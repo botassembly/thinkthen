@@ -12,7 +12,7 @@ public struct SessionBoundaryFailure: Error, Sendable, CustomStringConvertible {
 }
 
 func sessionCheck(_ code: Int32) throws {
-    if code != 0 { throw SessionBoundaryFailure(code: code, message: String(cString: thinkthen_session_error_message()), retryable: thinkthen_session_error_retryable() != 0, facts: try thinkthen_session_error_facts_json().map { try ImmediateFacts.read(JSONValue.parse(Data(String(cString: $0).utf8))) }) }
+    if code != 0 { throw SessionBoundaryFailure(code: code, message: String(cString: thinkthen_session_error_message()), retryable: thinkthen_session_error_retryable() != 0, facts: try thinkthen_session_error_facts_json().map { try ImmediateFacts.read(DataValue.parse(Data(String(cString: $0).utf8))) }) }
 }
 
 private final class SessionOwner: @unchecked Sendable {
@@ -97,30 +97,29 @@ public final class Session: @unchecked Sendable {
             let current = try lease()
             let interest = lock.withLock { cancelled ? UInt32(THINKTHEN_SESSION_WAIT_SETTLEMENT_V1) : UInt32(THINKTHEN_SESSION_WAIT_RESULT_V1) }
             try Task.checkCancellation()
-            let observed: Result<Data?, any Error> = await withCheckedContinuation { continuation in
+            let observed: Result<SessionPacket?, any Error> = await withCheckedContinuation { continuation in
                 DispatchQueue.global(qos: .userInitiated).async {
                     do {
-                        let copied: Data? = try withExtendedLifetime(current) {
+                        let copied: SessionPacket? = try withExtendedLifetime(current) {
                             var status: UInt32 = 0
                             var packet: OpaquePointer?
                             try sessionCheck(thinkthen_session_next_packet(current.handle, interest, &status, &packet))
                             guard let packet else {
-                                guard status == UInt32(THINKTHEN_SESSION_END_V1) else { throw JSONConversionError("Missing native packet") }
+                                guard status == UInt32(THINKTHEN_SESSION_END_V1) else { throw ValueConversionError("Missing native packet") }
                                 return nil
                             }
                             defer { thinkthen_session_result_free(packet) }
-                            var pointer: UnsafePointer<CChar>?
-                            var length = 0
-                            try sessionCheck(thinkthen_session_result_json(packet, &pointer, &length))
-                            guard let pointer else { throw JSONConversionError("Missing native packet bytes") }
-                            return Data(bytes: pointer, count: length)
+                            var view: UnsafePointer<thinkthen_complete_session_packet_v1>?
+                            try sessionCheck(thinkthen_session_result_view(packet, &view))
+                            guard let view else { throw ValueConversionError("Missing native packet view") }
+                            return try SessionPacket.read(copyNativeGraph(view))
                         }
                         continuation.resume(returning: .success(copied))
                     } catch { continuation.resume(returning: .failure(error)) }
                 }
             }
             try Task.checkCancellation()
-            return try observed.get().map { try SessionPacket.read(JSONValue.parse($0)) }
+            return try observed.get()
         } onCancel: { self.cancel() }
     }
 
@@ -168,7 +167,7 @@ public final class Client: @unchecked Sendable {
         let handle = Array(bytes).map { CChar(bitPattern: $0) } + [0]
         let pointer = handle.withUnsafeBufferPointer { thinkthen_engine_new_with($0.baseAddress) }
         guard let pointer else {
-            throw SessionBoundaryFailure(code: thinkthen_error_code(nil), message: thinkthen_error_message(nil).map { String(cString: $0) } ?? "Native constructor failed", retryable: thinkthen_error_retryable(nil) != 0, facts: try thinkthen_error_facts_json(nil).map { try ImmediateFacts.read(JSONValue.parse(Data(String(cString: $0).utf8))) })
+            throw SessionBoundaryFailure(code: thinkthen_error_code(nil), message: thinkthen_error_message(nil).map { String(cString: $0) } ?? "Native constructor failed", retryable: thinkthen_error_retryable(nil) != 0, facts: try thinkthen_error_facts_json(nil).map { try ImmediateFacts.read(DataValue.parse(Data(String(cString: $0).utf8))) })
         }
         owner = ClientOwner(pointer)
     }
@@ -185,16 +184,24 @@ public final class Client: @unchecked Sendable {
         return try withExtendedLifetime(current) { try body(current.handle) }
     }
     public func start(_ request: Request) throws -> Session {
-        let bytes = try request.json.data()
+        let call = request.call
+        let values = [Data(try String.read(call.function.json).utf8), try call.question.json.data(),
+                      try call.input.json.data(), try (call.options.value?.json ?? .object([:])).data(), Data("swift".utf8)]
+        let buffers = values.map { data -> UnsafeMutablePointer<CChar> in
+            let pointer = UnsafeMutablePointer<CChar>.allocate(capacity: max(data.count, 1))
+            data.copyBytes(to: UnsafeMutableRawBufferPointer(start: pointer, count: data.count))
+            return pointer
+        }
+        defer { buffers.forEach { $0.deallocate() } }
+        func view(_ index: Int) -> thinkthen_complete_utf8_v1 {
+            thinkthen_complete_utf8_v1(data: UnsafePointer(buffers[index]), len: values[index].count)
+        }
         return try live { handle in
             var session: OpaquePointer?
-            let surface = Array("swift".utf8).map { CChar(bitPattern: $0) }
-            try bytes.withUnsafeBytes { raw in
-                try surface.withUnsafeBufferPointer { token in
-                    try sessionCheck(thinkthen_session_new_with_surface(handle, raw.bindMemory(to: CChar.self).baseAddress, raw.count, token.baseAddress, token.count, &session))
-                }
-            }
-            guard let session else { throw JSONConversionError("Missing native session") }
+            var named = thinkthen_named_request_v1(function: view(0), question_json: view(1),
+                                                   input_json: view(2), options_json: view(3))
+            try sessionCheck(thinkthen_session_new_named_with_surface(handle, &named, view(4), &session))
+            guard let session else { throw ValueConversionError("Missing native session") }
             return Session(session)
         }
     }
@@ -205,12 +212,12 @@ public final class Client: @unchecked Sendable {
             try bytes.withUnsafeBytes { raw in
                 try sessionCheck(thinkthen_request_plan_value(handle, raw.bindMemory(to: CChar.self).baseAddress, raw.count, &pointer))
             }
-            guard let pointer else { throw JSONConversionError("Missing native plan") }
+            guard let pointer else { throw ValueConversionError("Missing native plan") }
             defer { thinkthen_value_free(pointer) }
             return try Plan.read(nativeValue(pointer))
         }
     }
-    func parseQuestion(_ grammar: QuestionGrammar, authored: JSONValue) throws -> Question {
+    func parseQuestion(_ grammar: QuestionGrammar, authored: DataValue) throws -> Question {
         let bytes = try authored.data()
         return try live { handle in
             var question: OpaquePointer?
@@ -218,11 +225,11 @@ public final class Client: @unchecked Sendable {
                 try bytes.withUnsafeBytes { raw in
                     let code = thinkthen_question_parse(handle, grammar.rawValue, thinkthen_string_v1(data: raw.bindMemory(to: CChar.self).baseAddress, len: raw.count), &question)
                     if code != 0 {
-                        throw SessionBoundaryFailure(code: code, message: thinkthen_error_message(handle).map { String(cString: $0) } ?? "Native question admission failed", retryable: thinkthen_error_retryable(handle) != 0, facts: try thinkthen_error_facts_json(handle).map { try ImmediateFacts.read(JSONValue.parse(Data(String(cString: $0).utf8))) })
+                        throw SessionBoundaryFailure(code: code, message: thinkthen_error_message(handle).map { String(cString: $0) } ?? "Native question admission failed", retryable: thinkthen_error_retryable(handle) != 0, facts: try thinkthen_error_facts_json(handle).map { try ImmediateFacts.read(DataValue.parse(Data(String(cString: $0).utf8))) })
                     }
                 }
             }
-            guard let question else { throw JSONConversionError("Missing admitted question") }
+            guard let question else { throw ValueConversionError("Missing admitted question") }
             defer { thinkthen_question_free(question) }
             return .definition(QuestionDefinition(value: try Definition.read(authored)))
         }
@@ -280,7 +287,7 @@ public final class Client: @unchecked Sendable {
             if case .terminal(let value) = packet { terminal = value }
         }
         try Task.checkCancellation()
-        guard let terminal else { throw JSONConversionError("Native End has no terminal") }
+        guard let terminal else { throw ValueConversionError("Native End has no terminal") }
         let call = Call(packets: packets, terminal: terminal)
         if case .value(let failure) = terminal.failure { throw SessionFailure(failure: failure, call: call) }
         return call
@@ -291,7 +298,7 @@ public final class Client: @unchecked Sendable {
             var advice = thinkthen_complete_utf8_v1()
             try sessionCheck(operation(handle, &state, &advice))
             let copied = advice.data.map { String(decoding: UnsafeRawBufferPointer(start: $0, count: advice.len), as: UTF8.self) }
-            guard let kind = UsagePersistenceState(rawValue: state.kind) else { throw JSONConversionError("Unknown native persistence state") }
+            guard let kind = UsagePersistenceState(rawValue: state.kind) else { throw ValueConversionError("Unknown native persistence state") }
             return UsagePersistenceStatus(state: kind, advice: copied)
         }
     }

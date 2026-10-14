@@ -16,7 +16,7 @@ import ThinkThen
         print(try await client.chooseAnswer(definition(.choose(AuthoredChoose(choose: .string("Which?"), options: .value(.object(choices))))), input: input) as Any)
         print(try await client.tagAnswer(definition(.tag(AuthoredTag(labels: .value(.list(["a", "b"])), tag: .string("Which?")))), input: input))
         print(try await client.scoreAnswer(definition(.score(AuthoredScore(levels: .value(.list(["low", "high"])), score: .string("How?")))), input: input))
-        let filtered: [JSONValue] = try await client.filterAnswer(question, input: records)
+        let filtered: [DataValue] = try await client.filterAnswer(question, input: records)
         print(filtered)
         let ranked: [UInt64] = try await client.rankAnswer(question, input: records)
         print(ranked)

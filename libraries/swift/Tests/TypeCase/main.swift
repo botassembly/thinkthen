@@ -2,16 +2,16 @@ import Foundation
 @testable import ThinkThen
 
 @main enum SharedConsumer {
-    static func run(_ fixture: [String: Any], settings: String, originalJSON: JSONValue) async throws -> Call {
-        let client = try Client(settings: EngineSettings.read(JSONValue.parse(Data(settings.utf8))))
+    static func run(_ fixture: [String: Any], settings: String, originalJSON: DataValue) async throws -> Call {
+        let client = try Client(settings: EngineSettings.read(DataValue.parse(Data(settings.utf8))))
         defer { client.close() }
         let verb = fixture["verb"] as! String
-        func value(_ object: Any) throws -> JSONValue {
-            try JSONValue.parse(JSONSerialization.data(withJSONObject: object, options: [.fragmentsAllowed]))
+        func value(_ object: Any) throws -> DataValue {
+            try DataValue.parse(JSONSerialization.data(withJSONObject: object, options: [.fragmentsAllowed]))
         }
-        let preserved: [String: JSONValue]
+        let preserved: [String: DataValue]
         if case .orderedObject(let members) = originalJSON.kind { preserved = Dictionary(members.map { ($0.key, $0.value) }, uniquingKeysWith: { _, last in last }) }
-        else { throw JSONConversionError("Fixture is not an object") }
+        else { throw ValueConversionError("Fixture is not an object") }
         let question: Question
         switch fixture["loader"] as? String {
         case "named", "load_named": question = .name(fixture["reference"] as! String)
@@ -20,7 +20,7 @@ import Foundation
         default:
             if fixture["question_form"] as? String == "file" { question = .file("fixture-question.json") }
             else {
-                var authored = try (fixture["raw"] as? String).map { try JSONValue.parse(Data($0.utf8)) } ?? preserved["question"]!
+                var authored = try (fixture["raw"] as? String).map { try DataValue.parse(Data($0.utf8)) } ?? preserved["question"]!
                 if case .orderedObject(let members) = authored.kind {
                     authored = .orderedObject(verb == "find" ? members.filter { $0.key != "none" } : members)
                 }
@@ -96,7 +96,7 @@ import Foundation
             case "annotate": return try await client.annotate(question, input: input, options: typedOptions)
             case "recognize": return try await client.recognize(question, input: input, options: typedOptions)
             case "relate": return try await client.relate(question, input: input, options: typedOptions)
-            default: throw JSONConversionError("Unknown fixture function")
+            default: throw ValueConversionError("Unknown fixture function")
             }
         }
         if injection == "cancel_token" { worker.cancel() }
@@ -111,18 +111,18 @@ import Foundation
     }
     static func main() async throws {
         let bytes = try Data(contentsOf: URL(fileURLWithPath: CommandLine.arguments[1]))
-        let originalJSON = try JSONValue.parse(bytes)
+        let originalJSON = try DataValue.parse(bytes)
         let fixture = try JSONSerialization.jsonObject(with: bytes) as! [String: Any]
-        let payload: JSONValue
+        let payload: DataValue
         do {
             let call = try await run(fixture, settings: CommandLine.arguments[2], originalJSON: originalJSON)
             payload = .object(["packets": .array(call.packets.map(\.json))])
         } catch let failure as SessionFailure {
             payload = .object(["packets": .array(failure.call.packets.map(\.json))])
         } catch let failure as SessionBoundaryFailure {
-            payload = try JSONValue.parse(JSONSerialization.data(withJSONObject: ["admission": ["code": failure.code, "message": failure.message]]))
+            payload = try DataValue.parse(JSONSerialization.data(withJSONObject: ["admission": ["code": failure.code, "message": failure.message]]))
         } catch is CancellationError {
-            payload = try JSONValue.parse(Data(#"{"admission":{"code":5,"message":"the call was cancelled"}}"#.utf8))
+            payload = try DataValue.parse(Data(#"{"admission":{"code":5,"message":"the call was cancelled"}}"#.utf8))
         }
         print(String(decoding: try payload.data(), as: UTF8.self))
     }

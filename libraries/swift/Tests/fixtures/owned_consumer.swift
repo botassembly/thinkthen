@@ -3,12 +3,12 @@ import Foundation
 
 @main enum Consumer {
     static func expect(_ condition: Bool, _ message: String) throws {
-        if !condition { throw JSONConversionError(message) }
+        if !condition { throw ValueConversionError(message) }
     }
     static func arrived(_ path: String) async throws {
         let until = ContinuousClock.now + .seconds(10)
         while !FileManager.default.fileExists(atPath: path) {
-            if ContinuousClock.now >= until { throw JSONConversionError("Provider did not arrive") }
+            if ContinuousClock.now >= until { throw ValueConversionError("Provider did not arrive") }
             try await Task.sleep(for: .milliseconds(10))
         }
     }
@@ -18,20 +18,20 @@ import Foundation
     }
     static func run() async throws {
         let raw = Data(#"{"future":1e400,"large":9007199254740993,"duplicate":1,"duplicate":2,"escaped":"\uD83D\uDE00"}"#.utf8)
-        try expect(try JSONValue.parse(raw).data() == raw, "Lossless original JSON")
+        try expect(try DataValue.parse(raw).data() == raw, "Lossless original JSON")
         let terminalBytes = Data(#"{"kind":"terminal","failure":null,"future":{"large":9007199254740993,"n":1e400}}"#.utf8)
-        let terminal = try SessionPacketTerminal.read(JSONValue.parse(terminalBytes))
+        let terminal = try SessionPacketTerminal.read(DataValue.parse(terminalBytes))
         try expect(!terminal.facts.isPresent && terminal.failure.isPresent && terminal.failure.value == nil, "Missing and null presence")
         try expect(try terminal.json.data() == terminalBytes, "Generated unknown-field round trip")
         for bad in [#""\uD800""#, #""\uDC00""#, "[01]", "[1e]", "[1.]", "[true,]"] {
             var refused = false
-            do { _ = try JSONValue.parse(Data(bad.utf8)) } catch { refused = true }
+            do { _ = try DataValue.parse(Data(bad.utf8)) } catch { refused = true }
             try expect(refused, "Invalid JSON accepted")
         }
         var refusedInfinity = false
         do { _ = try Double.infinity.json.data() } catch { refusedInfinity = true }
         try expect(refusedInfinity, "Infinity encoded")
-        let settings = try EngineSettings.read(JSONValue.parse(Data(CommandLine.arguments[1].utf8)))
+        let settings = try EngineSettings.read(DataValue.parse(Data(CommandLine.arguments[1].utf8)))
         let barrier = CommandLine.arguments[2]
         let planner = try Client(settings: settings)
         let preview = try planner.plan(Request(call: CallRequest(function: .decide, input: .text("preview"), question: .text("Is it?")), schema: .thinkthenRequest_1))
@@ -47,7 +47,7 @@ import Foundation
         let progress = await Task { "independent" }.value
         try expect(progress == "independent", "Unrelated task stalled")
         held.cancel()
-        do { _ = try await held.value; throw JSONConversionError("Cancelled task answered") }
+        do { _ = try await held.value; throw ValueConversionError("Cancelled task answered") }
         catch is CancellationError { }
         heldClient.close()
         try expect(!FileManager.default.fileExists(atPath: barrier + "/release-hold-owned-swift"), "Provider released before cancellation and cleanup")
@@ -55,14 +55,14 @@ import Foundation
         let client = try Client(settings: settings)
         let call = try await client.decide(.text("Is it?"), input: .text("owned-swift"))
         let rows: [AtomicDecideValue] = call.packets.compactMap { if case .decideRow(let row) = $0 { return row.value }; return nil }
-        guard let row = rows.first else { throw JSONConversionError("Missing typed decide row") }
+        guard let row = rows.first else { throw ValueConversionError("Missing typed decide row") }
         try expect(try row.value.json.data() == Data("true".utf8), "Typed native answer")
         try expect(call.terminal.facts.isPresent, "Native final facts missing")
         try expect(try call.decideAnswer() == true, "Normalized scalar answer")
         for (items, count) in [([Item](), 0), ([.text("cardinality-one"), .text("cardinality-two")], 2)] {
             do {
                 _ = try await client.decideAnswer(.text("Is it?"), input: .records(InputRecords(items: items)))
-                throw JSONConversionError("Answer cardinality accepted")
+                throw ValueConversionError("Answer cardinality accepted")
             } catch let failure as AnswerCardinalityError {
                 try expect(failure.count == count && failure.call.terminal.facts.isPresent, "Wrong answer cardinality or missing native settlement")
             }
@@ -83,9 +83,9 @@ import Foundation
         explicit.close()
         try expect(settled?.facts.isPresent == true && settled?.failure.isPresent == true, "Explicit post-cancel drain lost terminal facts")
         let facts = try call.terminal.json.data()
-        do { _ = try await client.decide(.text("Is it?"), input: .text("status-401")); throw JSONConversionError("Backend failure answered") }
+        do { _ = try await client.decide(.text("Is it?"), input: .text("status-401")); throw ValueConversionError("Backend failure answered") }
         catch let failure as SessionFailure {
-            guard case .backend = failure.kind else { throw JSONConversionError("Wrong typed failure kind") }
+            guard case .backend = failure.kind else { throw ValueConversionError("Wrong typed failure kind") }
             try expect(failure.failure.facts.isPresent && failure.call.terminal.facts.isPresent, "Failure facts lost")
         }
         let recognition = try await client.recognize(.definition(QuestionDefinition(value: .recognize(RecognizeDefinition(recognize: RecognizeQuestion(kinds: .value(OrderedMap([.init("person", AuthoredDescription.null)]))))))), input: .text("Ana Lima"))

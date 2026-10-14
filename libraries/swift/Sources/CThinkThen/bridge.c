@@ -23,11 +23,11 @@ struct native_functions {
     int (*thinkthen_session_error_retryable)(void);
     int (*thinkthen_session_finish)(thinkthen_session *, const char *, size_t);
     void (*thinkthen_session_free)(thinkthen_session *);
-    int (*thinkthen_session_new_with_surface)(const thinkthen_engine *, const char *, size_t, const char *, size_t, thinkthen_session **);
+    int (*thinkthen_session_new_named_with_surface)(const thinkthen_engine *, const thinkthen_named_request_v1 *, thinkthen_complete_utf8_v1, thinkthen_session **);
     int (*thinkthen_session_next_packet)(thinkthen_session *, uint32_t, uint32_t *, thinkthen_session_result **);
     int (*thinkthen_session_push)(thinkthen_session *, const char *, size_t, uint32_t *);
     void (*thinkthen_session_result_free)(thinkthen_session_result *);
-    int (*thinkthen_session_result_json)(const thinkthen_session_result *, const char **, size_t *);
+    int (*thinkthen_session_result_view)(const thinkthen_session_result *, const thinkthen_complete_session_packet_v1 **);
     void (*thinkthen_value_free)(thinkthen_value *);
     int (*thinkthen_value_parse)(const char *, size_t, thinkthen_value **);
     int (*thinkthen_value_view)(const thinkthen_value *, const thinkthen_complete_json_v1 **);
@@ -112,10 +112,10 @@ int thinkthen_swift_load(const char *path) {
             if (!symbol) goto failed;
             _Static_assert(sizeof(candidate.thinkthen_session_free) == sizeof(symbol), "function pointer width");
             memcpy(&candidate.thinkthen_session_free, &symbol, sizeof(symbol));
-            symbol = dlsym(handle, "thinkthen_session_new_with_surface");
+            symbol = dlsym(handle, "thinkthen_session_new_named_with_surface");
             if (!symbol) goto failed;
-            _Static_assert(sizeof(candidate.thinkthen_session_new_with_surface) == sizeof(symbol), "function pointer width");
-            memcpy(&candidate.thinkthen_session_new_with_surface, &symbol, sizeof(symbol));
+            _Static_assert(sizeof(candidate.thinkthen_session_new_named_with_surface) == sizeof(symbol), "function pointer width");
+            memcpy(&candidate.thinkthen_session_new_named_with_surface, &symbol, sizeof(symbol));
             symbol = dlsym(handle, "thinkthen_session_next_packet");
             if (!symbol) goto failed;
             _Static_assert(sizeof(candidate.thinkthen_session_next_packet) == sizeof(symbol), "function pointer width");
@@ -128,10 +128,10 @@ int thinkthen_swift_load(const char *path) {
             if (!symbol) goto failed;
             _Static_assert(sizeof(candidate.thinkthen_session_result_free) == sizeof(symbol), "function pointer width");
             memcpy(&candidate.thinkthen_session_result_free, &symbol, sizeof(symbol));
-            symbol = dlsym(handle, "thinkthen_session_result_json");
+            symbol = dlsym(handle, "thinkthen_session_result_view");
             if (!symbol) goto failed;
-            _Static_assert(sizeof(candidate.thinkthen_session_result_json) == sizeof(symbol), "function pointer width");
-            memcpy(&candidate.thinkthen_session_result_json, &symbol, sizeof(symbol));
+            _Static_assert(sizeof(candidate.thinkthen_session_result_view) == sizeof(symbol), "function pointer width");
+            memcpy(&candidate.thinkthen_session_result_view, &symbol, sizeof(symbol));
             symbol = dlsym(handle, "thinkthen_value_free");
             if (!symbol) goto failed;
             _Static_assert(sizeof(candidate.thinkthen_value_free) == sizeof(symbol), "function pointer width");
@@ -225,9 +225,9 @@ void thinkthen_session_free(thinkthen_session * arg0) {
     if (!native.thinkthen_session_free) abort();
     native.thinkthen_session_free(arg0);
 }
-int thinkthen_session_new_with_surface(const thinkthen_engine * arg0, const char * arg1, size_t arg2, const char * arg3, size_t arg4, thinkthen_session ** arg5) {
-    if (!native.thinkthen_session_new_with_surface) abort();
-    return native.thinkthen_session_new_with_surface(arg0, arg1, arg2, arg3, arg4, arg5);
+int thinkthen_session_new_named_with_surface(const thinkthen_engine * arg0, const thinkthen_named_request_v1 * arg1, thinkthen_complete_utf8_v1 arg2, thinkthen_session ** arg3) {
+    if (!native.thinkthen_session_new_named_with_surface) abort();
+    return native.thinkthen_session_new_named_with_surface(arg0, arg1, arg2, arg3);
 }
 int thinkthen_session_next_packet(thinkthen_session * arg0, uint32_t arg1, uint32_t * arg2, thinkthen_session_result ** arg3) {
     if (!native.thinkthen_session_next_packet) abort();
@@ -241,9 +241,9 @@ void thinkthen_session_result_free(thinkthen_session_result * arg0) {
     if (!native.thinkthen_session_result_free) abort();
     native.thinkthen_session_result_free(arg0);
 }
-int thinkthen_session_result_json(const thinkthen_session_result * arg0, const char ** arg1, size_t * arg2) {
-    if (!native.thinkthen_session_result_json) abort();
-    return native.thinkthen_session_result_json(arg0, arg1, arg2);
+int thinkthen_session_result_view(const thinkthen_session_result * arg0, const thinkthen_complete_session_packet_v1 ** arg1) {
+    if (!native.thinkthen_session_result_view) abort();
+    return native.thinkthen_session_result_view(arg0, arg1);
 }
 void thinkthen_value_free(thinkthen_value * arg0) {
     if (!native.thinkthen_value_free) abort();

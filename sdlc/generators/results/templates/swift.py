@@ -46,7 +46,7 @@ def render(definitions, inputs=False):
         return 'Receipt' + result if not inputs and result in input_names else result
     def typ(source, path):
         if not isinstance(source, dict) or not source:
-            return 'JSONValue'
+            return 'DataValue'
         if '$ref' in source:
             return named(source['$ref'].removeprefix('#/$defs/'))
         kinds = source.get('type')
@@ -69,7 +69,7 @@ def render(definitions, inputs=False):
             return 'OrderedMap<' + typ(source.get('additionalProperties', {}), path + '_Entry') + '>'
         if kind == 'object':
             return '[String: ' + typ(source.get('additionalProperties', {}), path + '_Entry') + ']'
-        return {'string': 'String', 'boolean': 'Bool', 'number': 'Double', 'integer': 'UInt64' if source.get('format', '').startswith('uint') else 'Int64', 'null': 'JSONValue'}.get(kind, 'JSONValue')
+        return {'string': 'String', 'boolean': 'Bool', 'number': 'Double', 'integer': 'UInt64' if source.get('format', '').startswith('uint') else 'Int64', 'null': 'DataValue'}.get(kind, 'DataValue')
     def case(tag, index):
         mode, field, value = tag
         token = value if mode == 'literal' else '_'.join(value.values()) if mode == 'literals' else field if mode == 'member' else '_'.join(field for field in value['required'] if field != 'version')
@@ -94,19 +94,19 @@ def render(definitions, inputs=False):
         source, cls = nodes[key], named(key)
         literals = source.get('enum', []) or [alt.get('const') for alt in source.get('oneOf', source.get('anyOf', []))]
         if literals and all(isinstance(value, str) for value in literals):
-            lines += [f'public enum {cls}: JSONRepresentable {{']
+            lines += [f'public enum {cls}: ValueRepresentable {{']
             lines += [f'    case {literal_member(value)}' for value in literals]
             lines += ([] if inputs else ['    case unknown(String)'])
-            lines += [f'    static func read(_ json: JSONValue) throws -> {cls} {{', '        let value = try String.read(json)', '        switch value {']
+            lines += [f'    static func read(_ json: DataValue) throws -> {cls} {{', '        let value = try String.read(json)', '        switch value {']
             lines += [f'        case {json.dumps(value)}: return .{literal_member(value)}' for value in literals]
-            lines += [('        default: throw JSONConversionError("Unknown ' + cls + ' value")') if inputs else '        default: return .unknown(value)', '        }', '    }', '    var json: JSONValue {', '        switch self {']
+            lines += [('        default: throw ValueConversionError("Unknown ' + cls + ' value")') if inputs else '        default: return .unknown(value)', '        }', '    }', '    var json: DataValue {', '        switch self {']
             lines += [f'        case .{literal_member(value)}: return .string({json.dumps(value)})' for value in literals]
             lines += ([] if inputs else ['        case .unknown(let value): return .string(value)']) + ['        }', '    }', '}']
         elif 'properties' in source:
             fields = source['properties']
             required = set(source.get('required', []))
-            lines += [f'public struct {cls}: JSONRepresentable {{', '    public let extensions: [String: JSONValue]', '    private var _sourceJSON: JSONValue? = nil']
-            args, assignments, reads, writes = ['extensions: [String: JSONValue] = [:]'], ['self.extensions = extensions'], [], []
+            lines += [f'public struct {cls}: ValueRepresentable {{', '    public let extensions: [String: DataValue]', '    private var _sourceJSON: DataValue? = nil']
+            args, assignments, reads, writes = ['extensions: [String: DataValue] = [:]'], ['self.extensions = extensions'], [], []
             for prop, field in fields.items():
                 pname, ptype = member(prop), typ(field, key + '_' + prop)
                 mandatory = prop in required
@@ -120,36 +120,36 @@ def render(definitions, inputs=False):
                 reads += [f'{pname.strip(chr(96))}: {expression}']
                 writes += [f'object[{json.dumps(prop)}] = {pname}.json' if mandatory else f'writePresence({pname}, {json.dumps(prop)}, &object)']
             keys = ', '.join(json.dumps(prop) for prop in fields)
-            lines += ['    public init(' + ', '.join(args) + ') { ' + '; '.join(assignments) + ' }', f'    static func read(_ json: JSONValue) throws -> {cls} {{', '        let object = try jsonObject(json)', f'        let known: Set<String> = [{keys}]', '        var value = Self(extensions: object.filter { !known.contains($0.key) }, ' + ', '.join(reads) + ')', '        value._sourceJSON = json', '        return value', '    }', '    var json: JSONValue {', '        if let _sourceJSON { return _sourceJSON }', f'        let known: Set<String> = [{keys}]', '        var object = extensions.filter { !known.contains($0.key) }', *('        ' + line for line in writes), '        return .object(object)', '    }', '}']
+            lines += ['    public init(' + ', '.join(args) + ') { ' + '; '.join(assignments) + ' }', f'    static func read(_ json: DataValue) throws -> {cls} {{', '        let object = try jsonObject(json)', f'        let known: Set<String> = [{keys}]', '        var value = Self(extensions: object.filter { !known.contains($0.key) }, ' + ', '.join(reads) + ')', '        value._sourceJSON = json', '        return value', '    }', '    var json: DataValue {', '        if let _sourceJSON { return _sourceJSON }', f'        let known: Set<String> = [{keys}]', '        var object = extensions.filter { !known.contains($0.key) }', *('        ' + line for line in writes), '        return .object(object)', '    }', '}']
             if not inputs:
                 lines.pop()
                 for prop in named_object_fields(source, definitions):
                     accessor = member(prop).strip('`') + 'Name'
-                    lines += [f'    public func {accessor}() throws -> Presence<String> {{', f'        switch try readPresence(jsonObject(self.json), {json.dumps(prop)}, JSONValue.self) {{', '        case .absent: return .absent', '        case .null: return .null', '        case .value(let object): return try readPresence(jsonObject(object), "name", String.self)', '        }', '    }']
+                    lines += [f'    public func {accessor}() throws -> Presence<String> {{', f'        switch try readPresence(jsonObject(self.json), {json.dumps(prop)}, DataValue.self) {{', '        case .absent: return .absent', '        case .null: return .null', '        case .value(let object): return try readPresence(jsonObject(object), "name", String.self)', '        }', '    }']
                 lines += ['}']
         elif 'variants' in source:
             variants = source['variants']
-            lines += [f'public indirect enum {cls}: JSONRepresentable {{']
+            lines += [f'public indirect enum {cls}: ValueRepresentable {{']
             lines += [f'    case {case(tag, i)}({named(child)})' for i, (child, tag) in enumerate(variants)]
-            lines += [f'    static func read(_ json: JSONValue) throws -> {cls} {{', '        let object = try jsonObject(json)']
+            lines += [f'    static func read(_ json: DataValue) throws -> {cls} {{', '        let object = try jsonObject(json)']
             for i, (child, tag) in enumerate(variants):
                 lines += [f'        if {cond(tag)} {{ return .{case(tag, i)}(try {named(child)}.read(json)) }}']
-            lines += [f'        throw JSONConversionError("Unknown {cls} alternative")', '    }', '    var json: JSONValue {', '        switch self {']
+            lines += [f'        throw ValueConversionError("Unknown {cls} alternative")', '    }', '    var json: DataValue {', '        switch self {']
             lines += [f'        case .{case(tag, i)}(let value): return value.json' for i, (_, tag) in enumerate(variants)]
             lines += ['        }', '    }', '}']
         elif 'primitive_variants' in source or source.get('anyOf', source.get('oneOf')) or isinstance(source.get('type'), list):
             alts = list(source.get('primitive_schemas', {}).values()) or source.get('anyOf', source.get('oneOf', [])) or [{**source, 'type': kind} for kind in source['type']]
-            lines += [f'public indirect enum {cls}: JSONRepresentable {{']
+            lines += [f'public indirect enum {cls}: ValueRepresentable {{']
             arms = [literal_member(arm_name(alt)) for alt in alts]
             for i, alt in enumerate(alts):
                 lines += [f'    case {arms[i]}' if alt.get('type') == 'null' else f'    case {arms[i]}({typ(alt, key + "_" + arm_name(alt))})']
-            lines += [f'    static func read(_ json: JSONValue) throws -> {cls} {{']
+            lines += [f'    static func read(_ json: DataValue) throws -> {cls} {{']
             for i, alt in enumerate(alts):
                 if alt.get('type') == 'null':
                     lines += [f'        if json == .null {{ return .{arms[i]} }}']
                 else:
                     lines += [f'        if let value = try? {typ(alt, key + "_" + arm_name(alt))}.read(json) {{ return .{arms[i]}(value) }}']
-            lines += [f'        throw JSONConversionError("Unknown {cls} value")', '    }', '    var json: JSONValue {', '        switch self {']
+            lines += [f'        throw ValueConversionError("Unknown {cls} value")', '    }', '    var json: DataValue {', '        switch self {']
             lines += [f'        case .{arms[i]}: return .null' if alt.get('type') == 'null' else f'        case .{arms[i]}(let value): return value.json' for i, alt in enumerate(alts)]
             lines += ['        }', '    }', '}']
         else:
@@ -162,8 +162,10 @@ def render(definitions, inputs=False):
         for function, child, payload in aggregate_answers(definitions):
             index = next(i for i, (candidate, _) in enumerate(variants) if candidate == child)
             tag = variants[index][1]
-            lines += [f'    public func {function}Answer() throws -> {typ(payload, child + "_value")} {{', f'        if case .{case(tag, index)}(let packet) = self {{ return packet.value }}', f'        throw JSONConversionError("Expected {function} aggregate packet")', '    }']
+            lines += [f'    public func {function}Answer() throws -> {typ(payload, child + "_value")} {{', f'        if case .{case(tag, index)}(let packet) = self {{ return packet.value }}', f'        throw ValueConversionError("Expected {function} aggregate packet")', '    }']
         lines += ['}', answer_helpers(definitions)]
+        from swift_native import render as native_graph
+        lines += [native_graph(definitions)]
     return ('\n'.join(lines) + '\n')
 
 
@@ -233,17 +235,17 @@ public struct OrderedMap<Value: Sendable>: Sendable {
     public let entries: [OrderedEntry<Value>]
     public init(_ entries: [OrderedEntry<Value>]) { self.entries = entries }
 }
-extension OrderedMap: JSONRepresentable where Value: JSONRepresentable {
-    static func read(_ json: JSONValue) throws -> Self {
-        let members: [JSONMember]
+extension OrderedMap: ValueRepresentable where Value: ValueRepresentable {
+    static func read(_ json: DataValue) throws -> Self {
+        let members: [ValueMember]
         switch json.kind {
         case .orderedObject(let value): members = value
-        case .object(let value): members = value.map { JSONMember($0.key, $0.value) }
-        default: throw JSONConversionError("Expected JSON object")
+        case .object(let value): members = value.map { ValueMember($0.key, $0.value) }
+        default: throw ValueConversionError("Expected JSON object")
         }
         return Self(try members.map { OrderedEntry($0.key, try Value.read($0.value)) })
     }
-    var json: JSONValue { .orderedObject(entries.map { JSONMember($0.key, $0.value.json) }) }
+    var json: DataValue { .orderedObject(entries.map { ValueMember($0.key, $0.value.json) }) }
 }"""
 
 
@@ -266,17 +268,17 @@ def answer_helpers(definitions):
     collection_test = ' || '.join('function == ' + json.dumps(function) for function in collections)
     lines = ['public struct AnswerCardinalityError: Error, Sendable {',
              '    public let function: String', '    public let count: Int', '    public let call: Call', '}',
-             'private func answerPath(_ json: JSONValue, _ path: [String]) throws -> JSONValue? {',
-             '    var value: JSONValue? = json', '    for key in path { guard let object = value else { return nil }; value = try jsonObject(object)[key] }', '    return value', '}',
-             'private func answerProjection(_ value: JSONValue, _ member: String) throws -> JSONValue {',
-             '    guard case .array(let rows) = value.kind else { throw JSONConversionError("Expected answer collection") }',
+             'private func answerPath(_ json: DataValue, _ path: [String]) throws -> DataValue? {',
+             '    var value: DataValue? = json', '    for key in path { guard let object = value else { return nil }; value = try jsonObject(object)[key] }', '    return value', '}',
+             'private func answerProjection(_ value: DataValue, _ member: String) throws -> DataValue {',
+             '    guard case .array(let rows) = value.kind else { throw ValueConversionError("Expected answer collection") }',
              '    return .array(try rows.map { try jsonRequired(jsonObject($0), member) })', '}',
              'extension Call {',
-             '    private func answerJSON(_ function: String, _ judgment: String) throws -> JSONValue {',
+             '    private func answerJSON(_ function: String, _ judgment: String) throws -> DataValue {',
              '        guard terminal.kind == "terminal" else { throw AnswerCardinalityError(function: function, count: 0, call: self) }',
-             '        if case .null = terminal.failure { throw JSONConversionError("Terminal failure must be an object") }',
+             '        if case .null = terminal.failure { throw ValueConversionError("Terminal failure must be an object") }',
              '        if case .value(let failure) = terminal.failure { throw SessionFailure(failure: failure, call: self) }',
-             '        let collection = ' + collection_test, '        var values: [JSONValue] = []', '        for packet in packets {',
+             '        let collection = ' + collection_test, '        var values: [DataValue] = []', '        for packet in packets {',
              '            guard try answerPath(packet.json, ["function"]) == .string(function) else { continue }',
              '            if judgment.isEmpty {',
              '                let kind = try answerPath(packet.json, ["kind"])',
@@ -286,14 +288,14 @@ def answer_helpers(definitions):
              *checks, '                guard let carrier = try answerPath(packet.json, ' + path(route) + ') else { continue }',
              '                guard try answerPath(carrier, ["kind"]) == .string(judgment), let value = try answerPath(carrier, ["value"]) else { continue }',
              '                values.append(value)', '            }', '        }',
-             '        if judgment.isEmpty && collection { var combined: [JSONValue] = []; for value in values { guard case .array(let items) = value.kind else { throw JSONConversionError("Expected aggregate collection") }; combined.append(contentsOf: items) }; return .array(combined) }',
+             '        if judgment.isEmpty && collection { var combined: [DataValue] = []; for value in values { guard case .array(let items) = value.kind else { throw ValueConversionError("Expected aggregate collection") }; combined.append(contentsOf: items) }; return .array(combined) }',
              '        guard values.count == 1 else { throw AnswerCardinalityError(function: function, count: values.count, call: self) }',
              '        return values[0]', '    }']
     def value_type(source):
-        if not isinstance(source, dict): return 'JSONValue'
+        if not isinstance(source, dict): return 'DataValue'
         if '$ref' in source: return name(source['$ref'].split('/')[-1])
         if source.get('type') == 'array': return '[' + value_type(source['items']) + ']'
-        return {'string': 'String', 'boolean': 'Bool', 'number': 'Double', 'integer': 'UInt64'}.get(source.get('type'), 'JSONValue')
+        return {'string': 'String', 'boolean': 'Bool', 'number': 'Double', 'integer': 'UInt64'}.get(source.get('type'), 'DataValue')
     answers = {function: (value_type(aggregate_projection(function, payload, definitions)[0]), value_type(aggregate_projection(function, payload, definitions)[0]), '') for function, _, payload in aggregate_answers(definitions)}
     projections = {function: aggregate_projection(function, payload, definitions)[1] for function, _, payload in aggregate_answers(definitions)}
     for function, kind, payload in scalar_answers(definitions):

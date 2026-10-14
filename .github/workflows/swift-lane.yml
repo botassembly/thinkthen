@@ -1,0 +1,83 @@
+name: Check Swift branch package
+on:
+  push:
+    branches: [ticket/0576-swift]
+    paths:
+      - 'libraries/swift/**'
+      - 'sdlc/generators/results/templates/swift*'
+      - '.github/workflows/swift-lane.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  native:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-15
+            target: aarch64-apple-darwin
+          - runner: macos-15-intel
+            target: x86_64-apple-darwin
+    runs-on: ${{ matrix.runner }}
+    env:
+      CARGO_BUILD_JOBS: '2'
+      MACOSX_DEPLOYMENT_TARGET: '15.0'
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          persist-credentials: false
+      - run: rustup toolchain install 1.95.0 --profile minimal
+      - name: Build matching native C package
+        env:
+          TARGET: ${{ matrix.target }}
+        run: sdlc/scripts/release-pack "$TARGET" "$RUNNER_TEMP/native" c
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: swift-native-${{ matrix.target }}
+          path: ${{ runner.temp }}/native/*
+          if-no-files-found: error
+          retention-days: 7
+  swift:
+    needs: native
+    runs-on: macos-15
+    env:
+      CARGO_BUILD_JOBS: '2'
+      MACOSX_DEPLOYMENT_TARGET: '15.0'
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c
+        with:
+          python-version: '3.13'
+      - run: rustup toolchain install 1.95.0 --profile minimal
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          pattern: swift-native-*
+          path: native
+          merge-multiple: true
+      - name: Assemble the existing Swift package
+        env:
+          THINKTHEN_RELEASE_EXPECTED_SHA: ${{ github.sha }}
+        run: |
+          mkdir "$RUNNER_TEMP/x64" "$RUNNER_TEMP/arm64"
+          tar -xzf native/thinkthen-c-0.2.0-x86_64-apple-darwin.tar.gz -C "$RUNNER_TEMP/x64"
+          tar -xzf native/thinkthen-c-0.2.0-aarch64-apple-darwin.tar.gz -C "$RUNNER_TEMP/arm64"
+          libraries/swift/build-xcframework.sh "$RUNNER_TEMP/x64" "$RUNNER_TEMP/arm64" "$RUNNER_TEMP/framework"
+          cp -R "$RUNNER_TEMP/framework/CThinkThen.xcframework" libraries/swift/
+          sdlc/scripts/release-pack --apple-wrappers aarch64-apple-darwin native swift objective-c
+      - name: Check the installed Swift package
+        run: |
+          cargo build --locked --package conformance-backend --jobs 2
+          export THINKTHEN_BACKEND_BIN="$PWD/target/debug/conformance-backend"
+          export THINKTHEN_ARTIFACT="$PWD/native/thinkthen-swift-0.2.0-aarch64-apple-darwin.tar.gz"
+          python3 libraries/swift/Tests/fixtures/guard.py "$THINKTHEN_ARTIFACT"
+          sh libraries/swift/check.sh
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: swift-apple-installed-package
+          path: native/thinkthen-swift-*
+          if-no-files-found: error
+          retention-days: 7

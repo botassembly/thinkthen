@@ -13,28 +13,28 @@ public struct OrderedMap<Value: Sendable>: Sendable {
   public let entries: [OrderedEntry<Value>]
   public init(_ entries: [OrderedEntry<Value>]) { self.entries = entries }
 }
-extension OrderedMap: JSONRepresentable where Value: JSONRepresentable {
-  static func read(_ json: JSONValue) throws -> Self {
-    let members: [JSONMember]
+extension OrderedMap: ValueRepresentable where Value: ValueRepresentable {
+  static func read(_ json: DataValue) throws -> Self {
+    let members: [ValueMember]
     switch json.kind {
     case .orderedObject(let value): members = value
-    case .object(let value): members = value.map { JSONMember($0.key, $0.value) }
-    default: throw JSONConversionError("Expected JSON object")
+    case .object(let value): members = value.map { ValueMember($0.key, $0.value) }
+    default: throw ValueConversionError("Expected JSON object")
     }
     return Self(try members.map { OrderedEntry($0.key, try Value.read($0.value)) })
   }
-  var json: JSONValue { .orderedObject(entries.map { JSONMember($0.key, $0.value.json) }) }
+  var json: DataValue { .orderedObject(entries.map { ValueMember($0.key, $0.value.json) }) }
 }
-public struct AnnotateDefinition: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
-  public let `batch`: Presence<JSONValue>
+public struct AnnotateDefinition: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
+  public let `batch`: Presence<DataValue>
   public let `profile`: Presence<AuthoredProfile>
   public let `questions`: OrderedMap<AnnotateQuestion>
   public let `threshold`: Presence<AuthoredThreshold>
   public let `version`: Int64
   public init(
-    extensions: [String: JSONValue] = [:], `batch`: Presence<JSONValue> = .absent,
+    extensions: [String: DataValue] = [:], `batch`: Presence<DataValue> = .absent,
     `profile`: Presence<AuthoredProfile> = .absent, `questions`: OrderedMap<AnnotateQuestion>,
     `threshold`: Presence<AuthoredThreshold> = .absent, `version`: Int64 = 1
   ) {
@@ -45,12 +45,12 @@ public struct AnnotateDefinition: JSONRepresentable {
     self.`threshold` = `threshold`
     self.`version` = `version`
   }
-  static func read(_ json: JSONValue) throws -> AnnotateDefinition {
+  static func read(_ json: DataValue) throws -> AnnotateDefinition {
     let object = try jsonObject(json)
     let known: Set<String> = ["batch", "profile", "questions", "threshold", "version"]
     var value = Self(
       extensions: object.filter { !known.contains($0.key) },
-      batch: try readPresence(object, "batch", JSONValue.self),
+      batch: try readPresence(object, "batch", DataValue.self),
       profile: try readPresence(object, "profile", AuthoredProfile.self),
       questions: try OrderedMap<AnnotateQuestion>.read(jsonRequired(object, "questions")),
       threshold: try readPresence(object, "threshold", AuthoredThreshold.self),
@@ -58,7 +58,7 @@ public struct AnnotateDefinition: JSONRepresentable {
     value._sourceJSON = json
     return value
   }
-  var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = ["batch", "profile", "questions", "threshold", "version"]
     var object = extensions.filter { !known.contains($0.key) }
@@ -70,12 +70,12 @@ public struct AnnotateDefinition: JSONRepresentable {
     return .object(object)
   }
 }
-public indirect enum AnnotateQuestion: JSONRepresentable {
+public indirect enum AnnotateQuestion: ValueRepresentable {
   case `decide`(AnnotateQuestionDecide)
   case `choose`(AnnotateQuestionChoose)
   case `tag`(AnnotateQuestionTag)
   case `score`(AnnotateQuestionScore)
-  static func read(_ json: JSONValue) throws -> AnnotateQuestion {
+  static func read(_ json: DataValue) throws -> AnnotateQuestion {
     let object = try jsonObject(json)
     if object["decide"] != nil && object["choose"] == nil && object["score"] == nil
       && object["tag"] == nil
@@ -97,9 +97,9 @@ public indirect enum AnnotateQuestion: JSONRepresentable {
     {
       return .`score`(try AnnotateQuestionScore.read(json))
     }
-    throw JSONConversionError("Unknown AnnotateQuestion alternative")
+    throw ValueConversionError("Unknown AnnotateQuestion alternative")
   }
-  var json: JSONValue {
+  var json: DataValue {
     switch self {
     case .`decide`(let value): return value.json
     case .`choose`(let value): return value.json
@@ -108,9 +108,9 @@ public indirect enum AnnotateQuestion: JSONRepresentable {
     }
   }
 }
-public struct AnnotateQuestionChoose: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
+public struct AnnotateQuestionChoose: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
   public let `choose`: AuthoredQuestionText
   public let `contextSchema`: Presence<AuthoredInputDeclaration>
   public let `itemSchema`: Presence<AuthoredInputDeclaration>
@@ -120,7 +120,7 @@ public struct AnnotateQuestionChoose: JSONRepresentable {
   public let `threshold`: Presence<AuthoredCut>
   public let `wordingVersion`: Presence<Int64>
   public init(
-    extensions: [String: JSONValue] = [:], `choose`: AuthoredQuestionText,
+    extensions: [String: DataValue] = [:], `choose`: AuthoredQuestionText,
     `contextSchema`: Presence<AuthoredInputDeclaration> = .absent,
     `itemSchema`: Presence<AuthoredInputDeclaration> = .absent, `name`: Presence<String> = .absent,
     `on`: Presence<AuthoredPointers> = .absent, `options`: Presence<AuthoredOptions> = .absent,
@@ -136,7 +136,7 @@ public struct AnnotateQuestionChoose: JSONRepresentable {
     self.`threshold` = `threshold`
     self.`wordingVersion` = `wordingVersion`
   }
-  static func read(_ json: JSONValue) throws -> AnnotateQuestionChoose {
+  static func read(_ json: DataValue) throws -> AnnotateQuestionChoose {
     let object = try jsonObject(json)
     let known: Set<String> = [
       "choose", "context_schema", "item_schema", "name", "on", "options", "threshold",
@@ -155,7 +155,7 @@ public struct AnnotateQuestionChoose: JSONRepresentable {
     value._sourceJSON = json
     return value
   }
-  var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = [
       "choose", "context_schema", "item_schema", "name", "on", "options", "threshold",
@@ -173,9 +173,9 @@ public struct AnnotateQuestionChoose: JSONRepresentable {
     return .object(object)
   }
 }
-public struct AnnotateQuestionDecide: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
+public struct AnnotateQuestionDecide: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
   public let `contextSchema`: Presence<AuthoredInputDeclaration>
   public let `decide`: AuthoredQuestionText
   public let `false`: Presence<AuthoredCriterion>
@@ -186,7 +186,7 @@ public struct AnnotateQuestionDecide: JSONRepresentable {
   public let `true`: Presence<AuthoredCriterion>
   public let `wordingVersion`: Presence<Int64>
   public init(
-    extensions: [String: JSONValue] = [:],
+    extensions: [String: DataValue] = [:],
     `contextSchema`: Presence<AuthoredInputDeclaration> = .absent, `decide`: AuthoredQuestionText,
     `false`: Presence<AuthoredCriterion> = .absent,
     `itemSchema`: Presence<AuthoredInputDeclaration> = .absent, `name`: Presence<String> = .absent,
@@ -204,7 +204,7 @@ public struct AnnotateQuestionDecide: JSONRepresentable {
     self.`true` = `true`
     self.`wordingVersion` = `wordingVersion`
   }
-  static func read(_ json: JSONValue) throws -> AnnotateQuestionDecide {
+  static func read(_ json: DataValue) throws -> AnnotateQuestionDecide {
     let object = try jsonObject(json)
     let known: Set<String> = [
       "context_schema", "decide", "false", "item_schema", "name", "on", "threshold", "true",
@@ -224,7 +224,7 @@ public struct AnnotateQuestionDecide: JSONRepresentable {
     value._sourceJSON = json
     return value
   }
-  var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = [
       "context_schema", "decide", "false", "item_schema", "name", "on", "threshold", "true",
@@ -243,9 +243,9 @@ public struct AnnotateQuestionDecide: JSONRepresentable {
     return .object(object)
   }
 }
-public struct AnnotateQuestionScore: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
+public struct AnnotateQuestionScore: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
   public let `contextSchema`: Presence<AuthoredInputDeclaration>
   public let `itemSchema`: Presence<AuthoredInputDeclaration>
   public let `levels`: Presence<AuthoredLevels>
@@ -254,7 +254,7 @@ public struct AnnotateQuestionScore: JSONRepresentable {
   public let `score`: AuthoredQuestionText
   public let `wordingVersion`: Presence<Int64>
   public init(
-    extensions: [String: JSONValue] = [:],
+    extensions: [String: DataValue] = [:],
     `contextSchema`: Presence<AuthoredInputDeclaration> = .absent,
     `itemSchema`: Presence<AuthoredInputDeclaration> = .absent,
     `levels`: Presence<AuthoredLevels> = .absent, `name`: Presence<String> = .absent,
@@ -270,7 +270,7 @@ public struct AnnotateQuestionScore: JSONRepresentable {
     self.`score` = `score`
     self.`wordingVersion` = `wordingVersion`
   }
-  static func read(_ json: JSONValue) throws -> AnnotateQuestionScore {
+  static func read(_ json: DataValue) throws -> AnnotateQuestionScore {
     let object = try jsonObject(json)
     let known: Set<String> = [
       "context_schema", "item_schema", "levels", "name", "on", "score", "wording_version",
@@ -287,7 +287,7 @@ public struct AnnotateQuestionScore: JSONRepresentable {
     value._sourceJSON = json
     return value
   }
-  var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = [
       "context_schema", "item_schema", "levels", "name", "on", "score", "wording_version",
@@ -303,9 +303,9 @@ public struct AnnotateQuestionScore: JSONRepresentable {
     return .object(object)
   }
 }
-public struct AnnotateQuestionTag: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
+public struct AnnotateQuestionTag: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
   public let `contextSchema`: Presence<AuthoredInputDeclaration>
   public let `itemSchema`: Presence<AuthoredInputDeclaration>
   public let `labels`: Presence<AuthoredLabels>
@@ -315,7 +315,7 @@ public struct AnnotateQuestionTag: JSONRepresentable {
   public let `threshold`: Presence<AuthoredCut>
   public let `wordingVersion`: Presence<Int64>
   public init(
-    extensions: [String: JSONValue] = [:],
+    extensions: [String: DataValue] = [:],
     `contextSchema`: Presence<AuthoredInputDeclaration> = .absent,
     `itemSchema`: Presence<AuthoredInputDeclaration> = .absent,
     `labels`: Presence<AuthoredLabels> = .absent, `name`: Presence<String> = .absent,
@@ -332,7 +332,7 @@ public struct AnnotateQuestionTag: JSONRepresentable {
     self.`threshold` = `threshold`
     self.`wordingVersion` = `wordingVersion`
   }
-  static func read(_ json: JSONValue) throws -> AnnotateQuestionTag {
+  static func read(_ json: DataValue) throws -> AnnotateQuestionTag {
     let object = try jsonObject(json)
     let known: Set<String> = [
       "context_schema", "item_schema", "labels", "name", "on", "tag", "threshold",
@@ -351,7 +351,7 @@ public struct AnnotateQuestionTag: JSONRepresentable {
     value._sourceJSON = json
     return value
   }
-  var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = [
       "context_schema", "item_schema", "labels", "name", "on", "tag", "threshold",
@@ -369,9 +369,9 @@ public struct AnnotateQuestionTag: JSONRepresentable {
     return .object(object)
   }
 }
-public struct AuthoredChoose: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
+public struct AuthoredChoose: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
   public let `batch`: Presence<AuthoredChooseBatch>
   public let `choose`: AuthoredQuestionText
   public let `contextSchema`: Presence<AuthoredInputDeclaration>
@@ -384,7 +384,7 @@ public struct AuthoredChoose: JSONRepresentable {
   public let `threshold`: Presence<AuthoredCut>
   public let `wordingVersion`: Presence<Int64>
   public init(
-    extensions: [String: JSONValue] = [:], `batch`: Presence<AuthoredChooseBatch> = .absent,
+    extensions: [String: DataValue] = [:], `batch`: Presence<AuthoredChooseBatch> = .absent,
     `choose`: AuthoredQuestionText, `contextSchema`: Presence<AuthoredInputDeclaration> = .absent,
     `itemSchema`: Presence<AuthoredInputDeclaration> = .absent,
     `model`: Presence<AuthoredName> = .absent, `name`: Presence<String> = .absent,
@@ -405,7 +405,7 @@ public struct AuthoredChoose: JSONRepresentable {
     self.`threshold` = `threshold`
     self.`wordingVersion` = `wordingVersion`
   }
-  static func read(_ json: JSONValue) throws -> AuthoredChoose {
+  static func read(_ json: DataValue) throws -> AuthoredChoose {
     let object = try jsonObject(json)
     let known: Set<String> = [
       "batch", "choose", "context_schema", "item_schema", "model", "name", "on", "options",
@@ -427,7 +427,7 @@ public struct AuthoredChoose: JSONRepresentable {
     value._sourceJSON = json
     return value
   }
-  var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = [
       "batch", "choose", "context_schema", "item_schema", "model", "name", "on", "options",
@@ -448,34 +448,34 @@ public struct AuthoredChoose: JSONRepresentable {
     return .object(object)
   }
 }
-public indirect enum AuthoredChooseBatch: JSONRepresentable {
+public indirect enum AuthoredChooseBatch: ValueRepresentable {
   case `max`(String)
   case `integer`(Int64)
-  static func read(_ json: JSONValue) throws -> AuthoredChooseBatch {
+  static func read(_ json: DataValue) throws -> AuthoredChooseBatch {
     if let value = try? String.read(json) { return .`max`(value) }
     if let value = try? Int64.read(json) { return .`integer`(value) }
-    throw JSONConversionError("Unknown AuthoredChooseBatch value")
+    throw ValueConversionError("Unknown AuthoredChooseBatch value")
   }
-  var json: JSONValue {
+  var json: DataValue {
     switch self {
     case .`max`(let value): return value.json
     case .`integer`(let value): return value.json
     }
   }
 }
-public indirect enum AuthoredCriterion: JSONRepresentable {
+public indirect enum AuthoredCriterion: ValueRepresentable {
   case `string`(String)
-  case `object`([String: JSONValue])
-  case `list`([JSONValue])
+  case `object`([String: DataValue])
+  case `list`([DataValue])
   case `null`
-  static func read(_ json: JSONValue) throws -> AuthoredCriterion {
+  static func read(_ json: DataValue) throws -> AuthoredCriterion {
     if let value = try? String.read(json) { return .`string`(value) }
-    if let value = try? [String: JSONValue].read(json) { return .`object`(value) }
-    if let value = try? [JSONValue].read(json) { return .`list`(value) }
+    if let value = try? [String: DataValue].read(json) { return .`object`(value) }
+    if let value = try? [DataValue].read(json) { return .`list`(value) }
     if json == .null { return .`null` }
-    throw JSONConversionError("Unknown AuthoredCriterion value")
+    throw ValueConversionError("Unknown AuthoredCriterion value")
   }
-  var json: JSONValue {
+  var json: DataValue {
     switch self {
     case .`string`(let value): return value.json
     case .`object`(let value): return value.json
@@ -484,24 +484,24 @@ public indirect enum AuthoredCriterion: JSONRepresentable {
     }
   }
 }
-public indirect enum AuthoredCut: JSONRepresentable {
+public indirect enum AuthoredCut: ValueRepresentable {
   case `number`(Double)
   case `string`(String)
-  static func read(_ json: JSONValue) throws -> AuthoredCut {
+  static func read(_ json: DataValue) throws -> AuthoredCut {
     if let value = try? Double.read(json) { return .`number`(value) }
     if let value = try? String.read(json) { return .`string`(value) }
-    throw JSONConversionError("Unknown AuthoredCut value")
+    throw ValueConversionError("Unknown AuthoredCut value")
   }
-  var json: JSONValue {
+  var json: DataValue {
     switch self {
     case .`number`(let value): return value.json
     case .`string`(let value): return value.json
     }
   }
 }
-public struct AuthoredDecide: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
+public struct AuthoredDecide: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
   public let `batch`: Presence<AuthoredDecideBatch>
   public let `contextSchema`: Presence<AuthoredInputDeclaration>
   public let `decide`: AuthoredQuestionText
@@ -515,7 +515,7 @@ public struct AuthoredDecide: JSONRepresentable {
   public let `true`: Presence<AuthoredCriterion>
   public let `wordingVersion`: Presence<Int64>
   public init(
-    extensions: [String: JSONValue] = [:], `batch`: Presence<AuthoredDecideBatch> = .absent,
+    extensions: [String: DataValue] = [:], `batch`: Presence<AuthoredDecideBatch> = .absent,
     `contextSchema`: Presence<AuthoredInputDeclaration> = .absent, `decide`: AuthoredQuestionText,
     `false`: Presence<AuthoredCriterion> = .absent,
     `itemSchema`: Presence<AuthoredInputDeclaration> = .absent,
@@ -538,7 +538,7 @@ public struct AuthoredDecide: JSONRepresentable {
     self.`true` = `true`
     self.`wordingVersion` = `wordingVersion`
   }
-  static func read(_ json: JSONValue) throws -> AuthoredDecide {
+  static func read(_ json: DataValue) throws -> AuthoredDecide {
     let object = try jsonObject(json)
     let known: Set<String> = [
       "batch", "context_schema", "decide", "false", "item_schema", "model", "name", "on", "profile",
@@ -561,7 +561,7 @@ public struct AuthoredDecide: JSONRepresentable {
     value._sourceJSON = json
     return value
   }
-  var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = [
       "batch", "context_schema", "decide", "false", "item_schema", "model", "name", "on", "profile",
@@ -583,34 +583,34 @@ public struct AuthoredDecide: JSONRepresentable {
     return .object(object)
   }
 }
-public indirect enum AuthoredDecideBatch: JSONRepresentable {
+public indirect enum AuthoredDecideBatch: ValueRepresentable {
   case `max`(String)
   case `integer`(Int64)
-  static func read(_ json: JSONValue) throws -> AuthoredDecideBatch {
+  static func read(_ json: DataValue) throws -> AuthoredDecideBatch {
     if let value = try? String.read(json) { return .`max`(value) }
     if let value = try? Int64.read(json) { return .`integer`(value) }
-    throw JSONConversionError("Unknown AuthoredDecideBatch value")
+    throw ValueConversionError("Unknown AuthoredDecideBatch value")
   }
-  var json: JSONValue {
+  var json: DataValue {
     switch self {
     case .`max`(let value): return value.json
     case .`integer`(let value): return value.json
     }
   }
 }
-public indirect enum AuthoredDescription: JSONRepresentable {
+public indirect enum AuthoredDescription: ValueRepresentable {
   case `string`(String)
-  case `object`([String: JSONValue])
-  case `list`([JSONValue])
+  case `object`([String: DataValue])
+  case `list`([DataValue])
   case `null`
-  static func read(_ json: JSONValue) throws -> AuthoredDescription {
+  static func read(_ json: DataValue) throws -> AuthoredDescription {
     if let value = try? String.read(json) { return .`string`(value) }
-    if let value = try? [String: JSONValue].read(json) { return .`object`(value) }
-    if let value = try? [JSONValue].read(json) { return .`list`(value) }
+    if let value = try? [String: DataValue].read(json) { return .`object`(value) }
+    if let value = try? [DataValue].read(json) { return .`list`(value) }
     if json == .null { return .`null` }
-    throw JSONConversionError("Unknown AuthoredDescription value")
+    throw ValueConversionError("Unknown AuthoredDescription value")
   }
-  var json: JSONValue {
+  var json: DataValue {
     switch self {
     case .`string`(let value): return value.json
     case .`object`(let value): return value.json
@@ -619,9 +619,9 @@ public indirect enum AuthoredDescription: JSONRepresentable {
     }
   }
 }
-public struct AuthoredFind: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
+public struct AuthoredFind: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
   public let `contextSchema`: Presence<AuthoredInputDeclaration>
   public let `find`: AuthoredQuestionText
   public let `itemSchema`: Presence<AuthoredInputDeclaration>
@@ -631,7 +631,7 @@ public struct AuthoredFind: JSONRepresentable {
   public let `profile`: Presence<AuthoredProfile>
   public let `wordingVersion`: Presence<Int64>
   public init(
-    extensions: [String: JSONValue] = [:],
+    extensions: [String: DataValue] = [:],
     `contextSchema`: Presence<AuthoredInputDeclaration> = .absent, `find`: AuthoredQuestionText,
     `itemSchema`: Presence<AuthoredInputDeclaration> = .absent,
     `model`: Presence<AuthoredName> = .absent, `name`: Presence<String> = .absent,
@@ -648,7 +648,7 @@ public struct AuthoredFind: JSONRepresentable {
     self.`profile` = `profile`
     self.`wordingVersion` = `wordingVersion`
   }
-  static func read(_ json: JSONValue) throws -> AuthoredFind {
+  static func read(_ json: DataValue) throws -> AuthoredFind {
     let object = try jsonObject(json)
     let known: Set<String> = [
       "context_schema", "find", "item_schema", "model", "name", "on", "profile", "wording_version",
@@ -666,7 +666,7 @@ public struct AuthoredFind: JSONRepresentable {
     value._sourceJSON = json
     return value
   }
-  var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = [
       "context_schema", "find", "item_schema", "model", "name", "on", "profile", "wording_version",
@@ -683,10 +683,10 @@ public struct AuthoredFind: JSONRepresentable {
     return .object(object)
   }
 }
-public indirect enum AuthoredInputDeclaration: JSONRepresentable {
+public indirect enum AuthoredInputDeclaration: ValueRepresentable {
   case `string`(AuthoredInputDeclarationString)
   case `object`(AuthoredInputDeclarationObject)
-  static func read(_ json: JSONValue) throws -> AuthoredInputDeclaration {
+  static func read(_ json: DataValue) throws -> AuthoredInputDeclaration {
     let object = try jsonObject(json)
     if object["type"] == .string("string") {
       return .`string`(try AuthoredInputDeclarationString.read(json))
@@ -694,23 +694,23 @@ public indirect enum AuthoredInputDeclaration: JSONRepresentable {
     if object["type"] == .string("object") {
       return .`object`(try AuthoredInputDeclarationObject.read(json))
     }
-    throw JSONConversionError("Unknown AuthoredInputDeclaration alternative")
+    throw ValueConversionError("Unknown AuthoredInputDeclaration alternative")
   }
-  var json: JSONValue {
+  var json: DataValue {
     switch self {
     case .`string`(let value): return value.json
     case .`object`(let value): return value.json
     }
   }
 }
-public struct AuthoredInputDeclarationObject: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
+public struct AuthoredInputDeclarationObject: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
   public let `properties`: [String: AuthoredInputProperty]
   public let `required`: Presence<[String]>
   public let `type`: String
   public init(
-    extensions: [String: JSONValue] = [:], `properties`: [String: AuthoredInputProperty],
+    extensions: [String: DataValue] = [:], `properties`: [String: AuthoredInputProperty],
     `required`: Presence<[String]> = .absent, `type`: String = "object"
   ) {
     self.extensions = extensions
@@ -718,7 +718,7 @@ public struct AuthoredInputDeclarationObject: JSONRepresentable {
     self.`required` = `required`
     self.`type` = `type`
   }
-  static func read(_ json: JSONValue) throws -> AuthoredInputDeclarationObject {
+  static func read(_ json: DataValue) throws -> AuthoredInputDeclarationObject {
     let object = try jsonObject(json)
     let known: Set<String> = ["properties", "required", "type"]
     var value = Self(
@@ -729,7 +729,7 @@ public struct AuthoredInputDeclarationObject: JSONRepresentable {
     value._sourceJSON = json
     return value
   }
-  var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = ["properties", "required", "type"]
     var object = extensions.filter { !known.contains($0.key) }
@@ -739,15 +739,15 @@ public struct AuthoredInputDeclarationObject: JSONRepresentable {
     return .object(object)
   }
 }
-public struct AuthoredInputDeclarationString: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
+public struct AuthoredInputDeclarationString: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
   public let `type`: String
-  public init(extensions: [String: JSONValue] = [:], `type`: String = "string") {
+  public init(extensions: [String: DataValue] = [:], `type`: String = "string") {
     self.extensions = extensions
     self.`type` = `type`
   }
-  static func read(_ json: JSONValue) throws -> AuthoredInputDeclarationString {
+  static func read(_ json: DataValue) throws -> AuthoredInputDeclarationString {
     let object = try jsonObject(json)
     let known: Set<String> = ["type"]
     var value = Self(
@@ -756,7 +756,7 @@ public struct AuthoredInputDeclarationString: JSONRepresentable {
     value._sourceJSON = json
     return value
   }
-  var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = ["type"]
     var object = extensions.filter { !known.contains($0.key) }
@@ -764,12 +764,12 @@ public struct AuthoredInputDeclarationString: JSONRepresentable {
     return .object(object)
   }
 }
-public indirect enum AuthoredInputProperty: JSONRepresentable {
+public indirect enum AuthoredInputProperty: ValueRepresentable {
   case `string`(AuthoredInputPropertyString)
   case `number`(AuthoredInputPropertyNumber)
   case `boolean`(AuthoredInputPropertyBoolean)
   case `array`(AuthoredInputPropertyArray)
-  static func read(_ json: JSONValue) throws -> AuthoredInputProperty {
+  static func read(_ json: DataValue) throws -> AuthoredInputProperty {
     let object = try jsonObject(json)
     if object["type"] == .string("string") {
       return .`string`(try AuthoredInputPropertyString.read(json))
@@ -783,9 +783,9 @@ public indirect enum AuthoredInputProperty: JSONRepresentable {
     if object["type"] == .string("array") {
       return .`array`(try AuthoredInputPropertyArray.read(json))
     }
-    throw JSONConversionError("Unknown AuthoredInputProperty alternative")
+    throw ValueConversionError("Unknown AuthoredInputProperty alternative")
   }
-  var json: JSONValue {
+  var json: DataValue {
     switch self {
     case .`string`(let value): return value.json
     case .`number`(let value): return value.json
@@ -794,20 +794,20 @@ public indirect enum AuthoredInputProperty: JSONRepresentable {
     }
   }
 }
-public struct AuthoredInputPropertyArray: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
+public struct AuthoredInputPropertyArray: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
   public let `items`: AuthoredInputPropertyArrayItems
   public let `type`: String
   public init(
-    extensions: [String: JSONValue] = [:], `items`: AuthoredInputPropertyArrayItems,
+    extensions: [String: DataValue] = [:], `items`: AuthoredInputPropertyArrayItems,
     `type`: String = "array"
   ) {
     self.extensions = extensions
     self.`items` = `items`
     self.`type` = `type`
   }
-  static func read(_ json: JSONValue) throws -> AuthoredInputPropertyArray {
+  static func read(_ json: DataValue) throws -> AuthoredInputPropertyArray {
     let object = try jsonObject(json)
     let known: Set<String> = ["items", "type"]
     var value = Self(
@@ -817,7 +817,7 @@ public struct AuthoredInputPropertyArray: JSONRepresentable {
     value._sourceJSON = json
     return value
   }
-  var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = ["items", "type"]
     var object = extensions.filter { !known.contains($0.key) }
@@ -826,15 +826,15 @@ public struct AuthoredInputPropertyArray: JSONRepresentable {
     return .object(object)
   }
 }
-public struct AuthoredInputPropertyArrayItems: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
+public struct AuthoredInputPropertyArrayItems: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
   public let `type`: String
-  public init(extensions: [String: JSONValue] = [:], `type`: String = "string") {
+  public init(extensions: [String: DataValue] = [:], `type`: String = "string") {
     self.extensions = extensions
     self.`type` = `type`
   }
-  static func read(_ json: JSONValue) throws -> AuthoredInputPropertyArrayItems {
+  static func read(_ json: DataValue) throws -> AuthoredInputPropertyArrayItems {
     let object = try jsonObject(json)
     let known: Set<String> = ["type"]
     var value = Self(
@@ -843,7 +843,7 @@ public struct AuthoredInputPropertyArrayItems: JSONRepresentable {
     value._sourceJSON = json
     return value
   }
-  var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = ["type"]
     var object = extensions.filter { !known.contains($0.key) }
@@ -851,15 +851,15 @@ public struct AuthoredInputPropertyArrayItems: JSONRepresentable {
     return .object(object)
   }
 }
-public struct AuthoredInputPropertyBoolean: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
+public struct AuthoredInputPropertyBoolean: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
   public let `type`: String
-  public init(extensions: [String: JSONValue] = [:], `type`: String = "boolean") {
+  public init(extensions: [String: DataValue] = [:], `type`: String = "boolean") {
     self.extensions = extensions
     self.`type` = `type`
   }
-  static func read(_ json: JSONValue) throws -> AuthoredInputPropertyBoolean {
+  static func read(_ json: DataValue) throws -> AuthoredInputPropertyBoolean {
     let object = try jsonObject(json)
     let known: Set<String> = ["type"]
     var value = Self(
@@ -868,7 +868,7 @@ public struct AuthoredInputPropertyBoolean: JSONRepresentable {
     value._sourceJSON = json
     return value
   }
-  var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = ["type"]
     var object = extensions.filter { !known.contains($0.key) }
@@ -876,15 +876,15 @@ public struct AuthoredInputPropertyBoolean: JSONRepresentable {
     return .object(object)
   }
 }
-public struct AuthoredInputPropertyNumber: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
+public struct AuthoredInputPropertyNumber: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
   public let `type`: String
-  public init(extensions: [String: JSONValue] = [:], `type`: String = "number") {
+  public init(extensions: [String: DataValue] = [:], `type`: String = "number") {
     self.extensions = extensions
     self.`type` = `type`
   }
-  static func read(_ json: JSONValue) throws -> AuthoredInputPropertyNumber {
+  static func read(_ json: DataValue) throws -> AuthoredInputPropertyNumber {
     let object = try jsonObject(json)
     let known: Set<String> = ["type"]
     var value = Self(
@@ -893,7 +893,7 @@ public struct AuthoredInputPropertyNumber: JSONRepresentable {
     value._sourceJSON = json
     return value
   }
-  var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = ["type"]
     var object = extensions.filter { !known.contains($0.key) }
@@ -901,15 +901,15 @@ public struct AuthoredInputPropertyNumber: JSONRepresentable {
     return .object(object)
   }
 }
-public struct AuthoredInputPropertyString: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
+public struct AuthoredInputPropertyString: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
   public let `type`: String
-  public init(extensions: [String: JSONValue] = [:], `type`: String = "string") {
+  public init(extensions: [String: DataValue] = [:], `type`: String = "string") {
     self.extensions = extensions
     self.`type` = `type`
   }
-  static func read(_ json: JSONValue) throws -> AuthoredInputPropertyString {
+  static func read(_ json: DataValue) throws -> AuthoredInputPropertyString {
     let object = try jsonObject(json)
     let known: Set<String> = ["type"]
     var value = Self(
@@ -918,7 +918,7 @@ public struct AuthoredInputPropertyString: JSONRepresentable {
     value._sourceJSON = json
     return value
   }
-  var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = ["type"]
     var object = extensions.filter { !known.contains($0.key) }
@@ -926,30 +926,30 @@ public struct AuthoredInputPropertyString: JSONRepresentable {
     return .object(object)
   }
 }
-public indirect enum AuthoredLabels: JSONRepresentable {
+public indirect enum AuthoredLabels: ValueRepresentable {
   case `list`([AuthoredName])
   case `object`([String: AuthoredDescription])
-  static func read(_ json: JSONValue) throws -> AuthoredLabels {
+  static func read(_ json: DataValue) throws -> AuthoredLabels {
     if let value = try? [AuthoredName].read(json) { return .`list`(value) }
     if let value = try? [String: AuthoredDescription].read(json) { return .`object`(value) }
-    throw JSONConversionError("Unknown AuthoredLabels value")
+    throw ValueConversionError("Unknown AuthoredLabels value")
   }
-  var json: JSONValue {
+  var json: DataValue {
     switch self {
     case .`list`(let value): return value.json
     case .`object`(let value): return value.json
     }
   }
 }
-public indirect enum AuthoredLevels: JSONRepresentable {
+public indirect enum AuthoredLevels: ValueRepresentable {
   case `list`([AuthoredName])
   case `object`([String: AuthoredCriterion])
-  static func read(_ json: JSONValue) throws -> AuthoredLevels {
+  static func read(_ json: DataValue) throws -> AuthoredLevels {
     if let value = try? [AuthoredName].read(json) { return .`list`(value) }
     if let value = try? [String: AuthoredCriterion].read(json) { return .`object`(value) }
-    throw JSONConversionError("Unknown AuthoredLevels value")
+    throw ValueConversionError("Unknown AuthoredLevels value")
   }
-  var json: JSONValue {
+  var json: DataValue {
     switch self {
     case .`list`(let value): return value.json
     case .`object`(let value): return value.json
@@ -957,30 +957,30 @@ public indirect enum AuthoredLevels: JSONRepresentable {
   }
 }
 public typealias AuthoredName = String
-public indirect enum AuthoredOptions: JSONRepresentable {
+public indirect enum AuthoredOptions: ValueRepresentable {
   case `list`([AuthoredName])
   case `object`(OrderedMap<AuthoredDescription>)
-  static func read(_ json: JSONValue) throws -> AuthoredOptions {
+  static func read(_ json: DataValue) throws -> AuthoredOptions {
     if let value = try? [AuthoredName].read(json) { return .`list`(value) }
     if let value = try? OrderedMap<AuthoredDescription>.read(json) { return .`object`(value) }
-    throw JSONConversionError("Unknown AuthoredOptions value")
+    throw ValueConversionError("Unknown AuthoredOptions value")
   }
-  var json: JSONValue {
+  var json: DataValue {
     switch self {
     case .`list`(let value): return value.json
     case .`object`(let value): return value.json
     }
   }
 }
-public indirect enum AuthoredPointers: JSONRepresentable {
+public indirect enum AuthoredPointers: ValueRepresentable {
   case `string`(String)
   case `list`([String])
-  static func read(_ json: JSONValue) throws -> AuthoredPointers {
+  static func read(_ json: DataValue) throws -> AuthoredPointers {
     if let value = try? String.read(json) { return .`string`(value) }
     if let value = try? [String].read(json) { return .`list`(value) }
-    throw JSONConversionError("Unknown AuthoredPointers value")
+    throw ValueConversionError("Unknown AuthoredPointers value")
   }
-  var json: JSONValue {
+  var json: DataValue {
     switch self {
     case .`string`(let value): return value.json
     case .`list`(let value): return value.json
@@ -988,17 +988,17 @@ public indirect enum AuthoredPointers: JSONRepresentable {
   }
 }
 public typealias AuthoredProfile = String
-public indirect enum AuthoredQuestionText: JSONRepresentable {
+public indirect enum AuthoredQuestionText: ValueRepresentable {
   case `string`(String)
-  case `object`([String: JSONValue])
-  case `list`([JSONValue])
-  static func read(_ json: JSONValue) throws -> AuthoredQuestionText {
+  case `object`([String: DataValue])
+  case `list`([DataValue])
+  static func read(_ json: DataValue) throws -> AuthoredQuestionText {
     if let value = try? String.read(json) { return .`string`(value) }
-    if let value = try? [String: JSONValue].read(json) { return .`object`(value) }
-    if let value = try? [JSONValue].read(json) { return .`list`(value) }
-    throw JSONConversionError("Unknown AuthoredQuestionText value")
+    if let value = try? [String: DataValue].read(json) { return .`object`(value) }
+    if let value = try? [DataValue].read(json) { return .`list`(value) }
+    throw ValueConversionError("Unknown AuthoredQuestionText value")
   }
-  var json: JSONValue {
+  var json: DataValue {
     switch self {
     case .`string`(let value): return value.json
     case .`object`(let value): return value.json
@@ -1006,9 +1006,9 @@ public indirect enum AuthoredQuestionText: JSONRepresentable {
     }
   }
 }
-public struct AuthoredRelate: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
+public struct AuthoredRelate: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
   public let `contextSchema`: Presence<AuthoredInputDeclaration>
   public let `itemSchema`: Presence<AuthoredInputDeclaration>
   public let `model`: Presence<AuthoredName>
@@ -1019,7 +1019,7 @@ public struct AuthoredRelate: JSONRepresentable {
   public let `version`: Int64
   public let `wordingVersion`: Presence<Int64>
   public init(
-    extensions: [String: JSONValue] = [:],
+    extensions: [String: DataValue] = [:],
     `contextSchema`: Presence<AuthoredInputDeclaration> = .absent,
     `itemSchema`: Presence<AuthoredInputDeclaration> = .absent,
     `model`: Presence<AuthoredName> = .absent, `name`: Presence<String> = .absent,
@@ -1038,7 +1038,7 @@ public struct AuthoredRelate: JSONRepresentable {
     self.`version` = `version`
     self.`wordingVersion` = `wordingVersion`
   }
-  static func read(_ json: JSONValue) throws -> AuthoredRelate {
+  static func read(_ json: DataValue) throws -> AuthoredRelate {
     let object = try jsonObject(json)
     let known: Set<String> = [
       "context_schema", "item_schema", "model", "name", "profile", "relate", "threshold", "version",
@@ -1058,7 +1058,7 @@ public struct AuthoredRelate: JSONRepresentable {
     value._sourceJSON = json
     return value
   }
-  var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = [
       "context_schema", "item_schema", "model", "name", "profile", "relate", "threshold", "version",
@@ -1077,9 +1077,9 @@ public struct AuthoredRelate: JSONRepresentable {
     return .object(object)
   }
 }
-public struct AuthoredRelation: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
+public struct AuthoredRelation: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
   public let `either`: Presence<Bool>
   public let `name`: AuthoredName
   public let `reads`: Presence<AuthoredName>
@@ -1087,7 +1087,7 @@ public struct AuthoredRelation: JSONRepresentable {
   public let `source`: Presence<AuthoredName>
   public let `target`: Presence<AuthoredName>
   public init(
-    extensions: [String: JSONValue] = [:], `either`: Presence<Bool> = .absent, `name`: AuthoredName,
+    extensions: [String: DataValue] = [:], `either`: Presence<Bool> = .absent, `name`: AuthoredName,
     `reads`: Presence<AuthoredName> = .absent, `single`: Presence<Bool> = .absent,
     `source`: Presence<AuthoredName> = .absent, `target`: Presence<AuthoredName> = .absent
   ) {
@@ -1099,7 +1099,7 @@ public struct AuthoredRelation: JSONRepresentable {
     self.`source` = `source`
     self.`target` = `target`
   }
-  static func read(_ json: JSONValue) throws -> AuthoredRelation {
+  static func read(_ json: DataValue) throws -> AuthoredRelation {
     let object = try jsonObject(json)
     let known: Set<String> = ["either", "name", "reads", "single", "source", "target"]
     var value = Self(
@@ -1113,7 +1113,7 @@ public struct AuthoredRelation: JSONRepresentable {
     value._sourceJSON = json
     return value
   }
-  var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = ["either", "name", "reads", "single", "source", "target"]
     var object = extensions.filter { !known.contains($0.key) }
@@ -1126,9 +1126,9 @@ public struct AuthoredRelation: JSONRepresentable {
     return .object(object)
   }
 }
-public struct AuthoredScore: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
+public struct AuthoredScore: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
   public let `batch`: Presence<AuthoredScoreBatch>
   public let `contextSchema`: Presence<AuthoredInputDeclaration>
   public let `itemSchema`: Presence<AuthoredInputDeclaration>
@@ -1140,7 +1140,7 @@ public struct AuthoredScore: JSONRepresentable {
   public let `score`: AuthoredQuestionText
   public let `wordingVersion`: Presence<Int64>
   public init(
-    extensions: [String: JSONValue] = [:], `batch`: Presence<AuthoredScoreBatch> = .absent,
+    extensions: [String: DataValue] = [:], `batch`: Presence<AuthoredScoreBatch> = .absent,
     `contextSchema`: Presence<AuthoredInputDeclaration> = .absent,
     `itemSchema`: Presence<AuthoredInputDeclaration> = .absent,
     `levels`: Presence<AuthoredLevels> = .absent, `model`: Presence<AuthoredName> = .absent,
@@ -1160,7 +1160,7 @@ public struct AuthoredScore: JSONRepresentable {
     self.`score` = `score`
     self.`wordingVersion` = `wordingVersion`
   }
-  static func read(_ json: JSONValue) throws -> AuthoredScore {
+  static func read(_ json: DataValue) throws -> AuthoredScore {
     let object = try jsonObject(json)
     let known: Set<String> = [
       "batch", "context_schema", "item_schema", "levels", "model", "name", "on", "profile", "score",
@@ -1181,7 +1181,7 @@ public struct AuthoredScore: JSONRepresentable {
     value._sourceJSON = json
     return value
   }
-  var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = [
       "batch", "context_schema", "item_schema", "levels", "model", "name", "on", "profile", "score",
@@ -1201,24 +1201,24 @@ public struct AuthoredScore: JSONRepresentable {
     return .object(object)
   }
 }
-public indirect enum AuthoredScoreBatch: JSONRepresentable {
+public indirect enum AuthoredScoreBatch: ValueRepresentable {
   case `max`(String)
   case `integer`(Int64)
-  static func read(_ json: JSONValue) throws -> AuthoredScoreBatch {
+  static func read(_ json: DataValue) throws -> AuthoredScoreBatch {
     if let value = try? String.read(json) { return .`max`(value) }
     if let value = try? Int64.read(json) { return .`integer`(value) }
-    throw JSONConversionError("Unknown AuthoredScoreBatch value")
+    throw ValueConversionError("Unknown AuthoredScoreBatch value")
   }
-  var json: JSONValue {
+  var json: DataValue {
     switch self {
     case .`max`(let value): return value.json
     case .`integer`(let value): return value.json
     }
   }
 }
-public struct AuthoredTag: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
+public struct AuthoredTag: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
   public let `batch`: Presence<AuthoredTagBatch>
   public let `contextSchema`: Presence<AuthoredInputDeclaration>
   public let `itemSchema`: Presence<AuthoredInputDeclaration>
@@ -1231,7 +1231,7 @@ public struct AuthoredTag: JSONRepresentable {
   public let `threshold`: Presence<AuthoredCut>
   public let `wordingVersion`: Presence<Int64>
   public init(
-    extensions: [String: JSONValue] = [:], `batch`: Presence<AuthoredTagBatch> = .absent,
+    extensions: [String: DataValue] = [:], `batch`: Presence<AuthoredTagBatch> = .absent,
     `contextSchema`: Presence<AuthoredInputDeclaration> = .absent,
     `itemSchema`: Presence<AuthoredInputDeclaration> = .absent,
     `labels`: Presence<AuthoredLabels> = .absent, `model`: Presence<AuthoredName> = .absent,
@@ -1252,7 +1252,7 @@ public struct AuthoredTag: JSONRepresentable {
     self.`threshold` = `threshold`
     self.`wordingVersion` = `wordingVersion`
   }
-  static func read(_ json: JSONValue) throws -> AuthoredTag {
+  static func read(_ json: DataValue) throws -> AuthoredTag {
     let object = try jsonObject(json)
     let known: Set<String> = [
       "batch", "context_schema", "item_schema", "labels", "model", "name", "on", "profile", "tag",
@@ -1274,7 +1274,7 @@ public struct AuthoredTag: JSONRepresentable {
     value._sourceJSON = json
     return value
   }
-  var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = [
       "batch", "context_schema", "item_schema", "labels", "model", "name", "on", "profile", "tag",
@@ -1295,60 +1295,60 @@ public struct AuthoredTag: JSONRepresentable {
     return .object(object)
   }
 }
-public indirect enum AuthoredTagBatch: JSONRepresentable {
+public indirect enum AuthoredTagBatch: ValueRepresentable {
   case `max`(String)
   case `integer`(Int64)
-  static func read(_ json: JSONValue) throws -> AuthoredTagBatch {
+  static func read(_ json: DataValue) throws -> AuthoredTagBatch {
     if let value = try? String.read(json) { return .`max`(value) }
     if let value = try? Int64.read(json) { return .`integer`(value) }
-    throw JSONConversionError("Unknown AuthoredTagBatch value")
+    throw ValueConversionError("Unknown AuthoredTagBatch value")
   }
-  var json: JSONValue {
+  var json: DataValue {
     switch self {
     case .`max`(let value): return value.json
     case .`integer`(let value): return value.json
     }
   }
 }
-public indirect enum AuthoredThreshold: JSONRepresentable {
+public indirect enum AuthoredThreshold: ValueRepresentable {
   case `number`(Double)
   case `string`(String)
-  static func read(_ json: JSONValue) throws -> AuthoredThreshold {
+  static func read(_ json: DataValue) throws -> AuthoredThreshold {
     if let value = try? Double.read(json) { return .`number`(value) }
     if let value = try? String.read(json) { return .`string`(value) }
-    throw JSONConversionError("Unknown AuthoredThreshold value")
+    throw ValueConversionError("Unknown AuthoredThreshold value")
   }
-  var json: JSONValue {
+  var json: DataValue {
     switch self {
     case .`number`(let value): return value.json
     case .`string`(let value): return value.json
     }
   }
 }
-public indirect enum CacheDocument: JSONRepresentable {
+public indirect enum CacheDocument: ValueRepresentable {
   case `string`(String)
   case `disabledCache`(DisabledCache)
-  static func read(_ json: JSONValue) throws -> CacheDocument {
+  static func read(_ json: DataValue) throws -> CacheDocument {
     if let value = try? String.read(json) { return .`string`(value) }
     if let value = try? DisabledCache.read(json) { return .`disabledCache`(value) }
-    throw JSONConversionError("Unknown CacheDocument value")
+    throw ValueConversionError("Unknown CacheDocument value")
   }
-  var json: JSONValue {
+  var json: DataValue {
     switch self {
     case .`string`(let value): return value.json
     case .`disabledCache`(let value): return value.json
     }
   }
 }
-public indirect enum ContextSchema: JSONRepresentable {
+public indirect enum ContextSchema: ValueRepresentable {
   case `string`(String)
-  case `object`([String: JSONValue])
-  static func read(_ json: JSONValue) throws -> ContextSchema {
+  case `object`([String: DataValue])
+  static func read(_ json: DataValue) throws -> ContextSchema {
     if let value = try? String.read(json) { return .`string`(value) }
-    if let value = try? [String: JSONValue].read(json) { return .`object`(value) }
-    throw JSONConversionError("Unknown ContextSchema value")
+    if let value = try? [String: DataValue].read(json) { return .`object`(value) }
+    throw ValueConversionError("Unknown ContextSchema value")
   }
-  var json: JSONValue {
+  var json: DataValue {
     switch self {
     case .`string`(let value): return value.json
     case .`object`(let value): return value.json
@@ -1356,9 +1356,9 @@ public indirect enum ContextSchema: JSONRepresentable {
   }
 }
 public typealias DisabledCache = Bool
-public struct EngineSettings: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
+public struct EngineSettings: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
   public let `backend`: Presence<String>
   public let `baseUrl`: Presence<String>
   public let `batch`: Presence<Batch>
@@ -1370,7 +1370,7 @@ public struct EngineSettings: JSONRepresentable {
   public let `maxRetries`: Presence<UInt64>
   public let `model`: Presence<String>
   public let `profile`: Presence<String>
-  public let `proxy`: Presence<JSONValue>
+  public let `proxy`: Presence<DataValue>
   public let `record`: Presence<String>
   public let `refreshCache`: Presence<Bool>
   public let `replay`: Presence<String>
@@ -1379,14 +1379,14 @@ public struct EngineSettings: JSONRepresentable {
   public let `usdPerMillionInput`: Presence<String>
   public let `usdPerMillionOutput`: Presence<String>
   public init(
-    extensions: [String: JSONValue] = [:], `backend`: Presence<String> = .absent,
+    extensions: [String: DataValue] = [:], `backend`: Presence<String> = .absent,
     `baseUrl`: Presence<String> = .absent, `batch`: Presence<Batch> = .absent,
     `cache`: Presence<CacheDocument> = .absent,
     `maxEstimatedInputTokensTotal`: Presence<UInt64?> = .absent,
     `maxRequestBytes`: Presence<UInt64> = .absent, `maxRequests`: Presence<UInt64?> = .absent,
     `maxRequestsTotal`: Presence<UInt64?> = .absent, `maxRetries`: Presence<UInt64> = .absent,
     `model`: Presence<String> = .absent, `profile`: Presence<String> = .absent,
-    `proxy`: Presence<JSONValue> = .absent, `record`: Presence<String> = .absent,
+    `proxy`: Presence<DataValue> = .absent, `record`: Presence<String> = .absent,
     `refreshCache`: Presence<Bool> = .absent, `replay`: Presence<String> = .absent,
     `throttle`: Presence<UInt64> = .absent, `timeout`: Presence<UInt64> = .absent,
     `usdPerMillionInput`: Presence<String> = .absent,
@@ -1413,7 +1413,7 @@ public struct EngineSettings: JSONRepresentable {
     self.`usdPerMillionInput` = `usdPerMillionInput`
     self.`usdPerMillionOutput` = `usdPerMillionOutput`
   }
-  static func read(_ json: JSONValue) throws -> EngineSettings {
+  static func read(_ json: DataValue) throws -> EngineSettings {
     let object = try jsonObject(json)
     let known: Set<String> = [
       "backend", "base_url", "batch", "cache", "max_estimated_input_tokens_total",
@@ -1435,7 +1435,7 @@ public struct EngineSettings: JSONRepresentable {
       maxRetries: try readPresence(object, "max_retries", UInt64.self),
       model: try readPresence(object, "model", String.self),
       profile: try readPresence(object, "profile", String.self),
-      proxy: try readPresence(object, "proxy", JSONValue.self),
+      proxy: try readPresence(object, "proxy", DataValue.self),
       record: try readPresence(object, "record", String.self),
       refreshCache: try readPresence(object, "refresh_cache", Bool.self),
       replay: try readPresence(object, "replay", String.self),
@@ -1446,7 +1446,7 @@ public struct EngineSettings: JSONRepresentable {
     value._sourceJSON = json
     return value
   }
-  var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = [
       "backend", "base_url", "batch", "cache", "max_estimated_input_tokens_total",
@@ -1477,48 +1477,48 @@ public struct EngineSettings: JSONRepresentable {
     return .object(object)
   }
 }
-public enum ImageMedia: JSONRepresentable {
+public enum ImageMedia: ValueRepresentable {
   case `imageJpeg`
   case `imagePng`
-  static func read(_ json: JSONValue) throws -> ImageMedia {
+  static func read(_ json: DataValue) throws -> ImageMedia {
     let value = try String.read(json)
     switch value {
     case "image/jpeg": return .`imageJpeg`
     case "image/png": return .`imagePng`
-    default: throw JSONConversionError("Unknown ImageMedia value")
+    default: throw ValueConversionError("Unknown ImageMedia value")
     }
   }
-  var json: JSONValue {
+  var json: DataValue {
     switch self {
     case .`imageJpeg`: return .string("image/jpeg")
     case .`imagePng`: return .string("image/png")
     }
   }
 }
-public struct OptionSchema: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
-  public let `description`: Presence<JSONValue>
+public struct OptionSchema: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
+  public let `description`: Presence<DataValue>
   public let `name`: String
   public init(
-    extensions: [String: JSONValue] = [:], `description`: Presence<JSONValue> = .absent,
+    extensions: [String: DataValue] = [:], `description`: Presence<DataValue> = .absent,
     `name`: String
   ) {
     self.extensions = extensions
     self.`description` = `description`
     self.`name` = `name`
   }
-  static func read(_ json: JSONValue) throws -> OptionSchema {
+  static func read(_ json: DataValue) throws -> OptionSchema {
     let object = try jsonObject(json)
     let known: Set<String> = ["description", "name"]
     var value = Self(
       extensions: object.filter { !known.contains($0.key) },
-      description: try readPresence(object, "description", JSONValue.self),
+      description: try readPresence(object, "description", DataValue.self),
       name: try String.read(jsonRequired(object, "name")))
     value._sourceJSON = json
     return value
   }
-  var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = ["description", "name"]
     var object = extensions.filter { !known.contains($0.key) }
@@ -1527,55 +1527,55 @@ public struct OptionSchema: JSONRepresentable {
     return .object(object)
   }
 }
-public enum ReaderMedia: JSONRepresentable {
+public enum ReaderMedia: ValueRepresentable {
   case `text`
   case `image`
-  static func read(_ json: JSONValue) throws -> ReaderMedia {
+  static func read(_ json: DataValue) throws -> ReaderMedia {
     let value = try String.read(json)
     switch value {
     case "text": return .`text`
     case "image": return .`image`
-    default: throw JSONConversionError("Unknown ReaderMedia value")
+    default: throw ValueConversionError("Unknown ReaderMedia value")
     }
   }
-  var json: JSONValue {
+  var json: DataValue {
     switch self {
     case .`text`: return .string("text")
     case .`image`: return .string("image")
     }
   }
 }
-public indirect enum RecognitionExample: JSONRepresentable {
+public indirect enum RecognitionExample: ValueRepresentable {
   case `string`(String)
   case `recognitionExampleText`(RecognitionExampleText)
-  static func read(_ json: JSONValue) throws -> RecognitionExample {
+  static func read(_ json: DataValue) throws -> RecognitionExample {
     if let value = try? String.read(json) { return .`string`(value) }
     if let value = try? RecognitionExampleText.read(json) {
       return .`recognitionExampleText`(value)
     }
-    throw JSONConversionError("Unknown RecognitionExample value")
+    throw ValueConversionError("Unknown RecognitionExample value")
   }
-  var json: JSONValue {
+  var json: DataValue {
     switch self {
     case .`string`(let value): return value.json
     case .`recognitionExampleText`(let value): return value.json
     }
   }
 }
-public struct RecognitionExampleEntity: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
+public struct RecognitionExampleEntity: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
   public let `end`: UInt64
   public let `kind`: String
   public let `start`: UInt64
-  public init(extensions: [String: JSONValue] = [:], `end`: UInt64, `kind`: String, `start`: UInt64)
+  public init(extensions: [String: DataValue] = [:], `end`: UInt64, `kind`: String, `start`: UInt64)
   {
     self.extensions = extensions
     self.`end` = `end`
     self.`kind` = `kind`
     self.`start` = `start`
   }
-  static func read(_ json: JSONValue) throws -> RecognitionExampleEntity {
+  static func read(_ json: DataValue) throws -> RecognitionExampleEntity {
     let object = try jsonObject(json)
     let known: Set<String> = ["end", "kind", "start"]
     var value = Self(
@@ -1586,7 +1586,7 @@ public struct RecognitionExampleEntity: JSONRepresentable {
     value._sourceJSON = json
     return value
   }
-  var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = ["end", "kind", "start"]
     var object = extensions.filter { !known.contains($0.key) }
@@ -1596,14 +1596,14 @@ public struct RecognitionExampleEntity: JSONRepresentable {
     return .object(object)
   }
 }
-public struct RecognitionExampleText: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
+public struct RecognitionExampleText: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
   public let `entities`: [RecognitionExampleEntity]
   public let `kinds`: Presence<[String]>
   public let `text`: String
   public init(
-    extensions: [String: JSONValue] = [:], `entities`: [RecognitionExampleEntity],
+    extensions: [String: DataValue] = [:], `entities`: [RecognitionExampleEntity],
     `kinds`: Presence<[String]> = .absent, `text`: String
   ) {
     self.extensions = extensions
@@ -1611,7 +1611,7 @@ public struct RecognitionExampleText: JSONRepresentable {
     self.`kinds` = `kinds`
     self.`text` = `text`
   }
-  static func read(_ json: JSONValue) throws -> RecognitionExampleText {
+  static func read(_ json: DataValue) throws -> RecognitionExampleText {
     let object = try jsonObject(json)
     let known: Set<String> = ["entities", "kinds", "text"]
     var value = Self(
@@ -1622,7 +1622,7 @@ public struct RecognitionExampleText: JSONRepresentable {
     value._sourceJSON = json
     return value
   }
-  var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = ["entities", "kinds", "text"]
     var object = extensions.filter { !known.contains($0.key) }
@@ -1632,32 +1632,32 @@ public struct RecognitionExampleText: JSONRepresentable {
     return .object(object)
   }
 }
-public enum RecognitionMode: JSONRepresentable {
+public enum RecognitionMode: ValueRepresentable {
   case `whole`
   case `boundaryOnly`
-  static func read(_ json: JSONValue) throws -> RecognitionMode {
+  static func read(_ json: DataValue) throws -> RecognitionMode {
     let value = try String.read(json)
     switch value {
     case "whole": return .`whole`
     case "boundary_only": return .`boundaryOnly`
-    default: throw JSONConversionError("Unknown RecognitionMode value")
+    default: throw ValueConversionError("Unknown RecognitionMode value")
     }
   }
-  var json: JSONValue {
+  var json: DataValue {
     switch self {
     case .`whole`: return .string("whole")
     case .`boundaryOnly`: return .string("boundary_only")
     }
   }
 }
-public struct RecognitionSeedSpan: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
+public struct RecognitionSeedSpan: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
   public let `end`: UInt64
   public let `kind`: Presence<String>
   public let `start`: UInt64
   public init(
-    extensions: [String: JSONValue] = [:], `end`: UInt64, `kind`: Presence<String> = .absent,
+    extensions: [String: DataValue] = [:], `end`: UInt64, `kind`: Presence<String> = .absent,
     `start`: UInt64
   ) {
     self.extensions = extensions
@@ -1665,7 +1665,7 @@ public struct RecognitionSeedSpan: JSONRepresentable {
     self.`kind` = `kind`
     self.`start` = `start`
   }
-  static func read(_ json: JSONValue) throws -> RecognitionSeedSpan {
+  static func read(_ json: DataValue) throws -> RecognitionSeedSpan {
     let object = try jsonObject(json)
     let known: Set<String> = ["end", "kind", "start"]
     var value = Self(
@@ -1676,7 +1676,7 @@ public struct RecognitionSeedSpan: JSONRepresentable {
     value._sourceJSON = json
     return value
   }
-  var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = ["end", "kind", "start"]
     var object = extensions.filter { !known.contains($0.key) }
@@ -1686,14 +1686,14 @@ public struct RecognitionSeedSpan: JSONRepresentable {
     return .object(object)
   }
 }
-public struct RecognitionStageContext: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
+public struct RecognitionStageContext: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
   public let `boundary`: Presence<String>
   public let `kindEdge`: Presence<String>
   public let `relation`: Presence<String>
   public init(
-    extensions: [String: JSONValue] = [:], `boundary`: Presence<String> = .absent,
+    extensions: [String: DataValue] = [:], `boundary`: Presence<String> = .absent,
     `kindEdge`: Presence<String> = .absent, `relation`: Presence<String> = .absent
   ) {
     self.extensions = extensions
@@ -1701,7 +1701,7 @@ public struct RecognitionStageContext: JSONRepresentable {
     self.`kindEdge` = `kindEdge`
     self.`relation` = `relation`
   }
-  static func read(_ json: JSONValue) throws -> RecognitionStageContext {
+  static func read(_ json: DataValue) throws -> RecognitionStageContext {
     let object = try jsonObject(json)
     let known: Set<String> = ["boundary", "kind_edge", "relation"]
     var value = Self(
@@ -1712,7 +1712,7 @@ public struct RecognitionStageContext: JSONRepresentable {
     value._sourceJSON = json
     return value
   }
-  var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = ["boundary", "kind_edge", "relation"]
     var object = extensions.filter { !known.contains($0.key) }
@@ -1722,9 +1722,9 @@ public struct RecognitionStageContext: JSONRepresentable {
     return .object(object)
   }
 }
-public struct RecognizeDefinition: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
+public struct RecognizeDefinition: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
   public let `contextSchema`: Presence<AuthoredInputDeclaration>
   public let `itemSchema`: Presence<AuthoredInputDeclaration>
   public let `model`: Presence<AuthoredName>
@@ -1737,7 +1737,7 @@ public struct RecognizeDefinition: JSONRepresentable {
   public let `version`: Int64
   public let `wordingVersion`: Presence<Int64>
   public init(
-    extensions: [String: JSONValue] = [:],
+    extensions: [String: DataValue] = [:],
     `contextSchema`: Presence<AuthoredInputDeclaration> = .absent,
     `itemSchema`: Presence<AuthoredInputDeclaration> = .absent,
     `model`: Presence<AuthoredName> = .absent, `name`: Presence<String> = .absent,
@@ -1759,7 +1759,7 @@ public struct RecognizeDefinition: JSONRepresentable {
     self.`version` = `version`
     self.`wordingVersion` = `wordingVersion`
   }
-  static func read(_ json: JSONValue) throws -> RecognizeDefinition {
+  static func read(_ json: DataValue) throws -> RecognizeDefinition {
     let object = try jsonObject(json)
     let known: Set<String> = [
       "context_schema", "item_schema", "model", "name", "on", "profile", "recognize",
@@ -1781,7 +1781,7 @@ public struct RecognizeDefinition: JSONRepresentable {
     value._sourceJSON = json
     return value
   }
-  var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = [
       "context_schema", "item_schema", "model", "name", "on", "profile", "recognize",
@@ -1802,9 +1802,9 @@ public struct RecognizeDefinition: JSONRepresentable {
     return .object(object)
   }
 }
-public struct RecognizeQuestion: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
+public struct RecognizeQuestion: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
   public let `entityDefinition`: Presence<AuthoredQuestionText>
   public let `instructions`: Presence<AuthoredQuestionText>
   public let `kinds`: Presence<OrderedMap<AuthoredDescription>>
@@ -1813,7 +1813,7 @@ public struct RecognizeQuestion: JSONRepresentable {
   public let `snippetPieces`: Presence<UInt64>
   public let `stageContext`: Presence<RecognitionStageContext>
   public init(
-    extensions: [String: JSONValue] = [:],
+    extensions: [String: DataValue] = [:],
     `entityDefinition`: Presence<AuthoredQuestionText> = .absent,
     `instructions`: Presence<AuthoredQuestionText> = .absent,
     `kinds`: Presence<OrderedMap<AuthoredDescription>> = .absent,
@@ -1831,7 +1831,7 @@ public struct RecognizeQuestion: JSONRepresentable {
     self.`snippetPieces` = `snippetPieces`
     self.`stageContext` = `stageContext`
   }
-  static func read(_ json: JSONValue) throws -> RecognizeQuestion {
+  static func read(_ json: DataValue) throws -> RecognizeQuestion {
     let object = try jsonObject(json)
     let known: Set<String> = [
       "entity_definition", "instructions", "kinds", "mode", "relations", "snippet_pieces",
@@ -1849,7 +1849,7 @@ public struct RecognizeQuestion: JSONRepresentable {
     value._sourceJSON = json
     return value
   }
-  var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = [
       "entity_definition", "instructions", "kinds", "mode", "relations", "snippet_pieces",
@@ -1866,17 +1866,17 @@ public struct RecognizeQuestion: JSONRepresentable {
     return .object(object)
   }
 }
-public struct RelateFields: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
+public struct RelateFields: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
   public let `kind`: String
   public let `name`: String
-  public init(extensions: [String: JSONValue] = [:], `kind`: String, `name`: String) {
+  public init(extensions: [String: DataValue] = [:], `kind`: String, `name`: String) {
     self.extensions = extensions
     self.`kind` = `kind`
     self.`name` = `name`
   }
-  static func read(_ json: JSONValue) throws -> RelateFields {
+  static func read(_ json: DataValue) throws -> RelateFields {
     let object = try jsonObject(json)
     let known: Set<String> = ["kind", "name"]
     var value = Self(
@@ -1886,7 +1886,7 @@ public struct RelateFields: JSONRepresentable {
     value._sourceJSON = json
     return value
   }
-  var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = ["kind", "name"]
     var object = extensions.filter { !known.contains($0.key) }
@@ -1895,20 +1895,20 @@ public struct RelateFields: JSONRepresentable {
     return .object(object)
   }
 }
-public struct RelateQuestion: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
+public struct RelateQuestion: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
   public let `fields`: Presence<RelateFields>
   public let `relations`: [AuthoredRelation]
   public init(
-    extensions: [String: JSONValue] = [:], `fields`: Presence<RelateFields> = .absent,
+    extensions: [String: DataValue] = [:], `fields`: Presence<RelateFields> = .absent,
     `relations`: [AuthoredRelation]
   ) {
     self.extensions = extensions
     self.`fields` = `fields`
     self.`relations` = `relations`
   }
-  static func read(_ json: JSONValue) throws -> RelateQuestion {
+  static func read(_ json: DataValue) throws -> RelateQuestion {
     let object = try jsonObject(json)
     let known: Set<String> = ["fields", "relations"]
     var value = Self(
@@ -1918,7 +1918,7 @@ public struct RelateQuestion: JSONRepresentable {
     value._sourceJSON = json
     return value
   }
-  var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = ["fields", "relations"]
     var object = extensions.filter { !known.contains($0.key) }
@@ -1927,17 +1927,17 @@ public struct RelateQuestion: JSONRepresentable {
     return .object(object)
   }
 }
-public struct Request: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
+public struct Request: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
   public let `call`: CallRequest
   public let `schema`: Version
-  public init(extensions: [String: JSONValue] = [:], `call`: CallRequest, `schema`: Version) {
+  public init(extensions: [String: DataValue] = [:], `call`: CallRequest, `schema`: Version) {
     self.extensions = extensions
     self.`call` = `call`
     self.`schema` = `schema`
   }
-  static func read(_ json: JSONValue) throws -> Request {
+  static func read(_ json: DataValue) throws -> Request {
     let object = try jsonObject(json)
     let known: Set<String> = ["call", "schema"]
     var value = Self(
@@ -1947,7 +1947,7 @@ public struct Request: JSONRepresentable {
     value._sourceJSON = json
     return value
   }
-  var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = ["call", "schema"]
     var object = extensions.filter { !known.contains($0.key) }
@@ -1956,30 +1956,30 @@ public struct Request: JSONRepresentable {
     return .object(object)
   }
 }
-public indirect enum Batch: JSONRepresentable {
+public indirect enum Batch: ValueRepresentable {
   case `integer`(UInt64)
   case `string`(String)
-  static func read(_ json: JSONValue) throws -> Batch {
+  static func read(_ json: DataValue) throws -> Batch {
     if let value = try? UInt64.read(json) { return .`integer`(value) }
     if let value = try? String.read(json) { return .`string`(value) }
-    throw JSONConversionError("Unknown Batch value")
+    throw ValueConversionError("Unknown Batch value")
   }
-  var json: JSONValue {
+  var json: DataValue {
     switch self {
     case .`integer`(let value): return value.json
     case .`string`(let value): return value.json
     }
   }
 }
-public struct CallRequest: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
+public struct CallRequest: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
   public let `function`: Function
   public let `input`: Input
   public let `options`: Presence<Options>
   public let `question`: Question
   public init(
-    extensions: [String: JSONValue] = [:], `function`: Function, `input`: Input,
+    extensions: [String: DataValue] = [:], `function`: Function, `input`: Input,
     `options`: Presence<Options> = .absent, `question`: Question
   ) {
     self.extensions = extensions
@@ -1988,7 +1988,7 @@ public struct CallRequest: JSONRepresentable {
     self.`options` = `options`
     self.`question` = `question`
   }
-  static func read(_ json: JSONValue) throws -> CallRequest {
+  static func read(_ json: DataValue) throws -> CallRequest {
     let object = try jsonObject(json)
     let known: Set<String> = ["function", "input", "options", "question"]
     var value = Self(
@@ -2000,7 +2000,7 @@ public struct CallRequest: JSONRepresentable {
     value._sourceJSON = json
     return value
   }
-  var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = ["function", "input", "options", "question"]
     var object = extensions.filter { !known.contains($0.key) }
@@ -2011,7 +2011,7 @@ public struct CallRequest: JSONRepresentable {
     return .object(object)
   }
 }
-public indirect enum Definition: JSONRepresentable {
+public indirect enum Definition: ValueRepresentable {
   case `decide`(AuthoredDecide)
   case `choose`(AuthoredChoose)
   case `tag`(AuthoredTag)
@@ -2020,7 +2020,7 @@ public indirect enum Definition: JSONRepresentable {
   case `find`(AuthoredFind)
   case `recognize`(RecognizeDefinition)
   case `questions`(AnnotateDefinition)
-  static func read(_ json: JSONValue) throws -> Definition {
+  static func read(_ json: DataValue) throws -> Definition {
     let object = try jsonObject(json)
     if object["decide"] != nil && object["choose"] == nil && object["find"] == nil
       && object["questions"] == nil && object["recognize"] == nil && object["relate"] == nil
@@ -2070,9 +2070,9 @@ public indirect enum Definition: JSONRepresentable {
     {
       return .`questions`(try AnnotateDefinition.read(json))
     }
-    throw JSONConversionError("Unknown Definition alternative")
+    throw ValueConversionError("Unknown Definition alternative")
   }
-  var json: JSONValue {
+  var json: DataValue {
     switch self {
     case .`decide`(let value): return value.json
     case .`choose`(let value): return value.json
@@ -2085,13 +2085,13 @@ public indirect enum Definition: JSONRepresentable {
     }
   }
 }
-public enum Framing: JSONRepresentable {
+public enum Framing: ValueRepresentable {
   case `document`
   case `lines`
   case `jsonl`
   case `csv`
   case `tsv`
-  static func read(_ json: JSONValue) throws -> Framing {
+  static func read(_ json: DataValue) throws -> Framing {
     let value = try String.read(json)
     switch value {
     case "document": return .`document`
@@ -2099,10 +2099,10 @@ public enum Framing: JSONRepresentable {
     case "jsonl": return .`jsonl`
     case "csv": return .`csv`
     case "tsv": return .`tsv`
-    default: throw JSONConversionError("Unknown Framing value")
+    default: throw ValueConversionError("Unknown Framing value")
     }
   }
-  var json: JSONValue {
+  var json: DataValue {
     switch self {
     case .`document`: return .string("document")
     case .`lines`: return .string("lines")
@@ -2112,7 +2112,7 @@ public enum Framing: JSONRepresentable {
     }
   }
 }
-public enum Function: JSONRepresentable {
+public enum Function: ValueRepresentable {
   case `decide`
   case `choose`
   case `tag`
@@ -2123,7 +2123,7 @@ public enum Function: JSONRepresentable {
   case `annotate`
   case `recognize`
   case `relate`
-  static func read(_ json: JSONValue) throws -> Function {
+  static func read(_ json: DataValue) throws -> Function {
     let value = try String.read(json)
     switch value {
     case "decide": return .`decide`
@@ -2136,10 +2136,10 @@ public enum Function: JSONRepresentable {
     case "annotate": return .`annotate`
     case "recognize": return .`recognize`
     case "relate": return .`relate`
-    default: throw JSONConversionError("Unknown Function value")
+    default: throw ValueConversionError("Unknown Function value")
     }
   }
-  var json: JSONValue {
+  var json: DataValue {
     switch self {
     case .`decide`: return .string("decide")
     case .`choose`: return .string("choose")
@@ -2154,30 +2154,30 @@ public enum Function: JSONRepresentable {
     }
   }
 }
-public indirect enum Image: JSONRepresentable {
+public indirect enum Image: ValueRepresentable {
   case `file`(ImageFile)
   case `bytes`(ImageBytes)
-  static func read(_ json: JSONValue) throws -> Image {
+  static func read(_ json: DataValue) throws -> Image {
     let object = try jsonObject(json)
     if object["kind"] == .string("file") { return .`file`(try ImageFile.read(json)) }
     if object["kind"] == .string("bytes") { return .`bytes`(try ImageBytes.read(json)) }
-    throw JSONConversionError("Unknown Image alternative")
+    throw ValueConversionError("Unknown Image alternative")
   }
-  var json: JSONValue {
+  var json: DataValue {
     switch self {
     case .`file`(let value): return value.json
     case .`bytes`(let value): return value.json
     }
   }
 }
-public struct ImageBytes: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
+public struct ImageBytes: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
   public let `bytes`: String
   public let `kind`: String
   public let `media`: ImageMedia
   public init(
-    extensions: [String: JSONValue] = [:], `bytes`: String, `kind`: String = "bytes",
+    extensions: [String: DataValue] = [:], `bytes`: String, `kind`: String = "bytes",
     `media`: ImageMedia
   ) {
     self.extensions = extensions
@@ -2185,7 +2185,7 @@ public struct ImageBytes: JSONRepresentable {
     self.`kind` = `kind`
     self.`media` = `media`
   }
-  static func read(_ json: JSONValue) throws -> ImageBytes {
+  static func read(_ json: DataValue) throws -> ImageBytes {
     let object = try jsonObject(json)
     let known: Set<String> = ["bytes", "kind", "media"]
     var value = Self(
@@ -2196,7 +2196,7 @@ public struct ImageBytes: JSONRepresentable {
     value._sourceJSON = json
     return value
   }
-  var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = ["bytes", "kind", "media"]
     var object = extensions.filter { !known.contains($0.key) }
@@ -2206,14 +2206,14 @@ public struct ImageBytes: JSONRepresentable {
     return .object(object)
   }
 }
-public struct ImageFile: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
+public struct ImageFile: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
   public let `kind`: String
   public let `media`: Presence<ImageMedia>
   public let `path`: String
   public init(
-    extensions: [String: JSONValue] = [:], `kind`: String = "file",
+    extensions: [String: DataValue] = [:], `kind`: String = "file",
     `media`: Presence<ImageMedia> = .absent, `path`: String
   ) {
     self.extensions = extensions
@@ -2221,7 +2221,7 @@ public struct ImageFile: JSONRepresentable {
     self.`media` = `media`
     self.`path` = `path`
   }
-  static func read(_ json: JSONValue) throws -> ImageFile {
+  static func read(_ json: DataValue) throws -> ImageFile {
     let object = try jsonObject(json)
     let known: Set<String> = ["kind", "media", "path"]
     var value = Self(
@@ -2232,7 +2232,7 @@ public struct ImageFile: JSONRepresentable {
     value._sourceJSON = json
     return value
   }
-  var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = ["kind", "media", "path"]
     var object = extensions.filter { !known.contains($0.key) }
@@ -2242,7 +2242,7 @@ public struct ImageFile: JSONRepresentable {
     return .object(object)
   }
 }
-public indirect enum Input: JSONRepresentable {
+public indirect enum Input: ValueRepresentable {
   case `text`(InputText)
   case `json`(InputJson)
   case `records`(InputRecords)
@@ -2250,7 +2250,7 @@ public indirect enum Input: JSONRepresentable {
   case `entities`(InputEntities)
   case `source`(InputSource)
   case `feed`(InputFeed)
-  static func read(_ json: JSONValue) throws -> Input {
+  static func read(_ json: DataValue) throws -> Input {
     let object = try jsonObject(json)
     if object["kind"] == .string("text") { return .`text`(try InputText.read(json)) }
     if object["kind"] == .string("json") { return .`json`(try InputJson.read(json)) }
@@ -2259,9 +2259,9 @@ public indirect enum Input: JSONRepresentable {
     if object["kind"] == .string("entities") { return .`entities`(try InputEntities.read(json)) }
     if object["kind"] == .string("source") { return .`source`(try InputSource.read(json)) }
     if object["kind"] == .string("feed") { return .`feed`(try InputFeed.read(json)) }
-    throw JSONConversionError("Unknown Input alternative")
+    throw ValueConversionError("Unknown Input alternative")
   }
-  var json: JSONValue {
+  var json: DataValue {
     switch self {
     case .`text`(let value): return value.json
     case .`json`(let value): return value.json
@@ -2273,17 +2273,17 @@ public indirect enum Input: JSONRepresentable {
     }
   }
 }
-public struct InputEntities: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
+public struct InputEntities: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
   public let `items`: [Item]
   public let `kind`: String
-  public init(extensions: [String: JSONValue] = [:], `items`: [Item], `kind`: String = "entities") {
+  public init(extensions: [String: DataValue] = [:], `items`: [Item], `kind`: String = "entities") {
     self.extensions = extensions
     self.`items` = `items`
     self.`kind` = `kind`
   }
-  static func read(_ json: JSONValue) throws -> InputEntities {
+  static func read(_ json: DataValue) throws -> InputEntities {
     let object = try jsonObject(json)
     let known: Set<String> = ["items", "kind"]
     var value = Self(
@@ -2293,7 +2293,7 @@ public struct InputEntities: JSONRepresentable {
     value._sourceJSON = json
     return value
   }
-  var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = ["items", "kind"]
     var object = extensions.filter { !known.contains($0.key) }
@@ -2302,16 +2302,16 @@ public struct InputEntities: JSONRepresentable {
     return .object(object)
   }
 }
-public struct InputFeed: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
+public struct InputFeed: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
   public let `framing`: Presence<Framing>
   public let `images`: Presence<[Image]>
   public let `kind`: String
   public let `name`: String
   public let `reading`: Presence<Reader>
   public init(
-    extensions: [String: JSONValue] = [:], `framing`: Presence<Framing> = .absent,
+    extensions: [String: DataValue] = [:], `framing`: Presence<Framing> = .absent,
     `images`: Presence<[Image]> = .absent, `kind`: String = "feed", `name`: String,
     `reading`: Presence<Reader> = .absent
   ) {
@@ -2322,7 +2322,7 @@ public struct InputFeed: JSONRepresentable {
     self.`name` = `name`
     self.`reading` = `reading`
   }
-  static func read(_ json: JSONValue) throws -> InputFeed {
+  static func read(_ json: DataValue) throws -> InputFeed {
     let object = try jsonObject(json)
     let known: Set<String> = ["framing", "images", "kind", "name", "reading"]
     var value = Self(
@@ -2335,7 +2335,7 @@ public struct InputFeed: JSONRepresentable {
     value._sourceJSON = json
     return value
   }
-  var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = ["framing", "images", "kind", "name", "reading"]
     var object = extensions.filter { !known.contains($0.key) }
@@ -2347,33 +2347,33 @@ public struct InputFeed: JSONRepresentable {
     return .object(object)
   }
 }
-public struct InputJson: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
+public struct InputJson: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
   public let `images`: Presence<[Image]>
   public let `kind`: String
-  public let `value`: JSONValue
+  public let `value`: DataValue
   public init(
-    extensions: [String: JSONValue] = [:], `images`: Presence<[Image]> = .absent,
-    `kind`: String = "json", `value`: JSONValue
+    extensions: [String: DataValue] = [:], `images`: Presence<[Image]> = .absent,
+    `kind`: String = "json", `value`: DataValue
   ) {
     self.extensions = extensions
     self.`images` = `images`
     self.`kind` = `kind`
     self.`value` = `value`
   }
-  static func read(_ json: JSONValue) throws -> InputJson {
+  static func read(_ json: DataValue) throws -> InputJson {
     let object = try jsonObject(json)
     let known: Set<String> = ["images", "kind", "value"]
     var value = Self(
       extensions: object.filter { !known.contains($0.key) },
       images: try readPresence(object, "images", [Image].self),
       kind: try String.read(jsonRequired(object, "kind")),
-      value: try JSONValue.read(jsonRequired(object, "value")))
+      value: try DataValue.read(jsonRequired(object, "value")))
     value._sourceJSON = json
     return value
   }
-  var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = ["images", "kind", "value"]
     var object = extensions.filter { !known.contains($0.key) }
@@ -2383,17 +2383,17 @@ public struct InputJson: JSONRepresentable {
     return .object(object)
   }
 }
-public struct InputRecords: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
+public struct InputRecords: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
   public let `items`: [Item]
   public let `kind`: String
-  public init(extensions: [String: JSONValue] = [:], `items`: [Item], `kind`: String = "records") {
+  public init(extensions: [String: DataValue] = [:], `items`: [Item], `kind`: String = "records") {
     self.extensions = extensions
     self.`items` = `items`
     self.`kind` = `kind`
   }
-  static func read(_ json: JSONValue) throws -> InputRecords {
+  static func read(_ json: DataValue) throws -> InputRecords {
     let object = try jsonObject(json)
     let known: Set<String> = ["items", "kind"]
     var value = Self(
@@ -2403,7 +2403,7 @@ public struct InputRecords: JSONRepresentable {
     value._sourceJSON = json
     return value
   }
-  var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = ["items", "kind"]
     var object = extensions.filter { !known.contains($0.key) }
@@ -2412,17 +2412,17 @@ public struct InputRecords: JSONRepresentable {
     return .object(object)
   }
 }
-public struct InputSource: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
+public struct InputSource: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
   public let `kind`: String
   public let `source`: Source
-  public init(extensions: [String: JSONValue] = [:], `kind`: String = "source", `source`: Source) {
+  public init(extensions: [String: DataValue] = [:], `kind`: String = "source", `source`: Source) {
     self.extensions = extensions
     self.`kind` = `kind`
     self.`source` = `source`
   }
-  static func read(_ json: JSONValue) throws -> InputSource {
+  static func read(_ json: DataValue) throws -> InputSource {
     let object = try jsonObject(json)
     let known: Set<String> = ["kind", "source"]
     var value = Self(
@@ -2432,7 +2432,7 @@ public struct InputSource: JSONRepresentable {
     value._sourceJSON = json
     return value
   }
-  var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = ["kind", "source"]
     var object = extensions.filter { !known.contains($0.key) }
@@ -2441,14 +2441,14 @@ public struct InputSource: JSONRepresentable {
     return .object(object)
   }
 }
-public struct InputText: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
+public struct InputText: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
   public let `images`: Presence<[Image]>
   public let `kind`: String
   public let `text`: String
   public init(
-    extensions: [String: JSONValue] = [:], `images`: Presence<[Image]> = .absent,
+    extensions: [String: DataValue] = [:], `images`: Presence<[Image]> = .absent,
     `kind`: String = "text", `text`: String
   ) {
     self.extensions = extensions
@@ -2456,7 +2456,7 @@ public struct InputText: JSONRepresentable {
     self.`kind` = `kind`
     self.`text` = `text`
   }
-  static func read(_ json: JSONValue) throws -> InputText {
+  static func read(_ json: DataValue) throws -> InputText {
     let object = try jsonObject(json)
     let known: Set<String> = ["images", "kind", "text"]
     var value = Self(
@@ -2467,7 +2467,7 @@ public struct InputText: JSONRepresentable {
     value._sourceJSON = json
     return value
   }
-  var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = ["images", "kind", "text"]
     var object = extensions.filter { !known.contains($0.key) }
@@ -2477,17 +2477,17 @@ public struct InputText: JSONRepresentable {
     return .object(object)
   }
 }
-public struct InputUnits: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
+public struct InputUnits: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
   public let `items`: [Item]
   public let `kind`: String
-  public init(extensions: [String: JSONValue] = [:], `items`: [Item], `kind`: String = "units") {
+  public init(extensions: [String: DataValue] = [:], `items`: [Item], `kind`: String = "units") {
     self.extensions = extensions
     self.`items` = `items`
     self.`kind` = `kind`
   }
-  static func read(_ json: JSONValue) throws -> InputUnits {
+  static func read(_ json: DataValue) throws -> InputUnits {
     let object = try jsonObject(json)
     let known: Set<String> = ["items", "kind"]
     var value = Self(
@@ -2497,7 +2497,7 @@ public struct InputUnits: JSONRepresentable {
     value._sourceJSON = json
     return value
   }
-  var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = ["items", "kind"]
     var object = extensions.filter { !known.contains($0.key) }
@@ -2506,9 +2506,9 @@ public struct InputUnits: JSONRepresentable {
     return .object(object)
   }
 }
-public struct Item: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
+public struct Item: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
   public let `context`: Presence<ContextSchema>
   public let `examples`: Presence<[RecognitionExample]>
   public let `images`: Presence<[Image]>
@@ -2516,7 +2516,7 @@ public struct Item: JSONRepresentable {
   public let `original`: Presence<Original>
   public let `seedSpans`: Presence<[RecognitionSeedSpan]>
   public init(
-    extensions: [String: JSONValue] = [:], `context`: Presence<ContextSchema> = .absent,
+    extensions: [String: DataValue] = [:], `context`: Presence<ContextSchema> = .absent,
     `examples`: Presence<[RecognitionExample]> = .absent, `images`: Presence<[Image]> = .absent,
     `options`: Presence<[OptionSchema]> = .absent, `original`: Presence<Original> = .absent,
     `seedSpans`: Presence<[RecognitionSeedSpan]> = .absent
@@ -2529,7 +2529,7 @@ public struct Item: JSONRepresentable {
     self.`original` = `original`
     self.`seedSpans` = `seedSpans`
   }
-  static func read(_ json: JSONValue) throws -> Item {
+  static func read(_ json: DataValue) throws -> Item {
     let object = try jsonObject(json)
     let known: Set<String> = ["context", "examples", "images", "options", "original", "seed_spans"]
     var value = Self(
@@ -2543,7 +2543,7 @@ public struct Item: JSONRepresentable {
     value._sourceJSON = json
     return value
   }
-  var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = ["context", "examples", "images", "options", "original", "seed_spans"]
     var object = extensions.filter { !known.contains($0.key) }
@@ -2556,9 +2556,9 @@ public struct Item: JSONRepresentable {
     return .object(object)
   }
 }
-public struct Options: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
+public struct Options: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
   public let `attempts`: Presence<Bool>
   public let `batch`: Presence<Batch>
   public let `context`: Presence<String>
@@ -2582,7 +2582,7 @@ public struct Options: JSONRepresentable {
   public let `threshold`: Presence<Threshold>
   public let `top`: Presence<UInt64>
   public init(
-    extensions: [String: JSONValue] = [:], `attempts`: Presence<Bool> = .absent,
+    extensions: [String: DataValue] = [:], `attempts`: Presence<Bool> = .absent,
     `batch`: Presence<Batch> = .absent, `context`: Presence<String> = .absent,
     `contextField`: Presence<String> = .absent, `deadlineMs`: Presence<Int64> = .absent,
     `details`: Presence<Bool> = .absent, `examples`: Presence<[RecognitionExample]> = .absent,
@@ -2620,7 +2620,7 @@ public struct Options: JSONRepresentable {
     self.`threshold` = `threshold`
     self.`top` = `top`
   }
-  static func read(_ json: JSONValue) throws -> Options {
+  static func read(_ json: DataValue) throws -> Options {
     let object = try jsonObject(json)
     let known: Set<String> = [
       "attempts", "batch", "context", "context_field", "deadline_ms", "details", "examples",
@@ -2655,7 +2655,7 @@ public struct Options: JSONRepresentable {
     value._sourceJSON = json
     return value
   }
-  var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = [
       "attempts", "batch", "context", "context_field", "deadline_ms", "details", "examples",
@@ -2689,43 +2689,43 @@ public struct Options: JSONRepresentable {
     return .object(object)
   }
 }
-public indirect enum Original: JSONRepresentable {
+public indirect enum Original: ValueRepresentable {
   case `text`(OriginalText)
   case `json`(OriginalJson)
-  static func read(_ json: JSONValue) throws -> Original {
+  static func read(_ json: DataValue) throws -> Original {
     let object = try jsonObject(json)
     if object["kind"] == .string("text") { return .`text`(try OriginalText.read(json)) }
     if object["kind"] == .string("json") { return .`json`(try OriginalJson.read(json)) }
-    throw JSONConversionError("Unknown Original alternative")
+    throw ValueConversionError("Unknown Original alternative")
   }
-  var json: JSONValue {
+  var json: DataValue {
     switch self {
     case .`text`(let value): return value.json
     case .`json`(let value): return value.json
     }
   }
 }
-public struct OriginalJson: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
+public struct OriginalJson: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
   public let `kind`: String
-  public let `value`: JSONValue
-  public init(extensions: [String: JSONValue] = [:], `kind`: String = "json", `value`: JSONValue) {
+  public let `value`: DataValue
+  public init(extensions: [String: DataValue] = [:], `kind`: String = "json", `value`: DataValue) {
     self.extensions = extensions
     self.`kind` = `kind`
     self.`value` = `value`
   }
-  static func read(_ json: JSONValue) throws -> OriginalJson {
+  static func read(_ json: DataValue) throws -> OriginalJson {
     let object = try jsonObject(json)
     let known: Set<String> = ["kind", "value"]
     var value = Self(
       extensions: object.filter { !known.contains($0.key) },
       kind: try String.read(jsonRequired(object, "kind")),
-      value: try JSONValue.read(jsonRequired(object, "value")))
+      value: try DataValue.read(jsonRequired(object, "value")))
     value._sourceJSON = json
     return value
   }
-  var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = ["kind", "value"]
     var object = extensions.filter { !known.contains($0.key) }
@@ -2734,17 +2734,17 @@ public struct OriginalJson: JSONRepresentable {
     return .object(object)
   }
 }
-public struct OriginalText: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
+public struct OriginalText: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
   public let `kind`: String
   public let `text`: String
-  public init(extensions: [String: JSONValue] = [:], `kind`: String = "text", `text`: String) {
+  public init(extensions: [String: DataValue] = [:], `kind`: String = "text", `text`: String) {
     self.extensions = extensions
     self.`kind` = `kind`
     self.`text` = `text`
   }
-  static func read(_ json: JSONValue) throws -> OriginalText {
+  static func read(_ json: DataValue) throws -> OriginalText {
     let object = try jsonObject(json)
     let known: Set<String> = ["kind", "text"]
     var value = Self(
@@ -2754,7 +2754,7 @@ public struct OriginalText: JSONRepresentable {
     value._sourceJSON = json
     return value
   }
-  var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = ["kind", "text"]
     var object = extensions.filter { !known.contains($0.key) }
@@ -2763,13 +2763,13 @@ public struct OriginalText: JSONRepresentable {
     return .object(object)
   }
 }
-public indirect enum Question: JSONRepresentable {
+public indirect enum Question: ValueRepresentable {
   case `text`(QuestionText)
   case `definition`(QuestionDefinition)
   case `file`(QuestionFile)
   case `name`(QuestionName)
   case `reference`(QuestionReference)
-  static func read(_ json: JSONValue) throws -> Question {
+  static func read(_ json: DataValue) throws -> Question {
     let object = try jsonObject(json)
     if object["kind"] == .string("text") { return .`text`(try QuestionText.read(json)) }
     if object["kind"] == .string("definition") {
@@ -2780,9 +2780,9 @@ public indirect enum Question: JSONRepresentable {
     if object["kind"] == .string("reference") {
       return .`reference`(try QuestionReference.read(json))
     }
-    throw JSONConversionError("Unknown Question alternative")
+    throw ValueConversionError("Unknown Question alternative")
   }
-  var json: JSONValue {
+  var json: DataValue {
     switch self {
     case .`text`(let value): return value.json
     case .`definition`(let value): return value.json
@@ -2792,19 +2792,19 @@ public indirect enum Question: JSONRepresentable {
     }
   }
 }
-public struct QuestionDefinition: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
+public struct QuestionDefinition: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
   public let `kind`: String
   public let `value`: Definition
   public init(
-    extensions: [String: JSONValue] = [:], `kind`: String = "definition", `value`: Definition
+    extensions: [String: DataValue] = [:], `kind`: String = "definition", `value`: Definition
   ) {
     self.extensions = extensions
     self.`kind` = `kind`
     self.`value` = `value`
   }
-  static func read(_ json: JSONValue) throws -> QuestionDefinition {
+  static func read(_ json: DataValue) throws -> QuestionDefinition {
     let object = try jsonObject(json)
     let known: Set<String> = ["kind", "value"]
     var value = Self(
@@ -2814,7 +2814,7 @@ public struct QuestionDefinition: JSONRepresentable {
     value._sourceJSON = json
     return value
   }
-  var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = ["kind", "value"]
     var object = extensions.filter { !known.contains($0.key) }
@@ -2823,17 +2823,17 @@ public struct QuestionDefinition: JSONRepresentable {
     return .object(object)
   }
 }
-public struct QuestionFile: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
+public struct QuestionFile: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
   public let `kind`: String
   public let `path`: String
-  public init(extensions: [String: JSONValue] = [:], `kind`: String = "file", `path`: String) {
+  public init(extensions: [String: DataValue] = [:], `kind`: String = "file", `path`: String) {
     self.extensions = extensions
     self.`kind` = `kind`
     self.`path` = `path`
   }
-  static func read(_ json: JSONValue) throws -> QuestionFile {
+  static func read(_ json: DataValue) throws -> QuestionFile {
     let object = try jsonObject(json)
     let known: Set<String> = ["kind", "path"]
     var value = Self(
@@ -2843,7 +2843,7 @@ public struct QuestionFile: JSONRepresentable {
     value._sourceJSON = json
     return value
   }
-  var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = ["kind", "path"]
     var object = extensions.filter { !known.contains($0.key) }
@@ -2852,17 +2852,17 @@ public struct QuestionFile: JSONRepresentable {
     return .object(object)
   }
 }
-public struct QuestionName: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
+public struct QuestionName: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
   public let `kind`: String
   public let `name`: String
-  public init(extensions: [String: JSONValue] = [:], `kind`: String = "name", `name`: String) {
+  public init(extensions: [String: DataValue] = [:], `kind`: String = "name", `name`: String) {
     self.extensions = extensions
     self.`kind` = `kind`
     self.`name` = `name`
   }
-  static func read(_ json: JSONValue) throws -> QuestionName {
+  static func read(_ json: DataValue) throws -> QuestionName {
     let object = try jsonObject(json)
     let known: Set<String> = ["kind", "name"]
     var value = Self(
@@ -2872,7 +2872,7 @@ public struct QuestionName: JSONRepresentable {
     value._sourceJSON = json
     return value
   }
-  var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = ["kind", "name"]
     var object = extensions.filter { !known.contains($0.key) }
@@ -2881,19 +2881,19 @@ public struct QuestionName: JSONRepresentable {
     return .object(object)
   }
 }
-public struct QuestionReference: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
+public struct QuestionReference: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
   public let `kind`: String
   public let `reference`: String
   public init(
-    extensions: [String: JSONValue] = [:], `kind`: String = "reference", `reference`: String
+    extensions: [String: DataValue] = [:], `kind`: String = "reference", `reference`: String
   ) {
     self.extensions = extensions
     self.`kind` = `kind`
     self.`reference` = `reference`
   }
-  static func read(_ json: JSONValue) throws -> QuestionReference {
+  static func read(_ json: DataValue) throws -> QuestionReference {
     let object = try jsonObject(json)
     let known: Set<String> = ["kind", "reference"]
     var value = Self(
@@ -2903,7 +2903,7 @@ public struct QuestionReference: JSONRepresentable {
     value._sourceJSON = json
     return value
   }
-  var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = ["kind", "reference"]
     var object = extensions.filter { !known.contains($0.key) }
@@ -2912,17 +2912,17 @@ public struct QuestionReference: JSONRepresentable {
     return .object(object)
   }
 }
-public struct QuestionText: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
+public struct QuestionText: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
   public let `kind`: String
   public let `text`: String
-  public init(extensions: [String: JSONValue] = [:], `kind`: String = "text", `text`: String) {
+  public init(extensions: [String: DataValue] = [:], `kind`: String = "text", `text`: String) {
     self.extensions = extensions
     self.`kind` = `kind`
     self.`text` = `text`
   }
-  static func read(_ json: JSONValue) throws -> QuestionText {
+  static func read(_ json: DataValue) throws -> QuestionText {
     let object = try jsonObject(json)
     let known: Set<String> = ["kind", "text"]
     var value = Self(
@@ -2932,7 +2932,7 @@ public struct QuestionText: JSONRepresentable {
     value._sourceJSON = json
     return value
   }
-  var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = ["kind", "text"]
     var object = extensions.filter { !known.contains($0.key) }
@@ -2941,20 +2941,20 @@ public struct QuestionText: JSONRepresentable {
     return .object(object)
   }
 }
-public struct Reader: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
+public struct Reader: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
   public let `unit`: Presence<SourceUnit>
   public let `window`: Presence<UInt64>
   public init(
-    extensions: [String: JSONValue] = [:], `unit`: Presence<SourceUnit> = .absent,
+    extensions: [String: DataValue] = [:], `unit`: Presence<SourceUnit> = .absent,
     `window`: Presence<UInt64> = .absent
   ) {
     self.extensions = extensions
     self.`unit` = `unit`
     self.`window` = `window`
   }
-  static func read(_ json: JSONValue) throws -> Reader {
+  static func read(_ json: DataValue) throws -> Reader {
     let object = try jsonObject(json)
     let known: Set<String> = ["unit", "window"]
     var value = Self(
@@ -2964,7 +2964,7 @@ public struct Reader: JSONRepresentable {
     value._sourceJSON = json
     return value
   }
-  var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = ["unit", "window"]
     var object = extensions.filter { !known.contains($0.key) }
@@ -2973,12 +2973,12 @@ public struct Reader: JSONRepresentable {
     return .object(object)
   }
 }
-public indirect enum ReaderFailure: JSONRepresentable {
+public indirect enum ReaderFailure: ValueRepresentable {
   case `producer`(ReaderFailureProducer)
   case `io`(ReaderFailureIo)
   case `utf8`(ReaderFailureUtf8)
   case `invalidInput`(ReaderFailureInvalidInput)
-  static func read(_ json: JSONValue) throws -> ReaderFailure {
+  static func read(_ json: DataValue) throws -> ReaderFailure {
     let object = try jsonObject(json)
     if object["kind"] == .string("producer") {
       return .`producer`(try ReaderFailureProducer.read(json))
@@ -2988,9 +2988,9 @@ public indirect enum ReaderFailure: JSONRepresentable {
     if object["kind"] == .string("invalid_input") {
       return .`invalidInput`(try ReaderFailureInvalidInput.read(json))
     }
-    throw JSONConversionError("Unknown ReaderFailure alternative")
+    throw ValueConversionError("Unknown ReaderFailure alternative")
   }
-  var json: JSONValue {
+  var json: DataValue {
     switch self {
     case .`producer`(let value): return value.json
     case .`io`(let value): return value.json
@@ -2999,20 +2999,20 @@ public indirect enum ReaderFailure: JSONRepresentable {
     }
   }
 }
-public struct ReaderFailureInvalidInput: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
+public struct ReaderFailureInvalidInput: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
   public let `kind`: String
   public let `location`: Presence<SessionSourceLocation>
   public init(
-    extensions: [String: JSONValue] = [:], `kind`: String = "invalid_input",
+    extensions: [String: DataValue] = [:], `kind`: String = "invalid_input",
     `location`: Presence<SessionSourceLocation> = .absent
   ) {
     self.extensions = extensions
     self.`kind` = `kind`
     self.`location` = `location`
   }
-  static func read(_ json: JSONValue) throws -> ReaderFailureInvalidInput {
+  static func read(_ json: DataValue) throws -> ReaderFailureInvalidInput {
     let object = try jsonObject(json)
     let known: Set<String> = ["kind", "location"]
     var value = Self(
@@ -3022,7 +3022,7 @@ public struct ReaderFailureInvalidInput: JSONRepresentable {
     value._sourceJSON = json
     return value
   }
-  var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = ["kind", "location"]
     var object = extensions.filter { !known.contains($0.key) }
@@ -3031,20 +3031,20 @@ public struct ReaderFailureInvalidInput: JSONRepresentable {
     return .object(object)
   }
 }
-public struct ReaderFailureIo: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
+public struct ReaderFailureIo: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
   public let `kind`: String
   public let `location`: Presence<SessionSourceLocation>
   public init(
-    extensions: [String: JSONValue] = [:], `kind`: String = "io",
+    extensions: [String: DataValue] = [:], `kind`: String = "io",
     `location`: Presence<SessionSourceLocation> = .absent
   ) {
     self.extensions = extensions
     self.`kind` = `kind`
     self.`location` = `location`
   }
-  static func read(_ json: JSONValue) throws -> ReaderFailureIo {
+  static func read(_ json: DataValue) throws -> ReaderFailureIo {
     let object = try jsonObject(json)
     let known: Set<String> = ["kind", "location"]
     var value = Self(
@@ -3054,7 +3054,7 @@ public struct ReaderFailureIo: JSONRepresentable {
     value._sourceJSON = json
     return value
   }
-  var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = ["kind", "location"]
     var object = extensions.filter { !known.contains($0.key) }
@@ -3063,15 +3063,15 @@ public struct ReaderFailureIo: JSONRepresentable {
     return .object(object)
   }
 }
-public struct ReaderFailureProducer: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
+public struct ReaderFailureProducer: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
   public let `kind`: String
-  public init(extensions: [String: JSONValue] = [:], `kind`: String = "producer") {
+  public init(extensions: [String: DataValue] = [:], `kind`: String = "producer") {
     self.extensions = extensions
     self.`kind` = `kind`
   }
-  static func read(_ json: JSONValue) throws -> ReaderFailureProducer {
+  static func read(_ json: DataValue) throws -> ReaderFailureProducer {
     let object = try jsonObject(json)
     let known: Set<String> = ["kind"]
     var value = Self(
@@ -3080,7 +3080,7 @@ public struct ReaderFailureProducer: JSONRepresentable {
     value._sourceJSON = json
     return value
   }
-  var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = ["kind"]
     var object = extensions.filter { !known.contains($0.key) }
@@ -3088,20 +3088,20 @@ public struct ReaderFailureProducer: JSONRepresentable {
     return .object(object)
   }
 }
-public struct ReaderFailureUtf8: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
+public struct ReaderFailureUtf8: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
   public let `kind`: String
   public let `location`: Presence<SessionSourceLocation>
   public init(
-    extensions: [String: JSONValue] = [:], `kind`: String = "utf8",
+    extensions: [String: DataValue] = [:], `kind`: String = "utf8",
     `location`: Presence<SessionSourceLocation> = .absent
   ) {
     self.extensions = extensions
     self.`kind` = `kind`
     self.`location` = `location`
   }
-  static func read(_ json: JSONValue) throws -> ReaderFailureUtf8 {
+  static func read(_ json: DataValue) throws -> ReaderFailureUtf8 {
     let object = try jsonObject(json)
     let known: Set<String> = ["kind", "location"]
     var value = Self(
@@ -3111,7 +3111,7 @@ public struct ReaderFailureUtf8: JSONRepresentable {
     value._sourceJSON = json
     return value
   }
-  var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = ["kind", "location"]
     var object = extensions.filter { !known.contains($0.key) }
@@ -3120,20 +3120,20 @@ public struct ReaderFailureUtf8: JSONRepresentable {
     return .object(object)
   }
 }
-public struct SessionDescriptor: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
+public struct SessionDescriptor: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
   public let `item`: Item
   public let `location`: Presence<SessionSourceLocation>
   public init(
-    extensions: [String: JSONValue] = [:], `item`: Item,
+    extensions: [String: DataValue] = [:], `item`: Item,
     `location`: Presence<SessionSourceLocation> = .absent
   ) {
     self.extensions = extensions
     self.`item` = `item`
     self.`location` = `location`
   }
-  static func read(_ json: JSONValue) throws -> SessionDescriptor {
+  static func read(_ json: DataValue) throws -> SessionDescriptor {
     let object = try jsonObject(json)
     let known: Set<String> = ["item", "location"]
     var value = Self(
@@ -3143,7 +3143,7 @@ public struct SessionDescriptor: JSONRepresentable {
     value._sourceJSON = json
     return value
   }
-  var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = ["item", "location"]
     var object = extensions.filter { !known.contains($0.key) }
@@ -3152,15 +3152,15 @@ public struct SessionDescriptor: JSONRepresentable {
     return .object(object)
   }
 }
-public struct Source: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
+public struct Source: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
   public let `framing`: Presence<Framing>
   public let `media`: Presence<ReaderMedia>
   public let `paths`: [String]
   public let `reading`: Presence<Reader>
   public init(
-    extensions: [String: JSONValue] = [:], `framing`: Presence<Framing> = .absent,
+    extensions: [String: DataValue] = [:], `framing`: Presence<Framing> = .absent,
     `media`: Presence<ReaderMedia> = .absent, `paths`: [String],
     `reading`: Presence<Reader> = .absent
   ) {
@@ -3170,7 +3170,7 @@ public struct Source: JSONRepresentable {
     self.`paths` = `paths`
     self.`reading` = `reading`
   }
-  static func read(_ json: JSONValue) throws -> Source {
+  static func read(_ json: DataValue) throws -> Source {
     let object = try jsonObject(json)
     let known: Set<String> = ["framing", "media", "paths", "reading"]
     var value = Self(
@@ -3182,7 +3182,7 @@ public struct Source: JSONRepresentable {
     value._sourceJSON = json
     return value
   }
-  var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = ["framing", "media", "paths", "reading"]
     var object = extensions.filter { !known.contains($0.key) }
@@ -3193,44 +3193,44 @@ public struct Source: JSONRepresentable {
     return .object(object)
   }
 }
-public indirect enum Threshold: JSONRepresentable {
+public indirect enum Threshold: ValueRepresentable {
   case `number`(Double)
   case `string`(String)
-  static func read(_ json: JSONValue) throws -> Threshold {
+  static func read(_ json: DataValue) throws -> Threshold {
     if let value = try? Double.read(json) { return .`number`(value) }
     if let value = try? String.read(json) { return .`string`(value) }
-    throw JSONConversionError("Unknown Threshold value")
+    throw ValueConversionError("Unknown Threshold value")
   }
-  var json: JSONValue {
+  var json: DataValue {
     switch self {
     case .`number`(let value): return value.json
     case .`string`(let value): return value.json
     }
   }
 }
-public enum Version: JSONRepresentable {
+public enum Version: ValueRepresentable {
   case `thinkthenRequest_1`
-  static func read(_ json: JSONValue) throws -> Version {
+  static func read(_ json: DataValue) throws -> Version {
     let value = try String.read(json)
     switch value {
     case "thinkthen.request/1": return .`thinkthenRequest_1`
-    default: throw JSONConversionError("Unknown Version value")
+    default: throw ValueConversionError("Unknown Version value")
     }
   }
-  var json: JSONValue {
+  var json: DataValue {
     switch self {
     case .`thinkthenRequest_1`: return .string("thinkthen.request/1")
     }
   }
 }
-public struct SessionSourceLocation: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
+public struct SessionSourceLocation: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
   public let `file`: String
   public let `firstLine`: Presence<UInt64>
   public let `lastLine`: Presence<UInt64>
   public init(
-    extensions: [String: JSONValue] = [:], `file`: String, `firstLine`: Presence<UInt64> = .absent,
+    extensions: [String: DataValue] = [:], `file`: String, `firstLine`: Presence<UInt64> = .absent,
     `lastLine`: Presence<UInt64> = .absent
   ) {
     self.extensions = extensions
@@ -3238,7 +3238,7 @@ public struct SessionSourceLocation: JSONRepresentable {
     self.`firstLine` = `firstLine`
     self.`lastLine` = `lastLine`
   }
-  static func read(_ json: JSONValue) throws -> SessionSourceLocation {
+  static func read(_ json: DataValue) throws -> SessionSourceLocation {
     let object = try jsonObject(json)
     let known: Set<String> = ["file", "first_line", "last_line"]
     var value = Self(
@@ -3249,7 +3249,7 @@ public struct SessionSourceLocation: JSONRepresentable {
     value._sourceJSON = json
     return value
   }
-  var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = ["file", "first_line", "last_line"]
     var object = extensions.filter { !known.contains($0.key) }
@@ -3259,20 +3259,20 @@ public struct SessionSourceLocation: JSONRepresentable {
     return .object(object)
   }
 }
-public enum SourceUnit: JSONRepresentable {
+public enum SourceUnit: ValueRepresentable {
   case `line`
   case `window`
   case `file`
-  static func read(_ json: JSONValue) throws -> SourceUnit {
+  static func read(_ json: DataValue) throws -> SourceUnit {
     let value = try String.read(json)
     switch value {
     case "line": return .`line`
     case "window": return .`window`
     case "file": return .`file`
-    default: throw JSONConversionError("Unknown SourceUnit value")
+    default: throw ValueConversionError("Unknown SourceUnit value")
     }
   }
-  var json: JSONValue {
+  var json: DataValue {
     switch self {
     case .`line`: return .string("line")
     case .`window`: return .string("window")
