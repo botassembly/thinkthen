@@ -20,7 +20,10 @@ lock=$cache_root/.duckdb-cache-mutation.lock
 if [ "${THINKTHEN_DUCKDB_CACHE_LOCK_HELD:-}" != "$lock" ]; then
 	exec python3 "$HERE/cache_lock.py" "$lock" /bin/sh "$0" "$@"
 fi
-if [ "${1:-}" = --fetch ]; then python3 "$HERE/source_hosts.py" --fetch; fi
+if [ "${1:-}" = --fetch ]; then
+	python3 "$HERE/source_hosts.py" --fetch
+	python3 "$HERE/../community/prepare.py"
+fi
 for version in $DUCKDB_VERSIONS; do
 	input_select "$version" "$host_target"
 	[ -d "$TOOLS/source/.git" ] && [ -d "$TOOLS/tools/.git" ] || {
