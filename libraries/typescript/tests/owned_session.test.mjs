@@ -275,6 +275,8 @@ test('Client recognize retains every aggregate chunk and its completed failure p
     const question={version:1,recognize:{kinds:{person:null}}};
     const done=await client.recognize(question,tt.Client.files(paths.slice(0,2),{unit:'file'}));
     const empty=await client.recognize(question,[]);
+    const boundary=await client.recognize(tt.Client.recognizeQuestion({person:null},{mode:'boundary_only'}),'Ana Lima');
+    if(JSON.stringify(boundary.probability)!==JSON.stringify(boundary.value.proposals.map(proposal=>proposal.probability)))throw Error('boundary proposal probability changed');
     let failed;
     try {await client.recognize(question,tt.Client.files(paths,{unit:'file'}));throw Error('failure became answer');}
     catch(error){if(!(error instanceof tt.ClientError))throw error;failed={kind:error.kind,rows:error.results.map(row=>row.index),sends:error.facts.requests_sent};}
