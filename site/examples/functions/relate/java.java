@@ -9,13 +9,13 @@ import thinkthen.Inputs.RequestQuestionDefinition;
 
 public class Relate {
     public static void main(String[] args) {
-        var makes = Map.of("name", "makes",
-            "source", "company", "target", "product",
-            "either", false);
+        var makes = new Inputs.AuthoredRelation()
+            .name("makes").source("company")
+            .target("product").either(false);
         var ask = new RequestQuestionDefinition().value(
-            Inputs.RequestDefinitionAuthoredRelate
-                .fromJson(Map.of("version", 1, "relate",
-                    Map.of("relations", List.of(makes)))));
+            new Inputs.RequestDefinitionAuthoredRelate()
+                .relate(new Inputs.RelateQuestion()
+                    .relations(List.of(makes))));
         var apple = Map.of(
             "name", "Apple", "kind", "company");
         var amazon = Map.of(

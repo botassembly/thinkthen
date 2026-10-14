@@ -13,5 +13,5 @@ import thinkthen.scala.ScalaEngine
     val call = tt.decide(question, broken)
     val isRefund = Await.result(call.result, 10.seconds)
       .decide()
-    assert(isRefund == true)
+    assert(isRefund.contains(true))
   }

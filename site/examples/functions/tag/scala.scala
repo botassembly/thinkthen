@@ -20,6 +20,6 @@ import thinkthen.scala.ScalaEngine
     val call = tt.tag(fits, message)
     val fittingLabels =
       Await.result(call.result, 10.seconds)
-      .tag().asScala.toList
+      .tag()
     assert(fittingLabels == labels)
   }

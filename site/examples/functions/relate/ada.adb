@@ -12,7 +12,7 @@ procedure Sample is
    Completed : Completion;
    function Entity (Name, Kind : String) return Item is
      (With_Original (Make_Item,
-       Original_From_Original_json
+       Original_From_json
          (Make_Original_json (V.Object_Item
            ([V.Named ("name", V.String_Item (Name)),
              V.Named ("kind", V.String_Item (Kind))])))));
@@ -27,7 +27,7 @@ begin
      Entities_Input (Records));
    Finish (Owner);
    declare
-      Related : constant Relation :=
+      Related : constant Thinkthen.Answers.Relation :=
         Relate_Answer (Owner, Completed);
       Connections : constant V.Value := Edges (Related);
       Who_Makes : Unbounded_String;

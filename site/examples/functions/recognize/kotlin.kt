@@ -7,11 +7,10 @@ import thinkthen.Results.RecognizeEntities
 
 suspend fun main() = KotlinEngine().use { tt ->
     val kinds = listOf("person", "product", "place")
-        .associateWith { null }
+        .associateWith { null as Inputs.AuthoredDescription? }
     val ask = RequestQuestionDefinition().value(
-        Inputs.RequestDefinitionRecognizeDefinition
-            .fromJson(mapOf("version" to 1,
-                "recognize" to mapOf("kinds" to kinds))))
+        Inputs.RequestDefinitionRecognizeDefinition()
+            .recognize(Inputs.RecognizeQuestion().kinds(kinds)))
     val text = RequestInputText().text(
         "Sam Patel says his Kindle arrived broken " +
             "in Denver.")

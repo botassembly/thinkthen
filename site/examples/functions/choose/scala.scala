@@ -23,5 +23,5 @@ import thinkthen.scala.ScalaEngine
     val call = tt.choose(owner, parcel)
     val team = Await.result(call.result, 10.seconds)
       .choose()
-    assert(team == "shipping")
+    assert(team.contains("shipping"))
   }

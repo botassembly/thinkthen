@@ -9,22 +9,20 @@ import thinkthen.scala.ScalaEngine
 
 @main def recognize(): Unit =
   Using.resource(new ScalaEngine()) { tt =>
-    val kinds = ListMap(
+    val kinds = ListMap[String, AuthoredDescription](
       "person" -> null,
       "product" -> null,
       "place" -> null,
     )
     val ask = RequestQuestionDefinition().value(
-      RequestDefinitionRecognizeDefinition
-        .fromJson(Map("version" -> 1,
-          "recognize" ->
-            Map("kinds" -> kinds.asJava).asJava).asJava))
+      RequestDefinitionRecognizeDefinition()
+        .recognize(RecognizeQuestion().kinds(kinds.asJava)))
     val text = RequestInputText().text(
       "Sam Patel says his Kindle arrived broken " +
         "in Denver.")
     val call = tt.recognize(ask, text)
     val facts = Await.result(call.result, 10.seconds)
-      .recognize().getFirst().value()
+      .recognize().head.value()
       .asInstanceOf[RecognizeEntities]
     val names = facts.entities().asScala.toList
       .map(one => one.text() -> one.kind())

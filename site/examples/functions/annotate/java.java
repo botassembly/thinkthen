@@ -1,6 +1,7 @@
 import java.math.BigDecimal;
 import java.util.Map;
 import thinkthen.Engine;
+import thinkthen.Results.*;
 import thinkthen.Inputs.RequestInputText;
 import thinkthen.Inputs.RequestQuestionFile;
 
@@ -14,11 +15,11 @@ public class Annotate {
         try (var tt = new Engine()) {
             var triage = tt.annotate(form, report)
                 .join().annotate().getFirst()
-                .value().json();
+                .value().value();
             assert triage.equals(Map.of(
-                "steps", true,
-                "area", "login",
-                "impact", new BigDecimal("1.98")));
+                "steps", new AnnotatedFieldBoolean(true),
+                "area", new AnnotatedFieldString("login"),
+                "impact", new AnnotatedFieldNumber(new BigDecimal("1.98"))));
         }
     }
 }

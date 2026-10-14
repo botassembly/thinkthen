@@ -6,13 +6,13 @@ import thinkthen.Inputs.RequestQuestionDefinition
 import thinkthen.kotlin.KotlinEngine
 
 suspend fun main() = KotlinEngine().use { tt ->
-    val makes = mapOf("name" to "makes",
-        "source" to "company", "target" to "product",
-        "either" to false)
+    val makes = Inputs.AuthoredRelation()
+        .name("makes").source("company")
+        .target("product").either(false)
     val ask = RequestQuestionDefinition().value(
-        Inputs.RequestDefinitionAuthoredRelate
-            .fromJson(mapOf("version" to 1, "relate" to
-                mapOf("relations" to listOf(makes)))))
+        Inputs.RequestDefinitionAuthoredRelate()
+            .relate(Inputs.RelateQuestion()
+                .relations(listOf(makes))))
     val apple = mapOf(
         "name" to "Apple", "kind" to "company")
     val amazon = mapOf(

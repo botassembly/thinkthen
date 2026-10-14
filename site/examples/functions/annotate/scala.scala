@@ -3,6 +3,7 @@ import scala.concurrent.duration.*
 import scala.util.Using
 import scala.jdk.CollectionConverters.*
 import thinkthen.Inputs.*
+import thinkthen.Results.*
 import thinkthen.scala.ScalaEngine
 
 @main def annotate(): Unit =
@@ -12,10 +13,10 @@ import thinkthen.scala.ScalaEngine
       .text("Steps: click Log in. Nobody gets in.")
     val call = tt.annotate(form, report)
     val triage = Await.result(call.result, 10.seconds)
-      .annotate().getFirst().value().json()
+      .annotate().head.value().value()
     assert(triage == Map(
-      "steps" -> true,
-      "area" -> "login",
-      "impact" -> java.math.BigDecimal("1.98"),
+      "steps" -> AnnotatedFieldBoolean(true),
+      "area" -> AnnotatedFieldString("login"),
+      "impact" -> AnnotatedFieldNumber(java.math.BigDecimal("1.98")),
     ).asJava)
   }

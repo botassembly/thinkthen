@@ -22,6 +22,6 @@ import thinkthen.scala.ScalaEngine
       }.asJava)
     val call = tt.filter(question, records)
     val complaints = Await.result(call.result, 10.seconds)
-      .filter().asScala.toList
+      .filter()
     assert(complaints == List(reviews(1), reviews(3)))
   }

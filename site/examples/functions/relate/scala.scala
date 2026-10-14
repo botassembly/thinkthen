@@ -7,14 +7,13 @@ import thinkthen.scala.ScalaEngine
 
 @main def relate(): Unit =
   Using.resource(new ScalaEngine()) { tt =>
-    val makes = Map("name" -> "makes",
-      "source" -> "company", "target" -> "product",
-      "either" -> false)
+    val makes = AuthoredRelation()
+      .name("makes").source("company")
+      .target("product").either(false)
     val ask = RequestQuestionDefinition().value(
-      RequestDefinitionAuthoredRelate
-        .fromJson(Map("version" -> 1, "relate" ->
-          Map("relations" ->
-            List(makes.asJava).asJava).asJava).asJava))
+      RequestDefinitionAuthoredRelate()
+        .relate(RelateQuestion()
+          .relations(List(makes).asJava)))
     val apple = Map(
       "name" -> "Apple", "kind" -> "company")
     val amazon = Map(
