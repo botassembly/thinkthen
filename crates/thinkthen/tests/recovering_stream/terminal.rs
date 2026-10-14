@@ -72,7 +72,7 @@ fn eager_recovery_counts_completed_rows_when_the_observer_cancels() {
             RequestFunction::Recognize,
             Recognize::builder().build().unwrap().into(),
             1,
-            2,
+            1,
         ),
     ];
     for (function, definition, completed, sends) in cases {
