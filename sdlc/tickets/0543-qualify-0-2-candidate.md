@@ -38,6 +38,8 @@ Reviews: revision ca927f9, accept
 
 Reviews: revision f8005a6, accept
 
+Reviews: revision 2c83b76, accept
+
 ## Outcome
 
 One reviewed commit, tagged `rc/0.2.0-rc.N`, passes the local release suite and the hosted rehearsal on Linux, macOS and Windows. It publishes nothing. This closes the build side of 0.2. Release QA and publication stay with 0425.
