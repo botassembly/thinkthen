@@ -3,7 +3,7 @@
 HEADER = r"""
 typedef struct tt_answer_owner tt_answer_owner;
 typedef struct thinkthen_cobol_AnswerText {uint64_t length; char text[8192];} thinkthen_cobol_AnswerText;
-typedef struct thinkthen_cobol_AnswerDecision {uint64_t present; uint64_t value;} thinkthen_cobol_AnswerDecision;
+typedef struct thinkthen_cobol_AnswerDecision {uint64_t present; const tt_value *value;} thinkthen_cobol_AnswerDecision;
 typedef struct thinkthen_cobol_AnswerChoice {uint64_t present; thinkthen_cobol_AnswerText value;} thinkthen_cobol_AnswerChoice;
 typedef struct thinkthen_cobol_AnswerScore {double value;} thinkthen_cobol_AnswerScore;
 typedef struct thinkthen_cobol_AnswerRankIndex {uint64_t value;} thinkthen_cobol_AnswerRankIndex;
@@ -16,7 +16,7 @@ typedef struct thinkthen_cobol_AnswerAnnotationField {
 } thinkthen_cobol_AnswerAnnotationField;
 typedef struct thinkthen_cobol_AnswerRecognition {
  uint64_t record; uint64_t proposal; thinkthen_cobol_AnswerText kind; thinkthen_cobol_AnswerText text;
- uint64_t start; uint64_t end; uint64_t length; double probability;
+ uint64_t start; uint64_t end; uint64_t length; double strength;
  uint64_t mode; uint64_t file_present; thinkthen_cobol_AnswerText file;
  uint64_t first_line_present; uint64_t first_line; uint64_t last_line_present; uint64_t last_line;
  const struct thinkthen_cobol_AnswerExtensions *extensions;
@@ -47,38 +47,65 @@ def render(native_facts, root, definitions):
     functions = enum_values(definitions['RequestFunction'])
     from templates.cobol_facts import render as facts_render
     facts_header, facts_source = facts_render(native_facts)
+    from templates.cobol_results import render as results_render
+    result_header, result_source, receipt_types, payloads = results_render(native_facts, root, functions)
     from templates.cobol_plan import render as plan_render
     plan_header, plan_declaration, plan_source = plan_render(root)
     declarations = HEADER.replace('typedef struct thinkthen_cobol_AnswerStatus {', facts_header + '\ntypedef struct thinkthen_cobol_AnswerStatus {')
+    declarations += result_header + '\n'
     declarations += plan_header + '\n' + plan_declaration + '\n'
-    source = SUPPORT.replace('static int copy_recognition_entity(', facts_source + '\nstatic int copy_recognition_entity(')
+    source = SUPPORT.replace('static int copy_recognition_entity(', facts_source + '\n' + result_source + '\nstatic int copy_recognition_entity(')
     rows = {'decide': 'Decision', 'choose': 'Choice', 'tag': 'Table', 'score': 'Score', 'filter': 'FilterOriginal', 'rank': 'RankIndex', 'annotate': 'AnnotationField', 'find': 'FindSelection', 'recognize': 'Recognition', 'relate': 'Relation'}
     for function in functions:
         typ = 'thinkthen_cobol_Answer' + function.title() + 'Result'
         row = 'thinkthen_cobol_Answer' + rows[function]
-        fields = ['tt_answer_owner *owner;', f'const {row} *rows;', 'uint64_t count;', f'{row} first;']
+        value_type = 'thinkthen_cobol_Answer' + function.title() + 'Value'
+        fields = ['uint64_t scalar;', f'const {row} *rows;', 'uint64_t count;', f'{row} first;']
         if function == 'recognize':
             fields += ['const thinkthen_cobol_AnswerRecognitionEdge *edges;', 'uint64_t edge_count;']
-        declarations += f'typedef struct {typ} {{' + ''.join(fields) + f'}} {typ};\n'
+        declarations += f'typedef struct {value_type} {{' + ''.join(fields) + f'}} {value_type};\n'
+        declarations += f'typedef struct {typ} {{tt_answer_owner *owner; {value_type} value; thinkthen_cobol_AnswerProbability probability; {receipt_types[function]} results; uint64_t facts_present; thinkthen_cobol_AnswerFacts facts;}} {typ};\n'
         signature = f'int TT_{function.upper()}(const void *engine,const thinkthen_cobol_RequestQuestion *question,const thinkthen_cobol_RequestInput *input,const thinkthen_cobol_RequestOptions *options,{typ} *out,thinkthen_cobol_AnswerStatus *status_out)'
         declarations += signature + ';\n'
         source += signature + ' {\nif(!out) return THINKTHEN_COBOL_REPRESENTATION;\nthinkthen_cobol_AnswerTable table={0};\nint code=blocking_answer(engine,question,input,options,"' + function + '",' + str(len(function)) + ',THINKTHEN_COMPLETE_REQUEST_FUNCTION_' + function.upper() + '_V1,&table,status_out);\nif(code) return code;\n'
-        source += typ + ' value={.owner=table.owner,.rows=table.rows,.count=table.count};\nif(table.count) value.first=value.rows[0];\n'
+        if function == 'decide':
+            source += 'for(size_t i=0;i<table.count;i++) ((thinkthen_cobol_AnswerDecision *)table.rows)[i].present=i<table.owner->probability_count && table.owner->probabilities[i].present;\n'
+        source += typ + ' result={.owner=table.owner,.value={.rows=table.rows,.count=table.count},.results={table.owner->receipts,table.owner->receipt_count},.facts_present=status_out->facts_present,.facts=status_out->facts};\n'
+        source += 'result.value.scalar=input && (input->kind==THINKTHEN_COBOL_REQUESTINPUTTEXT_KIND || input->kind==THINKTHEN_COBOL_REQUESTINPUTJSON_KIND);\n'
+        if function in ('filter', 'rank', 'relate'):
+            source += 'result.value.scalar=0;\n'
+        source += 'if(table.count) result.value.first=result.value.rows[0];\n'
+        source += 'result.probability=(thinkthen_cobol_AnswerProbability){.scalar=result.value.scalar,.data=table.owner->probabilities,.count=table.owner->probability_count,.lists=table.owner->probability_lists,.list_count=table.owner->probability_list_count};\n'
+        if function == 'find':
+            source += 'result.value.scalar=1; result.probability.scalar=1;\n'
         if function == 'recognize':
-            source += 'value.edges=table.edges; value.edge_count=table.edge_count;\n'
-        source += '*out=value; return 0;\n}\n'
+            source += 'if(result.value.scalar && result.probability.list_count==1) {result.probability.data=result.probability.lists[0].data; result.probability.count=result.probability.lists[0].count; result.probability.list_count=0;} result.probability.scalar=0;\n'
+            source += 'result.value.edges=table.edges; result.value.edge_count=table.edge_count;\n'
+        source += 'if(result.probability.count) result.probability.first=result.probability.data[0];\n*out=result; return 0;\n}\n'
     return declarations, source + plan_source
 
 
 SUPPORT = r"""
-struct tt_answer_owner {arena storage; void *rows; size_t count; size_t capacity; void *edges; size_t edge_count; size_t edge_capacity;};
+struct tt_answer_owner {arena storage; void *rows; size_t count; size_t capacity; void *edges; size_t edge_count; size_t edge_capacity; void *receipts; size_t receipt_count; thinkthen_cobol_AnswerNumber *probabilities; size_t probability_count; thinkthen_cobol_AnswerProbabilityList *probability_lists; size_t probability_list_count; unsigned char *resolved; size_t resolved_count;};
 void TT_ANSWER_FREE(tt_answer_owner *owner) {
-    if(owner) {release(&owner->storage); free(owner->rows); free(owner->edges); free(owner);}
+    if(owner) {release(&owner->storage); free(owner->rows); free(owner->edges); free(owner->receipts); free(owner->probabilities); free(owner->probability_lists); free(owner->resolved); free(owner);}
 }
 static int answer_text(thinkthen_complete_utf8_v1 input,thinkthen_cobol_AnswerText *out) {
     return TT_SESSION_TEXT(&input,out->text,&out->length);
 }
+static int original_limit(const thinkthen_complete_json_v1 *input) {
+    if(!input) return THINKTHEN_COBOL_REPRESENTATION;
+    if(input->kind==THINKTHEN_COMPLETE_JSON_STRING_V1 && input->data.string.len>THINKTHEN_COBOL_TEXT_CAPACITY) return THINKTHEN_COBOL_OVERFLOW;
+    if(input->kind==THINKTHEN_COMPLETE_JSON_NUMBER_V1 && input->data.number.len>THINKTHEN_COBOL_TEXT_CAPACITY) return THINKTHEN_COBOL_OVERFLOW;
+    if(input->kind==THINKTHEN_COMPLETE_JSON_ARRAY_V1) for(size_t i=0;i<input->data.array.len;i++) {int code=original_limit(input->data.array.data[i]); if(code) return code;}
+    if(input->kind==THINKTHEN_COMPLETE_JSON_OBJECT_V1) for(size_t i=0;i<input->data.object.len;i++) {
+        if(input->data.object.data[i].name.len>THINKTHEN_COBOL_TEXT_CAPACITY) return THINKTHEN_COBOL_OVERFLOW;
+        int code=original_limit(input->data.object.data[i].value); if(code) return code;
+    }
+    return 0;
+}
 static const tt_value *answer_original(arena *storage,const thinkthen_complete_json_v1 *input) {
+    int code=original_limit(input); if(code) {storage->code=code; return NULL;}
     tt_value *out=allocate(storage,1,sizeof(*out));
     if(out) out->value=copy_value(storage,input);
     return out;
@@ -92,7 +119,7 @@ static int answer_tags(arena *storage,thinkthen_complete_string_list_v1 input,co
     *out=rows; return 0;
 }
 static int copy_recognition_entity(arena *a,const thinkthen_complete_entity_v1 *entity,thinkthen_cobol_AnswerRecognition *row) {
-    row->start=entity->start; row->end=entity->end; row->length=entity->length; row->probability=entity->strength;
+    row->start=entity->start; row->end=entity->end; row->length=entity->length; row->strength=entity->strength;
     row->file_present=entity->file.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1;
     row->first_line_present=entity->first_line.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1; row->first_line=entity->first_line.value;
     row->last_line_present=entity->last_line.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1; row->last_line=entity->last_line.value;
@@ -149,9 +176,9 @@ static int project_answer(arena *a,const thinkthen_complete_session_packet_v1 *p
             const thinkthen_complete_decide_value_presence_v1 value=list.data[i]->value;
             rows[i].present=value.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1;
             if(rows[i].present) {
-                if(!value.value || !value.value->value || value.value->value->kind!=THINKTHEN_COMPLETE_JSON_BOOLEAN_V1) return THINKTHEN_COBOL_REPRESENTATION;
-                rows[i].value=value.value->value->data.boolean;
-            }
+                if(!value.value || !value.value->value) return THINKTHEN_COBOL_REPRESENTATION;
+                rows[i].value=answer_original(a,value.value->value);
+            } else rows[i].value=answer_original(a,&(thinkthen_complete_json_v1){.kind=THINKTHEN_COMPLETE_JSON_NULL_V1});
         }
         break;
     }
@@ -192,8 +219,9 @@ static int project_answer(arena *a,const thinkthen_complete_session_packet_v1 *p
         thinkthen_cobol_AnswerFilterOriginal *rows=allocate(a,list.len,sizeof(*rows)); out->rows=rows;
         if(!rows) return a->code;
         for(size_t i=0;i<list.len;i++) if(list.data[i]->value) {
-            if(list.data[i]->input.presence!=THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) return THINKTHEN_COBOL_REPRESENTATION;
-            rows[out->count++].original=answer_original(a,list.data[i]->input.value);
+            if(list.data[i]->input.presence==THINKTHEN_COMPLETE_PRESENCE_MISSING_V1) return THINKTHEN_COBOL_REPRESENTATION;
+            const thinkthen_complete_json_v1 null_value={.kind=THINKTHEN_COMPLETE_JSON_NULL_V1};
+            rows[out->count++].original=answer_original(a,list.data[i]->input.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? list.data[i]->input.value : &null_value);
         }
         break;
     }
@@ -246,6 +274,7 @@ static int project_answer(arena *a,const thinkthen_complete_session_packet_v1 *p
         row->present=value->index.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1;
         if(row->present) row->index=value->index.value;
         if(value->value.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) row->original=answer_original(a,value->value.value);
+        else if(row->present) row->original=answer_original(a,&(thinkthen_complete_json_v1){.kind=THINKTHEN_COMPLETE_JSON_NULL_V1});
         break;
     }
     case THINKTHEN_COMPLETE_REQUEST_FUNCTION_RECOGNIZE_V1: {
@@ -294,7 +323,7 @@ static int project_answer(arena *a,const thinkthen_complete_session_packet_v1 *p
                 for(size_t j=0;j<value->data.mode_proposals->proposals.len;j++) {
                     const thinkthen_complete_boundary_proposal_v1 *proposal=value->data.mode_proposals->proposals.data[j];
                     thinkthen_cobol_AnswerRecognition *row=rows+position++; row->record=i+1; row->proposal=1; row->mode=value->data.mode_proposals->mode->kind;
-                    row->start=proposal->start; row->end=proposal->end; row->length=proposal->length; row->probability=proposal->probability;
+                    row->start=proposal->start; row->end=proposal->end; row->length=proposal->length; row->strength=0;
                     int code=answer_text(proposal->text,&row->text);
                     thinkthen_cobol_AnswerExtensions *extensions=allocate(a,1,sizeof(*extensions));
                     if(extensions && !code) code=copy_thinkthen_cobol_AnswerExtensions(a,&proposal->extensions,extensions);
@@ -416,8 +445,10 @@ static int blocking_answer(const void *engine,const thinkthen_cobol_RequestQuest
                 if(!code) code=observed.failure_kind<sizeof(codes)/sizeof(codes[0]) ? codes[observed.failure_kind] : THINKTHEN_ELOCAL;
             }
         } else if(!code) {
+            code=observe_resolution(owner,packet);
+            if(!code) code=collect_receipts(owner,packet,kind);
             thinkthen_cobol_AnswerTable part={0};
-            code=project_answer(&owner->storage,packet,kind,&part);
+            if(!code) code=project_answer(&owner->storage,packet,kind,&part);
             if(!code && part.count) code=append_answer(owner,part,kind);
             if(!code && part.edge_count) code=append_edges(owner,part);
         }

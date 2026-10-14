@@ -4283,7 +4283,7 @@
  02 v-text pic x(8192).
 01 tt-n-cobol-AnswerDecision based.
  02 v-present usage binary-double unsigned.
- 02 v-value usage binary-double unsigned.
+ 02 v-value usage pointer.
 01 tt-n-cobol-AnswerChoice based.
  02 v-present usage binary-double unsigned.
  02 v-value.
@@ -4326,7 +4326,7 @@
  02 v-start usage binary-double unsigned.
  02 v-end usage binary-double unsigned.
  02 v-length usage binary-double unsigned.
- 02 v-probability usage float-long.
+ 02 v-strength usage float-long.
  02 v-mode usage binary-double unsigned.
  02 v-file-present usage binary-double unsigned.
  02 v-file.
@@ -4357,7 +4357,7 @@
  03 v-source-start usage binary-double unsigned.
  03 v-source-end usage binary-double unsigned.
  03 v-source-length usage binary-double unsigned.
- 03 v-source-probability usage float-long.
+ 03 v-source-strength usage float-long.
  03 v-source-mode usage binary-double unsigned.
  03 v-source-file-present usage binary-double unsigned.
  03 v-source-file.
@@ -4380,7 +4380,7 @@
  03 v-target-start usage binary-double unsigned.
  03 v-target-end usage binary-double unsigned.
  03 v-target-length usage binary-double unsigned.
- 03 v-target-probability usage float-long.
+ 03 v-target-strength usage float-long.
  03 v-target-mode usage binary-double unsigned.
  03 v-target-file-present usage binary-double unsigned.
  03 v-target-file.
@@ -4786,6 +4786,2244 @@
  02 v-count usage binary-double unsigned.
  02 v-edges usage pointer.
  02 v-edge-count usage binary-double unsigned.
+01 tt-n-cobol-AnswerNumber based.
+ 02 v-present usage binary-double unsigned.
+ 02 v-value usage float-long.
+01 tt-n-cobol-AnswerProbabilityList based.
+ 02 v-data usage pointer.
+ 02 v-count usage binary-double unsigned.
+01 tt-n-cobol-AnswerProbability based.
+ 02 v-scalar usage binary-double unsigned.
+ 02 v-first.
+ 03 v-first-present usage binary-double unsigned.
+ 03 v-first-value usage float-long.
+ 02 v-data usage pointer.
+ 02 v-count usage binary-double unsigned.
+ 02 v-lists usage pointer.
+ 02 v-list-count usage binary-double unsigned.
+01 tt-n-cobol-ReceiptRelation based.
+ 02 v-answer usage pointer.
+ 02 v-answer-id usage pointer.
+ 02 v-file.
+ 03 v-file-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-file-value.
+ 04 v-file-value-length usage binary-double unsigned.
+ 04 v-file-value-text pic x(8192).
+ 02 v-first-line.
+ 03 v-first-line-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-first-line-value usage binary-double unsigned.
+ 02 v-index.
+ 03 v-index-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-index-value usage binary-double unsigned.
+ 02 v-input.
+ 03 v-input-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-input-value usage pointer.
+ 02 v-input-sources.
+ 03 v-input-sources-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-input-sources-value.
+ 04 v-input-sources-value-data usage pointer.
+ 04 v-input-sources-value-len usage binary-double unsigned.
+ 02 v-last-line.
+ 03 v-last-line-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-last-line-value usage binary-double unsigned.
+ 02 v-meta usage pointer.
+ 02 v-position.
+ 03 v-position-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-position-value usage pointer.
+ 02 v-question usage pointer.
+ 02 v-schema usage pointer.
+ 02 v-value.
+ 03 v-value-data usage pointer.
+ 03 v-value-len usage binary-double unsigned.
+ 02 v-extensions.
+ 03 v-extensions-data usage pointer.
+ 03 v-extensions-len usage binary-double unsigned.
+01 tt-n-cobol-ReceiptExtensions based.
+ 02 v-data usage pointer.
+ 02 v-len usage binary-double unsigned.
+01 tt-n-cobol-ReceiptExtension based.
+ 02 v-name.
+ 03 v-name-length usage binary-double unsigned.
+ 03 v-name-text pic x(8192).
+ 02 v-value usage pointer.
+01 tt-n-cobol-ReceiptRelatedEntityEdgeList based.
+ 02 v-data usage pointer.
+ 02 v-len usage binary-double unsigned.
+01 tt-n-cobol-ReceiptRelatedEntityEdge based.
+ 02 v-either.
+ 03 v-either-presence usage binary-long unsigned.
+ 03 v-either-value usage binary-long unsigned.
+ 02 v-probability usage float-long.
+ 02 v-relation.
+ 03 v-relation-length usage binary-double unsigned.
+ 03 v-relation-text pic x(8192).
+ 02 v-source usage pointer.
+ 02 v-target usage pointer.
+ 02 v-extensions.
+ 03 v-extensions-data usage pointer.
+ 03 v-extensions-len usage binary-double unsigned.
+01 tt-n-cobol-ReceiptRelationEndpoint based.
+ 02 v-kind usage binary-long unsigned.
+ 02 filler pic x(4).
+ 02 v-data.
+ 03 v-data-related-entity usage pointer.
+ 03 v-data-source usage pointer.
+01 tt-n-cobol-ReceiptRelationEndpointData based.
+ 02 v-related-entity usage pointer.
+ 02 v-source usage pointer.
+01 tt-n-cobol-ReceiptRelationEndpointSource based.
+ 02 v-file.
+ 03 v-file-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-file-value.
+ 04 v-file-value-length usage binary-double unsigned.
+ 04 v-file-value-text pic x(8192).
+ 02 v-first-line.
+ 03 v-first-line-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-first-line-value usage binary-double unsigned.
+ 02 v-kind.
+ 03 v-kind-length usage binary-double unsigned.
+ 03 v-kind-text pic x(8192).
+ 02 v-last-line.
+ 03 v-last-line-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-last-line-value usage binary-double unsigned.
+ 02 v-name.
+ 03 v-name-length usage binary-double unsigned.
+ 03 v-name-text pic x(8192).
+ 02 v-ordinal usage binary-double unsigned.
+ 02 v-record.
+ 03 v-record-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-record-value usage pointer.
+ 02 v-extensions.
+ 03 v-extensions-data usage pointer.
+ 03 v-extensions-len usage binary-double unsigned.
+01 tt-n-cobol-ReceiptJsonPresence based.
+ 02 v-presence usage binary-long unsigned.
+ 02 filler pic x(4).
+ 02 v-value usage pointer.
+01 tt-n-cobol-ReceiptU64Presence based.
+ 02 v-presence usage binary-long unsigned.
+ 02 filler pic x(4).
+ 02 v-value usage binary-double unsigned.
+01 tt-n-cobol-ReceiptUtf8Presence based.
+ 02 v-presence usage binary-long unsigned.
+ 02 filler pic x(4).
+ 02 v-value.
+ 03 v-value-length usage binary-double unsigned.
+ 03 v-value-text pic x(8192).
+01 tt-n-cobol-ReceiptRelationEndpointRelatedEntity based.
+ 02 v-kind.
+ 03 v-kind-length usage binary-double unsigned.
+ 03 v-kind-text pic x(8192).
+ 02 v-name.
+ 03 v-name-length usage binary-double unsigned.
+ 03 v-name-text pic x(8192).
+ 02 v-extensions.
+ 03 v-extensions-data usage pointer.
+ 03 v-extensions-len usage binary-double unsigned.
+01 tt-n-cobol-ReceiptU32Presence based.
+ 02 v-presence usage binary-long unsigned.
+ 02 v-value usage binary-long unsigned.
+01 tt-n-cobol-ReceiptVersion based.
+ 02 v-kind usage binary-long unsigned.
+01 tt-n-cobol-ReceiptRelateQuestionDocument based.
+ 02 v-batch.
+ 03 v-batch-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-batch-value usage pointer.
+ 02 v-context-schema.
+ 03 v-context-schema-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-context-schema-value usage pointer.
+ 02 v-fields.
+ 03 v-fields-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-fields-value usage pointer.
+ 02 v-item-schema.
+ 03 v-item-schema-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-item-schema-value usage pointer.
+ 02 v-label-details.
+ 03 v-label-details-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-label-details-value.
+ 04 v-label-details-value-data usage pointer.
+ 04 v-label-details-value-len usage binary-double unsigned.
+ 02 v-model.
+ 03 v-model-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-model-value.
+ 04 v-model-value-length usage binary-double unsigned.
+ 04 v-model-value-text pic x(8192).
+ 02 v-name.
+ 03 v-name-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-name-value usage pointer.
+ 02 v-on.
+ 03 v-on-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-on-value.
+ 04 v-on-value-data usage pointer.
+ 04 v-on-value-len usage binary-double unsigned.
+ 02 v-profile.
+ 03 v-profile-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-profile-value.
+ 04 v-profile-value-length usage binary-double unsigned.
+ 04 v-profile-value-text pic x(8192).
+ 02 v-relations.
+ 03 v-relations-data usage pointer.
+ 03 v-relations-len usage binary-double unsigned.
+ 02 v-threshold usage pointer.
+ 02 v-verb.
+ 03 v-verb-length usage binary-double unsigned.
+ 03 v-verb-text pic x(8192).
+ 02 v-wording-version.
+ 03 v-wording-version-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-wording-version-value usage pointer.
+ 02 v-extensions.
+ 03 v-extensions-data usage pointer.
+ 03 v-extensions-len usage binary-double unsigned.
+01 tt-n-cobol-ReceiptWordingVersionPresence based.
+ 02 v-presence usage binary-long unsigned.
+ 02 filler pic x(4).
+ 02 v-value usage pointer.
+01 tt-n-cobol-ReceiptWordingVersion based.
+ 02 v-value usage binary-double unsigned.
+01 tt-n-cobol-ReceiptThreshold based.
+ 02 v-kind usage binary-long unsigned.
+ 02 filler pic x(4).
+ 02 v-data.
+ 03 v-data-number usage float-long.
+ 03 v-data-string.
+ 04 v-data-string-length usage binary-double unsigned.
+ 04 v-data-string-text pic x(8192).
+01 tt-n-cobol-ReceiptThresholdData based.
+ 02 v-number usage float-long.
+ 02 v-string.
+ 03 v-string-length usage binary-double unsigned.
+ 03 v-string-text pic x(8192).
+01 tt-n-cobol-ReceiptRelationRuleList based.
+ 02 v-data usage pointer.
+ 02 v-len usage binary-double unsigned.
+01 tt-n-cobol-ReceiptRelationRule based.
+ 02 v-either usage binary-long unsigned.
+ 02 filler pic x(4).
+ 02 v-name.
+ 03 v-name-length usage binary-double unsigned.
+ 03 v-name-text pic x(8192).
+ 02 v-reads.
+ 03 v-reads-length usage binary-double unsigned.
+ 03 v-reads-text pic x(8192).
+ 02 v-single.
+ 03 v-single-presence usage binary-long unsigned.
+ 03 v-single-value usage binary-long unsigned.
+ 02 v-source.
+ 03 v-source-length usage binary-double unsigned.
+ 03 v-source-text pic x(8192).
+ 02 v-target.
+ 03 v-target-length usage binary-double unsigned.
+ 03 v-target-text pic x(8192).
+ 02 v-extensions.
+ 03 v-extensions-data usage pointer.
+ 03 v-extensions-len usage binary-double unsigned.
+01 tt-n-cobol-ReceiptStringListPresence based.
+ 02 v-presence usage binary-long unsigned.
+ 02 filler pic x(4).
+ 02 v-value.
+ 03 v-value-data usage pointer.
+ 03 v-value-len usage binary-double unsigned.
+01 tt-n-cobol-ReceiptStringList based.
+ 02 v-data usage pointer.
+ 02 v-len usage binary-double unsigned.
+01 tt-n-cobol-ReceiptQuestionNamePresence based.
+ 02 v-presence usage binary-long unsigned.
+ 02 filler pic x(4).
+ 02 v-value usage pointer.
+01 tt-n-cobol-ReceiptQuestionName based.
+ 02 v-value.
+ 03 v-value-length usage binary-double unsigned.
+ 03 v-value-text pic x(8192).
+01 tt-n-cobol-ReceiptLabelListPresence based.
+ 02 v-presence usage binary-long unsigned.
+ 02 filler pic x(4).
+ 02 v-value.
+ 03 v-value-data usage pointer.
+ 03 v-value-len usage binary-double unsigned.
+01 tt-n-cobol-ReceiptLabelList based.
+ 02 v-data usage pointer.
+ 02 v-len usage binary-double unsigned.
+01 tt-n-cobol-ReceiptLabel based.
+ 02 v-description.
+ 03 v-description-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-description-value usage pointer.
+ 02 v-name.
+ 03 v-name-length usage binary-double unsigned.
+ 03 v-name-text pic x(8192).
+ 02 v-extensions.
+ 03 v-extensions-data usage pointer.
+ 03 v-extensions-len usage binary-double unsigned.
+01 tt-n-cobol-ReceiptInputDeclarationPresence based.
+ 02 v-presence usage binary-long unsigned.
+ 02 filler pic x(4).
+ 02 v-value usage pointer.
+01 tt-n-cobol-ReceiptInputDeclaration based.
+ 02 v-kind usage binary-long unsigned.
+ 02 filler pic x(4).
+ 02 v-data.
+ 03 v-data-string-root usage pointer.
+ 03 v-data-object-root usage pointer.
+01 tt-n-cobol-ReceiptInputDeclarationData based.
+ 02 v-string-root usage pointer.
+ 02 v-object-root usage pointer.
+01 tt-n-cobol-ReceiptInputDeclarationObjectRoot based.
+ 02 v-properties.
+ 03 v-properties-data usage pointer.
+ 03 v-properties-len usage binary-double unsigned.
+ 02 v-required.
+ 03 v-required-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-required-value.
+ 04 v-required-value-data usage pointer.
+ 04 v-required-value-len usage binary-double unsigned.
+ 02 v-type usage pointer.
+ 02 v-extensions.
+ 03 v-extensions-data usage pointer.
+ 03 v-extensions-len usage binary-double unsigned.
+01 tt-n-cobol-ReceiptObjectType based.
+ 02 v-kind usage binary-long unsigned.
+01 tt-n-cobol-ReceiptInputPropertyTypeMap based.
+ 02 v-data usage pointer.
+ 02 v-len usage binary-double unsigned.
+01 tt-n-cobol-ReceiptInputPropertyTypeMapEntry based.
+ 02 v-name.
+ 03 v-name-length usage binary-double unsigned.
+ 03 v-name-text pic x(8192).
+ 02 v-value usage pointer.
+01 tt-n-cobol-ReceiptInputPropertyType based.
+ 02 v-kind usage binary-long unsigned.
+ 02 filler pic x(4).
+ 02 v-data.
+ 03 v-data-string usage pointer.
+ 03 v-data-number usage pointer.
+ 03 v-data-boolean usage pointer.
+ 03 v-data-array usage pointer.
+01 tt-n-cobol-ReceiptInputPropertyTypeData based.
+ 02 v-string usage pointer.
+ 02 v-number usage pointer.
+ 02 v-boolean usage pointer.
+ 02 v-array usage pointer.
+01 tt-n-cobol-ReceiptInputPropertyTypeArray based.
+ 02 v-items usage pointer.
+ 02 v-type.
+ 03 v-type-length usage binary-double unsigned.
+ 03 v-type-text pic x(8192).
+ 02 v-extensions.
+ 03 v-extensions-data usage pointer.
+ 03 v-extensions-len usage binary-double unsigned.
+01 tt-n-cobol-ReceiptStringRoot based.
+ 02 v-type usage pointer.
+ 02 v-extensions.
+ 03 v-extensions-data usage pointer.
+ 03 v-extensions-len usage binary-double unsigned.
+01 tt-n-cobol-ReceiptStringType based.
+ 02 v-kind usage binary-long unsigned.
+01 tt-n-cobol-ReceiptInputPropertyTypeBoolean based.
+ 02 v-type.
+ 03 v-type-length usage binary-double unsigned.
+ 03 v-type-text pic x(8192).
+ 02 v-extensions.
+ 03 v-extensions-data usage pointer.
+ 03 v-extensions-len usage binary-double unsigned.
+01 tt-n-cobol-ReceiptInputPropertyTypeNumber based.
+ 02 v-type.
+ 03 v-type-length usage binary-double unsigned.
+ 03 v-type-text pic x(8192).
+ 02 v-extensions.
+ 03 v-extensions-data usage pointer.
+ 03 v-extensions-len usage binary-double unsigned.
+01 tt-n-cobol-ReceiptInputPropertyTypeString based.
+ 02 v-type.
+ 03 v-type-length usage binary-double unsigned.
+ 03 v-type-text pic x(8192).
+ 02 v-extensions.
+ 03 v-extensions-data usage pointer.
+ 03 v-extensions-len usage binary-double unsigned.
+01 tt-n-cobol-ReceiptInputDeclarationStringRoot based.
+ 02 v-type usage pointer.
+ 02 v-extensions.
+ 03 v-extensions-data usage pointer.
+ 03 v-extensions-len usage binary-double unsigned.
+01 tt-n-cobol-ReceiptRelateFieldsPresence based.
+ 02 v-presence usage binary-long unsigned.
+ 02 filler pic x(4).
+ 02 v-value usage pointer.
+01 tt-n-cobol-ReceiptRelateFields based.
+ 02 v-kind.
+ 03 v-kind-length usage binary-double unsigned.
+ 03 v-kind-text pic x(8192).
+ 02 v-name.
+ 03 v-name-length usage binary-double unsigned.
+ 03 v-name-text pic x(8192).
+ 02 v-extensions.
+ 03 v-extensions-data usage pointer.
+ 03 v-extensions-len usage binary-double unsigned.
+01 tt-n-cobol-ReceiptBatchPresence based.
+ 02 v-presence usage binary-long unsigned.
+ 02 filler pic x(4).
+ 02 v-value usage pointer.
+01 tt-n-cobol-ReceiptBatch based.
+ 02 v-kind usage binary-long unsigned.
+ 02 filler pic x(4).
+ 02 v-data.
+ 03 v-data-integer usage binary-double unsigned.
+ 03 v-data-string usage pointer.
+01 tt-n-cobol-ReceiptBatchData based.
+ 02 v-integer usage binary-double unsigned.
+ 02 v-string usage pointer.
+01 tt-n-cobol-ReceiptBatchString based.
+ 02 v-kind usage binary-long unsigned.
+01 tt-n-cobol-ReceiptPositionPresence based.
+ 02 v-presence usage binary-long unsigned.
+ 02 filler pic x(4).
+ 02 v-value usage pointer.
+01 tt-n-cobol-ReceiptPosition based.
+ 02 v-file.
+ 03 v-file-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-file-value.
+ 04 v-file-value-length usage binary-double unsigned.
+ 04 v-file-value-text pic x(8192).
+ 02 v-first.
+ 03 v-first-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-first-value usage binary-double unsigned.
+ 02 v-images.
+ 03 v-images-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-images-value.
+ 04 v-images-value-data usage pointer.
+ 04 v-images-value-len usage binary-double unsigned.
+ 02 v-last.
+ 03 v-last-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-last-value usage binary-double unsigned.
+ 02 v-extensions.
+ 03 v-extensions-data usage pointer.
+ 03 v-extensions-len usage binary-double unsigned.
+01 tt-n-cobol-ReceiptMeta based.
+ 02 v-answered-by.
+ 03 v-answered-by-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-answered-by-value.
+ 04 v-answered-by-value-length usage binary-double unsigned.
+ 04 v-answered-by-value-text pic x(8192).
+ 02 v-attempts.
+ 03 v-attempts-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-attempts-value.
+ 04 v-attempts-value-data usage pointer.
+ 04 v-attempts-value-len usage binary-double unsigned.
+ 02 v-batch-setting.
+ 03 v-batch-setting-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-batch-setting-value usage pointer.
+ 02 v-batch-warning.
+ 03 v-batch-warning-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-batch-warning-value usage pointer.
+ 02 v-cached usage binary-long unsigned.
+ 02 filler pic x(4).
+ 02 v-context-sha256.
+ 03 v-context-sha256-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-context-sha256-value.
+ 04 v-context-sha256-value-length usage binary-double unsigned.
+ 04 v-context-sha256-value-text pic x(8192).
+ 02 v-failed-questions usage binary-double unsigned.
+ 02 v-model.
+ 03 v-model-length usage binary-double unsigned.
+ 03 v-model-text pic x(8192).
+ 02 v-observations.
+ 03 v-observations-data usage pointer.
+ 03 v-observations-len usage binary-double unsigned.
+ 02 v-origin.
+ 03 v-origin-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-origin-value usage pointer.
+ 02 v-profile-warning.
+ 03 v-profile-warning-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-profile-warning-value usage pointer.
+ 02 v-question-sha256.
+ 03 v-question-sha256-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-question-sha256-value.
+ 04 v-question-sha256-value-length usage binary-double unsigned.
+ 04 v-question-sha256-value-text pic x(8192).
+ 02 v-question-sources.
+ 03 v-question-sources-data usage pointer.
+ 03 v-question-sources-len usage binary-double unsigned.
+ 02 v-questions-sha256.
+ 03 v-questions-sha256-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-questions-sha256-value.
+ 04 v-questions-sha256-value-length usage binary-double unsigned.
+ 04 v-questions-sha256-value-text pic x(8192).
+ 02 v-requests.
+ 03 v-requests-data usage pointer.
+ 03 v-requests-len usage binary-double unsigned.
+ 02 v-requests-sent usage binary-double unsigned.
+ 02 v-tool.
+ 03 v-tool-length usage binary-double unsigned.
+ 03 v-tool-text pic x(8192).
+ 02 v-url.
+ 03 v-url-length usage binary-double unsigned.
+ 03 v-url-text pic x(8192).
+ 02 v-usage.
+ 03 v-usage-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-usage-value usage pointer.
+ 02 v-extensions.
+ 03 v-extensions-data usage pointer.
+ 03 v-extensions-len usage binary-double unsigned.
+01 tt-n-cobol-ReceiptUsagePresence based.
+ 02 v-presence usage binary-long unsigned.
+ 02 filler pic x(4).
+ 02 v-value usage pointer.
+01 tt-n-cobol-ReceiptUsage based.
+ 02 v-input-tokens.
+ 03 v-input-tokens-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-input-tokens-value usage binary-double unsigned.
+ 02 v-output-tokens.
+ 03 v-output-tokens-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-output-tokens-value usage binary-double unsigned.
+ 02 v-extensions.
+ 03 v-extensions-data usage pointer.
+ 03 v-extensions-len usage binary-double unsigned.
+01 tt-n-cobol-ReceiptQuestionSourceList based.
+ 02 v-data usage pointer.
+ 02 v-len usage binary-double unsigned.
+01 tt-n-cobol-ReceiptQuestionSource based.
+ 02 v-answered-by.
+ 03 v-answered-by-length usage binary-double unsigned.
+ 03 v-answered-by-text pic x(8192).
+ 02 v-batch-size.
+ 03 v-batch-size-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-batch-size-value usage binary-double unsigned.
+ 02 v-origin usage pointer.
+ 02 v-extensions.
+ 03 v-extensions-data usage pointer.
+ 03 v-extensions-len usage binary-double unsigned.
+01 tt-n-cobol-ReceiptOrigin based.
+ 02 v-kind usage binary-long unsigned.
+01 tt-n-cobol-ReceiptProfileWarningPresence based.
+ 02 v-presence usage binary-long unsigned.
+ 02 filler pic x(4).
+ 02 v-value usage pointer.
+01 tt-n-cobol-ReceiptProfileWarning based.
+ 02 v-running.
+ 03 v-running-length usage binary-double unsigned.
+ 03 v-running-text pic x(8192).
+ 02 v-tuned-for.
+ 03 v-tuned-for-length usage binary-double unsigned.
+ 03 v-tuned-for-text pic x(8192).
+ 02 v-extensions.
+ 03 v-extensions-data usage pointer.
+ 03 v-extensions-len usage binary-double unsigned.
+01 tt-n-cobol-ReceiptOriginPresence based.
+ 02 v-presence usage binary-long unsigned.
+ 02 filler pic x(4).
+ 02 v-value usage pointer.
+01 tt-n-cobol-ReceiptObservationList based.
+ 02 v-data usage pointer.
+ 02 v-len usage binary-double unsigned.
+01 tt-n-cobol-ReceiptObservation based.
+ 02 v-kind usage binary-long unsigned.
+ 02 filler pic x(4).
+ 02 v-data.
+ 03 v-data-observation-id usage pointer.
+ 03 v-data-failure-id usage pointer.
+01 tt-n-cobol-ReceiptObservationData based.
+ 02 v-observation-id usage pointer.
+ 02 v-failure-id usage pointer.
+01 tt-n-cobol-ReceiptObservationFailureId based.
+ 02 v-failure-id usage pointer.
+ 02 v-extensions.
+ 03 v-extensions-data usage pointer.
+ 03 v-extensions-len usage binary-double unsigned.
+01 tt-n-cobol-ReceiptFailureId based.
+ 02 v-value.
+ 03 v-value-length usage binary-double unsigned.
+ 03 v-value-text pic x(8192).
+01 tt-n-cobol-ReceiptObservationObservationId based.
+ 02 v-observation-id usage pointer.
+ 02 v-extensions.
+ 03 v-extensions-data usage pointer.
+ 03 v-extensions-len usage binary-double unsigned.
+01 tt-n-cobol-ReceiptObservationId based.
+ 02 v-value.
+ 03 v-value-length usage binary-double unsigned.
+ 03 v-value-text pic x(8192).
+01 tt-n-cobol-ReceiptBatchWarningPresence based.
+ 02 v-presence usage binary-long unsigned.
+ 02 filler pic x(4).
+ 02 v-value usage pointer.
+01 tt-n-cobol-ReceiptBatchWarning based.
+ 02 v-running usage pointer.
+ 02 v-tuned-for usage pointer.
+ 02 v-extensions.
+ 03 v-extensions-data usage pointer.
+ 03 v-extensions-len usage binary-double unsigned.
+01 tt-n-cobol-ReceiptBatchSetting based.
+ 02 v-kind usage binary-long unsigned.
+ 02 filler pic x(4).
+ 02 v-data.
+ 03 v-data-integer usage binary-double unsigned.
+ 03 v-data-string.
+ 04 v-data-string-length usage binary-double unsigned.
+ 04 v-data-string-text pic x(8192).
+01 tt-n-cobol-ReceiptBatchSettingData based.
+ 02 v-integer usage binary-double unsigned.
+ 02 v-string.
+ 03 v-string-length usage binary-double unsigned.
+ 03 v-string-text pic x(8192).
+01 tt-n-cobol-ReceiptBatchSettingPresence based.
+ 02 v-presence usage binary-long unsigned.
+ 02 filler pic x(4).
+ 02 v-value usage pointer.
+01 tt-n-cobol-ReceiptAttemptListPresence based.
+ 02 v-presence usage binary-long unsigned.
+ 02 filler pic x(4).
+ 02 v-value.
+ 03 v-value-data usage pointer.
+ 03 v-value-len usage binary-double unsigned.
+01 tt-n-cobol-ReceiptAttemptList based.
+ 02 v-data usage pointer.
+ 02 v-len usage binary-double unsigned.
+01 tt-n-cobol-ReceiptAttempt based.
+ 02 v-ordinal usage binary-double unsigned.
+ 02 v-outcome usage pointer.
+ 02 v-request-id.
+ 03 v-request-id-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-request-id-value.
+ 04 v-request-id-value-length usage binary-double unsigned.
+ 04 v-request-id-value-text pic x(8192).
+ 02 v-request-sha256.
+ 03 v-request-sha256-length usage binary-double unsigned.
+ 03 v-request-sha256-text pic x(8192).
+ 02 v-sdk-request-id usage pointer.
+ 02 v-server-ms.
+ 03 v-server-ms-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-server-ms-value usage binary-double unsigned.
+ 02 v-status.
+ 03 v-status-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-status-value usage binary-double unsigned.
+ 02 v-wall-ms usage binary-double unsigned.
+ 02 v-extensions.
+ 03 v-extensions-data usage pointer.
+ 03 v-extensions-len usage binary-double unsigned.
+01 tt-n-cobol-ReceiptSdkRequestId based.
+ 02 v-value.
+ 03 v-value-length usage binary-double unsigned.
+ 03 v-value-text pic x(8192).
+01 tt-n-cobol-ReceiptAttemptOutcome based.
+ 02 v-kind usage binary-long unsigned.
+01 tt-n-cobol-ReceiptSessionInputSourceListPresence based.
+ 02 v-presence usage binary-long unsigned.
+ 02 filler pic x(4).
+ 02 v-value.
+ 03 v-value-data usage pointer.
+ 03 v-value-len usage binary-double unsigned.
+01 tt-n-cobol-ReceiptSessionInputSourceList based.
+ 02 v-data usage pointer.
+ 02 v-len usage binary-double unsigned.
+01 tt-n-cobol-ReceiptSessionInputSource based.
+ 02 v-index usage binary-double unsigned.
+ 02 v-source usage pointer.
+ 02 v-extensions.
+ 03 v-extensions-data usage pointer.
+ 03 v-extensions-len usage binary-double unsigned.
+01 tt-n-cobol-ReceiptPhysicalSource based.
+ 02 v-file.
+ 03 v-file-length usage binary-double unsigned.
+ 03 v-file-text pic x(8192).
+ 02 v-first-line.
+ 03 v-first-line-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-first-line-value usage binary-double unsigned.
+ 02 v-last-line.
+ 03 v-last-line-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-last-line-value usage binary-double unsigned.
+ 02 v-extensions.
+ 03 v-extensions-data usage pointer.
+ 03 v-extensions-len usage binary-double unsigned.
+01 tt-n-cobol-ReceiptAnswerId based.
+ 02 v-value.
+ 03 v-value-length usage binary-double unsigned.
+ 03 v-value-text pic x(8192).
+01 tt-n-cobol-ReceiptAnswers based.
+ 02 v-questions.
+ 03 v-questions-data usage pointer.
+ 03 v-questions-len usage binary-double unsigned.
+ 02 v-extensions.
+ 03 v-extensions-data usage pointer.
+ 03 v-extensions-len usage binary-double unsigned.
+01 tt-n-cobol-ReceiptRelationMemberList based.
+ 02 v-data usage pointer.
+ 02 v-len usage binary-double unsigned.
+01 tt-n-cobol-ReceiptRelationMember based.
+ 02 v-kind usage binary-long unsigned.
+ 02 filler pic x(4).
+ 02 v-data.
+ 03 v-data-answer-id usage pointer.
+ 03 v-data-failure-id usage pointer.
+01 tt-n-cobol-ReceiptRelationMemberData based.
+ 02 v-answer-id usage pointer.
+ 02 v-failure-id usage pointer.
+01 tt-n-cobol-ReceiptRelationMemberFailureId based.
+ 02 v-direction usage pointer.
+ 02 v-method usage pointer.
+ 02 v-observations.
+ 03 v-observations-data usage pointer.
+ 03 v-observations-len usage binary-double unsigned.
+ 02 v-question usage pointer.
+ 02 v-question-sources.
+ 03 v-question-sources-data usage pointer.
+ 03 v-question-sources-len usage binary-double unsigned.
+ 02 v-reads.
+ 03 v-reads-length usage binary-double unsigned.
+ 03 v-reads-text pic x(8192).
+ 02 v-relation.
+ 03 v-relation-length usage binary-double unsigned.
+ 03 v-relation-text pic x(8192).
+ 02 v-request.
+ 03 v-request-length usage binary-double unsigned.
+ 03 v-request-text pic x(8192).
+ 02 v-source usage pointer.
+ 02 v-target.
+ 03 v-target-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-target-value usage pointer.
+ 02 v-threshold usage pointer.
+ 02 v-usage.
+ 03 v-usage-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-usage-value usage pointer.
+ 02 v-failure usage pointer.
+ 02 v-failure-id usage pointer.
+ 02 v-extensions.
+ 03 v-extensions-data usage pointer.
+ 03 v-extensions-len usage binary-double unsigned.
+01 tt-n-cobol-ReceiptFailure based.
+ 02 v-cause usage pointer.
+ 02 v-kind usage pointer.
+ 02 v-extensions.
+ 03 v-extensions-data usage pointer.
+ 03 v-extensions-len usage binary-double unsigned.
+01 tt-n-cobol-ReceiptFailureFieldKind based.
+ 02 v-kind usage binary-long unsigned.
+01 tt-n-cobol-ReceiptFailureCause based.
+ 02 v-kind usage binary-long unsigned.
+01 tt-n-cobol-ReceiptRelatedEntityPresence based.
+ 02 v-presence usage binary-long unsigned.
+ 02 filler pic x(4).
+ 02 v-value usage pointer.
+01 tt-n-cobol-ReceiptRelatedEntity based.
+ 02 v-kind.
+ 03 v-kind-length usage binary-double unsigned.
+ 03 v-kind-text pic x(8192).
+ 02 v-name.
+ 03 v-name-length usage binary-double unsigned.
+ 03 v-name-text pic x(8192).
+ 02 v-extensions.
+ 03 v-extensions-data usage pointer.
+ 03 v-extensions-len usage binary-double unsigned.
+01 tt-n-cobol-ReceiptQuestionDocument based.
+ 02 v-kind usage binary-long unsigned.
+ 02 filler pic x(4).
+ 02 v-data.
+ 03 v-data-decide usage pointer.
+ 03 v-data-choose usage pointer.
+ 03 v-data-tag usage pointer.
+ 03 v-data-score usage pointer.
+01 tt-n-cobol-ReceiptQuestionDocumentData based.
+ 02 v-decide usage pointer.
+ 02 v-choose usage pointer.
+ 02 v-tag usage pointer.
+ 02 v-score usage pointer.
+01 tt-n-cobol-ReceiptQuestionDocumentScore based.
+ 02 v-batch.
+ 03 v-batch-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-batch-value usage pointer.
+ 02 v-context-schema.
+ 03 v-context-schema-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-context-schema-value usage pointer.
+ 02 v-item-schema.
+ 03 v-item-schema-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-item-schema-value usage pointer.
+ 02 v-label-details.
+ 03 v-label-details-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-label-details-value.
+ 04 v-label-details-value-data usage pointer.
+ 04 v-label-details-value-len usage binary-double unsigned.
+ 02 v-model.
+ 03 v-model-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-model-value.
+ 04 v-model-value-length usage binary-double unsigned.
+ 04 v-model-value-text pic x(8192).
+ 02 v-name.
+ 03 v-name-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-name-value usage pointer.
+ 02 v-on.
+ 03 v-on-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-on-value.
+ 04 v-on-value-data usage pointer.
+ 04 v-on-value-len usage binary-double unsigned.
+ 02 v-profile.
+ 03 v-profile-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-profile-value.
+ 04 v-profile-value-length usage binary-double unsigned.
+ 04 v-profile-value-text pic x(8192).
+ 02 v-wording-version.
+ 03 v-wording-version-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-wording-version-value usage pointer.
+ 02 v-levels.
+ 03 v-levels-data usage pointer.
+ 03 v-levels-len usage binary-double unsigned.
+ 02 v-text.
+ 03 v-text-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-text-value usage pointer.
+ 02 v-verb.
+ 03 v-verb-length usage binary-double unsigned.
+ 03 v-verb-text pic x(8192).
+ 02 v-extensions.
+ 03 v-extensions-data usage pointer.
+ 03 v-extensions-len usage binary-double unsigned.
+01 tt-n-cobol-ReceiptQuestionDocumentTag based.
+ 02 v-batch.
+ 03 v-batch-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-batch-value usage pointer.
+ 02 v-context-schema.
+ 03 v-context-schema-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-context-schema-value usage pointer.
+ 02 v-item-schema.
+ 03 v-item-schema-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-item-schema-value usage pointer.
+ 02 v-label-details.
+ 03 v-label-details-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-label-details-value.
+ 04 v-label-details-value-data usage pointer.
+ 04 v-label-details-value-len usage binary-double unsigned.
+ 02 v-model.
+ 03 v-model-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-model-value.
+ 04 v-model-value-length usage binary-double unsigned.
+ 04 v-model-value-text pic x(8192).
+ 02 v-name.
+ 03 v-name-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-name-value usage pointer.
+ 02 v-on.
+ 03 v-on-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-on-value.
+ 04 v-on-value-data usage pointer.
+ 04 v-on-value-len usage binary-double unsigned.
+ 02 v-profile.
+ 03 v-profile-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-profile-value.
+ 04 v-profile-value-length usage binary-double unsigned.
+ 04 v-profile-value-text pic x(8192).
+ 02 v-wording-version.
+ 03 v-wording-version-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-wording-version-value usage pointer.
+ 02 v-labels.
+ 03 v-labels-data usage pointer.
+ 03 v-labels-len usage binary-double unsigned.
+ 02 v-text.
+ 03 v-text-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-text-value usage pointer.
+ 02 v-verb.
+ 03 v-verb-length usage binary-double unsigned.
+ 03 v-verb-text pic x(8192).
+ 02 v-extensions.
+ 03 v-extensions-data usage pointer.
+ 03 v-extensions-len usage binary-double unsigned.
+01 tt-n-cobol-ReceiptQuestionDocumentChoose based.
+ 02 v-batch.
+ 03 v-batch-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-batch-value usage pointer.
+ 02 v-context-schema.
+ 03 v-context-schema-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-context-schema-value usage pointer.
+ 02 v-item-schema.
+ 03 v-item-schema-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-item-schema-value usage pointer.
+ 02 v-label-details.
+ 03 v-label-details-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-label-details-value.
+ 04 v-label-details-value-data usage pointer.
+ 04 v-label-details-value-len usage binary-double unsigned.
+ 02 v-model.
+ 03 v-model-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-model-value.
+ 04 v-model-value-length usage binary-double unsigned.
+ 04 v-model-value-text pic x(8192).
+ 02 v-name.
+ 03 v-name-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-name-value usage pointer.
+ 02 v-on.
+ 03 v-on-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-on-value.
+ 04 v-on-value-data usage pointer.
+ 04 v-on-value-len usage binary-double unsigned.
+ 02 v-profile.
+ 03 v-profile-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-profile-value.
+ 04 v-profile-value-length usage binary-double unsigned.
+ 04 v-profile-value-text pic x(8192).
+ 02 v-wording-version.
+ 03 v-wording-version-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-wording-version-value usage pointer.
+ 02 v-options.
+ 03 v-options-data usage pointer.
+ 03 v-options-len usage binary-double unsigned.
+ 02 v-text.
+ 03 v-text-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-text-value usage pointer.
+ 02 v-verb.
+ 03 v-verb-length usage binary-double unsigned.
+ 03 v-verb-text pic x(8192).
+ 02 v-extensions.
+ 03 v-extensions-data usage pointer.
+ 03 v-extensions-len usage binary-double unsigned.
+01 tt-n-cobol-ReceiptQuestionDocumentDecide based.
+ 02 v-batch.
+ 03 v-batch-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-batch-value usage pointer.
+ 02 v-context-schema.
+ 03 v-context-schema-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-context-schema-value usage pointer.
+ 02 v-item-schema.
+ 03 v-item-schema-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-item-schema-value usage pointer.
+ 02 v-label-details.
+ 03 v-label-details-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-label-details-value.
+ 04 v-label-details-value-data usage pointer.
+ 04 v-label-details-value-len usage binary-double unsigned.
+ 02 v-model.
+ 03 v-model-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-model-value.
+ 04 v-model-value-length usage binary-double unsigned.
+ 04 v-model-value-text pic x(8192).
+ 02 v-name.
+ 03 v-name-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-name-value usage pointer.
+ 02 v-on.
+ 03 v-on-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-on-value.
+ 04 v-on-value-data usage pointer.
+ 04 v-on-value-len usage binary-double unsigned.
+ 02 v-profile.
+ 03 v-profile-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-profile-value.
+ 04 v-profile-value-length usage binary-double unsigned.
+ 04 v-profile-value-text pic x(8192).
+ 02 v-wording-version.
+ 03 v-wording-version-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-wording-version-value usage pointer.
+ 02 v-false.
+ 03 v-false--presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-false--value usage pointer.
+ 02 v-text.
+ 03 v-text-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-text-value usage pointer.
+ 02 v-true.
+ 03 v-true--presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-true--value usage pointer.
+ 02 v-verb.
+ 03 v-verb-length usage binary-double unsigned.
+ 03 v-verb-text pic x(8192).
+ 02 v-extensions.
+ 03 v-extensions-data usage pointer.
+ 03 v-extensions-len usage binary-double unsigned.
+01 tt-n-cobol-ReceiptRelationMethod based.
+ 02 v-kind usage binary-long unsigned.
+01 tt-n-cobol-ReceiptRelationDirection based.
+ 02 v-kind usage binary-long unsigned.
+01 tt-n-cobol-ReceiptRelationMemberAnswerId based.
+ 02 v-direction usage pointer.
+ 02 v-method usage pointer.
+ 02 v-observations.
+ 03 v-observations-data usage pointer.
+ 03 v-observations-len usage binary-double unsigned.
+ 02 v-question usage pointer.
+ 02 v-question-sources.
+ 03 v-question-sources-data usage pointer.
+ 03 v-question-sources-len usage binary-double unsigned.
+ 02 v-reads.
+ 03 v-reads-length usage binary-double unsigned.
+ 03 v-reads-text pic x(8192).
+ 02 v-relation.
+ 03 v-relation-length usage binary-double unsigned.
+ 03 v-relation-text pic x(8192).
+ 02 v-request.
+ 03 v-request-length usage binary-double unsigned.
+ 03 v-request-text pic x(8192).
+ 02 v-source usage pointer.
+ 02 v-target.
+ 03 v-target-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-target-value usage pointer.
+ 02 v-threshold usage pointer.
+ 02 v-usage.
+ 03 v-usage-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-usage-value usage pointer.
+ 02 v-accepted usage binary-long unsigned.
+ 02 filler pic x(4).
+ 02 v-answer usage pointer.
+ 02 v-answer-id usage pointer.
+ 02 v-probability usage float-long.
+ 02 v-extensions.
+ 03 v-extensions-data usage pointer.
+ 03 v-extensions-len usage binary-double unsigned.
+01 tt-n-cobol-ReceiptAnswer based.
+ 02 v-kind usage binary-long unsigned.
+ 02 filler pic x(4).
+ 02 v-data.
+ 03 v-data-yes-no usage pointer.
+ 03 v-data-choice usage pointer.
+ 03 v-data-tag usage pointer.
+ 03 v-data-score usage pointer.
+01 tt-n-cobol-ReceiptAnswerData based.
+ 02 v-yes-no usage pointer.
+ 02 v-choice usage pointer.
+ 02 v-tag usage pointer.
+ 02 v-score usage pointer.
+01 tt-n-cobol-ReceiptAnswerScore based.
+ 02 v-confidence.
+ 03 v-confidence-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-confidence-value usage float-long.
+ 02 v-kind.
+ 03 v-kind-length usage binary-double unsigned.
+ 03 v-kind-text pic x(8192).
+ 02 v-level.
+ 03 v-level-length usage binary-double unsigned.
+ 03 v-level-text pic x(8192).
+ 02 v-probabilities.
+ 03 v-probabilities-data usage pointer.
+ 03 v-probabilities-len usage binary-double unsigned.
+ 02 v-extensions.
+ 03 v-extensions-data usage pointer.
+ 03 v-extensions-len usage binary-double unsigned.
+01 tt-n-cobol-ReceiptNumberMap based.
+ 02 v-data usage pointer.
+ 02 v-len usage binary-double unsigned.
+01 tt-n-cobol-ReceiptNumberMapEntry based.
+ 02 v-name.
+ 03 v-name-length usage binary-double unsigned.
+ 03 v-name-text pic x(8192).
+ 02 v-value usage float-long.
+01 tt-n-cobol-ReceiptF64Presence based.
+ 02 v-presence usage binary-long unsigned.
+ 02 filler pic x(4).
+ 02 v-value usage float-long.
+01 tt-n-cobol-ReceiptAnswerTag based.
+ 02 v-kind.
+ 03 v-kind-length usage binary-double unsigned.
+ 03 v-kind-text pic x(8192).
+ 02 v-probabilities.
+ 03 v-probabilities-data usage pointer.
+ 03 v-probabilities-len usage binary-double unsigned.
+ 02 v-extensions.
+ 03 v-extensions-data usage pointer.
+ 03 v-extensions-len usage binary-double unsigned.
+01 tt-n-cobol-ReceiptAnswerChoice based.
+ 02 v-confidence.
+ 03 v-confidence-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-confidence-value usage float-long.
+ 02 v-kind.
+ 03 v-kind-length usage binary-double unsigned.
+ 03 v-kind-text pic x(8192).
+ 02 v-pick.
+ 03 v-pick-length usage binary-double unsigned.
+ 03 v-pick-text pic x(8192).
+ 02 v-probabilities.
+ 03 v-probabilities-data usage pointer.
+ 03 v-probabilities-len usage binary-double unsigned.
+ 02 v-extensions.
+ 03 v-extensions-data usage pointer.
+ 03 v-extensions-len usage binary-double unsigned.
+01 tt-n-cobol-ReceiptAnswerYesNo based.
+ 02 v-kind.
+ 03 v-kind-length usage binary-double unsigned.
+ 03 v-kind-text pic x(8192).
+ 02 v-probability usage float-long.
+ 02 v-extensions.
+ 03 v-extensions-data usage pointer.
+ 03 v-extensions-len usage binary-double unsigned.
+01 tt-n-cobol-ReceiptRecognitionList based.
+ 02 v-data usage pointer.
+ 02 v-len usage binary-double unsigned.
+01 tt-n-cobol-ReceiptRecognition based.
+ 02 v-answer usage pointer.
+ 02 v-answer-id usage pointer.
+ 02 v-file.
+ 03 v-file-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-file-value.
+ 04 v-file-value-length usage binary-double unsigned.
+ 04 v-file-value-text pic x(8192).
+ 02 v-first-line.
+ 03 v-first-line-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-first-line-value usage binary-double unsigned.
+ 02 v-index.
+ 03 v-index-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-index-value usage binary-double unsigned.
+ 02 v-input.
+ 03 v-input-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-input-value usage pointer.
+ 02 v-last-line.
+ 03 v-last-line-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-last-line-value usage binary-double unsigned.
+ 02 v-meta usage pointer.
+ 02 v-position.
+ 03 v-position-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-position-value usage pointer.
+ 02 v-question usage pointer.
+ 02 v-schema usage pointer.
+ 02 v-source.
+ 03 v-source-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-source-value usage pointer.
+ 02 v-value usage pointer.
+ 02 v-extensions.
+ 03 v-extensions-data usage pointer.
+ 03 v-extensions-len usage binary-double unsigned.
+01 tt-n-cobol-ReceiptRecognize based.
+ 02 v-kind usage binary-long unsigned.
+ 02 filler pic x(4).
+ 02 v-data.
+ 03 v-data-entities usage pointer.
+ 03 v-data-mode-proposals usage pointer.
+01 tt-n-cobol-ReceiptRecognizeData based.
+ 02 v-entities usage pointer.
+ 02 v-mode-proposals usage pointer.
+01 tt-n-cobol-ReceiptRecognizeModeProposals based.
+ 02 v-mode usage pointer.
+ 02 v-proposals.
+ 03 v-proposals-data usage pointer.
+ 03 v-proposals-len usage binary-double unsigned.
+ 02 v-extensions.
+ 03 v-extensions-data usage pointer.
+ 03 v-extensions-len usage binary-double unsigned.
+01 tt-n-cobol-ReceiptBoundaryProposalList based.
+ 02 v-data usage pointer.
+ 02 v-len usage binary-double unsigned.
+01 tt-n-cobol-ReceiptBoundaryProposal based.
+ 02 v-end usage binary-double unsigned.
+ 02 v-length usage binary-double unsigned.
+ 02 v-probability usage float-long.
+ 02 v-start usage binary-double unsigned.
+ 02 v-text.
+ 03 v-text-length usage binary-double unsigned.
+ 03 v-text-text pic x(8192).
+ 02 v-extensions.
+ 03 v-extensions-data usage pointer.
+ 03 v-extensions-len usage binary-double unsigned.
+01 tt-n-cobol-ReceiptBoundaryMode based.
+ 02 v-kind usage binary-long unsigned.
+01 tt-n-cobol-ReceiptRecognizeEntities based.
+ 02 v-entities.
+ 03 v-entities-data usage pointer.
+ 03 v-entities-len usage binary-double unsigned.
+ 02 v-relations.
+ 03 v-relations-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-relations-value.
+ 04 v-relations-value-data usage pointer.
+ 04 v-relations-value-len usage binary-double unsigned.
+ 02 v-extensions.
+ 03 v-extensions-data usage pointer.
+ 03 v-extensions-len usage binary-double unsigned.
+01 tt-n-cobol-ReceiptEntityEdgeListPresence based.
+ 02 v-presence usage binary-long unsigned.
+ 02 filler pic x(4).
+ 02 v-value.
+ 03 v-value-data usage pointer.
+ 03 v-value-len usage binary-double unsigned.
+01 tt-n-cobol-ReceiptEntityEdgeList based.
+ 02 v-data usage pointer.
+ 02 v-len usage binary-double unsigned.
+01 tt-n-cobol-ReceiptEntityEdge based.
+ 02 v-either.
+ 03 v-either-presence usage binary-long unsigned.
+ 03 v-either-value usage binary-long unsigned.
+ 02 v-probability usage float-long.
+ 02 v-relation.
+ 03 v-relation-length usage binary-double unsigned.
+ 03 v-relation-text pic x(8192).
+ 02 v-source usage pointer.
+ 02 v-target usage pointer.
+ 02 v-extensions.
+ 03 v-extensions-data usage pointer.
+ 03 v-extensions-len usage binary-double unsigned.
+01 tt-n-cobol-ReceiptEntity based.
+ 02 v-end usage binary-double unsigned.
+ 02 v-file.
+ 03 v-file-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-file-value.
+ 04 v-file-value-length usage binary-double unsigned.
+ 04 v-file-value-text pic x(8192).
+ 02 v-first-line.
+ 03 v-first-line-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-first-line-value usage binary-double unsigned.
+ 02 v-kind.
+ 03 v-kind-length usage binary-double unsigned.
+ 03 v-kind-text pic x(8192).
+ 02 v-last-line.
+ 03 v-last-line-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-last-line-value usage binary-double unsigned.
+ 02 v-length usage binary-double unsigned.
+ 02 v-start usage binary-double unsigned.
+ 02 v-strength usage float-long.
+ 02 v-text.
+ 03 v-text-length usage binary-double unsigned.
+ 03 v-text-text pic x(8192).
+ 02 v-extensions.
+ 03 v-extensions-data usage pointer.
+ 03 v-extensions-len usage binary-double unsigned.
+01 tt-n-cobol-ReceiptEntityList based.
+ 02 v-data usage pointer.
+ 02 v-len usage binary-double unsigned.
+01 tt-n-cobol-ReceiptPhysicalSourcePresence based.
+ 02 v-presence usage binary-long unsigned.
+ 02 filler pic x(4).
+ 02 v-value usage pointer.
+01 tt-n-cobol-ReceiptRecognizeQuestionDocument based.
+ 02 v-batch.
+ 03 v-batch-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-batch-value usage pointer.
+ 02 v-context-schema.
+ 03 v-context-schema-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-context-schema-value usage pointer.
+ 02 v-entity-definition.
+ 03 v-entity-definition-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-entity-definition-value usage pointer.
+ 02 v-instructions.
+ 03 v-instructions-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-instructions-value usage pointer.
+ 02 v-item-schema.
+ 03 v-item-schema-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-item-schema-value usage pointer.
+ 02 v-kinds.
+ 03 v-kinds-data usage pointer.
+ 03 v-kinds-len usage binary-double unsigned.
+ 02 v-label-details.
+ 03 v-label-details-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-label-details-value.
+ 04 v-label-details-value-data usage pointer.
+ 04 v-label-details-value-len usage binary-double unsigned.
+ 02 v-mode.
+ 03 v-mode-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-mode-value usage pointer.
+ 02 v-model.
+ 03 v-model-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-model-value.
+ 04 v-model-value-length usage binary-double unsigned.
+ 04 v-model-value-text pic x(8192).
+ 02 v-name.
+ 03 v-name-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-name-value usage pointer.
+ 02 v-on.
+ 03 v-on-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-on-value.
+ 04 v-on-value-data usage pointer.
+ 04 v-on-value-len usage binary-double unsigned.
+ 02 v-profile.
+ 03 v-profile-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-profile-value.
+ 04 v-profile-value-length usage binary-double unsigned.
+ 04 v-profile-value-text pic x(8192).
+ 02 v-relation-threshold.
+ 03 v-relation-threshold-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-relation-threshold-value usage pointer.
+ 02 v-relations.
+ 03 v-relations-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-relations-value.
+ 04 v-relations-value-data usage pointer.
+ 04 v-relations-value-len usage binary-double unsigned.
+ 02 v-snippet-pieces.
+ 03 v-snippet-pieces-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-snippet-pieces-value usage binary-double unsigned.
+ 02 v-stage-context.
+ 03 v-stage-context-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-stage-context-value usage pointer.
+ 02 v-threshold usage pointer.
+ 02 v-verb usage pointer.
+ 02 v-wording-version.
+ 03 v-wording-version-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-wording-version-value usage pointer.
+ 02 v-extensions.
+ 03 v-extensions-data usage pointer.
+ 03 v-extensions-len usage binary-double unsigned.
+01 tt-n-cobol-ReceiptVerb based.
+ 02 v-kind usage binary-long unsigned.
+01 tt-n-cobol-ReceiptRecognitionStageContextPresence based.
+ 02 v-presence usage binary-long unsigned.
+ 02 filler pic x(4).
+ 02 v-value usage pointer.
+01 tt-n-cobol-ReceiptRecognitionStageContext based.
+ 02 v-boundary.
+ 03 v-boundary-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-boundary-value.
+ 04 v-boundary-value-length usage binary-double unsigned.
+ 04 v-boundary-value-text pic x(8192).
+ 02 v-kind-edge.
+ 03 v-kind-edge-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-kind-edge-value.
+ 04 v-kind-edge-value-length usage binary-double unsigned.
+ 04 v-kind-edge-value-text pic x(8192).
+ 02 v-relation.
+ 03 v-relation-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-relation-value.
+ 04 v-relation-value-length usage binary-double unsigned.
+ 04 v-relation-value-text pic x(8192).
+ 02 v-extensions.
+ 03 v-extensions-data usage pointer.
+ 03 v-extensions-len usage binary-double unsigned.
+01 tt-n-cobol-ReceiptRelationRuleListPresence based.
+ 02 v-presence usage binary-long unsigned.
+ 02 filler pic x(4).
+ 02 v-value.
+ 03 v-value-data usage pointer.
+ 03 v-value-len usage binary-double unsigned.
+01 tt-n-cobol-ReceiptThresholdPresence based.
+ 02 v-presence usage binary-long unsigned.
+ 02 filler pic x(4).
+ 02 v-value usage pointer.
+01 tt-n-cobol-ReceiptRecognitionModePresence based.
+ 02 v-presence usage binary-long unsigned.
+ 02 filler pic x(4).
+ 02 v-value usage pointer.
+01 tt-n-cobol-ReceiptRecognitionMode based.
+ 02 v-kind usage binary-long unsigned.
+01 tt-n-cobol-ReceiptJsonMap based.
+ 02 v-data usage pointer.
+ 02 v-len usage binary-double unsigned.
+01 tt-n-cobol-ReceiptJsonMapEntry based.
+ 02 v-name.
+ 03 v-name-length usage binary-double unsigned.
+ 03 v-name-text pic x(8192).
+ 02 v-value usage pointer.
+01 tt-n-cobol-ReceiptRecognitionOdds based.
+ 02 v-kind usage binary-long unsigned.
+ 02 filler pic x(4).
+ 02 v-data.
+ 03 v-data-recognize-answer usage pointer.
+ 03 v-data-boundary-odds usage pointer.
+01 tt-n-cobol-ReceiptRecognitionOddsData based.
+ 02 v-recognize-answer usage pointer.
+ 02 v-boundary-odds usage pointer.
+01 tt-n-cobol-ReceiptRecognitionOddsBoundaryOdds based.
+ 02 v-pieces.
+ 03 v-pieces-data usage pointer.
+ 03 v-pieces-len usage binary-double unsigned.
+ 02 v-proposals.
+ 03 v-proposals-data usage pointer.
+ 03 v-proposals-len usage binary-double unsigned.
+ 02 v-extensions.
+ 03 v-extensions-data usage pointer.
+ 03 v-extensions-len usage binary-double unsigned.
+01 tt-n-cobol-ReceiptPieceOddsList based.
+ 02 v-data usage pointer.
+ 02 v-len usage binary-double unsigned.
+01 tt-n-cobol-ReceiptPieceOdds based.
+ 02 v-end usage binary-double unsigned.
+ 02 v-start usage binary-double unsigned.
+ 02 v-tags.
+ 03 v-tags-data usage pointer.
+ 03 v-tags-len usage binary-double unsigned.
+ 02 v-extensions.
+ 03 v-extensions-data usage pointer.
+ 03 v-extensions-len usage binary-double unsigned.
+01 tt-n-cobol-ReceiptRecognitionOddsRecognizeAnswer based.
+ 02 v-names.
+ 03 v-names-data usage pointer.
+ 03 v-names-len usage binary-double unsigned.
+ 02 v-pairs.
+ 03 v-pairs-data usage pointer.
+ 03 v-pairs-len usage binary-double unsigned.
+ 02 v-pieces.
+ 03 v-pieces-data usage pointer.
+ 03 v-pieces-len usage binary-double unsigned.
+ 02 v-proposals.
+ 03 v-proposals-data usage pointer.
+ 03 v-proposals-len usage binary-double unsigned.
+ 02 v-extensions.
+ 03 v-extensions-data usage pointer.
+ 03 v-extensions-len usage binary-double unsigned.
+01 tt-n-cobol-ReceiptRecognitionProposalList based.
+ 02 v-data usage pointer.
+ 02 v-len usage binary-double unsigned.
+01 tt-n-cobol-ReceiptRecognitionProposal based.
+ 02 v-end usage binary-double unsigned.
+ 02 v-kept usage binary-long unsigned.
+ 02 filler pic x(4).
+ 02 v-kind.
+ 03 v-kind-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-kind-value.
+ 04 v-kind-value-length usage binary-double unsigned.
+ 04 v-kind-value-text pic x(8192).
+ 02 v-selected.
+ 03 v-selected-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-selected-value usage pointer.
+ 02 v-span-probability usage float-long.
+ 02 v-start usage binary-double unsigned.
+ 02 v-strength.
+ 03 v-strength-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-strength-value usage float-long.
+ 02 v-extensions.
+ 03 v-extensions-data usage pointer.
+ 03 v-extensions-len usage binary-double unsigned.
+01 tt-n-cobol-ReceiptPlacePresence based.
+ 02 v-presence usage binary-long unsigned.
+ 02 filler pic x(4).
+ 02 v-value usage pointer.
+01 tt-n-cobol-ReceiptPlace based.
+ 02 v-end usage binary-double unsigned.
+ 02 v-start usage binary-double unsigned.
+ 02 v-extensions.
+ 03 v-extensions-data usage pointer.
+ 03 v-extensions-len usage binary-double unsigned.
+01 tt-n-cobol-ReceiptPairOddsList based.
+ 02 v-data usage pointer.
+ 02 v-len usage binary-double unsigned.
+01 tt-n-cobol-ReceiptPairOdds based.
+ 02 v-probability usage float-long.
+ 02 v-relation.
+ 03 v-relation-length usage binary-double unsigned.
+ 03 v-relation-text pic x(8192).
+ 02 v-source usage pointer.
+ 02 v-target usage pointer.
+ 02 v-extensions.
+ 03 v-extensions-data usage pointer.
+ 03 v-extensions-len usage binary-double unsigned.
+01 tt-n-cobol-ReceiptNameOddsList based.
+ 02 v-data usage pointer.
+ 02 v-len usage binary-double unsigned.
+01 tt-n-cobol-ReceiptNameOdds based.
+ 02 v-edges.
+ 03 v-edges-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-edges-value.
+ 04 v-edges-value-data usage pointer.
+ 04 v-edges-value-len usage binary-double unsigned.
+ 02 v-end usage binary-double unsigned.
+ 02 v-kinds.
+ 03 v-kinds-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-kinds-value.
+ 04 v-kinds-value-data usage pointer.
+ 04 v-kinds-value-len usage binary-double unsigned.
+ 02 v-start usage binary-double unsigned.
+ 02 v-extensions.
+ 03 v-extensions-data usage pointer.
+ 03 v-extensions-len usage binary-double unsigned.
+01 tt-n-cobol-ReceiptNumberMapPresence based.
+ 02 v-presence usage binary-long unsigned.
+ 02 filler pic x(4).
+ 02 v-value.
+ 03 v-value-data usage pointer.
+ 03 v-value-len usage binary-double unsigned.
+01 tt-n-cobol-ReceiptAnnotationList based.
+ 02 v-data usage pointer.
+ 02 v-len usage binary-double unsigned.
+01 tt-n-cobol-ReceiptAnnotation based.
+ 02 v-answer-id usage pointer.
+ 02 v-answers.
+ 03 v-answers-data usage pointer.
+ 03 v-answers-len usage binary-double unsigned.
+ 02 v-file.
+ 03 v-file-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-file-value.
+ 04 v-file-value-length usage binary-double unsigned.
+ 04 v-file-value-text pic x(8192).
+ 02 v-first-line.
+ 03 v-first-line-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-first-line-value usage binary-double unsigned.
+ 02 v-index.
+ 03 v-index-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-index-value usage binary-double unsigned.
+ 02 v-input.
+ 03 v-input-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-input-value usage pointer.
+ 02 v-last-line.
+ 03 v-last-line-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-last-line-value usage binary-double unsigned.
+ 02 v-meta usage pointer.
+ 02 v-position.
+ 03 v-position-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-position-value usage pointer.
+ 02 v-schema usage pointer.
+ 02 v-source.
+ 03 v-source-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-source-value usage pointer.
+ 02 v-value usage pointer.
+ 02 v-extensions.
+ 03 v-extensions-data usage pointer.
+ 03 v-extensions-len usage binary-double unsigned.
+01 tt-n-cobol-ReceiptAnnotatedRow based.
+ 02 v-value.
+ 03 v-value-data usage pointer.
+ 03 v-value-len usage binary-double unsigned.
+01 tt-n-cobol-ReceiptAnnotatedFieldMap based.
+ 02 v-data usage pointer.
+ 02 v-len usage binary-double unsigned.
+01 tt-n-cobol-ReceiptAnnotatedFieldMapEntry based.
+ 02 v-name.
+ 03 v-name-length usage binary-double unsigned.
+ 03 v-name-text pic x(8192).
+ 02 v-value usage pointer.
+01 tt-n-cobol-ReceiptAnnotatedField based.
+ 02 v-kind usage binary-long unsigned.
+ 02 filler pic x(4).
+ 02 v-data.
+ 03 v-data-boolean usage binary-long unsigned.
+ 03 v-data-null usage binary-long unsigned.
+ 03 v-data-string.
+ 04 v-data-string-length usage binary-double unsigned.
+ 04 v-data-string-text pic x(8192).
+ 03 v-data-array.
+ 04 v-data-array-data usage pointer.
+ 04 v-data-array-len usage binary-double unsigned.
+ 03 v-data-number usage float-long.
+ 03 v-data-object usage pointer.
+01 tt-n-cobol-ReceiptAnnotatedFieldData based.
+ 02 v-boolean usage binary-long unsigned.
+ 02 v-null usage binary-long unsigned.
+ 02 v-string.
+ 03 v-string-length usage binary-double unsigned.
+ 03 v-string-text pic x(8192).
+ 02 v-array.
+ 03 v-array-data usage pointer.
+ 03 v-array-len usage binary-double unsigned.
+ 02 v-number usage float-long.
+ 02 v-object usage pointer.
+01 tt-n-cobol-ReceiptFailed based.
+ 02 v-failed usage pointer.
+ 02 v-extensions.
+ 03 v-extensions-data usage pointer.
+ 03 v-extensions-len usage binary-double unsigned.
+01 tt-n-cobol-ReceiptAnnotationMemberMap based.
+ 02 v-data usage pointer.
+ 02 v-len usage binary-double unsigned.
+01 tt-n-cobol-ReceiptAnnotationMemberMapEntry based.
+ 02 v-name.
+ 03 v-name-length usage binary-double unsigned.
+ 03 v-name-text pic x(8192).
+ 02 v-value usage pointer.
+01 tt-n-cobol-ReceiptAnnotationMember based.
+ 02 v-kind usage binary-long unsigned.
+ 02 filler pic x(4).
+ 02 v-data.
+ 03 v-data-answer-id usage pointer.
+ 03 v-data-failure-id usage pointer.
+01 tt-n-cobol-ReceiptAnnotationMemberData based.
+ 02 v-answer-id usage pointer.
+ 02 v-failure-id usage pointer.
+01 tt-n-cobol-ReceiptAnnotationMemberFailureId based.
+ 02 v-failure usage pointer.
+ 02 v-failure-id usage pointer.
+ 02 v-observations.
+ 03 v-observations-data usage pointer.
+ 03 v-observations-len usage binary-double unsigned.
+ 02 v-question usage pointer.
+ 02 v-question-sources.
+ 03 v-question-sources-data usage pointer.
+ 03 v-question-sources-len usage binary-double unsigned.
+ 02 v-request.
+ 03 v-request-length usage binary-double unsigned.
+ 03 v-request-text pic x(8192).
+ 02 v-threshold.
+ 03 v-threshold-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-threshold-value usage pointer.
+ 02 v-usage.
+ 03 v-usage-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-usage-value usage pointer.
+ 02 v-extensions.
+ 03 v-extensions-data usage pointer.
+ 03 v-extensions-len usage binary-double unsigned.
+01 tt-n-cobol-ReceiptAnnotationMemberAnswerId based.
+ 02 v-answer usage pointer.
+ 02 v-answer-id usage pointer.
+ 02 v-observations.
+ 03 v-observations-data usage pointer.
+ 03 v-observations-len usage binary-double unsigned.
+ 02 v-question usage pointer.
+ 02 v-question-sources.
+ 03 v-question-sources-data usage pointer.
+ 03 v-question-sources-len usage binary-double unsigned.
+ 02 v-request.
+ 03 v-request-length usage binary-double unsigned.
+ 03 v-request-text pic x(8192).
+ 02 v-threshold.
+ 03 v-threshold-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-threshold-value usage pointer.
+ 02 v-usage.
+ 03 v-usage-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-usage-value usage pointer.
+ 02 v-value.
+ 03 v-value-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-value-value usage pointer.
+ 02 v-extensions.
+ 03 v-extensions-data usage pointer.
+ 03 v-extensions-len usage binary-double unsigned.
+01 tt-n-cobol-ReceiptValuePresence based.
+ 02 v-presence usage binary-long unsigned.
+ 02 filler pic x(4).
+ 02 v-value usage pointer.
+01 tt-n-cobol-ReceiptValue based.
+ 02 v-kind usage binary-long unsigned.
+ 02 filler pic x(4).
+ 02 v-data.
+ 03 v-data-boolean usage binary-long unsigned.
+ 03 v-data-null usage binary-long unsigned.
+ 03 v-data-string.
+ 04 v-data-string-length usage binary-double unsigned.
+ 04 v-data-string-text pic x(8192).
+ 03 v-data-array.
+ 04 v-data-array-data usage pointer.
+ 04 v-data-array-len usage binary-double unsigned.
+ 03 v-data-number usage float-long.
+01 tt-n-cobol-ReceiptValueData based.
+ 02 v-boolean usage binary-long unsigned.
+ 02 v-null usage binary-long unsigned.
+ 02 v-string.
+ 03 v-string-length usage binary-double unsigned.
+ 03 v-string-text pic x(8192).
+ 02 v-array.
+ 03 v-array-data usage pointer.
+ 03 v-array-len usage binary-double unsigned.
+ 02 v-number usage float-long.
+01 tt-n-cobol-ReceiptFind based.
+ 02 v-answer usage pointer.
+ 02 v-answer-id usage pointer.
+ 02 v-candidates.
+ 03 v-candidates-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-candidates-value.
+ 04 v-candidates-value-data usage pointer.
+ 04 v-candidates-value-len usage binary-double unsigned.
+ 02 v-file.
+ 03 v-file-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-file-value.
+ 04 v-file-value-length usage binary-double unsigned.
+ 04 v-file-value-text pic x(8192).
+ 02 v-first-line.
+ 03 v-first-line-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-first-line-value usage binary-double unsigned.
+ 02 v-index.
+ 03 v-index-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-index-value usage binary-double unsigned.
+ 02 v-last-line.
+ 03 v-last-line-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-last-line-value usage binary-double unsigned.
+ 02 v-meta usage pointer.
+ 02 v-position.
+ 03 v-position-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-position-value usage pointer.
+ 02 v-question usage pointer.
+ 02 v-schema usage pointer.
+ 02 v-threshold.
+ 03 v-threshold-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-threshold-value usage pointer.
+ 02 v-value.
+ 03 v-value-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-value-value usage pointer.
+ 02 v-extensions.
+ 03 v-extensions-data usage pointer.
+ 03 v-extensions-len usage binary-double unsigned.
+01 tt-n-cobol-ReceiptFindQuestionDocument based.
+ 02 v-batch.
+ 03 v-batch-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-batch-value usage pointer.
+ 02 v-context-schema.
+ 03 v-context-schema-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-context-schema-value usage pointer.
+ 02 v-item-schema.
+ 03 v-item-schema-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-item-schema-value usage pointer.
+ 02 v-label-details.
+ 03 v-label-details-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-label-details-value.
+ 04 v-label-details-value-data usage pointer.
+ 04 v-label-details-value-len usage binary-double unsigned.
+ 02 v-model.
+ 03 v-model-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-model-value.
+ 04 v-model-value-length usage binary-double unsigned.
+ 04 v-model-value-text pic x(8192).
+ 02 v-name.
+ 03 v-name-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-name-value usage pointer.
+ 02 v-none usage binary-long unsigned.
+ 02 filler pic x(4).
+ 02 v-on.
+ 03 v-on-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-on-value.
+ 04 v-on-value-data usage pointer.
+ 04 v-on-value-len usage binary-double unsigned.
+ 02 v-profile.
+ 03 v-profile-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-profile-value.
+ 04 v-profile-value-length usage binary-double unsigned.
+ 04 v-profile-value-text pic x(8192).
+ 02 v-text.
+ 03 v-text-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-text-value usage pointer.
+ 02 v-verb.
+ 03 v-verb-length usage binary-double unsigned.
+ 03 v-verb-text pic x(8192).
+ 02 v-wording-version.
+ 03 v-wording-version-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-wording-version-value usage pointer.
+ 02 v-extensions.
+ 03 v-extensions-data usage pointer.
+ 03 v-extensions-len usage binary-double unsigned.
+01 tt-n-cobol-ReceiptFindCandidateListPresence based.
+ 02 v-presence usage binary-long unsigned.
+ 02 filler pic x(4).
+ 02 v-value.
+ 03 v-value-data usage pointer.
+ 03 v-value-len usage binary-double unsigned.
+01 tt-n-cobol-ReceiptFindCandidateList based.
+ 02 v-data usage pointer.
+ 02 v-len usage binary-double unsigned.
+01 tt-n-cobol-ReceiptFindCandidate based.
+ 02 v-index.
+ 03 v-index-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-index-value usage binary-double unsigned.
+ 02 v-input.
+ 03 v-input-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-input-value usage pointer.
+ 02 v-probability usage float-long.
+ 02 v-source.
+ 03 v-source-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-source-value usage pointer.
+ 02 v-extensions.
+ 03 v-extensions-data usage pointer.
+ 03 v-extensions-len usage binary-double unsigned.
+01 tt-n-cobol-ReceiptFindAnswer based.
+ 02 v-confidence.
+ 03 v-confidence-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-confidence-value usage float-long.
+ 02 v-kind.
+ 03 v-kind-length usage binary-double unsigned.
+ 03 v-kind-text pic x(8192).
+ 02 v-pick.
+ 03 v-pick-length usage binary-double unsigned.
+ 03 v-pick-text pic x(8192).
+ 02 v-probabilities.
+ 03 v-probabilities-data usage pointer.
+ 03 v-probabilities-len usage binary-double unsigned.
+ 02 v-extensions.
+ 03 v-extensions-data usage pointer.
+ 03 v-extensions-len usage binary-double unsigned.
+01 tt-n-cobol-ReceiptAtomicNonZeroUsizeList based.
+ 02 v-data usage pointer.
+ 02 v-len usage binary-double unsigned.
+01 tt-n-cobol-ReceiptAtomicNonZeroUsize based.
+ 02 v-answer usage pointer.
+ 02 v-answer-id usage pointer.
+ 02 v-images.
+ 03 v-images-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-images-value.
+ 04 v-images-value-data usage pointer.
+ 04 v-images-value-len usage binary-double unsigned.
+ 02 v-index.
+ 03 v-index-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-index-value usage binary-double unsigned.
+ 02 v-input.
+ 03 v-input-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-input-value usage pointer.
+ 02 v-members.
+ 03 v-members-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-members-value.
+ 04 v-members-value-data usage pointer.
+ 04 v-members-value-len usage binary-double unsigned.
+ 02 v-meta usage pointer.
+ 02 v-question usage pointer.
+ 02 v-question-name.
+ 03 v-question-name-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-question-name-value.
+ 04 v-question-name-value-length usage binary-double unsigned.
+ 04 v-question-name-value-text pic x(8192).
+ 02 v-schema usage pointer.
+ 02 v-source.
+ 03 v-source-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-source-value usage pointer.
+ 02 v-threshold.
+ 03 v-threshold-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-threshold-value usage pointer.
+ 02 v-value usage binary-double unsigned.
+ 02 v-extensions.
+ 03 v-extensions-data usage pointer.
+ 03 v-extensions-len usage binary-double unsigned.
+01 tt-n-cobol-ReceiptRankMemberListPresence based.
+ 02 v-presence usage binary-long unsigned.
+ 02 filler pic x(4).
+ 02 v-value.
+ 03 v-value-data usage pointer.
+ 03 v-value-len usage binary-double unsigned.
+01 tt-n-cobol-ReceiptRankMemberList based.
+ 02 v-data usage pointer.
+ 02 v-len usage binary-double unsigned.
+01 tt-n-cobol-ReceiptRankMember based.
+ 02 v-name.
+ 03 v-name-length usage binary-double unsigned.
+ 03 v-name-text pic x(8192).
+ 02 v-result usage pointer.
+ 02 v-extensions.
+ 03 v-extensions-data usage pointer.
+ 03 v-extensions-len usage binary-double unsigned.
+01 tt-n-cobol-ReceiptRankMemberResult based.
+ 02 v-answer usage pointer.
+ 02 v-answer-id usage pointer.
+ 02 v-images.
+ 03 v-images-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-images-value.
+ 04 v-images-value-data usage pointer.
+ 04 v-images-value-len usage binary-double unsigned.
+ 02 v-meta usage pointer.
+ 02 v-question usage pointer.
+ 02 v-schema usage pointer.
+ 02 v-source.
+ 03 v-source-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-source-value usage pointer.
+ 02 v-threshold.
+ 03 v-threshold-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-threshold-value usage pointer.
+ 02 v-value usage binary-double unsigned.
+ 02 v-extensions.
+ 03 v-extensions-data usage pointer.
+ 03 v-extensions-len usage binary-double unsigned.
+01 tt-n-cobol-ReceiptImageListPresence based.
+ 02 v-presence usage binary-long unsigned.
+ 02 filler pic x(4).
+ 02 v-value.
+ 03 v-value-data usage pointer.
+ 03 v-value-len usage binary-double unsigned.
+01 tt-n-cobol-ReceiptImageList based.
+ 02 v-data usage pointer.
+ 02 v-len usage binary-double unsigned.
+01 tt-n-cobol-ReceiptImage based.
+ 02 v-base64.
+ 03 v-base64-length usage binary-double unsigned.
+ 03 v-base64-text pic x(8192).
+ 02 v-height usage binary-double unsigned.
+ 02 v-media usage pointer.
+ 02 v-width usage binary-double unsigned.
+ 02 v-extensions.
+ 03 v-extensions-data usage pointer.
+ 03 v-extensions-len usage binary-double unsigned.
+01 tt-n-cobol-ReceiptImageMedia based.
+ 02 v-kind usage binary-long unsigned.
+01 tt-n-cobol-ReceiptAtomicBooleanList based.
+ 02 v-data usage pointer.
+ 02 v-len usage binary-double unsigned.
+01 tt-n-cobol-ReceiptAtomicBoolean based.
+ 02 v-answer usage pointer.
+ 02 v-answer-id usage pointer.
+ 02 v-images.
+ 03 v-images-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-images-value.
+ 04 v-images-value-data usage pointer.
+ 04 v-images-value-len usage binary-double unsigned.
+ 02 v-index.
+ 03 v-index-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-index-value usage binary-double unsigned.
+ 02 v-input.
+ 03 v-input-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-input-value usage pointer.
+ 02 v-members.
+ 03 v-members-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-members-value.
+ 04 v-members-value-data usage pointer.
+ 04 v-members-value-len usage binary-double unsigned.
+ 02 v-meta usage pointer.
+ 02 v-question usage pointer.
+ 02 v-question-name.
+ 03 v-question-name-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-question-name-value.
+ 04 v-question-name-value-length usage binary-double unsigned.
+ 04 v-question-name-value-text pic x(8192).
+ 02 v-schema usage pointer.
+ 02 v-source.
+ 03 v-source-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-source-value usage pointer.
+ 02 v-threshold.
+ 03 v-threshold-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-threshold-value usage pointer.
+ 02 v-value usage binary-long unsigned.
+ 02 filler pic x(4).
+ 02 v-extensions.
+ 03 v-extensions-data usage pointer.
+ 03 v-extensions-len usage binary-double unsigned.
+01 tt-n-cobol-ReceiptAtomicDoubleList based.
+ 02 v-data usage pointer.
+ 02 v-len usage binary-double unsigned.
+01 tt-n-cobol-ReceiptAtomicDouble based.
+ 02 v-answer usage pointer.
+ 02 v-answer-id usage pointer.
+ 02 v-images.
+ 03 v-images-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-images-value.
+ 04 v-images-value-data usage pointer.
+ 04 v-images-value-len usage binary-double unsigned.
+ 02 v-index.
+ 03 v-index-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-index-value usage binary-double unsigned.
+ 02 v-input.
+ 03 v-input-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-input-value usage pointer.
+ 02 v-members.
+ 03 v-members-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-members-value.
+ 04 v-members-value-data usage pointer.
+ 04 v-members-value-len usage binary-double unsigned.
+ 02 v-meta usage pointer.
+ 02 v-question usage pointer.
+ 02 v-question-name.
+ 03 v-question-name-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-question-name-value.
+ 04 v-question-name-value-length usage binary-double unsigned.
+ 04 v-question-name-value-text pic x(8192).
+ 02 v-schema usage pointer.
+ 02 v-source.
+ 03 v-source-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-source-value usage pointer.
+ 02 v-threshold.
+ 03 v-threshold-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-threshold-value usage pointer.
+ 02 v-value usage float-long.
+ 02 v-extensions.
+ 03 v-extensions-data usage pointer.
+ 03 v-extensions-len usage binary-double unsigned.
+01 tt-n-cobol-ReceiptAtomicArrayOfStringList based.
+ 02 v-data usage pointer.
+ 02 v-len usage binary-double unsigned.
+01 tt-n-cobol-ReceiptAtomicArrayOfString based.
+ 02 v-answer usage pointer.
+ 02 v-answer-id usage pointer.
+ 02 v-images.
+ 03 v-images-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-images-value.
+ 04 v-images-value-data usage pointer.
+ 04 v-images-value-len usage binary-double unsigned.
+ 02 v-index.
+ 03 v-index-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-index-value usage binary-double unsigned.
+ 02 v-input.
+ 03 v-input-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-input-value usage pointer.
+ 02 v-members.
+ 03 v-members-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-members-value.
+ 04 v-members-value-data usage pointer.
+ 04 v-members-value-len usage binary-double unsigned.
+ 02 v-meta usage pointer.
+ 02 v-question usage pointer.
+ 02 v-question-name.
+ 03 v-question-name-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-question-name-value.
+ 04 v-question-name-value-length usage binary-double unsigned.
+ 04 v-question-name-value-text pic x(8192).
+ 02 v-schema usage pointer.
+ 02 v-source.
+ 03 v-source-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-source-value usage pointer.
+ 02 v-threshold.
+ 03 v-threshold-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-threshold-value usage pointer.
+ 02 v-value.
+ 03 v-value-data usage pointer.
+ 03 v-value-len usage binary-double unsigned.
+ 02 v-extensions.
+ 03 v-extensions-data usage pointer.
+ 03 v-extensions-len usage binary-double unsigned.
+01 tt-n-cobol-ReceiptAtomicNullableStringList based.
+ 02 v-data usage pointer.
+ 02 v-len usage binary-double unsigned.
+01 tt-n-cobol-ReceiptAtomicNullableString based.
+ 02 v-answer usage pointer.
+ 02 v-answer-id usage pointer.
+ 02 v-images.
+ 03 v-images-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-images-value.
+ 04 v-images-value-data usage pointer.
+ 04 v-images-value-len usage binary-double unsigned.
+ 02 v-index.
+ 03 v-index-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-index-value usage binary-double unsigned.
+ 02 v-input.
+ 03 v-input-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-input-value usage pointer.
+ 02 v-members.
+ 03 v-members-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-members-value.
+ 04 v-members-value-data usage pointer.
+ 04 v-members-value-len usage binary-double unsigned.
+ 02 v-meta usage pointer.
+ 02 v-question usage pointer.
+ 02 v-question-name.
+ 03 v-question-name-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-question-name-value.
+ 04 v-question-name-value-length usage binary-double unsigned.
+ 04 v-question-name-value-text pic x(8192).
+ 02 v-schema usage pointer.
+ 02 v-source.
+ 03 v-source-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-source-value usage pointer.
+ 02 v-threshold.
+ 03 v-threshold-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-threshold-value usage pointer.
+ 02 v-value.
+ 03 v-value-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-value-value.
+ 04 v-value-value-length usage binary-double unsigned.
+ 04 v-value-value-text pic x(8192).
+ 02 v-extensions.
+ 03 v-extensions-data usage pointer.
+ 03 v-extensions-len usage binary-double unsigned.
+01 tt-n-cobol-ReceiptAtomicDecideValueList based.
+ 02 v-data usage pointer.
+ 02 v-len usage binary-double unsigned.
+01 tt-n-cobol-ReceiptAtomicDecideValue based.
+ 02 v-answer usage pointer.
+ 02 v-answer-id usage pointer.
+ 02 v-images.
+ 03 v-images-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-images-value.
+ 04 v-images-value-data usage pointer.
+ 04 v-images-value-len usage binary-double unsigned.
+ 02 v-index.
+ 03 v-index-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-index-value usage binary-double unsigned.
+ 02 v-input.
+ 03 v-input-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-input-value usage pointer.
+ 02 v-members.
+ 03 v-members-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-members-value.
+ 04 v-members-value-data usage pointer.
+ 04 v-members-value-len usage binary-double unsigned.
+ 02 v-meta usage pointer.
+ 02 v-question usage pointer.
+ 02 v-question-name.
+ 03 v-question-name-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-question-name-value.
+ 04 v-question-name-value-length usage binary-double unsigned.
+ 04 v-question-name-value-text pic x(8192).
+ 02 v-schema usage pointer.
+ 02 v-source.
+ 03 v-source-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-source-value usage pointer.
+ 02 v-threshold.
+ 03 v-threshold-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-threshold-value usage pointer.
+ 02 v-value.
+ 03 v-value-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-value-value usage pointer.
+ 02 v-extensions.
+ 03 v-extensions-data usage pointer.
+ 03 v-extensions-len usage binary-double unsigned.
+01 tt-n-cobol-ReceiptDecideValuePresence based.
+ 02 v-presence usage binary-long unsigned.
+ 02 filler pic x(4).
+ 02 v-value usage pointer.
+01 tt-n-cobol-ReceiptDecideValue based.
+ 02 v-value usage pointer.
+01 tt-n-cobol-ReceiptFindList based.
+ 02 v-data usage pointer.
+ 02 v-len usage binary-double unsigned.
+01 tt-n-cobol-ReceiptRelationList based.
+ 02 v-data usage pointer.
+ 02 v-len usage binary-double unsigned.
 01 tt-n-cobol-AnswerTokenBand based.
  02 v-lower usage binary-double unsigned.
  02 v-upper usage binary-double unsigned.
@@ -4806,15 +7044,87 @@
  03 v-token-estimate-method-length usage binary-double unsigned.
  03 v-token-estimate-method-text pic x(8192).
  02 v-upper-bound usage binary-double unsigned.
-01 tt-n-cobol-AnswerDecideResult based.
- 02 v-owner usage pointer.
+01 tt-n-cobol-AnswerDecideValue based.
+ 02 v-scalar usage binary-double unsigned.
  02 v-rows usage pointer.
  02 v-count usage binary-double unsigned.
  02 v-first.
  03 v-first-present usage binary-double unsigned.
- 03 v-first-value usage binary-double unsigned.
-01 tt-n-cobol-AnswerChooseResult based.
+ 03 v-first-value usage pointer.
+01 tt-n-cobol-AnswerDecideResult based.
  02 v-owner usage pointer.
+ 02 v-value.
+ 03 v-value-scalar usage binary-double unsigned.
+ 03 v-value-rows usage pointer.
+ 03 v-value-count usage binary-double unsigned.
+ 03 v-value-first.
+ 04 v-value-first-present usage binary-double unsigned.
+ 04 v-value-first-value usage pointer.
+ 02 v-probability.
+ 03 v-probability-scalar usage binary-double unsigned.
+ 03 v-probability-first.
+ 04 v-probability-first-present usage binary-double unsigned.
+ 04 v-probability-first-value usage float-long.
+ 03 v-probability-data usage pointer.
+ 03 v-probability-count usage binary-double unsigned.
+ 03 v-probability-lists usage pointer.
+ 03 v-probability-list-count usage binary-double unsigned.
+ 02 v-results.
+ 03 v-results-data usage pointer.
+ 03 v-results-len usage binary-double unsigned.
+ 02 v-facts-present usage binary-double unsigned.
+ 02 v-facts.
+ 03 v-facts-attempts.
+ 04 v-facts-attempts-presence usage binary-long unsigned.
+ 04 filler pic x(4).
+ 04 v-facts-attempts-value.
+ 05 v-facts-attempts-value-data usage pointer.
+ 05 v-facts-attempts-value-len usage binary-double unsigned.
+ 03 v-facts-cache-answers usage binary-double unsigned.
+ 03 v-facts-call-id usage pointer.
+ 03 v-facts-estimated-cost-usd.
+ 04 v-facts-estimated-cost-usd-presence usage binary-long unsigned.
+ 04 filler pic x(4).
+ 04 v-facts-estimated-cost-usd-value.
+ 05 v-facts-estimated-cost-usd-value-length usage binary-double unsigned.
+ 05 v-facts-estimated-cost-usd-value-text pic x(8192).
+ 03 v-facts-held-model-mismatch.
+ 04 v-facts-held-model-mismatch-presence usage binary-long unsigned.
+ 04 v-facts-held-model-mismatch-value usage binary-long unsigned.
+ 03 v-facts-input-tokens.
+ 04 v-facts-input-tokens-presence usage binary-long unsigned.
+ 04 filler pic x(4).
+ 04 v-facts-input-tokens-value usage binary-double unsigned.
+ 03 v-facts-largest-request-bytes usage binary-double unsigned.
+ 03 v-facts-largest-request-estimated-input-tokens.
+ 04 v-facts-largest-request-estimated-input-tokens-presence usage binary-long unsigned.
+ 04 filler pic x(4).
+ 04 v-facts-largest-request-estimated-input-tokens-value usage binary-double unsigned.
+ 03 v-facts-model.
+ 04 v-facts-model-presence usage binary-long unsigned.
+ 04 filler pic x(4).
+ 04 v-facts-model-value.
+ 05 v-facts-model-value-length usage binary-double unsigned.
+ 05 v-facts-model-value-text pic x(8192).
+ 03 v-facts-output-tokens.
+ 04 v-facts-output-tokens-presence usage binary-long unsigned.
+ 04 filler pic x(4).
+ 04 v-facts-output-tokens-value usage binary-double unsigned.
+ 03 v-facts-records usage binary-double unsigned.
+ 03 v-facts-requests-sent usage binary-double unsigned.
+ 03 v-facts-seconds usage float-long.
+ 03 v-facts-token-estimate-method.
+ 04 v-facts-token-estimate-method-length usage binary-double unsigned.
+ 04 v-facts-token-estimate-method-text pic x(8192).
+ 03 v-facts-usage-persistence.
+ 04 v-facts-usage-persistence-presence usage binary-long unsigned.
+ 04 filler pic x(4).
+ 04 v-facts-usage-persistence-value usage pointer.
+ 03 v-facts-extensions.
+ 04 v-facts-extensions-data usage pointer.
+ 04 v-facts-extensions-len usage binary-double unsigned.
+01 tt-n-cobol-AnswerChooseValue based.
+ 02 v-scalar usage binary-double unsigned.
  02 v-rows usage pointer.
  02 v-count usage binary-double unsigned.
  02 v-first.
@@ -4822,8 +7132,82 @@
  03 v-first-value.
  04 v-first-value-length usage binary-double unsigned.
  04 v-first-value-text pic x(8192).
-01 tt-n-cobol-AnswerTagResult based.
+01 tt-n-cobol-AnswerChooseResult based.
  02 v-owner usage pointer.
+ 02 v-value.
+ 03 v-value-scalar usage binary-double unsigned.
+ 03 v-value-rows usage pointer.
+ 03 v-value-count usage binary-double unsigned.
+ 03 v-value-first.
+ 04 v-value-first-present usage binary-double unsigned.
+ 04 v-value-first-value.
+ 05 v-value-first-value-length usage binary-double unsigned.
+ 05 v-value-first-value-text pic x(8192).
+ 02 v-probability.
+ 03 v-probability-scalar usage binary-double unsigned.
+ 03 v-probability-first.
+ 04 v-probability-first-present usage binary-double unsigned.
+ 04 v-probability-first-value usage float-long.
+ 03 v-probability-data usage pointer.
+ 03 v-probability-count usage binary-double unsigned.
+ 03 v-probability-lists usage pointer.
+ 03 v-probability-list-count usage binary-double unsigned.
+ 02 v-results.
+ 03 v-results-data usage pointer.
+ 03 v-results-len usage binary-double unsigned.
+ 02 v-facts-present usage binary-double unsigned.
+ 02 v-facts.
+ 03 v-facts-attempts.
+ 04 v-facts-attempts-presence usage binary-long unsigned.
+ 04 filler pic x(4).
+ 04 v-facts-attempts-value.
+ 05 v-facts-attempts-value-data usage pointer.
+ 05 v-facts-attempts-value-len usage binary-double unsigned.
+ 03 v-facts-cache-answers usage binary-double unsigned.
+ 03 v-facts-call-id usage pointer.
+ 03 v-facts-estimated-cost-usd.
+ 04 v-facts-estimated-cost-usd-presence usage binary-long unsigned.
+ 04 filler pic x(4).
+ 04 v-facts-estimated-cost-usd-value.
+ 05 v-facts-estimated-cost-usd-value-length usage binary-double unsigned.
+ 05 v-facts-estimated-cost-usd-value-text pic x(8192).
+ 03 v-facts-held-model-mismatch.
+ 04 v-facts-held-model-mismatch-presence usage binary-long unsigned.
+ 04 v-facts-held-model-mismatch-value usage binary-long unsigned.
+ 03 v-facts-input-tokens.
+ 04 v-facts-input-tokens-presence usage binary-long unsigned.
+ 04 filler pic x(4).
+ 04 v-facts-input-tokens-value usage binary-double unsigned.
+ 03 v-facts-largest-request-bytes usage binary-double unsigned.
+ 03 v-facts-largest-request-estimated-input-tokens.
+ 04 v-facts-largest-request-estimated-input-tokens-presence usage binary-long unsigned.
+ 04 filler pic x(4).
+ 04 v-facts-largest-request-estimated-input-tokens-value usage binary-double unsigned.
+ 03 v-facts-model.
+ 04 v-facts-model-presence usage binary-long unsigned.
+ 04 filler pic x(4).
+ 04 v-facts-model-value.
+ 05 v-facts-model-value-length usage binary-double unsigned.
+ 05 v-facts-model-value-text pic x(8192).
+ 03 v-facts-output-tokens.
+ 04 v-facts-output-tokens-presence usage binary-long unsigned.
+ 04 filler pic x(4).
+ 04 v-facts-output-tokens-value usage binary-double unsigned.
+ 03 v-facts-records usage binary-double unsigned.
+ 03 v-facts-requests-sent usage binary-double unsigned.
+ 03 v-facts-seconds usage float-long.
+ 03 v-facts-token-estimate-method.
+ 04 v-facts-token-estimate-method-length usage binary-double unsigned.
+ 04 v-facts-token-estimate-method-text pic x(8192).
+ 03 v-facts-usage-persistence.
+ 04 v-facts-usage-persistence-presence usage binary-long unsigned.
+ 04 filler pic x(4).
+ 04 v-facts-usage-persistence-value usage pointer.
+ 03 v-facts-extensions.
+ 04 v-facts-extensions-data usage pointer.
+ 04 v-facts-extensions-len usage binary-double unsigned.
+01 tt-n-cobol-AnswerTagValue based.
+ 02 v-scalar usage binary-double unsigned.
  02 v-rows usage pointer.
  02 v-count usage binary-double unsigned.
  02 v-first.
@@ -4832,34 +7216,395 @@
  03 v-first-count usage binary-double unsigned.
  03 v-first-edges usage pointer.
  03 v-first-edge-count usage binary-double unsigned.
-01 tt-n-cobol-AnswerScoreResult based.
+01 tt-n-cobol-AnswerTagResult based.
  02 v-owner usage pointer.
+ 02 v-value.
+ 03 v-value-scalar usage binary-double unsigned.
+ 03 v-value-rows usage pointer.
+ 03 v-value-count usage binary-double unsigned.
+ 03 v-value-first.
+ 04 v-value-first-owner usage pointer.
+ 04 v-value-first-rows usage pointer.
+ 04 v-value-first-count usage binary-double unsigned.
+ 04 v-value-first-edges usage pointer.
+ 04 v-value-first-edge-count usage binary-double unsigned.
+ 02 v-probability.
+ 03 v-probability-scalar usage binary-double unsigned.
+ 03 v-probability-first.
+ 04 v-probability-first-present usage binary-double unsigned.
+ 04 v-probability-first-value usage float-long.
+ 03 v-probability-data usage pointer.
+ 03 v-probability-count usage binary-double unsigned.
+ 03 v-probability-lists usage pointer.
+ 03 v-probability-list-count usage binary-double unsigned.
+ 02 v-results.
+ 03 v-results-data usage pointer.
+ 03 v-results-len usage binary-double unsigned.
+ 02 v-facts-present usage binary-double unsigned.
+ 02 v-facts.
+ 03 v-facts-attempts.
+ 04 v-facts-attempts-presence usage binary-long unsigned.
+ 04 filler pic x(4).
+ 04 v-facts-attempts-value.
+ 05 v-facts-attempts-value-data usage pointer.
+ 05 v-facts-attempts-value-len usage binary-double unsigned.
+ 03 v-facts-cache-answers usage binary-double unsigned.
+ 03 v-facts-call-id usage pointer.
+ 03 v-facts-estimated-cost-usd.
+ 04 v-facts-estimated-cost-usd-presence usage binary-long unsigned.
+ 04 filler pic x(4).
+ 04 v-facts-estimated-cost-usd-value.
+ 05 v-facts-estimated-cost-usd-value-length usage binary-double unsigned.
+ 05 v-facts-estimated-cost-usd-value-text pic x(8192).
+ 03 v-facts-held-model-mismatch.
+ 04 v-facts-held-model-mismatch-presence usage binary-long unsigned.
+ 04 v-facts-held-model-mismatch-value usage binary-long unsigned.
+ 03 v-facts-input-tokens.
+ 04 v-facts-input-tokens-presence usage binary-long unsigned.
+ 04 filler pic x(4).
+ 04 v-facts-input-tokens-value usage binary-double unsigned.
+ 03 v-facts-largest-request-bytes usage binary-double unsigned.
+ 03 v-facts-largest-request-estimated-input-tokens.
+ 04 v-facts-largest-request-estimated-input-tokens-presence usage binary-long unsigned.
+ 04 filler pic x(4).
+ 04 v-facts-largest-request-estimated-input-tokens-value usage binary-double unsigned.
+ 03 v-facts-model.
+ 04 v-facts-model-presence usage binary-long unsigned.
+ 04 filler pic x(4).
+ 04 v-facts-model-value.
+ 05 v-facts-model-value-length usage binary-double unsigned.
+ 05 v-facts-model-value-text pic x(8192).
+ 03 v-facts-output-tokens.
+ 04 v-facts-output-tokens-presence usage binary-long unsigned.
+ 04 filler pic x(4).
+ 04 v-facts-output-tokens-value usage binary-double unsigned.
+ 03 v-facts-records usage binary-double unsigned.
+ 03 v-facts-requests-sent usage binary-double unsigned.
+ 03 v-facts-seconds usage float-long.
+ 03 v-facts-token-estimate-method.
+ 04 v-facts-token-estimate-method-length usage binary-double unsigned.
+ 04 v-facts-token-estimate-method-text pic x(8192).
+ 03 v-facts-usage-persistence.
+ 04 v-facts-usage-persistence-presence usage binary-long unsigned.
+ 04 filler pic x(4).
+ 04 v-facts-usage-persistence-value usage pointer.
+ 03 v-facts-extensions.
+ 04 v-facts-extensions-data usage pointer.
+ 04 v-facts-extensions-len usage binary-double unsigned.
+01 tt-n-cobol-AnswerScoreValue based.
+ 02 v-scalar usage binary-double unsigned.
  02 v-rows usage pointer.
  02 v-count usage binary-double unsigned.
  02 v-first.
  03 v-first-value usage float-long.
-01 tt-n-cobol-AnswerFilterResult based.
+01 tt-n-cobol-AnswerScoreResult based.
  02 v-owner usage pointer.
+ 02 v-value.
+ 03 v-value-scalar usage binary-double unsigned.
+ 03 v-value-rows usage pointer.
+ 03 v-value-count usage binary-double unsigned.
+ 03 v-value-first.
+ 04 v-value-first-value usage float-long.
+ 02 v-probability.
+ 03 v-probability-scalar usage binary-double unsigned.
+ 03 v-probability-first.
+ 04 v-probability-first-present usage binary-double unsigned.
+ 04 v-probability-first-value usage float-long.
+ 03 v-probability-data usage pointer.
+ 03 v-probability-count usage binary-double unsigned.
+ 03 v-probability-lists usage pointer.
+ 03 v-probability-list-count usage binary-double unsigned.
+ 02 v-results.
+ 03 v-results-data usage pointer.
+ 03 v-results-len usage binary-double unsigned.
+ 02 v-facts-present usage binary-double unsigned.
+ 02 v-facts.
+ 03 v-facts-attempts.
+ 04 v-facts-attempts-presence usage binary-long unsigned.
+ 04 filler pic x(4).
+ 04 v-facts-attempts-value.
+ 05 v-facts-attempts-value-data usage pointer.
+ 05 v-facts-attempts-value-len usage binary-double unsigned.
+ 03 v-facts-cache-answers usage binary-double unsigned.
+ 03 v-facts-call-id usage pointer.
+ 03 v-facts-estimated-cost-usd.
+ 04 v-facts-estimated-cost-usd-presence usage binary-long unsigned.
+ 04 filler pic x(4).
+ 04 v-facts-estimated-cost-usd-value.
+ 05 v-facts-estimated-cost-usd-value-length usage binary-double unsigned.
+ 05 v-facts-estimated-cost-usd-value-text pic x(8192).
+ 03 v-facts-held-model-mismatch.
+ 04 v-facts-held-model-mismatch-presence usage binary-long unsigned.
+ 04 v-facts-held-model-mismatch-value usage binary-long unsigned.
+ 03 v-facts-input-tokens.
+ 04 v-facts-input-tokens-presence usage binary-long unsigned.
+ 04 filler pic x(4).
+ 04 v-facts-input-tokens-value usage binary-double unsigned.
+ 03 v-facts-largest-request-bytes usage binary-double unsigned.
+ 03 v-facts-largest-request-estimated-input-tokens.
+ 04 v-facts-largest-request-estimated-input-tokens-presence usage binary-long unsigned.
+ 04 filler pic x(4).
+ 04 v-facts-largest-request-estimated-input-tokens-value usage binary-double unsigned.
+ 03 v-facts-model.
+ 04 v-facts-model-presence usage binary-long unsigned.
+ 04 filler pic x(4).
+ 04 v-facts-model-value.
+ 05 v-facts-model-value-length usage binary-double unsigned.
+ 05 v-facts-model-value-text pic x(8192).
+ 03 v-facts-output-tokens.
+ 04 v-facts-output-tokens-presence usage binary-long unsigned.
+ 04 filler pic x(4).
+ 04 v-facts-output-tokens-value usage binary-double unsigned.
+ 03 v-facts-records usage binary-double unsigned.
+ 03 v-facts-requests-sent usage binary-double unsigned.
+ 03 v-facts-seconds usage float-long.
+ 03 v-facts-token-estimate-method.
+ 04 v-facts-token-estimate-method-length usage binary-double unsigned.
+ 04 v-facts-token-estimate-method-text pic x(8192).
+ 03 v-facts-usage-persistence.
+ 04 v-facts-usage-persistence-presence usage binary-long unsigned.
+ 04 filler pic x(4).
+ 04 v-facts-usage-persistence-value usage pointer.
+ 03 v-facts-extensions.
+ 04 v-facts-extensions-data usage pointer.
+ 04 v-facts-extensions-len usage binary-double unsigned.
+01 tt-n-cobol-AnswerFilterValue based.
+ 02 v-scalar usage binary-double unsigned.
  02 v-rows usage pointer.
  02 v-count usage binary-double unsigned.
  02 v-first.
  03 v-first-original usage pointer.
-01 tt-n-cobol-AnswerRankResult based.
+01 tt-n-cobol-AnswerFilterResult based.
  02 v-owner usage pointer.
+ 02 v-value.
+ 03 v-value-scalar usage binary-double unsigned.
+ 03 v-value-rows usage pointer.
+ 03 v-value-count usage binary-double unsigned.
+ 03 v-value-first.
+ 04 v-value-first-original usage pointer.
+ 02 v-probability.
+ 03 v-probability-scalar usage binary-double unsigned.
+ 03 v-probability-first.
+ 04 v-probability-first-present usage binary-double unsigned.
+ 04 v-probability-first-value usage float-long.
+ 03 v-probability-data usage pointer.
+ 03 v-probability-count usage binary-double unsigned.
+ 03 v-probability-lists usage pointer.
+ 03 v-probability-list-count usage binary-double unsigned.
+ 02 v-results.
+ 03 v-results-data usage pointer.
+ 03 v-results-len usage binary-double unsigned.
+ 02 v-facts-present usage binary-double unsigned.
+ 02 v-facts.
+ 03 v-facts-attempts.
+ 04 v-facts-attempts-presence usage binary-long unsigned.
+ 04 filler pic x(4).
+ 04 v-facts-attempts-value.
+ 05 v-facts-attempts-value-data usage pointer.
+ 05 v-facts-attempts-value-len usage binary-double unsigned.
+ 03 v-facts-cache-answers usage binary-double unsigned.
+ 03 v-facts-call-id usage pointer.
+ 03 v-facts-estimated-cost-usd.
+ 04 v-facts-estimated-cost-usd-presence usage binary-long unsigned.
+ 04 filler pic x(4).
+ 04 v-facts-estimated-cost-usd-value.
+ 05 v-facts-estimated-cost-usd-value-length usage binary-double unsigned.
+ 05 v-facts-estimated-cost-usd-value-text pic x(8192).
+ 03 v-facts-held-model-mismatch.
+ 04 v-facts-held-model-mismatch-presence usage binary-long unsigned.
+ 04 v-facts-held-model-mismatch-value usage binary-long unsigned.
+ 03 v-facts-input-tokens.
+ 04 v-facts-input-tokens-presence usage binary-long unsigned.
+ 04 filler pic x(4).
+ 04 v-facts-input-tokens-value usage binary-double unsigned.
+ 03 v-facts-largest-request-bytes usage binary-double unsigned.
+ 03 v-facts-largest-request-estimated-input-tokens.
+ 04 v-facts-largest-request-estimated-input-tokens-presence usage binary-long unsigned.
+ 04 filler pic x(4).
+ 04 v-facts-largest-request-estimated-input-tokens-value usage binary-double unsigned.
+ 03 v-facts-model.
+ 04 v-facts-model-presence usage binary-long unsigned.
+ 04 filler pic x(4).
+ 04 v-facts-model-value.
+ 05 v-facts-model-value-length usage binary-double unsigned.
+ 05 v-facts-model-value-text pic x(8192).
+ 03 v-facts-output-tokens.
+ 04 v-facts-output-tokens-presence usage binary-long unsigned.
+ 04 filler pic x(4).
+ 04 v-facts-output-tokens-value usage binary-double unsigned.
+ 03 v-facts-records usage binary-double unsigned.
+ 03 v-facts-requests-sent usage binary-double unsigned.
+ 03 v-facts-seconds usage float-long.
+ 03 v-facts-token-estimate-method.
+ 04 v-facts-token-estimate-method-length usage binary-double unsigned.
+ 04 v-facts-token-estimate-method-text pic x(8192).
+ 03 v-facts-usage-persistence.
+ 04 v-facts-usage-persistence-presence usage binary-long unsigned.
+ 04 filler pic x(4).
+ 04 v-facts-usage-persistence-value usage pointer.
+ 03 v-facts-extensions.
+ 04 v-facts-extensions-data usage pointer.
+ 04 v-facts-extensions-len usage binary-double unsigned.
+01 tt-n-cobol-AnswerRankValue based.
+ 02 v-scalar usage binary-double unsigned.
  02 v-rows usage pointer.
  02 v-count usage binary-double unsigned.
  02 v-first.
  03 v-first-value usage binary-double unsigned.
-01 tt-n-cobol-AnswerFindResult based.
+01 tt-n-cobol-AnswerRankResult based.
  02 v-owner usage pointer.
+ 02 v-value.
+ 03 v-value-scalar usage binary-double unsigned.
+ 03 v-value-rows usage pointer.
+ 03 v-value-count usage binary-double unsigned.
+ 03 v-value-first.
+ 04 v-value-first-value usage binary-double unsigned.
+ 02 v-probability.
+ 03 v-probability-scalar usage binary-double unsigned.
+ 03 v-probability-first.
+ 04 v-probability-first-present usage binary-double unsigned.
+ 04 v-probability-first-value usage float-long.
+ 03 v-probability-data usage pointer.
+ 03 v-probability-count usage binary-double unsigned.
+ 03 v-probability-lists usage pointer.
+ 03 v-probability-list-count usage binary-double unsigned.
+ 02 v-results.
+ 03 v-results-data usage pointer.
+ 03 v-results-len usage binary-double unsigned.
+ 02 v-facts-present usage binary-double unsigned.
+ 02 v-facts.
+ 03 v-facts-attempts.
+ 04 v-facts-attempts-presence usage binary-long unsigned.
+ 04 filler pic x(4).
+ 04 v-facts-attempts-value.
+ 05 v-facts-attempts-value-data usage pointer.
+ 05 v-facts-attempts-value-len usage binary-double unsigned.
+ 03 v-facts-cache-answers usage binary-double unsigned.
+ 03 v-facts-call-id usage pointer.
+ 03 v-facts-estimated-cost-usd.
+ 04 v-facts-estimated-cost-usd-presence usage binary-long unsigned.
+ 04 filler pic x(4).
+ 04 v-facts-estimated-cost-usd-value.
+ 05 v-facts-estimated-cost-usd-value-length usage binary-double unsigned.
+ 05 v-facts-estimated-cost-usd-value-text pic x(8192).
+ 03 v-facts-held-model-mismatch.
+ 04 v-facts-held-model-mismatch-presence usage binary-long unsigned.
+ 04 v-facts-held-model-mismatch-value usage binary-long unsigned.
+ 03 v-facts-input-tokens.
+ 04 v-facts-input-tokens-presence usage binary-long unsigned.
+ 04 filler pic x(4).
+ 04 v-facts-input-tokens-value usage binary-double unsigned.
+ 03 v-facts-largest-request-bytes usage binary-double unsigned.
+ 03 v-facts-largest-request-estimated-input-tokens.
+ 04 v-facts-largest-request-estimated-input-tokens-presence usage binary-long unsigned.
+ 04 filler pic x(4).
+ 04 v-facts-largest-request-estimated-input-tokens-value usage binary-double unsigned.
+ 03 v-facts-model.
+ 04 v-facts-model-presence usage binary-long unsigned.
+ 04 filler pic x(4).
+ 04 v-facts-model-value.
+ 05 v-facts-model-value-length usage binary-double unsigned.
+ 05 v-facts-model-value-text pic x(8192).
+ 03 v-facts-output-tokens.
+ 04 v-facts-output-tokens-presence usage binary-long unsigned.
+ 04 filler pic x(4).
+ 04 v-facts-output-tokens-value usage binary-double unsigned.
+ 03 v-facts-records usage binary-double unsigned.
+ 03 v-facts-requests-sent usage binary-double unsigned.
+ 03 v-facts-seconds usage float-long.
+ 03 v-facts-token-estimate-method.
+ 04 v-facts-token-estimate-method-length usage binary-double unsigned.
+ 04 v-facts-token-estimate-method-text pic x(8192).
+ 03 v-facts-usage-persistence.
+ 04 v-facts-usage-persistence-presence usage binary-long unsigned.
+ 04 filler pic x(4).
+ 04 v-facts-usage-persistence-value usage pointer.
+ 03 v-facts-extensions.
+ 04 v-facts-extensions-data usage pointer.
+ 04 v-facts-extensions-len usage binary-double unsigned.
+01 tt-n-cobol-AnswerFindValue based.
+ 02 v-scalar usage binary-double unsigned.
  02 v-rows usage pointer.
  02 v-count usage binary-double unsigned.
  02 v-first.
  03 v-first-present usage binary-double unsigned.
  03 v-first-index usage binary-double unsigned.
  03 v-first-original usage pointer.
-01 tt-n-cobol-AnswerAnnotateResult based.
+01 tt-n-cobol-AnswerFindResult based.
  02 v-owner usage pointer.
+ 02 v-value.
+ 03 v-value-scalar usage binary-double unsigned.
+ 03 v-value-rows usage pointer.
+ 03 v-value-count usage binary-double unsigned.
+ 03 v-value-first.
+ 04 v-value-first-present usage binary-double unsigned.
+ 04 v-value-first-index usage binary-double unsigned.
+ 04 v-value-first-original usage pointer.
+ 02 v-probability.
+ 03 v-probability-scalar usage binary-double unsigned.
+ 03 v-probability-first.
+ 04 v-probability-first-present usage binary-double unsigned.
+ 04 v-probability-first-value usage float-long.
+ 03 v-probability-data usage pointer.
+ 03 v-probability-count usage binary-double unsigned.
+ 03 v-probability-lists usage pointer.
+ 03 v-probability-list-count usage binary-double unsigned.
+ 02 v-results.
+ 03 v-results-data usage pointer.
+ 03 v-results-len usage binary-double unsigned.
+ 02 v-facts-present usage binary-double unsigned.
+ 02 v-facts.
+ 03 v-facts-attempts.
+ 04 v-facts-attempts-presence usage binary-long unsigned.
+ 04 filler pic x(4).
+ 04 v-facts-attempts-value.
+ 05 v-facts-attempts-value-data usage pointer.
+ 05 v-facts-attempts-value-len usage binary-double unsigned.
+ 03 v-facts-cache-answers usage binary-double unsigned.
+ 03 v-facts-call-id usage pointer.
+ 03 v-facts-estimated-cost-usd.
+ 04 v-facts-estimated-cost-usd-presence usage binary-long unsigned.
+ 04 filler pic x(4).
+ 04 v-facts-estimated-cost-usd-value.
+ 05 v-facts-estimated-cost-usd-value-length usage binary-double unsigned.
+ 05 v-facts-estimated-cost-usd-value-text pic x(8192).
+ 03 v-facts-held-model-mismatch.
+ 04 v-facts-held-model-mismatch-presence usage binary-long unsigned.
+ 04 v-facts-held-model-mismatch-value usage binary-long unsigned.
+ 03 v-facts-input-tokens.
+ 04 v-facts-input-tokens-presence usage binary-long unsigned.
+ 04 filler pic x(4).
+ 04 v-facts-input-tokens-value usage binary-double unsigned.
+ 03 v-facts-largest-request-bytes usage binary-double unsigned.
+ 03 v-facts-largest-request-estimated-input-tokens.
+ 04 v-facts-largest-request-estimated-input-tokens-presence usage binary-long unsigned.
+ 04 filler pic x(4).
+ 04 v-facts-largest-request-estimated-input-tokens-value usage binary-double unsigned.
+ 03 v-facts-model.
+ 04 v-facts-model-presence usage binary-long unsigned.
+ 04 filler pic x(4).
+ 04 v-facts-model-value.
+ 05 v-facts-model-value-length usage binary-double unsigned.
+ 05 v-facts-model-value-text pic x(8192).
+ 03 v-facts-output-tokens.
+ 04 v-facts-output-tokens-presence usage binary-long unsigned.
+ 04 filler pic x(4).
+ 04 v-facts-output-tokens-value usage binary-double unsigned.
+ 03 v-facts-records usage binary-double unsigned.
+ 03 v-facts-requests-sent usage binary-double unsigned.
+ 03 v-facts-seconds usage float-long.
+ 03 v-facts-token-estimate-method.
+ 04 v-facts-token-estimate-method-length usage binary-double unsigned.
+ 04 v-facts-token-estimate-method-text pic x(8192).
+ 03 v-facts-usage-persistence.
+ 04 v-facts-usage-persistence-presence usage binary-long unsigned.
+ 04 filler pic x(4).
+ 04 v-facts-usage-persistence-value usage pointer.
+ 03 v-facts-extensions.
+ 04 v-facts-extensions-data usage pointer.
+ 04 v-facts-extensions-len usage binary-double unsigned.
+01 tt-n-cobol-AnswerAnnotateValue based.
+ 02 v-scalar usage binary-double unsigned.
  02 v-rows usage pointer.
  02 v-count usage binary-double unsigned.
  02 v-first.
@@ -4877,8 +7622,92 @@
  03 v-first-tag-count usage binary-double unsigned.
  03 v-first-failure-kind usage binary-double unsigned.
  03 v-first-failure-cause usage binary-double unsigned.
-01 tt-n-cobol-AnswerRecognizeResult based.
+01 tt-n-cobol-AnswerAnnotateResult based.
  02 v-owner usage pointer.
+ 02 v-value.
+ 03 v-value-scalar usage binary-double unsigned.
+ 03 v-value-rows usage pointer.
+ 03 v-value-count usage binary-double unsigned.
+ 03 v-value-first.
+ 04 v-value-first-record usage binary-double unsigned.
+ 04 v-value-first-name.
+ 05 v-value-first-name-length usage binary-double unsigned.
+ 05 v-value-first-name-text pic x(8192).
+ 04 v-value-first-kind usage binary-double unsigned.
+ 04 v-value-first-boolean usage binary-double unsigned.
+ 04 v-value-first-number usage float-long.
+ 04 v-value-first-text.
+ 05 v-value-first-text-length usage binary-double unsigned.
+ 05 v-value-first-text-text pic x(8192).
+ 04 v-value-first-tags usage pointer.
+ 04 v-value-first-tag-count usage binary-double unsigned.
+ 04 v-value-first-failure-kind usage binary-double unsigned.
+ 04 v-value-first-failure-cause usage binary-double unsigned.
+ 02 v-probability.
+ 03 v-probability-scalar usage binary-double unsigned.
+ 03 v-probability-first.
+ 04 v-probability-first-present usage binary-double unsigned.
+ 04 v-probability-first-value usage float-long.
+ 03 v-probability-data usage pointer.
+ 03 v-probability-count usage binary-double unsigned.
+ 03 v-probability-lists usage pointer.
+ 03 v-probability-list-count usage binary-double unsigned.
+ 02 v-results.
+ 03 v-results-data usage pointer.
+ 03 v-results-len usage binary-double unsigned.
+ 02 v-facts-present usage binary-double unsigned.
+ 02 v-facts.
+ 03 v-facts-attempts.
+ 04 v-facts-attempts-presence usage binary-long unsigned.
+ 04 filler pic x(4).
+ 04 v-facts-attempts-value.
+ 05 v-facts-attempts-value-data usage pointer.
+ 05 v-facts-attempts-value-len usage binary-double unsigned.
+ 03 v-facts-cache-answers usage binary-double unsigned.
+ 03 v-facts-call-id usage pointer.
+ 03 v-facts-estimated-cost-usd.
+ 04 v-facts-estimated-cost-usd-presence usage binary-long unsigned.
+ 04 filler pic x(4).
+ 04 v-facts-estimated-cost-usd-value.
+ 05 v-facts-estimated-cost-usd-value-length usage binary-double unsigned.
+ 05 v-facts-estimated-cost-usd-value-text pic x(8192).
+ 03 v-facts-held-model-mismatch.
+ 04 v-facts-held-model-mismatch-presence usage binary-long unsigned.
+ 04 v-facts-held-model-mismatch-value usage binary-long unsigned.
+ 03 v-facts-input-tokens.
+ 04 v-facts-input-tokens-presence usage binary-long unsigned.
+ 04 filler pic x(4).
+ 04 v-facts-input-tokens-value usage binary-double unsigned.
+ 03 v-facts-largest-request-bytes usage binary-double unsigned.
+ 03 v-facts-largest-request-estimated-input-tokens.
+ 04 v-facts-largest-request-estimated-input-tokens-presence usage binary-long unsigned.
+ 04 filler pic x(4).
+ 04 v-facts-largest-request-estimated-input-tokens-value usage binary-double unsigned.
+ 03 v-facts-model.
+ 04 v-facts-model-presence usage binary-long unsigned.
+ 04 filler pic x(4).
+ 04 v-facts-model-value.
+ 05 v-facts-model-value-length usage binary-double unsigned.
+ 05 v-facts-model-value-text pic x(8192).
+ 03 v-facts-output-tokens.
+ 04 v-facts-output-tokens-presence usage binary-long unsigned.
+ 04 filler pic x(4).
+ 04 v-facts-output-tokens-value usage binary-double unsigned.
+ 03 v-facts-records usage binary-double unsigned.
+ 03 v-facts-requests-sent usage binary-double unsigned.
+ 03 v-facts-seconds usage float-long.
+ 03 v-facts-token-estimate-method.
+ 04 v-facts-token-estimate-method-length usage binary-double unsigned.
+ 04 v-facts-token-estimate-method-text pic x(8192).
+ 03 v-facts-usage-persistence.
+ 04 v-facts-usage-persistence-presence usage binary-long unsigned.
+ 04 filler pic x(4).
+ 04 v-facts-usage-persistence-value usage pointer.
+ 03 v-facts-extensions.
+ 04 v-facts-extensions-data usage pointer.
+ 04 v-facts-extensions-len usage binary-double unsigned.
+01 tt-n-cobol-AnswerRecognizeValue based.
+ 02 v-scalar usage binary-double unsigned.
  02 v-rows usage pointer.
  02 v-count usage binary-double unsigned.
  02 v-first.
@@ -4893,7 +7722,7 @@
  03 v-first-start usage binary-double unsigned.
  03 v-first-end usage binary-double unsigned.
  03 v-first-length usage binary-double unsigned.
- 03 v-first-probability usage float-long.
+ 03 v-first-strength usage float-long.
  03 v-first-mode usage binary-double unsigned.
  03 v-first-file-present usage binary-double unsigned.
  03 v-first-file.
@@ -4906,8 +7735,102 @@
  03 v-first-extensions usage pointer.
  02 v-edges usage pointer.
  02 v-edge-count usage binary-double unsigned.
-01 tt-n-cobol-AnswerRelateResult based.
+01 tt-n-cobol-AnswerRecognizeResult based.
  02 v-owner usage pointer.
+ 02 v-value.
+ 03 v-value-scalar usage binary-double unsigned.
+ 03 v-value-rows usage pointer.
+ 03 v-value-count usage binary-double unsigned.
+ 03 v-value-first.
+ 04 v-value-first-record usage binary-double unsigned.
+ 04 v-value-first-proposal usage binary-double unsigned.
+ 04 v-value-first-kind.
+ 05 v-value-first-kind-length usage binary-double unsigned.
+ 05 v-value-first-kind-text pic x(8192).
+ 04 v-value-first-text.
+ 05 v-value-first-text-length usage binary-double unsigned.
+ 05 v-value-first-text-text pic x(8192).
+ 04 v-value-first-start usage binary-double unsigned.
+ 04 v-value-first-end usage binary-double unsigned.
+ 04 v-value-first-length usage binary-double unsigned.
+ 04 v-value-first-strength usage float-long.
+ 04 v-value-first-mode usage binary-double unsigned.
+ 04 v-value-first-file-present usage binary-double unsigned.
+ 04 v-value-first-file.
+ 05 v-value-first-file-length usage binary-double unsigned.
+ 05 v-value-first-file-text pic x(8192).
+ 04 v-value-first-first-line-present usage binary-double unsigned.
+ 04 v-value-first-first-line usage binary-double unsigned.
+ 04 v-value-first-last-line-present usage binary-double unsigned.
+ 04 v-value-first-last-line usage binary-double unsigned.
+ 04 v-value-first-extensions usage pointer.
+ 03 v-value-edges usage pointer.
+ 03 v-value-edge-count usage binary-double unsigned.
+ 02 v-probability.
+ 03 v-probability-scalar usage binary-double unsigned.
+ 03 v-probability-first.
+ 04 v-probability-first-present usage binary-double unsigned.
+ 04 v-probability-first-value usage float-long.
+ 03 v-probability-data usage pointer.
+ 03 v-probability-count usage binary-double unsigned.
+ 03 v-probability-lists usage pointer.
+ 03 v-probability-list-count usage binary-double unsigned.
+ 02 v-results.
+ 03 v-results-data usage pointer.
+ 03 v-results-len usage binary-double unsigned.
+ 02 v-facts-present usage binary-double unsigned.
+ 02 v-facts.
+ 03 v-facts-attempts.
+ 04 v-facts-attempts-presence usage binary-long unsigned.
+ 04 filler pic x(4).
+ 04 v-facts-attempts-value.
+ 05 v-facts-attempts-value-data usage pointer.
+ 05 v-facts-attempts-value-len usage binary-double unsigned.
+ 03 v-facts-cache-answers usage binary-double unsigned.
+ 03 v-facts-call-id usage pointer.
+ 03 v-facts-estimated-cost-usd.
+ 04 v-facts-estimated-cost-usd-presence usage binary-long unsigned.
+ 04 filler pic x(4).
+ 04 v-facts-estimated-cost-usd-value.
+ 05 v-facts-estimated-cost-usd-value-length usage binary-double unsigned.
+ 05 v-facts-estimated-cost-usd-value-text pic x(8192).
+ 03 v-facts-held-model-mismatch.
+ 04 v-facts-held-model-mismatch-presence usage binary-long unsigned.
+ 04 v-facts-held-model-mismatch-value usage binary-long unsigned.
+ 03 v-facts-input-tokens.
+ 04 v-facts-input-tokens-presence usage binary-long unsigned.
+ 04 filler pic x(4).
+ 04 v-facts-input-tokens-value usage binary-double unsigned.
+ 03 v-facts-largest-request-bytes usage binary-double unsigned.
+ 03 v-facts-largest-request-estimated-input-tokens.
+ 04 v-facts-largest-request-estimated-input-tokens-presence usage binary-long unsigned.
+ 04 filler pic x(4).
+ 04 v-facts-largest-request-estimated-input-tokens-value usage binary-double unsigned.
+ 03 v-facts-model.
+ 04 v-facts-model-presence usage binary-long unsigned.
+ 04 filler pic x(4).
+ 04 v-facts-model-value.
+ 05 v-facts-model-value-length usage binary-double unsigned.
+ 05 v-facts-model-value-text pic x(8192).
+ 03 v-facts-output-tokens.
+ 04 v-facts-output-tokens-presence usage binary-long unsigned.
+ 04 filler pic x(4).
+ 04 v-facts-output-tokens-value usage binary-double unsigned.
+ 03 v-facts-records usage binary-double unsigned.
+ 03 v-facts-requests-sent usage binary-double unsigned.
+ 03 v-facts-seconds usage float-long.
+ 03 v-facts-token-estimate-method.
+ 04 v-facts-token-estimate-method-length usage binary-double unsigned.
+ 04 v-facts-token-estimate-method-text pic x(8192).
+ 03 v-facts-usage-persistence.
+ 04 v-facts-usage-persistence-presence usage binary-long unsigned.
+ 04 filler pic x(4).
+ 04 v-facts-usage-persistence-value usage pointer.
+ 03 v-facts-extensions.
+ 04 v-facts-extensions-data usage pointer.
+ 04 v-facts-extensions-len usage binary-double unsigned.
+01 tt-n-cobol-AnswerRelateValue based.
+ 02 v-scalar usage binary-double unsigned.
  02 v-rows usage pointer.
  02 v-count usage binary-double unsigned.
  02 v-first.
@@ -4930,6 +7853,95 @@
  03 v-first-probability usage float-long.
  03 v-first-either-present usage binary-double unsigned.
  03 v-first-either usage binary-double unsigned.
+01 tt-n-cobol-AnswerRelateResult based.
+ 02 v-owner usage pointer.
+ 02 v-value.
+ 03 v-value-scalar usage binary-double unsigned.
+ 03 v-value-rows usage pointer.
+ 03 v-value-count usage binary-double unsigned.
+ 03 v-value-first.
+ 04 v-value-first-record usage binary-double unsigned.
+ 04 v-value-first-relation.
+ 05 v-value-first-relation-length usage binary-double unsigned.
+ 05 v-value-first-relation-text pic x(8192).
+ 04 v-value-first-source.
+ 05 v-value-first-source-length usage binary-double unsigned.
+ 05 v-value-first-source-text pic x(8192).
+ 04 v-value-first-source-kind.
+ 05 v-value-first-source-kind-length usage binary-double unsigned.
+ 05 v-value-first-source-kind-text pic x(8192).
+ 04 v-value-first-target.
+ 05 v-value-first-target-length usage binary-double unsigned.
+ 05 v-value-first-target-text pic x(8192).
+ 04 v-value-first-target-kind.
+ 05 v-value-first-target-kind-length usage binary-double unsigned.
+ 05 v-value-first-target-kind-text pic x(8192).
+ 04 v-value-first-probability usage float-long.
+ 04 v-value-first-either-present usage binary-double unsigned.
+ 04 v-value-first-either usage binary-double unsigned.
+ 02 v-probability.
+ 03 v-probability-scalar usage binary-double unsigned.
+ 03 v-probability-first.
+ 04 v-probability-first-present usage binary-double unsigned.
+ 04 v-probability-first-value usage float-long.
+ 03 v-probability-data usage pointer.
+ 03 v-probability-count usage binary-double unsigned.
+ 03 v-probability-lists usage pointer.
+ 03 v-probability-list-count usage binary-double unsigned.
+ 02 v-results.
+ 03 v-results-data usage pointer.
+ 03 v-results-len usage binary-double unsigned.
+ 02 v-facts-present usage binary-double unsigned.
+ 02 v-facts.
+ 03 v-facts-attempts.
+ 04 v-facts-attempts-presence usage binary-long unsigned.
+ 04 filler pic x(4).
+ 04 v-facts-attempts-value.
+ 05 v-facts-attempts-value-data usage pointer.
+ 05 v-facts-attempts-value-len usage binary-double unsigned.
+ 03 v-facts-cache-answers usage binary-double unsigned.
+ 03 v-facts-call-id usage pointer.
+ 03 v-facts-estimated-cost-usd.
+ 04 v-facts-estimated-cost-usd-presence usage binary-long unsigned.
+ 04 filler pic x(4).
+ 04 v-facts-estimated-cost-usd-value.
+ 05 v-facts-estimated-cost-usd-value-length usage binary-double unsigned.
+ 05 v-facts-estimated-cost-usd-value-text pic x(8192).
+ 03 v-facts-held-model-mismatch.
+ 04 v-facts-held-model-mismatch-presence usage binary-long unsigned.
+ 04 v-facts-held-model-mismatch-value usage binary-long unsigned.
+ 03 v-facts-input-tokens.
+ 04 v-facts-input-tokens-presence usage binary-long unsigned.
+ 04 filler pic x(4).
+ 04 v-facts-input-tokens-value usage binary-double unsigned.
+ 03 v-facts-largest-request-bytes usage binary-double unsigned.
+ 03 v-facts-largest-request-estimated-input-tokens.
+ 04 v-facts-largest-request-estimated-input-tokens-presence usage binary-long unsigned.
+ 04 filler pic x(4).
+ 04 v-facts-largest-request-estimated-input-tokens-value usage binary-double unsigned.
+ 03 v-facts-model.
+ 04 v-facts-model-presence usage binary-long unsigned.
+ 04 filler pic x(4).
+ 04 v-facts-model-value.
+ 05 v-facts-model-value-length usage binary-double unsigned.
+ 05 v-facts-model-value-text pic x(8192).
+ 03 v-facts-output-tokens.
+ 04 v-facts-output-tokens-presence usage binary-long unsigned.
+ 04 filler pic x(4).
+ 04 v-facts-output-tokens-value usage binary-double unsigned.
+ 03 v-facts-records usage binary-double unsigned.
+ 03 v-facts-requests-sent usage binary-double unsigned.
+ 03 v-facts-seconds usage float-long.
+ 03 v-facts-token-estimate-method.
+ 04 v-facts-token-estimate-method-length usage binary-double unsigned.
+ 04 v-facts-token-estimate-method-text pic x(8192).
+ 03 v-facts-usage-persistence.
+ 04 v-facts-usage-persistence-presence usage binary-long unsigned.
+ 04 filler pic x(4).
+ 04 v-facts-usage-persistence-value usage pointer.
+ 03 v-facts-extensions.
+ 04 v-facts-extensions-data usage pointer.
+ 04 v-facts-extensions-len usage binary-double unsigned.
 78 tt-n-cobol-annotatequestionchoose-kind-k value 2.
 78 tt-n-cobol-annotatequestiondecide-kind-k value 1.
 78 tt-n-cobol-annotatequestionscore-kind-k value 4.

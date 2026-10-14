@@ -33,6 +33,36 @@ value = json.loads(Path(sys.argv[1]).read_text())
 records = Records(Path(os.environ['TT_SESSION_PACKAGE']))
 records.builder_bridge = bridge
 verb = value['verb']
+if value.get('call_result_contract'):
+    from owned_reader import record_types, Reader
+    from templates.host_answers import call_results
+    package = Path(os.environ['TT_SESSION_PACKAGE'])
+    record = record_types(package, package / 'src/thinkthen.h')
+    reader = Reader(bridge, record)
+    answer = record('thinkthen_cobol_Answer' + verb.title() + 'Result')()
+    status = record('thinkthen_cobol_AnswerStatus')()
+    pointers = [ct.c_void_p(engine)]
+    for name, schema in [('question', 'RequestQuestion'), ('input', 'RequestInput'), ('options', 'RequestOptions')]:
+        pointers.append(ct.c_void_p(records.construct(schema, definitions[schema], value[name])))
+    pointers += [ct.c_void_p(ct.addressof(answer)), ct.c_void_p(ct.addressof(status))]
+    call = getattr(bridge, 'COBOL_BLOCK_' + verb.upper()); call.argtypes = [ct.POINTER(ct.c_void_p)] * len(pointers)
+    bridge.TT_ANSWER_FREE.argtypes = [ct.c_void_p]
+    try:
+        code = call(*(ct.byref(pointer) for pointer in pointers))
+        assert code == 0, ('public-call-result', code, reader.text(status.message))
+        contracts = call_results(reader.definitions)
+        receipts = reader.decode(contracts[verb]['receipt_payload'], answer.results, 'receipt')
+        bare = reader.json_value(answer.value.first.value) if verb == 'decide' else reader.text(answer.value.first.value)
+        probability = answer.probability.first.value if answer.probability.first.present else None
+        reader.prefix = 'Answer'
+        facts = reader.definition('completeFacts', answer.facts)
+        payload = {'call_result': {'value': bare, 'probability': probability, 'results': receipts, 'facts': facts},
+                   'packets': [{'kind': 'aggregate', 'function': verb, 'value': receipts}, {'kind': 'terminal', 'facts': facts}]}
+        print(json.dumps(payload, ensure_ascii=False))
+    finally:
+        if status.owner: bridge.TT_ANSWER_FREE(status.owner)
+        native.thinkthen_engine_free(engine)
+    raise SystemExit(0)
 request = {'function':verb, 'question':value['question'], 'input':value['input'], 'options':value['options']}
 address = ct.c_void_p(records.construct('RequestCall', definitions['RequestCall'], request))
 session = ct.c_void_p()

@@ -67,9 +67,9 @@ procedure division.
        by reference tt-n-cobol-AnswerAnnotateResult
        tt-n-cobol-AnswerStatus returning status-code
     if status-code not = 0 stop run returning 1 end-if
-    set row-at to v-rows of tt-n-cobol-AnswerAnnotateResult
+    set row-at to v-value-rows of tt-n-cobol-AnswerAnnotateResult
     perform varying row-number from 1 by 1 until
-       row-number > v-count of
+       row-number > v-value-count of
           tt-n-cobol-AnswerAnnotateResult
        set address of tt-n-cobol-AnswerAnnotationField
           to row-at
