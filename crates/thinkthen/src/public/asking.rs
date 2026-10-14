@@ -13,6 +13,7 @@ use crate::public::question::Question;
 use crate::public::results::{Member, ObservedQuestion};
 
 /// One caller text and its zero-based place.
+#[derive(Clone)]
 pub(crate) struct Text {
     pub(crate) at: usize,
     pub(crate) input: super::QuestionInput,

@@ -125,6 +125,7 @@ fn status_counts_the_live_store_without_writes() {
     let (code, value, stderr) = inspect(&home);
     assert_eq!(code, Some(0));
     assert!(stderr.is_empty());
+    assert!(!Folder::Usage.in_home(&home).exists());
     assert_eq!(value["cache"]["entries"], 0);
     assert_eq!(value["cache"]["old_entries"], 0);
     assert_eq!(fs::read_dir(&cache).expect("empty cache").count(), 0);

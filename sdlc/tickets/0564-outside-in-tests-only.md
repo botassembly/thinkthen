@@ -66,3 +66,5 @@ PM amendment, 2026-10-13. Remaining work. 0564 keeps only Rust, in `crates/think
 
 - 2026-10-13 started
 - 2026-10-13 next: Merged the freshly accepted record-test cuts and parent-owned signal-folder cleanup into final at 39700e21b; preserve distinct checks and continue remaining test cleanup before the candidate.
+- 2026-10-14 next: Merged the reviewed eight-line duplicate test deletion at 12a8ba5ff with the stronger CLI assertion preserved; measured Rust total is 188214, and other inspected tests remain because they carry distinct provenance, diagnostics, privacy, cancellation or ownership checks.
+- 2026-10-14 next: Safe cuts are complete; the final survey retained distinct checks and product behavior, and the 510e8e97a ruling sets the Rust ratchet to the measured total at freeze with the feature growth recorded.

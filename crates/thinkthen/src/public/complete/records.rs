@@ -14,6 +14,7 @@ use crate::public::{
 };
 use std::sync::Arc;
 
+#[derive(Clone)]
 pub(super) struct Prepared {
     text: Text,
     question: Question,
@@ -159,19 +160,6 @@ pub(super) fn prepare_record<T: InputEvidence>(
             context,
         },
     ))
-}
-
-impl Prepared {
-    pub(super) fn duplicate(&self) -> Self {
-        Self {
-            text: Text {
-                at: self.text.at,
-                input: self.text.input.clone(),
-            },
-            question: self.question.clone(),
-            context: self.context.clone(),
-        }
-    }
 }
 
 pub(super) fn validate_context(engine: &facade::Engine, asks: &[Ask]) -> Result<(), Error> {

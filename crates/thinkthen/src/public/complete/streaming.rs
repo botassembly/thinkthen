@@ -113,7 +113,7 @@ impl Engine {
             call,
             asker,
             records,
-            Box::new(|_, original: &Original<T>| Ok(original.prepared.duplicate())),
+            Box::new(|_, original: &Original<T>| Ok(original.prepared.clone())),
             Box::new(move |stop, at, original, row| {
                 let effective = original
                     .as_ref()
