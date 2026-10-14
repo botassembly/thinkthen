@@ -68,7 +68,8 @@ class PublicSurface(unittest.TestCase):
             generated = root / 'libraries/ruby/sig/thinkthen/results_generated.rbs'
             original = generated.read_text()
             for before, after in [('?attempts: bool', '?extra_keyword: bool'),
-                                  ('?backend: String', '?backend: Integer')]:
+                                  ('?backend: String', '?backend: Integer'),
+                                  ('def schema: () -> (String)', 'def schema: () -> (Integer)')]:
                 with self.subTest(before=before):
                     self.assertIn(before, original)
                     generated.write_text(original.replace(before, after, 1))

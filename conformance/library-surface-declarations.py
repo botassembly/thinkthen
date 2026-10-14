@@ -586,6 +586,9 @@ def rbs(source):
         method = re.match(r'\s*def\s+(?:self\.)?(\w+)[!?]?:\s*\(', line)
         if method:
             result.add(Declaration(owner, method[1], 'call'))
+            if '->' in line:
+                returned = re.sub(r'\s+', '', line.rsplit('->', 1)[1])
+                result.add(Declaration(owner + '.' + method[1], returned, 'return'))
             start, depth, pieces = method.end(), 0, []
             for pos in range(start, len(line)):
                 char = line[pos]
