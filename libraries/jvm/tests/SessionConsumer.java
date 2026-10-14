@@ -64,6 +64,7 @@ public final class SessionConsumer {
             }
             return;
         }
+        Results.Plan retainedPlan;
         Engine.OwnedCall retained;
         Engine.SessionFailure retainedFailure;
         try (var engine = new Engine(new Inputs.EngineSettings().cache(new Inputs.CacheDocument(false)).maxRetries(0).batch(new Inputs.RequestBatch(1)))) {
@@ -94,7 +95,11 @@ public final class SessionConsumer {
             var entities = new Inputs.RequestInputEntities().items(List.of(new Inputs.RequestItem().original(new Inputs.RequestOriginalJson().value(Map.of("name","First","kind","alert"))),new Inputs.RequestItem().original(new Inputs.RequestOriginalJson().value(Map.of("name","Second","kind","alert")))));
             check(done(engine.relate(authored(new Inputs.RequestDefinitionAuthoredRelate().relate(new Inputs.RelateQuestion().relations(List.of(new Inputs.AuthoredRelation().name("caused_by").source("alert").target("alert"))))),entities,options())).packets().stream().anyMatch(Results.SessionPacketRelateAggregate.class::isInstance),"relate aggregate");
             var request = new Inputs.Request().call(new Inputs.RequestCall().function(Inputs.RequestFunction.DECIDE).question(question).input(records("preview")));
-            check(engine.plan(request).requests().intValueExact() == 1,"typed no-send plan");
+            retainedPlan = engine.plan(request);
+            check(retainedPlan.requests().intValueExact() == 1,"typed no-send plan");
+            check(retainedPlan.firstBodyUtf8().value().contains("preview"),"typed plan body");
+            try { engine.plan(new Inputs.Request().call(new Inputs.RequestCall().function(Inputs.RequestFunction.DECIDE).question(question("")).input(records("plan-refusal")))); throw new AssertionError("malformed plan admitted"); }
+            catch (NativeFailure expected) { check(!expected.retryable() && expected.facts() == null,"native plan admission facts"); }
             Files.createDirectories(Path.of("home/config/thinkthen/questions"));
             Files.writeString(Path.of("home/config/thinkthen/questions/saved.json"), "{\"decide\":\"Is it?\",\"name\":\"saved\"}");
             for (var selector : List.of(new Inputs.RequestQuestionName().name("saved"), new Inputs.RequestQuestionReference().reference("@saved"))) {
@@ -152,6 +157,7 @@ public final class SessionConsumer {
                 check(terminal != null && terminal.failure().state() == Presence.State.VALUE,"owned reader failure");
             }
         }
+        check(retainedPlan.records().intValueExact() == 1 && retainedPlan.firstBodyUtf8().value().contains("preview"),"plan died with native owner or engine");
         check(retained.terminal().facts().value().records().intValueExact() == 1,"result died with engine");
         check(retainedFailure.call().terminal().facts().value().requestsSent().intValueExact() == 1,"failure facts died with engine");
         try { retainedFailure.call().decide(); throw new AssertionError("failed call answered"); }

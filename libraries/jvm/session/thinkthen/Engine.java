@@ -52,12 +52,11 @@ public final class Engine extends NamedCalls implements AutoCloseable {
         try (Arena arguments = Arena.ofConfined()) {
             var bytes = NativeSession.bytes(arguments, request);
             var output = arguments.allocate(ValueLayout.ADDRESS);
-            var length = arguments.allocate(NativeSession.SIZE);
-            NativeSession.check((int)NativeSession.call("thinkthen_request_plan_json", ValueLayout.JAVA_INT,
-                new MemoryLayout[]{ValueLayout.ADDRESS, ValueLayout.ADDRESS, NativeSession.SIZE, ValueLayout.ADDRESS, ValueLayout.ADDRESS}, pointer, bytes, bytes.byteSize(), output, length));
-            var json = output.get(ValueLayout.ADDRESS, 0);
-            try { return new Results.Plan(NativeSession.copied(json, length.get(NativeSession.SIZE, 0))); }
-            finally { NativeSession.free("thinkthen_free_string", json); }
+            NativeSession.check((int)NativeSession.call("thinkthen_request_plan_value", ValueLayout.JAVA_INT,
+                new MemoryLayout[]{ValueLayout.ADDRESS, ValueLayout.ADDRESS, NativeSession.SIZE, ValueLayout.ADDRESS}, pointer, bytes, bytes.byteSize(), output));
+            var owner = output.get(ValueLayout.ADDRESS, 0);
+            try { return new Results.Plan(NativeResults.value(owner)); }
+            finally { NativeSession.free("thinkthen_value_free", owner); }
         }
     }
     public record OwnedCall(List<Results.SessionPacket> packets, Results.SessionPacketTerminal terminal) {
