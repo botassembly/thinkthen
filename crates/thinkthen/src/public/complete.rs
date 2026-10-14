@@ -9,6 +9,7 @@ mod rank_set;
 pub(crate) mod recognize;
 pub(in crate::public) mod records;
 mod recovering;
+mod recovering_stream;
 pub(crate) mod relate;
 mod streaming;
 use crate::core::{self, Value};
