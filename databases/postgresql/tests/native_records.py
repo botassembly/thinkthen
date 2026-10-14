@@ -38,9 +38,9 @@ def main():
             receipt = "thinkthen_details('Fits?','Alpha.')"
             assert query("SELECT (d.value).boolean_value, (d.probabilities).kind, "
                          "((d.probabilities).value).number_value, length(d.answer_id), "
-                         "d.model, d.requests_sent, d.cached FROM (SELECT " + receipt + " AS d) s", 1) == 't|yes_no|0.9|64|jev-1.13.0|1|f'
+                         "d.model, d.requests_sent, d.cached FROM " + receipt + " d", 1) == 't|yes_no|0.9|64|jev-1.13.0|1|f'
             assert query("SELECT (d.value).boolean_value IS NULL, d.answer_id IS NOT NULL "
-                         "FROM (SELECT thinkthen_details('Fits?','Alpha.',threshold=>'0.1:0.95') AS d) s", 1) == 't|t'
+                         "FROM thinkthen_details('Fits?','Alpha.',threshold=>'0.1:0.95') d", 1) == 't|t'
             assert query("SELECT thinkthen_details(NULL,'Alpha.',threshold=>'bad') IS NULL, "
                          "thinkthen_details('@not-read',NULL,threshold=>'bad') IS NULL") == 't|t'
 
@@ -53,7 +53,7 @@ def main():
                 receipt = "thinkthen_details(" + quoted(question) + ",'Alpha.')"
                 assert query("SELECT (d.value)." + field + ", (d.probabilities).kind, "
                              "cardinality(((d.probabilities).value).array_value), d.input IS NULL, "
-                             "d.inputs IS NULL FROM (SELECT " + receipt + " AS d) s", 1) == answer + '|named|2|t|t'
+                             "d.inputs IS NULL FROM " + receipt + " d", 1) == answer + '|named|2|t|t'
             for statement, state, message in [
                 ("SELECT thinkthen_details('Fits?','private-original',threshold=>'bad')", '22023', 'threshold'),
                 ("SELECT thinkthen_details('@missing-question','private-original')", '58030', 'question'),

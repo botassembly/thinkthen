@@ -179,9 +179,9 @@ def detailed(got, want):
 
 TYPED = {
     "decide": "thinkthen_decide({q}, {e})::text",
-    "choose": "thinkthen_choose({q}, {e}, NULL)",
-    "score": "thinkthen_score({q}, {e}, NULL)::text",
-    "tag": "array_to_json(thinkthen_tag({q}, {e}, NULL))::text",
+    "choose": "thinkthen_choose({q}, {e}, members => NULL)",
+    "score": "thinkthen_score({q}, {e}, members => NULL)::text",
+    "tag": "array_to_json(thinkthen_tag({q}, {e}, members => NULL))::text",
 }
 
 
