@@ -187,6 +187,20 @@ impl RequestRecoveringSession {
         timeout: std::time::Duration,
     ) -> super::RequestSessionReady {
         use super::RequestSessionReady as Ready;
+        if interest == RequestSessionWaitInterest::SettlementArm {
+            let _armed =
+                self.input
+                    .queue
+                    .ready(interest, std::time::Duration::ZERO, self.input.feed);
+            let state = self.output.lock();
+            return if state.packet.is_some() || state.terminal.is_some() {
+                Ready::Result
+            } else if state.settled || state.closed {
+                Ready::End
+            } else {
+                Ready::Timeout
+            };
+        }
         let started = std::time::Instant::now();
         let mut state = self.output.lock();
         loop {

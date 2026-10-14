@@ -297,7 +297,7 @@ fn full_and_cancelled_intake_do_not_convert_and_drop_does_not_join_held_provider
     assert_eq!(conversions.get(), 0);
     session.cancel();
     assert_eq!(
-        let _ready = session.wait(RequestSessionWaitInterest::Result, Duration::ZERO),
+        session.wait(RequestSessionWaitInterest::Result, Duration::ZERO),
         RequestSessionReady::Cancelled
     );
     assert_eq!(
