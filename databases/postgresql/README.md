@@ -248,10 +248,10 @@ FROM thinkthen_decide(
 );
 ```
 
-Read a named choice from `value` and its probability from the same typed receipt:
+Read a named choice from `value` and its confidence from the same typed receipt:
 
 ```sql
-SELECT value AS team, ((result).answer).probability AS probability
+SELECT value AS team, ((result).answer).confidence AS confidence
 FROM thinkthen_choose(
   'Which team owns this?',
   ARRAY[thinkthen_record(text => 'Please refund the duplicate charge.')],
@@ -262,7 +262,7 @@ FROM thinkthen_choose(
 );
 ```
 
-`team` is the selected option name. SQL `NULL` represents an unresolved choice. The receipt retains the resolved question, option order, answer identity and actual probability.
+`team` is the selected option name. SQL `NULL` represents an unresolved choice. The receipt retains the resolved question, option order, answer identity, confidence and named probability distribution.
 
 `thinkthen_record(value => 'null'::json)` holds authored JSON null. Omitting `value` leaves the original absent. The `context_value` argument accepts an object context. Typed option, image, seed and example arrays retain their order. Examples accept bracket text or explicit entity spans through `thinkthen_example` composites.
 

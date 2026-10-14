@@ -22,7 +22,7 @@ def main():
         backend = Backend(target / 'debug/conformance-backend', env)
         host = PostgresqlHost()
         try:
-            host.start({**env, 'THINKTHEN_BASE_URL': f'http://127.0.0.1:{backend.port}/generic/v1'})
+            host.start({**env, 'THINKTHEN_BASE_URL': f'http://127.0.0.1:{backend.port}/arm/full/capture/v1'})
 
             def query(statement, sends=0):
                 before = int(backend.read('count'))
@@ -62,14 +62,13 @@ def main():
             assert len(row['facts']['call_id']) == 64 and row['result']['meta']['requests_sent'] == 1, row
             assert row['observations'] and row['observations'][0]['kind'] == 'question', row
             assert query("SELECT array_append(observations,(observations)[1]) IS NOT NULL FROM thinkthen_decide('Fits?',ARRAY[" + record + "]) r", 1) == 't'
-            saved = quoted(json.dumps({'decide': 'Fits?', 'threshold': 0.95, 'context': 'Saved fallback.'}))
-            row = json.loads(query("SELECT to_jsonb(r) FROM thinkthen_decide(" + saved + ",ARRAY[" + record +
-                             "],thinkthen_reading(context=>'',threshold=>'0.5')) r", 1))
+            saved = quoted(json.dumps({'decide': 'Fits?', 'threshold': 0.95}))
+            row = json.loads(query("SELECT to_jsonb(r) FROM thinkthen_decide(" + saved + ",ARRAY[thinkthen_record(text=>'Alpha.',context=>'')],thinkthen_reading(context=>'Saved fallback.',threshold=>'0.5')) r", 1))
             assert row['value'] is True and row['result']['threshold']['number_value'] == 0.5, row
             wire = json.loads(json.loads(backend.read('capture'))['bodies'][-1])
             assert 'Saved fallback.' not in json.dumps(wire), wire
             assert wire['questions']['q1']['instructions'] == 'The text is \"Alpha.\". Fits?', wire
-            saved = quoted(json.dumps({'find': 'Fits?', 'field': ['/body']}))
+            saved = quoted(json.dumps({'find': 'Fits?', 'on': '/body'}))
             item = "thinkthen_record(value=>'{\"body\":\"Alpha.\",\"private\":\"not submitted\"}'::json)"
             row = json.loads(query("SELECT to_jsonb(r) FROM thinkthen_find(" + saved + ",ARRAY[" + item + "," + item + "]) r", 1))
             assert row['index'] == 0, row
@@ -78,7 +77,9 @@ def main():
 
             row = json.loads(query("SELECT to_jsonb(r) FROM thinkthen_choose('Which team owns this?',ARRAY[" + record +
                              "],thinkthen_reading(options=>ARRAY[ROW('billing',NULL)::thinkthen_option,ROW('shipping',NULL)::thinkthen_option])) r", 1))
-            assert row['value'] in ('billing', 'shipping') and row['result']['answer']['probability'] is not None, row
+            assert row['value'] == 'billing' and row['result']['answer']['confidence'] == 0.9, row
+            assert row['result']['answer']['probability'] is None, row
+            assert {entry['name']: entry['value'] for entry in row['result']['answer']['probabilities']} == {'billing': 0.9, 'shipping': 0.1}, row
             assert row['result']['question']['options'] == ['billing', 'shipping'], row
             assert query("SELECT (thinkthen_record(value=>'null'::json)).value IS NULL") == 'f'
             assert query("SELECT (thinkthen_record()).value IS NULL") == 't'
