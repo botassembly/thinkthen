@@ -34,8 +34,10 @@ int main(void) { @autoreleasepool {
     assert(judgment && !error);
     NSArray *edges = judgment.value.value.value;
     for (TTRelatedEntityEdge *edge in edges) {
-        TTRelatedEntity *company = (id)edge.source.value;
-        TTRelatedEntity *product = (id)edge.target.value;
+        TTRelationEndpointRelatedEntity *company =
+            (id)edge.source.value;
+        TTRelationEndpointRelatedEntity *product =
+            (id)edge.target.value;
         [whoMakes addObject:[NSString stringWithFormat:
             @"%@ makes %@", company.name.value,
                 product.name.value]];

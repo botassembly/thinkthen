@@ -19,7 +19,7 @@ int main(void) { @autoreleasepool {
         options:nil feed:nil call:NULL error:&error];
     assert(judgment && !error);
     for (TTRecognition *row in judgment.value) {
-        TTRecognizeFieldsEntities *facts =
+        TTRecognizeEntities *facts =
         (id)row.value.value;
         for (TTEntity *one in facts.entities.value) {
             [names addObject:[NSString stringWithFormat:
