@@ -30,13 +30,13 @@ with tempfile.TemporaryDirectory(prefix='installed-session-', dir=root) as tempo
     shutil.copy2(tests / 'session.zig', project / 'session.zig')
     (project / 'build.zig.zon').write_text((tests / 'build.zig.zon').read_text().replace('.path = "../"', '.path = "../package"'))
     fragment = (REPO / 'libraries/zig/README-PUBLIC.md').read_text().split('```zig\n', 1)[1].split('```', 1)[0]
-    (project / 'public.zig').write_text('const std = @import("std");\nconst tt = @import("thinkthen");\npub fn main() !void {\nvar gpa = std.heap.DebugAllocator(.{}){};\ndefer std.debug.assert(gpa.deinit() == .ok);\nconst a = gpa.allocator();\nvar engine = switch (try tt.Engine.init(a)) { .ok => |v| v, .failed => |f| { tt.releaseFailure(a, f); return error.EngineBuild; } };\ndefer engine.deinit();\n' + fragment + '}\n')
+    (project / 'public.zig').write_text(fragment)
     backend = Backend(key='tt-canary-273', arrivals='wire', retry_ms=True, concurrent=True)
     try:
         env = child_env(home=home, ZIG_GLOBAL_CACHE_DIR=str(root / 'cache'),
                         THINKTHEN_BASE_URL=f'http://127.0.0.1:{backend.server_port}/generic/v1',
                         THINKTHEN_API_KEY='tt-canary-273', THINKTHEN_CACHE=str(home / 'native-cache'))
-        subprocess.run([sys.executable, str(REPO / 'sdlc/scripts/build-admission.py'), '--lock', '/tmp/thinkthen-heavy.lock', '--', str(zig), 'build', '-j2'], cwd=project, env=env, check=True, timeout=120)
+        subprocess.run([sys.executable, str(REPO / 'sdlc/scripts/build-admission.py'), '--lock', '/tmp/thinkthen-heavy.lock', '--timeout', '900', '--', str(zig), 'build', '-j2'], cwd=project, env=env, check=True)
         if os.environ.get('THINKTHEN_COVERAGE_STAGE'):
             stage = Path(os.environ['THINKTHEN_COVERAGE_STAGE']); stage.mkdir(parents=True, exist_ok=True)
             for name in ('session', 'example'):

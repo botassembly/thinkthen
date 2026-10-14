@@ -26,15 +26,20 @@ pub fn main() !void {
             .original = .{ .text = .{ .text = text } },
         };
     }
-    var call = try tt.calls.find(&engine, .{
+    var call = switch (try tt.calls.find(&engine, tt.calls.Arguments(tt.inputs.RequestInputUnits){
         .question = .{ .text = .{ .text = question } },
-        .input = .{ .records = .{ .items = &records } },
-    });
+        .input = tt.inputs.RequestInputUnits{ .items = &records },
+    })) {
+        .ok => |result| result,
+        .failed => |failure| {
+            defer tt.releaseFailure(allocator, failure);
+            return error.CallFailed;
+        },
+    };
     defer call.deinit();
 
-    const at = (try call.value())
-        orelse return error.NotSure;
-    const refund_deadline = policy[at];
+    const found = call.value orelse return error.NotSure;
+    const refund_deadline = found.string;
     std.debug.assert(
         std.mem.eql(u8, refund_deadline, policy[1]),
     );

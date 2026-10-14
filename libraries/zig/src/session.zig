@@ -3,7 +3,6 @@ const std = @import("std");
 const tt = @import("thinkthen.zig");
 const c = @import("native.zig").c;
 const values = @import("results_generated.zig");
-const calls = @import("calls_generated.zig");
 pub const Error = error{ Usage, Backend, Deadline, Local, Cancelled, Defect, ClosedEngine };
 pub fn checked(code: c_int) Error!void {
     switch (code) {
@@ -128,11 +127,11 @@ pub const Session = struct {
         }
     }
 };
-pub fn startNamed(engine: *tt.Engine, function: tt.inputs.RequestFunction, arguments: calls.Arguments) !Session {
+pub fn startNamed(engine: *tt.Engine, function: tt.inputs.RequestFunction, arguments: struct { question: tt.inputs.RequestQuestion, input: tt.inputs.RequestInput, options: ?tt.inputs.RequestOptions = null }) !Session {
     const request = try tt.Request.init(engine.allocator, @tagName(function), arguments.question, arguments.input, arguments.options);
     defer request.deinit();
     return request.start(engine);
 }
 
-pub const Answer = @import("blocking.zig").Answer;
+pub const CallResult = @import("blocking.zig").CallResult;
 pub const completeNamed = @import("blocking.zig").completeNamed;

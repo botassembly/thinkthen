@@ -15,13 +15,19 @@ pub fn main() !void {
     const kinds = "kinds.json";
     const text = "Sam Patel says his Kindle " ++
         "arrived broken in Denver.";
-    var call = try tt.calls.recognize(&engine, .{
+    var call = switch (try tt.calls.recognize(&engine, tt.calls.Arguments(tt.inputs.RequestInputText){
         .question = .{ .file = .{ .path = kinds } },
-        .input = .{ .text = .{ .text = text } },
-    });
+        .input = tt.inputs.RequestInputText{ .text = text },
+    })) {
+        .ok => |result| result,
+        .failed => |failure| {
+            defer tt.releaseFailure(allocator, failure);
+            return error.CallFailed;
+        },
+    };
     defer call.deinit();
 
-    const facts = try call.value();
+    const facts = call.value;
     var names: std.ArrayList(u8) = .empty;
     defer names.deinit(allocator);
     for (facts.entities) |one| {
@@ -29,8 +35,7 @@ pub fn main() !void {
             one.text, one.kind,
         });
     }
-    std.debug.assert(std.mem.eql(u8, names.items,
-        "Sam Patel (person). " ++
+    std.debug.assert(std.mem.eql(u8, names.items, "Sam Patel (person). " ++
         "Kindle (product). " ++
         "Denver (place). "));
 }

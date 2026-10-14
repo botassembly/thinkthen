@@ -26,14 +26,20 @@ pub fn main() !void {
             .levels = .{ .array = &levels },
         },
     };
-    var call = try tt.calls.score(&engine, .{
+    var call = switch (try tt.calls.score(&engine, tt.calls.Arguments(tt.inputs.RequestInputText){
         .question = .{
             .definition = .{ .value = how_urgent },
         },
-        .input = .{ .text = .{ .text = outage } },
-    });
+        .input = tt.inputs.RequestInputText{ .text = outage },
+    })) {
+        .ok => |result| result,
+        .failed => |failure| {
+            defer tt.releaseFailure(allocator, failure);
+            return error.CallFailed;
+        },
+    };
     defer call.deinit();
 
-    const urgency = try call.value();
+    const urgency = call.value;
     std.debug.assert(urgency == 2.0);
 }

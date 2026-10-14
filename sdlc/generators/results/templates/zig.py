@@ -116,16 +116,27 @@ pub fn Map(comptime T: type) type {
 '''
 
 
-def answer_type(function):
-    return {'decide': '?bool', 'choose': '?[]const u8', 'tag': '[]const []const u8', 'score': 'f64', 'rank': '[]const u64', 'filter': '[]const tt.results.Value', 'find': '?u64', 'annotate': '[]const tt.results.SessionAnnotation', 'recognize': 'tt.results.SessionRecognition', 'relate': '[]const tt.results.SessionRelationEdge'}[function]
-
-
 def calls(definitions):
-    fields = definitions['RequestCall']['properties']
-    lines = ['// Generated named calls from the canonical request schema; do not edit.', 'const tt = @import("thinkthen.zig");', 'const inputs = @import("request_generated.zig");', 'pub const Arguments = struct {', '    question: inputs.RequestQuestion,', '    input: inputs.RequestInput,', '    options: ?inputs.RequestOptions = null,', '};']
+    from host_answers import scalar_input_selectors
+    scalar = scalar_input_selectors(definitions)
+    lines = ['// Generated named calls from the canonical request schema; do not edit.', 'const tt = @import("thinkthen.zig");', 'const inputs = @import("request_generated.zig");', 'const values = @import("results_generated.zig");',
+             'pub fn Arguments(comptime Input: type) type {',
+             '    _ = inputTag(Input);',
+             '    return struct { question: inputs.RequestQuestion, input: Input, options: ?inputs.RequestOptions = null };', '}',
+             'pub fn inputTag(comptime Input: type) inputs.RequestInput {']
+    for child, _ in definitions['RequestInput']['variants']:
+        payload = definitions[child]
+        tag = payload['properties']['kind']['const']
+        lines += [f'    if (Input == inputs.{name(child)}) return .{{ .{tag} = undefined }};']
+    lines += ['    @compileError("use a concrete generated input payload");', '}',
+              'pub fn listInput(comptime Input: type) bool {',
+              '    _ = inputTag(Input);', '    return ' + ' and '.join('Input != inputs.' + name(child) for child in scalar) + ';', '}',
+              'pub fn nativeInput(input: anytype) inputs.RequestInput {',
+              '    return @unionInit(inputs.RequestInput, @tagName(inputTag(@TypeOf(input))), input);', '}']
     for function in definitions['RequestFunction']['oneOf']:
         value = function['const']
-        lines += [f'pub fn {value}(engine: *tt.Engine, arguments: Arguments) !tt.session.Answer({answer_type(value)}) {{', f'    return tt.session.completeNamed(engine, .{value}, arguments, {answer_type(value)});', '}']
+        lines += [f'pub fn {value}(engine: *tt.Engine, arguments: anytype) !tt.Result(values.NamedCallResult(.{value}, @TypeOf(arguments.input))) {{',
+                  f'    return tt.session.completeNamed(engine, .{value}, arguments);', '}']
     return '\n'.join(lines) + '\n'
 
 def render_results(definitions):
@@ -237,7 +248,7 @@ def render_results(definitions):
         readers.append('pub fn read' + typ + '(a: std.mem.Allocator, v: c.' + ident(key) + ') anyerror!' + typ + ' {\n' + '\n'.join(body) + '\n}')
     aliases = ['Presence', 'Map', 'Number', 'Value', *(result_name(key) for key in emitted)]
     types = '\npub const Types = struct {\n' + '\n'.join('    pub const ' + typ + ' = @import("results_generated.zig").' + typ + ';' for typ in sorted(set(aliases))) + '\n};\n'
-    return RESULT_SUPPORT + '\n\n'.join(declarations + readers) + types + answer_helpers(definitions)
+    return RESULT_SUPPORT + '\n\n'.join(declarations + readers) + types + answer_helpers(definitions) + call_helpers(definitions) + public_call_types(definitions) + public_value_helpers(definitions)
 
 
 RESULT_SUPPORT = '''// Generated owned values from the canonical native packet graph; do not edit.
@@ -346,3 +357,197 @@ def answer_helpers(definitions):
                   f'        for (answer, receipts) |*out, receipt| out.* = {expr};',
                   '        return answer;', '    }']
     return '\n'.join(lines + ['};', ''])
+
+
+def call_helpers(definitions):
+    """Private typed receipt projections, independent of the named call API."""
+    from host_answers import call_results
+    from c import variant_member, nullable
+    rules = call_results(definitions)
+    lines = ['\npub fn callReceiptType(comptime function: anytype) type {']
+    for function, rule in rules.items():
+        payload = rule['receipt_payload']
+        receipt = payload.get('items', payload)['$ref'].split('/')[-1]
+        lines.append(f'    if (comptime std.mem.eql(u8, @tagName(function), "{function}")) return {name(receipt)};')
+    lines += ['    @compileError("unknown named function");', '}',
+              'pub fn callReceipts(comptime function: anytype, packet: *const SessionPacket, a: std.mem.Allocator) !?[]const callReceiptType(function) {']
+    for function, rule in rules.items():
+        carrier = variant_member('completesessionPacket', rule['carrier'])
+        lines += [f'    if (comptime std.mem.eql(u8, @tagName(function), "{function}")) {{',
+                  f'        if (packet.* != .{carrier}) return null;']
+        if rule['receipt_payload'].get('type') == 'array':
+            lines += [f'        return packet.{carrier}.value;']
+        else:
+            lines += ['        const result = try a.alloc(callReceiptType(function), 1);',
+                      f'        result[0] = packet.{carrier}.value;', '        return result;']
+        lines += ['    }']
+    lines += ['    unreachable;', '}',
+              'pub fn callValueType(comptime function: anytype) type {']
+    for function, rule in rules.items():
+        payload = rule['receipt_payload']
+        receipt = definitions[payload.get('items', payload)['$ref'].split('/')[-1]]
+        field = rule['value_projection']
+        schema = receipt['properties'][field]
+        presence = field not in receipt.get('required', []) or nullable(schema, definitions)
+        raw = f'@TypeOf(@field(@as(callReceiptType(function), undefined), "{field}"))'
+        typ = f'@typeInfo(@TypeOf(@as({raw}, undefined).optional())).optional.child' if presence else raw
+        if presence and function not in ('filter', 'rank'):
+            typ = '?' + typ
+        lines += [f'    if (comptime std.mem.eql(u8, @tagName(function), "{function}")) return {typ};']
+    lines += ['    @compileError("unknown named function");', '}',
+              'pub fn callValue(comptime function: anytype, receipt: callReceiptType(function)) !callValueType(function) {']
+    for function, rule in rules.items():
+        payload = rule['receipt_payload']
+        receipt = definitions[payload.get('items', payload)['$ref'].split('/')[-1]]
+        field = rule['value_projection']
+        presence = field not in receipt.get('required', []) or nullable(receipt['properties'][field], definitions)
+        value = f'receipt.{field}'
+        if presence:
+            if function in ('filter', 'rank'):
+                null = '.null_value' if function == 'filter' else 'return error.MissingAnswer'
+                value = f'switch ({value}) {{ .value => |v| v, .null_value => {null}, .missing => return error.MissingAnswer }}'
+            else:
+                value += '.optional()'
+        lines += [f'    if (comptime std.mem.eql(u8, @tagName(function), "{function}")) return {value};']
+    lines += ['    unreachable;', '}',
+              'pub fn callProbabilityType(comptime function: anytype) type {']
+    for function, rule in rules.items():
+        typ = '[]const ?f64' if function in ('recognize', 'relate') else '?f64'
+        lines += [f'    if (comptime std.mem.eql(u8, @tagName(function), "{function}")) return {typ};']
+    lines += ['    @compileError("unknown named function");', '}',
+              'pub fn callProbability(comptime function: anytype, receipt: callReceiptType(function), ordinal: usize, packets: []const *const SessionPacket, a: std.mem.Allocator) !callProbabilityType(function) {']
+    for function, rule in rules.items():
+        lines += [f'    if (comptime std.mem.eql(u8, @tagName(function), "{function}")) {{']
+        mode = rule['probability_mode']
+        if 'resolution' in rule:
+            tag = rule['scalar_kind']
+            lines += ['        const index = receipt.index.optional() orelse ordinal;',
+                      '        var resolved = false;',
+                      '        for (packets) |packet| {',
+                      '            if (packet.* != .observation or packet.observation.value != .row) continue;',
+                      '            const row = packet.observation.value.row;',
+                      '            if (row.index != index or row.value != .judgment) continue;',
+                      f'            if (row.value.judgment.value != .{tag}) continue;',
+                      f'            resolved = row.value.judgment.value.{tag}.value == .value;',
+                      '        }', '        if (!resolved) return null;']
+        if 'selection_path' in rule:
+            lines += ['        if (receipt.index != .value) return null;']
+        if mode == 'null':
+            lines += ['        return null;']
+        elif mode in ('yes', 'picked') or function == 'rank':
+            answer = 'receipt.answer'
+            schema = definitions[definitions[rule['receipt_payload'].get('items', rule['receipt_payload'])['$ref'].split('/')[-1]]['properties']['answer']['$ref'].split('/')[-1]]
+            if 'variants' in schema:
+                tag = 'yes_no' if mode == 'yes' or function == 'rank' else 'choice'
+                lines += [f'        if (receipt.answer != .{tag}) return ' + ('null;' if function == 'rank' else 'error.WrongAnswer;')]
+                answer += '.' + tag
+            if mode == 'picked':
+                lines += [f'        for ({answer}.probabilities.entries) |entry| {{',
+                          f'            if (std.mem.eql(u8, entry.key, {answer}.pick)) return entry.value;',
+                          '        }', '        return null;']
+            else:
+                lines += [f'        return {answer}.probability;']
+        elif function == 'relate':
+            lines += ['        const result = try a.alloc(?f64, receipt.value.len);',
+                      '        for (result, receipt.value) |*out, edge| out.* = edge.probability;', '        return result;']
+        elif function == 'recognize':
+            lines += RECOGNITION_CHANCES.strip().splitlines()
+        lines += ['    }']
+    lines += ['    unreachable;', '}',
+              'pub fn callRowReceipts(comptime function: anytype, packet: *const SessionPacket, a: std.mem.Allocator) !?[]const callReceiptType(function) {']
+    for child, _ in definitions['completesessionPacket']['variants']:
+        fields = definitions[child].get('properties', {})
+        function = fields.get('function', {}).get('const')
+        if fields.get('kind', {}).get('const') != 'row' or function not in rules:
+            continue
+        carrier = variant_member('completesessionPacket', child)
+        lines += [f'    if (comptime std.mem.eql(u8, @tagName(function), "{function}")) {{',
+                  f'        if (packet.* != .{carrier}) return null;',
+                  '        const result = try a.alloc(callReceiptType(function), 1);',
+                  f'        result[0] = packet.{carrier}.value;', '        return result;', '    }']
+    return '\n'.join(lines + ['    return null;', '}', ''])
+
+
+RECOGNITION_CHANCES = '''
+        switch (receipt.value) {
+            .mode_proposals => |value| {
+                const result = try a.alloc(?f64, value.proposals.len);
+                for (result, value.proposals) |*out, proposal| out.* = proposal.probability;
+                return result;
+            },
+            .entities => |value| {
+                if (receipt.answer != .recognize_answer) return error.WrongAnswer;
+                const result = try a.alloc(?f64, value.entities.len);
+                for (result, value.entities) |*out, entity| {
+                    out.* = null;
+                    for (receipt.answer.recognize_answer.proposals) |proposal| {
+                        if (!proposal.kept) continue;
+                        const selected = proposal.selected.optional() orelse continue;
+                        const kind = proposal.kind.optional() orelse continue;
+                        if (selected.start == entity.start and selected.end == entity.end and std.mem.eql(u8, kind, entity.kind)) {
+                            out.* = proposal.span_probability;
+                            break;
+                        }
+                    }
+                }
+                return result;
+            },
+        }
+'''
+
+
+def public_call_types(definitions):
+    from host_answers import call_results
+    lines = ['\npub fn callList(comptime function: anytype, comptime Input: type) bool {']
+    for function, rule in call_results(definitions).items():
+        expression = 'true' if rule['call_shape'] == 'collection' else 'false' if rule['call_shape'] == 'aggregate' else '@import("calls_generated.zig").listInput(Input)'
+        lines += [f'    if (comptime std.mem.eql(u8, @tagName(function), "{function}")) return {expression};']
+    lines += ['    @compileError("unknown named function");', '}',
+              'pub fn NamedCallResult(comptime function: anytype, comptime Input: type) type {',
+              '    const V = callPublicValueType(function);', '    const P = callProbabilityType(function);',
+              '    return @import("blocking.zig").CallResult(if (callList(function, Input)) []const V else V, if (callList(function, Input)) []const P else P, callReceiptType(function));', '}']
+    return '\n'.join(lines) + '\n'
+
+
+def public_value_helpers(definitions):
+    """Use normalized native rows where they remove endpoint and mode wrappers."""
+    from host_answers import call_results, named_object_fields
+    from c import variant_member
+    def resolve(schema):
+        return definitions[schema['$ref'].split('/')[-1]] if isinstance(schema, dict) and '$ref' in schema else schema if isinstance(schema, dict) else {}
+    normalized = {}
+    for function, rule in call_results(definitions).items():
+        if rule['value_projection'] != 'value':
+            continue
+        receipt = resolve(rule['receipt_payload'].get('items', rule['receipt_payload']))
+        source = resolve(receipt['properties']['value'])
+        for child, _ in definitions['completesessionObservedRow']['variants']:
+            payload = definitions[child]['properties']['value']
+            target = resolve(payload)
+            if source.get('type') == target.get('type') == 'array':
+                original, projected = resolve(source['items']), resolve(target['items'])
+                matches = bool(named_object_fields(original, definitions)) and original.get('properties', {}).keys() == projected.get('properties', {}).keys()
+            elif 'variants' in source and 'properties' in target:
+                fields = {key: value for variant, _ in source['variants'] for key, value in definitions[variant]['properties'].items() if key != 'mode'}
+                matches = bool(fields) and fields.keys() <= target['properties'].keys() and sum(target['properties'][key] == value for key, value in fields.items()) >= 2
+            else:
+                matches = False
+            if matches:
+                typ = '[]const ' + name(target['items']['$ref'].split('/')[-1]) if target.get('type') == 'array' else name(payload['$ref'].split('/')[-1])
+                normalized[function] = (variant_member('completesessionObservedRow', child), typ)
+                break
+    lines = ['\npub fn callPublicValueType(comptime function: anytype) type {']
+    for function, (_, typ) in normalized.items():
+        lines += [f'    if (comptime std.mem.eql(u8, @tagName(function), "{function}")) return {typ};']
+    lines += ['    return callValueType(function);', '}',
+              'pub fn callPublicValue(comptime function: anytype, receipt: callReceiptType(function), ordinal: usize, packets: []const *const SessionPacket) !callPublicValueType(function) {']
+    for function, (tag, _) in normalized.items():
+        lines += [f'    if (comptime std.mem.eql(u8, @tagName(function), "{function}")) {{',
+                  '        const index = receipt.index.optional() orelse ordinal;',
+                  '        for (packets) |packet| {',
+                  '            if (packet.* != .observation or packet.observation.value != .row) continue;',
+                  '            const row = packet.observation.value.row;',
+                  f'            if (row.index == index and row.value == .{tag}) return row.value.{tag}.value;',
+                  '        }', '        return error.MissingAnswer;', '    }']
+    lines += ['    return callValue(function, receipt);', '}', '']
+    return '\n'.join(lines)

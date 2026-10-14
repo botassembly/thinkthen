@@ -10,12 +10,18 @@ pub fn main() !void {
         },
     };
     defer engine.deinit();
-    var call = try tt.calls.decide(&engine, .{
+    var call = switch (try tt.calls.decide(&engine, tt.calls.Arguments(tt.inputs.RequestInputText){
         .question = .{ .text = .{ .text = "Is this a complaint?" } },
-        .input = .{ .text = .{ .text = "I demand a refund today" } },
-    });
+        .input = tt.inputs.RequestInputText{ .text = "I demand a refund today" },
+    })) {
+        .ok => |result| result,
+        .failed => |failure| {
+            defer tt.releaseFailure(a, failure);
+            return error.CallFailed;
+        },
+    };
     defer call.deinit();
-    const answer = try call.value();
+    const answer: ?bool = if (call.value) |value| value.boolean else null;
     std.debug.print("answer={any}\n", .{answer});
-    if (call.facts()) |facts| std.debug.print("records={d} requests={d}\n", .{ facts.records, facts.requests_sent });
+    if (call.facts) |facts| std.debug.print("records={d} requests={d}\n", .{ facts.records, facts.requests_sent });
 }

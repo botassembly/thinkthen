@@ -19,13 +19,16 @@ with tempfile.TemporaryDirectory(prefix='installed-session-', dir=ROOT / 'librar
         shutil.copy2(Path(__file__).parent / name, scratch / name)
     binary = scratch / 'consumer'
     env = child_env(home=scratch, ZIG_GLOBAL_CACHE_DIR=str(ROOT / 'libraries/zig/target/cache'))
-    subprocess.run([sys.executable, str(ROOT / 'sdlc/scripts/build-admission.py'), '--lock', '/tmp/thinkthen-heavy.lock', '--', os.environ.get('THINKTHEN_ZIG', 'zig'), 'build-exe', '-j2', '-fllvm', '-flld',
+    subprocess.run([sys.executable, str(ROOT / 'sdlc/scripts/build-admission.py'), '--lock', '/tmp/thinkthen-heavy.lock', '--timeout', '900', '--', os.environ.get('THINKTHEN_ZIG', 'zig'), 'build-exe', '-j2', '-fllvm', '-flld',
                     '--cache-dir', str(ROOT / 'libraries/zig/target/scratch/parity-cache'),
                     str(NATIVE / 'lib/libthinkthen.a'), '--dep', 'thinkthen', '-Mroot=' + str(scratch / 'session_consumer.zig'),
                     '-I', str(NATIVE / 'include'), '-Mthinkthen=' + str(PACKAGE / 'src/thinkthen.zig'),
                     '-lc', '-lgcc_s', '-lutil', '-lrt', '-lpthread', '-lm', '-ldl', '-femit-bin=' + str(binary)],
-                   env=env, check=True, timeout=120)
+                   env=env, check=True)
     if os.environ.get('THINKTHEN_COVERAGE_STAGE'):
         stage = Path(os.environ['THINKTHEN_COVERAGE_STAGE']); stage.mkdir(parents=True, exist_ok=True)
         shutil.copy2(binary, stage / 'consumer')
     session_cases.native_cases(binary, consumer='zig')
+    if not os.environ.get('THINKTHEN_ZIG_CASES') and os.environ.get('THINKTHEN_TEST_PROFILE', 'routine') != 'full':
+        os.environ['THINKTHEN_ZIG_CASES'] = 'library-call-result'
+        session_cases.native_cases(binary, consumer='zig')

@@ -1,23 +1,16 @@
-//! One owned answer and its native observations, receipts and terminal facts.
+//! One owned call result and its native observations, receipts and terminal facts.
 const std = @import("std");
 const tt = @import("thinkthen.zig");
+const values = @import("results_generated.zig");
 
-pub fn Answer(comptime T: type) type {
+pub fn CallResult(comptime V: type, comptime P: type, comptime R: type) type {
     return struct {
+        value: V,
+        probability: P,
+        results: []const R,
+        facts: ?*const tt.results.Facts,
         arena: std.heap.ArenaAllocator,
         packets: []const *tt.session.Packet,
-        outcome: anyerror!T,
-        pub fn value(self: @This()) !T {
-            return self.outcome;
-        }
-        pub fn facts(self: @This()) ?*const tt.results.Facts {
-            for (self.packets) |packet| if (packet.facts()) |v| return v;
-            return null;
-        }
-        pub fn failure(self: @This()) ?*const tt.results.CallError {
-            for (self.packets) |packet| if (packet.failure()) |v| return v;
-            return null;
-        }
         pub fn deinit(self: *@This()) void {
             for (self.packets) |packet| packet.deinit();
             self.arena.deinit();
@@ -25,9 +18,13 @@ pub fn Answer(comptime T: type) type {
     };
 }
 
-/// Rust admits the named call and waits for packets; Zig only retains ownership.
-pub fn completeNamed(engine: *tt.Engine, comptime function: tt.inputs.RequestFunction, arguments: tt.calls.Arguments, comptime T: type) !Answer(T) {
-    var session = try tt.session.startNamed(engine, function, arguments);
+/// Native admission and event waits retain the existing owned failure carrier.
+pub fn completeNamed(engine: *tt.Engine, comptime function: tt.inputs.RequestFunction, arguments: anytype) !tt.Result(values.NamedCallResult(function, @TypeOf(arguments.input))) {
+    const Input = @TypeOf(arguments.input);
+    const arguments_typed: tt.calls.Arguments(Input) = arguments;
+    var session = tt.session.startNamed(engine, function, .{ .question = arguments_typed.question, .input = tt.calls.nativeInput(arguments_typed.input), .options = arguments_typed.options }) catch |err| {
+        return .{ .failed = try tt.captureSession(engine.allocator, err) };
+    };
     defer session.deinit();
     try session.finish();
     var arena = std.heap.ArenaAllocator.init(engine.allocator);
@@ -45,41 +42,46 @@ pub fn completeNamed(engine: *tt.Engine, comptime function: tt.inputs.RequestFun
             };
         },
     };
-    var failed = false;
-    for (packets.items) |packet| if (packet.failure() != null) {
-        failed = true;
-    };
-    const outcome: anyerror!T = if (failed) error.CallFailed else project(function, T, packets.items, a);
-    return .{ .arena = arena, .packets = packets.items, .outcome = outcome };
-}
-
-fn project(comptime function: tt.inputs.RequestFunction, comptime T: type, packets: []const *tt.session.Packet, a: std.mem.Allocator) !T {
-    if (comptime function == .rank or function == .filter) {
-        const Element = @typeInfo(T).pointer.child;
-        var items: std.ArrayList(Element) = .empty;
-        var aggregate = false;
-        for (packets) |packet| {
-            const matches = if (comptime function == .rank) packet.value().* == .rank_aggregate else packet.value().* == .filter_aggregate;
-            if (matches) {
-                if (aggregate) return error.Cardinality;
-                aggregate = true;
-                items.clearRetainingCapacity();
-                try items.appendSlice(a, try @field(@TypeOf(packet.answers()), @tagName(function))(packet.answers()));
-            } else if (comptime function == .filter) {
-                if (!aggregate and packet.value().* == .filter_row) try items.appendSlice(a, try packet.answers().filter());
+    var facts: ?*const tt.results.Facts = null;
+    for (packets.items) |packet| {
+        if (packet.facts()) |v| facts = v;
+        if (packet.failure()) |failure| {
+            var immediate: ?tt.results.ImmediateFacts = null;
+            if (failure.facts.optional()) |v| {
+                var copied: tt.results.ImmediateFacts = undefined;
+                inline for (std.meta.fields(tt.results.ImmediateFacts)) |field| {
+                    @field(copied, field.name) = if (comptime std.mem.eql(u8, field.name, "call_id")) .{ .value = v.call_id } else @field(v, field.name);
+                }
+                immediate = copied;
             }
+            const kind = std.meta.stringToEnum(tt.FailureKind, @tagName(failure.@"error".kind)) orelse return error.Defect;
+            return .{ .failed = .{ .kind = kind, .code = @intFromEnum(kind), .retryable = failure.@"error".retryable, .message = try engine.allocator.dupe(u8, failure.@"error".message), .facts = immediate, .arena = arena, .packets = packets.items, .terminal = failure } };
         }
-        if (comptime function == .rank) if (!aggregate) return error.MissingAnswer;
-        return items.items;
     }
-    var count: usize = 0;
-    var value: T = undefined;
-    for (packets) |packet| {
-        if (packet.value().* != .observation or packet.value().observation.value != .row) continue;
-        const view = packet.answers();
-        value = try @field(@TypeOf(view), @tagName(function))(view);
-        count += 1;
+    const R = values.callReceiptType(function);
+    var receipts: std.ArrayList(R) = .empty;
+    const native = try a.alloc(*const values.SessionPacket, packets.items.len);
+    var aggregate = false;
+    for (packets.items, native) |packet, *out| {
+        out.* = packet.value();
+        if (try values.callReceipts(function, packet.value(), a)) |rows| {
+            if (aggregate) return error.Cardinality;
+            aggregate = true;
+            receipts.clearRetainingCapacity();
+            try receipts.appendSlice(a, rows);
+        } else if (!aggregate) {
+            if (try values.callRowReceipts(function, packet.value(), a)) |rows| try receipts.appendSlice(a, rows);
+        }
     }
-    if (count != 1) return error.Cardinality;
-    return value;
+    const V = values.callPublicValueType(function);
+    const P = values.callProbabilityType(function);
+    const list = comptime values.callList(function, Input);
+    if (!list and receipts.items.len != 1) return error.Cardinality;
+    const result_values = try a.alloc(V, receipts.items.len);
+    const probabilities = try a.alloc(P, receipts.items.len);
+    for (receipts.items, result_values, probabilities, 0..) |receipt, *value, *probability, i| {
+        value.* = try values.callPublicValue(function, receipt, i, native);
+        probability.* = try values.callProbability(function, receipt, i, native, a);
+    }
+    return .{ .ok = .{ .value = if (list) result_values else result_values[0], .probability = if (list) probabilities else probabilities[0], .results = receipts.items, .facts = facts, .arena = arena, .packets = packets.items } };
 }
