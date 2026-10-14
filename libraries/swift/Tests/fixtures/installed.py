@@ -81,7 +81,7 @@ try:
         result = subprocess.run(base + [location + '/consumer/.build/debug/Owned', settings, location + '/barrier'], env=env, capture_output=True, timeout=30)
         (args.out / 'installed-owned.log').write_bytes(result.stdout + result.stderr)
         assert result.returncode == 0 and b'OWNED_SWIFT_PASS' in result.stdout, (result.stdout, result.stderr)
-        assert server.arrivals[:8] == ['hold-owned-swift', 'owned-swift', QUOTED_STATE, 'unsure', 'uncertain-choice', 'authored-null', 'hold-explicit-swift', 'status-401'] and server.attempts == server.connections == 10, server.arrivals
+        assert server.arrivals[:8] == ['hold-owned-swift', 'owned-swift', QUOTED_STATE, 'unsure', 'uncertain-choice', 'authored-null', 'no', 'authored-value'] and server.attempts == server.connections == 15, server.arrivals
         print(result.stdout.decode(), end='')
         if not apple:
             asset = work / 'consumer/.build/debug/ThinkThen_ThinkThen.bundle/Native/x86_64-unknown-linux-gnu/libthinkthen.so'
@@ -92,7 +92,7 @@ try:
             try:
                 refused = subprocess.run(base + ['/work/consumer/.build/debug/Owned', settings, '/work/barrier'], env=env, capture_output=True, timeout=5)
                 assert refused.returncode != 0 and b'ThinkThen native package could not be loaded' in refused.stderr, (refused.stdout, refused.stderr)
-                assert server.attempts == 10, server.arrivals
+                assert server.attempts == 15, server.arrivals
                 print('Missing bundled native asset refuses locally with zero extra requests')
             finally:
                 hidden.rename(asset)
@@ -120,6 +120,6 @@ try:
     # Retain the installed executable and its resource bundle for shared cases.
     installed = args.out / 'installed'
     shutil.copytree(work / 'consumer/.build/debug', installed, symlinks=False)
-    print('Installed versioned SwiftPM dependency PASS; bundled native loading, ten counted requests')
+    print(f'Installed versioned SwiftPM dependency PASS; bundled native loading, {server.attempts} counted requests')
 finally:
     shutil.rmtree(work)

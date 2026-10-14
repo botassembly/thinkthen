@@ -3,10 +3,10 @@ import ThinkThen
 let client = try Client()
 let whichTeam = Question.file("teams.json")
 let parcel = "My parcel went to the wrong address."
-let judgment = try await client.chooseAnswer(
-    whichTeam,
-    input: .text(parcel)
+let judgment = try await client.choose(
+  whichTeam,
+  input: InputText(text: parcel)
 )
-let team = judgment ?? ""
+let team = judgment.value ?? ""
 precondition(team == "shipping")
 client.close()

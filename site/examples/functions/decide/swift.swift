@@ -3,10 +3,10 @@ import ThinkThen
 let client = try Client()
 let question = "Does the customer ask for a refund?"
 let broken = "Please refund my order. It arrived broken."
-let judgment = try await client.decideAnswer(
-    .text(question),
-    input: .text(broken)
+let judgment = try await client.decide(
+  .text(question),
+  input: InputText(text: broken)
 )
-let isRefund = judgment ?? false
+let isRefund = judgment.value == .bool(true)
 precondition(isRefund)
 client.close()

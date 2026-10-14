@@ -24,7 +24,7 @@ if args.routine:
     import parity
     required_ids = parity.required_cases(parity.inventory(), "swift")
     selected.update(line for line in (ROOT / "conformance/routine-ids.txt").read_text().splitlines() if line in required_ids)
-    selected.update(("complete-decide", "complete-find", "complete-annotate", "files-annotate", "images-decide", "image-file-decide", "settings-cache-off-sends-again", "settings-replay-answers-from-the-folder-alone", "declared-object-context", "context-null", "recognize-record-contexts"))
+    selected.update(("library-call-result", "complete-decide", "complete-find", "complete-annotate", "files-annotate", "images-decide", "image-file-decide", "settings-cache-off-sends-again", "settings-replay-answers-from-the-folder-alone", "declared-object-context", "context-null", "recognize-record-contexts"))
 native = Path(shutil.which("swift")).resolve().parents[2] / "usr/lib/swift/linux" if sys.platform != "darwin" else None
 def native_parity(consumer, command):
     # Shared recipes/assertions are read-only; execution uses each actual named consumer.

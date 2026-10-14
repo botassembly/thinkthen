@@ -7147,205 +7147,302 @@ public indirect enum Value: ValueRepresentable {
     }
   }
 }
-extension SessionPacket {
-  public func decideAnswer() throws -> [AtomicDecideValue] {
-    if case .`decideAggregate`(let packet) = self { return packet.value }
-    throw ValueConversionError("Expected decide aggregate packet")
-  }
-  public func chooseAnswer() throws -> [AtomicNullableString] {
-    if case .`chooseAggregate`(let packet) = self { return packet.value }
-    throw ValueConversionError("Expected choose aggregate packet")
-  }
-  public func tagAnswer() throws -> [AtomicArrayOfString] {
-    if case .`tagAggregate`(let packet) = self { return packet.value }
-    throw ValueConversionError("Expected tag aggregate packet")
-  }
-  public func scoreAnswer() throws -> [AtomicDouble] {
-    if case .`scoreAggregate`(let packet) = self { return packet.value }
-    throw ValueConversionError("Expected score aggregate packet")
-  }
-  public func filterAnswer() throws -> [AtomicBoolean] {
-    if case .`filterAggregate`(let packet) = self { return packet.value }
-    throw ValueConversionError("Expected filter aggregate packet")
-  }
-  public func rankAnswer() throws -> [AtomicNonZeroUsize] {
-    if case .`rankAggregate`(let packet) = self { return packet.value }
-    throw ValueConversionError("Expected rank aggregate packet")
-  }
-  public func findAnswer() throws -> Find {
-    if case .`findAggregate`(let packet) = self { return packet.value }
-    throw ValueConversionError("Expected find aggregate packet")
-  }
-  public func annotateAnswer() throws -> [Annotation] {
-    if case .`annotateAggregate`(let packet) = self { return packet.value }
-    throw ValueConversionError("Expected annotate aggregate packet")
-  }
-  public func recognizeAnswer() throws -> [Recognition] {
-    if case .`recognizeAggregate`(let packet) = self { return packet.value }
-    throw ValueConversionError("Expected recognize aggregate packet")
-  }
-  public func relateAnswer() throws -> Relation {
-    if case .`relateAggregate`(let packet) = self { return packet.value }
-    throw ValueConversionError("Expected relate aggregate packet")
-  }
-}
-public struct AnswerCardinalityError: Error, Sendable {
-  public let function: String
-  public let count: Int
-  public let call: Call
-}
-private func answerPath(_ json: DataValue, _ path: [String]) throws -> DataValue? {
-  var value: DataValue? = json
-  for key in path {
-    guard let object = value else { return nil }
-    value = try jsonObject(object)[key]
-  }
-  return value
-}
-private func answerProjection(_ value: DataValue, _ member: String) throws -> DataValue {
-  guard case .array(let rows) = value.kind else {
-    throw ValueConversionError("Expected answer collection")
-  }
-  return .array(try rows.map { try jsonRequired(jsonObject($0), member) })
-}
 extension Call {
-  private func answerJSON(_ function: String, _ judgment: String) throws -> DataValue {
-    guard terminal.kind == "terminal" else {
-      throw AnswerCardinalityError(function: function, count: 0, call: self)
+  func decideResultScalar() throws -> CallResult<DataValue?, Double?, [AtomicDecideValue]> {
+    let projection = try project(
+      "decide", collection: true, resolution: ["value", "value", "value", "value"],
+      guards: [
+        (["kind"], "observation"), (["value", "kind"], "row"),
+        (["value", "value", "kind"], "judgment"),
+        (["value", "value", "value", "kind"], "decision"),
+      ], indexPath: ["value", "index"])
+    guard projection.receipts.count == 1 else { throw ValueConversionError("Expected one result") }
+    let results = try [AtomicDecideValue].read(.array(projection.receipts))
+    let values = try projection.receipts.indices.map { index in
+      try projection.value(index, projection: "value", resolved: true)
     }
-    if case .null = terminal.failure {
-      throw ValueConversionError("Terminal failure must be an object")
+    let value = values[0]
+    let probabilities = try projection.receipts.indices.map { index in
+      try projection.probability(
+        index, path: ["answer", "probability"], pick: nil, settled: values[index] != nil)
     }
-    if case .value(let failure) = terminal.failure {
-      throw SessionFailure(failure: failure, call: self)
+    let probability = probabilities[0]
+    guard let facts = terminal.facts.value else {
+      throw ValueConversionError("Missing result facts")
     }
-    let collection =
-      function == "decide" || function == "choose" || function == "tag" || function == "score"
-      || function == "filter" || function == "rank" || function == "annotate"
-      || function == "recognize"
-    var values: [DataValue] = []
-    for packet in packets {
-      guard try answerPath(packet.json, ["function"]) == .string(function) else { continue }
-      if judgment.isEmpty {
-        let kind = try answerPath(packet.json, ["kind"])
-        let row = collection && kind == .string("row")
-        guard row || kind == .string("aggregate"),
-          let value = try answerPath(packet.json, ["value"])
-        else { continue }
-        values.append(row ? .array([value]) : value)
-      } else {
-        guard try answerPath(packet.json, ["kind"]) == .string("observation") else { continue }
-        guard try answerPath(packet.json, ["value", "kind"]) == .string("row") else { continue }
-        guard try answerPath(packet.json, ["value", "value", "kind"]) == .string("judgment") else {
-          continue
-        }
-        guard let carrier = try answerPath(packet.json, ["value", "value", "value"]) else {
-          continue
-        }
-        guard try answerPath(carrier, ["kind"]) == .string(judgment),
-          let value = try answerPath(carrier, ["value"])
-        else { continue }
-        values.append(value)
-      }
+    return CallResult(
+      value: value, probability: probability, results: results, facts: facts, call: self)
+  }
+  func decideResultList() throws -> CallResult<[DataValue?], [Double?], [AtomicDecideValue]> {
+    let projection = try project(
+      "decide", collection: true, resolution: ["value", "value", "value", "value"],
+      guards: [
+        (["kind"], "observation"), (["value", "kind"], "row"),
+        (["value", "value", "kind"], "judgment"),
+        (["value", "value", "value", "kind"], "decision"),
+      ], indexPath: ["value", "index"])
+    let results = try [AtomicDecideValue].read(.array(projection.receipts))
+    let values = try projection.receipts.indices.map { index in
+      try projection.value(index, projection: "value", resolved: true)
     }
-    if judgment.isEmpty && collection {
-      var combined: [DataValue] = []
-      for value in values {
-        guard case .array(let items) = value.kind else {
-          throw ValueConversionError("Expected aggregate collection")
-        }
-        combined.append(contentsOf: items)
-      }
-      return .array(combined)
+    let value = values
+    let probabilities = try projection.receipts.indices.map { index in
+      try projection.probability(
+        index, path: ["answer", "probability"], pick: nil, settled: values[index] != nil)
     }
-    guard values.count == 1 else {
-      throw AnswerCardinalityError(function: function, count: values.count, call: self)
+    let probability = probabilities
+    guard let facts = terminal.facts.value else {
+      throw ValueConversionError("Missing result facts")
     }
-    return values[0]
+    return CallResult(
+      value: value, probability: probability, results: results, facts: facts, call: self)
   }
-  public func decideAnswer() throws -> Bool? {
-    try Optional<Bool>.read(answerJSON("decide", "decision"))
+  func chooseResultScalar() throws -> CallResult<String?, Double?, [AtomicNullableString]> {
+    let projection = try project(
+      "choose", collection: true, resolution: ["value", "value", "value", "value"],
+      guards: [
+        (["kind"], "observation"), (["value", "kind"], "row"),
+        (["value", "value", "kind"], "judgment"), (["value", "value", "value", "kind"], "choice"),
+      ], indexPath: ["value", "index"])
+    guard projection.receipts.count == 1 else { throw ValueConversionError("Expected one result") }
+    let results = try [AtomicNullableString].read(.array(projection.receipts))
+    let values = try projection.receipts.indices.map { index in
+      try String?.read(projection.value(index, projection: "value", resolved: true) ?? .null)
+    }
+    let value = values[0]
+    let probabilities = try projection.receipts.indices.map { index in
+      try projection.probability(
+        index, path: ["answer", "probabilities"], pick: ["answer", "pick"],
+        settled: values[index] != nil)
+    }
+    let probability = probabilities[0]
+    guard let facts = terminal.facts.value else {
+      throw ValueConversionError("Missing result facts")
+    }
+    return CallResult(
+      value: value, probability: probability, results: results, facts: facts, call: self)
   }
-  public func chooseAnswer() throws -> String? {
-    try Optional<String>.read(answerJSON("choose", "choice"))
+  func chooseResultList() throws -> CallResult<[String?], [Double?], [AtomicNullableString]> {
+    let projection = try project(
+      "choose", collection: true, resolution: ["value", "value", "value", "value"],
+      guards: [
+        (["kind"], "observation"), (["value", "kind"], "row"),
+        (["value", "value", "kind"], "judgment"), (["value", "value", "value", "kind"], "choice"),
+      ], indexPath: ["value", "index"])
+    let results = try [AtomicNullableString].read(.array(projection.receipts))
+    let values = try projection.receipts.indices.map { index in
+      try String?.read(projection.value(index, projection: "value", resolved: true) ?? .null)
+    }
+    let value = values
+    let probabilities = try projection.receipts.indices.map { index in
+      try projection.probability(
+        index, path: ["answer", "probabilities"], pick: ["answer", "pick"],
+        settled: values[index] != nil)
+    }
+    let probability = probabilities
+    guard let facts = terminal.facts.value else {
+      throw ValueConversionError("Missing result facts")
+    }
+    return CallResult(
+      value: value, probability: probability, results: results, facts: facts, call: self)
   }
-  public func tagAnswer() throws -> [String] { try [String].read(answerJSON("tag", "tags")) }
-  public func scoreAnswer() throws -> Double { try Double.read(answerJSON("score", "score")) }
-  public func filterAnswer() throws -> [DataValue] {
-    try [DataValue].read(answerProjection(answerJSON("filter", ""), "input"))
+  func tagResultScalar() throws -> CallResult<[String], Double?, [AtomicArrayOfString]> {
+    let projection = try project("tag", collection: true, resolution: [], guards: [], indexPath: [])
+    guard projection.receipts.count == 1 else { throw ValueConversionError("Expected one result") }
+    let results = try [AtomicArrayOfString].read(.array(projection.receipts))
+    let values = try projection.receipts.indices.map { index in
+      try [String].read(projection.value(index, projection: "value", resolved: false) ?? .null)
+    }
+    let value = values[0]
+    let probability: Double? = nil
+    guard let facts = terminal.facts.value else {
+      throw ValueConversionError("Missing result facts")
+    }
+    return CallResult(
+      value: value, probability: probability, results: results, facts: facts, call: self)
   }
-  public func rankAnswer() throws -> [UInt64] {
-    try [UInt64].read(answerProjection(answerJSON("rank", ""), "index"))
+  func tagResultList() throws -> CallResult<[[String]], Double?, [AtomicArrayOfString]> {
+    let projection = try project("tag", collection: true, resolution: [], guards: [], indexPath: [])
+    let results = try [AtomicArrayOfString].read(.array(projection.receipts))
+    let values = try projection.receipts.indices.map { index in
+      try [String].read(projection.value(index, projection: "value", resolved: false) ?? .null)
+    }
+    let value = values
+    let probability: Double? = nil
+    guard let facts = terminal.facts.value else {
+      throw ValueConversionError("Missing result facts")
+    }
+    return CallResult(
+      value: value, probability: probability, results: results, facts: facts, call: self)
   }
-  public func findAnswer() throws -> Find { try Find.read(answerJSON("find", "")) }
-  public func annotateAnswer() throws -> [Annotation] {
-    try [Annotation].read(answerJSON("annotate", ""))
+  func scoreResultScalar() throws -> CallResult<Double, Double?, [AtomicDouble]> {
+    let projection = try project(
+      "score", collection: true, resolution: [], guards: [], indexPath: [])
+    guard projection.receipts.count == 1 else { throw ValueConversionError("Expected one result") }
+    let results = try [AtomicDouble].read(.array(projection.receipts))
+    let values = try projection.receipts.indices.map { index in
+      try Double.read(projection.value(index, projection: "value", resolved: false) ?? .null)
+    }
+    let value = values[0]
+    let probability: Double? = nil
+    guard let facts = terminal.facts.value else {
+      throw ValueConversionError("Missing result facts")
+    }
+    return CallResult(
+      value: value, probability: probability, results: results, facts: facts, call: self)
   }
-  public func recognizeAnswer() throws -> [Recognition] {
-    try [Recognition].read(answerJSON("recognize", ""))
+  func scoreResultList() throws -> CallResult<[Double], Double?, [AtomicDouble]> {
+    let projection = try project(
+      "score", collection: true, resolution: [], guards: [], indexPath: [])
+    let results = try [AtomicDouble].read(.array(projection.receipts))
+    let values = try projection.receipts.indices.map { index in
+      try Double.read(projection.value(index, projection: "value", resolved: false) ?? .null)
+    }
+    let value = values
+    let probability: Double? = nil
+    guard let facts = terminal.facts.value else {
+      throw ValueConversionError("Missing result facts")
+    }
+    return CallResult(
+      value: value, probability: probability, results: results, facts: facts, call: self)
   }
-  public func relateAnswer() throws -> Relation { try Relation.read(answerJSON("relate", "")) }
-}
-extension Client {
-  public func decideAnswer(_ question: Question, input: Input, options: Presence<Options> = .absent)
-    async throws -> Bool?
-  {
-    let call = try await decide(question, input: input, options: options)
-    return try call.decideAnswer()
+  func filterResult() throws -> CallResult<[DataValue], [Double?], [AtomicBoolean]> {
+    let projection = try project(
+      "filter", collection: true, resolution: [], guards: [], indexPath: [])
+    let results = try [AtomicBoolean].read(.array(projection.receipts))
+    let values = try projection.receipts.indices.map { index in
+      try DataValue.read(projection.value(index, projection: "input", resolved: false) ?? .null)
+    }
+    let value = values
+    let probabilities = try projection.receipts.indices.map { index in
+      try projection.probability(index, path: ["answer", "probability"], pick: nil, settled: true)
+    }
+    let probability = probabilities
+    guard let facts = terminal.facts.value else {
+      throw ValueConversionError("Missing result facts")
+    }
+    return CallResult(
+      value: value, probability: probability, results: results, facts: facts, call: self)
   }
-  public func chooseAnswer(_ question: Question, input: Input, options: Presence<Options> = .absent)
-    async throws -> String?
-  {
-    let call = try await choose(question, input: input, options: options)
-    return try call.chooseAnswer()
+  func rankResult() throws -> CallResult<[UInt64], [Double?], [AtomicNonZeroUsize]> {
+    let projection = try project(
+      "rank", collection: true, resolution: [], guards: [], indexPath: [])
+    let results = try [AtomicNonZeroUsize].read(.array(projection.receipts))
+    let values = try projection.receipts.indices.map { index in
+      try UInt64.read(projection.value(index, projection: "index", resolved: false) ?? .null)
+    }
+    let value = values
+    let probability: [Double?] = results.map {
+      if case .yesNo(let answer) = $0.answer { return answer.probability }
+      return nil
+    }
+    guard let facts = terminal.facts.value else {
+      throw ValueConversionError("Missing result facts")
+    }
+    return CallResult(
+      value: value, probability: probability, results: results, facts: facts, call: self)
   }
-  public func tagAnswer(_ question: Question, input: Input, options: Presence<Options> = .absent)
-    async throws -> [String]
-  {
-    let call = try await tag(question, input: input, options: options)
-    return try call.tagAnswer()
+  func findResult() throws -> CallResult<DataValue?, Double?, Find> {
+    let projection = try project(
+      "find", collection: false, resolution: [], guards: [], indexPath: [])
+    guard projection.receipts.count == 1 else { throw ValueConversionError("Expected one result") }
+    let results = try Find.read(projection.receipts[0])
+    let values = try projection.receipts.indices.map { index in
+      try projection.value(index, projection: "value", resolved: false)
+    }
+    let value: DataValue? =
+      try callPath(projection.receipts[0], ["index"]) == .null ? nil : values[0]
+    let probabilities = try projection.receipts.indices.map { index in
+      try projection.probability(
+        index, path: ["answer", "probabilities"], pick: ["answer", "pick"], settled: value != nil)
+    }
+    let probability = probabilities[0]
+    guard let facts = terminal.facts.value else {
+      throw ValueConversionError("Missing result facts")
+    }
+    return CallResult(
+      value: value, probability: probability, results: results, facts: facts, call: self)
   }
-  public func scoreAnswer(_ question: Question, input: Input, options: Presence<Options> = .absent)
-    async throws -> Double
-  {
-    let call = try await score(question, input: input, options: options)
-    return try call.scoreAnswer()
+  func annotateResultScalar() throws -> CallResult<AnnotatedRow, Double?, [Annotation]> {
+    let projection = try project(
+      "annotate", collection: true, resolution: [], guards: [], indexPath: [])
+    guard projection.receipts.count == 1 else { throw ValueConversionError("Expected one result") }
+    let results = try [Annotation].read(.array(projection.receipts))
+    let values = try projection.receipts.indices.map { index in
+      try AnnotatedRow.read(projection.value(index, projection: "value", resolved: false) ?? .null)
+    }
+    let value = values[0]
+    let probability: Double? = nil
+    guard let facts = terminal.facts.value else {
+      throw ValueConversionError("Missing result facts")
+    }
+    return CallResult(
+      value: value, probability: probability, results: results, facts: facts, call: self)
   }
-  public func filterAnswer(_ question: Question, input: Input, options: Presence<Options> = .absent)
-    async throws -> [DataValue]
-  {
-    let call = try await filter(question, input: input, options: options)
-    return try call.filterAnswer()
+  func annotateResultList() throws -> CallResult<[AnnotatedRow], Double?, [Annotation]> {
+    let projection = try project(
+      "annotate", collection: true, resolution: [], guards: [], indexPath: [])
+    let results = try [Annotation].read(.array(projection.receipts))
+    let values = try projection.receipts.indices.map { index in
+      try AnnotatedRow.read(projection.value(index, projection: "value", resolved: false) ?? .null)
+    }
+    let value = values
+    let probability: Double? = nil
+    guard let facts = terminal.facts.value else {
+      throw ValueConversionError("Missing result facts")
+    }
+    return CallResult(
+      value: value, probability: probability, results: results, facts: facts, call: self)
   }
-  public func rankAnswer(_ question: Question, input: Input, options: Presence<Options> = .absent)
-    async throws -> [UInt64]
-  {
-    let call = try await rank(question, input: input, options: options)
-    return try call.rankAnswer()
+  func recognizeResultScalar() throws -> CallResult<Recognize, [Double?], [Recognition]> {
+    let projection = try project(
+      "recognize", collection: true, resolution: [], guards: [], indexPath: [])
+    guard projection.receipts.count == 1 else { throw ValueConversionError("Expected one result") }
+    let results = try [Recognition].read(.array(projection.receipts))
+    let values = try projection.receipts.indices.map { index in
+      try Recognize.read(projection.value(index, projection: "value", resolved: false) ?? .null)
+    }
+    let value = values[0]
+    let probabilities = try results.map(recognitionProbabilities)
+    let probability = probabilities[0]
+    guard let facts = terminal.facts.value else {
+      throw ValueConversionError("Missing result facts")
+    }
+    return CallResult(
+      value: value, probability: probability, results: results, facts: facts, call: self)
   }
-  public func findAnswer(_ question: Question, input: Input, options: Presence<Options> = .absent)
-    async throws -> Find
-  {
-    let call = try await find(question, input: input, options: options)
-    return try call.findAnswer()
+  func recognizeResultList() throws -> CallResult<[Recognize], [[Double?]], [Recognition]> {
+    let projection = try project(
+      "recognize", collection: true, resolution: [], guards: [], indexPath: [])
+    let results = try [Recognition].read(.array(projection.receipts))
+    let values = try projection.receipts.indices.map { index in
+      try Recognize.read(projection.value(index, projection: "value", resolved: false) ?? .null)
+    }
+    let value = values
+    let probabilities = try results.map(recognitionProbabilities)
+    let probability = probabilities
+    guard let facts = terminal.facts.value else {
+      throw ValueConversionError("Missing result facts")
+    }
+    return CallResult(
+      value: value, probability: probability, results: results, facts: facts, call: self)
   }
-  public func annotateAnswer(
-    _ question: Question, input: Input, options: Presence<Options> = .absent
-  ) async throws -> [Annotation] {
-    let call = try await annotate(question, input: input, options: options)
-    return try call.annotateAnswer()
-  }
-  public func recognizeAnswer(
-    _ question: Question, input: Input, options: Presence<Options> = .absent
-  ) async throws -> [Recognition] {
-    let call = try await recognize(question, input: input, options: options)
-    return try call.recognizeAnswer()
-  }
-  public func relateAnswer(_ question: Question, input: Input, options: Presence<Options> = .absent)
-    async throws -> Relation
-  {
-    let call = try await relate(question, input: input, options: options)
-    return try call.relateAnswer()
+  func relateResult() throws -> CallResult<[RelatedEntityEdge], [Double?], Relation> {
+    let projection = try project(
+      "relate", collection: false, resolution: [], guards: [], indexPath: [])
+    guard projection.receipts.count == 1 else { throw ValueConversionError("Expected one result") }
+    let results = try Relation.read(projection.receipts[0])
+    let values = try projection.receipts.indices.map { index in
+      try [RelatedEntityEdge].read(
+        projection.value(index, projection: "value", resolved: false) ?? .null)
+    }
+    let value = values[0]
+    let probability: [Double?] = value.map { $0.probability }
+    guard let facts = terminal.facts.value else {
+      throw ValueConversionError("Missing result facts")
+    }
+    return CallResult(
+      value: value, probability: probability, results: results, facts: facts, call: self)
   }
 }
 
