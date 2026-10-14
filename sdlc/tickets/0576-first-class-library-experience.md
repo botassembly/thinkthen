@@ -93,3 +93,4 @@ Stage 2 starts when G1 and G2 land. One lane per language owns `libraries/<lang>
 - C++ (≤466, falling by about 243): delete `json.hpp` and read native views; typed `Client` settings; private C header; one failure type; ASan over the ten examples.
 - Ada (adb ≤200, ads ≤80): `T_EngineSettings`; make `Thinkthen_Session_C` and `Requests` private.
 - COBOL (c ≤12, h ≤12): settings record; one `CALL` per answer; rank and filter tables; the session check uses the blocking call; correct the README.
+- 2026-10-13 started
