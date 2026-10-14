@@ -63,6 +63,16 @@ try:
         ipath = scratch / (verb + '-input.json')
         qpath.write_text(json.dumps(question))
         ipath.write_text(json.dumps(original))
+        before_plan = len(server.requests)
+        planned = subprocess.run([binary, 'plan-' + verb, qpath, ipath], env=env, capture_output=True, text=True, timeout=5)
+        assert planned.returncode == 0 and len(server.requests) == before_plan, (verb, planned.returncode, planned.stdout, planned.stderr)
+        if verb in ('decide', 'choose', 'tag', 'score', 'filter', 'rank'):
+            plan = json.loads(planned.stdout)
+            required = json.loads((ROOT / 'specification/result.schema.json').read_text())['$defs']['completeplan']['required']
+            assert set(plan) == set(required), (verb, plan)
+        else:
+            assert planned.stdout.strip() == 'plan-refusal-pass', (verb, planned.stdout)
+        print('CPP_INSTALLED_PLAN_FUNCTION_PASS', verb, 'requests=0')
         result = subprocess.run([binary, verb, qpath, ipath], env=env, capture_output=True, text=True, timeout=20)
         assert result.returncode == 0, (verb, result.returncode, result.stdout, result.stderr)
         packets = [json.loads(line) for line in result.stdout.splitlines()]
