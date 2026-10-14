@@ -119,8 +119,8 @@ def render(definitions, name):
     for function, spec in call_results(definitions).items():
         payload = spec['receipt_payload']
         receipt = schema_type(payload.get('items', payload), public_type)
-        value_schema = spec['scalar_value'] or spec['aggregate_value']
-        if spec['call_shape'] == 'input' and spec['scalar_value'] is None:
+        value_schema = spec['aggregate_value']
+        if spec['call_shape'] == 'input':
             value_schema = value_schema['items']
         value = schema_type(value_schema, public_type)
         mode = spec['probability_mode']

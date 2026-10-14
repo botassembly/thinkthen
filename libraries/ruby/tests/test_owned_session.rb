@@ -3,6 +3,41 @@ require "minitest/autorun"
 require_relative "backend"
 
 class TestOwnedSession < Minitest::Test
+  def test_authored_decide_values_match_the_installed_return_signature
+    require "rbs"
+    require "rbs/test"
+    loader = RBS::EnvironmentLoader.new
+    loader.add(path: Pathname.new(File.expand_path("../sig", TestBackend::LIB)))
+    environment = RBS::Environment.from_loader(loader).resolve_type_names
+    builder = RBS::DefinitionBuilder.new(env: environment)
+    client = builder.build_instance(RBS::TypeName.parse("::ThinkThen::Client"))
+    value_type = client.methods.fetch(:decide).method_types.first.type.return_type.args.first
+    checker = RBS::Test::TypeCheck.new(self_class: Object, builder: builder,
+      sample_size: 100, unchecked_classes: [])
+    TestBackend.with(<<~RUBY) do |backend, child|
+      T::Client.open(cache: false) do |client|
+        meanings = ["approved", {status: "approved"}, ["approved", {code: 7}]]
+        answers = meanings.flat_map do |meaning|
+          ["text", ["text"]].map do |input|
+            result = client.decide({decide: "Approve?", true: meaning}, input)
+            [result.value, result.probability]
+          end
+        end
+        say answers
+      end
+    RUBY
+      answers = child.hear
+      assert_equal [["approved", 0.9], [["approved"], [0.9]],
+        [{"status" => "approved"}, 0.9], [[{"status" => "approved"}], [0.9]],
+        [["approved", {"code" => 7}], 0.9], [[["approved", {"code" => 7}]], [0.9]]], answers
+      answers.each { |value, _| assert checker.value(value, value_type), "authored value rejected by installed RBS" }
+      refute checker.value(7, value_type), "decide signature accepts an arbitrary scalar"
+      status, errors = child.finish
+      assert status.success?, errors
+      assert_equal 6, backend.count
+    end
+  end
+
   def test_producer_exception_and_native_admission_message_survive
     script = <<~RUBY
       marker = RuntimeError.new("private producer marker")
