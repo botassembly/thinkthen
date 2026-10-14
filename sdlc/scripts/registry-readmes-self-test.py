@@ -225,6 +225,29 @@ class PackageText(unittest.TestCase):
                          'engine.decide(q, input); "engine.choose(q, input)"'):
                 cases.append(('python', code, False))
             cases.append(('go', 'client.Decide(q, input); client.ChooseAsync(q, input);', False))
+            cases.extend([
+                ('ada', "for I in Texts'Range loop Inputs.Calls.Decide(q, i); "
+                        "Inputs.Calls.Choose(q, i); Put_Line(Long_Float'Image(p)); end loop;", True),
+                ('ada', "C := 'x'; Inputs.Calls.Decide(q, i); C := '''; Inputs.Calls.Choose(q, i);", True),
+                ('crate', "fn sample<'a, 'b>() { Question::decide(q); Question::choose::<&'a Team>(q); }", True),
+                ('crate', 'Question::decide(q); /* outer /* inner */ " */ Question::choose(q);', True),
+                ('crate', 'Question::decide(q); "continued \\\nnot a call"; Question::choose(q);', True),
+            ])
+            for family, current, decoys in (
+                    ('ada', 'Inputs.Calls.Decide(q, i);', (
+                        'Inputs.Calls.ChooseUnknown(q, i);', 'Inputs.Calls.Choose;',
+                        'Inputs.Calls.Decide(q, i);', '-- Inputs.Calls.Choose(q, i);',
+                        '"Inputs.Calls.Choose(q, i)"', '"quote "" Inputs.Calls.Choose(q, i) """',
+                        "'(' & 'C' & 'h' & 'o' & 'o' & 's' & 'e'")),
+                    ('crate', 'Question::decide(q);', (
+                        'Question::decide(q);', 'Question::chooseUnknown(q);',
+                        '// Question::choose(q);', '/* Question::choose(q); */',
+                        '/* outer /* inner */ Question::choose(q); */',
+                        '/* outer /* middle /* inner */ */ Question::choose(q); */',
+                        '"Question::choose(q)"', 'r#"Question::choose(q)"#',
+                        '"continued \\\nQuestion::choose(q)"',
+                        'br##"Question::choose(q)"##', "'x'", "'\\u{27}'"))):
+                cases.extend((family, current + '\n' + decoy, False) for decoy in decoys)
             for function in functions:
                 other = 'choose' if function == 'decide' else 'decide'
                 cases.append(('csharp', 'engine.' + function.title() + 'Async<Input<Record>>(q, input); '
