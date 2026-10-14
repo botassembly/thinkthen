@@ -8,7 +8,6 @@ use pgrx::prelude::*;
 use thinkthen::{Engine, Error, LoadedQuestion, Recognize};
 
 mod call;
-mod complete;
 mod native;
 use thinkthen_host::complete_native;
 mod descriptions;

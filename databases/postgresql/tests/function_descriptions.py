@@ -24,6 +24,7 @@ def main(socket):
     assert not err, err
     rows = json.loads(out)
     assert rows, 'the installed extension owns no functions'
+    assert not any(row['signature'].split('(')[0].endswith('_complete') for row in rows), rows
     for row in rows:
         assert row['description'] and row['description'].strip(), row
     def description(signature):
