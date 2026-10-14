@@ -2,7 +2,7 @@
 
 use std::io::Write;
 
-use thinkthen::{Answer, Engine, Question};
+use thinkthen::{Engine, Question};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let tt = Engine::from_env()?;
@@ -10,8 +10,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut out = std::io::stdout().lock();
     let answer = tt.decide(&refund, "I want to send this back.")?;
     match answer.value() {
-        Answer::Unsure => writeln!(out, "a person reads it")?,
-        other => writeln!(out, "{other:?}")?,
+        None => writeln!(out, "a person reads it")?,
+        Some(true) => writeln!(out, "Yes")?,
+        Some(false) => writeln!(out, "No")?,
     }
     Ok(())
 }

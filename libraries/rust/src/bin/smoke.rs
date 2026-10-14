@@ -3,15 +3,15 @@
 
 use std::io::Write;
 
-use thinkthen::{Answer, Engine, Question};
+use thinkthen::{Engine, Question};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let question = Question::decide(&std::env::var("THINKTHEN_TEST_SMOKE_QUESTION")?)?.cut();
     let text = std::env::var("THINKTHEN_TEST_SMOKE_TEXT")?;
     let value = match Engine::from_env()?.decide(&question, &text)?.into_value() {
-        Answer::Yes => "true",
-        Answer::No => "false",
-        Answer::Unsure => "null",
+        Some(true) => "true",
+        Some(false) => "false",
+        None => "null",
     };
     writeln!(std::io::stdout().lock(), "smoke: {value}")?;
     Ok(())
