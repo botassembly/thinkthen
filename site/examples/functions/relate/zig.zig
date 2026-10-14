@@ -28,9 +28,11 @@ pub fn main() !void {
             .value = .{ .object = fields },
         } } };
     }
-    var call = switch (try tt.calls.relate(&engine, tt.calls.Arguments(tt.inputs.RequestInputEntities){
+    var call = switch (try tt.calls.relate(&engine,
+        tt.calls.Arguments(tt.inputs.RequestInputEntities){
         .question = .{ .file = .{ .path = relations } },
-        .input = tt.inputs.RequestInputEntities{ .items = &entities },
+        .input = tt.inputs.RequestInputEntities{
+            .items = &entities },
     })) {
         .ok => |result| result,
         .failed => |failure| {
@@ -48,6 +50,7 @@ pub fn main() !void {
             edge.source.name, edge.target.name,
         });
     }
-    std.debug.assert(std.mem.eql(u8, who_makes.items, "Apple makes iPhone. " ++
+    std.debug.assert(std.mem.eql(u8,
+        who_makes.items, "Apple makes iPhone. " ++
         "Amazon makes Kindle. "));
 }
