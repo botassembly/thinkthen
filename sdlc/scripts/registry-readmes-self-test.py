@@ -129,6 +129,37 @@ class PackageText(unittest.TestCase):
             with self.assertRaisesRegex(readmes.Refusal, 'example-needs-two-functions: python'):
                 readmes.example('python', root)
 
+    def test_all_usage_blocks_are_selected_in_order(self):
+        with tempfile.TemporaryDirectory() as scratch:
+            root = Path(scratch)
+            page = readmes.source('r', root)
+            page.parent.mkdir(parents=True)
+            page.write_text('```r\ninstall.packages("thinkthen")\n```\n'
+                            '```r\ntt_decide("Q?", "one")\n```\n'
+                            '```r\ntt_choose("Q?", "two")\n```\n')
+            samples = readmes.examples('r', root)
+            self.assertEqual(len(samples), 2)
+            self.assertIn('tt_decide(', samples[0][1])
+            self.assertIn('tt_choose(', samples[1][1])
+
+    def test_root_body_refuses_internal_references_and_long_pages(self):
+        for family in ('command', 'packagist'):
+            with tempfile.TemporaryDirectory() as scratch:
+                root = Path(scratch)
+                (root / 'crates/thinkthen').mkdir(parents=True)
+                shutil.copyfile(readmes.REPO / 'crates/thinkthen/Cargo.toml',
+                                root / 'crates/thinkthen/Cargo.toml')
+                for plant, cause in [('ADR 0047', 'adr'), ('ticket 0578', 'ticket'),
+                                     ('sdlc/planning/a.md', 'internal-path')]:
+                    text = '# ThinkThen\n\n' + readmes.OPENING + '\n\n' + plant + '\n'
+                    (root / 'README.md').write_text(text)
+                    with self.assertRaisesRegex(readmes.Refusal, cause):
+                        readmes.check_readme(family, text.encode(), root)
+                text = '# ThinkThen\n\n' + readmes.OPENING + '\n' + '\n' * 37
+                (root / 'README.md').write_text(text)
+                with self.assertRaisesRegex(readmes.Refusal, 'readme-needs-under-40-lines'):
+                    readmes.check_readme(family, text.encode(), root)
+
     def test_release_replays_every_public_package_on_a_prepared_host(self):
         jobs = yaml.safe_load((readmes.REPO / '.github/workflows/release.yml').read_text())['jobs']
         steps = jobs['smoke']['steps']

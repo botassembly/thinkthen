@@ -81,11 +81,9 @@ def check_versions(text, release):
 
 
 def check_readme(family, data, root=REPO):
-    if family in ('command', 'packagist'):
-        check_text(opening(data.decode()).encode(), version(root))
-        check_versions(data.decode(), version(root))
-    else:
-        check_text(data, version(root))
+    check_text(data, version(root))
+    if len(data.decode().splitlines()) >= 40:
+        raise Refusal('readme-needs-under-40-lines: ' + family)
     expected = source(family, root).read_bytes()
     if data != expected:
         raise Refusal('readme-source-mismatch: ' + family)
@@ -228,7 +226,7 @@ def check_sources(root=REPO):
 
 
 SAMPLES = {
-    'command': ('sh', 'sample.sh'), 'packagist': ('sh', 'sample.sh'),
+    'command': ('sh', 'sample.sh'), 'packagist': ('php', 'sample.php'),
     'crate': ('rust', 'sample.rs'), 'python': ('python', 'sample.py'),
     'typescript': ('typescript', 'sample.mjs'), 'ruby': ('ruby', 'sample.rb'),
     'go': ('go', 'main.go'), 'cpp': ('cpp', 'sample.cpp'), 'c': ('c', 'sample.c'),
@@ -242,24 +240,39 @@ SAMPLES = {
 }
 
 
-def example(family, root=REPO):
+FUNCTION = r'(?:thinkthen_|tt_)?(decide|choose|tag|score|filter|rank|find|annotate|recognize|relate)(?:Answer|ValueAsync|_Answer)?'
+
+
+def examples(family, root=REPO):
     language, filename = SAMPLES[family]
     text = source(family, root).read_text()
     blocks = list(re.finditer(r'```' + language + r'\n(.*?)\n```', text, re.S))
-    if not blocks:
+    samples = []
+    functions = set()
+    for block in blocks:
+        code = block.group(1) + '\n'
+        # Installation belongs to package assembly, not offline sample replay.
+        if not re.search(FUNCTION, code, re.I) and re.fullmatch(
+                r'(?:(?:install\.packages\([^\n]*\)|CREATE EXTENSION thinkthen;|'
+                r'INSTALL thinkthen FROM community;|LOAD thinkthen;|\.load [^\n]*|'
+                r'curl [^\n]*install\.sh[^\n]*|brew install [^\n]*)\n)+', code):
+            continue
+        functions.update(name.lower() for name in re.findall(FUNCTION, code, re.I))
+        output = re.match(r'\s*```text\n(.*?)\n```', text[block.end():], re.S)
+        samples.append((filename, code, output.group(1) + '\n' if output else None))
+    if not samples:
         raise Refusal('missing-example: ' + family)
-    block = blocks[-1]
-    code = block.group(1) + '\n'
-    functions = set(re.findall(r'\b(decide|choose|tag|score|filter|rank|find|annotate|recognize|relate)(?:Answer|ValueAsync|_Answer)?\b', code, re.I))
-    functions.update(re.findall(r'thinkthen_(decide|choose|tag|score|filter|rank|find|annotate|recognize|relate)\(', code))
-    if family not in ('command', 'packagist') and len({name.lower() for name in functions}) < 2:
+    if family != 'command' and len(functions) < 2:
         raise Refusal('example-needs-two-functions: ' + family)
-    output = re.match(r'\s*```text\n(.*?)\n```', text[block.end():], re.S)
-    return filename, code, output.group(1) + '\n' if output else None
+    return samples
+
+
+def example(family, root=REPO):
+    return examples(family, root)[0]
 
 
 def unpack_example_package(family, packages, destination, selected=None):
-    family = 'command' if family == 'packagist' else family
+    family = 'php' if family == 'packagist' else family
     candidates = []
     for path in packages.iterdir():
         if not path.is_file() or path.name.endswith('.sha256') or path.name.startswith('thinkthen-first-run'):
@@ -365,8 +378,8 @@ def run_build(command, work, env, input):
         return run_process(command, work, env, input, 300)
 
 
-def run_example(family, packages, work, root=REPO, selected=None):
-    filename, code, expected = example(family, root)
+def run_example(family, packages, work, root=REPO, selected=None, sample_index=0):
+    filename, code, expected = examples(family, root)[sample_index]
     package = unpack_example_package(family, packages, work / 'package', selected)
     home = work / 'home'; home.mkdir()
     cache = work / 'cache'; cache.mkdir(mode=0o700)
@@ -392,7 +405,7 @@ def run_example(family, packages, work, root=REPO, selected=None):
             raise Refusal('example-did-not-run: ' + family + '\n' + (done.stdout + done.stderr)[-4000:])
         return done.stdout
 
-    if family in ('command', 'packagist'):
+    if family == 'command':
         sample_archive = packages / 'thinkthen-first-run.tar.gz'
         for name, data in members(sample_archive.read_bytes()).items():
             path = work / name
@@ -550,8 +563,10 @@ def check_examples(packages, root=REPO, families=None):
             for index, package in enumerate(selected):
                 work = scratch / (family + '-' + str(index)); work.mkdir()
                 try:
-                    run_example(family, packages, work, root, package)
-                    print('registry-readmes: replayed ' + family + (' ' + package.name if package else ''))
+                    for sample_index in range(len(examples(family, root))):
+                        sample_work = work / str(sample_index); sample_work.mkdir()
+                        run_example(family, packages, sample_work, root, package, sample_index)
+                        print('registry-readmes: replayed ' + family + ' block ' + str(sample_index + 1) + (' ' + package.name if package else ''))
                 except (Refusal, OSError, StopIteration, subprocess.SubprocessError) as error:
                     failures.append(str(error) or ('example-did-not-run: ' + family))
     if failures:
