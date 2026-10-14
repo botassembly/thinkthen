@@ -125,42 +125,60 @@ exit 2
                 self.assertEqual(row['settings'], expected, row['stage'])
 
     def test_duckdb_build_boundary_keeps_full_and_smoke_compiler_inputs_stable(self):
+        from importlib.util import module_from_spec, spec_from_file_location
+        spec = spec_from_file_location('campaign_duckdb_inputs', parity.ROOT / 'databases/duckdb/tools/inputs.py')
+        authority = module_from_spec(spec)
+        spec.loader.exec_module(authority)
         with tempfile.TemporaryDirectory(prefix='thinkthen-duckdb-env-') as folder:
             root = Path(folder)
             scripts, duckdb = root / 'sdlc/scripts', root / 'databases/duckdb'
             tools = root / 'tools'
-            for path in (scripts, duckdb / 'tools', duckdb / 'cpp', tools / 'venv/bin',
-                         tools / 'source', tools / 'static-libs', root / 'crates/thinkthen'):
+            for path in (scripts, duckdb / 'tools', duckdb / 'cpp', tools,
+                         root / 'crates/thinkthen'):
                 path.mkdir(parents=True)
             for source in ('databases/duckdb/check.sh', 'databases/duckdb/cpp/build.sh',
-                           'sdlc/scripts/scratch.sh', 'sdlc/scripts/full-compiler'):
+                           'databases/duckdb/tools/inputs.sh', 'databases/duckdb/tools/inputs.py',
+                           'databases/duckdb/tools/version.env', 'databases/duckdb/tools/source_hosts.py',
+                           'sdlc/scripts/scratch.sh', 'sdlc/scripts/full-compiler', 'sdlc/scripts/heavy-compile'):
                 shutil.copyfile(parity.ROOT / source, root / source)
             (scripts / 'installed.sh').write_text('smoke_guard() { :; }\n')
-            (duckdb / 'tools/prepare_inputs.sh').write_text('input_verify() { :; }\n')
-            (duckdb / 'tools/validate_inputs.py').write_text('')
-            (duckdb / 'tools/inputs.sh').write_text(f'''
-input_versions() {{ echo v1; }}
-input_target() {{ echo x86_64-unknown-linux-gnu; }}
-input_select() {{ TOOLS={tools}; DUCKDB_VERSION=v1; platform=fixture;
-    cli_hash=fixture; duckdb_source_commit=fixture; manifest=fixture; }}
-''')
+            (duckdb / 'tools/validate_inputs.py').write_text(
+                'from types import SimpleNamespace\narchive_tree = SimpleNamespace(raw_git=lambda *args: None)\n')
+            for name in ('receipt_types.py', 'request_helpers.py'):
+                (duckdb / 'tools' / name).write_text('')
+            cache = tools / 'cache'
+            target = 'x86_64-unknown-linux-gnu'
+            for version in authority.versions():
+                identity = authority.selected(version, target)
+                host = cache / 'duckdb/community' / version
+                for name in ('source/.git', 'tools', 'venv/bin'):
+                    (host / name).mkdir(parents=True)
+                (host / 'source/PIN').write_text(identity['source_commit'])
+                program = ('#!/bin/sh\ncase "$*" in\n'
+                           f"*source_id*|*'PRAGMA version'*) echo {identity['source_commit'][:10]} ;;\n"
+                           f"*platform*) echo {identity['platform']} ;;\nesac\n")
+                python = host / 'venv/bin/python'
+                python.write_text(program)
+                python.chmod(0o755)
+                cli = duckdb / 'build/community' / version / 'build/release/duckdb'
+                cli.parent.mkdir(parents=True)
+                cli.write_text(program)
+                cli.chmod(0o755)
             (root / 'crates/thinkthen/Cargo.toml').write_text('version = "1.0.0"\n')
-            (tools / 'platform.txt').write_text('fixture\n')
-            (tools / 'static-libs/libduckdb_static.a').touch()
-            (tools / 'venv/bin/python').write_text('#!/bin/sh\necho v1\n')
+            (root / 'vcpkg.json').write_text('{}\n')
             capture = '''import json,os,sys
 from pathlib import Path
-with Path(os.environ['CAPTURE']).open('a') as out:
+with Path(CAPTURE_PATH).open('a') as out:
     out.write(json.dumps({'args':sys.argv[1:], 'flags':{k:os.environ.get(k) for k in
         ('RUSTFLAGS','CFLAGS','CXXFLAGS')}})+'\\n')
-'''
-            (scripts / 'release-archive-tree.py').write_text(capture + 'sys.exit(91)\n')
+'''.replace('CAPTURE_PATH', repr(str(root / 'capture.jsonl')))
+            # Stop at the real community compiler boundary without building a host.
+            (tools / 'make').write_text('#!/usr/bin/python3\n' + capture + 'sys.exit(91)\n')
             (tools / 'cargo').write_text('#!/usr/bin/python3\n' + capture)
-            for name, body in (('rustc', 'echo "host: x86_64-unknown-linux-gnu"'),
-                               ('cmake', 'exit 0'), ('duckdb', 'exit 0')):
-                (tools / name).write_text('#!/bin/sh\n' + body + '\n')
-            for path in (tools / 'cargo', tools / 'rustc', tools / 'cmake',
-                         tools / 'duckdb', tools / 'venv/bin/python'):
+            (tools / 'git').write_text('#!/usr/bin/python3\nimport pathlib,sys\n'
+                                      'print((pathlib.Path(sys.argv[2]) / "PIN").read_text())\n')
+            (root / 'probe.py').write_text(capture)
+            for path in (tools / 'cargo', tools / 'make', tools / 'git'):
                 path.chmod(0o755)
             binary = root / 'target/debug/conformance-backend'
             binary.parent.mkdir(parents=True)
@@ -174,7 +192,8 @@ with Path(os.environ['CAPTURE']).open('a') as out:
                     receipt = root / 'capture.jsonl'
                     receipt.write_text('')
                     env = child_env(home=private) | {'PATH': str(tools) + ':' + os.defpath,
-                           'HOME': str(private), 'CAPTURE': str(receipt),
+                           'HOME': str(private), 'THINKTHEN_TOOLCHAINS': str(cache),
+                           'THINKTHEN_HEAVY_LOCK_HELD': '/tmp/thinkthen-heavy.lock',
                            'THINKTHEN_DUCKDB_CHECK_ARCHIVES': '1',
                            'THINKTHEN_TEST_PROFILE': profile, 'RUSTFLAGS': '--ambient',
                            'CFLAGS': '-O1', 'CXXFLAGS': '-O1'}
@@ -182,22 +201,28 @@ with Path(os.environ['CAPTURE']).open('a') as out:
                     command = 'REPO=$PWD; '
                     if full:
                         command += '. sdlc/scripts/full-compiler; '
-                    command += 'exec sh databases/duckdb/check.sh 12345'
+                    command += 'python3 probe.py caller; exec sh databases/duckdb/check.sh 12345'
                     result = subprocess.run(['sh', '-c', command], cwd=root, env=env,
                                             stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-                    self.assertEqual(result.returncode, 91, result.stdout.decode())
+                    # The community driver retains the failed compiler status in
+                    # CalledProcessError and exits 1 instead of exec'ing it.
+                    self.assertEqual(result.returncode, 1, result.stdout.decode())
+                    self.assertIn('returned non-zero exit status 91', result.stdout.decode())
                     rows = [json.loads(line) for line in receipt.read_text().splitlines()]
                     cargo, cmake = rows[-2:]
-                    self.assertIn('build', cargo['args'])
+                    self.assertIn('caller' if full else 'test', cargo['args'])
+                    self.assertEqual(cmake['args'][-1], 'release')
+                    self.assertIn('DUCKDB_SRCDIR=' + str(cache / 'duckdb/community' / authority.versions()[0] / 'source'), cmake['args'])
                     self.assertEqual(cmake['flags'], cargo['flags'])
-                    for key in ('CFLAGS', 'CXXFLAGS'):
-                        self.assertIn(f'-DCMAKE_{key[:-5]}_FLAGS={cargo["flags"][key]}', cmake['args'])
+                    for key in ('RUSTFLAGS', 'CFLAGS', 'CXXFLAGS'):
+                        self.assertTrue(cmake['flags'][key], key)
                     if full:
                         self.assertNotIn(str(private), json.dumps(rows))
                         snapshots.append(cargo['flags'])
                     else:
                         self.assertIn(str(private), cargo['flags']['RUSTFLAGS'])
-                        self.assertIn(str(private), cargo['flags']['CFLAGS'])
+                        self.assertEqual(cargo['flags']['CFLAGS'], '-O1')
+                        self.assertEqual(cargo['flags']['CXXFLAGS'], '-O1')
             self.assertTrue(all(flags == snapshots[0] for flags in snapshots))
 
 

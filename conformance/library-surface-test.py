@@ -16,6 +16,102 @@ from conformance.children.children import child_env
 
 
 class PublicSurface(unittest.TestCase):
+    def test_native_adapter_omissions_and_extra_members(self):
+        mutations = {
+            'c': [('include/thinkthen.h', 'thinkthen_session_new_typed_with_surface(', 'missing_dispatch(', 'missing function: decide'),
+                  ('include/thinkthen.h', '} thinkthen_request_item_v1;', '} missing_item_v1;', 'missing helper: item')],
+            'ruby': [('lib/thinkthen/session.rb', 'define_singleton_method("question_#{kind}")', 'define_singleton_method("absent_#{kind}")', 'missing helper: question_file')] + [
+                     ('lib/thinkthen/session.rb', 'private_constant :Carrier', literal, 'unlisted public type/export: .Carrier')
+                     for literal in ('if false\n      private_constant :Carrier\n    end',
+                                     'private_constant :Carrier if false',
+                                     'while false\n      private_constant :Carrier\n    end',
+                                     'false and private_constant :Carrier',
+                                     'begin\n      nil\n    rescue StandardError\n      private_constant :Carrier\n    end',
+                                     'class << self\n      Carrier = Class.new\n      private_constant :Carrier\n    end',
+                                     'private_class_method def self.hide_carrier\n      private_constant :Carrier\n    end',
+                                     'def _hide_carrier\n      private\n      private_constant :Carrier\n    end',
+                                     'def self._hide_carrier\n      ThinkThen::Client.private_constant :Carrier\n    end',
+                                     'deferred = -> {\n      private_constant :Carrier\n    }',
+                                     'deferred = lambda do\n      private_class_method :open\n      self.private_constant :Carrier\n    end',
+                                     'Deferred = proc do\n      Client.private_constant :Carrier\n    end',
+                                     'Object.const_set(:Carrier, Class.new)\n    Object.private_constant :Carrier',
+                                     'module Other\n      class Carrier; end\n      private_constant :Carrier\n    end\n    private_constant :Other',
+                                     'Object.const_set(:Other, Module.new)\n    Object::Other.const_set(:Carrier, Class.new)\n    Object::Other.private_constant :Carrier',
+                                     'Object.const_set(:Other, Module.new)\n    Other.const_set(:Carrier, Class.new)\n    Other.private_constant :Carrier',
+                                     '# visible Carrier', '# private_constant :Carrier',
+                                     '"private_constant :Carrier"', '%q{private_constant :Carrier}',
+                                     '%Q(private_constant :Carrier)', '%[private_constant :Carrier]',
+                                     '%q<private_constant :Carrier>', '%q|private_constant :Carrier|',
+                                     '%q#private_constant :Carrier#', '%Q!private_constant :Carrier!',
+                                     '%q"private_constant :Carrier"', '%q=private_constant :Carrier=',
+                                     r'%q{nested {text} \} private_constant :Carrier}',
+                                     r'%q|escaped \| private_constant :Carrier|',
+                                     '%w[private_constant :Carrier]', '%W[private_constant :Carrier]',
+                                     '%i[private_constant :Carrier]', '%I[private_constant :Carrier]',
+                                     '%r{private_constant :Carrier}',
+                                     '%x{private_constant :Carrier}', '%s{private_constant :Carrier}',
+                                     '`private_constant :Carrier`', '/private_constant :Carrier/',
+                                     'literal = /private_constant :Carrier/',
+                                     'puts /private_constant :Carrier/',
+                                     'x = true ? /private_constant :Carrier/ : /other/',
+                                     'x = -> { return /private_constant :Carrier/ }',
+                                     'x = /a/ && /private_constant :Carrier/',
+                                     'x = "#{"private_constant :Carrier"}"',
+                                     'x = %Q{#{"}"} private_constant :Carrier}',
+                                     r'/[\/] private_constant :Carrier/',
+                                     '<<TEXT\nprivate_constant :Carrier\nTEXT',
+                                     '<<-TEXT\nprivate_constant :Carrier\n  TEXT',
+                                     '<<~\'TEXT\'\nprivate_constant :Carrier\n  TEXT',
+                                     '<<"TEXT"\nprivate_constant :Carrier\nTEXT',
+                                     '<<`TEXT`\nprivate_constant :Carrier\nTEXT',
+                                     '<<\'END-HERE\'\nprivate_constant :Carrier\nEND-HERE',
+                                     '[<<ONE, <<TWO]\nfirst literal\nONE\nprivate_constant :Carrier\nTWO',
+                                     '\n=begin\nprivate_constant :Carrier\n=end')],
+            'typescript': [('native.d.ts', 'readonly context?: R.JsonValue;', 'readonly extraField?: R.JsonValue;', 'unlisted public field: ItemFields.extraField')],
+            'zig': [('src/authored.zig', 'pub fn plan(', 'pub fn missingPlan(', 'missing helper: plan'),
+                    ('src/thinkthen.zig', 'pub fn usagePersistence(', 'pub fn absentUsage(', 'missing helper: usage_persistence'),
+                    ('src/thinkthen.zig', 'closed: bool = false,', 'closed: bool = false, extraField: bool = false,', 'unlisted public field: Engine.extraField'),
+                    ('src/results_generated.zig', 'cache_answers: u64,', 'absent_cache_answers: u64,', 'missing generated declaration: results_generated.zig:ImmediateFacts.cache_answers')],
+        }
+        for library, cases in mutations.items():
+            with self.subTest(library=library), tempfile.TemporaryDirectory(prefix='library-surface-native-') as folder:
+                root = Path(folder)
+                for name in ('sdlc', 'specification', 'conformance'):
+                    (root / name).symlink_to(ROOT / name, target_is_directory=True)
+                header = root / 'libraries/c/include/thinkthen.h'
+                header.parent.mkdir(parents=True)
+                shutil.copyfile(ROOT / 'libraries/c/include/thinkthen.h', header)
+                if library == 'c':
+                    (root / 'libraries/c/src').symlink_to(ROOT / 'libraries/c/src', target_is_directory=True)
+                    (root / 'libraries/c/cbindgen.toml').symlink_to(ROOT / 'libraries/c/cbindgen.toml')
+                else:
+                    for suffix in ('*.rb', '*.rbs', '*.d.ts', '*.zig'):
+                        for path in (ROOT / 'libraries' / library).rglob(suffix):
+                            if 'target' in path.parts or 'node_modules' in path.parts:
+                                continue
+                            output = root / path.relative_to(ROOT)
+                            output.parent.mkdir(parents=True, exist_ok=True)
+                            shutil.copyfile(path, output)
+                def invoke():
+                    run = subprocess.run(['python3', str(CHECK), '--root', str(root), '--library', library, '--json'],
+                                         capture_output=True, text=True, env=child_env(home=folder))
+                    self.assertIn(run.returncode, (0, 1), run.stderr)
+                    return json.loads(run.stdout)['libraries'][library]
+                self.assertEqual(invoke(), [])
+                originals = {filename: (root / 'libraries' / library / filename).read_text()
+                             for filename, *_ in cases}
+                for filename, before, after, diagnostic in cases:
+                    with self.subTest(filename=filename, after=after, diagnostic=diagnostic):
+                        path = root / 'libraries' / library / filename
+                        original = originals[filename]
+                        self.assertIn(before, original)
+                        path.write_text(original.replace(before, after, 1))
+                        self.assertIn(diagnostic, invoke())
+                        if library == 'ruby' and before == 'private_constant :Carrier':
+                            path.write_text(original.replace(before, after + '\n    ' + before, 1))
+                            self.assertEqual(invoke(), [])
+                        path.write_text(original)
+
     def test_dart_mixins_and_generated_schema_still_detect_omissions(self):
         with tempfile.TemporaryDirectory(prefix='library-surface-dart-') as folder:
             root = Path(folder)
@@ -101,12 +197,42 @@ class PublicSurface(unittest.TestCase):
             header = root / 'libraries/c/include/thinkthen.h'
             header.parent.mkdir(parents=True)
             shutil.copyfile(ROOT / 'libraries/c/include/thinkthen.h', header)
-            def invoke():
+            def invoke(**values):
                 run = subprocess.run(['python3', str(CHECK), '--root', str(root), '--library', 'ruby', '--json'],
-                                     capture_output=True, text=True, env=child_env(home=folder))
+                                     capture_output=True, text=True, env=child_env(home=folder, **values))
                 self.assertIn(run.returncode, (0, 1), run.stderr)
                 return set(json.loads(run.stdout)['libraries']['ruby'])
             baseline = invoke()
+            runtime = root / 'libraries/ruby/lib/thinkthen/session.rb'
+            original_runtime = runtime.read_text()
+            for directive in ('self.private_constant :Carrier',
+                              'ThinkThen::Client.private_constant :Carrier',
+                              '::ThinkThen::Client.private_constant :Carrier',
+                              'Client.private_constant :Carrier'):
+                with self.subTest(directive=directive):
+                    runtime.write_text(original_runtime.replace('private_constant :Carrier', directive, 1))
+                    self.assertEqual(invoke(), baseline)
+            runtime.write_text(original_runtime)
+            marker = root / 'source-was-executed'
+            runtime.write_text(original_runtime + f'\nFile.write({str(marker)!r}, "loaded")\n')
+            ruby = shutil.which('ruby')
+            self.assertIsNotNone(ruby)
+            wrapper = root / 'ruby-lexer'
+            wrapper.write_text('#!/bin/sh\n'
+                               '[ -z "${RUBYOPT+x}" ] && [ -z "${RUBYLIB+x}" ] && '
+                               '[ -z "${TEST_CREDENTIAL+x}" ] || exit 19\n'
+                               'exec "' + ruby + '" "$@"\n')
+            wrapper.chmod(0o755)
+            self.assertEqual(invoke(RUBY=str(wrapper), RUBYOPT='-rmissing_ambient_config',
+                                    RUBYLIB=str(root), TEST_CREDENTIAL='fake'), baseline)
+            self.assertFalse(marker.exists())
+            runtime.write_text(original_runtime)
+            unavailable = subprocess.run(
+                [sys.executable, str(CHECK), '--root', str(root), '--library', 'ruby', '--json'],
+                capture_output=True, text=True,
+                env=child_env(home=folder, RUBY=str(root / 'missing-ruby')))
+            self.assertEqual(unavailable.returncode, 2)
+            self.assertIn('Ruby source lexer unavailable', unavailable.stderr)
             generated = root / 'libraries/ruby/sig/thinkthen/results_generated.rbs'
             original = generated.read_text()
             for before, after in [('?attempts: bool', '?extra_keyword: bool'),
@@ -132,6 +258,48 @@ class PublicSurface(unittest.TestCase):
             self.assertNotIn('unlisted public call/export: Client.dump', invoke())
             runtime.write_text(hidden.replace('private_class_method :dump', ''))
             self.assertIn('unlisted public call/export: Client.dump', invoke())
+
+    def test_ruby_method_visibility_domains_and_reopened_bodies(self):
+        cases = [
+            ('private\ndef self.extra_public_api; end', True),
+            ('def self.extra_public_api; end\nprivate_class_method :extra_public_api', False),
+            ('def extra_public_api; end\ndef self.extra_public_api; end\nprivate_class_method :extra_public_api', True),
+            ('def extra_public_api; end\ndef self.extra_public_api; end\nprivate :extra_public_api\nprivate_class_method :extra_public_api', False),
+            ('private\nend\nclass Client\ndef extra_public_api; end', True),
+            ('private\nend\nclass Client\nprivate\ndef extra_public_api; end', False),
+            ('class << self\nprivate\nend\nclass << self\ndef extra_public_api; end\nend', True),
+            ('class << self\nprivate\nend\nclass << self\nprivate\ndef extra_public_api; end\nend', False),
+            ('def self.extra_public_api; end\nclass << self\nprivate :extra_public_api\nend\ndef extra_public_api; end', True),
+            ('def self.extra_public_api; end\nclass << self\nprivate :extra_public_api\nend\nprivate def extra_public_api; end', False),
+            ('private def extra_public_api; end\ndef self.extra_public_api; end', True),
+            ('private def extra_public_api; end\nprivate_class_method def self.extra_public_api; end', False),
+            ('def self.extra_public_api; end\nprivate_class_method :extra_public_api\npublic_class_method :extra_public_api', True),
+            ('class << self\nprivate\ndef extra_public_api; end\nend', False),
+            ('class << self\ndef self.extra_public_api; end\nprivate_class_method :extra_public_api\nend', False),
+            ('class << self\ndef extra_public_api; end\ndef self.extra_public_api; end\nprivate_class_method :extra_public_api\nend', True),
+            ('private\npublic\ndef extra_public_api; end', True),
+            ('def extra_public_api; end\nend\nclass Client\nprivate :extra_public_api', False),
+        ]
+        with tempfile.TemporaryDirectory(prefix='library-surface-ruby-domains-') as folder:
+            root = Path(folder)
+            for name in ('sdlc', 'specification', 'conformance'):
+                (root / name).symlink_to(ROOT / name, target_is_directory=True)
+            shutil.copytree(ROOT / 'libraries/ruby/lib', root / 'libraries/ruby/lib')
+            shutil.copytree(ROOT / 'libraries/ruby/sig', root / 'libraries/ruby/sig')
+            header = root / 'libraries/c/include/thinkthen.h'
+            header.parent.mkdir(parents=True)
+            shutil.copyfile(ROOT / 'libraries/c/include/thinkthen.h', header)
+            runtime = root / 'libraries/ruby/lib/thinkthen/session.rb'
+            original = runtime.read_text()
+            for body, public in cases:
+                with self.subTest(body=body, public=public):
+                    runtime.write_text(original + '\nmodule ThinkThen\nclass Client\n' + body + '\nend\nend\n')
+                    run = subprocess.run([sys.executable, str(CHECK), '--root', str(root), '--library', 'ruby', '--json'],
+                                         capture_output=True, text=True, env=child_env(home=folder))
+                    self.assertIn(run.returncode, (0, 1), run.stderr)
+                    errors = json.loads(run.stdout)['libraries']['ruby']
+                    expected = ['unlisted public call/export: Client.extra_public_api'] if public else []
+                    self.assertEqual(errors, expected)
 
     def test_ada_generated_builders_types_and_private_visibility(self):
         with tempfile.TemporaryDirectory(prefix='library-surface-ada-') as folder:

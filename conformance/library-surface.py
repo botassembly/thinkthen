@@ -55,7 +55,7 @@ def function_errors(declared, functions, config, containers, facade=''):
     names = {canonical(d.name) for d in declared if d.kind == 'call' and d.owner in containers}
     errors = []
     for function in functions:
-        name = config.get('function_prefix', '') + native(function, config['naming']) + config.get('function_suffix', '')
+        name = config.get('function_dispatch', config.get('function_prefix', '') + native(function, config['naming']) + config.get('function_suffix', ''))
         if canonical(name) not in names:
             errors.append('missing function: ' + function + (' (' + facade + ')' if facade else ''))
     return errors

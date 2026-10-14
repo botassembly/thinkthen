@@ -284,17 +284,28 @@ def duckdb(check):
         raise Failure(f'DuckDB archive validation failed: {error}') from error
     folder = check.unpack(archive, check.root / 'duckdb')
     host = check.run('duckdb', '-unsigned', '-noheader', '-list', ':memory:',
-                     input='SELECT version(); PRAGMA platform;').splitlines()
-    if len(host) != 2 or host[0] not in versions():
+                     input="SELECT to_json({'version':library_version,'source_id':source_id}) FROM pragma_version(); PRAGMA platform;").splitlines()
+    if len(host) != 2:
         raise Failure('DuckDB host must report one supported version and platform')
-    identity = selected(host[0], TARGET)
+    try:
+        reported = json.loads(host[0])
+    except json.JSONDecodeError as error:
+        raise Failure('DuckDB host must report one supported version and platform') from error
+    if not isinstance(reported, dict) or not isinstance(reported.get('version'), str) or not reported['version']:
+        raise Failure('DuckDB host must report one supported version and platform')
+    identities = [selected(version, TARGET) for version in versions()]
+    matching = [item for item in identities if reported.get('source_id') in (item['source_commit'][:8], item['source_commit'][:10])
+                and (item['metadata_version'] != item['version'] or reported.get('version') == item['version'])]
+    if len(matching) != 1:
+        raise Failure('DuckDB host must report one supported version and platform')
+    identity = matching[0]
     if host[1] != identity['platform']:
         raise Failure('DuckDB host platform differs from its native target')
-    extension = folder / host[0] / host[1] / 'thinkthen.duckdb_extension'
+    extension = folder / identity['metadata_version'] / host[1] / 'thinkthen.duckdb_extension'
     if not extension.is_file() or extension.is_symlink():
         raise Failure(f'DuckDB archive is missing regular member {extension.relative_to(folder)}')
     try:
-        verify(extension, TARGET, host[0], check.version)
+        verify(extension, TARGET, identity['metadata_version'], check.version)
     except (OSError, ValueError) as error:
         raise Failure(str(error)) from error
     sql = f'LOAD {sql_quote(extension)}; SET thinkthen_replay={sql_quote(check.sample / "recording")}; SET thinkthen_cache=\'off\';\n'
