@@ -116,12 +116,16 @@ pub fn Map(comptime T: type) type {
 '''
 
 
+def answer_type(function):
+    return {'decide': '?bool', 'choose': '?[]const u8', 'tag': '[]const []const u8', 'score': 'f64', 'rank': '[]const u64', 'filter': '[]const tt.results.Value', 'find': '?u64', 'annotate': '[]const tt.results.SessionAnnotation', 'recognize': 'tt.results.SessionRecognition', 'relate': '[]const tt.results.SessionRelationEdge'}[function]
+
+
 def calls(definitions):
     fields = definitions['RequestCall']['properties']
     lines = ['// Generated named calls from the canonical request schema; do not edit.', 'const tt = @import("thinkthen.zig");', 'const inputs = @import("request_generated.zig");', 'pub const Arguments = struct {', '    question: inputs.RequestQuestion,', '    input: inputs.RequestInput,', '    options: ?inputs.RequestOptions = null,', '};']
     for function in definitions['RequestFunction']['oneOf']:
         value = function['const']
-        lines += [f'pub fn {value}(engine: *tt.Engine, arguments: Arguments) !tt.session.Session {{', f'    return tt.session.startNamed(engine, .{value}, arguments);', '}']
+        lines += [f'pub fn {value}(engine: *tt.Engine, arguments: Arguments) !tt.session.Answer({answer_type(value)}) {{', f'    return tt.session.completeNamed(engine, .{value}, arguments, {answer_type(value)});', '}']
     return '\n'.join(lines) + '\n'
 
 def render_results(definitions):

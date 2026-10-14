@@ -36,7 +36,7 @@ pub const Question = struct {
 
 const RequestStorage = struct {
     allocator: std.mem.Allocator,
-    function: inputs.RequestFunction,
+    function: []const u8,
     question: []const u8,
     input: []const u8,
     options: []const u8,
@@ -46,20 +46,23 @@ pub const Request = opaque {
     fn storage(self: *const Request) *const RequestStorage {
         return @ptrCast(@alignCast(self));
     }
-    pub fn init(allocator: std.mem.Allocator, call: inputs.RequestCall) !*Request {
+    pub fn init(allocator: std.mem.Allocator, function: []const u8, question_value: inputs.RequestQuestion, input_value: inputs.RequestInput, option_value: ?inputs.RequestOptions) !*Request {
         const owned = try allocator.create(RequestStorage);
         errdefer allocator.destroy(owned);
-        const question = try std.json.Stringify.valueAlloc(allocator, call.question, .{ .emit_null_optional_fields = false });
+        const question = try std.json.Stringify.valueAlloc(allocator, question_value, .{ .emit_null_optional_fields = false });
         errdefer allocator.free(question);
-        const input = try std.json.Stringify.valueAlloc(allocator, call.input, .{ .emit_null_optional_fields = false });
+        const input = try std.json.Stringify.valueAlloc(allocator, input_value, .{ .emit_null_optional_fields = false });
         errdefer allocator.free(input);
-        const options = if (call.options) |value| try std.json.Stringify.valueAlloc(allocator, value, .{ .emit_null_optional_fields = false }) else try allocator.dupe(u8, "{}");
-        owned.* = .{ .allocator = allocator, .function = call.function, .question = question, .input = input, .options = options };
+        const options = if (option_value) |value| try std.json.Stringify.valueAlloc(allocator, value, .{ .emit_null_optional_fields = false }) else try allocator.dupe(u8, "{}");
+        errdefer allocator.free(options);
+        const copied_function = try allocator.dupe(u8, function);
+        owned.* = .{ .allocator = allocator, .function = copied_function, .question = question, .input = input, .options = options };
         return @ptrCast(owned);
     }
     pub fn deinit(self: *Request) void {
         const owned: *RequestStorage = @ptrCast(@alignCast(self));
         const allocator = owned.allocator;
+        allocator.free(owned.function);
         allocator.free(owned.question);
         allocator.free(owned.input);
         allocator.free(owned.options);
@@ -67,7 +70,7 @@ pub const Request = opaque {
     }
     fn descriptor(self: *const Request) c.thinkthen_named_request_v1 {
         const owned = self.storage();
-        return .{ .function = utf8(@tagName(owned.function)), .question_json = utf8(owned.question), .input_json = utf8(owned.input), .options_json = utf8(owned.options) };
+        return .{ .function = utf8(owned.function), .question_json = utf8(owned.question), .input_json = utf8(owned.input), .options_json = utf8(owned.options) };
     }
     pub fn start(self: *const Request, engine: *tt.Engine) !tt.session.Session {
         if (engine.closed) return error.ClosedEngine;

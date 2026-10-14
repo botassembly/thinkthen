@@ -4,7 +4,9 @@ The source package bundles the matching native engine for x86_64 Linux GNU and r
 
 Construct an engine with `Engine.init(allocator)` or `Engine.initWithSettings(allocator, inputs.EngineSettings)`. Construction returns `.ok` or an owned `.failed` value. A failure has a native kind, message, retry signal and optional typed `facts`. Release it with `releaseFailure(allocator, failure)`.
 
-The ten `calls.FUNCTION(engine, arguments)` functions accept generated typed question, input and option descriptors. They return an owned session. Call `next()` to block for a packet or settlement; call `read()` only for an explicit nonblocking read. A feed accepts generated descriptors with `push()`. Use `wait(true)` when its queue is full, then retry. Finish a feed with `finish()` and cancel with `cancel()`.
+The ten `calls.FUNCTION(engine, arguments)` functions accept generated typed question, input and option descriptors. They block in the native engine and return an owned typed answer. Read it with `try answer.value()`, inspect `answer.facts()` and `answer.failure()`, and release it with `answer.deinit()`. A failed call retains its typed failure and facts; `value()` returns `error.CallFailed`. Scalar calls require one answer and return `error.Cardinality` for multiple records. Rank returns plain indices and filter returns original values.
+
+Use `Request.start(engine)` or `session.startNamed(engine, function, arguments)` for an owned streaming session. Call `next()` to block for a packet or settlement; call `read()` for an explicit nonblocking read. A feed accepts generated descriptors with `push()`. Use `wait(true)` when its queue is full, then retry. Finish a feed with `finish()` and cancel with `cancel()`.
 
 Each returned packet owns copied Zig values. `packet.value()` returns the generated `results.SessionPacket` union. `packet.terminal()`, `packet.facts()` and `packet.failure()` return optional typed fields. Missing, null and present fields use generated `Presence(T)` unions. Packets and their nested values survive session and engine destruction. Release every packet with `deinit()` after its borrowers finish.
 
@@ -12,15 +14,14 @@ Each returned packet owns copied Zig values. `packet.value()` returns the genera
 
 `Question.recognize(engine, definition)` and `Question.relate(engine, definition)` admit generated typed definitions through the native engine. `Question.init(engine, role, definition)` uses native saved-question admission. `question.name()` returns its optional borrowed name. The explicit role selects the grammar. Release the question with `deinit()`.
 
-`Request.init(allocator, call)` copies typed arguments independently of the caller. `request.start(engine)` uses native named admission. `request.plan(engine)` previews the same arguments without credentials, cache reads or requests. The returned plan has generated fields under `plan.value` and owns its strings after request and engine destruction. Release both owners with `deinit()`.
+`Request.init(allocator, function, question, input, options)` copies typed arguments independently of the caller. `request.start(engine)` uses native named admission. `request.plan(engine)` previews the same arguments without credentials, cache reads or requests. The returned plan has generated fields under `plan.value` and owns its strings after request and engine destruction. Release both owners with `deinit()`.
 
 ```zig
-const request = try tt.Request.init(allocator, .{
-    .function = .decide,
-    .question = .{ .text = .{ .text = "Does it pass?" } },
-    .input = .{ .text = .{ .text = "Evidence." } },
-    .options = .{ .details = false },
-});
+const request = try tt.Request.init(allocator, "decide",
+    .{ .text = .{ .text = "Does it pass?" } },
+    .{ .text = .{ .text = "Evidence." } },
+    .{ .details = false },
+);
 defer request.deinit();
 var plan = try request.plan(&engine);
 defer plan.deinit();

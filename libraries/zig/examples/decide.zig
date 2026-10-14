@@ -15,21 +15,7 @@ pub fn main() !void {
         .input = .{ .text = .{ .text = "I demand a refund today" } },
     });
     defer call.deinit();
-    while (true) switch (try call.next()) {
-        .pending => return error.Defect,
-        .end => break,
-        .packet => |value| {
-            const packet = value;
-            defer packet.deinit();
-            if (packet.failure()) |_| return error.DecisionFailed;
-            if (packet.value().* == .observation) {
-                const answer = packet.answers().decide() catch |err| {
-                    if (err == error.WrongAnswer) continue;
-                    return err;
-                };
-                std.debug.print("answer={any}\n", .{answer});
-            }
-            if (packet.facts()) |facts| std.debug.print("records={d} requests={d}\n", .{ facts.records, facts.requests_sent });
-        },
-    };
+    const answer = try call.value();
+    std.debug.print("answer={any}\n", .{answer});
+    if (call.facts()) |facts| std.debug.print("records={d} requests={d}\n", .{ facts.records, facts.requests_sent });
 }
