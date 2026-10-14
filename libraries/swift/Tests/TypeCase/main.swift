@@ -1,9 +1,9 @@
 import Foundation
-import ThinkThen
+@testable import ThinkThen
 
 @main enum SharedConsumer {
-    static func run(_ fixture: [String: Any], settings: String, originalJSON: JSONValue) async throws -> OwnedCall {
-        let client = try Client(settings: InputEngineSettings.read(JSONValue.parse(Data(settings.utf8))))
+    static func run(_ fixture: [String: Any], settings: String, originalJSON: JSONValue) async throws -> Call {
+        let client = try Client(settings: EngineSettings.read(JSONValue.parse(Data(settings.utf8))))
         defer { client.close() }
         let verb = fixture["verb"] as! String
         func value(_ object: Any) throws -> JSONValue {
@@ -12,7 +12,7 @@ import ThinkThen
         let preserved: [String: JSONValue]
         if case .orderedObject(let members) = originalJSON.kind { preserved = Dictionary(members.map { ($0.key, $0.value) }, uniquingKeysWith: { _, last in last }) }
         else { throw JSONConversionError("Fixture is not an object") }
-        let question: InputRequestQuestion
+        let question: Question
         switch fixture["loader"] as? String {
         case "named", "load_named": question = .name(fixture["reference"] as! String)
         case "reference", "load_reference": question = .reference(fixture["reference"] as! String)
@@ -31,14 +31,14 @@ import ThinkThen
         let injection = (fixture["operation"] as? [String: Any])?["injection"] as? String
         let contexts = fixture["contexts"] as? [Any]
         let projectContext = contexts?.contains { !($0 is String || $0 is [String: Any] || $0 is NSNull) } ?? false
-        var input: InputRequestInput
+        var input: Input
         if let paths = fixture["paths"] as? [String], !paths.isEmpty {
             let unit = fixture["source_unit"] as? Int ?? 3
             var source: [String: Any] = ["paths": paths, "reading": ["unit": unit == 2 ? "window" : (unit == 1 || unit == 5 ? "line" : "file")]]
             if unit == 2, let window = fixture["window"] as? Int, window != 0 { source["reading"] = ["unit": "window", "window": window] }
             if unit == 5 || fixture["owned_jsonl"] as? Bool == true { source["framing"] = "jsonl" }
             if unit == 4 || fixture["image_reader"] as? Bool == true { source["media"] = "image" }
-            input = try InputRequestInput.read(value(["kind": "source", "source": source]))
+            input = try Input.read(value(["kind": "source", "source": source]))
         } else {
             let images: [[String: Any]] = try (fixture["image_paths"] as? [String] ?? []).map {
                 ["kind": "bytes", "bytes": try Data(contentsOf: URL(fileURLWithPath: $0)).base64EncodedString(), "media": fixture["media"] ?? "image/png"]
@@ -58,7 +58,7 @@ import ThinkThen
                 if !images.isEmpty { item["images"] = images }
                 records.append(item)
             }
-            input = try InputRequestInput.read(value(["kind": verb == "find" ? "units" : verb == "relate" ? "entities" : "records", "items": records]))
+            input = try Input.read(value(["kind": verb == "find" ? "units" : verb == "relate" ? "entities" : "records", "items": records]))
         }
         var options: [String: Any] = ["attempts": true]
         if projectContext {
@@ -70,20 +70,20 @@ import ThinkThen
         if injection == "expired_deadline" { options["deadline_ms"] = 0 }
         if fixture["context_present"] as? Bool == true, fixture["context"] is NSNull, fixture["contexts"] is NSNull || fixture["contexts"] == nil {
             let first = (fixture["items"] as! [Any])[0]
-            input = .json(InputRequestInputJson(value: try value(["item": first, "context": NSNull()])))
+            input = .json(InputJson(value: try value(["item": first, "context": NSNull()])))
             options["field"] = ["/item"]
             options["context_field"] = "/context"
         }
-        let typedOptions = Presence.value(try InputRequestOptions.read(value(options)))
+        let typedOptions = Presence.value(try Options.read(value(options)))
         let incremental = fixture["incremental"] as? Bool == true
         let worker = Task {
             if incremental, case .records(let records) = input {
-                let feed = AsyncThrowingStream<InputRequestSessionDescriptor, any Error> { continuation in
-                    for item in records.items { continuation.yield(InputRequestSessionDescriptor(item: item)) }
+                let feed = AsyncThrowingStream<SessionDescriptor, any Error> { continuation in
+                    for item in records.items { continuation.yield(SessionDescriptor(item: item)) }
                     continuation.finish()
                 }
-                let call = InputRequestCall(function: .decide, input: .feed(InputRequestInputFeed(name: "records")), options: typedOptions, question: question)
-                return try await client.execute(InputRequest(call: call, schema: .thinkthenRequest_1), feed: feed)
+                let call = CallRequest(function: .decide, input: .feed(InputFeed(name: "records")), options: typedOptions, question: question)
+                return try await client.execute(Request(call: call, schema: .thinkthenRequest_1), feed: feed)
             }
             switch verb {
             case "decide": return try await client.decide(question, input: input, options: typedOptions)

@@ -18,7 +18,7 @@ public struct JSONNumber: Sendable, Equatable {
     init(unchecked rawValue: String) { self.rawValue = rawValue }
 }
 
-public protocol JSONRepresentable: Sendable {
+protocol JSONRepresentable: Sendable {
     static func read(_ json: JSONValue) throws -> Self
     var json: JSONValue { get }
 }
@@ -46,9 +46,9 @@ public struct JSONValue: JSONRepresentable, Equatable {
     public static func object(_ value: [String: JSONValue]) -> JSONValue { JSONValue(.object(value)) }
     public static func orderedObject(_ value: [JSONMember]) -> JSONValue { JSONValue(.orderedObject(value)) }
     public static func == (left: JSONValue, right: JSONValue) -> Bool { left.kind == right.kind }
-    public static func read(_ json: JSONValue) throws -> JSONValue { json }
-    public var json: JSONValue { self }
-    public static func parse(_ data: Data) throws -> JSONValue {
+    static func read(_ json: JSONValue) throws -> JSONValue { json }
+    var json: JSONValue { self }
+    static func parse(_ data: Data) throws -> JSONValue {
         try requireNativePackage()
         var owner: OpaquePointer?
         try data.withUnsafeBytes { raw in
@@ -59,7 +59,7 @@ public struct JSONValue: JSONRepresentable, Equatable {
         let copied = try nativeValue(owner)
         return JSONValue(copied.kind, original: data)
     }
-    public func data() throws -> Data {
+    func data() throws -> Data {
         func text(_ value: JSONValue) throws -> String {
             if let original = value.original { return String(decoding: original, as: UTF8.self) }
             switch value.kind {
@@ -145,46 +145,46 @@ func writePresence<T: JSONRepresentable>(_ value: Presence<T>, _ key: String, _ 
 }
 
 extension String: JSONRepresentable {
-    public static func read(_ json: JSONValue) throws -> String {
+    static func read(_ json: JSONValue) throws -> String {
         guard case .string(let value) = json.kind else { throw JSONConversionError("Expected JSON string") }; return value
     }
-    public var json: JSONValue { .string(self) }
+    var json: JSONValue { .string(self) }
 }
 extension Bool: JSONRepresentable {
-    public static func read(_ json: JSONValue) throws -> Bool {
+    static func read(_ json: JSONValue) throws -> Bool {
         guard case .bool(let value) = json.kind else { throw JSONConversionError("Expected JSON boolean") }; return value
     }
-    public var json: JSONValue { .bool(self) }
+    var json: JSONValue { .bool(self) }
 }
 extension Int64: JSONRepresentable {
-    public static func read(_ json: JSONValue) throws -> Int64 {
+    static func read(_ json: JSONValue) throws -> Int64 {
         guard case .number(let value) = json.kind, let parsed = Int64(value.rawValue) else { throw JSONConversionError("Expected signed JSON integer") }; return parsed
     }
-    public var json: JSONValue { .number(JSONNumber(unchecked: String(self))) }
+    var json: JSONValue { .number(JSONNumber(unchecked: String(self))) }
 }
 extension UInt64: JSONRepresentable {
-    public static func read(_ json: JSONValue) throws -> UInt64 {
+    static func read(_ json: JSONValue) throws -> UInt64 {
         guard case .number(let value) = json.kind, let parsed = UInt64(value.rawValue) else { throw JSONConversionError("Expected unsigned JSON integer") }; return parsed
     }
-    public var json: JSONValue { .number(JSONNumber(unchecked: String(self))) }
+    var json: JSONValue { .number(JSONNumber(unchecked: String(self))) }
 }
 extension Double: JSONRepresentable {
-    public static func read(_ json: JSONValue) throws -> Double {
+    static func read(_ json: JSONValue) throws -> Double {
         guard case .number(let value) = json.kind, let parsed = Double(value.rawValue), parsed.isFinite else { throw JSONConversionError("Expected finite JSON number") }; return parsed
     }
-    public var json: JSONValue { .number(JSONNumber(unchecked: String(self))) }
+    var json: JSONValue { .number(JSONNumber(unchecked: String(self))) }
 }
 extension Optional: JSONRepresentable where Wrapped: JSONRepresentable {
-    public static func read(_ json: JSONValue) throws -> Self { json == .null ? nil : try Wrapped.read(json) }
-    public var json: JSONValue { self?.json ?? .null }
+    static func read(_ json: JSONValue) throws -> Self { json == .null ? nil : try Wrapped.read(json) }
+    var json: JSONValue { self?.json ?? .null }
 }
 extension Array: JSONRepresentable where Element: JSONRepresentable {
-    public static func read(_ json: JSONValue) throws -> Self {
+    static func read(_ json: JSONValue) throws -> Self {
         guard case .array(let values) = json.kind else { throw JSONConversionError("Expected JSON array") }; return try values.map(Element.read)
     }
-    public var json: JSONValue { .array(map(\.json)) }
+    var json: JSONValue { .array(map(\.json)) }
 }
 extension Dictionary: JSONRepresentable where Key == String, Value: JSONRepresentable {
-    public static func read(_ json: JSONValue) throws -> Self { try jsonObject(json).mapValues(Value.read) }
-    public var json: JSONValue { .object(mapValues(\.json)) }
+    static func read(_ json: JSONValue) throws -> Self { try jsonObject(json).mapValues(Value.read) }
+    var json: JSONValue { .object(mapValues(\.json)) }
 }

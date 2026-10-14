@@ -66,7 +66,7 @@ try:
     if apple and os.environ.get('THINKTHEN_COVERAGE_INITIALIZER'):
         profile_link = ['-Xlinker', os.environ['THINKTHEN_COVERAGE_INITIALIZER'],
                         '-Xlinker', '-u', '-Xlinker', '___llvm_profile_runtime']
-    built = subprocess.run(base + [str(swift) if apple else '/swift/usr/bin/swift', 'build', '--jobs', '2'] + profile_link, cwd=work / 'consumer', env=env, capture_output=True, timeout=300)
+    built = subprocess.run([sys.executable, str(ROOT / 'sdlc/scripts/build-admission.py'), '--lock', '/tmp/thinkthen-heavy.lock', '--'] + base + [str(swift) if apple else '/swift/usr/bin/swift', 'build', '--jobs', '2'] + profile_link, cwd=work / 'consumer', env=env, capture_output=True, timeout=300)
     (args.out / 'installed-build.log').write_bytes(built.stdout + built.stderr)
     assert built.returncode == 0, (built.stdout + built.stderr)[-5000:]
     resolution = json.loads((work / 'consumer/Package.resolved').read_text())

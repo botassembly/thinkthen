@@ -2,33 +2,35 @@ import Foundation
 import ThinkThen
 
 @main enum Example {
-    static func definition(_ value: InputRequestDefinition) -> InputRequestQuestion {
-        .definition(InputRequestQuestionDefinition(value: value))
+    static func definition(_ value: Definition) -> Question {
+        .definition(QuestionDefinition(value: value))
     }
     static func main() async throws {
         let client = try Client()
         defer { client.close() }
-        let question = InputRequestQuestion.text("Is it?")
-        let input = InputRequestInput.text("text")
-        let records = InputRequestInput.records(InputRequestInputRecords(items: [.text("alpha"), .text("beta")]))
+        let question = Question.text("Is it?")
+        let input = Input.text("text")
+        let records = Input.records(InputRecords(items: [.text("alpha"), .text("beta")]))
         print(try await client.decideAnswer(question, input: input) as Any)
-        let choices = InputOrderedMap<InputAuthoredDescription>([.init("billing", .alternative3(.null)), .init("shipping", .alternative3(.null)), .init("account", .alternative3(.null)), .init("fraud", .alternative3(.null)), .init("returns", .alternative3(.null))])
-        print(try await client.chooseAnswer(definition(.alternative1(InputRequestDefinitionAuthoredChoose(choose: .alternative0("Which?"), options: .value(.alternative1(choices))))), input: input) as Any)
-        print(try await client.tagAnswer(definition(.alternative2(InputRequestDefinitionAuthoredTag(labels: .value(.alternative0(["a", "b"])), tag: .alternative0("Which?")))), input: input))
-        print(try await client.scoreAnswer(definition(.alternative3(InputRequestDefinitionAuthoredScore(levels: .value(.alternative0(["low", "high"])), score: .alternative0("How?")))), input: input))
-        print(try await client.filterAnswer(question, input: records))
-        print(try await client.rankAnswer(question, input: records))
-        print(try await client.findAnswer(.text("Which?"), input: .units(InputRequestInputUnits(items: [.text("alpha"), .text("beta")]))))
-        let questions = InputOrderedMap<InputAnnotateQuestion>([.init("billing", .alternative0(InputAnnotateQuestionDecide(decide: .alternative0("Is billing?")))), .init("shipping", .alternative0(InputAnnotateQuestionDecide(decide: .alternative0("Is shipping?")))), .init("account", .alternative0(InputAnnotateQuestionDecide(decide: .alternative0("Is account?")))), .init("fraud", .alternative0(InputAnnotateQuestionDecide(decide: .alternative0("Is fraud?")))), .init("returns", .alternative0(InputAnnotateQuestionDecide(decide: .alternative0("Is returns?"))))])
-        print(try await client.annotateAnswer(definition(.alternative7(InputRequestDefinitionAnnotateDefinition(questions: questions))), input: .records(InputRequestInputRecords(items: [.text("text")]))))
-        let kinds = InputOrderedMap<InputAuthoredDescription>([.init("person", .alternative3(.null)), .init("organization", .alternative3(.null)), .init("location", .alternative3(.null)), .init("product", .alternative3(.null)), .init("event", .alternative3(.null))])
-        print(try await client.recognizeAnswer(definition(.alternative6(InputRequestDefinitionRecognizeDefinition(recognize: InputRecognizeQuestion(kinds: .value(kinds))))), input: .text("Ana Lima")))
-        let relations = InputRelateQuestion(relations: [InputAuthoredRelation(name: "knows", source: .value("person"), target: .value("person"))])
-        let entities = InputRequestInput.entities(InputRequestInputEntities(items: [
-            InputRequestItem(original: .value(.json(InputRequestOriginalJson(value: .object(["name": .string("Ana"), "kind": .string("person")]))))),
-            InputRequestItem(original: .value(.json(InputRequestOriginalJson(value: .object(["name": .string("Bob"), "kind": .string("person")])))))
+        let choices = OrderedMap<AuthoredDescription>([.init("billing", .null), .init("shipping", .null), .init("account", .null), .init("fraud", .null), .init("returns", .null)])
+        print(try await client.chooseAnswer(definition(.choose(AuthoredChoose(choose: .string("Which?"), options: .value(.object(choices))))), input: input) as Any)
+        print(try await client.tagAnswer(definition(.tag(AuthoredTag(labels: .value(.list(["a", "b"])), tag: .string("Which?")))), input: input))
+        print(try await client.scoreAnswer(definition(.score(AuthoredScore(levels: .value(.list(["low", "high"])), score: .string("How?")))), input: input))
+        let filtered: [JSONValue] = try await client.filterAnswer(question, input: records)
+        print(filtered)
+        let ranked: [UInt64] = try await client.rankAnswer(question, input: records)
+        print(ranked)
+        print(try await client.findAnswer(.text("Which?"), input: .units(InputUnits(items: [.text("alpha"), .text("beta")]))))
+        let questions = OrderedMap<AnnotateQuestion>([.init("billing", .decide(AnnotateQuestionDecide(decide: .string("Is billing?")))), .init("shipping", .decide(AnnotateQuestionDecide(decide: .string("Is shipping?")))), .init("account", .decide(AnnotateQuestionDecide(decide: .string("Is account?")))), .init("fraud", .decide(AnnotateQuestionDecide(decide: .string("Is fraud?")))), .init("returns", .decide(AnnotateQuestionDecide(decide: .string("Is returns?"))))])
+        print(try await client.annotateAnswer(definition(.questions(AnnotateDefinition(questions: questions))), input: .records(InputRecords(items: [.text("text")]))))
+        let kinds = OrderedMap<AuthoredDescription>([.init("person", .null), .init("organization", .null), .init("location", .null), .init("product", .null), .init("event", .null)])
+        print(try await client.recognizeAnswer(definition(.recognize(RecognizeDefinition(recognize: RecognizeQuestion(kinds: .value(kinds))))), input: .text("Ana Lima")))
+        let relations = RelateQuestion(relations: [AuthoredRelation(name: "knows", source: .value("person"), target: .value("person"))])
+        let entities = Input.entities(InputEntities(items: [
+            Item(original: .value(.json(OriginalJson(value: .object(["name": .string("Ana"), "kind": .string("person")]))))),
+            Item(original: .value(.json(OriginalJson(value: .object(["name": .string("Bob"), "kind": .string("person")])))))
         ]))
-        let relation = try await client.relateAnswer(definition(.alternative4(InputRequestDefinitionAuthoredRelate(relate: relations))), input: entities)
+        let relation = try await client.relateAnswer(definition(.relate(AuthoredRelate(relate: relations))), input: entities)
         print(relation)
         if let edge = relation.value.first { print(try edge.sourceName().value as Any, try edge.targetName().value as Any) }
     }

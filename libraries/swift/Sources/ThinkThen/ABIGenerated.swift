@@ -1,7 +1,7 @@
 // Generated from the compiler-derived C header. Do not edit.
 import CThinkThen
 
-public enum QuestionGrammar: UInt32, Sendable {
+enum QuestionGrammar: UInt32, Sendable {
   case `atomic` = 1
   case `dynamicChoose` = 3
   case `find` = 8
@@ -17,7 +17,7 @@ public enum UsagePersistenceState: UInt32, Sendable {
   case `pending` = 2
   case `written` = 3
 }
-func nativeFailureKind(_ code: Int32) -> OwnedFailureKind {
+func nativeFailureKind(_ code: Int32) -> FailureKind {
   switch code {
   case 2: return .`backend`
   case 5: return .`cancelled`
@@ -29,10 +29,10 @@ func nativeFailureKind(_ code: Int32) -> OwnedFailureKind {
   }
 }
 extension Client {
-  public func finishUsageStatus() throws -> OwnedUsagePersistenceStatus {
+  public func finishUsageStatus() throws -> UsagePersistenceStatus {
     try usage(thinkthen_engine_finish_usage_status_v1)
   }
-  public func usagePersistence() throws -> OwnedUsagePersistenceStatus {
+  public func usagePersistence() throws -> UsagePersistenceStatus {
     try usage(thinkthen_engine_usage_persistence_v1)
   }
 }
