@@ -177,6 +177,7 @@ for verb,question in questions.items():
     assert rows[0][3] is not None and rows[2][3] is not None,rows
     assert rows[1][1] is None and rows[1][3] is None and rows[1][4] is not None,rows
     reader=Read(db,verb,question,{'records':records},None)
+    reader.fields={'request_question':question,'request_records':items}
     failure=reader.object('error',rows[1][4])
     assert failure['kind']=='backend' and failure['retryable'] is False,failure
     assert 'private evidence' not in json.dumps(failure),failure

@@ -574,6 +574,10 @@ pub(crate) const PROJECTIONS: &[Projection] = &[
         union: false,
         fields: &[
             Field {
+                name: "cause",
+                shape: Shape::Scalar(Scalar::Text),
+            },
+            Field {
                 name: "estimated_input_denial",
                 shape: Shape::Object("input_budget_denial"),
             },
@@ -2722,4 +2726,4 @@ pub(crate) const PROJECTIONS: &[Projection] = &[
         ],
     },
 ];
-pub(crate) const COLUMN_COUNT: usize = 1273;
+pub(crate) const COLUMN_COUNT: usize = 1275;

@@ -33,7 +33,6 @@ pub(super) fn execute(db: *mut sqlite3, invocation: Invocation) -> Result<Receip
         keys,
         ids,
         details,
-        recover,
         ..
     } = invocation;
     let shared = settings.context().map(str::to_owned);
@@ -41,7 +40,7 @@ pub(super) fn execute(db: *mut sqlite3, invocation: Invocation) -> Result<Receip
         let controls = shared
             .as_deref()
             .map_or(controls, |context| controls.context(context));
-        if details && recover {
+        if details {
             return Ok(sql_request::run_recovering(
                 engine,
                 &prepared,
@@ -77,6 +76,11 @@ pub(super) fn admission(error: &Error) -> Result<Receipt, Failure> {
     )
 }
 
+pub(super) fn admission_details(verb: &str, error: Error) -> Result<Receipt, Failure> {
+    let carrier = details_carrier(verb, complete_native::admission(&error))?;
+    project(verb, carrier, Vec::new(), std::collections::HashMap::new())
+}
+
 fn project(
     verb: &str,
     mut carrier: Json,
@@ -95,8 +99,26 @@ fn project(
         receipt.add("error", error)?;
     }
     let call_facts = carrier.pointer("/native/facts").cloned();
+    let call_error = carrier.pointer("/native/error").cloned();
+    let mut events = std::collections::HashMap::new();
+    for event in carrier
+        .get("observations")
+        .and_then(Json::as_array)
+        .into_iter()
+        .flatten()
+    {
+        let index = receipt.add("event", event)?;
+        events.entry(event.to_string()).or_insert(index);
+    }
     if let Some(rows) = carrier.get_mut("rows").and_then(Json::as_array_mut) {
-        project_details(&mut receipt, rows, verb, call_facts.as_ref())?;
+        project_details(
+            &mut receipt,
+            rows,
+            verb,
+            call_facts.as_ref(),
+            call_error.as_ref(),
+            &events,
+        )?;
     }
     let completed = carrier.get("completed");
     let value = native.get("value").or(completed);
@@ -121,14 +143,6 @@ fn project(
     if let Some(selection) = carrier.get("selection") {
         receipt.add("find_selection", &json!({"selected":selection}))?;
     }
-    for event in carrier
-        .get("observations")
-        .and_then(Json::as_array)
-        .into_iter()
-        .flatten()
-    {
-        receipt.add("event", event)?;
-    }
     receipt.keys = keys;
     receipt.ids = ids;
     receipt.carrier = carrier;
@@ -145,7 +159,6 @@ pub(super) struct Invocation {
     keys: Vec<String>,
     ids: crate::tables::Ids,
     details: bool,
-    recover: bool,
 }
 
 pub(super) fn prepare(
@@ -241,7 +254,6 @@ pub(super) fn prepare(
         inputs,
         settings,
         details,
-        recover: args.supplied("request_records"),
         keys: input::keys(args)?,
         ids,
     })
@@ -350,6 +362,8 @@ fn project_details(
     rows: &mut [Json],
     verb: &str,
     call_facts: Option<&Json>,
+    call_error: Option<&Json>,
+    events: &std::collections::HashMap<String, i64>,
 ) -> Result<(), Failure> {
     for row in rows {
         for (field, kind) in [
@@ -360,7 +374,9 @@ fn project_details(
             let Some(value) = row.get(field).filter(|value| !value.is_null()).cloned() else {
                 continue;
             };
-            let index = if field == "facts" && call_facts == Some(&value) {
+            let index = if (field == "facts" && call_facts == Some(&value))
+                || (field == "failure" && call_error == Some(&value))
+            {
                 0
             } else {
                 receipt.add(kind, &value)?
@@ -368,17 +384,16 @@ fn project_details(
             if field == "result" {
                 receipt.add(
                     "record_order",
-                    &json!({"ordinal":row.get("ordinal"),"result_index":index,"completed":false}),
+                    &json!({"ordinal":row.get("ordinal"),"result_index":index,"completed":call_error.is_some()}),
                 )?;
             }
             complete_native::put(row, field, json!(index))?;
         }
-        if let Some(events) = row.get("observations").and_then(Json::as_array).cloned() {
-            let mut first = None;
-            for event in events {
-                let index = receipt.add("event", &event)?;
-                first.get_or_insert(index);
-            }
+        if let Some(observations) = row.get("observations").and_then(Json::as_array) {
+            let first = observations
+                .first()
+                .and_then(|event| events.get(&event.to_string()))
+                .copied();
             complete_native::put(row, "observations", json!(first))?;
         }
     }

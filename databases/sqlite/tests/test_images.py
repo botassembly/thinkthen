@@ -74,7 +74,7 @@ say(value=complete(db, 'decide', 'Is red visible?', packed, None))
                [(row['value'], row['answer_id'], row['input']) for row in got['native']['value']], 'strict complete replay values')
         expect(replay['native']['facts']['requests_sent'], 0, 'strict replay sends nothing')
         invalid = child(STORED.replace('images.sqlite', 'complete-invalid.sqlite') + '''
-say(nulls=[run(db, 'SELECT value FROM thinkthen_decide(?, ?, ?)', args) for args in [(None,b'bad','bad'),('@unread-question.json',None,'bad')]],
+say(nulls=[run(db, 'SELECT value FROM thinkthen_decide_details(?, ?, ?)', args) for args in [(None,b'bad','bad'),('@unread-question.json',None,'bad')]],
  bad=[complete(db, 'decide', *('Is red visible?', value))['native']['error']['kind'] for value in [b'bad', packed+b'x']])
 ''', env)
         expect(invalid['nulls'], [[], []], 'NULL ignores malformed partners')

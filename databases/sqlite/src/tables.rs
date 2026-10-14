@@ -85,6 +85,9 @@ pub(crate) fn plan<T: Table>(info: &mut IndexInfo) -> Result<bool, Failure> {
         else {
             continue;
         };
+        if T::NAME.ends_with("_details") && !constraint.is_usable() && column < bound.len() {
+            return Ok(false);
+        }
         if !constraint.is_usable()
             || constraint.operator() != IndexConstraintOp::SQLITE_INDEX_CONSTRAINT_EQ
         {

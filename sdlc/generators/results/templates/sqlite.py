@@ -3,16 +3,11 @@ import json
 from pathlib import Path
 import sys
 
-from postgresql import Composite, ROOTS
+from postgresql import Composite, ROOTS, sql_schema
 
 
 def render(schema):
-    schema['$defs']['postgresqlObservedInput'] = {'type': 'object', 'properties': {
-        'input': True, 'source': {'$ref': '#/$defs/completePhysicalSource'},
-        'images': {'type': 'array', 'items': {'$ref': '#/$defs/completeImage'}}}}
-    schema['$defs']['completesessionObservation']['oneOf'][0]['properties']['inputs'] = {
-        'type': 'array', 'items': {'$ref': '#/$defs/postgresqlObservedInput'}}
-    schema['$defs']['completesessionObservation']['oneOf'][1]['properties']['value'] = True
+    schema = sql_schema(schema)
     model = Composite(schema['$defs'])
     for root in (*ROOTS, 'completesessionQuestionDetail'):
         model.shape({'$ref': '#/$defs/' + root}, root)

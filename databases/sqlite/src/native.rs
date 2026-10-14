@@ -178,7 +178,7 @@ impl<T: Verb> Table for Native<T> {
             {
                 return Err(error.into());
             }
-            Err(error) if T::DETAILS => return Err(error.into()),
+            Err(error) if T::DETAILS => Arc::new(run::admission_details(T::VERB, error)?),
             Err(error) => Arc::new(run::admission(&error)?),
             Ok(invocation) => cached::<T>(db, invocation, selection.is_none(), store)?,
         };
@@ -203,6 +203,10 @@ impl<T: Verb> Table for Native<T> {
                 let detail = receipt.projected("question_detail", Self::COLUMNS)?;
                 overlay(&mut rows, &detail, &[]);
             }
+        }
+        if selection.is_some() {
+            let facts = receipt.projected("facts", Self::COLUMNS)?;
+            overlay(&mut rows, &facts, &[]);
         }
         if selection.is_none() && !matches!(args.value("lookup_key"), ValueRef::Null) {
             rows.retain(|row| {
@@ -412,6 +416,9 @@ fn record_arguments(mut args: Arguments) -> Result<Arguments, Failure> {
         return Ok(args);
     }
     for field in ["text", "body", "keyed_json", "paths", "query"] {
+        if matches!(args.value(field), ValueRef::Blob(_)) {
+            continue;
+        }
         let Some(value) = args.text(field)? else {
             continue;
         };

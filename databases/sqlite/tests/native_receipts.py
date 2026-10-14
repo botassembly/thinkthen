@@ -5,15 +5,10 @@ import sys
 
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / 'sdlc/generators/results/templates'))
-from postgresql import Composite, ROOTS
+from postgresql import Composite, ROOTS, sql_schema
 
 SCHEMA = json.loads((ROOT / 'crates/thinkthen/src/public/results/complete.schema.json').read_text())
-SCHEMA['$defs']['postgresqlObservedInput'] = {'type': 'object', 'properties': {
-    'input': True, 'source': {'$ref': '#/$defs/completePhysicalSource'},
-    'images': {'type': 'array', 'items': {'$ref': '#/$defs/completeImage'}}}}
-SCHEMA['$defs']['completesessionObservation']['oneOf'][0]['properties']['inputs'] = {
-    'type': 'array', 'items': {'$ref': '#/$defs/postgresqlObservedInput'}}
-SCHEMA['$defs']['completesessionObservation']['oneOf'][1]['properties']['value'] = True
+SCHEMA = sql_schema(SCHEMA)
 MODEL = Composite(SCHEMA['$defs'])
 for name in (*ROOTS, 'completesessionQuestionDetail'):
     MODEL.shape({'$ref': '#/$defs/' + name}, name)

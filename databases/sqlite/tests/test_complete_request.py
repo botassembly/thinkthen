@@ -26,7 +26,7 @@ for verb, question, inputs in cases:
 for inputs in ({'records':[], 'incremental':None},):
     value=complete(db,'decide','@missing-saved-question.json',json.dumps(inputs))
     assert value['native']['error']['kind']=='usage', value
-assert run(db,"SELECT value FROM thinkthen_decide WHERE request_question=? AND request_records=? AND unknown=?",('@missing-saved-question.json','[]',1)) == 'no such column: unknown'
+assert run(db,"SELECT value FROM thinkthen_decide_details WHERE request_question=? AND request_records=? AND unknown=?",('@missing-saved-question.json','[]',1)) == 'no such column: unknown'
 say(results=results)
 ''', environment(backend))
     expect(got['results'], ['usage'] * 6, 'shared complete admission')
