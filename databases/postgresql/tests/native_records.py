@@ -107,7 +107,9 @@ def main():
                 assert set(plan['estimated_input_tokens']) == {'lower', 'upper'}, plan
                 assert plan['estimated_input_tokens']['upper'] >= plan['estimated_input_tokens']['lower'] > 0, plan
                 assert isinstance(plan['upper_bound'], bool), plan
-                assert json.loads(plan['first_body_utf8'])['state'] == 'Alpha.', plan
+                body = json.loads(plan['first_body_utf8'])
+                assert body['model'] == 'jev-1.13.0' and body['questions'], plan
+                assert 'Alpha.' in json.dumps(body), plan
             unsupported = {
                 'find': 'Fits?',
                 'annotate': json.dumps({'version': 1, 'questions': {'fit': {'decide': 'Fits?'}}}),
