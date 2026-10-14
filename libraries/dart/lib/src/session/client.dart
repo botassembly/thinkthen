@@ -30,7 +30,7 @@ final class StreamCleanupFailure implements Exception {
   String toString() => 'Input stream cleanup failed: $cause';
 }
 
-final class OwnedCall with CallAnswers {
+final class OwnedCall {
   final List<SessionPacket> packets;
   final SessionPacketTerminal terminal;
   OwnedCall(List<SessionPacket> packets, this.terminal)

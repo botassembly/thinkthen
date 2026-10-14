@@ -11,16 +11,14 @@ Future<void> main() async {
   ];
   final call = await engine.find(
     QuestionText(text: question),
-    InputUnits(items: [
-      for (final line in policy)
-        Item(
-          original: Presence.present(
-            OriginalText(text: line),
-          ),
-        ),
-    ]),
+    InputUnits(
+      items: [
+        for (final line in policy)
+          Item(original: Presence.present(OriginalText(text: line))),
+      ],
+    ),
   );
-  final refundDeadline = call.findAnswer().value;
+  final refundDeadline = call.value;
   assert(refundDeadline == policy[1]);
   engine.close();
 }

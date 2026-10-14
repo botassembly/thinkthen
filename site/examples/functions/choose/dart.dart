@@ -11,14 +11,11 @@ Future<void> main() async {
   const parcel = 'My parcel went to the wrong address.';
   final call = await engine.choose(
     DefinedQuestion(
-      value: Definition.read({
-        'choose': question,
-        'options': teams,
-      }),
+      value: Definition.read({'choose': question, 'options': teams}),
     ),
     InputText(text: parcel),
   );
-  final team = call.chooseAnswer();
+  final team = call.value;
   assert(team == 'shipping');
   engine.close();
 }

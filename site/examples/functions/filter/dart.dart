@@ -12,19 +12,16 @@ Future<void> main() async {
   ];
   final call = await engine.filter(
     QuestionText(text: question),
-    InputRecords(items: [
-      for (final review in reviews)
-        Item(
-          original: Presence.present(
-            OriginalText(text: review),
-          ),
-        ),
-    ]),
+    InputRecords(
+      items: [
+        for (final review in reviews)
+          Item(original: Presence.present(OriginalText(text: review))),
+      ],
+    ),
   );
-  final complaints = call.filterAnswer();
-  assert(const ListEquality<Object?>().equals(
-    complaints,
-    [reviews[1], reviews[3]],
-  ));
+  final complaints = call.value;
+  assert(
+    const ListEquality<Object?>().equals(complaints, [reviews[1], reviews[3]]),
+  );
   engine.close();
 }

@@ -5,22 +5,23 @@ Future<void> main() async {
   final engine = Engine.open();
   const question = 'Which labels fit this message?';
   const labels = ['praise', 'bug', 'billing'];
-  const message = 'Love the new dashboard, '
+  const message =
+      'Love the new dashboard, '
       'but export crashes the app,\n'
       'and I was charged twice.\n';
   final call = await engine.tag(
     DefinedQuestion(
-      value: Definition.read({
-        'tag': question,
-        'labels': labels,
-      }),
+      value: Definition.read({'tag': question, 'labels': labels}),
     ),
     InputText(text: message),
   );
-  final fittingLabels = call.tagAnswer();
-  assert(const ListEquality<String>().equals(
-    fittingLabels,
-    ['praise', 'bug', 'billing'],
-  ));
+  final fittingLabels = call.value as List<String>;
+  assert(
+    const ListEquality<String>().equals(fittingLabels, [
+      'praise',
+      'bug',
+      'billing',
+    ]),
+  );
   engine.close();
 }
