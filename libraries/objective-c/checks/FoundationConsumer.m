@@ -45,6 +45,34 @@ int main(int argc, const char *argv[]) {
         require(usage.state == TTUsagePersistenceWritten && usage.advice == nil);
         require(retained.facts.state == TTPresenceValue);
         require([retained decideAnswer:&error].state == TTPresenceValue && error == nil);
+        // Authored finite numbers survive native copying beyond decimal's exponent range.
+        client = [[TTFoundationClient alloc] initWithSettings:nil error:&error];
+        for (NSNumber *number in @[@(1e308), @(1e-308)]) {
+            TTJSONInput *numericInput = [TTJSONInput new]; numericInput.value = number;
+            arguments.function = TTFunctionFilter; arguments.input = numericInput;
+            TTPlan *numericPlan = [client plan:request error:&error];
+            require(numericPlan != nil && error == nil && numericPlan.records.value.unsignedIntegerValue == 1);
+            require(numericPlan.requests.value.unsignedIntegerValue == 1 && numericPlan.firstBodyUtf8.state == TTPresenceValue);
+            __block TTCall *numericCall = nil;
+            task = [client filter:question input:numericInput options:nil feed:nil completion:^(TTCall *call, NSError *failure) {
+                require(call != nil && failure == nil); numericCall = call; dispatch_semaphore_signal(completed);
+            } error:&error];
+            require(task != nil && error == nil);
+            require(dispatch_semaphore_wait(completed, dispatch_time(DISPATCH_TIME_NOW, 4 * NSEC_PER_SEC)) == 0);
+            task = nil;
+            NSArray *answer = [numericCall filterAnswer:&error];
+            require(error == nil && answer.count == 1 && [answer[0] doubleValue] == number.doubleValue);
+            require(numericCall.facts.value.requestsSent.value.unsignedIntegerValue == 1);
+            BOOL found = NO;
+            for (TTSessionPacket *packet in numericCall.packets) if ([packet isKindOfClass:TTSessionPacketFilterRow.class]) {
+                TTFilteredRecord *row = ((TTSessionPacketFilterRow *)packet).value.value;
+                require(row.input.state == TTPresenceValue && [row.input.value doubleValue] == number.doubleValue);
+                require(row.value.state == TTPresenceValue && row.value.value.doubleValue >= 0.8);
+                found = YES;
+            }
+            require(found);
+        }
+        client = nil;
         // A new client and unrelated host work progress while a provider is held.
         client = [[TTFoundationClient alloc] initWithSettings:nil error:&error];
         dispatch_semaphore_t cancelled = dispatch_semaphore_create(0);
