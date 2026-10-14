@@ -99,7 +99,14 @@ int main(int argc, const char *argv[]) {
                 require([decision.value.scalar isEqual:@NO] && decision.probability.scalar.doubleValue == .1);
             } else require(decision.value.scalar == nil && decision.probability == nil);
         }
-        NSArray *authored = @[NSNull.null, @NO, @{@"value":NSNull.null, @"ok":@NO}, @[NSNull.null, @NO, @"leaf"]];
+        TTAuthoredDecideBuilder *invalidMeaning = [TTAuthoredDecideBuilder new];
+        invalidMeaning.decide = @"Is it?"; invalidMeaning.trueValue = @NO;
+        TTQuestionDefinition *invalidQuestion = [TTQuestionDefinition new]; invalidQuestion.value = invalidMeaning;
+        decisionInput.text = @"authored-bool-objc";
+        require([client decide:invalidQuestion input:decisionInput options:nil feed:nil error:&error] == nil);
+        require([error isKindOfClass:TTFailureError.class] && ((TTFailureError *)error).kind == TTErrorUsage);
+        error = nil;
+        NSArray *authored = @[NSNull.null, @{@"value":NSNull.null, @"ok":@NO}, @[NSNull.null, @NO, @"leaf"]];
         NSMutableArray<TTCall *> *authoredCalls = [NSMutableArray array];
         for (NSUInteger index = 0; index < authored.count; index++) {
             TTAuthoredDecideBuilder *definition = [TTAuthoredDecideBuilder new];
