@@ -101,6 +101,24 @@ def annotation(source):
     return {'null': 'None', 'boolean': 'bool', 'string': 'str', 'integer': 'int', 'number': 'float'}.get(kind, 'Any')
 
 
+def column_schema(source):
+    """Describe column members once from the same native result graph."""
+    if not isinstance(source, dict): return None
+    if '$ref' in source:
+        key = source['$ref'].removeprefix('#/$defs/')
+        return ('ref', key)
+    if 'properties' in source:
+        return {key: column_schema(value) for key, value in source['properties'].items()}
+    alternatives = source.get('anyOf', source.get('oneOf', []))
+    choices = [column_schema(value) for value in alternatives if value.get('type') != 'null']
+    if choices: return choices[0] if len(choices) == 1 or all(value == choices[0] for value in choices) else None
+    kind = source.get('type')
+    if isinstance(kind, list):
+        kind = next((value for value in kind if value != 'null'), None)
+    if kind == 'array': return [column_schema(source.get('items'))]
+    return kind if kind in ('boolean', 'string', 'integer', 'number') else None
+
+
 def types(definitions, stubs=False):
     lines = ['# Generated from the shared Rust result graph; do not edit.',
              'from ._thinkthen import _NativeResult',
@@ -114,9 +132,13 @@ def types(definitions, stubs=False):
                  '    def __bool__(self) -> bool: ...',
                  '    def keys(self) -> list[str]: ...',
                  '    def to_dict(self) -> dict[str, Any]: ...']
+    if not stubs:
+        lines += ['', '_COLUMN_SCHEMAS = ' + repr({key: column_schema(source) for key, source in definitions.items()})]
     for key, source in definitions.items():
         if 'properties' in source:
             lines += ['', f'class {name(key)}(_NativeResult):', '    __slots__ = ()']
+            if not stubs:
+                lines.append('    _column_schema = _COLUMN_SCHEMAS[' + repr(key) + ']')
             if stubs:
                 for member, field in source['properties'].items():
                     if member.isidentifier():
