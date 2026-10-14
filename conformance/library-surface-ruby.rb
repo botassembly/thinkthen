@@ -85,31 +85,40 @@ end
 def lexical_owners(node, owner, owners, directives, visibility, executed = true)
   return unless node.is_a?(Array)
   return if %i[string_literal xstring_literal regexp_literal dyna_symbol].include?(node[0])
+  # Only statement lists and supported declaration bodies grant visibility.
+  # Expressions and unsupported control flow still supply lexical owners.
   constant_privacy(node, owner, directives) if executed
   method_privacy(node, owner, visibility) if executed
   if node[0].to_s.start_with?('@')
     owners[node[2][0]] = owner
+  elsif node[0].is_a?(Array) || node[0] == :program
+    node.each { |child| lexical_owners(child, owner, owners, directives, visibility, executed) if child.is_a?(Array) }
+  elsif node[0] == :bodystmt
+    lexical_owners(node[1], owner, owners, directives, visibility, executed)
+    node.drop(2).each { |child| lexical_owners(child, owner, owners, directives, visibility, false) }
+  elsif %i[do_block brace_block].include?(node[0])
+    lexical_owners(node[1], owner, owners, directives, visibility, false)
+    lexical_owners(node[2], owner, owners, directives, visibility, executed)
   elsif node[0] == :assign && node[2].is_a?(Array) && node[2][0] == :method_add_block &&
         constant_path(node[1]) && builder_block?(node[2])
     lexical_owners(node[1], owner, owners, directives, visibility, executed)
-    lexical_owners(node[2][1], owner, owners, directives, visibility, executed)
+    lexical_owners(node[2][1], owner, owners, directives, visibility, false)
     nested = [owner, constant_path(node[1])].reject(&:empty?).join('::')
     lexical_owners(node[2][2], nested, owners, directives, visibility, executed)
   elsif %i[class module].include?(node[0])
     lexical_owners(node[1], owner, owners, directives, visibility, executed)
     name = constant_path(node[1])
     nested = name.start_with?('::') ? name.delete_prefix('::') : [owner, name].reject(&:empty?).join('::')
-    lexical_owners(node[2], owner, owners, directives, visibility, executed) if node[0] == :class
+    lexical_owners(node[2], owner, owners, directives, visibility, false) if node[0] == :class
     lexical_owners(node[-1], nested, owners, directives, visibility, executed)
   elsif node[0] == :sclass
     lexical_owners(node[1], owner, owners, directives, visibility, executed)
     lexical_owners(node[2], owner + '::<singleton>', owners, directives, visibility, executed)
   elsif node[0] == :method_add_block
-    lexical_owners(node[1], owner, owners, directives, visibility, executed)
+    lexical_owners(node[1], owner, owners, directives, visibility, false)
     lexical_owners(node[2], owner, owners, directives, visibility, false)
   else
-    executed = false if %i[def defs lambda].include?(node[0])
-    node.each { |child| lexical_owners(child, owner, owners, directives, visibility, executed) if child.is_a?(Array) }
+    node.each { |child| lexical_owners(child, owner, owners, directives, visibility, false) if child.is_a?(Array) }
   end
 end
 owners, directives, visibility = {}, [], {}
