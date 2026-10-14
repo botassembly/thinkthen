@@ -108,7 +108,7 @@ static NSData *TTEncode(id object, NSError **error) {
     struct thinkthen_session *retained = _native; _waiters++;
     [_lock unlock];
     uint32_t ready = 0;
-    BOOL ok = TTCheck(thinkthen_session_wait(retained, input ? THINKTHEN_SESSION_WAIT_INPUT_V1 : THINKTHEN_SESSION_WAIT_SETTLEMENT_V1, 50, &ready), error);
+    BOOL ok = TTCheck(thinkthen_session_wait(retained, input ? THINKTHEN_SESSION_WAIT_INPUT_V1 : THINKTHEN_SESSION_WAIT_RESULT_V1, UINT32_MAX, &ready), error);
     [_lock lock]; _waiters--;
     if (_closed && !_waiters) { thinkthen_session_free(_native); _native = NULL; }
     [_lock unlock]; return ok;
