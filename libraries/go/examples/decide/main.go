@@ -23,11 +23,18 @@ func printAnswer[T any](answer T, err error) {
 	case []tt.Annotation:
 		rows := make([]any, len(value))
 		for i, row := range value {
-			authored, err := row.Value().Value.JSONValue()
+			fields, err := row.Value().Value.Value()
 			if err != nil {
 				log.Fatal(err)
 			}
-			rows[i] = authored
+			values := make(map[string]any, len(fields))
+			for name, field := range fields {
+				values[name], err = field.Value()
+				if err != nil {
+					log.Fatal(err)
+				}
+			}
+			rows[i] = values
 		}
 		output = rows
 	case []tt.Recognition:

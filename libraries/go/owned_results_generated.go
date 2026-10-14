@@ -369,6 +369,9 @@ func (v Attempt) Status() Presence[json.Number] { return ownedMember[json.Number
 func (v Attempt) WallMs() Presence[json.Number] { return ownedMember[json.Number](v.raw, "wall_ms") }
 
 type Batch struct{ ownedJSON }
+
+func (v Batch) Value() (any, error) { return v.jsonValue() }
+
 type BoundaryMode struct{ ownedJSON }
 
 func (v BoundaryMode) Value() (string, error) { return ownedDecode[string](v.raw) }
@@ -406,6 +409,9 @@ type CallId struct{ ownedJSON }
 func (v CallId) Value() (string, error) { return ownedDecode[string](v.raw) }
 
 type DecideValue struct{ ownedJSON }
+
+func (v DecideValue) Value() (any, error) { return v.jsonValue() }
+
 type EntityDocument struct{ ownedJSON }
 
 func (v EntityDocument) Kind() Presence[string] { return ownedMember[string](v.raw, "kind") }
@@ -556,6 +562,9 @@ func (v Image) Media() Presence[ResultImageMedia] {
 func (v Image) Width() Presence[json.Number] { return ownedMember[json.Number](v.raw, "width") }
 
 type ResultImageMedia struct{ ownedJSON }
+
+func (v ResultImageMedia) Value() (string, error) { return ownedDecode[string](v.raw) }
+
 type InputDeclaration struct{ ownedJSON }
 
 func (v InputDeclaration) AsInputDeclarationStringRoot() (InputDeclarationStringRoot, error) {
@@ -722,6 +731,9 @@ func (v ObservationObservationId) ObservationId() Presence[ObservationId] {
 }
 
 type Origin struct{ ownedJSON }
+
+func (v Origin) Value() (string, error) { return ownedDecode[string](v.raw) }
+
 type PersistenceObservation struct{ ownedJSON }
 
 func (v PersistenceObservation) Advice() Presence[string] {
@@ -835,6 +847,9 @@ func (v RecognitionEdgeDocument) Target() Presence[Entity] {
 }
 
 type ResultRecognitionMode struct{ ownedJSON }
+
+func (v ResultRecognitionMode) Value() (string, error) { return ownedDecode[string](v.raw) }
+
 type RecognitionOdds struct{ ownedJSON }
 
 func (v RecognitionOdds) AsRecognitionOddsRecognizeAnswer() (RecognitionOddsRecognizeAnswer, error) {
@@ -931,6 +946,9 @@ func (v Relation) Value() Presence[[]RelatedEntityEdge] {
 }
 
 type RelationDirection struct{ ownedJSON }
+
+func (v RelationDirection) Value() (string, error) { return ownedDecode[string](v.raw) }
+
 type RelationEndpoint struct{ ownedJSON }
 
 func (v RelationEndpoint) AsRelationEndpointRelatedEntity() (RelationEndpointRelatedEntity, error) {
@@ -1089,7 +1107,13 @@ func (v RelationMemberFailureId) SourceName() Presence[string] {
 }
 
 type RelationMethod struct{ ownedJSON }
+
+func (v RelationMethod) Value() (string, error) { return ownedDecode[string](v.raw) }
+
 type ResultFunction struct{ ownedJSON }
+
+func (v ResultFunction) Value() (string, error) { return ownedDecode[string](v.raw) }
+
 type SdkRequestId struct{ ownedJSON }
 
 func (v SdkRequestId) Value() (string, error) { return ownedDecode[string](v.raw) }
@@ -1137,6 +1161,9 @@ func (v SendBudgetDenialBeforeRetry) LastStatus() Presence[json.Number] {
 }
 
 type StopCause struct{ ownedJSON }
+
+func (v StopCause) Value() (string, error) { return ownedDecode[string](v.raw) }
+
 type Stopped struct{ ownedJSON }
 
 func (v Stopped) At() Presence[json.Number]     { return ownedMember[json.Number](v.raw, "at") }
@@ -1162,6 +1189,9 @@ func (v Usage) OutputTokens() Presence[json.Number] {
 }
 
 type UsagePersistence struct{ ownedJSON }
+
+func (v UsagePersistence) Value() (string, error) { return ownedDecode[string](v.raw) }
+
 type Verb struct{ ownedJSON }
 
 func (v Verb) Value() (string, error) { return ownedDecode[string](v.raw) }
@@ -1175,7 +1205,15 @@ type WordingVersion struct{ ownedJSON }
 func (v WordingVersion) Value() (json.Number, error) { return ownedDecode[json.Number](v.raw) }
 
 type AnnotatedField struct{ ownedJSON }
+
+func (v AnnotatedField) Value() (any, error) { return v.jsonValue() }
+
 type AnnotatedRow struct{ ownedJSON }
+
+func (v AnnotatedRow) Value() (map[string]AnnotatedField, error) {
+	return ownedDecode[map[string]AnnotatedField](v.raw)
+}
+
 type Answer struct{ ownedJSON }
 
 func (v Answer) AsAnswerYesNo() (AnswerYesNo, error) {
@@ -1240,7 +1278,13 @@ func (v AnswerYesNo) Probability() Presence[json.Number] {
 }
 
 type AttemptOutcome struct{ ownedJSON }
+
+func (v AttemptOutcome) Value() (string, error) { return ownedDecode[string](v.raw) }
+
 type BatchSetting struct{ ownedJSON }
+
+func (v BatchSetting) Value() (any, error) { return v.jsonValue() }
+
 type BatchWarning struct{ ownedJSON }
 
 func (v BatchWarning) Running() Presence[BatchSetting] {
@@ -1284,7 +1328,13 @@ func (v Failure) Cause() Presence[FailureCause] { return ownedMember[FailureCaus
 func (v Failure) Kind() Presence[string]        { return ownedMember[string](v.raw, "kind") }
 
 type FailureCause struct{ ownedJSON }
+
+func (v FailureCause) Value() (string, error) { return ownedDecode[string](v.raw) }
+
 type FailureKind struct{ ownedJSON }
+
+func (v FailureKind) Value() (string, error) { return ownedDecode[string](v.raw) }
+
 type FindAnswer struct{ ownedJSON }
 
 func (v FindAnswer) Confidence() Presence[json.Number] {
@@ -2355,6 +2405,9 @@ func (v SourceRelationEndpoint) Ordinal() Presence[json.Number] {
 func (v SourceRelationEndpoint) Record() Presence[any] { return ownedMember[any](v.raw, "record") }
 
 type Threshold struct{ ownedJSON }
+
+func (v Threshold) Value() (any, error) { return v.jsonValue() }
+
 type TokenBand struct{ ownedJSON }
 
 func (v TokenBand) Lower() Presence[json.Number] { return ownedMember[json.Number](v.raw, "lower") }
@@ -2371,6 +2424,7 @@ func (v TokenUsage) OutputTokens() Presence[json.Number] {
 
 type Value struct{ ownedJSON }
 
+func (v Value) Value() (any, error) { return v.jsonValue() }
 func (v SessionPacket) DecideAnswer() Presence[[]AtomicDecideValue] {
 	if !ownedLiteral(v.raw, "kind", "aggregate") || !ownedLiteral(v.raw, "function", "decide") {
 		return Presence[[]AtomicDecideValue]{Err: errAlternative}

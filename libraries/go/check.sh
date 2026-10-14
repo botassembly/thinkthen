@@ -61,6 +61,9 @@ else
 fi
 # All compile checks target the installed module, whose static asset is bundled.
 (cd "$module" && compile "$go_bin" vet .)
+cp fixtures/retention_test.go "$module/retention_test.go"
+(cd "$module" && compile "$go_bin" test -p 1 .)
+rm "$module/retention_test.go"
 for example in decide smoke; do
     scratch_dir caller
     mkdir "$caller/$example"
