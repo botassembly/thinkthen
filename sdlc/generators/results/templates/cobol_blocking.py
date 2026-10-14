@@ -292,7 +292,10 @@ static int project_answer(arena *a,const thinkthen_complete_session_packet_v1 *p
                     const thinkthen_complete_boundary_proposal_v1 *proposal=value->data.mode_proposals->proposals.data[j];
                     thinkthen_cobol_AnswerRecognition *row=rows+position++; row->record=i+1; row->proposal=1; row->mode=value->data.mode_proposals->mode->kind;
                     row->start=proposal->start; row->end=proposal->end; row->length=proposal->length; row->probability=proposal->probability;
-                    int code=answer_text(proposal->text,&row->text); if(code) return code;
+                    int code=answer_text(proposal->text,&row->text);
+                    thinkthen_cobol_AnswerExtensions *extensions=allocate(a,1,sizeof(*extensions));
+                    if(extensions && !code) code=copy_thinkthen_cobol_AnswerExtensions(a,&proposal->extensions,extensions);
+                    row->extensions=extensions; if(code) return code;
                 }
             } else return THINKTHEN_COBOL_REPRESENTATION;
         }

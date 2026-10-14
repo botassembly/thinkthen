@@ -5673,6 +5673,10 @@ thinkthen_cobol_AnswerTable *out) {
                         row->length=proposal->length;
                         row->probability=proposal->probability;
                         int code=answer_text(proposal->text,&row->text);
+                        thinkthen_cobol_AnswerExtensions *extensions=allocate(a,1,sizeof(*extensions));
+                        if(extensions && !code) code=copy_thinkthen_cobol_AnswerExtensions(a,&proposal->extensions,
+                        extensions);
+                        row->extensions=extensions;
                         if(code) return code;
                     }
                 } else return THINKTHEN_COBOL_REPRESENTATION;

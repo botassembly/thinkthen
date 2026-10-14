@@ -28,10 +28,10 @@ call "TT_ANSWER_FREE" using
 call "TT_CHOOSE" using by value engine choose-question input-rows no-controls
    by reference tt-n-cobol-AnswerChooseResult tt-n-cobol-AnswerStatus
    returning status-code
-if status-code = 0 and v-count of tt-n-cobol-AnswerDecideResult not = 3
+if status-code = 0 and v-count of tt-n-cobol-AnswerChooseResult not = 3
    move 2 to return-code goback
 end-if
-if status-code = 0 and v-first-present of tt-n-cobol-AnswerDecideResult = 1
+if status-code = 0 and v-first-present of tt-n-cobol-AnswerChooseResult = 1
    display v-first-value-text of tt-n-cobol-AnswerChooseResult
       (1:v-first-value-length of tt-n-cobol-AnswerChooseResult)
 end-if
