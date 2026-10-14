@@ -130,6 +130,49 @@ class PackageText(unittest.TestCase):
             with self.assertRaisesRegex(readmes.Refusal, 'example-needs-two-functions: python'):
                 readmes.example('python', root)
 
+    def test_database_examples_accept_named_details_and_refuse_retired_routes(self):
+        with tempfile.TemporaryDirectory() as scratch:
+            root = Path(scratch)
+            for family in ('sqlite', 'postgresql', 'duckdb'):
+                page = readmes.source(family, root)
+                page.parent.mkdir(parents=True)
+                install = {'sqlite': '.load thinkthen', 'postgresql': 'CREATE EXTENSION thinkthen;',
+                           'duckdb': 'INSTALL thinkthen FROM community;\nLOAD thinkthen;'}[family]
+                contract = json.loads((readmes.REPO / 'specification/request.schema.json').read_text())
+                functions = [variant['const'] for variant in contract['$defs']['RequestFunction']['oneOf']]
+                for suffix in ('', '_details'):
+                    calls = ''.join("SELECT thinkthen_" + function + suffix
+                                    + "('thinkthen_unknown(', 'i');\n" for function in functions)
+                    page.write_text('```sql\n' + install + '\n```\n```sql\n' + calls + '```\n')
+                    with self.subTest(family=family, suffix=suffix):
+                        samples = readmes.examples(family, root)
+                        self.assertEqual(len(samples), 1)
+                        for function in functions:
+                            self.assertIn('thinkthen_' + function + suffix + '(', samples[0][1])
+                page.write_text('```sql\nSELECT "thinkthen_decide" /* call */ (\'q\', \'i\');\n'
+                                'SELECT "thinkthen_choose_details"(\'q\', \'i\');\n```\n')
+                self.assertEqual(len(readmes.examples(family, root)), 1)
+                page.write_text("```sql\nSELECT 'thinkthen_decide(' AS prose;\n"
+                                "-- thinkthen_choose('q', 'i');\n```\n")
+                with self.assertRaisesRegex(readmes.Refusal, 'example-needs-two-functions: ' + family):
+                    readmes.examples(family, root)
+                for prose in ('SELECT 1 AS "thinkthen_decide(", 2 AS "thinkthen_choose(";',
+                              '/* outer /* inner */ thinkthen_decide( thinkthen_choose( */',
+                              "SELECT E'escaped \\' thinkthen_decide( thinkthen_choose(';"):
+                    page.write_text('```sql\n' + prose + '\n```\n')
+                    with self.subTest(family=family, prose=prose):
+                        with self.assertRaisesRegex(readmes.Refusal, 'example-needs-two-functions: ' + family):
+                            readmes.examples(family, root)
+                for route in ('thinkthen_call', 'thinkthen_complete', 'thinkthen_decide_complete',
+                              'thinkthen_unknown', 'tt_unknown_details', '"thinkthen_complete" /* call */'):
+                    page.write_text("```sql\nSELECT thinkthen_decide('q', 'i');\n"
+                                    "SELECT thinkthen_choose_details('q', 'i');\nSELECT "
+                                    + route + "('q', 'i');\n```\n")
+                    with self.subTest(family=family, route=route):
+                        with self.assertRaisesRegex(readmes.Refusal, 'unsupported-database-example-route: '
+                                                   + route.split()[0].strip('"')):
+                            readmes.examples(family, root)
+
     def test_archive_replay_preserves_package_roots_with_vendored_readmes(self):
         with tempfile.TemporaryDirectory() as scratch:
             tree = Path(scratch); packages = tree / 'packages'; packages.mkdir()

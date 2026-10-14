@@ -511,6 +511,13 @@ extraPublicExport <- function(context = NULL, enabled = FALSE,
                      'properties': {'kind': {'const': function}, 'value': {'type': 'boolean'}},
                      'required': ['kind', 'value']} for function in ('decide', 'choose')]},
                 'completeplan': {'type': 'object', 'properties': {}}}}
+            # Keep the aggregate's receipt contract owned by the real producer.
+            canonical = json.loads((ROOT / 'crates/thinkthen/src/public/results/complete.schema.json').read_text())
+            aggregate = next(variant for variant in canonical['$defs']['completesessionPacket']['oneOf']
+                             if variant.get('properties', {}).get('kind', {}).get('const') == 'aggregate'
+                             and variant['properties']['function']['const'] == 'decide')
+            result['$defs']['completesessionPacket']['oneOf'][0]['properties']['value'] = aggregate['properties']['value']
+            result['$defs'] = dict(canonical['$defs'], **result['$defs'])
             write('request.json', json.dumps(request))
             write('result.json', json.dumps(result))
             manifest = json.loads((ROOT / 'conformance/library-surface.json').read_text())
@@ -574,6 +581,10 @@ extraPublicExport <- function(context = NULL, enabled = FALSE,
             self.assertIn('unlisted public call/export: Controls.cancel', errors)
             code, errors = invoke(declarations.replace('readonly context?: string;', 'readonly context?: string; value(): string;'))
             self.assertIn('unlisted public call/export: Controls.value', errors)
+            code, errors = invoke(declarations + '\nexport class Result { readonly probability: number; }')
+            self.assertNotIn('unlisted public field: Result.probability', errors)
+            code, errors = invoke(declarations + '\nexport class Other { readonly probability: number; }')
+            self.assertIn('unlisted public field: Other.probability', errors)
             code, errors = invoke(declarations + '\nexport class Completed { cancel(): void; }')
             self.assertIn('unlisted public call/export: Completed.cancel', errors)
             code, errors = invoke(declarations.replace('readonly backend?: string;', ''))
@@ -677,6 +688,11 @@ extraPublicExport <- function(context = NULL, enabled = FALSE,
             for owner, field in [('Other', 'FactsJson'), ('Other', 'Failure'),
                                  ('RequestOptions', 'SurpriseOption'), ('EngineSettings', 'SurpriseSetting')]:
                 self.assertIn('unlisted public field: ' + owner + '.' + field, unexpected)
+            for signature in ('public T ExtraGeneric<T>() {}',
+                              'public ValueTask<CallResult<T, double?>> ExtraGeneric<T>() {}',
+                              'public Dictionary<string, List<int?[]>> ExtraGeneric<T, U>() {}'):
+                extra.write_text('public class Other { ' + signature + ' }')
+                self.assertIn('unlisted public call/export: Other.ExtraGeneric', invoke(original))
             extra.write_text('public class TransportBase { public string TransportJson {get;} }\n'
                              'public class Engine : TransportBase {}\n')
             self.assertIn('unlisted public field: TransportBase.TransportJson', invoke(original))
@@ -696,9 +712,9 @@ extraPublicExport <- function(context = NULL, enabled = FALSE,
             renamed = invoke(original.replace('DecideAsync(', 'SurpriseAsync('))
             self.assertIn('missing generated declaration: NamedCalls.g.cs:Engine.DecideAsync', renamed)
             self.assertIn('unlisted generated declaration: NamedCalls.g.cs:Engine.SurpriseAsync', renamed)
-            accessor = invoke(original.replace('Choice(this OwnedCall', 'SurpriseAccessor(this OwnedCall'))
-            self.assertIn('missing generated declaration: NamedCalls.g.cs:AnswerAccessors.Choice', accessor)
-            self.assertIn('unlisted generated declaration: NamedCalls.g.cs:AnswerAccessors.SurpriseAccessor', accessor)
+            field = invoke(original.replace('TProbability Probability {', 'TProbability SurpriseProbability {'))
+            self.assertIn('missing generated declaration: NamedCalls.g.cs:CallResult.Probability', field)
+            self.assertIn('unlisted generated declaration: NamedCalls.g.cs:CallResult.SurpriseProbability', field)
 
     def test_java_record_components_are_checked_at_the_cli(self):
         manifest = json.loads((ROOT / 'conformance/library-surface.json').read_text())

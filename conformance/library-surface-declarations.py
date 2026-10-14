@@ -164,10 +164,15 @@ def cstyle(source, language):
                   if depths[parent[0] + m.start()] == depths[parent[0]] + 1]
         return access[-1][1] == 'public' if access else struct_scopes[parent[0]]
     struct_scopes = {}
-    parentheses, nesting = [], 0
-    for char in text:
+    parentheses, nesting, angles, angle_depth = [], 0, [], 0
+    for pos, char in enumerate(text):
         parentheses.append(nesting)
         nesting += (char == '(') - (char == ')')
+        angles.append(angle_depth)
+        if char == '<':
+            angle_depth += 1
+        elif char == '>' and angle_depth and (pos == 0 or text[pos - 1] != '='):
+            angle_depth -= 1
     type_pattern = r'\b(?:class|struct|interface|enum(?:\s+class)?|record|union|trait|object|extension)\s+(\w+)'
     if language == 'dart':
         type_pattern = r'\b(?:class|enum|mixin)\s+(\w+)'
@@ -274,7 +279,7 @@ def cstyle(source, language):
     patterns = {
         'typescript': r'(?m)(?:^|[;{}\n])\s*(?:(?:export|declare|readonly|static|async)\s+)*(\w+)\s*(?:\??\s*:|(?:<[^\n]*?>)?\s*\()',
         'java': r'\bpublic\s+(?:(?:static|final|abstract|synchronized)\s+)*(?:[\w<>?,.\[\]]+\s+)(\w+)\s*(?:\(|[=;])',
-        'csharp': r'\bpublic\s+(?:(?:static|readonly|override|abstract|required|sealed|async)\s+)*(?:[\w<>?,.\[\]]+\s+)(\w+)\s*(?:\(|\{|[=;])',
+        'csharp': r'\bpublic\s+(?:(?:static|readonly|override|abstract|required|sealed|async|partial)\s+)*(?:[\w.]+(?:<[\w<>?,.\[\] \t\r\n]+>)?(?:\[\]|\?)?\s+)(\w+)\s*(?:<[\w<>?,.\[\] \t\r\n]+>\s*)?(?:\(|\{|[=;])',
         'swift': r'\bpublic\s+(?:(?:static|class|mutating|convenience)\s+)*(?:func|var|let)\s+`?(\w+)',
         'kotlin': r'(?m)(?:^|[;{}\n])\s*(?:(?:public|override|open|final|suspend)\s+)*(?:fun|val|var)\s+`?(\w+)' ,
         'scala': r'(?m)(?:^|[;{}\n])\s*(?:(?:override|final|lazy)\s+)*(?:def|val|var)\s+`?(\w+)' ,
@@ -292,7 +297,7 @@ def cstyle(source, language):
             continue
         pos = next(match.start(i) for i, group in enumerate(match.groups(), 1) if group)
         container = owner(pos)
-        if language in ('typescript', 'zig') and parentheses[pos]:
+        if language in ('typescript', 'zig') and parentheses[pos] or language == 'typescript' and angles[pos]:
             continue
         if language == 'cpp' and (parentheses[pos] or name == 'operator'):
             continue
