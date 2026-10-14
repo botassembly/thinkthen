@@ -46,3 +46,5 @@ Each package registry page that ships with 0.2 shows a short README for a strang
 The DuckDB descriptor and PR stay with 0577. The site and the fresh-reader test stay with 0575. Publication stays with 0425.
 
 ## Progress
+
+PM amendment, 2026-10-14. To break the merge cycle, each 0581 or 0582 binding lane may change the public example code that its existing installed checks replay, and only as far as the move to `result.value` and `result.probability` requires. It changes no prose. This ticket and 0575 still own the example text and its fresh-reader review.
