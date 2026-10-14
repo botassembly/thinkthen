@@ -98,7 +98,8 @@ def main():
                      ('score', ',reading=>thinkthen_reading(levels=>' + members + ')', 1),
                      ('tag', ',reading=>thinkthen_reading(labels=>' + members + ')', 2)]
             for function, reading, requests in plans:
-                row = json.loads(query("SELECT to_jsonb(r) FROM thinkthen_plan('Fits?',ARRAY[" + record + "]" + reading + ",function=>" + quoted(function) + ") r"))
+                question = json.dumps({'decide': 'Fits?'}) if function == 'rank' else 'Fits?'
+                row = json.loads(query("SELECT to_jsonb(r) FROM thinkthen_plan(" + quoted(question) + ",ARRAY[" + record + "]" + reading + ",function=>" + quoted(function) + ") r"))
                 plan = row['result']
                 assert set(plan) == {'records', 'requests', 'estimated_bytes', 'estimated_input_tokens', 'first_body_utf8', 'largest_request_bytes', 'largest_request_estimated_input_tokens', 'token_estimate_method', 'upper_bound'}, plan
                 assert plan['records'] == 1 and plan['requests'] == requests, plan
@@ -116,12 +117,13 @@ def main():
                 'recognize': json.dumps({'version': 1, 'recognize': {'kinds': {'person': "A person's name."}}}),
                 'relate': json.dumps({'version': 1, 'relate': {'relations': [{'name': 'knows', 'source': 'person', 'target': 'person'}]}}),
                 'wrong': 'Fits?',
+                'rank': 'Fits?',
             }
             for function, question in unsupported.items():
                 before = int(backend.read('count'))
                 out, err = sql(host.socket, "SELECT * FROM thinkthen_plan(" + quoted(question) + ",ARRAY[" + record + "],function=>" + quoted(function) + ")")
-                expected = 'unknown function' if function == 'wrong' else 'plan requires an atomic or rank question'
-                assert expected in err, (out, err)
+                expected = 'unknown function' if function == 'wrong' else 'rank requires saved decide, score or question set JSON' if function == 'rank' else 'plan requires an atomic or rank question'
+                assert '22023' in err and expected in err, (out, err)
                 assert int(backend.read('count')) == before
             query("SELECT count(*) FROM thinkthen_decide('Fits?',ARRAY[" + record +
                   "],thinkthen_reading(max_requests_total=>0)) r")
