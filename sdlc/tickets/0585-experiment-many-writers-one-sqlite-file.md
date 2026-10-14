@@ -1,8 +1,10 @@
 # 0585: Experiment: many writers on one SQLite answer file
 
-Status: OPEN.
+Status: COMPLETE.
 
 Milestone: 0.3
+
+Reviews: revision 0e46dc2, accept
 
 ## Outcome
 
@@ -19,3 +21,7 @@ Learn whether one SQLite file in write-ahead-log mode, with full sync, one write
 - Decision it changes: SQLite as the one store for 0.3, and whether writes must be grouped.
 - Machine: the Beelink.
 - Defers: the proxy's writers wait for 0.5.
+
+## Progress
+
+- 2026-10-14 started
