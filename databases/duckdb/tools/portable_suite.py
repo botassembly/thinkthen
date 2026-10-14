@@ -122,6 +122,12 @@ def discovery_describes_every_registered_function_without_sending():
 
 
 @case
+def named_typed_controls_share_native_admission_and_cache_identity():
+    from named_options import check
+    check(run)
+
+
+@case
 def named_decide_binds_by_name_and_settings_refuse_before_send():
     with Backend() as backend:
         got = run([

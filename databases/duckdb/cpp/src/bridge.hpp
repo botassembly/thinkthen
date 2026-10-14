@@ -19,6 +19,7 @@ struct ThinkThenText {
 	const uint8_t *bytes;
 	size_t len;
 };
+ThinkThenReply thinkthen_cpp_portable_settings(ThinkThenText);
 struct ThinkThenSettings {
 	const uint8_t *batch_bytes;
 	size_t batch_len;

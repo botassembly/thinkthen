@@ -52,6 +52,25 @@ Discovery creates no engine, reads no input files and sends no requests.
 
 `thinkthen_usage_status()` returns a VARCHAR JSON object with `state`: `disabled`, `pending`, `written` or `failed`. Failed adds only the native fixed advice, `check the usage folder permissions and free space`. Observation builds no engine, sends no request and never waits on the registry or writer. Failure takes precedence, then pending work, then written current deltas; an empty registry is disabled. A busy registry reports pending observation. Written does not promise future calls or other processes. Eviction retains failure discovered by the existing retirement finalization; successful answers and historical `thinkthen_usage()` totals remain available.
 
+Authored decide, choose, score and tag questions, annotation sets, keyed inputs and settings can be native DuckDB `STRUCT` or `MAP` values. Find and rank questions keep their literal-text contract. Choose options, score levels and tag labels accept ordered maps of names to authored readings as well as lists of names. Named controls can accompany a native settings object. The shared Rust parser validates these values and refuses repeated controls before any send.
+
+```sql
+SELECT thinkthen_decide({'decide': 'Does the writer ask for a refund?',
+                        'true': {'meaning': 'refund', 'optional': NULL},
+                        'false': {'meaning': 'other', 'enabled': FALSE}},
+                       body, settings := {'batch': 'max'}, model := 'jev-1.13.0')
+FROM tickets;
+SELECT thinkthen_choose('Which team owns this?', body,
+                       {'billing': 'Handles charges', 'shipping': NULL},
+                       settings := {'deadline_ms': -1})
+FROM tickets;
+SELECT * FROM thinkthen_decide_many('Does the writer ask for a refund?',
+                                    MAP(['first', 'second'], ['Refund me', 'Hello']),
+                                    batch := 'max');
+```
+
+Native `NULL` reading members retain authored JSON null, and `FALSE` and zero retain their values. Settings `NULL` means omission. `thinkthen_plan` accepts the same native objects and named controls as the judgment calls. A legacy settings string remains accepted under the shared settings contract.
+
 Required SQL NULL operands return SQL NULL from scalar calls and zero rows from table or set calls before inspecting partner operands, session settings or files. Optional NULL settings mean omitted settings. NULL members inside a supplied list retain that function’s existing validation.
 
 `WHERE` provides the filter form. `thinkthen_find` judges one ordered list per call; build a list from rows with `list(unit ORDER BY ordinal)` to preserve caller order. It accepts 2–255 nonblank units, or 2–254 when `{"none":true}` is in settings, and at most 16 MiB of unit text. Equal units keep separate original indexes. A selected none has a non-NULL result with NULL `index` and `value`; a top-level SQL NULL or empty list returns SQL NULL without sending. The question is literal text, including text beginning with `@` or looking like JSON. The earlier four C++ target packages have installed find proof; the Intel result is translated macOS 26 proof, with native Intel and macOS 15 release-runner checks still open. Call settings are one JSON object: `threshold`, question members, `model`, `batch`, `context`, `deadline_ms`, and find's `none` where the verb permits them. `NULL` settings and `{}` mean no call settings. `deadline_ms` replaces positional deadline and context slots; `-1` means no deadline, and `0` is spent. A `NULL` question or text gives a `NULL` row. A failure is an error whose text starts `thinkthen <kind>: `, with one of the six kinds, and never reads as `NULL`.
