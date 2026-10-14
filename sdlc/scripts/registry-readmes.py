@@ -3,6 +3,7 @@
 import argparse
 import email
 import gzip
+import hashlib
 import io
 import json
 import os
@@ -534,7 +535,20 @@ def run_example(family, packages, work, root=REPO, selected=None, sample_index=0
         run([dotnet, 'build', 'example.csproj', '--no-restore', '-o', str(work / 'bin')], True)
         output = run([dotnet, str(work / 'bin/example.dll')])
     elif family == 'dart':
-        (work / 'pubspec.yaml').write_text('name: registry_example\nenvironment:\n  sdk: ">=3.0.0 <4.0.0"\ndependencies:\n  thinkthen_dart:\n    path: ' + json.dumps(str(package)) + '\n')
+        native = unpack_example_package('c', packages, work / 'native', text_failures=text_failures)
+        manifest = json.loads((package / 'native-assets.json').read_text())
+        target = {'x86_64': 'x86_64', 'arm64': 'aarch64'}.get(os.uname().machine, os.uname().machine) + '-unknown-linux-gnu'
+        assets = [asset for asset in manifest['assets'].values() if asset['target'] == target]
+        if len(assets) != 1:
+            raise Refusal('dart-example-native-target-mismatch')
+        asset = assets[0]
+        binary = native / 'lib' / asset['file']
+        if hashlib.sha256(binary.read_bytes()).hexdigest() != asset['sha256']:
+            raise Refusal('dart-example-native-asset-mismatch')
+        assets_cache = work / 'assets'; assets_cache.mkdir()
+        (assets_cache / asset['sha256']).mkdir()
+        shutil.copyfile(binary, assets_cache / asset['sha256'] / asset['file'])
+        (work / 'pubspec.yaml').write_text('name: registry_example\nenvironment:\n  sdk: ">=3.10.0 <4.0.0"\ndependencies:\n  thinkthen_dart:\n    path: ' + json.dumps(str(package)) + '\nhooks:\n  user_defines:\n    thinkthen_dart:\n      offline: true\n      asset_cache: ' + json.dumps(str(assets_cache) + '/') + '\n')
         env['PUB_CACHE'] = os.environ.get('PUB_CACHE', str(Path.home() / '.pub-cache'))
         dart = os.environ.get('TT_DART', 'dart')
         run([dart, 'pub', 'get', '--offline'], True)

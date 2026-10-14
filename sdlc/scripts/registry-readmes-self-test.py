@@ -310,6 +310,13 @@ class PackageText(unittest.TestCase):
                 files = {'README.md': readmes.source(family).read_bytes()}
                 if family == 'dart':
                     files['pubspec.yaml'] = (readmes.REPO / 'libraries/dart/pubspec.yaml').read_bytes()
+                    native = b'fixture native library'
+                    target = {'x86_64': 'x86_64', 'arm64': 'aarch64'}.get(os.uname().machine, os.uname().machine) + '-unknown-linux-gnu'
+                    files['native-assets.json'] = json.dumps({'assets': {'fixture': {
+                        'target': target, 'file': 'libthinkthen.so',
+                        'sha256': readmes.hashlib.sha256(native).hexdigest()}}}).encode()
+                    archive(packages / ('thinkthen-c-' + readmes.version() + '-x86_64-unknown-linux-gnu.tar.gz'), {
+                        'README.md': readmes.source('c').read_bytes(), 'lib/libthinkthen.so': native})
                 archive(packages / ('thinkthen-' + family + '-' + readmes.version() + '-x86_64-unknown-linux-gnu.tar.gz'), files)
                 tool = tools / compiler
                 tool.write_text('#!' + sys.executable + '\n' +
