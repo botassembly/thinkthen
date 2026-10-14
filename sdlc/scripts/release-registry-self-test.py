@@ -13,6 +13,7 @@ import json
 import io
 import os
 import pathlib
+import shlex
 import shutil
 import subprocess
 import sys
@@ -350,6 +351,42 @@ def apple_package_cases():
                            'cargo': 'echo unexpected-native-build >&2; exit 99'}.items():
             tool = tools / name
             tool.write_text('#!/bin/sh\n' + body + '\n'); tool.chmod(0o755)
+        # check.sh pipes the generated Swift sources through a bare `swift format
+        # format`, which formatting.py resolves from PATH alone, before its
+        # artifact refusals. Record what the real generator renders for each
+        # check mode, then answer each recorded input with its committed
+        # formatted file, so the generator's own byte comparison still runs
+        # offline. The hosted Swift run proves real formatting; this fixture
+        # proves packaging routing and refusal.
+        records = root / 'target/formatter-records'; records.mkdir()
+        record = records / 'swift'
+        record.write_text('#!/bin/sh\ncat > ' + shlex.quote(str(records / 'rendered')) + '\nexit 0\n')
+        record.chmod(0o755)
+        cases = tools / 'swift-format-cases'; cases.mkdir()
+        for mode, generated in (('', 'ResultsGenerated.swift'), ('--inputs', 'InputsGenerated.swift'),
+                                ('--bridge', 'ABIGenerated.swift')):
+            rendered = records / 'rendered'
+            rendered.unlink(missing_ok=True)
+            command = [sys.executable, '-I', str(REPO / 'sdlc/generators/results/generate.py'),
+                       '--target', 'swift'] + ([mode] if mode else []) + ['--check']
+            result = subprocess.run(command, env=os.environ | {'PATH': str(records) + os.pathsep + os.environ.get('PATH', os.defpath)},
+                                    capture_output=True)
+            assert result.returncode == 1 and rendered.is_file(), (mode, result)
+            source = rendered.read_bytes()
+            assert source, (mode, 'the generator formatted nothing')
+            committed = REPO / 'libraries/swift/Sources/ThinkThen' / generated
+            (cases / hashlib.sha256(source).hexdigest()).write_bytes(committed.read_bytes())
+        (tools / 'swift').write_text(
+            '#!/bin/sh\n'
+            'set -eu\n'
+            '[ "$#" -eq 4 ] && [ "$1" = format ] && [ "$2" = format ] && [ "$3" = --configuration ] '
+            "&& [ \"$4\" = '{\"lineLength\":100}' ] || "
+            "{ echo 'swift fixture: unexpected format arguments: $*' >&2; exit 2; }\n"
+            'cases=' + shlex.quote(str(cases)) + '\n'
+            'digest=$(python3 -c "import hashlib, sys; print(hashlib.sha256(sys.stdin.buffer.read()).hexdigest())")\n'
+            '[ -f "$cases/$digest" ] || { echo \'swift fixture: no recorded formatting for this input\' >&2; exit 1; }\n'
+            'cat "$cases/$digest"\n')
+        (tools / 'swift').chmod(0o755)
         framework = root / 'libraries/swift/CThinkThen.xcframework'; framework.mkdir()
         (framework / 'Info.plist').write_text('opaque framework assembly fixture; no Apple execution')
         output = root / 'target/packages'; output.mkdir()
