@@ -508,7 +508,7 @@ func main() {
 		}
 		retained = append(retained, call)
 	}
-	originals, err := client.Filter(context.Background(), tt.TextQuestion("Does this qualify?"), tt.RecordsInput(tt.JSONItem(false), tt.JSONItem(nil), tt.JSONItem(map[string]any{"id": json.Number("9007199254740993")})), nil)
+	originals, err := client.Filter(context.Background(), tt.TextQuestion("Does this qualify?"), tt.RecordsInput(tt.JSONItem(false), tt.JSONItem(nil), tt.JSONItem(map[string]any{"id": json.Number("9007199254740993")})), &tt.RequestOptions{Batch: tt.Ptr[tt.RequestBatch](tt.RequestBatchInteger(1))})
 	require(err == nil, "filter original-value call failed")
 	originalJSON, err := json.Marshal(originals.Value)
 	require(err == nil && string(originalJSON) == `[false,null,{"id":9007199254740993}]`, "filter originals changed false, null or wide number")
