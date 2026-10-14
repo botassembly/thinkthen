@@ -39,6 +39,10 @@ JOIN thinkthen_rank('Does the writer ask for a refund?',
 ORDER BY refund.rank;
 ```
 
+`thinkthen_rank_set(questions, keyed_input[, settings])` ranks one keyed `jsonb` object with an ordered set of named decide questions. It returns `key`, `rank`, `probability`, `question_name` and `facts`. Each member ranks every record, and the combined order takes turns through the members in authored order. Each original key appears once. The probability and question name identify the member that selected that record. Use `ORDER BY rank` after a join.
+
+Pass the question set as text, including text returned by `thinkthen_question_file(path)`, to preserve its authored order and duplicate detection. The privileged and confined `@file` route also applies. Settings accept `batch`, `context` and `deadline_ms`. A required NULL question set or keyed input returns no rows before inspecting partners, reading files or sending; NULL settings uses defaults. Final call facts repeat on every row. Read them once.
+
 A judgment question is plain text, JSON text starting with `{` after leading white space, or a file named with the first-byte `'@refund.json'` spelling. Bare text, including `refund.json`, is a question and never a path. A question set or recognize/relation spec remains JSON or `@file`. To ask a literal question beginning with `@` or `{`, use a JSON question or named file.
 
 Find's question is nonblank literal text, including a literal `@`. Its ordered `text[]` is one set, not independent records; use `array_agg(unit ORDER BY ordinal)` to preserve positions and duplicates. Settings `{"none":true}` offers a final none candidate. An empty array or SQL NULL argument returns SQL NULL without a send. A selected none returns SQL NULL from the plain call. The details call retains its unresolved selection and candidate probabilities. A NULL array member, blank text, one unit, more than 255 units (254 with none), or more than 16 MiB of combined unit text raises usage before a send. `deadline_ms` in settings overrides the existing `thinkthen.deadline_ms` GUC for that call. PostgreSQL statement cancellation still applies.
