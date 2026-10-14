@@ -203,7 +203,7 @@ class PublicSurface(unittest.TestCase):
             self.assertIn('unlisted public call/export: Exported.ExtraPublicExport', errors)
             self.assertIn('unlisted public call/export: ExportedAlias.ExtraPublicExport', errors)
             self.assertIn('unlisted public call/export: returned.ExtraReturnedExport', errors)
-            self.assertIn('unlisted public call/export: OwnedFacts.ExtraRepresentationExport', errors)
+            self.assertIn('unlisted public call/export: Facts.ExtraRepresentationExport', errors)
             self.assertFalse(any('InvisibleExport' in error for error in errors))
             self.assertNotIn('unlisted public call/export: Client.Close', errors)
             self.assertFalse(any('nativeEngine.' in error or 'ownedJSON.' in error for error in errors))
