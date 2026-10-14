@@ -6,7 +6,10 @@ tt_engine(base_url = NULL, model = NULL, throttle = NULL,
   max_requests = NULL, max_requests_total = NULL,
   max_request_bytes = NULL, cache = NULL, timeout = NULL,
   max_retries = NULL, record = NULL, replay = NULL, profile = NULL,
-  batch = NULL, ..., backend = NULL, refresh_cache = FALSE)
+  batch = NULL, ..., backend = NULL,
+  max_estimated_input_tokens_total = NULL, proxy = NULL,
+  refresh_cache = FALSE, usd_per_million_input = NULL,
+  usd_per_million_output = NULL)
 }
 \arguments{
 \item{base_url, model}{Override the selected backend's address and model.}
@@ -19,8 +22,11 @@ tt_engine(base_url = NULL, model = NULL, throttle = NULL,
 \item{profile}{Backend profile file.}
 \item{batch}{Positive record count per request, or \code{"max"}.}
 \item{...}{Unknown arguments are refused.}
-\item{refresh_cache}{Ignore held cache answers while retaining native recording and cache identity.}
 \item{backend}{One backend name, or \code{NULL} to retain environment selection. Use the full keyword name.}
+\item{max_estimated_input_tokens_total}{Whole-number token spending cap: a send is refused once the process's estimated input tokens would pass it. The estimate bounds what is sent; it is not the backend's token count.}
+\item{proxy}{Reserved. Any value other than \code{NULL} is refused before store access, lookup, or a send. \code{NULL} omits it.}
+\item{refresh_cache}{Ignore held cache answers while retaining native recording and cache identity.}
+\item{usd_per_million_input, usd_per_million_output}{Caller prices for the two sides of reported usage, as decimal strings; both are required together, and neither sets an admission limit.}
 }
 \value{Invisibly returns \code{NULL}.}
 \description{Sets the engine once per R session. Equal settings can be repeated. Different settings raise a usage condition that names the settings in force. Start a new R session to change them.}
