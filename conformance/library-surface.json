@@ -334,7 +334,8 @@
         "Results"
       ],
       "function_containers": [
-        "Client"
+        "Client",
+        "NamedCalls"
       ],
       "lifecycle_owners": [
         "Client",

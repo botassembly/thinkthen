@@ -10,4 +10,6 @@ build_flags=${RUSTFLAGS:-}
 RUSTFLAGS="$build_flags" \
     cargo build --quiet --release --locked --offline
 case $(node -p 'process.platform') in darwin) library=libthinkthen_typescript.dylib ;; win32) library=thinkthen_typescript.dll ;; linux) library=libthinkthen_typescript.so ;; *) echo 'unsupported addon platform' >&2; exit 1 ;; esac
-cp -- "${CARGO_TARGET_DIR:-target}/release/$library" "$(node -p 'require("./native-platforms.json")[process.platform + "-" + process.arch]')"
+addon=$(node -p 'require("./native-platforms.json")[process.platform + "-" + process.arch]')
+cp -- "${CARGO_TARGET_DIR:-target}/release/$library" "$addon"
+case $(node -p process.platform) in linux) strip --strip-unneeded "$addon" ;; esac
