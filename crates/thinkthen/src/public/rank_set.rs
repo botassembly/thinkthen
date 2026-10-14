@@ -84,10 +84,7 @@ impl Engine {
         self.rank_set_complete_with(questions, records, options)?
             .project(|rows| {
                 let values = rows.iter().map(|row| row.ordinal).collect();
-                let probabilities = rows
-                    .iter()
-                    .map(|row| row.result.result.canonical.answer().yes())
-                    .collect();
+                let probabilities = rows.iter().map(|row| row.result.probability()).collect();
                 Ok((values, rows, probabilities))
             })
     }

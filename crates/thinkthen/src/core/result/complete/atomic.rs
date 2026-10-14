@@ -39,6 +39,7 @@ impl Atomic {
         }
     }
 
+    #[cfg(test)]
     pub(crate) const fn cached(&self) -> bool {
         self.meta.cached
     }

@@ -92,6 +92,9 @@ fn dispatch(
         | RequestFunction::Score
         | RequestFunction::Tag
         | RequestFunction::Filter => {
+            if let super::RequestDefinition::DynamicChoose(question) = &definition {
+                return engine.recover_dynamic_choose(question, records, controls);
+            }
             let question = definition.atomic()?;
             engine.recover_atomic(function.input_function(), &question, records, controls)
         }

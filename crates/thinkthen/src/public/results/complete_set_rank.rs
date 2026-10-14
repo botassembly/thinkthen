@@ -37,6 +37,12 @@ pub struct CompleteSetRank {
     pub(crate) members: Vec<CompleteRankMember>,
 }
 impl CompleteSetRank {
+    /// The yes probability of the member that selected this input.
+    #[must_use]
+    pub fn probability(&self) -> Option<f64> {
+        self.result.probability()
+    }
+
     /// One-based final turns position, before caller top truncation.
     #[must_use]
     pub const fn value(&self) -> usize {

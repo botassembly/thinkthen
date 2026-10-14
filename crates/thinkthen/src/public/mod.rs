@@ -38,7 +38,6 @@ pub(crate) mod error;
 mod filter;
 #[cfg(feature = "polars")]
 mod frame;
-mod native_batch;
 mod options;
 pub(crate) use options::readiness;
 mod panic;
@@ -90,7 +89,6 @@ pub use engine::{DecisionQuestion, DetailQuestion, Engine, Evidence};
 pub use error::{Error, ErrorDetail, ErrorKind, StopCause, Stopped};
 #[cfg(feature = "polars")]
 pub use frame::{PolarsCallOptions, PolarsEngine, PolarsExprOptions};
-pub use native_batch::RecoverableDetails;
 pub use options::{
     BatchSetting, CallOptions, CancelToken, EstimatedInputDenial, SendBudget, SendBudgetDenial,
     process_requests_sent,
