@@ -18,11 +18,12 @@ mod reading;
 mod results_generated;
 
 fn request(
-    verb: &'static str,
+    verb: &str,
     question: &str,
     options: thinkthen::RequestOptions,
     settings: &thinkthen::Settings,
 ) -> Result<thinkthen::AdmittedRequest, Error> {
+    let function = verb.parse()?;
     let prepared = if question.starts_with('@') {
         let (reference, source) =
             files::read_resolved_question(question, call::file_directory().as_deref())?;
@@ -33,7 +34,7 @@ fn request(
     };
     let definition = thinkthen_host::sql_request::definition(&prepared);
     Request::for_function(
-        verb.parse()?,
+        function,
         RequestArguments {
             question: RequestQuestion::Definition { value: definition },
             input: RequestInput::Feed {

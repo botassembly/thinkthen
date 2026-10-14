@@ -4,13 +4,14 @@ use pgrx::prelude::*;
 use thinkthen::RequestEnvironment;
 
 crate::descriptions::describe! {
-"Plan ordered native SQL records using the same admission and packing as execution; return counts and token bounds without sending. Required NULL operands return no rows. Evidence files must be read by the client.";
+"Plan ordered native SQL records using the same admission and packing as execution; return complete typed counts, bytes, token bounds and the first body without sending. An optional named function selects a canonical request function; native unsupported functions refuse without sending. Required NULL operands return no rows. Evidence files must be read by the client.";
 [name = "thinkthen_plan", parallel_restricted, requires = ["native_record_types", "native_reading_type", "native_generated_types"]];
 #[allow(clippy::type_complexity, reason = "pgrx reads SQL columns from the signature")]
 fn plan_records(
     question: Option<&str>,
     records: Option<Array<'_, pgrx::composite_type!("thinkthen_record")>>,
     reading: default!(Option<pgrx::composite_type!("thinkthen_reading")>, "NULL"),
+    function: default!(Option<&str>, "NULL"),
 ) -> TableIterator<'static, (
     name!(record_count, i64), name!(requests, i64), name!(estimated_bytes, i64),
     name!(input_tokens_lower, i64), name!(input_tokens_upper, i64),
@@ -21,11 +22,11 @@ fn plan_records(
             return TableIterator::new(Vec::new());
         };
         let settings = super::question_settings::read(reading.as_ref()).or_raise();
-        let verb = match crate::forms::plan_verb_result(question, &settings).or_raise() {
+        let verb = if let Some(function) = function { function } else { match crate::forms::plan_verb_result(question, &settings).or_raise() {
             thinkthen::For::Decide => "decide", thinkthen::For::Choose => "choose",
             thinkthen::For::Score => "score", thinkthen::For::Tag => "tag",
             thinkthen::For::Find => "find", thinkthen::For::Rank => "rank",
-        };
+        }};
         let context_schema = super::context_schema::read(reading.as_ref()).or_raise();
         let request = super::request(verb, question, super::options::read(reading).or_raise(), &settings).or_raise();
         let mut projection = request.record_reading().or_raise();

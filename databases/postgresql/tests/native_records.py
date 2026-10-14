@@ -92,6 +92,27 @@ def main():
             row = json.loads(query("SELECT to_jsonb(r) FROM thinkthen_decide('Fits?',ARRAY[thinkthen_record(value=>'null'::json)]) r", 1))
             assert row['result']['input'] is None and row['result']['input_present'] is True, row
             assert query("SELECT record_count FROM thinkthen_plan('Fits?',ARRAY[" + record + "]) ") == '1'
+            for function in ('decide', 'filter', 'rank'):
+                row = json.loads(query("SELECT to_jsonb(r) FROM thinkthen_plan('Fits?',ARRAY[" + record + "],function=>" + quoted(function) + ") r"))
+                plan = row['result']
+                assert set(plan) == {'records', 'requests', 'estimated_bytes', 'estimated_input_tokens', 'first_body_utf8', 'largest_request_bytes', 'largest_request_estimated_input_tokens', 'token_estimate_method', 'upper_bound'}, plan
+                assert plan['records'] == 1 and plan['requests'] == 1, plan
+                assert plan['estimated_bytes'] >= plan['largest_request_bytes'] > 0, plan
+                assert plan['largest_request_estimated_input_tokens'] > 0 and plan['token_estimate_method'], plan
+                assert plan['estimated_input_tokens'] and json.loads(plan['first_body_utf8'])['state'] == 'Alpha.', plan
+            unsupported = {
+                'find': 'Fits?',
+                'annotate': json.dumps({'version': 1, 'questions': {'fit': {'decide': 'Fits?'}}}),
+                'recognize': json.dumps({'version': 1, 'recognize': {'kinds': {'person': "A person's name."}}}),
+                'relate': json.dumps({'version': 1, 'relate': {'relations': [{'name': 'knows', 'source': 'person', 'target': 'person'}]}}),
+                'wrong': 'Fits?',
+            }
+            for function, question in unsupported.items():
+                before = int(backend.read('count'))
+                out, err = sql(host.socket, "SELECT * FROM thinkthen_plan(" + quoted(question) + ",ARRAY[" + record + "],function=>" + quoted(function) + ")")
+                expected = 'unknown function' if function == 'wrong' else 'plan requires an atomic or rank question'
+                assert expected in err, (out, err)
+                assert int(backend.read('count')) == before
             query("SELECT count(*) FROM thinkthen_decide('Fits?',ARRAY[" + record +
                   "],thinkthen_reading(max_requests_total=>0)) r")
             source = "ROW('caller-read.txt',1,1)::thinkthen_source"
