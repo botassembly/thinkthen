@@ -15,6 +15,13 @@ def group(target, mode, base, *names):
 
 
 OUTPUTS = (
+    *(Output('duckdb', 'receipt-types',
+             'databases/duckdb/cpp/src/receipt_types_generated' + suffix + '.hpp',
+             'databases/duckdb/tools/receipt_types.py')
+      for suffix in ('', '_1', '_2', '_3', '_4')),
+    Output('duckdb', 'request-helpers',
+           'databases/duckdb/cpp/src/request_helpers_generated.hpp',
+           'databases/duckdb/tools/request_helpers.py'),
     *group('sqlite', 'results', 'databases/sqlite/src/', 'receipt_generated.rs'),
     *group('postgresql', 'results', 'databases/postgresql/src/native/',
            'results_generated.rs', 'functions_generated.rs'),

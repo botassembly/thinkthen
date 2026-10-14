@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Exercise the size CLI on an isolated tracked library history."""
+import importlib.util
 import json
 import os
 from pathlib import Path
@@ -14,6 +15,63 @@ from conformance.children.children import child_env
 
 
 class SizeReport(unittest.TestCase):
+    def test_duckdb_registered_outputs_match_their_real_producers(self):
+        root = SCRIPT.parents[2]
+        sys.path.insert(0, str(root / 'sdlc/generators/results'))
+        from registry import OUTPUTS, invocations
+        spec = importlib.util.spec_from_file_location('receipt_types', root / 'databases/duckdb/tools/receipt_types.py')
+        producer = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(producer)
+        schema = json.loads((root / 'crates/thinkthen/src/public/results/complete.schema.json').read_text())
+        base = 'databases/duckdb/cpp/src/'
+        expected = {base + 'receipt_types_generated.hpp',
+                    *(base + f'receipt_types_generated_{index + 1}.hpp'
+                      for index in range(len(producer.render(schema))))}
+        receipt = 'databases/duckdb/tools/receipt_types.py'
+        helpers = 'databases/duckdb/tools/request_helpers.py'
+        self.assertEqual({output.path for output in OUTPUTS if output.producer == receipt}, expected)
+        self.assertEqual({output.path for output in OUTPUTS if output.producer == helpers},
+                         {base + 'request_helpers_generated.hpp'})
+        self.assertIn((receipt, 'duckdb', 'receipt-types'), invocations())
+        self.assertIn((helpers, 'duckdb', 'request-helpers'), invocations())
+
+    def test_production_counters_cover_build_files_and_declarations(self):
+        cases = {
+            'databases/duckdb/ratchet.py.json': 'databases/duckdb/community/build_rust.py',
+            'databases/sqlite/ratchet.json': 'databases/sqlite/build.rs',
+            'libraries/c/ratchet.json': 'libraries/c/build.rs',
+            'libraries/objective-c/ratchet.swift.json': 'libraries/objective-c/Package.swift',
+            'libraries/python/ratchet.pyi.json': 'libraries/python/thinkthen/__init__.pyi',
+            'libraries/swift/ratchet.h.json': 'libraries/swift/Sources/CThinkThen/include/loader.h',
+        }
+        with tempfile.TemporaryDirectory(prefix='production-size-') as folder:
+            root = Path(folder)
+            env = child_env(home=folder, GIT_CONFIG_NOSYSTEM='1', GIT_CONFIG_GLOBAL=os.devnull)
+            def write(path, source):
+                target = root / path
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_text(source)
+            for path in ('sdlc/scripts/ratchet.mjs', 'conformance/library-surface.json',
+                         'sdlc/generators/results/sources.py', 'sdlc/generators/results/registry.py'):
+                write(path, (SCRIPT.parents[2] / path).read_text())
+            write('libraries/c/tests/extra.rs', 'test\n' * 99)
+            write('libraries/python/thinkthen/_native_results.pyi', 'generated\n' * 99)
+            for config, source in cases.items():
+                with self.subTest(config=config):
+                    data = json.loads((SCRIPT.parents[2] / config).read_text())
+                    for directory in data['directory']:
+                        (root / Path(config).parent / directory).mkdir(parents=True, exist_ok=True)
+                    data['max'] = 2
+                    write(config, json.dumps(data))
+                    write(source, 'handwritten\n\nsource\n')
+                    command = ['node', 'sdlc/scripts/ratchet.mjs', config]
+                    passed = subprocess.run(command, cwd=root, env=env, capture_output=True, text=True)
+                    self.assertEqual(passed.returncode, 0, passed.stderr)
+                    write(source, 'handwritten\nsource\nadded\n')
+                    failed = subprocess.run(command, cwd=root, env=env, capture_output=True, text=True)
+                    self.assertEqual(failed.returncode, 1)
+                    self.assertIn('is 3 non-blank lines, ceiling is 2', failed.stderr)
+
     def test_disjoint_counts_ratios_history_and_opt_in_storage(self):
         with tempfile.TemporaryDirectory(prefix='library-size-') as folder:
             root = Path(folder)
@@ -28,7 +86,7 @@ class SizeReport(unittest.TestCase):
             libraries = {name: contract['libraries'][name] for name in ['python', 'jvm', 'dart']}
             manifest = {'libraries': libraries, 'databases': {name: contract['databases'][name] for name in ['postgresql', 'duckdb']}, 'exceptions': {'python': {'paths': ['libraries/python/adapter.py']}}}
             write('conformance/library-surface.json', json.dumps(manifest))
-            write('sdlc/generators/results/registry.py', "from types import SimpleNamespace\nOUTPUTS = (SimpleNamespace(target='python', path='libraries/python/generated.py'), SimpleNamespace(target='python', path='sdlc/generators/side/inputs.json'), SimpleNamespace(target='postgresql', path='databases/postgresql/src/results_generated.rs'))\ndef generated_paths():\n    return {output.path for output in OUTPUTS}\n")
+            write('sdlc/generators/results/registry.py', "from types import SimpleNamespace\nOUTPUTS = (SimpleNamespace(target='python', path='libraries/python/generated.py'), SimpleNamespace(target='python', path='sdlc/generators/side/inputs.json'), SimpleNamespace(target='postgresql', path='databases/postgresql/src/results_generated.rs'), SimpleNamespace(target='duckdb', path='databases/duckdb/cpp/src/receipt_types_generated.hpp'))\ndef generated_paths():\n    return {output.path for output in OUTPUTS}\n")
             write('sdlc/generators/results/sources.py', (SCRIPT.parent.parent / 'generators/results/sources.py').read_text())
             write('databases/postgresql/src/native.rs', 'native\n' * 2)
             write('databases/postgresql/src/results_generated.rs', 'generated\n' * 3)
@@ -37,11 +95,16 @@ class SizeReport(unittest.TestCase):
             write('databases/duckdb/tools/verbs_suite.py', 'test\n' * 2)
             write('databases/duckdb/cpp/verify_tables.py', 'test\n' * 3)
             write('databases/duckdb/tools/inputs.py', 'production\n')
+            write('databases/duckdb/src/worker.rs', 'native\n#[cfg(test)]\nmod tests {}\n')
+            write('databases/duckdb/community/build_rust.py', 'build\n' * 2)
+            write('databases/duckdb/cpp/src/unknown_generated.hpp', 'handwritten\n' * 3)
+            write('databases/duckdb/cpp/src/receipt_types_generated.hpp', 'generated\n' * 4)
             write('libraries/python/main.py', 'one\n\ntwo\n')
             write('libraries/python/adapter.py', 'adapter\n')
             write('libraries/python/generated.py', 'generated\n' * 5)
             write('sdlc/generators/side/inputs.json', '{\n}\n')
             write('libraries/python/tests/check.py', 'test\n' * 4)
+            write('libraries/python/check-windows.py', 'artifact test\n' * 2)
             write('libraries/jvm/session/Test.java', 'java\n' * 2)
             write('libraries/jvm/session/Test.kt', 'kotlin\n')
             write('libraries/jvm/session/Test.scala', 'scala\n')
@@ -71,11 +134,12 @@ class SizeReport(unittest.TestCase):
             run('git', 'commit', '-qm', 'Add handwritten behavior')
             report = json.loads(run(str(SCRIPT), '--root', str(root), '--json'))
             python = report['libraries']['python']
-            self.assertEqual((python['handwritten'], python['generated'], python['test'], python['exception']), (4, 9, 8, 1))
+            self.assertEqual((python['handwritten'], python['generated'], python['test'], python['exception']), (4, 9, 10, 1))
             database = report['libraries']['postgresql']
             self.assertEqual((database['handwritten'], database['generated'], database['test']), (3, 6, 9))
-            self.assertEqual(report['medians']['handwritten'], 3)
-            self.assertEqual(report['libraries']['duckdb']['handwritten'], 1)
+            self.assertEqual(report['medians']['handwritten'], 4)
+            self.assertEqual(report['libraries']['duckdb']['handwritten'], 9)
+            self.assertEqual(report['libraries']['duckdb']['generated'], 4)
             self.assertEqual(report['libraries']['duckdb']['test'], 7)
             self.assertEqual(report['commits'][0]['handwritten_added']['duckdb'], 0)
             self.assertEqual(report['commits'][0]['handwritten_added']['postgresql'], 1)
@@ -83,6 +147,18 @@ class SizeReport(unittest.TestCase):
             write('databases/postgresql/ratchet.json', json.dumps({
                 'directory': ['src'], 'extension': '.rs', 'scope': 'handwritten-production', 'max': 3}))
             run('node', 'sdlc/scripts/ratchet.mjs', 'databases/postgresql/ratchet.json')
+            write('databases/duckdb/ratchet.hpp.json', json.dumps({
+                'directory': ['cpp/src'], 'extension': '.hpp', 'scope': 'handwritten-production', 'max': 3}))
+            run('node', 'sdlc/scripts/ratchet.mjs', 'databases/duckdb/ratchet.hpp.json')
+            write('databases/duckdb/cpp/src/receipt_types_generated.hpp', 'generated\n' * 99)
+            run('node', 'sdlc/scripts/ratchet.mjs', 'databases/duckdb/ratchet.hpp.json')
+            write('databases/duckdb/cpp/src/unknown_generated.hpp', 'handwritten\n' * 4)
+            failure = subprocess.run(['node', 'sdlc/scripts/ratchet.mjs', 'databases/duckdb/ratchet.hpp.json'],
+                                     cwd=root, env=env, text=True, capture_output=True)
+            self.assertEqual(failure.returncode, 1)
+            self.assertIn('is 4 non-blank lines, ceiling is 3', failure.stderr)
+            write('databases/duckdb/cpp/src/unknown_generated.hpp', 'handwritten\n' * 3)
+            write('databases/duckdb/cpp/src/receipt_types_generated.hpp', 'generated\n' * 4)
             write('databases/postgresql/src/files_complete_tests.rs', 'test\n' * 99)
             run('node', 'sdlc/scripts/ratchet.mjs', 'databases/postgresql/ratchet.json')
             write('databases/postgresql/src/results_generated.rs', 'generated\n' * 99)
@@ -95,7 +171,7 @@ class SizeReport(unittest.TestCase):
             write('databases/postgresql/src/native.rs', 'native\n' * 3)
             write('databases/postgresql/src/files_complete_tests.rs', 'test\n' * 5)
             write('databases/postgresql/src/results_generated.rs', 'generated\n' * 6)
-            self.assertEqual(report['libraries']['dart']['ratios']['handwritten'], 0.6667)
+            self.assertEqual(report['libraries']['dart']['ratios']['handwritten'], 0.5)
             self.assertEqual(report['libraries']['jvm']['languages']['kotlin']['handwritten'], 1)
             self.assertEqual(report['libraries']['jvm']['languages']['python']['test'], 2)
             self.assertEqual(report['libraries']['dart']['test'], 11)

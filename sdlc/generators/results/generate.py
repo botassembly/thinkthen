@@ -435,6 +435,7 @@ def main():
         for producer, target, mode in invocations():
             command = ([sys.executable, str(ROOT / 'sdlc/scripts/generate-c-header.py')]
                        if producer == 'header' else
+                       [sys.executable, str(ROOT / producer)] if producer.endswith('.py') else
                        [sys.executable, str(Path(__file__).resolve()), '--target', target])
             if mode in ('inputs', 'bridge', 'operations'):
                 command.append('--' + mode)
