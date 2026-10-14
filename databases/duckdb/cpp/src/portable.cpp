@@ -371,11 +371,21 @@ void Scalar(DataChunk &args, ExpressionState &state, Vector &result) {
 void OriginalSettings(DataChunk &args, ExpressionState &, Vector &result) {
 	for (idx_t row = 0; row < args.size(); ++row) {
 		auto value = args.data[0].GetValue(row);
-		if (value.IsNull()) { result.SetValue(row, Value(LogicalType::VARCHAR)); continue; }
-		const auto raw = value.GetValue<string>();
+		const auto raw = value.IsNull() ? string("{}") : value.GetValue<string>();
 		RustReply reply(thinkthen_cpp_portable_settings({reinterpret_cast<const uint8_t *>(raw.data()), raw.size()}));
+		if (reply.value.status == 1 && args.data[2].GetValue(row).GetValue<bool>()) {
+			// Keep the original failure for the packed Rust carrier. Never repair it
+			// by replacing its final byte while appending named controls.
+			result.SetValue(row, Value(raw));
+			continue;
+		}
 		Checked(reply.value);
-		result.SetValue(row, value);
+		const auto controls = args.data[1].GetValue(row).GetValue<string>();
+		if (controls == "{}") { result.SetValue(row, value); continue; }
+		const auto first = raw.find_first_not_of(" \t\r\n");
+		const auto last = raw.find_last_not_of(" \t\r\n");
+		const auto empty = raw.find_first_not_of(" \t\r\n", first + 1) == last;
+		result.SetValue(row, Value(raw.substr(first, last - first) + (empty ? "" : ",") + controls.substr(1)));
 	}
 }
 
@@ -413,7 +423,7 @@ string PortableJSONArgument(const string &argument) {
 	       " AS VARCHAR) ELSE CAST(to_json(" + argument + ") AS VARCHAR) END";
 }
 
-string PortableOptions(const string &settings, const string &nulls, bool legacy_type) {
+string PortableOptions(const string &settings, const string &nulls, bool legacy_type, bool recoverable) {
 	const auto guard = nulls + (legacy_type ? " OR (typeof(settings) NOT IN ('VARCHAR', 'JSON', '\"NULL\"') AND "
 	    "NOT starts_with(typeof(settings), 'STRUCT(') AND NOT starts_with(typeof(settings), 'MAP('))" : "");
 	string call = "thinkthen_native_options(" + PortableJSONArgument(settings);
@@ -422,11 +432,13 @@ string PortableOptions(const string &settings, const string &nulls, bool legacy_
 	for (auto parameter : {"context", "model", "batch", "deadline_ms", "allow_none", "true_reading", "false_reading"}) {
 		call += ", CASE WHEN " + nulls + " THEN NULL ELSE " + parameter + " END";
 	}
-	return "CASE WHEN " + guard + " THEN NULL ELSE " + call + ") END";
+	return "CASE WHEN " + guard + " THEN NULL ELSE " + call + (recoverable ? ", true) END" : ", false) END");
 }
 
 void RegisterPortableDecide(ExtensionLoader &loader) {
-	ScalarFunction checked("thinkthen_native_settings", {LogicalType::VARCHAR}, LogicalType::VARCHAR, OriginalSettings);
+	ScalarFunction checked("thinkthen_native_settings",
+	                       {LogicalType::VARCHAR, LogicalType::VARCHAR, LogicalType::BOOLEAN},
+	                       LogicalType::VARCHAR, OriginalSettings);
 	ThinkThenSpecialNulls(checked);
 	checked.SetStability(FunctionStability::VOLATILE);
 	RegisterDescribedScalar(loader, checked, "Validate original settings through the shared native parser.");
@@ -444,10 +456,8 @@ void RegisterPortableDecide(ExtensionLoader &loader) {
 	}
 	encoded += "), '}')";
 	RegisterMacro(loader, "CREATE MACRO thinkthen_native_options(settings, context, model, batch, deadline_ms, "
-	                      "allow_none, true_reading, false_reading) AS CASE WHEN " + encoded + " = '{}' THEN thinkthen_native_settings(settings) ELSE "
-	                      "concat(substr(trim(coalesce(thinkthen_native_settings(settings), '{}')), 1, length(trim(coalesce(thinkthen_native_settings(settings), '{}'))) - 1), "
-	                      "CASE WHEN regexp_full_match(coalesce(thinkthen_native_settings(settings), '{}'), '[[:space:]]*[{][[:space:]]*[}][[:space:]]*') THEN '' ELSE ',' END, "
-	                      "substr(" + encoded + ", 2)) END", "Encode named SQL controls for native admission.");
+	                      "allow_none, true_reading, false_reading, recoverable) AS thinkthen_native_settings(settings, "
+	                      + encoded + ", recoverable)", "Encode named SQL controls for native admission.");
 	const string purpose = "Judge whether text answers a yes-or-no question.";
 	ScalarFunction native("thinkthen_native_decide",
 	                      {LogicalType::VARCHAR, LogicalType::VARCHAR, LogicalType::VARCHAR, LogicalType::VARCHAR,
@@ -523,7 +533,7 @@ void RegisterPortableDecide(ExtensionLoader &loader) {
 		native.SetStability(FunctionStability::VOLATILE);
 		RegisterDescribedScalar(loader, native, purpose);
 		RegisterMacro(loader, "CREATE MACRO thinkthen_" + name + "(question, input, settings := NULL" + PortableOptionParameters() + ") AS "
-		                      "thinkthen_native_" + name + "(" + PortableJSONArgument("question") + ", input, " + PortableOptions() + ", "
+		                      "thinkthen_native_" + name + "(" + PortableJSONArgument("question") + ", input, " + PortableOptions("settings", "question IS NULL OR input IS NULL", true, kind == 3) + ", "
 		                      + std::to_string(kind) + ", typeof(settings))", purpose);
 	}
 }

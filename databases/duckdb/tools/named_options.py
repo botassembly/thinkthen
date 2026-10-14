@@ -28,6 +28,7 @@ def check(run):
         expect(backend.count(), 2, "equivalent controls share cache; refused controls send nothing")
     native_objects(run)
     original_settings_and_nulls(run)
+    packed_settings_failures(run)
 
 
 def native_objects(run):
@@ -73,3 +74,39 @@ def original_settings_and_nulls(run):
         expect([rows(item)[0][0] for item in got[4:11]], [None]*7, 'required NULL precedes typed control casts')
         expect(rows(got[11]), [], 'required NULL collection returns no rows')
         expect(backend.count(), 0, 'original settings failures and NULL inputs send nothing')
+
+
+def packed_settings_failures(run):
+    """Packed safe failures preserve invalid originals and later valid records."""
+    with Backend() as backend:
+        got = run([
+            "SELECT id, thinkthen_try_details('Refund?', body, settings, context := 'policy') AS detail "
+            "FROM (VALUES (1,'alpha','{\"batch\":\"max\"}'), (2,'broken','{\"batch\":1]'), "
+            "(3,'beta','{\"batch\":\"max\"}'), (4,'broken','{\"batch\":1]'), "
+            "(5,'duplicate','{\"batch\":1,\"batch\":2}'), "
+            "(6,'duplicate','{\"batch\":1,\"batch\":2}'), (7,'gamma','{\"batch\":1}')) "
+            "s(id,body,settings) ORDER BY id",
+            "SELECT thinkthen_try_details('Refund?', 'broken', settings) "
+            "FROM (VALUES ('{\"batch\":1]'), ('{\"batch\":1,\"batch\":2}')) s(settings)",
+        ], backend.base('arm/full/capture'))
+        import json
+        values = [(key, json.loads(detail) if isinstance(detail, str) else detail)
+                  for key, detail in rows(got[0])]
+        expect([key for key, _ in values], list(range(1, 8)), 'original row order')
+        failed = {'status': 'failed', 'error': {'kind': 'usage', 'message':
+                  "check the row's question and arguments, or raise the process request total when it is spent",
+                  'retryable': False}}
+        expect([value for _, value in values if value['status'] == 'failed'], [failed]*4,
+               'four exact old safe failures without added facts')
+        expect([json.loads(value) if isinstance(value, str) else value for value, in rows(got[1])],
+               [failed]*2, 'original-only settings retain the same safe failure')
+        expect([(key, value['status'], value['details']['value']) for key, value in values
+                if value['status'] == 'answered'], [(1,'answered',True), (3,'answered',True), (7,'answered',True)],
+               'valid siblings and later independent record answer')
+        prefix = '{"state":"policy","model":"jev-1.13.0","questions":'
+        def question(text):
+            return '{"type":"noul","instructions":"The text is ' + chr(92) + '"' + text + chr(92) + '". Refund?"}'
+        expected = [prefix + '{"q1":' + question('alpha') + ',"q2":' + question('beta') + '}}',
+                    prefix + '{"q1":' + question('gamma') + '}}']
+        expect(backend.count(), 2, 'invalid originals send nothing; valid groups send once')
+        expect(sorted(backend.capture()), sorted(expected), 'exact valid send multiset')
