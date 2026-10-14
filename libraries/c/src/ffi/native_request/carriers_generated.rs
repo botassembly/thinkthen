@@ -19,12 +19,10 @@ pub struct thinkthen_request_engine_settings_v1 {
     pub m_base_url: *const thinkthen_request_text_v1,
     pub m_batch: *const thinkthen_request_batch_v1,
     pub m_cache: *const thinkthen_request_cache_document_v1,
-    pub m_max_estimated_input_tokens_total:
-        *const thinkthen_request_engine_settings_max_estimated_input_tokens_total_v1,
+    pub m_max_estimated_input_tokens_total: *const thinkthen_request_optional_total_v1,
     pub m_max_request_bytes: *const thinkthen_request_unsigned_v1,
-    pub m_max_requests: *const thinkthen_request_engine_settings_max_requests_v1,
-    pub m_max_requests_total:
-        *const thinkthen_request_engine_settings_max_estimated_input_tokens_total_v1,
+    pub m_max_requests: *const thinkthen_request_optional_count_v1,
+    pub m_max_requests_total: *const thinkthen_request_optional_total_v1,
     pub m_max_retries: *const thinkthen_request_unsigned_v1,
     pub m_model: *const thinkthen_request_text_v1,
     pub m_profile: *const thinkthen_request_text_v1,
@@ -239,12 +237,12 @@ pub struct thinkthen_request_image_file_v1 {
     pub m_path: *const thinkthen_request_text_v1,
 }
 pub const THINKTHEN_REQUEST_RECOGNITION_EXAMPLE_TEXT_V1: u32 = 1;
-pub const THINKTHEN_REQUEST_RECOGNITION_EXAMPLE_RECOGNITION_EXAMPLE_TEXT_V1: u32 = 2;
+pub const THINKTHEN_REQUEST_RECOGNITION_EXAMPLE_EXAMPLE_TEXT_V1: u32 = 2;
 #[repr(C)]
 #[derive(Clone, Copy)]
 pub union thinkthen_request_recognition_example_data_v1 {
     pub text: *const thinkthen_request_text_v1,
-    pub recognition_example_text: *const thinkthen_request_recognition_example_text_v1,
+    pub example_text: *const thinkthen_request_recognition_example_text_v1,
 }
 impl std::fmt::Debug for thinkthen_request_recognition_example_data_v1 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -1095,51 +1093,48 @@ pub struct thinkthen_request_input_text_v1 {
 pub struct thinkthen_request_text_v1 {
     pub text: thinkthen_complete_utf8_v1,
 }
-pub const THINKTHEN_REQUEST_ENGINE_SETTINGS_MAX_ESTIMATED_INPUT_TOKENS_TOTAL_UNSIGNED_VALUE_V1:
-    u32 = 1;
-pub const THINKTHEN_REQUEST_ENGINE_SETTINGS_MAX_ESTIMATED_INPUT_TOKENS_TOTAL_NULL_V1: u32 = 2;
+pub const THINKTHEN_REQUEST_OPTIONAL_TOTAL_UNSIGNED_VALUE_V1: u32 = 1;
+pub const THINKTHEN_REQUEST_OPTIONAL_TOTAL_NULL_V1: u32 = 2;
 #[repr(C)]
 #[derive(Clone, Copy)]
-pub union thinkthen_request_engine_settings_max_estimated_input_tokens_total_data_v1 {
+pub union thinkthen_request_optional_total_data_v1 {
     pub unsigned_value: *const thinkthen_request_unsigned_v1,
     pub null: *const thinkthen_request_null_v1,
 }
-impl std::fmt::Debug
-    for thinkthen_request_engine_settings_max_estimated_input_tokens_total_data_v1
-{
+impl std::fmt::Debug for thinkthen_request_optional_total_data_v1 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_str("request union payload")
     }
 }
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
-pub struct thinkthen_request_engine_settings_max_estimated_input_tokens_total_v1 {
+pub struct thinkthen_request_optional_total_v1 {
     pub kind: u32,
-    pub data: thinkthen_request_engine_settings_max_estimated_input_tokens_total_data_v1,
+    pub data: thinkthen_request_optional_total_data_v1,
 }
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct thinkthen_request_unsigned_v1 {
     pub value: u64,
 }
-pub const THINKTHEN_REQUEST_ENGINE_SETTINGS_MAX_REQUESTS_UNSIGNED_VALUE_V1: u32 = 1;
-pub const THINKTHEN_REQUEST_ENGINE_SETTINGS_MAX_REQUESTS_NULL_V1: u32 = 2;
+pub const THINKTHEN_REQUEST_OPTIONAL_COUNT_UNSIGNED_VALUE_V1: u32 = 1;
+pub const THINKTHEN_REQUEST_OPTIONAL_COUNT_NULL_V1: u32 = 2;
 #[repr(C)]
 #[derive(Clone, Copy)]
-pub union thinkthen_request_engine_settings_max_requests_data_v1 {
+pub union thinkthen_request_optional_count_data_v1 {
     pub unsigned_value: *const thinkthen_request_unsigned_v1,
     pub null: *const thinkthen_request_null_v1,
 }
-impl std::fmt::Debug for thinkthen_request_engine_settings_max_requests_data_v1 {
+impl std::fmt::Debug for thinkthen_request_optional_count_data_v1 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_str("request union payload")
     }
 }
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
-pub struct thinkthen_request_engine_settings_max_requests_v1 {
+pub struct thinkthen_request_optional_count_v1 {
     pub kind: u32,
-    pub data: thinkthen_request_engine_settings_max_requests_data_v1,
+    pub data: thinkthen_request_optional_count_data_v1,
 }
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
@@ -1472,7 +1467,7 @@ pub(super) unsafe fn read_thinkthen_request_engine_settings_v1(
                     input.m_max_estimated_input_tokens_total,
                     context,
                     &mut fields,
-                    read_thinkthen_request_engine_settings_max_estimated_input_tokens_total_v1,
+                    read_thinkthen_request_optional_total_v1,
                 )?;
                 optional(
                     "max_request_bytes",
@@ -1486,14 +1481,14 @@ pub(super) unsafe fn read_thinkthen_request_engine_settings_v1(
                     input.m_max_requests,
                     context,
                     &mut fields,
-                    read_thinkthen_request_engine_settings_max_requests_v1,
+                    read_thinkthen_request_optional_count_v1,
                 )?;
                 optional(
                     "max_requests_total",
                     input.m_max_requests_total,
                     context,
                     &mut fields,
-                    read_thinkthen_request_engine_settings_max_estimated_input_tokens_total_v1,
+                    read_thinkthen_request_optional_total_v1,
                 )?;
                 optional(
                     "max_retries",
@@ -2096,9 +2091,9 @@ pub(super) unsafe fn read_thinkthen_request_recognition_example_v1(
                 THINKTHEN_REQUEST_RECOGNITION_EXAMPLE_TEXT_V1 => {
                     read_thinkthen_request_text_v1(input.data.text, context)?
                 }
-                THINKTHEN_REQUEST_RECOGNITION_EXAMPLE_RECOGNITION_EXAMPLE_TEXT_V1 => {
+                THINKTHEN_REQUEST_RECOGNITION_EXAMPLE_EXAMPLE_TEXT_V1 => {
                     read_thinkthen_request_recognition_example_text_v1(
-                        input.data.recognition_example_text,
+                        input.data.example_text,
                         context,
                     )?
                 }
@@ -4565,20 +4560,26 @@ pub(super) unsafe fn read_thinkthen_request_text_v1(
         unsafe { Ok(Value::Text(context.text(input.text)?)) }
     })
 }
-pub(super) unsafe fn read_thinkthen_request_engine_settings_max_estimated_input_tokens_total_v1(
-    pointer: *const thinkthen_request_engine_settings_max_estimated_input_tokens_total_v1,
+pub(super) unsafe fn read_thinkthen_request_optional_total_v1(
+    pointer: *const thinkthen_request_optional_total_v1,
     context: &mut Context,
 ) -> Result<Value, CarrierError> {
     // SAFETY: the caller retains every referenced aligned carrier and counted extent.
     let input = unsafe { borrow(pointer)? };
     context.enter(|context| {
-// SAFETY: nested pointers retain the caller's live counted carrier graph.
-unsafe { Ok(match input.kind {
-THINKTHEN_REQUEST_ENGINE_SETTINGS_MAX_ESTIMATED_INPUT_TOKENS_TOTAL_UNSIGNED_VALUE_V1 => read_thinkthen_request_unsigned_v1(input.data.unsigned_value, context)?,
-THINKTHEN_REQUEST_ENGINE_SETTINGS_MAX_ESTIMATED_INPUT_TOKENS_TOTAL_NULL_V1 => read_thinkthen_request_null_v1(input.data.null, context)?,
-_ => return Err(CarrierError::Invalid),
-}) }
-})
+        // SAFETY: nested pointers retain the caller's live counted carrier graph.
+        unsafe {
+            Ok(match input.kind {
+                THINKTHEN_REQUEST_OPTIONAL_TOTAL_UNSIGNED_VALUE_V1 => {
+                    read_thinkthen_request_unsigned_v1(input.data.unsigned_value, context)?
+                }
+                THINKTHEN_REQUEST_OPTIONAL_TOTAL_NULL_V1 => {
+                    read_thinkthen_request_null_v1(input.data.null, context)?
+                }
+                _ => return Err(CarrierError::Invalid),
+            })
+        }
+    })
 }
 pub(super) unsafe fn read_thinkthen_request_unsigned_v1(
     pointer: *const thinkthen_request_unsigned_v1,
@@ -4588,8 +4589,8 @@ pub(super) unsafe fn read_thinkthen_request_unsigned_v1(
     let input = unsafe { borrow(pointer)? };
     context.enter(|_context| Ok(Value::Number(input.value.into())))
 }
-pub(super) unsafe fn read_thinkthen_request_engine_settings_max_requests_v1(
-    pointer: *const thinkthen_request_engine_settings_max_requests_v1,
+pub(super) unsafe fn read_thinkthen_request_optional_count_v1(
+    pointer: *const thinkthen_request_optional_count_v1,
     context: &mut Context,
 ) -> Result<Value, CarrierError> {
     // SAFETY: the caller retains every referenced aligned carrier and counted extent.
@@ -4598,10 +4599,10 @@ pub(super) unsafe fn read_thinkthen_request_engine_settings_max_requests_v1(
         // SAFETY: nested pointers retain the caller's live counted carrier graph.
         unsafe {
             Ok(match input.kind {
-                THINKTHEN_REQUEST_ENGINE_SETTINGS_MAX_REQUESTS_UNSIGNED_VALUE_V1 => {
+                THINKTHEN_REQUEST_OPTIONAL_COUNT_UNSIGNED_VALUE_V1 => {
                     read_thinkthen_request_unsigned_v1(input.data.unsigned_value, context)?
                 }
-                THINKTHEN_REQUEST_ENGINE_SETTINGS_MAX_REQUESTS_NULL_V1 => {
+                THINKTHEN_REQUEST_OPTIONAL_COUNT_NULL_V1 => {
                     read_thinkthen_request_null_v1(input.data.null, context)?
                 }
                 _ => return Err(CarrierError::Invalid),

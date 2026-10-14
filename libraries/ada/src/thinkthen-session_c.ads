@@ -195,10 +195,6 @@ private package Thinkthen.Session_C is
    K_THINKTHEN_REQUEST_DESCRIPTION_JSON_VALUE_MAP_V1 : constant := 2;
    K_THINKTHEN_REQUEST_DESCRIPTION_NULL_V1 : constant := 4;
    K_THINKTHEN_REQUEST_DESCRIPTION_TEXT_V1 : constant := 1;
-   K_THINKTHEN_REQUEST_ENGINE_SETTINGS_MAX_ESTIMATED_INPUT_TOKENS_TOTAL_NULL_V1 : constant := 2;
-   K_THINKTHEN_REQUEST_ENGINE_SETTINGS_MAX_ESTIMATED_INPUT_TOKENS_TOTAL_UNSIGNED_VALUE_V1 : constant := 1;
-   K_THINKTHEN_REQUEST_ENGINE_SETTINGS_MAX_REQUESTS_NULL_V1 : constant := 2;
-   K_THINKTHEN_REQUEST_ENGINE_SETTINGS_MAX_REQUESTS_UNSIGNED_VALUE_V1 : constant := 1;
    K_THINKTHEN_REQUEST_FRAMING_LITERAL_CSV_V1 : constant := 4;
    K_THINKTHEN_REQUEST_FRAMING_LITERAL_DOCUMENT_V1 : constant := 1;
    K_THINKTHEN_REQUEST_FRAMING_LITERAL_JSONL_V1 : constant := 3;
@@ -225,6 +221,10 @@ private package Thinkthen.Session_C is
    K_THINKTHEN_REQUEST_LABELS_NAME_LIST_V1 : constant := 1;
    K_THINKTHEN_REQUEST_LEVELS_CRITERION_MAP_V1 : constant := 2;
    K_THINKTHEN_REQUEST_LEVELS_NAME_LIST_V1 : constant := 1;
+   K_THINKTHEN_REQUEST_OPTIONAL_COUNT_NULL_V1 : constant := 2;
+   K_THINKTHEN_REQUEST_OPTIONAL_COUNT_UNSIGNED_VALUE_V1 : constant := 1;
+   K_THINKTHEN_REQUEST_OPTIONAL_TOTAL_NULL_V1 : constant := 2;
+   K_THINKTHEN_REQUEST_OPTIONAL_TOTAL_UNSIGNED_VALUE_V1 : constant := 1;
    K_THINKTHEN_REQUEST_OPTIONS_DESCRIPTION_MAP_V1 : constant := 2;
    K_THINKTHEN_REQUEST_OPTIONS_NAME_LIST_V1 : constant := 1;
    K_THINKTHEN_REQUEST_ORIGINAL_JSON_V1 : constant := 2;
@@ -247,7 +247,7 @@ private package Thinkthen.Session_C is
    K_THINKTHEN_REQUEST_READER_FAILURE_UTF_8_V1 : constant := 3;
    K_THINKTHEN_REQUEST_READER_MEDIA_LITERAL_IMAGE_V1 : constant := 2;
    K_THINKTHEN_REQUEST_READER_MEDIA_LITERAL_TEXT_V1 : constant := 1;
-   K_THINKTHEN_REQUEST_RECOGNITION_EXAMPLE_RECOGNITION_EXAMPLE_TEXT_V1 : constant := 2;
+   K_THINKTHEN_REQUEST_RECOGNITION_EXAMPLE_EXAMPLE_TEXT_V1 : constant := 2;
    K_THINKTHEN_REQUEST_RECOGNITION_EXAMPLE_TEXT_V1 : constant := 1;
    K_THINKTHEN_REQUEST_RECOGNITION_MODE_LITERAL_BOUNDARY_ONLY_V1 : constant := 2;
    K_THINKTHEN_REQUEST_RECOGNITION_MODE_LITERAL_WHOLE_V1 : constant := 1;
@@ -333,7 +333,7 @@ private package Thinkthen.Session_C is
       reserved : aliased Interfaces.Unsigned_32;
    end record
    with Convention => C_Pass_By_Copy;
-   type thinkthen_request_engine_settings_max_estimated_input_tokens_total_data_v1 (discr : unsigned := 0) is record
+   type thinkthen_request_optional_total_data_v1 (discr : unsigned := 0) is record
       case discr is
          when 0 =>
             unsigned_value : access constant thinkthen_request_unsigned_v1;
@@ -343,12 +343,12 @@ private package Thinkthen.Session_C is
    end record
    with Convention => C_Pass_By_Copy,
         Unchecked_Union => True;
-   type thinkthen_request_engine_settings_max_estimated_input_tokens_total_v1 is record
+   type thinkthen_request_optional_total_v1 is record
       kind : aliased Interfaces.Unsigned_32;
-      data : aliased thinkthen_request_engine_settings_max_estimated_input_tokens_total_data_v1;
+      data : aliased thinkthen_request_optional_total_data_v1;
    end record
    with Convention => C_Pass_By_Copy;
-   type thinkthen_request_engine_settings_max_requests_data_v1 (discr : unsigned := 0) is record
+   type thinkthen_request_optional_count_data_v1 (discr : unsigned := 0) is record
       case discr is
          when 0 =>
             unsigned_value : access constant thinkthen_request_unsigned_v1;
@@ -358,9 +358,9 @@ private package Thinkthen.Session_C is
    end record
    with Convention => C_Pass_By_Copy,
         Unchecked_Union => True;
-   type thinkthen_request_engine_settings_max_requests_v1 is record
+   type thinkthen_request_optional_count_v1 is record
       kind : aliased Interfaces.Unsigned_32;
-      data : aliased thinkthen_request_engine_settings_max_requests_data_v1;
+      data : aliased thinkthen_request_optional_count_data_v1;
    end record
    with Convention => C_Pass_By_Copy;
    type thinkthen_complete_json_v1;
@@ -413,10 +413,10 @@ private package Thinkthen.Session_C is
       m_base_url : access constant thinkthen_request_text_v1;
       m_batch : access constant thinkthen_request_batch_v1;
       m_cache : access constant thinkthen_request_cache_document_v1;
-      m_max_estimated_input_tokens_total : access constant thinkthen_request_engine_settings_max_estimated_input_tokens_total_v1;
+      m_max_estimated_input_tokens_total : access constant thinkthen_request_optional_total_v1;
       m_max_request_bytes : access constant thinkthen_request_unsigned_v1;
-      m_max_requests : access constant thinkthen_request_engine_settings_max_requests_v1;
-      m_max_requests_total : access constant thinkthen_request_engine_settings_max_estimated_input_tokens_total_v1;
+      m_max_requests : access constant thinkthen_request_optional_count_v1;
+      m_max_requests_total : access constant thinkthen_request_optional_total_v1;
       m_max_retries : access constant thinkthen_request_unsigned_v1;
       m_model : access constant thinkthen_request_text_v1;
       m_profile : access constant thinkthen_request_text_v1;
@@ -702,7 +702,7 @@ private package Thinkthen.Session_C is
          when 0 =>
             text : access constant thinkthen_request_text_v1;
          when others =>
-            recognition_example_text : access constant thinkthen_request_recognition_example_text_v1;
+            example_text : access constant thinkthen_request_recognition_example_text_v1;
       end case;
    end record
    with Convention => C_Pass_By_Copy,

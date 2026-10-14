@@ -433,14 +433,6 @@
 
 #define THINKTHEN_REQUEST_DESCRIPTION_TEXT_V1 1
 
-#define THINKTHEN_REQUEST_ENGINE_SETTINGS_MAX_ESTIMATED_INPUT_TOKENS_TOTAL_NULL_V1 2
-
-#define THINKTHEN_REQUEST_ENGINE_SETTINGS_MAX_ESTIMATED_INPUT_TOKENS_TOTAL_UNSIGNED_VALUE_V1 1
-
-#define THINKTHEN_REQUEST_ENGINE_SETTINGS_MAX_REQUESTS_NULL_V1 2
-
-#define THINKTHEN_REQUEST_ENGINE_SETTINGS_MAX_REQUESTS_UNSIGNED_VALUE_V1 1
-
 #define THINKTHEN_REQUEST_FRAMING_LITERAL_CSV_V1 4
 
 #define THINKTHEN_REQUEST_FRAMING_LITERAL_DOCUMENT_V1 1
@@ -493,6 +485,14 @@
 
 #define THINKTHEN_REQUEST_LEVELS_NAME_LIST_V1 1
 
+#define THINKTHEN_REQUEST_OPTIONAL_COUNT_NULL_V1 2
+
+#define THINKTHEN_REQUEST_OPTIONAL_COUNT_UNSIGNED_VALUE_V1 1
+
+#define THINKTHEN_REQUEST_OPTIONAL_TOTAL_NULL_V1 2
+
+#define THINKTHEN_REQUEST_OPTIONAL_TOTAL_UNSIGNED_VALUE_V1 1
+
 #define THINKTHEN_REQUEST_OPTIONS_DESCRIPTION_MAP_V1 2
 
 #define THINKTHEN_REQUEST_OPTIONS_NAME_LIST_V1 1
@@ -537,7 +537,7 @@
 
 #define THINKTHEN_REQUEST_READER_MEDIA_LITERAL_TEXT_V1 1
 
-#define THINKTHEN_REQUEST_RECOGNITION_EXAMPLE_RECOGNITION_EXAMPLE_TEXT_V1 2
+#define THINKTHEN_REQUEST_RECOGNITION_EXAMPLE_EXAMPLE_TEXT_V1 2
 
 #define THINKTHEN_REQUEST_RECOGNITION_EXAMPLE_TEXT_V1 1
 
@@ -828,25 +828,25 @@ typedef struct thinkthen_request_null_v1 {
   uint32_t reserved;
 } thinkthen_request_null_v1;
 
-typedef union thinkthen_request_engine_settings_max_estimated_input_tokens_total_data_v1 {
+typedef union thinkthen_request_optional_total_data_v1 {
   const struct thinkthen_request_unsigned_v1 *unsigned_value;
   const struct thinkthen_request_null_v1 *null;
-} thinkthen_request_engine_settings_max_estimated_input_tokens_total_data_v1;
+} thinkthen_request_optional_total_data_v1;
 
-typedef struct thinkthen_request_engine_settings_max_estimated_input_tokens_total_v1 {
+typedef struct thinkthen_request_optional_total_v1 {
   uint32_t kind;
-  union thinkthen_request_engine_settings_max_estimated_input_tokens_total_data_v1 data;
-} thinkthen_request_engine_settings_max_estimated_input_tokens_total_v1;
+  union thinkthen_request_optional_total_data_v1 data;
+} thinkthen_request_optional_total_v1;
 
-typedef union thinkthen_request_engine_settings_max_requests_data_v1 {
+typedef union thinkthen_request_optional_count_data_v1 {
   const struct thinkthen_request_unsigned_v1 *unsigned_value;
   const struct thinkthen_request_null_v1 *null;
-} thinkthen_request_engine_settings_max_requests_data_v1;
+} thinkthen_request_optional_count_data_v1;
 
-typedef struct thinkthen_request_engine_settings_max_requests_v1 {
+typedef struct thinkthen_request_optional_count_v1 {
   uint32_t kind;
-  union thinkthen_request_engine_settings_max_requests_data_v1 data;
-} thinkthen_request_engine_settings_max_requests_v1;
+  union thinkthen_request_optional_count_data_v1 data;
+} thinkthen_request_optional_count_v1;
 
 /*
  C descriptor or borrowed view `thinkthen_complete_json_array_v1`.
@@ -943,10 +943,10 @@ typedef struct thinkthen_request_engine_settings_v1 {
   const struct thinkthen_request_text_v1 *m_base_url;
   const struct thinkthen_request_batch_v1 *m_batch;
   const struct thinkthen_request_cache_document_v1 *m_cache;
-  const struct thinkthen_request_engine_settings_max_estimated_input_tokens_total_v1 *m_max_estimated_input_tokens_total;
+  const struct thinkthen_request_optional_total_v1 *m_max_estimated_input_tokens_total;
   const struct thinkthen_request_unsigned_v1 *m_max_request_bytes;
-  const struct thinkthen_request_engine_settings_max_requests_v1 *m_max_requests;
-  const struct thinkthen_request_engine_settings_max_estimated_input_tokens_total_v1 *m_max_requests_total;
+  const struct thinkthen_request_optional_count_v1 *m_max_requests;
+  const struct thinkthen_request_optional_total_v1 *m_max_requests_total;
   const struct thinkthen_request_unsigned_v1 *m_max_retries;
   const struct thinkthen_request_text_v1 *m_model;
   const struct thinkthen_request_text_v1 *m_profile;
@@ -1347,7 +1347,7 @@ typedef struct thinkthen_request_recognition_example_text_v1 {
 
 typedef union thinkthen_request_recognition_example_data_v1 {
   const struct thinkthen_request_text_v1 *text;
-  const struct thinkthen_request_recognition_example_text_v1 *recognition_example_text;
+  const struct thinkthen_request_recognition_example_text_v1 *example_text;
 } thinkthen_request_recognition_example_data_v1;
 
 typedef struct thinkthen_request_recognition_example_v1 {

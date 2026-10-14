@@ -805,7 +805,7 @@ static void *convert_CacheDocument_CacheDocument(arena *a,const void *input) {
 static void *convert_EngineSettings_member_max_estimated_input_tokens_total_EngineSettings_max_estimated_input_tokens_total(arena *a,
 const void *input) {
     const thinkthen_cobol_SettingsInputTokenBudget *p=input;
-    thinkthen_request_engine_settings_max_estimated_input_tokens_total_v1 *out=allocate(a,1,sizeof(*out));
+    thinkthen_request_optional_total_v1 *out=allocate(a,1,sizeof(*out));
     if(!out) return NULL;
     if(!p) {
         a->code=THINKTHEN_COBOL_REPRESENTATION;
@@ -838,7 +838,7 @@ static void *convert_EngineSettings_member_max_request_bytes_Unsigned(arena *a,c
 static void *convert_EngineSettings_member_max_requests_EngineSettings_max_requests(arena *a,
 const void *input) {
     const thinkthen_cobol_SettingsMaxRequests *p=input;
-    thinkthen_request_engine_settings_max_requests_v1 *out=allocate(a,1,sizeof(*out));
+    thinkthen_request_optional_count_v1 *out=allocate(a,1,sizeof(*out));
     if(!out) return NULL;
     if(!p) {
         a->code=THINKTHEN_COBOL_REPRESENTATION;
@@ -859,7 +859,7 @@ const void *input) {
 static void *convert_EngineSettings_member_max_requests_total_EngineSettings_max_estimated_input_tokens_total(arena *a,
 const void *input) {
     const thinkthen_cobol_SettingsMaxRequestsTotal *p=input;
-    thinkthen_request_engine_settings_max_estimated_input_tokens_total_v1 *out=allocate(a,1,sizeof(*out));
+    thinkthen_request_optional_total_v1 *out=allocate(a,1,sizeof(*out));
     if(!out) return NULL;
     if(!p) {
         a->code=THINKTHEN_COBOL_REPRESENTATION;
@@ -1906,8 +1906,7 @@ static void *convert_RecognitionExample_RecognitionExample(arena *a,const void *
     switch(p->kind) {
         case 1: out->data.text=convert_RecognitionExample_arm_1_Text(a,p->value);
         break;
-        case 2: out->data.recognition_example_text=convert_RecognitionExampleText_RecognitionExampleText(a,
-        p->value);
+        case 2: out->data.example_text=convert_RecognitionExampleText_RecognitionExampleText(a,p->value);
         break;
         default: a->code=THINKTHEN_COBOL_REPRESENTATION;
         break;

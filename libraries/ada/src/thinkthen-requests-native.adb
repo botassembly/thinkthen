@@ -144,12 +144,6 @@ function Store_thinkthen_request_description_v1 is new Store (thinkthen_request_
 type A_thinkthen_request_disabled_cache_v1 is access all thinkthen_request_disabled_cache_v1;
 function P_thinkthen_request_disabled_cache_v1 is new Ada.Unchecked_Conversion (System.Address, A_thinkthen_request_disabled_cache_v1);
 function Store_thinkthen_request_disabled_cache_v1 is new Store (thinkthen_request_disabled_cache_v1);
-type A_thinkthen_request_engine_settings_max_estimated_input_tokens_total_v1 is access all thinkthen_request_engine_settings_max_estimated_input_tokens_total_v1;
-function P_thinkthen_request_engine_settings_max_estimated_input_tokens_total_v1 is new Ada.Unchecked_Conversion (System.Address, A_thinkthen_request_engine_settings_max_estimated_input_tokens_total_v1);
-function Store_thinkthen_request_engine_settings_max_estimated_input_tokens_total_v1 is new Store (thinkthen_request_engine_settings_max_estimated_input_tokens_total_v1);
-type A_thinkthen_request_engine_settings_max_requests_v1 is access all thinkthen_request_engine_settings_max_requests_v1;
-function P_thinkthen_request_engine_settings_max_requests_v1 is new Ada.Unchecked_Conversion (System.Address, A_thinkthen_request_engine_settings_max_requests_v1);
-function Store_thinkthen_request_engine_settings_max_requests_v1 is new Store (thinkthen_request_engine_settings_max_requests_v1);
 function Store_thinkthen_request_engine_settings_v1 is new Store (thinkthen_request_engine_settings_v1);
 type A_thinkthen_request_framing_v1 is access all thinkthen_request_framing_v1;
 function P_thinkthen_request_framing_v1 is new Ada.Unchecked_Conversion (System.Address, A_thinkthen_request_framing_v1);
@@ -313,6 +307,12 @@ type A_thinkthen_request_option_schema_list_v1 is access all thinkthen_request_o
 function P_thinkthen_request_option_schema_list_v1 is new Ada.Unchecked_Conversion (System.Address, A_thinkthen_request_option_schema_list_v1);
 function Store_thinkthen_request_option_schema_list_v1 is new Store (thinkthen_request_option_schema_list_v1);
 function Store_thinkthen_request_option_schema_v1 is new Store (thinkthen_request_option_schema_v1);
+type A_thinkthen_request_optional_count_v1 is access all thinkthen_request_optional_count_v1;
+function P_thinkthen_request_optional_count_v1 is new Ada.Unchecked_Conversion (System.Address, A_thinkthen_request_optional_count_v1);
+function Store_thinkthen_request_optional_count_v1 is new Store (thinkthen_request_optional_count_v1);
+type A_thinkthen_request_optional_total_v1 is access all thinkthen_request_optional_total_v1;
+function P_thinkthen_request_optional_total_v1 is new Ada.Unchecked_Conversion (System.Address, A_thinkthen_request_optional_total_v1);
+function Store_thinkthen_request_optional_total_v1 is new Store (thinkthen_request_optional_total_v1);
 type A_thinkthen_request_options_v1 is access all thinkthen_request_options_v1;
 function P_thinkthen_request_options_v1 is new Ada.Unchecked_Conversion (System.Address, A_thinkthen_request_options_v1);
 function Store_thinkthen_request_options_v1 is new Store (thinkthen_request_options_v1);
@@ -769,10 +769,10 @@ if Value.T_backend.Present then Result.m_backend := P_thinkthen_request_text_v1 
 if Value.T_base_url.Present then Result.m_base_url := P_thinkthen_request_text_v1 (Convert_EngineSettings_field_base_url_Text (Value.T_base_url.Value, Storage)); else Result.m_base_url := null; end if;
 if Value.T_batch.Present then Result.m_batch := P_thinkthen_request_batch_v1 (Convert_RequestBatch_RequestBatch (Value.T_batch.Value, Storage)); else Result.m_batch := null; end if;
 if Value.T_cache.Present then Result.m_cache := P_thinkthen_request_cache_document_v1 (Convert_CacheDocument_CacheDocument (Value.T_cache.Value, Storage)); else Result.m_cache := null; end if;
-if Value.T_max_estimated_input_tokens_total.Present then Result.m_max_estimated_input_tokens_total := P_thinkthen_request_engine_settings_max_estimated_input_tokens_total_v1 (Convert_EngineSettings_field_max_estimated_input_tokens_total_EngineSettings_max_estimated_input_tokens_total (Value.T_max_estimated_input_tokens_total.Value, Storage)); else Result.m_max_estimated_input_tokens_total := null; end if;
+if Value.T_max_estimated_input_tokens_total.Present then Result.m_max_estimated_input_tokens_total := P_thinkthen_request_optional_total_v1 (Convert_EngineSettings_field_max_estimated_input_tokens_total_EngineSettings_max_estimated_input_tokens_total (Value.T_max_estimated_input_tokens_total.Value, Storage)); else Result.m_max_estimated_input_tokens_total := null; end if;
 if Value.T_max_request_bytes.Present then Result.m_max_request_bytes := P_thinkthen_request_unsigned_v1 (Convert_EngineSettings_field_max_request_bytes_Unsigned (Value.T_max_request_bytes.Value, Storage)); else Result.m_max_request_bytes := null; end if;
-if Value.T_max_requests.Present then Result.m_max_requests := P_thinkthen_request_engine_settings_max_requests_v1 (Convert_EngineSettings_field_max_requests_EngineSettings_max_requests (Value.T_max_requests.Value, Storage)); else Result.m_max_requests := null; end if;
-if Value.T_max_requests_total.Present then Result.m_max_requests_total := P_thinkthen_request_engine_settings_max_estimated_input_tokens_total_v1 (Convert_EngineSettings_field_max_requests_total_EngineSettings_max_estimated_input_tokens_total (Value.T_max_requests_total.Value, Storage)); else Result.m_max_requests_total := null; end if;
+if Value.T_max_requests.Present then Result.m_max_requests := P_thinkthen_request_optional_count_v1 (Convert_EngineSettings_field_max_requests_EngineSettings_max_requests (Value.T_max_requests.Value, Storage)); else Result.m_max_requests := null; end if;
+if Value.T_max_requests_total.Present then Result.m_max_requests_total := P_thinkthen_request_optional_total_v1 (Convert_EngineSettings_field_max_requests_total_EngineSettings_max_estimated_input_tokens_total (Value.T_max_requests_total.Value, Storage)); else Result.m_max_requests_total := null; end if;
 if Value.T_max_retries.Present then Result.m_max_retries := P_thinkthen_request_unsigned_v1 (Convert_EngineSettings_field_max_retries_Unsigned (Value.T_max_retries.Value, Storage)); else Result.m_max_retries := null; end if;
 if Value.T_model.Present then Result.m_model := P_thinkthen_request_text_v1 (Convert_EngineSettings_field_model_Text (Value.T_model.Value, Storage)); else Result.m_model := null; end if;
 if Value.T_profile.Present then Result.m_profile := P_thinkthen_request_text_v1 (Convert_EngineSettings_field_profile_Text (Value.T_profile.Value, Storage)); else Result.m_profile := null; end if;
@@ -946,7 +946,7 @@ end case;
 return Store_thinkthen_request_cache_document_v1 (Result, Storage);
 end Convert_CacheDocument_CacheDocument;
 function Convert_EngineSettings_field_max_estimated_input_tokens_total_EngineSettings_max_estimated_input_tokens_total (Value : T_EngineSettings_field_max_estimated_input_tokens_total; Storage : in out Arena) return System.Address is
-Result : thinkthen_request_engine_settings_max_estimated_input_tokens_total_v1;
+Result : thinkthen_request_optional_total_v1;
 begin
 case Value.Kind is
 when T_EngineSettings_field_max_estimated_input_tokens_total_arm_0 =>
@@ -956,7 +956,7 @@ when T_EngineSettings_field_max_estimated_input_tokens_total_arm_1 =>
 Result.kind := 2;
 Result.data := (discr => 1, null => P_thinkthen_request_null_v1 (Convert_EngineSettings_field_max_estimated_input_tokens_total_value_1_Null (Value.V_1, Storage)));
 end case;
-return Store_thinkthen_request_engine_settings_max_estimated_input_tokens_total_v1 (Result, Storage);
+return Store_thinkthen_request_optional_total_v1 (Result, Storage);
 end Convert_EngineSettings_field_max_estimated_input_tokens_total_EngineSettings_max_estimated_input_tokens_total;
 function Convert_EngineSettings_field_max_request_bytes_Unsigned (Value : T_Unsigned; Storage : in out Arena) return System.Address is
 Result : thinkthen_request_unsigned_v1;
@@ -965,7 +965,7 @@ Result.value := Interfaces.Unsigned_64 (Value);
 return Store_thinkthen_request_unsigned_v1 (Result, Storage);
 end Convert_EngineSettings_field_max_request_bytes_Unsigned;
 function Convert_EngineSettings_field_max_requests_EngineSettings_max_requests (Value : T_EngineSettings_field_max_requests; Storage : in out Arena) return System.Address is
-Result : thinkthen_request_engine_settings_max_requests_v1;
+Result : thinkthen_request_optional_count_v1;
 begin
 case Value.Kind is
 when T_EngineSettings_field_max_requests_arm_0 =>
@@ -975,10 +975,10 @@ when T_EngineSettings_field_max_requests_arm_1 =>
 Result.kind := 2;
 Result.data := (discr => 1, null => P_thinkthen_request_null_v1 (Convert_EngineSettings_field_max_requests_value_1_Null (Value.V_1, Storage)));
 end case;
-return Store_thinkthen_request_engine_settings_max_requests_v1 (Result, Storage);
+return Store_thinkthen_request_optional_count_v1 (Result, Storage);
 end Convert_EngineSettings_field_max_requests_EngineSettings_max_requests;
 function Convert_EngineSettings_field_max_requests_total_EngineSettings_max_estimated_input_tokens_total (Value : T_EngineSettings_field_max_requests_total; Storage : in out Arena) return System.Address is
-Result : thinkthen_request_engine_settings_max_estimated_input_tokens_total_v1;
+Result : thinkthen_request_optional_total_v1;
 begin
 case Value.Kind is
 when T_EngineSettings_field_max_requests_total_arm_0 =>
@@ -988,7 +988,7 @@ when T_EngineSettings_field_max_requests_total_arm_1 =>
 Result.kind := 2;
 Result.data := (discr => 1, null => P_thinkthen_request_null_v1 (Convert_EngineSettings_field_max_requests_total_value_1_Null (Value.V_1, Storage)));
 end case;
-return Store_thinkthen_request_engine_settings_max_estimated_input_tokens_total_v1 (Result, Storage);
+return Store_thinkthen_request_optional_total_v1 (Result, Storage);
 end Convert_EngineSettings_field_max_requests_total_EngineSettings_max_estimated_input_tokens_total;
 function Convert_EngineSettings_field_max_retries_Unsigned (Value : T_Unsigned; Storage : in out Arena) return System.Address is
 Result : thinkthen_request_unsigned_v1;
@@ -1627,7 +1627,7 @@ Result.kind := 1;
 Result.data := (discr => 0, text => P_thinkthen_request_text_v1 (Convert_RecognitionExample_value_0_Text (Value.V_0, Storage)));
 when T_RecognitionExample_arm_1 =>
 Result.kind := 2;
-Result.data := (discr => 1, recognition_example_text => P_thinkthen_request_recognition_example_text_v1 (Convert_RecognitionExampleText_RecognitionExampleText (Value.V_1, Storage)));
+Result.data := (discr => 1, example_text => P_thinkthen_request_recognition_example_text_v1 (Convert_RecognitionExampleText_RecognitionExampleText (Value.V_1, Storage)));
 end case;
 return Store_thinkthen_request_recognition_example_v1 (Result, Storage);
 end Convert_RecognitionExample_RecognitionExample;

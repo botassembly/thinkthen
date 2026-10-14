@@ -5,6 +5,8 @@ from native import JSON_KINDS
 
 
 def name(key):
+    key = {'EngineSettings_max_estimated_input_tokens_total': 'OptionalTotal',
+           'EngineSettings_max_requests': 'OptionalCount'}.get(key, key)
     key = key.replace('RequestOptions', 'CallOptions', 1) if key.startswith('RequestOptions') else key
     key = key.replace('RequestThreshold', 'CallThreshold', 1) if key.startswith('RequestThreshold') else key
     key = key.replace('RequestQuestion', 'QuestionSelector', 1) if key.startswith('RequestQuestion') else key.removeprefix('Request')
@@ -19,7 +21,7 @@ def union_member(parent, target, siblings=()):
     prefix = name(parent).removeprefix("thinkthen_request_").removesuffix("_v1")
     short = member.removeprefix(prefix + "_")
     if sum(name(item).removeprefix("thinkthen_request_").removesuffix("_v1").removeprefix(prefix + "_") == short for item in siblings) > 1:
-        short = member
+        short = prefix.rsplit("_", 1)[-1] + "_" + short if member.startswith(prefix + "_") else member
     if short in {"unsigned", "signed", "char", "int", "float", "double", "long", "short", "void", "bool", "class", "struct", "union", "enum"}:
         short += "_value"
     return short
