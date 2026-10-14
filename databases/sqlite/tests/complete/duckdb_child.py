@@ -28,7 +28,8 @@ try:
         members = []
         for key in ('text','document','context','options','examples','seed_spans','source'):
             if key in record:
-                members.append(key + ' := ' + (argument('null','::JSON') if record[key] is None and key in ('context','options','examples','seed_spans') else argument(record[key])))
+                members.append(key + ' := ' + (argument(json.dumps(record[key]),'::JSON')
+                               if key in ('context','options','examples','seed_spans') else argument(record[key])))
         if 'json' in record or 'json_text' in record:
             original = record.get('json_text') if 'json_text' in record else json.dumps(record['json'],ensure_ascii=False,separators=(',',':'))
             members.append('json := ' + argument(original, '::JSON'))
@@ -65,6 +66,8 @@ try:
     columns = [row[0] for row in db.execute('DESCRIBE native_rows').fetchall()]
     actual = [dict(zip(columns,row)) for row in db.execute('SELECT * FROM native_rows ORDER BY ordinal NULLS LAST').fetchall()]
     assert actual
+    if payload['verb'] == 'rank' and actual[0]['failure'] is None and actual[0]['result'] is not None:
+        actual.sort(key=lambda row: row['result']['value'])
     first = actual[0]
     assert isinstance(first['facts'],dict) or first['facts'] is None
     assert isinstance(first['failure'],dict) or first['failure'] is None
