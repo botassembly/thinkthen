@@ -9,6 +9,7 @@ import (
 	"context"
 	"errors"
 	"io"
+	"reflect"
 	"runtime"
 	"unsafe"
 )
@@ -18,6 +19,17 @@ import (
 // The client calls Next serially and joins its reader before the call returns.
 type Producer interface {
 	Next(ctx context.Context) (any, error)
+}
+
+func nilProducer(producer Producer) bool {
+	value := reflect.ValueOf(producer)
+	switch value.Kind() {
+	case reflect.Invalid:
+		return true
+	case reflect.Chan, reflect.Func, reflect.Map, reflect.Pointer, reflect.Slice:
+		return value.IsNil()
+	}
+	return false
 }
 
 type activeSession struct {
