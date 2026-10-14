@@ -2,6 +2,7 @@
 import collections
 import contextlib
 import os
+import re
 from pathlib import Path
 import shutil
 import subprocess
@@ -38,6 +39,10 @@ with contextlib.ExitStack() as installed:
         (work / "Sources/Consumer").mkdir(parents=True)
         (work / "Sources/Cases").mkdir(parents=True)
         (work / "Sources/Results").mkdir(parents=True)
+        (work / "Sources/Public").mkdir(parents=True)
+        page = (package / "README-PUBLIC.md").read_text()
+        sample = re.search(r"```objc\n(.*?)\n```", page, re.S).group(1)
+        (work / "Sources/Public/main.m").write_text(sample + "\n")
         shutil.copy2(ROOT / "checks/FoundationResultsConsumer.m", work / "Sources/Results/main.m")
         # Fixture projection uses a local private declaration, never an exported module member.
         for target in ("Cases", "Results"):
@@ -56,6 +61,10 @@ with contextlib.ExitStack() as installed:
      .product(name: "ThinkThenFoundation", package: "package")],
      cSettings: [.unsafeFlags(["-fobjc-arc", "-fblocks"])],
      linkerSettings: [.linkedFramework("Foundation")]),
+     .executableTarget(name: "Public", dependencies: [
+     .product(name: "ThinkThenFoundation", package: "package")],
+     cSettings: [.unsafeFlags(["-fobjc-arc", "-fblocks"])],
+     linkerSettings: [.linkedFramework("Foundation")]),
      .executableTarget(name: "Results", dependencies: [
      .product(name: "ThinkThenFoundation", package: "package")],
      cSettings: [.unsafeFlags(["-fobjc-arc", "-fblocks"])],
@@ -70,6 +79,14 @@ with contextlib.ExitStack() as installed:
                        check=True, timeout=300)
         subprocess.run([str(work / ".build/debug/Results"), str(REPO / "conformance/fixtures/complete.json")],
                        env=env, check=True, timeout=3)
+        public_cache = work / "public-cache"; public_cache.mkdir()
+        shutil.copy2(REPO / "site/recordings/thinkthen.jsonl", public_cache / "thinkthen.jsonl")
+        public_env = child_env(home=work / "public-home")
+        public_env["THINKTHEN_CACHE"] = str(public_cache)
+        public = subprocess.run([str(work / ".build/debug/Public")], cwd=work, env=public_env,
+                                text=True, capture_output=True, check=True, timeout=30)
+        assert public.stdout.splitlines() == ["true", "false", "true", "billing", "shipping", "account"], public.stdout
+        print("Foundation public README replay passed six offline answers")
         barrier = work / "barrier"
         barrier.mkdir()
         server = Backend(barrier, key='tt-canary-295', packed_questions={'Is it?'}, canonical_packed=True, hold_first=True)
