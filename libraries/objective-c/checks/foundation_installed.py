@@ -89,4 +89,25 @@ with contextlib.ExitStack() as installed:
         # The full profile removes the routine filter; it is candidate-only.
         if not (Path(os.environ.get("CARGO_TARGET_DIR", str(REPO / "target"))) / "debug/conformance-backend").is_file():
             raise RuntimeError("the recorded shared backend must be built before Foundation parity")
-        native_cases(work / ".build/debug/Cases", consumer="objective-c")
+        # Foundation dictionaries have no insertion-order contract. Preserve the
+        # authored fixture order through the public ordered-map builder.
+        adapter = work / "ordered-cases"
+        adapter.write_text("#!/usr/bin/env python3\n" + r'''import json, os, sys
+from pathlib import Path
+
+def ordered(value):
+    if isinstance(value, dict):
+        return {"kind":"object", "entries":[[key, ordered(item)] for key,item in value.items()]}
+    if isinstance(value, list):
+        return {"kind":"array", "items":[ordered(item) for item in value]}
+    return {"kind":"scalar", "value":value}
+
+source = Path(sys.argv[1])
+fixture = json.loads(source.read_text())
+fixture["ordered"] = {key:ordered(fixture[key]) for key in ("question", "input", "options", "feed_items") if key in fixture}
+source.write_text(json.dumps(fixture, ensure_ascii=False, separators=(",", ":")))
+binary = Path(__file__).parent / ".build/debug/Cases"
+os.execve(str(binary), [str(binary), *sys.argv[1:]], os.environ)
+''')
+        adapter.chmod(0o700)
+        native_cases(adapter, consumer="objective-c")
