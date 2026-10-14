@@ -1113,14 +1113,10 @@
         "libraries/swift/Sources/ThinkThen/*.swift"
       ],
       "option_containers": [
-        "RequestOptions",
-        "InputRequestOptions",
-        "Controls"
+        "Options"
       ],
       "setting_containers": [
-        "EngineSettings",
-        "InputEngineSettings",
-        "Settings"
+        "EngineSettings"
       ],
       "function_prefix": "",
       "test_folders": [
@@ -1128,11 +1124,11 @@
         "Examples"
       ],
       "helper_names": {
-        "question_file": "InputRequestQuestion.file",
-        "question_name": "InputRequestQuestion.name",
-        "question_reference": "InputRequestQuestion.reference",
-        "item": "InputRequestItem.text",
-        "files": "InputRequestInput.files"
+        "question_file": "Question.file",
+        "question_name": "Question.name",
+        "question_reference": "Question.reference",
+        "item": "Item.text",
+        "files": "Input.files"
       },
       "function_containers": [
         "Client"
@@ -1143,17 +1139,91 @@
       ],
       "representation_owners": [
         "Presence",
-        "OwnedUsagePersistenceStatus",
+        "UsagePersistenceStatus",
         "Array",
         "Bool",
         "Dictionary",
         "Double",
         "Int64",
-        "JSONValue",
+        "DataValue",
         "Optional",
         "String",
-        "UInt64"
-      ]
+        "UInt64",
+        "Image",
+        "ValueKind",
+        "ValueMember",
+        "NumberLiteral",
+        "UsagePersistenceState"
+      ],
+      "representation_types": [
+        "Call",
+        "FeedReadFailure",
+        "ValueKind",
+        "ValueMember",
+        "NumberLiteral",
+        "DataValue",
+        "SessionBoundaryFailure",
+        "UsagePersistenceState",
+        "UsagePersistenceStatus"
+      ],
+      "lifecycle_members": {
+        "Client": [
+          "execute"
+        ]
+      },
+      "representation_members": {
+        "Image": [
+          "bytes"
+        ],
+        "DataValue": [
+          "array",
+          "bool",
+          "number",
+          "object",
+          "orderedObject",
+          "string"
+        ]
+      },
+      "wrapper_members": {
+        "FeedReadFailure": [
+          "failure"
+        ],
+        "ValueKind": [
+          "array",
+          "bool",
+          "null",
+          "number",
+          "object",
+          "orderedObject",
+          "string"
+        ],
+        "ValueMember": [
+          "key"
+        ],
+        "NumberLiteral": [
+          "rawValue"
+        ],
+        "DataValue": [
+          "null"
+        ],
+        "Presence": [
+          "absent",
+          "null"
+        ],
+        "SessionBoundaryFailure": [
+          "description"
+        ],
+        "SessionFailure": [
+          "description",
+          "failure"
+        ],
+        "UsagePersistenceState": [
+          "disabled",
+          "failed",
+          "pending",
+          "written"
+        ]
+      }
     },
     "zig": {
       "root": "libraries/zig",

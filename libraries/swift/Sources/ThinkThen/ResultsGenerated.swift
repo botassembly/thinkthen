@@ -1,28 +1,29 @@
+import CThinkThen
 // Generated from the shared Rust graph. Do not edit.
 import Foundation
 
-public struct OwnedAnnotation: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
-  public let `answerId`: OwnedAnswerId
-  public let `answers`: [String: OwnedAnnotationMember]
+public struct Annotation: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
+  public let `answerId`: AnswerId
+  public let `answers`: [String: AnnotationMember]
   public let `file`: Presence<String>
   public let `firstLine`: Presence<UInt64>
   public let `index`: Presence<UInt64>
-  public let `input`: JSONValue
+  public let `input`: DataValue
   public let `lastLine`: Presence<UInt64>
-  public let `meta`: OwnedMeta
-  public let `position`: Presence<OwnedPosition>
-  public let `schema`: OwnedVersion
-  public let `source`: Presence<OwnedPhysicalSource>
-  public let `value`: OwnedAnnotatedRow
+  public let `meta`: Meta
+  public let `position`: Presence<Position>
+  public let `schema`: ReceiptVersion
+  public let `source`: Presence<PhysicalSource>
+  public let `value`: AnnotatedRow
   public init(
-    extensions: [String: JSONValue] = [:], `answerId`: OwnedAnswerId,
-    `answers`: [String: OwnedAnnotationMember], `file`: Presence<String> = .absent,
+    extensions: [String: DataValue] = [:], `answerId`: AnswerId,
+    `answers`: [String: AnnotationMember], `file`: Presence<String> = .absent,
     `firstLine`: Presence<UInt64> = .absent, `index`: Presence<UInt64> = .absent,
-    `input`: JSONValue, `lastLine`: Presence<UInt64> = .absent, `meta`: OwnedMeta,
-    `position`: Presence<OwnedPosition> = .absent, `schema`: OwnedVersion,
-    `source`: Presence<OwnedPhysicalSource> = .absent, `value`: OwnedAnnotatedRow
+    `input`: DataValue, `lastLine`: Presence<UInt64> = .absent, `meta`: Meta,
+    `position`: Presence<Position> = .absent, `schema`: ReceiptVersion,
+    `source`: Presence<PhysicalSource> = .absent, `value`: AnnotatedRow
   ) {
     self.extensions = extensions
     self.`answerId` = `answerId`
@@ -38,7 +39,7 @@ public struct OwnedAnnotation: JSONRepresentable {
     self.`source` = `source`
     self.`value` = `value`
   }
-  public static func read(_ json: JSONValue) throws -> OwnedAnnotation {
+  static func read(_ json: DataValue) throws -> Annotation {
     let object = try jsonObject(json)
     let known: Set<String> = [
       "answer_id", "answers", "file", "first_line", "index", "input", "last_line", "meta",
@@ -46,22 +47,22 @@ public struct OwnedAnnotation: JSONRepresentable {
     ]
     var value = Self(
       extensions: object.filter { !known.contains($0.key) },
-      answerId: try OwnedAnswerId.read(jsonRequired(object, "answer_id")),
-      answers: try [String: OwnedAnnotationMember].read(jsonRequired(object, "answers")),
+      answerId: try AnswerId.read(jsonRequired(object, "answer_id")),
+      answers: try [String: AnnotationMember].read(jsonRequired(object, "answers")),
       file: try readPresence(object, "file", String.self),
       firstLine: try readPresence(object, "first_line", UInt64.self),
       index: try readPresence(object, "index", UInt64.self),
-      input: try JSONValue.read(jsonRequired(object, "input")),
+      input: try DataValue.read(jsonRequired(object, "input")),
       lastLine: try readPresence(object, "last_line", UInt64.self),
-      meta: try OwnedMeta.read(jsonRequired(object, "meta")),
-      position: try readPresence(object, "position", OwnedPosition.self),
-      schema: try OwnedVersion.read(jsonRequired(object, "schema")),
-      source: try readPresence(object, "source", OwnedPhysicalSource.self),
-      value: try OwnedAnnotatedRow.read(jsonRequired(object, "value")))
+      meta: try Meta.read(jsonRequired(object, "meta")),
+      position: try readPresence(object, "position", Position.self),
+      schema: try ReceiptVersion.read(jsonRequired(object, "schema")),
+      source: try readPresence(object, "source", PhysicalSource.self),
+      value: try AnnotatedRow.read(jsonRequired(object, "value")))
     value._sourceJSON = json
     return value
   }
-  public var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = [
       "answer_id", "answers", "file", "first_line", "index", "input", "last_line", "meta",
@@ -83,43 +84,43 @@ public struct OwnedAnnotation: JSONRepresentable {
     return .object(object)
   }
 }
-public indirect enum OwnedAnnotationMember: JSONRepresentable {
-  case `answerId`(OwnedAnnotationMemberAnswerId)
-  case `failureId`(OwnedAnnotationMemberFailureId)
-  public static func read(_ json: JSONValue) throws -> OwnedAnnotationMember {
+public indirect enum AnnotationMember: ValueRepresentable {
+  case `answerId`(AnnotationMemberAnswerId)
+  case `failureId`(AnnotationMemberFailureId)
+  static func read(_ json: DataValue) throws -> AnnotationMember {
     let object = try jsonObject(json)
     if object["answer_id"] != nil && object["answer_id"] != .null {
-      return .`answerId`(try OwnedAnnotationMemberAnswerId.read(json))
+      return .`answerId`(try AnnotationMemberAnswerId.read(json))
     }
     if object["failure_id"] != nil && object["failure_id"] != .null {
-      return .`failureId`(try OwnedAnnotationMemberFailureId.read(json))
+      return .`failureId`(try AnnotationMemberFailureId.read(json))
     }
-    throw JSONConversionError("Unknown OwnedAnnotationMember alternative")
+    throw ValueConversionError("Unknown AnnotationMember alternative")
   }
-  public var json: JSONValue {
+  var json: DataValue {
     switch self {
     case .`answerId`(let value): return value.json
     case .`failureId`(let value): return value.json
     }
   }
 }
-public struct OwnedAnnotationMemberAnswerId: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
-  public let `answer`: OwnedAnswer
-  public let `answerId`: OwnedAnswerId
-  public let `observations`: [OwnedObservation]
-  public let `question`: OwnedQuestionDocument
-  public let `questionSources`: [OwnedQuestionSource]
+public struct AnnotationMemberAnswerId: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
+  public let `answer`: Answer
+  public let `answerId`: AnswerId
+  public let `observations`: [Observation]
+  public let `question`: QuestionDocument
+  public let `questionSources`: [QuestionSource]
   public let `request`: String
-  public let `threshold`: OwnedThreshold?
-  public let `usage`: Presence<OwnedUsage>
-  public let `value`: OwnedValue
+  public let `threshold`: ReceiptThreshold?
+  public let `usage`: Presence<Usage>
+  public let `value`: Value
   public init(
-    extensions: [String: JSONValue] = [:], `answer`: OwnedAnswer, `answerId`: OwnedAnswerId,
-    `observations`: [OwnedObservation], `question`: OwnedQuestionDocument,
-    `questionSources`: [OwnedQuestionSource], `request`: String, `threshold`: OwnedThreshold?,
-    `usage`: Presence<OwnedUsage> = .absent, `value`: OwnedValue
+    extensions: [String: DataValue] = [:], `answer`: Answer, `answerId`: AnswerId,
+    `observations`: [Observation], `question`: QuestionDocument,
+    `questionSources`: [QuestionSource], `request`: String, `threshold`: ReceiptThreshold?,
+    `usage`: Presence<Usage> = .absent, `value`: Value
   ) {
     self.extensions = extensions
     self.`answer` = `answer`
@@ -132,7 +133,7 @@ public struct OwnedAnnotationMemberAnswerId: JSONRepresentable {
     self.`usage` = `usage`
     self.`value` = `value`
   }
-  public static func read(_ json: JSONValue) throws -> OwnedAnnotationMemberAnswerId {
+  static func read(_ json: DataValue) throws -> AnnotationMemberAnswerId {
     let object = try jsonObject(json)
     let known: Set<String> = [
       "answer", "answer_id", "observations", "question", "question_sources", "request", "threshold",
@@ -140,19 +141,19 @@ public struct OwnedAnnotationMemberAnswerId: JSONRepresentable {
     ]
     var value = Self(
       extensions: object.filter { !known.contains($0.key) },
-      answer: try OwnedAnswer.read(jsonRequired(object, "answer")),
-      answerId: try OwnedAnswerId.read(jsonRequired(object, "answer_id")),
-      observations: try [OwnedObservation].read(jsonRequired(object, "observations")),
-      question: try OwnedQuestionDocument.read(jsonRequired(object, "question")),
-      questionSources: try [OwnedQuestionSource].read(jsonRequired(object, "question_sources")),
+      answer: try Answer.read(jsonRequired(object, "answer")),
+      answerId: try AnswerId.read(jsonRequired(object, "answer_id")),
+      observations: try [Observation].read(jsonRequired(object, "observations")),
+      question: try QuestionDocument.read(jsonRequired(object, "question")),
+      questionSources: try [QuestionSource].read(jsonRequired(object, "question_sources")),
       request: try String.read(jsonRequired(object, "request")),
-      threshold: try OwnedThreshold?.read(jsonRequired(object, "threshold")),
-      usage: try readPresence(object, "usage", OwnedUsage.self),
-      value: try OwnedValue.read(jsonRequired(object, "value")))
+      threshold: try ReceiptThreshold?.read(jsonRequired(object, "threshold")),
+      usage: try readPresence(object, "usage", Usage.self),
+      value: try Value.read(jsonRequired(object, "value")))
     value._sourceJSON = json
     return value
   }
-  public var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = [
       "answer", "answer_id", "observations", "question", "question_sources", "request", "threshold",
@@ -171,22 +172,22 @@ public struct OwnedAnnotationMemberAnswerId: JSONRepresentable {
     return .object(object)
   }
 }
-public struct OwnedAnnotationMemberFailureId: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
-  public let `failure`: OwnedFailure
-  public let `failureId`: OwnedFailureId
-  public let `observations`: [OwnedObservation]
-  public let `question`: OwnedQuestionDocument
-  public let `questionSources`: [OwnedQuestionSource]
+public struct AnnotationMemberFailureId: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
+  public let `failure`: Failure
+  public let `failureId`: FailureId
+  public let `observations`: [Observation]
+  public let `question`: QuestionDocument
+  public let `questionSources`: [QuestionSource]
   public let `request`: String
-  public let `threshold`: OwnedThreshold?
-  public let `usage`: Presence<OwnedUsage>
+  public let `threshold`: ReceiptThreshold?
+  public let `usage`: Presence<Usage>
   public init(
-    extensions: [String: JSONValue] = [:], `failure`: OwnedFailure, `failureId`: OwnedFailureId,
-    `observations`: [OwnedObservation], `question`: OwnedQuestionDocument,
-    `questionSources`: [OwnedQuestionSource], `request`: String, `threshold`: OwnedThreshold?,
-    `usage`: Presence<OwnedUsage> = .absent
+    extensions: [String: DataValue] = [:], `failure`: Failure, `failureId`: FailureId,
+    `observations`: [Observation], `question`: QuestionDocument,
+    `questionSources`: [QuestionSource], `request`: String, `threshold`: ReceiptThreshold?,
+    `usage`: Presence<Usage> = .absent
   ) {
     self.extensions = extensions
     self.`failure` = `failure`
@@ -198,7 +199,7 @@ public struct OwnedAnnotationMemberFailureId: JSONRepresentable {
     self.`threshold` = `threshold`
     self.`usage` = `usage`
   }
-  public static func read(_ json: JSONValue) throws -> OwnedAnnotationMemberFailureId {
+  static func read(_ json: DataValue) throws -> AnnotationMemberFailureId {
     let object = try jsonObject(json)
     let known: Set<String> = [
       "failure", "failure_id", "observations", "question", "question_sources", "request",
@@ -206,18 +207,18 @@ public struct OwnedAnnotationMemberFailureId: JSONRepresentable {
     ]
     var value = Self(
       extensions: object.filter { !known.contains($0.key) },
-      failure: try OwnedFailure.read(jsonRequired(object, "failure")),
-      failureId: try OwnedFailureId.read(jsonRequired(object, "failure_id")),
-      observations: try [OwnedObservation].read(jsonRequired(object, "observations")),
-      question: try OwnedQuestionDocument.read(jsonRequired(object, "question")),
-      questionSources: try [OwnedQuestionSource].read(jsonRequired(object, "question_sources")),
+      failure: try Failure.read(jsonRequired(object, "failure")),
+      failureId: try FailureId.read(jsonRequired(object, "failure_id")),
+      observations: try [Observation].read(jsonRequired(object, "observations")),
+      question: try QuestionDocument.read(jsonRequired(object, "question")),
+      questionSources: try [QuestionSource].read(jsonRequired(object, "question_sources")),
       request: try String.read(jsonRequired(object, "request")),
-      threshold: try OwnedThreshold?.read(jsonRequired(object, "threshold")),
-      usage: try readPresence(object, "usage", OwnedUsage.self))
+      threshold: try ReceiptThreshold?.read(jsonRequired(object, "threshold")),
+      usage: try readPresence(object, "usage", Usage.self))
     value._sourceJSON = json
     return value
   }
-  public var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = [
       "failure", "failure_id", "observations", "question", "question_sources", "request",
@@ -235,30 +236,28 @@ public struct OwnedAnnotationMemberFailureId: JSONRepresentable {
     return .object(object)
   }
 }
-public indirect enum OwnedAnnotationValue: JSONRepresentable {
-  case `decision`(OwnedAnnotationValueDecision)
-  case `choice`(OwnedAnnotationValueChoice)
-  case `score`(OwnedAnnotationValueScore)
-  case `tags`(OwnedAnnotationValueTags)
-  case `failed`(OwnedAnnotationValueFailed)
-  public static func read(_ json: JSONValue) throws -> OwnedAnnotationValue {
+public indirect enum AnnotationValue: ValueRepresentable {
+  case `decision`(AnnotationValueDecision)
+  case `choice`(AnnotationValueChoice)
+  case `score`(AnnotationValueScore)
+  case `tags`(AnnotationValueTags)
+  case `failed`(AnnotationValueFailed)
+  static func read(_ json: DataValue) throws -> AnnotationValue {
     let object = try jsonObject(json)
     if object["kind"] == .string("decision") {
-      return .`decision`(try OwnedAnnotationValueDecision.read(json))
+      return .`decision`(try AnnotationValueDecision.read(json))
     }
     if object["kind"] == .string("choice") {
-      return .`choice`(try OwnedAnnotationValueChoice.read(json))
+      return .`choice`(try AnnotationValueChoice.read(json))
     }
-    if object["kind"] == .string("score") {
-      return .`score`(try OwnedAnnotationValueScore.read(json))
-    }
-    if object["kind"] == .string("tags") { return .`tags`(try OwnedAnnotationValueTags.read(json)) }
+    if object["kind"] == .string("score") { return .`score`(try AnnotationValueScore.read(json)) }
+    if object["kind"] == .string("tags") { return .`tags`(try AnnotationValueTags.read(json)) }
     if object["kind"] == .string("failed") {
-      return .`failed`(try OwnedAnnotationValueFailed.read(json))
+      return .`failed`(try AnnotationValueFailed.read(json))
     }
-    throw JSONConversionError("Unknown OwnedAnnotationValue alternative")
+    throw ValueConversionError("Unknown AnnotationValue alternative")
   }
-  public var json: JSONValue {
+  var json: DataValue {
     switch self {
     case .`decision`(let value): return value.json
     case .`choice`(let value): return value.json
@@ -268,30 +267,27 @@ public indirect enum OwnedAnnotationValue: JSONRepresentable {
     }
   }
 }
-public struct OwnedAnnotationValueChoice: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
+public struct AnnotationValueChoice: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
   public let `kind`: String
-  public let `value`: OwnedAnnotationValueChoiceValue
-  public init(
-    extensions: [String: JSONValue] = [:], `kind`: String = "choice",
-    `value`: OwnedAnnotationValueChoiceValue
-  ) {
+  public let `value`: String?
+  public init(extensions: [String: DataValue] = [:], `kind`: String = "choice", `value`: String?) {
     self.extensions = extensions
     self.`kind` = `kind`
     self.`value` = `value`
   }
-  public static func read(_ json: JSONValue) throws -> OwnedAnnotationValueChoice {
+  static func read(_ json: DataValue) throws -> AnnotationValueChoice {
     let object = try jsonObject(json)
     let known: Set<String> = ["kind", "value"]
     var value = Self(
       extensions: object.filter { !known.contains($0.key) },
       kind: try String.read(jsonRequired(object, "kind")),
-      value: try OwnedAnnotationValueChoiceValue.read(jsonRequired(object, "value")))
+      value: try String?.read(jsonRequired(object, "value")))
     value._sourceJSON = json
     return value
   }
-  public var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = ["kind", "value"]
     var object = extensions.filter { !known.contains($0.key) }
@@ -300,45 +296,27 @@ public struct OwnedAnnotationValueChoice: JSONRepresentable {
     return .object(object)
   }
 }
-public indirect enum OwnedAnnotationValueChoiceValue: JSONRepresentable {
-  case alternative0(String)
-  case alternative1(JSONValue)
-  public static func read(_ json: JSONValue) throws -> OwnedAnnotationValueChoiceValue {
-    if let value = try? String.read(json) { return .alternative0(value) }
-    if json == .null { return .alternative1(.null) }
-    throw JSONConversionError("Unknown OwnedAnnotationValueChoiceValue value")
-  }
-  public var json: JSONValue {
-    switch self {
-    case .alternative0(let value): return value.json
-    case .alternative1(let value): return value.json
-    }
-  }
-}
-public struct OwnedAnnotationValueDecision: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
+public struct AnnotationValueDecision: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
   public let `kind`: String
-  public let `value`: OwnedAnnotationValueDecisionValue
-  public init(
-    extensions: [String: JSONValue] = [:], `kind`: String = "decision",
-    `value`: OwnedAnnotationValueDecisionValue
-  ) {
+  public let `value`: Bool?
+  public init(extensions: [String: DataValue] = [:], `kind`: String = "decision", `value`: Bool?) {
     self.extensions = extensions
     self.`kind` = `kind`
     self.`value` = `value`
   }
-  public static func read(_ json: JSONValue) throws -> OwnedAnnotationValueDecision {
+  static func read(_ json: DataValue) throws -> AnnotationValueDecision {
     let object = try jsonObject(json)
     let known: Set<String> = ["kind", "value"]
     var value = Self(
       extensions: object.filter { !known.contains($0.key) },
       kind: try String.read(jsonRequired(object, "kind")),
-      value: try OwnedAnnotationValueDecisionValue.read(jsonRequired(object, "value")))
+      value: try Bool?.read(jsonRequired(object, "value")))
     value._sourceJSON = json
     return value
   }
-  public var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = ["kind", "value"]
     var object = extensions.filter { !known.contains($0.key) }
@@ -347,44 +325,27 @@ public struct OwnedAnnotationValueDecision: JSONRepresentable {
     return .object(object)
   }
 }
-public indirect enum OwnedAnnotationValueDecisionValue: JSONRepresentable {
-  case alternative0(Bool)
-  case alternative1(JSONValue)
-  public static func read(_ json: JSONValue) throws -> OwnedAnnotationValueDecisionValue {
-    if let value = try? Bool.read(json) { return .alternative0(value) }
-    if json == .null { return .alternative1(.null) }
-    throw JSONConversionError("Unknown OwnedAnnotationValueDecisionValue value")
-  }
-  public var json: JSONValue {
-    switch self {
-    case .alternative0(let value): return value.json
-    case .alternative1(let value): return value.json
-    }
-  }
-}
-public struct OwnedAnnotationValueFailed: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
+public struct AnnotationValueFailed: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
   public let `kind`: String
-  public let `value`: OwnedFailure
-  public init(
-    extensions: [String: JSONValue] = [:], `kind`: String = "failed", `value`: OwnedFailure
-  ) {
+  public let `value`: Failure
+  public init(extensions: [String: DataValue] = [:], `kind`: String = "failed", `value`: Failure) {
     self.extensions = extensions
     self.`kind` = `kind`
     self.`value` = `value`
   }
-  public static func read(_ json: JSONValue) throws -> OwnedAnnotationValueFailed {
+  static func read(_ json: DataValue) throws -> AnnotationValueFailed {
     let object = try jsonObject(json)
     let known: Set<String> = ["kind", "value"]
     var value = Self(
       extensions: object.filter { !known.contains($0.key) },
       kind: try String.read(jsonRequired(object, "kind")),
-      value: try OwnedFailure.read(jsonRequired(object, "value")))
+      value: try Failure.read(jsonRequired(object, "value")))
     value._sourceJSON = json
     return value
   }
-  public var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = ["kind", "value"]
     var object = extensions.filter { !known.contains($0.key) }
@@ -393,17 +354,17 @@ public struct OwnedAnnotationValueFailed: JSONRepresentable {
     return .object(object)
   }
 }
-public struct OwnedAnnotationValueScore: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
+public struct AnnotationValueScore: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
   public let `kind`: String
   public let `value`: Double
-  public init(extensions: [String: JSONValue] = [:], `kind`: String = "score", `value`: Double) {
+  public init(extensions: [String: DataValue] = [:], `kind`: String = "score", `value`: Double) {
     self.extensions = extensions
     self.`kind` = `kind`
     self.`value` = `value`
   }
-  public static func read(_ json: JSONValue) throws -> OwnedAnnotationValueScore {
+  static func read(_ json: DataValue) throws -> AnnotationValueScore {
     let object = try jsonObject(json)
     let known: Set<String> = ["kind", "value"]
     var value = Self(
@@ -413,7 +374,7 @@ public struct OwnedAnnotationValueScore: JSONRepresentable {
     value._sourceJSON = json
     return value
   }
-  public var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = ["kind", "value"]
     var object = extensions.filter { !known.contains($0.key) }
@@ -422,17 +383,17 @@ public struct OwnedAnnotationValueScore: JSONRepresentable {
     return .object(object)
   }
 }
-public struct OwnedAnnotationValueTags: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
+public struct AnnotationValueTags: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
   public let `kind`: String
   public let `value`: [String]
-  public init(extensions: [String: JSONValue] = [:], `kind`: String = "tags", `value`: [String]) {
+  public init(extensions: [String: DataValue] = [:], `kind`: String = "tags", `value`: [String]) {
     self.extensions = extensions
     self.`kind` = `kind`
     self.`value` = `value`
   }
-  public static func read(_ json: JSONValue) throws -> OwnedAnnotationValueTags {
+  static func read(_ json: DataValue) throws -> AnnotationValueTags {
     let object = try jsonObject(json)
     let known: Set<String> = ["kind", "value"]
     var value = Self(
@@ -442,7 +403,7 @@ public struct OwnedAnnotationValueTags: JSONRepresentable {
     value._sourceJSON = json
     return value
   }
-  public var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = ["kind", "value"]
     var object = extensions.filter { !known.contains($0.key) }
@@ -451,25 +412,25 @@ public struct OwnedAnnotationValueTags: JSONRepresentable {
     return .object(object)
   }
 }
-public typealias OwnedAnswerId = String
-public struct OwnedAnswers: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
-  public let `questions`: [OwnedRelationMember]
-  public init(extensions: [String: JSONValue] = [:], `questions`: [OwnedRelationMember]) {
+public typealias AnswerId = String
+public struct Answers: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
+  public let `questions`: [RelationMember]
+  public init(extensions: [String: DataValue] = [:], `questions`: [RelationMember]) {
     self.extensions = extensions
     self.`questions` = `questions`
   }
-  public static func read(_ json: JSONValue) throws -> OwnedAnswers {
+  static func read(_ json: DataValue) throws -> Answers {
     let object = try jsonObject(json)
     let known: Set<String> = ["questions"]
     var value = Self(
       extensions: object.filter { !known.contains($0.key) },
-      questions: try [OwnedRelationMember].read(jsonRequired(object, "questions")))
+      questions: try [RelationMember].read(jsonRequired(object, "questions")))
     value._sourceJSON = json
     return value
   }
-  public var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = ["questions"]
     var object = extensions.filter { !known.contains($0.key) }
@@ -477,30 +438,29 @@ public struct OwnedAnswers: JSONRepresentable {
     return .object(object)
   }
 }
-public struct OwnedAtomicArrayOfString: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
-  public let `answer`: OwnedAnswer
-  public let `answerId`: OwnedAnswerId
-  public let `images`: Presence<[OwnedImage]>
+public struct AtomicArrayOfString: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
+  public let `answer`: Answer
+  public let `answerId`: AnswerId
+  public let `images`: Presence<[ReceiptImage]>
   public let `index`: Presence<UInt64>
-  public let `input`: Presence<JSONValue>
-  public let `members`: Presence<[OwnedRankMember]>
-  public let `meta`: OwnedMeta
-  public let `question`: OwnedQuestionDocument
+  public let `input`: Presence<DataValue>
+  public let `members`: Presence<[RankMember]>
+  public let `meta`: Meta
+  public let `question`: QuestionDocument
   public let `questionName`: Presence<String>
-  public let `schema`: OwnedVersion
-  public let `source`: Presence<OwnedPhysicalSource>
-  public let `threshold`: OwnedThreshold?
+  public let `schema`: ReceiptVersion
+  public let `source`: Presence<PhysicalSource>
+  public let `threshold`: ReceiptThreshold?
   public let `value`: [String]
   public init(
-    extensions: [String: JSONValue] = [:], `answer`: OwnedAnswer, `answerId`: OwnedAnswerId,
-    `images`: Presence<[OwnedImage]> = .absent, `index`: Presence<UInt64> = .absent,
-    `input`: Presence<JSONValue> = .absent, `members`: Presence<[OwnedRankMember]> = .absent,
-    `meta`: OwnedMeta, `question`: OwnedQuestionDocument,
-    `questionName`: Presence<String> = .absent, `schema`: OwnedVersion,
-    `source`: Presence<OwnedPhysicalSource> = .absent, `threshold`: OwnedThreshold?,
-    `value`: [String]
+    extensions: [String: DataValue] = [:], `answer`: Answer, `answerId`: AnswerId,
+    `images`: Presence<[ReceiptImage]> = .absent, `index`: Presence<UInt64> = .absent,
+    `input`: Presence<DataValue> = .absent, `members`: Presence<[RankMember]> = .absent,
+    `meta`: Meta, `question`: QuestionDocument, `questionName`: Presence<String> = .absent,
+    `schema`: ReceiptVersion, `source`: Presence<PhysicalSource> = .absent,
+    `threshold`: ReceiptThreshold?, `value`: [String]
   ) {
     self.extensions = extensions
     self.`answer` = `answer`
@@ -517,7 +477,7 @@ public struct OwnedAtomicArrayOfString: JSONRepresentable {
     self.`threshold` = `threshold`
     self.`value` = `value`
   }
-  public static func read(_ json: JSONValue) throws -> OwnedAtomicArrayOfString {
+  static func read(_ json: DataValue) throws -> AtomicArrayOfString {
     let object = try jsonObject(json)
     let known: Set<String> = [
       "answer", "answer_id", "images", "index", "input", "members", "meta", "question",
@@ -525,23 +485,23 @@ public struct OwnedAtomicArrayOfString: JSONRepresentable {
     ]
     var value = Self(
       extensions: object.filter { !known.contains($0.key) },
-      answer: try OwnedAnswer.read(jsonRequired(object, "answer")),
-      answerId: try OwnedAnswerId.read(jsonRequired(object, "answer_id")),
-      images: try readPresence(object, "images", [OwnedImage].self),
+      answer: try Answer.read(jsonRequired(object, "answer")),
+      answerId: try AnswerId.read(jsonRequired(object, "answer_id")),
+      images: try readPresence(object, "images", [ReceiptImage].self),
       index: try readPresence(object, "index", UInt64.self),
-      input: try readPresence(object, "input", JSONValue.self),
-      members: try readPresence(object, "members", [OwnedRankMember].self),
-      meta: try OwnedMeta.read(jsonRequired(object, "meta")),
-      question: try OwnedQuestionDocument.read(jsonRequired(object, "question")),
+      input: try readPresence(object, "input", DataValue.self),
+      members: try readPresence(object, "members", [RankMember].self),
+      meta: try Meta.read(jsonRequired(object, "meta")),
+      question: try QuestionDocument.read(jsonRequired(object, "question")),
       questionName: try readPresence(object, "question_name", String.self),
-      schema: try OwnedVersion.read(jsonRequired(object, "schema")),
-      source: try readPresence(object, "source", OwnedPhysicalSource.self),
-      threshold: try OwnedThreshold?.read(jsonRequired(object, "threshold")),
+      schema: try ReceiptVersion.read(jsonRequired(object, "schema")),
+      source: try readPresence(object, "source", PhysicalSource.self),
+      threshold: try ReceiptThreshold?.read(jsonRequired(object, "threshold")),
       value: try [String].read(jsonRequired(object, "value")))
     value._sourceJSON = json
     return value
   }
-  public var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = [
       "answer", "answer_id", "images", "index", "input", "members", "meta", "question",
@@ -564,30 +524,29 @@ public struct OwnedAtomicArrayOfString: JSONRepresentable {
     return .object(object)
   }
 }
-public struct OwnedAtomicDecideValue: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
-  public let `answer`: OwnedAnswer
-  public let `answerId`: OwnedAnswerId
-  public let `images`: Presence<[OwnedImage]>
+public struct AtomicDecideValue: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
+  public let `answer`: Answer
+  public let `answerId`: AnswerId
+  public let `images`: Presence<[ReceiptImage]>
   public let `index`: Presence<UInt64>
-  public let `input`: Presence<JSONValue>
-  public let `members`: Presence<[OwnedRankMember]>
-  public let `meta`: OwnedMeta
-  public let `question`: OwnedQuestionDocument
+  public let `input`: Presence<DataValue>
+  public let `members`: Presence<[RankMember]>
+  public let `meta`: Meta
+  public let `question`: QuestionDocument
   public let `questionName`: Presence<String>
-  public let `schema`: OwnedVersion
-  public let `source`: Presence<OwnedPhysicalSource>
-  public let `threshold`: OwnedThreshold?
-  public let `value`: OwnedDecideValue
+  public let `schema`: ReceiptVersion
+  public let `source`: Presence<PhysicalSource>
+  public let `threshold`: ReceiptThreshold?
+  public let `value`: DecideValue
   public init(
-    extensions: [String: JSONValue] = [:], `answer`: OwnedAnswer, `answerId`: OwnedAnswerId,
-    `images`: Presence<[OwnedImage]> = .absent, `index`: Presence<UInt64> = .absent,
-    `input`: Presence<JSONValue> = .absent, `members`: Presence<[OwnedRankMember]> = .absent,
-    `meta`: OwnedMeta, `question`: OwnedQuestionDocument,
-    `questionName`: Presence<String> = .absent, `schema`: OwnedVersion,
-    `source`: Presence<OwnedPhysicalSource> = .absent, `threshold`: OwnedThreshold?,
-    `value`: OwnedDecideValue
+    extensions: [String: DataValue] = [:], `answer`: Answer, `answerId`: AnswerId,
+    `images`: Presence<[ReceiptImage]> = .absent, `index`: Presence<UInt64> = .absent,
+    `input`: Presence<DataValue> = .absent, `members`: Presence<[RankMember]> = .absent,
+    `meta`: Meta, `question`: QuestionDocument, `questionName`: Presence<String> = .absent,
+    `schema`: ReceiptVersion, `source`: Presence<PhysicalSource> = .absent,
+    `threshold`: ReceiptThreshold?, `value`: DecideValue
   ) {
     self.extensions = extensions
     self.`answer` = `answer`
@@ -604,7 +563,7 @@ public struct OwnedAtomicDecideValue: JSONRepresentable {
     self.`threshold` = `threshold`
     self.`value` = `value`
   }
-  public static func read(_ json: JSONValue) throws -> OwnedAtomicDecideValue {
+  static func read(_ json: DataValue) throws -> AtomicDecideValue {
     let object = try jsonObject(json)
     let known: Set<String> = [
       "answer", "answer_id", "images", "index", "input", "members", "meta", "question",
@@ -612,23 +571,23 @@ public struct OwnedAtomicDecideValue: JSONRepresentable {
     ]
     var value = Self(
       extensions: object.filter { !known.contains($0.key) },
-      answer: try OwnedAnswer.read(jsonRequired(object, "answer")),
-      answerId: try OwnedAnswerId.read(jsonRequired(object, "answer_id")),
-      images: try readPresence(object, "images", [OwnedImage].self),
+      answer: try Answer.read(jsonRequired(object, "answer")),
+      answerId: try AnswerId.read(jsonRequired(object, "answer_id")),
+      images: try readPresence(object, "images", [ReceiptImage].self),
       index: try readPresence(object, "index", UInt64.self),
-      input: try readPresence(object, "input", JSONValue.self),
-      members: try readPresence(object, "members", [OwnedRankMember].self),
-      meta: try OwnedMeta.read(jsonRequired(object, "meta")),
-      question: try OwnedQuestionDocument.read(jsonRequired(object, "question")),
+      input: try readPresence(object, "input", DataValue.self),
+      members: try readPresence(object, "members", [RankMember].self),
+      meta: try Meta.read(jsonRequired(object, "meta")),
+      question: try QuestionDocument.read(jsonRequired(object, "question")),
       questionName: try readPresence(object, "question_name", String.self),
-      schema: try OwnedVersion.read(jsonRequired(object, "schema")),
-      source: try readPresence(object, "source", OwnedPhysicalSource.self),
-      threshold: try OwnedThreshold?.read(jsonRequired(object, "threshold")),
-      value: try OwnedDecideValue.read(jsonRequired(object, "value")))
+      schema: try ReceiptVersion.read(jsonRequired(object, "schema")),
+      source: try readPresence(object, "source", PhysicalSource.self),
+      threshold: try ReceiptThreshold?.read(jsonRequired(object, "threshold")),
+      value: try DecideValue.read(jsonRequired(object, "value")))
     value._sourceJSON = json
     return value
   }
-  public var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = [
       "answer", "answer_id", "images", "index", "input", "members", "meta", "question",
@@ -651,29 +610,29 @@ public struct OwnedAtomicDecideValue: JSONRepresentable {
     return .object(object)
   }
 }
-public struct OwnedAtomicNonZeroUsize: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
-  public let `answer`: OwnedAnswer
-  public let `answerId`: OwnedAnswerId
-  public let `images`: Presence<[OwnedImage]>
+public struct AtomicNonZeroUsize: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
+  public let `answer`: Answer
+  public let `answerId`: AnswerId
+  public let `images`: Presence<[ReceiptImage]>
   public let `index`: Presence<UInt64>
-  public let `input`: Presence<JSONValue>
-  public let `members`: Presence<[OwnedRankMember]>
-  public let `meta`: OwnedMeta
-  public let `question`: OwnedQuestionDocument
+  public let `input`: Presence<DataValue>
+  public let `members`: Presence<[RankMember]>
+  public let `meta`: Meta
+  public let `question`: QuestionDocument
   public let `questionName`: Presence<String>
-  public let `schema`: OwnedVersion
-  public let `source`: Presence<OwnedPhysicalSource>
-  public let `threshold`: OwnedThreshold?
+  public let `schema`: ReceiptVersion
+  public let `source`: Presence<PhysicalSource>
+  public let `threshold`: ReceiptThreshold?
   public let `value`: UInt64
   public init(
-    extensions: [String: JSONValue] = [:], `answer`: OwnedAnswer, `answerId`: OwnedAnswerId,
-    `images`: Presence<[OwnedImage]> = .absent, `index`: Presence<UInt64> = .absent,
-    `input`: Presence<JSONValue> = .absent, `members`: Presence<[OwnedRankMember]> = .absent,
-    `meta`: OwnedMeta, `question`: OwnedQuestionDocument,
-    `questionName`: Presence<String> = .absent, `schema`: OwnedVersion,
-    `source`: Presence<OwnedPhysicalSource> = .absent, `threshold`: OwnedThreshold?, `value`: UInt64
+    extensions: [String: DataValue] = [:], `answer`: Answer, `answerId`: AnswerId,
+    `images`: Presence<[ReceiptImage]> = .absent, `index`: Presence<UInt64> = .absent,
+    `input`: Presence<DataValue> = .absent, `members`: Presence<[RankMember]> = .absent,
+    `meta`: Meta, `question`: QuestionDocument, `questionName`: Presence<String> = .absent,
+    `schema`: ReceiptVersion, `source`: Presence<PhysicalSource> = .absent,
+    `threshold`: ReceiptThreshold?, `value`: UInt64
   ) {
     self.extensions = extensions
     self.`answer` = `answer`
@@ -690,7 +649,7 @@ public struct OwnedAtomicNonZeroUsize: JSONRepresentable {
     self.`threshold` = `threshold`
     self.`value` = `value`
   }
-  public static func read(_ json: JSONValue) throws -> OwnedAtomicNonZeroUsize {
+  static func read(_ json: DataValue) throws -> AtomicNonZeroUsize {
     let object = try jsonObject(json)
     let known: Set<String> = [
       "answer", "answer_id", "images", "index", "input", "members", "meta", "question",
@@ -698,23 +657,23 @@ public struct OwnedAtomicNonZeroUsize: JSONRepresentable {
     ]
     var value = Self(
       extensions: object.filter { !known.contains($0.key) },
-      answer: try OwnedAnswer.read(jsonRequired(object, "answer")),
-      answerId: try OwnedAnswerId.read(jsonRequired(object, "answer_id")),
-      images: try readPresence(object, "images", [OwnedImage].self),
+      answer: try Answer.read(jsonRequired(object, "answer")),
+      answerId: try AnswerId.read(jsonRequired(object, "answer_id")),
+      images: try readPresence(object, "images", [ReceiptImage].self),
       index: try readPresence(object, "index", UInt64.self),
-      input: try readPresence(object, "input", JSONValue.self),
-      members: try readPresence(object, "members", [OwnedRankMember].self),
-      meta: try OwnedMeta.read(jsonRequired(object, "meta")),
-      question: try OwnedQuestionDocument.read(jsonRequired(object, "question")),
+      input: try readPresence(object, "input", DataValue.self),
+      members: try readPresence(object, "members", [RankMember].self),
+      meta: try Meta.read(jsonRequired(object, "meta")),
+      question: try QuestionDocument.read(jsonRequired(object, "question")),
       questionName: try readPresence(object, "question_name", String.self),
-      schema: try OwnedVersion.read(jsonRequired(object, "schema")),
-      source: try readPresence(object, "source", OwnedPhysicalSource.self),
-      threshold: try OwnedThreshold?.read(jsonRequired(object, "threshold")),
+      schema: try ReceiptVersion.read(jsonRequired(object, "schema")),
+      source: try readPresence(object, "source", PhysicalSource.self),
+      threshold: try ReceiptThreshold?.read(jsonRequired(object, "threshold")),
       value: try UInt64.read(jsonRequired(object, "value")))
     value._sourceJSON = json
     return value
   }
-  public var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = [
       "answer", "answer_id", "images", "index", "input", "members", "meta", "question",
@@ -737,30 +696,29 @@ public struct OwnedAtomicNonZeroUsize: JSONRepresentable {
     return .object(object)
   }
 }
-public struct OwnedAtomicNullableString: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
-  public let `answer`: OwnedAnswer
-  public let `answerId`: OwnedAnswerId
-  public let `images`: Presence<[OwnedImage]>
+public struct AtomicNullableString: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
+  public let `answer`: Answer
+  public let `answerId`: AnswerId
+  public let `images`: Presence<[ReceiptImage]>
   public let `index`: Presence<UInt64>
-  public let `input`: Presence<JSONValue>
-  public let `members`: Presence<[OwnedRankMember]>
-  public let `meta`: OwnedMeta
-  public let `question`: OwnedQuestionDocument
+  public let `input`: Presence<DataValue>
+  public let `members`: Presence<[RankMember]>
+  public let `meta`: Meta
+  public let `question`: QuestionDocument
   public let `questionName`: Presence<String>
-  public let `schema`: OwnedVersion
-  public let `source`: Presence<OwnedPhysicalSource>
-  public let `threshold`: OwnedThreshold?
-  public let `value`: OwnedAtomicNullableStringValue
+  public let `schema`: ReceiptVersion
+  public let `source`: Presence<PhysicalSource>
+  public let `threshold`: ReceiptThreshold?
+  public let `value`: String?
   public init(
-    extensions: [String: JSONValue] = [:], `answer`: OwnedAnswer, `answerId`: OwnedAnswerId,
-    `images`: Presence<[OwnedImage]> = .absent, `index`: Presence<UInt64> = .absent,
-    `input`: Presence<JSONValue> = .absent, `members`: Presence<[OwnedRankMember]> = .absent,
-    `meta`: OwnedMeta, `question`: OwnedQuestionDocument,
-    `questionName`: Presence<String> = .absent, `schema`: OwnedVersion,
-    `source`: Presence<OwnedPhysicalSource> = .absent, `threshold`: OwnedThreshold?,
-    `value`: OwnedAtomicNullableStringValue
+    extensions: [String: DataValue] = [:], `answer`: Answer, `answerId`: AnswerId,
+    `images`: Presence<[ReceiptImage]> = .absent, `index`: Presence<UInt64> = .absent,
+    `input`: Presence<DataValue> = .absent, `members`: Presence<[RankMember]> = .absent,
+    `meta`: Meta, `question`: QuestionDocument, `questionName`: Presence<String> = .absent,
+    `schema`: ReceiptVersion, `source`: Presence<PhysicalSource> = .absent,
+    `threshold`: ReceiptThreshold?, `value`: String?
   ) {
     self.extensions = extensions
     self.`answer` = `answer`
@@ -777,7 +735,7 @@ public struct OwnedAtomicNullableString: JSONRepresentable {
     self.`threshold` = `threshold`
     self.`value` = `value`
   }
-  public static func read(_ json: JSONValue) throws -> OwnedAtomicNullableString {
+  static func read(_ json: DataValue) throws -> AtomicNullableString {
     let object = try jsonObject(json)
     let known: Set<String> = [
       "answer", "answer_id", "images", "index", "input", "members", "meta", "question",
@@ -785,23 +743,23 @@ public struct OwnedAtomicNullableString: JSONRepresentable {
     ]
     var value = Self(
       extensions: object.filter { !known.contains($0.key) },
-      answer: try OwnedAnswer.read(jsonRequired(object, "answer")),
-      answerId: try OwnedAnswerId.read(jsonRequired(object, "answer_id")),
-      images: try readPresence(object, "images", [OwnedImage].self),
+      answer: try Answer.read(jsonRequired(object, "answer")),
+      answerId: try AnswerId.read(jsonRequired(object, "answer_id")),
+      images: try readPresence(object, "images", [ReceiptImage].self),
       index: try readPresence(object, "index", UInt64.self),
-      input: try readPresence(object, "input", JSONValue.self),
-      members: try readPresence(object, "members", [OwnedRankMember].self),
-      meta: try OwnedMeta.read(jsonRequired(object, "meta")),
-      question: try OwnedQuestionDocument.read(jsonRequired(object, "question")),
+      input: try readPresence(object, "input", DataValue.self),
+      members: try readPresence(object, "members", [RankMember].self),
+      meta: try Meta.read(jsonRequired(object, "meta")),
+      question: try QuestionDocument.read(jsonRequired(object, "question")),
       questionName: try readPresence(object, "question_name", String.self),
-      schema: try OwnedVersion.read(jsonRequired(object, "schema")),
-      source: try readPresence(object, "source", OwnedPhysicalSource.self),
-      threshold: try OwnedThreshold?.read(jsonRequired(object, "threshold")),
-      value: try OwnedAtomicNullableStringValue.read(jsonRequired(object, "value")))
+      schema: try ReceiptVersion.read(jsonRequired(object, "schema")),
+      source: try readPresence(object, "source", PhysicalSource.self),
+      threshold: try ReceiptThreshold?.read(jsonRequired(object, "threshold")),
+      value: try String?.read(jsonRequired(object, "value")))
     value._sourceJSON = json
     return value
   }
-  public var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = [
       "answer", "answer_id", "images", "index", "input", "members", "meta", "question",
@@ -824,44 +782,29 @@ public struct OwnedAtomicNullableString: JSONRepresentable {
     return .object(object)
   }
 }
-public indirect enum OwnedAtomicNullableStringValue: JSONRepresentable {
-  case alternative0(String)
-  case alternative1(JSONValue)
-  public static func read(_ json: JSONValue) throws -> OwnedAtomicNullableStringValue {
-    if let value = try? String.read(json) { return .alternative0(value) }
-    if json == .null { return .alternative1(.null) }
-    throw JSONConversionError("Unknown OwnedAtomicNullableStringValue value")
-  }
-  public var json: JSONValue {
-    switch self {
-    case .alternative0(let value): return value.json
-    case .alternative1(let value): return value.json
-    }
-  }
-}
-public struct OwnedAtomicBoolean: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
-  public let `answer`: OwnedAnswer
-  public let `answerId`: OwnedAnswerId
-  public let `images`: Presence<[OwnedImage]>
+public struct AtomicBoolean: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
+  public let `answer`: Answer
+  public let `answerId`: AnswerId
+  public let `images`: Presence<[ReceiptImage]>
   public let `index`: Presence<UInt64>
-  public let `input`: Presence<JSONValue>
-  public let `members`: Presence<[OwnedRankMember]>
-  public let `meta`: OwnedMeta
-  public let `question`: OwnedQuestionDocument
+  public let `input`: Presence<DataValue>
+  public let `members`: Presence<[RankMember]>
+  public let `meta`: Meta
+  public let `question`: QuestionDocument
   public let `questionName`: Presence<String>
-  public let `schema`: OwnedVersion
-  public let `source`: Presence<OwnedPhysicalSource>
-  public let `threshold`: OwnedThreshold?
+  public let `schema`: ReceiptVersion
+  public let `source`: Presence<PhysicalSource>
+  public let `threshold`: ReceiptThreshold?
   public let `value`: Bool
   public init(
-    extensions: [String: JSONValue] = [:], `answer`: OwnedAnswer, `answerId`: OwnedAnswerId,
-    `images`: Presence<[OwnedImage]> = .absent, `index`: Presence<UInt64> = .absent,
-    `input`: Presence<JSONValue> = .absent, `members`: Presence<[OwnedRankMember]> = .absent,
-    `meta`: OwnedMeta, `question`: OwnedQuestionDocument,
-    `questionName`: Presence<String> = .absent, `schema`: OwnedVersion,
-    `source`: Presence<OwnedPhysicalSource> = .absent, `threshold`: OwnedThreshold?, `value`: Bool
+    extensions: [String: DataValue] = [:], `answer`: Answer, `answerId`: AnswerId,
+    `images`: Presence<[ReceiptImage]> = .absent, `index`: Presence<UInt64> = .absent,
+    `input`: Presence<DataValue> = .absent, `members`: Presence<[RankMember]> = .absent,
+    `meta`: Meta, `question`: QuestionDocument, `questionName`: Presence<String> = .absent,
+    `schema`: ReceiptVersion, `source`: Presence<PhysicalSource> = .absent,
+    `threshold`: ReceiptThreshold?, `value`: Bool
   ) {
     self.extensions = extensions
     self.`answer` = `answer`
@@ -878,7 +821,7 @@ public struct OwnedAtomicBoolean: JSONRepresentable {
     self.`threshold` = `threshold`
     self.`value` = `value`
   }
-  public static func read(_ json: JSONValue) throws -> OwnedAtomicBoolean {
+  static func read(_ json: DataValue) throws -> AtomicBoolean {
     let object = try jsonObject(json)
     let known: Set<String> = [
       "answer", "answer_id", "images", "index", "input", "members", "meta", "question",
@@ -886,23 +829,23 @@ public struct OwnedAtomicBoolean: JSONRepresentable {
     ]
     var value = Self(
       extensions: object.filter { !known.contains($0.key) },
-      answer: try OwnedAnswer.read(jsonRequired(object, "answer")),
-      answerId: try OwnedAnswerId.read(jsonRequired(object, "answer_id")),
-      images: try readPresence(object, "images", [OwnedImage].self),
+      answer: try Answer.read(jsonRequired(object, "answer")),
+      answerId: try AnswerId.read(jsonRequired(object, "answer_id")),
+      images: try readPresence(object, "images", [ReceiptImage].self),
       index: try readPresence(object, "index", UInt64.self),
-      input: try readPresence(object, "input", JSONValue.self),
-      members: try readPresence(object, "members", [OwnedRankMember].self),
-      meta: try OwnedMeta.read(jsonRequired(object, "meta")),
-      question: try OwnedQuestionDocument.read(jsonRequired(object, "question")),
+      input: try readPresence(object, "input", DataValue.self),
+      members: try readPresence(object, "members", [RankMember].self),
+      meta: try Meta.read(jsonRequired(object, "meta")),
+      question: try QuestionDocument.read(jsonRequired(object, "question")),
       questionName: try readPresence(object, "question_name", String.self),
-      schema: try OwnedVersion.read(jsonRequired(object, "schema")),
-      source: try readPresence(object, "source", OwnedPhysicalSource.self),
-      threshold: try OwnedThreshold?.read(jsonRequired(object, "threshold")),
+      schema: try ReceiptVersion.read(jsonRequired(object, "schema")),
+      source: try readPresence(object, "source", PhysicalSource.self),
+      threshold: try ReceiptThreshold?.read(jsonRequired(object, "threshold")),
       value: try Bool.read(jsonRequired(object, "value")))
     value._sourceJSON = json
     return value
   }
-  public var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = [
       "answer", "answer_id", "images", "index", "input", "members", "meta", "question",
@@ -925,29 +868,29 @@ public struct OwnedAtomicBoolean: JSONRepresentable {
     return .object(object)
   }
 }
-public struct OwnedAtomicDouble: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
-  public let `answer`: OwnedAnswer
-  public let `answerId`: OwnedAnswerId
-  public let `images`: Presence<[OwnedImage]>
+public struct AtomicDouble: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
+  public let `answer`: Answer
+  public let `answerId`: AnswerId
+  public let `images`: Presence<[ReceiptImage]>
   public let `index`: Presence<UInt64>
-  public let `input`: Presence<JSONValue>
-  public let `members`: Presence<[OwnedRankMember]>
-  public let `meta`: OwnedMeta
-  public let `question`: OwnedQuestionDocument
+  public let `input`: Presence<DataValue>
+  public let `members`: Presence<[RankMember]>
+  public let `meta`: Meta
+  public let `question`: QuestionDocument
   public let `questionName`: Presence<String>
-  public let `schema`: OwnedVersion
-  public let `source`: Presence<OwnedPhysicalSource>
-  public let `threshold`: OwnedThreshold?
+  public let `schema`: ReceiptVersion
+  public let `source`: Presence<PhysicalSource>
+  public let `threshold`: ReceiptThreshold?
   public let `value`: Double
   public init(
-    extensions: [String: JSONValue] = [:], `answer`: OwnedAnswer, `answerId`: OwnedAnswerId,
-    `images`: Presence<[OwnedImage]> = .absent, `index`: Presence<UInt64> = .absent,
-    `input`: Presence<JSONValue> = .absent, `members`: Presence<[OwnedRankMember]> = .absent,
-    `meta`: OwnedMeta, `question`: OwnedQuestionDocument,
-    `questionName`: Presence<String> = .absent, `schema`: OwnedVersion,
-    `source`: Presence<OwnedPhysicalSource> = .absent, `threshold`: OwnedThreshold?, `value`: Double
+    extensions: [String: DataValue] = [:], `answer`: Answer, `answerId`: AnswerId,
+    `images`: Presence<[ReceiptImage]> = .absent, `index`: Presence<UInt64> = .absent,
+    `input`: Presence<DataValue> = .absent, `members`: Presence<[RankMember]> = .absent,
+    `meta`: Meta, `question`: QuestionDocument, `questionName`: Presence<String> = .absent,
+    `schema`: ReceiptVersion, `source`: Presence<PhysicalSource> = .absent,
+    `threshold`: ReceiptThreshold?, `value`: Double
   ) {
     self.extensions = extensions
     self.`answer` = `answer`
@@ -964,7 +907,7 @@ public struct OwnedAtomicDouble: JSONRepresentable {
     self.`threshold` = `threshold`
     self.`value` = `value`
   }
-  public static func read(_ json: JSONValue) throws -> OwnedAtomicDouble {
+  static func read(_ json: DataValue) throws -> AtomicDouble {
     let object = try jsonObject(json)
     let known: Set<String> = [
       "answer", "answer_id", "images", "index", "input", "members", "meta", "question",
@@ -972,23 +915,23 @@ public struct OwnedAtomicDouble: JSONRepresentable {
     ]
     var value = Self(
       extensions: object.filter { !known.contains($0.key) },
-      answer: try OwnedAnswer.read(jsonRequired(object, "answer")),
-      answerId: try OwnedAnswerId.read(jsonRequired(object, "answer_id")),
-      images: try readPresence(object, "images", [OwnedImage].self),
+      answer: try Answer.read(jsonRequired(object, "answer")),
+      answerId: try AnswerId.read(jsonRequired(object, "answer_id")),
+      images: try readPresence(object, "images", [ReceiptImage].self),
       index: try readPresence(object, "index", UInt64.self),
-      input: try readPresence(object, "input", JSONValue.self),
-      members: try readPresence(object, "members", [OwnedRankMember].self),
-      meta: try OwnedMeta.read(jsonRequired(object, "meta")),
-      question: try OwnedQuestionDocument.read(jsonRequired(object, "question")),
+      input: try readPresence(object, "input", DataValue.self),
+      members: try readPresence(object, "members", [RankMember].self),
+      meta: try Meta.read(jsonRequired(object, "meta")),
+      question: try QuestionDocument.read(jsonRequired(object, "question")),
       questionName: try readPresence(object, "question_name", String.self),
-      schema: try OwnedVersion.read(jsonRequired(object, "schema")),
-      source: try readPresence(object, "source", OwnedPhysicalSource.self),
-      threshold: try OwnedThreshold?.read(jsonRequired(object, "threshold")),
+      schema: try ReceiptVersion.read(jsonRequired(object, "schema")),
+      source: try readPresence(object, "source", PhysicalSource.self),
+      threshold: try ReceiptThreshold?.read(jsonRequired(object, "threshold")),
       value: try Double.read(jsonRequired(object, "value")))
     value._sourceJSON = json
     return value
   }
-  public var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = [
       "answer", "answer_id", "images", "index", "input", "members", "meta", "question",
@@ -1011,22 +954,21 @@ public struct OwnedAtomicDouble: JSONRepresentable {
     return .object(object)
   }
 }
-public struct OwnedAttempt: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
+public struct Attempt: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
   public let `ordinal`: UInt64
-  public let `outcome`: OwnedAttemptOutcome
+  public let `outcome`: AttemptOutcome
   public let `requestId`: Presence<String>
   public let `requestSha256`: String
-  public let `sdkRequestId`: OwnedSdkRequestId
+  public let `sdkRequestId`: SdkRequestId
   public let `serverMs`: Presence<UInt64>
   public let `status`: Presence<UInt64>
   public let `wallMs`: UInt64
   public init(
-    extensions: [String: JSONValue] = [:], `ordinal`: UInt64, `outcome`: OwnedAttemptOutcome,
-    `requestId`: Presence<String> = .absent, `requestSha256`: String,
-    `sdkRequestId`: OwnedSdkRequestId, `serverMs`: Presence<UInt64> = .absent,
-    `status`: Presence<UInt64> = .absent, `wallMs`: UInt64
+    extensions: [String: DataValue] = [:], `ordinal`: UInt64, `outcome`: AttemptOutcome,
+    `requestId`: Presence<String> = .absent, `requestSha256`: String, `sdkRequestId`: SdkRequestId,
+    `serverMs`: Presence<UInt64> = .absent, `status`: Presence<UInt64> = .absent, `wallMs`: UInt64
   ) {
     self.extensions = extensions
     self.`ordinal` = `ordinal`
@@ -1038,7 +980,7 @@ public struct OwnedAttempt: JSONRepresentable {
     self.`status` = `status`
     self.`wallMs` = `wallMs`
   }
-  public static func read(_ json: JSONValue) throws -> OwnedAttempt {
+  static func read(_ json: DataValue) throws -> Attempt {
     let object = try jsonObject(json)
     let known: Set<String> = [
       "ordinal", "outcome", "request_id", "request_sha256", "sdk_request_id", "server_ms", "status",
@@ -1047,17 +989,17 @@ public struct OwnedAttempt: JSONRepresentable {
     var value = Self(
       extensions: object.filter { !known.contains($0.key) },
       ordinal: try UInt64.read(jsonRequired(object, "ordinal")),
-      outcome: try OwnedAttemptOutcome.read(jsonRequired(object, "outcome")),
+      outcome: try AttemptOutcome.read(jsonRequired(object, "outcome")),
       requestId: try readPresence(object, "request_id", String.self),
       requestSha256: try String.read(jsonRequired(object, "request_sha256")),
-      sdkRequestId: try OwnedSdkRequestId.read(jsonRequired(object, "sdk_request_id")),
+      sdkRequestId: try SdkRequestId.read(jsonRequired(object, "sdk_request_id")),
       serverMs: try readPresence(object, "server_ms", UInt64.self),
       status: try readPresence(object, "status", UInt64.self),
       wallMs: try UInt64.read(jsonRequired(object, "wall_ms")))
     value._sourceJSON = json
     return value
   }
-  public var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = [
       "ordinal", "outcome", "request_id", "request_sha256", "sdk_request_id", "server_ms", "status",
@@ -1075,62 +1017,61 @@ public struct OwnedAttempt: JSONRepresentable {
     return .object(object)
   }
 }
-public indirect enum OwnedBatch: JSONRepresentable {
-  case alternative0(UInt64)
-  case alternative1(String)
-  public static func read(_ json: JSONValue) throws -> OwnedBatch {
-    if let value = try? UInt64.read(json) { return .alternative0(value) }
-    if let value = try? String.read(json) { return .alternative1(value) }
-    throw JSONConversionError("Unknown OwnedBatch value")
+public indirect enum ReceiptBatch: ValueRepresentable {
+  case `integer`(UInt64)
+  case `string`(String)
+  static func read(_ json: DataValue) throws -> ReceiptBatch {
+    if let value = try? UInt64.read(json) { return .`integer`(value) }
+    if let value = try? String.read(json) { return .`string`(value) }
+    throw ValueConversionError("Unknown ReceiptBatch value")
   }
-  public var json: JSONValue {
+  var json: DataValue {
     switch self {
-    case .alternative0(let value): return value.json
-    case .alternative1(let value): return value.json
+    case .`integer`(let value): return value.json
+    case .`string`(let value): return value.json
     }
   }
 }
-public enum OwnedBoundaryMode: JSONRepresentable {
+public enum BoundaryMode: ValueRepresentable {
   case `boundaryOnly`
   case unknown(String)
-  public static func read(_ json: JSONValue) throws -> OwnedBoundaryMode {
+  static func read(_ json: DataValue) throws -> BoundaryMode {
     let value = try String.read(json)
     switch value {
     case "boundary_only": return .`boundaryOnly`
     default: return .unknown(value)
     }
   }
-  public var json: JSONValue {
+  var json: DataValue {
     switch self {
     case .`boundaryOnly`: return .string("boundary_only")
     case .unknown(let value): return .string(value)
     }
   }
 }
-public struct OwnedBoundaryOdds: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
-  public let `pieces`: [OwnedPieceOdds]
-  public let `proposals`: [OwnedBoundaryProposal]
+public struct BoundaryOdds: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
+  public let `pieces`: [PieceOdds]
+  public let `proposals`: [BoundaryProposal]
   public init(
-    extensions: [String: JSONValue] = [:], `pieces`: [OwnedPieceOdds],
-    `proposals`: [OwnedBoundaryProposal]
+    extensions: [String: DataValue] = [:], `pieces`: [PieceOdds], `proposals`: [BoundaryProposal]
   ) {
     self.extensions = extensions
     self.`pieces` = `pieces`
     self.`proposals` = `proposals`
   }
-  public static func read(_ json: JSONValue) throws -> OwnedBoundaryOdds {
+  static func read(_ json: DataValue) throws -> BoundaryOdds {
     let object = try jsonObject(json)
     let known: Set<String> = ["pieces", "proposals"]
     var value = Self(
       extensions: object.filter { !known.contains($0.key) },
-      pieces: try [OwnedPieceOdds].read(jsonRequired(object, "pieces")),
-      proposals: try [OwnedBoundaryProposal].read(jsonRequired(object, "proposals")))
+      pieces: try [PieceOdds].read(jsonRequired(object, "pieces")),
+      proposals: try [BoundaryProposal].read(jsonRequired(object, "proposals")))
     value._sourceJSON = json
     return value
   }
-  public var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = ["pieces", "proposals"]
     var object = extensions.filter { !known.contains($0.key) }
@@ -1139,16 +1080,16 @@ public struct OwnedBoundaryOdds: JSONRepresentable {
     return .object(object)
   }
 }
-public struct OwnedBoundaryProposal: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
+public struct BoundaryProposal: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
   public let `end`: UInt64
   public let `length`: UInt64
   public let `probability`: Double
   public let `start`: UInt64
   public let `text`: String
   public init(
-    extensions: [String: JSONValue] = [:], `end`: UInt64, `length`: UInt64, `probability`: Double,
+    extensions: [String: DataValue] = [:], `end`: UInt64, `length`: UInt64, `probability`: Double,
     `start`: UInt64, `text`: String
   ) {
     self.extensions = extensions
@@ -1158,7 +1099,7 @@ public struct OwnedBoundaryProposal: JSONRepresentable {
     self.`start` = `start`
     self.`text` = `text`
   }
-  public static func read(_ json: JSONValue) throws -> OwnedBoundaryProposal {
+  static func read(_ json: DataValue) throws -> BoundaryProposal {
     let object = try jsonObject(json)
     let known: Set<String> = ["end", "length", "probability", "start", "text"]
     var value = Self(
@@ -1171,7 +1112,7 @@ public struct OwnedBoundaryProposal: JSONRepresentable {
     value._sourceJSON = json
     return value
   }
-  public var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = ["end", "length", "probability", "start", "text"]
     var object = extensions.filter { !known.contains($0.key) }
@@ -1183,30 +1124,30 @@ public struct OwnedBoundaryProposal: JSONRepresentable {
     return .object(object)
   }
 }
-public struct OwnedCallError: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
-  public let `error`: OwnedError
-  public let `facts`: Presence<OwnedFacts>
+public struct CallError: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
+  public let `error`: FailureDetail
+  public let `facts`: Presence<Facts>
   public init(
-    extensions: [String: JSONValue] = [:], `error`: OwnedError,
-    `facts`: Presence<OwnedFacts> = .absent
+    extensions: [String: DataValue] = [:], `error`: FailureDetail,
+    `facts`: Presence<Facts> = .absent
   ) {
     self.extensions = extensions
     self.`error` = `error`
     self.`facts` = `facts`
   }
-  public static func read(_ json: JSONValue) throws -> OwnedCallError {
+  static func read(_ json: DataValue) throws -> CallError {
     let object = try jsonObject(json)
     let known: Set<String> = ["error", "facts"]
     var value = Self(
       extensions: object.filter { !known.contains($0.key) },
-      error: try OwnedError.read(jsonRequired(object, "error")),
-      facts: try readPresence(object, "facts", OwnedFacts.self))
+      error: try FailureDetail.read(jsonRequired(object, "error")),
+      facts: try readPresence(object, "facts", Facts.self))
     value._sourceJSON = json
     return value
   }
-  public var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = ["error", "facts"]
     var object = extensions.filter { !known.contains($0.key) }
@@ -1215,48 +1156,33 @@ public struct OwnedCallError: JSONRepresentable {
     return .object(object)
   }
 }
-public typealias OwnedCallId = String
-public indirect enum OwnedDecideValue: JSONRepresentable {
-  case alternative0(OwnedDecideValueAlternative0)
-  case alternative1(JSONValue)
-  public static func read(_ json: JSONValue) throws -> OwnedDecideValue {
-    if let value = try? OwnedDecideValueAlternative0.read(json) { return .alternative0(value) }
-    if let value = try? JSONValue.read(json) { return .alternative1(value) }
-    throw JSONConversionError("Unknown OwnedDecideValue value")
+public typealias CallId = String
+public indirect enum DecideValue: ValueRepresentable {
+  case `booleanOrNull`(Bool?)
+  case `jsonValue`(DataValue)
+  static func read(_ json: DataValue) throws -> DecideValue {
+    if let value = try? Bool?.read(json) { return .`booleanOrNull`(value) }
+    if let value = try? DataValue.read(json) { return .`jsonValue`(value) }
+    throw ValueConversionError("Unknown DecideValue value")
   }
-  public var json: JSONValue {
+  var json: DataValue {
     switch self {
-    case .alternative0(let value): return value.json
-    case .alternative1(let value): return value.json
+    case .`booleanOrNull`(let value): return value.json
+    case .`jsonValue`(let value): return value.json
     }
   }
 }
-public indirect enum OwnedDecideValueAlternative0: JSONRepresentable {
-  case alternative0(Bool)
-  case alternative1(JSONValue)
-  public static func read(_ json: JSONValue) throws -> OwnedDecideValueAlternative0 {
-    if let value = try? Bool.read(json) { return .alternative0(value) }
-    if json == .null { return .alternative1(.null) }
-    throw JSONConversionError("Unknown OwnedDecideValueAlternative0 value")
-  }
-  public var json: JSONValue {
-    switch self {
-    case .alternative0(let value): return value.json
-    case .alternative1(let value): return value.json
-    }
-  }
-}
-public struct OwnedEntityDocument: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
+public struct EntityDocument: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
   public let `kind`: String
   public let `name`: String
-  public init(extensions: [String: JSONValue] = [:], `kind`: String, `name`: String) {
+  public init(extensions: [String: DataValue] = [:], `kind`: String, `name`: String) {
     self.extensions = extensions
     self.`kind` = `kind`
     self.`name` = `name`
   }
-  public static func read(_ json: JSONValue) throws -> OwnedEntityDocument {
+  static func read(_ json: DataValue) throws -> EntityDocument {
     let object = try jsonObject(json)
     let known: Set<String> = ["kind", "name"]
     var value = Self(
@@ -1266,7 +1192,7 @@ public struct OwnedEntityDocument: JSONRepresentable {
     value._sourceJSON = json
     return value
   }
-  public var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = ["kind", "name"]
     var object = extensions.filter { !known.contains($0.key) }
@@ -1275,20 +1201,20 @@ public struct OwnedEntityDocument: JSONRepresentable {
     return .object(object)
   }
 }
-public struct OwnedError: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
-  public let `estimatedInputDenial`: Presence<OwnedEstimatedInputDenial>
-  public let `kind`: OwnedFailureKind
+public struct FailureDetail: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
+  public let `estimatedInputDenial`: Presence<EstimatedInputDenial>
+  public let `kind`: FailureKind
   public let `message`: String
   public let `retryable`: Bool
-  public let `sendBudgetDenial`: Presence<OwnedSendBudgetDenial>
-  public let `stopped`: OwnedStopped
+  public let `sendBudgetDenial`: Presence<SendBudgetDenial>
+  public let `stopped`: Stopped
   public init(
-    extensions: [String: JSONValue] = [:],
-    `estimatedInputDenial`: Presence<OwnedEstimatedInputDenial> = .absent, `kind`: OwnedFailureKind,
-    `message`: String, `retryable`: Bool,
-    `sendBudgetDenial`: Presence<OwnedSendBudgetDenial> = .absent, `stopped`: OwnedStopped
+    extensions: [String: DataValue] = [:],
+    `estimatedInputDenial`: Presence<EstimatedInputDenial> = .absent, `kind`: FailureKind,
+    `message`: String, `retryable`: Bool, `sendBudgetDenial`: Presence<SendBudgetDenial> = .absent,
+    `stopped`: Stopped
   ) {
     self.extensions = extensions
     self.`estimatedInputDenial` = `estimatedInputDenial`
@@ -1298,7 +1224,7 @@ public struct OwnedError: JSONRepresentable {
     self.`sendBudgetDenial` = `sendBudgetDenial`
     self.`stopped` = `stopped`
   }
-  public static func read(_ json: JSONValue) throws -> OwnedError {
+  static func read(_ json: DataValue) throws -> FailureDetail {
     let object = try jsonObject(json)
     let known: Set<String> = [
       "estimated_input_denial", "kind", "message", "retryable", "send_budget_denial", "stopped",
@@ -1306,16 +1232,16 @@ public struct OwnedError: JSONRepresentable {
     var value = Self(
       extensions: object.filter { !known.contains($0.key) },
       estimatedInputDenial: try readPresence(
-        object, "estimated_input_denial", OwnedEstimatedInputDenial.self),
-      kind: try OwnedFailureKind.read(jsonRequired(object, "kind")),
+        object, "estimated_input_denial", EstimatedInputDenial.self),
+      kind: try FailureKind.read(jsonRequired(object, "kind")),
       message: try String.read(jsonRequired(object, "message")),
       retryable: try Bool.read(jsonRequired(object, "retryable")),
-      sendBudgetDenial: try readPresence(object, "send_budget_denial", OwnedSendBudgetDenial.self),
-      stopped: try OwnedStopped.read(jsonRequired(object, "stopped")))
+      sendBudgetDenial: try readPresence(object, "send_budget_denial", SendBudgetDenial.self),
+      stopped: try Stopped.read(jsonRequired(object, "stopped")))
     value._sourceJSON = json
     return value
   }
-  public var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = [
       "estimated_input_denial", "kind", "message", "retryable", "send_budget_denial", "stopped",
@@ -1330,24 +1256,24 @@ public struct OwnedError: JSONRepresentable {
     return .object(object)
   }
 }
-public indirect enum OwnedEstimatedInputDenial: JSONRepresentable {
-  case `initialRequest`(OwnedEstimatedInputDenialInitialRequest)
-  case `additionalRequest`(OwnedEstimatedInputDenialAdditionalRequest)
-  case `retry`(OwnedEstimatedInputDenialRetry)
-  public static func read(_ json: JSONValue) throws -> OwnedEstimatedInputDenial {
+public indirect enum EstimatedInputDenial: ValueRepresentable {
+  case `initialRequest`(EstimatedInputDenialInitialRequest)
+  case `additionalRequest`(EstimatedInputDenialAdditionalRequest)
+  case `retry`(EstimatedInputDenialRetry)
+  static func read(_ json: DataValue) throws -> EstimatedInputDenial {
     let object = try jsonObject(json)
     if object["kind"] == .string("initial_request") {
-      return .`initialRequest`(try OwnedEstimatedInputDenialInitialRequest.read(json))
+      return .`initialRequest`(try EstimatedInputDenialInitialRequest.read(json))
     }
     if object["kind"] == .string("additional_request") {
-      return .`additionalRequest`(try OwnedEstimatedInputDenialAdditionalRequest.read(json))
+      return .`additionalRequest`(try EstimatedInputDenialAdditionalRequest.read(json))
     }
     if object["kind"] == .string("retry") {
-      return .`retry`(try OwnedEstimatedInputDenialRetry.read(json))
+      return .`retry`(try EstimatedInputDenialRetry.read(json))
     }
-    throw JSONConversionError("Unknown OwnedEstimatedInputDenial alternative")
+    throw ValueConversionError("Unknown EstimatedInputDenial alternative")
   }
-  public var json: JSONValue {
+  var json: DataValue {
     switch self {
     case .`initialRequest`(let value): return value.json
     case .`additionalRequest`(let value): return value.json
@@ -1355,19 +1281,19 @@ public indirect enum OwnedEstimatedInputDenial: JSONRepresentable {
     }
   }
 }
-public struct OwnedEstimatedInputDenialAdditionalRequest: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
+public struct EstimatedInputDenialAdditionalRequest: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
   public let `kind`: String
   public let `limit`: UInt64
   public init(
-    extensions: [String: JSONValue] = [:], `kind`: String = "additional_request", `limit`: UInt64
+    extensions: [String: DataValue] = [:], `kind`: String = "additional_request", `limit`: UInt64
   ) {
     self.extensions = extensions
     self.`kind` = `kind`
     self.`limit` = `limit`
   }
-  public static func read(_ json: JSONValue) throws -> OwnedEstimatedInputDenialAdditionalRequest {
+  static func read(_ json: DataValue) throws -> EstimatedInputDenialAdditionalRequest {
     let object = try jsonObject(json)
     let known: Set<String> = ["kind", "limit"]
     var value = Self(
@@ -1377,7 +1303,7 @@ public struct OwnedEstimatedInputDenialAdditionalRequest: JSONRepresentable {
     value._sourceJSON = json
     return value
   }
-  public var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = ["kind", "limit"]
     var object = extensions.filter { !known.contains($0.key) }
@@ -1386,19 +1312,19 @@ public struct OwnedEstimatedInputDenialAdditionalRequest: JSONRepresentable {
     return .object(object)
   }
 }
-public struct OwnedEstimatedInputDenialInitialRequest: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
+public struct EstimatedInputDenialInitialRequest: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
   public let `kind`: String
   public let `limit`: UInt64
   public init(
-    extensions: [String: JSONValue] = [:], `kind`: String = "initial_request", `limit`: UInt64
+    extensions: [String: DataValue] = [:], `kind`: String = "initial_request", `limit`: UInt64
   ) {
     self.extensions = extensions
     self.`kind` = `kind`
     self.`limit` = `limit`
   }
-  public static func read(_ json: JSONValue) throws -> OwnedEstimatedInputDenialInitialRequest {
+  static func read(_ json: DataValue) throws -> EstimatedInputDenialInitialRequest {
     let object = try jsonObject(json)
     let known: Set<String> = ["kind", "limit"]
     var value = Self(
@@ -1408,7 +1334,7 @@ public struct OwnedEstimatedInputDenialInitialRequest: JSONRepresentable {
     value._sourceJSON = json
     return value
   }
-  public var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = ["kind", "limit"]
     var object = extensions.filter { !known.contains($0.key) }
@@ -1417,14 +1343,14 @@ public struct OwnedEstimatedInputDenialInitialRequest: JSONRepresentable {
     return .object(object)
   }
 }
-public struct OwnedEstimatedInputDenialRetry: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
+public struct EstimatedInputDenialRetry: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
   public let `kind`: String
   public let `lastStatus`: UInt64
   public let `limit`: UInt64
   public init(
-    extensions: [String: JSONValue] = [:], `kind`: String = "retry", `lastStatus`: UInt64,
+    extensions: [String: DataValue] = [:], `kind`: String = "retry", `lastStatus`: UInt64,
     `limit`: UInt64
   ) {
     self.extensions = extensions
@@ -1432,7 +1358,7 @@ public struct OwnedEstimatedInputDenialRetry: JSONRepresentable {
     self.`lastStatus` = `lastStatus`
     self.`limit` = `limit`
   }
-  public static func read(_ json: JSONValue) throws -> OwnedEstimatedInputDenialRetry {
+  static func read(_ json: DataValue) throws -> EstimatedInputDenialRetry {
     let object = try jsonObject(json)
     let known: Set<String> = ["kind", "last_status", "limit"]
     var value = Self(
@@ -1443,7 +1369,7 @@ public struct OwnedEstimatedInputDenialRetry: JSONRepresentable {
     value._sourceJSON = json
     return value
   }
-  public var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = ["kind", "last_status", "limit"]
     var object = extensions.filter { !known.contains($0.key) }
@@ -1453,33 +1379,32 @@ public struct OwnedEstimatedInputDenialRetry: JSONRepresentable {
     return .object(object)
   }
 }
-public struct OwnedFacts: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
-  public let `attempts`: Presence<[OwnedAttempt]>
+public struct Facts: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
+  public let `attempts`: Presence<[Attempt]>
   public let `cacheAnswers`: UInt64
-  public let `callId`: OwnedCallId
+  public let `callId`: CallId
   public let `estimatedCostUsd`: Presence<String>
   public let `heldModelMismatch`: Presence<Bool>
   public let `inputTokens`: Presence<UInt64>
   public let `largestRequestBytes`: UInt64
-  public let `largestRequestEstimatedInputTokens`: OwnedFactsLargestRequestEstimatedInputTokens
+  public let `largestRequestEstimatedInputTokens`: UInt64?
   public let `model`: Presence<String>
   public let `outputTokens`: Presence<UInt64>
   public let `records`: UInt64
   public let `requestsSent`: UInt64
   public let `seconds`: Double
   public let `tokenEstimateMethod`: String
-  public let `usagePersistence`: Presence<OwnedPersistenceObservation>
+  public let `usagePersistence`: Presence<PersistenceObservation>
   public init(
-    extensions: [String: JSONValue] = [:], `attempts`: Presence<[OwnedAttempt]> = .absent,
-    `cacheAnswers`: UInt64, `callId`: OwnedCallId, `estimatedCostUsd`: Presence<String> = .absent,
+    extensions: [String: DataValue] = [:], `attempts`: Presence<[Attempt]> = .absent,
+    `cacheAnswers`: UInt64, `callId`: CallId, `estimatedCostUsd`: Presence<String> = .absent,
     `heldModelMismatch`: Presence<Bool> = .absent, `inputTokens`: Presence<UInt64> = .absent,
-    `largestRequestBytes`: UInt64,
-    `largestRequestEstimatedInputTokens`: OwnedFactsLargestRequestEstimatedInputTokens,
+    `largestRequestBytes`: UInt64, `largestRequestEstimatedInputTokens`: UInt64?,
     `model`: Presence<String> = .absent, `outputTokens`: Presence<UInt64> = .absent,
     `records`: UInt64, `requestsSent`: UInt64, `seconds`: Double, `tokenEstimateMethod`: String,
-    `usagePersistence`: Presence<OwnedPersistenceObservation> = .absent
+    `usagePersistence`: Presence<PersistenceObservation> = .absent
   ) {
     self.extensions = extensions
     self.`attempts` = `attempts`
@@ -1498,7 +1423,7 @@ public struct OwnedFacts: JSONRepresentable {
     self.`tokenEstimateMethod` = `tokenEstimateMethod`
     self.`usagePersistence` = `usagePersistence`
   }
-  public static func read(_ json: JSONValue) throws -> OwnedFacts {
+  static func read(_ json: DataValue) throws -> Facts {
     let object = try jsonObject(json)
     let known: Set<String> = [
       "attempts", "cache_answers", "call_id", "estimated_cost_usd", "held_model_mismatch",
@@ -1508,14 +1433,14 @@ public struct OwnedFacts: JSONRepresentable {
     ]
     var value = Self(
       extensions: object.filter { !known.contains($0.key) },
-      attempts: try readPresence(object, "attempts", [OwnedAttempt].self),
+      attempts: try readPresence(object, "attempts", [Attempt].self),
       cacheAnswers: try UInt64.read(jsonRequired(object, "cache_answers")),
-      callId: try OwnedCallId.read(jsonRequired(object, "call_id")),
+      callId: try CallId.read(jsonRequired(object, "call_id")),
       estimatedCostUsd: try readPresence(object, "estimated_cost_usd", String.self),
       heldModelMismatch: try readPresence(object, "held_model_mismatch", Bool.self),
       inputTokens: try readPresence(object, "input_tokens", UInt64.self),
       largestRequestBytes: try UInt64.read(jsonRequired(object, "largest_request_bytes")),
-      largestRequestEstimatedInputTokens: try OwnedFactsLargestRequestEstimatedInputTokens.read(
+      largestRequestEstimatedInputTokens: try UInt64?.read(
         jsonRequired(object, "largest_request_estimated_input_tokens")),
       model: try readPresence(object, "model", String.self),
       outputTokens: try readPresence(object, "output_tokens", UInt64.self),
@@ -1523,12 +1448,11 @@ public struct OwnedFacts: JSONRepresentable {
       requestsSent: try UInt64.read(jsonRequired(object, "requests_sent")),
       seconds: try Double.read(jsonRequired(object, "seconds")),
       tokenEstimateMethod: try String.read(jsonRequired(object, "token_estimate_method")),
-      usagePersistence: try readPresence(
-        object, "usage_persistence", OwnedPersistenceObservation.self))
+      usagePersistence: try readPresence(object, "usage_persistence", PersistenceObservation.self))
     value._sourceJSON = json
     return value
   }
-  public var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = [
       "attempts", "cache_answers", "call_id", "estimated_cost_usd", "held_model_mismatch",
@@ -1555,46 +1479,30 @@ public struct OwnedFacts: JSONRepresentable {
     return .object(object)
   }
 }
-public indirect enum OwnedFactsLargestRequestEstimatedInputTokens: JSONRepresentable {
-  case alternative0(UInt64)
-  case alternative1(JSONValue)
-  public static func read(_ json: JSONValue) throws -> OwnedFactsLargestRequestEstimatedInputTokens
-  {
-    if let value = try? UInt64.read(json) { return .alternative0(value) }
-    if json == .null { return .alternative1(.null) }
-    throw JSONConversionError("Unknown OwnedFactsLargestRequestEstimatedInputTokens value")
-  }
-  public var json: JSONValue {
-    switch self {
-    case .alternative0(let value): return value.json
-    case .alternative1(let value): return value.json
-    }
-  }
-}
-public typealias OwnedFailureId = String
-public struct OwnedFind: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
-  public let `answer`: OwnedFindAnswer
-  public let `answerId`: OwnedAnswerId
-  public let `candidates`: Presence<[OwnedFindCandidate]>
+public typealias FailureId = String
+public struct Find: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
+  public let `answer`: FindAnswer
+  public let `answerId`: AnswerId
+  public let `candidates`: Presence<[FindCandidate]>
   public let `file`: Presence<String>
   public let `firstLine`: Presence<UInt64>
-  public let `index`: OwnedFindIndex
+  public let `index`: UInt64?
   public let `lastLine`: Presence<UInt64>
-  public let `meta`: OwnedMeta
-  public let `position`: Presence<OwnedPosition>
-  public let `question`: OwnedFindQuestionDocument
-  public let `schema`: OwnedVersion
-  public let `threshold`: JSONValue
-  public let `value`: JSONValue
+  public let `meta`: Meta
+  public let `position`: Presence<Position>
+  public let `question`: FindQuestionDocument
+  public let `schema`: ReceiptVersion
+  public let `threshold`: DataValue
+  public let `value`: DataValue
   public init(
-    extensions: [String: JSONValue] = [:], `answer`: OwnedFindAnswer, `answerId`: OwnedAnswerId,
-    `candidates`: Presence<[OwnedFindCandidate]> = .absent, `file`: Presence<String> = .absent,
-    `firstLine`: Presence<UInt64> = .absent, `index`: OwnedFindIndex,
-    `lastLine`: Presence<UInt64> = .absent, `meta`: OwnedMeta,
-    `position`: Presence<OwnedPosition> = .absent, `question`: OwnedFindQuestionDocument,
-    `schema`: OwnedVersion, `threshold`: JSONValue, `value`: JSONValue
+    extensions: [String: DataValue] = [:], `answer`: FindAnswer, `answerId`: AnswerId,
+    `candidates`: Presence<[FindCandidate]> = .absent, `file`: Presence<String> = .absent,
+    `firstLine`: Presence<UInt64> = .absent, `index`: UInt64?,
+    `lastLine`: Presence<UInt64> = .absent, `meta`: Meta, `position`: Presence<Position> = .absent,
+    `question`: FindQuestionDocument, `schema`: ReceiptVersion, `threshold`: DataValue,
+    `value`: DataValue
   ) {
     self.extensions = extensions
     self.`answer` = `answer`
@@ -1611,7 +1519,7 @@ public struct OwnedFind: JSONRepresentable {
     self.`threshold` = `threshold`
     self.`value` = `value`
   }
-  public static func read(_ json: JSONValue) throws -> OwnedFind {
+  static func read(_ json: DataValue) throws -> Find {
     let object = try jsonObject(json)
     let known: Set<String> = [
       "answer", "answer_id", "candidates", "file", "first_line", "index", "last_line", "meta",
@@ -1619,23 +1527,23 @@ public struct OwnedFind: JSONRepresentable {
     ]
     var value = Self(
       extensions: object.filter { !known.contains($0.key) },
-      answer: try OwnedFindAnswer.read(jsonRequired(object, "answer")),
-      answerId: try OwnedAnswerId.read(jsonRequired(object, "answer_id")),
-      candidates: try readPresence(object, "candidates", [OwnedFindCandidate].self),
+      answer: try FindAnswer.read(jsonRequired(object, "answer")),
+      answerId: try AnswerId.read(jsonRequired(object, "answer_id")),
+      candidates: try readPresence(object, "candidates", [FindCandidate].self),
       file: try readPresence(object, "file", String.self),
       firstLine: try readPresence(object, "first_line", UInt64.self),
-      index: try OwnedFindIndex.read(jsonRequired(object, "index")),
+      index: try UInt64?.read(jsonRequired(object, "index")),
       lastLine: try readPresence(object, "last_line", UInt64.self),
-      meta: try OwnedMeta.read(jsonRequired(object, "meta")),
-      position: try readPresence(object, "position", OwnedPosition.self),
-      question: try OwnedFindQuestionDocument.read(jsonRequired(object, "question")),
-      schema: try OwnedVersion.read(jsonRequired(object, "schema")),
-      threshold: try JSONValue.read(jsonRequired(object, "threshold")),
-      value: try JSONValue.read(jsonRequired(object, "value")))
+      meta: try Meta.read(jsonRequired(object, "meta")),
+      position: try readPresence(object, "position", Position.self),
+      question: try FindQuestionDocument.read(jsonRequired(object, "question")),
+      schema: try ReceiptVersion.read(jsonRequired(object, "schema")),
+      threshold: try DataValue.read(jsonRequired(object, "threshold")),
+      value: try DataValue.read(jsonRequired(object, "value")))
     value._sourceJSON = json
     return value
   }
-  public var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = [
       "answer", "answer_id", "candidates", "file", "first_line", "index", "last_line", "meta",
@@ -1658,16 +1566,16 @@ public struct OwnedFind: JSONRepresentable {
     return .object(object)
   }
 }
-public struct OwnedFindCandidate: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
-  public let `index`: OwnedFindCandidateIndex
-  public let `input`: JSONValue
+public struct FindCandidate: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
+  public let `index`: UInt64?
+  public let `input`: DataValue
   public let `probability`: Double
-  public let `source`: Presence<OwnedPhysicalSource>
+  public let `source`: Presence<PhysicalSource>
   public init(
-    extensions: [String: JSONValue] = [:], `index`: OwnedFindCandidateIndex, `input`: JSONValue,
-    `probability`: Double, `source`: Presence<OwnedPhysicalSource> = .absent
+    extensions: [String: DataValue] = [:], `index`: UInt64?, `input`: DataValue,
+    `probability`: Double, `source`: Presence<PhysicalSource> = .absent
   ) {
     self.extensions = extensions
     self.`index` = `index`
@@ -1675,19 +1583,19 @@ public struct OwnedFindCandidate: JSONRepresentable {
     self.`probability` = `probability`
     self.`source` = `source`
   }
-  public static func read(_ json: JSONValue) throws -> OwnedFindCandidate {
+  static func read(_ json: DataValue) throws -> FindCandidate {
     let object = try jsonObject(json)
     let known: Set<String> = ["index", "input", "probability", "source"]
     var value = Self(
       extensions: object.filter { !known.contains($0.key) },
-      index: try OwnedFindCandidateIndex.read(jsonRequired(object, "index")),
-      input: try JSONValue.read(jsonRequired(object, "input")),
+      index: try UInt64?.read(jsonRequired(object, "index")),
+      input: try DataValue.read(jsonRequired(object, "input")),
       probability: try Double.read(jsonRequired(object, "probability")),
-      source: try readPresence(object, "source", OwnedPhysicalSource.self))
+      source: try readPresence(object, "source", PhysicalSource.self))
     value._sourceJSON = json
     return value
   }
-  public var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = ["index", "input", "probability", "source"]
     var object = extensions.filter { !known.contains($0.key) }
@@ -1698,46 +1606,16 @@ public struct OwnedFindCandidate: JSONRepresentable {
     return .object(object)
   }
 }
-public indirect enum OwnedFindCandidateIndex: JSONRepresentable {
-  case alternative0(UInt64)
-  case alternative1(JSONValue)
-  public static func read(_ json: JSONValue) throws -> OwnedFindCandidateIndex {
-    if let value = try? UInt64.read(json) { return .alternative0(value) }
-    if json == .null { return .alternative1(.null) }
-    throw JSONConversionError("Unknown OwnedFindCandidateIndex value")
-  }
-  public var json: JSONValue {
-    switch self {
-    case .alternative0(let value): return value.json
-    case .alternative1(let value): return value.json
-    }
-  }
-}
-public indirect enum OwnedFindIndex: JSONRepresentable {
-  case alternative0(UInt64)
-  case alternative1(JSONValue)
-  public static func read(_ json: JSONValue) throws -> OwnedFindIndex {
-    if let value = try? UInt64.read(json) { return .alternative0(value) }
-    if json == .null { return .alternative1(.null) }
-    throw JSONConversionError("Unknown OwnedFindIndex value")
-  }
-  public var json: JSONValue {
-    switch self {
-    case .alternative0(let value): return value.json
-    case .alternative1(let value): return value.json
-    }
-  }
-}
-public struct OwnedImage: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
+public struct ReceiptImage: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
   public let `base64`: String
   public let `height`: UInt64
-  public let `media`: OwnedImageMedia
+  public let `media`: ReceiptImageMedia
   public let `width`: UInt64
   public init(
-    extensions: [String: JSONValue] = [:], `base64`: String, `height`: UInt64,
-    `media`: OwnedImageMedia, `width`: UInt64
+    extensions: [String: DataValue] = [:], `base64`: String, `height`: UInt64,
+    `media`: ReceiptImageMedia, `width`: UInt64
   ) {
     self.extensions = extensions
     self.`base64` = `base64`
@@ -1745,19 +1623,19 @@ public struct OwnedImage: JSONRepresentable {
     self.`media` = `media`
     self.`width` = `width`
   }
-  public static func read(_ json: JSONValue) throws -> OwnedImage {
+  static func read(_ json: DataValue) throws -> ReceiptImage {
     let object = try jsonObject(json)
     let known: Set<String> = ["base64", "height", "media", "width"]
     var value = Self(
       extensions: object.filter { !known.contains($0.key) },
       base64: try String.read(jsonRequired(object, "base64")),
       height: try UInt64.read(jsonRequired(object, "height")),
-      media: try OwnedImageMedia.read(jsonRequired(object, "media")),
+      media: try ReceiptImageMedia.read(jsonRequired(object, "media")),
       width: try UInt64.read(jsonRequired(object, "width")))
     value._sourceJSON = json
     return value
   }
-  public var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = ["base64", "height", "media", "width"]
     var object = extensions.filter { !known.contains($0.key) }
@@ -1768,11 +1646,11 @@ public struct OwnedImage: JSONRepresentable {
     return .object(object)
   }
 }
-public enum OwnedImageMedia: JSONRepresentable {
+public enum ReceiptImageMedia: ValueRepresentable {
   case `imageJpeg`
   case `imagePng`
   case unknown(String)
-  public static func read(_ json: JSONValue) throws -> OwnedImageMedia {
+  static func read(_ json: DataValue) throws -> ReceiptImageMedia {
     let value = try String.read(json)
     switch value {
     case "image/jpeg": return .`imageJpeg`
@@ -1780,7 +1658,7 @@ public enum OwnedImageMedia: JSONRepresentable {
     default: return .unknown(value)
     }
   }
-  public var json: JSONValue {
+  var json: DataValue {
     switch self {
     case .`imageJpeg`: return .string("image/jpeg")
     case .`imagePng`: return .string("image/png")
@@ -1788,53 +1666,154 @@ public enum OwnedImageMedia: JSONRepresentable {
     }
   }
 }
-public indirect enum OwnedInputDeclaration: JSONRepresentable {
-  case `string`(OwnedInputDeclarationStringRoot)
-  case `object`(OwnedInputDeclarationObjectRoot)
-  public static func read(_ json: JSONValue) throws -> OwnedInputDeclaration {
+public struct ImmediateFacts: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
+  public let `attempts`: Presence<[Attempt]>
+  public let `cacheAnswers`: UInt64
+  public let `callId`: Presence<CallId>
+  public let `estimatedCostUsd`: Presence<String>
+  public let `heldModelMismatch`: Presence<Bool>
+  public let `inputTokens`: Presence<UInt64>
+  public let `largestRequestBytes`: UInt64
+  public let `largestRequestEstimatedInputTokens`: UInt64?
+  public let `model`: Presence<String>
+  public let `outputTokens`: Presence<UInt64>
+  public let `records`: UInt64
+  public let `requestsSent`: UInt64
+  public let `seconds`: Double
+  public let `tokenEstimateMethod`: String
+  public let `usagePersistence`: Presence<PersistenceObservation>
+  public init(
+    extensions: [String: DataValue] = [:], `attempts`: Presence<[Attempt]> = .absent,
+    `cacheAnswers`: UInt64, `callId`: Presence<CallId> = .absent,
+    `estimatedCostUsd`: Presence<String> = .absent, `heldModelMismatch`: Presence<Bool> = .absent,
+    `inputTokens`: Presence<UInt64> = .absent, `largestRequestBytes`: UInt64,
+    `largestRequestEstimatedInputTokens`: UInt64?, `model`: Presence<String> = .absent,
+    `outputTokens`: Presence<UInt64> = .absent, `records`: UInt64, `requestsSent`: UInt64,
+    `seconds`: Double, `tokenEstimateMethod`: String,
+    `usagePersistence`: Presence<PersistenceObservation> = .absent
+  ) {
+    self.extensions = extensions
+    self.`attempts` = `attempts`
+    self.`cacheAnswers` = `cacheAnswers`
+    self.`callId` = `callId`
+    self.`estimatedCostUsd` = `estimatedCostUsd`
+    self.`heldModelMismatch` = `heldModelMismatch`
+    self.`inputTokens` = `inputTokens`
+    self.`largestRequestBytes` = `largestRequestBytes`
+    self.`largestRequestEstimatedInputTokens` = `largestRequestEstimatedInputTokens`
+    self.`model` = `model`
+    self.`outputTokens` = `outputTokens`
+    self.`records` = `records`
+    self.`requestsSent` = `requestsSent`
+    self.`seconds` = `seconds`
+    self.`tokenEstimateMethod` = `tokenEstimateMethod`
+    self.`usagePersistence` = `usagePersistence`
+  }
+  static func read(_ json: DataValue) throws -> ImmediateFacts {
+    let object = try jsonObject(json)
+    let known: Set<String> = [
+      "attempts", "cache_answers", "call_id", "estimated_cost_usd", "held_model_mismatch",
+      "input_tokens", "largest_request_bytes", "largest_request_estimated_input_tokens", "model",
+      "output_tokens", "records", "requests_sent", "seconds", "token_estimate_method",
+      "usage_persistence",
+    ]
+    var value = Self(
+      extensions: object.filter { !known.contains($0.key) },
+      attempts: try readPresence(object, "attempts", [Attempt].self),
+      cacheAnswers: try UInt64.read(jsonRequired(object, "cache_answers")),
+      callId: try readPresence(object, "call_id", CallId.self),
+      estimatedCostUsd: try readPresence(object, "estimated_cost_usd", String.self),
+      heldModelMismatch: try readPresence(object, "held_model_mismatch", Bool.self),
+      inputTokens: try readPresence(object, "input_tokens", UInt64.self),
+      largestRequestBytes: try UInt64.read(jsonRequired(object, "largest_request_bytes")),
+      largestRequestEstimatedInputTokens: try UInt64?.read(
+        jsonRequired(object, "largest_request_estimated_input_tokens")),
+      model: try readPresence(object, "model", String.self),
+      outputTokens: try readPresence(object, "output_tokens", UInt64.self),
+      records: try UInt64.read(jsonRequired(object, "records")),
+      requestsSent: try UInt64.read(jsonRequired(object, "requests_sent")),
+      seconds: try Double.read(jsonRequired(object, "seconds")),
+      tokenEstimateMethod: try String.read(jsonRequired(object, "token_estimate_method")),
+      usagePersistence: try readPresence(object, "usage_persistence", PersistenceObservation.self))
+    value._sourceJSON = json
+    return value
+  }
+  var json: DataValue {
+    if let _sourceJSON { return _sourceJSON }
+    let known: Set<String> = [
+      "attempts", "cache_answers", "call_id", "estimated_cost_usd", "held_model_mismatch",
+      "input_tokens", "largest_request_bytes", "largest_request_estimated_input_tokens", "model",
+      "output_tokens", "records", "requests_sent", "seconds", "token_estimate_method",
+      "usage_persistence",
+    ]
+    var object = extensions.filter { !known.contains($0.key) }
+    writePresence(`attempts`, "attempts", &object)
+    object["cache_answers"] = `cacheAnswers`.json
+    writePresence(`callId`, "call_id", &object)
+    writePresence(`estimatedCostUsd`, "estimated_cost_usd", &object)
+    writePresence(`heldModelMismatch`, "held_model_mismatch", &object)
+    writePresence(`inputTokens`, "input_tokens", &object)
+    object["largest_request_bytes"] = `largestRequestBytes`.json
+    object["largest_request_estimated_input_tokens"] = `largestRequestEstimatedInputTokens`.json
+    writePresence(`model`, "model", &object)
+    writePresence(`outputTokens`, "output_tokens", &object)
+    object["records"] = `records`.json
+    object["requests_sent"] = `requestsSent`.json
+    object["seconds"] = `seconds`.json
+    object["token_estimate_method"] = `tokenEstimateMethod`.json
+    writePresence(`usagePersistence`, "usage_persistence", &object)
+    return .object(object)
+  }
+}
+public indirect enum InputDeclaration: ValueRepresentable {
+  case `string`(InputDeclarationStringRoot)
+  case `object`(InputDeclarationObjectRoot)
+  static func read(_ json: DataValue) throws -> InputDeclaration {
     let object = try jsonObject(json)
     if object["type"] == .string("string") {
-      return .`string`(try OwnedInputDeclarationStringRoot.read(json))
+      return .`string`(try InputDeclarationStringRoot.read(json))
     }
     if object["type"] == .string("object") {
-      return .`object`(try OwnedInputDeclarationObjectRoot.read(json))
+      return .`object`(try InputDeclarationObjectRoot.read(json))
     }
-    throw JSONConversionError("Unknown OwnedInputDeclaration alternative")
+    throw ValueConversionError("Unknown InputDeclaration alternative")
   }
-  public var json: JSONValue {
+  var json: DataValue {
     switch self {
     case .`string`(let value): return value.json
     case .`object`(let value): return value.json
     }
   }
 }
-public struct OwnedInputDeclarationObjectRoot: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
-  public let `properties`: [String: OwnedInputPropertyType]
+public struct InputDeclarationObjectRoot: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
+  public let `properties`: [String: InputPropertyType]
   public let `required`: Presence<[String]>
-  public let `type`: OwnedObjectType
+  public let `type`: ObjectType
   public init(
-    extensions: [String: JSONValue] = [:], `properties`: [String: OwnedInputPropertyType],
-    `required`: Presence<[String]> = .absent, `type`: OwnedObjectType
+    extensions: [String: DataValue] = [:], `properties`: [String: InputPropertyType],
+    `required`: Presence<[String]> = .absent, `type`: ObjectType
   ) {
     self.extensions = extensions
     self.`properties` = `properties`
     self.`required` = `required`
     self.`type` = `type`
   }
-  public static func read(_ json: JSONValue) throws -> OwnedInputDeclarationObjectRoot {
+  static func read(_ json: DataValue) throws -> InputDeclarationObjectRoot {
     let object = try jsonObject(json)
     let known: Set<String> = ["properties", "required", "type"]
     var value = Self(
       extensions: object.filter { !known.contains($0.key) },
-      properties: try [String: OwnedInputPropertyType].read(jsonRequired(object, "properties")),
+      properties: try [String: InputPropertyType].read(jsonRequired(object, "properties")),
       required: try readPresence(object, "required", [String].self),
-      type: try OwnedObjectType.read(jsonRequired(object, "type")))
+      type: try ObjectType.read(jsonRequired(object, "type")))
     value._sourceJSON = json
     return value
   }
-  public var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = ["properties", "required", "type"]
     var object = extensions.filter { !known.contains($0.key) }
@@ -1844,24 +1823,24 @@ public struct OwnedInputDeclarationObjectRoot: JSONRepresentable {
     return .object(object)
   }
 }
-public struct OwnedInputDeclarationStringRoot: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
-  public let `type`: OwnedStringType
-  public init(extensions: [String: JSONValue] = [:], `type`: OwnedStringType) {
+public struct InputDeclarationStringRoot: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
+  public let `type`: StringType
+  public init(extensions: [String: DataValue] = [:], `type`: StringType) {
     self.extensions = extensions
     self.`type` = `type`
   }
-  public static func read(_ json: JSONValue) throws -> OwnedInputDeclarationStringRoot {
+  static func read(_ json: DataValue) throws -> InputDeclarationStringRoot {
     let object = try jsonObject(json)
     let known: Set<String> = ["type"]
     var value = Self(
       extensions: object.filter { !known.contains($0.key) },
-      type: try OwnedStringType.read(jsonRequired(object, "type")))
+      type: try StringType.read(jsonRequired(object, "type")))
     value._sourceJSON = json
     return value
   }
-  public var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = ["type"]
     var object = extensions.filter { !known.contains($0.key) }
@@ -1869,28 +1848,26 @@ public struct OwnedInputDeclarationStringRoot: JSONRepresentable {
     return .object(object)
   }
 }
-public indirect enum OwnedInputPropertyType: JSONRepresentable {
-  case `string`(OwnedInputPropertyTypeString)
-  case `number`(OwnedInputPropertyTypeNumber)
-  case `boolean`(OwnedInputPropertyTypeBoolean)
-  case `array`(OwnedInputPropertyTypeArray)
-  public static func read(_ json: JSONValue) throws -> OwnedInputPropertyType {
+public indirect enum InputPropertyType: ValueRepresentable {
+  case `string`(InputPropertyTypeString)
+  case `number`(InputPropertyTypeNumber)
+  case `boolean`(InputPropertyTypeBoolean)
+  case `array`(InputPropertyTypeArray)
+  static func read(_ json: DataValue) throws -> InputPropertyType {
     let object = try jsonObject(json)
     if object["type"] == .string("string") {
-      return .`string`(try OwnedInputPropertyTypeString.read(json))
+      return .`string`(try InputPropertyTypeString.read(json))
     }
     if object["type"] == .string("number") {
-      return .`number`(try OwnedInputPropertyTypeNumber.read(json))
+      return .`number`(try InputPropertyTypeNumber.read(json))
     }
     if object["type"] == .string("boolean") {
-      return .`boolean`(try OwnedInputPropertyTypeBoolean.read(json))
+      return .`boolean`(try InputPropertyTypeBoolean.read(json))
     }
-    if object["type"] == .string("array") {
-      return .`array`(try OwnedInputPropertyTypeArray.read(json))
-    }
-    throw JSONConversionError("Unknown OwnedInputPropertyType alternative")
+    if object["type"] == .string("array") { return .`array`(try InputPropertyTypeArray.read(json)) }
+    throw ValueConversionError("Unknown InputPropertyType alternative")
   }
-  public var json: JSONValue {
+  var json: DataValue {
     switch self {
     case .`string`(let value): return value.json
     case .`number`(let value): return value.json
@@ -1899,29 +1876,28 @@ public indirect enum OwnedInputPropertyType: JSONRepresentable {
     }
   }
 }
-public struct OwnedInputPropertyTypeArray: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
-  public let `items`: OwnedStringRoot
+public struct InputPropertyTypeArray: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
+  public let `items`: StringRoot
   public let `type`: String
-  public init(
-    extensions: [String: JSONValue] = [:], `items`: OwnedStringRoot, `type`: String = "array"
-  ) {
+  public init(extensions: [String: DataValue] = [:], `items`: StringRoot, `type`: String = "array")
+  {
     self.extensions = extensions
     self.`items` = `items`
     self.`type` = `type`
   }
-  public static func read(_ json: JSONValue) throws -> OwnedInputPropertyTypeArray {
+  static func read(_ json: DataValue) throws -> InputPropertyTypeArray {
     let object = try jsonObject(json)
     let known: Set<String> = ["items", "type"]
     var value = Self(
       extensions: object.filter { !known.contains($0.key) },
-      items: try OwnedStringRoot.read(jsonRequired(object, "items")),
+      items: try StringRoot.read(jsonRequired(object, "items")),
       type: try String.read(jsonRequired(object, "type")))
     value._sourceJSON = json
     return value
   }
-  public var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = ["items", "type"]
     var object = extensions.filter { !known.contains($0.key) }
@@ -1930,15 +1906,15 @@ public struct OwnedInputPropertyTypeArray: JSONRepresentable {
     return .object(object)
   }
 }
-public struct OwnedInputPropertyTypeBoolean: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
+public struct InputPropertyTypeBoolean: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
   public let `type`: String
-  public init(extensions: [String: JSONValue] = [:], `type`: String = "boolean") {
+  public init(extensions: [String: DataValue] = [:], `type`: String = "boolean") {
     self.extensions = extensions
     self.`type` = `type`
   }
-  public static func read(_ json: JSONValue) throws -> OwnedInputPropertyTypeBoolean {
+  static func read(_ json: DataValue) throws -> InputPropertyTypeBoolean {
     let object = try jsonObject(json)
     let known: Set<String> = ["type"]
     var value = Self(
@@ -1947,7 +1923,7 @@ public struct OwnedInputPropertyTypeBoolean: JSONRepresentable {
     value._sourceJSON = json
     return value
   }
-  public var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = ["type"]
     var object = extensions.filter { !known.contains($0.key) }
@@ -1955,15 +1931,15 @@ public struct OwnedInputPropertyTypeBoolean: JSONRepresentable {
     return .object(object)
   }
 }
-public struct OwnedInputPropertyTypeNumber: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
+public struct InputPropertyTypeNumber: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
   public let `type`: String
-  public init(extensions: [String: JSONValue] = [:], `type`: String = "number") {
+  public init(extensions: [String: DataValue] = [:], `type`: String = "number") {
     self.extensions = extensions
     self.`type` = `type`
   }
-  public static func read(_ json: JSONValue) throws -> OwnedInputPropertyTypeNumber {
+  static func read(_ json: DataValue) throws -> InputPropertyTypeNumber {
     let object = try jsonObject(json)
     let known: Set<String> = ["type"]
     var value = Self(
@@ -1972,7 +1948,7 @@ public struct OwnedInputPropertyTypeNumber: JSONRepresentable {
     value._sourceJSON = json
     return value
   }
-  public var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = ["type"]
     var object = extensions.filter { !known.contains($0.key) }
@@ -1980,15 +1956,15 @@ public struct OwnedInputPropertyTypeNumber: JSONRepresentable {
     return .object(object)
   }
 }
-public struct OwnedInputPropertyTypeString: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
+public struct InputPropertyTypeString: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
   public let `type`: String
-  public init(extensions: [String: JSONValue] = [:], `type`: String = "string") {
+  public init(extensions: [String: DataValue] = [:], `type`: String = "string") {
     self.extensions = extensions
     self.`type` = `type`
   }
-  public static func read(_ json: JSONValue) throws -> OwnedInputPropertyTypeString {
+  static func read(_ json: DataValue) throws -> InputPropertyTypeString {
     let object = try jsonObject(json)
     let known: Set<String> = ["type"]
     var value = Self(
@@ -1997,7 +1973,7 @@ public struct OwnedInputPropertyTypeString: JSONRepresentable {
     value._sourceJSON = json
     return value
   }
-  public var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = ["type"]
     var object = extensions.filter { !known.contains($0.key) }
@@ -2005,30 +1981,30 @@ public struct OwnedInputPropertyTypeString: JSONRepresentable {
     return .object(object)
   }
 }
-public struct OwnedLabel: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
-  public let `description`: Presence<JSONValue>
+public struct Label: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
+  public let `description`: Presence<DataValue>
   public let `name`: String
   public init(
-    extensions: [String: JSONValue] = [:], `description`: Presence<JSONValue> = .absent,
+    extensions: [String: DataValue] = [:], `description`: Presence<DataValue> = .absent,
     `name`: String
   ) {
     self.extensions = extensions
     self.`description` = `description`
     self.`name` = `name`
   }
-  public static func read(_ json: JSONValue) throws -> OwnedLabel {
+  static func read(_ json: DataValue) throws -> Label {
     let object = try jsonObject(json)
     let known: Set<String> = ["description", "name"]
     var value = Self(
       extensions: object.filter { !known.contains($0.key) },
-      description: try readPresence(object, "description", JSONValue.self),
+      description: try readPresence(object, "description", DataValue.self),
       name: try String.read(jsonRequired(object, "name")))
     value._sourceJSON = json
     return value
   }
-  public var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = ["description", "name"]
     var object = extensions.filter { !known.contains($0.key) }
@@ -2037,39 +2013,38 @@ public struct OwnedLabel: JSONRepresentable {
     return .object(object)
   }
 }
-public struct OwnedMeta: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
+public struct Meta: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
   public let `answeredBy`: Presence<String>
-  public let `attempts`: Presence<[OwnedAttempt]>
-  public let `batchSetting`: Presence<OwnedBatchSetting>
-  public let `batchWarning`: Presence<OwnedBatchWarning>
+  public let `attempts`: Presence<[Attempt]>
+  public let `batchSetting`: Presence<BatchSetting>
+  public let `batchWarning`: Presence<BatchWarning>
   public let `cached`: Bool
   public let `contextSha256`: Presence<String>
   public let `failedQuestions`: UInt64
   public let `model`: String
-  public let `observations`: [OwnedObservation]
-  public let `origin`: OwnedOrigin?
-  public let `profileWarning`: Presence<OwnedProfileWarning>
+  public let `observations`: [Observation]
+  public let `origin`: Origin?
+  public let `profileWarning`: Presence<ProfileWarning>
   public let `questionSha256`: Presence<String>
-  public let `questionSources`: [OwnedQuestionSource]
+  public let `questionSources`: [QuestionSource]
   public let `questionsSha256`: Presence<String>
   public let `requests`: [String]
   public let `requestsSent`: UInt64
   public let `tool`: String
   public let `url`: String
-  public let `usage`: Presence<OwnedUsage>
+  public let `usage`: Presence<Usage>
   public init(
-    extensions: [String: JSONValue] = [:], `answeredBy`: Presence<String> = .absent,
-    `attempts`: Presence<[OwnedAttempt]> = .absent,
-    `batchSetting`: Presence<OwnedBatchSetting> = .absent,
-    `batchWarning`: Presence<OwnedBatchWarning> = .absent, `cached`: Bool,
+    extensions: [String: DataValue] = [:], `answeredBy`: Presence<String> = .absent,
+    `attempts`: Presence<[Attempt]> = .absent, `batchSetting`: Presence<BatchSetting> = .absent,
+    `batchWarning`: Presence<BatchWarning> = .absent, `cached`: Bool,
     `contextSha256`: Presence<String> = .absent, `failedQuestions`: UInt64, `model`: String,
-    `observations`: [OwnedObservation], `origin`: OwnedOrigin?,
-    `profileWarning`: Presence<OwnedProfileWarning> = .absent,
-    `questionSha256`: Presence<String> = .absent, `questionSources`: [OwnedQuestionSource],
+    `observations`: [Observation], `origin`: Origin?,
+    `profileWarning`: Presence<ProfileWarning> = .absent,
+    `questionSha256`: Presence<String> = .absent, `questionSources`: [QuestionSource],
     `questionsSha256`: Presence<String> = .absent, `requests`: [String], `requestsSent`: UInt64,
-    `tool`: String, `url`: String, `usage`: Presence<OwnedUsage> = .absent
+    `tool`: String, `url`: String, `usage`: Presence<Usage> = .absent
   ) {
     self.extensions = extensions
     self.`answeredBy` = `answeredBy`
@@ -2092,7 +2067,7 @@ public struct OwnedMeta: JSONRepresentable {
     self.`url` = `url`
     self.`usage` = `usage`
   }
-  public static func read(_ json: JSONValue) throws -> OwnedMeta {
+  static func read(_ json: DataValue) throws -> Meta {
     let object = try jsonObject(json)
     let known: Set<String> = [
       "answered_by", "attempts", "batch_setting", "batch_warning", "cached", "context_sha256",
@@ -2102,28 +2077,28 @@ public struct OwnedMeta: JSONRepresentable {
     var value = Self(
       extensions: object.filter { !known.contains($0.key) },
       answeredBy: try readPresence(object, "answered_by", String.self),
-      attempts: try readPresence(object, "attempts", [OwnedAttempt].self),
-      batchSetting: try readPresence(object, "batch_setting", OwnedBatchSetting.self),
-      batchWarning: try readPresence(object, "batch_warning", OwnedBatchWarning.self),
+      attempts: try readPresence(object, "attempts", [Attempt].self),
+      batchSetting: try readPresence(object, "batch_setting", BatchSetting.self),
+      batchWarning: try readPresence(object, "batch_warning", BatchWarning.self),
       cached: try Bool.read(jsonRequired(object, "cached")),
       contextSha256: try readPresence(object, "context_sha256", String.self),
       failedQuestions: try UInt64.read(jsonRequired(object, "failed_questions")),
       model: try String.read(jsonRequired(object, "model")),
-      observations: try [OwnedObservation].read(jsonRequired(object, "observations")),
-      origin: try OwnedOrigin?.read(jsonRequired(object, "origin")),
-      profileWarning: try readPresence(object, "profile_warning", OwnedProfileWarning.self),
+      observations: try [Observation].read(jsonRequired(object, "observations")),
+      origin: try Origin?.read(jsonRequired(object, "origin")),
+      profileWarning: try readPresence(object, "profile_warning", ProfileWarning.self),
       questionSha256: try readPresence(object, "question_sha256", String.self),
-      questionSources: try [OwnedQuestionSource].read(jsonRequired(object, "question_sources")),
+      questionSources: try [QuestionSource].read(jsonRequired(object, "question_sources")),
       questionsSha256: try readPresence(object, "questions_sha256", String.self),
       requests: try [String].read(jsonRequired(object, "requests")),
       requestsSent: try UInt64.read(jsonRequired(object, "requests_sent")),
       tool: try String.read(jsonRequired(object, "tool")),
       url: try String.read(jsonRequired(object, "url")),
-      usage: try readPresence(object, "usage", OwnedUsage.self))
+      usage: try readPresence(object, "usage", Usage.self))
     value._sourceJSON = json
     return value
   }
-  public var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = [
       "answered_by", "attempts", "batch_setting", "batch_warning", "cached", "context_sha256",
@@ -2153,33 +2128,33 @@ public struct OwnedMeta: JSONRepresentable {
     return .object(object)
   }
 }
-public struct OwnedObjectRoot: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
-  public let `properties`: [String: OwnedInputPropertyType]
+public struct ObjectRoot: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
+  public let `properties`: [String: InputPropertyType]
   public let `required`: Presence<[String]>
-  public let `type`: OwnedObjectType
+  public let `type`: ObjectType
   public init(
-    extensions: [String: JSONValue] = [:], `properties`: [String: OwnedInputPropertyType],
-    `required`: Presence<[String]> = .absent, `type`: OwnedObjectType
+    extensions: [String: DataValue] = [:], `properties`: [String: InputPropertyType],
+    `required`: Presence<[String]> = .absent, `type`: ObjectType
   ) {
     self.extensions = extensions
     self.`properties` = `properties`
     self.`required` = `required`
     self.`type` = `type`
   }
-  public static func read(_ json: JSONValue) throws -> OwnedObjectRoot {
+  static func read(_ json: DataValue) throws -> ObjectRoot {
     let object = try jsonObject(json)
     let known: Set<String> = ["properties", "required", "type"]
     var value = Self(
       extensions: object.filter { !known.contains($0.key) },
-      properties: try [String: OwnedInputPropertyType].read(jsonRequired(object, "properties")),
+      properties: try [String: InputPropertyType].read(jsonRequired(object, "properties")),
       required: try readPresence(object, "required", [String].self),
-      type: try OwnedObjectType.read(jsonRequired(object, "type")))
+      type: try ObjectType.read(jsonRequired(object, "type")))
     value._sourceJSON = json
     return value
   }
-  public var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = ["properties", "required", "type"]
     var object = extensions.filter { !known.contains($0.key) }
@@ -2189,62 +2164,62 @@ public struct OwnedObjectRoot: JSONRepresentable {
     return .object(object)
   }
 }
-public enum OwnedObjectType: JSONRepresentable {
+public enum ObjectType: ValueRepresentable {
   case `object`
   case unknown(String)
-  public static func read(_ json: JSONValue) throws -> OwnedObjectType {
+  static func read(_ json: DataValue) throws -> ObjectType {
     let value = try String.read(json)
     switch value {
     case "object": return .`object`
     default: return .unknown(value)
     }
   }
-  public var json: JSONValue {
+  var json: DataValue {
     switch self {
     case .`object`: return .string("object")
     case .unknown(let value): return .string(value)
     }
   }
 }
-public indirect enum OwnedObservation: JSONRepresentable {
-  case `observationId`(OwnedObservationObservationId)
-  case `failureId`(OwnedObservationFailureId)
-  public static func read(_ json: JSONValue) throws -> OwnedObservation {
+public indirect enum Observation: ValueRepresentable {
+  case `observationId`(ObservationObservationId)
+  case `failureId`(ObservationFailureId)
+  static func read(_ json: DataValue) throws -> Observation {
     let object = try jsonObject(json)
     if object["observation_id"] != nil && object["observation_id"] != .null {
-      return .`observationId`(try OwnedObservationObservationId.read(json))
+      return .`observationId`(try ObservationObservationId.read(json))
     }
     if object["failure_id"] != nil && object["failure_id"] != .null {
-      return .`failureId`(try OwnedObservationFailureId.read(json))
+      return .`failureId`(try ObservationFailureId.read(json))
     }
-    throw JSONConversionError("Unknown OwnedObservation alternative")
+    throw ValueConversionError("Unknown Observation alternative")
   }
-  public var json: JSONValue {
+  var json: DataValue {
     switch self {
     case .`observationId`(let value): return value.json
     case .`failureId`(let value): return value.json
     }
   }
 }
-public typealias OwnedObservationId = String
-public struct OwnedObservationFailureId: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
-  public let `failureId`: OwnedFailureId
-  public init(extensions: [String: JSONValue] = [:], `failureId`: OwnedFailureId) {
+public typealias ObservationId = String
+public struct ObservationFailureId: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
+  public let `failureId`: FailureId
+  public init(extensions: [String: DataValue] = [:], `failureId`: FailureId) {
     self.extensions = extensions
     self.`failureId` = `failureId`
   }
-  public static func read(_ json: JSONValue) throws -> OwnedObservationFailureId {
+  static func read(_ json: DataValue) throws -> ObservationFailureId {
     let object = try jsonObject(json)
     let known: Set<String> = ["failure_id"]
     var value = Self(
       extensions: object.filter { !known.contains($0.key) },
-      failureId: try OwnedFailureId.read(jsonRequired(object, "failure_id")))
+      failureId: try FailureId.read(jsonRequired(object, "failure_id")))
     value._sourceJSON = json
     return value
   }
-  public var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = ["failure_id"]
     var object = extensions.filter { !known.contains($0.key) }
@@ -2252,24 +2227,24 @@ public struct OwnedObservationFailureId: JSONRepresentable {
     return .object(object)
   }
 }
-public struct OwnedObservationObservationId: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
-  public let `observationId`: OwnedObservationId
-  public init(extensions: [String: JSONValue] = [:], `observationId`: OwnedObservationId) {
+public struct ObservationObservationId: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
+  public let `observationId`: ObservationId
+  public init(extensions: [String: DataValue] = [:], `observationId`: ObservationId) {
     self.extensions = extensions
     self.`observationId` = `observationId`
   }
-  public static func read(_ json: JSONValue) throws -> OwnedObservationObservationId {
+  static func read(_ json: DataValue) throws -> ObservationObservationId {
     let object = try jsonObject(json)
     let known: Set<String> = ["observation_id"]
     var value = Self(
       extensions: object.filter { !known.contains($0.key) },
-      observationId: try OwnedObservationId.read(jsonRequired(object, "observation_id")))
+      observationId: try ObservationId.read(jsonRequired(object, "observation_id")))
     value._sourceJSON = json
     return value
   }
-  public var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = ["observation_id"]
     var object = extensions.filter { !known.contains($0.key) }
@@ -2277,14 +2252,14 @@ public struct OwnedObservationObservationId: JSONRepresentable {
     return .object(object)
   }
 }
-public enum OwnedOrigin: JSONRepresentable {
+public enum Origin: ValueRepresentable {
   case `live`
   case `cache`
   case `replay`
   case `proxy`
   case `memory`
   case unknown(String)
-  public static func read(_ json: JSONValue) throws -> OwnedOrigin {
+  static func read(_ json: DataValue) throws -> Origin {
     let value = try String.read(json)
     switch value {
     case "live": return .`live`
@@ -2295,7 +2270,7 @@ public enum OwnedOrigin: JSONRepresentable {
     default: return .unknown(value)
     }
   }
-  public var json: JSONValue {
+  var json: DataValue {
     switch self {
     case .`live`: return .string("live")
     case .`cache`: return .string("cache")
@@ -2306,33 +2281,33 @@ public enum OwnedOrigin: JSONRepresentable {
     }
   }
 }
-public struct OwnedPersistenceObservation: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
+public struct PersistenceObservation: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
   public let `advice`: Presence<String>
   public let `observedAt`: String
-  public let `state`: OwnedUsagePersistence
+  public let `state`: UsagePersistence
   public init(
-    extensions: [String: JSONValue] = [:], `advice`: Presence<String> = .absent,
-    `observedAt`: String, `state`: OwnedUsagePersistence
+    extensions: [String: DataValue] = [:], `advice`: Presence<String> = .absent,
+    `observedAt`: String, `state`: UsagePersistence
   ) {
     self.extensions = extensions
     self.`advice` = `advice`
     self.`observedAt` = `observedAt`
     self.`state` = `state`
   }
-  public static func read(_ json: JSONValue) throws -> OwnedPersistenceObservation {
+  static func read(_ json: DataValue) throws -> PersistenceObservation {
     let object = try jsonObject(json)
     let known: Set<String> = ["advice", "observed_at", "state"]
     var value = Self(
       extensions: object.filter { !known.contains($0.key) },
       advice: try readPresence(object, "advice", String.self),
       observedAt: try String.read(jsonRequired(object, "observed_at")),
-      state: try OwnedUsagePersistence.read(jsonRequired(object, "state")))
+      state: try UsagePersistence.read(jsonRequired(object, "state")))
     value._sourceJSON = json
     return value
   }
-  public var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = ["advice", "observed_at", "state"]
     var object = extensions.filter { !known.contains($0.key) }
@@ -2342,14 +2317,14 @@ public struct OwnedPersistenceObservation: JSONRepresentable {
     return .object(object)
   }
 }
-public struct OwnedPhysicalSource: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
+public struct PhysicalSource: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
   public let `file`: String
   public let `firstLine`: Presence<UInt64>
   public let `lastLine`: Presence<UInt64>
   public init(
-    extensions: [String: JSONValue] = [:], `file`: String, `firstLine`: Presence<UInt64> = .absent,
+    extensions: [String: DataValue] = [:], `file`: String, `firstLine`: Presence<UInt64> = .absent,
     `lastLine`: Presence<UInt64> = .absent
   ) {
     self.extensions = extensions
@@ -2357,7 +2332,7 @@ public struct OwnedPhysicalSource: JSONRepresentable {
     self.`firstLine` = `firstLine`
     self.`lastLine` = `lastLine`
   }
-  public static func read(_ json: JSONValue) throws -> OwnedPhysicalSource {
+  static func read(_ json: DataValue) throws -> PhysicalSource {
     let object = try jsonObject(json)
     let known: Set<String> = ["file", "first_line", "last_line"]
     var value = Self(
@@ -2368,7 +2343,7 @@ public struct OwnedPhysicalSource: JSONRepresentable {
     value._sourceJSON = json
     return value
   }
-  public var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = ["file", "first_line", "last_line"]
     var object = extensions.filter { !known.contains($0.key) }
@@ -2378,17 +2353,16 @@ public struct OwnedPhysicalSource: JSONRepresentable {
     return .object(object)
   }
 }
-public struct OwnedPosition: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
-  public let `file`: OwnedPositionFile
+public struct Position: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
+  public let `file`: String?
   public let `first`: Presence<UInt64>
   public let `images`: Presence<[String]>
   public let `last`: Presence<UInt64>
   public init(
-    extensions: [String: JSONValue] = [:], `file`: OwnedPositionFile,
-    `first`: Presence<UInt64> = .absent, `images`: Presence<[String]> = .absent,
-    `last`: Presence<UInt64> = .absent
+    extensions: [String: DataValue] = [:], `file`: String?, `first`: Presence<UInt64> = .absent,
+    `images`: Presence<[String]> = .absent, `last`: Presence<UInt64> = .absent
   ) {
     self.extensions = extensions
     self.`file` = `file`
@@ -2396,19 +2370,19 @@ public struct OwnedPosition: JSONRepresentable {
     self.`images` = `images`
     self.`last` = `last`
   }
-  public static func read(_ json: JSONValue) throws -> OwnedPosition {
+  static func read(_ json: DataValue) throws -> Position {
     let object = try jsonObject(json)
     let known: Set<String> = ["file", "first", "images", "last"]
     var value = Self(
       extensions: object.filter { !known.contains($0.key) },
-      file: try OwnedPositionFile.read(jsonRequired(object, "file")),
+      file: try String?.read(jsonRequired(object, "file")),
       first: try readPresence(object, "first", UInt64.self),
       images: try readPresence(object, "images", [String].self),
       last: try readPresence(object, "last", UInt64.self))
     value._sourceJSON = json
     return value
   }
-  public var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = ["file", "first", "images", "last"]
     var object = extensions.filter { !known.contains($0.key) }
@@ -2419,49 +2393,34 @@ public struct OwnedPosition: JSONRepresentable {
     return .object(object)
   }
 }
-public indirect enum OwnedPositionFile: JSONRepresentable {
-  case alternative0(String)
-  case alternative1(JSONValue)
-  public static func read(_ json: JSONValue) throws -> OwnedPositionFile {
-    if let value = try? String.read(json) { return .alternative0(value) }
-    if json == .null { return .alternative1(.null) }
-    throw JSONConversionError("Unknown OwnedPositionFile value")
-  }
-  public var json: JSONValue {
-    switch self {
-    case .alternative0(let value): return value.json
-    case .alternative1(let value): return value.json
-    }
-  }
-}
-public typealias OwnedQuestionName = String
-public struct OwnedQuestionSource: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
+public typealias ReceiptQuestionName = String
+public struct QuestionSource: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
   public let `answeredBy`: String
   public let `batchSize`: Presence<UInt64>
-  public let `origin`: OwnedOrigin
+  public let `origin`: Origin
   public init(
-    extensions: [String: JSONValue] = [:], `answeredBy`: String,
-    `batchSize`: Presence<UInt64> = .absent, `origin`: OwnedOrigin
+    extensions: [String: DataValue] = [:], `answeredBy`: String,
+    `batchSize`: Presence<UInt64> = .absent, `origin`: Origin
   ) {
     self.extensions = extensions
     self.`answeredBy` = `answeredBy`
     self.`batchSize` = `batchSize`
     self.`origin` = `origin`
   }
-  public static func read(_ json: JSONValue) throws -> OwnedQuestionSource {
+  static func read(_ json: DataValue) throws -> QuestionSource {
     let object = try jsonObject(json)
     let known: Set<String> = ["answered_by", "batch_size", "origin"]
     var value = Self(
       extensions: object.filter { !known.contains($0.key) },
       answeredBy: try String.read(jsonRequired(object, "answered_by")),
       batchSize: try readPresence(object, "batch_size", UInt64.self),
-      origin: try OwnedOrigin.read(jsonRequired(object, "origin")))
+      origin: try Origin.read(jsonRequired(object, "origin")))
     value._sourceJSON = json
     return value
   }
-  public var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = ["answered_by", "batch_size", "origin"]
     var object = extensions.filter { !known.contains($0.key) }
@@ -2471,29 +2430,27 @@ public struct OwnedQuestionSource: JSONRepresentable {
     return .object(object)
   }
 }
-public struct OwnedRankMember: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
+public struct RankMember: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
   public let `name`: String
-  public let `result`: OwnedRankMemberResult
-  public init(
-    extensions: [String: JSONValue] = [:], `name`: String, `result`: OwnedRankMemberResult
-  ) {
+  public let `result`: RankMemberResult
+  public init(extensions: [String: DataValue] = [:], `name`: String, `result`: RankMemberResult) {
     self.extensions = extensions
     self.`name` = `name`
     self.`result` = `result`
   }
-  public static func read(_ json: JSONValue) throws -> OwnedRankMember {
+  static func read(_ json: DataValue) throws -> RankMember {
     let object = try jsonObject(json)
     let known: Set<String> = ["name", "result"]
     var value = Self(
       extensions: object.filter { !known.contains($0.key) },
       name: try String.read(jsonRequired(object, "name")),
-      result: try OwnedRankMemberResult.read(jsonRequired(object, "result")))
+      result: try RankMemberResult.read(jsonRequired(object, "result")))
     value._sourceJSON = json
     return value
   }
-  public var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = ["name", "result"]
     var object = extensions.filter { !known.contains($0.key) }
@@ -2502,23 +2459,23 @@ public struct OwnedRankMember: JSONRepresentable {
     return .object(object)
   }
 }
-public struct OwnedRankMemberResult: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
-  public let `answer`: OwnedAnswer
-  public let `answerId`: OwnedAnswerId
-  public let `images`: Presence<[OwnedImage]>
-  public let `meta`: OwnedMeta
-  public let `question`: OwnedQuestionDocument
-  public let `schema`: OwnedVersion
-  public let `source`: Presence<OwnedPhysicalSource>
-  public let `threshold`: JSONValue
+public struct RankMemberResult: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
+  public let `answer`: Answer
+  public let `answerId`: AnswerId
+  public let `images`: Presence<[ReceiptImage]>
+  public let `meta`: Meta
+  public let `question`: QuestionDocument
+  public let `schema`: ReceiptVersion
+  public let `source`: Presence<PhysicalSource>
+  public let `threshold`: DataValue
   public let `value`: UInt64
   public init(
-    extensions: [String: JSONValue] = [:], `answer`: OwnedAnswer, `answerId`: OwnedAnswerId,
-    `images`: Presence<[OwnedImage]> = .absent, `meta`: OwnedMeta,
-    `question`: OwnedQuestionDocument, `schema`: OwnedVersion,
-    `source`: Presence<OwnedPhysicalSource> = .absent, `threshold`: JSONValue, `value`: UInt64
+    extensions: [String: DataValue] = [:], `answer`: Answer, `answerId`: AnswerId,
+    `images`: Presence<[ReceiptImage]> = .absent, `meta`: Meta, `question`: QuestionDocument,
+    `schema`: ReceiptVersion, `source`: Presence<PhysicalSource> = .absent, `threshold`: DataValue,
+    `value`: UInt64
   ) {
     self.extensions = extensions
     self.`answer` = `answer`
@@ -2531,26 +2488,26 @@ public struct OwnedRankMemberResult: JSONRepresentable {
     self.`threshold` = `threshold`
     self.`value` = `value`
   }
-  public static func read(_ json: JSONValue) throws -> OwnedRankMemberResult {
+  static func read(_ json: DataValue) throws -> RankMemberResult {
     let object = try jsonObject(json)
     let known: Set<String> = [
       "answer", "answer_id", "images", "meta", "question", "schema", "source", "threshold", "value",
     ]
     var value = Self(
       extensions: object.filter { !known.contains($0.key) },
-      answer: try OwnedAnswer.read(jsonRequired(object, "answer")),
-      answerId: try OwnedAnswerId.read(jsonRequired(object, "answer_id")),
-      images: try readPresence(object, "images", [OwnedImage].self),
-      meta: try OwnedMeta.read(jsonRequired(object, "meta")),
-      question: try OwnedQuestionDocument.read(jsonRequired(object, "question")),
-      schema: try OwnedVersion.read(jsonRequired(object, "schema")),
-      source: try readPresence(object, "source", OwnedPhysicalSource.self),
-      threshold: try JSONValue.read(jsonRequired(object, "threshold")),
+      answer: try Answer.read(jsonRequired(object, "answer")),
+      answerId: try AnswerId.read(jsonRequired(object, "answer_id")),
+      images: try readPresence(object, "images", [ReceiptImage].self),
+      meta: try Meta.read(jsonRequired(object, "meta")),
+      question: try QuestionDocument.read(jsonRequired(object, "question")),
+      schema: try ReceiptVersion.read(jsonRequired(object, "schema")),
+      source: try readPresence(object, "source", PhysicalSource.self),
+      threshold: try DataValue.read(jsonRequired(object, "threshold")),
       value: try UInt64.read(jsonRequired(object, "value")))
     value._sourceJSON = json
     return value
   }
-  public var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = [
       "answer", "answer_id", "images", "meta", "question", "schema", "source", "threshold", "value",
@@ -2568,30 +2525,29 @@ public struct OwnedRankMemberResult: JSONRepresentable {
     return .object(object)
   }
 }
-public struct OwnedRecognition: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
-  public let `answer`: OwnedRecognitionOdds
-  public let `answerId`: OwnedAnswerId
+public struct Recognition: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
+  public let `answer`: RecognitionOdds
+  public let `answerId`: AnswerId
   public let `file`: Presence<String>
   public let `firstLine`: Presence<UInt64>
   public let `index`: Presence<UInt64>
-  public let `input`: Presence<JSONValue>
+  public let `input`: Presence<DataValue>
   public let `lastLine`: Presence<UInt64>
-  public let `meta`: OwnedMeta
-  public let `position`: Presence<OwnedPosition>
-  public let `question`: OwnedRecognizeQuestionDocument
-  public let `schema`: OwnedVersion
-  public let `source`: Presence<OwnedPhysicalSource>
-  public let `value`: OwnedRecognize
+  public let `meta`: Meta
+  public let `position`: Presence<Position>
+  public let `question`: RecognizeQuestionDocument
+  public let `schema`: ReceiptVersion
+  public let `source`: Presence<PhysicalSource>
+  public let `value`: Recognize
   public init(
-    extensions: [String: JSONValue] = [:], `answer`: OwnedRecognitionOdds,
-    `answerId`: OwnedAnswerId, `file`: Presence<String> = .absent,
-    `firstLine`: Presence<UInt64> = .absent, `index`: Presence<UInt64> = .absent,
-    `input`: Presence<JSONValue> = .absent, `lastLine`: Presence<UInt64> = .absent,
-    `meta`: OwnedMeta, `position`: Presence<OwnedPosition> = .absent,
-    `question`: OwnedRecognizeQuestionDocument, `schema`: OwnedVersion,
-    `source`: Presence<OwnedPhysicalSource> = .absent, `value`: OwnedRecognize
+    extensions: [String: DataValue] = [:], `answer`: RecognitionOdds, `answerId`: AnswerId,
+    `file`: Presence<String> = .absent, `firstLine`: Presence<UInt64> = .absent,
+    `index`: Presence<UInt64> = .absent, `input`: Presence<DataValue> = .absent,
+    `lastLine`: Presence<UInt64> = .absent, `meta`: Meta, `position`: Presence<Position> = .absent,
+    `question`: RecognizeQuestionDocument, `schema`: ReceiptVersion,
+    `source`: Presence<PhysicalSource> = .absent, `value`: Recognize
   ) {
     self.extensions = extensions
     self.`answer` = `answer`
@@ -2608,7 +2564,7 @@ public struct OwnedRecognition: JSONRepresentable {
     self.`source` = `source`
     self.`value` = `value`
   }
-  public static func read(_ json: JSONValue) throws -> OwnedRecognition {
+  static func read(_ json: DataValue) throws -> Recognition {
     let object = try jsonObject(json)
     let known: Set<String> = [
       "answer", "answer_id", "file", "first_line", "index", "input", "last_line", "meta",
@@ -2616,23 +2572,23 @@ public struct OwnedRecognition: JSONRepresentable {
     ]
     var value = Self(
       extensions: object.filter { !known.contains($0.key) },
-      answer: try OwnedRecognitionOdds.read(jsonRequired(object, "answer")),
-      answerId: try OwnedAnswerId.read(jsonRequired(object, "answer_id")),
+      answer: try RecognitionOdds.read(jsonRequired(object, "answer")),
+      answerId: try AnswerId.read(jsonRequired(object, "answer_id")),
       file: try readPresence(object, "file", String.self),
       firstLine: try readPresence(object, "first_line", UInt64.self),
       index: try readPresence(object, "index", UInt64.self),
-      input: try readPresence(object, "input", JSONValue.self),
+      input: try readPresence(object, "input", DataValue.self),
       lastLine: try readPresence(object, "last_line", UInt64.self),
-      meta: try OwnedMeta.read(jsonRequired(object, "meta")),
-      position: try readPresence(object, "position", OwnedPosition.self),
-      question: try OwnedRecognizeQuestionDocument.read(jsonRequired(object, "question")),
-      schema: try OwnedVersion.read(jsonRequired(object, "schema")),
-      source: try readPresence(object, "source", OwnedPhysicalSource.self),
-      value: try OwnedRecognize.read(jsonRequired(object, "value")))
+      meta: try Meta.read(jsonRequired(object, "meta")),
+      position: try readPresence(object, "position", Position.self),
+      question: try RecognizeQuestionDocument.read(jsonRequired(object, "question")),
+      schema: try ReceiptVersion.read(jsonRequired(object, "schema")),
+      source: try readPresence(object, "source", PhysicalSource.self),
+      value: try Recognize.read(jsonRequired(object, "value")))
     value._sourceJSON = json
     return value
   }
-  public var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = [
       "answer", "answer_id", "file", "first_line", "index", "input", "last_line", "meta",
@@ -2655,17 +2611,17 @@ public struct OwnedRecognition: JSONRepresentable {
     return .object(object)
   }
 }
-public struct OwnedRecognitionEdgeDocument: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
+public struct RecognitionEdgeDocument: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
   public let `either`: Bool
   public let `probability`: Double
   public let `relation`: String
-  public let `source`: OwnedEntity
-  public let `target`: OwnedEntity
+  public let `source`: Entity
+  public let `target`: Entity
   public init(
-    extensions: [String: JSONValue] = [:], `either`: Bool, `probability`: Double,
-    `relation`: String, `source`: OwnedEntity, `target`: OwnedEntity
+    extensions: [String: DataValue] = [:], `either`: Bool, `probability`: Double,
+    `relation`: String, `source`: Entity, `target`: Entity
   ) {
     self.extensions = extensions
     self.`either` = `either`
@@ -2674,7 +2630,7 @@ public struct OwnedRecognitionEdgeDocument: JSONRepresentable {
     self.`source` = `source`
     self.`target` = `target`
   }
-  public static func read(_ json: JSONValue) throws -> OwnedRecognitionEdgeDocument {
+  static func read(_ json: DataValue) throws -> RecognitionEdgeDocument {
     let object = try jsonObject(json)
     let known: Set<String> = ["either", "probability", "relation", "source", "target"]
     var value = Self(
@@ -2682,12 +2638,12 @@ public struct OwnedRecognitionEdgeDocument: JSONRepresentable {
       either: try Bool.read(jsonRequired(object, "either")),
       probability: try Double.read(jsonRequired(object, "probability")),
       relation: try String.read(jsonRequired(object, "relation")),
-      source: try OwnedEntity.read(jsonRequired(object, "source")),
-      target: try OwnedEntity.read(jsonRequired(object, "target")))
+      source: try Entity.read(jsonRequired(object, "source")),
+      target: try Entity.read(jsonRequired(object, "target")))
     value._sourceJSON = json
     return value
   }
-  public var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = ["either", "probability", "relation", "source", "target"]
     var object = extensions.filter { !known.contains($0.key) }
@@ -2699,11 +2655,11 @@ public struct OwnedRecognitionEdgeDocument: JSONRepresentable {
     return .object(object)
   }
 }
-public enum OwnedRecognitionMode: JSONRepresentable {
+public enum ReceiptRecognitionMode: ValueRepresentable {
   case `whole`
   case `boundaryOnly`
   case unknown(String)
-  public static func read(_ json: JSONValue) throws -> OwnedRecognitionMode {
+  static func read(_ json: DataValue) throws -> ReceiptRecognitionMode {
     let value = try String.read(json)
     switch value {
     case "whole": return .`whole`
@@ -2711,7 +2667,7 @@ public enum OwnedRecognitionMode: JSONRepresentable {
     default: return .unknown(value)
     }
   }
-  public var json: JSONValue {
+  var json: DataValue {
     switch self {
     case .`whole`: return .string("whole")
     case .`boundaryOnly`: return .string("boundary_only")
@@ -2719,54 +2675,53 @@ public enum OwnedRecognitionMode: JSONRepresentable {
     }
   }
 }
-public indirect enum OwnedRecognitionOdds: JSONRepresentable {
-  case `alternative0`(OwnedRecognitionOddsRecognizeAnswer)
-  case `alternative1`(OwnedRecognitionOddsBoundaryOdds)
-  public static func read(_ json: JSONValue) throws -> OwnedRecognitionOdds {
+public indirect enum RecognitionOdds: ValueRepresentable {
+  case `namesPairsPiecesProposals`(RecognitionOddsRecognizeAnswer)
+  case `piecesProposals`(RecognitionOddsBoundaryOdds)
+  static func read(_ json: DataValue) throws -> RecognitionOdds {
     let object = try jsonObject(json)
     if object["names"] != nil && object["pairs"] != nil && object["pieces"] != nil
       && object["proposals"] != nil
     {
-      return .`alternative0`(try OwnedRecognitionOddsRecognizeAnswer.read(json))
+      return .`namesPairsPiecesProposals`(try RecognitionOddsRecognizeAnswer.read(json))
     }
     if object["pieces"] != nil && object["proposals"] != nil && object["names"] == nil
       && object["pairs"] == nil
     {
-      return .`alternative1`(try OwnedRecognitionOddsBoundaryOdds.read(json))
+      return .`piecesProposals`(try RecognitionOddsBoundaryOdds.read(json))
     }
-    throw JSONConversionError("Unknown OwnedRecognitionOdds alternative")
+    throw ValueConversionError("Unknown RecognitionOdds alternative")
   }
-  public var json: JSONValue {
+  var json: DataValue {
     switch self {
-    case .`alternative0`(let value): return value.json
-    case .`alternative1`(let value): return value.json
+    case .`namesPairsPiecesProposals`(let value): return value.json
+    case .`piecesProposals`(let value): return value.json
     }
   }
 }
-public struct OwnedRecognitionOddsBoundaryOdds: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
-  public let `pieces`: [OwnedPieceOdds]
-  public let `proposals`: [OwnedBoundaryProposal]
+public struct RecognitionOddsBoundaryOdds: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
+  public let `pieces`: [PieceOdds]
+  public let `proposals`: [BoundaryProposal]
   public init(
-    extensions: [String: JSONValue] = [:], `pieces`: [OwnedPieceOdds],
-    `proposals`: [OwnedBoundaryProposal]
+    extensions: [String: DataValue] = [:], `pieces`: [PieceOdds], `proposals`: [BoundaryProposal]
   ) {
     self.extensions = extensions
     self.`pieces` = `pieces`
     self.`proposals` = `proposals`
   }
-  public static func read(_ json: JSONValue) throws -> OwnedRecognitionOddsBoundaryOdds {
+  static func read(_ json: DataValue) throws -> RecognitionOddsBoundaryOdds {
     let object = try jsonObject(json)
     let known: Set<String> = ["pieces", "proposals"]
     var value = Self(
       extensions: object.filter { !known.contains($0.key) },
-      pieces: try [OwnedPieceOdds].read(jsonRequired(object, "pieces")),
-      proposals: try [OwnedBoundaryProposal].read(jsonRequired(object, "proposals")))
+      pieces: try [PieceOdds].read(jsonRequired(object, "pieces")),
+      proposals: try [BoundaryProposal].read(jsonRequired(object, "proposals")))
     value._sourceJSON = json
     return value
   }
-  public var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = ["pieces", "proposals"]
     var object = extensions.filter { !known.contains($0.key) }
@@ -2775,16 +2730,16 @@ public struct OwnedRecognitionOddsBoundaryOdds: JSONRepresentable {
     return .object(object)
   }
 }
-public struct OwnedRecognitionOddsRecognizeAnswer: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
-  public let `names`: [OwnedNameOdds]
-  public let `pairs`: [OwnedPairOdds]
-  public let `pieces`: [OwnedPieceOdds]
-  public let `proposals`: [OwnedRecognitionProposal]
+public struct RecognitionOddsRecognizeAnswer: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
+  public let `names`: [NameOdds]
+  public let `pairs`: [PairOdds]
+  public let `pieces`: [PieceOdds]
+  public let `proposals`: [RecognitionProposal]
   public init(
-    extensions: [String: JSONValue] = [:], `names`: [OwnedNameOdds], `pairs`: [OwnedPairOdds],
-    `pieces`: [OwnedPieceOdds], `proposals`: [OwnedRecognitionProposal]
+    extensions: [String: DataValue] = [:], `names`: [NameOdds], `pairs`: [PairOdds],
+    `pieces`: [PieceOdds], `proposals`: [RecognitionProposal]
   ) {
     self.extensions = extensions
     self.`names` = `names`
@@ -2792,19 +2747,19 @@ public struct OwnedRecognitionOddsRecognizeAnswer: JSONRepresentable {
     self.`pieces` = `pieces`
     self.`proposals` = `proposals`
   }
-  public static func read(_ json: JSONValue) throws -> OwnedRecognitionOddsRecognizeAnswer {
+  static func read(_ json: DataValue) throws -> RecognitionOddsRecognizeAnswer {
     let object = try jsonObject(json)
     let known: Set<String> = ["names", "pairs", "pieces", "proposals"]
     var value = Self(
       extensions: object.filter { !known.contains($0.key) },
-      names: try [OwnedNameOdds].read(jsonRequired(object, "names")),
-      pairs: try [OwnedPairOdds].read(jsonRequired(object, "pairs")),
-      pieces: try [OwnedPieceOdds].read(jsonRequired(object, "pieces")),
-      proposals: try [OwnedRecognitionProposal].read(jsonRequired(object, "proposals")))
+      names: try [NameOdds].read(jsonRequired(object, "names")),
+      pairs: try [PairOdds].read(jsonRequired(object, "pairs")),
+      pieces: try [PieceOdds].read(jsonRequired(object, "pieces")),
+      proposals: try [RecognitionProposal].read(jsonRequired(object, "proposals")))
     value._sourceJSON = json
     return value
   }
-  public var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = ["names", "pairs", "pieces", "proposals"]
     var object = extensions.filter { !known.contains($0.key) }
@@ -2815,19 +2770,19 @@ public struct OwnedRecognitionOddsRecognizeAnswer: JSONRepresentable {
     return .object(object)
   }
 }
-public struct OwnedRecognitionProposal: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
+public struct RecognitionProposal: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
   public let `end`: UInt64
   public let `kept`: Bool
   public let `kind`: Presence<String>
-  public let `selected`: Presence<OwnedPlace>
+  public let `selected`: Presence<Place>
   public let `spanProbability`: Double
   public let `start`: UInt64
   public let `strength`: Presence<Double>
   public init(
-    extensions: [String: JSONValue] = [:], `end`: UInt64, `kept`: Bool,
-    `kind`: Presence<String> = .absent, `selected`: Presence<OwnedPlace> = .absent,
+    extensions: [String: DataValue] = [:], `end`: UInt64, `kept`: Bool,
+    `kind`: Presence<String> = .absent, `selected`: Presence<Place> = .absent,
     `spanProbability`: Double, `start`: UInt64, `strength`: Presence<Double> = .absent
   ) {
     self.extensions = extensions
@@ -2839,7 +2794,7 @@ public struct OwnedRecognitionProposal: JSONRepresentable {
     self.`start` = `start`
     self.`strength` = `strength`
   }
-  public static func read(_ json: JSONValue) throws -> OwnedRecognitionProposal {
+  static func read(_ json: DataValue) throws -> RecognitionProposal {
     let object = try jsonObject(json)
     let known: Set<String> = [
       "end", "kept", "kind", "selected", "span_probability", "start", "strength",
@@ -2849,14 +2804,14 @@ public struct OwnedRecognitionProposal: JSONRepresentable {
       end: try UInt64.read(jsonRequired(object, "end")),
       kept: try Bool.read(jsonRequired(object, "kept")),
       kind: try readPresence(object, "kind", String.self),
-      selected: try readPresence(object, "selected", OwnedPlace.self),
+      selected: try readPresence(object, "selected", Place.self),
       spanProbability: try Double.read(jsonRequired(object, "span_probability")),
       start: try UInt64.read(jsonRequired(object, "start")),
       strength: try readPresence(object, "strength", Double.self))
     value._sourceJSON = json
     return value
   }
-  public var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = [
       "end", "kept", "kind", "selected", "span_probability", "start", "strength",
@@ -2872,14 +2827,14 @@ public struct OwnedRecognitionProposal: JSONRepresentable {
     return .object(object)
   }
 }
-public struct OwnedRecognitionStageContext: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
+public struct ReceiptRecognitionStageContext: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
   public let `boundary`: Presence<String>
   public let `kindEdge`: Presence<String>
   public let `relation`: Presence<String>
   public init(
-    extensions: [String: JSONValue] = [:], `boundary`: Presence<String> = .absent,
+    extensions: [String: DataValue] = [:], `boundary`: Presence<String> = .absent,
     `kindEdge`: Presence<String> = .absent, `relation`: Presence<String> = .absent
   ) {
     self.extensions = extensions
@@ -2887,7 +2842,7 @@ public struct OwnedRecognitionStageContext: JSONRepresentable {
     self.`kindEdge` = `kindEdge`
     self.`relation` = `relation`
   }
-  public static func read(_ json: JSONValue) throws -> OwnedRecognitionStageContext {
+  static func read(_ json: DataValue) throws -> ReceiptRecognitionStageContext {
     let object = try jsonObject(json)
     let known: Set<String> = ["boundary", "kind_edge", "relation"]
     var value = Self(
@@ -2898,7 +2853,7 @@ public struct OwnedRecognitionStageContext: JSONRepresentable {
     value._sourceJSON = json
     return value
   }
-  public var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = ["boundary", "kind_edge", "relation"]
     var object = extensions.filter { !known.contains($0.key) }
@@ -2908,30 +2863,29 @@ public struct OwnedRecognitionStageContext: JSONRepresentable {
     return .object(object)
   }
 }
-public struct OwnedRelation: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
-  public let `answer`: OwnedAnswers
-  public let `answerId`: OwnedAnswerId
+public struct Relation: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
+  public let `answer`: Answers
+  public let `answerId`: AnswerId
   public let `file`: Presence<String>
   public let `firstLine`: Presence<UInt64>
   public let `index`: Presence<UInt64>
-  public let `input`: Presence<JSONValue>
-  public let `inputSources`: Presence<[OwnedSessionInputSource]>
+  public let `input`: Presence<DataValue>
+  public let `inputSources`: Presence<[SessionInputSource]>
   public let `lastLine`: Presence<UInt64>
-  public let `meta`: OwnedMeta
-  public let `position`: Presence<OwnedPosition>
-  public let `question`: OwnedRelateQuestionDocument
-  public let `schema`: OwnedVersion
-  public let `value`: [OwnedRelatedEntityEdge]
+  public let `meta`: Meta
+  public let `position`: Presence<Position>
+  public let `question`: RelateQuestionDocument
+  public let `schema`: ReceiptVersion
+  public let `value`: [RelatedEntityEdge]
   public init(
-    extensions: [String: JSONValue] = [:], `answer`: OwnedAnswers, `answerId`: OwnedAnswerId,
+    extensions: [String: DataValue] = [:], `answer`: Answers, `answerId`: AnswerId,
     `file`: Presence<String> = .absent, `firstLine`: Presence<UInt64> = .absent,
-    `index`: Presence<UInt64> = .absent, `input`: Presence<JSONValue> = .absent,
-    `inputSources`: Presence<[OwnedSessionInputSource]> = .absent,
-    `lastLine`: Presence<UInt64> = .absent, `meta`: OwnedMeta,
-    `position`: Presence<OwnedPosition> = .absent, `question`: OwnedRelateQuestionDocument,
-    `schema`: OwnedVersion, `value`: [OwnedRelatedEntityEdge]
+    `index`: Presence<UInt64> = .absent, `input`: Presence<DataValue> = .absent,
+    `inputSources`: Presence<[SessionInputSource]> = .absent,
+    `lastLine`: Presence<UInt64> = .absent, `meta`: Meta, `position`: Presence<Position> = .absent,
+    `question`: RelateQuestionDocument, `schema`: ReceiptVersion, `value`: [RelatedEntityEdge]
   ) {
     self.extensions = extensions
     self.`answer` = `answer`
@@ -2948,7 +2902,7 @@ public struct OwnedRelation: JSONRepresentable {
     self.`schema` = `schema`
     self.`value` = `value`
   }
-  public static func read(_ json: JSONValue) throws -> OwnedRelation {
+  static func read(_ json: DataValue) throws -> Relation {
     let object = try jsonObject(json)
     let known: Set<String> = [
       "answer", "answer_id", "file", "first_line", "index", "input", "input_sources", "last_line",
@@ -2956,23 +2910,23 @@ public struct OwnedRelation: JSONRepresentable {
     ]
     var value = Self(
       extensions: object.filter { !known.contains($0.key) },
-      answer: try OwnedAnswers.read(jsonRequired(object, "answer")),
-      answerId: try OwnedAnswerId.read(jsonRequired(object, "answer_id")),
+      answer: try Answers.read(jsonRequired(object, "answer")),
+      answerId: try AnswerId.read(jsonRequired(object, "answer_id")),
       file: try readPresence(object, "file", String.self),
       firstLine: try readPresence(object, "first_line", UInt64.self),
       index: try readPresence(object, "index", UInt64.self),
-      input: try readPresence(object, "input", JSONValue.self),
-      inputSources: try readPresence(object, "input_sources", [OwnedSessionInputSource].self),
+      input: try readPresence(object, "input", DataValue.self),
+      inputSources: try readPresence(object, "input_sources", [SessionInputSource].self),
       lastLine: try readPresence(object, "last_line", UInt64.self),
-      meta: try OwnedMeta.read(jsonRequired(object, "meta")),
-      position: try readPresence(object, "position", OwnedPosition.self),
-      question: try OwnedRelateQuestionDocument.read(jsonRequired(object, "question")),
-      schema: try OwnedVersion.read(jsonRequired(object, "schema")),
-      value: try [OwnedRelatedEntityEdge].read(jsonRequired(object, "value")))
+      meta: try Meta.read(jsonRequired(object, "meta")),
+      position: try readPresence(object, "position", Position.self),
+      question: try RelateQuestionDocument.read(jsonRequired(object, "question")),
+      schema: try ReceiptVersion.read(jsonRequired(object, "schema")),
+      value: try [RelatedEntityEdge].read(jsonRequired(object, "value")))
     value._sourceJSON = json
     return value
   }
-  public var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = [
       "answer", "answer_id", "file", "first_line", "index", "input", "input_sources", "last_line",
@@ -2995,11 +2949,11 @@ public struct OwnedRelation: JSONRepresentable {
     return .object(object)
   }
 }
-public enum OwnedRelationDirection: JSONRepresentable {
+public enum RelationDirection: ValueRepresentable {
   case `sourceToTarget`
   case `either`
   case unknown(String)
-  public static func read(_ json: JSONValue) throws -> OwnedRelationDirection {
+  static func read(_ json: DataValue) throws -> RelationDirection {
     let value = try String.read(json)
     switch value {
     case "source_to_target": return .`sourceToTarget`
@@ -3007,7 +2961,7 @@ public enum OwnedRelationDirection: JSONRepresentable {
     default: return .unknown(value)
     }
   }
-  public var json: JSONValue {
+  var json: DataValue {
     switch self {
     case .`sourceToTarget`: return .string("source_to_target")
     case .`either`: return .string("either")
@@ -3015,41 +2969,41 @@ public enum OwnedRelationDirection: JSONRepresentable {
     }
   }
 }
-public indirect enum OwnedRelationEndpoint: JSONRepresentable {
-  case `alternative0`(OwnedRelationEndpointRelatedEntity)
-  case `alternative1`(OwnedRelationEndpointSource)
-  public static func read(_ json: JSONValue) throws -> OwnedRelationEndpoint {
+public indirect enum RelationEndpoint: ValueRepresentable {
+  case `kindName`(RelationEndpointRelatedEntity)
+  case `fileKindNameOrdinalRecord`(RelationEndpointSource)
+  static func read(_ json: DataValue) throws -> RelationEndpoint {
     let object = try jsonObject(json)
     if object["kind"] != nil && object["name"] != nil && object["file"] == nil
       && object["ordinal"] == nil && object["record"] == nil
     {
-      return .`alternative0`(try OwnedRelationEndpointRelatedEntity.read(json))
+      return .`kindName`(try RelationEndpointRelatedEntity.read(json))
     }
     if object["file"] != nil && object["kind"] != nil && object["name"] != nil
       && object["ordinal"] != nil && object["record"] != nil
     {
-      return .`alternative1`(try OwnedRelationEndpointSource.read(json))
+      return .`fileKindNameOrdinalRecord`(try RelationEndpointSource.read(json))
     }
-    throw JSONConversionError("Unknown OwnedRelationEndpoint alternative")
+    throw ValueConversionError("Unknown RelationEndpoint alternative")
   }
-  public var json: JSONValue {
+  var json: DataValue {
     switch self {
-    case .`alternative0`(let value): return value.json
-    case .`alternative1`(let value): return value.json
+    case .`kindName`(let value): return value.json
+    case .`fileKindNameOrdinalRecord`(let value): return value.json
     }
   }
 }
-public struct OwnedRelationEndpointRelatedEntity: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
+public struct RelationEndpointRelatedEntity: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
   public let `kind`: String
   public let `name`: String
-  public init(extensions: [String: JSONValue] = [:], `kind`: String, `name`: String) {
+  public init(extensions: [String: DataValue] = [:], `kind`: String, `name`: String) {
     self.extensions = extensions
     self.`kind` = `kind`
     self.`name` = `name`
   }
-  public static func read(_ json: JSONValue) throws -> OwnedRelationEndpointRelatedEntity {
+  static func read(_ json: DataValue) throws -> RelationEndpointRelatedEntity {
     let object = try jsonObject(json)
     let known: Set<String> = ["kind", "name"]
     var value = Self(
@@ -3059,7 +3013,7 @@ public struct OwnedRelationEndpointRelatedEntity: JSONRepresentable {
     value._sourceJSON = json
     return value
   }
-  public var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = ["kind", "name"]
     var object = extensions.filter { !known.contains($0.key) }
@@ -3068,20 +3022,20 @@ public struct OwnedRelationEndpointRelatedEntity: JSONRepresentable {
     return .object(object)
   }
 }
-public struct OwnedRelationEndpointSource: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
-  public let `file`: OwnedRelationEndpointSourceFile
+public struct RelationEndpointSource: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
+  public let `file`: String?
   public let `firstLine`: Presence<UInt64>
   public let `kind`: String
   public let `lastLine`: Presence<UInt64>
   public let `name`: String
   public let `ordinal`: UInt64
-  public let `record`: JSONValue
+  public let `record`: DataValue
   public init(
-    extensions: [String: JSONValue] = [:], `file`: OwnedRelationEndpointSourceFile,
-    `firstLine`: Presence<UInt64> = .absent, `kind`: String, `lastLine`: Presence<UInt64> = .absent,
-    `name`: String, `ordinal`: UInt64, `record`: JSONValue
+    extensions: [String: DataValue] = [:], `file`: String?, `firstLine`: Presence<UInt64> = .absent,
+    `kind`: String, `lastLine`: Presence<UInt64> = .absent, `name`: String, `ordinal`: UInt64,
+    `record`: DataValue
   ) {
     self.extensions = extensions
     self.`file` = `file`
@@ -3092,24 +3046,24 @@ public struct OwnedRelationEndpointSource: JSONRepresentable {
     self.`ordinal` = `ordinal`
     self.`record` = `record`
   }
-  public static func read(_ json: JSONValue) throws -> OwnedRelationEndpointSource {
+  static func read(_ json: DataValue) throws -> RelationEndpointSource {
     let object = try jsonObject(json)
     let known: Set<String> = [
       "file", "first_line", "kind", "last_line", "name", "ordinal", "record",
     ]
     var value = Self(
       extensions: object.filter { !known.contains($0.key) },
-      file: try OwnedRelationEndpointSourceFile.read(jsonRequired(object, "file")),
+      file: try String?.read(jsonRequired(object, "file")),
       firstLine: try readPresence(object, "first_line", UInt64.self),
       kind: try String.read(jsonRequired(object, "kind")),
       lastLine: try readPresence(object, "last_line", UInt64.self),
       name: try String.read(jsonRequired(object, "name")),
       ordinal: try UInt64.read(jsonRequired(object, "ordinal")),
-      record: try JSONValue.read(jsonRequired(object, "record")))
+      record: try DataValue.read(jsonRequired(object, "record")))
     value._sourceJSON = json
     return value
   }
-  public var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = [
       "file", "first_line", "kind", "last_line", "name", "ordinal", "record",
@@ -3125,68 +3079,52 @@ public struct OwnedRelationEndpointSource: JSONRepresentable {
     return .object(object)
   }
 }
-public indirect enum OwnedRelationEndpointSourceFile: JSONRepresentable {
-  case alternative0(String)
-  case alternative1(JSONValue)
-  public static func read(_ json: JSONValue) throws -> OwnedRelationEndpointSourceFile {
-    if let value = try? String.read(json) { return .alternative0(value) }
-    if json == .null { return .alternative1(.null) }
-    throw JSONConversionError("Unknown OwnedRelationEndpointSourceFile value")
-  }
-  public var json: JSONValue {
-    switch self {
-    case .alternative0(let value): return value.json
-    case .alternative1(let value): return value.json
-    }
-  }
-}
-public indirect enum OwnedRelationMember: JSONRepresentable {
-  case `answerId`(OwnedRelationMemberAnswerId)
-  case `failureId`(OwnedRelationMemberFailureId)
-  public static func read(_ json: JSONValue) throws -> OwnedRelationMember {
+public indirect enum RelationMember: ValueRepresentable {
+  case `answerId`(RelationMemberAnswerId)
+  case `failureId`(RelationMemberFailureId)
+  static func read(_ json: DataValue) throws -> RelationMember {
     let object = try jsonObject(json)
     if object["answer_id"] != nil && object["answer_id"] != .null {
-      return .`answerId`(try OwnedRelationMemberAnswerId.read(json))
+      return .`answerId`(try RelationMemberAnswerId.read(json))
     }
     if object["failure_id"] != nil && object["failure_id"] != .null {
-      return .`failureId`(try OwnedRelationMemberFailureId.read(json))
+      return .`failureId`(try RelationMemberFailureId.read(json))
     }
-    throw JSONConversionError("Unknown OwnedRelationMember alternative")
+    throw ValueConversionError("Unknown RelationMember alternative")
   }
-  public var json: JSONValue {
+  var json: DataValue {
     switch self {
     case .`answerId`(let value): return value.json
     case .`failureId`(let value): return value.json
     }
   }
 }
-public struct OwnedRelationMemberAnswerId: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
-  public let `direction`: OwnedRelationDirection
-  public let `method`: OwnedRelationMethod
-  public let `observations`: [OwnedObservation]
-  public let `question`: OwnedQuestionDocument
-  public let `questionSources`: [OwnedQuestionSource]
+public struct RelationMemberAnswerId: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
+  public let `direction`: RelationDirection
+  public let `method`: RelationMethod
+  public let `observations`: [Observation]
+  public let `question`: QuestionDocument
+  public let `questionSources`: [QuestionSource]
   public let `reads`: String
   public let `relation`: String
   public let `request`: String
-  public let `source`: OwnedRelatedEntity
-  public let `target`: OwnedRelatedEntity?
-  public let `threshold`: OwnedThreshold
-  public let `usage`: Presence<OwnedUsage>
+  public let `source`: RelatedEntity
+  public let `target`: RelatedEntity?
+  public let `threshold`: ReceiptThreshold
+  public let `usage`: Presence<Usage>
   public let `accepted`: Bool
-  public let `answer`: OwnedAnswer
-  public let `answerId`: OwnedAnswerId
+  public let `answer`: Answer
+  public let `answerId`: AnswerId
   public let `probability`: Double
   public init(
-    extensions: [String: JSONValue] = [:], `direction`: OwnedRelationDirection,
-    `method`: OwnedRelationMethod, `observations`: [OwnedObservation],
-    `question`: OwnedQuestionDocument, `questionSources`: [OwnedQuestionSource], `reads`: String,
-    `relation`: String, `request`: String, `source`: OwnedRelatedEntity,
-    `target`: OwnedRelatedEntity?, `threshold`: OwnedThreshold,
-    `usage`: Presence<OwnedUsage> = .absent, `accepted`: Bool, `answer`: OwnedAnswer,
-    `answerId`: OwnedAnswerId, `probability`: Double
+    extensions: [String: DataValue] = [:], `direction`: RelationDirection, `method`: RelationMethod,
+    `observations`: [Observation], `question`: QuestionDocument,
+    `questionSources`: [QuestionSource], `reads`: String, `relation`: String, `request`: String,
+    `source`: RelatedEntity, `target`: RelatedEntity?, `threshold`: ReceiptThreshold,
+    `usage`: Presence<Usage> = .absent, `accepted`: Bool, `answer`: Answer, `answerId`: AnswerId,
+    `probability`: Double
   ) {
     self.extensions = extensions
     self.`direction` = `direction`
@@ -3206,7 +3144,7 @@ public struct OwnedRelationMemberAnswerId: JSONRepresentable {
     self.`answerId` = `answerId`
     self.`probability` = `probability`
   }
-  public static func read(_ json: JSONValue) throws -> OwnedRelationMemberAnswerId {
+  static func read(_ json: DataValue) throws -> RelationMemberAnswerId {
     let object = try jsonObject(json)
     let known: Set<String> = [
       "direction", "method", "observations", "question", "question_sources", "reads", "relation",
@@ -3215,26 +3153,26 @@ public struct OwnedRelationMemberAnswerId: JSONRepresentable {
     ]
     var value = Self(
       extensions: object.filter { !known.contains($0.key) },
-      direction: try OwnedRelationDirection.read(jsonRequired(object, "direction")),
-      method: try OwnedRelationMethod.read(jsonRequired(object, "method")),
-      observations: try [OwnedObservation].read(jsonRequired(object, "observations")),
-      question: try OwnedQuestionDocument.read(jsonRequired(object, "question")),
-      questionSources: try [OwnedQuestionSource].read(jsonRequired(object, "question_sources")),
+      direction: try RelationDirection.read(jsonRequired(object, "direction")),
+      method: try RelationMethod.read(jsonRequired(object, "method")),
+      observations: try [Observation].read(jsonRequired(object, "observations")),
+      question: try QuestionDocument.read(jsonRequired(object, "question")),
+      questionSources: try [QuestionSource].read(jsonRequired(object, "question_sources")),
       reads: try String.read(jsonRequired(object, "reads")),
       relation: try String.read(jsonRequired(object, "relation")),
       request: try String.read(jsonRequired(object, "request")),
-      source: try OwnedRelatedEntity.read(jsonRequired(object, "source")),
-      target: try OwnedRelatedEntity?.read(jsonRequired(object, "target")),
-      threshold: try OwnedThreshold.read(jsonRequired(object, "threshold")),
-      usage: try readPresence(object, "usage", OwnedUsage.self),
+      source: try RelatedEntity.read(jsonRequired(object, "source")),
+      target: try RelatedEntity?.read(jsonRequired(object, "target")),
+      threshold: try ReceiptThreshold.read(jsonRequired(object, "threshold")),
+      usage: try readPresence(object, "usage", Usage.self),
       accepted: try Bool.read(jsonRequired(object, "accepted")),
-      answer: try OwnedAnswer.read(jsonRequired(object, "answer")),
-      answerId: try OwnedAnswerId.read(jsonRequired(object, "answer_id")),
+      answer: try Answer.read(jsonRequired(object, "answer")),
+      answerId: try AnswerId.read(jsonRequired(object, "answer_id")),
       probability: try Double.read(jsonRequired(object, "probability")))
     value._sourceJSON = json
     return value
   }
-  public var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = [
       "direction", "method", "observations", "question", "question_sources", "reads", "relation",
@@ -3261,37 +3199,36 @@ public struct OwnedRelationMemberAnswerId: JSONRepresentable {
     return .object(object)
   }
   public func sourceName() throws -> Presence<String> {
-    switch try readPresence(jsonObject(self.json), "source", JSONValue.self) {
+    switch try readPresence(jsonObject(self.json), "source", DataValue.self) {
     case .absent: return .absent
     case .null: return .null
     case .value(let object): return try readPresence(jsonObject(object), "name", String.self)
     }
   }
 }
-public struct OwnedRelationMemberFailureId: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
-  public let `direction`: OwnedRelationDirection
-  public let `method`: OwnedRelationMethod
-  public let `observations`: [OwnedObservation]
-  public let `question`: OwnedQuestionDocument
-  public let `questionSources`: [OwnedQuestionSource]
+public struct RelationMemberFailureId: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
+  public let `direction`: RelationDirection
+  public let `method`: RelationMethod
+  public let `observations`: [Observation]
+  public let `question`: QuestionDocument
+  public let `questionSources`: [QuestionSource]
   public let `reads`: String
   public let `relation`: String
   public let `request`: String
-  public let `source`: OwnedRelatedEntity
-  public let `target`: OwnedRelatedEntity?
-  public let `threshold`: OwnedThreshold
-  public let `usage`: Presence<OwnedUsage>
-  public let `failure`: OwnedFailure
-  public let `failureId`: OwnedFailureId
+  public let `source`: RelatedEntity
+  public let `target`: RelatedEntity?
+  public let `threshold`: ReceiptThreshold
+  public let `usage`: Presence<Usage>
+  public let `failure`: Failure
+  public let `failureId`: FailureId
   public init(
-    extensions: [String: JSONValue] = [:], `direction`: OwnedRelationDirection,
-    `method`: OwnedRelationMethod, `observations`: [OwnedObservation],
-    `question`: OwnedQuestionDocument, `questionSources`: [OwnedQuestionSource], `reads`: String,
-    `relation`: String, `request`: String, `source`: OwnedRelatedEntity,
-    `target`: OwnedRelatedEntity?, `threshold`: OwnedThreshold,
-    `usage`: Presence<OwnedUsage> = .absent, `failure`: OwnedFailure, `failureId`: OwnedFailureId
+    extensions: [String: DataValue] = [:], `direction`: RelationDirection, `method`: RelationMethod,
+    `observations`: [Observation], `question`: QuestionDocument,
+    `questionSources`: [QuestionSource], `reads`: String, `relation`: String, `request`: String,
+    `source`: RelatedEntity, `target`: RelatedEntity?, `threshold`: ReceiptThreshold,
+    `usage`: Presence<Usage> = .absent, `failure`: Failure, `failureId`: FailureId
   ) {
     self.extensions = extensions
     self.`direction` = `direction`
@@ -3309,7 +3246,7 @@ public struct OwnedRelationMemberFailureId: JSONRepresentable {
     self.`failure` = `failure`
     self.`failureId` = `failureId`
   }
-  public static func read(_ json: JSONValue) throws -> OwnedRelationMemberFailureId {
+  static func read(_ json: DataValue) throws -> RelationMemberFailureId {
     let object = try jsonObject(json)
     let known: Set<String> = [
       "direction", "method", "observations", "question", "question_sources", "reads", "relation",
@@ -3317,24 +3254,24 @@ public struct OwnedRelationMemberFailureId: JSONRepresentable {
     ]
     var value = Self(
       extensions: object.filter { !known.contains($0.key) },
-      direction: try OwnedRelationDirection.read(jsonRequired(object, "direction")),
-      method: try OwnedRelationMethod.read(jsonRequired(object, "method")),
-      observations: try [OwnedObservation].read(jsonRequired(object, "observations")),
-      question: try OwnedQuestionDocument.read(jsonRequired(object, "question")),
-      questionSources: try [OwnedQuestionSource].read(jsonRequired(object, "question_sources")),
+      direction: try RelationDirection.read(jsonRequired(object, "direction")),
+      method: try RelationMethod.read(jsonRequired(object, "method")),
+      observations: try [Observation].read(jsonRequired(object, "observations")),
+      question: try QuestionDocument.read(jsonRequired(object, "question")),
+      questionSources: try [QuestionSource].read(jsonRequired(object, "question_sources")),
       reads: try String.read(jsonRequired(object, "reads")),
       relation: try String.read(jsonRequired(object, "relation")),
       request: try String.read(jsonRequired(object, "request")),
-      source: try OwnedRelatedEntity.read(jsonRequired(object, "source")),
-      target: try OwnedRelatedEntity?.read(jsonRequired(object, "target")),
-      threshold: try OwnedThreshold.read(jsonRequired(object, "threshold")),
-      usage: try readPresence(object, "usage", OwnedUsage.self),
-      failure: try OwnedFailure.read(jsonRequired(object, "failure")),
-      failureId: try OwnedFailureId.read(jsonRequired(object, "failure_id")))
+      source: try RelatedEntity.read(jsonRequired(object, "source")),
+      target: try RelatedEntity?.read(jsonRequired(object, "target")),
+      threshold: try ReceiptThreshold.read(jsonRequired(object, "threshold")),
+      usage: try readPresence(object, "usage", Usage.self),
+      failure: try Failure.read(jsonRequired(object, "failure")),
+      failureId: try FailureId.read(jsonRequired(object, "failure_id")))
     value._sourceJSON = json
     return value
   }
-  public var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = [
       "direction", "method", "observations", "question", "question_sources", "reads", "relation",
@@ -3358,18 +3295,18 @@ public struct OwnedRelationMemberFailureId: JSONRepresentable {
     return .object(object)
   }
   public func sourceName() throws -> Presence<String> {
-    switch try readPresence(jsonObject(self.json), "source", JSONValue.self) {
+    switch try readPresence(jsonObject(self.json), "source", DataValue.self) {
     case .absent: return .absent
     case .null: return .null
     case .value(let object): return try readPresence(jsonObject(object), "name", String.self)
     }
   }
 }
-public enum OwnedRelationMethod: JSONRepresentable {
+public enum RelationMethod: ValueRepresentable {
   case `yesNo`
   case `choice`
   case unknown(String)
-  public static func read(_ json: JSONValue) throws -> OwnedRelationMethod {
+  static func read(_ json: DataValue) throws -> RelationMethod {
     let value = try String.read(json)
     switch value {
     case "yes_no": return .`yesNo`
@@ -3377,7 +3314,7 @@ public enum OwnedRelationMethod: JSONRepresentable {
     default: return .unknown(value)
     }
   }
-  public var json: JSONValue {
+  var json: DataValue {
     switch self {
     case .`yesNo`: return .string("yes_no")
     case .`choice`: return .string("choice")
@@ -3385,7 +3322,7 @@ public enum OwnedRelationMethod: JSONRepresentable {
     }
   }
 }
-public enum OwnedRequestFunction: JSONRepresentable {
+public enum ReceiptFunction: ValueRepresentable {
   case `decide`
   case `choose`
   case `tag`
@@ -3397,7 +3334,7 @@ public enum OwnedRequestFunction: JSONRepresentable {
   case `recognize`
   case `relate`
   case unknown(String)
-  public static func read(_ json: JSONValue) throws -> OwnedRequestFunction {
+  static func read(_ json: DataValue) throws -> ReceiptFunction {
     let value = try String.read(json)
     switch value {
     case "decide": return .`decide`
@@ -3413,7 +3350,7 @@ public enum OwnedRequestFunction: JSONRepresentable {
     default: return .unknown(value)
     }
   }
-  public var json: JSONValue {
+  var json: DataValue {
     switch self {
     case .`decide`: return .string("decide")
     case .`choose`: return .string("choose")
@@ -3429,25 +3366,25 @@ public enum OwnedRequestFunction: JSONRepresentable {
     }
   }
 }
-public typealias OwnedSdkRequestId = String
-public indirect enum OwnedSendBudgetDenial: JSONRepresentable {
-  case `beforeFirstSend`(OwnedSendBudgetDenialBeforeFirstSend)
-  case `beforeAdditionalSend`(OwnedSendBudgetDenialBeforeAdditionalSend)
-  case `beforeRetry`(OwnedSendBudgetDenialBeforeRetry)
-  public static func read(_ json: JSONValue) throws -> OwnedSendBudgetDenial {
+public typealias SdkRequestId = String
+public indirect enum SendBudgetDenial: ValueRepresentable {
+  case `beforeFirstSend`(SendBudgetDenialBeforeFirstSend)
+  case `beforeAdditionalSend`(SendBudgetDenialBeforeAdditionalSend)
+  case `beforeRetry`(SendBudgetDenialBeforeRetry)
+  static func read(_ json: DataValue) throws -> SendBudgetDenial {
     let object = try jsonObject(json)
     if object["kind"] == .string("before_first_send") {
-      return .`beforeFirstSend`(try OwnedSendBudgetDenialBeforeFirstSend.read(json))
+      return .`beforeFirstSend`(try SendBudgetDenialBeforeFirstSend.read(json))
     }
     if object["kind"] == .string("before_additional_send") {
-      return .`beforeAdditionalSend`(try OwnedSendBudgetDenialBeforeAdditionalSend.read(json))
+      return .`beforeAdditionalSend`(try SendBudgetDenialBeforeAdditionalSend.read(json))
     }
     if object["kind"] == .string("before_retry") {
-      return .`beforeRetry`(try OwnedSendBudgetDenialBeforeRetry.read(json))
+      return .`beforeRetry`(try SendBudgetDenialBeforeRetry.read(json))
     }
-    throw JSONConversionError("Unknown OwnedSendBudgetDenial alternative")
+    throw ValueConversionError("Unknown SendBudgetDenial alternative")
   }
-  public var json: JSONValue {
+  var json: DataValue {
     switch self {
     case .`beforeFirstSend`(let value): return value.json
     case .`beforeAdditionalSend`(let value): return value.json
@@ -3455,15 +3392,15 @@ public indirect enum OwnedSendBudgetDenial: JSONRepresentable {
     }
   }
 }
-public struct OwnedSendBudgetDenialBeforeAdditionalSend: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
+public struct SendBudgetDenialBeforeAdditionalSend: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
   public let `kind`: String
-  public init(extensions: [String: JSONValue] = [:], `kind`: String = "before_additional_send") {
+  public init(extensions: [String: DataValue] = [:], `kind`: String = "before_additional_send") {
     self.extensions = extensions
     self.`kind` = `kind`
   }
-  public static func read(_ json: JSONValue) throws -> OwnedSendBudgetDenialBeforeAdditionalSend {
+  static func read(_ json: DataValue) throws -> SendBudgetDenialBeforeAdditionalSend {
     let object = try jsonObject(json)
     let known: Set<String> = ["kind"]
     var value = Self(
@@ -3472,7 +3409,7 @@ public struct OwnedSendBudgetDenialBeforeAdditionalSend: JSONRepresentable {
     value._sourceJSON = json
     return value
   }
-  public var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = ["kind"]
     var object = extensions.filter { !known.contains($0.key) }
@@ -3480,15 +3417,15 @@ public struct OwnedSendBudgetDenialBeforeAdditionalSend: JSONRepresentable {
     return .object(object)
   }
 }
-public struct OwnedSendBudgetDenialBeforeFirstSend: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
+public struct SendBudgetDenialBeforeFirstSend: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
   public let `kind`: String
-  public init(extensions: [String: JSONValue] = [:], `kind`: String = "before_first_send") {
+  public init(extensions: [String: DataValue] = [:], `kind`: String = "before_first_send") {
     self.extensions = extensions
     self.`kind` = `kind`
   }
-  public static func read(_ json: JSONValue) throws -> OwnedSendBudgetDenialBeforeFirstSend {
+  static func read(_ json: DataValue) throws -> SendBudgetDenialBeforeFirstSend {
     let object = try jsonObject(json)
     let known: Set<String> = ["kind"]
     var value = Self(
@@ -3497,7 +3434,7 @@ public struct OwnedSendBudgetDenialBeforeFirstSend: JSONRepresentable {
     value._sourceJSON = json
     return value
   }
-  public var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = ["kind"]
     var object = extensions.filter { !known.contains($0.key) }
@@ -3505,19 +3442,19 @@ public struct OwnedSendBudgetDenialBeforeFirstSend: JSONRepresentable {
     return .object(object)
   }
 }
-public struct OwnedSendBudgetDenialBeforeRetry: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
+public struct SendBudgetDenialBeforeRetry: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
   public let `kind`: String
   public let `lastStatus`: UInt64
   public init(
-    extensions: [String: JSONValue] = [:], `kind`: String = "before_retry", `lastStatus`: UInt64
+    extensions: [String: DataValue] = [:], `kind`: String = "before_retry", `lastStatus`: UInt64
   ) {
     self.extensions = extensions
     self.`kind` = `kind`
     self.`lastStatus` = `lastStatus`
   }
-  public static func read(_ json: JSONValue) throws -> OwnedSendBudgetDenialBeforeRetry {
+  static func read(_ json: DataValue) throws -> SendBudgetDenialBeforeRetry {
     let object = try jsonObject(json)
     let known: Set<String> = ["kind", "last_status"]
     var value = Self(
@@ -3527,7 +3464,7 @@ public struct OwnedSendBudgetDenialBeforeRetry: JSONRepresentable {
     value._sourceJSON = json
     return value
   }
-  public var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = ["kind", "last_status"]
     var object = extensions.filter { !known.contains($0.key) }
@@ -3536,7 +3473,7 @@ public struct OwnedSendBudgetDenialBeforeRetry: JSONRepresentable {
     return .object(object)
   }
 }
-public enum OwnedStopCause: JSONRepresentable {
+public enum StopCause: ValueRepresentable {
   case `usage`
   case `local`
   case `noKey`
@@ -3549,7 +3486,7 @@ public enum OwnedStopCause: JSONRepresentable {
   case `deadline`
   case `defect`
   case unknown(String)
-  public static func read(_ json: JSONValue) throws -> OwnedStopCause {
+  static func read(_ json: DataValue) throws -> StopCause {
     let value = try String.read(json)
     switch value {
     case "usage": return .`usage`
@@ -3566,7 +3503,7 @@ public enum OwnedStopCause: JSONRepresentable {
     default: return .unknown(value)
     }
   }
-  public var json: JSONValue {
+  var json: DataValue {
     switch self {
     case .`usage`: return .string("usage")
     case .`local`: return .string("local")
@@ -3583,16 +3520,16 @@ public enum OwnedStopCause: JSONRepresentable {
     }
   }
 }
-public struct OwnedStopped: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
+public struct Stopped: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
   public let `at`: Presence<UInt64>
-  public let `cause`: OwnedStopCause
+  public let `cause`: StopCause
   public let `retryable`: Bool
   public let `status`: Presence<UInt64>
   public init(
-    extensions: [String: JSONValue] = [:], `at`: Presence<UInt64> = .absent,
-    `cause`: OwnedStopCause, `retryable`: Bool, `status`: Presence<UInt64> = .absent
+    extensions: [String: DataValue] = [:], `at`: Presence<UInt64> = .absent, `cause`: StopCause,
+    `retryable`: Bool, `status`: Presence<UInt64> = .absent
   ) {
     self.extensions = extensions
     self.`at` = `at`
@@ -3600,19 +3537,19 @@ public struct OwnedStopped: JSONRepresentable {
     self.`retryable` = `retryable`
     self.`status` = `status`
   }
-  public static func read(_ json: JSONValue) throws -> OwnedStopped {
+  static func read(_ json: DataValue) throws -> Stopped {
     let object = try jsonObject(json)
     let known: Set<String> = ["at", "cause", "retryable", "status"]
     var value = Self(
       extensions: object.filter { !known.contains($0.key) },
       at: try readPresence(object, "at", UInt64.self),
-      cause: try OwnedStopCause.read(jsonRequired(object, "cause")),
+      cause: try StopCause.read(jsonRequired(object, "cause")),
       retryable: try Bool.read(jsonRequired(object, "retryable")),
       status: try readPresence(object, "status", UInt64.self))
     value._sourceJSON = json
     return value
   }
-  public var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = ["at", "cause", "retryable", "status"]
     var object = extensions.filter { !known.contains($0.key) }
@@ -3623,24 +3560,24 @@ public struct OwnedStopped: JSONRepresentable {
     return .object(object)
   }
 }
-public struct OwnedStringRoot: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
-  public let `type`: OwnedStringType
-  public init(extensions: [String: JSONValue] = [:], `type`: OwnedStringType) {
+public struct StringRoot: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
+  public let `type`: StringType
+  public init(extensions: [String: DataValue] = [:], `type`: StringType) {
     self.extensions = extensions
     self.`type` = `type`
   }
-  public static func read(_ json: JSONValue) throws -> OwnedStringRoot {
+  static func read(_ json: DataValue) throws -> StringRoot {
     let object = try jsonObject(json)
     let known: Set<String> = ["type"]
     var value = Self(
       extensions: object.filter { !known.contains($0.key) },
-      type: try OwnedStringType.read(jsonRequired(object, "type")))
+      type: try StringType.read(jsonRequired(object, "type")))
     value._sourceJSON = json
     return value
   }
-  public var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = ["type"]
     var object = extensions.filter { !known.contains($0.key) }
@@ -3648,37 +3585,37 @@ public struct OwnedStringRoot: JSONRepresentable {
     return .object(object)
   }
 }
-public enum OwnedStringType: JSONRepresentable {
+public enum StringType: ValueRepresentable {
   case `string`
   case unknown(String)
-  public static func read(_ json: JSONValue) throws -> OwnedStringType {
+  static func read(_ json: DataValue) throws -> StringType {
     let value = try String.read(json)
     switch value {
     case "string": return .`string`
     default: return .unknown(value)
     }
   }
-  public var json: JSONValue {
+  var json: DataValue {
     switch self {
     case .`string`: return .string("string")
     case .unknown(let value): return .string(value)
     }
   }
 }
-public struct OwnedUsage: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
+public struct Usage: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
   public let `inputTokens`: Presence<UInt64>
   public let `outputTokens`: Presence<UInt64>
   public init(
-    extensions: [String: JSONValue] = [:], `inputTokens`: Presence<UInt64> = .absent,
+    extensions: [String: DataValue] = [:], `inputTokens`: Presence<UInt64> = .absent,
     `outputTokens`: Presence<UInt64> = .absent
   ) {
     self.extensions = extensions
     self.`inputTokens` = `inputTokens`
     self.`outputTokens` = `outputTokens`
   }
-  public static func read(_ json: JSONValue) throws -> OwnedUsage {
+  static func read(_ json: DataValue) throws -> Usage {
     let object = try jsonObject(json)
     let known: Set<String> = ["input_tokens", "output_tokens"]
     var value = Self(
@@ -3688,7 +3625,7 @@ public struct OwnedUsage: JSONRepresentable {
     value._sourceJSON = json
     return value
   }
-  public var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = ["input_tokens", "output_tokens"]
     var object = extensions.filter { !known.contains($0.key) }
@@ -3697,13 +3634,13 @@ public struct OwnedUsage: JSONRepresentable {
     return .object(object)
   }
 }
-public enum OwnedUsagePersistence: JSONRepresentable {
+public enum UsagePersistence: ValueRepresentable {
   case `disabled`
   case `pending`
   case `written`
   case `failed`
   case unknown(String)
-  public static func read(_ json: JSONValue) throws -> OwnedUsagePersistence {
+  static func read(_ json: DataValue) throws -> UsagePersistence {
     let value = try String.read(json)
     switch value {
     case "disabled": return .`disabled`
@@ -3713,7 +3650,7 @@ public enum OwnedUsagePersistence: JSONRepresentable {
     default: return .unknown(value)
     }
   }
-  public var json: JSONValue {
+  var json: DataValue {
     switch self {
     case .`disabled`: return .string("disabled")
     case .`pending`: return .string("pending")
@@ -3723,83 +3660,83 @@ public enum OwnedUsagePersistence: JSONRepresentable {
     }
   }
 }
-public enum OwnedVerb: JSONRepresentable {
+public enum Verb: ValueRepresentable {
   case `recognize`
   case unknown(String)
-  public static func read(_ json: JSONValue) throws -> OwnedVerb {
+  static func read(_ json: DataValue) throws -> Verb {
     let value = try String.read(json)
     switch value {
     case "recognize": return .`recognize`
     default: return .unknown(value)
     }
   }
-  public var json: JSONValue {
+  var json: DataValue {
     switch self {
     case .`recognize`: return .string("recognize")
     case .unknown(let value): return .string(value)
     }
   }
 }
-public enum OwnedVersion: JSONRepresentable {
+public enum ReceiptVersion: ValueRepresentable {
   case `thinkthenResult_2`
   case unknown(String)
-  public static func read(_ json: JSONValue) throws -> OwnedVersion {
+  static func read(_ json: DataValue) throws -> ReceiptVersion {
     let value = try String.read(json)
     switch value {
     case "thinkthen.result/2": return .`thinkthenResult_2`
     default: return .unknown(value)
     }
   }
-  public var json: JSONValue {
+  var json: DataValue {
     switch self {
     case .`thinkthenResult_2`: return .string("thinkthen.result/2")
     case .unknown(let value): return .string(value)
     }
   }
 }
-public typealias OwnedWordingVersion = UInt64
-public indirect enum OwnedAnnotatedField: JSONRepresentable {
-  case alternative0(Bool)
-  case alternative1(JSONValue)
-  case alternative2(String)
-  case alternative3([String])
-  case alternative4(Double)
-  case alternative5(OwnedFailed)
-  public static func read(_ json: JSONValue) throws -> OwnedAnnotatedField {
-    if let value = try? Bool.read(json) { return .alternative0(value) }
-    if json == .null { return .alternative1(.null) }
-    if let value = try? String.read(json) { return .alternative2(value) }
-    if let value = try? [String].read(json) { return .alternative3(value) }
-    if let value = try? Double.read(json) { return .alternative4(value) }
-    if let value = try? OwnedFailed.read(json) { return .alternative5(value) }
-    throw JSONConversionError("Unknown OwnedAnnotatedField value")
+public typealias WordingVersion = UInt64
+public indirect enum AnnotatedField: ValueRepresentable {
+  case `boolean`(Bool)
+  case `null`
+  case `string`(String)
+  case `list`([String])
+  case `number`(Double)
+  case `completefailed`(Failed)
+  static func read(_ json: DataValue) throws -> AnnotatedField {
+    if let value = try? Bool.read(json) { return .`boolean`(value) }
+    if json == .null { return .`null` }
+    if let value = try? String.read(json) { return .`string`(value) }
+    if let value = try? [String].read(json) { return .`list`(value) }
+    if let value = try? Double.read(json) { return .`number`(value) }
+    if let value = try? Failed.read(json) { return .`completefailed`(value) }
+    throw ValueConversionError("Unknown AnnotatedField value")
   }
-  public var json: JSONValue {
+  var json: DataValue {
     switch self {
-    case .alternative0(let value): return value.json
-    case .alternative1(let value): return value.json
-    case .alternative2(let value): return value.json
-    case .alternative3(let value): return value.json
-    case .alternative4(let value): return value.json
-    case .alternative5(let value): return value.json
+    case .`boolean`(let value): return value.json
+    case .`null`: return .null
+    case .`string`(let value): return value.json
+    case .`list`(let value): return value.json
+    case .`number`(let value): return value.json
+    case .`completefailed`(let value): return value.json
     }
   }
 }
-public typealias OwnedAnnotatedRow = [String: OwnedAnnotatedField]
-public indirect enum OwnedAnswer: JSONRepresentable {
-  case `yesNo`(OwnedAnswerYesNo)
-  case `choice`(OwnedAnswerChoice)
-  case `tag`(OwnedAnswerTag)
-  case `score`(OwnedAnswerScore)
-  public static func read(_ json: JSONValue) throws -> OwnedAnswer {
+public typealias AnnotatedRow = [String: AnnotatedField]
+public indirect enum Answer: ValueRepresentable {
+  case `yesNo`(AnswerYesNo)
+  case `choice`(AnswerChoice)
+  case `tag`(AnswerTag)
+  case `score`(AnswerScore)
+  static func read(_ json: DataValue) throws -> Answer {
     let object = try jsonObject(json)
-    if object["kind"] == .string("yes_no") { return .`yesNo`(try OwnedAnswerYesNo.read(json)) }
-    if object["kind"] == .string("choice") { return .`choice`(try OwnedAnswerChoice.read(json)) }
-    if object["kind"] == .string("tag") { return .`tag`(try OwnedAnswerTag.read(json)) }
-    if object["kind"] == .string("score") { return .`score`(try OwnedAnswerScore.read(json)) }
-    throw JSONConversionError("Unknown OwnedAnswer alternative")
+    if object["kind"] == .string("yes_no") { return .`yesNo`(try AnswerYesNo.read(json)) }
+    if object["kind"] == .string("choice") { return .`choice`(try AnswerChoice.read(json)) }
+    if object["kind"] == .string("tag") { return .`tag`(try AnswerTag.read(json)) }
+    if object["kind"] == .string("score") { return .`score`(try AnswerScore.read(json)) }
+    throw ValueConversionError("Unknown Answer alternative")
   }
-  public var json: JSONValue {
+  var json: DataValue {
     switch self {
     case .`yesNo`(let value): return value.json
     case .`choice`(let value): return value.json
@@ -3808,15 +3745,15 @@ public indirect enum OwnedAnswer: JSONRepresentable {
     }
   }
 }
-public struct OwnedAnswerChoice: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
+public struct AnswerChoice: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
   public let `confidence`: Presence<Double>
   public let `kind`: String
   public let `pick`: String
   public let `probabilities`: [String: Double]
   public init(
-    extensions: [String: JSONValue] = [:], `confidence`: Presence<Double> = .absent,
+    extensions: [String: DataValue] = [:], `confidence`: Presence<Double> = .absent,
     `kind`: String = "choice", `pick`: String, `probabilities`: [String: Double]
   ) {
     self.extensions = extensions
@@ -3825,7 +3762,7 @@ public struct OwnedAnswerChoice: JSONRepresentable {
     self.`pick` = `pick`
     self.`probabilities` = `probabilities`
   }
-  public static func read(_ json: JSONValue) throws -> OwnedAnswerChoice {
+  static func read(_ json: DataValue) throws -> AnswerChoice {
     let object = try jsonObject(json)
     let known: Set<String> = ["confidence", "kind", "pick", "probabilities"]
     var value = Self(
@@ -3837,7 +3774,7 @@ public struct OwnedAnswerChoice: JSONRepresentable {
     value._sourceJSON = json
     return value
   }
-  public var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = ["confidence", "kind", "pick", "probabilities"]
     var object = extensions.filter { !known.contains($0.key) }
@@ -3848,15 +3785,15 @@ public struct OwnedAnswerChoice: JSONRepresentable {
     return .object(object)
   }
 }
-public struct OwnedAnswerScore: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
+public struct AnswerScore: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
   public let `confidence`: Presence<Double>
   public let `kind`: String
   public let `level`: String
   public let `probabilities`: [String: Double]
   public init(
-    extensions: [String: JSONValue] = [:], `confidence`: Presence<Double> = .absent,
+    extensions: [String: DataValue] = [:], `confidence`: Presence<Double> = .absent,
     `kind`: String = "score", `level`: String, `probabilities`: [String: Double]
   ) {
     self.extensions = extensions
@@ -3865,7 +3802,7 @@ public struct OwnedAnswerScore: JSONRepresentable {
     self.`level` = `level`
     self.`probabilities` = `probabilities`
   }
-  public static func read(_ json: JSONValue) throws -> OwnedAnswerScore {
+  static func read(_ json: DataValue) throws -> AnswerScore {
     let object = try jsonObject(json)
     let known: Set<String> = ["confidence", "kind", "level", "probabilities"]
     var value = Self(
@@ -3877,7 +3814,7 @@ public struct OwnedAnswerScore: JSONRepresentable {
     value._sourceJSON = json
     return value
   }
-  public var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = ["confidence", "kind", "level", "probabilities"]
     var object = extensions.filter { !known.contains($0.key) }
@@ -3888,19 +3825,19 @@ public struct OwnedAnswerScore: JSONRepresentable {
     return .object(object)
   }
 }
-public struct OwnedAnswerTag: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
+public struct AnswerTag: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
   public let `kind`: String
   public let `probabilities`: [String: Double]
   public init(
-    extensions: [String: JSONValue] = [:], `kind`: String = "tag", `probabilities`: [String: Double]
+    extensions: [String: DataValue] = [:], `kind`: String = "tag", `probabilities`: [String: Double]
   ) {
     self.extensions = extensions
     self.`kind` = `kind`
     self.`probabilities` = `probabilities`
   }
-  public static func read(_ json: JSONValue) throws -> OwnedAnswerTag {
+  static func read(_ json: DataValue) throws -> AnswerTag {
     let object = try jsonObject(json)
     let known: Set<String> = ["kind", "probabilities"]
     var value = Self(
@@ -3910,7 +3847,7 @@ public struct OwnedAnswerTag: JSONRepresentable {
     value._sourceJSON = json
     return value
   }
-  public var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = ["kind", "probabilities"]
     var object = extensions.filter { !known.contains($0.key) }
@@ -3919,19 +3856,19 @@ public struct OwnedAnswerTag: JSONRepresentable {
     return .object(object)
   }
 }
-public struct OwnedAnswerYesNo: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
+public struct AnswerYesNo: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
   public let `kind`: String
   public let `probability`: Double
   public init(
-    extensions: [String: JSONValue] = [:], `kind`: String = "yes_no", `probability`: Double
+    extensions: [String: DataValue] = [:], `kind`: String = "yes_no", `probability`: Double
   ) {
     self.extensions = extensions
     self.`kind` = `kind`
     self.`probability` = `probability`
   }
-  public static func read(_ json: JSONValue) throws -> OwnedAnswerYesNo {
+  static func read(_ json: DataValue) throws -> AnswerYesNo {
     let object = try jsonObject(json)
     let known: Set<String> = ["kind", "probability"]
     var value = Self(
@@ -3941,7 +3878,7 @@ public struct OwnedAnswerYesNo: JSONRepresentable {
     value._sourceJSON = json
     return value
   }
-  public var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = ["kind", "probability"]
     var object = extensions.filter { !known.contains($0.key) }
@@ -3950,12 +3887,12 @@ public struct OwnedAnswerYesNo: JSONRepresentable {
     return .object(object)
   }
 }
-public enum OwnedAttemptOutcome: JSONRepresentable {
+public enum AttemptOutcome: ValueRepresentable {
   case `ok`
   case `status`
   case `transport`
   case unknown(String)
-  public static func read(_ json: JSONValue) throws -> OwnedAttemptOutcome {
+  static func read(_ json: DataValue) throws -> AttemptOutcome {
     let value = try String.read(json)
     switch value {
     case "ok": return .`ok`
@@ -3964,7 +3901,7 @@ public enum OwnedAttemptOutcome: JSONRepresentable {
     default: return .unknown(value)
     }
   }
-  public var json: JSONValue {
+  var json: DataValue {
     switch self {
     case .`ok`: return .string("ok")
     case .`status`: return .string("status")
@@ -3973,45 +3910,44 @@ public enum OwnedAttemptOutcome: JSONRepresentable {
     }
   }
 }
-public indirect enum OwnedBatchSetting: JSONRepresentable {
-  case alternative0(UInt64)
-  case alternative1(String)
-  public static func read(_ json: JSONValue) throws -> OwnedBatchSetting {
-    if let value = try? UInt64.read(json) { return .alternative0(value) }
-    if let value = try? String.read(json) { return .alternative1(value) }
-    throw JSONConversionError("Unknown OwnedBatchSetting value")
+public indirect enum BatchSetting: ValueRepresentable {
+  case `integer`(UInt64)
+  case `string`(String)
+  static func read(_ json: DataValue) throws -> BatchSetting {
+    if let value = try? UInt64.read(json) { return .`integer`(value) }
+    if let value = try? String.read(json) { return .`string`(value) }
+    throw ValueConversionError("Unknown BatchSetting value")
   }
-  public var json: JSONValue {
+  var json: DataValue {
     switch self {
-    case .alternative0(let value): return value.json
-    case .alternative1(let value): return value.json
+    case .`integer`(let value): return value.json
+    case .`string`(let value): return value.json
     }
   }
 }
-public struct OwnedBatchWarning: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
-  public let `running`: OwnedBatchSetting
-  public let `tunedFor`: OwnedBatchSetting
+public struct BatchWarning: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
+  public let `running`: BatchSetting
+  public let `tunedFor`: BatchSetting
   public init(
-    extensions: [String: JSONValue] = [:], `running`: OwnedBatchSetting,
-    `tunedFor`: OwnedBatchSetting
+    extensions: [String: DataValue] = [:], `running`: BatchSetting, `tunedFor`: BatchSetting
   ) {
     self.extensions = extensions
     self.`running` = `running`
     self.`tunedFor` = `tunedFor`
   }
-  public static func read(_ json: JSONValue) throws -> OwnedBatchWarning {
+  static func read(_ json: DataValue) throws -> BatchWarning {
     let object = try jsonObject(json)
     let known: Set<String> = ["running", "tuned_for"]
     var value = Self(
       extensions: object.filter { !known.contains($0.key) },
-      running: try OwnedBatchSetting.read(jsonRequired(object, "running")),
-      tunedFor: try OwnedBatchSetting.read(jsonRequired(object, "tuned_for")))
+      running: try BatchSetting.read(jsonRequired(object, "running")),
+      tunedFor: try BatchSetting.read(jsonRequired(object, "tuned_for")))
     value._sourceJSON = json
     return value
   }
-  public var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = ["running", "tuned_for"]
     var object = extensions.filter { !known.contains($0.key) }
@@ -4020,9 +3956,9 @@ public struct OwnedBatchWarning: JSONRepresentable {
     return .object(object)
   }
 }
-public struct OwnedEntity: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
+public struct Entity: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
   public let `end`: UInt64
   public let `file`: Presence<String>
   public let `firstLine`: Presence<UInt64>
@@ -4033,7 +3969,7 @@ public struct OwnedEntity: JSONRepresentable {
   public let `strength`: Double
   public let `text`: String
   public init(
-    extensions: [String: JSONValue] = [:], `end`: UInt64, `file`: Presence<String> = .absent,
+    extensions: [String: DataValue] = [:], `end`: UInt64, `file`: Presence<String> = .absent,
     `firstLine`: Presence<UInt64> = .absent, `kind`: String, `lastLine`: Presence<UInt64> = .absent,
     `length`: UInt64, `start`: UInt64, `strength`: Double, `text`: String
   ) {
@@ -4048,7 +3984,7 @@ public struct OwnedEntity: JSONRepresentable {
     self.`strength` = `strength`
     self.`text` = `text`
   }
-  public static func read(_ json: JSONValue) throws -> OwnedEntity {
+  static func read(_ json: DataValue) throws -> Entity {
     let object = try jsonObject(json)
     let known: Set<String> = [
       "end", "file", "first_line", "kind", "last_line", "length", "start", "strength", "text",
@@ -4067,7 +4003,7 @@ public struct OwnedEntity: JSONRepresentable {
     value._sourceJSON = json
     return value
   }
-  public var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = [
       "end", "file", "first_line", "kind", "last_line", "length", "start", "strength", "text",
@@ -4085,17 +4021,17 @@ public struct OwnedEntity: JSONRepresentable {
     return .object(object)
   }
 }
-public struct OwnedEntityEdge: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
+public struct EntityEdge: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
   public let `either`: Presence<Bool>
   public let `probability`: Double
   public let `relation`: String
-  public let `source`: OwnedEntity
-  public let `target`: OwnedEntity
+  public let `source`: Entity
+  public let `target`: Entity
   public init(
-    extensions: [String: JSONValue] = [:], `either`: Presence<Bool> = .absent,
-    `probability`: Double, `relation`: String, `source`: OwnedEntity, `target`: OwnedEntity
+    extensions: [String: DataValue] = [:], `either`: Presence<Bool> = .absent,
+    `probability`: Double, `relation`: String, `source`: Entity, `target`: Entity
   ) {
     self.extensions = extensions
     self.`either` = `either`
@@ -4104,7 +4040,7 @@ public struct OwnedEntityEdge: JSONRepresentable {
     self.`source` = `source`
     self.`target` = `target`
   }
-  public static func read(_ json: JSONValue) throws -> OwnedEntityEdge {
+  static func read(_ json: DataValue) throws -> EntityEdge {
     let object = try jsonObject(json)
     let known: Set<String> = ["either", "probability", "relation", "source", "target"]
     var value = Self(
@@ -4112,12 +4048,12 @@ public struct OwnedEntityEdge: JSONRepresentable {
       either: try readPresence(object, "either", Bool.self),
       probability: try Double.read(jsonRequired(object, "probability")),
       relation: try String.read(jsonRequired(object, "relation")),
-      source: try OwnedEntity.read(jsonRequired(object, "source")),
-      target: try OwnedEntity.read(jsonRequired(object, "target")))
+      source: try Entity.read(jsonRequired(object, "source")),
+      target: try Entity.read(jsonRequired(object, "target")))
     value._sourceJSON = json
     return value
   }
-  public var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = ["either", "probability", "relation", "source", "target"]
     var object = extensions.filter { !known.contains($0.key) }
@@ -4129,24 +4065,24 @@ public struct OwnedEntityEdge: JSONRepresentable {
     return .object(object)
   }
 }
-public struct OwnedFailed: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
-  public let `failed`: OwnedFailure
-  public init(extensions: [String: JSONValue] = [:], `failed`: OwnedFailure) {
+public struct Failed: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
+  public let `failed`: Failure
+  public init(extensions: [String: DataValue] = [:], `failed`: Failure) {
     self.extensions = extensions
     self.`failed` = `failed`
   }
-  public static func read(_ json: JSONValue) throws -> OwnedFailed {
+  static func read(_ json: DataValue) throws -> Failed {
     let object = try jsonObject(json)
     let known: Set<String> = ["failed"]
     var value = Self(
       extensions: object.filter { !known.contains($0.key) },
-      failed: try OwnedFailure.read(jsonRequired(object, "failed")))
+      failed: try Failure.read(jsonRequired(object, "failed")))
     value._sourceJSON = json
     return value
   }
-  public var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = ["failed"]
     var object = extensions.filter { !known.contains($0.key) }
@@ -4154,27 +4090,27 @@ public struct OwnedFailed: JSONRepresentable {
     return .object(object)
   }
 }
-public struct OwnedFailure: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
-  public let `cause`: OwnedFailureCause
+public struct Failure: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
+  public let `cause`: FailureCause
   public let `kind`: String
-  public init(extensions: [String: JSONValue] = [:], `cause`: OwnedFailureCause, `kind`: String) {
+  public init(extensions: [String: DataValue] = [:], `cause`: FailureCause, `kind`: String) {
     self.extensions = extensions
     self.`cause` = `cause`
     self.`kind` = `kind`
   }
-  public static func read(_ json: JSONValue) throws -> OwnedFailure {
+  static func read(_ json: DataValue) throws -> Failure {
     let object = try jsonObject(json)
     let known: Set<String> = ["cause", "kind"]
     var value = Self(
       extensions: object.filter { !known.contains($0.key) },
-      cause: try OwnedFailureCause.read(jsonRequired(object, "cause")),
+      cause: try FailureCause.read(jsonRequired(object, "cause")),
       kind: try String.read(jsonRequired(object, "kind")))
     value._sourceJSON = json
     return value
   }
-  public var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = ["cause", "kind"]
     var object = extensions.filter { !known.contains($0.key) }
@@ -4183,7 +4119,7 @@ public struct OwnedFailure: JSONRepresentable {
     return .object(object)
   }
 }
-public enum OwnedFailureCause: JSONRepresentable {
+public enum FailureCause: ValueRepresentable {
   case `missingAnswer`
   case `wrongKind`
   case `missingProbability`
@@ -4191,7 +4127,7 @@ public enum OwnedFailureCause: JSONRepresentable {
   case `invalidDistribution`
   case `unexpectedProbability`
   case unknown(String)
-  public static func read(_ json: JSONValue) throws -> OwnedFailureCause {
+  static func read(_ json: DataValue) throws -> FailureCause {
     let value = try String.read(json)
     switch value {
     case "missing_answer": return .`missingAnswer`
@@ -4203,7 +4139,7 @@ public enum OwnedFailureCause: JSONRepresentable {
     default: return .unknown(value)
     }
   }
-  public var json: JSONValue {
+  var json: DataValue {
     switch self {
     case .`missingAnswer`: return .string("missing_answer")
     case .`wrongKind`: return .string("wrong_kind")
@@ -4215,7 +4151,7 @@ public enum OwnedFailureCause: JSONRepresentable {
     }
   }
 }
-public enum OwnedFailureKind: JSONRepresentable {
+public enum FailureKind: ValueRepresentable {
   case `usage`
   case `backend`
   case `local`
@@ -4223,7 +4159,7 @@ public enum OwnedFailureKind: JSONRepresentable {
   case `deadline`
   case `defect`
   case unknown(String)
-  public static func read(_ json: JSONValue) throws -> OwnedFailureKind {
+  static func read(_ json: DataValue) throws -> FailureKind {
     let value = try String.read(json)
     switch value {
     case "usage": return .`usage`
@@ -4235,7 +4171,7 @@ public enum OwnedFailureKind: JSONRepresentable {
     default: return .unknown(value)
     }
   }
-  public var json: JSONValue {
+  var json: DataValue {
     switch self {
     case .`usage`: return .string("usage")
     case .`backend`: return .string("backend")
@@ -4247,15 +4183,15 @@ public enum OwnedFailureKind: JSONRepresentable {
     }
   }
 }
-public struct OwnedFindAnswer: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
+public struct FindAnswer: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
   public let `confidence`: Presence<Double>
   public let `kind`: String
   public let `pick`: String
   public let `probabilities`: [String: Double]
   public init(
-    extensions: [String: JSONValue] = [:], `confidence`: Presence<Double> = .absent,
+    extensions: [String: DataValue] = [:], `confidence`: Presence<Double> = .absent,
     `kind`: String = "find", `pick`: String, `probabilities`: [String: Double]
   ) {
     self.extensions = extensions
@@ -4264,7 +4200,7 @@ public struct OwnedFindAnswer: JSONRepresentable {
     self.`pick` = `pick`
     self.`probabilities` = `probabilities`
   }
-  public static func read(_ json: JSONValue) throws -> OwnedFindAnswer {
+  static func read(_ json: DataValue) throws -> FindAnswer {
     let object = try jsonObject(json)
     let known: Set<String> = ["confidence", "kind", "pick", "probabilities"]
     var value = Self(
@@ -4276,7 +4212,7 @@ public struct OwnedFindAnswer: JSONRepresentable {
     value._sourceJSON = json
     return value
   }
-  public var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = ["confidence", "kind", "pick", "probabilities"]
     var object = extensions.filter { !known.contains($0.key) }
@@ -4287,29 +4223,28 @@ public struct OwnedFindAnswer: JSONRepresentable {
     return .object(object)
   }
 }
-public struct OwnedFindQuestionDocument: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
-  public let `batch`: Presence<OwnedBatch>
-  public let `contextSchema`: Presence<OwnedInputDeclaration>
-  public let `itemSchema`: Presence<OwnedInputDeclaration>
-  public let `labelDetails`: Presence<[OwnedLabel]>
+public struct FindQuestionDocument: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
+  public let `batch`: Presence<ReceiptBatch>
+  public let `contextSchema`: Presence<InputDeclaration>
+  public let `itemSchema`: Presence<InputDeclaration>
+  public let `labelDetails`: Presence<[Label]>
   public let `model`: Presence<String>
-  public let `name`: Presence<OwnedQuestionName>
+  public let `name`: Presence<ReceiptQuestionName>
   public let `none`: Bool
   public let `on`: Presence<[String]>
   public let `profile`: Presence<String>
-  public let `text`: JSONValue
+  public let `text`: DataValue
   public let `verb`: String
-  public let `wordingVersion`: Presence<OwnedWordingVersion>
+  public let `wordingVersion`: Presence<WordingVersion>
   public init(
-    extensions: [String: JSONValue] = [:], `batch`: Presence<OwnedBatch> = .absent,
-    `contextSchema`: Presence<OwnedInputDeclaration> = .absent,
-    `itemSchema`: Presence<OwnedInputDeclaration> = .absent,
-    `labelDetails`: Presence<[OwnedLabel]> = .absent, `model`: Presence<String> = .absent,
-    `name`: Presence<OwnedQuestionName> = .absent, `none`: Bool, `on`: Presence<[String]> = .absent,
-    `profile`: Presence<String> = .absent, `text`: JSONValue, `verb`: String = "find",
-    `wordingVersion`: Presence<OwnedWordingVersion> = .absent
+    extensions: [String: DataValue] = [:], `batch`: Presence<ReceiptBatch> = .absent,
+    `contextSchema`: Presence<InputDeclaration> = .absent,
+    `itemSchema`: Presence<InputDeclaration> = .absent, `labelDetails`: Presence<[Label]> = .absent,
+    `model`: Presence<String> = .absent, `name`: Presence<ReceiptQuestionName> = .absent,
+    `none`: Bool, `on`: Presence<[String]> = .absent, `profile`: Presence<String> = .absent,
+    `text`: DataValue, `verb`: String = "find", `wordingVersion`: Presence<WordingVersion> = .absent
   ) {
     self.extensions = extensions
     self.`batch` = `batch`
@@ -4325,7 +4260,7 @@ public struct OwnedFindQuestionDocument: JSONRepresentable {
     self.`verb` = `verb`
     self.`wordingVersion` = `wordingVersion`
   }
-  public static func read(_ json: JSONValue) throws -> OwnedFindQuestionDocument {
+  static func read(_ json: DataValue) throws -> FindQuestionDocument {
     let object = try jsonObject(json)
     let known: Set<String> = [
       "batch", "context_schema", "item_schema", "label_details", "model", "name", "none", "on",
@@ -4333,22 +4268,22 @@ public struct OwnedFindQuestionDocument: JSONRepresentable {
     ]
     var value = Self(
       extensions: object.filter { !known.contains($0.key) },
-      batch: try readPresence(object, "batch", OwnedBatch.self),
-      contextSchema: try readPresence(object, "context_schema", OwnedInputDeclaration.self),
-      itemSchema: try readPresence(object, "item_schema", OwnedInputDeclaration.self),
-      labelDetails: try readPresence(object, "label_details", [OwnedLabel].self),
+      batch: try readPresence(object, "batch", ReceiptBatch.self),
+      contextSchema: try readPresence(object, "context_schema", InputDeclaration.self),
+      itemSchema: try readPresence(object, "item_schema", InputDeclaration.self),
+      labelDetails: try readPresence(object, "label_details", [Label].self),
       model: try readPresence(object, "model", String.self),
-      name: try readPresence(object, "name", OwnedQuestionName.self),
+      name: try readPresence(object, "name", ReceiptQuestionName.self),
       none: try Bool.read(jsonRequired(object, "none")),
       on: try readPresence(object, "on", [String].self),
       profile: try readPresence(object, "profile", String.self),
-      text: try JSONValue.read(jsonRequired(object, "text")),
+      text: try DataValue.read(jsonRequired(object, "text")),
       verb: try String.read(jsonRequired(object, "verb")),
-      wordingVersion: try readPresence(object, "wording_version", OwnedWordingVersion.self))
+      wordingVersion: try readPresence(object, "wording_version", WordingVersion.self))
     value._sourceJSON = json
     return value
   }
-  public var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = [
       "batch", "context_schema", "item_schema", "label_details", "model", "name", "none", "on",
@@ -4370,16 +4305,16 @@ public struct OwnedFindQuestionDocument: JSONRepresentable {
     return .object(object)
   }
 }
-public struct OwnedNameOdds: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
-  public let `edges`: OwnedNameOddsEdges
+public struct NameOdds: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
+  public let `edges`: [String: Double]?
   public let `end`: UInt64
-  public let `kinds`: OwnedNameOddsKinds
+  public let `kinds`: [String: Double]?
   public let `start`: UInt64
   public init(
-    extensions: [String: JSONValue] = [:], `edges`: OwnedNameOddsEdges, `end`: UInt64,
-    `kinds`: OwnedNameOddsKinds, `start`: UInt64
+    extensions: [String: DataValue] = [:], `edges`: [String: Double]?, `end`: UInt64,
+    `kinds`: [String: Double]?, `start`: UInt64
   ) {
     self.extensions = extensions
     self.`edges` = `edges`
@@ -4387,19 +4322,19 @@ public struct OwnedNameOdds: JSONRepresentable {
     self.`kinds` = `kinds`
     self.`start` = `start`
   }
-  public static func read(_ json: JSONValue) throws -> OwnedNameOdds {
+  static func read(_ json: DataValue) throws -> NameOdds {
     let object = try jsonObject(json)
     let known: Set<String> = ["edges", "end", "kinds", "start"]
     var value = Self(
       extensions: object.filter { !known.contains($0.key) },
-      edges: try OwnedNameOddsEdges.read(jsonRequired(object, "edges")),
+      edges: try [String: Double]?.read(jsonRequired(object, "edges")),
       end: try UInt64.read(jsonRequired(object, "end")),
-      kinds: try OwnedNameOddsKinds.read(jsonRequired(object, "kinds")),
+      kinds: try [String: Double]?.read(jsonRequired(object, "kinds")),
       start: try UInt64.read(jsonRequired(object, "start")))
     value._sourceJSON = json
     return value
   }
-  public var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = ["edges", "end", "kinds", "start"]
     var object = extensions.filter { !known.contains($0.key) }
@@ -4410,46 +4345,16 @@ public struct OwnedNameOdds: JSONRepresentable {
     return .object(object)
   }
 }
-public indirect enum OwnedNameOddsEdges: JSONRepresentable {
-  case alternative0([String: Double])
-  case alternative1(JSONValue)
-  public static func read(_ json: JSONValue) throws -> OwnedNameOddsEdges {
-    if let value = try? [String: Double].read(json) { return .alternative0(value) }
-    if json == .null { return .alternative1(.null) }
-    throw JSONConversionError("Unknown OwnedNameOddsEdges value")
-  }
-  public var json: JSONValue {
-    switch self {
-    case .alternative0(let value): return value.json
-    case .alternative1(let value): return value.json
-    }
-  }
-}
-public indirect enum OwnedNameOddsKinds: JSONRepresentable {
-  case alternative0([String: Double])
-  case alternative1(JSONValue)
-  public static func read(_ json: JSONValue) throws -> OwnedNameOddsKinds {
-    if let value = try? [String: Double].read(json) { return .alternative0(value) }
-    if json == .null { return .alternative1(.null) }
-    throw JSONConversionError("Unknown OwnedNameOddsKinds value")
-  }
-  public var json: JSONValue {
-    switch self {
-    case .alternative0(let value): return value.json
-    case .alternative1(let value): return value.json
-    }
-  }
-}
-public struct OwnedPairOdds: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
+public struct PairOdds: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
   public let `probability`: Double
   public let `relation`: String
-  public let `source`: OwnedPlace
-  public let `target`: OwnedPlace
+  public let `source`: Place
+  public let `target`: Place
   public init(
-    extensions: [String: JSONValue] = [:], `probability`: Double, `relation`: String,
-    `source`: OwnedPlace, `target`: OwnedPlace
+    extensions: [String: DataValue] = [:], `probability`: Double, `relation`: String,
+    `source`: Place, `target`: Place
   ) {
     self.extensions = extensions
     self.`probability` = `probability`
@@ -4457,19 +4362,19 @@ public struct OwnedPairOdds: JSONRepresentable {
     self.`source` = `source`
     self.`target` = `target`
   }
-  public static func read(_ json: JSONValue) throws -> OwnedPairOdds {
+  static func read(_ json: DataValue) throws -> PairOdds {
     let object = try jsonObject(json)
     let known: Set<String> = ["probability", "relation", "source", "target"]
     var value = Self(
       extensions: object.filter { !known.contains($0.key) },
       probability: try Double.read(jsonRequired(object, "probability")),
       relation: try String.read(jsonRequired(object, "relation")),
-      source: try OwnedPlace.read(jsonRequired(object, "source")),
-      target: try OwnedPlace.read(jsonRequired(object, "target")))
+      source: try Place.read(jsonRequired(object, "source")),
+      target: try Place.read(jsonRequired(object, "target")))
     value._sourceJSON = json
     return value
   }
-  public var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = ["probability", "relation", "source", "target"]
     var object = extensions.filter { !known.contains($0.key) }
@@ -4480,21 +4385,21 @@ public struct OwnedPairOdds: JSONRepresentable {
     return .object(object)
   }
 }
-public struct OwnedPieceOdds: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
+public struct PieceOdds: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
   public let `end`: UInt64
   public let `start`: UInt64
   public let `tags`: [String: Double]
   public init(
-    extensions: [String: JSONValue] = [:], `end`: UInt64, `start`: UInt64, `tags`: [String: Double]
+    extensions: [String: DataValue] = [:], `end`: UInt64, `start`: UInt64, `tags`: [String: Double]
   ) {
     self.extensions = extensions
     self.`end` = `end`
     self.`start` = `start`
     self.`tags` = `tags`
   }
-  public static func read(_ json: JSONValue) throws -> OwnedPieceOdds {
+  static func read(_ json: DataValue) throws -> PieceOdds {
     let object = try jsonObject(json)
     let known: Set<String> = ["end", "start", "tags"]
     var value = Self(
@@ -4505,7 +4410,7 @@ public struct OwnedPieceOdds: JSONRepresentable {
     value._sourceJSON = json
     return value
   }
-  public var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = ["end", "start", "tags"]
     var object = extensions.filter { !known.contains($0.key) }
@@ -4515,17 +4420,17 @@ public struct OwnedPieceOdds: JSONRepresentable {
     return .object(object)
   }
 }
-public struct OwnedPlace: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
+public struct Place: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
   public let `end`: UInt64
   public let `start`: UInt64
-  public init(extensions: [String: JSONValue] = [:], `end`: UInt64, `start`: UInt64) {
+  public init(extensions: [String: DataValue] = [:], `end`: UInt64, `start`: UInt64) {
     self.extensions = extensions
     self.`end` = `end`
     self.`start` = `start`
   }
-  public static func read(_ json: JSONValue) throws -> OwnedPlace {
+  static func read(_ json: DataValue) throws -> Place {
     let object = try jsonObject(json)
     let known: Set<String> = ["end", "start"]
     var value = Self(
@@ -4535,7 +4440,7 @@ public struct OwnedPlace: JSONRepresentable {
     value._sourceJSON = json
     return value
   }
-  public var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = ["end", "start"]
     var object = extensions.filter { !known.contains($0.key) }
@@ -4544,12 +4449,12 @@ public struct OwnedPlace: JSONRepresentable {
     return .object(object)
   }
 }
-public struct OwnedPlan: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
+public struct Plan: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
   public let `estimatedBytes`: UInt64
-  public let `estimatedInputTokens`: OwnedTokenBand
-  public let `firstBodyUtf8`: OwnedPlanFirstBodyUtf8
+  public let `estimatedInputTokens`: TokenBand
+  public let `firstBodyUtf8`: String?
   public let `largestRequestBytes`: UInt64
   public let `largestRequestEstimatedInputTokens`: UInt64
   public let `records`: UInt64
@@ -4557,10 +4462,10 @@ public struct OwnedPlan: JSONRepresentable {
   public let `tokenEstimateMethod`: String
   public let `upperBound`: Bool
   public init(
-    extensions: [String: JSONValue] = [:], `estimatedBytes`: UInt64,
-    `estimatedInputTokens`: OwnedTokenBand, `firstBodyUtf8`: OwnedPlanFirstBodyUtf8,
-    `largestRequestBytes`: UInt64, `largestRequestEstimatedInputTokens`: UInt64, `records`: UInt64,
-    `requests`: UInt64, `tokenEstimateMethod`: String, `upperBound`: Bool
+    extensions: [String: DataValue] = [:], `estimatedBytes`: UInt64,
+    `estimatedInputTokens`: TokenBand, `firstBodyUtf8`: String?, `largestRequestBytes`: UInt64,
+    `largestRequestEstimatedInputTokens`: UInt64, `records`: UInt64, `requests`: UInt64,
+    `tokenEstimateMethod`: String, `upperBound`: Bool
   ) {
     self.extensions = extensions
     self.`estimatedBytes` = `estimatedBytes`
@@ -4573,7 +4478,7 @@ public struct OwnedPlan: JSONRepresentable {
     self.`tokenEstimateMethod` = `tokenEstimateMethod`
     self.`upperBound` = `upperBound`
   }
-  public static func read(_ json: JSONValue) throws -> OwnedPlan {
+  static func read(_ json: DataValue) throws -> Plan {
     let object = try jsonObject(json)
     let known: Set<String> = [
       "estimated_bytes", "estimated_input_tokens", "first_body_utf8", "largest_request_bytes",
@@ -4583,8 +4488,8 @@ public struct OwnedPlan: JSONRepresentable {
     var value = Self(
       extensions: object.filter { !known.contains($0.key) },
       estimatedBytes: try UInt64.read(jsonRequired(object, "estimated_bytes")),
-      estimatedInputTokens: try OwnedTokenBand.read(jsonRequired(object, "estimated_input_tokens")),
-      firstBodyUtf8: try OwnedPlanFirstBodyUtf8.read(jsonRequired(object, "first_body_utf8")),
+      estimatedInputTokens: try TokenBand.read(jsonRequired(object, "estimated_input_tokens")),
+      firstBodyUtf8: try String?.read(jsonRequired(object, "first_body_utf8")),
       largestRequestBytes: try UInt64.read(jsonRequired(object, "largest_request_bytes")),
       largestRequestEstimatedInputTokens: try UInt64.read(
         jsonRequired(object, "largest_request_estimated_input_tokens")),
@@ -4595,7 +4500,7 @@ public struct OwnedPlan: JSONRepresentable {
     value._sourceJSON = json
     return value
   }
-  public var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = [
       "estimated_bytes", "estimated_input_tokens", "first_body_utf8", "largest_request_bytes",
@@ -4615,32 +4520,17 @@ public struct OwnedPlan: JSONRepresentable {
     return .object(object)
   }
 }
-public indirect enum OwnedPlanFirstBodyUtf8: JSONRepresentable {
-  case alternative0(String)
-  case alternative1(JSONValue)
-  public static func read(_ json: JSONValue) throws -> OwnedPlanFirstBodyUtf8 {
-    if let value = try? String.read(json) { return .alternative0(value) }
-    if json == .null { return .alternative1(.null) }
-    throw JSONConversionError("Unknown OwnedPlanFirstBodyUtf8 value")
-  }
-  public var json: JSONValue {
-    switch self {
-    case .alternative0(let value): return value.json
-    case .alternative1(let value): return value.json
-    }
-  }
-}
-public struct OwnedProfileWarning: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
+public struct ProfileWarning: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
   public let `running`: String
   public let `tunedFor`: String
-  public init(extensions: [String: JSONValue] = [:], `running`: String, `tunedFor`: String) {
+  public init(extensions: [String: DataValue] = [:], `running`: String, `tunedFor`: String) {
     self.extensions = extensions
     self.`running` = `running`
     self.`tunedFor` = `tunedFor`
   }
-  public static func read(_ json: JSONValue) throws -> OwnedProfileWarning {
+  static func read(_ json: DataValue) throws -> ProfileWarning {
     let object = try jsonObject(json)
     let known: Set<String> = ["running", "tuned_for"]
     var value = Self(
@@ -4650,7 +4540,7 @@ public struct OwnedProfileWarning: JSONRepresentable {
     value._sourceJSON = json
     return value
   }
-  public var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = ["running", "tuned_for"]
     var object = extensions.filter { !known.contains($0.key) }
@@ -4659,26 +4549,24 @@ public struct OwnedProfileWarning: JSONRepresentable {
     return .object(object)
   }
 }
-public indirect enum OwnedQuestionDocument: JSONRepresentable {
-  case `decide`(OwnedQuestionDocumentDecide)
-  case `choose`(OwnedQuestionDocumentChoose)
-  case `tag`(OwnedQuestionDocumentTag)
-  case `score`(OwnedQuestionDocumentScore)
-  public static func read(_ json: JSONValue) throws -> OwnedQuestionDocument {
+public indirect enum QuestionDocument: ValueRepresentable {
+  case `decide`(QuestionDocumentDecide)
+  case `choose`(QuestionDocumentChoose)
+  case `tag`(QuestionDocumentTag)
+  case `score`(QuestionDocumentScore)
+  static func read(_ json: DataValue) throws -> QuestionDocument {
     let object = try jsonObject(json)
     if object["verb"] == .string("decide") {
-      return .`decide`(try OwnedQuestionDocumentDecide.read(json))
+      return .`decide`(try QuestionDocumentDecide.read(json))
     }
     if object["verb"] == .string("choose") {
-      return .`choose`(try OwnedQuestionDocumentChoose.read(json))
+      return .`choose`(try QuestionDocumentChoose.read(json))
     }
-    if object["verb"] == .string("tag") { return .`tag`(try OwnedQuestionDocumentTag.read(json)) }
-    if object["verb"] == .string("score") {
-      return .`score`(try OwnedQuestionDocumentScore.read(json))
-    }
-    throw JSONConversionError("Unknown OwnedQuestionDocument alternative")
+    if object["verb"] == .string("tag") { return .`tag`(try QuestionDocumentTag.read(json)) }
+    if object["verb"] == .string("score") { return .`score`(try QuestionDocumentScore.read(json)) }
+    throw ValueConversionError("Unknown QuestionDocument alternative")
   }
-  public var json: JSONValue {
+  var json: DataValue {
     switch self {
     case .`decide`(let value): return value.json
     case .`choose`(let value): return value.json
@@ -4687,30 +4575,29 @@ public indirect enum OwnedQuestionDocument: JSONRepresentable {
     }
   }
 }
-public struct OwnedQuestionDocumentChoose: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
-  public let `batch`: Presence<OwnedBatch>
-  public let `contextSchema`: Presence<OwnedInputDeclaration>
-  public let `itemSchema`: Presence<OwnedInputDeclaration>
-  public let `labelDetails`: Presence<[OwnedLabel]>
+public struct QuestionDocumentChoose: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
+  public let `batch`: Presence<ReceiptBatch>
+  public let `contextSchema`: Presence<InputDeclaration>
+  public let `itemSchema`: Presence<InputDeclaration>
+  public let `labelDetails`: Presence<[Label]>
   public let `model`: Presence<String>
-  public let `name`: Presence<OwnedQuestionName>
+  public let `name`: Presence<ReceiptQuestionName>
   public let `on`: Presence<[String]>
   public let `profile`: Presence<String>
-  public let `wordingVersion`: Presence<OwnedWordingVersion>
+  public let `wordingVersion`: Presence<WordingVersion>
   public let `options`: [String]
-  public let `text`: JSONValue
+  public let `text`: DataValue
   public let `verb`: String
   public init(
-    extensions: [String: JSONValue] = [:], `batch`: Presence<OwnedBatch> = .absent,
-    `contextSchema`: Presence<OwnedInputDeclaration> = .absent,
-    `itemSchema`: Presence<OwnedInputDeclaration> = .absent,
-    `labelDetails`: Presence<[OwnedLabel]> = .absent, `model`: Presence<String> = .absent,
-    `name`: Presence<OwnedQuestionName> = .absent, `on`: Presence<[String]> = .absent,
-    `profile`: Presence<String> = .absent,
-    `wordingVersion`: Presence<OwnedWordingVersion> = .absent, `options`: [String],
-    `text`: JSONValue, `verb`: String = "choose"
+    extensions: [String: DataValue] = [:], `batch`: Presence<ReceiptBatch> = .absent,
+    `contextSchema`: Presence<InputDeclaration> = .absent,
+    `itemSchema`: Presence<InputDeclaration> = .absent, `labelDetails`: Presence<[Label]> = .absent,
+    `model`: Presence<String> = .absent, `name`: Presence<ReceiptQuestionName> = .absent,
+    `on`: Presence<[String]> = .absent, `profile`: Presence<String> = .absent,
+    `wordingVersion`: Presence<WordingVersion> = .absent, `options`: [String], `text`: DataValue,
+    `verb`: String = "choose"
   ) {
     self.extensions = extensions
     self.`batch` = `batch`
@@ -4726,7 +4613,7 @@ public struct OwnedQuestionDocumentChoose: JSONRepresentable {
     self.`text` = `text`
     self.`verb` = `verb`
   }
-  public static func read(_ json: JSONValue) throws -> OwnedQuestionDocumentChoose {
+  static func read(_ json: DataValue) throws -> QuestionDocumentChoose {
     let object = try jsonObject(json)
     let known: Set<String> = [
       "batch", "context_schema", "item_schema", "label_details", "model", "name", "on", "profile",
@@ -4734,22 +4621,22 @@ public struct OwnedQuestionDocumentChoose: JSONRepresentable {
     ]
     var value = Self(
       extensions: object.filter { !known.contains($0.key) },
-      batch: try readPresence(object, "batch", OwnedBatch.self),
-      contextSchema: try readPresence(object, "context_schema", OwnedInputDeclaration.self),
-      itemSchema: try readPresence(object, "item_schema", OwnedInputDeclaration.self),
-      labelDetails: try readPresence(object, "label_details", [OwnedLabel].self),
+      batch: try readPresence(object, "batch", ReceiptBatch.self),
+      contextSchema: try readPresence(object, "context_schema", InputDeclaration.self),
+      itemSchema: try readPresence(object, "item_schema", InputDeclaration.self),
+      labelDetails: try readPresence(object, "label_details", [Label].self),
       model: try readPresence(object, "model", String.self),
-      name: try readPresence(object, "name", OwnedQuestionName.self),
+      name: try readPresence(object, "name", ReceiptQuestionName.self),
       on: try readPresence(object, "on", [String].self),
       profile: try readPresence(object, "profile", String.self),
-      wordingVersion: try readPresence(object, "wording_version", OwnedWordingVersion.self),
+      wordingVersion: try readPresence(object, "wording_version", WordingVersion.self),
       options: try [String].read(jsonRequired(object, "options")),
-      text: try JSONValue.read(jsonRequired(object, "text")),
+      text: try DataValue.read(jsonRequired(object, "text")),
       verb: try String.read(jsonRequired(object, "verb")))
     value._sourceJSON = json
     return value
   }
-  public var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = [
       "batch", "context_schema", "item_schema", "label_details", "model", "name", "on", "profile",
@@ -4771,32 +4658,30 @@ public struct OwnedQuestionDocumentChoose: JSONRepresentable {
     return .object(object)
   }
 }
-public struct OwnedQuestionDocumentDecide: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
-  public let `batch`: Presence<OwnedBatch>
-  public let `contextSchema`: Presence<OwnedInputDeclaration>
-  public let `itemSchema`: Presence<OwnedInputDeclaration>
-  public let `labelDetails`: Presence<[OwnedLabel]>
+public struct QuestionDocumentDecide: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
+  public let `batch`: Presence<ReceiptBatch>
+  public let `contextSchema`: Presence<InputDeclaration>
+  public let `itemSchema`: Presence<InputDeclaration>
+  public let `labelDetails`: Presence<[Label]>
   public let `model`: Presence<String>
-  public let `name`: Presence<OwnedQuestionName>
+  public let `name`: Presence<ReceiptQuestionName>
   public let `on`: Presence<[String]>
   public let `profile`: Presence<String>
-  public let `wordingVersion`: Presence<OwnedWordingVersion>
-  public let `false`: Presence<JSONValue>
-  public let `text`: JSONValue
-  public let `true`: Presence<JSONValue>
+  public let `wordingVersion`: Presence<WordingVersion>
+  public let `false`: Presence<DataValue>
+  public let `text`: DataValue
+  public let `true`: Presence<DataValue>
   public let `verb`: String
   public init(
-    extensions: [String: JSONValue] = [:], `batch`: Presence<OwnedBatch> = .absent,
-    `contextSchema`: Presence<OwnedInputDeclaration> = .absent,
-    `itemSchema`: Presence<OwnedInputDeclaration> = .absent,
-    `labelDetails`: Presence<[OwnedLabel]> = .absent, `model`: Presence<String> = .absent,
-    `name`: Presence<OwnedQuestionName> = .absent, `on`: Presence<[String]> = .absent,
-    `profile`: Presence<String> = .absent,
-    `wordingVersion`: Presence<OwnedWordingVersion> = .absent,
-    `false`: Presence<JSONValue> = .absent, `text`: JSONValue,
-    `true`: Presence<JSONValue> = .absent, `verb`: String = "decide"
+    extensions: [String: DataValue] = [:], `batch`: Presence<ReceiptBatch> = .absent,
+    `contextSchema`: Presence<InputDeclaration> = .absent,
+    `itemSchema`: Presence<InputDeclaration> = .absent, `labelDetails`: Presence<[Label]> = .absent,
+    `model`: Presence<String> = .absent, `name`: Presence<ReceiptQuestionName> = .absent,
+    `on`: Presence<[String]> = .absent, `profile`: Presence<String> = .absent,
+    `wordingVersion`: Presence<WordingVersion> = .absent, `false`: Presence<DataValue> = .absent,
+    `text`: DataValue, `true`: Presence<DataValue> = .absent, `verb`: String = "decide"
   ) {
     self.extensions = extensions
     self.`batch` = `batch`
@@ -4813,7 +4698,7 @@ public struct OwnedQuestionDocumentDecide: JSONRepresentable {
     self.`true` = `true`
     self.`verb` = `verb`
   }
-  public static func read(_ json: JSONValue) throws -> OwnedQuestionDocumentDecide {
+  static func read(_ json: DataValue) throws -> QuestionDocumentDecide {
     let object = try jsonObject(json)
     let known: Set<String> = [
       "batch", "context_schema", "item_schema", "label_details", "model", "name", "on", "profile",
@@ -4821,23 +4706,23 @@ public struct OwnedQuestionDocumentDecide: JSONRepresentable {
     ]
     var value = Self(
       extensions: object.filter { !known.contains($0.key) },
-      batch: try readPresence(object, "batch", OwnedBatch.self),
-      contextSchema: try readPresence(object, "context_schema", OwnedInputDeclaration.self),
-      itemSchema: try readPresence(object, "item_schema", OwnedInputDeclaration.self),
-      labelDetails: try readPresence(object, "label_details", [OwnedLabel].self),
+      batch: try readPresence(object, "batch", ReceiptBatch.self),
+      contextSchema: try readPresence(object, "context_schema", InputDeclaration.self),
+      itemSchema: try readPresence(object, "item_schema", InputDeclaration.self),
+      labelDetails: try readPresence(object, "label_details", [Label].self),
       model: try readPresence(object, "model", String.self),
-      name: try readPresence(object, "name", OwnedQuestionName.self),
+      name: try readPresence(object, "name", ReceiptQuestionName.self),
       on: try readPresence(object, "on", [String].self),
       profile: try readPresence(object, "profile", String.self),
-      wordingVersion: try readPresence(object, "wording_version", OwnedWordingVersion.self),
-      false: try readPresence(object, "false", JSONValue.self),
-      text: try JSONValue.read(jsonRequired(object, "text")),
-      true: try readPresence(object, "true", JSONValue.self),
+      wordingVersion: try readPresence(object, "wording_version", WordingVersion.self),
+      false: try readPresence(object, "false", DataValue.self),
+      text: try DataValue.read(jsonRequired(object, "text")),
+      true: try readPresence(object, "true", DataValue.self),
       verb: try String.read(jsonRequired(object, "verb")))
     value._sourceJSON = json
     return value
   }
-  public var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = [
       "batch", "context_schema", "item_schema", "label_details", "model", "name", "on", "profile",
@@ -4860,30 +4745,29 @@ public struct OwnedQuestionDocumentDecide: JSONRepresentable {
     return .object(object)
   }
 }
-public struct OwnedQuestionDocumentScore: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
-  public let `batch`: Presence<OwnedBatch>
-  public let `contextSchema`: Presence<OwnedInputDeclaration>
-  public let `itemSchema`: Presence<OwnedInputDeclaration>
-  public let `labelDetails`: Presence<[OwnedLabel]>
+public struct QuestionDocumentScore: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
+  public let `batch`: Presence<ReceiptBatch>
+  public let `contextSchema`: Presence<InputDeclaration>
+  public let `itemSchema`: Presence<InputDeclaration>
+  public let `labelDetails`: Presence<[Label]>
   public let `model`: Presence<String>
-  public let `name`: Presence<OwnedQuestionName>
+  public let `name`: Presence<ReceiptQuestionName>
   public let `on`: Presence<[String]>
   public let `profile`: Presence<String>
-  public let `wordingVersion`: Presence<OwnedWordingVersion>
+  public let `wordingVersion`: Presence<WordingVersion>
   public let `levels`: [String]
-  public let `text`: JSONValue
+  public let `text`: DataValue
   public let `verb`: String
   public init(
-    extensions: [String: JSONValue] = [:], `batch`: Presence<OwnedBatch> = .absent,
-    `contextSchema`: Presence<OwnedInputDeclaration> = .absent,
-    `itemSchema`: Presence<OwnedInputDeclaration> = .absent,
-    `labelDetails`: Presence<[OwnedLabel]> = .absent, `model`: Presence<String> = .absent,
-    `name`: Presence<OwnedQuestionName> = .absent, `on`: Presence<[String]> = .absent,
-    `profile`: Presence<String> = .absent,
-    `wordingVersion`: Presence<OwnedWordingVersion> = .absent, `levels`: [String],
-    `text`: JSONValue, `verb`: String = "score"
+    extensions: [String: DataValue] = [:], `batch`: Presence<ReceiptBatch> = .absent,
+    `contextSchema`: Presence<InputDeclaration> = .absent,
+    `itemSchema`: Presence<InputDeclaration> = .absent, `labelDetails`: Presence<[Label]> = .absent,
+    `model`: Presence<String> = .absent, `name`: Presence<ReceiptQuestionName> = .absent,
+    `on`: Presence<[String]> = .absent, `profile`: Presence<String> = .absent,
+    `wordingVersion`: Presence<WordingVersion> = .absent, `levels`: [String], `text`: DataValue,
+    `verb`: String = "score"
   ) {
     self.extensions = extensions
     self.`batch` = `batch`
@@ -4899,7 +4783,7 @@ public struct OwnedQuestionDocumentScore: JSONRepresentable {
     self.`text` = `text`
     self.`verb` = `verb`
   }
-  public static func read(_ json: JSONValue) throws -> OwnedQuestionDocumentScore {
+  static func read(_ json: DataValue) throws -> QuestionDocumentScore {
     let object = try jsonObject(json)
     let known: Set<String> = [
       "batch", "context_schema", "item_schema", "label_details", "model", "name", "on", "profile",
@@ -4907,22 +4791,22 @@ public struct OwnedQuestionDocumentScore: JSONRepresentable {
     ]
     var value = Self(
       extensions: object.filter { !known.contains($0.key) },
-      batch: try readPresence(object, "batch", OwnedBatch.self),
-      contextSchema: try readPresence(object, "context_schema", OwnedInputDeclaration.self),
-      itemSchema: try readPresence(object, "item_schema", OwnedInputDeclaration.self),
-      labelDetails: try readPresence(object, "label_details", [OwnedLabel].self),
+      batch: try readPresence(object, "batch", ReceiptBatch.self),
+      contextSchema: try readPresence(object, "context_schema", InputDeclaration.self),
+      itemSchema: try readPresence(object, "item_schema", InputDeclaration.self),
+      labelDetails: try readPresence(object, "label_details", [Label].self),
       model: try readPresence(object, "model", String.self),
-      name: try readPresence(object, "name", OwnedQuestionName.self),
+      name: try readPresence(object, "name", ReceiptQuestionName.self),
       on: try readPresence(object, "on", [String].self),
       profile: try readPresence(object, "profile", String.self),
-      wordingVersion: try readPresence(object, "wording_version", OwnedWordingVersion.self),
+      wordingVersion: try readPresence(object, "wording_version", WordingVersion.self),
       levels: try [String].read(jsonRequired(object, "levels")),
-      text: try JSONValue.read(jsonRequired(object, "text")),
+      text: try DataValue.read(jsonRequired(object, "text")),
       verb: try String.read(jsonRequired(object, "verb")))
     value._sourceJSON = json
     return value
   }
-  public var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = [
       "batch", "context_schema", "item_schema", "label_details", "model", "name", "on", "profile",
@@ -4944,30 +4828,29 @@ public struct OwnedQuestionDocumentScore: JSONRepresentable {
     return .object(object)
   }
 }
-public struct OwnedQuestionDocumentTag: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
-  public let `batch`: Presence<OwnedBatch>
-  public let `contextSchema`: Presence<OwnedInputDeclaration>
-  public let `itemSchema`: Presence<OwnedInputDeclaration>
-  public let `labelDetails`: Presence<[OwnedLabel]>
+public struct QuestionDocumentTag: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
+  public let `batch`: Presence<ReceiptBatch>
+  public let `contextSchema`: Presence<InputDeclaration>
+  public let `itemSchema`: Presence<InputDeclaration>
+  public let `labelDetails`: Presence<[Label]>
   public let `model`: Presence<String>
-  public let `name`: Presence<OwnedQuestionName>
+  public let `name`: Presence<ReceiptQuestionName>
   public let `on`: Presence<[String]>
   public let `profile`: Presence<String>
-  public let `wordingVersion`: Presence<OwnedWordingVersion>
+  public let `wordingVersion`: Presence<WordingVersion>
   public let `labels`: [String]
-  public let `text`: JSONValue
+  public let `text`: DataValue
   public let `verb`: String
   public init(
-    extensions: [String: JSONValue] = [:], `batch`: Presence<OwnedBatch> = .absent,
-    `contextSchema`: Presence<OwnedInputDeclaration> = .absent,
-    `itemSchema`: Presence<OwnedInputDeclaration> = .absent,
-    `labelDetails`: Presence<[OwnedLabel]> = .absent, `model`: Presence<String> = .absent,
-    `name`: Presence<OwnedQuestionName> = .absent, `on`: Presence<[String]> = .absent,
-    `profile`: Presence<String> = .absent,
-    `wordingVersion`: Presence<OwnedWordingVersion> = .absent, `labels`: [String],
-    `text`: JSONValue, `verb`: String = "tag"
+    extensions: [String: DataValue] = [:], `batch`: Presence<ReceiptBatch> = .absent,
+    `contextSchema`: Presence<InputDeclaration> = .absent,
+    `itemSchema`: Presence<InputDeclaration> = .absent, `labelDetails`: Presence<[Label]> = .absent,
+    `model`: Presence<String> = .absent, `name`: Presence<ReceiptQuestionName> = .absent,
+    `on`: Presence<[String]> = .absent, `profile`: Presence<String> = .absent,
+    `wordingVersion`: Presence<WordingVersion> = .absent, `labels`: [String], `text`: DataValue,
+    `verb`: String = "tag"
   ) {
     self.extensions = extensions
     self.`batch` = `batch`
@@ -4983,7 +4866,7 @@ public struct OwnedQuestionDocumentTag: JSONRepresentable {
     self.`text` = `text`
     self.`verb` = `verb`
   }
-  public static func read(_ json: JSONValue) throws -> OwnedQuestionDocumentTag {
+  static func read(_ json: DataValue) throws -> QuestionDocumentTag {
     let object = try jsonObject(json)
     let known: Set<String> = [
       "batch", "context_schema", "item_schema", "label_details", "model", "name", "on", "profile",
@@ -4991,22 +4874,22 @@ public struct OwnedQuestionDocumentTag: JSONRepresentable {
     ]
     var value = Self(
       extensions: object.filter { !known.contains($0.key) },
-      batch: try readPresence(object, "batch", OwnedBatch.self),
-      contextSchema: try readPresence(object, "context_schema", OwnedInputDeclaration.self),
-      itemSchema: try readPresence(object, "item_schema", OwnedInputDeclaration.self),
-      labelDetails: try readPresence(object, "label_details", [OwnedLabel].self),
+      batch: try readPresence(object, "batch", ReceiptBatch.self),
+      contextSchema: try readPresence(object, "context_schema", InputDeclaration.self),
+      itemSchema: try readPresence(object, "item_schema", InputDeclaration.self),
+      labelDetails: try readPresence(object, "label_details", [Label].self),
       model: try readPresence(object, "model", String.self),
-      name: try readPresence(object, "name", OwnedQuestionName.self),
+      name: try readPresence(object, "name", ReceiptQuestionName.self),
       on: try readPresence(object, "on", [String].self),
       profile: try readPresence(object, "profile", String.self),
-      wordingVersion: try readPresence(object, "wording_version", OwnedWordingVersion.self),
+      wordingVersion: try readPresence(object, "wording_version", WordingVersion.self),
       labels: try [String].read(jsonRequired(object, "labels")),
-      text: try JSONValue.read(jsonRequired(object, "text")),
+      text: try DataValue.read(jsonRequired(object, "text")),
       verb: try String.read(jsonRequired(object, "verb")))
     value._sourceJSON = json
     return value
   }
-  public var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = [
       "batch", "context_schema", "item_schema", "label_details", "model", "name", "on", "profile",
@@ -5028,36 +4911,36 @@ public struct OwnedQuestionDocumentTag: JSONRepresentable {
     return .object(object)
   }
 }
-public indirect enum OwnedRecognize: JSONRepresentable {
-  case `alternative0`(OwnedRecognizeEntities)
-  case `alternative1`(OwnedRecognizeModeProposals)
-  public static func read(_ json: JSONValue) throws -> OwnedRecognize {
+public indirect enum Recognize: ValueRepresentable {
+  case `entities`(RecognizeEntities)
+  case `modeProposals`(RecognizeModeProposals)
+  static func read(_ json: DataValue) throws -> Recognize {
     let object = try jsonObject(json)
     if object["entities"] != nil && object["mode"] == nil && object["proposals"] == nil {
-      return .`alternative0`(try OwnedRecognizeEntities.read(json))
+      return .`entities`(try RecognizeEntities.read(json))
     }
     if object["mode"] != nil && object["proposals"] != nil && object["entities"] == nil {
-      return .`alternative1`(try OwnedRecognizeModeProposals.read(json))
+      return .`modeProposals`(try RecognizeModeProposals.read(json))
     }
-    throw JSONConversionError("Unknown OwnedRecognize alternative")
+    throw ValueConversionError("Unknown Recognize alternative")
   }
-  public var json: JSONValue {
+  var json: DataValue {
     switch self {
-    case .`alternative0`(let value): return value.json
-    case .`alternative1`(let value): return value.json
+    case .`entities`(let value): return value.json
+    case .`modeProposals`(let value): return value.json
     }
   }
 }
-public struct OwnedRecognizeAnswer: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
-  public let `names`: [OwnedNameOdds]
-  public let `pairs`: [OwnedPairOdds]
-  public let `pieces`: [OwnedPieceOdds]
-  public let `proposals`: [OwnedRecognitionProposal]
+public struct RecognizeAnswer: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
+  public let `names`: [NameOdds]
+  public let `pairs`: [PairOdds]
+  public let `pieces`: [PieceOdds]
+  public let `proposals`: [RecognitionProposal]
   public init(
-    extensions: [String: JSONValue] = [:], `names`: [OwnedNameOdds], `pairs`: [OwnedPairOdds],
-    `pieces`: [OwnedPieceOdds], `proposals`: [OwnedRecognitionProposal]
+    extensions: [String: DataValue] = [:], `names`: [NameOdds], `pairs`: [PairOdds],
+    `pieces`: [PieceOdds], `proposals`: [RecognitionProposal]
   ) {
     self.extensions = extensions
     self.`names` = `names`
@@ -5065,19 +4948,19 @@ public struct OwnedRecognizeAnswer: JSONRepresentable {
     self.`pieces` = `pieces`
     self.`proposals` = `proposals`
   }
-  public static func read(_ json: JSONValue) throws -> OwnedRecognizeAnswer {
+  static func read(_ json: DataValue) throws -> RecognizeAnswer {
     let object = try jsonObject(json)
     let known: Set<String> = ["names", "pairs", "pieces", "proposals"]
     var value = Self(
       extensions: object.filter { !known.contains($0.key) },
-      names: try [OwnedNameOdds].read(jsonRequired(object, "names")),
-      pairs: try [OwnedPairOdds].read(jsonRequired(object, "pairs")),
-      pieces: try [OwnedPieceOdds].read(jsonRequired(object, "pieces")),
-      proposals: try [OwnedRecognitionProposal].read(jsonRequired(object, "proposals")))
+      names: try [NameOdds].read(jsonRequired(object, "names")),
+      pairs: try [PairOdds].read(jsonRequired(object, "pairs")),
+      pieces: try [PieceOdds].read(jsonRequired(object, "pieces")),
+      proposals: try [RecognitionProposal].read(jsonRequired(object, "proposals")))
     value._sourceJSON = json
     return value
   }
-  public var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = ["names", "pairs", "pieces", "proposals"]
     var object = extensions.filter { !known.contains($0.key) }
@@ -5088,42 +4971,42 @@ public struct OwnedRecognizeAnswer: JSONRepresentable {
     return .object(object)
   }
 }
-public struct OwnedRecognizeQuestionDocument: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
-  public let `batch`: Presence<OwnedBatch>
-  public let `contextSchema`: Presence<OwnedInputDeclaration>
-  public let `entityDefinition`: Presence<JSONValue>
-  public let `instructions`: Presence<JSONValue>
-  public let `itemSchema`: Presence<OwnedInputDeclaration>
-  public let `kinds`: [String: JSONValue]
-  public let `labelDetails`: Presence<[OwnedLabel]>
-  public let `mode`: Presence<OwnedRecognitionMode>
+public struct RecognizeQuestionDocument: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
+  public let `batch`: Presence<ReceiptBatch>
+  public let `contextSchema`: Presence<InputDeclaration>
+  public let `entityDefinition`: Presence<DataValue>
+  public let `instructions`: Presence<DataValue>
+  public let `itemSchema`: Presence<InputDeclaration>
+  public let `kinds`: [String: DataValue]
+  public let `labelDetails`: Presence<[Label]>
+  public let `mode`: Presence<ReceiptRecognitionMode>
   public let `model`: Presence<String>
-  public let `name`: Presence<OwnedQuestionName>
+  public let `name`: Presence<ReceiptQuestionName>
   public let `on`: Presence<[String]>
   public let `profile`: Presence<String>
-  public let `relationThreshold`: Presence<OwnedThreshold>
-  public let `relations`: Presence<[OwnedRelationRule]>
+  public let `relationThreshold`: Presence<ReceiptThreshold>
+  public let `relations`: Presence<[RelationRule]>
   public let `snippetPieces`: Presence<UInt64>
-  public let `stageContext`: Presence<OwnedRecognitionStageContext>
-  public let `threshold`: OwnedThreshold
-  public let `verb`: OwnedVerb
-  public let `wordingVersion`: Presence<OwnedWordingVersion>
+  public let `stageContext`: Presence<ReceiptRecognitionStageContext>
+  public let `threshold`: ReceiptThreshold
+  public let `verb`: Verb
+  public let `wordingVersion`: Presence<WordingVersion>
   public init(
-    extensions: [String: JSONValue] = [:], `batch`: Presence<OwnedBatch> = .absent,
-    `contextSchema`: Presence<OwnedInputDeclaration> = .absent,
-    `entityDefinition`: Presence<JSONValue> = .absent,
-    `instructions`: Presence<JSONValue> = .absent,
-    `itemSchema`: Presence<OwnedInputDeclaration> = .absent, `kinds`: [String: JSONValue],
-    `labelDetails`: Presence<[OwnedLabel]> = .absent,
-    `mode`: Presence<OwnedRecognitionMode> = .absent, `model`: Presence<String> = .absent,
-    `name`: Presence<OwnedQuestionName> = .absent, `on`: Presence<[String]> = .absent,
-    `profile`: Presence<String> = .absent, `relationThreshold`: Presence<OwnedThreshold> = .absent,
-    `relations`: Presence<[OwnedRelationRule]> = .absent,
-    `snippetPieces`: Presence<UInt64> = .absent,
-    `stageContext`: Presence<OwnedRecognitionStageContext> = .absent, `threshold`: OwnedThreshold,
-    `verb`: OwnedVerb, `wordingVersion`: Presence<OwnedWordingVersion> = .absent
+    extensions: [String: DataValue] = [:], `batch`: Presence<ReceiptBatch> = .absent,
+    `contextSchema`: Presence<InputDeclaration> = .absent,
+    `entityDefinition`: Presence<DataValue> = .absent,
+    `instructions`: Presence<DataValue> = .absent,
+    `itemSchema`: Presence<InputDeclaration> = .absent, `kinds`: [String: DataValue],
+    `labelDetails`: Presence<[Label]> = .absent, `mode`: Presence<ReceiptRecognitionMode> = .absent,
+    `model`: Presence<String> = .absent, `name`: Presence<ReceiptQuestionName> = .absent,
+    `on`: Presence<[String]> = .absent, `profile`: Presence<String> = .absent,
+    `relationThreshold`: Presence<ReceiptThreshold> = .absent,
+    `relations`: Presence<[RelationRule]> = .absent, `snippetPieces`: Presence<UInt64> = .absent,
+    `stageContext`: Presence<ReceiptRecognitionStageContext> = .absent,
+    `threshold`: ReceiptThreshold, `verb`: Verb,
+    `wordingVersion`: Presence<WordingVersion> = .absent
   ) {
     self.extensions = extensions
     self.`batch` = `batch`
@@ -5146,7 +5029,7 @@ public struct OwnedRecognizeQuestionDocument: JSONRepresentable {
     self.`verb` = `verb`
     self.`wordingVersion` = `wordingVersion`
   }
-  public static func read(_ json: JSONValue) throws -> OwnedRecognizeQuestionDocument {
+  static func read(_ json: DataValue) throws -> RecognizeQuestionDocument {
     let object = try jsonObject(json)
     let known: Set<String> = [
       "batch", "context_schema", "entity_definition", "instructions", "item_schema", "kinds",
@@ -5155,29 +5038,29 @@ public struct OwnedRecognizeQuestionDocument: JSONRepresentable {
     ]
     var value = Self(
       extensions: object.filter { !known.contains($0.key) },
-      batch: try readPresence(object, "batch", OwnedBatch.self),
-      contextSchema: try readPresence(object, "context_schema", OwnedInputDeclaration.self),
-      entityDefinition: try readPresence(object, "entity_definition", JSONValue.self),
-      instructions: try readPresence(object, "instructions", JSONValue.self),
-      itemSchema: try readPresence(object, "item_schema", OwnedInputDeclaration.self),
-      kinds: try [String: JSONValue].read(jsonRequired(object, "kinds")),
-      labelDetails: try readPresence(object, "label_details", [OwnedLabel].self),
-      mode: try readPresence(object, "mode", OwnedRecognitionMode.self),
+      batch: try readPresence(object, "batch", ReceiptBatch.self),
+      contextSchema: try readPresence(object, "context_schema", InputDeclaration.self),
+      entityDefinition: try readPresence(object, "entity_definition", DataValue.self),
+      instructions: try readPresence(object, "instructions", DataValue.self),
+      itemSchema: try readPresence(object, "item_schema", InputDeclaration.self),
+      kinds: try [String: DataValue].read(jsonRequired(object, "kinds")),
+      labelDetails: try readPresence(object, "label_details", [Label].self),
+      mode: try readPresence(object, "mode", ReceiptRecognitionMode.self),
       model: try readPresence(object, "model", String.self),
-      name: try readPresence(object, "name", OwnedQuestionName.self),
+      name: try readPresence(object, "name", ReceiptQuestionName.self),
       on: try readPresence(object, "on", [String].self),
       profile: try readPresence(object, "profile", String.self),
-      relationThreshold: try readPresence(object, "relation_threshold", OwnedThreshold.self),
-      relations: try readPresence(object, "relations", [OwnedRelationRule].self),
+      relationThreshold: try readPresence(object, "relation_threshold", ReceiptThreshold.self),
+      relations: try readPresence(object, "relations", [RelationRule].self),
       snippetPieces: try readPresence(object, "snippet_pieces", UInt64.self),
-      stageContext: try readPresence(object, "stage_context", OwnedRecognitionStageContext.self),
-      threshold: try OwnedThreshold.read(jsonRequired(object, "threshold")),
-      verb: try OwnedVerb.read(jsonRequired(object, "verb")),
-      wordingVersion: try readPresence(object, "wording_version", OwnedWordingVersion.self))
+      stageContext: try readPresence(object, "stage_context", ReceiptRecognitionStageContext.self),
+      threshold: try ReceiptThreshold.read(jsonRequired(object, "threshold")),
+      verb: try Verb.read(jsonRequired(object, "verb")),
+      wordingVersion: try readPresence(object, "wording_version", WordingVersion.self))
     value._sourceJSON = json
     return value
   }
-  public var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = [
       "batch", "context_schema", "entity_definition", "instructions", "item_schema", "kinds",
@@ -5207,30 +5090,30 @@ public struct OwnedRecognizeQuestionDocument: JSONRepresentable {
     return .object(object)
   }
 }
-public struct OwnedRecognizeEntities: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
-  public let `entities`: [OwnedEntity]
-  public let `relations`: Presence<[OwnedEntityEdge]>
+public struct RecognizeEntities: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
+  public let `entities`: [Entity]
+  public let `relations`: Presence<[EntityEdge]>
   public init(
-    extensions: [String: JSONValue] = [:], `entities`: [OwnedEntity],
-    `relations`: Presence<[OwnedEntityEdge]> = .absent
+    extensions: [String: DataValue] = [:], `entities`: [Entity],
+    `relations`: Presence<[EntityEdge]> = .absent
   ) {
     self.extensions = extensions
     self.`entities` = `entities`
     self.`relations` = `relations`
   }
-  public static func read(_ json: JSONValue) throws -> OwnedRecognizeEntities {
+  static func read(_ json: DataValue) throws -> RecognizeEntities {
     let object = try jsonObject(json)
     let known: Set<String> = ["entities", "relations"]
     var value = Self(
       extensions: object.filter { !known.contains($0.key) },
-      entities: try [OwnedEntity].read(jsonRequired(object, "entities")),
-      relations: try readPresence(object, "relations", [OwnedEntityEdge].self))
+      entities: try [Entity].read(jsonRequired(object, "entities")),
+      relations: try readPresence(object, "relations", [EntityEdge].self))
     value._sourceJSON = json
     return value
   }
-  public var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = ["entities", "relations"]
     var object = extensions.filter { !known.contains($0.key) }
@@ -5239,30 +5122,29 @@ public struct OwnedRecognizeEntities: JSONRepresentable {
     return .object(object)
   }
 }
-public struct OwnedRecognizeModeProposals: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
-  public let `mode`: OwnedBoundaryMode
-  public let `proposals`: [OwnedBoundaryProposal]
+public struct RecognizeModeProposals: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
+  public let `mode`: BoundaryMode
+  public let `proposals`: [BoundaryProposal]
   public init(
-    extensions: [String: JSONValue] = [:], `mode`: OwnedBoundaryMode,
-    `proposals`: [OwnedBoundaryProposal]
+    extensions: [String: DataValue] = [:], `mode`: BoundaryMode, `proposals`: [BoundaryProposal]
   ) {
     self.extensions = extensions
     self.`mode` = `mode`
     self.`proposals` = `proposals`
   }
-  public static func read(_ json: JSONValue) throws -> OwnedRecognizeModeProposals {
+  static func read(_ json: DataValue) throws -> RecognizeModeProposals {
     let object = try jsonObject(json)
     let known: Set<String> = ["mode", "proposals"]
     var value = Self(
       extensions: object.filter { !known.contains($0.key) },
-      mode: try OwnedBoundaryMode.read(jsonRequired(object, "mode")),
-      proposals: try [OwnedBoundaryProposal].read(jsonRequired(object, "proposals")))
+      mode: try BoundaryMode.read(jsonRequired(object, "mode")),
+      proposals: try [BoundaryProposal].read(jsonRequired(object, "proposals")))
     value._sourceJSON = json
     return value
   }
-  public var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = ["mode", "proposals"]
     var object = extensions.filter { !known.contains($0.key) }
@@ -5271,17 +5153,17 @@ public struct OwnedRecognizeModeProposals: JSONRepresentable {
     return .object(object)
   }
 }
-public struct OwnedRelateFields: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
+public struct ReceiptRelateFields: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
   public let `kind`: String
   public let `name`: String
-  public init(extensions: [String: JSONValue] = [:], `kind`: String, `name`: String) {
+  public init(extensions: [String: DataValue] = [:], `kind`: String, `name`: String) {
     self.extensions = extensions
     self.`kind` = `kind`
     self.`name` = `name`
   }
-  public static func read(_ json: JSONValue) throws -> OwnedRelateFields {
+  static func read(_ json: DataValue) throws -> ReceiptRelateFields {
     let object = try jsonObject(json)
     let known: Set<String> = ["kind", "name"]
     var value = Self(
@@ -5291,7 +5173,7 @@ public struct OwnedRelateFields: JSONRepresentable {
     value._sourceJSON = json
     return value
   }
-  public var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = ["kind", "name"]
     var object = extensions.filter { !known.contains($0.key) }
@@ -5300,31 +5182,30 @@ public struct OwnedRelateFields: JSONRepresentable {
     return .object(object)
   }
 }
-public struct OwnedRelateQuestionDocument: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
-  public let `batch`: Presence<OwnedBatch>
-  public let `contextSchema`: Presence<OwnedInputDeclaration>
-  public let `fields`: OwnedRelateFields?
-  public let `itemSchema`: Presence<OwnedInputDeclaration>
-  public let `labelDetails`: Presence<[OwnedLabel]>
+public struct RelateQuestionDocument: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
+  public let `batch`: Presence<ReceiptBatch>
+  public let `contextSchema`: Presence<InputDeclaration>
+  public let `fields`: ReceiptRelateFields?
+  public let `itemSchema`: Presence<InputDeclaration>
+  public let `labelDetails`: Presence<[Label]>
   public let `model`: Presence<String>
-  public let `name`: Presence<OwnedQuestionName>
+  public let `name`: Presence<ReceiptQuestionName>
   public let `on`: Presence<[String]>
   public let `profile`: Presence<String>
-  public let `relations`: [OwnedRelationRule]
-  public let `threshold`: OwnedThreshold
+  public let `relations`: [RelationRule]
+  public let `threshold`: ReceiptThreshold
   public let `verb`: String
-  public let `wordingVersion`: Presence<OwnedWordingVersion>
+  public let `wordingVersion`: Presence<WordingVersion>
   public init(
-    extensions: [String: JSONValue] = [:], `batch`: Presence<OwnedBatch> = .absent,
-    `contextSchema`: Presence<OwnedInputDeclaration> = .absent, `fields`: OwnedRelateFields?,
-    `itemSchema`: Presence<OwnedInputDeclaration> = .absent,
-    `labelDetails`: Presence<[OwnedLabel]> = .absent, `model`: Presence<String> = .absent,
-    `name`: Presence<OwnedQuestionName> = .absent, `on`: Presence<[String]> = .absent,
-    `profile`: Presence<String> = .absent, `relations`: [OwnedRelationRule],
-    `threshold`: OwnedThreshold, `verb`: String = "relate",
-    `wordingVersion`: Presence<OwnedWordingVersion> = .absent
+    extensions: [String: DataValue] = [:], `batch`: Presence<ReceiptBatch> = .absent,
+    `contextSchema`: Presence<InputDeclaration> = .absent, `fields`: ReceiptRelateFields?,
+    `itemSchema`: Presence<InputDeclaration> = .absent, `labelDetails`: Presence<[Label]> = .absent,
+    `model`: Presence<String> = .absent, `name`: Presence<ReceiptQuestionName> = .absent,
+    `on`: Presence<[String]> = .absent, `profile`: Presence<String> = .absent,
+    `relations`: [RelationRule], `threshold`: ReceiptThreshold, `verb`: String = "relate",
+    `wordingVersion`: Presence<WordingVersion> = .absent
   ) {
     self.extensions = extensions
     self.`batch` = `batch`
@@ -5341,7 +5222,7 @@ public struct OwnedRelateQuestionDocument: JSONRepresentable {
     self.`verb` = `verb`
     self.`wordingVersion` = `wordingVersion`
   }
-  public static func read(_ json: JSONValue) throws -> OwnedRelateQuestionDocument {
+  static func read(_ json: DataValue) throws -> RelateQuestionDocument {
     let object = try jsonObject(json)
     let known: Set<String> = [
       "batch", "context_schema", "fields", "item_schema", "label_details", "model", "name", "on",
@@ -5349,23 +5230,23 @@ public struct OwnedRelateQuestionDocument: JSONRepresentable {
     ]
     var value = Self(
       extensions: object.filter { !known.contains($0.key) },
-      batch: try readPresence(object, "batch", OwnedBatch.self),
-      contextSchema: try readPresence(object, "context_schema", OwnedInputDeclaration.self),
-      fields: try OwnedRelateFields?.read(jsonRequired(object, "fields")),
-      itemSchema: try readPresence(object, "item_schema", OwnedInputDeclaration.self),
-      labelDetails: try readPresence(object, "label_details", [OwnedLabel].self),
+      batch: try readPresence(object, "batch", ReceiptBatch.self),
+      contextSchema: try readPresence(object, "context_schema", InputDeclaration.self),
+      fields: try ReceiptRelateFields?.read(jsonRequired(object, "fields")),
+      itemSchema: try readPresence(object, "item_schema", InputDeclaration.self),
+      labelDetails: try readPresence(object, "label_details", [Label].self),
       model: try readPresence(object, "model", String.self),
-      name: try readPresence(object, "name", OwnedQuestionName.self),
+      name: try readPresence(object, "name", ReceiptQuestionName.self),
       on: try readPresence(object, "on", [String].self),
       profile: try readPresence(object, "profile", String.self),
-      relations: try [OwnedRelationRule].read(jsonRequired(object, "relations")),
-      threshold: try OwnedThreshold.read(jsonRequired(object, "threshold")),
+      relations: try [RelationRule].read(jsonRequired(object, "relations")),
+      threshold: try ReceiptThreshold.read(jsonRequired(object, "threshold")),
       verb: try String.read(jsonRequired(object, "verb")),
-      wordingVersion: try readPresence(object, "wording_version", OwnedWordingVersion.self))
+      wordingVersion: try readPresence(object, "wording_version", WordingVersion.self))
     value._sourceJSON = json
     return value
   }
-  public var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = [
       "batch", "context_schema", "fields", "item_schema", "label_details", "model", "name", "on",
@@ -5388,17 +5269,17 @@ public struct OwnedRelateQuestionDocument: JSONRepresentable {
     return .object(object)
   }
 }
-public struct OwnedRelatedEntity: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
+public struct RelatedEntity: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
   public let `kind`: String
   public let `name`: String
-  public init(extensions: [String: JSONValue] = [:], `kind`: String, `name`: String) {
+  public init(extensions: [String: DataValue] = [:], `kind`: String, `name`: String) {
     self.extensions = extensions
     self.`kind` = `kind`
     self.`name` = `name`
   }
-  public static func read(_ json: JSONValue) throws -> OwnedRelatedEntity {
+  static func read(_ json: DataValue) throws -> RelatedEntity {
     let object = try jsonObject(json)
     let known: Set<String> = ["kind", "name"]
     var value = Self(
@@ -5408,7 +5289,7 @@ public struct OwnedRelatedEntity: JSONRepresentable {
     value._sourceJSON = json
     return value
   }
-  public var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = ["kind", "name"]
     var object = extensions.filter { !known.contains($0.key) }
@@ -5417,18 +5298,18 @@ public struct OwnedRelatedEntity: JSONRepresentable {
     return .object(object)
   }
 }
-public struct OwnedRelatedEntityEdge: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
+public struct RelatedEntityEdge: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
   public let `either`: Presence<Bool>
   public let `probability`: Double
   public let `relation`: String
-  public let `source`: OwnedRelationEndpoint
-  public let `target`: OwnedRelationEndpoint
+  public let `source`: RelationEndpoint
+  public let `target`: RelationEndpoint
   public init(
-    extensions: [String: JSONValue] = [:], `either`: Presence<Bool> = .absent,
-    `probability`: Double, `relation`: String, `source`: OwnedRelationEndpoint,
-    `target`: OwnedRelationEndpoint
+    extensions: [String: DataValue] = [:], `either`: Presence<Bool> = .absent,
+    `probability`: Double, `relation`: String, `source`: RelationEndpoint,
+    `target`: RelationEndpoint
   ) {
     self.extensions = extensions
     self.`either` = `either`
@@ -5437,7 +5318,7 @@ public struct OwnedRelatedEntityEdge: JSONRepresentable {
     self.`source` = `source`
     self.`target` = `target`
   }
-  public static func read(_ json: JSONValue) throws -> OwnedRelatedEntityEdge {
+  static func read(_ json: DataValue) throws -> RelatedEntityEdge {
     let object = try jsonObject(json)
     let known: Set<String> = ["either", "probability", "relation", "source", "target"]
     var value = Self(
@@ -5445,12 +5326,12 @@ public struct OwnedRelatedEntityEdge: JSONRepresentable {
       either: try readPresence(object, "either", Bool.self),
       probability: try Double.read(jsonRequired(object, "probability")),
       relation: try String.read(jsonRequired(object, "relation")),
-      source: try OwnedRelationEndpoint.read(jsonRequired(object, "source")),
-      target: try OwnedRelationEndpoint.read(jsonRequired(object, "target")))
+      source: try RelationEndpoint.read(jsonRequired(object, "source")),
+      target: try RelationEndpoint.read(jsonRequired(object, "target")))
     value._sourceJSON = json
     return value
   }
-  public var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = ["either", "probability", "relation", "source", "target"]
     var object = extensions.filter { !known.contains($0.key) }
@@ -5462,23 +5343,23 @@ public struct OwnedRelatedEntityEdge: JSONRepresentable {
     return .object(object)
   }
   public func sourceName() throws -> Presence<String> {
-    switch try readPresence(jsonObject(self.json), "source", JSONValue.self) {
+    switch try readPresence(jsonObject(self.json), "source", DataValue.self) {
     case .absent: return .absent
     case .null: return .null
     case .value(let object): return try readPresence(jsonObject(object), "name", String.self)
     }
   }
   public func targetName() throws -> Presence<String> {
-    switch try readPresence(jsonObject(self.json), "target", JSONValue.self) {
+    switch try readPresence(jsonObject(self.json), "target", DataValue.self) {
     case .absent: return .absent
     case .null: return .null
     case .value(let object): return try readPresence(jsonObject(object), "name", String.self)
     }
   }
 }
-public struct OwnedRelationRule: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
+public struct RelationRule: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
   public let `either`: Bool
   public let `name`: String
   public let `reads`: String
@@ -5486,7 +5367,7 @@ public struct OwnedRelationRule: JSONRepresentable {
   public let `source`: String
   public let `target`: String
   public init(
-    extensions: [String: JSONValue] = [:], `either`: Bool, `name`: String, `reads`: String,
+    extensions: [String: DataValue] = [:], `either`: Bool, `name`: String, `reads`: String,
     `single`: Presence<Bool> = .absent, `source`: String, `target`: String
   ) {
     self.extensions = extensions
@@ -5497,7 +5378,7 @@ public struct OwnedRelationRule: JSONRepresentable {
     self.`source` = `source`
     self.`target` = `target`
   }
-  public static func read(_ json: JSONValue) throws -> OwnedRelationRule {
+  static func read(_ json: DataValue) throws -> RelationRule {
     let object = try jsonObject(json)
     let known: Set<String> = ["either", "name", "reads", "single", "source", "target"]
     var value = Self(
@@ -5511,7 +5392,7 @@ public struct OwnedRelationRule: JSONRepresentable {
     value._sourceJSON = json
     return value
   }
-  public var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = ["either", "name", "reads", "single", "source", "target"]
     var object = extensions.filter { !known.contains($0.key) }
@@ -5524,28 +5405,27 @@ public struct OwnedRelationRule: JSONRepresentable {
     return .object(object)
   }
 }
-public struct OwnedSessionAnnotation: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
+public struct SessionAnnotation: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
   public let `name`: String
-  public let `value`: OwnedAnnotationValue
-  public init(extensions: [String: JSONValue] = [:], `name`: String, `value`: OwnedAnnotationValue)
-  {
+  public let `value`: AnnotationValue
+  public init(extensions: [String: DataValue] = [:], `name`: String, `value`: AnnotationValue) {
     self.extensions = extensions
     self.`name` = `name`
     self.`value` = `value`
   }
-  public static func read(_ json: JSONValue) throws -> OwnedSessionAnnotation {
+  static func read(_ json: DataValue) throws -> SessionAnnotation {
     let object = try jsonObject(json)
     let known: Set<String> = ["name", "value"]
     var value = Self(
       extensions: object.filter { !known.contains($0.key) },
       name: try String.read(jsonRequired(object, "name")),
-      value: try OwnedAnnotationValue.read(jsonRequired(object, "value")))
+      value: try AnnotationValue.read(jsonRequired(object, "value")))
     value._sourceJSON = json
     return value
   }
-  public var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = ["name", "value"]
     var object = extensions.filter { !known.contains($0.key) }
@@ -5554,28 +5434,27 @@ public struct OwnedSessionAnnotation: JSONRepresentable {
     return .object(object)
   }
 }
-public struct OwnedSessionInputSource: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
+public struct SessionInputSource: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
   public let `index`: UInt64
-  public let `source`: OwnedPhysicalSource
-  public init(extensions: [String: JSONValue] = [:], `index`: UInt64, `source`: OwnedPhysicalSource)
-  {
+  public let `source`: PhysicalSource
+  public init(extensions: [String: DataValue] = [:], `index`: UInt64, `source`: PhysicalSource) {
     self.extensions = extensions
     self.`index` = `index`
     self.`source` = `source`
   }
-  public static func read(_ json: JSONValue) throws -> OwnedSessionInputSource {
+  static func read(_ json: DataValue) throws -> SessionInputSource {
     let object = try jsonObject(json)
     let known: Set<String> = ["index", "source"]
     var value = Self(
       extensions: object.filter { !known.contains($0.key) },
       index: try UInt64.read(jsonRequired(object, "index")),
-      source: try OwnedPhysicalSource.read(jsonRequired(object, "source")))
+      source: try PhysicalSource.read(jsonRequired(object, "source")))
     value._sourceJSON = json
     return value
   }
-  public var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = ["index", "source"]
     var object = extensions.filter { !known.contains($0.key) }
@@ -5584,26 +5463,24 @@ public struct OwnedSessionInputSource: JSONRepresentable {
     return .object(object)
   }
 }
-public indirect enum OwnedSessionJudgment: JSONRepresentable {
-  case `decision`(OwnedSessionJudgmentDecision)
-  case `choice`(OwnedSessionJudgmentChoice)
-  case `score`(OwnedSessionJudgmentScore)
-  case `tags`(OwnedSessionJudgmentTags)
-  public static func read(_ json: JSONValue) throws -> OwnedSessionJudgment {
+public indirect enum SessionJudgment: ValueRepresentable {
+  case `decision`(SessionJudgmentDecision)
+  case `choice`(SessionJudgmentChoice)
+  case `score`(SessionJudgmentScore)
+  case `tags`(SessionJudgmentTags)
+  static func read(_ json: DataValue) throws -> SessionJudgment {
     let object = try jsonObject(json)
     if object["kind"] == .string("decision") {
-      return .`decision`(try OwnedSessionJudgmentDecision.read(json))
+      return .`decision`(try SessionJudgmentDecision.read(json))
     }
     if object["kind"] == .string("choice") {
-      return .`choice`(try OwnedSessionJudgmentChoice.read(json))
+      return .`choice`(try SessionJudgmentChoice.read(json))
     }
-    if object["kind"] == .string("score") {
-      return .`score`(try OwnedSessionJudgmentScore.read(json))
-    }
-    if object["kind"] == .string("tags") { return .`tags`(try OwnedSessionJudgmentTags.read(json)) }
-    throw JSONConversionError("Unknown OwnedSessionJudgment alternative")
+    if object["kind"] == .string("score") { return .`score`(try SessionJudgmentScore.read(json)) }
+    if object["kind"] == .string("tags") { return .`tags`(try SessionJudgmentTags.read(json)) }
+    throw ValueConversionError("Unknown SessionJudgment alternative")
   }
-  public var json: JSONValue {
+  var json: DataValue {
     switch self {
     case .`decision`(let value): return value.json
     case .`choice`(let value): return value.json
@@ -5612,30 +5489,27 @@ public indirect enum OwnedSessionJudgment: JSONRepresentable {
     }
   }
 }
-public struct OwnedSessionJudgmentChoice: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
+public struct SessionJudgmentChoice: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
   public let `kind`: String
-  public let `value`: OwnedSessionJudgmentChoiceValue
-  public init(
-    extensions: [String: JSONValue] = [:], `kind`: String = "choice",
-    `value`: OwnedSessionJudgmentChoiceValue
-  ) {
+  public let `value`: String?
+  public init(extensions: [String: DataValue] = [:], `kind`: String = "choice", `value`: String?) {
     self.extensions = extensions
     self.`kind` = `kind`
     self.`value` = `value`
   }
-  public static func read(_ json: JSONValue) throws -> OwnedSessionJudgmentChoice {
+  static func read(_ json: DataValue) throws -> SessionJudgmentChoice {
     let object = try jsonObject(json)
     let known: Set<String> = ["kind", "value"]
     var value = Self(
       extensions: object.filter { !known.contains($0.key) },
       kind: try String.read(jsonRequired(object, "kind")),
-      value: try OwnedSessionJudgmentChoiceValue.read(jsonRequired(object, "value")))
+      value: try String?.read(jsonRequired(object, "value")))
     value._sourceJSON = json
     return value
   }
-  public var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = ["kind", "value"]
     var object = extensions.filter { !known.contains($0.key) }
@@ -5644,45 +5518,27 @@ public struct OwnedSessionJudgmentChoice: JSONRepresentable {
     return .object(object)
   }
 }
-public indirect enum OwnedSessionJudgmentChoiceValue: JSONRepresentable {
-  case alternative0(String)
-  case alternative1(JSONValue)
-  public static func read(_ json: JSONValue) throws -> OwnedSessionJudgmentChoiceValue {
-    if let value = try? String.read(json) { return .alternative0(value) }
-    if json == .null { return .alternative1(.null) }
-    throw JSONConversionError("Unknown OwnedSessionJudgmentChoiceValue value")
-  }
-  public var json: JSONValue {
-    switch self {
-    case .alternative0(let value): return value.json
-    case .alternative1(let value): return value.json
-    }
-  }
-}
-public struct OwnedSessionJudgmentDecision: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
+public struct SessionJudgmentDecision: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
   public let `kind`: String
-  public let `value`: OwnedSessionJudgmentDecisionValue
-  public init(
-    extensions: [String: JSONValue] = [:], `kind`: String = "decision",
-    `value`: OwnedSessionJudgmentDecisionValue
-  ) {
+  public let `value`: Bool?
+  public init(extensions: [String: DataValue] = [:], `kind`: String = "decision", `value`: Bool?) {
     self.extensions = extensions
     self.`kind` = `kind`
     self.`value` = `value`
   }
-  public static func read(_ json: JSONValue) throws -> OwnedSessionJudgmentDecision {
+  static func read(_ json: DataValue) throws -> SessionJudgmentDecision {
     let object = try jsonObject(json)
     let known: Set<String> = ["kind", "value"]
     var value = Self(
       extensions: object.filter { !known.contains($0.key) },
       kind: try String.read(jsonRequired(object, "kind")),
-      value: try OwnedSessionJudgmentDecisionValue.read(jsonRequired(object, "value")))
+      value: try Bool?.read(jsonRequired(object, "value")))
     value._sourceJSON = json
     return value
   }
-  public var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = ["kind", "value"]
     var object = extensions.filter { !known.contains($0.key) }
@@ -5691,32 +5547,17 @@ public struct OwnedSessionJudgmentDecision: JSONRepresentable {
     return .object(object)
   }
 }
-public indirect enum OwnedSessionJudgmentDecisionValue: JSONRepresentable {
-  case alternative0(Bool)
-  case alternative1(JSONValue)
-  public static func read(_ json: JSONValue) throws -> OwnedSessionJudgmentDecisionValue {
-    if let value = try? Bool.read(json) { return .alternative0(value) }
-    if json == .null { return .alternative1(.null) }
-    throw JSONConversionError("Unknown OwnedSessionJudgmentDecisionValue value")
-  }
-  public var json: JSONValue {
-    switch self {
-    case .alternative0(let value): return value.json
-    case .alternative1(let value): return value.json
-    }
-  }
-}
-public struct OwnedSessionJudgmentScore: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
+public struct SessionJudgmentScore: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
   public let `kind`: String
   public let `value`: Double
-  public init(extensions: [String: JSONValue] = [:], `kind`: String = "score", `value`: Double) {
+  public init(extensions: [String: DataValue] = [:], `kind`: String = "score", `value`: Double) {
     self.extensions = extensions
     self.`kind` = `kind`
     self.`value` = `value`
   }
-  public static func read(_ json: JSONValue) throws -> OwnedSessionJudgmentScore {
+  static func read(_ json: DataValue) throws -> SessionJudgmentScore {
     let object = try jsonObject(json)
     let known: Set<String> = ["kind", "value"]
     var value = Self(
@@ -5726,7 +5567,7 @@ public struct OwnedSessionJudgmentScore: JSONRepresentable {
     value._sourceJSON = json
     return value
   }
-  public var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = ["kind", "value"]
     var object = extensions.filter { !known.contains($0.key) }
@@ -5735,17 +5576,17 @@ public struct OwnedSessionJudgmentScore: JSONRepresentable {
     return .object(object)
   }
 }
-public struct OwnedSessionJudgmentTags: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
+public struct SessionJudgmentTags: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
   public let `kind`: String
   public let `value`: [String]
-  public init(extensions: [String: JSONValue] = [:], `kind`: String = "tags", `value`: [String]) {
+  public init(extensions: [String: DataValue] = [:], `kind`: String = "tags", `value`: [String]) {
     self.extensions = extensions
     self.`kind` = `kind`
     self.`value` = `value`
   }
-  public static func read(_ json: JSONValue) throws -> OwnedSessionJudgmentTags {
+  static func read(_ json: DataValue) throws -> SessionJudgmentTags {
     let object = try jsonObject(json)
     let known: Set<String> = ["kind", "value"]
     var value = Self(
@@ -5755,7 +5596,7 @@ public struct OwnedSessionJudgmentTags: JSONRepresentable {
     value._sourceJSON = json
     return value
   }
-  public var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = ["kind", "value"]
     var object = extensions.filter { !known.contains($0.key) }
@@ -5764,17 +5605,17 @@ public struct OwnedSessionJudgmentTags: JSONRepresentable {
     return .object(object)
   }
 }
-public struct OwnedSessionNamedProbability: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
+public struct SessionNamedProbability: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
   public let `name`: String
   public let `probability`: Double
-  public init(extensions: [String: JSONValue] = [:], `name`: String, `probability`: Double) {
+  public init(extensions: [String: DataValue] = [:], `name`: String, `probability`: Double) {
     self.extensions = extensions
     self.`name` = `name`
     self.`probability` = `probability`
   }
-  public static func read(_ json: JSONValue) throws -> OwnedSessionNamedProbability {
+  static func read(_ json: DataValue) throws -> SessionNamedProbability {
     let object = try jsonObject(json)
     let known: Set<String> = ["name", "probability"]
     var value = Self(
@@ -5784,7 +5625,7 @@ public struct OwnedSessionNamedProbability: JSONRepresentable {
     value._sourceJSON = json
     return value
   }
-  public var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = ["name", "probability"]
     var object = extensions.filter { !known.contains($0.key) }
@@ -5793,35 +5634,35 @@ public struct OwnedSessionNamedProbability: JSONRepresentable {
     return .object(object)
   }
 }
-public indirect enum OwnedSessionObservation: JSONRepresentable {
-  case `question`(OwnedSessionObservationQuestion)
-  case `row`(OwnedSessionObservationRow)
-  public static func read(_ json: JSONValue) throws -> OwnedSessionObservation {
+public indirect enum SessionObservation: ValueRepresentable {
+  case `question`(SessionObservationQuestion)
+  case `row`(SessionObservationRow)
+  static func read(_ json: DataValue) throws -> SessionObservation {
     let object = try jsonObject(json)
     if object["kind"] == .string("question") {
-      return .`question`(try OwnedSessionObservationQuestion.read(json))
+      return .`question`(try SessionObservationQuestion.read(json))
     }
-    if object["kind"] == .string("row") { return .`row`(try OwnedSessionObservationRow.read(json)) }
-    throw JSONConversionError("Unknown OwnedSessionObservation alternative")
+    if object["kind"] == .string("row") { return .`row`(try SessionObservationRow.read(json)) }
+    throw ValueConversionError("Unknown SessionObservation alternative")
   }
-  public var json: JSONValue {
+  var json: DataValue {
     switch self {
     case .`question`(let value): return value.json
     case .`row`(let value): return value.json
     }
   }
 }
-public struct OwnedSessionObservationQuestion: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
-  public let `detail`: OwnedSessionQuestionDetail
+public struct SessionObservationQuestion: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
+  public let `detail`: SessionQuestionDetail
   public let `index`: UInt64
   public let `kind`: String
   public let `member`: Presence<String>
   public let `position`: UInt64
   public let `stage`: Presence<String>
   public init(
-    extensions: [String: JSONValue] = [:], `detail`: OwnedSessionQuestionDetail, `index`: UInt64,
+    extensions: [String: DataValue] = [:], `detail`: SessionQuestionDetail, `index`: UInt64,
     `kind`: String = "question", `member`: Presence<String> = .absent, `position`: UInt64,
     `stage`: Presence<String> = .absent
   ) {
@@ -5833,12 +5674,12 @@ public struct OwnedSessionObservationQuestion: JSONRepresentable {
     self.`position` = `position`
     self.`stage` = `stage`
   }
-  public static func read(_ json: JSONValue) throws -> OwnedSessionObservationQuestion {
+  static func read(_ json: DataValue) throws -> SessionObservationQuestion {
     let object = try jsonObject(json)
     let known: Set<String> = ["detail", "index", "kind", "member", "position", "stage"]
     var value = Self(
       extensions: object.filter { !known.contains($0.key) },
-      detail: try OwnedSessionQuestionDetail.read(jsonRequired(object, "detail")),
+      detail: try SessionQuestionDetail.read(jsonRequired(object, "detail")),
       index: try UInt64.read(jsonRequired(object, "index")),
       kind: try String.read(jsonRequired(object, "kind")),
       member: try readPresence(object, "member", String.self),
@@ -5847,7 +5688,7 @@ public struct OwnedSessionObservationQuestion: JSONRepresentable {
     value._sourceJSON = json
     return value
   }
-  public var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = ["detail", "index", "kind", "member", "position", "stage"]
     var object = extensions.filter { !known.contains($0.key) }
@@ -5860,33 +5701,33 @@ public struct OwnedSessionObservationQuestion: JSONRepresentable {
     return .object(object)
   }
 }
-public struct OwnedSessionObservationRow: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
+public struct SessionObservationRow: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
   public let `index`: UInt64
   public let `kind`: String
-  public let `value`: OwnedSessionObservedRow
+  public let `value`: SessionObservedRow
   public init(
-    extensions: [String: JSONValue] = [:], `index`: UInt64, `kind`: String = "row",
-    `value`: OwnedSessionObservedRow
+    extensions: [String: DataValue] = [:], `index`: UInt64, `kind`: String = "row",
+    `value`: SessionObservedRow
   ) {
     self.extensions = extensions
     self.`index` = `index`
     self.`kind` = `kind`
     self.`value` = `value`
   }
-  public static func read(_ json: JSONValue) throws -> OwnedSessionObservationRow {
+  static func read(_ json: DataValue) throws -> SessionObservationRow {
     let object = try jsonObject(json)
     let known: Set<String> = ["index", "kind", "value"]
     var value = Self(
       extensions: object.filter { !known.contains($0.key) },
       index: try UInt64.read(jsonRequired(object, "index")),
       kind: try String.read(jsonRequired(object, "kind")),
-      value: try OwnedSessionObservedRow.read(jsonRequired(object, "value")))
+      value: try SessionObservedRow.read(jsonRequired(object, "value")))
     value._sourceJSON = json
     return value
   }
-  public var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = ["index", "kind", "value"]
     var object = extensions.filter { !known.contains($0.key) }
@@ -5896,32 +5737,30 @@ public struct OwnedSessionObservationRow: JSONRepresentable {
     return .object(object)
   }
 }
-public indirect enum OwnedSessionObservedRow: JSONRepresentable {
-  case `judgment`(OwnedSessionObservedRowJudgment)
-  case `annotated`(OwnedSessionObservedRowAnnotated)
-  case `recognized`(OwnedSessionObservedRowRecognized)
-  case `find`(OwnedSessionObservedRowFind)
-  case `relations`(OwnedSessionObservedRowRelations)
-  public static func read(_ json: JSONValue) throws -> OwnedSessionObservedRow {
+public indirect enum SessionObservedRow: ValueRepresentable {
+  case `judgment`(SessionObservedRowJudgment)
+  case `annotated`(SessionObservedRowAnnotated)
+  case `recognized`(SessionObservedRowRecognized)
+  case `find`(SessionObservedRowFind)
+  case `relations`(SessionObservedRowRelations)
+  static func read(_ json: DataValue) throws -> SessionObservedRow {
     let object = try jsonObject(json)
     if object["kind"] == .string("judgment") {
-      return .`judgment`(try OwnedSessionObservedRowJudgment.read(json))
+      return .`judgment`(try SessionObservedRowJudgment.read(json))
     }
     if object["kind"] == .string("annotated") {
-      return .`annotated`(try OwnedSessionObservedRowAnnotated.read(json))
+      return .`annotated`(try SessionObservedRowAnnotated.read(json))
     }
     if object["kind"] == .string("recognized") {
-      return .`recognized`(try OwnedSessionObservedRowRecognized.read(json))
+      return .`recognized`(try SessionObservedRowRecognized.read(json))
     }
-    if object["kind"] == .string("find") {
-      return .`find`(try OwnedSessionObservedRowFind.read(json))
-    }
+    if object["kind"] == .string("find") { return .`find`(try SessionObservedRowFind.read(json)) }
     if object["kind"] == .string("relations") {
-      return .`relations`(try OwnedSessionObservedRowRelations.read(json))
+      return .`relations`(try SessionObservedRowRelations.read(json))
     }
-    throw JSONConversionError("Unknown OwnedSessionObservedRow alternative")
+    throw ValueConversionError("Unknown SessionObservedRow alternative")
   }
-  public var json: JSONValue {
+  var json: DataValue {
     switch self {
     case .`judgment`(let value): return value.json
     case .`annotated`(let value): return value.json
@@ -5931,30 +5770,30 @@ public indirect enum OwnedSessionObservedRow: JSONRepresentable {
     }
   }
 }
-public struct OwnedSessionObservedRowAnnotated: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
+public struct SessionObservedRowAnnotated: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
   public let `kind`: String
-  public let `value`: [OwnedSessionAnnotation]
+  public let `value`: [SessionAnnotation]
   public init(
-    extensions: [String: JSONValue] = [:], `kind`: String = "annotated",
-    `value`: [OwnedSessionAnnotation]
+    extensions: [String: DataValue] = [:], `kind`: String = "annotated",
+    `value`: [SessionAnnotation]
   ) {
     self.extensions = extensions
     self.`kind` = `kind`
     self.`value` = `value`
   }
-  public static func read(_ json: JSONValue) throws -> OwnedSessionObservedRowAnnotated {
+  static func read(_ json: DataValue) throws -> SessionObservedRowAnnotated {
     let object = try jsonObject(json)
     let known: Set<String> = ["kind", "value"]
     var value = Self(
       extensions: object.filter { !known.contains($0.key) },
       kind: try String.read(jsonRequired(object, "kind")),
-      value: try [OwnedSessionAnnotation].read(jsonRequired(object, "value")))
+      value: try [SessionAnnotation].read(jsonRequired(object, "value")))
     value._sourceJSON = json
     return value
   }
-  public var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = ["kind", "value"]
     var object = extensions.filter { !known.contains($0.key) }
@@ -5963,30 +5802,27 @@ public struct OwnedSessionObservedRowAnnotated: JSONRepresentable {
     return .object(object)
   }
 }
-public struct OwnedSessionObservedRowFind: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
+public struct SessionObservedRowFind: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
   public let `kind`: String
-  public let `value`: OwnedSessionObservedRowFindValue
-  public init(
-    extensions: [String: JSONValue] = [:], `kind`: String = "find",
-    `value`: OwnedSessionObservedRowFindValue
-  ) {
+  public let `value`: UInt64?
+  public init(extensions: [String: DataValue] = [:], `kind`: String = "find", `value`: UInt64?) {
     self.extensions = extensions
     self.`kind` = `kind`
     self.`value` = `value`
   }
-  public static func read(_ json: JSONValue) throws -> OwnedSessionObservedRowFind {
+  static func read(_ json: DataValue) throws -> SessionObservedRowFind {
     let object = try jsonObject(json)
     let known: Set<String> = ["kind", "value"]
     var value = Self(
       extensions: object.filter { !known.contains($0.key) },
       kind: try String.read(jsonRequired(object, "kind")),
-      value: try OwnedSessionObservedRowFindValue.read(jsonRequired(object, "value")))
+      value: try UInt64?.read(jsonRequired(object, "value")))
     value._sourceJSON = json
     return value
   }
-  public var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = ["kind", "value"]
     var object = extensions.filter { !known.contains($0.key) }
@@ -5995,45 +5831,29 @@ public struct OwnedSessionObservedRowFind: JSONRepresentable {
     return .object(object)
   }
 }
-public indirect enum OwnedSessionObservedRowFindValue: JSONRepresentable {
-  case alternative0(UInt64)
-  case alternative1(JSONValue)
-  public static func read(_ json: JSONValue) throws -> OwnedSessionObservedRowFindValue {
-    if let value = try? UInt64.read(json) { return .alternative0(value) }
-    if json == .null { return .alternative1(.null) }
-    throw JSONConversionError("Unknown OwnedSessionObservedRowFindValue value")
-  }
-  public var json: JSONValue {
-    switch self {
-    case .alternative0(let value): return value.json
-    case .alternative1(let value): return value.json
-    }
-  }
-}
-public struct OwnedSessionObservedRowJudgment: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
+public struct SessionObservedRowJudgment: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
   public let `kind`: String
-  public let `value`: OwnedSessionJudgment
+  public let `value`: SessionJudgment
   public init(
-    extensions: [String: JSONValue] = [:], `kind`: String = "judgment",
-    `value`: OwnedSessionJudgment
+    extensions: [String: DataValue] = [:], `kind`: String = "judgment", `value`: SessionJudgment
   ) {
     self.extensions = extensions
     self.`kind` = `kind`
     self.`value` = `value`
   }
-  public static func read(_ json: JSONValue) throws -> OwnedSessionObservedRowJudgment {
+  static func read(_ json: DataValue) throws -> SessionObservedRowJudgment {
     let object = try jsonObject(json)
     let known: Set<String> = ["kind", "value"]
     var value = Self(
       extensions: object.filter { !known.contains($0.key) },
       kind: try String.read(jsonRequired(object, "kind")),
-      value: try OwnedSessionJudgment.read(jsonRequired(object, "value")))
+      value: try SessionJudgment.read(jsonRequired(object, "value")))
     value._sourceJSON = json
     return value
   }
-  public var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = ["kind", "value"]
     var object = extensions.filter { !known.contains($0.key) }
@@ -6042,30 +5862,30 @@ public struct OwnedSessionObservedRowJudgment: JSONRepresentable {
     return .object(object)
   }
 }
-public struct OwnedSessionObservedRowRecognized: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
+public struct SessionObservedRowRecognized: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
   public let `kind`: String
-  public let `value`: OwnedSessionRecognition
+  public let `value`: SessionRecognition
   public init(
-    extensions: [String: JSONValue] = [:], `kind`: String = "recognized",
-    `value`: OwnedSessionRecognition
+    extensions: [String: DataValue] = [:], `kind`: String = "recognized",
+    `value`: SessionRecognition
   ) {
     self.extensions = extensions
     self.`kind` = `kind`
     self.`value` = `value`
   }
-  public static func read(_ json: JSONValue) throws -> OwnedSessionObservedRowRecognized {
+  static func read(_ json: DataValue) throws -> SessionObservedRowRecognized {
     let object = try jsonObject(json)
     let known: Set<String> = ["kind", "value"]
     var value = Self(
       extensions: object.filter { !known.contains($0.key) },
       kind: try String.read(jsonRequired(object, "kind")),
-      value: try OwnedSessionRecognition.read(jsonRequired(object, "value")))
+      value: try SessionRecognition.read(jsonRequired(object, "value")))
     value._sourceJSON = json
     return value
   }
-  public var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = ["kind", "value"]
     var object = extensions.filter { !known.contains($0.key) }
@@ -6074,30 +5894,30 @@ public struct OwnedSessionObservedRowRecognized: JSONRepresentable {
     return .object(object)
   }
 }
-public struct OwnedSessionObservedRowRelations: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
+public struct SessionObservedRowRelations: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
   public let `kind`: String
-  public let `value`: [OwnedSessionRelationEdge]
+  public let `value`: [SessionRelationEdge]
   public init(
-    extensions: [String: JSONValue] = [:], `kind`: String = "relations",
-    `value`: [OwnedSessionRelationEdge]
+    extensions: [String: DataValue] = [:], `kind`: String = "relations",
+    `value`: [SessionRelationEdge]
   ) {
     self.extensions = extensions
     self.`kind` = `kind`
     self.`value` = `value`
   }
-  public static func read(_ json: JSONValue) throws -> OwnedSessionObservedRowRelations {
+  static func read(_ json: DataValue) throws -> SessionObservedRowRelations {
     let object = try jsonObject(json)
     let known: Set<String> = ["kind", "value"]
     var value = Self(
       extensions: object.filter { !known.contains($0.key) },
       kind: try String.read(jsonRequired(object, "kind")),
-      value: try [OwnedSessionRelationEdge].read(jsonRequired(object, "value")))
+      value: try [SessionRelationEdge].read(jsonRequired(object, "value")))
     value._sourceJSON = json
     return value
   }
-  public var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = ["kind", "value"]
     var object = extensions.filter { !known.contains($0.key) }
@@ -6106,84 +5926,84 @@ public struct OwnedSessionObservedRowRelations: JSONRepresentable {
     return .object(object)
   }
 }
-public indirect enum OwnedSessionPacket: JSONRepresentable {
-  case `decideRow`(OwnedSessionPacketDecideRow)
-  case `chooseRow`(OwnedSessionPacketChooseRow)
-  case `tagRow`(OwnedSessionPacketTagRow)
-  case `scoreRow`(OwnedSessionPacketScoreRow)
-  case `filterRow`(OwnedSessionPacketFilterRow)
-  case `annotateRow`(OwnedSessionPacketAnnotateRow)
-  case `decideAggregate`(OwnedSessionPacketDecideAggregate)
-  case `chooseAggregate`(OwnedSessionPacketChooseAggregate)
-  case `tagAggregate`(OwnedSessionPacketTagAggregate)
-  case `scoreAggregate`(OwnedSessionPacketScoreAggregate)
-  case `filterAggregate`(OwnedSessionPacketFilterAggregate)
-  case `rankAggregate`(OwnedSessionPacketRankAggregate)
-  case `findAggregate`(OwnedSessionPacketFindAggregate)
-  case `annotateAggregate`(OwnedSessionPacketAnnotateAggregate)
-  case `recognizeAggregate`(OwnedSessionPacketRecognizeAggregate)
-  case `relateAggregate`(OwnedSessionPacketRelateAggregate)
-  case `observation`(OwnedSessionPacketObservation)
-  case `terminal`(OwnedSessionPacketTerminal)
-  public static func read(_ json: JSONValue) throws -> OwnedSessionPacket {
+public indirect enum SessionPacket: ValueRepresentable {
+  case `decideRow`(SessionPacketDecideRow)
+  case `chooseRow`(SessionPacketChooseRow)
+  case `tagRow`(SessionPacketTagRow)
+  case `scoreRow`(SessionPacketScoreRow)
+  case `filterRow`(SessionPacketFilterRow)
+  case `annotateRow`(SessionPacketAnnotateRow)
+  case `decideAggregate`(SessionPacketDecideAggregate)
+  case `chooseAggregate`(SessionPacketChooseAggregate)
+  case `tagAggregate`(SessionPacketTagAggregate)
+  case `scoreAggregate`(SessionPacketScoreAggregate)
+  case `filterAggregate`(SessionPacketFilterAggregate)
+  case `rankAggregate`(SessionPacketRankAggregate)
+  case `findAggregate`(SessionPacketFindAggregate)
+  case `annotateAggregate`(SessionPacketAnnotateAggregate)
+  case `recognizeAggregate`(SessionPacketRecognizeAggregate)
+  case `relateAggregate`(SessionPacketRelateAggregate)
+  case `observation`(SessionPacketObservation)
+  case `terminal`(SessionPacketTerminal)
+  static func read(_ json: DataValue) throws -> SessionPacket {
     let object = try jsonObject(json)
     if object["function"] == .string("decide") && object["kind"] == .string("row") {
-      return .`decideRow`(try OwnedSessionPacketDecideRow.read(json))
+      return .`decideRow`(try SessionPacketDecideRow.read(json))
     }
     if object["function"] == .string("choose") && object["kind"] == .string("row") {
-      return .`chooseRow`(try OwnedSessionPacketChooseRow.read(json))
+      return .`chooseRow`(try SessionPacketChooseRow.read(json))
     }
     if object["function"] == .string("tag") && object["kind"] == .string("row") {
-      return .`tagRow`(try OwnedSessionPacketTagRow.read(json))
+      return .`tagRow`(try SessionPacketTagRow.read(json))
     }
     if object["function"] == .string("score") && object["kind"] == .string("row") {
-      return .`scoreRow`(try OwnedSessionPacketScoreRow.read(json))
+      return .`scoreRow`(try SessionPacketScoreRow.read(json))
     }
     if object["function"] == .string("filter") && object["kind"] == .string("row") {
-      return .`filterRow`(try OwnedSessionPacketFilterRow.read(json))
+      return .`filterRow`(try SessionPacketFilterRow.read(json))
     }
     if object["function"] == .string("annotate") && object["kind"] == .string("row") {
-      return .`annotateRow`(try OwnedSessionPacketAnnotateRow.read(json))
+      return .`annotateRow`(try SessionPacketAnnotateRow.read(json))
     }
     if object["function"] == .string("decide") && object["kind"] == .string("aggregate") {
-      return .`decideAggregate`(try OwnedSessionPacketDecideAggregate.read(json))
+      return .`decideAggregate`(try SessionPacketDecideAggregate.read(json))
     }
     if object["function"] == .string("choose") && object["kind"] == .string("aggregate") {
-      return .`chooseAggregate`(try OwnedSessionPacketChooseAggregate.read(json))
+      return .`chooseAggregate`(try SessionPacketChooseAggregate.read(json))
     }
     if object["function"] == .string("tag") && object["kind"] == .string("aggregate") {
-      return .`tagAggregate`(try OwnedSessionPacketTagAggregate.read(json))
+      return .`tagAggregate`(try SessionPacketTagAggregate.read(json))
     }
     if object["function"] == .string("score") && object["kind"] == .string("aggregate") {
-      return .`scoreAggregate`(try OwnedSessionPacketScoreAggregate.read(json))
+      return .`scoreAggregate`(try SessionPacketScoreAggregate.read(json))
     }
     if object["function"] == .string("filter") && object["kind"] == .string("aggregate") {
-      return .`filterAggregate`(try OwnedSessionPacketFilterAggregate.read(json))
+      return .`filterAggregate`(try SessionPacketFilterAggregate.read(json))
     }
     if object["function"] == .string("rank") && object["kind"] == .string("aggregate") {
-      return .`rankAggregate`(try OwnedSessionPacketRankAggregate.read(json))
+      return .`rankAggregate`(try SessionPacketRankAggregate.read(json))
     }
     if object["function"] == .string("find") && object["kind"] == .string("aggregate") {
-      return .`findAggregate`(try OwnedSessionPacketFindAggregate.read(json))
+      return .`findAggregate`(try SessionPacketFindAggregate.read(json))
     }
     if object["function"] == .string("annotate") && object["kind"] == .string("aggregate") {
-      return .`annotateAggregate`(try OwnedSessionPacketAnnotateAggregate.read(json))
+      return .`annotateAggregate`(try SessionPacketAnnotateAggregate.read(json))
     }
     if object["function"] == .string("recognize") && object["kind"] == .string("aggregate") {
-      return .`recognizeAggregate`(try OwnedSessionPacketRecognizeAggregate.read(json))
+      return .`recognizeAggregate`(try SessionPacketRecognizeAggregate.read(json))
     }
     if object["function"] == .string("relate") && object["kind"] == .string("aggregate") {
-      return .`relateAggregate`(try OwnedSessionPacketRelateAggregate.read(json))
+      return .`relateAggregate`(try SessionPacketRelateAggregate.read(json))
     }
     if object["kind"] == .string("observation") {
-      return .`observation`(try OwnedSessionPacketObservation.read(json))
+      return .`observation`(try SessionPacketObservation.read(json))
     }
     if object["kind"] == .string("terminal") {
-      return .`terminal`(try OwnedSessionPacketTerminal.read(json))
+      return .`terminal`(try SessionPacketTerminal.read(json))
     }
-    throw JSONConversionError("Unknown OwnedSessionPacket alternative")
+    throw ValueConversionError("Unknown SessionPacket alternative")
   }
-  public var json: JSONValue {
+  var json: DataValue {
     switch self {
     case .`decideRow`(let value): return value.json
     case .`chooseRow`(let value): return value.json
@@ -6206,33 +6026,33 @@ public indirect enum OwnedSessionPacket: JSONRepresentable {
     }
   }
 }
-public struct OwnedSessionPacketAnnotateAggregate: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
+public struct SessionPacketAnnotateAggregate: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
   public let `function`: String
   public let `kind`: String
-  public let `value`: [OwnedAnnotation]
+  public let `value`: [Annotation]
   public init(
-    extensions: [String: JSONValue] = [:], `function`: String = "annotate",
-    `kind`: String = "aggregate", `value`: [OwnedAnnotation]
+    extensions: [String: DataValue] = [:], `function`: String = "annotate",
+    `kind`: String = "aggregate", `value`: [Annotation]
   ) {
     self.extensions = extensions
     self.`function` = `function`
     self.`kind` = `kind`
     self.`value` = `value`
   }
-  public static func read(_ json: JSONValue) throws -> OwnedSessionPacketAnnotateAggregate {
+  static func read(_ json: DataValue) throws -> SessionPacketAnnotateAggregate {
     let object = try jsonObject(json)
     let known: Set<String> = ["function", "kind", "value"]
     var value = Self(
       extensions: object.filter { !known.contains($0.key) },
       function: try String.read(jsonRequired(object, "function")),
       kind: try String.read(jsonRequired(object, "kind")),
-      value: try [OwnedAnnotation].read(jsonRequired(object, "value")))
+      value: try [Annotation].read(jsonRequired(object, "value")))
     value._sourceJSON = json
     return value
   }
-  public var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = ["function", "kind", "value"]
     var object = extensions.filter { !known.contains($0.key) }
@@ -6242,33 +6062,33 @@ public struct OwnedSessionPacketAnnotateAggregate: JSONRepresentable {
     return .object(object)
   }
 }
-public struct OwnedSessionPacketAnnotateRow: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
+public struct SessionPacketAnnotateRow: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
   public let `function`: String
   public let `kind`: String
-  public let `value`: OwnedAnnotation
+  public let `value`: Annotation
   public init(
-    extensions: [String: JSONValue] = [:], `function`: String = "annotate", `kind`: String = "row",
-    `value`: OwnedAnnotation
+    extensions: [String: DataValue] = [:], `function`: String = "annotate", `kind`: String = "row",
+    `value`: Annotation
   ) {
     self.extensions = extensions
     self.`function` = `function`
     self.`kind` = `kind`
     self.`value` = `value`
   }
-  public static func read(_ json: JSONValue) throws -> OwnedSessionPacketAnnotateRow {
+  static func read(_ json: DataValue) throws -> SessionPacketAnnotateRow {
     let object = try jsonObject(json)
     let known: Set<String> = ["function", "kind", "value"]
     var value = Self(
       extensions: object.filter { !known.contains($0.key) },
       function: try String.read(jsonRequired(object, "function")),
       kind: try String.read(jsonRequired(object, "kind")),
-      value: try OwnedAnnotation.read(jsonRequired(object, "value")))
+      value: try Annotation.read(jsonRequired(object, "value")))
     value._sourceJSON = json
     return value
   }
-  public var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = ["function", "kind", "value"]
     var object = extensions.filter { !known.contains($0.key) }
@@ -6278,33 +6098,33 @@ public struct OwnedSessionPacketAnnotateRow: JSONRepresentable {
     return .object(object)
   }
 }
-public struct OwnedSessionPacketChooseAggregate: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
+public struct SessionPacketChooseAggregate: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
   public let `function`: String
   public let `kind`: String
-  public let `value`: [OwnedAtomicNullableString]
+  public let `value`: [AtomicNullableString]
   public init(
-    extensions: [String: JSONValue] = [:], `function`: String = "choose",
-    `kind`: String = "aggregate", `value`: [OwnedAtomicNullableString]
+    extensions: [String: DataValue] = [:], `function`: String = "choose",
+    `kind`: String = "aggregate", `value`: [AtomicNullableString]
   ) {
     self.extensions = extensions
     self.`function` = `function`
     self.`kind` = `kind`
     self.`value` = `value`
   }
-  public static func read(_ json: JSONValue) throws -> OwnedSessionPacketChooseAggregate {
+  static func read(_ json: DataValue) throws -> SessionPacketChooseAggregate {
     let object = try jsonObject(json)
     let known: Set<String> = ["function", "kind", "value"]
     var value = Self(
       extensions: object.filter { !known.contains($0.key) },
       function: try String.read(jsonRequired(object, "function")),
       kind: try String.read(jsonRequired(object, "kind")),
-      value: try [OwnedAtomicNullableString].read(jsonRequired(object, "value")))
+      value: try [AtomicNullableString].read(jsonRequired(object, "value")))
     value._sourceJSON = json
     return value
   }
-  public var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = ["function", "kind", "value"]
     var object = extensions.filter { !known.contains($0.key) }
@@ -6314,33 +6134,33 @@ public struct OwnedSessionPacketChooseAggregate: JSONRepresentable {
     return .object(object)
   }
 }
-public struct OwnedSessionPacketChooseRow: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
+public struct SessionPacketChooseRow: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
   public let `function`: String
   public let `kind`: String
-  public let `value`: OwnedAtomicNullableString
+  public let `value`: AtomicNullableString
   public init(
-    extensions: [String: JSONValue] = [:], `function`: String = "choose", `kind`: String = "row",
-    `value`: OwnedAtomicNullableString
+    extensions: [String: DataValue] = [:], `function`: String = "choose", `kind`: String = "row",
+    `value`: AtomicNullableString
   ) {
     self.extensions = extensions
     self.`function` = `function`
     self.`kind` = `kind`
     self.`value` = `value`
   }
-  public static func read(_ json: JSONValue) throws -> OwnedSessionPacketChooseRow {
+  static func read(_ json: DataValue) throws -> SessionPacketChooseRow {
     let object = try jsonObject(json)
     let known: Set<String> = ["function", "kind", "value"]
     var value = Self(
       extensions: object.filter { !known.contains($0.key) },
       function: try String.read(jsonRequired(object, "function")),
       kind: try String.read(jsonRequired(object, "kind")),
-      value: try OwnedAtomicNullableString.read(jsonRequired(object, "value")))
+      value: try AtomicNullableString.read(jsonRequired(object, "value")))
     value._sourceJSON = json
     return value
   }
-  public var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = ["function", "kind", "value"]
     var object = extensions.filter { !known.contains($0.key) }
@@ -6350,33 +6170,33 @@ public struct OwnedSessionPacketChooseRow: JSONRepresentable {
     return .object(object)
   }
 }
-public struct OwnedSessionPacketDecideAggregate: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
+public struct SessionPacketDecideAggregate: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
   public let `function`: String
   public let `kind`: String
-  public let `value`: [OwnedAtomicDecideValue]
+  public let `value`: [AtomicDecideValue]
   public init(
-    extensions: [String: JSONValue] = [:], `function`: String = "decide",
-    `kind`: String = "aggregate", `value`: [OwnedAtomicDecideValue]
+    extensions: [String: DataValue] = [:], `function`: String = "decide",
+    `kind`: String = "aggregate", `value`: [AtomicDecideValue]
   ) {
     self.extensions = extensions
     self.`function` = `function`
     self.`kind` = `kind`
     self.`value` = `value`
   }
-  public static func read(_ json: JSONValue) throws -> OwnedSessionPacketDecideAggregate {
+  static func read(_ json: DataValue) throws -> SessionPacketDecideAggregate {
     let object = try jsonObject(json)
     let known: Set<String> = ["function", "kind", "value"]
     var value = Self(
       extensions: object.filter { !known.contains($0.key) },
       function: try String.read(jsonRequired(object, "function")),
       kind: try String.read(jsonRequired(object, "kind")),
-      value: try [OwnedAtomicDecideValue].read(jsonRequired(object, "value")))
+      value: try [AtomicDecideValue].read(jsonRequired(object, "value")))
     value._sourceJSON = json
     return value
   }
-  public var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = ["function", "kind", "value"]
     var object = extensions.filter { !known.contains($0.key) }
@@ -6386,33 +6206,33 @@ public struct OwnedSessionPacketDecideAggregate: JSONRepresentable {
     return .object(object)
   }
 }
-public struct OwnedSessionPacketDecideRow: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
+public struct SessionPacketDecideRow: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
   public let `function`: String
   public let `kind`: String
-  public let `value`: OwnedAtomicDecideValue
+  public let `value`: AtomicDecideValue
   public init(
-    extensions: [String: JSONValue] = [:], `function`: String = "decide", `kind`: String = "row",
-    `value`: OwnedAtomicDecideValue
+    extensions: [String: DataValue] = [:], `function`: String = "decide", `kind`: String = "row",
+    `value`: AtomicDecideValue
   ) {
     self.extensions = extensions
     self.`function` = `function`
     self.`kind` = `kind`
     self.`value` = `value`
   }
-  public static func read(_ json: JSONValue) throws -> OwnedSessionPacketDecideRow {
+  static func read(_ json: DataValue) throws -> SessionPacketDecideRow {
     let object = try jsonObject(json)
     let known: Set<String> = ["function", "kind", "value"]
     var value = Self(
       extensions: object.filter { !known.contains($0.key) },
       function: try String.read(jsonRequired(object, "function")),
       kind: try String.read(jsonRequired(object, "kind")),
-      value: try OwnedAtomicDecideValue.read(jsonRequired(object, "value")))
+      value: try AtomicDecideValue.read(jsonRequired(object, "value")))
     value._sourceJSON = json
     return value
   }
-  public var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = ["function", "kind", "value"]
     var object = extensions.filter { !known.contains($0.key) }
@@ -6422,33 +6242,33 @@ public struct OwnedSessionPacketDecideRow: JSONRepresentable {
     return .object(object)
   }
 }
-public struct OwnedSessionPacketFilterAggregate: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
+public struct SessionPacketFilterAggregate: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
   public let `function`: String
   public let `kind`: String
-  public let `value`: [OwnedAtomicBoolean]
+  public let `value`: [AtomicBoolean]
   public init(
-    extensions: [String: JSONValue] = [:], `function`: String = "filter",
-    `kind`: String = "aggregate", `value`: [OwnedAtomicBoolean]
+    extensions: [String: DataValue] = [:], `function`: String = "filter",
+    `kind`: String = "aggregate", `value`: [AtomicBoolean]
   ) {
     self.extensions = extensions
     self.`function` = `function`
     self.`kind` = `kind`
     self.`value` = `value`
   }
-  public static func read(_ json: JSONValue) throws -> OwnedSessionPacketFilterAggregate {
+  static func read(_ json: DataValue) throws -> SessionPacketFilterAggregate {
     let object = try jsonObject(json)
     let known: Set<String> = ["function", "kind", "value"]
     var value = Self(
       extensions: object.filter { !known.contains($0.key) },
       function: try String.read(jsonRequired(object, "function")),
       kind: try String.read(jsonRequired(object, "kind")),
-      value: try [OwnedAtomicBoolean].read(jsonRequired(object, "value")))
+      value: try [AtomicBoolean].read(jsonRequired(object, "value")))
     value._sourceJSON = json
     return value
   }
-  public var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = ["function", "kind", "value"]
     var object = extensions.filter { !known.contains($0.key) }
@@ -6458,33 +6278,33 @@ public struct OwnedSessionPacketFilterAggregate: JSONRepresentable {
     return .object(object)
   }
 }
-public struct OwnedSessionPacketFilterRow: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
+public struct SessionPacketFilterRow: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
   public let `function`: String
   public let `kind`: String
-  public let `value`: OwnedAtomicBoolean
+  public let `value`: AtomicBoolean
   public init(
-    extensions: [String: JSONValue] = [:], `function`: String = "filter", `kind`: String = "row",
-    `value`: OwnedAtomicBoolean
+    extensions: [String: DataValue] = [:], `function`: String = "filter", `kind`: String = "row",
+    `value`: AtomicBoolean
   ) {
     self.extensions = extensions
     self.`function` = `function`
     self.`kind` = `kind`
     self.`value` = `value`
   }
-  public static func read(_ json: JSONValue) throws -> OwnedSessionPacketFilterRow {
+  static func read(_ json: DataValue) throws -> SessionPacketFilterRow {
     let object = try jsonObject(json)
     let known: Set<String> = ["function", "kind", "value"]
     var value = Self(
       extensions: object.filter { !known.contains($0.key) },
       function: try String.read(jsonRequired(object, "function")),
       kind: try String.read(jsonRequired(object, "kind")),
-      value: try OwnedAtomicBoolean.read(jsonRequired(object, "value")))
+      value: try AtomicBoolean.read(jsonRequired(object, "value")))
     value._sourceJSON = json
     return value
   }
-  public var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = ["function", "kind", "value"]
     var object = extensions.filter { !known.contains($0.key) }
@@ -6494,33 +6314,33 @@ public struct OwnedSessionPacketFilterRow: JSONRepresentable {
     return .object(object)
   }
 }
-public struct OwnedSessionPacketFindAggregate: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
+public struct SessionPacketFindAggregate: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
   public let `function`: String
   public let `kind`: String
-  public let `value`: OwnedFind
+  public let `value`: Find
   public init(
-    extensions: [String: JSONValue] = [:], `function`: String = "find",
-    `kind`: String = "aggregate", `value`: OwnedFind
+    extensions: [String: DataValue] = [:], `function`: String = "find",
+    `kind`: String = "aggregate", `value`: Find
   ) {
     self.extensions = extensions
     self.`function` = `function`
     self.`kind` = `kind`
     self.`value` = `value`
   }
-  public static func read(_ json: JSONValue) throws -> OwnedSessionPacketFindAggregate {
+  static func read(_ json: DataValue) throws -> SessionPacketFindAggregate {
     let object = try jsonObject(json)
     let known: Set<String> = ["function", "kind", "value"]
     var value = Self(
       extensions: object.filter { !known.contains($0.key) },
       function: try String.read(jsonRequired(object, "function")),
       kind: try String.read(jsonRequired(object, "kind")),
-      value: try OwnedFind.read(jsonRequired(object, "value")))
+      value: try Find.read(jsonRequired(object, "value")))
     value._sourceJSON = json
     return value
   }
-  public var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = ["function", "kind", "value"]
     var object = extensions.filter { !known.contains($0.key) }
@@ -6530,33 +6350,33 @@ public struct OwnedSessionPacketFindAggregate: JSONRepresentable {
     return .object(object)
   }
 }
-public struct OwnedSessionPacketObservation: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
-  public let `function`: OwnedRequestFunction
+public struct SessionPacketObservation: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
+  public let `function`: ReceiptFunction
   public let `kind`: String
-  public let `value`: OwnedSessionObservation
+  public let `value`: SessionObservation
   public init(
-    extensions: [String: JSONValue] = [:], `function`: OwnedRequestFunction,
-    `kind`: String = "observation", `value`: OwnedSessionObservation
+    extensions: [String: DataValue] = [:], `function`: ReceiptFunction,
+    `kind`: String = "observation", `value`: SessionObservation
   ) {
     self.extensions = extensions
     self.`function` = `function`
     self.`kind` = `kind`
     self.`value` = `value`
   }
-  public static func read(_ json: JSONValue) throws -> OwnedSessionPacketObservation {
+  static func read(_ json: DataValue) throws -> SessionPacketObservation {
     let object = try jsonObject(json)
     let known: Set<String> = ["function", "kind", "value"]
     var value = Self(
       extensions: object.filter { !known.contains($0.key) },
-      function: try OwnedRequestFunction.read(jsonRequired(object, "function")),
+      function: try ReceiptFunction.read(jsonRequired(object, "function")),
       kind: try String.read(jsonRequired(object, "kind")),
-      value: try OwnedSessionObservation.read(jsonRequired(object, "value")))
+      value: try SessionObservation.read(jsonRequired(object, "value")))
     value._sourceJSON = json
     return value
   }
-  public var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = ["function", "kind", "value"]
     var object = extensions.filter { !known.contains($0.key) }
@@ -6566,33 +6386,33 @@ public struct OwnedSessionPacketObservation: JSONRepresentable {
     return .object(object)
   }
 }
-public struct OwnedSessionPacketRankAggregate: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
+public struct SessionPacketRankAggregate: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
   public let `function`: String
   public let `kind`: String
-  public let `value`: [OwnedAtomicNonZeroUsize]
+  public let `value`: [AtomicNonZeroUsize]
   public init(
-    extensions: [String: JSONValue] = [:], `function`: String = "rank",
-    `kind`: String = "aggregate", `value`: [OwnedAtomicNonZeroUsize]
+    extensions: [String: DataValue] = [:], `function`: String = "rank",
+    `kind`: String = "aggregate", `value`: [AtomicNonZeroUsize]
   ) {
     self.extensions = extensions
     self.`function` = `function`
     self.`kind` = `kind`
     self.`value` = `value`
   }
-  public static func read(_ json: JSONValue) throws -> OwnedSessionPacketRankAggregate {
+  static func read(_ json: DataValue) throws -> SessionPacketRankAggregate {
     let object = try jsonObject(json)
     let known: Set<String> = ["function", "kind", "value"]
     var value = Self(
       extensions: object.filter { !known.contains($0.key) },
       function: try String.read(jsonRequired(object, "function")),
       kind: try String.read(jsonRequired(object, "kind")),
-      value: try [OwnedAtomicNonZeroUsize].read(jsonRequired(object, "value")))
+      value: try [AtomicNonZeroUsize].read(jsonRequired(object, "value")))
     value._sourceJSON = json
     return value
   }
-  public var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = ["function", "kind", "value"]
     var object = extensions.filter { !known.contains($0.key) }
@@ -6602,33 +6422,33 @@ public struct OwnedSessionPacketRankAggregate: JSONRepresentable {
     return .object(object)
   }
 }
-public struct OwnedSessionPacketRecognizeAggregate: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
+public struct SessionPacketRecognizeAggregate: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
   public let `function`: String
   public let `kind`: String
-  public let `value`: [OwnedRecognition]
+  public let `value`: [Recognition]
   public init(
-    extensions: [String: JSONValue] = [:], `function`: String = "recognize",
-    `kind`: String = "aggregate", `value`: [OwnedRecognition]
+    extensions: [String: DataValue] = [:], `function`: String = "recognize",
+    `kind`: String = "aggregate", `value`: [Recognition]
   ) {
     self.extensions = extensions
     self.`function` = `function`
     self.`kind` = `kind`
     self.`value` = `value`
   }
-  public static func read(_ json: JSONValue) throws -> OwnedSessionPacketRecognizeAggregate {
+  static func read(_ json: DataValue) throws -> SessionPacketRecognizeAggregate {
     let object = try jsonObject(json)
     let known: Set<String> = ["function", "kind", "value"]
     var value = Self(
       extensions: object.filter { !known.contains($0.key) },
       function: try String.read(jsonRequired(object, "function")),
       kind: try String.read(jsonRequired(object, "kind")),
-      value: try [OwnedRecognition].read(jsonRequired(object, "value")))
+      value: try [Recognition].read(jsonRequired(object, "value")))
     value._sourceJSON = json
     return value
   }
-  public var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = ["function", "kind", "value"]
     var object = extensions.filter { !known.contains($0.key) }
@@ -6638,33 +6458,33 @@ public struct OwnedSessionPacketRecognizeAggregate: JSONRepresentable {
     return .object(object)
   }
 }
-public struct OwnedSessionPacketRelateAggregate: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
+public struct SessionPacketRelateAggregate: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
   public let `function`: String
   public let `kind`: String
-  public let `value`: OwnedRelation
+  public let `value`: Relation
   public init(
-    extensions: [String: JSONValue] = [:], `function`: String = "relate",
-    `kind`: String = "aggregate", `value`: OwnedRelation
+    extensions: [String: DataValue] = [:], `function`: String = "relate",
+    `kind`: String = "aggregate", `value`: Relation
   ) {
     self.extensions = extensions
     self.`function` = `function`
     self.`kind` = `kind`
     self.`value` = `value`
   }
-  public static func read(_ json: JSONValue) throws -> OwnedSessionPacketRelateAggregate {
+  static func read(_ json: DataValue) throws -> SessionPacketRelateAggregate {
     let object = try jsonObject(json)
     let known: Set<String> = ["function", "kind", "value"]
     var value = Self(
       extensions: object.filter { !known.contains($0.key) },
       function: try String.read(jsonRequired(object, "function")),
       kind: try String.read(jsonRequired(object, "kind")),
-      value: try OwnedRelation.read(jsonRequired(object, "value")))
+      value: try Relation.read(jsonRequired(object, "value")))
     value._sourceJSON = json
     return value
   }
-  public var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = ["function", "kind", "value"]
     var object = extensions.filter { !known.contains($0.key) }
@@ -6674,33 +6494,33 @@ public struct OwnedSessionPacketRelateAggregate: JSONRepresentable {
     return .object(object)
   }
 }
-public struct OwnedSessionPacketScoreAggregate: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
+public struct SessionPacketScoreAggregate: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
   public let `function`: String
   public let `kind`: String
-  public let `value`: [OwnedAtomicDouble]
+  public let `value`: [AtomicDouble]
   public init(
-    extensions: [String: JSONValue] = [:], `function`: String = "score",
-    `kind`: String = "aggregate", `value`: [OwnedAtomicDouble]
+    extensions: [String: DataValue] = [:], `function`: String = "score",
+    `kind`: String = "aggregate", `value`: [AtomicDouble]
   ) {
     self.extensions = extensions
     self.`function` = `function`
     self.`kind` = `kind`
     self.`value` = `value`
   }
-  public static func read(_ json: JSONValue) throws -> OwnedSessionPacketScoreAggregate {
+  static func read(_ json: DataValue) throws -> SessionPacketScoreAggregate {
     let object = try jsonObject(json)
     let known: Set<String> = ["function", "kind", "value"]
     var value = Self(
       extensions: object.filter { !known.contains($0.key) },
       function: try String.read(jsonRequired(object, "function")),
       kind: try String.read(jsonRequired(object, "kind")),
-      value: try [OwnedAtomicDouble].read(jsonRequired(object, "value")))
+      value: try [AtomicDouble].read(jsonRequired(object, "value")))
     value._sourceJSON = json
     return value
   }
-  public var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = ["function", "kind", "value"]
     var object = extensions.filter { !known.contains($0.key) }
@@ -6710,33 +6530,33 @@ public struct OwnedSessionPacketScoreAggregate: JSONRepresentable {
     return .object(object)
   }
 }
-public struct OwnedSessionPacketScoreRow: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
+public struct SessionPacketScoreRow: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
   public let `function`: String
   public let `kind`: String
-  public let `value`: OwnedAtomicDouble
+  public let `value`: AtomicDouble
   public init(
-    extensions: [String: JSONValue] = [:], `function`: String = "score", `kind`: String = "row",
-    `value`: OwnedAtomicDouble
+    extensions: [String: DataValue] = [:], `function`: String = "score", `kind`: String = "row",
+    `value`: AtomicDouble
   ) {
     self.extensions = extensions
     self.`function` = `function`
     self.`kind` = `kind`
     self.`value` = `value`
   }
-  public static func read(_ json: JSONValue) throws -> OwnedSessionPacketScoreRow {
+  static func read(_ json: DataValue) throws -> SessionPacketScoreRow {
     let object = try jsonObject(json)
     let known: Set<String> = ["function", "kind", "value"]
     var value = Self(
       extensions: object.filter { !known.contains($0.key) },
       function: try String.read(jsonRequired(object, "function")),
       kind: try String.read(jsonRequired(object, "kind")),
-      value: try OwnedAtomicDouble.read(jsonRequired(object, "value")))
+      value: try AtomicDouble.read(jsonRequired(object, "value")))
     value._sourceJSON = json
     return value
   }
-  public var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = ["function", "kind", "value"]
     var object = extensions.filter { !known.contains($0.key) }
@@ -6746,33 +6566,33 @@ public struct OwnedSessionPacketScoreRow: JSONRepresentable {
     return .object(object)
   }
 }
-public struct OwnedSessionPacketTagAggregate: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
+public struct SessionPacketTagAggregate: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
   public let `function`: String
   public let `kind`: String
-  public let `value`: [OwnedAtomicArrayOfString]
+  public let `value`: [AtomicArrayOfString]
   public init(
-    extensions: [String: JSONValue] = [:], `function`: String = "tag", `kind`: String = "aggregate",
-    `value`: [OwnedAtomicArrayOfString]
+    extensions: [String: DataValue] = [:], `function`: String = "tag", `kind`: String = "aggregate",
+    `value`: [AtomicArrayOfString]
   ) {
     self.extensions = extensions
     self.`function` = `function`
     self.`kind` = `kind`
     self.`value` = `value`
   }
-  public static func read(_ json: JSONValue) throws -> OwnedSessionPacketTagAggregate {
+  static func read(_ json: DataValue) throws -> SessionPacketTagAggregate {
     let object = try jsonObject(json)
     let known: Set<String> = ["function", "kind", "value"]
     var value = Self(
       extensions: object.filter { !known.contains($0.key) },
       function: try String.read(jsonRequired(object, "function")),
       kind: try String.read(jsonRequired(object, "kind")),
-      value: try [OwnedAtomicArrayOfString].read(jsonRequired(object, "value")))
+      value: try [AtomicArrayOfString].read(jsonRequired(object, "value")))
     value._sourceJSON = json
     return value
   }
-  public var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = ["function", "kind", "value"]
     var object = extensions.filter { !known.contains($0.key) }
@@ -6782,33 +6602,33 @@ public struct OwnedSessionPacketTagAggregate: JSONRepresentable {
     return .object(object)
   }
 }
-public struct OwnedSessionPacketTagRow: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
+public struct SessionPacketTagRow: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
   public let `function`: String
   public let `kind`: String
-  public let `value`: OwnedAtomicArrayOfString
+  public let `value`: AtomicArrayOfString
   public init(
-    extensions: [String: JSONValue] = [:], `function`: String = "tag", `kind`: String = "row",
-    `value`: OwnedAtomicArrayOfString
+    extensions: [String: DataValue] = [:], `function`: String = "tag", `kind`: String = "row",
+    `value`: AtomicArrayOfString
   ) {
     self.extensions = extensions
     self.`function` = `function`
     self.`kind` = `kind`
     self.`value` = `value`
   }
-  public static func read(_ json: JSONValue) throws -> OwnedSessionPacketTagRow {
+  static func read(_ json: DataValue) throws -> SessionPacketTagRow {
     let object = try jsonObject(json)
     let known: Set<String> = ["function", "kind", "value"]
     var value = Self(
       extensions: object.filter { !known.contains($0.key) },
       function: try String.read(jsonRequired(object, "function")),
       kind: try String.read(jsonRequired(object, "kind")),
-      value: try OwnedAtomicArrayOfString.read(jsonRequired(object, "value")))
+      value: try AtomicArrayOfString.read(jsonRequired(object, "value")))
     value._sourceJSON = json
     return value
   }
-  public var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = ["function", "kind", "value"]
     var object = extensions.filter { !known.contains($0.key) }
@@ -6818,33 +6638,33 @@ public struct OwnedSessionPacketTagRow: JSONRepresentable {
     return .object(object)
   }
 }
-public struct OwnedSessionPacketTerminal: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
-  public let `facts`: Presence<OwnedFacts>
-  public let `failure`: Presence<OwnedCallError>
+public struct SessionPacketTerminal: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
+  public let `facts`: Presence<Facts>
+  public let `failure`: Presence<CallError>
   public let `kind`: String
   public init(
-    extensions: [String: JSONValue] = [:], `facts`: Presence<OwnedFacts> = .absent,
-    `failure`: Presence<OwnedCallError> = .absent, `kind`: String = "terminal"
+    extensions: [String: DataValue] = [:], `facts`: Presence<Facts> = .absent,
+    `failure`: Presence<CallError> = .absent, `kind`: String = "terminal"
   ) {
     self.extensions = extensions
     self.`facts` = `facts`
     self.`failure` = `failure`
     self.`kind` = `kind`
   }
-  public static func read(_ json: JSONValue) throws -> OwnedSessionPacketTerminal {
+  static func read(_ json: DataValue) throws -> SessionPacketTerminal {
     let object = try jsonObject(json)
     let known: Set<String> = ["facts", "failure", "kind"]
     var value = Self(
       extensions: object.filter { !known.contains($0.key) },
-      facts: try readPresence(object, "facts", OwnedFacts.self),
-      failure: try readPresence(object, "failure", OwnedCallError.self),
+      facts: try readPresence(object, "facts", Facts.self),
+      failure: try readPresence(object, "failure", CallError.self),
       kind: try String.read(jsonRequired(object, "kind")))
     value._sourceJSON = json
     return value
   }
-  public var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = ["facts", "failure", "kind"]
     var object = extensions.filter { !known.contains($0.key) }
@@ -6854,50 +6674,50 @@ public struct OwnedSessionPacketTerminal: JSONRepresentable {
     return .object(object)
   }
 }
-public indirect enum OwnedSessionProbabilities: JSONRepresentable {
-  case `yesNo`(OwnedSessionProbabilitiesYesNo)
-  case `named`(OwnedSessionProbabilitiesNamed)
-  public static func read(_ json: JSONValue) throws -> OwnedSessionProbabilities {
+public indirect enum SessionProbabilities: ValueRepresentable {
+  case `yesNo`(SessionProbabilitiesYesNo)
+  case `named`(SessionProbabilitiesNamed)
+  static func read(_ json: DataValue) throws -> SessionProbabilities {
     let object = try jsonObject(json)
     if object["kind"] == .string("yes_no") {
-      return .`yesNo`(try OwnedSessionProbabilitiesYesNo.read(json))
+      return .`yesNo`(try SessionProbabilitiesYesNo.read(json))
     }
     if object["kind"] == .string("named") {
-      return .`named`(try OwnedSessionProbabilitiesNamed.read(json))
+      return .`named`(try SessionProbabilitiesNamed.read(json))
     }
-    throw JSONConversionError("Unknown OwnedSessionProbabilities alternative")
+    throw ValueConversionError("Unknown SessionProbabilities alternative")
   }
-  public var json: JSONValue {
+  var json: DataValue {
     switch self {
     case .`yesNo`(let value): return value.json
     case .`named`(let value): return value.json
     }
   }
 }
-public struct OwnedSessionProbabilitiesNamed: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
+public struct SessionProbabilitiesNamed: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
   public let `kind`: String
-  public let `value`: [OwnedSessionNamedProbability]
+  public let `value`: [SessionNamedProbability]
   public init(
-    extensions: [String: JSONValue] = [:], `kind`: String = "named",
-    `value`: [OwnedSessionNamedProbability]
+    extensions: [String: DataValue] = [:], `kind`: String = "named",
+    `value`: [SessionNamedProbability]
   ) {
     self.extensions = extensions
     self.`kind` = `kind`
     self.`value` = `value`
   }
-  public static func read(_ json: JSONValue) throws -> OwnedSessionProbabilitiesNamed {
+  static func read(_ json: DataValue) throws -> SessionProbabilitiesNamed {
     let object = try jsonObject(json)
     let known: Set<String> = ["kind", "value"]
     var value = Self(
       extensions: object.filter { !known.contains($0.key) },
       kind: try String.read(jsonRequired(object, "kind")),
-      value: try [OwnedSessionNamedProbability].read(jsonRequired(object, "value")))
+      value: try [SessionNamedProbability].read(jsonRequired(object, "value")))
     value._sourceJSON = json
     return value
   }
-  public var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = ["kind", "value"]
     var object = extensions.filter { !known.contains($0.key) }
@@ -6906,17 +6726,17 @@ public struct OwnedSessionProbabilitiesNamed: JSONRepresentable {
     return .object(object)
   }
 }
-public struct OwnedSessionProbabilitiesYesNo: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
+public struct SessionProbabilitiesYesNo: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
   public let `kind`: String
   public let `value`: Double
-  public init(extensions: [String: JSONValue] = [:], `kind`: String = "yes_no", `value`: Double) {
+  public init(extensions: [String: DataValue] = [:], `kind`: String = "yes_no", `value`: Double) {
     self.extensions = extensions
     self.`kind` = `kind`
     self.`value` = `value`
   }
-  public static func read(_ json: JSONValue) throws -> OwnedSessionProbabilitiesYesNo {
+  static func read(_ json: DataValue) throws -> SessionProbabilitiesYesNo {
     let object = try jsonObject(json)
     let known: Set<String> = ["kind", "value"]
     var value = Self(
@@ -6926,7 +6746,7 @@ public struct OwnedSessionProbabilitiesYesNo: JSONRepresentable {
     value._sourceJSON = json
     return value
   }
-  public var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = ["kind", "value"]
     var object = extensions.filter { !known.contains($0.key) }
@@ -6935,46 +6755,44 @@ public struct OwnedSessionProbabilitiesYesNo: JSONRepresentable {
     return .object(object)
   }
 }
-public struct OwnedSessionQuestionDetail: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
-  public let `answerId`: Presence<OwnedAnswerId>
+public struct SessionQuestionDetail: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
+  public let `answerId`: Presence<AnswerId>
   public let `cached`: Bool
   public let `confidence`: Presence<Double>
   public let `failedQuestions`: UInt64
-  public let `failure`: Presence<OwnedFailure>
-  public let `failureId`: Presence<OwnedFailureId>
-  public let `input`: Presence<JSONValue>
-  public let `inputSource`: Presence<OwnedPhysicalSource>
-  public let `inputSources`: [OwnedSessionInputSource]
-  public let `inputs`: [JSONValue]
+  public let `failure`: Presence<Failure>
+  public let `failureId`: Presence<FailureId>
+  public let `input`: Presence<DataValue>
+  public let `inputSource`: Presence<PhysicalSource>
+  public let `inputSources`: [SessionInputSource]
+  public let `inputs`: [DataValue]
   public let `model`: String
-  public let `observations`: [OwnedObservation]
-  public let `probabilities`: Presence<OwnedSessionProbabilities>
-  public let `question`: OwnedQuestionDocument
+  public let `observations`: [Observation]
+  public let `probabilities`: Presence<SessionProbabilities>
+  public let `question`: QuestionDocument
   public let `questionSha256`: String
-  public let `questionSources`: [OwnedQuestionSource]
+  public let `questionSources`: [QuestionSource]
   public let `rawPick`: Presence<String>
-  public let `reportedUsage`: Presence<OwnedUsage>
+  public let `reportedUsage`: Presence<Usage>
   public let `requests`: [String]
   public let `requestsSent`: UInt64
-  public let `threshold`: Presence<OwnedThreshold>
+  public let `threshold`: Presence<ReceiptThreshold>
   public let `url`: String
-  public let `usage`: Presence<OwnedTokenUsage>
-  public let `value`: Presence<OwnedValue>
+  public let `usage`: Presence<TokenUsage>
+  public let `value`: Presence<Value>
   public init(
-    extensions: [String: JSONValue] = [:], `answerId`: Presence<OwnedAnswerId> = .absent,
-    `cached`: Bool, `confidence`: Presence<Double> = .absent, `failedQuestions`: UInt64,
-    `failure`: Presence<OwnedFailure> = .absent, `failureId`: Presence<OwnedFailureId> = .absent,
-    `input`: Presence<JSONValue> = .absent, `inputSource`: Presence<OwnedPhysicalSource> = .absent,
-    `inputSources`: [OwnedSessionInputSource], `inputs`: [JSONValue], `model`: String,
-    `observations`: [OwnedObservation],
-    `probabilities`: Presence<OwnedSessionProbabilities> = .absent,
-    `question`: OwnedQuestionDocument, `questionSha256`: String,
-    `questionSources`: [OwnedQuestionSource], `rawPick`: Presence<String> = .absent,
-    `reportedUsage`: Presence<OwnedUsage> = .absent, `requests`: [String], `requestsSent`: UInt64,
-    `threshold`: Presence<OwnedThreshold> = .absent, `url`: String,
-    `usage`: Presence<OwnedTokenUsage> = .absent, `value`: Presence<OwnedValue> = .absent
+    extensions: [String: DataValue] = [:], `answerId`: Presence<AnswerId> = .absent, `cached`: Bool,
+    `confidence`: Presence<Double> = .absent, `failedQuestions`: UInt64,
+    `failure`: Presence<Failure> = .absent, `failureId`: Presence<FailureId> = .absent,
+    `input`: Presence<DataValue> = .absent, `inputSource`: Presence<PhysicalSource> = .absent,
+    `inputSources`: [SessionInputSource], `inputs`: [DataValue], `model`: String,
+    `observations`: [Observation], `probabilities`: Presence<SessionProbabilities> = .absent,
+    `question`: QuestionDocument, `questionSha256`: String, `questionSources`: [QuestionSource],
+    `rawPick`: Presence<String> = .absent, `reportedUsage`: Presence<Usage> = .absent,
+    `requests`: [String], `requestsSent`: UInt64, `threshold`: Presence<ReceiptThreshold> = .absent,
+    `url`: String, `usage`: Presence<TokenUsage> = .absent, `value`: Presence<Value> = .absent
   ) {
     self.extensions = extensions
     self.`answerId` = `answerId`
@@ -7002,7 +6820,7 @@ public struct OwnedSessionQuestionDetail: JSONRepresentable {
     self.`usage` = `usage`
     self.`value` = `value`
   }
-  public static func read(_ json: JSONValue) throws -> OwnedSessionQuestionDetail {
+  static func read(_ json: DataValue) throws -> SessionQuestionDetail {
     let object = try jsonObject(json)
     let known: Set<String> = [
       "answer_id", "cached", "confidence", "failed_questions", "failure", "failure_id", "input",
@@ -7012,34 +6830,34 @@ public struct OwnedSessionQuestionDetail: JSONRepresentable {
     ]
     var value = Self(
       extensions: object.filter { !known.contains($0.key) },
-      answerId: try readPresence(object, "answer_id", OwnedAnswerId.self),
+      answerId: try readPresence(object, "answer_id", AnswerId.self),
       cached: try Bool.read(jsonRequired(object, "cached")),
       confidence: try readPresence(object, "confidence", Double.self),
       failedQuestions: try UInt64.read(jsonRequired(object, "failed_questions")),
-      failure: try readPresence(object, "failure", OwnedFailure.self),
-      failureId: try readPresence(object, "failure_id", OwnedFailureId.self),
-      input: try readPresence(object, "input", JSONValue.self),
-      inputSource: try readPresence(object, "input_source", OwnedPhysicalSource.self),
-      inputSources: try [OwnedSessionInputSource].read(jsonRequired(object, "input_sources")),
-      inputs: try [JSONValue].read(jsonRequired(object, "inputs")),
+      failure: try readPresence(object, "failure", Failure.self),
+      failureId: try readPresence(object, "failure_id", FailureId.self),
+      input: try readPresence(object, "input", DataValue.self),
+      inputSource: try readPresence(object, "input_source", PhysicalSource.self),
+      inputSources: try [SessionInputSource].read(jsonRequired(object, "input_sources")),
+      inputs: try [DataValue].read(jsonRequired(object, "inputs")),
       model: try String.read(jsonRequired(object, "model")),
-      observations: try [OwnedObservation].read(jsonRequired(object, "observations")),
-      probabilities: try readPresence(object, "probabilities", OwnedSessionProbabilities.self),
-      question: try OwnedQuestionDocument.read(jsonRequired(object, "question")),
+      observations: try [Observation].read(jsonRequired(object, "observations")),
+      probabilities: try readPresence(object, "probabilities", SessionProbabilities.self),
+      question: try QuestionDocument.read(jsonRequired(object, "question")),
       questionSha256: try String.read(jsonRequired(object, "question_sha256")),
-      questionSources: try [OwnedQuestionSource].read(jsonRequired(object, "question_sources")),
+      questionSources: try [QuestionSource].read(jsonRequired(object, "question_sources")),
       rawPick: try readPresence(object, "raw_pick", String.self),
-      reportedUsage: try readPresence(object, "reported_usage", OwnedUsage.self),
+      reportedUsage: try readPresence(object, "reported_usage", Usage.self),
       requests: try [String].read(jsonRequired(object, "requests")),
       requestsSent: try UInt64.read(jsonRequired(object, "requests_sent")),
-      threshold: try readPresence(object, "threshold", OwnedThreshold.self),
+      threshold: try readPresence(object, "threshold", ReceiptThreshold.self),
       url: try String.read(jsonRequired(object, "url")),
-      usage: try readPresence(object, "usage", OwnedTokenUsage.self),
-      value: try readPresence(object, "value", OwnedValue.self))
+      usage: try readPresence(object, "usage", TokenUsage.self),
+      value: try readPresence(object, "value", Value.self))
     value._sourceJSON = json
     return value
   }
-  public var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = [
       "answer_id", "cached", "confidence", "failed_questions", "failure", "failure_id", "input",
@@ -7075,17 +6893,17 @@ public struct OwnedSessionQuestionDetail: JSONRepresentable {
     return .object(object)
   }
 }
-public struct OwnedSessionRecognition: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
-  public let `entities`: [OwnedEntity]
-  public let `mode`: OwnedRecognitionMode
-  public let `proposals`: Presence<[OwnedBoundaryProposal]>
-  public let `relations`: Presence<[OwnedRecognitionEdgeDocument]>
+public struct SessionRecognition: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
+  public let `entities`: [Entity]
+  public let `mode`: ReceiptRecognitionMode
+  public let `proposals`: Presence<[BoundaryProposal]>
+  public let `relations`: Presence<[RecognitionEdgeDocument]>
   public init(
-    extensions: [String: JSONValue] = [:], `entities`: [OwnedEntity], `mode`: OwnedRecognitionMode,
-    `proposals`: Presence<[OwnedBoundaryProposal]> = .absent,
-    `relations`: Presence<[OwnedRecognitionEdgeDocument]> = .absent
+    extensions: [String: DataValue] = [:], `entities`: [Entity], `mode`: ReceiptRecognitionMode,
+    `proposals`: Presence<[BoundaryProposal]> = .absent,
+    `relations`: Presence<[RecognitionEdgeDocument]> = .absent
   ) {
     self.extensions = extensions
     self.`entities` = `entities`
@@ -7093,19 +6911,19 @@ public struct OwnedSessionRecognition: JSONRepresentable {
     self.`proposals` = `proposals`
     self.`relations` = `relations`
   }
-  public static func read(_ json: JSONValue) throws -> OwnedSessionRecognition {
+  static func read(_ json: DataValue) throws -> SessionRecognition {
     let object = try jsonObject(json)
     let known: Set<String> = ["entities", "mode", "proposals", "relations"]
     var value = Self(
       extensions: object.filter { !known.contains($0.key) },
-      entities: try [OwnedEntity].read(jsonRequired(object, "entities")),
-      mode: try OwnedRecognitionMode.read(jsonRequired(object, "mode")),
-      proposals: try readPresence(object, "proposals", [OwnedBoundaryProposal].self),
-      relations: try readPresence(object, "relations", [OwnedRecognitionEdgeDocument].self))
+      entities: try [Entity].read(jsonRequired(object, "entities")),
+      mode: try ReceiptRecognitionMode.read(jsonRequired(object, "mode")),
+      proposals: try readPresence(object, "proposals", [BoundaryProposal].self),
+      relations: try readPresence(object, "relations", [RecognitionEdgeDocument].self))
     value._sourceJSON = json
     return value
   }
-  public var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = ["entities", "mode", "proposals", "relations"]
     var object = extensions.filter { !known.contains($0.key) }
@@ -7116,17 +6934,17 @@ public struct OwnedSessionRecognition: JSONRepresentable {
     return .object(object)
   }
 }
-public struct OwnedSessionRelationEdge: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
+public struct SessionRelationEdge: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
   public let `either`: Bool
   public let `probability`: Double
   public let `relation`: String
-  public let `source`: OwnedEntityDocument
-  public let `target`: OwnedEntityDocument
+  public let `source`: EntityDocument
+  public let `target`: EntityDocument
   public init(
-    extensions: [String: JSONValue] = [:], `either`: Bool, `probability`: Double,
-    `relation`: String, `source`: OwnedEntityDocument, `target`: OwnedEntityDocument
+    extensions: [String: DataValue] = [:], `either`: Bool, `probability`: Double,
+    `relation`: String, `source`: EntityDocument, `target`: EntityDocument
   ) {
     self.extensions = extensions
     self.`either` = `either`
@@ -7135,7 +6953,7 @@ public struct OwnedSessionRelationEdge: JSONRepresentable {
     self.`source` = `source`
     self.`target` = `target`
   }
-  public static func read(_ json: JSONValue) throws -> OwnedSessionRelationEdge {
+  static func read(_ json: DataValue) throws -> SessionRelationEdge {
     let object = try jsonObject(json)
     let known: Set<String> = ["either", "probability", "relation", "source", "target"]
     var value = Self(
@@ -7143,12 +6961,12 @@ public struct OwnedSessionRelationEdge: JSONRepresentable {
       either: try Bool.read(jsonRequired(object, "either")),
       probability: try Double.read(jsonRequired(object, "probability")),
       relation: try String.read(jsonRequired(object, "relation")),
-      source: try OwnedEntityDocument.read(jsonRequired(object, "source")),
-      target: try OwnedEntityDocument.read(jsonRequired(object, "target")))
+      source: try EntityDocument.read(jsonRequired(object, "source")),
+      target: try EntityDocument.read(jsonRequired(object, "target")))
     value._sourceJSON = json
     return value
   }
-  public var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = ["either", "probability", "relation", "source", "target"]
     var object = extensions.filter { !known.contains($0.key) }
@@ -7160,34 +6978,34 @@ public struct OwnedSessionRelationEdge: JSONRepresentable {
     return .object(object)
   }
   public func sourceName() throws -> Presence<String> {
-    switch try readPresence(jsonObject(self.json), "source", JSONValue.self) {
+    switch try readPresence(jsonObject(self.json), "source", DataValue.self) {
     case .absent: return .absent
     case .null: return .null
     case .value(let object): return try readPresence(jsonObject(object), "name", String.self)
     }
   }
   public func targetName() throws -> Presence<String> {
-    switch try readPresence(jsonObject(self.json), "target", JSONValue.self) {
+    switch try readPresence(jsonObject(self.json), "target", DataValue.self) {
     case .absent: return .absent
     case .null: return .null
     case .value(let object): return try readPresence(jsonObject(object), "name", String.self)
     }
   }
 }
-public struct OwnedSourceRelationEndpoint: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
-  public let `file`: OwnedSourceRelationEndpointFile
+public struct SourceRelationEndpoint: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
+  public let `file`: String?
   public let `firstLine`: Presence<UInt64>
   public let `kind`: String
   public let `lastLine`: Presence<UInt64>
   public let `name`: String
   public let `ordinal`: UInt64
-  public let `record`: JSONValue
+  public let `record`: DataValue
   public init(
-    extensions: [String: JSONValue] = [:], `file`: OwnedSourceRelationEndpointFile,
-    `firstLine`: Presence<UInt64> = .absent, `kind`: String, `lastLine`: Presence<UInt64> = .absent,
-    `name`: String, `ordinal`: UInt64, `record`: JSONValue
+    extensions: [String: DataValue] = [:], `file`: String?, `firstLine`: Presence<UInt64> = .absent,
+    `kind`: String, `lastLine`: Presence<UInt64> = .absent, `name`: String, `ordinal`: UInt64,
+    `record`: DataValue
   ) {
     self.extensions = extensions
     self.`file` = `file`
@@ -7198,24 +7016,24 @@ public struct OwnedSourceRelationEndpoint: JSONRepresentable {
     self.`ordinal` = `ordinal`
     self.`record` = `record`
   }
-  public static func read(_ json: JSONValue) throws -> OwnedSourceRelationEndpoint {
+  static func read(_ json: DataValue) throws -> SourceRelationEndpoint {
     let object = try jsonObject(json)
     let known: Set<String> = [
       "file", "first_line", "kind", "last_line", "name", "ordinal", "record",
     ]
     var value = Self(
       extensions: object.filter { !known.contains($0.key) },
-      file: try OwnedSourceRelationEndpointFile.read(jsonRequired(object, "file")),
+      file: try String?.read(jsonRequired(object, "file")),
       firstLine: try readPresence(object, "first_line", UInt64.self),
       kind: try String.read(jsonRequired(object, "kind")),
       lastLine: try readPresence(object, "last_line", UInt64.self),
       name: try String.read(jsonRequired(object, "name")),
       ordinal: try UInt64.read(jsonRequired(object, "ordinal")),
-      record: try JSONValue.read(jsonRequired(object, "record")))
+      record: try DataValue.read(jsonRequired(object, "record")))
     value._sourceJSON = json
     return value
   }
-  public var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = [
       "file", "first_line", "kind", "last_line", "name", "ordinal", "record",
@@ -7231,47 +7049,32 @@ public struct OwnedSourceRelationEndpoint: JSONRepresentable {
     return .object(object)
   }
 }
-public indirect enum OwnedSourceRelationEndpointFile: JSONRepresentable {
-  case alternative0(String)
-  case alternative1(JSONValue)
-  public static func read(_ json: JSONValue) throws -> OwnedSourceRelationEndpointFile {
-    if let value = try? String.read(json) { return .alternative0(value) }
-    if json == .null { return .alternative1(.null) }
-    throw JSONConversionError("Unknown OwnedSourceRelationEndpointFile value")
+public indirect enum ReceiptThreshold: ValueRepresentable {
+  case `number`(Double)
+  case `string`(String)
+  static func read(_ json: DataValue) throws -> ReceiptThreshold {
+    if let value = try? Double.read(json) { return .`number`(value) }
+    if let value = try? String.read(json) { return .`string`(value) }
+    throw ValueConversionError("Unknown ReceiptThreshold value")
   }
-  public var json: JSONValue {
+  var json: DataValue {
     switch self {
-    case .alternative0(let value): return value.json
-    case .alternative1(let value): return value.json
+    case .`number`(let value): return value.json
+    case .`string`(let value): return value.json
     }
   }
 }
-public indirect enum OwnedThreshold: JSONRepresentable {
-  case alternative0(Double)
-  case alternative1(String)
-  public static func read(_ json: JSONValue) throws -> OwnedThreshold {
-    if let value = try? Double.read(json) { return .alternative0(value) }
-    if let value = try? String.read(json) { return .alternative1(value) }
-    throw JSONConversionError("Unknown OwnedThreshold value")
-  }
-  public var json: JSONValue {
-    switch self {
-    case .alternative0(let value): return value.json
-    case .alternative1(let value): return value.json
-    }
-  }
-}
-public struct OwnedTokenBand: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
+public struct TokenBand: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
   public let `lower`: UInt64
   public let `upper`: UInt64
-  public init(extensions: [String: JSONValue] = [:], `lower`: UInt64, `upper`: UInt64) {
+  public init(extensions: [String: DataValue] = [:], `lower`: UInt64, `upper`: UInt64) {
     self.extensions = extensions
     self.`lower` = `lower`
     self.`upper` = `upper`
   }
-  public static func read(_ json: JSONValue) throws -> OwnedTokenBand {
+  static func read(_ json: DataValue) throws -> TokenBand {
     let object = try jsonObject(json)
     let known: Set<String> = ["lower", "upper"]
     var value = Self(
@@ -7281,7 +7084,7 @@ public struct OwnedTokenBand: JSONRepresentable {
     value._sourceJSON = json
     return value
   }
-  public var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = ["lower", "upper"]
     var object = extensions.filter { !known.contains($0.key) }
@@ -7290,18 +7093,18 @@ public struct OwnedTokenBand: JSONRepresentable {
     return .object(object)
   }
 }
-public struct OwnedTokenUsage: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
+public struct TokenUsage: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
   public let `inputTokens`: UInt64
   public let `outputTokens`: UInt64
-  public init(extensions: [String: JSONValue] = [:], `inputTokens`: UInt64, `outputTokens`: UInt64)
+  public init(extensions: [String: DataValue] = [:], `inputTokens`: UInt64, `outputTokens`: UInt64)
   {
     self.extensions = extensions
     self.`inputTokens` = `inputTokens`
     self.`outputTokens` = `outputTokens`
   }
-  public static func read(_ json: JSONValue) throws -> OwnedTokenUsage {
+  static func read(_ json: DataValue) throws -> TokenUsage {
     let object = try jsonObject(json)
     let known: Set<String> = ["input_tokens", "output_tokens"]
     var value = Self(
@@ -7311,7 +7114,7 @@ public struct OwnedTokenUsage: JSONRepresentable {
     value._sourceJSON = json
     return value
   }
-  public var json: JSONValue {
+  var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = ["input_tokens", "output_tokens"]
     var object = extensions.filter { !known.contains($0.key) }
@@ -7320,92 +7123,98 @@ public struct OwnedTokenUsage: JSONRepresentable {
     return .object(object)
   }
 }
-public indirect enum OwnedValue: JSONRepresentable {
-  case alternative0(Bool)
-  case alternative1(JSONValue)
-  case alternative2(String)
-  case alternative3([String])
-  case alternative4(Double)
-  public static func read(_ json: JSONValue) throws -> OwnedValue {
-    if let value = try? Bool.read(json) { return .alternative0(value) }
-    if json == .null { return .alternative1(.null) }
-    if let value = try? String.read(json) { return .alternative2(value) }
-    if let value = try? [String].read(json) { return .alternative3(value) }
-    if let value = try? Double.read(json) { return .alternative4(value) }
-    throw JSONConversionError("Unknown OwnedValue value")
+public indirect enum Value: ValueRepresentable {
+  case `boolean`(Bool)
+  case `null`
+  case `string`(String)
+  case `list`([String])
+  case `number`(Double)
+  static func read(_ json: DataValue) throws -> Value {
+    if let value = try? Bool.read(json) { return .`boolean`(value) }
+    if json == .null { return .`null` }
+    if let value = try? String.read(json) { return .`string`(value) }
+    if let value = try? [String].read(json) { return .`list`(value) }
+    if let value = try? Double.read(json) { return .`number`(value) }
+    throw ValueConversionError("Unknown Value value")
   }
-  public var json: JSONValue {
+  var json: DataValue {
     switch self {
-    case .alternative0(let value): return value.json
-    case .alternative1(let value): return value.json
-    case .alternative2(let value): return value.json
-    case .alternative3(let value): return value.json
-    case .alternative4(let value): return value.json
+    case .`boolean`(let value): return value.json
+    case .`null`: return .null
+    case .`string`(let value): return value.json
+    case .`list`(let value): return value.json
+    case .`number`(let value): return value.json
     }
   }
 }
-extension OwnedSessionPacket {
-  public func decideAnswer() throws -> [OwnedAtomicDecideValue] {
+extension SessionPacket {
+  public func decideAnswer() throws -> [AtomicDecideValue] {
     if case .`decideAggregate`(let packet) = self { return packet.value }
-    throw JSONConversionError("Expected decide aggregate packet")
+    throw ValueConversionError("Expected decide aggregate packet")
   }
-  public func chooseAnswer() throws -> [OwnedAtomicNullableString] {
+  public func chooseAnswer() throws -> [AtomicNullableString] {
     if case .`chooseAggregate`(let packet) = self { return packet.value }
-    throw JSONConversionError("Expected choose aggregate packet")
+    throw ValueConversionError("Expected choose aggregate packet")
   }
-  public func tagAnswer() throws -> [OwnedAtomicArrayOfString] {
+  public func tagAnswer() throws -> [AtomicArrayOfString] {
     if case .`tagAggregate`(let packet) = self { return packet.value }
-    throw JSONConversionError("Expected tag aggregate packet")
+    throw ValueConversionError("Expected tag aggregate packet")
   }
-  public func scoreAnswer() throws -> [OwnedAtomicDouble] {
+  public func scoreAnswer() throws -> [AtomicDouble] {
     if case .`scoreAggregate`(let packet) = self { return packet.value }
-    throw JSONConversionError("Expected score aggregate packet")
+    throw ValueConversionError("Expected score aggregate packet")
   }
-  public func filterAnswer() throws -> [OwnedAtomicBoolean] {
+  public func filterAnswer() throws -> [AtomicBoolean] {
     if case .`filterAggregate`(let packet) = self { return packet.value }
-    throw JSONConversionError("Expected filter aggregate packet")
+    throw ValueConversionError("Expected filter aggregate packet")
   }
-  public func rankAnswer() throws -> [OwnedAtomicNonZeroUsize] {
+  public func rankAnswer() throws -> [AtomicNonZeroUsize] {
     if case .`rankAggregate`(let packet) = self { return packet.value }
-    throw JSONConversionError("Expected rank aggregate packet")
+    throw ValueConversionError("Expected rank aggregate packet")
   }
-  public func findAnswer() throws -> OwnedFind {
+  public func findAnswer() throws -> Find {
     if case .`findAggregate`(let packet) = self { return packet.value }
-    throw JSONConversionError("Expected find aggregate packet")
+    throw ValueConversionError("Expected find aggregate packet")
   }
-  public func annotateAnswer() throws -> [OwnedAnnotation] {
+  public func annotateAnswer() throws -> [Annotation] {
     if case .`annotateAggregate`(let packet) = self { return packet.value }
-    throw JSONConversionError("Expected annotate aggregate packet")
+    throw ValueConversionError("Expected annotate aggregate packet")
   }
-  public func recognizeAnswer() throws -> [OwnedRecognition] {
+  public func recognizeAnswer() throws -> [Recognition] {
     if case .`recognizeAggregate`(let packet) = self { return packet.value }
-    throw JSONConversionError("Expected recognize aggregate packet")
+    throw ValueConversionError("Expected recognize aggregate packet")
   }
-  public func relateAnswer() throws -> OwnedRelation {
+  public func relateAnswer() throws -> Relation {
     if case .`relateAggregate`(let packet) = self { return packet.value }
-    throw JSONConversionError("Expected relate aggregate packet")
+    throw ValueConversionError("Expected relate aggregate packet")
   }
 }
 public struct AnswerCardinalityError: Error, Sendable {
   public let function: String
   public let count: Int
-  public let call: OwnedCall
+  public let call: Call
 }
-private func answerPath(_ json: JSONValue, _ path: [String]) throws -> JSONValue? {
-  var value: JSONValue? = json
+private func answerPath(_ json: DataValue, _ path: [String]) throws -> DataValue? {
+  var value: DataValue? = json
   for key in path {
     guard let object = value else { return nil }
     value = try jsonObject(object)[key]
   }
   return value
 }
-extension OwnedCall {
-  private func answerJSON(_ function: String, _ judgment: String) throws -> JSONValue {
+private func answerProjection(_ value: DataValue, _ member: String) throws -> DataValue {
+  guard case .array(let rows) = value.kind else {
+    throw ValueConversionError("Expected answer collection")
+  }
+  return .array(try rows.map { try jsonRequired(jsonObject($0), member) })
+}
+extension Call {
+  private func answerJSON(_ function: String, _ judgment: String) throws -> DataValue {
     guard terminal.kind == "terminal" else {
       throw AnswerCardinalityError(function: function, count: 0, call: self)
     }
     if case .null = terminal.failure {
-      throw JSONConversionError("Terminal failure must be an object")
+      throw ValueConversionError("Terminal failure must be an object")
     }
     if case .value(let failure) = terminal.failure {
       throw SessionFailure(failure: failure, call: self)
@@ -7414,7 +7223,7 @@ extension OwnedCall {
       function == "decide" || function == "choose" || function == "tag" || function == "score"
       || function == "filter" || function == "rank" || function == "annotate"
       || function == "recognize"
-    var values: [JSONValue] = []
+    var values: [DataValue] = []
     for packet in packets {
       guard try answerPath(packet.json, ["function"]) == .string(function) else { continue }
       if judgment.isEmpty {
@@ -7440,10 +7249,10 @@ extension OwnedCall {
       }
     }
     if judgment.isEmpty && collection {
-      var combined: [JSONValue] = []
+      var combined: [DataValue] = []
       for value in values {
         guard case .array(let items) = value.kind else {
-          throw JSONConversionError("Expected aggregate collection")
+          throw ValueConversionError("Expected aggregate collection")
         }
         combined.append(contentsOf: items)
       }
@@ -7462,92 +7271,4547 @@ extension OwnedCall {
   }
   public func tagAnswer() throws -> [String] { try [String].read(answerJSON("tag", "tags")) }
   public func scoreAnswer() throws -> Double { try Double.read(answerJSON("score", "score")) }
-  public func filterAnswer() throws -> [OwnedAtomicBoolean] {
-    try [OwnedAtomicBoolean].read(answerJSON("filter", ""))
+  public func filterAnswer() throws -> [DataValue] {
+    try [DataValue].read(answerProjection(answerJSON("filter", ""), "input"))
   }
-  public func rankAnswer() throws -> [OwnedAtomicNonZeroUsize] {
-    try [OwnedAtomicNonZeroUsize].read(answerJSON("rank", ""))
+  public func rankAnswer() throws -> [UInt64] {
+    try [UInt64].read(answerProjection(answerJSON("rank", ""), "index"))
   }
-  public func findAnswer() throws -> OwnedFind { try OwnedFind.read(answerJSON("find", "")) }
-  public func annotateAnswer() throws -> [OwnedAnnotation] {
-    try [OwnedAnnotation].read(answerJSON("annotate", ""))
+  public func findAnswer() throws -> Find { try Find.read(answerJSON("find", "")) }
+  public func annotateAnswer() throws -> [Annotation] {
+    try [Annotation].read(answerJSON("annotate", ""))
   }
-  public func recognizeAnswer() throws -> [OwnedRecognition] {
-    try [OwnedRecognition].read(answerJSON("recognize", ""))
+  public func recognizeAnswer() throws -> [Recognition] {
+    try [Recognition].read(answerJSON("recognize", ""))
   }
-  public func relateAnswer() throws -> OwnedRelation {
-    try OwnedRelation.read(answerJSON("relate", ""))
-  }
+  public func relateAnswer() throws -> Relation { try Relation.read(answerJSON("relate", "")) }
 }
 extension Client {
-  public func decideAnswer(
-    _ question: InputRequestQuestion, input: InputRequestInput,
-    options: Presence<InputRequestOptions> = .absent
-  ) async throws -> Bool? {
+  public func decideAnswer(_ question: Question, input: Input, options: Presence<Options> = .absent)
+    async throws -> Bool?
+  {
     let call = try await decide(question, input: input, options: options)
     return try call.decideAnswer()
   }
-  public func chooseAnswer(
-    _ question: InputRequestQuestion, input: InputRequestInput,
-    options: Presence<InputRequestOptions> = .absent
-  ) async throws -> String? {
+  public func chooseAnswer(_ question: Question, input: Input, options: Presence<Options> = .absent)
+    async throws -> String?
+  {
     let call = try await choose(question, input: input, options: options)
     return try call.chooseAnswer()
   }
-  public func tagAnswer(
-    _ question: InputRequestQuestion, input: InputRequestInput,
-    options: Presence<InputRequestOptions> = .absent
-  ) async throws -> [String] {
+  public func tagAnswer(_ question: Question, input: Input, options: Presence<Options> = .absent)
+    async throws -> [String]
+  {
     let call = try await tag(question, input: input, options: options)
     return try call.tagAnswer()
   }
-  public func scoreAnswer(
-    _ question: InputRequestQuestion, input: InputRequestInput,
-    options: Presence<InputRequestOptions> = .absent
-  ) async throws -> Double {
+  public func scoreAnswer(_ question: Question, input: Input, options: Presence<Options> = .absent)
+    async throws -> Double
+  {
     let call = try await score(question, input: input, options: options)
     return try call.scoreAnswer()
   }
-  public func filterAnswer(
-    _ question: InputRequestQuestion, input: InputRequestInput,
-    options: Presence<InputRequestOptions> = .absent
-  ) async throws -> [OwnedAtomicBoolean] {
+  public func filterAnswer(_ question: Question, input: Input, options: Presence<Options> = .absent)
+    async throws -> [DataValue]
+  {
     let call = try await filter(question, input: input, options: options)
     return try call.filterAnswer()
   }
-  public func rankAnswer(
-    _ question: InputRequestQuestion, input: InputRequestInput,
-    options: Presence<InputRequestOptions> = .absent
-  ) async throws -> [OwnedAtomicNonZeroUsize] {
+  public func rankAnswer(_ question: Question, input: Input, options: Presence<Options> = .absent)
+    async throws -> [UInt64]
+  {
     let call = try await rank(question, input: input, options: options)
     return try call.rankAnswer()
   }
-  public func findAnswer(
-    _ question: InputRequestQuestion, input: InputRequestInput,
-    options: Presence<InputRequestOptions> = .absent
-  ) async throws -> OwnedFind {
+  public func findAnswer(_ question: Question, input: Input, options: Presence<Options> = .absent)
+    async throws -> Find
+  {
     let call = try await find(question, input: input, options: options)
     return try call.findAnswer()
   }
   public func annotateAnswer(
-    _ question: InputRequestQuestion, input: InputRequestInput,
-    options: Presence<InputRequestOptions> = .absent
-  ) async throws -> [OwnedAnnotation] {
+    _ question: Question, input: Input, options: Presence<Options> = .absent
+  ) async throws -> [Annotation] {
     let call = try await annotate(question, input: input, options: options)
     return try call.annotateAnswer()
   }
   public func recognizeAnswer(
-    _ question: InputRequestQuestion, input: InputRequestInput,
-    options: Presence<InputRequestOptions> = .absent
-  ) async throws -> [OwnedRecognition] {
+    _ question: Question, input: Input, options: Presence<Options> = .absent
+  ) async throws -> [Recognition] {
     let call = try await recognize(question, input: input, options: options)
     return try call.recognizeAnswer()
   }
-  public func relateAnswer(
-    _ question: InputRequestQuestion, input: InputRequestInput,
-    options: Presence<InputRequestOptions> = .absent
-  ) async throws -> OwnedRelation {
+  public func relateAnswer(_ question: Question, input: Input, options: Presence<Options> = .absent)
+    async throws -> Relation
+  {
     let call = try await relate(question, input: input, options: options)
     return try call.relateAnswer()
   }
+}
+
+func nativeElements<T>(_ pointer: UnsafePointer<T>?, _ count: Int) throws -> [T] {
+  if count == 0 { return [] }
+  guard let pointer else { throw ValueConversionError("Missing native collection") }
+  return Array(UnsafeBufferPointer(start: pointer, count: count))
+}
+func copyNativeLeaf(_ pointer: UnsafePointer<thinkthen_complete_json_v1>?) throws -> DataValue {
+  guard let pointer else { throw ValueConversionError("Missing native leaf") }
+  return try DataValue.copyNative(pointer)
+}
+func copyNativeExtensions(_ value: thinkthen_complete_extensions_v1) throws -> [ValueMember] {
+  try nativeElements(value.data, value.len).map {
+    ValueMember(nativeString($0.name), try copyNativeLeaf($0.value))
+  }
+}
+
+func nativeValue(_ owner: OpaquePointer) throws -> DataValue {
+  var view: UnsafePointer<thinkthen_complete_json_v1>?
+  try sessionCheck(thinkthen_value_view(owner, &view))
+  guard let view else { throw ValueConversionError("Missing native value view") }
+  return try DataValue.copyNative(view)
+}
+
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_session_packet_v1>?) throws
+  -> DataValue
+{
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  switch value.kind {
+  case 1: return try copyNativeGraph(value.data.`decide_row`)
+  case 2: return try copyNativeGraph(value.data.`choose_row`)
+  case 3: return try copyNativeGraph(value.data.`tag_row`)
+  case 4: return try copyNativeGraph(value.data.`score_row`)
+  case 5: return try copyNativeGraph(value.data.`filter_row`)
+  case 6: return try copyNativeGraph(value.data.`annotate_row`)
+  case 7: return try copyNativeGraph(value.data.`decide_aggregate`)
+  case 8: return try copyNativeGraph(value.data.`choose_aggregate`)
+  case 9: return try copyNativeGraph(value.data.`tag_aggregate`)
+  case 10: return try copyNativeGraph(value.data.`score_aggregate`)
+  case 11: return try copyNativeGraph(value.data.`filter_aggregate`)
+  case 12: return try copyNativeGraph(value.data.`rank_aggregate`)
+  case 13: return try copyNativeGraph(value.data.`find_aggregate`)
+  case 14: return try copyNativeGraph(value.data.`annotate_aggregate`)
+  case 15: return try copyNativeGraph(value.data.`recognize_aggregate`)
+  case 16: return try copyNativeGraph(value.data.`relate_aggregate`)
+  case 17: return try copyNativeGraph(value.data.`observation`)
+  case 18: return try copyNativeGraph(value.data.`terminal`)
+  default: throw ValueConversionError("Unknown native packet alternative")
+  }
+}
+private func copyNativeGraph(
+  _ pointer: UnsafePointer<thinkthen_complete_session_packet_terminal_v1>?
+) throws -> DataValue {
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  var members = try copyNativeExtensions(value.extensions)
+  switch value.`facts`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("facts", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("facts", try copyNativeGraph(value.`facts`.value)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`failure`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("failure", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("failure", try copyNativeGraph(value.`failure`.value)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  members.append(ValueMember("kind", .string(nativeString(value.`kind`))))
+  return .orderedObject(members)
+}
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_call_error_v1>?) throws
+  -> DataValue
+{
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  var members = try copyNativeExtensions(value.extensions)
+  members.append(ValueMember("error", try copyNativeGraph(value.`error`)))
+  switch value.`facts`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("facts", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("facts", try copyNativeGraph(value.`facts`.value)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  return .orderedObject(members)
+}
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_facts_v1>?) throws
+  -> DataValue
+{
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  var members = try copyNativeExtensions(value.extensions)
+  switch value.`attempts`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("attempts", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(
+      ValueMember(
+        "attempts",
+        .array(
+          try nativeElements(value.`attempts`.value.data, value.`attempts`.value.len).map { item in
+            try copyNativeGraph(item)
+          })))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  members.append(
+    ValueMember("cache_answers", .number(NumberLiteral(unchecked: String(value.`cache_answers`)))))
+  members.append(ValueMember("call_id", try copyNativeGraph(value.`call_id`)))
+  switch value.`estimated_cost_usd`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1):
+    members.append(ValueMember("estimated_cost_usd", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(
+      ValueMember("estimated_cost_usd", .string(nativeString(value.`estimated_cost_usd`.value))))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`held_model_mismatch`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1):
+    members.append(ValueMember("held_model_mismatch", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(
+      ValueMember("held_model_mismatch", .bool(value.`held_model_mismatch`.value != 0)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`input_tokens`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1):
+    members.append(ValueMember("input_tokens", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(
+      ValueMember(
+        "input_tokens", .number(NumberLiteral(unchecked: String(value.`input_tokens`.value)))))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  members.append(
+    ValueMember(
+      "largest_request_bytes",
+      .number(NumberLiteral(unchecked: String(value.`largest_request_bytes`)))))
+  switch value.`largest_request_estimated_input_tokens`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1):
+    members.append(ValueMember("largest_request_estimated_input_tokens", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(
+      ValueMember(
+        "largest_request_estimated_input_tokens",
+        .number(
+          NumberLiteral(unchecked: String(value.`largest_request_estimated_input_tokens`.value)))))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`model`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("model", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("model", .string(nativeString(value.`model`.value))))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`output_tokens`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1):
+    members.append(ValueMember("output_tokens", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(
+      ValueMember(
+        "output_tokens", .number(NumberLiteral(unchecked: String(value.`output_tokens`.value)))))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  members.append(ValueMember("records", .number(NumberLiteral(unchecked: String(value.`records`)))))
+  members.append(
+    ValueMember("requests_sent", .number(NumberLiteral(unchecked: String(value.`requests_sent`)))))
+  members.append(ValueMember("seconds", .number(NumberLiteral(unchecked: String(value.`seconds`)))))
+  members.append(
+    ValueMember("token_estimate_method", .string(nativeString(value.`token_estimate_method`))))
+  switch value.`usage_persistence`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1):
+    members.append(ValueMember("usage_persistence", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(
+      ValueMember("usage_persistence", try copyNativeGraph(value.`usage_persistence`.value)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  return .orderedObject(members)
+}
+private func copyNativeGraph(
+  _ pointer: UnsafePointer<thinkthen_complete_persistence_observation_v1>?
+) throws -> DataValue {
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  var members = try copyNativeExtensions(value.extensions)
+  switch value.`advice`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("advice", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("advice", .string(nativeString(value.`advice`.value))))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  members.append(ValueMember("observed_at", .string(nativeString(value.`observed_at`))))
+  members.append(ValueMember("state", try copyNativeGraph(value.`state`)))
+  return .orderedObject(members)
+}
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_usage_persistence_v1>?)
+  throws -> DataValue
+{
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  switch value.kind {
+  case 1: return .string("disabled")
+  case 2: return .string("pending")
+  case 3: return .string("written")
+  case 4: return .string("failed")
+  default: throw ValueConversionError("Unknown native enum value")
+  }
+}
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_call_id_v1>?) throws
+  -> DataValue
+{
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  return .string(nativeString(value.value))
+}
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_attempt_v1>?) throws
+  -> DataValue
+{
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  var members = try copyNativeExtensions(value.extensions)
+  members.append(ValueMember("ordinal", .number(NumberLiteral(unchecked: String(value.`ordinal`)))))
+  members.append(ValueMember("outcome", try copyNativeGraph(value.`outcome`)))
+  switch value.`request_id`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("request_id", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("request_id", .string(nativeString(value.`request_id`.value))))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  members.append(ValueMember("request_sha256", .string(nativeString(value.`request_sha256`))))
+  members.append(ValueMember("sdk_request_id", try copyNativeGraph(value.`sdk_request_id`)))
+  switch value.`server_ms`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("server_ms", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(
+      ValueMember("server_ms", .number(NumberLiteral(unchecked: String(value.`server_ms`.value)))))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`status`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("status", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(
+      ValueMember("status", .number(NumberLiteral(unchecked: String(value.`status`.value)))))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  members.append(ValueMember("wall_ms", .number(NumberLiteral(unchecked: String(value.`wall_ms`)))))
+  return .orderedObject(members)
+}
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_sdk_request_id_v1>?) throws
+  -> DataValue
+{
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  return .string(nativeString(value.value))
+}
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_attempt_outcome_v1>?)
+  throws -> DataValue
+{
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  switch value.kind {
+  case 1: return .string("ok")
+  case 2: return .string("status")
+  case 3: return .string("transport")
+  default: throw ValueConversionError("Unknown native enum value")
+  }
+}
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_error_v1>?) throws
+  -> DataValue
+{
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  var members = try copyNativeExtensions(value.extensions)
+  switch value.`estimated_input_denial`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1):
+    members.append(ValueMember("estimated_input_denial", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(
+      ValueMember(
+        "estimated_input_denial", try copyNativeGraph(value.`estimated_input_denial`.value)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  members.append(ValueMember("kind", try copyNativeGraph(value.`kind`)))
+  members.append(ValueMember("message", .string(nativeString(value.`message`))))
+  members.append(ValueMember("retryable", .bool(value.`retryable` != 0)))
+  switch value.`send_budget_denial`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1):
+    members.append(ValueMember("send_budget_denial", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(
+      ValueMember("send_budget_denial", try copyNativeGraph(value.`send_budget_denial`.value)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  members.append(ValueMember("stopped", try copyNativeGraph(value.`stopped`)))
+  return .orderedObject(members)
+}
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_stopped_v1>?) throws
+  -> DataValue
+{
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  var members = try copyNativeExtensions(value.extensions)
+  switch value.`at`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("at", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("at", .number(NumberLiteral(unchecked: String(value.`at`.value)))))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  members.append(ValueMember("cause", try copyNativeGraph(value.`cause`)))
+  members.append(ValueMember("retryable", .bool(value.`retryable` != 0)))
+  switch value.`status`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("status", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(
+      ValueMember("status", .number(NumberLiteral(unchecked: String(value.`status`.value)))))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  return .orderedObject(members)
+}
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_stop_cause_v1>?) throws
+  -> DataValue
+{
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  switch value.kind {
+  case 1: return .string("usage")
+  case 2: return .string("local")
+  case 3: return .string("no_key")
+  case 4: return .string("transport")
+  case 5: return .string("status")
+  case 6: return .string("too_large")
+  case 7: return .string("reply")
+  case 8: return .string("backend")
+  case 9: return .string("cancelled")
+  case 10: return .string("deadline")
+  case 11: return .string("defect")
+  default: throw ValueConversionError("Unknown native enum value")
+  }
+}
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_send_denial_v1>?) throws
+  -> DataValue
+{
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  switch value.kind {
+  case 1: return try copyNativeGraph(value.data.`before_first_send`)
+  case 2: return try copyNativeGraph(value.data.`before_additional_send`)
+  case 3: return try copyNativeGraph(value.data.`before_retry`)
+  default: throw ValueConversionError("Unknown native packet alternative")
+  }
+}
+private func copyNativeGraph(
+  _ pointer: UnsafePointer<thinkthen_complete_send_denial_before_retry_v1>?
+) throws -> DataValue {
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  var members = try copyNativeExtensions(value.extensions)
+  members.append(ValueMember("kind", .string(nativeString(value.`kind`))))
+  members.append(
+    ValueMember("last_status", .number(NumberLiteral(unchecked: String(value.`last_status`)))))
+  return .orderedObject(members)
+}
+private func copyNativeGraph(
+  _ pointer: UnsafePointer<thinkthen_complete_send_denial_before_additional_send_v1>?
+) throws -> DataValue {
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  var members = try copyNativeExtensions(value.extensions)
+  members.append(ValueMember("kind", .string(nativeString(value.`kind`))))
+  return .orderedObject(members)
+}
+private func copyNativeGraph(
+  _ pointer: UnsafePointer<thinkthen_complete_send_denial_before_first_send_v1>?
+) throws -> DataValue {
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  var members = try copyNativeExtensions(value.extensions)
+  members.append(ValueMember("kind", .string(nativeString(value.`kind`))))
+  return .orderedObject(members)
+}
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_failure_kind_v1>?) throws
+  -> DataValue
+{
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  switch value.kind {
+  case 1: return .string("usage")
+  case 2: return .string("backend")
+  case 3: return .string("local")
+  case 4: return .string("cancelled")
+  case 5: return .string("deadline")
+  case 6: return .string("defect")
+  default: throw ValueConversionError("Unknown native enum value")
+  }
+}
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_input_denial_v1>?) throws
+  -> DataValue
+{
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  switch value.kind {
+  case 1: return try copyNativeGraph(value.data.`initial_request`)
+  case 2: return try copyNativeGraph(value.data.`additional_request`)
+  case 3: return try copyNativeGraph(value.data.`retry`)
+  default: throw ValueConversionError("Unknown native packet alternative")
+  }
+}
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_input_denial_retry_v1>?)
+  throws -> DataValue
+{
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  var members = try copyNativeExtensions(value.extensions)
+  members.append(ValueMember("kind", .string(nativeString(value.`kind`))))
+  members.append(
+    ValueMember("last_status", .number(NumberLiteral(unchecked: String(value.`last_status`)))))
+  members.append(ValueMember("limit", .number(NumberLiteral(unchecked: String(value.`limit`)))))
+  return .orderedObject(members)
+}
+private func copyNativeGraph(
+  _ pointer: UnsafePointer<thinkthen_complete_input_denial_additional_request_v1>?
+) throws -> DataValue {
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  var members = try copyNativeExtensions(value.extensions)
+  members.append(ValueMember("kind", .string(nativeString(value.`kind`))))
+  members.append(ValueMember("limit", .number(NumberLiteral(unchecked: String(value.`limit`)))))
+  return .orderedObject(members)
+}
+private func copyNativeGraph(
+  _ pointer: UnsafePointer<thinkthen_complete_input_denial_initial_request_v1>?
+) throws -> DataValue {
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  var members = try copyNativeExtensions(value.extensions)
+  members.append(ValueMember("kind", .string(nativeString(value.`kind`))))
+  members.append(ValueMember("limit", .number(NumberLiteral(unchecked: String(value.`limit`)))))
+  return .orderedObject(members)
+}
+private func copyNativeGraph(
+  _ pointer: UnsafePointer<thinkthen_complete_session_packet_observation_v1>?
+) throws -> DataValue {
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  var members = try copyNativeExtensions(value.extensions)
+  members.append(ValueMember("function", try copyNativeGraph(value.`function`)))
+  members.append(ValueMember("kind", .string(nativeString(value.`kind`))))
+  members.append(ValueMember("value", try copyNativeGraph(value.`value`)))
+  return .orderedObject(members)
+}
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_session_observation_v1>?)
+  throws -> DataValue
+{
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  switch value.kind {
+  case 1: return try copyNativeGraph(value.data.`question`)
+  case 2: return try copyNativeGraph(value.data.`row`)
+  default: throw ValueConversionError("Unknown native packet alternative")
+  }
+}
+private func copyNativeGraph(
+  _ pointer: UnsafePointer<thinkthen_complete_session_observation_row_v1>?
+) throws -> DataValue {
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  var members = try copyNativeExtensions(value.extensions)
+  members.append(ValueMember("index", .number(NumberLiteral(unchecked: String(value.`index`)))))
+  members.append(ValueMember("kind", .string(nativeString(value.`kind`))))
+  members.append(ValueMember("value", try copyNativeGraph(value.`value`)))
+  return .orderedObject(members)
+}
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_session_observed_row_v1>?)
+  throws -> DataValue
+{
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  switch value.kind {
+  case 1: return try copyNativeGraph(value.data.`judgment`)
+  case 2: return try copyNativeGraph(value.data.`annotated`)
+  case 3: return try copyNativeGraph(value.data.`recognized`)
+  case 4: return try copyNativeGraph(value.data.`find`)
+  case 5: return try copyNativeGraph(value.data.`relations`)
+  default: throw ValueConversionError("Unknown native packet alternative")
+  }
+}
+private func copyNativeGraph(
+  _ pointer: UnsafePointer<thinkthen_complete_session_observed_row_relations_v1>?
+) throws -> DataValue {
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  var members = try copyNativeExtensions(value.extensions)
+  members.append(ValueMember("kind", .string(nativeString(value.`kind`))))
+  members.append(
+    ValueMember(
+      "value",
+      .array(
+        try nativeElements(value.`value`.data, value.`value`.len).map { item in
+          try copyNativeGraph(item)
+        })))
+  return .orderedObject(members)
+}
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_session_relation_edge_v1>?)
+  throws -> DataValue
+{
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  var members = try copyNativeExtensions(value.extensions)
+  members.append(ValueMember("either", .bool(value.`either` != 0)))
+  members.append(
+    ValueMember("probability", .number(NumberLiteral(unchecked: String(value.`probability`)))))
+  members.append(ValueMember("relation", .string(nativeString(value.`relation`))))
+  members.append(ValueMember("source", try copyNativeGraph(value.`source`)))
+  members.append(ValueMember("target", try copyNativeGraph(value.`target`)))
+  return .orderedObject(members)
+}
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_entity_document_v1>?)
+  throws -> DataValue
+{
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  var members = try copyNativeExtensions(value.extensions)
+  members.append(ValueMember("kind", .string(nativeString(value.`kind`))))
+  members.append(ValueMember("name", .string(nativeString(value.`name`))))
+  return .orderedObject(members)
+}
+private func copyNativeGraph(
+  _ pointer: UnsafePointer<thinkthen_complete_session_observed_row_find_v1>?
+) throws -> DataValue {
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  var members = try copyNativeExtensions(value.extensions)
+  members.append(ValueMember("kind", .string(nativeString(value.`kind`))))
+  switch value.`value`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("value", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(
+      ValueMember("value", .number(NumberLiteral(unchecked: String(value.`value`.value)))))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  return .orderedObject(members)
+}
+private func copyNativeGraph(
+  _ pointer: UnsafePointer<thinkthen_complete_session_observed_row_recognized_v1>?
+) throws -> DataValue {
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  var members = try copyNativeExtensions(value.extensions)
+  members.append(ValueMember("kind", .string(nativeString(value.`kind`))))
+  members.append(ValueMember("value", try copyNativeGraph(value.`value`)))
+  return .orderedObject(members)
+}
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_session_recognition_v1>?)
+  throws -> DataValue
+{
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  var members = try copyNativeExtensions(value.extensions)
+  members.append(
+    ValueMember(
+      "entities",
+      .array(
+        try nativeElements(value.`entities`.data, value.`entities`.len).map { item in
+          try copyNativeGraph(item)
+        })))
+  members.append(ValueMember("mode", try copyNativeGraph(value.`mode`)))
+  switch value.`proposals`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("proposals", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(
+      ValueMember(
+        "proposals",
+        .array(
+          try nativeElements(value.`proposals`.value.data, value.`proposals`.value.len).map {
+            item in try copyNativeGraph(item)
+          })))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`relations`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("relations", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(
+      ValueMember(
+        "relations",
+        .array(
+          try nativeElements(value.`relations`.value.data, value.`relations`.value.len).map {
+            item in try copyNativeGraph(item)
+          })))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  return .orderedObject(members)
+}
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_recognition_edge_v1>?)
+  throws -> DataValue
+{
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  var members = try copyNativeExtensions(value.extensions)
+  members.append(ValueMember("either", .bool(value.`either` != 0)))
+  members.append(
+    ValueMember("probability", .number(NumberLiteral(unchecked: String(value.`probability`)))))
+  members.append(ValueMember("relation", .string(nativeString(value.`relation`))))
+  members.append(ValueMember("source", try copyNativeGraph(value.`source`)))
+  members.append(ValueMember("target", try copyNativeGraph(value.`target`)))
+  return .orderedObject(members)
+}
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_entity_v1>?) throws
+  -> DataValue
+{
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  var members = try copyNativeExtensions(value.extensions)
+  members.append(ValueMember("end", .number(NumberLiteral(unchecked: String(value.`end`)))))
+  switch value.`file`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("file", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("file", .string(nativeString(value.`file`.value))))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`first_line`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("first_line", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(
+      ValueMember("first_line", .number(NumberLiteral(unchecked: String(value.`first_line`.value))))
+    )
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  members.append(ValueMember("kind", .string(nativeString(value.`kind`))))
+  switch value.`last_line`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("last_line", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(
+      ValueMember("last_line", .number(NumberLiteral(unchecked: String(value.`last_line`.value)))))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  members.append(ValueMember("length", .number(NumberLiteral(unchecked: String(value.`length`)))))
+  members.append(ValueMember("start", .number(NumberLiteral(unchecked: String(value.`start`)))))
+  members.append(
+    ValueMember("strength", .number(NumberLiteral(unchecked: String(value.`strength`)))))
+  members.append(ValueMember("text", .string(nativeString(value.`text`))))
+  return .orderedObject(members)
+}
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_boundary_proposal_v1>?)
+  throws -> DataValue
+{
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  var members = try copyNativeExtensions(value.extensions)
+  members.append(ValueMember("end", .number(NumberLiteral(unchecked: String(value.`end`)))))
+  members.append(ValueMember("length", .number(NumberLiteral(unchecked: String(value.`length`)))))
+  members.append(
+    ValueMember("probability", .number(NumberLiteral(unchecked: String(value.`probability`)))))
+  members.append(ValueMember("start", .number(NumberLiteral(unchecked: String(value.`start`)))))
+  members.append(ValueMember("text", .string(nativeString(value.`text`))))
+  return .orderedObject(members)
+}
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_recognition_mode_v1>?)
+  throws -> DataValue
+{
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  switch value.kind {
+  case 1: return .string("whole")
+  case 2: return .string("boundary_only")
+  default: throw ValueConversionError("Unknown native enum value")
+  }
+}
+private func copyNativeGraph(
+  _ pointer: UnsafePointer<thinkthen_complete_session_observed_row_annotated_v1>?
+) throws -> DataValue {
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  var members = try copyNativeExtensions(value.extensions)
+  members.append(ValueMember("kind", .string(nativeString(value.`kind`))))
+  members.append(
+    ValueMember(
+      "value",
+      .array(
+        try nativeElements(value.`value`.data, value.`value`.len).map { item in
+          try copyNativeGraph(item)
+        })))
+  return .orderedObject(members)
+}
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_session_annotation_v1>?)
+  throws -> DataValue
+{
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  var members = try copyNativeExtensions(value.extensions)
+  members.append(ValueMember("name", .string(nativeString(value.`name`))))
+  members.append(ValueMember("value", try copyNativeGraph(value.`value`)))
+  return .orderedObject(members)
+}
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_annotation_value_v1>?)
+  throws -> DataValue
+{
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  switch value.kind {
+  case 1: return try copyNativeGraph(value.data.`decision`)
+  case 2: return try copyNativeGraph(value.data.`choice`)
+  case 3: return try copyNativeGraph(value.data.`score`)
+  case 4: return try copyNativeGraph(value.data.`tags`)
+  case 5: return try copyNativeGraph(value.data.`failed`)
+  default: throw ValueConversionError("Unknown native packet alternative")
+  }
+}
+private func copyNativeGraph(
+  _ pointer: UnsafePointer<thinkthen_complete_annotation_value_failed_v1>?
+) throws -> DataValue {
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  var members = try copyNativeExtensions(value.extensions)
+  members.append(ValueMember("kind", .string(nativeString(value.`kind`))))
+  members.append(ValueMember("value", try copyNativeGraph(value.`value`)))
+  return .orderedObject(members)
+}
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_failure_field_kind_v1>?)
+  throws -> DataValue
+{
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  switch value.kind {
+  case 1: return .string("backend")
+  default: throw ValueConversionError("Unknown native enum value")
+  }
+}
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_failure_v1>?) throws
+  -> DataValue
+{
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  var members = try copyNativeExtensions(value.extensions)
+  members.append(ValueMember("cause", try copyNativeGraph(value.`cause`)))
+  members.append(ValueMember("kind", try copyNativeGraph(value.`kind`)))
+  return .orderedObject(members)
+}
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_failure_cause_v1>?) throws
+  -> DataValue
+{
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  switch value.kind {
+  case 1: return .string("missing_answer")
+  case 2: return .string("wrong_kind")
+  case 3: return .string("missing_probability")
+  case 4: return .string("invalid_probability")
+  case 5: return .string("invalid_distribution")
+  case 6: return .string("unexpected_probability")
+  default: throw ValueConversionError("Unknown native enum value")
+  }
+}
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_annotation_value_tags_v1>?)
+  throws -> DataValue
+{
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  var members = try copyNativeExtensions(value.extensions)
+  members.append(ValueMember("kind", .string(nativeString(value.`kind`))))
+  members.append(
+    ValueMember(
+      "value",
+      .array(
+        try nativeElements(value.`value`.data, value.`value`.len).map { item in
+          .string(nativeString(item))
+        })))
+  return .orderedObject(members)
+}
+private func copyNativeGraph(
+  _ pointer: UnsafePointer<thinkthen_complete_annotation_value_score_v1>?
+) throws -> DataValue {
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  var members = try copyNativeExtensions(value.extensions)
+  members.append(ValueMember("kind", .string(nativeString(value.`kind`))))
+  members.append(ValueMember("value", .number(NumberLiteral(unchecked: String(value.`value`)))))
+  return .orderedObject(members)
+}
+private func copyNativeGraph(
+  _ pointer: UnsafePointer<thinkthen_complete_annotation_value_choice_v1>?
+) throws -> DataValue {
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  var members = try copyNativeExtensions(value.extensions)
+  members.append(ValueMember("kind", .string(nativeString(value.`kind`))))
+  switch value.`value`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("value", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("value", .string(nativeString(value.`value`.value))))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  return .orderedObject(members)
+}
+private func copyNativeGraph(
+  _ pointer: UnsafePointer<thinkthen_complete_annotation_value_decision_v1>?
+) throws -> DataValue {
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  var members = try copyNativeExtensions(value.extensions)
+  members.append(ValueMember("kind", .string(nativeString(value.`kind`))))
+  switch value.`value`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("value", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("value", .bool(value.`value`.value != 0)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  return .orderedObject(members)
+}
+private func copyNativeGraph(
+  _ pointer: UnsafePointer<thinkthen_complete_session_observed_row_judgment_v1>?
+) throws -> DataValue {
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  var members = try copyNativeExtensions(value.extensions)
+  members.append(ValueMember("kind", .string(nativeString(value.`kind`))))
+  members.append(ValueMember("value", try copyNativeGraph(value.`value`)))
+  return .orderedObject(members)
+}
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_session_judgment_v1>?)
+  throws -> DataValue
+{
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  switch value.kind {
+  case 1: return try copyNativeGraph(value.data.`decision`)
+  case 2: return try copyNativeGraph(value.data.`choice`)
+  case 3: return try copyNativeGraph(value.data.`score`)
+  case 4: return try copyNativeGraph(value.data.`tags`)
+  default: throw ValueConversionError("Unknown native packet alternative")
+  }
+}
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_session_judgment_tags_v1>?)
+  throws -> DataValue
+{
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  var members = try copyNativeExtensions(value.extensions)
+  members.append(ValueMember("kind", .string(nativeString(value.`kind`))))
+  members.append(
+    ValueMember(
+      "value",
+      .array(
+        try nativeElements(value.`value`.data, value.`value`.len).map { item in
+          .string(nativeString(item))
+        })))
+  return .orderedObject(members)
+}
+private func copyNativeGraph(
+  _ pointer: UnsafePointer<thinkthen_complete_session_judgment_score_v1>?
+) throws -> DataValue {
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  var members = try copyNativeExtensions(value.extensions)
+  members.append(ValueMember("kind", .string(nativeString(value.`kind`))))
+  members.append(ValueMember("value", .number(NumberLiteral(unchecked: String(value.`value`)))))
+  return .orderedObject(members)
+}
+private func copyNativeGraph(
+  _ pointer: UnsafePointer<thinkthen_complete_session_judgment_choice_v1>?
+) throws -> DataValue {
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  var members = try copyNativeExtensions(value.extensions)
+  members.append(ValueMember("kind", .string(nativeString(value.`kind`))))
+  switch value.`value`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("value", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("value", .string(nativeString(value.`value`.value))))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  return .orderedObject(members)
+}
+private func copyNativeGraph(
+  _ pointer: UnsafePointer<thinkthen_complete_session_judgment_decision_v1>?
+) throws -> DataValue {
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  var members = try copyNativeExtensions(value.extensions)
+  members.append(ValueMember("kind", .string(nativeString(value.`kind`))))
+  switch value.`value`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("value", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("value", .bool(value.`value`.value != 0)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  return .orderedObject(members)
+}
+private func copyNativeGraph(
+  _ pointer: UnsafePointer<thinkthen_complete_session_observation_question_v1>?
+) throws -> DataValue {
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  var members = try copyNativeExtensions(value.extensions)
+  members.append(ValueMember("detail", try copyNativeGraph(value.`detail`)))
+  members.append(ValueMember("index", .number(NumberLiteral(unchecked: String(value.`index`)))))
+  members.append(ValueMember("kind", .string(nativeString(value.`kind`))))
+  switch value.`member`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("member", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("member", .string(nativeString(value.`member`.value))))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  members.append(
+    ValueMember("position", .number(NumberLiteral(unchecked: String(value.`position`)))))
+  switch value.`stage`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("stage", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("stage", .string(nativeString(value.`stage`.value))))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  return .orderedObject(members)
+}
+private func copyNativeGraph(
+  _ pointer: UnsafePointer<thinkthen_complete_session_question_detail_v1>?
+) throws -> DataValue {
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  var members = try copyNativeExtensions(value.extensions)
+  switch value.`answer_id`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("answer_id", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("answer_id", try copyNativeGraph(value.`answer_id`.value)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  members.append(ValueMember("cached", .bool(value.`cached` != 0)))
+  switch value.`confidence`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("confidence", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(
+      ValueMember("confidence", .number(NumberLiteral(unchecked: String(value.`confidence`.value))))
+    )
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  members.append(
+    ValueMember(
+      "failed_questions", .number(NumberLiteral(unchecked: String(value.`failed_questions`)))))
+  switch value.`failure`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("failure", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("failure", try copyNativeGraph(value.`failure`.value)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`failure_id`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("failure_id", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("failure_id", try copyNativeGraph(value.`failure_id`.value)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`input`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("input", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("input", try copyNativeLeaf(value.`input`.value)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`input_source`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1):
+    members.append(ValueMember("input_source", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("input_source", try copyNativeGraph(value.`input_source`.value)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  members.append(
+    ValueMember(
+      "input_sources",
+      .array(
+        try nativeElements(value.`input_sources`.data, value.`input_sources`.len).map { item in
+          try copyNativeGraph(item)
+        })))
+  members.append(
+    ValueMember(
+      "inputs",
+      .array(
+        try nativeElements(value.`inputs`.data, value.`inputs`.len).map { item in
+          try copyNativeLeaf(item)
+        })))
+  members.append(ValueMember("model", .string(nativeString(value.`model`))))
+  members.append(
+    ValueMember(
+      "observations",
+      .array(
+        try nativeElements(value.`observations`.data, value.`observations`.len).map { item in
+          try copyNativeGraph(item)
+        })))
+  switch value.`probabilities`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1):
+    members.append(ValueMember("probabilities", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("probabilities", try copyNativeGraph(value.`probabilities`.value)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  members.append(ValueMember("question", try copyNativeGraph(value.`question`)))
+  members.append(ValueMember("question_sha256", .string(nativeString(value.`question_sha256`))))
+  members.append(
+    ValueMember(
+      "question_sources",
+      .array(
+        try nativeElements(value.`question_sources`.data, value.`question_sources`.len).map {
+          item in try copyNativeGraph(item)
+        })))
+  switch value.`raw_pick`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("raw_pick", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("raw_pick", .string(nativeString(value.`raw_pick`.value))))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`reported_usage`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1):
+    members.append(ValueMember("reported_usage", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("reported_usage", try copyNativeGraph(value.`reported_usage`.value)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  members.append(
+    ValueMember(
+      "requests",
+      .array(
+        try nativeElements(value.`requests`.data, value.`requests`.len).map { item in
+          .string(nativeString(item))
+        })))
+  members.append(
+    ValueMember("requests_sent", .number(NumberLiteral(unchecked: String(value.`requests_sent`)))))
+  switch value.`threshold`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("threshold", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("threshold", try copyNativeGraph(value.`threshold`.value)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  members.append(ValueMember("url", .string(nativeString(value.`url`))))
+  switch value.`usage`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("usage", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("usage", try copyNativeGraph(value.`usage`.value)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`value`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("value", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("value", try copyNativeGraph(value.`value`.value)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  return .orderedObject(members)
+}
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_value_v1>?) throws
+  -> DataValue
+{
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  switch value.kind {
+  case 1: return .bool(value.data.`boolean` != 0)
+  case 2: return .null
+  case 3: return .string(nativeString(value.data.`string`))
+  case 4:
+    return .array(
+      try nativeElements(value.data.`array`.data, value.data.`array`.len).map { item in
+        .string(nativeString(item))
+      })
+  case 5: return .number(NumberLiteral(unchecked: String(value.data.`number`)))
+  default: throw ValueConversionError("Unknown native value alternative")
+  }
+}
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_token_usage_v1>?) throws
+  -> DataValue
+{
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  var members = try copyNativeExtensions(value.extensions)
+  members.append(
+    ValueMember("input_tokens", .number(NumberLiteral(unchecked: String(value.`input_tokens`)))))
+  members.append(
+    ValueMember("output_tokens", .number(NumberLiteral(unchecked: String(value.`output_tokens`)))))
+  return .orderedObject(members)
+}
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_threshold_v1>?) throws
+  -> DataValue
+{
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  switch value.kind {
+  case 1: return .number(NumberLiteral(unchecked: String(value.data.`number`)))
+  case 2: return .string(nativeString(value.data.`string`))
+  default: throw ValueConversionError("Unknown native value alternative")
+  }
+}
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_usage_v1>?) throws
+  -> DataValue
+{
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  var members = try copyNativeExtensions(value.extensions)
+  switch value.`input_tokens`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1):
+    members.append(ValueMember("input_tokens", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(
+      ValueMember(
+        "input_tokens", .number(NumberLiteral(unchecked: String(value.`input_tokens`.value)))))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`output_tokens`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1):
+    members.append(ValueMember("output_tokens", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(
+      ValueMember(
+        "output_tokens", .number(NumberLiteral(unchecked: String(value.`output_tokens`.value)))))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  return .orderedObject(members)
+}
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_question_source_v1>?)
+  throws -> DataValue
+{
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  var members = try copyNativeExtensions(value.extensions)
+  members.append(ValueMember("answered_by", .string(nativeString(value.`answered_by`))))
+  switch value.`batch_size`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("batch_size", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(
+      ValueMember("batch_size", .number(NumberLiteral(unchecked: String(value.`batch_size`.value))))
+    )
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  members.append(ValueMember("origin", try copyNativeGraph(value.`origin`)))
+  return .orderedObject(members)
+}
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_origin_v1>?) throws
+  -> DataValue
+{
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  switch value.kind {
+  case 1: return .string("live")
+  case 2: return .string("cache")
+  case 3: return .string("replay")
+  case 4: return .string("proxy")
+  case 5: return .string("memory")
+  default: throw ValueConversionError("Unknown native enum value")
+  }
+}
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_question_document_v1>?)
+  throws -> DataValue
+{
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  switch value.kind {
+  case 1: return try copyNativeGraph(value.data.`decide`)
+  case 2: return try copyNativeGraph(value.data.`choose`)
+  case 3: return try copyNativeGraph(value.data.`tag`)
+  case 4: return try copyNativeGraph(value.data.`score`)
+  default: throw ValueConversionError("Unknown native packet alternative")
+  }
+}
+private func copyNativeGraph(
+  _ pointer: UnsafePointer<thinkthen_complete_question_document_score_v1>?
+) throws -> DataValue {
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  var members = try copyNativeExtensions(value.extensions)
+  switch value.`batch`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("batch", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("batch", try copyNativeGraph(value.`batch`.value)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`context_schema`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1):
+    members.append(ValueMember("context_schema", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("context_schema", try copyNativeGraph(value.`context_schema`.value)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`item_schema`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1):
+    members.append(ValueMember("item_schema", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("item_schema", try copyNativeGraph(value.`item_schema`.value)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`label_details`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1):
+    members.append(ValueMember("label_details", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(
+      ValueMember(
+        "label_details",
+        .array(
+          try nativeElements(value.`label_details`.value.data, value.`label_details`.value.len).map
+          { item in try copyNativeGraph(item) })))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`model`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("model", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("model", .string(nativeString(value.`model`.value))))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`name`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("name", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("name", try copyNativeGraph(value.`name`.value)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`on`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("on", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(
+      ValueMember(
+        "on",
+        .array(
+          try nativeElements(value.`on`.value.data, value.`on`.value.len).map { item in
+            .string(nativeString(item))
+          })))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`profile`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("profile", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("profile", .string(nativeString(value.`profile`.value))))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`wording_version`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1):
+    members.append(ValueMember("wording_version", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(
+      ValueMember("wording_version", try copyNativeGraph(value.`wording_version`.value)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  members.append(
+    ValueMember(
+      "levels",
+      .array(
+        try nativeElements(value.`levels`.data, value.`levels`.len).map { item in
+          .string(nativeString(item))
+        })))
+  switch value.`text`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("text", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("text", try copyNativeLeaf(value.`text`.value)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  members.append(ValueMember("verb", .string(nativeString(value.`verb`))))
+  return .orderedObject(members)
+}
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_wording_version_v1>?)
+  throws -> DataValue
+{
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  return .number(NumberLiteral(unchecked: String(value.value)))
+}
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_question_name_v1>?) throws
+  -> DataValue
+{
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  return .string(nativeString(value.value))
+}
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_label_v1>?) throws
+  -> DataValue
+{
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  var members = try copyNativeExtensions(value.extensions)
+  switch value.`description`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1):
+    members.append(ValueMember("description", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("description", try copyNativeLeaf(value.`description`.value)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  members.append(ValueMember("name", .string(nativeString(value.`name`))))
+  return .orderedObject(members)
+}
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_input_declaration_v1>?)
+  throws -> DataValue
+{
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  switch value.kind {
+  case 1: return try copyNativeGraph(value.data.`string_root`)
+  case 2: return try copyNativeGraph(value.data.`object_root`)
+  default: throw ValueConversionError("Unknown native packet alternative")
+  }
+}
+private func copyNativeGraph(
+  _ pointer: UnsafePointer<thinkthen_complete_input_declaration_object_root_v1>?
+) throws -> DataValue {
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  var members = try copyNativeExtensions(value.extensions)
+  members.append(
+    ValueMember(
+      "properties",
+      .orderedObject(
+        try nativeElements(value.`properties`.data, value.`properties`.len).map { item in
+          ValueMember(nativeString(item.name), try copyNativeGraph(item.value))
+        })))
+  switch value.`required`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("required", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(
+      ValueMember(
+        "required",
+        .array(
+          try nativeElements(value.`required`.value.data, value.`required`.value.len).map { item in
+            .string(nativeString(item))
+          })))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  members.append(ValueMember("type", try copyNativeGraph(value.`type`)))
+  return .orderedObject(members)
+}
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_object_type_v1>?) throws
+  -> DataValue
+{
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  switch value.kind {
+  case 1: return .string("object")
+  default: throw ValueConversionError("Unknown native enum value")
+  }
+}
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_input_property_type_v1>?)
+  throws -> DataValue
+{
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  switch value.kind {
+  case 1: return try copyNativeGraph(value.data.`string`)
+  case 2: return try copyNativeGraph(value.data.`number`)
+  case 3: return try copyNativeGraph(value.data.`boolean`)
+  case 4: return try copyNativeGraph(value.data.`array`)
+  default: throw ValueConversionError("Unknown native packet alternative")
+  }
+}
+private func copyNativeGraph(
+  _ pointer: UnsafePointer<thinkthen_complete_input_property_type_array_v1>?
+) throws -> DataValue {
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  var members = try copyNativeExtensions(value.extensions)
+  members.append(ValueMember("items", try copyNativeGraph(value.`items`)))
+  members.append(ValueMember("type", .string(nativeString(value.`type`))))
+  return .orderedObject(members)
+}
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_string_root_v1>?) throws
+  -> DataValue
+{
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  var members = try copyNativeExtensions(value.extensions)
+  members.append(ValueMember("type", try copyNativeGraph(value.`type`)))
+  return .orderedObject(members)
+}
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_string_type_v1>?) throws
+  -> DataValue
+{
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  switch value.kind {
+  case 1: return .string("string")
+  default: throw ValueConversionError("Unknown native enum value")
+  }
+}
+private func copyNativeGraph(
+  _ pointer: UnsafePointer<thinkthen_complete_input_property_type_boolean_v1>?
+) throws -> DataValue {
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  var members = try copyNativeExtensions(value.extensions)
+  members.append(ValueMember("type", .string(nativeString(value.`type`))))
+  return .orderedObject(members)
+}
+private func copyNativeGraph(
+  _ pointer: UnsafePointer<thinkthen_complete_input_property_type_number_v1>?
+) throws -> DataValue {
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  var members = try copyNativeExtensions(value.extensions)
+  members.append(ValueMember("type", .string(nativeString(value.`type`))))
+  return .orderedObject(members)
+}
+private func copyNativeGraph(
+  _ pointer: UnsafePointer<thinkthen_complete_input_property_type_string_v1>?
+) throws -> DataValue {
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  var members = try copyNativeExtensions(value.extensions)
+  members.append(ValueMember("type", .string(nativeString(value.`type`))))
+  return .orderedObject(members)
+}
+private func copyNativeGraph(
+  _ pointer: UnsafePointer<thinkthen_complete_input_declaration_string_root_v1>?
+) throws -> DataValue {
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  var members = try copyNativeExtensions(value.extensions)
+  members.append(ValueMember("type", try copyNativeGraph(value.`type`)))
+  return .orderedObject(members)
+}
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_batch_string_v1>?) throws
+  -> DataValue
+{
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  switch value.kind {
+  case 1: return .string("max")
+  default: throw ValueConversionError("Unknown native enum value")
+  }
+}
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_batch_v1>?) throws
+  -> DataValue
+{
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  switch value.kind {
+  case 1: return .number(NumberLiteral(unchecked: String(value.data.`integer`)))
+  case 2: return try copyNativeGraph(value.data.`string`)
+  default: throw ValueConversionError("Unknown native value alternative")
+  }
+}
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_question_document_tag_v1>?)
+  throws -> DataValue
+{
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  var members = try copyNativeExtensions(value.extensions)
+  switch value.`batch`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("batch", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("batch", try copyNativeGraph(value.`batch`.value)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`context_schema`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1):
+    members.append(ValueMember("context_schema", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("context_schema", try copyNativeGraph(value.`context_schema`.value)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`item_schema`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1):
+    members.append(ValueMember("item_schema", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("item_schema", try copyNativeGraph(value.`item_schema`.value)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`label_details`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1):
+    members.append(ValueMember("label_details", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(
+      ValueMember(
+        "label_details",
+        .array(
+          try nativeElements(value.`label_details`.value.data, value.`label_details`.value.len).map
+          { item in try copyNativeGraph(item) })))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`model`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("model", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("model", .string(nativeString(value.`model`.value))))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`name`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("name", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("name", try copyNativeGraph(value.`name`.value)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`on`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("on", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(
+      ValueMember(
+        "on",
+        .array(
+          try nativeElements(value.`on`.value.data, value.`on`.value.len).map { item in
+            .string(nativeString(item))
+          })))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`profile`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("profile", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("profile", .string(nativeString(value.`profile`.value))))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`wording_version`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1):
+    members.append(ValueMember("wording_version", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(
+      ValueMember("wording_version", try copyNativeGraph(value.`wording_version`.value)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  members.append(
+    ValueMember(
+      "labels",
+      .array(
+        try nativeElements(value.`labels`.data, value.`labels`.len).map { item in
+          .string(nativeString(item))
+        })))
+  switch value.`text`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("text", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("text", try copyNativeLeaf(value.`text`.value)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  members.append(ValueMember("verb", .string(nativeString(value.`verb`))))
+  return .orderedObject(members)
+}
+private func copyNativeGraph(
+  _ pointer: UnsafePointer<thinkthen_complete_question_document_choose_v1>?
+) throws -> DataValue {
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  var members = try copyNativeExtensions(value.extensions)
+  switch value.`batch`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("batch", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("batch", try copyNativeGraph(value.`batch`.value)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`context_schema`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1):
+    members.append(ValueMember("context_schema", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("context_schema", try copyNativeGraph(value.`context_schema`.value)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`item_schema`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1):
+    members.append(ValueMember("item_schema", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("item_schema", try copyNativeGraph(value.`item_schema`.value)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`label_details`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1):
+    members.append(ValueMember("label_details", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(
+      ValueMember(
+        "label_details",
+        .array(
+          try nativeElements(value.`label_details`.value.data, value.`label_details`.value.len).map
+          { item in try copyNativeGraph(item) })))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`model`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("model", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("model", .string(nativeString(value.`model`.value))))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`name`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("name", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("name", try copyNativeGraph(value.`name`.value)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`on`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("on", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(
+      ValueMember(
+        "on",
+        .array(
+          try nativeElements(value.`on`.value.data, value.`on`.value.len).map { item in
+            .string(nativeString(item))
+          })))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`profile`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("profile", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("profile", .string(nativeString(value.`profile`.value))))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`wording_version`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1):
+    members.append(ValueMember("wording_version", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(
+      ValueMember("wording_version", try copyNativeGraph(value.`wording_version`.value)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  members.append(
+    ValueMember(
+      "options",
+      .array(
+        try nativeElements(value.`options`.data, value.`options`.len).map { item in
+          .string(nativeString(item))
+        })))
+  switch value.`text`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("text", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("text", try copyNativeLeaf(value.`text`.value)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  members.append(ValueMember("verb", .string(nativeString(value.`verb`))))
+  return .orderedObject(members)
+}
+private func copyNativeGraph(
+  _ pointer: UnsafePointer<thinkthen_complete_question_document_decide_v1>?
+) throws -> DataValue {
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  var members = try copyNativeExtensions(value.extensions)
+  switch value.`batch`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("batch", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("batch", try copyNativeGraph(value.`batch`.value)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`context_schema`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1):
+    members.append(ValueMember("context_schema", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("context_schema", try copyNativeGraph(value.`context_schema`.value)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`item_schema`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1):
+    members.append(ValueMember("item_schema", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("item_schema", try copyNativeGraph(value.`item_schema`.value)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`label_details`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1):
+    members.append(ValueMember("label_details", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(
+      ValueMember(
+        "label_details",
+        .array(
+          try nativeElements(value.`label_details`.value.data, value.`label_details`.value.len).map
+          { item in try copyNativeGraph(item) })))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`model`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("model", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("model", .string(nativeString(value.`model`.value))))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`name`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("name", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("name", try copyNativeGraph(value.`name`.value)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`on`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("on", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(
+      ValueMember(
+        "on",
+        .array(
+          try nativeElements(value.`on`.value.data, value.`on`.value.len).map { item in
+            .string(nativeString(item))
+          })))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`profile`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("profile", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("profile", .string(nativeString(value.`profile`.value))))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`wording_version`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1):
+    members.append(ValueMember("wording_version", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(
+      ValueMember("wording_version", try copyNativeGraph(value.`wording_version`.value)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`false_`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("false", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("false", try copyNativeLeaf(value.`false_`.value)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`text`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("text", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("text", try copyNativeLeaf(value.`text`.value)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`true_`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("true", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("true", try copyNativeLeaf(value.`true_`.value)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  members.append(ValueMember("verb", .string(nativeString(value.`verb`))))
+  return .orderedObject(members)
+}
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_session_probabilities_v1>?)
+  throws -> DataValue
+{
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  switch value.kind {
+  case 1: return try copyNativeGraph(value.data.`yes_no`)
+  case 2: return try copyNativeGraph(value.data.`named`)
+  default: throw ValueConversionError("Unknown native packet alternative")
+  }
+}
+private func copyNativeGraph(
+  _ pointer: UnsafePointer<thinkthen_complete_session_probabilities_named_v1>?
+) throws -> DataValue {
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  var members = try copyNativeExtensions(value.extensions)
+  members.append(ValueMember("kind", .string(nativeString(value.`kind`))))
+  members.append(
+    ValueMember(
+      "value",
+      .array(
+        try nativeElements(value.`value`.data, value.`value`.len).map { item in
+          try copyNativeGraph(item)
+        })))
+  return .orderedObject(members)
+}
+private func copyNativeGraph(
+  _ pointer: UnsafePointer<thinkthen_complete_session_named_probability_v1>?
+) throws -> DataValue {
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  var members = try copyNativeExtensions(value.extensions)
+  members.append(ValueMember("name", .string(nativeString(value.`name`))))
+  members.append(
+    ValueMember("probability", .number(NumberLiteral(unchecked: String(value.`probability`)))))
+  return .orderedObject(members)
+}
+private func copyNativeGraph(
+  _ pointer: UnsafePointer<thinkthen_complete_session_probabilities_yes_no_v1>?
+) throws -> DataValue {
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  var members = try copyNativeExtensions(value.extensions)
+  members.append(ValueMember("kind", .string(nativeString(value.`kind`))))
+  members.append(ValueMember("value", .number(NumberLiteral(unchecked: String(value.`value`)))))
+  return .orderedObject(members)
+}
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_observation_v1>?) throws
+  -> DataValue
+{
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  switch value.kind {
+  case 1: return try copyNativeGraph(value.data.`observation_id`)
+  case 2: return try copyNativeGraph(value.data.`failure_id`)
+  default: throw ValueConversionError("Unknown native packet alternative")
+  }
+}
+private func copyNativeGraph(
+  _ pointer: UnsafePointer<thinkthen_complete_observation_failure_id_v1>?
+) throws -> DataValue {
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  var members = try copyNativeExtensions(value.extensions)
+  members.append(ValueMember("failure_id", try copyNativeGraph(value.`failure_id`)))
+  return .orderedObject(members)
+}
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_failure_id_v1>?) throws
+  -> DataValue
+{
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  return .string(nativeString(value.value))
+}
+private func copyNativeGraph(
+  _ pointer: UnsafePointer<thinkthen_complete_observation_observation_id_v1>?
+) throws -> DataValue {
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  var members = try copyNativeExtensions(value.extensions)
+  members.append(ValueMember("observation_id", try copyNativeGraph(value.`observation_id`)))
+  return .orderedObject(members)
+}
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_observation_id_v1>?) throws
+  -> DataValue
+{
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  return .string(nativeString(value.value))
+}
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_session_input_source_v1>?)
+  throws -> DataValue
+{
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  var members = try copyNativeExtensions(value.extensions)
+  members.append(ValueMember("index", .number(NumberLiteral(unchecked: String(value.`index`)))))
+  members.append(ValueMember("source", try copyNativeGraph(value.`source`)))
+  return .orderedObject(members)
+}
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_physical_source_v1>?)
+  throws -> DataValue
+{
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  var members = try copyNativeExtensions(value.extensions)
+  members.append(ValueMember("file", .string(nativeString(value.`file`))))
+  switch value.`first_line`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("first_line", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(
+      ValueMember("first_line", .number(NumberLiteral(unchecked: String(value.`first_line`.value))))
+    )
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`last_line`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("last_line", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(
+      ValueMember("last_line", .number(NumberLiteral(unchecked: String(value.`last_line`.value)))))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  return .orderedObject(members)
+}
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_answer_id_v1>?) throws
+  -> DataValue
+{
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  return .string(nativeString(value.value))
+}
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_request_function_v1>?)
+  throws -> DataValue
+{
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  switch value.kind {
+  case 1: return .string("decide")
+  case 2: return .string("choose")
+  case 3: return .string("tag")
+  case 4: return .string("score")
+  case 5: return .string("filter")
+  case 6: return .string("rank")
+  case 7: return .string("find")
+  case 8: return .string("annotate")
+  case 9: return .string("recognize")
+  case 10: return .string("relate")
+  default: throw ValueConversionError("Unknown native enum value")
+  }
+}
+private func copyNativeGraph(
+  _ pointer: UnsafePointer<thinkthen_complete_session_packet_relate_aggregate_v1>?
+) throws -> DataValue {
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  var members = try copyNativeExtensions(value.extensions)
+  members.append(ValueMember("function", .string(nativeString(value.`function`))))
+  members.append(ValueMember("kind", .string(nativeString(value.`kind`))))
+  members.append(ValueMember("value", try copyNativeGraph(value.`value`)))
+  return .orderedObject(members)
+}
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_relation_v1>?) throws
+  -> DataValue
+{
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  var members = try copyNativeExtensions(value.extensions)
+  members.append(ValueMember("answer", try copyNativeGraph(value.`answer`)))
+  members.append(ValueMember("answer_id", try copyNativeGraph(value.`answer_id`)))
+  switch value.`file`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("file", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("file", .string(nativeString(value.`file`.value))))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`first_line`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("first_line", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(
+      ValueMember("first_line", .number(NumberLiteral(unchecked: String(value.`first_line`.value))))
+    )
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`index`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("index", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(
+      ValueMember("index", .number(NumberLiteral(unchecked: String(value.`index`.value)))))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`input`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("input", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("input", try copyNativeLeaf(value.`input`.value)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`input_sources`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1):
+    members.append(ValueMember("input_sources", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(
+      ValueMember(
+        "input_sources",
+        .array(
+          try nativeElements(value.`input_sources`.value.data, value.`input_sources`.value.len).map
+          { item in try copyNativeGraph(item) })))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`last_line`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("last_line", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(
+      ValueMember("last_line", .number(NumberLiteral(unchecked: String(value.`last_line`.value)))))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  members.append(ValueMember("meta", try copyNativeGraph(value.`meta`)))
+  switch value.`position`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("position", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("position", try copyNativeGraph(value.`position`.value)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  members.append(ValueMember("question", try copyNativeGraph(value.`question`)))
+  members.append(ValueMember("schema", try copyNativeGraph(value.`schema`)))
+  members.append(
+    ValueMember(
+      "value",
+      .array(
+        try nativeElements(value.`value`.data, value.`value`.len).map { item in
+          try copyNativeGraph(item)
+        })))
+  return .orderedObject(members)
+}
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_related_entity_edge_v1>?)
+  throws -> DataValue
+{
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  var members = try copyNativeExtensions(value.extensions)
+  switch value.`either`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("either", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("either", .bool(value.`either`.value != 0)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  members.append(
+    ValueMember("probability", .number(NumberLiteral(unchecked: String(value.`probability`)))))
+  members.append(ValueMember("relation", .string(nativeString(value.`relation`))))
+  members.append(ValueMember("source", try copyNativeGraph(value.`source`)))
+  members.append(ValueMember("target", try copyNativeGraph(value.`target`)))
+  return .orderedObject(members)
+}
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_relation_endpoint_v1>?)
+  throws -> DataValue
+{
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  switch value.kind {
+  case 1: return try copyNativeGraph(value.data.`related_entity`)
+  case 2: return try copyNativeGraph(value.data.`source`)
+  default: throw ValueConversionError("Unknown native packet alternative")
+  }
+}
+private func copyNativeGraph(
+  _ pointer: UnsafePointer<thinkthen_complete_relation_endpoint_source_v1>?
+) throws -> DataValue {
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  var members = try copyNativeExtensions(value.extensions)
+  switch value.`file`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("file", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("file", .string(nativeString(value.`file`.value))))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`first_line`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("first_line", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(
+      ValueMember("first_line", .number(NumberLiteral(unchecked: String(value.`first_line`.value))))
+    )
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  members.append(ValueMember("kind", .string(nativeString(value.`kind`))))
+  switch value.`last_line`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("last_line", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(
+      ValueMember("last_line", .number(NumberLiteral(unchecked: String(value.`last_line`.value)))))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  members.append(ValueMember("name", .string(nativeString(value.`name`))))
+  members.append(ValueMember("ordinal", .number(NumberLiteral(unchecked: String(value.`ordinal`)))))
+  switch value.`record`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("record", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("record", try copyNativeLeaf(value.`record`.value)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  return .orderedObject(members)
+}
+private func copyNativeGraph(
+  _ pointer: UnsafePointer<thinkthen_complete_relation_endpoint_related_entity_v1>?
+) throws -> DataValue {
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  var members = try copyNativeExtensions(value.extensions)
+  members.append(ValueMember("kind", .string(nativeString(value.`kind`))))
+  members.append(ValueMember("name", .string(nativeString(value.`name`))))
+  return .orderedObject(members)
+}
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_version_v1>?) throws
+  -> DataValue
+{
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  switch value.kind {
+  case 1: return .string("thinkthen.result/2")
+  default: throw ValueConversionError("Unknown native enum value")
+  }
+}
+private func copyNativeGraph(
+  _ pointer: UnsafePointer<thinkthen_complete_relate_question_document_v1>?
+) throws -> DataValue {
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  var members = try copyNativeExtensions(value.extensions)
+  switch value.`batch`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("batch", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("batch", try copyNativeGraph(value.`batch`.value)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`context_schema`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1):
+    members.append(ValueMember("context_schema", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("context_schema", try copyNativeGraph(value.`context_schema`.value)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`fields`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("fields", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("fields", try copyNativeGraph(value.`fields`.value)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`item_schema`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1):
+    members.append(ValueMember("item_schema", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("item_schema", try copyNativeGraph(value.`item_schema`.value)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`label_details`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1):
+    members.append(ValueMember("label_details", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(
+      ValueMember(
+        "label_details",
+        .array(
+          try nativeElements(value.`label_details`.value.data, value.`label_details`.value.len).map
+          { item in try copyNativeGraph(item) })))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`model`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("model", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("model", .string(nativeString(value.`model`.value))))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`name`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("name", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("name", try copyNativeGraph(value.`name`.value)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`on`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("on", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(
+      ValueMember(
+        "on",
+        .array(
+          try nativeElements(value.`on`.value.data, value.`on`.value.len).map { item in
+            .string(nativeString(item))
+          })))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`profile`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("profile", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("profile", .string(nativeString(value.`profile`.value))))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  members.append(
+    ValueMember(
+      "relations",
+      .array(
+        try nativeElements(value.`relations`.data, value.`relations`.len).map { item in
+          try copyNativeGraph(item)
+        })))
+  members.append(ValueMember("threshold", try copyNativeGraph(value.`threshold`)))
+  members.append(ValueMember("verb", .string(nativeString(value.`verb`))))
+  switch value.`wording_version`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1):
+    members.append(ValueMember("wording_version", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(
+      ValueMember("wording_version", try copyNativeGraph(value.`wording_version`.value)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  return .orderedObject(members)
+}
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_relation_rule_v1>?) throws
+  -> DataValue
+{
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  var members = try copyNativeExtensions(value.extensions)
+  members.append(ValueMember("either", .bool(value.`either` != 0)))
+  members.append(ValueMember("name", .string(nativeString(value.`name`))))
+  members.append(ValueMember("reads", .string(nativeString(value.`reads`))))
+  switch value.`single`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("single", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("single", .bool(value.`single`.value != 0)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  members.append(ValueMember("source", .string(nativeString(value.`source`))))
+  members.append(ValueMember("target", .string(nativeString(value.`target`))))
+  return .orderedObject(members)
+}
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_relate_fields_v1>?) throws
+  -> DataValue
+{
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  var members = try copyNativeExtensions(value.extensions)
+  members.append(ValueMember("kind", .string(nativeString(value.`kind`))))
+  members.append(ValueMember("name", .string(nativeString(value.`name`))))
+  return .orderedObject(members)
+}
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_position_v1>?) throws
+  -> DataValue
+{
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  var members = try copyNativeExtensions(value.extensions)
+  switch value.`file`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("file", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("file", .string(nativeString(value.`file`.value))))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`first`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("first", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(
+      ValueMember("first", .number(NumberLiteral(unchecked: String(value.`first`.value)))))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`images`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("images", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(
+      ValueMember(
+        "images",
+        .array(
+          try nativeElements(value.`images`.value.data, value.`images`.value.len).map { item in
+            .string(nativeString(item))
+          })))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`last`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("last", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(
+      ValueMember("last", .number(NumberLiteral(unchecked: String(value.`last`.value)))))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  return .orderedObject(members)
+}
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_meta_v1>?) throws
+  -> DataValue
+{
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  var members = try copyNativeExtensions(value.extensions)
+  switch value.`answered_by`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1):
+    members.append(ValueMember("answered_by", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("answered_by", .string(nativeString(value.`answered_by`.value))))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`attempts`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("attempts", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(
+      ValueMember(
+        "attempts",
+        .array(
+          try nativeElements(value.`attempts`.value.data, value.`attempts`.value.len).map { item in
+            try copyNativeGraph(item)
+          })))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`batch_setting`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1):
+    members.append(ValueMember("batch_setting", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("batch_setting", try copyNativeGraph(value.`batch_setting`.value)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`batch_warning`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1):
+    members.append(ValueMember("batch_warning", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("batch_warning", try copyNativeGraph(value.`batch_warning`.value)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  members.append(ValueMember("cached", .bool(value.`cached` != 0)))
+  switch value.`context_sha256`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1):
+    members.append(ValueMember("context_sha256", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(
+      ValueMember("context_sha256", .string(nativeString(value.`context_sha256`.value))))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  members.append(
+    ValueMember(
+      "failed_questions", .number(NumberLiteral(unchecked: String(value.`failed_questions`)))))
+  members.append(ValueMember("model", .string(nativeString(value.`model`))))
+  members.append(
+    ValueMember(
+      "observations",
+      .array(
+        try nativeElements(value.`observations`.data, value.`observations`.len).map { item in
+          try copyNativeGraph(item)
+        })))
+  switch value.`origin`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("origin", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("origin", try copyNativeGraph(value.`origin`.value)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`profile_warning`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1):
+    members.append(ValueMember("profile_warning", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(
+      ValueMember("profile_warning", try copyNativeGraph(value.`profile_warning`.value)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`question_sha256`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1):
+    members.append(ValueMember("question_sha256", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(
+      ValueMember("question_sha256", .string(nativeString(value.`question_sha256`.value))))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  members.append(
+    ValueMember(
+      "question_sources",
+      .array(
+        try nativeElements(value.`question_sources`.data, value.`question_sources`.len).map {
+          item in try copyNativeGraph(item)
+        })))
+  switch value.`questions_sha256`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1):
+    members.append(ValueMember("questions_sha256", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(
+      ValueMember("questions_sha256", .string(nativeString(value.`questions_sha256`.value))))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  members.append(
+    ValueMember(
+      "requests",
+      .array(
+        try nativeElements(value.`requests`.data, value.`requests`.len).map { item in
+          .string(nativeString(item))
+        })))
+  members.append(
+    ValueMember("requests_sent", .number(NumberLiteral(unchecked: String(value.`requests_sent`)))))
+  members.append(ValueMember("tool", .string(nativeString(value.`tool`))))
+  members.append(ValueMember("url", .string(nativeString(value.`url`))))
+  switch value.`usage`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("usage", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("usage", try copyNativeGraph(value.`usage`.value)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  return .orderedObject(members)
+}
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_profile_warning_v1>?)
+  throws -> DataValue
+{
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  var members = try copyNativeExtensions(value.extensions)
+  members.append(ValueMember("running", .string(nativeString(value.`running`))))
+  members.append(ValueMember("tuned_for", .string(nativeString(value.`tuned_for`))))
+  return .orderedObject(members)
+}
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_batch_warning_v1>?) throws
+  -> DataValue
+{
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  var members = try copyNativeExtensions(value.extensions)
+  members.append(ValueMember("running", try copyNativeGraph(value.`running`)))
+  members.append(ValueMember("tuned_for", try copyNativeGraph(value.`tuned_for`)))
+  return .orderedObject(members)
+}
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_batch_setting_v1>?) throws
+  -> DataValue
+{
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  switch value.kind {
+  case 1: return .number(NumberLiteral(unchecked: String(value.data.`integer`)))
+  case 2: return .string(nativeString(value.data.`string`))
+  default: throw ValueConversionError("Unknown native value alternative")
+  }
+}
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_answers_v1>?) throws
+  -> DataValue
+{
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  var members = try copyNativeExtensions(value.extensions)
+  members.append(
+    ValueMember(
+      "questions",
+      .array(
+        try nativeElements(value.`questions`.data, value.`questions`.len).map { item in
+          try copyNativeGraph(item)
+        })))
+  return .orderedObject(members)
+}
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_relation_member_v1>?)
+  throws -> DataValue
+{
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  switch value.kind {
+  case 1: return try copyNativeGraph(value.data.`answer_id`)
+  case 2: return try copyNativeGraph(value.data.`failure_id`)
+  default: throw ValueConversionError("Unknown native packet alternative")
+  }
+}
+private func copyNativeGraph(
+  _ pointer: UnsafePointer<thinkthen_complete_relation_member_failure_id_v1>?
+) throws -> DataValue {
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  var members = try copyNativeExtensions(value.extensions)
+  members.append(ValueMember("direction", try copyNativeGraph(value.`direction`)))
+  members.append(ValueMember("method", try copyNativeGraph(value.`method`)))
+  members.append(
+    ValueMember(
+      "observations",
+      .array(
+        try nativeElements(value.`observations`.data, value.`observations`.len).map { item in
+          try copyNativeGraph(item)
+        })))
+  members.append(ValueMember("question", try copyNativeGraph(value.`question`)))
+  members.append(
+    ValueMember(
+      "question_sources",
+      .array(
+        try nativeElements(value.`question_sources`.data, value.`question_sources`.len).map {
+          item in try copyNativeGraph(item)
+        })))
+  members.append(ValueMember("reads", .string(nativeString(value.`reads`))))
+  members.append(ValueMember("relation", .string(nativeString(value.`relation`))))
+  members.append(ValueMember("request", .string(nativeString(value.`request`))))
+  members.append(ValueMember("source", try copyNativeGraph(value.`source`)))
+  switch value.`target`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("target", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("target", try copyNativeGraph(value.`target`.value)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  members.append(ValueMember("threshold", try copyNativeGraph(value.`threshold`)))
+  switch value.`usage`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("usage", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("usage", try copyNativeGraph(value.`usage`.value)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  members.append(ValueMember("failure", try copyNativeGraph(value.`failure`)))
+  members.append(ValueMember("failure_id", try copyNativeGraph(value.`failure_id`)))
+  return .orderedObject(members)
+}
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_related_entity_v1>?) throws
+  -> DataValue
+{
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  var members = try copyNativeExtensions(value.extensions)
+  members.append(ValueMember("kind", .string(nativeString(value.`kind`))))
+  members.append(ValueMember("name", .string(nativeString(value.`name`))))
+  return .orderedObject(members)
+}
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_relation_method_v1>?)
+  throws -> DataValue
+{
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  switch value.kind {
+  case 1: return .string("yes_no")
+  case 2: return .string("choice")
+  default: throw ValueConversionError("Unknown native enum value")
+  }
+}
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_relation_direction_v1>?)
+  throws -> DataValue
+{
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  switch value.kind {
+  case 1: return .string("source_to_target")
+  case 2: return .string("either")
+  default: throw ValueConversionError("Unknown native enum value")
+  }
+}
+private func copyNativeGraph(
+  _ pointer: UnsafePointer<thinkthen_complete_relation_member_answer_id_v1>?
+) throws -> DataValue {
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  var members = try copyNativeExtensions(value.extensions)
+  members.append(ValueMember("direction", try copyNativeGraph(value.`direction`)))
+  members.append(ValueMember("method", try copyNativeGraph(value.`method`)))
+  members.append(
+    ValueMember(
+      "observations",
+      .array(
+        try nativeElements(value.`observations`.data, value.`observations`.len).map { item in
+          try copyNativeGraph(item)
+        })))
+  members.append(ValueMember("question", try copyNativeGraph(value.`question`)))
+  members.append(
+    ValueMember(
+      "question_sources",
+      .array(
+        try nativeElements(value.`question_sources`.data, value.`question_sources`.len).map {
+          item in try copyNativeGraph(item)
+        })))
+  members.append(ValueMember("reads", .string(nativeString(value.`reads`))))
+  members.append(ValueMember("relation", .string(nativeString(value.`relation`))))
+  members.append(ValueMember("request", .string(nativeString(value.`request`))))
+  members.append(ValueMember("source", try copyNativeGraph(value.`source`)))
+  switch value.`target`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("target", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("target", try copyNativeGraph(value.`target`.value)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  members.append(ValueMember("threshold", try copyNativeGraph(value.`threshold`)))
+  switch value.`usage`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("usage", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("usage", try copyNativeGraph(value.`usage`.value)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  members.append(ValueMember("accepted", .bool(value.`accepted` != 0)))
+  members.append(ValueMember("answer", try copyNativeGraph(value.`answer`)))
+  members.append(ValueMember("answer_id", try copyNativeGraph(value.`answer_id`)))
+  members.append(
+    ValueMember("probability", .number(NumberLiteral(unchecked: String(value.`probability`)))))
+  return .orderedObject(members)
+}
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_answer_v1>?) throws
+  -> DataValue
+{
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  switch value.kind {
+  case 1: return try copyNativeGraph(value.data.`yes_no`)
+  case 2: return try copyNativeGraph(value.data.`choice`)
+  case 3: return try copyNativeGraph(value.data.`tag`)
+  case 4: return try copyNativeGraph(value.data.`score`)
+  default: throw ValueConversionError("Unknown native packet alternative")
+  }
+}
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_answer_score_v1>?) throws
+  -> DataValue
+{
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  var members = try copyNativeExtensions(value.extensions)
+  switch value.`confidence`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("confidence", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(
+      ValueMember("confidence", .number(NumberLiteral(unchecked: String(value.`confidence`.value))))
+    )
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  members.append(ValueMember("kind", .string(nativeString(value.`kind`))))
+  members.append(ValueMember("level", .string(nativeString(value.`level`))))
+  members.append(
+    ValueMember(
+      "probabilities",
+      .orderedObject(
+        try nativeElements(value.`probabilities`.data, value.`probabilities`.len).map { item in
+          ValueMember(
+            nativeString(item.name), .number(NumberLiteral(unchecked: String(item.value))))
+        })))
+  return .orderedObject(members)
+}
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_answer_tag_v1>?) throws
+  -> DataValue
+{
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  var members = try copyNativeExtensions(value.extensions)
+  members.append(ValueMember("kind", .string(nativeString(value.`kind`))))
+  members.append(
+    ValueMember(
+      "probabilities",
+      .orderedObject(
+        try nativeElements(value.`probabilities`.data, value.`probabilities`.len).map { item in
+          ValueMember(
+            nativeString(item.name), .number(NumberLiteral(unchecked: String(item.value))))
+        })))
+  return .orderedObject(members)
+}
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_answer_choice_v1>?) throws
+  -> DataValue
+{
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  var members = try copyNativeExtensions(value.extensions)
+  switch value.`confidence`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("confidence", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(
+      ValueMember("confidence", .number(NumberLiteral(unchecked: String(value.`confidence`.value))))
+    )
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  members.append(ValueMember("kind", .string(nativeString(value.`kind`))))
+  members.append(ValueMember("pick", .string(nativeString(value.`pick`))))
+  members.append(
+    ValueMember(
+      "probabilities",
+      .orderedObject(
+        try nativeElements(value.`probabilities`.data, value.`probabilities`.len).map { item in
+          ValueMember(
+            nativeString(item.name), .number(NumberLiteral(unchecked: String(item.value))))
+        })))
+  return .orderedObject(members)
+}
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_answer_yes_no_v1>?) throws
+  -> DataValue
+{
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  var members = try copyNativeExtensions(value.extensions)
+  members.append(ValueMember("kind", .string(nativeString(value.`kind`))))
+  members.append(
+    ValueMember("probability", .number(NumberLiteral(unchecked: String(value.`probability`)))))
+  return .orderedObject(members)
+}
+private func copyNativeGraph(
+  _ pointer: UnsafePointer<thinkthen_complete_session_packet_recognize_aggregate_v1>?
+) throws -> DataValue {
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  var members = try copyNativeExtensions(value.extensions)
+  members.append(ValueMember("function", .string(nativeString(value.`function`))))
+  members.append(ValueMember("kind", .string(nativeString(value.`kind`))))
+  members.append(
+    ValueMember(
+      "value",
+      .array(
+        try nativeElements(value.`value`.data, value.`value`.len).map { item in
+          try copyNativeGraph(item)
+        })))
+  return .orderedObject(members)
+}
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_recognition_v1>?) throws
+  -> DataValue
+{
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  var members = try copyNativeExtensions(value.extensions)
+  members.append(ValueMember("answer", try copyNativeGraph(value.`answer`)))
+  members.append(ValueMember("answer_id", try copyNativeGraph(value.`answer_id`)))
+  switch value.`file`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("file", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("file", .string(nativeString(value.`file`.value))))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`first_line`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("first_line", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(
+      ValueMember("first_line", .number(NumberLiteral(unchecked: String(value.`first_line`.value))))
+    )
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`index`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("index", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(
+      ValueMember("index", .number(NumberLiteral(unchecked: String(value.`index`.value)))))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`input`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("input", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("input", try copyNativeLeaf(value.`input`.value)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`last_line`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("last_line", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(
+      ValueMember("last_line", .number(NumberLiteral(unchecked: String(value.`last_line`.value)))))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  members.append(ValueMember("meta", try copyNativeGraph(value.`meta`)))
+  switch value.`position`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("position", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("position", try copyNativeGraph(value.`position`.value)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  members.append(ValueMember("question", try copyNativeGraph(value.`question`)))
+  members.append(ValueMember("schema", try copyNativeGraph(value.`schema`)))
+  switch value.`source`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("source", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("source", try copyNativeGraph(value.`source`.value)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  members.append(ValueMember("value", try copyNativeGraph(value.`value`)))
+  return .orderedObject(members)
+}
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_recognize_v1>?) throws
+  -> DataValue
+{
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  switch value.kind {
+  case 1: return try copyNativeGraph(value.data.`entities`)
+  case 2: return try copyNativeGraph(value.data.`mode_proposals`)
+  default: throw ValueConversionError("Unknown native packet alternative")
+  }
+}
+private func copyNativeGraph(
+  _ pointer: UnsafePointer<thinkthen_complete_recognize_mode_proposals_v1>?
+) throws -> DataValue {
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  var members = try copyNativeExtensions(value.extensions)
+  members.append(ValueMember("mode", try copyNativeGraph(value.`mode`)))
+  members.append(
+    ValueMember(
+      "proposals",
+      .array(
+        try nativeElements(value.`proposals`.data, value.`proposals`.len).map { item in
+          try copyNativeGraph(item)
+        })))
+  return .orderedObject(members)
+}
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_boundary_mode_v1>?) throws
+  -> DataValue
+{
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  switch value.kind {
+  case 1: return .string("boundary_only")
+  default: throw ValueConversionError("Unknown native enum value")
+  }
+}
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_recognize_entities_v1>?)
+  throws -> DataValue
+{
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  var members = try copyNativeExtensions(value.extensions)
+  members.append(
+    ValueMember(
+      "entities",
+      .array(
+        try nativeElements(value.`entities`.data, value.`entities`.len).map { item in
+          try copyNativeGraph(item)
+        })))
+  switch value.`relations`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("relations", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(
+      ValueMember(
+        "relations",
+        .array(
+          try nativeElements(value.`relations`.value.data, value.`relations`.value.len).map {
+            item in try copyNativeGraph(item)
+          })))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  return .orderedObject(members)
+}
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_entity_edge_v1>?) throws
+  -> DataValue
+{
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  var members = try copyNativeExtensions(value.extensions)
+  switch value.`either`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("either", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("either", .bool(value.`either`.value != 0)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  members.append(
+    ValueMember("probability", .number(NumberLiteral(unchecked: String(value.`probability`)))))
+  members.append(ValueMember("relation", .string(nativeString(value.`relation`))))
+  members.append(ValueMember("source", try copyNativeGraph(value.`source`)))
+  members.append(ValueMember("target", try copyNativeGraph(value.`target`)))
+  return .orderedObject(members)
+}
+private func copyNativeGraph(
+  _ pointer: UnsafePointer<thinkthen_complete_recognize_question_document_v1>?
+) throws -> DataValue {
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  var members = try copyNativeExtensions(value.extensions)
+  switch value.`batch`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("batch", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("batch", try copyNativeGraph(value.`batch`.value)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`context_schema`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1):
+    members.append(ValueMember("context_schema", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("context_schema", try copyNativeGraph(value.`context_schema`.value)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`entity_definition`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1):
+    members.append(ValueMember("entity_definition", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(
+      ValueMember("entity_definition", try copyNativeLeaf(value.`entity_definition`.value)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`instructions`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1):
+    members.append(ValueMember("instructions", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("instructions", try copyNativeLeaf(value.`instructions`.value)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`item_schema`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1):
+    members.append(ValueMember("item_schema", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("item_schema", try copyNativeGraph(value.`item_schema`.value)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  members.append(
+    ValueMember(
+      "kinds",
+      .orderedObject(
+        try nativeElements(value.`kinds`.data, value.`kinds`.len).map { item in
+          ValueMember(nativeString(item.name), try copyNativeLeaf(item.value))
+        })))
+  switch value.`label_details`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1):
+    members.append(ValueMember("label_details", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(
+      ValueMember(
+        "label_details",
+        .array(
+          try nativeElements(value.`label_details`.value.data, value.`label_details`.value.len).map
+          { item in try copyNativeGraph(item) })))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`mode`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("mode", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("mode", try copyNativeGraph(value.`mode`.value)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`model`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("model", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("model", .string(nativeString(value.`model`.value))))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`name`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("name", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("name", try copyNativeGraph(value.`name`.value)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`on`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("on", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(
+      ValueMember(
+        "on",
+        .array(
+          try nativeElements(value.`on`.value.data, value.`on`.value.len).map { item in
+            .string(nativeString(item))
+          })))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`profile`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("profile", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("profile", .string(nativeString(value.`profile`.value))))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`relation_threshold`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1):
+    members.append(ValueMember("relation_threshold", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(
+      ValueMember("relation_threshold", try copyNativeGraph(value.`relation_threshold`.value)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`relations`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("relations", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(
+      ValueMember(
+        "relations",
+        .array(
+          try nativeElements(value.`relations`.value.data, value.`relations`.value.len).map {
+            item in try copyNativeGraph(item)
+          })))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`snippet_pieces`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1):
+    members.append(ValueMember("snippet_pieces", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(
+      ValueMember(
+        "snippet_pieces", .number(NumberLiteral(unchecked: String(value.`snippet_pieces`.value)))))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`stage_context`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1):
+    members.append(ValueMember("stage_context", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("stage_context", try copyNativeGraph(value.`stage_context`.value)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  members.append(ValueMember("threshold", try copyNativeGraph(value.`threshold`)))
+  members.append(ValueMember("verb", try copyNativeGraph(value.`verb`)))
+  switch value.`wording_version`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1):
+    members.append(ValueMember("wording_version", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(
+      ValueMember("wording_version", try copyNativeGraph(value.`wording_version`.value)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  return .orderedObject(members)
+}
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_verb_v1>?) throws
+  -> DataValue
+{
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  switch value.kind {
+  case 1: return .string("recognize")
+  default: throw ValueConversionError("Unknown native enum value")
+  }
+}
+private func copyNativeGraph(
+  _ pointer: UnsafePointer<thinkthen_complete_recognition_stage_context_v1>?
+) throws -> DataValue {
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  var members = try copyNativeExtensions(value.extensions)
+  switch value.`boundary`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("boundary", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("boundary", .string(nativeString(value.`boundary`.value))))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`kind_edge`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("kind_edge", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("kind_edge", .string(nativeString(value.`kind_edge`.value))))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`relation`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("relation", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("relation", .string(nativeString(value.`relation`.value))))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  return .orderedObject(members)
+}
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_recognition_odds_v1>?)
+  throws -> DataValue
+{
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  switch value.kind {
+  case 1: return try copyNativeGraph(value.data.`recognize_answer`)
+  case 2: return try copyNativeGraph(value.data.`boundary_odds`)
+  default: throw ValueConversionError("Unknown native packet alternative")
+  }
+}
+private func copyNativeGraph(
+  _ pointer: UnsafePointer<thinkthen_complete_recognition_odds_boundary_odds_v1>?
+) throws -> DataValue {
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  var members = try copyNativeExtensions(value.extensions)
+  members.append(
+    ValueMember(
+      "pieces",
+      .array(
+        try nativeElements(value.`pieces`.data, value.`pieces`.len).map { item in
+          try copyNativeGraph(item)
+        })))
+  members.append(
+    ValueMember(
+      "proposals",
+      .array(
+        try nativeElements(value.`proposals`.data, value.`proposals`.len).map { item in
+          try copyNativeGraph(item)
+        })))
+  return .orderedObject(members)
+}
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_piece_odds_v1>?) throws
+  -> DataValue
+{
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  var members = try copyNativeExtensions(value.extensions)
+  members.append(ValueMember("end", .number(NumberLiteral(unchecked: String(value.`end`)))))
+  members.append(ValueMember("start", .number(NumberLiteral(unchecked: String(value.`start`)))))
+  members.append(
+    ValueMember(
+      "tags",
+      .orderedObject(
+        try nativeElements(value.`tags`.data, value.`tags`.len).map { item in
+          ValueMember(
+            nativeString(item.name), .number(NumberLiteral(unchecked: String(item.value))))
+        })))
+  return .orderedObject(members)
+}
+private func copyNativeGraph(
+  _ pointer: UnsafePointer<thinkthen_complete_recognition_odds_recognize_answer_v1>?
+) throws -> DataValue {
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  var members = try copyNativeExtensions(value.extensions)
+  members.append(
+    ValueMember(
+      "names",
+      .array(
+        try nativeElements(value.`names`.data, value.`names`.len).map { item in
+          try copyNativeGraph(item)
+        })))
+  members.append(
+    ValueMember(
+      "pairs",
+      .array(
+        try nativeElements(value.`pairs`.data, value.`pairs`.len).map { item in
+          try copyNativeGraph(item)
+        })))
+  members.append(
+    ValueMember(
+      "pieces",
+      .array(
+        try nativeElements(value.`pieces`.data, value.`pieces`.len).map { item in
+          try copyNativeGraph(item)
+        })))
+  members.append(
+    ValueMember(
+      "proposals",
+      .array(
+        try nativeElements(value.`proposals`.data, value.`proposals`.len).map { item in
+          try copyNativeGraph(item)
+        })))
+  return .orderedObject(members)
+}
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_recognition_proposal_v1>?)
+  throws -> DataValue
+{
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  var members = try copyNativeExtensions(value.extensions)
+  members.append(ValueMember("end", .number(NumberLiteral(unchecked: String(value.`end`)))))
+  members.append(ValueMember("kept", .bool(value.`kept` != 0)))
+  switch value.`kind`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("kind", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("kind", .string(nativeString(value.`kind`.value))))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`selected`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("selected", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("selected", try copyNativeGraph(value.`selected`.value)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  members.append(
+    ValueMember(
+      "span_probability", .number(NumberLiteral(unchecked: String(value.`span_probability`)))))
+  members.append(ValueMember("start", .number(NumberLiteral(unchecked: String(value.`start`)))))
+  switch value.`strength`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("strength", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(
+      ValueMember("strength", .number(NumberLiteral(unchecked: String(value.`strength`.value)))))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  return .orderedObject(members)
+}
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_place_v1>?) throws
+  -> DataValue
+{
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  var members = try copyNativeExtensions(value.extensions)
+  members.append(ValueMember("end", .number(NumberLiteral(unchecked: String(value.`end`)))))
+  members.append(ValueMember("start", .number(NumberLiteral(unchecked: String(value.`start`)))))
+  return .orderedObject(members)
+}
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_pair_odds_v1>?) throws
+  -> DataValue
+{
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  var members = try copyNativeExtensions(value.extensions)
+  members.append(
+    ValueMember("probability", .number(NumberLiteral(unchecked: String(value.`probability`)))))
+  members.append(ValueMember("relation", .string(nativeString(value.`relation`))))
+  members.append(ValueMember("source", try copyNativeGraph(value.`source`)))
+  members.append(ValueMember("target", try copyNativeGraph(value.`target`)))
+  return .orderedObject(members)
+}
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_name_odds_v1>?) throws
+  -> DataValue
+{
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  var members = try copyNativeExtensions(value.extensions)
+  switch value.`edges`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("edges", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(
+      ValueMember(
+        "edges",
+        .orderedObject(
+          try nativeElements(value.`edges`.value.data, value.`edges`.value.len).map { item in
+            ValueMember(
+              nativeString(item.name), .number(NumberLiteral(unchecked: String(item.value))))
+          })))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  members.append(ValueMember("end", .number(NumberLiteral(unchecked: String(value.`end`)))))
+  switch value.`kinds`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("kinds", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(
+      ValueMember(
+        "kinds",
+        .orderedObject(
+          try nativeElements(value.`kinds`.value.data, value.`kinds`.value.len).map { item in
+            ValueMember(
+              nativeString(item.name), .number(NumberLiteral(unchecked: String(item.value))))
+          })))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  members.append(ValueMember("start", .number(NumberLiteral(unchecked: String(value.`start`)))))
+  return .orderedObject(members)
+}
+private func copyNativeGraph(
+  _ pointer: UnsafePointer<thinkthen_complete_session_packet_annotate_aggregate_v1>?
+) throws -> DataValue {
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  var members = try copyNativeExtensions(value.extensions)
+  members.append(ValueMember("function", .string(nativeString(value.`function`))))
+  members.append(ValueMember("kind", .string(nativeString(value.`kind`))))
+  members.append(
+    ValueMember(
+      "value",
+      .array(
+        try nativeElements(value.`value`.data, value.`value`.len).map { item in
+          try copyNativeGraph(item)
+        })))
+  return .orderedObject(members)
+}
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_annotation_v1>?) throws
+  -> DataValue
+{
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  var members = try copyNativeExtensions(value.extensions)
+  members.append(ValueMember("answer_id", try copyNativeGraph(value.`answer_id`)))
+  members.append(
+    ValueMember(
+      "answers",
+      .orderedObject(
+        try nativeElements(value.`answers`.data, value.`answers`.len).map { item in
+          ValueMember(nativeString(item.name), try copyNativeGraph(item.value))
+        })))
+  switch value.`file`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("file", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("file", .string(nativeString(value.`file`.value))))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`first_line`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("first_line", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(
+      ValueMember("first_line", .number(NumberLiteral(unchecked: String(value.`first_line`.value))))
+    )
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`index`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("index", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(
+      ValueMember("index", .number(NumberLiteral(unchecked: String(value.`index`.value)))))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`input`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("input", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("input", try copyNativeLeaf(value.`input`.value)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`last_line`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("last_line", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(
+      ValueMember("last_line", .number(NumberLiteral(unchecked: String(value.`last_line`.value)))))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  members.append(ValueMember("meta", try copyNativeGraph(value.`meta`)))
+  switch value.`position`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("position", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("position", try copyNativeGraph(value.`position`.value)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  members.append(ValueMember("schema", try copyNativeGraph(value.`schema`)))
+  switch value.`source`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("source", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("source", try copyNativeGraph(value.`source`.value)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  members.append(ValueMember("value", try copyNativeGraph(value.`value`)))
+  return .orderedObject(members)
+}
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_annotated_row_v1>?) throws
+  -> DataValue
+{
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  return .orderedObject(
+    try nativeElements(value.value.data, value.value.len).map { item in
+      ValueMember(nativeString(item.name), try copyNativeGraph(item.value))
+    })
+}
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_annotated_field_v1>?)
+  throws -> DataValue
+{
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  switch value.kind {
+  case 1: return .bool(value.data.`boolean` != 0)
+  case 2: return .null
+  case 3: return .string(nativeString(value.data.`string`))
+  case 4:
+    return .array(
+      try nativeElements(value.data.`array`.data, value.data.`array`.len).map { item in
+        .string(nativeString(item))
+      })
+  case 5: return .number(NumberLiteral(unchecked: String(value.data.`number`)))
+  case 6: return try copyNativeGraph(value.data.`object`)
+  default: throw ValueConversionError("Unknown native value alternative")
+  }
+}
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_failed_v1>?) throws
+  -> DataValue
+{
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  var members = try copyNativeExtensions(value.extensions)
+  members.append(ValueMember("failed", try copyNativeGraph(value.`failed`)))
+  return .orderedObject(members)
+}
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_annotation_member_v1>?)
+  throws -> DataValue
+{
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  switch value.kind {
+  case 1: return try copyNativeGraph(value.data.`answer_id`)
+  case 2: return try copyNativeGraph(value.data.`failure_id`)
+  default: throw ValueConversionError("Unknown native packet alternative")
+  }
+}
+private func copyNativeGraph(
+  _ pointer: UnsafePointer<thinkthen_complete_annotation_member_failure_id_v1>?
+) throws -> DataValue {
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  var members = try copyNativeExtensions(value.extensions)
+  members.append(ValueMember("failure", try copyNativeGraph(value.`failure`)))
+  members.append(ValueMember("failure_id", try copyNativeGraph(value.`failure_id`)))
+  members.append(
+    ValueMember(
+      "observations",
+      .array(
+        try nativeElements(value.`observations`.data, value.`observations`.len).map { item in
+          try copyNativeGraph(item)
+        })))
+  members.append(ValueMember("question", try copyNativeGraph(value.`question`)))
+  members.append(
+    ValueMember(
+      "question_sources",
+      .array(
+        try nativeElements(value.`question_sources`.data, value.`question_sources`.len).map {
+          item in try copyNativeGraph(item)
+        })))
+  members.append(ValueMember("request", .string(nativeString(value.`request`))))
+  switch value.`threshold`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("threshold", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("threshold", try copyNativeGraph(value.`threshold`.value)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`usage`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("usage", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("usage", try copyNativeGraph(value.`usage`.value)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  return .orderedObject(members)
+}
+private func copyNativeGraph(
+  _ pointer: UnsafePointer<thinkthen_complete_annotation_member_answer_id_v1>?
+) throws -> DataValue {
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  var members = try copyNativeExtensions(value.extensions)
+  members.append(ValueMember("answer", try copyNativeGraph(value.`answer`)))
+  members.append(ValueMember("answer_id", try copyNativeGraph(value.`answer_id`)))
+  members.append(
+    ValueMember(
+      "observations",
+      .array(
+        try nativeElements(value.`observations`.data, value.`observations`.len).map { item in
+          try copyNativeGraph(item)
+        })))
+  members.append(ValueMember("question", try copyNativeGraph(value.`question`)))
+  members.append(
+    ValueMember(
+      "question_sources",
+      .array(
+        try nativeElements(value.`question_sources`.data, value.`question_sources`.len).map {
+          item in try copyNativeGraph(item)
+        })))
+  members.append(ValueMember("request", .string(nativeString(value.`request`))))
+  switch value.`threshold`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("threshold", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("threshold", try copyNativeGraph(value.`threshold`.value)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`usage`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("usage", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("usage", try copyNativeGraph(value.`usage`.value)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`value`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("value", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("value", try copyNativeGraph(value.`value`.value)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  return .orderedObject(members)
+}
+private func copyNativeGraph(
+  _ pointer: UnsafePointer<thinkthen_complete_session_packet_find_aggregate_v1>?
+) throws -> DataValue {
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  var members = try copyNativeExtensions(value.extensions)
+  members.append(ValueMember("function", .string(nativeString(value.`function`))))
+  members.append(ValueMember("kind", .string(nativeString(value.`kind`))))
+  members.append(ValueMember("value", try copyNativeGraph(value.`value`)))
+  return .orderedObject(members)
+}
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_find_v1>?) throws
+  -> DataValue
+{
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  var members = try copyNativeExtensions(value.extensions)
+  members.append(ValueMember("answer", try copyNativeGraph(value.`answer`)))
+  members.append(ValueMember("answer_id", try copyNativeGraph(value.`answer_id`)))
+  switch value.`candidates`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("candidates", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(
+      ValueMember(
+        "candidates",
+        .array(
+          try nativeElements(value.`candidates`.value.data, value.`candidates`.value.len).map {
+            item in try copyNativeGraph(item)
+          })))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`file`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("file", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("file", .string(nativeString(value.`file`.value))))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`first_line`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("first_line", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(
+      ValueMember("first_line", .number(NumberLiteral(unchecked: String(value.`first_line`.value))))
+    )
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`index`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("index", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(
+      ValueMember("index", .number(NumberLiteral(unchecked: String(value.`index`.value)))))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`last_line`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("last_line", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(
+      ValueMember("last_line", .number(NumberLiteral(unchecked: String(value.`last_line`.value)))))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  members.append(ValueMember("meta", try copyNativeGraph(value.`meta`)))
+  switch value.`position`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("position", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("position", try copyNativeGraph(value.`position`.value)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  members.append(ValueMember("question", try copyNativeGraph(value.`question`)))
+  members.append(ValueMember("schema", try copyNativeGraph(value.`schema`)))
+  switch value.`threshold`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("threshold", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("threshold", try copyNativeLeaf(value.`threshold`.value)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`value`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("value", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("value", try copyNativeLeaf(value.`value`.value)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  return .orderedObject(members)
+}
+private func copyNativeGraph(
+  _ pointer: UnsafePointer<thinkthen_complete_find_question_document_v1>?
+) throws -> DataValue {
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  var members = try copyNativeExtensions(value.extensions)
+  switch value.`batch`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("batch", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("batch", try copyNativeGraph(value.`batch`.value)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`context_schema`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1):
+    members.append(ValueMember("context_schema", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("context_schema", try copyNativeGraph(value.`context_schema`.value)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`item_schema`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1):
+    members.append(ValueMember("item_schema", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("item_schema", try copyNativeGraph(value.`item_schema`.value)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`label_details`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1):
+    members.append(ValueMember("label_details", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(
+      ValueMember(
+        "label_details",
+        .array(
+          try nativeElements(value.`label_details`.value.data, value.`label_details`.value.len).map
+          { item in try copyNativeGraph(item) })))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`model`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("model", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("model", .string(nativeString(value.`model`.value))))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`name`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("name", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("name", try copyNativeGraph(value.`name`.value)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  members.append(ValueMember("none", .bool(value.`none` != 0)))
+  switch value.`on`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("on", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(
+      ValueMember(
+        "on",
+        .array(
+          try nativeElements(value.`on`.value.data, value.`on`.value.len).map { item in
+            .string(nativeString(item))
+          })))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`profile`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("profile", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("profile", .string(nativeString(value.`profile`.value))))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`text`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("text", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("text", try copyNativeLeaf(value.`text`.value)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  members.append(ValueMember("verb", .string(nativeString(value.`verb`))))
+  switch value.`wording_version`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1):
+    members.append(ValueMember("wording_version", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(
+      ValueMember("wording_version", try copyNativeGraph(value.`wording_version`.value)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  return .orderedObject(members)
+}
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_find_candidate_v1>?) throws
+  -> DataValue
+{
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  var members = try copyNativeExtensions(value.extensions)
+  switch value.`index`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("index", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(
+      ValueMember("index", .number(NumberLiteral(unchecked: String(value.`index`.value)))))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`input`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("input", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("input", try copyNativeLeaf(value.`input`.value)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  members.append(
+    ValueMember("probability", .number(NumberLiteral(unchecked: String(value.`probability`)))))
+  switch value.`source`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("source", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("source", try copyNativeGraph(value.`source`.value)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  return .orderedObject(members)
+}
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_find_answer_v1>?) throws
+  -> DataValue
+{
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  var members = try copyNativeExtensions(value.extensions)
+  switch value.`confidence`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("confidence", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(
+      ValueMember("confidence", .number(NumberLiteral(unchecked: String(value.`confidence`.value))))
+    )
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  members.append(ValueMember("kind", .string(nativeString(value.`kind`))))
+  members.append(ValueMember("pick", .string(nativeString(value.`pick`))))
+  members.append(
+    ValueMember(
+      "probabilities",
+      .orderedObject(
+        try nativeElements(value.`probabilities`.data, value.`probabilities`.len).map { item in
+          ValueMember(
+            nativeString(item.name), .number(NumberLiteral(unchecked: String(item.value))))
+        })))
+  return .orderedObject(members)
+}
+private func copyNativeGraph(
+  _ pointer: UnsafePointer<thinkthen_complete_session_packet_rank_aggregate_v1>?
+) throws -> DataValue {
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  var members = try copyNativeExtensions(value.extensions)
+  members.append(ValueMember("function", .string(nativeString(value.`function`))))
+  members.append(ValueMember("kind", .string(nativeString(value.`kind`))))
+  members.append(
+    ValueMember(
+      "value",
+      .array(
+        try nativeElements(value.`value`.data, value.`value`.len).map { item in
+          try copyNativeGraph(item)
+        })))
+  return .orderedObject(members)
+}
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_atomic_non_zero_usize_v1>?)
+  throws -> DataValue
+{
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  var members = try copyNativeExtensions(value.extensions)
+  members.append(ValueMember("answer", try copyNativeGraph(value.`answer`)))
+  members.append(ValueMember("answer_id", try copyNativeGraph(value.`answer_id`)))
+  switch value.`images`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("images", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(
+      ValueMember(
+        "images",
+        .array(
+          try nativeElements(value.`images`.value.data, value.`images`.value.len).map { item in
+            try copyNativeGraph(item)
+          })))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`index`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("index", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(
+      ValueMember("index", .number(NumberLiteral(unchecked: String(value.`index`.value)))))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`input`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("input", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("input", try copyNativeLeaf(value.`input`.value)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`members`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("members", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(
+      ValueMember(
+        "members",
+        .array(
+          try nativeElements(value.`members`.value.data, value.`members`.value.len).map { item in
+            try copyNativeGraph(item)
+          })))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  members.append(ValueMember("meta", try copyNativeGraph(value.`meta`)))
+  members.append(ValueMember("question", try copyNativeGraph(value.`question`)))
+  switch value.`question_name`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1):
+    members.append(ValueMember("question_name", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("question_name", .string(nativeString(value.`question_name`.value))))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  members.append(ValueMember("schema", try copyNativeGraph(value.`schema`)))
+  switch value.`source`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("source", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("source", try copyNativeGraph(value.`source`.value)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`threshold`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("threshold", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("threshold", try copyNativeGraph(value.`threshold`.value)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  members.append(ValueMember("value", .number(NumberLiteral(unchecked: String(value.`value`)))))
+  return .orderedObject(members)
+}
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_rank_member_v1>?) throws
+  -> DataValue
+{
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  var members = try copyNativeExtensions(value.extensions)
+  members.append(ValueMember("name", .string(nativeString(value.`name`))))
+  members.append(ValueMember("result", try copyNativeGraph(value.`result`)))
+  return .orderedObject(members)
+}
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_rank_member_result_v1>?)
+  throws -> DataValue
+{
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  var members = try copyNativeExtensions(value.extensions)
+  members.append(ValueMember("answer", try copyNativeGraph(value.`answer`)))
+  members.append(ValueMember("answer_id", try copyNativeGraph(value.`answer_id`)))
+  switch value.`images`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("images", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(
+      ValueMember(
+        "images",
+        .array(
+          try nativeElements(value.`images`.value.data, value.`images`.value.len).map { item in
+            try copyNativeGraph(item)
+          })))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  members.append(ValueMember("meta", try copyNativeGraph(value.`meta`)))
+  members.append(ValueMember("question", try copyNativeGraph(value.`question`)))
+  members.append(ValueMember("schema", try copyNativeGraph(value.`schema`)))
+  switch value.`source`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("source", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("source", try copyNativeGraph(value.`source`.value)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`threshold`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("threshold", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("threshold", try copyNativeLeaf(value.`threshold`.value)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  members.append(ValueMember("value", .number(NumberLiteral(unchecked: String(value.`value`)))))
+  return .orderedObject(members)
+}
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_image_v1>?) throws
+  -> DataValue
+{
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  var members = try copyNativeExtensions(value.extensions)
+  members.append(ValueMember("base64", .string(nativeString(value.`base64`))))
+  members.append(ValueMember("height", .number(NumberLiteral(unchecked: String(value.`height`)))))
+  members.append(ValueMember("media", try copyNativeGraph(value.`media`)))
+  members.append(ValueMember("width", .number(NumberLiteral(unchecked: String(value.`width`)))))
+  return .orderedObject(members)
+}
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_image_media_v1>?) throws
+  -> DataValue
+{
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  switch value.kind {
+  case 1: return .string("image/jpeg")
+  case 2: return .string("image/png")
+  default: throw ValueConversionError("Unknown native enum value")
+  }
+}
+private func copyNativeGraph(
+  _ pointer: UnsafePointer<thinkthen_complete_session_packet_filter_aggregate_v1>?
+) throws -> DataValue {
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  var members = try copyNativeExtensions(value.extensions)
+  members.append(ValueMember("function", .string(nativeString(value.`function`))))
+  members.append(ValueMember("kind", .string(nativeString(value.`kind`))))
+  members.append(
+    ValueMember(
+      "value",
+      .array(
+        try nativeElements(value.`value`.data, value.`value`.len).map { item in
+          try copyNativeGraph(item)
+        })))
+  return .orderedObject(members)
+}
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_atomic_boolean_v1>?) throws
+  -> DataValue
+{
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  var members = try copyNativeExtensions(value.extensions)
+  members.append(ValueMember("answer", try copyNativeGraph(value.`answer`)))
+  members.append(ValueMember("answer_id", try copyNativeGraph(value.`answer_id`)))
+  switch value.`images`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("images", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(
+      ValueMember(
+        "images",
+        .array(
+          try nativeElements(value.`images`.value.data, value.`images`.value.len).map { item in
+            try copyNativeGraph(item)
+          })))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`index`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("index", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(
+      ValueMember("index", .number(NumberLiteral(unchecked: String(value.`index`.value)))))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`input`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("input", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("input", try copyNativeLeaf(value.`input`.value)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`members`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("members", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(
+      ValueMember(
+        "members",
+        .array(
+          try nativeElements(value.`members`.value.data, value.`members`.value.len).map { item in
+            try copyNativeGraph(item)
+          })))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  members.append(ValueMember("meta", try copyNativeGraph(value.`meta`)))
+  members.append(ValueMember("question", try copyNativeGraph(value.`question`)))
+  switch value.`question_name`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1):
+    members.append(ValueMember("question_name", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("question_name", .string(nativeString(value.`question_name`.value))))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  members.append(ValueMember("schema", try copyNativeGraph(value.`schema`)))
+  switch value.`source`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("source", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("source", try copyNativeGraph(value.`source`.value)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`threshold`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("threshold", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("threshold", try copyNativeGraph(value.`threshold`.value)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  members.append(ValueMember("value", .bool(value.`value` != 0)))
+  return .orderedObject(members)
+}
+private func copyNativeGraph(
+  _ pointer: UnsafePointer<thinkthen_complete_session_packet_score_aggregate_v1>?
+) throws -> DataValue {
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  var members = try copyNativeExtensions(value.extensions)
+  members.append(ValueMember("function", .string(nativeString(value.`function`))))
+  members.append(ValueMember("kind", .string(nativeString(value.`kind`))))
+  members.append(
+    ValueMember(
+      "value",
+      .array(
+        try nativeElements(value.`value`.data, value.`value`.len).map { item in
+          try copyNativeGraph(item)
+        })))
+  return .orderedObject(members)
+}
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_atomic_double_v1>?) throws
+  -> DataValue
+{
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  var members = try copyNativeExtensions(value.extensions)
+  members.append(ValueMember("answer", try copyNativeGraph(value.`answer`)))
+  members.append(ValueMember("answer_id", try copyNativeGraph(value.`answer_id`)))
+  switch value.`images`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("images", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(
+      ValueMember(
+        "images",
+        .array(
+          try nativeElements(value.`images`.value.data, value.`images`.value.len).map { item in
+            try copyNativeGraph(item)
+          })))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`index`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("index", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(
+      ValueMember("index", .number(NumberLiteral(unchecked: String(value.`index`.value)))))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`input`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("input", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("input", try copyNativeLeaf(value.`input`.value)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`members`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("members", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(
+      ValueMember(
+        "members",
+        .array(
+          try nativeElements(value.`members`.value.data, value.`members`.value.len).map { item in
+            try copyNativeGraph(item)
+          })))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  members.append(ValueMember("meta", try copyNativeGraph(value.`meta`)))
+  members.append(ValueMember("question", try copyNativeGraph(value.`question`)))
+  switch value.`question_name`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1):
+    members.append(ValueMember("question_name", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("question_name", .string(nativeString(value.`question_name`.value))))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  members.append(ValueMember("schema", try copyNativeGraph(value.`schema`)))
+  switch value.`source`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("source", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("source", try copyNativeGraph(value.`source`.value)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`threshold`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("threshold", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("threshold", try copyNativeGraph(value.`threshold`.value)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  members.append(ValueMember("value", .number(NumberLiteral(unchecked: String(value.`value`)))))
+  return .orderedObject(members)
+}
+private func copyNativeGraph(
+  _ pointer: UnsafePointer<thinkthen_complete_session_packet_tag_aggregate_v1>?
+) throws -> DataValue {
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  var members = try copyNativeExtensions(value.extensions)
+  members.append(ValueMember("function", .string(nativeString(value.`function`))))
+  members.append(ValueMember("kind", .string(nativeString(value.`kind`))))
+  members.append(
+    ValueMember(
+      "value",
+      .array(
+        try nativeElements(value.`value`.data, value.`value`.len).map { item in
+          try copyNativeGraph(item)
+        })))
+  return .orderedObject(members)
+}
+private func copyNativeGraph(
+  _ pointer: UnsafePointer<thinkthen_complete_atomic_array_of_string_v1>?
+) throws -> DataValue {
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  var members = try copyNativeExtensions(value.extensions)
+  members.append(ValueMember("answer", try copyNativeGraph(value.`answer`)))
+  members.append(ValueMember("answer_id", try copyNativeGraph(value.`answer_id`)))
+  switch value.`images`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("images", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(
+      ValueMember(
+        "images",
+        .array(
+          try nativeElements(value.`images`.value.data, value.`images`.value.len).map { item in
+            try copyNativeGraph(item)
+          })))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`index`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("index", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(
+      ValueMember("index", .number(NumberLiteral(unchecked: String(value.`index`.value)))))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`input`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("input", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("input", try copyNativeLeaf(value.`input`.value)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`members`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("members", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(
+      ValueMember(
+        "members",
+        .array(
+          try nativeElements(value.`members`.value.data, value.`members`.value.len).map { item in
+            try copyNativeGraph(item)
+          })))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  members.append(ValueMember("meta", try copyNativeGraph(value.`meta`)))
+  members.append(ValueMember("question", try copyNativeGraph(value.`question`)))
+  switch value.`question_name`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1):
+    members.append(ValueMember("question_name", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("question_name", .string(nativeString(value.`question_name`.value))))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  members.append(ValueMember("schema", try copyNativeGraph(value.`schema`)))
+  switch value.`source`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("source", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("source", try copyNativeGraph(value.`source`.value)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`threshold`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("threshold", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("threshold", try copyNativeGraph(value.`threshold`.value)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  members.append(
+    ValueMember(
+      "value",
+      .array(
+        try nativeElements(value.`value`.data, value.`value`.len).map { item in
+          .string(nativeString(item))
+        })))
+  return .orderedObject(members)
+}
+private func copyNativeGraph(
+  _ pointer: UnsafePointer<thinkthen_complete_session_packet_choose_aggregate_v1>?
+) throws -> DataValue {
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  var members = try copyNativeExtensions(value.extensions)
+  members.append(ValueMember("function", .string(nativeString(value.`function`))))
+  members.append(ValueMember("kind", .string(nativeString(value.`kind`))))
+  members.append(
+    ValueMember(
+      "value",
+      .array(
+        try nativeElements(value.`value`.data, value.`value`.len).map { item in
+          try copyNativeGraph(item)
+        })))
+  return .orderedObject(members)
+}
+private func copyNativeGraph(
+  _ pointer: UnsafePointer<thinkthen_complete_atomic_nullable_string_v1>?
+) throws -> DataValue {
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  var members = try copyNativeExtensions(value.extensions)
+  members.append(ValueMember("answer", try copyNativeGraph(value.`answer`)))
+  members.append(ValueMember("answer_id", try copyNativeGraph(value.`answer_id`)))
+  switch value.`images`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("images", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(
+      ValueMember(
+        "images",
+        .array(
+          try nativeElements(value.`images`.value.data, value.`images`.value.len).map { item in
+            try copyNativeGraph(item)
+          })))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`index`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("index", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(
+      ValueMember("index", .number(NumberLiteral(unchecked: String(value.`index`.value)))))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`input`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("input", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("input", try copyNativeLeaf(value.`input`.value)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`members`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("members", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(
+      ValueMember(
+        "members",
+        .array(
+          try nativeElements(value.`members`.value.data, value.`members`.value.len).map { item in
+            try copyNativeGraph(item)
+          })))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  members.append(ValueMember("meta", try copyNativeGraph(value.`meta`)))
+  members.append(ValueMember("question", try copyNativeGraph(value.`question`)))
+  switch value.`question_name`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1):
+    members.append(ValueMember("question_name", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("question_name", .string(nativeString(value.`question_name`.value))))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  members.append(ValueMember("schema", try copyNativeGraph(value.`schema`)))
+  switch value.`source`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("source", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("source", try copyNativeGraph(value.`source`.value)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`threshold`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("threshold", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("threshold", try copyNativeGraph(value.`threshold`.value)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`value`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("value", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("value", .string(nativeString(value.`value`.value))))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  return .orderedObject(members)
+}
+private func copyNativeGraph(
+  _ pointer: UnsafePointer<thinkthen_complete_session_packet_decide_aggregate_v1>?
+) throws -> DataValue {
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  var members = try copyNativeExtensions(value.extensions)
+  members.append(ValueMember("function", .string(nativeString(value.`function`))))
+  members.append(ValueMember("kind", .string(nativeString(value.`kind`))))
+  members.append(
+    ValueMember(
+      "value",
+      .array(
+        try nativeElements(value.`value`.data, value.`value`.len).map { item in
+          try copyNativeGraph(item)
+        })))
+  return .orderedObject(members)
+}
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_atomic_decide_value_v1>?)
+  throws -> DataValue
+{
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  var members = try copyNativeExtensions(value.extensions)
+  members.append(ValueMember("answer", try copyNativeGraph(value.`answer`)))
+  members.append(ValueMember("answer_id", try copyNativeGraph(value.`answer_id`)))
+  switch value.`images`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("images", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(
+      ValueMember(
+        "images",
+        .array(
+          try nativeElements(value.`images`.value.data, value.`images`.value.len).map { item in
+            try copyNativeGraph(item)
+          })))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`index`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("index", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(
+      ValueMember("index", .number(NumberLiteral(unchecked: String(value.`index`.value)))))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`input`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("input", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("input", try copyNativeLeaf(value.`input`.value)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`members`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("members", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(
+      ValueMember(
+        "members",
+        .array(
+          try nativeElements(value.`members`.value.data, value.`members`.value.len).map { item in
+            try copyNativeGraph(item)
+          })))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  members.append(ValueMember("meta", try copyNativeGraph(value.`meta`)))
+  members.append(ValueMember("question", try copyNativeGraph(value.`question`)))
+  switch value.`question_name`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1):
+    members.append(ValueMember("question_name", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("question_name", .string(nativeString(value.`question_name`.value))))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  members.append(ValueMember("schema", try copyNativeGraph(value.`schema`)))
+  switch value.`source`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("source", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("source", try copyNativeGraph(value.`source`.value)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`threshold`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("threshold", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("threshold", try copyNativeGraph(value.`threshold`.value)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`value`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("value", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("value", try copyNativeGraph(value.`value`.value)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  return .orderedObject(members)
+}
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_decide_value_v1>?) throws
+  -> DataValue
+{
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  return try copyNativeLeaf(value.value)
+}
+private func copyNativeGraph(
+  _ pointer: UnsafePointer<thinkthen_complete_session_packet_annotate_row_v1>?
+) throws -> DataValue {
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  var members = try copyNativeExtensions(value.extensions)
+  members.append(ValueMember("function", .string(nativeString(value.`function`))))
+  members.append(ValueMember("kind", .string(nativeString(value.`kind`))))
+  members.append(ValueMember("value", try copyNativeGraph(value.`value`)))
+  return .orderedObject(members)
+}
+private func copyNativeGraph(
+  _ pointer: UnsafePointer<thinkthen_complete_session_packet_filter_row_v1>?
+) throws -> DataValue {
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  var members = try copyNativeExtensions(value.extensions)
+  members.append(ValueMember("function", .string(nativeString(value.`function`))))
+  members.append(ValueMember("kind", .string(nativeString(value.`kind`))))
+  members.append(ValueMember("value", try copyNativeGraph(value.`value`)))
+  return .orderedObject(members)
+}
+private func copyNativeGraph(
+  _ pointer: UnsafePointer<thinkthen_complete_session_packet_score_row_v1>?
+) throws -> DataValue {
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  var members = try copyNativeExtensions(value.extensions)
+  members.append(ValueMember("function", .string(nativeString(value.`function`))))
+  members.append(ValueMember("kind", .string(nativeString(value.`kind`))))
+  members.append(ValueMember("value", try copyNativeGraph(value.`value`)))
+  return .orderedObject(members)
+}
+private func copyNativeGraph(
+  _ pointer: UnsafePointer<thinkthen_complete_session_packet_tag_row_v1>?
+) throws -> DataValue {
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  var members = try copyNativeExtensions(value.extensions)
+  members.append(ValueMember("function", .string(nativeString(value.`function`))))
+  members.append(ValueMember("kind", .string(nativeString(value.`kind`))))
+  members.append(ValueMember("value", try copyNativeGraph(value.`value`)))
+  return .orderedObject(members)
+}
+private func copyNativeGraph(
+  _ pointer: UnsafePointer<thinkthen_complete_session_packet_choose_row_v1>?
+) throws -> DataValue {
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  var members = try copyNativeExtensions(value.extensions)
+  members.append(ValueMember("function", .string(nativeString(value.`function`))))
+  members.append(ValueMember("kind", .string(nativeString(value.`kind`))))
+  members.append(ValueMember("value", try copyNativeGraph(value.`value`)))
+  return .orderedObject(members)
+}
+private func copyNativeGraph(
+  _ pointer: UnsafePointer<thinkthen_complete_session_packet_decide_row_v1>?
+) throws -> DataValue {
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  var members = try copyNativeExtensions(value.extensions)
+  members.append(ValueMember("function", .string(nativeString(value.`function`))))
+  members.append(ValueMember("kind", .string(nativeString(value.`kind`))))
+  members.append(ValueMember("value", try copyNativeGraph(value.`value`)))
+  return .orderedObject(members)
+}
+func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_session_packet_v1>) throws
+  -> DataValue
+{
+  try copyNativeGraph(Optional(pointer))
 }
