@@ -123,6 +123,33 @@ class Cases(unittest.TestCase):
             archive_tree.raw_git(folder, commit)
 
 
+    def test_python_source_guard_checks_raw_inputs_and_managed_core(self):
+        core = self.root / 'core'; core_commit = self.source_fixture(core)
+        python = self.root / 'python'; self.source_fixture(python)
+        (python / 'external').mkdir()
+        (python / 'external/duckdb').symlink_to(core, target_is_directory=True)
+        run(['git', '-C', str(python), 'update-index', '--add', '--cacheinfo',
+             f'160000,{core_commit},external/duckdb'], self.env)
+        run(['git', '-C', str(python), '-c', 'user.name=fixture', '-c',
+             'user.email=fixture@example.invalid', 'commit', '-qm', 'core'], self.env)
+        commit = run(['git', '-C', str(python), 'rev-parse', 'HEAD'], self.env).stdout.strip()
+        command = [sys.executable, str(HERE / 'validate_inputs.py'), '--source', str(core),
+                   '--commit', core_commit, '--python', str(python), '--python-commit', commit]
+        self.assertEqual(run(command, self.env).returncode, 0)
+        for flag in ('--assume-unchanged', '--skip-worktree'):
+            run(['git', '-C', str(python), 'update-index', flag, 'source.cc'], self.env)
+            (python / 'source.cc').write_text('hidden Python build mutation\n')
+            rejected = run(command, self.env)
+            self.assertNotEqual(rejected.returncode, 0)
+            self.assertIn('raw Git source file differs: source.cc', rejected.stderr)
+            (python / 'source.cc').write_text('original\n')
+        (python / 'hidden').write_text('untracked Python build input\n')
+        self.assertIn('unexpected source input: hidden', run(command, self.env).stderr)
+        (python / 'hidden').unlink()
+        (core / 'source.cc').write_text('changed approved core\n')
+        self.assertIn('raw Git source file differs: source.cc', run(command, self.env).stderr)
+
+
     def test_raw_git_ignores_replacement_refs(self):
         source = self.root / 'replace-source'
         commit = self.source_fixture(source)

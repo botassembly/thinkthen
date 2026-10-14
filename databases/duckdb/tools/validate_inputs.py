@@ -53,12 +53,19 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument('--source', type=Path)
     parser.add_argument('--commit')
+    parser.add_argument('--python', type=Path)
+    parser.add_argument('--python-commit')
     parser.add_argument('--static', type=Path)
     parser.add_argument('--manifest', type=Path)
     parser.add_argument('--zip', type=Path)
     args = parser.parse_args()
     if args.source:
         archive_tree.raw_git(args.source, args.commit)
+    if args.python:
+        if not args.source or not args.python_commit:
+            raise ValueError('Python source requires its pin and approved core')
+        archive_tree.raw_git(args.python, args.python_commit,
+                             managed_gitlinks={'external/duckdb': (args.source, args.commit)})
     if args.static:
         if not args.manifest:
             raise ValueError('static archives require a manifest')

@@ -46,8 +46,7 @@ folder.mkdir(parents=True, exist_ok=True)
 if not (folder / '.git').exists():
     subprocess.run(['git', 'init', '--quiet', str(folder)], check=True)
 for command in (['fetch', '--no-tags', '--depth', '1', 'https://github.com/duckdb/duckdb-python.git', sys.argv[2]],
-                ['checkout', '--quiet', '--detach', sys.argv[2]],
-                ['diff', '--exit-code', sys.argv[2], '--', '.', ':!external/duckdb']):
+                ['checkout', '--quiet', '--detach', sys.argv[2]]):
     subprocess.run(['git', '-C', str(folder)] + command, check=True)
 # The Python backend also reads its core submodule for package metadata.
 # Its compiler and metadata must use the same approved core checkout.
@@ -59,11 +58,26 @@ if core.resolve() != (folder.parent / 'source').resolve():
     raise SystemExit('setup: the Python core differs from its approved source')
 subprocess.run(['git', '-C', str(folder), 'submodule', 'init', 'external/duckdb'], check=True)
 PY
+			python3 "$HERE/validate_inputs.py" --source "$TOOLS/source" --commit "$duckdb_source_commit" \
+				--python "$TOOLS/python" --python-commit "$duckdb_python_commit"
+			python3 - "$TOOLS" <<'PY'
+import shutil
+import sys
+from pathlib import Path
+folder = Path(sys.argv[1])
+staging = folder / 'python-build'
+if staging.exists():
+    shutil.rmtree(staging)
+shutil.copytree(folder / 'python', staging / 'source', symlinks=True)
+PY
+			python3 "$HERE/validate_inputs.py" --source "$TOOLS/source" --commit "$duckdb_source_commit" \
+				--python "$TOOLS/python-build/source" --python-commit "$duckdb_python_commit"
 			"$TOOLS/venv/bin/python" -m pip install 'scikit-build-core==0.11.6' 'nanobind==3.0.1'
 			heavy_compile env CMAKE_ARGS="-DDUCKDB_SOURCE_PATH=$TOOLS/source -DBUILD_EXTENSIONS=core_functions -DNATIVE_ARCH=OFF" \
-			CMAKE_BUILD_PARALLEL_LEVEL=2 RUSTC_WRAPPER= \
+			CMAKE_BUILD_PARALLEL_LEVEL=2 RUSTC_WRAPPER= PYTHONDONTWRITEBYTECODE=1 \
+			SKBUILD_BUILD_DIR="$TOOLS/python-build/cmake" \
 			CXXFLAGS="${CXXFLAGS:-} -ffile-prefix-map=$HOME=/build" \
-			"$TOOLS/venv/bin/python" -m pip install --no-build-isolation --no-deps "$TOOLS/python"
+			"$TOOLS/venv/bin/python" -m pip install --no-build-isolation --no-deps "$TOOLS/python-build/source"
 		;; esac
 	fi
 	[ -x "$TOOLS/venv/bin/python" ] || { echo "not run: DuckDB $version Python host is missing; run tools/setup.sh --fetch" >&2; exit 77; }
