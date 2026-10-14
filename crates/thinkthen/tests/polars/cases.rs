@@ -254,14 +254,32 @@ fn judged(door: &Engine, slice: &Engine, question: &str, texts: &[&str]) -> (Cel
                 options(),
             )?;
             let value = match call.value() {
-                thinkthen::RequestValue::Choices(rows) => {
-                    Judgment::Choice(rows[0].result().value().map(str::to_owned))
+                thinkthen::RequestValue::Choices(rows) => Judgment::Choice(
+                    rows.first()
+                        .expect("one native atomic row")
+                        .result()
+                        .value()
+                        .map(str::to_owned),
+                ),
+                thinkthen::RequestValue::Scores(rows) => Judgment::Score(
+                    rows.first()
+                        .expect("one native atomic row")
+                        .result()
+                        .value(),
+                ),
+                thinkthen::RequestValue::Tags(rows) => Judgment::Tags(
+                    rows.first()
+                        .expect("one native atomic row")
+                        .result()
+                        .value()
+                        .to_vec(),
+                ),
+                _ => {
+                    return Err(thinkthen::Error::new(
+                        thinkthen::ErrorKind::Defect,
+                        "native atomic result",
+                    ));
                 }
-                thinkthen::RequestValue::Scores(rows) => Judgment::Score(rows[0].result().value()),
-                thinkthen::RequestValue::Tags(rows) => {
-                    Judgment::Tags(rows[0].result().value().to_vec())
-                }
-                _ => panic!("native atomic result"),
             };
             Ok::<_, thinkthen::Error>(judgment(&value))
         })

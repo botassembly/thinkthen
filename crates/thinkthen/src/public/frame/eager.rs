@@ -300,20 +300,22 @@ fn scalar(
     texts: &Series,
     options: CallOptions<'_>,
 ) -> Result<Call<Series, crate::RequestValue, Series>, Error> {
-    if question.kind() != wanted {
-        return Err(Error::usage(
-            "question kind does not match the requested function",
-        ));
-    }
-    atomic_frame(engine, question, texts, options)?.try_map(|frame| {
-        let mut value = frame
-            .column("value")
-            .map_err(|_| Error::defect("an atomic frame lost its value"))?
-            .as_materialized_series()
-            .clone();
-        value.rename(texts.name().clone());
-        Ok(value)
-    })
+    let named = atomic_function(wanted)?;
+    result::enrich(
+        request::execute(engine, question, texts, named, options)?,
+        named,
+        texts,
+        |value| {
+            let frame = project_atomic(value, texts, wanted)?;
+            let mut value = frame
+                .column("value")
+                .map_err(|_| Error::defect("an atomic frame lost its value"))?
+                .as_materialized_series()
+                .clone();
+            value.rename(texts.name().clone());
+            Ok(value)
+        },
+    )
 }
 
 pub(super) fn atomic_frame(
@@ -332,19 +334,27 @@ pub(super) fn atomic_frame(
             kind_word(kind)
         )));
     }
-    let named = match kind {
-        QuestionKind::Decide => crate::RequestFunction::Decide,
-        QuestionKind::Choose => crate::RequestFunction::Choose,
-        QuestionKind::Score => crate::RequestFunction::Score,
-        QuestionKind::Tag => crate::RequestFunction::Tag,
-        _ => return Err(Error::defect("an atomic column lost its kind")),
-    };
+    let named = atomic_function(kind)?;
     result::enrich(
         request::execute(engine, question, texts, named, options)?,
         named,
         texts,
         |value| project_atomic(value, texts, kind),
     )
+}
+
+fn atomic_function(kind: QuestionKind) -> Result<crate::RequestFunction, Error> {
+    Ok(match kind {
+        QuestionKind::Decide => crate::RequestFunction::Decide,
+        QuestionKind::Choose => crate::RequestFunction::Choose,
+        QuestionKind::Score => crate::RequestFunction::Score,
+        QuestionKind::Tag => crate::RequestFunction::Tag,
+        _ => {
+            return Err(Error::usage(
+                "the atomic column takes decide, choose, score or tag",
+            ));
+        }
+    })
 }
 
 pub(super) fn project_atomic(

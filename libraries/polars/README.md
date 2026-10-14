@@ -96,7 +96,7 @@ The consumer under `consumer/` exercises actual frame associations through the p
 
 ## Native records
 
-`Engine::records_column(function, definition, column, records, options)` returns a DataFrame containing one `records` Struct column. Its field types come from the generated native schema. Supply a real typed original Series and parallel nullable `RecordInput` values. Row counts, null positions, originals and admitted native inputs must match. Incompatible or heterogeneous originals are refused before any request. Null input positions remain null records. Ranked record indices retain original positions; find retains its candidate set.
+`Engine::records_column(function, definition, column, records, options)` returns a DataFrame containing one `records` Struct column. Its field types come from the generated native schema. Supply a real typed original Series and parallel nullable `RecordInput` values. Row counts, null positions, originals and admitted native inputs must match. Incompatible or heterogeneous originals are refused before any request. Null input positions remain null records. Ranked record indices retain original positions; find retains its candidate set. The records column maps compact native occurrence indices to original nullable column positions. Native records in `results()` preserve their ordinals.
 
 Every eager named method returns one `Call` with `value()`, `probability()`, `results()` and `facts()`. The probability getter is a typed Series. The results getter retains the full unchanged canonical native records, including rejected filter observations and original inputs. The six `*_input_column_batch` methods keep native pull behavior and their position map. No separate details or complete frame method exists.
 

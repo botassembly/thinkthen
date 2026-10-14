@@ -473,6 +473,25 @@ fn collection_expressions_preserve_logical_sets_and_nullable_original_positions(
             .collect::<Vec<_>>(),
         [Some("strong"), Some("strong")]
     );
+}
+
+#[test]
+fn find_expression_compares_one_complete_nullable_collection() {
+    use thinkthen::PolarsExprOptions;
+    use thinkthen::polars::prelude::col;
+    let listener = collection_listener();
+    let engine = common::builder(listener.base())
+        .no_cache()
+        .build()
+        .expect("engine");
+    let column = Series::new(
+        "body".into(),
+        [Some("strong"), None, Some("weak"), Some("strong")],
+    );
+    let frame = DataFrame::new(4, vec![column.into()]).expect("frame");
+    let options = PolarsExprOptions::new().batch(thinkthen::BatchSetting::Records(
+        std::num::NonZeroUsize::MIN,
+    ));
     let before = listener.count();
     let find = Question::find("Which?")
         .expect("find")
@@ -616,26 +635,6 @@ fn records_column_keeps_rejected_filter_observations_and_refuses_incompatible_or
         seed_spans: None,
         examples: None,
     };
-    for rows in [
-        vec![Some(record("different")), None, Some(record("weak"))],
-        vec![Some(record("strong")), Some(record("extra")), None],
-    ] {
-        let error = engine
-            .records_column(
-                RequestFunction::Filter,
-                &definition,
-                &column,
-                rows,
-                CallOptions::new(),
-            )
-            .expect_err("incompatible originals");
-        assert_eq!(error.kind(), ErrorKind::Usage);
-    }
-    assert_eq!(
-        listener.count(),
-        0,
-        "input compatibility fails before sending"
-    );
     let result = engine
         .records_column(
             RequestFunction::Filter,
@@ -696,6 +695,46 @@ fn records_column_keeps_rejected_filter_observations_and_refuses_incompatible_or
         (2, 1)
     );
     assert_eq!(listener.count(), 1);
+}
+
+#[test]
+fn records_column_refuses_changed_originals_or_null_positions_before_sending() {
+    use thinkthen::{RecordInput, RequestDefinition, RequestFunction};
+    let listener = collection_listener();
+    let engine = common::builder(listener.base())
+        .no_cache()
+        .build()
+        .expect("engine");
+    let definition =
+        RequestDefinition::from(Question::decide("Relevant?").expect("question").cut());
+    let column = Series::new("body".into(), [Some("strong"), None, Some("weak")]);
+    let record = |text: &str| RecordInput {
+        original: text.to_owned(),
+        context: None,
+        options: None,
+        seed_spans: None,
+        examples: None,
+    };
+    for rows in [
+        vec![Some(record("different")), None, Some(record("weak"))],
+        vec![Some(record("strong")), Some(record("extra")), None],
+    ] {
+        let error = engine
+            .records_column(
+                RequestFunction::Filter,
+                &definition,
+                &column,
+                rows,
+                CallOptions::new(),
+            )
+            .expect_err("incompatible originals");
+        assert_eq!(error.kind(), ErrorKind::Usage);
+    }
+    assert_eq!(
+        listener.count(),
+        0,
+        "input compatibility fails before sending"
+    );
 }
 
 #[test]
@@ -761,5 +800,43 @@ fn records_column_projects_scalar_unions_without_changing_native_records() {
         listener.count(),
         2,
         "each record projection uses its one native call"
+    );
+}
+
+#[test]
+fn records_column_refuses_original_fields_missing_from_the_typed_column() {
+    use thinkthen::polars::prelude::IntoSeries;
+    use thinkthen::{RawRecord, RecordReading, RequestDefinition, RequestFunction};
+    let listener = collection_listener();
+    let engine = common::builder(listener.base())
+        .no_cache()
+        .build()
+        .expect("engine");
+    let original =
+        RawRecord::json(r#"{"kept":"strong","extra":"must remain present"}"#).expect("original");
+    let input = RecordReading::new(&["/kept"], None, None)
+        .expect("reading")
+        .compose(original)
+        .expect("record");
+    let column = DataFrame::new(1, vec![Series::new("kept".into(), ["strong"]).into()])
+        .expect("frame")
+        .into_struct("original".into())
+        .into_series();
+    let definition =
+        RequestDefinition::from(Question::decide("Relevant?").expect("question").cut());
+    let error = engine
+        .records_column(
+            RequestFunction::Decide,
+            &definition,
+            &column,
+            vec![Some(input)],
+            CallOptions::new(),
+        )
+        .expect_err("missing original field");
+    assert_eq!(error.kind(), ErrorKind::Usage);
+    assert_eq!(
+        listener.count(),
+        0,
+        "no original field is silently dropped before sending"
     );
 }

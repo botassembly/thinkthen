@@ -3,6 +3,10 @@
     clippy::print_stdout,
     reason = "the conformance child writes its actual native projection"
 )]
+#[expect(
+    dead_code,
+    reason = "the shared fixture also contains the Rust scalar writer; this consumer writes typed Polars records"
+)]
 #[path = "../../../rust/consumer/src/fixture.rs"]
 mod fixture;
 use fixture::{Fixture, Original};

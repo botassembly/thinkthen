@@ -388,22 +388,17 @@ fn annotation_and_recognition_expressions_keep_generated_nested_types_and_null_r
         let probability = results.field_by_name("probability").expect("probability");
         if id.starts_with("17") {
             let values = values.struct_().expect("named typed annotation");
-            assert_eq!(
-                values.field_by_name("refund").expect("refund").dtype(),
-                &DataType::Boolean
-            );
-            assert_eq!(
-                values.field_by_name("team").expect("team").dtype(),
-                &DataType::String
-            );
-            assert_eq!(
-                values.field_by_name("severity").expect("severity").dtype(),
-                &DataType::Float64
-            );
-            assert_eq!(
-                values.field_by_name("topics").expect("topics").dtype(),
-                &DataType::List(Box::new(DataType::String))
-            );
+            for (name, dtype) in [
+                ("refund", DataType::Boolean),
+                ("team", DataType::String),
+                ("severity", DataType::Float64),
+                ("topics", DataType::List(Box::new(DataType::String))),
+            ] {
+                assert_eq!(
+                    values.field_by_name(name).expect("typed member").dtype(),
+                    &dtype
+                );
+            }
             assert_eq!(probability.null_count(), 2);
         } else {
             let entities = values

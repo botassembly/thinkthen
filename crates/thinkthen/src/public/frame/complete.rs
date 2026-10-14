@@ -74,14 +74,8 @@ pub(super) fn rank(
             .collect::<Result<Vec<_>, _>>()?;
         let probabilities = rows
             .iter()
-            .map(|row| {
-                row.result()
-                    .canonical
-                    .answer()
-                    .yes()
-                    .ok_or_else(|| Error::defect("rank lost its probability"))
-            })
-            .collect::<Result<Vec<_>, _>>()?;
+            .map(|row| row.result().probability())
+            .collect::<Vec<_>>();
         frame(vec![
             Series::new("index".into(), indices),
             Series::new("record".into(), originals),

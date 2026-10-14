@@ -48,9 +48,15 @@ impl Shape {
         }
         match self {
             Self::Raw(dtype) => raw_cell(value, dtype),
-            Self::Object(fields) => struct_cell(fields, |name, shape| {
-                shape.cell(value.get(name).unwrap_or(&Value::Null))
-            }),
+            Self::Object(fields) => {
+                let object = value.as_object().ok_or_else(invalid)?;
+                if object.keys().any(|name| !fields.contains_key(name)) {
+                    return Err(invalid());
+                }
+                struct_cell(fields, |name, shape| {
+                    shape.cell(value.get(name).unwrap_or(&Value::Null))
+                })
+            }
             Self::Union(fields) => union_cell(fields, value),
             Self::List(item) => {
                 let values = value.as_array().ok_or_else(invalid)?;
@@ -521,18 +527,27 @@ fn raw_cell(value: &Value, dtype: &DataType) -> Result<AnyValue<'static>, Error>
         DataType::Float64 => AnyValue::Float64(value.as_f64().ok_or_else(invalid)?),
         DataType::UInt64 => AnyValue::UInt64(value.as_u64().ok_or_else(invalid)?),
         DataType::Int64 => AnyValue::Int64(value.as_i64().ok_or_else(invalid)?),
-        DataType::Struct(fields) => AnyValue::StructOwned(Box::new((
-            fields
-                .iter()
-                .map(|field| {
-                    raw_cell(
-                        value.get(field.name().as_str()).unwrap_or(&Value::Null),
-                        field.dtype(),
-                    )
-                })
-                .collect::<Result<Vec<_>, Error>>()?,
-            fields.clone(),
-        ))),
+        DataType::Struct(fields) => {
+            let object = value.as_object().ok_or_else(invalid)?;
+            if object
+                .keys()
+                .any(|name| !fields.iter().any(|field| field.name().as_str() == name))
+            {
+                return Err(invalid());
+            }
+            AnyValue::StructOwned(Box::new((
+                fields
+                    .iter()
+                    .map(|field| {
+                        raw_cell(
+                            value.get(field.name().as_str()).unwrap_or(&Value::Null),
+                            field.dtype(),
+                        )
+                    })
+                    .collect::<Result<Vec<_>, Error>>()?,
+                fields.clone(),
+            )))
+        }
         DataType::List(inner) => {
             AnyValue::List(series("", value.as_array().ok_or_else(invalid)?, inner)?)
         }
