@@ -6533,6 +6533,10 @@ NSString *judgment, id call, NSError **error) {
         NSDictionary *fields = packet.rawFields;
         if (![fields[@"function"] isEqual:function]) continue;
         id value;
+        if ([function isEqual:@"filter"]) {
+            if ([fields[@"kind"] isEqual:@"row"]) [values addObject:fields[@"value"]];
+            continue;
+        }
         if (!judgment.length) {
             if (![fields[@"kind"] isEqual:@"aggregate"]) continue;
             value = fields[@"value"];
@@ -6543,6 +6547,7 @@ NSString *judgment, id call, NSError **error) {
             value = carrier[@"value"];
         } if (value) [values addObject:value];
     }
+    if ([function isEqual:@"filter"]) return [values copy];
     if (values.count != 1) {
         if (error) *error = [NSError errorWithDomain:TTAnswerErrorDomain code:1 userInfo:@{
             NSLocalizedDescriptionKey:@"Expected exactly one successful answer", @"ThinkThenFunction":function,
