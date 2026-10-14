@@ -4,6 +4,10 @@ here=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 root=$(CDPATH= cd -- "$here/../.." && pwd)
 swift=${THINKTHEN_SWIFT:-$(command -v swift || true)}
 [ -x "$swift" ] || exit 77
+node "$root/sdlc/scripts/ratchet.mjs" "$here/ratchet.swift.json"
+for mode in '' --inputs --bridge; do
+    python3 -I "$root/sdlc/generators/results/generate.py" --target swift ${mode:+"$mode"} --check
+done
 case $(uname -s) in
 Darwin)
     [ -f "${THINKTHEN_ARTIFACT:-}" ] || { echo 'Swift Apple checks require the final installed package; no native build is started' >&2; exit 1; }
@@ -27,16 +31,7 @@ Darwin)
 Linux) ;;
 *) echo 'Swift installed checks require Linux or macOS' >&2; exit 77 ;;
 esac
-lock=${THINKTHEN_HEAVY_LOCK:-${XDG_RUNTIME_DIR:-/tmp}/thinkthen-swift.lock}
-if [ "${THINKTHEN_HEAVY_LOCK_HELD:-}" != "$lock" ]; then
-    export THINKTHEN_HEAVY_LOCK_HELD=$lock
-    exec flock -w 180 -E 75 -o "$lock" /bin/sh "$0" "$@"
-fi
 . "$root/sdlc/scripts/scratch.sh"
-node "$root/sdlc/scripts/ratchet.mjs" "$here/ratchet.swift.json"
-for mode in '' --inputs --bridge; do
-    python3 -I "$root/sdlc/generators/results/generate.py" --target swift ${mode:+"$mode"} --check
-done
 if [ "${THINKTHEN_TEST_PROFILE:-}" = smoke ]; then
     smoke_guard
     . "$root/sdlc/scripts/installed.sh"
@@ -66,9 +61,9 @@ else
     export CARGO_BUILD_JOBS=${CARGO_BUILD_JOBS:-2} CARGO_NET_OFFLINE=true
     build_flags=${RUSTFLAGS:-}
     [ "${THINKTHEN_FULL_COMPILER:-}" = 1 ] || build_flags="$build_flags --remap-path-prefix=$HOME=/build"
-    RUSTC_WRAPPER= RUSTFLAGS="$build_flags" cargo build --locked --offline --manifest-path "$root/libraries/c/Cargo.toml" --lib -j2
+    RUSTC_WRAPPER= RUSTFLAGS="$build_flags" python3 "$root/sdlc/scripts/build-admission.py" -- cargo build --locked --offline --manifest-path "$root/libraries/c/Cargo.toml" --lib -j2
     package=$package_scratch/package
-    python3 "$here/Tests/fixtures/package_local.py" --native "$root/libraries/c/target/debug/libthinkthen_c.so" --out "$package"
+    python3 "$here/Tests/fixtures/package_local.py" --native "${CARGO_TARGET_DIR:-$root/libraries/c/target}/debug/libthinkthen_c.so" --out "$package"
     python3 "$here/Tests/fixtures/guard.py" "$package_scratch/thinkthen-swift-0.2.0.tar.gz"
 fi
 if [ -n "${THINKTHEN_COVERAGE_STAGE:-}" ]; then
