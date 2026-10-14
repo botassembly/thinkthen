@@ -1,7 +1,7 @@
 //! SQLite host arguments enter the native shared Request without serialization.
 use crate::complete_native::{Inputs, Prepared, defect};
 mod rows;
-pub use rows::{project_outcome, project_value};
+pub use rows::{project_carrier, project_outcome, project_value};
 use serde_json::{Value, json};
 use std::sync::Mutex;
 use thinkthen::{
