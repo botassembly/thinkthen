@@ -46,7 +46,7 @@ jobs:
           python3 sdlc/generators/results/generate.py --target objc --check
           sh libraries/objective-c/check.sh
       - name: Replay Objective-C website examples
-        if: ${{ inputs.website_examples }}
+        if: ${{ inputs.website_examples && !cancelled() }}
         env:
           SITE_NATIVE_PACKAGE: ${{ github.workspace }}/target/website-c-package
         run: |
