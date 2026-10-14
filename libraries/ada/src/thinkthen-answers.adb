@@ -5752,14 +5752,14 @@ Item : constant Value := Answer (Call, "tag", "tags");
 begin
 return Texts (Item);
 end Tag_Answer;
-function Filter_Answer (Call : Completion) return Boolean_List is
+function Filter_Answer (Call : Completion) return Thinkthen.Values.Value_List is
 Item : constant Value := Answer (Call, "filter", "");
 begin
 declare
-Items : Boolean_List (1 .. Length (Item));
+Items : Thinkthen.Values.Value_List (1 .. Length (Item));
 begin
 for I in Items'Range loop
-Items (I) := As_Boolean (Field_Value (Element (Item, I), "value"));
+Items (I) := Field_Value (Element (Item, I), "input");
 end loop;
 return Items;
 end;
@@ -5771,7 +5771,7 @@ declare
 Items : Rank_List (1 .. Length (Item));
 begin
 for I in Items'Range loop
-Items (I) := Interfaces.Unsigned_64'Value (As_Number (Field_Value (Element (Item, I), "value")));
+Items (I) := Interfaces.Unsigned_64'Value (As_Number (Field_Value (Element (Item, I), "index")));
 end loop;
 return Items;
 end;
@@ -5826,7 +5826,7 @@ begin
 Call := Collect (Owner);
 return Score_Answer (Call);
 end Score_Answer;
-function Filter_Answer (Owner : in out Thinkthen.Sessions.Session; Call : in out Completion) return Boolean_List is
+function Filter_Answer (Owner : in out Thinkthen.Sessions.Session; Call : in out Completion) return Thinkthen.Values.Value_List is
 begin
 Call := Collect (Owner);
 return Filter_Answer (Call);
