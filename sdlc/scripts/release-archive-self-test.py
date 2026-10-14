@@ -553,6 +553,7 @@ def main():
         win_zip = windows / f"thinkthen-{version}-x86_64-pc-windows-msvc.zip"
         with zipfile.ZipFile(win_zip, "w") as output:
             output.writestr("thinkthen.exe", binary)
+            output.writestr("README.md", (REPO / "README.md").read_bytes())
         c_zip = C_FIXTURE["create"](windows, version)
         sample = windows / "thinkthen-first-run.tar.gz"
         sample.write_bytes(first_run)
