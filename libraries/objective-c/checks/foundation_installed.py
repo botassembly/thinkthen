@@ -67,7 +67,7 @@ with contextlib.ExitStack() as installed:
             profile_link = ["-Xlinker", os.environ["THINKTHEN_COVERAGE_INITIALIZER"],
                             "-Xlinker", "-u", "-Xlinker", "___llvm_profile_runtime"]
         subprocess.run(["swift", "build", "--disable-sandbox", "-j", "1"] + profile_link, cwd=work, env=env,
-                       check=True, timeout=60)
+                       check=True, timeout=300)
         subprocess.run([str(work / ".build/debug/Results"), str(REPO / "conformance/fixtures/complete.json")],
                        env=env, check=True, timeout=3)
         barrier = work / "barrier"

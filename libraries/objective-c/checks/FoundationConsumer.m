@@ -50,7 +50,7 @@ int main(int argc, const char *argv[]) {
         dispatch_semaphore_t cancelled = dispatch_semaphore_create(0);
         input = [TTTextInput new]; input.text = @"hold-foundation";
         TTTask *held = [client decide:question input:input options:nil feed:nil completion:^(TTCall *call, NSError *failure) {
-            require(call == nil && failure.code == TTNativeErrorCode(@"cancelled"));
+            require(call == nil && [failure isKindOfClass:TTFailureError.class] && ((TTFailureError *)failure).kind == TTErrorCancelled && ((TTFailureError *)failure).facts == nil);
             dispatch_semaphore_signal(cancelled);
         } error:&error];
         require(held != nil && error == nil);

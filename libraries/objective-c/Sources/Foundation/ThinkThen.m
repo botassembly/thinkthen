@@ -37,10 +37,15 @@ static NSError *TTImmediate(int code) {
 static BOOL TTCheck(int code, NSError **error) { if (!code) return YES; if (error) *error = TTImmediate(code); return NO; }
 static NSData *TTEncode(id object, NSError **error) {
     // Foundation owns representation checks; native Request owns admission.
-    @try { return TTRequestJSONData(object, error); }
+    @try {
+        NSError *representation = nil;
+        NSData *data = TTRequestJSONData(object, &representation);
+        if (!data && error) *error = TTNativeFailure(NULL, TTErrorUsage, @"Input has an unsupported Foundation representation");
+        return data;
+    }
     @catch (NSException *exception) {
         (void)exception;
-        if (error) *error = [NSError errorWithDomain:TTErrorDomain code:THINKTHEN_EUSAGE userInfo:@{NSLocalizedDescriptionKey:@"Input has an unsupported Foundation representation"}];
+        if (error) *error = TTNativeFailure(NULL, TTErrorUsage, @"Input has an unsupported Foundation representation");
         return nil;
     }
 }
@@ -59,7 +64,7 @@ static NSData *TTEncode(id object, NSError **error) {
 }
 - (BOOL)live:(NSError **)error {
     if (_native && !_closed) return YES;
-    if (error) *error = [NSError errorWithDomain:TTErrorDomain code:THINKTHEN_ELOCAL userInfo:@{NSLocalizedDescriptionKey:@"Session is closed"}];
+    if (error) *error = TTNativeFailure(NULL, TTErrorLocal, @"Session is closed");
     return NO;
 }
 - (BOOL)tryPush:(TTDescriptor *)descriptor accepted:(BOOL *)accepted closed:(BOOL *)closed error:(NSError **)error {
@@ -148,7 +153,7 @@ static NSData *TTEncode(id object, NSError **error) {
         _packets = [NSMutableArray array]; _queue = dispatch_queue_create("thinkthen.foundation.callback", DISPATCH_QUEUE_SERIAL);
         dispatch_async(_queue, ^{
             while (!self->_finished) {
-                if (self.cancelled) { [self settle:[NSError errorWithDomain:TTErrorDomain code:THINKTHEN_ECANCELLED userInfo:@{NSLocalizedDescriptionKey:@"Cancelled"}] call:nil]; break; }
+                if (self.cancelled) { [self settle:TTNativeFailure(NULL, TTErrorCancelled, @"Cancelled") call:nil]; break; }
                 [self tick];
                 if (self->_finished) break;
                 if (self->_feed && !self->_pending) continue;
@@ -162,7 +167,7 @@ static NSData *TTEncode(id object, NSError **error) {
 - (void)settle:(NSError *)error call:(TTCall *)call {
     if (_finished) return;
     _finished = YES; [_session close];
-    if (self.cancelled) { call = nil; error = [NSError errorWithDomain:TTErrorDomain code:THINKTHEN_ECANCELLED userInfo:@{NSLocalizedDescriptionKey:@"Cancelled"}]; }
+    if (self.cancelled) { call = nil; error = TTNativeFailure(NULL, TTErrorCancelled, @"Cancelled"); }
     _feed = nil; _pending = nil;
     TTCompletion completion = _completion; _completion = nil;
     completion(call, error);
@@ -190,7 +195,7 @@ static NSData *TTEncode(id object, NSError **error) {
         if (error) { [self settle:error call:nil]; return; }
         if (packet) { [_packets addObject:packet]; if ([packet isKindOfClass:TTSessionPacketTerminal.class]) _terminal = (id)packet; }
         if (ended) {
-            if (!_terminal) { [self settle:[NSError errorWithDomain:TTErrorDomain code:THINKTHEN_EDEFECT userInfo:@{NSLocalizedDescriptionKey:@"Native session ended without terminal"}] call:nil]; return; }
+            if (!_terminal) { [self settle:TTNativeFailure(NULL, TTErrorDefect, @"Native session ended without terminal") call:nil]; return; }
             TTCall *call = [[TTCall alloc] initWithPackets:_packets terminal:_terminal];
             if (_terminal.failure.state == TTPresenceValue) {
                 TTCallError *failure = _terminal.failure.value;
@@ -204,7 +209,7 @@ static NSData *TTEncode(id object, NSError **error) {
 - (void)cancel {
     // Signal now; dispatch only host completion. A held provider is never joined.
     self.cancelled = YES; [_session cancel]; [_session close];
-    dispatch_async(_queue, ^{ [self settle:[NSError errorWithDomain:TTErrorDomain code:THINKTHEN_ECANCELLED userInfo:@{NSLocalizedDescriptionKey:@"Cancelled"}] call:nil]; });
+    dispatch_async(_queue, ^{ [self settle:TTNativeFailure(NULL, TTErrorCancelled, @"Cancelled") call:nil]; });
 }
 @end
 @interface TTUsagePersistenceStatus ()
