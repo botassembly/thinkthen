@@ -136,30 +136,9 @@ const builtIns = backends().map((b) => b.name);
   )}
   {surface.slug === 'duckdb' && (
     <>
-      <h3 id="use-the-release-from-dbt-v1">Use the release from dbt v1</h3>
-      <p>Use <code>dbt-core==1.12.5</code>, <code>dbt-duckdb==1.11.0</code> and <code>duckdb==1.5.5</code>. Unpack the public extension archive and set <code>THINKTHEN_EXT_DIR</code> to its absolute root, containing <code>v1.5.5/</code>. The adapter installs from that local repository.</p>
-      <Code code={`python3 -m venv dbt-env
-. dbt-env/bin/activate
-python -m pip install dbt-core==1.12.5 dbt-duckdb==1.11.0 duckdb==1.5.5
-mkdir -p .dbt-extensions
-export THINKTHEN_DBT_EXTENSION_DIR="$PWD/.dbt-extensions"`} lang="bash" label="Copy the dbt v1 package pins" />
-      <p>Save this as <code>profiles.yml</code> beside your dbt project and set the project's profile to <code>thinkthen_dbt</code>. The backend key belongs in the process environment.</p>
-      <Code code={`thinkthen_dbt:
-  target: local
-  outputs:
-    local:
-      type: duckdb
-      path: warehouse.duckdb
-      threads: 1
-      config_options:
-        allow_unsigned_extensions: true
-        extension_directory: "{{ env_var('THINKTHEN_DBT_EXTENSION_DIR') }}"
-      extensions:
-        - name: thinkthen
-          repo: "'{{ env_var('THINKTHEN_EXT_DIR') }}'"`} lang="yaml" file="profiles.yml" label="Copy the dbt v1 startup profile" />
-      <p>Run <code>dbt run --profiles-dir .</code> from the project. The adapter supplies <code>config_options</code> when it opens DuckDB. A later SQL <code>SET allow_unsigned_extensions</code> cannot change the setting. Enable unsigned extensions only for a local artifact you trust.</p>
-      <p>Keep this project's extension directory separate from DuckDB's existing installation. An extension installed from another repository can produce “the origin is different”. Use a fresh project-owned directory at startup and retry installation there. Changing XDG directories does not relocate DuckDB's extension directory. Do not replace or remove a user's existing extension to recover.</p>
-      <p>dbt v2 requires signed extensions. Use dbt v1.</p>
+      <h3 id="use-the-release-from-dbt-v1">Use the release with DuckDB</h3>
+      <p>The current release archive supports {surface.supportedVersions.map((version, index) => <>{index ? ' and ' : ''}<code>{version}</code></>)}. Use the direct DuckDB installation above and the SQL samples below.</p>
+      <p>The earlier dbt v1 setup used a DuckDB version outside this release's supported list. A dbt setup for the current archive has not been verified.</p>
     </>
   )}
 
