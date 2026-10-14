@@ -272,6 +272,14 @@ def host_functions(code, family):
         comments = r'\*>[^\n]*'
     # Mask literals before seeking calls, including triple and verbatim strings.
     literals = r'"""[\s\S]*?"""|\'\'\'[\s\S]*?\'\'\'|@"(?:""|[^"])*"|"(?:\\.|[^"\\])*"|\'(?:\\.|[^\'\\])*\'|`[^`]*`'
+    if family == 'ada':
+        # Attributes use apostrophes; only one character is a character literal.
+        # Ada strings escape a quotation mark by doubling it, not with a backslash.
+        literals = r'"(?:""|[^"])*"|\'[^\n]\''
+    elif family == 'crate':
+        # Lifetimes remain code. Rust characters and raw strings remain literals.
+        literals = (r'(?:br|r)(?P<hashes>\#*)"[\s\S]*?"(?P=hashes)|'
+                    r'"(?:\\.|[^"\\])*"|\'(?:\\(?:u\{[0-9a-fA-F_]+\}|x[0-9a-fA-F]{2}|.)|[^\'\\\n])\'')
     functions = set()
     if family == 'cobol':
         # Match CALL operands before masking other literals, including DISPLAY text.
@@ -295,7 +303,7 @@ def host_functions(code, family):
     code = re.sub(literals + '|' + comments, mask, code)
     suffix = 'Async' if family == 'csharp' else ''
     # Rust turbofish and typed host arguments remain part of the same named call.
-    generic = r'(?:\s*(?:::)?\s*<[\w\s.:,<>\[\]&?]+>)?' if family in ('crate', 'cpp', 'typescript', 'csharp') else ''
+    generic = r'(?:\s*(?:::)?\s*<[\w\s.:,<>\[\]&?\']+>)?' if family in ('crate', 'cpp', 'typescript', 'csharp') else ''
     invocation = r'\s*:' if family == 'objective-c' else generic + r'\s*\('
     return functions | {name.lower() for name in re.findall(FUNCTION + suffix + invocation, code, re.I)}
 
