@@ -106,6 +106,8 @@ BOOL TTCallSingleInput(TTInput *input) {''']
                            'for (NSDictionary *row in rows) { id raw = row[' + literal(projection) + '];',
                            'if (!raw) TTInvalidResult();',
                            *(['BOOL settled = raw != NSNull.null;'] if spec['probability_mode'] in ('yes', 'picked') else [])]
+        if projection == 'input' and spec['probability_mode'] == 'yes':
+            implementation += ['settled = [row[@"value"] boolValue];']
         if 'resolution' in spec:
             implementation += ['settled = [resolved[row[@"index"] ?: @0] boolValue];']
         if 'selection_path' in spec:

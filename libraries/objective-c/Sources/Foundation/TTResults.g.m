@@ -6698,6 +6698,7 @@ static NSDictionary *TTCallProjection(TTCall *call) {
             id raw = row[@"input"];
             if (!raw) TTInvalidResult();
             BOOL settled = raw != NSNull.null;
+            settled = [row[@"value"] boolValue];
             [values addObject:raw == NSNull.null ? NSNull.null : raw];
             [odds addObject:settled ? (row[@"answer"][@"probability"] ?: NSNull.null) : NSNull.null];
         }

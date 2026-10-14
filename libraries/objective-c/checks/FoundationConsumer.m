@@ -85,6 +85,8 @@ int main(int argc, const char *argv[]) {
             NSArray *answer = filterCall.value.items;
             require(answer != nil && error == nil);
             require([answer isEqual:filterInput == multiple ? originals : @[]]);
+            require(filterCall.probability.items.count == answer.count);
+            for (TTCallProbability *odds in filterCall.probability.items) require(odds.scalar.doubleValue > 0 && odds.scalar.doubleValue <= 1);
             require(filterCall.facts.value.requestsSent.value.unsignedIntegerValue == (filterInput == multiple ? 4 : filterInput == empty ? 0 : 1));
         }
         client = nil;
