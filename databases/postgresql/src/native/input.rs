@@ -7,12 +7,14 @@ use thinkthen::{Error, RequestItem, RequestOriginal};
 extension_sql!(
     r#"
 CREATE TYPE thinkthen_option AS (name text, description json);
-CREATE TYPE thinkthen_seed AS (start bigint, end bigint, kind text);
+CREATE TYPE thinkthen_example_entity AS (start bigint, "end" bigint, kind text);
+CREATE TYPE thinkthen_example AS (brackets text, text text, entities thinkthen_example_entity[], kinds text[]);
+CREATE TYPE thinkthen_seed AS (start bigint, "end" bigint, kind text);
 CREATE TYPE thinkthen_source AS (file text, first_line bigint, last_line bigint);
 CREATE TYPE thinkthen_reader_failure AS (kind text, message text);
 CREATE TYPE thinkthen_record AS (
-    text text, value json, context text, options thinkthen_option[],
-    seed_spans thinkthen_seed[], examples text[], images thinkthen_image_value[],
+    text text, value json, context text, context_value json, options thinkthen_option[],
+    seed_spans thinkthen_seed[], examples thinkthen_example[], images thinkthen_image_value[],
     source thinkthen_source, read_error thinkthen_reader_failure
 );
 "#,
@@ -82,11 +84,11 @@ fn record(tuple: Option<pgrx::composite_type!("thinkthen_record")>) -> Result<Re
         return Err(thinkthen::Error::new(kind, message));
     }
     let text: Option<String> = field(&tuple, "text")?;
-    let value: Option<pgrx::datum::Json> = field(&tuple, "value")?;
+    let value: Option<crate::ffi::RawJson> = field(&tuple, "value")?;
     let original = match (text, value) {
         (Some(text), None) => Some(RequestOriginal::Text { text }),
         (None, Some(value)) => Some(RequestOriginal::Json {
-            value: thinkthen::RawRecord::json(&value.0.to_string())?,
+            value: thinkthen::RawRecord::json(&value.0)?,
         }),
         (None, None) => None,
         _ => return Err(call::usage("a record has either text or JSON, never both")),
@@ -99,7 +101,7 @@ fn record(tuple: Option<pgrx::composite_type!("thinkthen_record")>) -> Result<Re
                 .iter()
                 .map(|tuple| {
                     let tuple = tuple.ok_or_else(|| call::usage("option list contains NULL"))?;
-                    let description: Option<pgrx::datum::Json> = field(&tuple, "description")?;
+                    let description: Option<crate::ffi::RawJson> = field(&tuple, "description")?;
                     Ok(thinkthen::RecordOption {
                         name: field(&tuple, "name")?
                             .ok_or_else(|| call::usage("option name is NULL"))?,
@@ -116,23 +118,13 @@ fn record(tuple: Option<pgrx::composite_type!("thinkthen_record")>) -> Result<Re
         .map(|images| crate::images::input(images, None).map(|item| item.images))
         .transpose()?
         .unwrap_or_default();
-    let examples: Option<Array<'_, &str>> = field(&tuple, "examples")?;
+    let examples = examples(field(&tuple, "examples")?)?;
     let item = RequestItem {
         original,
-        context: field::<String>(&tuple, "context")?.map(thinkthen::RecordContext::Text),
+        context: context(&tuple)?,
         options,
         seed_spans: seeds(field(&tuple, "seed_spans")?)?,
-        examples: examples
-            .map(|values| {
-                values
-                    .iter()
-                    .map(|text| {
-                        text.map(brackets)
-                            .ok_or_else(|| call::usage("example list contains NULL"))
-                    })
-                    .collect()
-            })
-            .transpose()?,
+        examples,
         images,
     };
     let source: Option<pgrx::composite_type!("thinkthen_source")> = field(&tuple, "source")?;
@@ -153,11 +145,8 @@ fn record(tuple: Option<pgrx::composite_type!("thinkthen_record")>) -> Result<Re
     Ok(Record { item, source })
 }
 
-fn read_description(value: pgrx::datum::Json) -> Result<thinkthen::Description, Error> {
-    thinkthen::Description::from_json(&value.0.to_string())
-}
-fn brackets(text: &str) -> thinkthen::RecognitionExample {
-    thinkthen::RecognitionExample::Brackets(text.to_owned())
+fn read_description(value: crate::ffi::RawJson) -> Result<thinkthen::Description, Error> {
+    thinkthen::Description::from_json(&value.0)
 }
 
 pub(super) fn compose(
@@ -188,4 +177,85 @@ pub(super) fn compose(
         };
     }
     Ok(row)
+}
+
+fn context(
+    tuple: &PgHeapTuple<'_, AllocatedByRust>,
+) -> Result<Option<thinkthen::RecordContext>, Error> {
+    let text: Option<String> = field(tuple, "context")?;
+    let object: Option<crate::ffi::RawJson> = field(tuple, "context_value")?;
+    match (text, object) {
+        (Some(text), None) => Ok(Some(thinkthen::RecordContext::Text(text))),
+        (None, Some(object)) => Ok(Some(thinkthen::RecordContext::Object(
+            thinkthen::ObjectContext::new(&thinkthen::RawRecord::json(&object.0)?)?,
+        ))),
+        (None, None) => Ok(None),
+        _ => Err(call::usage(
+            "a record has either text or object context, never both",
+        )),
+    }
+}
+
+pub(super) fn examples(
+    values: Option<Array<'_, pgrx::composite_type!("thinkthen_example")>>,
+) -> Result<Option<Vec<thinkthen::RecognitionExample>>, Error> {
+    values
+        .map(|values| values.iter().map(example).collect())
+        .transpose()
+}
+fn example(
+    tuple: Option<pgrx::composite_type!("thinkthen_example")>,
+) -> Result<thinkthen::RecognitionExample, Error> {
+    let tuple = tuple.ok_or_else(|| call::usage("example list contains NULL"))?;
+    let brackets: Option<String> = field(&tuple, "brackets")?;
+    let text: Option<String> = field(&tuple, "text")?;
+    let entities: Option<Array<'_, pgrx::composite_type!("thinkthen_example_entity")>> =
+        field(&tuple, "entities")?;
+    let kinds: Option<Array<'_, &str>> = field(&tuple, "kinds")?;
+    match (brackets, text, entities) {
+        (Some(text), None, None) if kinds.is_none() => {
+            Ok(thinkthen::RecognitionExample::Brackets(text))
+        }
+        (None, Some(text), Some(entities)) => {
+            let entities = entities
+                .iter()
+                .map(example_entity)
+                .collect::<Result<Vec<_>, _>>()?;
+            let kinds = kinds
+                .map(|values| {
+                    values
+                        .iter()
+                        .map(|value| {
+                            value
+                                .map(str::to_owned)
+                                .ok_or_else(|| call::usage("example kinds contains NULL"))
+                        })
+                        .collect()
+                })
+                .transpose()?;
+            Ok(thinkthen::RecognitionExample::Spans(
+                thinkthen::RecognitionExampleText {
+                    text,
+                    entities,
+                    kinds,
+                },
+            ))
+        }
+        _ => Err(call::usage("an example has brackets or text with entities")),
+    }
+}
+
+fn example_entity(
+    tuple: Option<pgrx::composite_type!("thinkthen_example_entity")>,
+) -> Result<thinkthen::RecognitionExampleEntity, Error> {
+    let tuple = tuple.ok_or_else(|| call::usage("example entities contains NULL"))?;
+    Ok(thinkthen::RecognitionExampleEntity {
+        start: super::number(
+            field::<i64>(&tuple, "start")?.ok_or_else(|| call::usage("example start is NULL"))?,
+        )?,
+        end: super::number(
+            field::<i64>(&tuple, "end")?.ok_or_else(|| call::usage("example end is NULL"))?,
+        )?,
+        kind: field(&tuple, "kind")?.ok_or_else(|| call::usage("example kind is NULL"))?,
+    })
 }

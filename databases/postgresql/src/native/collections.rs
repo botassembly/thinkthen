@@ -19,7 +19,7 @@ fn find_records(
         name!(index, Option<i64>),
         name!(value, Option<JsonB>),
         name!(probability, Option<f64>),
-    name!(reading, Option<pgrx::composite_type!('static, "thinkthen_found")>),
+    name!(result, Option<pgrx::composite_type!('static, "thinkthen_found")>),
         name!(
             facts,
             Option<pgrx::composite_type!('static, "thinkthen_facts")>
@@ -78,7 +78,7 @@ fn relate_records(
             value,
             Option<Vec<pgrx::composite_type!('static, "thinkthen_edge")>>
         ),
-        name!(reading, Option<pgrx::composite_type!('static, "thinkthen_related")>),
+        name!(result, Option<pgrx::composite_type!('static, "thinkthen_related")>),
         name!(
             facts,
             Option<pgrx::composite_type!('static, "thinkthen_facts")>

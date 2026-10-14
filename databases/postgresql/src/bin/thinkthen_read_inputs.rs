@@ -7,6 +7,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut source = String::new();
     io::stdin().read_to_string(&mut source)?;
     let mut value: serde_json::Value = serde_json::from_str(&source)?;
+    if value.get("files").is_none() {
+        value = checked_records(value, &source)?;
+        writeln!(io::stdout().lock(), "{value}")?;
+        return Ok(());
+    }
     let files = value
         .get("files")
         .ok_or("client reader requires explicit files")?;
@@ -66,4 +71,24 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .insert("records".to_owned(), serde_json::json!(records));
     writeln!(io::stdout().lock(), "{value}")?;
     Ok(())
+}
+
+fn checked_records(
+    mut value: serde_json::Value,
+    source: &str,
+) -> Result<serde_json::Value, Box<dyn std::error::Error>> {
+    let inputs = match thinkthen_host::complete_native::Inputs::parse_request(source) {
+        Ok(inputs) => inputs,
+        Err(error) => return Ok(serde_json::json!({"records":[{"read_error":error.complete()}]})),
+    };
+    let records = value.get_mut("records").and_then(serde_json::Value::as_array_mut)
+        .ok_or("records is an ordered array")?;
+    for (index, record) in inputs.deferred_records(None).enumerate() {
+        let Err(error) = record else { continue };
+        *records.get_mut(index).ok_or("invalid record position")? =
+            serde_json::json!({"read_error":error.complete()});
+        records.truncate(index + 1);
+        break;
+    }
+    Ok(value)
 }

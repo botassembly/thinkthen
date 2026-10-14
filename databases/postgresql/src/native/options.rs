@@ -10,7 +10,7 @@ CREATE TYPE thinkthen_reading AS (
     model text, mode text, snippet_pieces bigint, relation_threshold text,
     threshold text, context text, boundary_context text, kind_edge_context text,
     relation_context text, field text[], context_field text, options_field text,
-    seed_spans thinkthen_seed[], examples text[], seed_spans_field text,
+    seed_spans thinkthen_seed[], examples thinkthen_example[], seed_spans_field text,
     examples_field text, batch text, deadline_ms bigint, max_requests_total bigint,
     attempts boolean, none boolean, top bigint, files_only boolean, incremental boolean, cancelled boolean
 );
@@ -75,17 +75,13 @@ pub(super) fn read(
             boundary: field(&tuple, "boundary_context")?,
             kind_edge: field(&tuple, "kind_edge_context")?,
             relation: field(&tuple, "relation_context")?,
-        }),
+        })
+        .filter(|value| !value.is_empty()),
         field: strings("field")?,
         context_field: field(&tuple, "context_field")?,
         options_field: field(&tuple, "options_field")?,
         seed_spans: super::input::seeds(field(&tuple, "seed_spans")?)?,
-        examples: strings("examples")?.map(|values| {
-            values
-                .into_iter()
-                .map(thinkthen::RecognitionExample::Brackets)
-                .collect()
-        }),
+        examples: super::input::examples(field(&tuple, "examples")?)?,
         seed_spans_field: field(&tuple, "seed_spans_field")?,
         examples_field: field(&tuple, "examples_field")?,
         batch,

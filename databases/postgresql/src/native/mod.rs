@@ -7,7 +7,7 @@ use thinkthen::{
 };
 mod collections;
 mod constructors;
-mod functions;
+mod functions_generated;
 mod input;
 mod options;
 mod output;
@@ -46,10 +46,18 @@ fn request(
     .admit()
 }
 
-#[derive(Debug)]
 pub(super) struct Execution {
     pub(super) outcome: RequestOutcome,
     pub(super) observations: Vec<serde_json::Value>,
+}
+
+impl std::fmt::Debug for Execution {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        formatter
+            .debug_struct("Execution")
+            .field("observations", &self.observations.len())
+            .finish_non_exhaustive()
+    }
 }
 
 pub(super) fn execute(

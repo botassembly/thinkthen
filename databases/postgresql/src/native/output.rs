@@ -5,7 +5,7 @@ use thinkthen::{Error, Facts, RequestOutcome, RequestValue};
 
 extension_sql!(
     r#"
-CREATE TYPE thinkthen_name AS (text text, start bigint, end bigint, kind text, strength double precision);
+CREATE TYPE thinkthen_name AS (text text, start bigint, "end" bigint, kind text, strength double precision);
 CREATE TYPE thinkthen_edge AS (relation text, source_name text, source_kind text, target_name text, target_kind text, probability double precision, either boolean);
 "#,
     name = "native_result_types"
@@ -26,6 +26,15 @@ fn set<T: pgrx::IntoDatum>(tuple: &mut PgHeapTuple<'_, AllocatedByRust>, name: &
         .set_by_name(name, value)
         .map_err(|_| call::defect("native result field is unavailable"))
         .or_raise();
+}
+pub(super) fn optional<T: pgrx::IntoDatum>(
+    tuple: &mut PgHeapTuple<'_, AllocatedByRust>,
+    name: &str,
+    value: Option<T>,
+) {
+    if let Some(value) = value {
+        set(tuple, name, value);
+    }
 }
 pub(super) fn index(value: usize) -> i64 {
     i64::try_from(value).unwrap_or(i64::MAX)
@@ -50,12 +59,20 @@ pub(super) fn reading(
     super::results_generated::convert(kind, value).or_raise()
 }
 
-#[derive(Debug)]
 pub(super) struct Projection {
     pub(super) value: Option<RequestValue>,
     pub(super) facts: Option<Facts>,
     pub(super) failure: Option<Error>,
     pub(super) observations: Vec<serde_json::Value>,
+}
+
+impl std::fmt::Debug for Projection {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        formatter
+            .debug_struct("Projection")
+            .field("observations", &self.observations.len())
+            .finish_non_exhaustive()
+    }
 }
 
 pub(super) fn outcome(result: Result<super::Execution, Error>) -> Projection {

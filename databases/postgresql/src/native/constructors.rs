@@ -8,11 +8,12 @@ crate::descriptions::describe! {
 #[allow(clippy::too_many_arguments, reason = "PostgreSQL exposes defaulted named record fields")]
 fn thinkthen_record(
     text: default!(Option<&str>, "NULL"),
-    value: default!(Option<pgrx::datum::Json>, "NULL"),
+    value: default!(Option<crate::ffi::RawJson>, "NULL"),
     context: default!(Option<&str>, "NULL"),
+    context_value: default!(Option<crate::ffi::RawJson>, "NULL"),
     options: default!(Option<Array<'_, pgrx::composite_type!("thinkthen_option")>>, "NULL"),
     seed_spans: default!(Option<Array<'_, pgrx::composite_type!("thinkthen_seed")>>, "NULL"),
-    examples: default!(Option<Array<'_, &str>>, "NULL"),
+    examples: default!(Option<Array<'_, pgrx::composite_type!("thinkthen_example")>>, "NULL"),
     images: default!(Option<Array<'_, pgrx::composite_type!("thinkthen_image_value")>>, "NULL"),
     source: default!(Option<pgrx::composite_type!("thinkthen_source")>, "NULL"),
     read_error: default!(Option<pgrx::composite_type!("thinkthen_reader_failure")>, "NULL"),
@@ -21,11 +22,10 @@ fn thinkthen_record(
         let mut tuple = super::output::tuple("thinkthen_record");
         macro_rules! set {
             ($($field:ident),+) => {$(
-                tuple.set_by_name(stringify!($field), $field)
-                    .unwrap_or_else(|_| call::raise(call::defect("native record field is unavailable")));
+                super::output::optional(&mut tuple, stringify!($field), $field);
             )+};
         }
-        set!(text, value, context, options, seed_spans, examples, images, source, read_error);
+        set!(text, value, context, context_value, options, seed_spans, examples, images, source, read_error);
         tuple
     })
 }

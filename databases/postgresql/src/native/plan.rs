@@ -12,7 +12,7 @@ fn plan_records(
     records: Option<Array<'_, pgrx::composite_type!("thinkthen_record")>>,
     reading: default!(Option<pgrx::composite_type!("thinkthen_reading")>, "NULL"),
 ) -> TableIterator<'static, (
-    name!(records, i64), name!(requests, i64), name!(estimated_bytes, i64),
+    name!(record_count, i64), name!(requests, i64), name!(estimated_bytes, i64),
     name!(input_tokens_lower, i64), name!(input_tokens_upper, i64),
     name!(upper_bound, bool),
 )> {

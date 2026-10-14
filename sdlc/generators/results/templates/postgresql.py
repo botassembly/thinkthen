@@ -32,6 +32,9 @@ class Composite:
             return [schema]
         if '$ref' in schema:
             return self.alternatives(self.definitions[schema['$ref'].split('/')[-1]])
+        kinds = schema.get('type')
+        if isinstance(kinds, list) and len(kinds) > 1:
+            return [{**schema, 'type': kind} for kind in kinds]
         choices = schema.get('oneOf', schema.get('anyOf'))
         if choices and not all(set(item) <= {'required', 'not'} for item in choices):
             common = schema.get('properties', {})
@@ -64,17 +67,20 @@ class Composite:
                         else:
                             fields[member] = child
                 return self.object(key, fields)
-            shapes = [self.shape(child, key + '_value') for child in choices]
-            if all(shape == shapes[0] for shape in shapes):
-                return shapes[0]
-            # Different native values retain named columns, rather than numbered arms.
-            fields = {}
+            groups = {}
             for child in choices:
                 kinds = child.get('type', [])
                 kinds = [kinds] if isinstance(kinds, str) else kinds
                 for kind in kinds:
                     if kind != 'null':
-                        fields[kind + '_value'] = child
+                        groups.setdefault(kind, []).append(child)
+            if len(groups) == 1:
+                kind, children = next(iter(groups.items()))
+                if kind == 'array':
+                    items = [child.get('items', {}) for child in children]
+                    return self.shape({'type': 'array', 'items': {'anyOf': items}}, key)
+                return self.shape(max(children, key=lambda child: child.get('maximum', 0)), key)
+            fields = {kind + '_value': {'anyOf': children} for kind, children in groups.items()}
             return self.object(key, fields, union=True)
         schema = choices[0]
         kinds = schema.get('type', [])
@@ -89,6 +95,8 @@ class Composite:
         if 'array' in kinds:
             sql, descriptor = self.shape(schema.get('items', {}), key + '_item')
             return (sql + '[]', ('array', descriptor))
+        if 'integer' in kinds and schema.get('maximum', 0) > 9223372036854775807:
+            return ('numeric', 'unsigned')
         for kind, sql in [('string', 'text'), ('boolean', 'boolean'),
                           ('integer', 'bigint'), ('number', 'double precision')]:
             if kind in kinds or (kind == 'string' and isinstance(schema.get('const'), str)):
@@ -132,14 +140,15 @@ def render(schema):
                          '.map_err(|_| crate::call::defect("generated result presence is unavailable"))?;']
             expression, rust_type = conversion(descriptor, 'held', kind)
             arms += ['let converted: Option<' + rust_type + '> = ' + expression + ';',
+                     'if let Some(converted) = converted {',
                      'tuple.set_by_name(' + json.dumps(field) + ', converted)',
-                     '.map_err(|_| crate::call::defect("generated result field is unavailable"))?;']
+                     '.map_err(|_| crate::call::defect("generated result field is unavailable"))?;', '}']
         arms += ['Ok(tuple)', '},']
     return '\n'.join([
         '// Generated from the canonical Rust result schema; do not edit.',
         'use pgrx::prelude::*;', 'use serde_json::Value;',
         'pgrx::extension_sql!(r#"', *sql, '"#, name = "native_generated_types");',
-        '#[expect(clippy::too_many_lines, reason = "generated schema projections")]',
+        '#[expect(clippy::too_many_lines, clippy::excessive_nesting, clippy::cognitive_complexity, reason = "generated schema projections")]',
         'pub(super) fn convert(kind: &str, value: &Value) -> Result<PgHeapTuple<\'static, AllocatedByRust>, thinkthen::Error> {',
         'match kind {', *arms,
         '_ => Err(crate::call::defect("unknown generated result type")),', '}', '}',
@@ -149,6 +158,8 @@ def render(schema):
 def conversion(descriptor, value, kind):
     if descriptor == 'json':
         return (value + '.map(|value| pgrx::datum::JsonB(value.clone()))', 'pgrx::datum::JsonB')
+    if descriptor == 'unsigned':
+        return (value + '.and_then(Value::as_u64).map(pgrx::AnyNumeric::from)', 'pgrx::AnyNumeric')
     if descriptor in ('string', 'integer', 'number', 'boolean'):
         method, rust = {'string': ('as_str', 'String'), 'integer': ('as_i64', 'i64'),
                         'number': ('as_f64', 'f64'), 'boolean': ('as_bool', 'bool')}[descriptor]
@@ -161,17 +172,93 @@ def conversion(descriptor, value, kind):
     if mode == 'array':
         expression, rust = conversion(child, 'Some(value)', kind)
         result = expression[:-1] if expression.endswith('?') else 'Ok(' + expression + ')'
-        return (value + '.and_then(Value::as_array).map(|values| values.iter().map(|value| '
-                + result + ').collect::<Result<Vec<_>, thinkthen::Error>>()).transpose()?',
+        elements = 'values.iter().map(|value| ' + result + ').collect::<Result<Vec<_>, thinkthen::Error>>()'
+        if isinstance(child, tuple) and child[0] == 'object':
+            array = 'crate::ffi::composite_array(' + json.dumps(child[1]) + ', ' + elements + '?)'
+            return (value + '.and_then(Value::as_array).map(|values| ' + array + ').transpose()?',
+                    "Array<'static, PgHeapTuple<'static, AllocatedByRust>>")
+        return (value + '.and_then(Value::as_array).map(|values| ' + elements + ').transpose()?',
                 'Vec<Option<' + rust + '>>')
     if mode == 'mapping':
         child_type = child[1]
-        return (value + '.and_then(Value::as_object).map(|values| values.iter().map(|(name, value)| {'
-                ' let entry = serde_json::json!({"name": name, "value": value}); '
-                'convert(' + json.dumps(child_type) + ', &entry) }).collect::<Result<Vec<_>, thinkthen::Error>>()).transpose()?',
-                "Vec<PgHeapTuple<'static, AllocatedByRust>>")
+        elements = ('values.iter().map(|(name, value)| {'
+                    ' let entry = serde_json::json!({"name": name, "value": value}); '
+                    'convert(' + json.dumps(child_type) + ', &entry).map(Some) })'
+                    '.collect::<Result<Vec<_>, thinkthen::Error>>()?')
+        return (value + '.and_then(Value::as_object).map(|values| '
+                'crate::ffi::composite_array(' + json.dumps(child_type) + ', ' + elements + ')).transpose()?',
+                "Array<'static, PgHeapTuple<'static, AllocatedByRust>>")
     raise ValueError(descriptor)
 
+
+
+def render_functions():
+    calls = (
+        ('decide', 'bool', 'Decisions', 'decision', 'crate::answer_value(row.result().value())'),
+        ('choose', 'String', 'Choices', 'choice', 'row.result().value().map(str::to_owned)'),
+        ('tag', 'Vec<String>', 'Tags', 'tags', 'Some(row.result().value().to_vec())'),
+        ('score', 'f64', 'Scores', 'score', 'Some(row.result().value())'),
+        ('filter', 'JsonB', 'Filtered', 'filtered', 'row.result().value().then(|| output::original(row.original()))'),
+        ('rank', 'i64', 'Ranked', 'ranked', 'Some(output::index(row.ordinal()))'),
+        ('annotate', 'JsonB', 'Annotations', 'annotation', 'Some(crate::jsonb(&row.result().value_json().or_raise()))'),
+        ('recognize', 'Vec<pgrx::composite_type!(\'static, "thinkthen_name")>', 'Recognized', 'recognized', 'Some(output::names(row.result().value()))'),
+    )
+    result = ["// Generated native PostgreSQL declarations; do not edit.",
+              "use super::output;", "use crate::call::{self, OrRaise as _};",
+              "use pgrx::prelude::*;", "use pgrx::datum::JsonB;",
+              "use thinkthen::RequestValue;"]
+    for verb, kind, variant, reading, expression in calls:
+        extra = ""
+        if verb == 'rank':
+            extra = """Some(RequestValue::SetRanked(rows)) => rows.into_iter().map(|row| {
+                let reading = output::reading("thinkthen_ranked", &serde_json::to_value(&row)
+                    .map_err(|_| call::defect("native result could not be projected")).or_raise());
+                (Some(output::index(row.ordinal())), Some(output::index(row.ordinal())), Some(reading),
+                    facts.as_ref().map(output::facts), None, output::events(&observations))
+            }).collect::<Vec<_>>(),"""
+        result.append(f'''crate::descriptions::describe! {{
+"Read ordered native SQL records with typed controls; return typed answers, full result readings, final facts, failures and observations. Required NULL operands return no rows. Evidence files must be read by the client.";
+[name = "thinkthen_{verb}", parallel_restricted, requires = ["native_record_types", "native_reading_type", "native_result_types", "native_generated_types"]];
+#[allow(clippy::type_complexity, reason = "pgrx reads SQL columns from the signature")]
+fn {verb}_records(
+    question: Option<&str>,
+    records: Option<Array<'_, pgrx::composite_type!("thinkthen_record")>>,
+    reading: default!(Option<pgrx::composite_type!("thinkthen_reading")>, "NULL"),
+) -> TableIterator<'static, (
+    name!(ordinal, Option<i64>), name!(value, Option<{kind}>),
+    name!(result, Option<pgrx::composite_type!('static, "thinkthen_{reading}")>),
+    name!(facts, Option<pgrx::composite_type!('static, "thinkthen_facts")>),
+    name!(failure, Option<pgrx::composite_type!('static, "thinkthen_error")>),
+    name!(observations, Vec<pgrx::composite_type!('static, "thinkthen_event")>),
+)> {{
+    call::guarded(|| {{
+        let (Some(question), Some(records)) = (question, records) else {{
+            return TableIterator::new(Vec::new());
+        }};
+        let output::Projection {{ value, facts, failure, observations }} = output::outcome(
+            super::execute("{verb}", question, records, reading),
+        );
+        let mut rows = match value {{
+            Some(RequestValue::{variant}(rows)) => rows.into_iter().map(|row| {{
+                let reading = output::reading("thinkthen_{reading}", &serde_json::to_value(&row)
+                    .map_err(|_| call::defect("native result could not be projected")).or_raise());
+                (Some(output::index(row.ordinal())), {expression}, Some(reading),
+                    facts.as_ref().map(output::facts), None, output::events(&observations))
+            }}).collect::<Vec<_>>(),
+            {extra}
+            None => Vec::new(),
+            _ => call::raise(crate::request::wrong_result()),
+        }};
+        if failure.is_some() || rows.is_empty() {{
+            rows.push((None, None, None, facts.as_ref().map(output::facts),
+                failure.as_ref().map(output::failure), output::events(&observations)));
+        }}
+        TableIterator::new(rows)
+    }})
+}}
+}}
+''')
+    return '\n'.join(result)
 
 def main():
     import argparse
@@ -182,15 +269,17 @@ def main():
     args = parser.parse_args()
     root = Path(__file__).resolve().parents[4]
     schema = json.loads((root / 'crates/thinkthen/src/public/results/complete.schema.json').read_text())
-    target = root / 'databases/postgresql/src/native/results_generated.rs'
-    result = render(schema)
-    result = subprocess.run(['rustfmt', '--edition', '2024', '--emit', 'stdout'], input=result,
-                            text=True, capture_output=True, check=True).stdout
-    if args.check:
-        if target.read_text() != result:
-            raise SystemExit('PostgreSQL result generation is stale')
-    else:
-        target.write_text(result)
+    outputs = {'results_generated.rs': render(schema), 'functions_generated.rs': render_functions()}
+    for name, source in outputs.items():
+        target = root / 'databases/postgresql/src/native' / name
+        result = subprocess.run(['rustfmt', '--edition', '2024', '--emit', 'stdout'], input=source,
+                                text=True, capture_output=True, check=True).stdout
+        if args.check:
+            if target.read_text() != result:
+                raise SystemExit('PostgreSQL result generation is stale: ' + name)
+        else:
+            target.write_text(result)
+
 
 
 if __name__ == '__main__':

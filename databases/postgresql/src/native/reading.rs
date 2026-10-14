@@ -20,7 +20,7 @@ fn thinkthen_reading(
     context_field: default!(Option<&str>, "NULL"),
     options_field: default!(Option<&str>, "NULL"),
     seed_spans: default!(Option<Array<'_, pgrx::composite_type!("thinkthen_seed")>>, "NULL"),
-    examples: default!(Option<Array<'_, &str>>, "NULL"),
+    examples: default!(Option<Array<'_, pgrx::composite_type!("thinkthen_example")>>, "NULL"),
     seed_spans_field: default!(Option<&str>, "NULL"),
     examples_field: default!(Option<&str>, "NULL"),
     batch: default!(Option<&str>, "NULL"),
@@ -37,8 +37,7 @@ fn thinkthen_reading(
         let mut tuple = super::output::tuple("thinkthen_reading");
         macro_rules! set {
             ($($field:ident),+) => {$(
-                tuple.set_by_name(stringify!($field), $field)
-                    .unwrap_or_else(|_| call::raise(call::defect("native reading field is unavailable")));
+                super::output::optional(&mut tuple, stringify!($field), $field);
             )+};
         }
         set!(model, mode, snippet_pieces, relation_threshold, threshold, context, boundary_context, kind_edge_context, relation_context, field, context_field, options_field, seed_spans, examples, seed_spans_field, examples_field, batch, deadline_ms, max_requests_total, attempts, none, top, files_only, incremental, cancelled);
