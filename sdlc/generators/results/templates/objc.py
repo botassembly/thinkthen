@@ -8,8 +8,11 @@ ROOTS = ('completesessionPacket', 'completeplan')
 
 
 def name(key):
-    return 'TT' + ''.join(part[0].upper() + part[1:] for part in re.findall(
+    native = 'TT' + ''.join(part[0].upper() + part[1:] for part in re.findall(
         r'[A-Z]?[a-z]+|[A-Z]+(?![a-z])|[0-9]+', key.removeprefix('complete')))
+    return {'TTAtomicNonZeroUsize':'TTRankedRecord', 'TTAtomicDecideValue':'TTDecisionRecord',
+            'TTAtomicBoolean':'TTFilteredRecord', 'TTAtomicArrayOfString':'TTTagRecord',
+            'TTAtomicNullableString':'TTChoiceRecord', 'TTAtomicDouble':'TTScoreRecord'}.get(native, native)
 
 
 def member(key):
@@ -245,7 +248,7 @@ NSData *TTRequestJSONData(id value, NSError **error) {
 def inputs(definitions):
     """Prepared question builders keep Foundation values and Rust admission."""
     objects = {key: value for key, value in definitions.items()
-               if 'properties' in value}
+               if 'properties' in value and not key.startswith('RequestDefinition')}
     enums = {key: enum_values(value) for key, value in definitions.items() if enum_values(value)}
     def typ(source):
         if not isinstance(source, dict): return 'id'
@@ -339,7 +342,7 @@ def answer_helpers(definitions):
     declarations, bodies, client_declarations, client_bodies = [], [], [], []
     for function, (payload, kind) in answers.items():
         target, decode = conversion(payload, definitions)
-        if function == 'rank': target, decode = 'NSArray<NSNumber *> *', 'TTArray(value, ^id(id item) { return TTInteger(TTObject(item)[@"value"]); })'
+        if function == 'rank': target, decode = 'NSArray<NSNumber *> *', 'TTArray(value, ^id(id item) { return TTInteger(TTObject(item)[@"index"]); })'
         if function == 'filter': target, decode = 'NSArray *', 'TTArray(value, ^id(id item) { id original = TTObject(item)[@"input"]; if (!original) TTInvalidResult(); return original; })'
         method = function + 'Answer'
         signature = f'- (nullable TTPresence<{target}> *){method}:(NSError **)error'
@@ -471,4 +474,4 @@ def rename_inputs(outputs):
     def rename(text):
         for old in sorted(replacements, key=len, reverse=True): text = text.replace(old, replacements[old])
         return re.sub(r'\bTTInput([A-Z]\w*)', r'TT\1Builder', text)
-    return {key:rename(value) for key,value in outputs.items()}
+    return {key:rename(value).replace('NSError **)', 'NSError * _Nullable * _Nullable)') for key,value in outputs.items()}

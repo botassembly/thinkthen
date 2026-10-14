@@ -17,6 +17,12 @@ int main(int argc, const char *argv[]) {
         TTPlan *plan = [client plan:request error:&error];
         require(plan != nil && error == nil);
         require(plan.firstBodyUtf8.state == TTPresenceValue && plan.records.value.unsignedIntegerValue == 1);
+        TTRecordsInput *empty = [TTRecordsInput new]; empty.items = @[];
+        arguments.input = empty;
+        TTPlan *emptyPlan = [client plan:request error:&error];
+        require(emptyPlan != nil && error == nil && emptyPlan.firstBodyUtf8.state == TTPresenceNull);
+        require(emptyPlan.requests.state == TTPresenceValue && emptyPlan.requests.value.unsignedIntegerValue == 0);
+        arguments.input = input;
         TTTask *refused = [client decide:[TTTextQuestion new] input:input options:nil feed:nil completion:^(TTCall *call, NSError *failure) { (void)call; (void)failure; abort(); } error:&error];
         require(refused == nil && [error isKindOfClass:TTFailureError.class] && !((TTFailureError *)error).retryable);
         error = nil;

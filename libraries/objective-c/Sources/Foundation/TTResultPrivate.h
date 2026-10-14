@@ -15,18 +15,17 @@ FOUNDATION_EXPORT NSNumber *TTInteger(id value);
 FOUNDATION_EXPORT NSNumber *TTBoolean(id value);
 FOUNDATION_EXPORT NSArray *TTArray(id value, id (^convert)(id));
 FOUNDATION_EXPORT NSDictionary *TTMap(id value, id (^convert)(id));
-NS_ASSUME_NONNULL_END
 
 @interface TTRequestObject (Transport)
 - (instancetype)initWithFields:(NSDictionary *)fields;
 @property(nonatomic, readonly) NSMutableDictionary<NSString *, id> *requestFields;
 @end
-FOUNDATION_EXPORT NSData *TTRequestJSONData(id value, NSError **error);
-FOUNDATION_EXPORT id TTAnswerPayload(NSArray *packets, id terminal, NSString *function, NSString *judgment, id call, NSError **error);
+FOUNDATION_EXPORT NSData * _Nullable TTRequestJSONData(id value, NSError * _Nullable * _Nullable error);
+FOUNDATION_EXPORT id _Nullable TTAnswerPayload(NSArray *packets, id terminal, NSString *function, NSString *judgment, id call, NSError * _Nullable * _Nullable error);
 FOUNDATION_EXPORT TTPresence *TTAnswerPresence(id payload, id (^convert)(id));
 
 @interface TTFoundationClient (Scheduling)
-- (TTTask *)start:(NSString *)verb question:(TTQuestion *)question input:(TTInput *)input options:(TTControls *)options feed:(TTFeed)feed completion:(TTCompletion)completion error:(NSError **)error;
+- (nullable TTTask *)start:(NSString *)verb question:(TTQuestion *)question input:(TTInput *)input options:(TTControls *)options feed:(TTFeed)feed completion:(TTCompletion)completion error:(NSError * _Nullable * _Nullable)error;
 @end
 
 @interface TTCall (Transport)
@@ -35,3 +34,5 @@ FOUNDATION_EXPORT TTPresence *TTAnswerPresence(id payload, id (^convert)(id));
 @end
 
 FOUNDATION_EXPORT NSString * const TTRequestVersion;
+
+NS_ASSUME_NONNULL_END

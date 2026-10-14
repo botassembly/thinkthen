@@ -12,7 +12,7 @@ static void typed(NSArray<TTSessionPacket *> *packets, TTSessionPacketTerminal *
     }
     for (TTSessionPacket *packet in packets) {
         if ([packet isKindOfClass:TTSessionPacketDecideRow.class]) {
-            TTAtomicDecideValue *value = ((TTSessionPacketDecideRow *)packet).value.value;
+            TTDecisionRecord *value = ((TTSessionPacketDecideRow *)packet).value.value;
             id raw = value.rawFields[@"value"];
             require(value.value.state == (raw == NSNull.null ? TTPresenceNull : TTPresenceValue));
             if (value.value.state == TTPresenceValue) require([value.value.value isEqual:raw]);
@@ -101,6 +101,15 @@ int main(int argc, const char *argv[]) {
         if (retained || explicitPackets) {
             NSArray<TTSessionPacket *> *values = retained ? retained.packets : explicitPackets;
             typed(values, retained ? retained.terminal : explicitTerminal);
+            if (retained && [verb isEqual:@"rank"] && !failure) {
+                TTPresence<NSArray<NSNumber *> *> *answer = [retained rankAnswer:&error];
+                require(answer.state == TTPresenceValue && error == nil);
+                NSMutableArray *indices = [NSMutableArray array];
+                for (TTSessionPacket *packet in values) if ([packet isKindOfClass:TTSessionPacketRankAggregate.class]) {
+                    for (TTRankedRecord *row in ((TTSessionPacketRankAggregate *)packet).value.value) [indices addObject:row.index.value];
+                }
+                require([answer.value isEqual:indices]);
+            }
             NSMutableArray *packets = [NSMutableArray array];
             for (TTSessionPacket *packet in values) [packets addObject:packet.rawFields];
             payload = @{@"packets":packets};

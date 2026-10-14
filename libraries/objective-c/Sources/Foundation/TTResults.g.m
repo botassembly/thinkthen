@@ -2,9 +2,9 @@
 #import "TTResults.g.h"
 #import "TTResultPrivate.h"
 #import "ThinkThenFoundation.h"
-#define TT_GENERATED_NAMED_IMPLEMENTATIONS - (nullable TTTask *)decide:(TTQuestion *)question input:(TTInput *)input options:(nullable TTControls *)options feed:(nullable TTFeed)feed completion:(TTCompletion)completion error:(NSError **)error { return [self start:@"decide" question:question input:input options:options feed:feed completion:completion error:error]; } - (nullable TTTask *)choose:(TTQuestion *)question input:(TTInput *)input options:(nullable TTControls *)options feed:(nullable TTFeed)feed completion:(TTCompletion)completion error:(NSError **)error { return [self start:@"choose" question:question input:input options:options feed:feed completion:completion error:error]; } - (nullable TTTask *)tag:(TTQuestion *)question input:(TTInput *)input options:(nullable TTControls *)options feed:(nullable TTFeed)feed completion:(TTCompletion)completion error:(NSError **)error { return [self start:@"tag" question:question input:input options:options feed:feed completion:completion error:error]; } - (nullable TTTask *)score:(TTQuestion *)question input:(TTInput *)input options:(nullable TTControls *)options feed:(nullable TTFeed)feed completion:(TTCompletion)completion error:(NSError **)error { return [self start:@"score" question:question input:input options:options feed:feed completion:completion error:error]; } - (nullable TTTask *)filter:(TTQuestion *)question input:(TTInput *)input options:(nullable TTControls *)options feed:(nullable TTFeed)feed completion:(TTCompletion)completion error:(NSError **)error { return [self start:@"filter" question:question input:input options:options feed:feed completion:completion error:error]; } - (nullable TTTask *)rank:(TTQuestion *)question input:(TTInput *)input options:(nullable TTControls *)options feed:(nullable TTFeed)feed completion:(TTCompletion)completion error:(NSError **)error { return [self start:@"rank" question:question input:input options:options feed:feed completion:completion error:error]; } - (nullable TTTask *)find:(TTQuestion *)question input:(TTInput *)input options:(nullable TTControls *)options feed:(nullable TTFeed)feed completion:(TTCompletion)completion error:(NSError **)error { return [self start:@"find" question:question input:input options:options feed:feed completion:completion error:error]; } - (nullable TTTask *)annotate:(TTQuestion *)question input:(TTInput *)input options:(nullable TTControls *)options feed:(nullable TTFeed)feed completion:(TTCompletion)completion error:(NSError **)error { return [self start:@"annotate" question:question input:input options:options feed:feed completion:completion error:error]; } - (nullable TTTask *)recognize:(TTQuestion *)question input:(TTInput *)input options:(nullable TTControls *)options feed:(nullable TTFeed)feed completion:(TTCompletion)completion error:(NSError **)error { return [self start:@"recognize" question:question input:input options:options feed:feed completion:completion error:error]; } - (nullable TTTask *)relate:(TTQuestion *)question input:(TTInput *)input options:(nullable TTControls *)options feed:(nullable TTFeed)feed completion:(TTCompletion)completion error:(NSError **)error { return [self start:@"relate" question:question input:input options:options feed:feed completion:completion error:error]; }
-#define TT_GENERATED_ANSWER_IMPLEMENTATIONS - (nullable TTPresence<NSNumber *> *)decideAnswer:(NSError **)error { id payload = TTAnswerPayload(self.packets, self.terminal, @"decide", @"decision", self, error); if (!payload) return nil; return TTAnswerPresence(payload, ^id(id value) { return TTBoolean(value); }); } - (nullable TTPresence<NSString *> *)chooseAnswer:(NSError **)error { id payload = TTAnswerPayload(self.packets, self.terminal, @"choose", @"choice", self, error); if (!payload) return nil; return TTAnswerPresence(payload, ^id(id value) { return TTString(value); }); } - (nullable TTPresence<NSArray<NSString *> *> *)tagAnswer:(NSError **)error { id payload = TTAnswerPayload(self.packets, self.terminal, @"tag", @"tags", self, error); if (!payload) return nil; return TTAnswerPresence(payload, ^id(id value) { return TTArray(value, ^id(id item) { return TTString(item); }); }); } - (nullable TTPresence<NSNumber *> *)scoreAnswer:(NSError **)error { id payload = TTAnswerPayload(self.packets, self.terminal, @"score", @"score", self, error); if (!payload) return nil; return TTAnswerPresence(payload, ^id(id value) { return TTNumber(value); }); } - (nullable TTPresence<NSArray *> *)filterAnswer:(NSError **)error { id payload = TTAnswerPayload(self.packets, self.terminal, @"filter", @"", self, error); if (!payload) return nil; return TTAnswerPresence(payload, ^id(id value) { return TTArray(value, ^id(id item) { id original = TTObject(item)[@"input"]; if (!original) TTInvalidResult(); return original; }); }); } - (nullable TTPresence<NSArray<NSNumber *> *> *)rankAnswer:(NSError **)error { id payload = TTAnswerPayload(self.packets, self.terminal, @"rank", @"", self, error); if (!payload) return nil; return TTAnswerPresence(payload, ^id(id value) { return TTArray(value, ^id(id item) { return TTInteger(TTObject(item)[@"value"]); }); }); } - (nullable TTPresence<TTFind *> *)findAnswer:(NSError **)error { id payload = TTAnswerPayload(self.packets, self.terminal, @"find", @"", self, error); if (!payload) return nil; return TTAnswerPresence(payload, ^id(id value) { return [TTFind read:value]; }); } - (nullable TTPresence<NSArray<TTAnnotation *> *> *)annotateAnswer:(NSError **)error { id payload = TTAnswerPayload(self.packets, self.terminal, @"annotate", @"", self, error); if (!payload) return nil; return TTAnswerPresence(payload, ^id(id value) { return TTArray(value, ^id(id item) { return [TTAnnotation read:item]; }); }); } - (nullable TTPresence<NSArray<TTRecognition *> *> *)recognizeAnswer:(NSError **)error { id payload = TTAnswerPayload(self.packets, self.terminal, @"recognize", @"", self, error); if (!payload) return nil; return TTAnswerPresence(payload, ^id(id value) { return TTArray(value, ^id(id item) { return [TTRecognition read:item]; }); }); } - (nullable TTPresence<TTRelation *> *)relateAnswer:(NSError **)error { id payload = TTAnswerPayload(self.packets, self.terminal, @"relate", @"", self, error); if (!payload) return nil; return TTAnswerPresence(payload, ^id(id value) { return [TTRelation read:value]; }); }
-#define TT_GENERATED_USAGE_IMPLEMENTATIONS - (nullable TTUsagePersistenceStatus *)finishUsageStatus:(NSError **)error { return [self usageStatus:YES error:error]; } - (nullable TTUsagePersistenceStatus *)usagePersistence:(NSError **)error { return [self usageStatus:NO error:error]; }
+#define TT_GENERATED_NAMED_IMPLEMENTATIONS - (nullable TTTask *)decide:(TTQuestion *)question input:(TTInput *)input options:(nullable TTControls *)options feed:(nullable TTFeed)feed completion:(TTCompletion)completion error:(NSError * _Nullable * _Nullable)error { return [self start:@"decide" question:question input:input options:options feed:feed completion:completion error:error]; } - (nullable TTTask *)choose:(TTQuestion *)question input:(TTInput *)input options:(nullable TTControls *)options feed:(nullable TTFeed)feed completion:(TTCompletion)completion error:(NSError * _Nullable * _Nullable)error { return [self start:@"choose" question:question input:input options:options feed:feed completion:completion error:error]; } - (nullable TTTask *)tag:(TTQuestion *)question input:(TTInput *)input options:(nullable TTControls *)options feed:(nullable TTFeed)feed completion:(TTCompletion)completion error:(NSError * _Nullable * _Nullable)error { return [self start:@"tag" question:question input:input options:options feed:feed completion:completion error:error]; } - (nullable TTTask *)score:(TTQuestion *)question input:(TTInput *)input options:(nullable TTControls *)options feed:(nullable TTFeed)feed completion:(TTCompletion)completion error:(NSError * _Nullable * _Nullable)error { return [self start:@"score" question:question input:input options:options feed:feed completion:completion error:error]; } - (nullable TTTask *)filter:(TTQuestion *)question input:(TTInput *)input options:(nullable TTControls *)options feed:(nullable TTFeed)feed completion:(TTCompletion)completion error:(NSError * _Nullable * _Nullable)error { return [self start:@"filter" question:question input:input options:options feed:feed completion:completion error:error]; } - (nullable TTTask *)rank:(TTQuestion *)question input:(TTInput *)input options:(nullable TTControls *)options feed:(nullable TTFeed)feed completion:(TTCompletion)completion error:(NSError * _Nullable * _Nullable)error { return [self start:@"rank" question:question input:input options:options feed:feed completion:completion error:error]; } - (nullable TTTask *)find:(TTQuestion *)question input:(TTInput *)input options:(nullable TTControls *)options feed:(nullable TTFeed)feed completion:(TTCompletion)completion error:(NSError * _Nullable * _Nullable)error { return [self start:@"find" question:question input:input options:options feed:feed completion:completion error:error]; } - (nullable TTTask *)annotate:(TTQuestion *)question input:(TTInput *)input options:(nullable TTControls *)options feed:(nullable TTFeed)feed completion:(TTCompletion)completion error:(NSError * _Nullable * _Nullable)error { return [self start:@"annotate" question:question input:input options:options feed:feed completion:completion error:error]; } - (nullable TTTask *)recognize:(TTQuestion *)question input:(TTInput *)input options:(nullable TTControls *)options feed:(nullable TTFeed)feed completion:(TTCompletion)completion error:(NSError * _Nullable * _Nullable)error { return [self start:@"recognize" question:question input:input options:options feed:feed completion:completion error:error]; } - (nullable TTTask *)relate:(TTQuestion *)question input:(TTInput *)input options:(nullable TTControls *)options feed:(nullable TTFeed)feed completion:(TTCompletion)completion error:(NSError * _Nullable * _Nullable)error { return [self start:@"relate" question:question input:input options:options feed:feed completion:completion error:error]; }
+#define TT_GENERATED_ANSWER_IMPLEMENTATIONS - (nullable TTPresence<NSNumber *> *)decideAnswer:(NSError * _Nullable * _Nullable)error { id payload = TTAnswerPayload(self.packets, self.terminal, @"decide", @"decision", self, error); if (!payload) return nil; return TTAnswerPresence(payload, ^id(id value) { return TTBoolean(value); }); } - (nullable TTPresence<NSString *> *)chooseAnswer:(NSError * _Nullable * _Nullable)error { id payload = TTAnswerPayload(self.packets, self.terminal, @"choose", @"choice", self, error); if (!payload) return nil; return TTAnswerPresence(payload, ^id(id value) { return TTString(value); }); } - (nullable TTPresence<NSArray<NSString *> *> *)tagAnswer:(NSError * _Nullable * _Nullable)error { id payload = TTAnswerPayload(self.packets, self.terminal, @"tag", @"tags", self, error); if (!payload) return nil; return TTAnswerPresence(payload, ^id(id value) { return TTArray(value, ^id(id item) { return TTString(item); }); }); } - (nullable TTPresence<NSNumber *> *)scoreAnswer:(NSError * _Nullable * _Nullable)error { id payload = TTAnswerPayload(self.packets, self.terminal, @"score", @"score", self, error); if (!payload) return nil; return TTAnswerPresence(payload, ^id(id value) { return TTNumber(value); }); } - (nullable TTPresence<NSArray *> *)filterAnswer:(NSError * _Nullable * _Nullable)error { id payload = TTAnswerPayload(self.packets, self.terminal, @"filter", @"", self, error); if (!payload) return nil; return TTAnswerPresence(payload, ^id(id value) { return TTArray(value, ^id(id item) { id original = TTObject(item)[@"input"]; if (!original) TTInvalidResult(); return original; }); }); } - (nullable TTPresence<NSArray<NSNumber *> *> *)rankAnswer:(NSError * _Nullable * _Nullable)error { id payload = TTAnswerPayload(self.packets, self.terminal, @"rank", @"", self, error); if (!payload) return nil; return TTAnswerPresence(payload, ^id(id value) { return TTArray(value, ^id(id item) { return TTInteger(TTObject(item)[@"index"]); }); }); } - (nullable TTPresence<TTFind *> *)findAnswer:(NSError * _Nullable * _Nullable)error { id payload = TTAnswerPayload(self.packets, self.terminal, @"find", @"", self, error); if (!payload) return nil; return TTAnswerPresence(payload, ^id(id value) { return [TTFind read:value]; }); } - (nullable TTPresence<NSArray<TTAnnotation *> *> *)annotateAnswer:(NSError * _Nullable * _Nullable)error { id payload = TTAnswerPayload(self.packets, self.terminal, @"annotate", @"", self, error); if (!payload) return nil; return TTAnswerPresence(payload, ^id(id value) { return TTArray(value, ^id(id item) { return [TTAnnotation read:item]; }); }); } - (nullable TTPresence<NSArray<TTRecognition *> *> *)recognizeAnswer:(NSError * _Nullable * _Nullable)error { id payload = TTAnswerPayload(self.packets, self.terminal, @"recognize", @"", self, error); if (!payload) return nil; return TTAnswerPresence(payload, ^id(id value) { return TTArray(value, ^id(id item) { return [TTRecognition read:item]; }); }); } - (nullable TTPresence<TTRelation *> *)relateAnswer:(NSError * _Nullable * _Nullable)error { id payload = TTAnswerPayload(self.packets, self.terminal, @"relate", @"", self, error); if (!payload) return nil; return TTAnswerPresence(payload, ^id(id value) { return [TTRelation read:value]; }); }
+#define TT_GENERATED_USAGE_IMPLEMENTATIONS - (nullable TTUsagePersistenceStatus *)finishUsageStatus:(NSError * _Nullable * _Nullable)error { return [self usageStatus:YES error:error]; } - (nullable TTUsagePersistenceStatus *)usagePersistence:(NSError * _Nullable * _Nullable)error { return [self usageStatus:NO error:error]; }
 NSString * const TTRequestVersion = @"thinkthen.request/1";
 @implementation TTAnnotation
 + (instancetype)read:(id)value {
@@ -108,7 +108,7 @@ NSString * const TTRequestVersion = @"thinkthen.request/1";
     }];
 }
 @end
-@implementation TTAtomicArrayOfString
+@implementation TTTagRecord
 + (instancetype)read:(id)value {
     return [[self alloc] initWithFields:TTObject(value)];
 }
@@ -184,7 +184,7 @@ NSString * const TTRequestVersion = @"thinkthen.request/1";
     }];
 }
 @end
-@implementation TTAtomicDecideValue
+@implementation TTDecisionRecord
 + (instancetype)read:(id)value {
     return [[self alloc] initWithFields:TTObject(value)];
 }
@@ -258,7 +258,7 @@ NSString * const TTRequestVersion = @"thinkthen.request/1";
     }];
 }
 @end
-@implementation TTAtomicNonZeroUsize
+@implementation TTRankedRecord
 + (instancetype)read:(id)value {
     return [[self alloc] initWithFields:TTObject(value)];
 }
@@ -332,7 +332,7 @@ NSString * const TTRequestVersion = @"thinkthen.request/1";
     }];
 }
 @end
-@implementation TTAtomicNullableString
+@implementation TTChoiceRecord
 + (instancetype)read:(id)value {
     return [[self alloc] initWithFields:TTObject(value)];
 }
@@ -406,7 +406,7 @@ NSString * const TTRequestVersion = @"thinkthen.request/1";
     }];
 }
 @end
-@implementation TTAtomicBoolean
+@implementation TTFilteredRecord
 + (instancetype)read:(id)value {
     return [[self alloc] initWithFields:TTObject(value)];
 }
@@ -480,7 +480,7 @@ NSString * const TTRequestVersion = @"thinkthen.request/1";
     }];
 }
 @end
-@implementation TTAtomicDouble
+@implementation TTScoreRecord
 + (instancetype)read:(id)value {
     return [[self alloc] initWithFields:TTObject(value)];
 }
@@ -4197,10 +4197,10 @@ NSString * const TTRequestVersion = @"thinkthen.request/1";
         return TTString(value);
     }];
 }
-- (TTPresence<NSArray<TTAtomicNullableString *> *> *)value {
+- (TTPresence<NSArray<TTChoiceRecord *> *> *)value {
     return [self presence:@"value" required:YES convert:^id(id value) {
         return TTArray(value, ^id(id item) {
-            return [TTAtomicNullableString read:item];
+            return [TTChoiceRecord read:item];
         });
     }];
 }
@@ -4219,9 +4219,9 @@ NSString * const TTRequestVersion = @"thinkthen.request/1";
         return TTString(value);
     }];
 }
-- (TTPresence<TTAtomicNullableString *> *)value {
+- (TTPresence<TTChoiceRecord *> *)value {
     return [self presence:@"value" required:YES convert:^id(id value) {
-        return [TTAtomicNullableString read:value];
+        return [TTChoiceRecord read:value];
     }];
 }
 @end
@@ -4239,10 +4239,10 @@ NSString * const TTRequestVersion = @"thinkthen.request/1";
         return TTString(value);
     }];
 }
-- (TTPresence<NSArray<TTAtomicDecideValue *> *> *)value {
+- (TTPresence<NSArray<TTDecisionRecord *> *> *)value {
     return [self presence:@"value" required:YES convert:^id(id value) {
         return TTArray(value, ^id(id item) {
-            return [TTAtomicDecideValue read:item];
+            return [TTDecisionRecord read:item];
         });
     }];
 }
@@ -4261,9 +4261,9 @@ NSString * const TTRequestVersion = @"thinkthen.request/1";
         return TTString(value);
     }];
 }
-- (TTPresence<TTAtomicDecideValue *> *)value {
+- (TTPresence<TTDecisionRecord *> *)value {
     return [self presence:@"value" required:YES convert:^id(id value) {
-        return [TTAtomicDecideValue read:value];
+        return [TTDecisionRecord read:value];
     }];
 }
 @end
@@ -4281,10 +4281,10 @@ NSString * const TTRequestVersion = @"thinkthen.request/1";
         return TTString(value);
     }];
 }
-- (TTPresence<NSArray<TTAtomicBoolean *> *> *)value {
+- (TTPresence<NSArray<TTFilteredRecord *> *> *)value {
     return [self presence:@"value" required:YES convert:^id(id value) {
         return TTArray(value, ^id(id item) {
-            return [TTAtomicBoolean read:item];
+            return [TTFilteredRecord read:item];
         });
     }];
 }
@@ -4303,9 +4303,9 @@ NSString * const TTRequestVersion = @"thinkthen.request/1";
         return TTString(value);
     }];
 }
-- (TTPresence<TTAtomicBoolean *> *)value {
+- (TTPresence<TTFilteredRecord *> *)value {
     return [self presence:@"value" required:YES convert:^id(id value) {
-        return [TTAtomicBoolean read:value];
+        return [TTFilteredRecord read:value];
     }];
 }
 @end
@@ -4363,10 +4363,10 @@ NSString * const TTRequestVersion = @"thinkthen.request/1";
         return TTString(value);
     }];
 }
-- (TTPresence<NSArray<TTAtomicNonZeroUsize *> *> *)value {
+- (TTPresence<NSArray<TTRankedRecord *> *> *)value {
     return [self presence:@"value" required:YES convert:^id(id value) {
         return TTArray(value, ^id(id item) {
-            return [TTAtomicNonZeroUsize read:item];
+            return [TTRankedRecord read:item];
         });
     }];
 }
@@ -4427,10 +4427,10 @@ NSString * const TTRequestVersion = @"thinkthen.request/1";
         return TTString(value);
     }];
 }
-- (TTPresence<NSArray<TTAtomicDouble *> *> *)value {
+- (TTPresence<NSArray<TTScoreRecord *> *> *)value {
     return [self presence:@"value" required:YES convert:^id(id value) {
         return TTArray(value, ^id(id item) {
-            return [TTAtomicDouble read:item];
+            return [TTScoreRecord read:item];
         });
     }];
 }
@@ -4449,9 +4449,9 @@ NSString * const TTRequestVersion = @"thinkthen.request/1";
         return TTString(value);
     }];
 }
-- (TTPresence<TTAtomicDouble *> *)value {
+- (TTPresence<TTScoreRecord *> *)value {
     return [self presence:@"value" required:YES convert:^id(id value) {
-        return [TTAtomicDouble read:value];
+        return [TTScoreRecord read:value];
     }];
 }
 @end
@@ -4469,10 +4469,10 @@ NSString * const TTRequestVersion = @"thinkthen.request/1";
         return TTString(value);
     }];
 }
-- (TTPresence<NSArray<TTAtomicArrayOfString *> *> *)value {
+- (TTPresence<NSArray<TTTagRecord *> *> *)value {
     return [self presence:@"value" required:YES convert:^id(id value) {
         return TTArray(value, ^id(id item) {
-            return [TTAtomicArrayOfString read:item];
+            return [TTTagRecord read:item];
         });
     }];
 }
@@ -4491,9 +4491,9 @@ NSString * const TTRequestVersion = @"thinkthen.request/1";
         return TTString(value);
     }];
 }
-- (TTPresence<TTAtomicArrayOfString *> *)value {
+- (TTPresence<TTTagRecord *> *)value {
     return [self presence:@"value" required:YES convert:^id(id value) {
-        return [TTAtomicArrayOfString read:value];
+        return [TTTagRecord read:value];
     }];
 }
 @end
@@ -4560,51 +4560,51 @@ NSInteger TTNativeErrorCode(NSString *kind) {
     return 0;
 }
 @implementation TTSessionPacket (Answers)
-- (TTPresence<NSArray<TTAtomicDecideValue *> *> *)decideAnswer {
+- (TTPresence<NSArray<TTDecisionRecord *> *> *)decideAnswer {
     if (![self.rawFields[@"kind"] isEqual:@"aggregate"] || ![self.rawFields[@"function"] isEqual:@"decide"]) TTInvalidResult();
     return [self presence:@"value" required:YES convert:^id(id value) {
         return TTArray(value, ^id(id item) {
-            return [TTAtomicDecideValue read:item];
+            return [TTDecisionRecord read:item];
         });
     }];
 }
-- (TTPresence<NSArray<TTAtomicNullableString *> *> *)chooseAnswer {
+- (TTPresence<NSArray<TTChoiceRecord *> *> *)chooseAnswer {
     if (![self.rawFields[@"kind"] isEqual:@"aggregate"] || ![self.rawFields[@"function"] isEqual:@"choose"]) TTInvalidResult();
     return [self presence:@"value" required:YES convert:^id(id value) {
         return TTArray(value, ^id(id item) {
-            return [TTAtomicNullableString read:item];
+            return [TTChoiceRecord read:item];
         });
     }];
 }
-- (TTPresence<NSArray<TTAtomicArrayOfString *> *> *)tagAnswer {
+- (TTPresence<NSArray<TTTagRecord *> *> *)tagAnswer {
     if (![self.rawFields[@"kind"] isEqual:@"aggregate"] || ![self.rawFields[@"function"] isEqual:@"tag"]) TTInvalidResult();
     return [self presence:@"value" required:YES convert:^id(id value) {
         return TTArray(value, ^id(id item) {
-            return [TTAtomicArrayOfString read:item];
+            return [TTTagRecord read:item];
         });
     }];
 }
-- (TTPresence<NSArray<TTAtomicDouble *> *> *)scoreAnswer {
+- (TTPresence<NSArray<TTScoreRecord *> *> *)scoreAnswer {
     if (![self.rawFields[@"kind"] isEqual:@"aggregate"] || ![self.rawFields[@"function"] isEqual:@"score"]) TTInvalidResult();
     return [self presence:@"value" required:YES convert:^id(id value) {
         return TTArray(value, ^id(id item) {
-            return [TTAtomicDouble read:item];
+            return [TTScoreRecord read:item];
         });
     }];
 }
-- (TTPresence<NSArray<TTAtomicBoolean *> *> *)filterAnswer {
+- (TTPresence<NSArray<TTFilteredRecord *> *> *)filterAnswer {
     if (![self.rawFields[@"kind"] isEqual:@"aggregate"] || ![self.rawFields[@"function"] isEqual:@"filter"]) TTInvalidResult();
     return [self presence:@"value" required:YES convert:^id(id value) {
         return TTArray(value, ^id(id item) {
-            return [TTAtomicBoolean read:item];
+            return [TTFilteredRecord read:item];
         });
     }];
 }
-- (TTPresence<NSArray<TTAtomicNonZeroUsize *> *> *)rankAnswer {
+- (TTPresence<NSArray<TTRankedRecord *> *> *)rankAnswer {
     if (![self.rawFields[@"kind"] isEqual:@"aggregate"] || ![self.rawFields[@"function"] isEqual:@"rank"]) TTInvalidResult();
     return [self presence:@"value" required:YES convert:^id(id value) {
         return TTArray(value, ^id(id item) {
-            return [TTAtomicNonZeroUsize read:item];
+            return [TTRankedRecord read:item];
         });
     }];
 }
@@ -5983,555 +5983,6 @@ TTSourceUnitBuilder const TTSourceUnitFileBuilder = @"file";
 - (void)setQuestion:(TTQuestion *)value {
     if (value) self.requestFields[@"question"] = value;
     else [self.requestFields removeObjectForKey:@"question"];
-}
-@end
-@implementation TTRequestDefinitionAnnotateDefinition
-- (id)batch {
-    return self.requestFields[@"batch"];
-}
-- (void)setBatch:(id)value {
-    if (value) self.requestFields[@"batch"] = value;
-    else [self.requestFields removeObjectForKey:@"batch"];
-}
-- (NSString *)profile {
-    return self.requestFields[@"profile"];
-}
-- (void)setProfile:(NSString *)value {
-    if (value) self.requestFields[@"profile"] = value;
-    else [self.requestFields removeObjectForKey:@"profile"];
-}
-- (TTOrderedMap *)questions {
-    return self.requestFields[@"questions"];
-}
-- (void)setQuestions:(TTOrderedMap *)value {
-    if (value) self.requestFields[@"questions"] = value;
-    else [self.requestFields removeObjectForKey:@"questions"];
-}
-- (id)threshold {
-    return self.requestFields[@"threshold"];
-}
-- (void)setThreshold:(id)value {
-    if (value) self.requestFields[@"threshold"] = value;
-    else [self.requestFields removeObjectForKey:@"threshold"];
-}
-- (instancetype)init {
-    if ((self = [super init])) {
-        self.requestFields[@"version"] = @(1);
-    } return self;
-}
-@end
-@implementation TTRequestDefinitionAuthoredChoose
-- (id)batch {
-    return self.requestFields[@"batch"];
-}
-- (void)setBatch:(id)value {
-    if (value) self.requestFields[@"batch"] = value;
-    else [self.requestFields removeObjectForKey:@"batch"];
-}
-- (id)choose {
-    return self.requestFields[@"choose"];
-}
-- (void)setChoose:(id)value {
-    if (value) self.requestFields[@"choose"] = value;
-    else [self.requestFields removeObjectForKey:@"choose"];
-}
-- (id)contextSchema {
-    return self.requestFields[@"context_schema"];
-}
-- (void)setContextSchema:(id)value {
-    if (value) self.requestFields[@"context_schema"] = value;
-    else [self.requestFields removeObjectForKey:@"context_schema"];
-}
-- (id)itemSchema {
-    return self.requestFields[@"item_schema"];
-}
-- (void)setItemSchema:(id)value {
-    if (value) self.requestFields[@"item_schema"] = value;
-    else [self.requestFields removeObjectForKey:@"item_schema"];
-}
-- (NSString *)model {
-    return self.requestFields[@"model"];
-}
-- (void)setModel:(NSString *)value {
-    if (value) self.requestFields[@"model"] = value;
-    else [self.requestFields removeObjectForKey:@"model"];
-}
-- (NSString *)name {
-    return self.requestFields[@"name"];
-}
-- (void)setName:(NSString *)value {
-    if (value) self.requestFields[@"name"] = value;
-    else [self.requestFields removeObjectForKey:@"name"];
-}
-- (id)on {
-    return self.requestFields[@"on"];
-}
-- (void)setOn:(id)value {
-    if (value) self.requestFields[@"on"] = value;
-    else [self.requestFields removeObjectForKey:@"on"];
-}
-- (id)options {
-    return self.requestFields[@"options"];
-}
-- (void)setOptions:(id)value {
-    if (value) self.requestFields[@"options"] = value;
-    else [self.requestFields removeObjectForKey:@"options"];
-}
-- (NSString *)profile {
-    return self.requestFields[@"profile"];
-}
-- (void)setProfile:(NSString *)value {
-    if (value) self.requestFields[@"profile"] = value;
-    else [self.requestFields removeObjectForKey:@"profile"];
-}
-- (id)threshold {
-    return self.requestFields[@"threshold"];
-}
-- (void)setThreshold:(id)value {
-    if (value) self.requestFields[@"threshold"] = value;
-    else [self.requestFields removeObjectForKey:@"threshold"];
-}
-- (NSNumber *)wordingVersion {
-    return self.requestFields[@"wording_version"];
-}
-- (void)setWordingVersion:(NSNumber *)value {
-    if (value) self.requestFields[@"wording_version"] = value;
-    else [self.requestFields removeObjectForKey:@"wording_version"];
-}
-@end
-@implementation TTRequestDefinitionAuthoredDecide
-- (id)batch {
-    return self.requestFields[@"batch"];
-}
-- (void)setBatch:(id)value {
-    if (value) self.requestFields[@"batch"] = value;
-    else [self.requestFields removeObjectForKey:@"batch"];
-}
-- (id)contextSchema {
-    return self.requestFields[@"context_schema"];
-}
-- (void)setContextSchema:(id)value {
-    if (value) self.requestFields[@"context_schema"] = value;
-    else [self.requestFields removeObjectForKey:@"context_schema"];
-}
-- (id)decide {
-    return self.requestFields[@"decide"];
-}
-- (void)setDecide:(id)value {
-    if (value) self.requestFields[@"decide"] = value;
-    else [self.requestFields removeObjectForKey:@"decide"];
-}
-- (id)falseValue {
-    return self.requestFields[@"false"];
-}
-- (void)setFalseValue:(id)value {
-    if (value) self.requestFields[@"false"] = value;
-    else [self.requestFields removeObjectForKey:@"false"];
-}
-- (id)itemSchema {
-    return self.requestFields[@"item_schema"];
-}
-- (void)setItemSchema:(id)value {
-    if (value) self.requestFields[@"item_schema"] = value;
-    else [self.requestFields removeObjectForKey:@"item_schema"];
-}
-- (NSString *)model {
-    return self.requestFields[@"model"];
-}
-- (void)setModel:(NSString *)value {
-    if (value) self.requestFields[@"model"] = value;
-    else [self.requestFields removeObjectForKey:@"model"];
-}
-- (NSString *)name {
-    return self.requestFields[@"name"];
-}
-- (void)setName:(NSString *)value {
-    if (value) self.requestFields[@"name"] = value;
-    else [self.requestFields removeObjectForKey:@"name"];
-}
-- (id)on {
-    return self.requestFields[@"on"];
-}
-- (void)setOn:(id)value {
-    if (value) self.requestFields[@"on"] = value;
-    else [self.requestFields removeObjectForKey:@"on"];
-}
-- (NSString *)profile {
-    return self.requestFields[@"profile"];
-}
-- (void)setProfile:(NSString *)value {
-    if (value) self.requestFields[@"profile"] = value;
-    else [self.requestFields removeObjectForKey:@"profile"];
-}
-- (id)threshold {
-    return self.requestFields[@"threshold"];
-}
-- (void)setThreshold:(id)value {
-    if (value) self.requestFields[@"threshold"] = value;
-    else [self.requestFields removeObjectForKey:@"threshold"];
-}
-- (id)trueValue {
-    return self.requestFields[@"true"];
-}
-- (void)setTrueValue:(id)value {
-    if (value) self.requestFields[@"true"] = value;
-    else [self.requestFields removeObjectForKey:@"true"];
-}
-- (NSNumber *)wordingVersion {
-    return self.requestFields[@"wording_version"];
-}
-- (void)setWordingVersion:(NSNumber *)value {
-    if (value) self.requestFields[@"wording_version"] = value;
-    else [self.requestFields removeObjectForKey:@"wording_version"];
-}
-@end
-@implementation TTRequestDefinitionAuthoredFind
-- (id)contextSchema {
-    return self.requestFields[@"context_schema"];
-}
-- (void)setContextSchema:(id)value {
-    if (value) self.requestFields[@"context_schema"] = value;
-    else [self.requestFields removeObjectForKey:@"context_schema"];
-}
-- (id)find {
-    return self.requestFields[@"find"];
-}
-- (void)setFind:(id)value {
-    if (value) self.requestFields[@"find"] = value;
-    else [self.requestFields removeObjectForKey:@"find"];
-}
-- (id)itemSchema {
-    return self.requestFields[@"item_schema"];
-}
-- (void)setItemSchema:(id)value {
-    if (value) self.requestFields[@"item_schema"] = value;
-    else [self.requestFields removeObjectForKey:@"item_schema"];
-}
-- (NSString *)model {
-    return self.requestFields[@"model"];
-}
-- (void)setModel:(NSString *)value {
-    if (value) self.requestFields[@"model"] = value;
-    else [self.requestFields removeObjectForKey:@"model"];
-}
-- (NSString *)name {
-    return self.requestFields[@"name"];
-}
-- (void)setName:(NSString *)value {
-    if (value) self.requestFields[@"name"] = value;
-    else [self.requestFields removeObjectForKey:@"name"];
-}
-- (id)on {
-    return self.requestFields[@"on"];
-}
-- (void)setOn:(id)value {
-    if (value) self.requestFields[@"on"] = value;
-    else [self.requestFields removeObjectForKey:@"on"];
-}
-- (NSString *)profile {
-    return self.requestFields[@"profile"];
-}
-- (void)setProfile:(NSString *)value {
-    if (value) self.requestFields[@"profile"] = value;
-    else [self.requestFields removeObjectForKey:@"profile"];
-}
-- (NSNumber *)wordingVersion {
-    return self.requestFields[@"wording_version"];
-}
-- (void)setWordingVersion:(NSNumber *)value {
-    if (value) self.requestFields[@"wording_version"] = value;
-    else [self.requestFields removeObjectForKey:@"wording_version"];
-}
-@end
-@implementation TTRequestDefinitionAuthoredRelate
-- (id)contextSchema {
-    return self.requestFields[@"context_schema"];
-}
-- (void)setContextSchema:(id)value {
-    if (value) self.requestFields[@"context_schema"] = value;
-    else [self.requestFields removeObjectForKey:@"context_schema"];
-}
-- (id)itemSchema {
-    return self.requestFields[@"item_schema"];
-}
-- (void)setItemSchema:(id)value {
-    if (value) self.requestFields[@"item_schema"] = value;
-    else [self.requestFields removeObjectForKey:@"item_schema"];
-}
-- (NSString *)model {
-    return self.requestFields[@"model"];
-}
-- (void)setModel:(NSString *)value {
-    if (value) self.requestFields[@"model"] = value;
-    else [self.requestFields removeObjectForKey:@"model"];
-}
-- (NSString *)name {
-    return self.requestFields[@"name"];
-}
-- (void)setName:(NSString *)value {
-    if (value) self.requestFields[@"name"] = value;
-    else [self.requestFields removeObjectForKey:@"name"];
-}
-- (NSString *)profile {
-    return self.requestFields[@"profile"];
-}
-- (void)setProfile:(NSString *)value {
-    if (value) self.requestFields[@"profile"] = value;
-    else [self.requestFields removeObjectForKey:@"profile"];
-}
-- (TTRelateQuestionBuilder *)relate {
-    return self.requestFields[@"relate"];
-}
-- (void)setRelate:(TTRelateQuestionBuilder *)value {
-    if (value) self.requestFields[@"relate"] = value;
-    else [self.requestFields removeObjectForKey:@"relate"];
-}
-- (id)threshold {
-    return self.requestFields[@"threshold"];
-}
-- (void)setThreshold:(id)value {
-    if (value) self.requestFields[@"threshold"] = value;
-    else [self.requestFields removeObjectForKey:@"threshold"];
-}
-- (NSNumber *)wordingVersion {
-    return self.requestFields[@"wording_version"];
-}
-- (void)setWordingVersion:(NSNumber *)value {
-    if (value) self.requestFields[@"wording_version"] = value;
-    else [self.requestFields removeObjectForKey:@"wording_version"];
-}
-- (instancetype)init {
-    if ((self = [super init])) {
-        self.requestFields[@"version"] = @(1);
-    } return self;
-}
-@end
-@implementation TTRequestDefinitionAuthoredScore
-- (id)batch {
-    return self.requestFields[@"batch"];
-}
-- (void)setBatch:(id)value {
-    if (value) self.requestFields[@"batch"] = value;
-    else [self.requestFields removeObjectForKey:@"batch"];
-}
-- (id)contextSchema {
-    return self.requestFields[@"context_schema"];
-}
-- (void)setContextSchema:(id)value {
-    if (value) self.requestFields[@"context_schema"] = value;
-    else [self.requestFields removeObjectForKey:@"context_schema"];
-}
-- (id)itemSchema {
-    return self.requestFields[@"item_schema"];
-}
-- (void)setItemSchema:(id)value {
-    if (value) self.requestFields[@"item_schema"] = value;
-    else [self.requestFields removeObjectForKey:@"item_schema"];
-}
-- (id)levels {
-    return self.requestFields[@"levels"];
-}
-- (void)setLevels:(id)value {
-    if (value) self.requestFields[@"levels"] = value;
-    else [self.requestFields removeObjectForKey:@"levels"];
-}
-- (NSString *)model {
-    return self.requestFields[@"model"];
-}
-- (void)setModel:(NSString *)value {
-    if (value) self.requestFields[@"model"] = value;
-    else [self.requestFields removeObjectForKey:@"model"];
-}
-- (NSString *)name {
-    return self.requestFields[@"name"];
-}
-- (void)setName:(NSString *)value {
-    if (value) self.requestFields[@"name"] = value;
-    else [self.requestFields removeObjectForKey:@"name"];
-}
-- (id)on {
-    return self.requestFields[@"on"];
-}
-- (void)setOn:(id)value {
-    if (value) self.requestFields[@"on"] = value;
-    else [self.requestFields removeObjectForKey:@"on"];
-}
-- (NSString *)profile {
-    return self.requestFields[@"profile"];
-}
-- (void)setProfile:(NSString *)value {
-    if (value) self.requestFields[@"profile"] = value;
-    else [self.requestFields removeObjectForKey:@"profile"];
-}
-- (id)score {
-    return self.requestFields[@"score"];
-}
-- (void)setScore:(id)value {
-    if (value) self.requestFields[@"score"] = value;
-    else [self.requestFields removeObjectForKey:@"score"];
-}
-- (NSNumber *)wordingVersion {
-    return self.requestFields[@"wording_version"];
-}
-- (void)setWordingVersion:(NSNumber *)value {
-    if (value) self.requestFields[@"wording_version"] = value;
-    else [self.requestFields removeObjectForKey:@"wording_version"];
-}
-@end
-@implementation TTRequestDefinitionAuthoredTag
-- (id)batch {
-    return self.requestFields[@"batch"];
-}
-- (void)setBatch:(id)value {
-    if (value) self.requestFields[@"batch"] = value;
-    else [self.requestFields removeObjectForKey:@"batch"];
-}
-- (id)contextSchema {
-    return self.requestFields[@"context_schema"];
-}
-- (void)setContextSchema:(id)value {
-    if (value) self.requestFields[@"context_schema"] = value;
-    else [self.requestFields removeObjectForKey:@"context_schema"];
-}
-- (id)itemSchema {
-    return self.requestFields[@"item_schema"];
-}
-- (void)setItemSchema:(id)value {
-    if (value) self.requestFields[@"item_schema"] = value;
-    else [self.requestFields removeObjectForKey:@"item_schema"];
-}
-- (id)labels {
-    return self.requestFields[@"labels"];
-}
-- (void)setLabels:(id)value {
-    if (value) self.requestFields[@"labels"] = value;
-    else [self.requestFields removeObjectForKey:@"labels"];
-}
-- (NSString *)model {
-    return self.requestFields[@"model"];
-}
-- (void)setModel:(NSString *)value {
-    if (value) self.requestFields[@"model"] = value;
-    else [self.requestFields removeObjectForKey:@"model"];
-}
-- (NSString *)name {
-    return self.requestFields[@"name"];
-}
-- (void)setName:(NSString *)value {
-    if (value) self.requestFields[@"name"] = value;
-    else [self.requestFields removeObjectForKey:@"name"];
-}
-- (id)on {
-    return self.requestFields[@"on"];
-}
-- (void)setOn:(id)value {
-    if (value) self.requestFields[@"on"] = value;
-    else [self.requestFields removeObjectForKey:@"on"];
-}
-- (NSString *)profile {
-    return self.requestFields[@"profile"];
-}
-- (void)setProfile:(NSString *)value {
-    if (value) self.requestFields[@"profile"] = value;
-    else [self.requestFields removeObjectForKey:@"profile"];
-}
-- (id)tag {
-    return self.requestFields[@"tag"];
-}
-- (void)setTag:(id)value {
-    if (value) self.requestFields[@"tag"] = value;
-    else [self.requestFields removeObjectForKey:@"tag"];
-}
-- (id)threshold {
-    return self.requestFields[@"threshold"];
-}
-- (void)setThreshold:(id)value {
-    if (value) self.requestFields[@"threshold"] = value;
-    else [self.requestFields removeObjectForKey:@"threshold"];
-}
-- (NSNumber *)wordingVersion {
-    return self.requestFields[@"wording_version"];
-}
-- (void)setWordingVersion:(NSNumber *)value {
-    if (value) self.requestFields[@"wording_version"] = value;
-    else [self.requestFields removeObjectForKey:@"wording_version"];
-}
-@end
-@implementation TTRequestDefinitionRecognizeDefinition
-- (id)contextSchema {
-    return self.requestFields[@"context_schema"];
-}
-- (void)setContextSchema:(id)value {
-    if (value) self.requestFields[@"context_schema"] = value;
-    else [self.requestFields removeObjectForKey:@"context_schema"];
-}
-- (id)itemSchema {
-    return self.requestFields[@"item_schema"];
-}
-- (void)setItemSchema:(id)value {
-    if (value) self.requestFields[@"item_schema"] = value;
-    else [self.requestFields removeObjectForKey:@"item_schema"];
-}
-- (NSString *)model {
-    return self.requestFields[@"model"];
-}
-- (void)setModel:(NSString *)value {
-    if (value) self.requestFields[@"model"] = value;
-    else [self.requestFields removeObjectForKey:@"model"];
-}
-- (NSString *)name {
-    return self.requestFields[@"name"];
-}
-- (void)setName:(NSString *)value {
-    if (value) self.requestFields[@"name"] = value;
-    else [self.requestFields removeObjectForKey:@"name"];
-}
-- (id)on {
-    return self.requestFields[@"on"];
-}
-- (void)setOn:(id)value {
-    if (value) self.requestFields[@"on"] = value;
-    else [self.requestFields removeObjectForKey:@"on"];
-}
-- (NSString *)profile {
-    return self.requestFields[@"profile"];
-}
-- (void)setProfile:(NSString *)value {
-    if (value) self.requestFields[@"profile"] = value;
-    else [self.requestFields removeObjectForKey:@"profile"];
-}
-- (TTRecognizeQuestionBuilder *)recognize {
-    return self.requestFields[@"recognize"];
-}
-- (void)setRecognize:(TTRecognizeQuestionBuilder *)value {
-    if (value) self.requestFields[@"recognize"] = value;
-    else [self.requestFields removeObjectForKey:@"recognize"];
-}
-- (id)relationThreshold {
-    return self.requestFields[@"relation_threshold"];
-}
-- (void)setRelationThreshold:(id)value {
-    if (value) self.requestFields[@"relation_threshold"] = value;
-    else [self.requestFields removeObjectForKey:@"relation_threshold"];
-}
-- (id)threshold {
-    return self.requestFields[@"threshold"];
-}
-- (void)setThreshold:(id)value {
-    if (value) self.requestFields[@"threshold"] = value;
-    else [self.requestFields removeObjectForKey:@"threshold"];
-}
-- (NSNumber *)wordingVersion {
-    return self.requestFields[@"wording_version"];
-}
-- (void)setWordingVersion:(NSNumber *)value {
-    if (value) self.requestFields[@"wording_version"] = value;
-    else [self.requestFields removeObjectForKey:@"wording_version"];
-}
-- (instancetype)init {
-    if ((self = [super init])) {
-        self.requestFields[@"version"] = @(1);
-    } return self;
 }
 @end
 @implementation TTRequestImageBytes

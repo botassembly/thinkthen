@@ -4,38 +4,37 @@ NS_ASSUME_NONNULL_BEGIN
 FOUNDATION_EXPORT NSInteger TTNativeErrorCode(NSString *kind);
 @class TTAnnotation, TTAnnotationMember, TTAnnotationMemberAnswerId, TTAnnotationMemberFailureId,
 TTAnnotationValue, TTAnnotationValueChoice, TTAnnotationValueDecision, TTAnnotationValueFailed,
-TTAnnotationValueScore, TTAnnotationValueTags, TTAnswers, TTAtomicArrayOfString, TTAtomicDecideValue,
-TTAtomicNonZeroUsize, TTAtomicNullableString, TTAtomicBoolean, TTAtomicDouble, TTAttempt, TTBatch,
-TTBoundaryOdds, TTBoundaryProposal, TTCallError, TTEntityDocument, TTError, TTEstimatedInputDenial,
-TTEstimatedInputDenialAdditionalRequest, TTEstimatedInputDenialInitialRequest, TTEstimatedInputDenialRetry,
-TTFacts, TTFind, TTFindCandidate, TTImage, TTDeclarationBuilder, TTDeclarationObjectRootBuilder,
-TTDeclarationStringRootBuilder, TTPropertyTypeBuilder, TTPropertyTypeArrayBuilder, TTPropertyTypeBooleanBuilder,
-TTPropertyTypeNumberBuilder, TTPropertyTypeStringBuilder, TTLabel, TTMeta, TTObjectRoot, TTObservation,
-TTObservationFailureId, TTObservationObservationId, TTPersistenceObservation, TTPhysicalSource,
-TTPosition, TTQuestionSource, TTRankMember, TTRankMemberResult, TTRecognition, TTRecognitionEdgeDocument,
-TTRecognitionOdds, TTRecognitionOddsBoundaryOdds, TTRecognitionOddsRecognizeAnswer, TTRecognitionProposal,
-TTRecognitionStageContext, TTRelation, TTRelationEndpoint, TTRelationEndpointRelatedEntity,
-TTRelationEndpointSource, TTRelationMember, TTRelationMemberAnswerId, TTRelationMemberFailureId,
-TTSendBudgetDenial, TTSendBudgetDenialBeforeAdditionalSend, TTSendBudgetDenialBeforeFirstSend,
-TTSendBudgetDenialBeforeRetry, TTStopped, TTStringRoot, TTUsage, TTAnnotatedField, TTAnswer,
-TTAnswerChoice, TTAnswerScore, TTAnswerTag, TTAnswerYesNo, TTBatchSetting, TTBatchWarning,
-TTEntity, TTEntityEdge, TTFailed, TTFailure, TTFindAnswer, TTFindQuestionDocument, TTNameOdds,
-TTPairOdds, TTPieceOdds, TTPlace, TTPlan, TTProfileWarning, TTQuestionDocument, TTQuestionDocumentChoose,
-TTQuestionDocumentDecide, TTQuestionDocumentScore, TTQuestionDocumentTag, TTRecognize, TTRecognizeAnswer,
-TTRecognizeQuestionDocument, TTRecognizeEntities, TTRecognizeModeProposals, TTRelateFields,
-TTRelateQuestionDocument, TTRelatedEntity, TTRelatedEntityEdge, TTRelationRule, TTSessionAnnotation,
-TTSessionInputSource, TTSessionJudgment, TTSessionJudgmentChoice, TTSessionJudgmentDecision,
-TTSessionJudgmentScore, TTSessionJudgmentTags, TTSessionNamedProbability, TTSessionObservation,
-TTSessionObservationQuestion, TTSessionObservationRow, TTSessionObservedRow, TTSessionObservedRowAnnotated,
-TTSessionObservedRowFind, TTSessionObservedRowJudgment, TTSessionObservedRowRecognized, TTSessionObservedRowRelations,
-TTSessionPacket, TTSessionPacketAnnotateAggregate, TTSessionPacketAnnotateRow, TTSessionPacketChooseAggregate,
-TTSessionPacketChooseRow, TTSessionPacketDecideAggregate, TTSessionPacketDecideRow, TTSessionPacketFilterAggregate,
-TTSessionPacketFilterRow, TTSessionPacketFindAggregate, TTSessionPacketObservation, TTSessionPacketRankAggregate,
-TTSessionPacketRecognizeAggregate, TTSessionPacketRelateAggregate, TTSessionPacketScoreAggregate,
-TTSessionPacketScoreRow, TTSessionPacketTagAggregate, TTSessionPacketTagRow, TTSessionPacketTerminal,
-TTSessionProbabilities, TTSessionProbabilitiesNamed, TTSessionProbabilitiesYesNo, TTSessionQuestionDetail,
-TTSessionRecognition, TTSessionRelationEdge, TTSourceRelationEndpoint, TTThreshold, TTTokenBand,
-TTTokenUsage, TTValue, TTImmediateFacts;
+TTAnnotationValueScore, TTAnnotationValueTags, TTAnswers, TTTagRecord, TTDecisionRecord, TTRankedRecord,
+TTChoiceRecord, TTFilteredRecord, TTScoreRecord, TTAttempt, TTBatch, TTBoundaryOdds, TTBoundaryProposal,
+TTCallError, TTEntityDocument, TTError, TTEstimatedInputDenial, TTEstimatedInputDenialAdditionalRequest,
+TTEstimatedInputDenialInitialRequest, TTEstimatedInputDenialRetry, TTFacts, TTFind, TTFindCandidate,
+TTImage, TTDeclarationBuilder, TTDeclarationObjectRootBuilder, TTDeclarationStringRootBuilder,
+TTPropertyTypeBuilder, TTPropertyTypeArrayBuilder, TTPropertyTypeBooleanBuilder, TTPropertyTypeNumberBuilder,
+TTPropertyTypeStringBuilder, TTLabel, TTMeta, TTObjectRoot, TTObservation, TTObservationFailureId,
+TTObservationObservationId, TTPersistenceObservation, TTPhysicalSource, TTPosition, TTQuestionSource,
+TTRankMember, TTRankMemberResult, TTRecognition, TTRecognitionEdgeDocument, TTRecognitionOdds,
+TTRecognitionOddsBoundaryOdds, TTRecognitionOddsRecognizeAnswer, TTRecognitionProposal, TTRecognitionStageContext,
+TTRelation, TTRelationEndpoint, TTRelationEndpointRelatedEntity, TTRelationEndpointSource,
+TTRelationMember, TTRelationMemberAnswerId, TTRelationMemberFailureId, TTSendBudgetDenial,
+TTSendBudgetDenialBeforeAdditionalSend, TTSendBudgetDenialBeforeFirstSend, TTSendBudgetDenialBeforeRetry,
+TTStopped, TTStringRoot, TTUsage, TTAnnotatedField, TTAnswer, TTAnswerChoice, TTAnswerScore,
+TTAnswerTag, TTAnswerYesNo, TTBatchSetting, TTBatchWarning, TTEntity, TTEntityEdge, TTFailed,
+TTFailure, TTFindAnswer, TTFindQuestionDocument, TTNameOdds, TTPairOdds, TTPieceOdds, TTPlace,
+TTPlan, TTProfileWarning, TTQuestionDocument, TTQuestionDocumentChoose, TTQuestionDocumentDecide,
+TTQuestionDocumentScore, TTQuestionDocumentTag, TTRecognize, TTRecognizeAnswer, TTRecognizeQuestionDocument,
+TTRecognizeEntities, TTRecognizeModeProposals, TTRelateFields, TTRelateQuestionDocument, TTRelatedEntity,
+TTRelatedEntityEdge, TTRelationRule, TTSessionAnnotation, TTSessionInputSource, TTSessionJudgment,
+TTSessionJudgmentChoice, TTSessionJudgmentDecision, TTSessionJudgmentScore, TTSessionJudgmentTags,
+TTSessionNamedProbability, TTSessionObservation, TTSessionObservationQuestion, TTSessionObservationRow,
+TTSessionObservedRow, TTSessionObservedRowAnnotated, TTSessionObservedRowFind, TTSessionObservedRowJudgment,
+TTSessionObservedRowRecognized, TTSessionObservedRowRelations, TTSessionPacket, TTSessionPacketAnnotateAggregate,
+TTSessionPacketAnnotateRow, TTSessionPacketChooseAggregate, TTSessionPacketChooseRow, TTSessionPacketDecideAggregate,
+TTSessionPacketDecideRow, TTSessionPacketFilterAggregate, TTSessionPacketFilterRow, TTSessionPacketFindAggregate,
+TTSessionPacketObservation, TTSessionPacketRankAggregate, TTSessionPacketRecognizeAggregate,
+TTSessionPacketRelateAggregate, TTSessionPacketScoreAggregate, TTSessionPacketScoreRow, TTSessionPacketTagAggregate,
+TTSessionPacketTagRow, TTSessionPacketTerminal, TTSessionProbabilities, TTSessionProbabilitiesNamed,
+TTSessionProbabilitiesYesNo, TTSessionQuestionDetail, TTSessionRecognition, TTSessionRelationEdge,
+TTSourceRelationEndpoint, TTThreshold, TTTokenBand, TTTokenUsage, TTValue, TTImmediateFacts;
 @interface TTAnnotation : TTResultNode
 @property(nonatomic, readonly) TTPresence<NSString *> *answerId;
 @property(nonatomic, readonly) TTPresence<NSDictionary<NSString *, TTAnnotationMember *> *> *answers;
@@ -57,7 +56,7 @@ TTTokenUsage, TTValue, TTImmediateFacts;
 @interface TTAnswers : TTResultNode
 @property(nonatomic, readonly) TTPresence<NSArray<TTRelationMember *> *> *questions;
 @end
-@interface TTAtomicArrayOfString : TTResultNode
+@interface TTTagRecord : TTResultNode
 @property(nonatomic, readonly) TTPresence<TTAnswer *> *answer;
 @property(nonatomic, readonly) TTPresence<NSString *> *answerId;
 @property(nonatomic, readonly) TTPresence<NSArray<TTImage *> *> *images;
@@ -72,7 +71,7 @@ TTTokenUsage, TTValue, TTImmediateFacts;
 @property(nonatomic, readonly) TTPresence<TTThreshold *> *threshold;
 @property(nonatomic, readonly) TTPresence<NSArray<NSString *> *> *value;
 @end
-@interface TTAtomicDecideValue : TTResultNode
+@interface TTDecisionRecord : TTResultNode
 @property(nonatomic, readonly) TTPresence<TTAnswer *> *answer;
 @property(nonatomic, readonly) TTPresence<NSString *> *answerId;
 @property(nonatomic, readonly) TTPresence<NSArray<TTImage *> *> *images;
@@ -87,7 +86,7 @@ TTTokenUsage, TTValue, TTImmediateFacts;
 @property(nonatomic, readonly) TTPresence<TTThreshold *> *threshold;
 @property(nonatomic, readonly) TTPresence<id> *value;
 @end
-@interface TTAtomicNonZeroUsize : TTResultNode
+@interface TTRankedRecord : TTResultNode
 @property(nonatomic, readonly) TTPresence<TTAnswer *> *answer;
 @property(nonatomic, readonly) TTPresence<NSString *> *answerId;
 @property(nonatomic, readonly) TTPresence<NSArray<TTImage *> *> *images;
@@ -102,7 +101,7 @@ TTTokenUsage, TTValue, TTImmediateFacts;
 @property(nonatomic, readonly) TTPresence<TTThreshold *> *threshold;
 @property(nonatomic, readonly) TTPresence<NSNumber *> *value;
 @end
-@interface TTAtomicNullableString : TTResultNode
+@interface TTChoiceRecord : TTResultNode
 @property(nonatomic, readonly) TTPresence<TTAnswer *> *answer;
 @property(nonatomic, readonly) TTPresence<NSString *> *answerId;
 @property(nonatomic, readonly) TTPresence<NSArray<TTImage *> *> *images;
@@ -117,7 +116,7 @@ TTTokenUsage, TTValue, TTImmediateFacts;
 @property(nonatomic, readonly) TTPresence<TTThreshold *> *threshold;
 @property(nonatomic, readonly) TTPresence<NSString *> *value;
 @end
-@interface TTAtomicBoolean : TTResultNode
+@interface TTFilteredRecord : TTResultNode
 @property(nonatomic, readonly) TTPresence<TTAnswer *> *answer;
 @property(nonatomic, readonly) TTPresence<NSString *> *answerId;
 @property(nonatomic, readonly) TTPresence<NSArray<TTImage *> *> *images;
@@ -132,7 +131,7 @@ TTTokenUsage, TTValue, TTImmediateFacts;
 @property(nonatomic, readonly) TTPresence<TTThreshold *> *threshold;
 @property(nonatomic, readonly) TTPresence<NSNumber *> *value;
 @end
-@interface TTAtomicDouble : TTResultNode
+@interface TTScoreRecord : TTResultNode
 @property(nonatomic, readonly) TTPresence<TTAnswer *> *answer;
 @property(nonatomic, readonly) TTPresence<NSString *> *answerId;
 @property(nonatomic, readonly) TTPresence<NSArray<TTImage *> *> *images;
@@ -946,32 +945,32 @@ TTTokenUsage, TTValue, TTImmediateFacts;
 @interface TTSessionPacketChooseAggregate : TTSessionPacket
 @property(nonatomic, readonly) TTPresence<NSString *> *function;
 @property(nonatomic, readonly) TTPresence<NSString *> *kind;
-@property(nonatomic, readonly) TTPresence<NSArray<TTAtomicNullableString *> *> *value;
+@property(nonatomic, readonly) TTPresence<NSArray<TTChoiceRecord *> *> *value;
 @end
 @interface TTSessionPacketChooseRow : TTSessionPacket
 @property(nonatomic, readonly) TTPresence<NSString *> *function;
 @property(nonatomic, readonly) TTPresence<NSString *> *kind;
-@property(nonatomic, readonly) TTPresence<TTAtomicNullableString *> *value;
+@property(nonatomic, readonly) TTPresence<TTChoiceRecord *> *value;
 @end
 @interface TTSessionPacketDecideAggregate : TTSessionPacket
 @property(nonatomic, readonly) TTPresence<NSString *> *function;
 @property(nonatomic, readonly) TTPresence<NSString *> *kind;
-@property(nonatomic, readonly) TTPresence<NSArray<TTAtomicDecideValue *> *> *value;
+@property(nonatomic, readonly) TTPresence<NSArray<TTDecisionRecord *> *> *value;
 @end
 @interface TTSessionPacketDecideRow : TTSessionPacket
 @property(nonatomic, readonly) TTPresence<NSString *> *function;
 @property(nonatomic, readonly) TTPresence<NSString *> *kind;
-@property(nonatomic, readonly) TTPresence<TTAtomicDecideValue *> *value;
+@property(nonatomic, readonly) TTPresence<TTDecisionRecord *> *value;
 @end
 @interface TTSessionPacketFilterAggregate : TTSessionPacket
 @property(nonatomic, readonly) TTPresence<NSString *> *function;
 @property(nonatomic, readonly) TTPresence<NSString *> *kind;
-@property(nonatomic, readonly) TTPresence<NSArray<TTAtomicBoolean *> *> *value;
+@property(nonatomic, readonly) TTPresence<NSArray<TTFilteredRecord *> *> *value;
 @end
 @interface TTSessionPacketFilterRow : TTSessionPacket
 @property(nonatomic, readonly) TTPresence<NSString *> *function;
 @property(nonatomic, readonly) TTPresence<NSString *> *kind;
-@property(nonatomic, readonly) TTPresence<TTAtomicBoolean *> *value;
+@property(nonatomic, readonly) TTPresence<TTFilteredRecord *> *value;
 @end
 @interface TTSessionPacketFindAggregate : TTSessionPacket
 @property(nonatomic, readonly) TTPresence<NSString *> *function;
@@ -986,7 +985,7 @@ TTTokenUsage, TTValue, TTImmediateFacts;
 @interface TTSessionPacketRankAggregate : TTSessionPacket
 @property(nonatomic, readonly) TTPresence<NSString *> *function;
 @property(nonatomic, readonly) TTPresence<NSString *> *kind;
-@property(nonatomic, readonly) TTPresence<NSArray<TTAtomicNonZeroUsize *> *> *value;
+@property(nonatomic, readonly) TTPresence<NSArray<TTRankedRecord *> *> *value;
 @end
 @interface TTSessionPacketRecognizeAggregate : TTSessionPacket
 @property(nonatomic, readonly) TTPresence<NSString *> *function;
@@ -1001,22 +1000,22 @@ TTTokenUsage, TTValue, TTImmediateFacts;
 @interface TTSessionPacketScoreAggregate : TTSessionPacket
 @property(nonatomic, readonly) TTPresence<NSString *> *function;
 @property(nonatomic, readonly) TTPresence<NSString *> *kind;
-@property(nonatomic, readonly) TTPresence<NSArray<TTAtomicDouble *> *> *value;
+@property(nonatomic, readonly) TTPresence<NSArray<TTScoreRecord *> *> *value;
 @end
 @interface TTSessionPacketScoreRow : TTSessionPacket
 @property(nonatomic, readonly) TTPresence<NSString *> *function;
 @property(nonatomic, readonly) TTPresence<NSString *> *kind;
-@property(nonatomic, readonly) TTPresence<TTAtomicDouble *> *value;
+@property(nonatomic, readonly) TTPresence<TTScoreRecord *> *value;
 @end
 @interface TTSessionPacketTagAggregate : TTSessionPacket
 @property(nonatomic, readonly) TTPresence<NSString *> *function;
 @property(nonatomic, readonly) TTPresence<NSString *> *kind;
-@property(nonatomic, readonly) TTPresence<NSArray<TTAtomicArrayOfString *> *> *value;
+@property(nonatomic, readonly) TTPresence<NSArray<TTTagRecord *> *> *value;
 @end
 @interface TTSessionPacketTagRow : TTSessionPacket
 @property(nonatomic, readonly) TTPresence<NSString *> *function;
 @property(nonatomic, readonly) TTPresence<NSString *> *kind;
-@property(nonatomic, readonly) TTPresence<TTAtomicArrayOfString *> *value;
+@property(nonatomic, readonly) TTPresence<TTTagRecord *> *value;
 @end
 @interface TTSessionPacketTerminal : TTSessionPacket
 @property(nonatomic, readonly) TTPresence<TTFacts *> *facts;
@@ -1032,12 +1031,12 @@ TTTokenUsage, TTValue, TTImmediateFacts;
 @property(nonatomic, readonly) TTPresence<NSNumber *> *value;
 @end
 @interface TTSessionPacket (Answers)
-@property(nonatomic, readonly) TTPresence<NSArray<TTAtomicDecideValue *> *> *decideAnswer;
-@property(nonatomic, readonly) TTPresence<NSArray<TTAtomicNullableString *> *> *chooseAnswer;
-@property(nonatomic, readonly) TTPresence<NSArray<TTAtomicArrayOfString *> *> *tagAnswer;
-@property(nonatomic, readonly) TTPresence<NSArray<TTAtomicDouble *> *> *scoreAnswer;
-@property(nonatomic, readonly) TTPresence<NSArray<TTAtomicBoolean *> *> *filterAnswer;
-@property(nonatomic, readonly) TTPresence<NSArray<TTAtomicNonZeroUsize *> *> *rankAnswer;
+@property(nonatomic, readonly) TTPresence<NSArray<TTDecisionRecord *> *> *decideAnswer;
+@property(nonatomic, readonly) TTPresence<NSArray<TTChoiceRecord *> *> *chooseAnswer;
+@property(nonatomic, readonly) TTPresence<NSArray<TTTagRecord *> *> *tagAnswer;
+@property(nonatomic, readonly) TTPresence<NSArray<TTScoreRecord *> *> *scoreAnswer;
+@property(nonatomic, readonly) TTPresence<NSArray<TTFilteredRecord *> *> *filterAnswer;
+@property(nonatomic, readonly) TTPresence<NSArray<TTRankedRecord *> *> *rankAnswer;
 @property(nonatomic, readonly) TTPresence<TTFind *> *findAnswer;
 @property(nonatomic, readonly) TTPresence<NSArray<TTAnnotation *> *> *annotateAnswer;
 @property(nonatomic, readonly) TTPresence<NSArray<TTRecognition *> *> *recognizeAnswer;
@@ -1096,14 +1095,12 @@ TTAuthoredInputPropertyStringBuilder, TTAuthoredRelateBuilder, TTAuthoredRelatio
 TTAuthoredTagBuilder, TTSettings, TTOptionSchemaBuilder, TTRecognitionExampleEntityBuilder,
 TTRecognitionExampleTextBuilder, TTRecognitionSeedSpanBuilder, TTRecognitionStageContextBuilder,
 TTRecognizeDefinitionBuilder, TTRecognizeQuestionBuilder, TTRelateFieldsBuilder, TTRelateQuestionBuilder,
-TTRequest, TTRequestCall, TTRequestDefinitionAnnotateDefinition, TTRequestDefinitionAuthoredChoose,
-TTRequestDefinitionAuthoredDecide, TTRequestDefinitionAuthoredFind, TTRequestDefinitionAuthoredRelate,
-TTRequestDefinitionAuthoredScore, TTRequestDefinitionAuthoredTag, TTRequestDefinitionRecognizeDefinition,
-TTRequestImageBytes, TTRequestImageFile, TTEntitiesInput, TTFeedInput, TTJSONInput, TTRecordsInput,
-TTSourceInput, TTTextInput, TTUnitsInput, TTItem, TTControls, TTRequestOriginalJson, TTRequestOriginalText,
-TTQuestionDefinition, TTQuestionFile, TTQuestionName, TTQuestionReference, TTTextQuestion,
-TTRequestReader, TTRequestReaderFailureInvalidInput, TTRequestReaderFailureIo, TTRequestReaderFailureProducer,
-TTRequestReaderFailureUtf8, TTRequestSessionDescriptor, TTFiles, TTSessionSourceLocationBuilder;
+TTRequest, TTRequestCall, TTRequestImageBytes, TTRequestImageFile, TTEntitiesInput, TTFeedInput,
+TTJSONInput, TTRecordsInput, TTSourceInput, TTTextInput, TTUnitsInput, TTItem, TTControls,
+TTRequestOriginalJson, TTRequestOriginalText, TTQuestionDefinition, TTQuestionFile, TTQuestionName,
+TTQuestionReference, TTTextQuestion, TTRequestReader, TTRequestReaderFailureInvalidInput, TTRequestReaderFailureIo,
+TTRequestReaderFailureProducer, TTRequestReaderFailureUtf8, TTRequestSessionDescriptor, TTFiles,
+TTSessionSourceLocationBuilder;
 @interface TTAnnotateDefinitionBuilder : TTRequestObject
 @property(nonatomic, strong, nullable) id batch;
 @property(nonatomic, strong, nullable) NSString * profile;
@@ -1328,96 +1325,6 @@ TTRequestReaderFailureUtf8, TTRequestSessionDescriptor, TTFiles, TTSessionSource
 @property(nonatomic, strong, nullable) TTControls * options;
 @property(nonatomic, strong, nullable) TTQuestion * question;
 @end
-@interface TTRequestDefinitionAnnotateDefinition : TTRequestObject
-@property(nonatomic, strong, nullable) id batch;
-@property(nonatomic, strong, nullable) NSString * profile;
-@property(nonatomic, strong, nullable) TTOrderedMap * questions;
-@property(nonatomic, strong, nullable) id threshold;
-@end
-@interface TTRequestDefinitionAuthoredChoose : TTRequestObject
-@property(nonatomic, strong, nullable) id batch;
-@property(nonatomic, strong, nullable) id choose;
-@property(nonatomic, strong, nullable) id contextSchema;
-@property(nonatomic, strong, nullable) id itemSchema;
-@property(nonatomic, strong, nullable) NSString * model;
-@property(nonatomic, strong, nullable) NSString * name;
-@property(nonatomic, strong, nullable) id on;
-@property(nonatomic, strong, nullable) id options;
-@property(nonatomic, strong, nullable) NSString * profile;
-@property(nonatomic, strong, nullable) id threshold;
-@property(nonatomic, strong, nullable) NSNumber * wordingVersion;
-@end
-@interface TTRequestDefinitionAuthoredDecide : TTRequestObject
-@property(nonatomic, strong, nullable) id batch;
-@property(nonatomic, strong, nullable) id contextSchema;
-@property(nonatomic, strong, nullable) id decide;
-@property(nonatomic, strong, nullable) id falseValue;
-@property(nonatomic, strong, nullable) id itemSchema;
-@property(nonatomic, strong, nullable) NSString * model;
-@property(nonatomic, strong, nullable) NSString * name;
-@property(nonatomic, strong, nullable) id on;
-@property(nonatomic, strong, nullable) NSString * profile;
-@property(nonatomic, strong, nullable) id threshold;
-@property(nonatomic, strong, nullable) id trueValue;
-@property(nonatomic, strong, nullable) NSNumber * wordingVersion;
-@end
-@interface TTRequestDefinitionAuthoredFind : TTRequestObject
-@property(nonatomic, strong, nullable) id contextSchema;
-@property(nonatomic, strong, nullable) id find;
-@property(nonatomic, strong, nullable) id itemSchema;
-@property(nonatomic, strong, nullable) NSString * model;
-@property(nonatomic, strong, nullable) NSString * name;
-@property(nonatomic, strong, nullable) id on;
-@property(nonatomic, strong, nullable) NSString * profile;
-@property(nonatomic, strong, nullable) NSNumber * wordingVersion;
-@end
-@interface TTRequestDefinitionAuthoredRelate : TTRequestObject
-@property(nonatomic, strong, nullable) id contextSchema;
-@property(nonatomic, strong, nullable) id itemSchema;
-@property(nonatomic, strong, nullable) NSString * model;
-@property(nonatomic, strong, nullable) NSString * name;
-@property(nonatomic, strong, nullable) NSString * profile;
-@property(nonatomic, strong, nullable) TTRelateQuestionBuilder * relate;
-@property(nonatomic, strong, nullable) id threshold;
-@property(nonatomic, strong, nullable) NSNumber * wordingVersion;
-@end
-@interface TTRequestDefinitionAuthoredScore : TTRequestObject
-@property(nonatomic, strong, nullable) id batch;
-@property(nonatomic, strong, nullable) id contextSchema;
-@property(nonatomic, strong, nullable) id itemSchema;
-@property(nonatomic, strong, nullable) id levels;
-@property(nonatomic, strong, nullable) NSString * model;
-@property(nonatomic, strong, nullable) NSString * name;
-@property(nonatomic, strong, nullable) id on;
-@property(nonatomic, strong, nullable) NSString * profile;
-@property(nonatomic, strong, nullable) id score;
-@property(nonatomic, strong, nullable) NSNumber * wordingVersion;
-@end
-@interface TTRequestDefinitionAuthoredTag : TTRequestObject
-@property(nonatomic, strong, nullable) id batch;
-@property(nonatomic, strong, nullable) id contextSchema;
-@property(nonatomic, strong, nullable) id itemSchema;
-@property(nonatomic, strong, nullable) id labels;
-@property(nonatomic, strong, nullable) NSString * model;
-@property(nonatomic, strong, nullable) NSString * name;
-@property(nonatomic, strong, nullable) id on;
-@property(nonatomic, strong, nullable) NSString * profile;
-@property(nonatomic, strong, nullable) id tag;
-@property(nonatomic, strong, nullable) id threshold;
-@property(nonatomic, strong, nullable) NSNumber * wordingVersion;
-@end
-@interface TTRequestDefinitionRecognizeDefinition : TTRequestObject
-@property(nonatomic, strong, nullable) id contextSchema;
-@property(nonatomic, strong, nullable) id itemSchema;
-@property(nonatomic, strong, nullable) NSString * model;
-@property(nonatomic, strong, nullable) NSString * name;
-@property(nonatomic, strong, nullable) id on;
-@property(nonatomic, strong, nullable) NSString * profile;
-@property(nonatomic, strong, nullable) TTRecognizeQuestionBuilder * recognize;
-@property(nonatomic, strong, nullable) id relationThreshold;
-@property(nonatomic, strong, nullable) id threshold;
-@property(nonatomic, strong, nullable) NSNumber * wordingVersion;
-@end
 @interface TTRequestImageBytes : TTRequestObject
 @property(nonatomic, strong, nullable) NSString * bytes;
 @property(nonatomic, strong, nullable) TTImageMediaBuilder media;
@@ -1542,37 +1449,37 @@ typedef TTRequestSessionDescriptor * _Nullable (^TTFeed)(TTRequestObject * _Null
 @property(nonatomic, strong, readonly) TTPresence<TTFacts *> *facts;
 @end
 @interface TTCall (Answers)
-- (nullable TTPresence<NSNumber *> *)decideAnswer:(NSError **)error;
-- (nullable TTPresence<NSString *> *)chooseAnswer:(NSError **)error;
-- (nullable TTPresence<NSArray<NSString *> *> *)tagAnswer:(NSError **)error;
-- (nullable TTPresence<NSNumber *> *)scoreAnswer:(NSError **)error;
-- (nullable TTPresence<NSArray *> *)filterAnswer:(NSError **)error;
-- (nullable TTPresence<NSArray<NSNumber *> *> *)rankAnswer:(NSError **)error;
-- (nullable TTPresence<TTFind *> *)findAnswer:(NSError **)error;
-- (nullable TTPresence<NSArray<TTAnnotation *> *> *)annotateAnswer:(NSError **)error;
-- (nullable TTPresence<NSArray<TTRecognition *> *> *)recognizeAnswer:(NSError **)error;
-- (nullable TTPresence<TTRelation *> *)relateAnswer:(NSError **)error;
+- (nullable TTPresence<NSNumber *> *)decideAnswer:(NSError * _Nullable * _Nullable)error;
+- (nullable TTPresence<NSString *> *)chooseAnswer:(NSError * _Nullable * _Nullable)error;
+- (nullable TTPresence<NSArray<NSString *> *> *)tagAnswer:(NSError * _Nullable * _Nullable)error;
+- (nullable TTPresence<NSNumber *> *)scoreAnswer:(NSError * _Nullable * _Nullable)error;
+- (nullable TTPresence<NSArray *> *)filterAnswer:(NSError * _Nullable * _Nullable)error;
+- (nullable TTPresence<NSArray<NSNumber *> *> *)rankAnswer:(NSError * _Nullable * _Nullable)error;
+- (nullable TTPresence<TTFind *> *)findAnswer:(NSError * _Nullable * _Nullable)error;
+- (nullable TTPresence<NSArray<TTAnnotation *> *> *)annotateAnswer:(NSError * _Nullable * _Nullable)error;
+- (nullable TTPresence<NSArray<TTRecognition *> *> *)recognizeAnswer:(NSError * _Nullable * _Nullable)error;
+- (nullable TTPresence<TTRelation *> *)relateAnswer:(NSError * _Nullable * _Nullable)error;
 @end
 @interface TTFoundationClient : NSObject
-- (nullable instancetype)initWithSettings:(nullable TTSettings *)settings error:(NSError **)error NS_DESIGNATED_INITIALIZER;
+- (nullable instancetype)initWithSettings:(nullable TTSettings *)settings error:(NSError * _Nullable * _Nullable)error NS_DESIGNATED_INITIALIZER;
 - (instancetype)init NS_UNAVAILABLE;
 + (instancetype)new NS_UNAVAILABLE;
-- (nullable TTPlan *)plan:(TTRequest *)request error:(NSError **)error;
-- (nullable TTSession *)startRequest:(TTRequest *)request error:(NSError **)error;
-- (nullable TTUsagePersistenceStatus *)usagePersistence:(NSError **)error;
-- (nullable TTUsagePersistenceStatus *)finishUsageStatus:(NSError **)error;
+- (nullable TTPlan *)plan:(TTRequest *)request error:(NSError * _Nullable * _Nullable)error;
+- (nullable TTSession *)startRequest:(TTRequest *)request error:(NSError * _Nullable * _Nullable)error;
+- (nullable TTUsagePersistenceStatus *)usagePersistence:(NSError * _Nullable * _Nullable)error;
+- (nullable TTUsagePersistenceStatus *)finishUsageStatus:(NSError * _Nullable * _Nullable)error;
 @end
 @interface TTFoundationClient (NamedCalls)
-- (nullable TTTask *)decide:(TTQuestion *)question input:(TTInput *)input options:(nullable TTControls *)options feed:(nullable TTFeed)feed completion:(TTCompletion)completion error:(NSError **)error;
-- (nullable TTTask *)choose:(TTQuestion *)question input:(TTInput *)input options:(nullable TTControls *)options feed:(nullable TTFeed)feed completion:(TTCompletion)completion error:(NSError **)error;
-- (nullable TTTask *)tag:(TTQuestion *)question input:(TTInput *)input options:(nullable TTControls *)options feed:(nullable TTFeed)feed completion:(TTCompletion)completion error:(NSError **)error;
-- (nullable TTTask *)score:(TTQuestion *)question input:(TTInput *)input options:(nullable TTControls *)options feed:(nullable TTFeed)feed completion:(TTCompletion)completion error:(NSError **)error;
-- (nullable TTTask *)filter:(TTQuestion *)question input:(TTInput *)input options:(nullable TTControls *)options feed:(nullable TTFeed)feed completion:(TTCompletion)completion error:(NSError **)error;
-- (nullable TTTask *)rank:(TTQuestion *)question input:(TTInput *)input options:(nullable TTControls *)options feed:(nullable TTFeed)feed completion:(TTCompletion)completion error:(NSError **)error;
-- (nullable TTTask *)find:(TTQuestion *)question input:(TTInput *)input options:(nullable TTControls *)options feed:(nullable TTFeed)feed completion:(TTCompletion)completion error:(NSError **)error;
-- (nullable TTTask *)annotate:(TTQuestion *)question input:(TTInput *)input options:(nullable TTControls *)options feed:(nullable TTFeed)feed completion:(TTCompletion)completion error:(NSError **)error;
-- (nullable TTTask *)recognize:(TTQuestion *)question input:(TTInput *)input options:(nullable TTControls *)options feed:(nullable TTFeed)feed completion:(TTCompletion)completion error:(NSError **)error;
-- (nullable TTTask *)relate:(TTQuestion *)question input:(TTInput *)input options:(nullable TTControls *)options feed:(nullable TTFeed)feed completion:(TTCompletion)completion error:(NSError **)error;
+- (nullable TTTask *)decide:(TTQuestion *)question input:(TTInput *)input options:(nullable TTControls *)options feed:(nullable TTFeed)feed completion:(TTCompletion)completion error:(NSError * _Nullable * _Nullable)error;
+- (nullable TTTask *)choose:(TTQuestion *)question input:(TTInput *)input options:(nullable TTControls *)options feed:(nullable TTFeed)feed completion:(TTCompletion)completion error:(NSError * _Nullable * _Nullable)error;
+- (nullable TTTask *)tag:(TTQuestion *)question input:(TTInput *)input options:(nullable TTControls *)options feed:(nullable TTFeed)feed completion:(TTCompletion)completion error:(NSError * _Nullable * _Nullable)error;
+- (nullable TTTask *)score:(TTQuestion *)question input:(TTInput *)input options:(nullable TTControls *)options feed:(nullable TTFeed)feed completion:(TTCompletion)completion error:(NSError * _Nullable * _Nullable)error;
+- (nullable TTTask *)filter:(TTQuestion *)question input:(TTInput *)input options:(nullable TTControls *)options feed:(nullable TTFeed)feed completion:(TTCompletion)completion error:(NSError * _Nullable * _Nullable)error;
+- (nullable TTTask *)rank:(TTQuestion *)question input:(TTInput *)input options:(nullable TTControls *)options feed:(nullable TTFeed)feed completion:(TTCompletion)completion error:(NSError * _Nullable * _Nullable)error;
+- (nullable TTTask *)find:(TTQuestion *)question input:(TTInput *)input options:(nullable TTControls *)options feed:(nullable TTFeed)feed completion:(TTCompletion)completion error:(NSError * _Nullable * _Nullable)error;
+- (nullable TTTask *)annotate:(TTQuestion *)question input:(TTInput *)input options:(nullable TTControls *)options feed:(nullable TTFeed)feed completion:(TTCompletion)completion error:(NSError * _Nullable * _Nullable)error;
+- (nullable TTTask *)recognize:(TTQuestion *)question input:(TTInput *)input options:(nullable TTControls *)options feed:(nullable TTFeed)feed completion:(TTCompletion)completion error:(NSError * _Nullable * _Nullable)error;
+- (nullable TTTask *)relate:(TTQuestion *)question input:(TTInput *)input options:(nullable TTControls *)options feed:(nullable TTFeed)feed completion:(TTCompletion)completion error:(NSError * _Nullable * _Nullable)error;
 @end
 typedef NS_ENUM(uint32_t, TTUsagePersistenceState) {
     TTUsagePersistenceDisabled = 1,
@@ -1580,5 +1487,5 @@ typedef NS_ENUM(uint32_t, TTUsagePersistenceState) {
     TTUsagePersistencePending = 2,
     TTUsagePersistenceWritten = 3,
 };
-#define TT_GENERATED_USAGE_DECLARATIONS - (nullable TTUsagePersistenceStatus *)finishUsageStatus:(NSError **)error; - (nullable TTUsagePersistenceStatus *)usagePersistence:(NSError **)error;
+#define TT_GENERATED_USAGE_DECLARATIONS - (nullable TTUsagePersistenceStatus *)finishUsageStatus:(NSError * _Nullable * _Nullable)error; - (nullable TTUsagePersistenceStatus *)usagePersistence:(NSError * _Nullable * _Nullable)error;
 NS_ASSUME_NONNULL_END

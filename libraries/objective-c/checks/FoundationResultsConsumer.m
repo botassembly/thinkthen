@@ -23,7 +23,7 @@ int main(int argc, const char *argv[]) {
         for (NSDictionary *row in fixture[@"results"]) {
             NSDictionary *result = row[@"result"];
             if ([row[@"type"] isEqual:@"DecideResult"]) {
-                TTAtomicDecideValue *decision = [TTAtomicDecideValue read:result];
+                TTDecisionRecord *decision = [TTDecisionRecord read:result];
                 require(decision.value.state == TTPresenceValue && [decision.value.value isEqual:@NO]);
             }
             if ([row[@"type"] isEqual:@"ChooseResult"]) {
