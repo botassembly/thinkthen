@@ -22,7 +22,9 @@ from fixture_types import write as write_fixture_types
 
 def run(command, cwd, env, expected=None, timeout=180):
     if len(command) > 1 and command[1] == "build":
-        command = ["/usr/bin/flock", "-w", "180", "-o", os.environ.get("THINKTHEN_HEAVY_LOCK", "/tmp/thinkthen-heavy.lock"), *command]
+        command = [sys.executable, str(ROOT / "sdlc/scripts/build-admission.py"),
+                   "--lock", os.environ.get("THINKTHEN_HEAVY_LOCK", "/tmp/thinkthen-heavy.lock"),
+                   "--", *command]
     result = subprocess.run(command, cwd=cwd, env=env, text=True, stdout=subprocess.PIPE,
                             stderr=subprocess.STDOUT, timeout=timeout)
     if expected:
@@ -139,6 +141,7 @@ def main():
     spec = ("name: installed_native_assets\npublish_to: none\nenvironment:\n  sdk: '>=3.10.0 <4.0.0'\ndependencies:\n  thinkthen_dart:\n    path: ../packages/dart\nhooks:\n  user_defines:\n    thinkthen_dart:\n      offline: true\n      asset_cache: ../packages/dart/checks/scratch/native-assets/\n")
     (consumer / 'pubspec.yaml').write_text(spec)
     run([str(dart), 'pub', 'get', '--offline'], consumer, env)
+    run([str(dart), 'analyze', '--fatal-infos'], consumer, env)
     if os.environ.get('THINKTHEN_TEST_PROFILE') == 'smoke':
         env.update({name: os.environ[name] for name in ('THINKTHEN_BASE_URL', 'THINKTHEN_API_KEY',
             'THINKTHEN_CACHE', 'THINKTHEN_TEST_SMOKE_QUESTION', 'THINKTHEN_TEST_SMOKE_TEXT')})
@@ -254,6 +257,7 @@ def main():
         (app / 'lib/parity_consumer.dart').write_text(parity_source)
     (app / 'pubspec.yaml').write_text("name: thinkthen_flutter_example\npublish_to: none\nenvironment:\n  sdk: '>=3.10.0 <4.0.0'\ndependencies:\n  flutter:\n    sdk: flutter\n  thinkthen_flutter:\n    path: ../packages/flutter\ndependency_overrides:\n  thinkthen_dart:\n    path: ../packages/dart\nhooks:\n  user_defines:\n    thinkthen_dart:\n      offline: true\n      asset_cache: ../packages/dart/checks/scratch/native-assets/\n")
     run([str(flutter), 'pub', 'get', '--offline'], app, env)
+    run([str(flutter), 'analyze', '--no-pub', '--fatal-infos'], app, env)
     run([str(flutter), 'build', 'linux', '--release', '--no-pub'], app, env)
     bundle = app / 'build/linux/x64/release/bundle'
     assert list((bundle / 'lib').glob('*thinkthen*')), 'FLUTTER_BUNDLED_NATIVE_ASSET'

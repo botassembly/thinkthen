@@ -73,7 +73,7 @@ class TestOwnedSession < Minitest::Test
       assert_equal true, child.hear
       assert_equal "billing", child.hear
       assert_equal 0.15, child.hear
-      assert_equal [1, 2], child.hear
+      assert_equal [0, 1], child.hear
       assert_equal "first", child.hear
       assert_equal %w[knows knows], child.hear
       status, errors = child.finish
@@ -91,12 +91,53 @@ class TestOwnedSession < Minitest::Test
         say answers.map { |answer| answer.facts.requests_sent }
       end
     RUBY
-      assert_equal [[1], [1, 2], []], child.hear
+      assert_equal [[0], [0, 1], []], child.hear
       assert_equal [true, true, true], child.hear
       assert_equal [1, 1, 0], child.hear
       status, errors = child.finish
       assert status.success?, errors
       assert_equal 2, backend.count
+    end
+  end
+
+  def test_rank_returns_original_indexes_for_reordered_ties_and_duplicate_values
+    TestBackend.with(<<~RUBY, arm: "case/15-rank-records") do |backend, child|
+      originals = [{body: "item 0", id: 81}, {body: "item 1", id: 37},
+        {body: "item 2", id: 92}, {body: "item 1", id: 37}]
+      retained = T::Client.open(cache: false) do |client|
+        client.rank("How relevant is this?", originals, field: ["/body"], batch: 1)
+      end
+      say retained.value
+      say retained.results.map(&:input)
+      say retained.results.map(&:value)
+      say [retained.value.frozen?, retained.value.all? { |index| index.is_a?(Integer) }]
+      say retained.facts.requests_sent
+    RUBY
+      assert_equal [1, 3, 2, 0], child.hear
+      assert_equal [{"body" => "item 1", "id" => 37}, {"body" => "item 1", "id" => 37},
+        {"body" => "item 2", "id" => 92}, {"body" => "item 0", "id" => 81}], child.hear
+      assert_equal [1, 2, 3, 4], child.hear
+      assert_equal [true, true], child.hear
+      assert_equal 3, child.hear
+      status, errors = child.finish
+      assert status.success?, errors
+      assert_equal 3, backend.count
+    end
+  end
+
+  def test_filter_retains_original_values_in_its_plain_answer
+    TestBackend.with(<<~RUBY) do |backend, child|
+      retained = T::Client.open(cache: false) do |client|
+        client.filter("Keep this?", [{body: "duplicate", id: 81}, {body: "duplicate", id: 81}, "other"])
+      end
+      say retained.value
+      say retained.value.frozen?
+    RUBY
+      assert_equal [{"body" => "duplicate", "id" => 81}, {"body" => "duplicate", "id" => 81}, "other"], child.hear
+      assert_equal true, child.hear
+      status, errors = child.finish
+      assert status.success?, errors
+      assert_equal 1, backend.count
     end
   end
 

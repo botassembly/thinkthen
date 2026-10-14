@@ -45,6 +45,20 @@ external int _thinkthen_error_code(Pointer<Void> arg0);
 external Pointer<Void> _thinkthen_error_view(Pointer<Void> arg0);
 @Native<
         Int32 Function(Pointer<Void>, Pointer<_NativeNamedRequest>,
+            Pointer<Pointer<Void>>)>(
+    symbol: 'thinkthen_request_plan_named_value',
+    assetId: 'package:thinkthen_dart/thinkthen')
+external int _thinkthen_request_plan_named_value(Pointer<Void> arg0,
+    Pointer<_NativeNamedRequest> arg1, Pointer<Pointer<Void>> arg2);
+@Native<Int32 Function(Pointer<Void>, Pointer<Pointer<Void>>)>(
+    symbol: 'thinkthen_value_view', assetId: 'package:thinkthen_dart/thinkthen')
+external int _thinkthen_value_view(
+    Pointer<Void> arg0, Pointer<Pointer<Void>> arg1);
+@Native<Void Function(Pointer<Void>)>(
+    symbol: 'thinkthen_value_free', assetId: 'package:thinkthen_dart/thinkthen')
+external void _thinkthen_value_free(Pointer<Void> arg0);
+@Native<
+        Int32 Function(Pointer<Void>, Pointer<_NativeNamedRequest>,
             _NativeUsageAdvice, Pointer<Pointer<Void>>)>(
     symbol: 'thinkthen_session_new_named_with_surface',
     assetId: 'package:thinkthen_dart/thinkthen')
@@ -114,6 +128,10 @@ final class _NativeAbi {
           _thinkthen_engine_free);
   final thinkthen_error_code = _thinkthen_error_code;
   final thinkthen_error_view = _thinkthen_error_view;
+  final thinkthen_request_plan_named_value =
+      _thinkthen_request_plan_named_value;
+  final thinkthen_value_view = _thinkthen_value_view;
+  final thinkthen_value_free = _thinkthen_value_free;
   final thinkthen_session_new_named_with_surface =
       _thinkthen_session_new_named_with_surface;
   final thinkthen_session_push = _thinkthen_session_push;
@@ -132,7 +150,8 @@ final class _NativeAbi {
   final thinkthen_engine_finish_usage_status_v1 =
       _thinkthen_engine_finish_usage_status_v1;
   Pointer<Void> startNamed(Pointer<Void> engine, String function,
-      Question question, Input input, Options? options, String surface) {
+      Question question, Input input, Options? options, String surface,
+      {bool preview = false}) {
     final output = calloc<Pointer<Void>>();
     final request = calloc<_NativeNamedRequest>();
     final bytes = <Pointer<Uint8>>[];
@@ -154,10 +173,11 @@ final class _NativeAbi {
       request.ref.question_json = counted(_encodeNative(question));
       request.ref.input_json = counted(_encodeNative(input));
       request.ref.options_json = counted(_encodeNative(options ?? Options()));
-      _checkSession(
-          this,
-          thinkthen_session_new_named_with_surface(
-              engine, request, counted(surface), output));
+      final code = preview
+          ? thinkthen_request_plan_named_value(engine, request, output)
+          : thinkthen_session_new_named_with_surface(
+              engine, request, counted(surface), output);
+      _checkSession(this, code);
       return output.value;
     } finally {
       for (final value in bytes) calloc.free(value);
@@ -175,6 +195,17 @@ final class _NativeAbi {
           _NativePacketReader.readSessionPacket(view.value));
     } finally {
       thinkthen_session_result_free(packet);
+      calloc.free(view);
+    }
+  }
+
+  Plan takePlan(Pointer<Void> value) {
+    final view = calloc<Pointer<Void>>();
+    try {
+      _checkSession(this, thinkthen_value_view(value, view));
+      return Plan.read(_NativePacketReader._value(view.value));
+    } finally {
+      thinkthen_value_free(value);
       calloc.free(view);
     }
   }

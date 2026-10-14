@@ -2,7 +2,7 @@
 import json
 import re
 
-ROOTS = ('completesessionPacket', 'completeImmediateFacts')
+ROOTS = ('completesessionPacket', 'completeImmediateFacts', 'completeplan')
 PREFIX = ''
 INPUT_ROOTS = ('RequestFunction', 'RequestQuestion', 'RequestInput', 'RequestOptions', 'RequestSessionDescriptor', 'RequestReaderFailure', 'EngineSettings')
 
@@ -216,7 +216,8 @@ def bridge(abi, definitions):
             return ('Pointer<Void>',) * 2
         return {'uint32_t': ('Uint32', 'int'), 'int': ('Int32', 'int'), 'size_t': ('Size', 'int'), 'void': ('Void', 'void')}[value]
     symbols = ('thinkthen_engine_new_with', 'thinkthen_engine_free', 'thinkthen_error_code',
-               'thinkthen_error_view',
+               'thinkthen_error_view', 'thinkthen_request_plan_named_value',
+               'thinkthen_value_view', 'thinkthen_value_free',
                'thinkthen_session_new_named_with_surface', 'thinkthen_session_push',
                'thinkthen_session_next_packet', 'thinkthen_session_finish', 'thinkthen_session_cancel',
                'thinkthen_session_free', 'thinkthen_session_result_free', 'thinkthen_session_result_view',
@@ -265,7 +266,7 @@ def abi_helpers(abi):
                  'input_json': '_encodeNative(input)', 'options_json': '_encodeNative(options ?? Options())'}
     if set(fields) != set(arguments): raise ValueError('named request ABI changed')
     lines = [
-        '  Pointer<Void> startNamed(Pointer<Void> engine, String function, Question question, Input input, Options? options, String surface) {',
+        '  Pointer<Void> startNamed(Pointer<Void> engine, String function, Question question, Input input, Options? options, String surface, {bool preview = false}) {',
         '    final output = calloc<Pointer<Void>>();',
         '    final request = calloc<_NativeNamedRequest>();',
         '    final bytes = <Pointer<Uint8>>[];',
@@ -284,7 +285,10 @@ def abi_helpers(abi):
     lines += ['      return view.ref;', '    }', '    try {']
     lines += [f'      request.ref.{field} = counted({arguments[field]});' for field in fields]
     lines += [
-        '      _checkSession(this, thinkthen_session_new_named_with_surface(engine, request, counted(surface), output));',
+        '      final code = preview',
+        '          ? thinkthen_request_plan_named_value(engine, request, output)',
+        '          : thinkthen_session_new_named_with_surface(engine, request, counted(surface), output);',
+        '      _checkSession(this, code);',
         '      return output.value;',
         '    } finally {',
         '      for (final value in bytes) calloc.free(value);',
@@ -297,6 +301,11 @@ def abi_helpers(abi):
         '      return SessionPacket.read(_NativePacketReader.readSessionPacket(view.value));',
         '    } finally { thinkthen_session_result_free(packet); calloc.free(view); }', '  }',
     ]
+    lines += ['  Plan takePlan(Pointer<Void> value) {',
+              '    final view = calloc<Pointer<Void>>();', '    try {',
+              '      _checkSession(this, thinkthen_value_view(value, view));',
+              '      return Plan.read(_NativePacketReader._value(view.value));',
+              '    } finally { thinkthen_value_free(value); calloc.free(view); }', '  }']
     for symbol, operation in usage_operations(abi['functions']):
         host = {'usage_persistence': 'usagePersistence', 'finish_usage_status': 'finishUsageStatus'}[operation]
         lines += [f'  UsagePersistenceStatus {host}(Pointer<Void> engine) {{',
@@ -328,7 +337,7 @@ def abi_helpers(abi):
 def calls(inputs, definitions):
     global PREFIX
     PREFIX = ''
-    from host_answers import scalar_answers, aggregate_answers, named_object_fields
+    from host_answers import scalar_answers, aggregate_answers, aggregate_projection, named_object_fields
     lines = ['// Generated named calls and answers from canonical contracts; do not edit.', 'part of thinkthen_session;', 'mixin NamedCalls {', '  Future<OwnedCall> _call(String function, Question question, Input input, Options? options, Cancellation? cancellation, Stream<FeedItem>? feed);', '  OwnedSession _startSession(Question question, Input input, String function, {Options? options});']
     for function in inputs['RequestFunction']['oneOf']:
         value = function['const']
@@ -345,7 +354,8 @@ def calls(inputs, definitions):
     for function, child, payload in aggregate_answers(definitions):
         if function in {function for function, _, _ in scalar_answers(definitions)}: continue
         typ = hint(payload, definitions)
-        result_type = 'List<Object?>' if function in ('rank', 'filter') else typ
+        projected, projection = aggregate_projection(function, payload, definitions)
+        result_type = hint(projected, definitions)
         lines += [f'  {result_type} {function}Answer() {{', '    _successful();']
         if payload.get('type') == 'array':
             item = hint(payload['items'], definitions)
@@ -360,7 +370,7 @@ def calls(inputs, definitions):
         if function == 'filter':
             lines += ['    return List.unmodifiable(answers.where((row) => row.value == true).map((row) => row.input.value));']
         elif function == 'rank':
-            lines += ['    answers.sort((a, b) => a.value.compareTo(b.value));', '    return List.unmodifiable(answers.map((row) => row.input.value));']
+            lines += ['    answers.sort((a, b) => a.value.compareTo(b.value));', f'    return List.unmodifiable(answers.map((row) => row.{projection}.value ?? (throw StateError("Rank answer has no input index"))));']
         elif payload.get('type') == 'array': lines += ['    return List.unmodifiable(answers);']
         else: lines += ['    return answers;']
         lines += ['  }']
@@ -369,7 +379,7 @@ def calls(inputs, definitions):
 def native_readers(abi, definitions):
     """Read measured native graph fields, preserving exact integers and presence."""
     from c import normalized, nullable, ident, variant_member, container_key
-    nodes, pending = {}, list(ROOTS)
+    nodes, pending = {}, [key for key in ROOTS if key != 'completeplan']
     def references(value):
         if isinstance(value, dict):
             if '$ref' in value: yield value['$ref'].split('/')[-1]
