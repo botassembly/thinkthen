@@ -6533,7 +6533,8 @@ NSString *judgment, id call, NSError **error) {
         NSDictionary *fields = packet.rawFields;
         if (![fields[@"function"] isEqual:function]) continue;
         id value;
-        if ([function isEqual:@"filter"]) {
+        BOOL rowAnswer = [function isEqual:@"filter"] || [function isEqual:@"annotate"];
+        if (rowAnswer) {
             if ([fields[@"kind"] isEqual:@"row"]) [values addObject:fields[@"value"]];
             continue;
         }
@@ -6547,7 +6548,7 @@ NSString *judgment, id call, NSError **error) {
             value = carrier[@"value"];
         } if (value) [values addObject:value];
     }
-    if ([function isEqual:@"filter"] && [((TTCall *)call).function isEqual:function]) return [values copy];
+    if (([function isEqual:@"filter"] || [function isEqual:@"annotate"]) && [((TTCall *)call).function isEqual:function]) return [values copy];
     if (values.count != 1) {
         if (error) *error = [NSError errorWithDomain:TTAnswerErrorDomain code:1 userInfo:@{
             NSLocalizedDescriptionKey:@"Expected exactly one successful answer", @"ThinkThenFunction":function,
