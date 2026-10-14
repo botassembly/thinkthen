@@ -39,6 +39,9 @@ with contextlib.ExitStack() as installed:
         (work / "Sources/Cases").mkdir(parents=True)
         (work / "Sources/Results").mkdir(parents=True)
         shutil.copy2(ROOT / "checks/FoundationResultsConsumer.m", work / "Sources/Results/main.m")
+        # Fixture projection uses a local private declaration, never an exported module member.
+        for target in ("Cases", "Results"):
+            shutil.copy2(ROOT / "Sources/Foundation/TTResultPrivate.h", work / "Sources" / target / "TTResultPrivate.h")
         shutil.copy2(ROOT / "checks/FoundationCases.m", work / "Sources/Cases/main.m")
         shutil.copy2(ROOT / "checks/FoundationConsumer.m", work / "Sources/Consumer/main.m")
         (work / "Package.swift").write_text('''// swift-tools-version: 6.0
