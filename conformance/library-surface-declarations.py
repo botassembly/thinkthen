@@ -21,8 +21,12 @@ def python(source):
     def visit(nodes, owner=''):
         for node in nodes:
             name = getattr(node, 'name', None)
-            if isinstance(node, ast.ClassDef) and not name.startswith('_'):
-                result.add(Declaration(owner, name, 'type'))
+            if isinstance(node, ast.ClassDef):
+                result.add(Declaration(owner, name, 'hidden_type' if name.startswith('_') else 'type'))
+                for base in node.bases:
+                    target = base.value if isinstance(base, ast.Subscript) else base
+                    if isinstance(target, ast.Name):
+                        result.add(Declaration(name, target.id, 'inherited'))
                 visit(node.body, name)
             elif isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
                 if not name.startswith('_') or name == '__init__':
@@ -34,6 +38,11 @@ def python(source):
                             result.add(Declaration(container, arg.arg, 'parameter'))
                     for arg in node.args.kwonlyargs:
                         result.add(Declaration(container, arg.arg, 'field'))
+                    keyword = node.args.kwarg
+                    if keyword and isinstance(keyword.annotation, ast.Subscript):
+                        annotation = keyword.annotation
+                        if isinstance(annotation.value, ast.Name) and annotation.value.id == 'Unpack' and isinstance(annotation.slice, ast.Name):
+                            result.add(Declaration(container, annotation.slice.id, 'unpacked'))
             elif isinstance(node, ast.Assign) and isinstance(node.value, (ast.Name, ast.Subscript, ast.BinOp)):
                 for target in node.targets:
                     if isinstance(target, ast.Name) and not target.id.startswith('_'):
@@ -41,6 +50,7 @@ def python(source):
             elif isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name):
                 if not node.target.id.startswith('_'):
                     result.add(Declaration(owner, node.target.id, 'field'))
+                    result.add(Declaration(owner + '.' + node.target.id, ast.unparse(node.annotation), 'annotation'))
     visit(tree.body)
     if exports is not None:
         result = {d for d in result if d.owner or d.name in exports}
@@ -52,6 +62,15 @@ def masked(source, comments=r'//[^\n]*|/\*[\s\S]*?\*/'):
     # Preserve positions and newlines for scope matching, but never match words in comments/strings.
     pattern = comments + r'|"(?:\\.|[^"\\])*"|\'(?:\\.|[^\'\\])*\''
     return re.sub(pattern, lambda m: ''.join('\n' if c == '\n' else ' ' for c in m[0]), source)
+
+
+def normalized_annotation(source):
+    """Normalize type syntax while preserving quoted literal content."""
+    quoted = r'("(?:\\.|[^"\\])*"|\'(?:\\.|[^\'\\])*\'|`(?:\\.|[^`\\])*`)'
+    parts = re.split(quoted, source)
+    for index in range(0, len(parts), 2):
+        parts[index] = re.sub(r'\(([\w.]+)\)', r'\1', re.sub(r'\s+', '', parts[index]))
+    return ''.join(parts).lstrip('|')
 
 
 def braces(source):
@@ -152,6 +171,14 @@ def cstyle(source, language):
             for base in re.finditer(r'(?:^\s*:|,)\s*(?:(public|protected|private)\s+)?([\w:]+)(?:\s*<[^{}]*?>)?', header):
                 if base[1] == 'public' or not base[1] and struct_scopes[start]:
                     result.add(Declaration(name, base[2].split('::')[-1], 'inherited'))
+        if language in ('typescript', 'csharp'):
+            header = text[match.end():start]
+            bases = re.search(r'\bextends\s+(.+)|^\s*:\s*(.+)', header)
+            if bases:
+                for base in (bases[1] or bases[2]).split(','):
+                    target = re.match(r'\s*([\w.]+)', base)
+                    if target:
+                        result.add(Declaration(name, target[1].split('.')[-1], 'inherited'))
         if language in ('java', 'kotlin', 'scala'):
             header = text[match.end():start]
             base = re.search(r'\bextends\s+(\w+)|^\s*(?:private\s+constructor\s*\([^)]*\)\s*)?:\s*(\w+)', header)
@@ -221,6 +248,8 @@ def cstyle(source, language):
             continue
         pos = next(match.start(i) for i, group in enumerate(match.groups(), 1) if group)
         container = owner(pos)
+        if language == 'typescript' and parentheses[pos]:
+            continue
         if language == 'cpp' and (parentheses[pos] or name == 'operator'):
             continue
         if language == 'go' and not container:
@@ -235,6 +264,20 @@ def cstyle(source, language):
         if kind == 'call' and (name == container or language == 'scala' and name == 'this'):
             continue
         result.add(Declaration(container, name, kind))
+        if language == 'typescript' and kind == 'field':
+            colon = text.find(':', pos, match.end())
+            if colon >= 0:
+                nesting, end = 0, colon + 1
+                while end < len(text):
+                    char = text[end]
+                    if char == ';' and nesting == 0:
+                        break
+                    if char == '}' and nesting == 0:
+                        break
+                    nesting += (char in '([{<') - (char in ')]}>')
+                    end += 1
+                annotation = normalized_annotation(source[colon + 1:end])
+                result.add(Declaration(container + '.' + name, annotation, 'annotation'))
     # Enum constants form the public contract even without a field declaration.
     for start, end, container in scopes:
         prefix = text[max(0, text.rfind(';', 0, start) + 1):start]
@@ -327,9 +370,10 @@ def cstyle(source, language):
                 result.add(Declaration('', match[1], 'call'))
         public = set()
         for item in result:
-            local = item.owner or item.name
+            local = item.owner.split('.')[0] if item.owner else item.name
             for name in bindings.get(local, ()):
-                public.add(Declaration(name if item.owner else '', item.name if item.owner else name, item.kind))
+                mapped_owner = name + item.owner[len(local):] if item.owner else ''
+                public.add(Declaration(mapped_owner, item.name if item.owner else name, item.kind))
             if not item.owner and item.kind == 'export' and item.name in {n for names in bindings.values() for n in names}:
                 public.add(item)
         result = public
@@ -384,14 +428,19 @@ def other(source, language):
         constants = {}
         for line in source.splitlines():
             indent = len(line) - len(line.lstrip())
-            match = re.match(r'\s*(class|module)\s+(\w+)', line)
+            if line.strip() and not line.lstrip().startswith('#'):
+                scopes = [s for s in scopes if s[0] < indent]
+            match = re.match(r'\s*(?:class|module)\s+(\w+)|\s*(\w+)\s*=\s*Struct\.new', line)
             if match:
                 scopes = [s for s in scopes if s[0] < indent]
-                scopes.append((indent, match[2]))
-                result.add(Declaration('', match[2], 'type'))
+                name = match[1] or match[2]
+                scopes.append((indent, name))
+                result.add(Declaration('', name, 'type'))
             container = scopes[-1][1] if scopes else ''
             if line.strip() == 'private':
                 private.add(container)
+            elif line.strip() == 'public':
+                private.discard(container)
             match = re.match(r'\s*(\w+)\s*=\s*%w\[([^]]*)\]', line)
             if match:
                 constants[(container, match[1])] = match[2].split()
@@ -411,6 +460,8 @@ def other(source, language):
             if container not in private and re.match(r'\s*attr_reader\b', line):
                 for name in re.findall(r':(\w+)', line):
                     result.add(Declaration(container, name, 'field'))
+            for name in re.findall(r':(\w+)', line) if re.match(r'\s*private_class_method\b', line) else ():
+                result.discard(Declaration(container, name, 'call'))
             match = re.match(r'\s*define_method\([\'\"](\w+)[\'\"]\)', line)
             if match:
                 result.add(Declaration(container, match[1], 'field'))
@@ -487,6 +538,8 @@ def declarations(source, language):
         return php(source)
     if language == 'python':
         return python(source)
+    if language == 'rbs':
+        return rbs(source)
     if language in ('r', 'ruby', 'ada', 'cobol'):
         return other(source, language)
     return cstyle(source, language)
@@ -501,3 +554,74 @@ def public_inherited(declared):
         if promoted <= result:
             return result
         result.update(promoted)
+
+
+def python_keywords(declared):
+    """Resolve keyword dictionaries and inherited fields from their typed source."""
+    expanded = set(declared)
+    while True:
+        inherited = {Declaration(link.owner, member.name, 'field')
+                     for link in declared if link.kind == 'inherited'
+                     for member in expanded if member.owner == link.name and member.kind == 'field'}
+        if inherited <= expanded:
+            break
+        expanded.update(inherited)
+    for link in declared:
+        if link.kind == 'unpacked':
+            expanded.update(Declaration(link.owner, member.name, 'field')
+                            for member in expanded.copy() if member.owner == link.name and member.kind == 'field')
+    return {d for d in expanded if d.kind not in ('hidden_type', 'unpacked') and not d.owner.startswith('_')}
+
+
+def rbs(source):
+    """Read RBS member signatures, including nested typed keyword parameters."""
+    result, scopes, private = set(), [], set()
+    owning_method = None
+    for line in source.splitlines():
+        indent = len(line) - len(line.lstrip())
+        if line.strip() and not line.lstrip().startswith('#'):
+            scopes = [s for s in scopes if s[0] < indent]
+        match = re.match(r'\s*(?:class|module)\s+(\w+)', line)
+        if match:
+            scopes.append((indent, match[1]))
+            result.add(Declaration('', match[1], 'type'))
+        owner = scopes[-1][1] if scopes else ''
+        if line.strip() == 'private':
+            private.add(owner)
+        elif line.strip() == 'public':
+            private.discard(owner)
+        if owner in private:
+            continue
+        method = re.match(r'\s*def\s+(?:self\.)?(\w+)[!?]?:\s*\(', line)
+        continuation = re.match(r'\s*\|\s*\(', line)
+        if method:
+            owning_method = (owner, method[1])
+        elif continuation and owning_method and owning_method[0] == owner:
+            method = continuation
+        elif line.strip() and not line.lstrip().startswith('#'):
+            owning_method = None
+        if method:
+            name = owning_method[1]
+            result.add(Declaration(owner, name, 'call'))
+            if '->' in line:
+                returned = re.sub(r'\s+', '', line.rsplit('->', 1)[1])
+                result.add(Declaration(owner + '.' + name, returned, 'return'))
+            start, depth, pieces = method.end(), 0, []
+            for pos in range(start, len(line)):
+                char = line[pos]
+                if char == ')' and depth == 0:
+                    pieces.append(line[start:pos]); break
+                if char == ',' and depth == 0:
+                    pieces.append(line[start:pos]); start = pos + 1
+                else:
+                    depth += (char in '([{') - (char in ')]}')
+            for piece in pieces:
+                keyword = re.match(r'\s*\??(\w+):\s*(.+)', piece)
+                if keyword:
+                    container = owner + '.' + name
+                    result.add(Declaration(container, keyword[1], 'field'))
+                    result.add(Declaration(container + '.' + keyword[1], keyword[2].strip(), 'annotation'))
+        field = re.match(r'\s*attr_reader\s+(\w+):', line)
+        if field:
+            result.add(Declaration(owner, field[1], 'field'))
+    return result
