@@ -31,11 +31,9 @@ if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
     [ -n "${THINKTHEN_C_ARTIFACT:-}" ] || { echo 'go: missing C archive' >&2; exit 1; }
 fi
 "$python_bin" -c 'import jsonschema' || { echo 'go: not run: Python jsonschema is unavailable' >&2; exit 77; }
-lock=${THINKTHEN_HEAVY_LOCK:-/run/user/1000/thinkthen-codex-6.lock}
-if [ "${THINKTHEN_HEAVY_LOCK_HELD:-}" != "$lock" ]; then
-    export THINKTHEN_HEAVY_LOCK_HELD="$lock"
-    exec flock -w 180 -o "$lock" /bin/sh "$repo/libraries/go/check.sh" "$@"
-fi
+admission=${THINKTHEN_BUILD_ADMISSION:-$repo/sdlc/scripts/build-admission.py}
+export THINKTHEN_BUILD_ADMISSION="$admission"
+compile() { "$python_bin" "$admission" --lock "${THINKTHEN_HEAVY_LOCK:-/tmp/thinkthen-heavy.lock}" -- "$@"; }
 . "$repo/sdlc/scripts/scratch.sh"
 usage_home
 export CARGO_NET_OFFLINE=true CARGO_BUILD_JOBS=2
@@ -52,26 +50,26 @@ if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
     installed_unpack
     module=$scratch
 else
-    cargo build --locked --offline --manifest-path "$repo/libraries/c/Cargo.toml" --lib -j2
+    compile cargo build --locked --offline --manifest-path "$repo/libraries/c/Cargo.toml" --lib -j2
     out="$repo/target/go/native"
     mkdir -p "$out/include" "$out/lib"
     cp "$repo/libraries/c/include/thinkthen.h" "$out/include/thinkthen.h"
-    sh "$repo/libraries/c/localize.sh" "$repo/libraries/c/target/debug/libthinkthen_c.a" "$out/lib/libthinkthen.a"
+    sh "$repo/libraries/c/localize.sh" "${CARGO_TARGET_DIR:-$repo/libraries/c/target}/debug/libthinkthen_c.a" "$out/lib/libthinkthen.a"
     scratch_dir installed
     module="$installed/module"
     "$python_bin" fixtures/package_owned.py "$PWD" "$out" "$module"
 fi
 # All compile checks target the installed module, whose static asset is bundled.
-(cd "$module" && "$go_bin" vet .)
+(cd "$module" && compile "$go_bin" vet .)
 for example in decide smoke; do
     scratch_dir caller
     mkdir "$caller/$example"
     cp "examples/$example/main.go" "$caller/$example/main.go"
     printf 'module example.org/thinkthen-example\n\ngo 1.22\n\nrequire github.com/botassembly/thinkthen/libraries/go v0.0.0\nreplace github.com/botassembly/thinkthen/libraries/go => %s\n' "$module" >"$caller/$example/go.mod"
-    (cd "$caller/$example" && "$go_bin" build -p 1 -buildvcs=false -o "$caller/example" .)
+    (cd "$caller/$example" && compile "$go_bin" build -p 1 -buildvcs=false -o "$caller/example" .)
     if [ "${THINKTHEN_TEST_PROFILE:-}" = smoke ] && [ "$example" = smoke ]; then "$caller/example"; exit; fi
 done
-cargo build --locked --offline --manifest-path "$repo/Cargo.toml" --package conformance-backend -j2
+compile cargo build --locked --offline --manifest-path "$repo/Cargo.toml" --package conformance-backend -j2
 "$python_bin" fixtures/owned_installed.py "$module" plan
 "$python_bin" fixtures/owned_installed.py "$module"
 "$python_bin" fixtures/owned_installed.py "$module" feed

@@ -8,1205 +8,1031 @@ import (
 	"reflect"
 )
 
-type OwnedAnnotation struct{ ownedJSON }
+type Annotation struct{ ownedJSON }
 
-func (v OwnedAnnotation) AnswerId() Presence[OwnedAnswerId] {
-	return ownedMember[OwnedAnswerId](v.raw, "answer_id")
+func (v Annotation) AnswerId() Presence[AnswerId] { return ownedMember[AnswerId](v.raw, "answer_id") }
+func (v Annotation) Answers() Presence[map[string]AnnotationMember] {
+	return ownedMember[map[string]AnnotationMember](v.raw, "answers")
 }
-func (v OwnedAnnotation) Answers() Presence[map[string]OwnedAnnotationMember] {
-	return ownedMember[map[string]OwnedAnnotationMember](v.raw, "answers")
-}
-func (v OwnedAnnotation) File() Presence[string] { return ownedMember[string](v.raw, "file") }
-func (v OwnedAnnotation) FirstLine() Presence[json.Number] {
+func (v Annotation) File() Presence[string] { return ownedMember[string](v.raw, "file") }
+func (v Annotation) FirstLine() Presence[json.Number] {
 	return ownedMember[json.Number](v.raw, "first_line")
 }
-func (v OwnedAnnotation) Index() Presence[json.Number] {
-	return ownedMember[json.Number](v.raw, "index")
-}
-func (v OwnedAnnotation) Input() Presence[any] { return ownedMember[any](v.raw, "input") }
-func (v OwnedAnnotation) LastLine() Presence[json.Number] {
+func (v Annotation) Index() Presence[json.Number] { return ownedMember[json.Number](v.raw, "index") }
+func (v Annotation) Input() Presence[any]         { return ownedMember[any](v.raw, "input") }
+func (v Annotation) LastLine() Presence[json.Number] {
 	return ownedMember[json.Number](v.raw, "last_line")
 }
-func (v OwnedAnnotation) Meta() Presence[OwnedMeta] { return ownedMember[OwnedMeta](v.raw, "meta") }
-func (v OwnedAnnotation) Position() Presence[OwnedPosition] {
-	return ownedMember[OwnedPosition](v.raw, "position")
+func (v Annotation) Meta() Presence[Meta]         { return ownedMember[Meta](v.raw, "meta") }
+func (v Annotation) Position() Presence[Position] { return ownedMember[Position](v.raw, "position") }
+func (v Annotation) Schema() Presence[Version]    { return ownedMember[Version](v.raw, "schema") }
+func (v Annotation) Source() Presence[PhysicalSource] {
+	return ownedMember[PhysicalSource](v.raw, "source")
 }
-func (v OwnedAnnotation) Schema() Presence[OwnedVersion] {
-	return ownedMember[OwnedVersion](v.raw, "schema")
-}
-func (v OwnedAnnotation) Source() Presence[OwnedPhysicalSource] {
-	return ownedMember[OwnedPhysicalSource](v.raw, "source")
-}
-func (v OwnedAnnotation) Value() Presence[OwnedAnnotatedRow] {
-	return ownedMember[OwnedAnnotatedRow](v.raw, "value")
-}
+func (v Annotation) Value() Presence[AnnotatedRow] { return ownedMember[AnnotatedRow](v.raw, "value") }
 
-type OwnedAnnotationMember struct{ ownedJSON }
+type AnnotationMember struct{ ownedJSON }
 
-func (v OwnedAnnotationMember) AsAnnotationMemberAnswerId() (OwnedAnnotationMemberAnswerId, error) {
+func (v AnnotationMember) AsAnnotationMemberAnswerId() (AnnotationMemberAnswerId, error) {
 	if !(ownedHas(v.raw, "answer_id")) {
-		return OwnedAnnotationMemberAnswerId{}, errOwnedAlternative
+		return AnnotationMemberAnswerId{}, errAlternative
 	}
-	return ownedDecode[OwnedAnnotationMemberAnswerId](v.raw)
+	return ownedDecode[AnnotationMemberAnswerId](v.raw)
 }
-func (v OwnedAnnotationMember) AsAnnotationMemberFailureId() (OwnedAnnotationMemberFailureId, error) {
+func (v AnnotationMember) AsAnnotationMemberFailureId() (AnnotationMemberFailureId, error) {
 	if !(ownedHas(v.raw, "failure_id")) {
-		return OwnedAnnotationMemberFailureId{}, errOwnedAlternative
+		return AnnotationMemberFailureId{}, errAlternative
 	}
-	return ownedDecode[OwnedAnnotationMemberFailureId](v.raw)
+	return ownedDecode[AnnotationMemberFailureId](v.raw)
 }
 
-type OwnedAnnotationMemberAnswerId struct{ ownedJSON }
+type AnnotationMemberAnswerId struct{ ownedJSON }
 
-func (v OwnedAnnotationMemberAnswerId) Answer() Presence[OwnedAnswer] {
-	return ownedMember[OwnedAnswer](v.raw, "answer")
+func (v AnnotationMemberAnswerId) Answer() Presence[Answer] {
+	return ownedMember[Answer](v.raw, "answer")
 }
-func (v OwnedAnnotationMemberAnswerId) AnswerId() Presence[OwnedAnswerId] {
-	return ownedMember[OwnedAnswerId](v.raw, "answer_id")
+func (v AnnotationMemberAnswerId) AnswerId() Presence[AnswerId] {
+	return ownedMember[AnswerId](v.raw, "answer_id")
 }
-func (v OwnedAnnotationMemberAnswerId) Observations() Presence[[]OwnedObservation] {
-	return ownedMember[[]OwnedObservation](v.raw, "observations")
+func (v AnnotationMemberAnswerId) Observations() Presence[[]Observation] {
+	return ownedMember[[]Observation](v.raw, "observations")
 }
-func (v OwnedAnnotationMemberAnswerId) Question() Presence[OwnedQuestionDocument] {
-	return ownedMember[OwnedQuestionDocument](v.raw, "question")
+func (v AnnotationMemberAnswerId) Question() Presence[QuestionDocument] {
+	return ownedMember[QuestionDocument](v.raw, "question")
 }
-func (v OwnedAnnotationMemberAnswerId) QuestionSources() Presence[[]OwnedQuestionSource] {
-	return ownedMember[[]OwnedQuestionSource](v.raw, "question_sources")
+func (v AnnotationMemberAnswerId) QuestionSources() Presence[[]QuestionSource] {
+	return ownedMember[[]QuestionSource](v.raw, "question_sources")
 }
-func (v OwnedAnnotationMemberAnswerId) Request() Presence[string] {
+func (v AnnotationMemberAnswerId) Request() Presence[string] {
 	return ownedMember[string](v.raw, "request")
 }
-func (v OwnedAnnotationMemberAnswerId) Threshold() Presence[OwnedThreshold] {
-	return ownedMember[OwnedThreshold](v.raw, "threshold")
+func (v AnnotationMemberAnswerId) Threshold() Presence[Threshold] {
+	return ownedMember[Threshold](v.raw, "threshold")
 }
-func (v OwnedAnnotationMemberAnswerId) Usage() Presence[OwnedUsage] {
-	return ownedMember[OwnedUsage](v.raw, "usage")
-}
-func (v OwnedAnnotationMemberAnswerId) Value() Presence[OwnedValue] {
-	return ownedMember[OwnedValue](v.raw, "value")
-}
+func (v AnnotationMemberAnswerId) Usage() Presence[Usage] { return ownedMember[Usage](v.raw, "usage") }
+func (v AnnotationMemberAnswerId) Value() Presence[Value] { return ownedMember[Value](v.raw, "value") }
 
-type OwnedAnnotationMemberFailureId struct{ ownedJSON }
+type AnnotationMemberFailureId struct{ ownedJSON }
 
-func (v OwnedAnnotationMemberFailureId) Failure() Presence[OwnedFailure] {
-	return ownedMember[OwnedFailure](v.raw, "failure")
+func (v AnnotationMemberFailureId) Failure() Presence[Failure] {
+	return ownedMember[Failure](v.raw, "failure")
 }
-func (v OwnedAnnotationMemberFailureId) FailureId() Presence[OwnedFailureId] {
-	return ownedMember[OwnedFailureId](v.raw, "failure_id")
+func (v AnnotationMemberFailureId) FailureId() Presence[FailureId] {
+	return ownedMember[FailureId](v.raw, "failure_id")
 }
-func (v OwnedAnnotationMemberFailureId) Observations() Presence[[]OwnedObservation] {
-	return ownedMember[[]OwnedObservation](v.raw, "observations")
+func (v AnnotationMemberFailureId) Observations() Presence[[]Observation] {
+	return ownedMember[[]Observation](v.raw, "observations")
 }
-func (v OwnedAnnotationMemberFailureId) Question() Presence[OwnedQuestionDocument] {
-	return ownedMember[OwnedQuestionDocument](v.raw, "question")
+func (v AnnotationMemberFailureId) Question() Presence[QuestionDocument] {
+	return ownedMember[QuestionDocument](v.raw, "question")
 }
-func (v OwnedAnnotationMemberFailureId) QuestionSources() Presence[[]OwnedQuestionSource] {
-	return ownedMember[[]OwnedQuestionSource](v.raw, "question_sources")
+func (v AnnotationMemberFailureId) QuestionSources() Presence[[]QuestionSource] {
+	return ownedMember[[]QuestionSource](v.raw, "question_sources")
 }
-func (v OwnedAnnotationMemberFailureId) Request() Presence[string] {
+func (v AnnotationMemberFailureId) Request() Presence[string] {
 	return ownedMember[string](v.raw, "request")
 }
-func (v OwnedAnnotationMemberFailureId) Threshold() Presence[OwnedThreshold] {
-	return ownedMember[OwnedThreshold](v.raw, "threshold")
+func (v AnnotationMemberFailureId) Threshold() Presence[Threshold] {
+	return ownedMember[Threshold](v.raw, "threshold")
 }
-func (v OwnedAnnotationMemberFailureId) Usage() Presence[OwnedUsage] {
-	return ownedMember[OwnedUsage](v.raw, "usage")
-}
+func (v AnnotationMemberFailureId) Usage() Presence[Usage] { return ownedMember[Usage](v.raw, "usage") }
 
-type OwnedAnnotationValue struct{ ownedJSON }
+type AnnotationValue struct{ ownedJSON }
 
-func (v OwnedAnnotationValue) AsAnnotationValueDecision() (OwnedAnnotationValueDecision, error) {
+func (v AnnotationValue) AsAnnotationValueDecision() (AnnotationValueDecision, error) {
 	if !(ownedLiteral(v.raw, "kind", "decision")) {
-		return OwnedAnnotationValueDecision{}, errOwnedAlternative
+		return AnnotationValueDecision{}, errAlternative
 	}
-	return ownedDecode[OwnedAnnotationValueDecision](v.raw)
+	return ownedDecode[AnnotationValueDecision](v.raw)
 }
-func (v OwnedAnnotationValue) AsAnnotationValueChoice() (OwnedAnnotationValueChoice, error) {
+func (v AnnotationValue) AsAnnotationValueChoice() (AnnotationValueChoice, error) {
 	if !(ownedLiteral(v.raw, "kind", "choice")) {
-		return OwnedAnnotationValueChoice{}, errOwnedAlternative
+		return AnnotationValueChoice{}, errAlternative
 	}
-	return ownedDecode[OwnedAnnotationValueChoice](v.raw)
+	return ownedDecode[AnnotationValueChoice](v.raw)
 }
-func (v OwnedAnnotationValue) AsAnnotationValueScore() (OwnedAnnotationValueScore, error) {
+func (v AnnotationValue) AsAnnotationValueScore() (AnnotationValueScore, error) {
 	if !(ownedLiteral(v.raw, "kind", "score")) {
-		return OwnedAnnotationValueScore{}, errOwnedAlternative
+		return AnnotationValueScore{}, errAlternative
 	}
-	return ownedDecode[OwnedAnnotationValueScore](v.raw)
+	return ownedDecode[AnnotationValueScore](v.raw)
 }
-func (v OwnedAnnotationValue) AsAnnotationValueTags() (OwnedAnnotationValueTags, error) {
+func (v AnnotationValue) AsAnnotationValueTags() (AnnotationValueTags, error) {
 	if !(ownedLiteral(v.raw, "kind", "tags")) {
-		return OwnedAnnotationValueTags{}, errOwnedAlternative
+		return AnnotationValueTags{}, errAlternative
 	}
-	return ownedDecode[OwnedAnnotationValueTags](v.raw)
+	return ownedDecode[AnnotationValueTags](v.raw)
 }
-func (v OwnedAnnotationValue) AsAnnotationValueFailed() (OwnedAnnotationValueFailed, error) {
+func (v AnnotationValue) AsAnnotationValueFailed() (AnnotationValueFailed, error) {
 	if !(ownedLiteral(v.raw, "kind", "failed")) {
-		return OwnedAnnotationValueFailed{}, errOwnedAlternative
+		return AnnotationValueFailed{}, errAlternative
 	}
-	return ownedDecode[OwnedAnnotationValueFailed](v.raw)
+	return ownedDecode[AnnotationValueFailed](v.raw)
 }
 
-type OwnedAnnotationValueChoice struct{ ownedJSON }
+type AnnotationValueChoice struct{ ownedJSON }
 
-func (v OwnedAnnotationValueChoice) Kind() Presence[string] {
-	return ownedMember[string](v.raw, "kind")
-}
-func (v OwnedAnnotationValueChoice) Value() Presence[string] {
-	return ownedMember[string](v.raw, "value")
-}
+func (v AnnotationValueChoice) Kind() Presence[string]  { return ownedMember[string](v.raw, "kind") }
+func (v AnnotationValueChoice) Value() Presence[string] { return ownedMember[string](v.raw, "value") }
 
-type OwnedAnnotationValueDecision struct{ ownedJSON }
+type AnnotationValueDecision struct{ ownedJSON }
 
-func (v OwnedAnnotationValueDecision) Kind() Presence[string] {
-	return ownedMember[string](v.raw, "kind")
-}
-func (v OwnedAnnotationValueDecision) Value() Presence[bool] {
-	return ownedMember[bool](v.raw, "value")
-}
+func (v AnnotationValueDecision) Kind() Presence[string] { return ownedMember[string](v.raw, "kind") }
+func (v AnnotationValueDecision) Value() Presence[bool]  { return ownedMember[bool](v.raw, "value") }
 
-type OwnedAnnotationValueFailed struct{ ownedJSON }
+type AnnotationValueFailed struct{ ownedJSON }
 
-func (v OwnedAnnotationValueFailed) Kind() Presence[string] {
-	return ownedMember[string](v.raw, "kind")
-}
-func (v OwnedAnnotationValueFailed) Value() Presence[OwnedFailure] {
-	return ownedMember[OwnedFailure](v.raw, "value")
-}
+func (v AnnotationValueFailed) Kind() Presence[string]   { return ownedMember[string](v.raw, "kind") }
+func (v AnnotationValueFailed) Value() Presence[Failure] { return ownedMember[Failure](v.raw, "value") }
 
-type OwnedAnnotationValueScore struct{ ownedJSON }
+type AnnotationValueScore struct{ ownedJSON }
 
-func (v OwnedAnnotationValueScore) Kind() Presence[string] { return ownedMember[string](v.raw, "kind") }
-func (v OwnedAnnotationValueScore) Value() Presence[json.Number] {
+func (v AnnotationValueScore) Kind() Presence[string] { return ownedMember[string](v.raw, "kind") }
+func (v AnnotationValueScore) Value() Presence[json.Number] {
 	return ownedMember[json.Number](v.raw, "value")
 }
 
-type OwnedAnnotationValueTags struct{ ownedJSON }
+type AnnotationValueTags struct{ ownedJSON }
 
-func (v OwnedAnnotationValueTags) Kind() Presence[string] { return ownedMember[string](v.raw, "kind") }
-func (v OwnedAnnotationValueTags) Value() Presence[[]string] {
-	return ownedMember[[]string](v.raw, "value")
+func (v AnnotationValueTags) Kind() Presence[string]    { return ownedMember[string](v.raw, "kind") }
+func (v AnnotationValueTags) Value() Presence[[]string] { return ownedMember[[]string](v.raw, "value") }
+
+type AnswerId struct{ ownedJSON }
+
+func (v AnswerId) Value() (string, error) { return ownedDecode[string](v.raw) }
+
+type Answers struct{ ownedJSON }
+
+func (v Answers) Questions() Presence[[]RelationMember] {
+	return ownedMember[[]RelationMember](v.raw, "questions")
 }
 
-type OwnedAnswerId struct{ ownedJSON }
+type AtomicArrayOfString struct{ ownedJSON }
 
-func (v OwnedAnswerId) Value() (string, error) { return ownedDecode[string](v.raw) }
-
-type OwnedAnswers struct{ ownedJSON }
-
-func (v OwnedAnswers) Questions() Presence[[]OwnedRelationMember] {
-	return ownedMember[[]OwnedRelationMember](v.raw, "questions")
+func (v AtomicArrayOfString) Answer() Presence[Answer] { return ownedMember[Answer](v.raw, "answer") }
+func (v AtomicArrayOfString) AnswerId() Presence[AnswerId] {
+	return ownedMember[AnswerId](v.raw, "answer_id")
 }
-
-type OwnedAtomicArrayOfString struct{ ownedJSON }
-
-func (v OwnedAtomicArrayOfString) Answer() Presence[OwnedAnswer] {
-	return ownedMember[OwnedAnswer](v.raw, "answer")
-}
-func (v OwnedAtomicArrayOfString) AnswerId() Presence[OwnedAnswerId] {
-	return ownedMember[OwnedAnswerId](v.raw, "answer_id")
-}
-func (v OwnedAtomicArrayOfString) Images() Presence[[]OwnedImage] {
-	return ownedMember[[]OwnedImage](v.raw, "images")
-}
-func (v OwnedAtomicArrayOfString) Index() Presence[json.Number] {
+func (v AtomicArrayOfString) Images() Presence[[]Image] { return ownedMember[[]Image](v.raw, "images") }
+func (v AtomicArrayOfString) Index() Presence[json.Number] {
 	return ownedMember[json.Number](v.raw, "index")
 }
-func (v OwnedAtomicArrayOfString) Input() Presence[any] { return ownedMember[any](v.raw, "input") }
-func (v OwnedAtomicArrayOfString) Members() Presence[[]OwnedRankMember] {
-	return ownedMember[[]OwnedRankMember](v.raw, "members")
+func (v AtomicArrayOfString) Input() Presence[any] { return ownedMember[any](v.raw, "input") }
+func (v AtomicArrayOfString) Members() Presence[[]RankMember] {
+	return ownedMember[[]RankMember](v.raw, "members")
 }
-func (v OwnedAtomicArrayOfString) Meta() Presence[OwnedMeta] {
-	return ownedMember[OwnedMeta](v.raw, "meta")
+func (v AtomicArrayOfString) Meta() Presence[Meta] { return ownedMember[Meta](v.raw, "meta") }
+func (v AtomicArrayOfString) Question() Presence[QuestionDocument] {
+	return ownedMember[QuestionDocument](v.raw, "question")
 }
-func (v OwnedAtomicArrayOfString) Question() Presence[OwnedQuestionDocument] {
-	return ownedMember[OwnedQuestionDocument](v.raw, "question")
-}
-func (v OwnedAtomicArrayOfString) QuestionName() Presence[string] {
+func (v AtomicArrayOfString) QuestionName() Presence[string] {
 	return ownedMember[string](v.raw, "question_name")
 }
-func (v OwnedAtomicArrayOfString) Schema() Presence[OwnedVersion] {
-	return ownedMember[OwnedVersion](v.raw, "schema")
+func (v AtomicArrayOfString) Schema() Presence[Version] { return ownedMember[Version](v.raw, "schema") }
+func (v AtomicArrayOfString) Source() Presence[PhysicalSource] {
+	return ownedMember[PhysicalSource](v.raw, "source")
 }
-func (v OwnedAtomicArrayOfString) Source() Presence[OwnedPhysicalSource] {
-	return ownedMember[OwnedPhysicalSource](v.raw, "source")
+func (v AtomicArrayOfString) Threshold() Presence[Threshold] {
+	return ownedMember[Threshold](v.raw, "threshold")
 }
-func (v OwnedAtomicArrayOfString) Threshold() Presence[OwnedThreshold] {
-	return ownedMember[OwnedThreshold](v.raw, "threshold")
-}
-func (v OwnedAtomicArrayOfString) Value() Presence[[]string] {
-	return ownedMember[[]string](v.raw, "value")
-}
+func (v AtomicArrayOfString) Value() Presence[[]string] { return ownedMember[[]string](v.raw, "value") }
 
-type OwnedAtomicDecideValue struct{ ownedJSON }
+type AtomicDecideValue struct{ ownedJSON }
 
-func (v OwnedAtomicDecideValue) Answer() Presence[OwnedAnswer] {
-	return ownedMember[OwnedAnswer](v.raw, "answer")
+func (v AtomicDecideValue) Answer() Presence[Answer] { return ownedMember[Answer](v.raw, "answer") }
+func (v AtomicDecideValue) AnswerId() Presence[AnswerId] {
+	return ownedMember[AnswerId](v.raw, "answer_id")
 }
-func (v OwnedAtomicDecideValue) AnswerId() Presence[OwnedAnswerId] {
-	return ownedMember[OwnedAnswerId](v.raw, "answer_id")
-}
-func (v OwnedAtomicDecideValue) Images() Presence[[]OwnedImage] {
-	return ownedMember[[]OwnedImage](v.raw, "images")
-}
-func (v OwnedAtomicDecideValue) Index() Presence[json.Number] {
+func (v AtomicDecideValue) Images() Presence[[]Image] { return ownedMember[[]Image](v.raw, "images") }
+func (v AtomicDecideValue) Index() Presence[json.Number] {
 	return ownedMember[json.Number](v.raw, "index")
 }
-func (v OwnedAtomicDecideValue) Input() Presence[any] { return ownedMember[any](v.raw, "input") }
-func (v OwnedAtomicDecideValue) Members() Presence[[]OwnedRankMember] {
-	return ownedMember[[]OwnedRankMember](v.raw, "members")
+func (v AtomicDecideValue) Input() Presence[any] { return ownedMember[any](v.raw, "input") }
+func (v AtomicDecideValue) Members() Presence[[]RankMember] {
+	return ownedMember[[]RankMember](v.raw, "members")
 }
-func (v OwnedAtomicDecideValue) Meta() Presence[OwnedMeta] {
-	return ownedMember[OwnedMeta](v.raw, "meta")
+func (v AtomicDecideValue) Meta() Presence[Meta] { return ownedMember[Meta](v.raw, "meta") }
+func (v AtomicDecideValue) Question() Presence[QuestionDocument] {
+	return ownedMember[QuestionDocument](v.raw, "question")
 }
-func (v OwnedAtomicDecideValue) Question() Presence[OwnedQuestionDocument] {
-	return ownedMember[OwnedQuestionDocument](v.raw, "question")
-}
-func (v OwnedAtomicDecideValue) QuestionName() Presence[string] {
+func (v AtomicDecideValue) QuestionName() Presence[string] {
 	return ownedMember[string](v.raw, "question_name")
 }
-func (v OwnedAtomicDecideValue) Schema() Presence[OwnedVersion] {
-	return ownedMember[OwnedVersion](v.raw, "schema")
+func (v AtomicDecideValue) Schema() Presence[Version] { return ownedMember[Version](v.raw, "schema") }
+func (v AtomicDecideValue) Source() Presence[PhysicalSource] {
+	return ownedMember[PhysicalSource](v.raw, "source")
 }
-func (v OwnedAtomicDecideValue) Source() Presence[OwnedPhysicalSource] {
-	return ownedMember[OwnedPhysicalSource](v.raw, "source")
+func (v AtomicDecideValue) Threshold() Presence[Threshold] {
+	return ownedMember[Threshold](v.raw, "threshold")
 }
-func (v OwnedAtomicDecideValue) Threshold() Presence[OwnedThreshold] {
-	return ownedMember[OwnedThreshold](v.raw, "threshold")
-}
-func (v OwnedAtomicDecideValue) Value() Presence[OwnedDecideValue] {
-	return ownedMember[OwnedDecideValue](v.raw, "value")
+func (v AtomicDecideValue) Value() Presence[DecideValue] {
+	return ownedMember[DecideValue](v.raw, "value")
 }
 
-type OwnedAtomicNonZeroUsize struct{ ownedJSON }
+type AtomicNonZeroUsize struct{ ownedJSON }
 
-func (v OwnedAtomicNonZeroUsize) Answer() Presence[OwnedAnswer] {
-	return ownedMember[OwnedAnswer](v.raw, "answer")
+func (v AtomicNonZeroUsize) Answer() Presence[Answer] { return ownedMember[Answer](v.raw, "answer") }
+func (v AtomicNonZeroUsize) AnswerId() Presence[AnswerId] {
+	return ownedMember[AnswerId](v.raw, "answer_id")
 }
-func (v OwnedAtomicNonZeroUsize) AnswerId() Presence[OwnedAnswerId] {
-	return ownedMember[OwnedAnswerId](v.raw, "answer_id")
-}
-func (v OwnedAtomicNonZeroUsize) Images() Presence[[]OwnedImage] {
-	return ownedMember[[]OwnedImage](v.raw, "images")
-}
-func (v OwnedAtomicNonZeroUsize) Index() Presence[json.Number] {
+func (v AtomicNonZeroUsize) Images() Presence[[]Image] { return ownedMember[[]Image](v.raw, "images") }
+func (v AtomicNonZeroUsize) Index() Presence[json.Number] {
 	return ownedMember[json.Number](v.raw, "index")
 }
-func (v OwnedAtomicNonZeroUsize) Input() Presence[any] { return ownedMember[any](v.raw, "input") }
-func (v OwnedAtomicNonZeroUsize) Members() Presence[[]OwnedRankMember] {
-	return ownedMember[[]OwnedRankMember](v.raw, "members")
+func (v AtomicNonZeroUsize) Input() Presence[any] { return ownedMember[any](v.raw, "input") }
+func (v AtomicNonZeroUsize) Members() Presence[[]RankMember] {
+	return ownedMember[[]RankMember](v.raw, "members")
 }
-func (v OwnedAtomicNonZeroUsize) Meta() Presence[OwnedMeta] {
-	return ownedMember[OwnedMeta](v.raw, "meta")
+func (v AtomicNonZeroUsize) Meta() Presence[Meta] { return ownedMember[Meta](v.raw, "meta") }
+func (v AtomicNonZeroUsize) Question() Presence[QuestionDocument] {
+	return ownedMember[QuestionDocument](v.raw, "question")
 }
-func (v OwnedAtomicNonZeroUsize) Question() Presence[OwnedQuestionDocument] {
-	return ownedMember[OwnedQuestionDocument](v.raw, "question")
-}
-func (v OwnedAtomicNonZeroUsize) QuestionName() Presence[string] {
+func (v AtomicNonZeroUsize) QuestionName() Presence[string] {
 	return ownedMember[string](v.raw, "question_name")
 }
-func (v OwnedAtomicNonZeroUsize) Schema() Presence[OwnedVersion] {
-	return ownedMember[OwnedVersion](v.raw, "schema")
+func (v AtomicNonZeroUsize) Schema() Presence[Version] { return ownedMember[Version](v.raw, "schema") }
+func (v AtomicNonZeroUsize) Source() Presence[PhysicalSource] {
+	return ownedMember[PhysicalSource](v.raw, "source")
 }
-func (v OwnedAtomicNonZeroUsize) Source() Presence[OwnedPhysicalSource] {
-	return ownedMember[OwnedPhysicalSource](v.raw, "source")
+func (v AtomicNonZeroUsize) Threshold() Presence[Threshold] {
+	return ownedMember[Threshold](v.raw, "threshold")
 }
-func (v OwnedAtomicNonZeroUsize) Threshold() Presence[OwnedThreshold] {
-	return ownedMember[OwnedThreshold](v.raw, "threshold")
-}
-func (v OwnedAtomicNonZeroUsize) Value() Presence[json.Number] {
+func (v AtomicNonZeroUsize) Value() Presence[json.Number] {
 	return ownedMember[json.Number](v.raw, "value")
 }
 
-type OwnedAtomicNullableString struct{ ownedJSON }
+type AtomicNullableString struct{ ownedJSON }
 
-func (v OwnedAtomicNullableString) Answer() Presence[OwnedAnswer] {
-	return ownedMember[OwnedAnswer](v.raw, "answer")
+func (v AtomicNullableString) Answer() Presence[Answer] { return ownedMember[Answer](v.raw, "answer") }
+func (v AtomicNullableString) AnswerId() Presence[AnswerId] {
+	return ownedMember[AnswerId](v.raw, "answer_id")
 }
-func (v OwnedAtomicNullableString) AnswerId() Presence[OwnedAnswerId] {
-	return ownedMember[OwnedAnswerId](v.raw, "answer_id")
+func (v AtomicNullableString) Images() Presence[[]Image] {
+	return ownedMember[[]Image](v.raw, "images")
 }
-func (v OwnedAtomicNullableString) Images() Presence[[]OwnedImage] {
-	return ownedMember[[]OwnedImage](v.raw, "images")
-}
-func (v OwnedAtomicNullableString) Index() Presence[json.Number] {
+func (v AtomicNullableString) Index() Presence[json.Number] {
 	return ownedMember[json.Number](v.raw, "index")
 }
-func (v OwnedAtomicNullableString) Input() Presence[any] { return ownedMember[any](v.raw, "input") }
-func (v OwnedAtomicNullableString) Members() Presence[[]OwnedRankMember] {
-	return ownedMember[[]OwnedRankMember](v.raw, "members")
+func (v AtomicNullableString) Input() Presence[any] { return ownedMember[any](v.raw, "input") }
+func (v AtomicNullableString) Members() Presence[[]RankMember] {
+	return ownedMember[[]RankMember](v.raw, "members")
 }
-func (v OwnedAtomicNullableString) Meta() Presence[OwnedMeta] {
-	return ownedMember[OwnedMeta](v.raw, "meta")
+func (v AtomicNullableString) Meta() Presence[Meta] { return ownedMember[Meta](v.raw, "meta") }
+func (v AtomicNullableString) Question() Presence[QuestionDocument] {
+	return ownedMember[QuestionDocument](v.raw, "question")
 }
-func (v OwnedAtomicNullableString) Question() Presence[OwnedQuestionDocument] {
-	return ownedMember[OwnedQuestionDocument](v.raw, "question")
-}
-func (v OwnedAtomicNullableString) QuestionName() Presence[string] {
+func (v AtomicNullableString) QuestionName() Presence[string] {
 	return ownedMember[string](v.raw, "question_name")
 }
-func (v OwnedAtomicNullableString) Schema() Presence[OwnedVersion] {
-	return ownedMember[OwnedVersion](v.raw, "schema")
+func (v AtomicNullableString) Schema() Presence[Version] {
+	return ownedMember[Version](v.raw, "schema")
 }
-func (v OwnedAtomicNullableString) Source() Presence[OwnedPhysicalSource] {
-	return ownedMember[OwnedPhysicalSource](v.raw, "source")
+func (v AtomicNullableString) Source() Presence[PhysicalSource] {
+	return ownedMember[PhysicalSource](v.raw, "source")
 }
-func (v OwnedAtomicNullableString) Threshold() Presence[OwnedThreshold] {
-	return ownedMember[OwnedThreshold](v.raw, "threshold")
+func (v AtomicNullableString) Threshold() Presence[Threshold] {
+	return ownedMember[Threshold](v.raw, "threshold")
 }
-func (v OwnedAtomicNullableString) Value() Presence[string] {
-	return ownedMember[string](v.raw, "value")
-}
+func (v AtomicNullableString) Value() Presence[string] { return ownedMember[string](v.raw, "value") }
 
-type OwnedAtomicBoolean struct{ ownedJSON }
+type AtomicBoolean struct{ ownedJSON }
 
-func (v OwnedAtomicBoolean) Answer() Presence[OwnedAnswer] {
-	return ownedMember[OwnedAnswer](v.raw, "answer")
+func (v AtomicBoolean) Answer() Presence[Answer] { return ownedMember[Answer](v.raw, "answer") }
+func (v AtomicBoolean) AnswerId() Presence[AnswerId] {
+	return ownedMember[AnswerId](v.raw, "answer_id")
 }
-func (v OwnedAtomicBoolean) AnswerId() Presence[OwnedAnswerId] {
-	return ownedMember[OwnedAnswerId](v.raw, "answer_id")
+func (v AtomicBoolean) Images() Presence[[]Image]    { return ownedMember[[]Image](v.raw, "images") }
+func (v AtomicBoolean) Index() Presence[json.Number] { return ownedMember[json.Number](v.raw, "index") }
+func (v AtomicBoolean) Input() Presence[any]         { return ownedMember[any](v.raw, "input") }
+func (v AtomicBoolean) Members() Presence[[]RankMember] {
+	return ownedMember[[]RankMember](v.raw, "members")
 }
-func (v OwnedAtomicBoolean) Images() Presence[[]OwnedImage] {
-	return ownedMember[[]OwnedImage](v.raw, "images")
+func (v AtomicBoolean) Meta() Presence[Meta] { return ownedMember[Meta](v.raw, "meta") }
+func (v AtomicBoolean) Question() Presence[QuestionDocument] {
+	return ownedMember[QuestionDocument](v.raw, "question")
 }
-func (v OwnedAtomicBoolean) Index() Presence[json.Number] {
-	return ownedMember[json.Number](v.raw, "index")
-}
-func (v OwnedAtomicBoolean) Input() Presence[any] { return ownedMember[any](v.raw, "input") }
-func (v OwnedAtomicBoolean) Members() Presence[[]OwnedRankMember] {
-	return ownedMember[[]OwnedRankMember](v.raw, "members")
-}
-func (v OwnedAtomicBoolean) Meta() Presence[OwnedMeta] { return ownedMember[OwnedMeta](v.raw, "meta") }
-func (v OwnedAtomicBoolean) Question() Presence[OwnedQuestionDocument] {
-	return ownedMember[OwnedQuestionDocument](v.raw, "question")
-}
-func (v OwnedAtomicBoolean) QuestionName() Presence[string] {
+func (v AtomicBoolean) QuestionName() Presence[string] {
 	return ownedMember[string](v.raw, "question_name")
 }
-func (v OwnedAtomicBoolean) Schema() Presence[OwnedVersion] {
-	return ownedMember[OwnedVersion](v.raw, "schema")
+func (v AtomicBoolean) Schema() Presence[Version] { return ownedMember[Version](v.raw, "schema") }
+func (v AtomicBoolean) Source() Presence[PhysicalSource] {
+	return ownedMember[PhysicalSource](v.raw, "source")
 }
-func (v OwnedAtomicBoolean) Source() Presence[OwnedPhysicalSource] {
-	return ownedMember[OwnedPhysicalSource](v.raw, "source")
+func (v AtomicBoolean) Threshold() Presence[Threshold] {
+	return ownedMember[Threshold](v.raw, "threshold")
 }
-func (v OwnedAtomicBoolean) Threshold() Presence[OwnedThreshold] {
-	return ownedMember[OwnedThreshold](v.raw, "threshold")
-}
-func (v OwnedAtomicBoolean) Value() Presence[bool] { return ownedMember[bool](v.raw, "value") }
+func (v AtomicBoolean) Value() Presence[bool] { return ownedMember[bool](v.raw, "value") }
 
-type OwnedAtomicDouble struct{ ownedJSON }
+type AtomicDouble struct{ ownedJSON }
 
-func (v OwnedAtomicDouble) Answer() Presence[OwnedAnswer] {
-	return ownedMember[OwnedAnswer](v.raw, "answer")
+func (v AtomicDouble) Answer() Presence[Answer]     { return ownedMember[Answer](v.raw, "answer") }
+func (v AtomicDouble) AnswerId() Presence[AnswerId] { return ownedMember[AnswerId](v.raw, "answer_id") }
+func (v AtomicDouble) Images() Presence[[]Image]    { return ownedMember[[]Image](v.raw, "images") }
+func (v AtomicDouble) Index() Presence[json.Number] { return ownedMember[json.Number](v.raw, "index") }
+func (v AtomicDouble) Input() Presence[any]         { return ownedMember[any](v.raw, "input") }
+func (v AtomicDouble) Members() Presence[[]RankMember] {
+	return ownedMember[[]RankMember](v.raw, "members")
 }
-func (v OwnedAtomicDouble) AnswerId() Presence[OwnedAnswerId] {
-	return ownedMember[OwnedAnswerId](v.raw, "answer_id")
+func (v AtomicDouble) Meta() Presence[Meta] { return ownedMember[Meta](v.raw, "meta") }
+func (v AtomicDouble) Question() Presence[QuestionDocument] {
+	return ownedMember[QuestionDocument](v.raw, "question")
 }
-func (v OwnedAtomicDouble) Images() Presence[[]OwnedImage] {
-	return ownedMember[[]OwnedImage](v.raw, "images")
-}
-func (v OwnedAtomicDouble) Index() Presence[json.Number] {
-	return ownedMember[json.Number](v.raw, "index")
-}
-func (v OwnedAtomicDouble) Input() Presence[any] { return ownedMember[any](v.raw, "input") }
-func (v OwnedAtomicDouble) Members() Presence[[]OwnedRankMember] {
-	return ownedMember[[]OwnedRankMember](v.raw, "members")
-}
-func (v OwnedAtomicDouble) Meta() Presence[OwnedMeta] { return ownedMember[OwnedMeta](v.raw, "meta") }
-func (v OwnedAtomicDouble) Question() Presence[OwnedQuestionDocument] {
-	return ownedMember[OwnedQuestionDocument](v.raw, "question")
-}
-func (v OwnedAtomicDouble) QuestionName() Presence[string] {
+func (v AtomicDouble) QuestionName() Presence[string] {
 	return ownedMember[string](v.raw, "question_name")
 }
-func (v OwnedAtomicDouble) Schema() Presence[OwnedVersion] {
-	return ownedMember[OwnedVersion](v.raw, "schema")
+func (v AtomicDouble) Schema() Presence[Version] { return ownedMember[Version](v.raw, "schema") }
+func (v AtomicDouble) Source() Presence[PhysicalSource] {
+	return ownedMember[PhysicalSource](v.raw, "source")
 }
-func (v OwnedAtomicDouble) Source() Presence[OwnedPhysicalSource] {
-	return ownedMember[OwnedPhysicalSource](v.raw, "source")
+func (v AtomicDouble) Threshold() Presence[Threshold] {
+	return ownedMember[Threshold](v.raw, "threshold")
 }
-func (v OwnedAtomicDouble) Threshold() Presence[OwnedThreshold] {
-	return ownedMember[OwnedThreshold](v.raw, "threshold")
-}
-func (v OwnedAtomicDouble) Value() Presence[json.Number] {
-	return ownedMember[json.Number](v.raw, "value")
-}
+func (v AtomicDouble) Value() Presence[json.Number] { return ownedMember[json.Number](v.raw, "value") }
 
-type OwnedAttempt struct{ ownedJSON }
+type Attempt struct{ ownedJSON }
 
-func (v OwnedAttempt) Ordinal() Presence[json.Number] {
-	return ownedMember[json.Number](v.raw, "ordinal")
+func (v Attempt) Ordinal() Presence[json.Number] { return ownedMember[json.Number](v.raw, "ordinal") }
+func (v Attempt) Outcome() Presence[AttemptOutcome] {
+	return ownedMember[AttemptOutcome](v.raw, "outcome")
 }
-func (v OwnedAttempt) Outcome() Presence[OwnedAttemptOutcome] {
-	return ownedMember[OwnedAttemptOutcome](v.raw, "outcome")
-}
-func (v OwnedAttempt) RequestId() Presence[string] { return ownedMember[string](v.raw, "request_id") }
-func (v OwnedAttempt) RequestSha256() Presence[string] {
+func (v Attempt) RequestId() Presence[string] { return ownedMember[string](v.raw, "request_id") }
+func (v Attempt) RequestSha256() Presence[string] {
 	return ownedMember[string](v.raw, "request_sha256")
 }
-func (v OwnedAttempt) SdkRequestId() Presence[OwnedSdkRequestId] {
-	return ownedMember[OwnedSdkRequestId](v.raw, "sdk_request_id")
+func (v Attempt) SdkRequestId() Presence[SdkRequestId] {
+	return ownedMember[SdkRequestId](v.raw, "sdk_request_id")
 }
-func (v OwnedAttempt) ServerMs() Presence[json.Number] {
+func (v Attempt) ServerMs() Presence[json.Number] {
 	return ownedMember[json.Number](v.raw, "server_ms")
 }
-func (v OwnedAttempt) Status() Presence[json.Number] {
-	return ownedMember[json.Number](v.raw, "status")
+func (v Attempt) Status() Presence[json.Number] { return ownedMember[json.Number](v.raw, "status") }
+func (v Attempt) WallMs() Presence[json.Number] { return ownedMember[json.Number](v.raw, "wall_ms") }
+
+type Batch struct{ ownedJSON }
+type BoundaryMode struct{ ownedJSON }
+
+func (v BoundaryMode) Value() (string, error) { return ownedDecode[string](v.raw) }
+
+type BoundaryOdds struct{ ownedJSON }
+
+func (v BoundaryOdds) Pieces() Presence[[]PieceOdds] {
+	return ownedMember[[]PieceOdds](v.raw, "pieces")
 }
-func (v OwnedAttempt) WallMs() Presence[json.Number] {
-	return ownedMember[json.Number](v.raw, "wall_ms")
-}
-
-type OwnedBatch struct{ ownedJSON }
-type OwnedBoundaryMode struct{ ownedJSON }
-
-func (v OwnedBoundaryMode) Value() (string, error) { return ownedDecode[string](v.raw) }
-
-type OwnedBoundaryOdds struct{ ownedJSON }
-
-func (v OwnedBoundaryOdds) Pieces() Presence[[]OwnedPieceOdds] {
-	return ownedMember[[]OwnedPieceOdds](v.raw, "pieces")
-}
-func (v OwnedBoundaryOdds) Proposals() Presence[[]OwnedBoundaryProposal] {
-	return ownedMember[[]OwnedBoundaryProposal](v.raw, "proposals")
+func (v BoundaryOdds) Proposals() Presence[[]BoundaryProposal] {
+	return ownedMember[[]BoundaryProposal](v.raw, "proposals")
 }
 
-type OwnedBoundaryProposal struct{ ownedJSON }
+type BoundaryProposal struct{ ownedJSON }
 
-func (v OwnedBoundaryProposal) End() Presence[json.Number] {
-	return ownedMember[json.Number](v.raw, "end")
-}
-func (v OwnedBoundaryProposal) Length() Presence[json.Number] {
+func (v BoundaryProposal) End() Presence[json.Number] { return ownedMember[json.Number](v.raw, "end") }
+func (v BoundaryProposal) Length() Presence[json.Number] {
 	return ownedMember[json.Number](v.raw, "length")
 }
-func (v OwnedBoundaryProposal) Probability() Presence[json.Number] {
+func (v BoundaryProposal) Probability() Presence[json.Number] {
 	return ownedMember[json.Number](v.raw, "probability")
 }
-func (v OwnedBoundaryProposal) Start() Presence[json.Number] {
+func (v BoundaryProposal) Start() Presence[json.Number] {
 	return ownedMember[json.Number](v.raw, "start")
 }
-func (v OwnedBoundaryProposal) Text() Presence[string] { return ownedMember[string](v.raw, "text") }
+func (v BoundaryProposal) Text() Presence[string] { return ownedMember[string](v.raw, "text") }
 
-type OwnedCallError struct{ ownedJSON }
+type CallError struct{ ownedJSON }
 
-func (v OwnedCallError) Error() Presence[OwnedError] { return ownedMember[OwnedError](v.raw, "error") }
-func (v OwnedCallError) Facts() Presence[OwnedFacts] { return ownedMember[OwnedFacts](v.raw, "facts") }
+func (v CallError) Error() Presence[FailureDetail] { return ownedMember[FailureDetail](v.raw, "error") }
+func (v CallError) Facts() Presence[Facts]         { return ownedMember[Facts](v.raw, "facts") }
 
-type OwnedCallId struct{ ownedJSON }
+type CallId struct{ ownedJSON }
 
-func (v OwnedCallId) Value() (string, error) { return ownedDecode[string](v.raw) }
+func (v CallId) Value() (string, error) { return ownedDecode[string](v.raw) }
 
-type OwnedDecideValue struct{ ownedJSON }
-type OwnedEntityDocument struct{ ownedJSON }
+type DecideValue struct{ ownedJSON }
+type EntityDocument struct{ ownedJSON }
 
-func (v OwnedEntityDocument) Kind() Presence[string] { return ownedMember[string](v.raw, "kind") }
-func (v OwnedEntityDocument) Name() Presence[string] { return ownedMember[string](v.raw, "name") }
+func (v EntityDocument) Kind() Presence[string] { return ownedMember[string](v.raw, "kind") }
+func (v EntityDocument) Name() Presence[string] { return ownedMember[string](v.raw, "name") }
 
-type OwnedError struct{ ownedJSON }
+type FailureDetail struct{ ownedJSON }
 
-func (v OwnedError) EstimatedInputDenial() Presence[OwnedEstimatedInputDenial] {
-	return ownedMember[OwnedEstimatedInputDenial](v.raw, "estimated_input_denial")
+func (v FailureDetail) EstimatedInputDenial() Presence[EstimatedInputDenial] {
+	return ownedMember[EstimatedInputDenial](v.raw, "estimated_input_denial")
 }
-func (v OwnedError) Kind() Presence[OwnedFailureKind] {
-	return ownedMember[OwnedFailureKind](v.raw, "kind")
+func (v FailureDetail) Kind() Presence[FailureKind] { return ownedMember[FailureKind](v.raw, "kind") }
+func (v FailureDetail) Message() Presence[string]   { return ownedMember[string](v.raw, "message") }
+func (v FailureDetail) Retryable() Presence[bool]   { return ownedMember[bool](v.raw, "retryable") }
+func (v FailureDetail) SendBudgetDenial() Presence[SendBudgetDenial] {
+	return ownedMember[SendBudgetDenial](v.raw, "send_budget_denial")
 }
-func (v OwnedError) Message() Presence[string] { return ownedMember[string](v.raw, "message") }
-func (v OwnedError) Retryable() Presence[bool] { return ownedMember[bool](v.raw, "retryable") }
-func (v OwnedError) SendBudgetDenial() Presence[OwnedSendBudgetDenial] {
-	return ownedMember[OwnedSendBudgetDenial](v.raw, "send_budget_denial")
-}
-func (v OwnedError) Stopped() Presence[OwnedStopped] {
-	return ownedMember[OwnedStopped](v.raw, "stopped")
-}
+func (v FailureDetail) Stopped() Presence[Stopped] { return ownedMember[Stopped](v.raw, "stopped") }
 
-type OwnedEstimatedInputDenial struct{ ownedJSON }
+type EstimatedInputDenial struct{ ownedJSON }
 
-func (v OwnedEstimatedInputDenial) AsEstimatedInputDenialInitialRequest() (OwnedEstimatedInputDenialInitialRequest, error) {
+func (v EstimatedInputDenial) AsEstimatedInputDenialInitialRequest() (EstimatedInputDenialInitialRequest, error) {
 	if !(ownedLiteral(v.raw, "kind", "initial_request")) {
-		return OwnedEstimatedInputDenialInitialRequest{}, errOwnedAlternative
+		return EstimatedInputDenialInitialRequest{}, errAlternative
 	}
-	return ownedDecode[OwnedEstimatedInputDenialInitialRequest](v.raw)
+	return ownedDecode[EstimatedInputDenialInitialRequest](v.raw)
 }
-func (v OwnedEstimatedInputDenial) AsEstimatedInputDenialAdditionalRequest() (OwnedEstimatedInputDenialAdditionalRequest, error) {
+func (v EstimatedInputDenial) AsEstimatedInputDenialAdditionalRequest() (EstimatedInputDenialAdditionalRequest, error) {
 	if !(ownedLiteral(v.raw, "kind", "additional_request")) {
-		return OwnedEstimatedInputDenialAdditionalRequest{}, errOwnedAlternative
+		return EstimatedInputDenialAdditionalRequest{}, errAlternative
 	}
-	return ownedDecode[OwnedEstimatedInputDenialAdditionalRequest](v.raw)
+	return ownedDecode[EstimatedInputDenialAdditionalRequest](v.raw)
 }
-func (v OwnedEstimatedInputDenial) AsEstimatedInputDenialRetry() (OwnedEstimatedInputDenialRetry, error) {
+func (v EstimatedInputDenial) AsEstimatedInputDenialRetry() (EstimatedInputDenialRetry, error) {
 	if !(ownedLiteral(v.raw, "kind", "retry")) {
-		return OwnedEstimatedInputDenialRetry{}, errOwnedAlternative
+		return EstimatedInputDenialRetry{}, errAlternative
 	}
-	return ownedDecode[OwnedEstimatedInputDenialRetry](v.raw)
+	return ownedDecode[EstimatedInputDenialRetry](v.raw)
 }
 
-type OwnedEstimatedInputDenialAdditionalRequest struct{ ownedJSON }
+type EstimatedInputDenialAdditionalRequest struct{ ownedJSON }
 
-func (v OwnedEstimatedInputDenialAdditionalRequest) Kind() Presence[string] {
+func (v EstimatedInputDenialAdditionalRequest) Kind() Presence[string] {
 	return ownedMember[string](v.raw, "kind")
 }
-func (v OwnedEstimatedInputDenialAdditionalRequest) Limit() Presence[json.Number] {
+func (v EstimatedInputDenialAdditionalRequest) Limit() Presence[json.Number] {
 	return ownedMember[json.Number](v.raw, "limit")
 }
 
-type OwnedEstimatedInputDenialInitialRequest struct{ ownedJSON }
+type EstimatedInputDenialInitialRequest struct{ ownedJSON }
 
-func (v OwnedEstimatedInputDenialInitialRequest) Kind() Presence[string] {
+func (v EstimatedInputDenialInitialRequest) Kind() Presence[string] {
 	return ownedMember[string](v.raw, "kind")
 }
-func (v OwnedEstimatedInputDenialInitialRequest) Limit() Presence[json.Number] {
+func (v EstimatedInputDenialInitialRequest) Limit() Presence[json.Number] {
 	return ownedMember[json.Number](v.raw, "limit")
 }
 
-type OwnedEstimatedInputDenialRetry struct{ ownedJSON }
+type EstimatedInputDenialRetry struct{ ownedJSON }
 
-func (v OwnedEstimatedInputDenialRetry) Kind() Presence[string] {
-	return ownedMember[string](v.raw, "kind")
-}
-func (v OwnedEstimatedInputDenialRetry) LastStatus() Presence[json.Number] {
+func (v EstimatedInputDenialRetry) Kind() Presence[string] { return ownedMember[string](v.raw, "kind") }
+func (v EstimatedInputDenialRetry) LastStatus() Presence[json.Number] {
 	return ownedMember[json.Number](v.raw, "last_status")
 }
-func (v OwnedEstimatedInputDenialRetry) Limit() Presence[json.Number] {
+func (v EstimatedInputDenialRetry) Limit() Presence[json.Number] {
 	return ownedMember[json.Number](v.raw, "limit")
 }
 
-type OwnedFacts struct{ ownedJSON }
+type Facts struct{ ownedJSON }
 
-func (v OwnedFacts) Attempts() Presence[[]OwnedAttempt] {
-	return ownedMember[[]OwnedAttempt](v.raw, "attempts")
-}
-func (v OwnedFacts) CacheAnswers() Presence[json.Number] {
+func (v Facts) Attempts() Presence[[]Attempt] { return ownedMember[[]Attempt](v.raw, "attempts") }
+func (v Facts) CacheAnswers() Presence[json.Number] {
 	return ownedMember[json.Number](v.raw, "cache_answers")
 }
-func (v OwnedFacts) CallId() Presence[OwnedCallId] { return ownedMember[OwnedCallId](v.raw, "call_id") }
-func (v OwnedFacts) EstimatedCostUsd() Presence[string] {
+func (v Facts) CallId() Presence[CallId] { return ownedMember[CallId](v.raw, "call_id") }
+func (v Facts) EstimatedCostUsd() Presence[string] {
 	return ownedMember[string](v.raw, "estimated_cost_usd")
 }
-func (v OwnedFacts) HeldModelMismatch() Presence[bool] {
+func (v Facts) HeldModelMismatch() Presence[bool] {
 	return ownedMember[bool](v.raw, "held_model_mismatch")
 }
-func (v OwnedFacts) InputTokens() Presence[json.Number] {
+func (v Facts) InputTokens() Presence[json.Number] {
 	return ownedMember[json.Number](v.raw, "input_tokens")
 }
-func (v OwnedFacts) LargestRequestBytes() Presence[json.Number] {
+func (v Facts) LargestRequestBytes() Presence[json.Number] {
 	return ownedMember[json.Number](v.raw, "largest_request_bytes")
 }
-func (v OwnedFacts) LargestRequestEstimatedInputTokens() Presence[json.Number] {
+func (v Facts) LargestRequestEstimatedInputTokens() Presence[json.Number] {
 	return ownedMember[json.Number](v.raw, "largest_request_estimated_input_tokens")
 }
-func (v OwnedFacts) Model() Presence[string] { return ownedMember[string](v.raw, "model") }
-func (v OwnedFacts) OutputTokens() Presence[json.Number] {
+func (v Facts) Model() Presence[string] { return ownedMember[string](v.raw, "model") }
+func (v Facts) OutputTokens() Presence[json.Number] {
 	return ownedMember[json.Number](v.raw, "output_tokens")
 }
-func (v OwnedFacts) Records() Presence[json.Number] {
-	return ownedMember[json.Number](v.raw, "records")
-}
-func (v OwnedFacts) RequestsSent() Presence[json.Number] {
+func (v Facts) Records() Presence[json.Number] { return ownedMember[json.Number](v.raw, "records") }
+func (v Facts) RequestsSent() Presence[json.Number] {
 	return ownedMember[json.Number](v.raw, "requests_sent")
 }
-func (v OwnedFacts) Seconds() Presence[json.Number] {
-	return ownedMember[json.Number](v.raw, "seconds")
-}
-func (v OwnedFacts) TokenEstimateMethod() Presence[string] {
+func (v Facts) Seconds() Presence[json.Number] { return ownedMember[json.Number](v.raw, "seconds") }
+func (v Facts) TokenEstimateMethod() Presence[string] {
 	return ownedMember[string](v.raw, "token_estimate_method")
 }
-func (v OwnedFacts) UsagePersistence() Presence[OwnedPersistenceObservation] {
-	return ownedMember[OwnedPersistenceObservation](v.raw, "usage_persistence")
+func (v Facts) UsagePersistence() Presence[PersistenceObservation] {
+	return ownedMember[PersistenceObservation](v.raw, "usage_persistence")
 }
 
-type OwnedFailureId struct{ ownedJSON }
+type FailureId struct{ ownedJSON }
 
-func (v OwnedFailureId) Value() (string, error) { return ownedDecode[string](v.raw) }
+func (v FailureId) Value() (string, error) { return ownedDecode[string](v.raw) }
 
-type OwnedFind struct{ ownedJSON }
+type Find struct{ ownedJSON }
 
-func (v OwnedFind) Answer() Presence[OwnedFindAnswer] {
-	return ownedMember[OwnedFindAnswer](v.raw, "answer")
+func (v Find) Answer() Presence[FindAnswer] { return ownedMember[FindAnswer](v.raw, "answer") }
+func (v Find) AnswerId() Presence[AnswerId] { return ownedMember[AnswerId](v.raw, "answer_id") }
+func (v Find) Candidates() Presence[[]FindCandidate] {
+	return ownedMember[[]FindCandidate](v.raw, "candidates")
 }
-func (v OwnedFind) AnswerId() Presence[OwnedAnswerId] {
-	return ownedMember[OwnedAnswerId](v.raw, "answer_id")
+func (v Find) File() Presence[string]           { return ownedMember[string](v.raw, "file") }
+func (v Find) FirstLine() Presence[json.Number] { return ownedMember[json.Number](v.raw, "first_line") }
+func (v Find) Index() Presence[json.Number]     { return ownedMember[json.Number](v.raw, "index") }
+func (v Find) LastLine() Presence[json.Number]  { return ownedMember[json.Number](v.raw, "last_line") }
+func (v Find) Meta() Presence[Meta]             { return ownedMember[Meta](v.raw, "meta") }
+func (v Find) Position() Presence[Position]     { return ownedMember[Position](v.raw, "position") }
+func (v Find) Question() Presence[FindQuestionDocument] {
+	return ownedMember[FindQuestionDocument](v.raw, "question")
 }
-func (v OwnedFind) Candidates() Presence[[]OwnedFindCandidate] {
-	return ownedMember[[]OwnedFindCandidate](v.raw, "candidates")
-}
-func (v OwnedFind) File() Presence[string] { return ownedMember[string](v.raw, "file") }
-func (v OwnedFind) FirstLine() Presence[json.Number] {
-	return ownedMember[json.Number](v.raw, "first_line")
-}
-func (v OwnedFind) Index() Presence[json.Number] { return ownedMember[json.Number](v.raw, "index") }
-func (v OwnedFind) LastLine() Presence[json.Number] {
-	return ownedMember[json.Number](v.raw, "last_line")
-}
-func (v OwnedFind) Meta() Presence[OwnedMeta] { return ownedMember[OwnedMeta](v.raw, "meta") }
-func (v OwnedFind) Position() Presence[OwnedPosition] {
-	return ownedMember[OwnedPosition](v.raw, "position")
-}
-func (v OwnedFind) Question() Presence[OwnedFindQuestionDocument] {
-	return ownedMember[OwnedFindQuestionDocument](v.raw, "question")
-}
-func (v OwnedFind) Schema() Presence[OwnedVersion] { return ownedMember[OwnedVersion](v.raw, "schema") }
-func (v OwnedFind) Threshold() Presence[any]       { return ownedMember[any](v.raw, "threshold") }
-func (v OwnedFind) Value() Presence[any]           { return ownedMember[any](v.raw, "value") }
+func (v Find) Schema() Presence[Version] { return ownedMember[Version](v.raw, "schema") }
+func (v Find) Threshold() Presence[any]  { return ownedMember[any](v.raw, "threshold") }
+func (v Find) Value() Presence[any]      { return ownedMember[any](v.raw, "value") }
 
-type OwnedFindCandidate struct{ ownedJSON }
+type FindCandidate struct{ ownedJSON }
 
-func (v OwnedFindCandidate) Index() Presence[json.Number] {
-	return ownedMember[json.Number](v.raw, "index")
-}
-func (v OwnedFindCandidate) Input() Presence[any] { return ownedMember[any](v.raw, "input") }
-func (v OwnedFindCandidate) Probability() Presence[json.Number] {
+func (v FindCandidate) Index() Presence[json.Number] { return ownedMember[json.Number](v.raw, "index") }
+func (v FindCandidate) Input() Presence[any]         { return ownedMember[any](v.raw, "input") }
+func (v FindCandidate) Probability() Presence[json.Number] {
 	return ownedMember[json.Number](v.raw, "probability")
 }
-func (v OwnedFindCandidate) Source() Presence[OwnedPhysicalSource] {
-	return ownedMember[OwnedPhysicalSource](v.raw, "source")
+func (v FindCandidate) Source() Presence[PhysicalSource] {
+	return ownedMember[PhysicalSource](v.raw, "source")
 }
 
-type OwnedImage struct{ ownedJSON }
+type Image struct{ ownedJSON }
 
-func (v OwnedImage) Base64() Presence[string]      { return ownedMember[string](v.raw, "base64") }
-func (v OwnedImage) Height() Presence[json.Number] { return ownedMember[json.Number](v.raw, "height") }
-func (v OwnedImage) Media() Presence[OwnedImageMedia] {
-	return ownedMember[OwnedImageMedia](v.raw, "media")
+func (v Image) Base64() Presence[string]      { return ownedMember[string](v.raw, "base64") }
+func (v Image) Height() Presence[json.Number] { return ownedMember[json.Number](v.raw, "height") }
+func (v Image) Media() Presence[ResultImageMedia] {
+	return ownedMember[ResultImageMedia](v.raw, "media")
 }
-func (v OwnedImage) Width() Presence[json.Number] { return ownedMember[json.Number](v.raw, "width") }
+func (v Image) Width() Presence[json.Number] { return ownedMember[json.Number](v.raw, "width") }
 
-type OwnedImageMedia struct{ ownedJSON }
-type OwnedInputDeclaration struct{ ownedJSON }
+type ResultImageMedia struct{ ownedJSON }
+type InputDeclaration struct{ ownedJSON }
 
-func (v OwnedInputDeclaration) AsInputDeclarationStringRoot() (OwnedInputDeclarationStringRoot, error) {
+func (v InputDeclaration) AsInputDeclarationStringRoot() (InputDeclarationStringRoot, error) {
 	if !(ownedLiteral(v.raw, "type", "string")) {
-		return OwnedInputDeclarationStringRoot{}, errOwnedAlternative
+		return InputDeclarationStringRoot{}, errAlternative
 	}
-	return ownedDecode[OwnedInputDeclarationStringRoot](v.raw)
+	return ownedDecode[InputDeclarationStringRoot](v.raw)
 }
-func (v OwnedInputDeclaration) AsInputDeclarationObjectRoot() (OwnedInputDeclarationObjectRoot, error) {
+func (v InputDeclaration) AsInputDeclarationObjectRoot() (InputDeclarationObjectRoot, error) {
 	if !(ownedLiteral(v.raw, "type", "object")) {
-		return OwnedInputDeclarationObjectRoot{}, errOwnedAlternative
+		return InputDeclarationObjectRoot{}, errAlternative
 	}
-	return ownedDecode[OwnedInputDeclarationObjectRoot](v.raw)
+	return ownedDecode[InputDeclarationObjectRoot](v.raw)
 }
 
-type OwnedInputDeclarationObjectRoot struct{ ownedJSON }
+type InputDeclarationObjectRoot struct{ ownedJSON }
 
-func (v OwnedInputDeclarationObjectRoot) Properties() Presence[map[string]OwnedInputPropertyType] {
-	return ownedMember[map[string]OwnedInputPropertyType](v.raw, "properties")
+func (v InputDeclarationObjectRoot) Properties() Presence[map[string]InputPropertyType] {
+	return ownedMember[map[string]InputPropertyType](v.raw, "properties")
 }
-func (v OwnedInputDeclarationObjectRoot) Required() Presence[[]string] {
+func (v InputDeclarationObjectRoot) Required() Presence[[]string] {
 	return ownedMember[[]string](v.raw, "required")
 }
-func (v OwnedInputDeclarationObjectRoot) Type() Presence[OwnedObjectType] {
-	return ownedMember[OwnedObjectType](v.raw, "type")
+func (v InputDeclarationObjectRoot) Type() Presence[ObjectType] {
+	return ownedMember[ObjectType](v.raw, "type")
 }
 
-type OwnedInputDeclarationStringRoot struct{ ownedJSON }
+type InputDeclarationStringRoot struct{ ownedJSON }
 
-func (v OwnedInputDeclarationStringRoot) Type() Presence[OwnedStringType] {
-	return ownedMember[OwnedStringType](v.raw, "type")
+func (v InputDeclarationStringRoot) Type() Presence[StringType] {
+	return ownedMember[StringType](v.raw, "type")
 }
 
-type OwnedInputPropertyType struct{ ownedJSON }
+type InputPropertyType struct{ ownedJSON }
 
-func (v OwnedInputPropertyType) AsInputPropertyTypeString() (OwnedInputPropertyTypeString, error) {
+func (v InputPropertyType) AsInputPropertyTypeString() (InputPropertyTypeString, error) {
 	if !(ownedLiteral(v.raw, "type", "string")) {
-		return OwnedInputPropertyTypeString{}, errOwnedAlternative
+		return InputPropertyTypeString{}, errAlternative
 	}
-	return ownedDecode[OwnedInputPropertyTypeString](v.raw)
+	return ownedDecode[InputPropertyTypeString](v.raw)
 }
-func (v OwnedInputPropertyType) AsInputPropertyTypeNumber() (OwnedInputPropertyTypeNumber, error) {
+func (v InputPropertyType) AsInputPropertyTypeNumber() (InputPropertyTypeNumber, error) {
 	if !(ownedLiteral(v.raw, "type", "number")) {
-		return OwnedInputPropertyTypeNumber{}, errOwnedAlternative
+		return InputPropertyTypeNumber{}, errAlternative
 	}
-	return ownedDecode[OwnedInputPropertyTypeNumber](v.raw)
+	return ownedDecode[InputPropertyTypeNumber](v.raw)
 }
-func (v OwnedInputPropertyType) AsInputPropertyTypeBoolean() (OwnedInputPropertyTypeBoolean, error) {
+func (v InputPropertyType) AsInputPropertyTypeBoolean() (InputPropertyTypeBoolean, error) {
 	if !(ownedLiteral(v.raw, "type", "boolean")) {
-		return OwnedInputPropertyTypeBoolean{}, errOwnedAlternative
+		return InputPropertyTypeBoolean{}, errAlternative
 	}
-	return ownedDecode[OwnedInputPropertyTypeBoolean](v.raw)
+	return ownedDecode[InputPropertyTypeBoolean](v.raw)
 }
-func (v OwnedInputPropertyType) AsInputPropertyTypeArray() (OwnedInputPropertyTypeArray, error) {
+func (v InputPropertyType) AsInputPropertyTypeArray() (InputPropertyTypeArray, error) {
 	if !(ownedLiteral(v.raw, "type", "array")) {
-		return OwnedInputPropertyTypeArray{}, errOwnedAlternative
+		return InputPropertyTypeArray{}, errAlternative
 	}
-	return ownedDecode[OwnedInputPropertyTypeArray](v.raw)
+	return ownedDecode[InputPropertyTypeArray](v.raw)
 }
 
-type OwnedInputPropertyTypeArray struct{ ownedJSON }
+type InputPropertyTypeArray struct{ ownedJSON }
 
-func (v OwnedInputPropertyTypeArray) Items() Presence[OwnedStringRoot] {
-	return ownedMember[OwnedStringRoot](v.raw, "items")
+func (v InputPropertyTypeArray) Items() Presence[StringRoot] {
+	return ownedMember[StringRoot](v.raw, "items")
 }
-func (v OwnedInputPropertyTypeArray) Type() Presence[string] {
-	return ownedMember[string](v.raw, "type")
+func (v InputPropertyTypeArray) Type() Presence[string] { return ownedMember[string](v.raw, "type") }
+
+type InputPropertyTypeBoolean struct{ ownedJSON }
+
+func (v InputPropertyTypeBoolean) Type() Presence[string] { return ownedMember[string](v.raw, "type") }
+
+type InputPropertyTypeNumber struct{ ownedJSON }
+
+func (v InputPropertyTypeNumber) Type() Presence[string] { return ownedMember[string](v.raw, "type") }
+
+type InputPropertyTypeString struct{ ownedJSON }
+
+func (v InputPropertyTypeString) Type() Presence[string] { return ownedMember[string](v.raw, "type") }
+
+type Label struct{ ownedJSON }
+
+func (v Label) Description() Presence[any] { return ownedMember[any](v.raw, "description") }
+func (v Label) Name() Presence[string]     { return ownedMember[string](v.raw, "name") }
+
+type Meta struct{ ownedJSON }
+
+func (v Meta) AnsweredBy() Presence[string]  { return ownedMember[string](v.raw, "answered_by") }
+func (v Meta) Attempts() Presence[[]Attempt] { return ownedMember[[]Attempt](v.raw, "attempts") }
+func (v Meta) BatchSetting() Presence[BatchSetting] {
+	return ownedMember[BatchSetting](v.raw, "batch_setting")
 }
-
-type OwnedInputPropertyTypeBoolean struct{ ownedJSON }
-
-func (v OwnedInputPropertyTypeBoolean) Type() Presence[string] {
-	return ownedMember[string](v.raw, "type")
+func (v Meta) BatchWarning() Presence[BatchWarning] {
+	return ownedMember[BatchWarning](v.raw, "batch_warning")
 }
-
-type OwnedInputPropertyTypeNumber struct{ ownedJSON }
-
-func (v OwnedInputPropertyTypeNumber) Type() Presence[string] {
-	return ownedMember[string](v.raw, "type")
-}
-
-type OwnedInputPropertyTypeString struct{ ownedJSON }
-
-func (v OwnedInputPropertyTypeString) Type() Presence[string] {
-	return ownedMember[string](v.raw, "type")
-}
-
-type OwnedLabel struct{ ownedJSON }
-
-func (v OwnedLabel) Description() Presence[any] { return ownedMember[any](v.raw, "description") }
-func (v OwnedLabel) Name() Presence[string]     { return ownedMember[string](v.raw, "name") }
-
-type OwnedMeta struct{ ownedJSON }
-
-func (v OwnedMeta) AnsweredBy() Presence[string] { return ownedMember[string](v.raw, "answered_by") }
-func (v OwnedMeta) Attempts() Presence[[]OwnedAttempt] {
-	return ownedMember[[]OwnedAttempt](v.raw, "attempts")
-}
-func (v OwnedMeta) BatchSetting() Presence[OwnedBatchSetting] {
-	return ownedMember[OwnedBatchSetting](v.raw, "batch_setting")
-}
-func (v OwnedMeta) BatchWarning() Presence[OwnedBatchWarning] {
-	return ownedMember[OwnedBatchWarning](v.raw, "batch_warning")
-}
-func (v OwnedMeta) Cached() Presence[bool] { return ownedMember[bool](v.raw, "cached") }
-func (v OwnedMeta) ContextSha256() Presence[string] {
-	return ownedMember[string](v.raw, "context_sha256")
-}
-func (v OwnedMeta) FailedQuestions() Presence[json.Number] {
+func (v Meta) Cached() Presence[bool]          { return ownedMember[bool](v.raw, "cached") }
+func (v Meta) ContextSha256() Presence[string] { return ownedMember[string](v.raw, "context_sha256") }
+func (v Meta) FailedQuestions() Presence[json.Number] {
 	return ownedMember[json.Number](v.raw, "failed_questions")
 }
-func (v OwnedMeta) Model() Presence[string] { return ownedMember[string](v.raw, "model") }
-func (v OwnedMeta) Observations() Presence[[]OwnedObservation] {
-	return ownedMember[[]OwnedObservation](v.raw, "observations")
+func (v Meta) Model() Presence[string] { return ownedMember[string](v.raw, "model") }
+func (v Meta) Observations() Presence[[]Observation] {
+	return ownedMember[[]Observation](v.raw, "observations")
 }
-func (v OwnedMeta) Origin() Presence[OwnedOrigin] { return ownedMember[OwnedOrigin](v.raw, "origin") }
-func (v OwnedMeta) ProfileWarning() Presence[OwnedProfileWarning] {
-	return ownedMember[OwnedProfileWarning](v.raw, "profile_warning")
+func (v Meta) Origin() Presence[Origin] { return ownedMember[Origin](v.raw, "origin") }
+func (v Meta) ProfileWarning() Presence[ProfileWarning] {
+	return ownedMember[ProfileWarning](v.raw, "profile_warning")
 }
-func (v OwnedMeta) QuestionSha256() Presence[string] {
-	return ownedMember[string](v.raw, "question_sha256")
+func (v Meta) QuestionSha256() Presence[string] { return ownedMember[string](v.raw, "question_sha256") }
+func (v Meta) QuestionSources() Presence[[]QuestionSource] {
+	return ownedMember[[]QuestionSource](v.raw, "question_sources")
 }
-func (v OwnedMeta) QuestionSources() Presence[[]OwnedQuestionSource] {
-	return ownedMember[[]OwnedQuestionSource](v.raw, "question_sources")
-}
-func (v OwnedMeta) QuestionsSha256() Presence[string] {
+func (v Meta) QuestionsSha256() Presence[string] {
 	return ownedMember[string](v.raw, "questions_sha256")
 }
-func (v OwnedMeta) Requests() Presence[[]string] { return ownedMember[[]string](v.raw, "requests") }
-func (v OwnedMeta) RequestsSent() Presence[json.Number] {
+func (v Meta) Requests() Presence[[]string] { return ownedMember[[]string](v.raw, "requests") }
+func (v Meta) RequestsSent() Presence[json.Number] {
 	return ownedMember[json.Number](v.raw, "requests_sent")
 }
-func (v OwnedMeta) Tool() Presence[string]      { return ownedMember[string](v.raw, "tool") }
-func (v OwnedMeta) Url() Presence[string]       { return ownedMember[string](v.raw, "url") }
-func (v OwnedMeta) Usage() Presence[OwnedUsage] { return ownedMember[OwnedUsage](v.raw, "usage") }
+func (v Meta) Tool() Presence[string] { return ownedMember[string](v.raw, "tool") }
+func (v Meta) Url() Presence[string]  { return ownedMember[string](v.raw, "url") }
+func (v Meta) Usage() Presence[Usage] { return ownedMember[Usage](v.raw, "usage") }
 
-type OwnedObjectRoot struct{ ownedJSON }
+type ObjectRoot struct{ ownedJSON }
 
-func (v OwnedObjectRoot) Properties() Presence[map[string]OwnedInputPropertyType] {
-	return ownedMember[map[string]OwnedInputPropertyType](v.raw, "properties")
+func (v ObjectRoot) Properties() Presence[map[string]InputPropertyType] {
+	return ownedMember[map[string]InputPropertyType](v.raw, "properties")
 }
-func (v OwnedObjectRoot) Required() Presence[[]string] {
-	return ownedMember[[]string](v.raw, "required")
-}
-func (v OwnedObjectRoot) Type() Presence[OwnedObjectType] {
-	return ownedMember[OwnedObjectType](v.raw, "type")
-}
+func (v ObjectRoot) Required() Presence[[]string] { return ownedMember[[]string](v.raw, "required") }
+func (v ObjectRoot) Type() Presence[ObjectType]   { return ownedMember[ObjectType](v.raw, "type") }
 
-type OwnedObjectType struct{ ownedJSON }
+type ObjectType struct{ ownedJSON }
 
-func (v OwnedObjectType) Value() (string, error) { return ownedDecode[string](v.raw) }
+func (v ObjectType) Value() (string, error) { return ownedDecode[string](v.raw) }
 
-type OwnedObservation struct{ ownedJSON }
+type Observation struct{ ownedJSON }
 
-func (v OwnedObservation) AsObservationObservationId() (OwnedObservationObservationId, error) {
+func (v Observation) AsObservationObservationId() (ObservationObservationId, error) {
 	if !(ownedHas(v.raw, "observation_id")) {
-		return OwnedObservationObservationId{}, errOwnedAlternative
+		return ObservationObservationId{}, errAlternative
 	}
-	return ownedDecode[OwnedObservationObservationId](v.raw)
+	return ownedDecode[ObservationObservationId](v.raw)
 }
-func (v OwnedObservation) AsObservationFailureId() (OwnedObservationFailureId, error) {
+func (v Observation) AsObservationFailureId() (ObservationFailureId, error) {
 	if !(ownedHas(v.raw, "failure_id")) {
-		return OwnedObservationFailureId{}, errOwnedAlternative
+		return ObservationFailureId{}, errAlternative
 	}
-	return ownedDecode[OwnedObservationFailureId](v.raw)
+	return ownedDecode[ObservationFailureId](v.raw)
 }
 
-type OwnedObservationId struct{ ownedJSON }
+type ObservationId struct{ ownedJSON }
 
-func (v OwnedObservationId) Value() (string, error) { return ownedDecode[string](v.raw) }
+func (v ObservationId) Value() (string, error) { return ownedDecode[string](v.raw) }
 
-type OwnedObservationFailureId struct{ ownedJSON }
+type ObservationFailureId struct{ ownedJSON }
 
-func (v OwnedObservationFailureId) FailureId() Presence[OwnedFailureId] {
-	return ownedMember[OwnedFailureId](v.raw, "failure_id")
+func (v ObservationFailureId) FailureId() Presence[FailureId] {
+	return ownedMember[FailureId](v.raw, "failure_id")
 }
 
-type OwnedObservationObservationId struct{ ownedJSON }
+type ObservationObservationId struct{ ownedJSON }
 
-func (v OwnedObservationObservationId) ObservationId() Presence[OwnedObservationId] {
-	return ownedMember[OwnedObservationId](v.raw, "observation_id")
+func (v ObservationObservationId) ObservationId() Presence[ObservationId] {
+	return ownedMember[ObservationId](v.raw, "observation_id")
 }
 
-type OwnedOrigin struct{ ownedJSON }
-type OwnedPersistenceObservation struct{ ownedJSON }
+type Origin struct{ ownedJSON }
+type PersistenceObservation struct{ ownedJSON }
 
-func (v OwnedPersistenceObservation) Advice() Presence[string] {
+func (v PersistenceObservation) Advice() Presence[string] {
 	return ownedMember[string](v.raw, "advice")
 }
-func (v OwnedPersistenceObservation) ObservedAt() Presence[string] {
+func (v PersistenceObservation) ObservedAt() Presence[string] {
 	return ownedMember[string](v.raw, "observed_at")
 }
-func (v OwnedPersistenceObservation) State() Presence[OwnedUsagePersistence] {
-	return ownedMember[OwnedUsagePersistence](v.raw, "state")
+func (v PersistenceObservation) State() Presence[UsagePersistence] {
+	return ownedMember[UsagePersistence](v.raw, "state")
 }
 
-type OwnedPhysicalSource struct{ ownedJSON }
+type PhysicalSource struct{ ownedJSON }
 
-func (v OwnedPhysicalSource) File() Presence[string] { return ownedMember[string](v.raw, "file") }
-func (v OwnedPhysicalSource) FirstLine() Presence[json.Number] {
+func (v PhysicalSource) File() Presence[string] { return ownedMember[string](v.raw, "file") }
+func (v PhysicalSource) FirstLine() Presence[json.Number] {
 	return ownedMember[json.Number](v.raw, "first_line")
 }
-func (v OwnedPhysicalSource) LastLine() Presence[json.Number] {
+func (v PhysicalSource) LastLine() Presence[json.Number] {
 	return ownedMember[json.Number](v.raw, "last_line")
 }
 
-type OwnedPosition struct{ ownedJSON }
+type Position struct{ ownedJSON }
 
-func (v OwnedPosition) File() Presence[string]       { return ownedMember[string](v.raw, "file") }
-func (v OwnedPosition) First() Presence[json.Number] { return ownedMember[json.Number](v.raw, "first") }
-func (v OwnedPosition) Images() Presence[[]string]   { return ownedMember[[]string](v.raw, "images") }
-func (v OwnedPosition) Last() Presence[json.Number]  { return ownedMember[json.Number](v.raw, "last") }
+func (v Position) File() Presence[string]       { return ownedMember[string](v.raw, "file") }
+func (v Position) First() Presence[json.Number] { return ownedMember[json.Number](v.raw, "first") }
+func (v Position) Images() Presence[[]string]   { return ownedMember[[]string](v.raw, "images") }
+func (v Position) Last() Presence[json.Number]  { return ownedMember[json.Number](v.raw, "last") }
 
-type OwnedQuestionName struct{ ownedJSON }
+type QuestionName struct{ ownedJSON }
 
-func (v OwnedQuestionName) Value() (string, error) { return ownedDecode[string](v.raw) }
+func (v QuestionName) Value() (string, error) { return ownedDecode[string](v.raw) }
 
-type OwnedQuestionSource struct{ ownedJSON }
+type QuestionSource struct{ ownedJSON }
 
-func (v OwnedQuestionSource) AnsweredBy() Presence[string] {
+func (v QuestionSource) AnsweredBy() Presence[string] {
 	return ownedMember[string](v.raw, "answered_by")
 }
-func (v OwnedQuestionSource) BatchSize() Presence[json.Number] {
+func (v QuestionSource) BatchSize() Presence[json.Number] {
 	return ownedMember[json.Number](v.raw, "batch_size")
 }
-func (v OwnedQuestionSource) Origin() Presence[OwnedOrigin] {
-	return ownedMember[OwnedOrigin](v.raw, "origin")
+func (v QuestionSource) Origin() Presence[Origin] { return ownedMember[Origin](v.raw, "origin") }
+
+type RankMember struct{ ownedJSON }
+
+func (v RankMember) Name() Presence[string] { return ownedMember[string](v.raw, "name") }
+func (v RankMember) Result() Presence[RankMemberResult] {
+	return ownedMember[RankMemberResult](v.raw, "result")
 }
 
-type OwnedRankMember struct{ ownedJSON }
+type RankMemberResult struct{ ownedJSON }
 
-func (v OwnedRankMember) Name() Presence[string] { return ownedMember[string](v.raw, "name") }
-func (v OwnedRankMember) Result() Presence[OwnedRankMemberResult] {
-	return ownedMember[OwnedRankMemberResult](v.raw, "result")
+func (v RankMemberResult) Answer() Presence[Answer] { return ownedMember[Answer](v.raw, "answer") }
+func (v RankMemberResult) AnswerId() Presence[AnswerId] {
+	return ownedMember[AnswerId](v.raw, "answer_id")
 }
-
-type OwnedRankMemberResult struct{ ownedJSON }
-
-func (v OwnedRankMemberResult) Answer() Presence[OwnedAnswer] {
-	return ownedMember[OwnedAnswer](v.raw, "answer")
+func (v RankMemberResult) Images() Presence[[]Image] { return ownedMember[[]Image](v.raw, "images") }
+func (v RankMemberResult) Meta() Presence[Meta]      { return ownedMember[Meta](v.raw, "meta") }
+func (v RankMemberResult) Question() Presence[QuestionDocument] {
+	return ownedMember[QuestionDocument](v.raw, "question")
 }
-func (v OwnedRankMemberResult) AnswerId() Presence[OwnedAnswerId] {
-	return ownedMember[OwnedAnswerId](v.raw, "answer_id")
+func (v RankMemberResult) Schema() Presence[Version] { return ownedMember[Version](v.raw, "schema") }
+func (v RankMemberResult) Source() Presence[PhysicalSource] {
+	return ownedMember[PhysicalSource](v.raw, "source")
 }
-func (v OwnedRankMemberResult) Images() Presence[[]OwnedImage] {
-	return ownedMember[[]OwnedImage](v.raw, "images")
-}
-func (v OwnedRankMemberResult) Meta() Presence[OwnedMeta] {
-	return ownedMember[OwnedMeta](v.raw, "meta")
-}
-func (v OwnedRankMemberResult) Question() Presence[OwnedQuestionDocument] {
-	return ownedMember[OwnedQuestionDocument](v.raw, "question")
-}
-func (v OwnedRankMemberResult) Schema() Presence[OwnedVersion] {
-	return ownedMember[OwnedVersion](v.raw, "schema")
-}
-func (v OwnedRankMemberResult) Source() Presence[OwnedPhysicalSource] {
-	return ownedMember[OwnedPhysicalSource](v.raw, "source")
-}
-func (v OwnedRankMemberResult) Threshold() Presence[any] { return ownedMember[any](v.raw, "threshold") }
-func (v OwnedRankMemberResult) Value() Presence[json.Number] {
+func (v RankMemberResult) Threshold() Presence[any] { return ownedMember[any](v.raw, "threshold") }
+func (v RankMemberResult) Value() Presence[json.Number] {
 	return ownedMember[json.Number](v.raw, "value")
 }
 
-type OwnedRecognition struct{ ownedJSON }
+type Recognition struct{ ownedJSON }
 
-func (v OwnedRecognition) Answer() Presence[OwnedRecognitionOdds] {
-	return ownedMember[OwnedRecognitionOdds](v.raw, "answer")
+func (v Recognition) Answer() Presence[RecognitionOdds] {
+	return ownedMember[RecognitionOdds](v.raw, "answer")
 }
-func (v OwnedRecognition) AnswerId() Presence[OwnedAnswerId] {
-	return ownedMember[OwnedAnswerId](v.raw, "answer_id")
-}
-func (v OwnedRecognition) File() Presence[string] { return ownedMember[string](v.raw, "file") }
-func (v OwnedRecognition) FirstLine() Presence[json.Number] {
+func (v Recognition) AnswerId() Presence[AnswerId] { return ownedMember[AnswerId](v.raw, "answer_id") }
+func (v Recognition) File() Presence[string]       { return ownedMember[string](v.raw, "file") }
+func (v Recognition) FirstLine() Presence[json.Number] {
 	return ownedMember[json.Number](v.raw, "first_line")
 }
-func (v OwnedRecognition) Index() Presence[json.Number] {
-	return ownedMember[json.Number](v.raw, "index")
-}
-func (v OwnedRecognition) Input() Presence[any] { return ownedMember[any](v.raw, "input") }
-func (v OwnedRecognition) LastLine() Presence[json.Number] {
+func (v Recognition) Index() Presence[json.Number] { return ownedMember[json.Number](v.raw, "index") }
+func (v Recognition) Input() Presence[any]         { return ownedMember[any](v.raw, "input") }
+func (v Recognition) LastLine() Presence[json.Number] {
 	return ownedMember[json.Number](v.raw, "last_line")
 }
-func (v OwnedRecognition) Meta() Presence[OwnedMeta] { return ownedMember[OwnedMeta](v.raw, "meta") }
-func (v OwnedRecognition) Position() Presence[OwnedPosition] {
-	return ownedMember[OwnedPosition](v.raw, "position")
+func (v Recognition) Meta() Presence[Meta]         { return ownedMember[Meta](v.raw, "meta") }
+func (v Recognition) Position() Presence[Position] { return ownedMember[Position](v.raw, "position") }
+func (v Recognition) Question() Presence[RecognizeQuestionDocument] {
+	return ownedMember[RecognizeQuestionDocument](v.raw, "question")
 }
-func (v OwnedRecognition) Question() Presence[OwnedRecognizeQuestionDocument] {
-	return ownedMember[OwnedRecognizeQuestionDocument](v.raw, "question")
+func (v Recognition) Schema() Presence[Version] { return ownedMember[Version](v.raw, "schema") }
+func (v Recognition) Source() Presence[PhysicalSource] {
+	return ownedMember[PhysicalSource](v.raw, "source")
 }
-func (v OwnedRecognition) Schema() Presence[OwnedVersion] {
-	return ownedMember[OwnedVersion](v.raw, "schema")
-}
-func (v OwnedRecognition) Source() Presence[OwnedPhysicalSource] {
-	return ownedMember[OwnedPhysicalSource](v.raw, "source")
-}
-func (v OwnedRecognition) Value() Presence[OwnedRecognize] {
-	return ownedMember[OwnedRecognize](v.raw, "value")
-}
+func (v Recognition) Value() Presence[Recognize] { return ownedMember[Recognize](v.raw, "value") }
 
-type OwnedRecognitionEdgeDocument struct{ ownedJSON }
+type RecognitionEdgeDocument struct{ ownedJSON }
 
-func (v OwnedRecognitionEdgeDocument) Either() Presence[bool] {
-	return ownedMember[bool](v.raw, "either")
-}
-func (v OwnedRecognitionEdgeDocument) Probability() Presence[json.Number] {
+func (v RecognitionEdgeDocument) Either() Presence[bool] { return ownedMember[bool](v.raw, "either") }
+func (v RecognitionEdgeDocument) Probability() Presence[json.Number] {
 	return ownedMember[json.Number](v.raw, "probability")
 }
-func (v OwnedRecognitionEdgeDocument) Relation() Presence[string] {
+func (v RecognitionEdgeDocument) Relation() Presence[string] {
 	return ownedMember[string](v.raw, "relation")
 }
-func (v OwnedRecognitionEdgeDocument) Source() Presence[OwnedEntity] {
-	return ownedMember[OwnedEntity](v.raw, "source")
+func (v RecognitionEdgeDocument) Source() Presence[Entity] {
+	return ownedMember[Entity](v.raw, "source")
 }
-func (v OwnedRecognitionEdgeDocument) Target() Presence[OwnedEntity] {
-	return ownedMember[OwnedEntity](v.raw, "target")
+func (v RecognitionEdgeDocument) Target() Presence[Entity] {
+	return ownedMember[Entity](v.raw, "target")
 }
 
-type OwnedRecognitionMode struct{ ownedJSON }
-type OwnedRecognitionOdds struct{ ownedJSON }
+type ResultRecognitionMode struct{ ownedJSON }
+type RecognitionOdds struct{ ownedJSON }
 
-func (v OwnedRecognitionOdds) AsRecognitionOddsRecognizeAnswer() (OwnedRecognitionOddsRecognizeAnswer, error) {
+func (v RecognitionOdds) AsRecognitionOddsRecognizeAnswer() (RecognitionOddsRecognizeAnswer, error) {
 	if !(ownedHas(v.raw, "names") && ownedHas(v.raw, "pairs") && ownedHas(v.raw, "pieces") && ownedHas(v.raw, "proposals")) {
-		return OwnedRecognitionOddsRecognizeAnswer{}, errOwnedAlternative
+		return RecognitionOddsRecognizeAnswer{}, errAlternative
 	}
-	return ownedDecode[OwnedRecognitionOddsRecognizeAnswer](v.raw)
+	return ownedDecode[RecognitionOddsRecognizeAnswer](v.raw)
 }
-func (v OwnedRecognitionOdds) AsRecognitionOddsBoundaryOdds() (OwnedRecognitionOddsBoundaryOdds, error) {
+func (v RecognitionOdds) AsRecognitionOddsBoundaryOdds() (RecognitionOddsBoundaryOdds, error) {
 	if !(ownedHas(v.raw, "pieces") && ownedHas(v.raw, "proposals") && !ownedHas(v.raw, "names") && !ownedHas(v.raw, "pairs")) {
-		return OwnedRecognitionOddsBoundaryOdds{}, errOwnedAlternative
+		return RecognitionOddsBoundaryOdds{}, errAlternative
 	}
-	return ownedDecode[OwnedRecognitionOddsBoundaryOdds](v.raw)
+	return ownedDecode[RecognitionOddsBoundaryOdds](v.raw)
 }
 
-type OwnedRecognitionOddsBoundaryOdds struct{ ownedJSON }
+type RecognitionOddsBoundaryOdds struct{ ownedJSON }
 
-func (v OwnedRecognitionOddsBoundaryOdds) Pieces() Presence[[]OwnedPieceOdds] {
-	return ownedMember[[]OwnedPieceOdds](v.raw, "pieces")
+func (v RecognitionOddsBoundaryOdds) Pieces() Presence[[]PieceOdds] {
+	return ownedMember[[]PieceOdds](v.raw, "pieces")
 }
-func (v OwnedRecognitionOddsBoundaryOdds) Proposals() Presence[[]OwnedBoundaryProposal] {
-	return ownedMember[[]OwnedBoundaryProposal](v.raw, "proposals")
-}
-
-type OwnedRecognitionOddsRecognizeAnswer struct{ ownedJSON }
-
-func (v OwnedRecognitionOddsRecognizeAnswer) Names() Presence[[]OwnedNameOdds] {
-	return ownedMember[[]OwnedNameOdds](v.raw, "names")
-}
-func (v OwnedRecognitionOddsRecognizeAnswer) Pairs() Presence[[]OwnedPairOdds] {
-	return ownedMember[[]OwnedPairOdds](v.raw, "pairs")
-}
-func (v OwnedRecognitionOddsRecognizeAnswer) Pieces() Presence[[]OwnedPieceOdds] {
-	return ownedMember[[]OwnedPieceOdds](v.raw, "pieces")
-}
-func (v OwnedRecognitionOddsRecognizeAnswer) Proposals() Presence[[]OwnedRecognitionProposal] {
-	return ownedMember[[]OwnedRecognitionProposal](v.raw, "proposals")
+func (v RecognitionOddsBoundaryOdds) Proposals() Presence[[]BoundaryProposal] {
+	return ownedMember[[]BoundaryProposal](v.raw, "proposals")
 }
 
-type OwnedRecognitionProposal struct{ ownedJSON }
+type RecognitionOddsRecognizeAnswer struct{ ownedJSON }
 
-func (v OwnedRecognitionProposal) End() Presence[json.Number] {
+func (v RecognitionOddsRecognizeAnswer) Names() Presence[[]NameOdds] {
+	return ownedMember[[]NameOdds](v.raw, "names")
+}
+func (v RecognitionOddsRecognizeAnswer) Pairs() Presence[[]PairOdds] {
+	return ownedMember[[]PairOdds](v.raw, "pairs")
+}
+func (v RecognitionOddsRecognizeAnswer) Pieces() Presence[[]PieceOdds] {
+	return ownedMember[[]PieceOdds](v.raw, "pieces")
+}
+func (v RecognitionOddsRecognizeAnswer) Proposals() Presence[[]RecognitionProposal] {
+	return ownedMember[[]RecognitionProposal](v.raw, "proposals")
+}
+
+type RecognitionProposal struct{ ownedJSON }
+
+func (v RecognitionProposal) End() Presence[json.Number] {
 	return ownedMember[json.Number](v.raw, "end")
 }
-func (v OwnedRecognitionProposal) Kept() Presence[bool]   { return ownedMember[bool](v.raw, "kept") }
-func (v OwnedRecognitionProposal) Kind() Presence[string] { return ownedMember[string](v.raw, "kind") }
-func (v OwnedRecognitionProposal) Selected() Presence[OwnedPlace] {
-	return ownedMember[OwnedPlace](v.raw, "selected")
-}
-func (v OwnedRecognitionProposal) SpanProbability() Presence[json.Number] {
+func (v RecognitionProposal) Kept() Presence[bool]      { return ownedMember[bool](v.raw, "kept") }
+func (v RecognitionProposal) Kind() Presence[string]    { return ownedMember[string](v.raw, "kind") }
+func (v RecognitionProposal) Selected() Presence[Place] { return ownedMember[Place](v.raw, "selected") }
+func (v RecognitionProposal) SpanProbability() Presence[json.Number] {
 	return ownedMember[json.Number](v.raw, "span_probability")
 }
-func (v OwnedRecognitionProposal) Start() Presence[json.Number] {
+func (v RecognitionProposal) Start() Presence[json.Number] {
 	return ownedMember[json.Number](v.raw, "start")
 }
-func (v OwnedRecognitionProposal) Strength() Presence[json.Number] {
+func (v RecognitionProposal) Strength() Presence[json.Number] {
 	return ownedMember[json.Number](v.raw, "strength")
 }
 
-type OwnedRecognitionStageContext struct{ ownedJSON }
+type RecognitionContext struct{ ownedJSON }
 
-func (v OwnedRecognitionStageContext) Boundary() Presence[string] {
+func (v RecognitionContext) Boundary() Presence[string] {
 	return ownedMember[string](v.raw, "boundary")
 }
-func (v OwnedRecognitionStageContext) KindEdge() Presence[string] {
+func (v RecognitionContext) KindEdge() Presence[string] {
 	return ownedMember[string](v.raw, "kind_edge")
 }
-func (v OwnedRecognitionStageContext) Relation() Presence[string] {
+func (v RecognitionContext) Relation() Presence[string] {
 	return ownedMember[string](v.raw, "relation")
 }
 
-type OwnedRelation struct{ ownedJSON }
+type Relation struct{ ownedJSON }
 
-func (v OwnedRelation) Answer() Presence[OwnedAnswers] {
-	return ownedMember[OwnedAnswers](v.raw, "answer")
-}
-func (v OwnedRelation) AnswerId() Presence[OwnedAnswerId] {
-	return ownedMember[OwnedAnswerId](v.raw, "answer_id")
-}
-func (v OwnedRelation) File() Presence[string] { return ownedMember[string](v.raw, "file") }
-func (v OwnedRelation) FirstLine() Presence[json.Number] {
+func (v Relation) Answer() Presence[Answers]    { return ownedMember[Answers](v.raw, "answer") }
+func (v Relation) AnswerId() Presence[AnswerId] { return ownedMember[AnswerId](v.raw, "answer_id") }
+func (v Relation) File() Presence[string]       { return ownedMember[string](v.raw, "file") }
+func (v Relation) FirstLine() Presence[json.Number] {
 	return ownedMember[json.Number](v.raw, "first_line")
 }
-func (v OwnedRelation) Index() Presence[json.Number] { return ownedMember[json.Number](v.raw, "index") }
-func (v OwnedRelation) Input() Presence[any]         { return ownedMember[any](v.raw, "input") }
-func (v OwnedRelation) InputSources() Presence[[]OwnedSessionInputSource] {
-	return ownedMember[[]OwnedSessionInputSource](v.raw, "input_sources")
+func (v Relation) Index() Presence[json.Number] { return ownedMember[json.Number](v.raw, "index") }
+func (v Relation) Input() Presence[any]         { return ownedMember[any](v.raw, "input") }
+func (v Relation) InputSources() Presence[[]SessionInputSource] {
+	return ownedMember[[]SessionInputSource](v.raw, "input_sources")
 }
-func (v OwnedRelation) LastLine() Presence[json.Number] {
+func (v Relation) LastLine() Presence[json.Number] {
 	return ownedMember[json.Number](v.raw, "last_line")
 }
-func (v OwnedRelation) Meta() Presence[OwnedMeta] { return ownedMember[OwnedMeta](v.raw, "meta") }
-func (v OwnedRelation) Position() Presence[OwnedPosition] {
-	return ownedMember[OwnedPosition](v.raw, "position")
+func (v Relation) Meta() Presence[Meta]         { return ownedMember[Meta](v.raw, "meta") }
+func (v Relation) Position() Presence[Position] { return ownedMember[Position](v.raw, "position") }
+func (v Relation) Question() Presence[RelateQuestionDocument] {
+	return ownedMember[RelateQuestionDocument](v.raw, "question")
 }
-func (v OwnedRelation) Question() Presence[OwnedRelateQuestionDocument] {
-	return ownedMember[OwnedRelateQuestionDocument](v.raw, "question")
-}
-func (v OwnedRelation) Schema() Presence[OwnedVersion] {
-	return ownedMember[OwnedVersion](v.raw, "schema")
-}
-func (v OwnedRelation) Value() Presence[[]OwnedRelatedEntityEdge] {
-	return ownedMember[[]OwnedRelatedEntityEdge](v.raw, "value")
+func (v Relation) Schema() Presence[Version] { return ownedMember[Version](v.raw, "schema") }
+func (v Relation) Value() Presence[[]RelatedEntityEdge] {
+	return ownedMember[[]RelatedEntityEdge](v.raw, "value")
 }
 
-type OwnedRelationDirection struct{ ownedJSON }
-type OwnedRelationEndpoint struct{ ownedJSON }
+type RelationDirection struct{ ownedJSON }
+type RelationEndpoint struct{ ownedJSON }
 
-func (v OwnedRelationEndpoint) AsRelationEndpointRelatedEntity() (OwnedRelationEndpointRelatedEntity, error) {
+func (v RelationEndpoint) AsRelationEndpointRelatedEntity() (RelationEndpointRelatedEntity, error) {
 	if !(ownedHas(v.raw, "kind") && ownedHas(v.raw, "name") && !ownedHas(v.raw, "file") && !ownedHas(v.raw, "ordinal") && !ownedHas(v.raw, "record")) {
-		return OwnedRelationEndpointRelatedEntity{}, errOwnedAlternative
+		return RelationEndpointRelatedEntity{}, errAlternative
 	}
-	return ownedDecode[OwnedRelationEndpointRelatedEntity](v.raw)
+	return ownedDecode[RelationEndpointRelatedEntity](v.raw)
 }
-func (v OwnedRelationEndpoint) AsRelationEndpointSource() (OwnedRelationEndpointSource, error) {
+func (v RelationEndpoint) AsRelationEndpointSource() (RelationEndpointSource, error) {
 	if !(ownedHas(v.raw, "file") && ownedHas(v.raw, "kind") && ownedHas(v.raw, "name") && ownedHas(v.raw, "ordinal") && ownedHas(v.raw, "record")) {
-		return OwnedRelationEndpointSource{}, errOwnedAlternative
+		return RelationEndpointSource{}, errAlternative
 	}
-	return ownedDecode[OwnedRelationEndpointSource](v.raw)
+	return ownedDecode[RelationEndpointSource](v.raw)
 }
 
-type OwnedRelationEndpointRelatedEntity struct{ ownedJSON }
+type RelationEndpointRelatedEntity struct{ ownedJSON }
 
-func (v OwnedRelationEndpointRelatedEntity) Kind() Presence[string] {
+func (v RelationEndpointRelatedEntity) Kind() Presence[string] {
 	return ownedMember[string](v.raw, "kind")
 }
-func (v OwnedRelationEndpointRelatedEntity) Name() Presence[string] {
+func (v RelationEndpointRelatedEntity) Name() Presence[string] {
 	return ownedMember[string](v.raw, "name")
 }
 
-type OwnedRelationEndpointSource struct{ ownedJSON }
+type RelationEndpointSource struct{ ownedJSON }
 
-func (v OwnedRelationEndpointSource) File() Presence[string] {
-	return ownedMember[string](v.raw, "file")
-}
-func (v OwnedRelationEndpointSource) FirstLine() Presence[json.Number] {
+func (v RelationEndpointSource) File() Presence[string] { return ownedMember[string](v.raw, "file") }
+func (v RelationEndpointSource) FirstLine() Presence[json.Number] {
 	return ownedMember[json.Number](v.raw, "first_line")
 }
-func (v OwnedRelationEndpointSource) Kind() Presence[string] {
-	return ownedMember[string](v.raw, "kind")
-}
-func (v OwnedRelationEndpointSource) LastLine() Presence[json.Number] {
+func (v RelationEndpointSource) Kind() Presence[string] { return ownedMember[string](v.raw, "kind") }
+func (v RelationEndpointSource) LastLine() Presence[json.Number] {
 	return ownedMember[json.Number](v.raw, "last_line")
 }
-func (v OwnedRelationEndpointSource) Name() Presence[string] {
-	return ownedMember[string](v.raw, "name")
-}
-func (v OwnedRelationEndpointSource) Ordinal() Presence[json.Number] {
+func (v RelationEndpointSource) Name() Presence[string] { return ownedMember[string](v.raw, "name") }
+func (v RelationEndpointSource) Ordinal() Presence[json.Number] {
 	return ownedMember[json.Number](v.raw, "ordinal")
 }
-func (v OwnedRelationEndpointSource) Record() Presence[any] { return ownedMember[any](v.raw, "record") }
+func (v RelationEndpointSource) Record() Presence[any] { return ownedMember[any](v.raw, "record") }
 
-type OwnedRelationMember struct{ ownedJSON }
+type RelationMember struct{ ownedJSON }
 
-func (v OwnedRelationMember) AsRelationMemberAnswerId() (OwnedRelationMemberAnswerId, error) {
+func (v RelationMember) AsRelationMemberAnswerId() (RelationMemberAnswerId, error) {
 	if !(ownedHas(v.raw, "answer_id")) {
-		return OwnedRelationMemberAnswerId{}, errOwnedAlternative
+		return RelationMemberAnswerId{}, errAlternative
 	}
-	return ownedDecode[OwnedRelationMemberAnswerId](v.raw)
+	return ownedDecode[RelationMemberAnswerId](v.raw)
 }
-func (v OwnedRelationMember) AsRelationMemberFailureId() (OwnedRelationMemberFailureId, error) {
+func (v RelationMember) AsRelationMemberFailureId() (RelationMemberFailureId, error) {
 	if !(ownedHas(v.raw, "failure_id")) {
-		return OwnedRelationMemberFailureId{}, errOwnedAlternative
+		return RelationMemberFailureId{}, errAlternative
 	}
-	return ownedDecode[OwnedRelationMemberFailureId](v.raw)
+	return ownedDecode[RelationMemberFailureId](v.raw)
 }
 
-type OwnedRelationMemberAnswerId struct{ ownedJSON }
+type RelationMemberAnswerId struct{ ownedJSON }
 
-func (v OwnedRelationMemberAnswerId) Direction() Presence[OwnedRelationDirection] {
-	return ownedMember[OwnedRelationDirection](v.raw, "direction")
+func (v RelationMemberAnswerId) Direction() Presence[RelationDirection] {
+	return ownedMember[RelationDirection](v.raw, "direction")
 }
-func (v OwnedRelationMemberAnswerId) Method() Presence[OwnedRelationMethod] {
-	return ownedMember[OwnedRelationMethod](v.raw, "method")
+func (v RelationMemberAnswerId) Method() Presence[RelationMethod] {
+	return ownedMember[RelationMethod](v.raw, "method")
 }
-func (v OwnedRelationMemberAnswerId) Observations() Presence[[]OwnedObservation] {
-	return ownedMember[[]OwnedObservation](v.raw, "observations")
+func (v RelationMemberAnswerId) Observations() Presence[[]Observation] {
+	return ownedMember[[]Observation](v.raw, "observations")
 }
-func (v OwnedRelationMemberAnswerId) Question() Presence[OwnedQuestionDocument] {
-	return ownedMember[OwnedQuestionDocument](v.raw, "question")
+func (v RelationMemberAnswerId) Question() Presence[QuestionDocument] {
+	return ownedMember[QuestionDocument](v.raw, "question")
 }
-func (v OwnedRelationMemberAnswerId) QuestionSources() Presence[[]OwnedQuestionSource] {
-	return ownedMember[[]OwnedQuestionSource](v.raw, "question_sources")
+func (v RelationMemberAnswerId) QuestionSources() Presence[[]QuestionSource] {
+	return ownedMember[[]QuestionSource](v.raw, "question_sources")
 }
-func (v OwnedRelationMemberAnswerId) Reads() Presence[string] {
-	return ownedMember[string](v.raw, "reads")
-}
-func (v OwnedRelationMemberAnswerId) Relation() Presence[string] {
+func (v RelationMemberAnswerId) Reads() Presence[string] { return ownedMember[string](v.raw, "reads") }
+func (v RelationMemberAnswerId) Relation() Presence[string] {
 	return ownedMember[string](v.raw, "relation")
 }
-func (v OwnedRelationMemberAnswerId) Request() Presence[string] {
+func (v RelationMemberAnswerId) Request() Presence[string] {
 	return ownedMember[string](v.raw, "request")
 }
-func (v OwnedRelationMemberAnswerId) Source() Presence[OwnedRelatedEntity] {
-	return ownedMember[OwnedRelatedEntity](v.raw, "source")
+func (v RelationMemberAnswerId) Source() Presence[RelatedEntity] {
+	return ownedMember[RelatedEntity](v.raw, "source")
 }
-func (v OwnedRelationMemberAnswerId) Target() Presence[OwnedRelatedEntity] {
-	return ownedMember[OwnedRelatedEntity](v.raw, "target")
+func (v RelationMemberAnswerId) Target() Presence[RelatedEntity] {
+	return ownedMember[RelatedEntity](v.raw, "target")
 }
-func (v OwnedRelationMemberAnswerId) Threshold() Presence[OwnedThreshold] {
-	return ownedMember[OwnedThreshold](v.raw, "threshold")
+func (v RelationMemberAnswerId) Threshold() Presence[Threshold] {
+	return ownedMember[Threshold](v.raw, "threshold")
 }
-func (v OwnedRelationMemberAnswerId) Usage() Presence[OwnedUsage] {
-	return ownedMember[OwnedUsage](v.raw, "usage")
-}
-func (v OwnedRelationMemberAnswerId) Accepted() Presence[bool] {
+func (v RelationMemberAnswerId) Usage() Presence[Usage] { return ownedMember[Usage](v.raw, "usage") }
+func (v RelationMemberAnswerId) Accepted() Presence[bool] {
 	return ownedMember[bool](v.raw, "accepted")
 }
-func (v OwnedRelationMemberAnswerId) Answer() Presence[OwnedAnswer] {
-	return ownedMember[OwnedAnswer](v.raw, "answer")
+func (v RelationMemberAnswerId) Answer() Presence[Answer] {
+	return ownedMember[Answer](v.raw, "answer")
 }
-func (v OwnedRelationMemberAnswerId) AnswerId() Presence[OwnedAnswerId] {
-	return ownedMember[OwnedAnswerId](v.raw, "answer_id")
+func (v RelationMemberAnswerId) AnswerId() Presence[AnswerId] {
+	return ownedMember[AnswerId](v.raw, "answer_id")
 }
-func (v OwnedRelationMemberAnswerId) Probability() Presence[json.Number] {
+func (v RelationMemberAnswerId) Probability() Presence[json.Number] {
 	return ownedMember[json.Number](v.raw, "probability")
 }
-func (v OwnedRelationMemberAnswerId) SourceName() Presence[string] {
+func (v RelationMemberAnswerId) SourceName() Presence[string] {
 	nested := ownedMember[json.RawMessage](v.raw, "source")
 	if nested.Err != nil || !nested.Present || nested.Null {
 		return Presence[string]{Present: nested.Present, Null: nested.Null, Err: nested.Err}
@@ -1214,51 +1040,47 @@ func (v OwnedRelationMemberAnswerId) SourceName() Presence[string] {
 	return ownedMember[string](nested.Value, "name")
 }
 
-type OwnedRelationMemberFailureId struct{ ownedJSON }
+type RelationMemberFailureId struct{ ownedJSON }
 
-func (v OwnedRelationMemberFailureId) Direction() Presence[OwnedRelationDirection] {
-	return ownedMember[OwnedRelationDirection](v.raw, "direction")
+func (v RelationMemberFailureId) Direction() Presence[RelationDirection] {
+	return ownedMember[RelationDirection](v.raw, "direction")
 }
-func (v OwnedRelationMemberFailureId) Method() Presence[OwnedRelationMethod] {
-	return ownedMember[OwnedRelationMethod](v.raw, "method")
+func (v RelationMemberFailureId) Method() Presence[RelationMethod] {
+	return ownedMember[RelationMethod](v.raw, "method")
 }
-func (v OwnedRelationMemberFailureId) Observations() Presence[[]OwnedObservation] {
-	return ownedMember[[]OwnedObservation](v.raw, "observations")
+func (v RelationMemberFailureId) Observations() Presence[[]Observation] {
+	return ownedMember[[]Observation](v.raw, "observations")
 }
-func (v OwnedRelationMemberFailureId) Question() Presence[OwnedQuestionDocument] {
-	return ownedMember[OwnedQuestionDocument](v.raw, "question")
+func (v RelationMemberFailureId) Question() Presence[QuestionDocument] {
+	return ownedMember[QuestionDocument](v.raw, "question")
 }
-func (v OwnedRelationMemberFailureId) QuestionSources() Presence[[]OwnedQuestionSource] {
-	return ownedMember[[]OwnedQuestionSource](v.raw, "question_sources")
+func (v RelationMemberFailureId) QuestionSources() Presence[[]QuestionSource] {
+	return ownedMember[[]QuestionSource](v.raw, "question_sources")
 }
-func (v OwnedRelationMemberFailureId) Reads() Presence[string] {
-	return ownedMember[string](v.raw, "reads")
-}
-func (v OwnedRelationMemberFailureId) Relation() Presence[string] {
+func (v RelationMemberFailureId) Reads() Presence[string] { return ownedMember[string](v.raw, "reads") }
+func (v RelationMemberFailureId) Relation() Presence[string] {
 	return ownedMember[string](v.raw, "relation")
 }
-func (v OwnedRelationMemberFailureId) Request() Presence[string] {
+func (v RelationMemberFailureId) Request() Presence[string] {
 	return ownedMember[string](v.raw, "request")
 }
-func (v OwnedRelationMemberFailureId) Source() Presence[OwnedRelatedEntity] {
-	return ownedMember[OwnedRelatedEntity](v.raw, "source")
+func (v RelationMemberFailureId) Source() Presence[RelatedEntity] {
+	return ownedMember[RelatedEntity](v.raw, "source")
 }
-func (v OwnedRelationMemberFailureId) Target() Presence[OwnedRelatedEntity] {
-	return ownedMember[OwnedRelatedEntity](v.raw, "target")
+func (v RelationMemberFailureId) Target() Presence[RelatedEntity] {
+	return ownedMember[RelatedEntity](v.raw, "target")
 }
-func (v OwnedRelationMemberFailureId) Threshold() Presence[OwnedThreshold] {
-	return ownedMember[OwnedThreshold](v.raw, "threshold")
+func (v RelationMemberFailureId) Threshold() Presence[Threshold] {
+	return ownedMember[Threshold](v.raw, "threshold")
 }
-func (v OwnedRelationMemberFailureId) Usage() Presence[OwnedUsage] {
-	return ownedMember[OwnedUsage](v.raw, "usage")
+func (v RelationMemberFailureId) Usage() Presence[Usage] { return ownedMember[Usage](v.raw, "usage") }
+func (v RelationMemberFailureId) Failure() Presence[Failure] {
+	return ownedMember[Failure](v.raw, "failure")
 }
-func (v OwnedRelationMemberFailureId) Failure() Presence[OwnedFailure] {
-	return ownedMember[OwnedFailure](v.raw, "failure")
+func (v RelationMemberFailureId) FailureId() Presence[FailureId] {
+	return ownedMember[FailureId](v.raw, "failure_id")
 }
-func (v OwnedRelationMemberFailureId) FailureId() Presence[OwnedFailureId] {
-	return ownedMember[OwnedFailureId](v.raw, "failure_id")
-}
-func (v OwnedRelationMemberFailureId) SourceName() Presence[string] {
+func (v RelationMemberFailureId) SourceName() Presence[string] {
 	nested := ownedMember[json.RawMessage](v.raw, "source")
 	if nested.Err != nil || !nested.Present || nested.Null {
 		return Presence[string]{Present: nested.Present, Null: nested.Null, Err: nested.Err}
@@ -1266,682 +1088,604 @@ func (v OwnedRelationMemberFailureId) SourceName() Presence[string] {
 	return ownedMember[string](nested.Value, "name")
 }
 
-type OwnedRelationMethod struct{ ownedJSON }
-type OwnedRequestFunction struct{ ownedJSON }
-type OwnedSdkRequestId struct{ ownedJSON }
+type RelationMethod struct{ ownedJSON }
+type ResultFunction struct{ ownedJSON }
+type SdkRequestId struct{ ownedJSON }
 
-func (v OwnedSdkRequestId) Value() (string, error) { return ownedDecode[string](v.raw) }
+func (v SdkRequestId) Value() (string, error) { return ownedDecode[string](v.raw) }
 
-type OwnedSendBudgetDenial struct{ ownedJSON }
+type SendBudgetDenial struct{ ownedJSON }
 
-func (v OwnedSendBudgetDenial) AsSendBudgetDenialBeforeFirstSend() (OwnedSendBudgetDenialBeforeFirstSend, error) {
+func (v SendBudgetDenial) AsSendBudgetDenialBeforeFirstSend() (SendBudgetDenialBeforeFirstSend, error) {
 	if !(ownedLiteral(v.raw, "kind", "before_first_send")) {
-		return OwnedSendBudgetDenialBeforeFirstSend{}, errOwnedAlternative
+		return SendBudgetDenialBeforeFirstSend{}, errAlternative
 	}
-	return ownedDecode[OwnedSendBudgetDenialBeforeFirstSend](v.raw)
+	return ownedDecode[SendBudgetDenialBeforeFirstSend](v.raw)
 }
-func (v OwnedSendBudgetDenial) AsSendBudgetDenialBeforeAdditionalSend() (OwnedSendBudgetDenialBeforeAdditionalSend, error) {
+func (v SendBudgetDenial) AsSendBudgetDenialBeforeAdditionalSend() (SendBudgetDenialBeforeAdditionalSend, error) {
 	if !(ownedLiteral(v.raw, "kind", "before_additional_send")) {
-		return OwnedSendBudgetDenialBeforeAdditionalSend{}, errOwnedAlternative
+		return SendBudgetDenialBeforeAdditionalSend{}, errAlternative
 	}
-	return ownedDecode[OwnedSendBudgetDenialBeforeAdditionalSend](v.raw)
+	return ownedDecode[SendBudgetDenialBeforeAdditionalSend](v.raw)
 }
-func (v OwnedSendBudgetDenial) AsSendBudgetDenialBeforeRetry() (OwnedSendBudgetDenialBeforeRetry, error) {
+func (v SendBudgetDenial) AsSendBudgetDenialBeforeRetry() (SendBudgetDenialBeforeRetry, error) {
 	if !(ownedLiteral(v.raw, "kind", "before_retry")) {
-		return OwnedSendBudgetDenialBeforeRetry{}, errOwnedAlternative
+		return SendBudgetDenialBeforeRetry{}, errAlternative
 	}
-	return ownedDecode[OwnedSendBudgetDenialBeforeRetry](v.raw)
+	return ownedDecode[SendBudgetDenialBeforeRetry](v.raw)
 }
 
-type OwnedSendBudgetDenialBeforeAdditionalSend struct{ ownedJSON }
+type SendBudgetDenialBeforeAdditionalSend struct{ ownedJSON }
 
-func (v OwnedSendBudgetDenialBeforeAdditionalSend) Kind() Presence[string] {
+func (v SendBudgetDenialBeforeAdditionalSend) Kind() Presence[string] {
 	return ownedMember[string](v.raw, "kind")
 }
 
-type OwnedSendBudgetDenialBeforeFirstSend struct{ ownedJSON }
+type SendBudgetDenialBeforeFirstSend struct{ ownedJSON }
 
-func (v OwnedSendBudgetDenialBeforeFirstSend) Kind() Presence[string] {
+func (v SendBudgetDenialBeforeFirstSend) Kind() Presence[string] {
 	return ownedMember[string](v.raw, "kind")
 }
 
-type OwnedSendBudgetDenialBeforeRetry struct{ ownedJSON }
+type SendBudgetDenialBeforeRetry struct{ ownedJSON }
 
-func (v OwnedSendBudgetDenialBeforeRetry) Kind() Presence[string] {
+func (v SendBudgetDenialBeforeRetry) Kind() Presence[string] {
 	return ownedMember[string](v.raw, "kind")
 }
-func (v OwnedSendBudgetDenialBeforeRetry) LastStatus() Presence[json.Number] {
+func (v SendBudgetDenialBeforeRetry) LastStatus() Presence[json.Number] {
 	return ownedMember[json.Number](v.raw, "last_status")
 }
 
-type OwnedStopCause struct{ ownedJSON }
-type OwnedStopped struct{ ownedJSON }
+type StopCause struct{ ownedJSON }
+type Stopped struct{ ownedJSON }
 
-func (v OwnedStopped) At() Presence[json.Number] { return ownedMember[json.Number](v.raw, "at") }
-func (v OwnedStopped) Cause() Presence[OwnedStopCause] {
-	return ownedMember[OwnedStopCause](v.raw, "cause")
-}
-func (v OwnedStopped) Retryable() Presence[bool] { return ownedMember[bool](v.raw, "retryable") }
-func (v OwnedStopped) Status() Presence[json.Number] {
-	return ownedMember[json.Number](v.raw, "status")
-}
+func (v Stopped) At() Presence[json.Number]     { return ownedMember[json.Number](v.raw, "at") }
+func (v Stopped) Cause() Presence[StopCause]    { return ownedMember[StopCause](v.raw, "cause") }
+func (v Stopped) Retryable() Presence[bool]     { return ownedMember[bool](v.raw, "retryable") }
+func (v Stopped) Status() Presence[json.Number] { return ownedMember[json.Number](v.raw, "status") }
 
-type OwnedStringRoot struct{ ownedJSON }
+type StringRoot struct{ ownedJSON }
 
-func (v OwnedStringRoot) Type() Presence[OwnedStringType] {
-	return ownedMember[OwnedStringType](v.raw, "type")
-}
+func (v StringRoot) Type() Presence[StringType] { return ownedMember[StringType](v.raw, "type") }
 
-type OwnedStringType struct{ ownedJSON }
+type StringType struct{ ownedJSON }
 
-func (v OwnedStringType) Value() (string, error) { return ownedDecode[string](v.raw) }
+func (v StringType) Value() (string, error) { return ownedDecode[string](v.raw) }
 
-type OwnedUsage struct{ ownedJSON }
+type Usage struct{ ownedJSON }
 
-func (v OwnedUsage) InputTokens() Presence[json.Number] {
+func (v Usage) InputTokens() Presence[json.Number] {
 	return ownedMember[json.Number](v.raw, "input_tokens")
 }
-func (v OwnedUsage) OutputTokens() Presence[json.Number] {
+func (v Usage) OutputTokens() Presence[json.Number] {
 	return ownedMember[json.Number](v.raw, "output_tokens")
 }
 
-type OwnedUsagePersistence struct{ ownedJSON }
-type OwnedVerb struct{ ownedJSON }
+type UsagePersistence struct{ ownedJSON }
+type Verb struct{ ownedJSON }
 
-func (v OwnedVerb) Value() (string, error) { return ownedDecode[string](v.raw) }
+func (v Verb) Value() (string, error) { return ownedDecode[string](v.raw) }
 
-type OwnedVersion struct{ ownedJSON }
+type Version struct{ ownedJSON }
 
-func (v OwnedVersion) Value() (string, error) { return ownedDecode[string](v.raw) }
+func (v Version) Value() (string, error) { return ownedDecode[string](v.raw) }
 
-type OwnedWordingVersion struct{ ownedJSON }
+type WordingVersion struct{ ownedJSON }
 
-func (v OwnedWordingVersion) Value() (json.Number, error) { return ownedDecode[json.Number](v.raw) }
+func (v WordingVersion) Value() (json.Number, error) { return ownedDecode[json.Number](v.raw) }
 
-type OwnedAnnotatedField struct{ ownedJSON }
-type OwnedAnnotatedRow struct{ ownedJSON }
-type OwnedAnswer struct{ ownedJSON }
+type AnnotatedField struct{ ownedJSON }
+type AnnotatedRow struct{ ownedJSON }
+type Answer struct{ ownedJSON }
 
-func (v OwnedAnswer) AsAnswerYesNo() (OwnedAnswerYesNo, error) {
+func (v Answer) AsAnswerYesNo() (AnswerYesNo, error) {
 	if !(ownedLiteral(v.raw, "kind", "yes_no")) {
-		return OwnedAnswerYesNo{}, errOwnedAlternative
+		return AnswerYesNo{}, errAlternative
 	}
-	return ownedDecode[OwnedAnswerYesNo](v.raw)
+	return ownedDecode[AnswerYesNo](v.raw)
 }
-func (v OwnedAnswer) AsAnswerChoice() (OwnedAnswerChoice, error) {
+func (v Answer) AsAnswerChoice() (AnswerChoice, error) {
 	if !(ownedLiteral(v.raw, "kind", "choice")) {
-		return OwnedAnswerChoice{}, errOwnedAlternative
+		return AnswerChoice{}, errAlternative
 	}
-	return ownedDecode[OwnedAnswerChoice](v.raw)
+	return ownedDecode[AnswerChoice](v.raw)
 }
-func (v OwnedAnswer) AsAnswerTag() (OwnedAnswerTag, error) {
+func (v Answer) AsAnswerTag() (AnswerTag, error) {
 	if !(ownedLiteral(v.raw, "kind", "tag")) {
-		return OwnedAnswerTag{}, errOwnedAlternative
+		return AnswerTag{}, errAlternative
 	}
-	return ownedDecode[OwnedAnswerTag](v.raw)
+	return ownedDecode[AnswerTag](v.raw)
 }
-func (v OwnedAnswer) AsAnswerScore() (OwnedAnswerScore, error) {
+func (v Answer) AsAnswerScore() (AnswerScore, error) {
 	if !(ownedLiteral(v.raw, "kind", "score")) {
-		return OwnedAnswerScore{}, errOwnedAlternative
+		return AnswerScore{}, errAlternative
 	}
-	return ownedDecode[OwnedAnswerScore](v.raw)
+	return ownedDecode[AnswerScore](v.raw)
 }
 
-type OwnedAnswerChoice struct{ ownedJSON }
+type AnswerChoice struct{ ownedJSON }
 
-func (v OwnedAnswerChoice) Confidence() Presence[json.Number] {
+func (v AnswerChoice) Confidence() Presence[json.Number] {
 	return ownedMember[json.Number](v.raw, "confidence")
 }
-func (v OwnedAnswerChoice) Kind() Presence[string] { return ownedMember[string](v.raw, "kind") }
-func (v OwnedAnswerChoice) Pick() Presence[string] { return ownedMember[string](v.raw, "pick") }
-func (v OwnedAnswerChoice) Probabilities() Presence[map[string]json.Number] {
+func (v AnswerChoice) Kind() Presence[string] { return ownedMember[string](v.raw, "kind") }
+func (v AnswerChoice) Pick() Presence[string] { return ownedMember[string](v.raw, "pick") }
+func (v AnswerChoice) Probabilities() Presence[map[string]json.Number] {
 	return ownedMember[map[string]json.Number](v.raw, "probabilities")
 }
 
-type OwnedAnswerScore struct{ ownedJSON }
+type AnswerScore struct{ ownedJSON }
 
-func (v OwnedAnswerScore) Confidence() Presence[json.Number] {
+func (v AnswerScore) Confidence() Presence[json.Number] {
 	return ownedMember[json.Number](v.raw, "confidence")
 }
-func (v OwnedAnswerScore) Kind() Presence[string]  { return ownedMember[string](v.raw, "kind") }
-func (v OwnedAnswerScore) Level() Presence[string] { return ownedMember[string](v.raw, "level") }
-func (v OwnedAnswerScore) Probabilities() Presence[map[string]json.Number] {
+func (v AnswerScore) Kind() Presence[string]  { return ownedMember[string](v.raw, "kind") }
+func (v AnswerScore) Level() Presence[string] { return ownedMember[string](v.raw, "level") }
+func (v AnswerScore) Probabilities() Presence[map[string]json.Number] {
 	return ownedMember[map[string]json.Number](v.raw, "probabilities")
 }
 
-type OwnedAnswerTag struct{ ownedJSON }
+type AnswerTag struct{ ownedJSON }
 
-func (v OwnedAnswerTag) Kind() Presence[string] { return ownedMember[string](v.raw, "kind") }
-func (v OwnedAnswerTag) Probabilities() Presence[map[string]json.Number] {
+func (v AnswerTag) Kind() Presence[string] { return ownedMember[string](v.raw, "kind") }
+func (v AnswerTag) Probabilities() Presence[map[string]json.Number] {
 	return ownedMember[map[string]json.Number](v.raw, "probabilities")
 }
 
-type OwnedAnswerYesNo struct{ ownedJSON }
+type AnswerYesNo struct{ ownedJSON }
 
-func (v OwnedAnswerYesNo) Kind() Presence[string] { return ownedMember[string](v.raw, "kind") }
-func (v OwnedAnswerYesNo) Probability() Presence[json.Number] {
+func (v AnswerYesNo) Kind() Presence[string] { return ownedMember[string](v.raw, "kind") }
+func (v AnswerYesNo) Probability() Presence[json.Number] {
 	return ownedMember[json.Number](v.raw, "probability")
 }
 
-type OwnedAttemptOutcome struct{ ownedJSON }
-type OwnedBatchSetting struct{ ownedJSON }
-type OwnedBatchWarning struct{ ownedJSON }
+type AttemptOutcome struct{ ownedJSON }
+type BatchSetting struct{ ownedJSON }
+type BatchWarning struct{ ownedJSON }
 
-func (v OwnedBatchWarning) Running() Presence[OwnedBatchSetting] {
-	return ownedMember[OwnedBatchSetting](v.raw, "running")
+func (v BatchWarning) Running() Presence[BatchSetting] {
+	return ownedMember[BatchSetting](v.raw, "running")
 }
-func (v OwnedBatchWarning) TunedFor() Presence[OwnedBatchSetting] {
-	return ownedMember[OwnedBatchSetting](v.raw, "tuned_for")
+func (v BatchWarning) TunedFor() Presence[BatchSetting] {
+	return ownedMember[BatchSetting](v.raw, "tuned_for")
 }
 
-type OwnedEntity struct{ ownedJSON }
+type Entity struct{ ownedJSON }
 
-func (v OwnedEntity) End() Presence[json.Number] { return ownedMember[json.Number](v.raw, "end") }
-func (v OwnedEntity) File() Presence[string]     { return ownedMember[string](v.raw, "file") }
-func (v OwnedEntity) FirstLine() Presence[json.Number] {
+func (v Entity) End() Presence[json.Number] { return ownedMember[json.Number](v.raw, "end") }
+func (v Entity) File() Presence[string]     { return ownedMember[string](v.raw, "file") }
+func (v Entity) FirstLine() Presence[json.Number] {
 	return ownedMember[json.Number](v.raw, "first_line")
 }
-func (v OwnedEntity) Kind() Presence[string] { return ownedMember[string](v.raw, "kind") }
-func (v OwnedEntity) LastLine() Presence[json.Number] {
-	return ownedMember[json.Number](v.raw, "last_line")
-}
-func (v OwnedEntity) Length() Presence[json.Number] { return ownedMember[json.Number](v.raw, "length") }
-func (v OwnedEntity) Start() Presence[json.Number]  { return ownedMember[json.Number](v.raw, "start") }
-func (v OwnedEntity) Strength() Presence[json.Number] {
-	return ownedMember[json.Number](v.raw, "strength")
-}
-func (v OwnedEntity) Text() Presence[string] { return ownedMember[string](v.raw, "text") }
+func (v Entity) Kind() Presence[string]          { return ownedMember[string](v.raw, "kind") }
+func (v Entity) LastLine() Presence[json.Number] { return ownedMember[json.Number](v.raw, "last_line") }
+func (v Entity) Length() Presence[json.Number]   { return ownedMember[json.Number](v.raw, "length") }
+func (v Entity) Start() Presence[json.Number]    { return ownedMember[json.Number](v.raw, "start") }
+func (v Entity) Strength() Presence[json.Number] { return ownedMember[json.Number](v.raw, "strength") }
+func (v Entity) Text() Presence[string]          { return ownedMember[string](v.raw, "text") }
 
-type OwnedEntityEdge struct{ ownedJSON }
+type EntityEdge struct{ ownedJSON }
 
-func (v OwnedEntityEdge) Either() Presence[bool] { return ownedMember[bool](v.raw, "either") }
-func (v OwnedEntityEdge) Probability() Presence[json.Number] {
+func (v EntityEdge) Either() Presence[bool] { return ownedMember[bool](v.raw, "either") }
+func (v EntityEdge) Probability() Presence[json.Number] {
 	return ownedMember[json.Number](v.raw, "probability")
 }
-func (v OwnedEntityEdge) Relation() Presence[string] { return ownedMember[string](v.raw, "relation") }
-func (v OwnedEntityEdge) Source() Presence[OwnedEntity] {
-	return ownedMember[OwnedEntity](v.raw, "source")
-}
-func (v OwnedEntityEdge) Target() Presence[OwnedEntity] {
-	return ownedMember[OwnedEntity](v.raw, "target")
-}
+func (v EntityEdge) Relation() Presence[string] { return ownedMember[string](v.raw, "relation") }
+func (v EntityEdge) Source() Presence[Entity]   { return ownedMember[Entity](v.raw, "source") }
+func (v EntityEdge) Target() Presence[Entity]   { return ownedMember[Entity](v.raw, "target") }
 
-type OwnedFailed struct{ ownedJSON }
+type Failed struct{ ownedJSON }
 
-func (v OwnedFailed) Failed() Presence[OwnedFailure] {
-	return ownedMember[OwnedFailure](v.raw, "failed")
-}
+func (v Failed) Failed() Presence[Failure] { return ownedMember[Failure](v.raw, "failed") }
 
-type OwnedFailure struct{ ownedJSON }
+type Failure struct{ ownedJSON }
 
-func (v OwnedFailure) Cause() Presence[OwnedFailureCause] {
-	return ownedMember[OwnedFailureCause](v.raw, "cause")
-}
-func (v OwnedFailure) Kind() Presence[string] { return ownedMember[string](v.raw, "kind") }
+func (v Failure) Cause() Presence[FailureCause] { return ownedMember[FailureCause](v.raw, "cause") }
+func (v Failure) Kind() Presence[string]        { return ownedMember[string](v.raw, "kind") }
 
-type OwnedFailureCause struct{ ownedJSON }
-type OwnedFailureKind struct{ ownedJSON }
-type OwnedFindAnswer struct{ ownedJSON }
+type FailureCause struct{ ownedJSON }
+type FailureKind struct{ ownedJSON }
+type FindAnswer struct{ ownedJSON }
 
-func (v OwnedFindAnswer) Confidence() Presence[json.Number] {
+func (v FindAnswer) Confidence() Presence[json.Number] {
 	return ownedMember[json.Number](v.raw, "confidence")
 }
-func (v OwnedFindAnswer) Kind() Presence[any]    { return ownedMember[any](v.raw, "kind") }
-func (v OwnedFindAnswer) Pick() Presence[string] { return ownedMember[string](v.raw, "pick") }
-func (v OwnedFindAnswer) Probabilities() Presence[map[string]json.Number] {
+func (v FindAnswer) Kind() Presence[any]    { return ownedMember[any](v.raw, "kind") }
+func (v FindAnswer) Pick() Presence[string] { return ownedMember[string](v.raw, "pick") }
+func (v FindAnswer) Probabilities() Presence[map[string]json.Number] {
 	return ownedMember[map[string]json.Number](v.raw, "probabilities")
 }
 
-type OwnedFindQuestionDocument struct{ ownedJSON }
+type FindQuestionDocument struct{ ownedJSON }
 
-func (v OwnedFindQuestionDocument) Batch() Presence[OwnedBatch] {
-	return ownedMember[OwnedBatch](v.raw, "batch")
+func (v FindQuestionDocument) Batch() Presence[Batch] { return ownedMember[Batch](v.raw, "batch") }
+func (v FindQuestionDocument) ContextSchema() Presence[InputDeclaration] {
+	return ownedMember[InputDeclaration](v.raw, "context_schema")
 }
-func (v OwnedFindQuestionDocument) ContextSchema() Presence[OwnedInputDeclaration] {
-	return ownedMember[OwnedInputDeclaration](v.raw, "context_schema")
+func (v FindQuestionDocument) ItemSchema() Presence[InputDeclaration] {
+	return ownedMember[InputDeclaration](v.raw, "item_schema")
 }
-func (v OwnedFindQuestionDocument) ItemSchema() Presence[OwnedInputDeclaration] {
-	return ownedMember[OwnedInputDeclaration](v.raw, "item_schema")
+func (v FindQuestionDocument) LabelDetails() Presence[[]Label] {
+	return ownedMember[[]Label](v.raw, "label_details")
 }
-func (v OwnedFindQuestionDocument) LabelDetails() Presence[[]OwnedLabel] {
-	return ownedMember[[]OwnedLabel](v.raw, "label_details")
+func (v FindQuestionDocument) Model() Presence[string] { return ownedMember[string](v.raw, "model") }
+func (v FindQuestionDocument) Name() Presence[QuestionName] {
+	return ownedMember[QuestionName](v.raw, "name")
 }
-func (v OwnedFindQuestionDocument) Model() Presence[string] {
-	return ownedMember[string](v.raw, "model")
-}
-func (v OwnedFindQuestionDocument) Name() Presence[OwnedQuestionName] {
-	return ownedMember[OwnedQuestionName](v.raw, "name")
-}
-func (v OwnedFindQuestionDocument) None() Presence[bool]   { return ownedMember[bool](v.raw, "none") }
-func (v OwnedFindQuestionDocument) On() Presence[[]string] { return ownedMember[[]string](v.raw, "on") }
-func (v OwnedFindQuestionDocument) Profile() Presence[string] {
+func (v FindQuestionDocument) None() Presence[bool]   { return ownedMember[bool](v.raw, "none") }
+func (v FindQuestionDocument) On() Presence[[]string] { return ownedMember[[]string](v.raw, "on") }
+func (v FindQuestionDocument) Profile() Presence[string] {
 	return ownedMember[string](v.raw, "profile")
 }
-func (v OwnedFindQuestionDocument) Text() Presence[any] { return ownedMember[any](v.raw, "text") }
-func (v OwnedFindQuestionDocument) Verb() Presence[any] { return ownedMember[any](v.raw, "verb") }
-func (v OwnedFindQuestionDocument) WordingVersion() Presence[OwnedWordingVersion] {
-	return ownedMember[OwnedWordingVersion](v.raw, "wording_version")
+func (v FindQuestionDocument) Text() Presence[any] { return ownedMember[any](v.raw, "text") }
+func (v FindQuestionDocument) Verb() Presence[any] { return ownedMember[any](v.raw, "verb") }
+func (v FindQuestionDocument) WordingVersion() Presence[WordingVersion] {
+	return ownedMember[WordingVersion](v.raw, "wording_version")
 }
 
-type OwnedNameOdds struct{ ownedJSON }
+type NameOdds struct{ ownedJSON }
 
-func (v OwnedNameOdds) Edges() Presence[map[string]json.Number] {
+func (v NameOdds) Edges() Presence[map[string]json.Number] {
 	return ownedMember[map[string]json.Number](v.raw, "edges")
 }
-func (v OwnedNameOdds) End() Presence[json.Number] { return ownedMember[json.Number](v.raw, "end") }
-func (v OwnedNameOdds) Kinds() Presence[map[string]json.Number] {
+func (v NameOdds) End() Presence[json.Number] { return ownedMember[json.Number](v.raw, "end") }
+func (v NameOdds) Kinds() Presence[map[string]json.Number] {
 	return ownedMember[map[string]json.Number](v.raw, "kinds")
 }
-func (v OwnedNameOdds) Start() Presence[json.Number] { return ownedMember[json.Number](v.raw, "start") }
+func (v NameOdds) Start() Presence[json.Number] { return ownedMember[json.Number](v.raw, "start") }
 
-type OwnedPairOdds struct{ ownedJSON }
+type PairOdds struct{ ownedJSON }
 
-func (v OwnedPairOdds) Probability() Presence[json.Number] {
+func (v PairOdds) Probability() Presence[json.Number] {
 	return ownedMember[json.Number](v.raw, "probability")
 }
-func (v OwnedPairOdds) Relation() Presence[string]   { return ownedMember[string](v.raw, "relation") }
-func (v OwnedPairOdds) Source() Presence[OwnedPlace] { return ownedMember[OwnedPlace](v.raw, "source") }
-func (v OwnedPairOdds) Target() Presence[OwnedPlace] { return ownedMember[OwnedPlace](v.raw, "target") }
+func (v PairOdds) Relation() Presence[string] { return ownedMember[string](v.raw, "relation") }
+func (v PairOdds) Source() Presence[Place]    { return ownedMember[Place](v.raw, "source") }
+func (v PairOdds) Target() Presence[Place]    { return ownedMember[Place](v.raw, "target") }
 
-type OwnedPieceOdds struct{ ownedJSON }
+type PieceOdds struct{ ownedJSON }
 
-func (v OwnedPieceOdds) End() Presence[json.Number] { return ownedMember[json.Number](v.raw, "end") }
-func (v OwnedPieceOdds) Start() Presence[json.Number] {
-	return ownedMember[json.Number](v.raw, "start")
-}
-func (v OwnedPieceOdds) Tags() Presence[map[string]json.Number] {
+func (v PieceOdds) End() Presence[json.Number]   { return ownedMember[json.Number](v.raw, "end") }
+func (v PieceOdds) Start() Presence[json.Number] { return ownedMember[json.Number](v.raw, "start") }
+func (v PieceOdds) Tags() Presence[map[string]json.Number] {
 	return ownedMember[map[string]json.Number](v.raw, "tags")
 }
 
-type OwnedPlace struct{ ownedJSON }
+type Place struct{ ownedJSON }
 
-func (v OwnedPlace) End() Presence[json.Number]   { return ownedMember[json.Number](v.raw, "end") }
-func (v OwnedPlace) Start() Presence[json.Number] { return ownedMember[json.Number](v.raw, "start") }
+func (v Place) End() Presence[json.Number]   { return ownedMember[json.Number](v.raw, "end") }
+func (v Place) Start() Presence[json.Number] { return ownedMember[json.Number](v.raw, "start") }
 
-type OwnedPlan struct{ ownedJSON }
+type Plan struct{ ownedJSON }
 
-func (v OwnedPlan) EstimatedBytes() Presence[json.Number] {
+func (v Plan) EstimatedBytes() Presence[json.Number] {
 	return ownedMember[json.Number](v.raw, "estimated_bytes")
 }
-func (v OwnedPlan) EstimatedInputTokens() Presence[OwnedTokenBand] {
-	return ownedMember[OwnedTokenBand](v.raw, "estimated_input_tokens")
+func (v Plan) EstimatedInputTokens() Presence[TokenBand] {
+	return ownedMember[TokenBand](v.raw, "estimated_input_tokens")
 }
-func (v OwnedPlan) FirstBodyUtf8() Presence[string] {
-	return ownedMember[string](v.raw, "first_body_utf8")
-}
-func (v OwnedPlan) LargestRequestBytes() Presence[json.Number] {
+func (v Plan) FirstBodyUtf8() Presence[string] { return ownedMember[string](v.raw, "first_body_utf8") }
+func (v Plan) LargestRequestBytes() Presence[json.Number] {
 	return ownedMember[json.Number](v.raw, "largest_request_bytes")
 }
-func (v OwnedPlan) LargestRequestEstimatedInputTokens() Presence[json.Number] {
+func (v Plan) LargestRequestEstimatedInputTokens() Presence[json.Number] {
 	return ownedMember[json.Number](v.raw, "largest_request_estimated_input_tokens")
 }
-func (v OwnedPlan) Records() Presence[json.Number] { return ownedMember[json.Number](v.raw, "records") }
-func (v OwnedPlan) Requests() Presence[json.Number] {
-	return ownedMember[json.Number](v.raw, "requests")
-}
-func (v OwnedPlan) TokenEstimateMethod() Presence[string] {
+func (v Plan) Records() Presence[json.Number]  { return ownedMember[json.Number](v.raw, "records") }
+func (v Plan) Requests() Presence[json.Number] { return ownedMember[json.Number](v.raw, "requests") }
+func (v Plan) TokenEstimateMethod() Presence[string] {
 	return ownedMember[string](v.raw, "token_estimate_method")
 }
-func (v OwnedPlan) UpperBound() Presence[bool] { return ownedMember[bool](v.raw, "upper_bound") }
+func (v Plan) UpperBound() Presence[bool] { return ownedMember[bool](v.raw, "upper_bound") }
 
-type OwnedProfileWarning struct{ ownedJSON }
+type ProfileWarning struct{ ownedJSON }
 
-func (v OwnedProfileWarning) Running() Presence[string] { return ownedMember[string](v.raw, "running") }
-func (v OwnedProfileWarning) TunedFor() Presence[string] {
-	return ownedMember[string](v.raw, "tuned_for")
-}
+func (v ProfileWarning) Running() Presence[string]  { return ownedMember[string](v.raw, "running") }
+func (v ProfileWarning) TunedFor() Presence[string] { return ownedMember[string](v.raw, "tuned_for") }
 
-type OwnedQuestionDocument struct{ ownedJSON }
+type QuestionDocument struct{ ownedJSON }
 
-func (v OwnedQuestionDocument) AsQuestionDocumentDecide() (OwnedQuestionDocumentDecide, error) {
+func (v QuestionDocument) AsQuestionDocumentDecide() (QuestionDocumentDecide, error) {
 	if !(ownedLiteral(v.raw, "verb", "decide")) {
-		return OwnedQuestionDocumentDecide{}, errOwnedAlternative
+		return QuestionDocumentDecide{}, errAlternative
 	}
-	return ownedDecode[OwnedQuestionDocumentDecide](v.raw)
+	return ownedDecode[QuestionDocumentDecide](v.raw)
 }
-func (v OwnedQuestionDocument) AsQuestionDocumentChoose() (OwnedQuestionDocumentChoose, error) {
+func (v QuestionDocument) AsQuestionDocumentChoose() (QuestionDocumentChoose, error) {
 	if !(ownedLiteral(v.raw, "verb", "choose")) {
-		return OwnedQuestionDocumentChoose{}, errOwnedAlternative
+		return QuestionDocumentChoose{}, errAlternative
 	}
-	return ownedDecode[OwnedQuestionDocumentChoose](v.raw)
+	return ownedDecode[QuestionDocumentChoose](v.raw)
 }
-func (v OwnedQuestionDocument) AsQuestionDocumentTag() (OwnedQuestionDocumentTag, error) {
+func (v QuestionDocument) AsQuestionDocumentTag() (QuestionDocumentTag, error) {
 	if !(ownedLiteral(v.raw, "verb", "tag")) {
-		return OwnedQuestionDocumentTag{}, errOwnedAlternative
+		return QuestionDocumentTag{}, errAlternative
 	}
-	return ownedDecode[OwnedQuestionDocumentTag](v.raw)
+	return ownedDecode[QuestionDocumentTag](v.raw)
 }
-func (v OwnedQuestionDocument) AsQuestionDocumentScore() (OwnedQuestionDocumentScore, error) {
+func (v QuestionDocument) AsQuestionDocumentScore() (QuestionDocumentScore, error) {
 	if !(ownedLiteral(v.raw, "verb", "score")) {
-		return OwnedQuestionDocumentScore{}, errOwnedAlternative
+		return QuestionDocumentScore{}, errAlternative
 	}
-	return ownedDecode[OwnedQuestionDocumentScore](v.raw)
+	return ownedDecode[QuestionDocumentScore](v.raw)
 }
 
-type OwnedQuestionDocumentChoose struct{ ownedJSON }
+type QuestionDocumentChoose struct{ ownedJSON }
 
-func (v OwnedQuestionDocumentChoose) Batch() Presence[OwnedBatch] {
-	return ownedMember[OwnedBatch](v.raw, "batch")
+func (v QuestionDocumentChoose) Batch() Presence[Batch] { return ownedMember[Batch](v.raw, "batch") }
+func (v QuestionDocumentChoose) ContextSchema() Presence[InputDeclaration] {
+	return ownedMember[InputDeclaration](v.raw, "context_schema")
 }
-func (v OwnedQuestionDocumentChoose) ContextSchema() Presence[OwnedInputDeclaration] {
-	return ownedMember[OwnedInputDeclaration](v.raw, "context_schema")
+func (v QuestionDocumentChoose) ItemSchema() Presence[InputDeclaration] {
+	return ownedMember[InputDeclaration](v.raw, "item_schema")
 }
-func (v OwnedQuestionDocumentChoose) ItemSchema() Presence[OwnedInputDeclaration] {
-	return ownedMember[OwnedInputDeclaration](v.raw, "item_schema")
+func (v QuestionDocumentChoose) LabelDetails() Presence[[]Label] {
+	return ownedMember[[]Label](v.raw, "label_details")
 }
-func (v OwnedQuestionDocumentChoose) LabelDetails() Presence[[]OwnedLabel] {
-	return ownedMember[[]OwnedLabel](v.raw, "label_details")
+func (v QuestionDocumentChoose) Model() Presence[string] { return ownedMember[string](v.raw, "model") }
+func (v QuestionDocumentChoose) Name() Presence[QuestionName] {
+	return ownedMember[QuestionName](v.raw, "name")
 }
-func (v OwnedQuestionDocumentChoose) Model() Presence[string] {
-	return ownedMember[string](v.raw, "model")
-}
-func (v OwnedQuestionDocumentChoose) Name() Presence[OwnedQuestionName] {
-	return ownedMember[OwnedQuestionName](v.raw, "name")
-}
-func (v OwnedQuestionDocumentChoose) On() Presence[[]string] {
-	return ownedMember[[]string](v.raw, "on")
-}
-func (v OwnedQuestionDocumentChoose) Profile() Presence[string] {
+func (v QuestionDocumentChoose) On() Presence[[]string] { return ownedMember[[]string](v.raw, "on") }
+func (v QuestionDocumentChoose) Profile() Presence[string] {
 	return ownedMember[string](v.raw, "profile")
 }
-func (v OwnedQuestionDocumentChoose) WordingVersion() Presence[OwnedWordingVersion] {
-	return ownedMember[OwnedWordingVersion](v.raw, "wording_version")
+func (v QuestionDocumentChoose) WordingVersion() Presence[WordingVersion] {
+	return ownedMember[WordingVersion](v.raw, "wording_version")
 }
-func (v OwnedQuestionDocumentChoose) Options() Presence[[]string] {
+func (v QuestionDocumentChoose) Options() Presence[[]string] {
 	return ownedMember[[]string](v.raw, "options")
 }
-func (v OwnedQuestionDocumentChoose) Text() Presence[any] { return ownedMember[any](v.raw, "text") }
-func (v OwnedQuestionDocumentChoose) Verb() Presence[string] {
-	return ownedMember[string](v.raw, "verb")
-}
+func (v QuestionDocumentChoose) Text() Presence[any]    { return ownedMember[any](v.raw, "text") }
+func (v QuestionDocumentChoose) Verb() Presence[string] { return ownedMember[string](v.raw, "verb") }
 
-type OwnedQuestionDocumentDecide struct{ ownedJSON }
+type QuestionDocumentDecide struct{ ownedJSON }
 
-func (v OwnedQuestionDocumentDecide) Batch() Presence[OwnedBatch] {
-	return ownedMember[OwnedBatch](v.raw, "batch")
+func (v QuestionDocumentDecide) Batch() Presence[Batch] { return ownedMember[Batch](v.raw, "batch") }
+func (v QuestionDocumentDecide) ContextSchema() Presence[InputDeclaration] {
+	return ownedMember[InputDeclaration](v.raw, "context_schema")
 }
-func (v OwnedQuestionDocumentDecide) ContextSchema() Presence[OwnedInputDeclaration] {
-	return ownedMember[OwnedInputDeclaration](v.raw, "context_schema")
+func (v QuestionDocumentDecide) ItemSchema() Presence[InputDeclaration] {
+	return ownedMember[InputDeclaration](v.raw, "item_schema")
 }
-func (v OwnedQuestionDocumentDecide) ItemSchema() Presence[OwnedInputDeclaration] {
-	return ownedMember[OwnedInputDeclaration](v.raw, "item_schema")
+func (v QuestionDocumentDecide) LabelDetails() Presence[[]Label] {
+	return ownedMember[[]Label](v.raw, "label_details")
 }
-func (v OwnedQuestionDocumentDecide) LabelDetails() Presence[[]OwnedLabel] {
-	return ownedMember[[]OwnedLabel](v.raw, "label_details")
+func (v QuestionDocumentDecide) Model() Presence[string] { return ownedMember[string](v.raw, "model") }
+func (v QuestionDocumentDecide) Name() Presence[QuestionName] {
+	return ownedMember[QuestionName](v.raw, "name")
 }
-func (v OwnedQuestionDocumentDecide) Model() Presence[string] {
-	return ownedMember[string](v.raw, "model")
-}
-func (v OwnedQuestionDocumentDecide) Name() Presence[OwnedQuestionName] {
-	return ownedMember[OwnedQuestionName](v.raw, "name")
-}
-func (v OwnedQuestionDocumentDecide) On() Presence[[]string] {
-	return ownedMember[[]string](v.raw, "on")
-}
-func (v OwnedQuestionDocumentDecide) Profile() Presence[string] {
+func (v QuestionDocumentDecide) On() Presence[[]string] { return ownedMember[[]string](v.raw, "on") }
+func (v QuestionDocumentDecide) Profile() Presence[string] {
 	return ownedMember[string](v.raw, "profile")
 }
-func (v OwnedQuestionDocumentDecide) WordingVersion() Presence[OwnedWordingVersion] {
-	return ownedMember[OwnedWordingVersion](v.raw, "wording_version")
+func (v QuestionDocumentDecide) WordingVersion() Presence[WordingVersion] {
+	return ownedMember[WordingVersion](v.raw, "wording_version")
 }
-func (v OwnedQuestionDocumentDecide) False() Presence[any] { return ownedMember[any](v.raw, "false") }
-func (v OwnedQuestionDocumentDecide) Text() Presence[any]  { return ownedMember[any](v.raw, "text") }
-func (v OwnedQuestionDocumentDecide) True() Presence[any]  { return ownedMember[any](v.raw, "true") }
-func (v OwnedQuestionDocumentDecide) Verb() Presence[string] {
-	return ownedMember[string](v.raw, "verb")
-}
+func (v QuestionDocumentDecide) False() Presence[any]   { return ownedMember[any](v.raw, "false") }
+func (v QuestionDocumentDecide) Text() Presence[any]    { return ownedMember[any](v.raw, "text") }
+func (v QuestionDocumentDecide) True() Presence[any]    { return ownedMember[any](v.raw, "true") }
+func (v QuestionDocumentDecide) Verb() Presence[string] { return ownedMember[string](v.raw, "verb") }
 
-type OwnedQuestionDocumentScore struct{ ownedJSON }
+type QuestionDocumentScore struct{ ownedJSON }
 
-func (v OwnedQuestionDocumentScore) Batch() Presence[OwnedBatch] {
-	return ownedMember[OwnedBatch](v.raw, "batch")
+func (v QuestionDocumentScore) Batch() Presence[Batch] { return ownedMember[Batch](v.raw, "batch") }
+func (v QuestionDocumentScore) ContextSchema() Presence[InputDeclaration] {
+	return ownedMember[InputDeclaration](v.raw, "context_schema")
 }
-func (v OwnedQuestionDocumentScore) ContextSchema() Presence[OwnedInputDeclaration] {
-	return ownedMember[OwnedInputDeclaration](v.raw, "context_schema")
+func (v QuestionDocumentScore) ItemSchema() Presence[InputDeclaration] {
+	return ownedMember[InputDeclaration](v.raw, "item_schema")
 }
-func (v OwnedQuestionDocumentScore) ItemSchema() Presence[OwnedInputDeclaration] {
-	return ownedMember[OwnedInputDeclaration](v.raw, "item_schema")
+func (v QuestionDocumentScore) LabelDetails() Presence[[]Label] {
+	return ownedMember[[]Label](v.raw, "label_details")
 }
-func (v OwnedQuestionDocumentScore) LabelDetails() Presence[[]OwnedLabel] {
-	return ownedMember[[]OwnedLabel](v.raw, "label_details")
+func (v QuestionDocumentScore) Model() Presence[string] { return ownedMember[string](v.raw, "model") }
+func (v QuestionDocumentScore) Name() Presence[QuestionName] {
+	return ownedMember[QuestionName](v.raw, "name")
 }
-func (v OwnedQuestionDocumentScore) Model() Presence[string] {
-	return ownedMember[string](v.raw, "model")
-}
-func (v OwnedQuestionDocumentScore) Name() Presence[OwnedQuestionName] {
-	return ownedMember[OwnedQuestionName](v.raw, "name")
-}
-func (v OwnedQuestionDocumentScore) On() Presence[[]string] {
-	return ownedMember[[]string](v.raw, "on")
-}
-func (v OwnedQuestionDocumentScore) Profile() Presence[string] {
+func (v QuestionDocumentScore) On() Presence[[]string] { return ownedMember[[]string](v.raw, "on") }
+func (v QuestionDocumentScore) Profile() Presence[string] {
 	return ownedMember[string](v.raw, "profile")
 }
-func (v OwnedQuestionDocumentScore) WordingVersion() Presence[OwnedWordingVersion] {
-	return ownedMember[OwnedWordingVersion](v.raw, "wording_version")
+func (v QuestionDocumentScore) WordingVersion() Presence[WordingVersion] {
+	return ownedMember[WordingVersion](v.raw, "wording_version")
 }
-func (v OwnedQuestionDocumentScore) Levels() Presence[[]string] {
+func (v QuestionDocumentScore) Levels() Presence[[]string] {
 	return ownedMember[[]string](v.raw, "levels")
 }
-func (v OwnedQuestionDocumentScore) Text() Presence[any] { return ownedMember[any](v.raw, "text") }
-func (v OwnedQuestionDocumentScore) Verb() Presence[string] {
-	return ownedMember[string](v.raw, "verb")
-}
+func (v QuestionDocumentScore) Text() Presence[any]    { return ownedMember[any](v.raw, "text") }
+func (v QuestionDocumentScore) Verb() Presence[string] { return ownedMember[string](v.raw, "verb") }
 
-type OwnedQuestionDocumentTag struct{ ownedJSON }
+type QuestionDocumentTag struct{ ownedJSON }
 
-func (v OwnedQuestionDocumentTag) Batch() Presence[OwnedBatch] {
-	return ownedMember[OwnedBatch](v.raw, "batch")
+func (v QuestionDocumentTag) Batch() Presence[Batch] { return ownedMember[Batch](v.raw, "batch") }
+func (v QuestionDocumentTag) ContextSchema() Presence[InputDeclaration] {
+	return ownedMember[InputDeclaration](v.raw, "context_schema")
 }
-func (v OwnedQuestionDocumentTag) ContextSchema() Presence[OwnedInputDeclaration] {
-	return ownedMember[OwnedInputDeclaration](v.raw, "context_schema")
+func (v QuestionDocumentTag) ItemSchema() Presence[InputDeclaration] {
+	return ownedMember[InputDeclaration](v.raw, "item_schema")
 }
-func (v OwnedQuestionDocumentTag) ItemSchema() Presence[OwnedInputDeclaration] {
-	return ownedMember[OwnedInputDeclaration](v.raw, "item_schema")
+func (v QuestionDocumentTag) LabelDetails() Presence[[]Label] {
+	return ownedMember[[]Label](v.raw, "label_details")
 }
-func (v OwnedQuestionDocumentTag) LabelDetails() Presence[[]OwnedLabel] {
-	return ownedMember[[]OwnedLabel](v.raw, "label_details")
+func (v QuestionDocumentTag) Model() Presence[string] { return ownedMember[string](v.raw, "model") }
+func (v QuestionDocumentTag) Name() Presence[QuestionName] {
+	return ownedMember[QuestionName](v.raw, "name")
 }
-func (v OwnedQuestionDocumentTag) Model() Presence[string] {
-	return ownedMember[string](v.raw, "model")
+func (v QuestionDocumentTag) On() Presence[[]string]    { return ownedMember[[]string](v.raw, "on") }
+func (v QuestionDocumentTag) Profile() Presence[string] { return ownedMember[string](v.raw, "profile") }
+func (v QuestionDocumentTag) WordingVersion() Presence[WordingVersion] {
+	return ownedMember[WordingVersion](v.raw, "wording_version")
 }
-func (v OwnedQuestionDocumentTag) Name() Presence[OwnedQuestionName] {
-	return ownedMember[OwnedQuestionName](v.raw, "name")
-}
-func (v OwnedQuestionDocumentTag) On() Presence[[]string] { return ownedMember[[]string](v.raw, "on") }
-func (v OwnedQuestionDocumentTag) Profile() Presence[string] {
-	return ownedMember[string](v.raw, "profile")
-}
-func (v OwnedQuestionDocumentTag) WordingVersion() Presence[OwnedWordingVersion] {
-	return ownedMember[OwnedWordingVersion](v.raw, "wording_version")
-}
-func (v OwnedQuestionDocumentTag) Labels() Presence[[]string] {
+func (v QuestionDocumentTag) Labels() Presence[[]string] {
 	return ownedMember[[]string](v.raw, "labels")
 }
-func (v OwnedQuestionDocumentTag) Text() Presence[any]    { return ownedMember[any](v.raw, "text") }
-func (v OwnedQuestionDocumentTag) Verb() Presence[string] { return ownedMember[string](v.raw, "verb") }
+func (v QuestionDocumentTag) Text() Presence[any]    { return ownedMember[any](v.raw, "text") }
+func (v QuestionDocumentTag) Verb() Presence[string] { return ownedMember[string](v.raw, "verb") }
 
-type OwnedRecognize struct{ ownedJSON }
+type Recognize struct{ ownedJSON }
 
-func (v OwnedRecognize) AsRecognizeEntities() (OwnedRecognizeEntities, error) {
+func (v Recognize) AsRecognizeEntities() (RecognizeEntities, error) {
 	if !(ownedHas(v.raw, "entities") && !ownedHas(v.raw, "mode") && !ownedHas(v.raw, "proposals")) {
-		return OwnedRecognizeEntities{}, errOwnedAlternative
+		return RecognizeEntities{}, errAlternative
 	}
-	return ownedDecode[OwnedRecognizeEntities](v.raw)
+	return ownedDecode[RecognizeEntities](v.raw)
 }
-func (v OwnedRecognize) AsRecognizeModeProposals() (OwnedRecognizeModeProposals, error) {
+func (v Recognize) AsRecognizeModeProposals() (RecognizeModeProposals, error) {
 	if !(ownedHas(v.raw, "mode") && ownedHas(v.raw, "proposals") && !ownedHas(v.raw, "entities")) {
-		return OwnedRecognizeModeProposals{}, errOwnedAlternative
+		return RecognizeModeProposals{}, errAlternative
 	}
-	return ownedDecode[OwnedRecognizeModeProposals](v.raw)
+	return ownedDecode[RecognizeModeProposals](v.raw)
 }
 
-type OwnedRecognizeAnswer struct{ ownedJSON }
+type RecognizeAnswer struct{ ownedJSON }
 
-func (v OwnedRecognizeAnswer) Names() Presence[[]OwnedNameOdds] {
-	return ownedMember[[]OwnedNameOdds](v.raw, "names")
+func (v RecognizeAnswer) Names() Presence[[]NameOdds] { return ownedMember[[]NameOdds](v.raw, "names") }
+func (v RecognizeAnswer) Pairs() Presence[[]PairOdds] { return ownedMember[[]PairOdds](v.raw, "pairs") }
+func (v RecognizeAnswer) Pieces() Presence[[]PieceOdds] {
+	return ownedMember[[]PieceOdds](v.raw, "pieces")
 }
-func (v OwnedRecognizeAnswer) Pairs() Presence[[]OwnedPairOdds] {
-	return ownedMember[[]OwnedPairOdds](v.raw, "pairs")
-}
-func (v OwnedRecognizeAnswer) Pieces() Presence[[]OwnedPieceOdds] {
-	return ownedMember[[]OwnedPieceOdds](v.raw, "pieces")
-}
-func (v OwnedRecognizeAnswer) Proposals() Presence[[]OwnedRecognitionProposal] {
-	return ownedMember[[]OwnedRecognitionProposal](v.raw, "proposals")
+func (v RecognizeAnswer) Proposals() Presence[[]RecognitionProposal] {
+	return ownedMember[[]RecognitionProposal](v.raw, "proposals")
 }
 
-type OwnedRecognizeQuestionDocument struct{ ownedJSON }
+type RecognizeQuestionDocument struct{ ownedJSON }
 
-func (v OwnedRecognizeQuestionDocument) Batch() Presence[OwnedBatch] {
-	return ownedMember[OwnedBatch](v.raw, "batch")
+func (v RecognizeQuestionDocument) Batch() Presence[Batch] { return ownedMember[Batch](v.raw, "batch") }
+func (v RecognizeQuestionDocument) ContextSchema() Presence[InputDeclaration] {
+	return ownedMember[InputDeclaration](v.raw, "context_schema")
 }
-func (v OwnedRecognizeQuestionDocument) ContextSchema() Presence[OwnedInputDeclaration] {
-	return ownedMember[OwnedInputDeclaration](v.raw, "context_schema")
-}
-func (v OwnedRecognizeQuestionDocument) EntityDefinition() Presence[any] {
+func (v RecognizeQuestionDocument) EntityDefinition() Presence[any] {
 	return ownedMember[any](v.raw, "entity_definition")
 }
-func (v OwnedRecognizeQuestionDocument) Instructions() Presence[any] {
+func (v RecognizeQuestionDocument) Instructions() Presence[any] {
 	return ownedMember[any](v.raw, "instructions")
 }
-func (v OwnedRecognizeQuestionDocument) ItemSchema() Presence[OwnedInputDeclaration] {
-	return ownedMember[OwnedInputDeclaration](v.raw, "item_schema")
+func (v RecognizeQuestionDocument) ItemSchema() Presence[InputDeclaration] {
+	return ownedMember[InputDeclaration](v.raw, "item_schema")
 }
-func (v OwnedRecognizeQuestionDocument) Kinds() Presence[map[string]any] {
+func (v RecognizeQuestionDocument) Kinds() Presence[map[string]any] {
 	return ownedMember[map[string]any](v.raw, "kinds")
 }
-func (v OwnedRecognizeQuestionDocument) LabelDetails() Presence[[]OwnedLabel] {
-	return ownedMember[[]OwnedLabel](v.raw, "label_details")
+func (v RecognizeQuestionDocument) LabelDetails() Presence[[]Label] {
+	return ownedMember[[]Label](v.raw, "label_details")
 }
-func (v OwnedRecognizeQuestionDocument) Mode() Presence[OwnedRecognitionMode] {
-	return ownedMember[OwnedRecognitionMode](v.raw, "mode")
+func (v RecognizeQuestionDocument) Mode() Presence[ResultRecognitionMode] {
+	return ownedMember[ResultRecognitionMode](v.raw, "mode")
 }
-func (v OwnedRecognizeQuestionDocument) Model() Presence[string] {
+func (v RecognizeQuestionDocument) Model() Presence[string] {
 	return ownedMember[string](v.raw, "model")
 }
-func (v OwnedRecognizeQuestionDocument) Name() Presence[OwnedQuestionName] {
-	return ownedMember[OwnedQuestionName](v.raw, "name")
+func (v RecognizeQuestionDocument) Name() Presence[QuestionName] {
+	return ownedMember[QuestionName](v.raw, "name")
 }
-func (v OwnedRecognizeQuestionDocument) On() Presence[[]string] {
-	return ownedMember[[]string](v.raw, "on")
-}
-func (v OwnedRecognizeQuestionDocument) Profile() Presence[string] {
+func (v RecognizeQuestionDocument) On() Presence[[]string] { return ownedMember[[]string](v.raw, "on") }
+func (v RecognizeQuestionDocument) Profile() Presence[string] {
 	return ownedMember[string](v.raw, "profile")
 }
-func (v OwnedRecognizeQuestionDocument) RelationThreshold() Presence[OwnedThreshold] {
-	return ownedMember[OwnedThreshold](v.raw, "relation_threshold")
+func (v RecognizeQuestionDocument) RelationThreshold() Presence[Threshold] {
+	return ownedMember[Threshold](v.raw, "relation_threshold")
 }
-func (v OwnedRecognizeQuestionDocument) Relations() Presence[[]OwnedRelationRule] {
-	return ownedMember[[]OwnedRelationRule](v.raw, "relations")
+func (v RecognizeQuestionDocument) Relations() Presence[[]RelationRule] {
+	return ownedMember[[]RelationRule](v.raw, "relations")
 }
-func (v OwnedRecognizeQuestionDocument) SnippetPieces() Presence[json.Number] {
+func (v RecognizeQuestionDocument) SnippetPieces() Presence[json.Number] {
 	return ownedMember[json.Number](v.raw, "snippet_pieces")
 }
-func (v OwnedRecognizeQuestionDocument) StageContext() Presence[OwnedRecognitionStageContext] {
-	return ownedMember[OwnedRecognitionStageContext](v.raw, "stage_context")
+func (v RecognizeQuestionDocument) StageContext() Presence[RecognitionContext] {
+	return ownedMember[RecognitionContext](v.raw, "stage_context")
 }
-func (v OwnedRecognizeQuestionDocument) Threshold() Presence[OwnedThreshold] {
-	return ownedMember[OwnedThreshold](v.raw, "threshold")
+func (v RecognizeQuestionDocument) Threshold() Presence[Threshold] {
+	return ownedMember[Threshold](v.raw, "threshold")
 }
-func (v OwnedRecognizeQuestionDocument) Verb() Presence[OwnedVerb] {
-	return ownedMember[OwnedVerb](v.raw, "verb")
-}
-func (v OwnedRecognizeQuestionDocument) WordingVersion() Presence[OwnedWordingVersion] {
-	return ownedMember[OwnedWordingVersion](v.raw, "wording_version")
+func (v RecognizeQuestionDocument) Verb() Presence[Verb] { return ownedMember[Verb](v.raw, "verb") }
+func (v RecognizeQuestionDocument) WordingVersion() Presence[WordingVersion] {
+	return ownedMember[WordingVersion](v.raw, "wording_version")
 }
 
-type OwnedRecognizeEntities struct{ ownedJSON }
+type RecognizeEntities struct{ ownedJSON }
 
-func (v OwnedRecognizeEntities) Entities() Presence[[]OwnedEntity] {
-	return ownedMember[[]OwnedEntity](v.raw, "entities")
+func (v RecognizeEntities) Entities() Presence[[]Entity] {
+	return ownedMember[[]Entity](v.raw, "entities")
 }
-func (v OwnedRecognizeEntities) Relations() Presence[[]OwnedEntityEdge] {
-	return ownedMember[[]OwnedEntityEdge](v.raw, "relations")
-}
-
-type OwnedRecognizeModeProposals struct{ ownedJSON }
-
-func (v OwnedRecognizeModeProposals) Mode() Presence[OwnedBoundaryMode] {
-	return ownedMember[OwnedBoundaryMode](v.raw, "mode")
-}
-func (v OwnedRecognizeModeProposals) Proposals() Presence[[]OwnedBoundaryProposal] {
-	return ownedMember[[]OwnedBoundaryProposal](v.raw, "proposals")
+func (v RecognizeEntities) Relations() Presence[[]EntityEdge] {
+	return ownedMember[[]EntityEdge](v.raw, "relations")
 }
 
-type OwnedRelateFields struct{ ownedJSON }
+type RecognizeModeProposals struct{ ownedJSON }
 
-func (v OwnedRelateFields) Kind() Presence[string] { return ownedMember[string](v.raw, "kind") }
-func (v OwnedRelateFields) Name() Presence[string] { return ownedMember[string](v.raw, "name") }
+func (v RecognizeModeProposals) Mode() Presence[BoundaryMode] {
+	return ownedMember[BoundaryMode](v.raw, "mode")
+}
+func (v RecognizeModeProposals) Proposals() Presence[[]BoundaryProposal] {
+	return ownedMember[[]BoundaryProposal](v.raw, "proposals")
+}
 
-type OwnedRelateQuestionDocument struct{ ownedJSON }
+type RelationFields struct{ ownedJSON }
 
-func (v OwnedRelateQuestionDocument) Batch() Presence[OwnedBatch] {
-	return ownedMember[OwnedBatch](v.raw, "batch")
+func (v RelationFields) Kind() Presence[string] { return ownedMember[string](v.raw, "kind") }
+func (v RelationFields) Name() Presence[string] { return ownedMember[string](v.raw, "name") }
+
+type RelateQuestionDocument struct{ ownedJSON }
+
+func (v RelateQuestionDocument) Batch() Presence[Batch] { return ownedMember[Batch](v.raw, "batch") }
+func (v RelateQuestionDocument) ContextSchema() Presence[InputDeclaration] {
+	return ownedMember[InputDeclaration](v.raw, "context_schema")
 }
-func (v OwnedRelateQuestionDocument) ContextSchema() Presence[OwnedInputDeclaration] {
-	return ownedMember[OwnedInputDeclaration](v.raw, "context_schema")
+func (v RelateQuestionDocument) Fields() Presence[RelationFields] {
+	return ownedMember[RelationFields](v.raw, "fields")
 }
-func (v OwnedRelateQuestionDocument) Fields() Presence[OwnedRelateFields] {
-	return ownedMember[OwnedRelateFields](v.raw, "fields")
+func (v RelateQuestionDocument) ItemSchema() Presence[InputDeclaration] {
+	return ownedMember[InputDeclaration](v.raw, "item_schema")
 }
-func (v OwnedRelateQuestionDocument) ItemSchema() Presence[OwnedInputDeclaration] {
-	return ownedMember[OwnedInputDeclaration](v.raw, "item_schema")
+func (v RelateQuestionDocument) LabelDetails() Presence[[]Label] {
+	return ownedMember[[]Label](v.raw, "label_details")
 }
-func (v OwnedRelateQuestionDocument) LabelDetails() Presence[[]OwnedLabel] {
-	return ownedMember[[]OwnedLabel](v.raw, "label_details")
+func (v RelateQuestionDocument) Model() Presence[string] { return ownedMember[string](v.raw, "model") }
+func (v RelateQuestionDocument) Name() Presence[QuestionName] {
+	return ownedMember[QuestionName](v.raw, "name")
 }
-func (v OwnedRelateQuestionDocument) Model() Presence[string] {
-	return ownedMember[string](v.raw, "model")
-}
-func (v OwnedRelateQuestionDocument) Name() Presence[OwnedQuestionName] {
-	return ownedMember[OwnedQuestionName](v.raw, "name")
-}
-func (v OwnedRelateQuestionDocument) On() Presence[[]string] {
-	return ownedMember[[]string](v.raw, "on")
-}
-func (v OwnedRelateQuestionDocument) Profile() Presence[string] {
+func (v RelateQuestionDocument) On() Presence[[]string] { return ownedMember[[]string](v.raw, "on") }
+func (v RelateQuestionDocument) Profile() Presence[string] {
 	return ownedMember[string](v.raw, "profile")
 }
-func (v OwnedRelateQuestionDocument) Relations() Presence[[]OwnedRelationRule] {
-	return ownedMember[[]OwnedRelationRule](v.raw, "relations")
+func (v RelateQuestionDocument) Relations() Presence[[]RelationRule] {
+	return ownedMember[[]RelationRule](v.raw, "relations")
 }
-func (v OwnedRelateQuestionDocument) Threshold() Presence[OwnedThreshold] {
-	return ownedMember[OwnedThreshold](v.raw, "threshold")
+func (v RelateQuestionDocument) Threshold() Presence[Threshold] {
+	return ownedMember[Threshold](v.raw, "threshold")
 }
-func (v OwnedRelateQuestionDocument) Verb() Presence[any] { return ownedMember[any](v.raw, "verb") }
-func (v OwnedRelateQuestionDocument) WordingVersion() Presence[OwnedWordingVersion] {
-	return ownedMember[OwnedWordingVersion](v.raw, "wording_version")
+func (v RelateQuestionDocument) Verb() Presence[any] { return ownedMember[any](v.raw, "verb") }
+func (v RelateQuestionDocument) WordingVersion() Presence[WordingVersion] {
+	return ownedMember[WordingVersion](v.raw, "wording_version")
 }
 
-type OwnedRelatedEntity struct{ ownedJSON }
+type RelatedEntity struct{ ownedJSON }
 
-func (v OwnedRelatedEntity) Kind() Presence[string] { return ownedMember[string](v.raw, "kind") }
-func (v OwnedRelatedEntity) Name() Presence[string] { return ownedMember[string](v.raw, "name") }
+func (v RelatedEntity) Kind() Presence[string] { return ownedMember[string](v.raw, "kind") }
+func (v RelatedEntity) Name() Presence[string] { return ownedMember[string](v.raw, "name") }
 
-type OwnedRelatedEntityEdge struct{ ownedJSON }
+type RelatedEntityEdge struct{ ownedJSON }
 
-func (v OwnedRelatedEntityEdge) Either() Presence[bool] { return ownedMember[bool](v.raw, "either") }
-func (v OwnedRelatedEntityEdge) Probability() Presence[json.Number] {
+func (v RelatedEntityEdge) Either() Presence[bool] { return ownedMember[bool](v.raw, "either") }
+func (v RelatedEntityEdge) Probability() Presence[json.Number] {
 	return ownedMember[json.Number](v.raw, "probability")
 }
-func (v OwnedRelatedEntityEdge) Relation() Presence[string] {
-	return ownedMember[string](v.raw, "relation")
+func (v RelatedEntityEdge) Relation() Presence[string] { return ownedMember[string](v.raw, "relation") }
+func (v RelatedEntityEdge) Source() Presence[RelationEndpoint] {
+	return ownedMember[RelationEndpoint](v.raw, "source")
 }
-func (v OwnedRelatedEntityEdge) Source() Presence[OwnedRelationEndpoint] {
-	return ownedMember[OwnedRelationEndpoint](v.raw, "source")
+func (v RelatedEntityEdge) Target() Presence[RelationEndpoint] {
+	return ownedMember[RelationEndpoint](v.raw, "target")
 }
-func (v OwnedRelatedEntityEdge) Target() Presence[OwnedRelationEndpoint] {
-	return ownedMember[OwnedRelationEndpoint](v.raw, "target")
-}
-func (v OwnedRelatedEntityEdge) SourceName() Presence[string] {
+func (v RelatedEntityEdge) SourceName() Presence[string] {
 	nested := ownedMember[json.RawMessage](v.raw, "source")
 	if nested.Err != nil || !nested.Present || nested.Null {
 		return Presence[string]{Present: nested.Present, Null: nested.Null, Err: nested.Err}
 	}
 	return ownedMember[string](nested.Value, "name")
 }
-func (v OwnedRelatedEntityEdge) TargetName() Presence[string] {
+func (v RelatedEntityEdge) TargetName() Presence[string] {
 	nested := ownedMember[json.RawMessage](v.raw, "target")
 	if nested.Err != nil || !nested.Present || nested.Null {
 		return Presence[string]{Present: nested.Present, Null: nested.Null, Err: nested.Err}
@@ -1949,692 +1693,644 @@ func (v OwnedRelatedEntityEdge) TargetName() Presence[string] {
 	return ownedMember[string](nested.Value, "name")
 }
 
-type OwnedRelationRule struct{ ownedJSON }
+type RelationRule struct{ ownedJSON }
 
-func (v OwnedRelationRule) Either() Presence[bool]   { return ownedMember[bool](v.raw, "either") }
-func (v OwnedRelationRule) Name() Presence[string]   { return ownedMember[string](v.raw, "name") }
-func (v OwnedRelationRule) Reads() Presence[string]  { return ownedMember[string](v.raw, "reads") }
-func (v OwnedRelationRule) Single() Presence[bool]   { return ownedMember[bool](v.raw, "single") }
-func (v OwnedRelationRule) Source() Presence[string] { return ownedMember[string](v.raw, "source") }
-func (v OwnedRelationRule) Target() Presence[string] { return ownedMember[string](v.raw, "target") }
+func (v RelationRule) Either() Presence[bool]   { return ownedMember[bool](v.raw, "either") }
+func (v RelationRule) Name() Presence[string]   { return ownedMember[string](v.raw, "name") }
+func (v RelationRule) Reads() Presence[string]  { return ownedMember[string](v.raw, "reads") }
+func (v RelationRule) Single() Presence[bool]   { return ownedMember[bool](v.raw, "single") }
+func (v RelationRule) Source() Presence[string] { return ownedMember[string](v.raw, "source") }
+func (v RelationRule) Target() Presence[string] { return ownedMember[string](v.raw, "target") }
 
-type OwnedSessionAnnotation struct{ ownedJSON }
+type SessionAnnotation struct{ ownedJSON }
 
-func (v OwnedSessionAnnotation) Name() Presence[string] { return ownedMember[string](v.raw, "name") }
-func (v OwnedSessionAnnotation) Value() Presence[OwnedAnnotationValue] {
-	return ownedMember[OwnedAnnotationValue](v.raw, "value")
+func (v SessionAnnotation) Name() Presence[string] { return ownedMember[string](v.raw, "name") }
+func (v SessionAnnotation) Value() Presence[AnnotationValue] {
+	return ownedMember[AnnotationValue](v.raw, "value")
 }
 
-type OwnedSessionInputSource struct{ ownedJSON }
+type SessionInputSource struct{ ownedJSON }
 
-func (v OwnedSessionInputSource) Index() Presence[json.Number] {
+func (v SessionInputSource) Index() Presence[json.Number] {
 	return ownedMember[json.Number](v.raw, "index")
 }
-func (v OwnedSessionInputSource) Source() Presence[OwnedPhysicalSource] {
-	return ownedMember[OwnedPhysicalSource](v.raw, "source")
+func (v SessionInputSource) Source() Presence[PhysicalSource] {
+	return ownedMember[PhysicalSource](v.raw, "source")
 }
 
-type OwnedSessionJudgment struct{ ownedJSON }
+type SessionJudgment struct{ ownedJSON }
 
-func (v OwnedSessionJudgment) AsSessionJudgmentDecision() (OwnedSessionJudgmentDecision, error) {
+func (v SessionJudgment) AsSessionJudgmentDecision() (SessionJudgmentDecision, error) {
 	if !(ownedLiteral(v.raw, "kind", "decision")) {
-		return OwnedSessionJudgmentDecision{}, errOwnedAlternative
+		return SessionJudgmentDecision{}, errAlternative
 	}
-	return ownedDecode[OwnedSessionJudgmentDecision](v.raw)
+	return ownedDecode[SessionJudgmentDecision](v.raw)
 }
-func (v OwnedSessionJudgment) AsSessionJudgmentChoice() (OwnedSessionJudgmentChoice, error) {
+func (v SessionJudgment) AsSessionJudgmentChoice() (SessionJudgmentChoice, error) {
 	if !(ownedLiteral(v.raw, "kind", "choice")) {
-		return OwnedSessionJudgmentChoice{}, errOwnedAlternative
+		return SessionJudgmentChoice{}, errAlternative
 	}
-	return ownedDecode[OwnedSessionJudgmentChoice](v.raw)
+	return ownedDecode[SessionJudgmentChoice](v.raw)
 }
-func (v OwnedSessionJudgment) AsSessionJudgmentScore() (OwnedSessionJudgmentScore, error) {
+func (v SessionJudgment) AsSessionJudgmentScore() (SessionJudgmentScore, error) {
 	if !(ownedLiteral(v.raw, "kind", "score")) {
-		return OwnedSessionJudgmentScore{}, errOwnedAlternative
+		return SessionJudgmentScore{}, errAlternative
 	}
-	return ownedDecode[OwnedSessionJudgmentScore](v.raw)
+	return ownedDecode[SessionJudgmentScore](v.raw)
 }
-func (v OwnedSessionJudgment) AsSessionJudgmentTags() (OwnedSessionJudgmentTags, error) {
+func (v SessionJudgment) AsSessionJudgmentTags() (SessionJudgmentTags, error) {
 	if !(ownedLiteral(v.raw, "kind", "tags")) {
-		return OwnedSessionJudgmentTags{}, errOwnedAlternative
+		return SessionJudgmentTags{}, errAlternative
 	}
-	return ownedDecode[OwnedSessionJudgmentTags](v.raw)
+	return ownedDecode[SessionJudgmentTags](v.raw)
 }
 
-type OwnedSessionJudgmentChoice struct{ ownedJSON }
+type SessionJudgmentChoice struct{ ownedJSON }
 
-func (v OwnedSessionJudgmentChoice) Kind() Presence[string] {
-	return ownedMember[string](v.raw, "kind")
-}
-func (v OwnedSessionJudgmentChoice) Value() Presence[string] {
-	return ownedMember[string](v.raw, "value")
-}
+func (v SessionJudgmentChoice) Kind() Presence[string]  { return ownedMember[string](v.raw, "kind") }
+func (v SessionJudgmentChoice) Value() Presence[string] { return ownedMember[string](v.raw, "value") }
 
-type OwnedSessionJudgmentDecision struct{ ownedJSON }
+type SessionJudgmentDecision struct{ ownedJSON }
 
-func (v OwnedSessionJudgmentDecision) Kind() Presence[string] {
-	return ownedMember[string](v.raw, "kind")
-}
-func (v OwnedSessionJudgmentDecision) Value() Presence[bool] {
-	return ownedMember[bool](v.raw, "value")
-}
+func (v SessionJudgmentDecision) Kind() Presence[string] { return ownedMember[string](v.raw, "kind") }
+func (v SessionJudgmentDecision) Value() Presence[bool]  { return ownedMember[bool](v.raw, "value") }
 
-type OwnedSessionJudgmentScore struct{ ownedJSON }
+type SessionJudgmentScore struct{ ownedJSON }
 
-func (v OwnedSessionJudgmentScore) Kind() Presence[string] { return ownedMember[string](v.raw, "kind") }
-func (v OwnedSessionJudgmentScore) Value() Presence[json.Number] {
+func (v SessionJudgmentScore) Kind() Presence[string] { return ownedMember[string](v.raw, "kind") }
+func (v SessionJudgmentScore) Value() Presence[json.Number] {
 	return ownedMember[json.Number](v.raw, "value")
 }
 
-type OwnedSessionJudgmentTags struct{ ownedJSON }
+type SessionJudgmentTags struct{ ownedJSON }
 
-func (v OwnedSessionJudgmentTags) Kind() Presence[string] { return ownedMember[string](v.raw, "kind") }
-func (v OwnedSessionJudgmentTags) Value() Presence[[]string] {
-	return ownedMember[[]string](v.raw, "value")
-}
+func (v SessionJudgmentTags) Kind() Presence[string]    { return ownedMember[string](v.raw, "kind") }
+func (v SessionJudgmentTags) Value() Presence[[]string] { return ownedMember[[]string](v.raw, "value") }
 
-type OwnedSessionNamedProbability struct{ ownedJSON }
+type SessionNamedProbability struct{ ownedJSON }
 
-func (v OwnedSessionNamedProbability) Name() Presence[string] {
-	return ownedMember[string](v.raw, "name")
-}
-func (v OwnedSessionNamedProbability) Probability() Presence[json.Number] {
+func (v SessionNamedProbability) Name() Presence[string] { return ownedMember[string](v.raw, "name") }
+func (v SessionNamedProbability) Probability() Presence[json.Number] {
 	return ownedMember[json.Number](v.raw, "probability")
 }
 
-type OwnedSessionObservation struct{ ownedJSON }
+type SessionObservation struct{ ownedJSON }
 
-func (v OwnedSessionObservation) AsSessionObservationQuestion() (OwnedSessionObservationQuestion, error) {
+func (v SessionObservation) AsSessionObservationQuestion() (SessionObservationQuestion, error) {
 	if !(ownedLiteral(v.raw, "kind", "question")) {
-		return OwnedSessionObservationQuestion{}, errOwnedAlternative
+		return SessionObservationQuestion{}, errAlternative
 	}
-	return ownedDecode[OwnedSessionObservationQuestion](v.raw)
+	return ownedDecode[SessionObservationQuestion](v.raw)
 }
-func (v OwnedSessionObservation) AsSessionObservationRow() (OwnedSessionObservationRow, error) {
+func (v SessionObservation) AsSessionObservationRow() (SessionObservationRow, error) {
 	if !(ownedLiteral(v.raw, "kind", "row")) {
-		return OwnedSessionObservationRow{}, errOwnedAlternative
+		return SessionObservationRow{}, errAlternative
 	}
-	return ownedDecode[OwnedSessionObservationRow](v.raw)
+	return ownedDecode[SessionObservationRow](v.raw)
 }
 
-type OwnedSessionObservationQuestion struct{ ownedJSON }
+type SessionObservationQuestion struct{ ownedJSON }
 
-func (v OwnedSessionObservationQuestion) Detail() Presence[OwnedSessionQuestionDetail] {
-	return ownedMember[OwnedSessionQuestionDetail](v.raw, "detail")
+func (v SessionObservationQuestion) Detail() Presence[SessionQuestionDetail] {
+	return ownedMember[SessionQuestionDetail](v.raw, "detail")
 }
-func (v OwnedSessionObservationQuestion) Index() Presence[json.Number] {
+func (v SessionObservationQuestion) Index() Presence[json.Number] {
 	return ownedMember[json.Number](v.raw, "index")
 }
-func (v OwnedSessionObservationQuestion) Kind() Presence[string] {
+func (v SessionObservationQuestion) Kind() Presence[string] {
 	return ownedMember[string](v.raw, "kind")
 }
-func (v OwnedSessionObservationQuestion) Member() Presence[string] {
+func (v SessionObservationQuestion) Member() Presence[string] {
 	return ownedMember[string](v.raw, "member")
 }
-func (v OwnedSessionObservationQuestion) Position() Presence[json.Number] {
+func (v SessionObservationQuestion) Position() Presence[json.Number] {
 	return ownedMember[json.Number](v.raw, "position")
 }
-func (v OwnedSessionObservationQuestion) Stage() Presence[string] {
+func (v SessionObservationQuestion) Stage() Presence[string] {
 	return ownedMember[string](v.raw, "stage")
 }
 
-type OwnedSessionObservationRow struct{ ownedJSON }
+type SessionObservationRow struct{ ownedJSON }
 
-func (v OwnedSessionObservationRow) Index() Presence[json.Number] {
+func (v SessionObservationRow) Index() Presence[json.Number] {
 	return ownedMember[json.Number](v.raw, "index")
 }
-func (v OwnedSessionObservationRow) Kind() Presence[string] {
-	return ownedMember[string](v.raw, "kind")
-}
-func (v OwnedSessionObservationRow) Value() Presence[OwnedSessionObservedRow] {
-	return ownedMember[OwnedSessionObservedRow](v.raw, "value")
+func (v SessionObservationRow) Kind() Presence[string] { return ownedMember[string](v.raw, "kind") }
+func (v SessionObservationRow) Value() Presence[SessionObservedRow] {
+	return ownedMember[SessionObservedRow](v.raw, "value")
 }
 
-type OwnedSessionObservedRow struct{ ownedJSON }
+type SessionObservedRow struct{ ownedJSON }
 
-func (v OwnedSessionObservedRow) AsSessionObservedRowJudgment() (OwnedSessionObservedRowJudgment, error) {
+func (v SessionObservedRow) AsSessionObservedRowJudgment() (SessionObservedRowJudgment, error) {
 	if !(ownedLiteral(v.raw, "kind", "judgment")) {
-		return OwnedSessionObservedRowJudgment{}, errOwnedAlternative
+		return SessionObservedRowJudgment{}, errAlternative
 	}
-	return ownedDecode[OwnedSessionObservedRowJudgment](v.raw)
+	return ownedDecode[SessionObservedRowJudgment](v.raw)
 }
-func (v OwnedSessionObservedRow) AsSessionObservedRowAnnotated() (OwnedSessionObservedRowAnnotated, error) {
+func (v SessionObservedRow) AsSessionObservedRowAnnotated() (SessionObservedRowAnnotated, error) {
 	if !(ownedLiteral(v.raw, "kind", "annotated")) {
-		return OwnedSessionObservedRowAnnotated{}, errOwnedAlternative
+		return SessionObservedRowAnnotated{}, errAlternative
 	}
-	return ownedDecode[OwnedSessionObservedRowAnnotated](v.raw)
+	return ownedDecode[SessionObservedRowAnnotated](v.raw)
 }
-func (v OwnedSessionObservedRow) AsSessionObservedRowRecognized() (OwnedSessionObservedRowRecognized, error) {
+func (v SessionObservedRow) AsSessionObservedRowRecognized() (SessionObservedRowRecognized, error) {
 	if !(ownedLiteral(v.raw, "kind", "recognized")) {
-		return OwnedSessionObservedRowRecognized{}, errOwnedAlternative
+		return SessionObservedRowRecognized{}, errAlternative
 	}
-	return ownedDecode[OwnedSessionObservedRowRecognized](v.raw)
+	return ownedDecode[SessionObservedRowRecognized](v.raw)
 }
-func (v OwnedSessionObservedRow) AsSessionObservedRowFind() (OwnedSessionObservedRowFind, error) {
+func (v SessionObservedRow) AsSessionObservedRowFind() (SessionObservedRowFind, error) {
 	if !(ownedLiteral(v.raw, "kind", "find")) {
-		return OwnedSessionObservedRowFind{}, errOwnedAlternative
+		return SessionObservedRowFind{}, errAlternative
 	}
-	return ownedDecode[OwnedSessionObservedRowFind](v.raw)
+	return ownedDecode[SessionObservedRowFind](v.raw)
 }
-func (v OwnedSessionObservedRow) AsSessionObservedRowRelations() (OwnedSessionObservedRowRelations, error) {
+func (v SessionObservedRow) AsSessionObservedRowRelations() (SessionObservedRowRelations, error) {
 	if !(ownedLiteral(v.raw, "kind", "relations")) {
-		return OwnedSessionObservedRowRelations{}, errOwnedAlternative
+		return SessionObservedRowRelations{}, errAlternative
 	}
-	return ownedDecode[OwnedSessionObservedRowRelations](v.raw)
+	return ownedDecode[SessionObservedRowRelations](v.raw)
 }
 
-type OwnedSessionObservedRowAnnotated struct{ ownedJSON }
+type SessionObservedRowAnnotated struct{ ownedJSON }
 
-func (v OwnedSessionObservedRowAnnotated) Kind() Presence[string] {
+func (v SessionObservedRowAnnotated) Kind() Presence[string] {
 	return ownedMember[string](v.raw, "kind")
 }
-func (v OwnedSessionObservedRowAnnotated) Value() Presence[[]OwnedSessionAnnotation] {
-	return ownedMember[[]OwnedSessionAnnotation](v.raw, "value")
+func (v SessionObservedRowAnnotated) Value() Presence[[]SessionAnnotation] {
+	return ownedMember[[]SessionAnnotation](v.raw, "value")
 }
 
-type OwnedSessionObservedRowFind struct{ ownedJSON }
+type SessionObservedRowFind struct{ ownedJSON }
 
-func (v OwnedSessionObservedRowFind) Kind() Presence[string] {
-	return ownedMember[string](v.raw, "kind")
-}
-func (v OwnedSessionObservedRowFind) Value() Presence[json.Number] {
+func (v SessionObservedRowFind) Kind() Presence[string] { return ownedMember[string](v.raw, "kind") }
+func (v SessionObservedRowFind) Value() Presence[json.Number] {
 	return ownedMember[json.Number](v.raw, "value")
 }
 
-type OwnedSessionObservedRowJudgment struct{ ownedJSON }
+type SessionObservedRowJudgment struct{ ownedJSON }
 
-func (v OwnedSessionObservedRowJudgment) Kind() Presence[string] {
+func (v SessionObservedRowJudgment) Kind() Presence[string] {
 	return ownedMember[string](v.raw, "kind")
 }
-func (v OwnedSessionObservedRowJudgment) Value() Presence[OwnedSessionJudgment] {
-	return ownedMember[OwnedSessionJudgment](v.raw, "value")
+func (v SessionObservedRowJudgment) Value() Presence[SessionJudgment] {
+	return ownedMember[SessionJudgment](v.raw, "value")
 }
 
-type OwnedSessionObservedRowRecognized struct{ ownedJSON }
+type SessionObservedRowRecognized struct{ ownedJSON }
 
-func (v OwnedSessionObservedRowRecognized) Kind() Presence[string] {
+func (v SessionObservedRowRecognized) Kind() Presence[string] {
 	return ownedMember[string](v.raw, "kind")
 }
-func (v OwnedSessionObservedRowRecognized) Value() Presence[OwnedSessionRecognition] {
-	return ownedMember[OwnedSessionRecognition](v.raw, "value")
+func (v SessionObservedRowRecognized) Value() Presence[SessionRecognition] {
+	return ownedMember[SessionRecognition](v.raw, "value")
 }
 
-type OwnedSessionObservedRowRelations struct{ ownedJSON }
+type SessionObservedRowRelations struct{ ownedJSON }
 
-func (v OwnedSessionObservedRowRelations) Kind() Presence[string] {
+func (v SessionObservedRowRelations) Kind() Presence[string] {
 	return ownedMember[string](v.raw, "kind")
 }
-func (v OwnedSessionObservedRowRelations) Value() Presence[[]OwnedSessionRelationEdge] {
-	return ownedMember[[]OwnedSessionRelationEdge](v.raw, "value")
+func (v SessionObservedRowRelations) Value() Presence[[]SessionRelationEdge] {
+	return ownedMember[[]SessionRelationEdge](v.raw, "value")
 }
 
-type OwnedSessionPacket struct{ ownedJSON }
+type SessionPacket struct{ ownedJSON }
 
-func (v OwnedSessionPacket) AsSessionPacketDecideRow() (OwnedSessionPacketDecideRow, error) {
+func (v SessionPacket) AsSessionPacketDecideRow() (SessionPacketDecideRow, error) {
 	if !(ownedLiteral(v.raw, "function", "decide") && ownedLiteral(v.raw, "kind", "row")) {
-		return OwnedSessionPacketDecideRow{}, errOwnedAlternative
+		return SessionPacketDecideRow{}, errAlternative
 	}
-	return ownedDecode[OwnedSessionPacketDecideRow](v.raw)
+	return ownedDecode[SessionPacketDecideRow](v.raw)
 }
-func (v OwnedSessionPacket) AsSessionPacketChooseRow() (OwnedSessionPacketChooseRow, error) {
+func (v SessionPacket) AsSessionPacketChooseRow() (SessionPacketChooseRow, error) {
 	if !(ownedLiteral(v.raw, "function", "choose") && ownedLiteral(v.raw, "kind", "row")) {
-		return OwnedSessionPacketChooseRow{}, errOwnedAlternative
+		return SessionPacketChooseRow{}, errAlternative
 	}
-	return ownedDecode[OwnedSessionPacketChooseRow](v.raw)
+	return ownedDecode[SessionPacketChooseRow](v.raw)
 }
-func (v OwnedSessionPacket) AsSessionPacketTagRow() (OwnedSessionPacketTagRow, error) {
+func (v SessionPacket) AsSessionPacketTagRow() (SessionPacketTagRow, error) {
 	if !(ownedLiteral(v.raw, "function", "tag") && ownedLiteral(v.raw, "kind", "row")) {
-		return OwnedSessionPacketTagRow{}, errOwnedAlternative
+		return SessionPacketTagRow{}, errAlternative
 	}
-	return ownedDecode[OwnedSessionPacketTagRow](v.raw)
+	return ownedDecode[SessionPacketTagRow](v.raw)
 }
-func (v OwnedSessionPacket) AsSessionPacketScoreRow() (OwnedSessionPacketScoreRow, error) {
+func (v SessionPacket) AsSessionPacketScoreRow() (SessionPacketScoreRow, error) {
 	if !(ownedLiteral(v.raw, "function", "score") && ownedLiteral(v.raw, "kind", "row")) {
-		return OwnedSessionPacketScoreRow{}, errOwnedAlternative
+		return SessionPacketScoreRow{}, errAlternative
 	}
-	return ownedDecode[OwnedSessionPacketScoreRow](v.raw)
+	return ownedDecode[SessionPacketScoreRow](v.raw)
 }
-func (v OwnedSessionPacket) AsSessionPacketFilterRow() (OwnedSessionPacketFilterRow, error) {
+func (v SessionPacket) AsSessionPacketFilterRow() (SessionPacketFilterRow, error) {
 	if !(ownedLiteral(v.raw, "function", "filter") && ownedLiteral(v.raw, "kind", "row")) {
-		return OwnedSessionPacketFilterRow{}, errOwnedAlternative
+		return SessionPacketFilterRow{}, errAlternative
 	}
-	return ownedDecode[OwnedSessionPacketFilterRow](v.raw)
+	return ownedDecode[SessionPacketFilterRow](v.raw)
 }
-func (v OwnedSessionPacket) AsSessionPacketAnnotateRow() (OwnedSessionPacketAnnotateRow, error) {
+func (v SessionPacket) AsSessionPacketAnnotateRow() (SessionPacketAnnotateRow, error) {
 	if !(ownedLiteral(v.raw, "function", "annotate") && ownedLiteral(v.raw, "kind", "row")) {
-		return OwnedSessionPacketAnnotateRow{}, errOwnedAlternative
+		return SessionPacketAnnotateRow{}, errAlternative
 	}
-	return ownedDecode[OwnedSessionPacketAnnotateRow](v.raw)
+	return ownedDecode[SessionPacketAnnotateRow](v.raw)
 }
-func (v OwnedSessionPacket) AsSessionPacketDecideAggregate() (OwnedSessionPacketDecideAggregate, error) {
+func (v SessionPacket) AsSessionPacketDecideAggregate() (SessionPacketDecideAggregate, error) {
 	if !(ownedLiteral(v.raw, "function", "decide") && ownedLiteral(v.raw, "kind", "aggregate")) {
-		return OwnedSessionPacketDecideAggregate{}, errOwnedAlternative
+		return SessionPacketDecideAggregate{}, errAlternative
 	}
-	return ownedDecode[OwnedSessionPacketDecideAggregate](v.raw)
+	return ownedDecode[SessionPacketDecideAggregate](v.raw)
 }
-func (v OwnedSessionPacket) AsSessionPacketChooseAggregate() (OwnedSessionPacketChooseAggregate, error) {
+func (v SessionPacket) AsSessionPacketChooseAggregate() (SessionPacketChooseAggregate, error) {
 	if !(ownedLiteral(v.raw, "function", "choose") && ownedLiteral(v.raw, "kind", "aggregate")) {
-		return OwnedSessionPacketChooseAggregate{}, errOwnedAlternative
+		return SessionPacketChooseAggregate{}, errAlternative
 	}
-	return ownedDecode[OwnedSessionPacketChooseAggregate](v.raw)
+	return ownedDecode[SessionPacketChooseAggregate](v.raw)
 }
-func (v OwnedSessionPacket) AsSessionPacketTagAggregate() (OwnedSessionPacketTagAggregate, error) {
+func (v SessionPacket) AsSessionPacketTagAggregate() (SessionPacketTagAggregate, error) {
 	if !(ownedLiteral(v.raw, "function", "tag") && ownedLiteral(v.raw, "kind", "aggregate")) {
-		return OwnedSessionPacketTagAggregate{}, errOwnedAlternative
+		return SessionPacketTagAggregate{}, errAlternative
 	}
-	return ownedDecode[OwnedSessionPacketTagAggregate](v.raw)
+	return ownedDecode[SessionPacketTagAggregate](v.raw)
 }
-func (v OwnedSessionPacket) AsSessionPacketScoreAggregate() (OwnedSessionPacketScoreAggregate, error) {
+func (v SessionPacket) AsSessionPacketScoreAggregate() (SessionPacketScoreAggregate, error) {
 	if !(ownedLiteral(v.raw, "function", "score") && ownedLiteral(v.raw, "kind", "aggregate")) {
-		return OwnedSessionPacketScoreAggregate{}, errOwnedAlternative
+		return SessionPacketScoreAggregate{}, errAlternative
 	}
-	return ownedDecode[OwnedSessionPacketScoreAggregate](v.raw)
+	return ownedDecode[SessionPacketScoreAggregate](v.raw)
 }
-func (v OwnedSessionPacket) AsSessionPacketFilterAggregate() (OwnedSessionPacketFilterAggregate, error) {
+func (v SessionPacket) AsSessionPacketFilterAggregate() (SessionPacketFilterAggregate, error) {
 	if !(ownedLiteral(v.raw, "function", "filter") && ownedLiteral(v.raw, "kind", "aggregate")) {
-		return OwnedSessionPacketFilterAggregate{}, errOwnedAlternative
+		return SessionPacketFilterAggregate{}, errAlternative
 	}
-	return ownedDecode[OwnedSessionPacketFilterAggregate](v.raw)
+	return ownedDecode[SessionPacketFilterAggregate](v.raw)
 }
-func (v OwnedSessionPacket) AsSessionPacketRankAggregate() (OwnedSessionPacketRankAggregate, error) {
+func (v SessionPacket) AsSessionPacketRankAggregate() (SessionPacketRankAggregate, error) {
 	if !(ownedLiteral(v.raw, "function", "rank") && ownedLiteral(v.raw, "kind", "aggregate")) {
-		return OwnedSessionPacketRankAggregate{}, errOwnedAlternative
+		return SessionPacketRankAggregate{}, errAlternative
 	}
-	return ownedDecode[OwnedSessionPacketRankAggregate](v.raw)
+	return ownedDecode[SessionPacketRankAggregate](v.raw)
 }
-func (v OwnedSessionPacket) AsSessionPacketFindAggregate() (OwnedSessionPacketFindAggregate, error) {
+func (v SessionPacket) AsSessionPacketFindAggregate() (SessionPacketFindAggregate, error) {
 	if !(ownedLiteral(v.raw, "function", "find") && ownedLiteral(v.raw, "kind", "aggregate")) {
-		return OwnedSessionPacketFindAggregate{}, errOwnedAlternative
+		return SessionPacketFindAggregate{}, errAlternative
 	}
-	return ownedDecode[OwnedSessionPacketFindAggregate](v.raw)
+	return ownedDecode[SessionPacketFindAggregate](v.raw)
 }
-func (v OwnedSessionPacket) AsSessionPacketAnnotateAggregate() (OwnedSessionPacketAnnotateAggregate, error) {
+func (v SessionPacket) AsSessionPacketAnnotateAggregate() (SessionPacketAnnotateAggregate, error) {
 	if !(ownedLiteral(v.raw, "function", "annotate") && ownedLiteral(v.raw, "kind", "aggregate")) {
-		return OwnedSessionPacketAnnotateAggregate{}, errOwnedAlternative
+		return SessionPacketAnnotateAggregate{}, errAlternative
 	}
-	return ownedDecode[OwnedSessionPacketAnnotateAggregate](v.raw)
+	return ownedDecode[SessionPacketAnnotateAggregate](v.raw)
 }
-func (v OwnedSessionPacket) AsSessionPacketRecognizeAggregate() (OwnedSessionPacketRecognizeAggregate, error) {
+func (v SessionPacket) AsSessionPacketRecognizeAggregate() (SessionPacketRecognizeAggregate, error) {
 	if !(ownedLiteral(v.raw, "function", "recognize") && ownedLiteral(v.raw, "kind", "aggregate")) {
-		return OwnedSessionPacketRecognizeAggregate{}, errOwnedAlternative
+		return SessionPacketRecognizeAggregate{}, errAlternative
 	}
-	return ownedDecode[OwnedSessionPacketRecognizeAggregate](v.raw)
+	return ownedDecode[SessionPacketRecognizeAggregate](v.raw)
 }
-func (v OwnedSessionPacket) AsSessionPacketRelateAggregate() (OwnedSessionPacketRelateAggregate, error) {
+func (v SessionPacket) AsSessionPacketRelateAggregate() (SessionPacketRelateAggregate, error) {
 	if !(ownedLiteral(v.raw, "function", "relate") && ownedLiteral(v.raw, "kind", "aggregate")) {
-		return OwnedSessionPacketRelateAggregate{}, errOwnedAlternative
+		return SessionPacketRelateAggregate{}, errAlternative
 	}
-	return ownedDecode[OwnedSessionPacketRelateAggregate](v.raw)
+	return ownedDecode[SessionPacketRelateAggregate](v.raw)
 }
-func (v OwnedSessionPacket) AsSessionPacketObservation() (OwnedSessionPacketObservation, error) {
+func (v SessionPacket) AsSessionPacketObservation() (SessionPacketObservation, error) {
 	if !(ownedLiteral(v.raw, "kind", "observation")) {
-		return OwnedSessionPacketObservation{}, errOwnedAlternative
+		return SessionPacketObservation{}, errAlternative
 	}
-	return ownedDecode[OwnedSessionPacketObservation](v.raw)
+	return ownedDecode[SessionPacketObservation](v.raw)
 }
-func (v OwnedSessionPacket) AsSessionPacketTerminal() (OwnedSessionPacketTerminal, error) {
+func (v SessionPacket) AsSessionPacketTerminal() (SessionPacketTerminal, error) {
 	if !(ownedLiteral(v.raw, "kind", "terminal")) {
-		return OwnedSessionPacketTerminal{}, errOwnedAlternative
+		return SessionPacketTerminal{}, errAlternative
 	}
-	return ownedDecode[OwnedSessionPacketTerminal](v.raw)
+	return ownedDecode[SessionPacketTerminal](v.raw)
 }
 
-type OwnedSessionPacketAnnotateAggregate struct{ ownedJSON }
+type SessionPacketAnnotateAggregate struct{ ownedJSON }
 
-func (v OwnedSessionPacketAnnotateAggregate) Function() Presence[string] {
+func (v SessionPacketAnnotateAggregate) Function() Presence[string] {
 	return ownedMember[string](v.raw, "function")
 }
-func (v OwnedSessionPacketAnnotateAggregate) Kind() Presence[string] {
+func (v SessionPacketAnnotateAggregate) Kind() Presence[string] {
 	return ownedMember[string](v.raw, "kind")
 }
-func (v OwnedSessionPacketAnnotateAggregate) Value() Presence[[]OwnedAnnotation] {
-	return ownedMember[[]OwnedAnnotation](v.raw, "value")
+func (v SessionPacketAnnotateAggregate) Value() Presence[[]Annotation] {
+	return ownedMember[[]Annotation](v.raw, "value")
 }
 
-type OwnedSessionPacketAnnotateRow struct{ ownedJSON }
+type SessionPacketAnnotateRow struct{ ownedJSON }
 
-func (v OwnedSessionPacketAnnotateRow) Function() Presence[string] {
+func (v SessionPacketAnnotateRow) Function() Presence[string] {
 	return ownedMember[string](v.raw, "function")
 }
-func (v OwnedSessionPacketAnnotateRow) Kind() Presence[string] {
-	return ownedMember[string](v.raw, "kind")
-}
-func (v OwnedSessionPacketAnnotateRow) Value() Presence[OwnedAnnotation] {
-	return ownedMember[OwnedAnnotation](v.raw, "value")
+func (v SessionPacketAnnotateRow) Kind() Presence[string] { return ownedMember[string](v.raw, "kind") }
+func (v SessionPacketAnnotateRow) Value() Presence[Annotation] {
+	return ownedMember[Annotation](v.raw, "value")
 }
 
-type OwnedSessionPacketChooseAggregate struct{ ownedJSON }
+type SessionPacketChooseAggregate struct{ ownedJSON }
 
-func (v OwnedSessionPacketChooseAggregate) Function() Presence[string] {
+func (v SessionPacketChooseAggregate) Function() Presence[string] {
 	return ownedMember[string](v.raw, "function")
 }
-func (v OwnedSessionPacketChooseAggregate) Kind() Presence[string] {
+func (v SessionPacketChooseAggregate) Kind() Presence[string] {
 	return ownedMember[string](v.raw, "kind")
 }
-func (v OwnedSessionPacketChooseAggregate) Value() Presence[[]OwnedAtomicNullableString] {
-	return ownedMember[[]OwnedAtomicNullableString](v.raw, "value")
+func (v SessionPacketChooseAggregate) Value() Presence[[]AtomicNullableString] {
+	return ownedMember[[]AtomicNullableString](v.raw, "value")
 }
 
-type OwnedSessionPacketChooseRow struct{ ownedJSON }
+type SessionPacketChooseRow struct{ ownedJSON }
 
-func (v OwnedSessionPacketChooseRow) Function() Presence[string] {
+func (v SessionPacketChooseRow) Function() Presence[string] {
 	return ownedMember[string](v.raw, "function")
 }
-func (v OwnedSessionPacketChooseRow) Kind() Presence[string] {
-	return ownedMember[string](v.raw, "kind")
-}
-func (v OwnedSessionPacketChooseRow) Value() Presence[OwnedAtomicNullableString] {
-	return ownedMember[OwnedAtomicNullableString](v.raw, "value")
+func (v SessionPacketChooseRow) Kind() Presence[string] { return ownedMember[string](v.raw, "kind") }
+func (v SessionPacketChooseRow) Value() Presence[AtomicNullableString] {
+	return ownedMember[AtomicNullableString](v.raw, "value")
 }
 
-type OwnedSessionPacketDecideAggregate struct{ ownedJSON }
+type SessionPacketDecideAggregate struct{ ownedJSON }
 
-func (v OwnedSessionPacketDecideAggregate) Function() Presence[string] {
+func (v SessionPacketDecideAggregate) Function() Presence[string] {
 	return ownedMember[string](v.raw, "function")
 }
-func (v OwnedSessionPacketDecideAggregate) Kind() Presence[string] {
+func (v SessionPacketDecideAggregate) Kind() Presence[string] {
 	return ownedMember[string](v.raw, "kind")
 }
-func (v OwnedSessionPacketDecideAggregate) Value() Presence[[]OwnedAtomicDecideValue] {
-	return ownedMember[[]OwnedAtomicDecideValue](v.raw, "value")
+func (v SessionPacketDecideAggregate) Value() Presence[[]AtomicDecideValue] {
+	return ownedMember[[]AtomicDecideValue](v.raw, "value")
 }
 
-type OwnedSessionPacketDecideRow struct{ ownedJSON }
+type SessionPacketDecideRow struct{ ownedJSON }
 
-func (v OwnedSessionPacketDecideRow) Function() Presence[string] {
+func (v SessionPacketDecideRow) Function() Presence[string] {
 	return ownedMember[string](v.raw, "function")
 }
-func (v OwnedSessionPacketDecideRow) Kind() Presence[string] {
-	return ownedMember[string](v.raw, "kind")
-}
-func (v OwnedSessionPacketDecideRow) Value() Presence[OwnedAtomicDecideValue] {
-	return ownedMember[OwnedAtomicDecideValue](v.raw, "value")
+func (v SessionPacketDecideRow) Kind() Presence[string] { return ownedMember[string](v.raw, "kind") }
+func (v SessionPacketDecideRow) Value() Presence[AtomicDecideValue] {
+	return ownedMember[AtomicDecideValue](v.raw, "value")
 }
 
-type OwnedSessionPacketFilterAggregate struct{ ownedJSON }
+type SessionPacketFilterAggregate struct{ ownedJSON }
 
-func (v OwnedSessionPacketFilterAggregate) Function() Presence[string] {
+func (v SessionPacketFilterAggregate) Function() Presence[string] {
 	return ownedMember[string](v.raw, "function")
 }
-func (v OwnedSessionPacketFilterAggregate) Kind() Presence[string] {
+func (v SessionPacketFilterAggregate) Kind() Presence[string] {
 	return ownedMember[string](v.raw, "kind")
 }
-func (v OwnedSessionPacketFilterAggregate) Value() Presence[[]OwnedAtomicBoolean] {
-	return ownedMember[[]OwnedAtomicBoolean](v.raw, "value")
+func (v SessionPacketFilterAggregate) Value() Presence[[]AtomicBoolean] {
+	return ownedMember[[]AtomicBoolean](v.raw, "value")
 }
 
-type OwnedSessionPacketFilterRow struct{ ownedJSON }
+type SessionPacketFilterRow struct{ ownedJSON }
 
-func (v OwnedSessionPacketFilterRow) Function() Presence[string] {
+func (v SessionPacketFilterRow) Function() Presence[string] {
 	return ownedMember[string](v.raw, "function")
 }
-func (v OwnedSessionPacketFilterRow) Kind() Presence[string] {
-	return ownedMember[string](v.raw, "kind")
-}
-func (v OwnedSessionPacketFilterRow) Value() Presence[OwnedAtomicBoolean] {
-	return ownedMember[OwnedAtomicBoolean](v.raw, "value")
+func (v SessionPacketFilterRow) Kind() Presence[string] { return ownedMember[string](v.raw, "kind") }
+func (v SessionPacketFilterRow) Value() Presence[AtomicBoolean] {
+	return ownedMember[AtomicBoolean](v.raw, "value")
 }
 
-type OwnedSessionPacketFindAggregate struct{ ownedJSON }
+type SessionPacketFindAggregate struct{ ownedJSON }
 
-func (v OwnedSessionPacketFindAggregate) Function() Presence[string] {
+func (v SessionPacketFindAggregate) Function() Presence[string] {
 	return ownedMember[string](v.raw, "function")
 }
-func (v OwnedSessionPacketFindAggregate) Kind() Presence[string] {
+func (v SessionPacketFindAggregate) Kind() Presence[string] {
 	return ownedMember[string](v.raw, "kind")
 }
-func (v OwnedSessionPacketFindAggregate) Value() Presence[OwnedFind] {
-	return ownedMember[OwnedFind](v.raw, "value")
+func (v SessionPacketFindAggregate) Value() Presence[Find] { return ownedMember[Find](v.raw, "value") }
+
+type SessionPacketObservation struct{ ownedJSON }
+
+func (v SessionPacketObservation) Function() Presence[ResultFunction] {
+	return ownedMember[ResultFunction](v.raw, "function")
+}
+func (v SessionPacketObservation) Kind() Presence[string] { return ownedMember[string](v.raw, "kind") }
+func (v SessionPacketObservation) Value() Presence[SessionObservation] {
+	return ownedMember[SessionObservation](v.raw, "value")
 }
 
-type OwnedSessionPacketObservation struct{ ownedJSON }
+type SessionPacketRankAggregate struct{ ownedJSON }
 
-func (v OwnedSessionPacketObservation) Function() Presence[OwnedRequestFunction] {
-	return ownedMember[OwnedRequestFunction](v.raw, "function")
-}
-func (v OwnedSessionPacketObservation) Kind() Presence[string] {
-	return ownedMember[string](v.raw, "kind")
-}
-func (v OwnedSessionPacketObservation) Value() Presence[OwnedSessionObservation] {
-	return ownedMember[OwnedSessionObservation](v.raw, "value")
-}
-
-type OwnedSessionPacketRankAggregate struct{ ownedJSON }
-
-func (v OwnedSessionPacketRankAggregate) Function() Presence[string] {
+func (v SessionPacketRankAggregate) Function() Presence[string] {
 	return ownedMember[string](v.raw, "function")
 }
-func (v OwnedSessionPacketRankAggregate) Kind() Presence[string] {
+func (v SessionPacketRankAggregate) Kind() Presence[string] {
 	return ownedMember[string](v.raw, "kind")
 }
-func (v OwnedSessionPacketRankAggregate) Value() Presence[[]OwnedAtomicNonZeroUsize] {
-	return ownedMember[[]OwnedAtomicNonZeroUsize](v.raw, "value")
+func (v SessionPacketRankAggregate) Value() Presence[[]AtomicNonZeroUsize] {
+	return ownedMember[[]AtomicNonZeroUsize](v.raw, "value")
 }
 
-type OwnedSessionPacketRecognizeAggregate struct{ ownedJSON }
+type SessionPacketRecognizeAggregate struct{ ownedJSON }
 
-func (v OwnedSessionPacketRecognizeAggregate) Function() Presence[string] {
+func (v SessionPacketRecognizeAggregate) Function() Presence[string] {
 	return ownedMember[string](v.raw, "function")
 }
-func (v OwnedSessionPacketRecognizeAggregate) Kind() Presence[string] {
+func (v SessionPacketRecognizeAggregate) Kind() Presence[string] {
 	return ownedMember[string](v.raw, "kind")
 }
-func (v OwnedSessionPacketRecognizeAggregate) Value() Presence[[]OwnedRecognition] {
-	return ownedMember[[]OwnedRecognition](v.raw, "value")
+func (v SessionPacketRecognizeAggregate) Value() Presence[[]Recognition] {
+	return ownedMember[[]Recognition](v.raw, "value")
 }
 
-type OwnedSessionPacketRelateAggregate struct{ ownedJSON }
+type SessionPacketRelateAggregate struct{ ownedJSON }
 
-func (v OwnedSessionPacketRelateAggregate) Function() Presence[string] {
+func (v SessionPacketRelateAggregate) Function() Presence[string] {
 	return ownedMember[string](v.raw, "function")
 }
-func (v OwnedSessionPacketRelateAggregate) Kind() Presence[string] {
+func (v SessionPacketRelateAggregate) Kind() Presence[string] {
 	return ownedMember[string](v.raw, "kind")
 }
-func (v OwnedSessionPacketRelateAggregate) Value() Presence[OwnedRelation] {
-	return ownedMember[OwnedRelation](v.raw, "value")
+func (v SessionPacketRelateAggregate) Value() Presence[Relation] {
+	return ownedMember[Relation](v.raw, "value")
 }
 
-type OwnedSessionPacketScoreAggregate struct{ ownedJSON }
+type SessionPacketScoreAggregate struct{ ownedJSON }
 
-func (v OwnedSessionPacketScoreAggregate) Function() Presence[string] {
+func (v SessionPacketScoreAggregate) Function() Presence[string] {
 	return ownedMember[string](v.raw, "function")
 }
-func (v OwnedSessionPacketScoreAggregate) Kind() Presence[string] {
+func (v SessionPacketScoreAggregate) Kind() Presence[string] {
 	return ownedMember[string](v.raw, "kind")
 }
-func (v OwnedSessionPacketScoreAggregate) Value() Presence[[]OwnedAtomicDouble] {
-	return ownedMember[[]OwnedAtomicDouble](v.raw, "value")
+func (v SessionPacketScoreAggregate) Value() Presence[[]AtomicDouble] {
+	return ownedMember[[]AtomicDouble](v.raw, "value")
 }
 
-type OwnedSessionPacketScoreRow struct{ ownedJSON }
+type SessionPacketScoreRow struct{ ownedJSON }
 
-func (v OwnedSessionPacketScoreRow) Function() Presence[string] {
+func (v SessionPacketScoreRow) Function() Presence[string] {
 	return ownedMember[string](v.raw, "function")
 }
-func (v OwnedSessionPacketScoreRow) Kind() Presence[string] {
-	return ownedMember[string](v.raw, "kind")
-}
-func (v OwnedSessionPacketScoreRow) Value() Presence[OwnedAtomicDouble] {
-	return ownedMember[OwnedAtomicDouble](v.raw, "value")
+func (v SessionPacketScoreRow) Kind() Presence[string] { return ownedMember[string](v.raw, "kind") }
+func (v SessionPacketScoreRow) Value() Presence[AtomicDouble] {
+	return ownedMember[AtomicDouble](v.raw, "value")
 }
 
-type OwnedSessionPacketTagAggregate struct{ ownedJSON }
+type SessionPacketTagAggregate struct{ ownedJSON }
 
-func (v OwnedSessionPacketTagAggregate) Function() Presence[string] {
+func (v SessionPacketTagAggregate) Function() Presence[string] {
 	return ownedMember[string](v.raw, "function")
 }
-func (v OwnedSessionPacketTagAggregate) Kind() Presence[string] {
-	return ownedMember[string](v.raw, "kind")
-}
-func (v OwnedSessionPacketTagAggregate) Value() Presence[[]OwnedAtomicArrayOfString] {
-	return ownedMember[[]OwnedAtomicArrayOfString](v.raw, "value")
+func (v SessionPacketTagAggregate) Kind() Presence[string] { return ownedMember[string](v.raw, "kind") }
+func (v SessionPacketTagAggregate) Value() Presence[[]AtomicArrayOfString] {
+	return ownedMember[[]AtomicArrayOfString](v.raw, "value")
 }
 
-type OwnedSessionPacketTagRow struct{ ownedJSON }
+type SessionPacketTagRow struct{ ownedJSON }
 
-func (v OwnedSessionPacketTagRow) Function() Presence[string] {
+func (v SessionPacketTagRow) Function() Presence[string] {
 	return ownedMember[string](v.raw, "function")
 }
-func (v OwnedSessionPacketTagRow) Kind() Presence[string] { return ownedMember[string](v.raw, "kind") }
-func (v OwnedSessionPacketTagRow) Value() Presence[OwnedAtomicArrayOfString] {
-	return ownedMember[OwnedAtomicArrayOfString](v.raw, "value")
+func (v SessionPacketTagRow) Kind() Presence[string] { return ownedMember[string](v.raw, "kind") }
+func (v SessionPacketTagRow) Value() Presence[AtomicArrayOfString] {
+	return ownedMember[AtomicArrayOfString](v.raw, "value")
 }
 
-type OwnedSessionPacketTerminal struct{ ownedJSON }
+type SessionPacketTerminal struct{ ownedJSON }
 
-func (v OwnedSessionPacketTerminal) Facts() Presence[OwnedFacts] {
-	return ownedMember[OwnedFacts](v.raw, "facts")
+func (v SessionPacketTerminal) Facts() Presence[Facts] { return ownedMember[Facts](v.raw, "facts") }
+func (v SessionPacketTerminal) Failure() Presence[CallError] {
+	return ownedMember[CallError](v.raw, "failure")
 }
-func (v OwnedSessionPacketTerminal) Failure() Presence[OwnedCallError] {
-	return ownedMember[OwnedCallError](v.raw, "failure")
-}
-func (v OwnedSessionPacketTerminal) Kind() Presence[string] {
-	return ownedMember[string](v.raw, "kind")
-}
+func (v SessionPacketTerminal) Kind() Presence[string] { return ownedMember[string](v.raw, "kind") }
 
-type OwnedSessionProbabilities struct{ ownedJSON }
+type SessionProbabilities struct{ ownedJSON }
 
-func (v OwnedSessionProbabilities) AsSessionProbabilitiesYesNo() (OwnedSessionProbabilitiesYesNo, error) {
+func (v SessionProbabilities) AsSessionProbabilitiesYesNo() (SessionProbabilitiesYesNo, error) {
 	if !(ownedLiteral(v.raw, "kind", "yes_no")) {
-		return OwnedSessionProbabilitiesYesNo{}, errOwnedAlternative
+		return SessionProbabilitiesYesNo{}, errAlternative
 	}
-	return ownedDecode[OwnedSessionProbabilitiesYesNo](v.raw)
+	return ownedDecode[SessionProbabilitiesYesNo](v.raw)
 }
-func (v OwnedSessionProbabilities) AsSessionProbabilitiesNamed() (OwnedSessionProbabilitiesNamed, error) {
+func (v SessionProbabilities) AsSessionProbabilitiesNamed() (SessionProbabilitiesNamed, error) {
 	if !(ownedLiteral(v.raw, "kind", "named")) {
-		return OwnedSessionProbabilitiesNamed{}, errOwnedAlternative
+		return SessionProbabilitiesNamed{}, errAlternative
 	}
-	return ownedDecode[OwnedSessionProbabilitiesNamed](v.raw)
+	return ownedDecode[SessionProbabilitiesNamed](v.raw)
 }
 
-type OwnedSessionProbabilitiesNamed struct{ ownedJSON }
+type SessionProbabilitiesNamed struct{ ownedJSON }
 
-func (v OwnedSessionProbabilitiesNamed) Kind() Presence[string] {
-	return ownedMember[string](v.raw, "kind")
-}
-func (v OwnedSessionProbabilitiesNamed) Value() Presence[[]OwnedSessionNamedProbability] {
-	return ownedMember[[]OwnedSessionNamedProbability](v.raw, "value")
+func (v SessionProbabilitiesNamed) Kind() Presence[string] { return ownedMember[string](v.raw, "kind") }
+func (v SessionProbabilitiesNamed) Value() Presence[[]SessionNamedProbability] {
+	return ownedMember[[]SessionNamedProbability](v.raw, "value")
 }
 
-type OwnedSessionProbabilitiesYesNo struct{ ownedJSON }
+type SessionProbabilitiesYesNo struct{ ownedJSON }
 
-func (v OwnedSessionProbabilitiesYesNo) Kind() Presence[string] {
-	return ownedMember[string](v.raw, "kind")
-}
-func (v OwnedSessionProbabilitiesYesNo) Value() Presence[json.Number] {
+func (v SessionProbabilitiesYesNo) Kind() Presence[string] { return ownedMember[string](v.raw, "kind") }
+func (v SessionProbabilitiesYesNo) Value() Presence[json.Number] {
 	return ownedMember[json.Number](v.raw, "value")
 }
 
-type OwnedSessionQuestionDetail struct{ ownedJSON }
+type SessionQuestionDetail struct{ ownedJSON }
 
-func (v OwnedSessionQuestionDetail) AnswerId() Presence[OwnedAnswerId] {
-	return ownedMember[OwnedAnswerId](v.raw, "answer_id")
+func (v SessionQuestionDetail) AnswerId() Presence[AnswerId] {
+	return ownedMember[AnswerId](v.raw, "answer_id")
 }
-func (v OwnedSessionQuestionDetail) Cached() Presence[bool] {
-	return ownedMember[bool](v.raw, "cached")
-}
-func (v OwnedSessionQuestionDetail) Confidence() Presence[json.Number] {
+func (v SessionQuestionDetail) Cached() Presence[bool] { return ownedMember[bool](v.raw, "cached") }
+func (v SessionQuestionDetail) Confidence() Presence[json.Number] {
 	return ownedMember[json.Number](v.raw, "confidence")
 }
-func (v OwnedSessionQuestionDetail) FailedQuestions() Presence[json.Number] {
+func (v SessionQuestionDetail) FailedQuestions() Presence[json.Number] {
 	return ownedMember[json.Number](v.raw, "failed_questions")
 }
-func (v OwnedSessionQuestionDetail) Failure() Presence[OwnedFailure] {
-	return ownedMember[OwnedFailure](v.raw, "failure")
+func (v SessionQuestionDetail) Failure() Presence[Failure] {
+	return ownedMember[Failure](v.raw, "failure")
 }
-func (v OwnedSessionQuestionDetail) FailureId() Presence[OwnedFailureId] {
-	return ownedMember[OwnedFailureId](v.raw, "failure_id")
+func (v SessionQuestionDetail) FailureId() Presence[FailureId] {
+	return ownedMember[FailureId](v.raw, "failure_id")
 }
-func (v OwnedSessionQuestionDetail) Input() Presence[any] { return ownedMember[any](v.raw, "input") }
-func (v OwnedSessionQuestionDetail) InputSource() Presence[OwnedPhysicalSource] {
-	return ownedMember[OwnedPhysicalSource](v.raw, "input_source")
+func (v SessionQuestionDetail) Input() Presence[any] { return ownedMember[any](v.raw, "input") }
+func (v SessionQuestionDetail) InputSource() Presence[PhysicalSource] {
+	return ownedMember[PhysicalSource](v.raw, "input_source")
 }
-func (v OwnedSessionQuestionDetail) InputSources() Presence[[]OwnedSessionInputSource] {
-	return ownedMember[[]OwnedSessionInputSource](v.raw, "input_sources")
+func (v SessionQuestionDetail) InputSources() Presence[[]SessionInputSource] {
+	return ownedMember[[]SessionInputSource](v.raw, "input_sources")
 }
-func (v OwnedSessionQuestionDetail) Inputs() Presence[[]any] {
-	return ownedMember[[]any](v.raw, "inputs")
+func (v SessionQuestionDetail) Inputs() Presence[[]any] { return ownedMember[[]any](v.raw, "inputs") }
+func (v SessionQuestionDetail) Model() Presence[string] { return ownedMember[string](v.raw, "model") }
+func (v SessionQuestionDetail) Observations() Presence[[]Observation] {
+	return ownedMember[[]Observation](v.raw, "observations")
 }
-func (v OwnedSessionQuestionDetail) Model() Presence[string] {
-	return ownedMember[string](v.raw, "model")
+func (v SessionQuestionDetail) Probabilities() Presence[SessionProbabilities] {
+	return ownedMember[SessionProbabilities](v.raw, "probabilities")
 }
-func (v OwnedSessionQuestionDetail) Observations() Presence[[]OwnedObservation] {
-	return ownedMember[[]OwnedObservation](v.raw, "observations")
+func (v SessionQuestionDetail) Question() Presence[QuestionDocument] {
+	return ownedMember[QuestionDocument](v.raw, "question")
 }
-func (v OwnedSessionQuestionDetail) Probabilities() Presence[OwnedSessionProbabilities] {
-	return ownedMember[OwnedSessionProbabilities](v.raw, "probabilities")
-}
-func (v OwnedSessionQuestionDetail) Question() Presence[OwnedQuestionDocument] {
-	return ownedMember[OwnedQuestionDocument](v.raw, "question")
-}
-func (v OwnedSessionQuestionDetail) QuestionSha256() Presence[string] {
+func (v SessionQuestionDetail) QuestionSha256() Presence[string] {
 	return ownedMember[string](v.raw, "question_sha256")
 }
-func (v OwnedSessionQuestionDetail) QuestionSources() Presence[[]OwnedQuestionSource] {
-	return ownedMember[[]OwnedQuestionSource](v.raw, "question_sources")
+func (v SessionQuestionDetail) QuestionSources() Presence[[]QuestionSource] {
+	return ownedMember[[]QuestionSource](v.raw, "question_sources")
 }
-func (v OwnedSessionQuestionDetail) RawPick() Presence[string] {
+func (v SessionQuestionDetail) RawPick() Presence[string] {
 	return ownedMember[string](v.raw, "raw_pick")
 }
-func (v OwnedSessionQuestionDetail) ReportedUsage() Presence[OwnedUsage] {
-	return ownedMember[OwnedUsage](v.raw, "reported_usage")
+func (v SessionQuestionDetail) ReportedUsage() Presence[Usage] {
+	return ownedMember[Usage](v.raw, "reported_usage")
 }
-func (v OwnedSessionQuestionDetail) Requests() Presence[[]string] {
+func (v SessionQuestionDetail) Requests() Presence[[]string] {
 	return ownedMember[[]string](v.raw, "requests")
 }
-func (v OwnedSessionQuestionDetail) RequestsSent() Presence[json.Number] {
+func (v SessionQuestionDetail) RequestsSent() Presence[json.Number] {
 	return ownedMember[json.Number](v.raw, "requests_sent")
 }
-func (v OwnedSessionQuestionDetail) Threshold() Presence[OwnedThreshold] {
-	return ownedMember[OwnedThreshold](v.raw, "threshold")
+func (v SessionQuestionDetail) Threshold() Presence[Threshold] {
+	return ownedMember[Threshold](v.raw, "threshold")
 }
-func (v OwnedSessionQuestionDetail) Url() Presence[string] { return ownedMember[string](v.raw, "url") }
-func (v OwnedSessionQuestionDetail) Usage() Presence[OwnedTokenUsage] {
-	return ownedMember[OwnedTokenUsage](v.raw, "usage")
+func (v SessionQuestionDetail) Url() Presence[string] { return ownedMember[string](v.raw, "url") }
+func (v SessionQuestionDetail) Usage() Presence[TokenUsage] {
+	return ownedMember[TokenUsage](v.raw, "usage")
 }
-func (v OwnedSessionQuestionDetail) Value() Presence[OwnedValue] {
-	return ownedMember[OwnedValue](v.raw, "value")
+func (v SessionQuestionDetail) Value() Presence[Value] { return ownedMember[Value](v.raw, "value") }
+
+type SessionRecognition struct{ ownedJSON }
+
+func (v SessionRecognition) Entities() Presence[[]Entity] {
+	return ownedMember[[]Entity](v.raw, "entities")
+}
+func (v SessionRecognition) Mode() Presence[ResultRecognitionMode] {
+	return ownedMember[ResultRecognitionMode](v.raw, "mode")
+}
+func (v SessionRecognition) Proposals() Presence[[]BoundaryProposal] {
+	return ownedMember[[]BoundaryProposal](v.raw, "proposals")
+}
+func (v SessionRecognition) Relations() Presence[[]RecognitionEdgeDocument] {
+	return ownedMember[[]RecognitionEdgeDocument](v.raw, "relations")
 }
 
-type OwnedSessionRecognition struct{ ownedJSON }
+type SessionRelationEdge struct{ ownedJSON }
 
-func (v OwnedSessionRecognition) Entities() Presence[[]OwnedEntity] {
-	return ownedMember[[]OwnedEntity](v.raw, "entities")
-}
-func (v OwnedSessionRecognition) Mode() Presence[OwnedRecognitionMode] {
-	return ownedMember[OwnedRecognitionMode](v.raw, "mode")
-}
-func (v OwnedSessionRecognition) Proposals() Presence[[]OwnedBoundaryProposal] {
-	return ownedMember[[]OwnedBoundaryProposal](v.raw, "proposals")
-}
-func (v OwnedSessionRecognition) Relations() Presence[[]OwnedRecognitionEdgeDocument] {
-	return ownedMember[[]OwnedRecognitionEdgeDocument](v.raw, "relations")
-}
-
-type OwnedSessionRelationEdge struct{ ownedJSON }
-
-func (v OwnedSessionRelationEdge) Either() Presence[bool] { return ownedMember[bool](v.raw, "either") }
-func (v OwnedSessionRelationEdge) Probability() Presence[json.Number] {
+func (v SessionRelationEdge) Either() Presence[bool] { return ownedMember[bool](v.raw, "either") }
+func (v SessionRelationEdge) Probability() Presence[json.Number] {
 	return ownedMember[json.Number](v.raw, "probability")
 }
-func (v OwnedSessionRelationEdge) Relation() Presence[string] {
+func (v SessionRelationEdge) Relation() Presence[string] {
 	return ownedMember[string](v.raw, "relation")
 }
-func (v OwnedSessionRelationEdge) Source() Presence[OwnedEntityDocument] {
-	return ownedMember[OwnedEntityDocument](v.raw, "source")
+func (v SessionRelationEdge) Source() Presence[EntityDocument] {
+	return ownedMember[EntityDocument](v.raw, "source")
 }
-func (v OwnedSessionRelationEdge) Target() Presence[OwnedEntityDocument] {
-	return ownedMember[OwnedEntityDocument](v.raw, "target")
+func (v SessionRelationEdge) Target() Presence[EntityDocument] {
+	return ownedMember[EntityDocument](v.raw, "target")
 }
-func (v OwnedSessionRelationEdge) SourceName() Presence[string] {
+func (v SessionRelationEdge) SourceName() Presence[string] {
 	nested := ownedMember[json.RawMessage](v.raw, "source")
 	if nested.Err != nil || !nested.Present || nested.Null {
 		return Presence[string]{Present: nested.Present, Null: nested.Null, Err: nested.Err}
 	}
 	return ownedMember[string](nested.Value, "name")
 }
-func (v OwnedSessionRelationEdge) TargetName() Presence[string] {
+func (v SessionRelationEdge) TargetName() Presence[string] {
 	nested := ownedMember[json.RawMessage](v.raw, "target")
 	if nested.Err != nil || !nested.Present || nested.Null {
 		return Presence[string]{Present: nested.Present, Null: nested.Null, Err: nested.Err}
@@ -2642,108 +2338,98 @@ func (v OwnedSessionRelationEdge) TargetName() Presence[string] {
 	return ownedMember[string](nested.Value, "name")
 }
 
-type OwnedSourceRelationEndpoint struct{ ownedJSON }
+type SourceRelationEndpoint struct{ ownedJSON }
 
-func (v OwnedSourceRelationEndpoint) File() Presence[string] {
-	return ownedMember[string](v.raw, "file")
-}
-func (v OwnedSourceRelationEndpoint) FirstLine() Presence[json.Number] {
+func (v SourceRelationEndpoint) File() Presence[string] { return ownedMember[string](v.raw, "file") }
+func (v SourceRelationEndpoint) FirstLine() Presence[json.Number] {
 	return ownedMember[json.Number](v.raw, "first_line")
 }
-func (v OwnedSourceRelationEndpoint) Kind() Presence[string] {
-	return ownedMember[string](v.raw, "kind")
-}
-func (v OwnedSourceRelationEndpoint) LastLine() Presence[json.Number] {
+func (v SourceRelationEndpoint) Kind() Presence[string] { return ownedMember[string](v.raw, "kind") }
+func (v SourceRelationEndpoint) LastLine() Presence[json.Number] {
 	return ownedMember[json.Number](v.raw, "last_line")
 }
-func (v OwnedSourceRelationEndpoint) Name() Presence[string] {
-	return ownedMember[string](v.raw, "name")
-}
-func (v OwnedSourceRelationEndpoint) Ordinal() Presence[json.Number] {
+func (v SourceRelationEndpoint) Name() Presence[string] { return ownedMember[string](v.raw, "name") }
+func (v SourceRelationEndpoint) Ordinal() Presence[json.Number] {
 	return ownedMember[json.Number](v.raw, "ordinal")
 }
-func (v OwnedSourceRelationEndpoint) Record() Presence[any] { return ownedMember[any](v.raw, "record") }
+func (v SourceRelationEndpoint) Record() Presence[any] { return ownedMember[any](v.raw, "record") }
 
-type OwnedThreshold struct{ ownedJSON }
-type OwnedTokenBand struct{ ownedJSON }
+type Threshold struct{ ownedJSON }
+type TokenBand struct{ ownedJSON }
 
-func (v OwnedTokenBand) Lower() Presence[json.Number] {
-	return ownedMember[json.Number](v.raw, "lower")
-}
-func (v OwnedTokenBand) Upper() Presence[json.Number] {
-	return ownedMember[json.Number](v.raw, "upper")
-}
+func (v TokenBand) Lower() Presence[json.Number] { return ownedMember[json.Number](v.raw, "lower") }
+func (v TokenBand) Upper() Presence[json.Number] { return ownedMember[json.Number](v.raw, "upper") }
 
-type OwnedTokenUsage struct{ ownedJSON }
+type TokenUsage struct{ ownedJSON }
 
-func (v OwnedTokenUsage) InputTokens() Presence[json.Number] {
+func (v TokenUsage) InputTokens() Presence[json.Number] {
 	return ownedMember[json.Number](v.raw, "input_tokens")
 }
-func (v OwnedTokenUsage) OutputTokens() Presence[json.Number] {
+func (v TokenUsage) OutputTokens() Presence[json.Number] {
 	return ownedMember[json.Number](v.raw, "output_tokens")
 }
 
-type OwnedValue struct{ ownedJSON }
+type Value struct{ ownedJSON }
 
-func (v OwnedSessionPacket) DecideAnswer() Presence[[]OwnedAtomicDecideValue] {
+func (v SessionPacket) DecideAnswer() Presence[[]AtomicDecideValue] {
 	if !ownedLiteral(v.raw, "kind", "aggregate") || !ownedLiteral(v.raw, "function", "decide") {
-		return Presence[[]OwnedAtomicDecideValue]{Err: errOwnedAlternative}
+		return Presence[[]AtomicDecideValue]{Err: errAlternative}
 	}
-	return ownedMember[[]OwnedAtomicDecideValue](v.raw, "value")
+	return ownedMember[[]AtomicDecideValue](v.raw, "value")
 }
-func (v OwnedSessionPacket) ChooseAnswer() Presence[[]OwnedAtomicNullableString] {
+func (v SessionPacket) ChooseAnswer() Presence[[]AtomicNullableString] {
 	if !ownedLiteral(v.raw, "kind", "aggregate") || !ownedLiteral(v.raw, "function", "choose") {
-		return Presence[[]OwnedAtomicNullableString]{Err: errOwnedAlternative}
+		return Presence[[]AtomicNullableString]{Err: errAlternative}
 	}
-	return ownedMember[[]OwnedAtomicNullableString](v.raw, "value")
+	return ownedMember[[]AtomicNullableString](v.raw, "value")
 }
-func (v OwnedSessionPacket) TagAnswer() Presence[[]OwnedAtomicArrayOfString] {
+func (v SessionPacket) TagAnswer() Presence[[]AtomicArrayOfString] {
 	if !ownedLiteral(v.raw, "kind", "aggregate") || !ownedLiteral(v.raw, "function", "tag") {
-		return Presence[[]OwnedAtomicArrayOfString]{Err: errOwnedAlternative}
+		return Presence[[]AtomicArrayOfString]{Err: errAlternative}
 	}
-	return ownedMember[[]OwnedAtomicArrayOfString](v.raw, "value")
+	return ownedMember[[]AtomicArrayOfString](v.raw, "value")
 }
-func (v OwnedSessionPacket) ScoreAnswer() Presence[[]OwnedAtomicDouble] {
+func (v SessionPacket) ScoreAnswer() Presence[[]AtomicDouble] {
 	if !ownedLiteral(v.raw, "kind", "aggregate") || !ownedLiteral(v.raw, "function", "score") {
-		return Presence[[]OwnedAtomicDouble]{Err: errOwnedAlternative}
+		return Presence[[]AtomicDouble]{Err: errAlternative}
 	}
-	return ownedMember[[]OwnedAtomicDouble](v.raw, "value")
+	return ownedMember[[]AtomicDouble](v.raw, "value")
 }
-func (v OwnedSessionPacket) FilterAnswer() Presence[[]OwnedAtomicBoolean] {
+func (v SessionPacket) FilterAnswer() Presence[[]AtomicBoolean] {
 	if !ownedLiteral(v.raw, "kind", "aggregate") || !ownedLiteral(v.raw, "function", "filter") {
-		return Presence[[]OwnedAtomicBoolean]{Err: errOwnedAlternative}
+		return Presence[[]AtomicBoolean]{Err: errAlternative}
 	}
-	return ownedMember[[]OwnedAtomicBoolean](v.raw, "value")
+	return ownedMember[[]AtomicBoolean](v.raw, "value")
 }
-func (v OwnedSessionPacket) RankAnswer() Presence[[]OwnedAtomicNonZeroUsize] {
+func (v SessionPacket) RankAnswer() Presence[[]AtomicNonZeroUsize] {
 	if !ownedLiteral(v.raw, "kind", "aggregate") || !ownedLiteral(v.raw, "function", "rank") {
-		return Presence[[]OwnedAtomicNonZeroUsize]{Err: errOwnedAlternative}
+		return Presence[[]AtomicNonZeroUsize]{Err: errAlternative}
 	}
-	return ownedMember[[]OwnedAtomicNonZeroUsize](v.raw, "value")
+	return ownedMember[[]AtomicNonZeroUsize](v.raw, "value")
 }
-func (v OwnedSessionPacket) FindAnswer() Presence[OwnedFind] {
+func (v SessionPacket) FindAnswer() Presence[Find] {
 	if !ownedLiteral(v.raw, "kind", "aggregate") || !ownedLiteral(v.raw, "function", "find") {
-		return Presence[OwnedFind]{Err: errOwnedAlternative}
+		return Presence[Find]{Err: errAlternative}
 	}
-	return ownedMember[OwnedFind](v.raw, "value")
+	return ownedMember[Find](v.raw, "value")
 }
-func (v OwnedSessionPacket) AnnotateAnswer() Presence[[]OwnedAnnotation] {
+func (v SessionPacket) AnnotateAnswer() Presence[[]Annotation] {
 	if !ownedLiteral(v.raw, "kind", "aggregate") || !ownedLiteral(v.raw, "function", "annotate") {
-		return Presence[[]OwnedAnnotation]{Err: errOwnedAlternative}
+		return Presence[[]Annotation]{Err: errAlternative}
 	}
-	return ownedMember[[]OwnedAnnotation](v.raw, "value")
+	return ownedMember[[]Annotation](v.raw, "value")
 }
-func (v OwnedSessionPacket) RecognizeAnswer() Presence[[]OwnedRecognition] {
+func (v SessionPacket) RecognizeAnswer() Presence[[]Recognition] {
 	if !ownedLiteral(v.raw, "kind", "aggregate") || !ownedLiteral(v.raw, "function", "recognize") {
-		return Presence[[]OwnedRecognition]{Err: errOwnedAlternative}
+		return Presence[[]Recognition]{Err: errAlternative}
 	}
-	return ownedMember[[]OwnedRecognition](v.raw, "value")
+	return ownedMember[[]Recognition](v.raw, "value")
 }
-func (v OwnedSessionPacket) RelateAnswer() Presence[OwnedRelation] {
+func (v SessionPacket) RelateAnswer() Presence[Relation] {
 	if !ownedLiteral(v.raw, "kind", "aggregate") || !ownedLiteral(v.raw, "function", "relate") {
-		return Presence[OwnedRelation]{Err: errOwnedAlternative}
+		return Presence[Relation]{Err: errAlternative}
 	}
-	return ownedMember[OwnedRelation](v.raw, "value")
+	return ownedMember[Relation](v.raw, "value")
 }
 
 // OrderedEntry carries one authored object member.
@@ -2753,18 +2439,18 @@ type OrderedEntry[V any] struct {
 }
 type OrderedMap[V any] []OrderedEntry[V]
 
-func (v OrderedMap[V]) MarshalJSON() ([]byte, error) {
+func (v OrderedMap[V]) marshalJSON() ([]byte, error) {
 	if v == nil {
 		return []byte("null"), nil
 	}
 	var out bytes.Buffer
 	out.WriteByte('{')
 	for i, entry := range v {
-		key, err := json.Marshal(entry.Key)
+		key, err := transportMarshal(entry.Key)
 		if err != nil {
 			return nil, err
 		}
-		value, err := json.Marshal(entry.Value)
+		value, err := transportMarshal(entry.Value)
 		if err != nil {
 			return nil, err
 		}
@@ -2827,9 +2513,9 @@ type RequestInputFeed struct {
 	Reading *RequestReader  `json:"reading,omitempty"`
 }
 
-func (v RequestInputFeed) MarshalJSON() ([]byte, error) {
+func (v RequestInputFeed) marshalJSON() ([]byte, error) {
 	type plain RequestInputFeed
-	data, err := json.Marshal(plain(v))
+	data, err := transportMarshal(plain(v))
 	if err != nil {
 		return nil, err
 	}
@@ -2838,7 +2524,7 @@ func (v RequestInputFeed) MarshalJSON() ([]byte, error) {
 		return nil, err
 	}
 	object["kind"] = json.RawMessage("\"feed\"")
-	return json.Marshal(object)
+	return transportMarshal(object)
 }
 
 type RequestReader struct {
@@ -2863,9 +2549,9 @@ type RequestImageBytes struct {
 	Media ImageMedia `json:"media"`
 }
 
-func (v RequestImageBytes) MarshalJSON() ([]byte, error) {
+func (v RequestImageBytes) marshalJSON() ([]byte, error) {
 	type plain RequestImageBytes
-	data, err := json.Marshal(plain(v))
+	data, err := transportMarshal(plain(v))
 	if err != nil {
 		return nil, err
 	}
@@ -2874,7 +2560,7 @@ func (v RequestImageBytes) MarshalJSON() ([]byte, error) {
 		return nil, err
 	}
 	object["kind"] = json.RawMessage("\"bytes\"")
-	return json.Marshal(object)
+	return transportMarshal(object)
 }
 
 type ImageMedia string
@@ -2889,9 +2575,9 @@ type RequestImageFile struct {
 	Path  string      `json:"path"`
 }
 
-func (v RequestImageFile) MarshalJSON() ([]byte, error) {
+func (v RequestImageFile) marshalJSON() ([]byte, error) {
 	type plain RequestImageFile
-	data, err := json.Marshal(plain(v))
+	data, err := transportMarshal(plain(v))
 	if err != nil {
 		return nil, err
 	}
@@ -2900,7 +2586,7 @@ func (v RequestImageFile) MarshalJSON() ([]byte, error) {
 		return nil, err
 	}
 	object["kind"] = json.RawMessage("\"file\"")
-	return json.Marshal(object)
+	return transportMarshal(object)
 }
 
 type RequestFraming string
@@ -2917,9 +2603,9 @@ type RequestInputSource struct {
 	Source RequestSource `json:"source"`
 }
 
-func (v RequestInputSource) MarshalJSON() ([]byte, error) {
+func (v RequestInputSource) marshalJSON() ([]byte, error) {
 	type plain RequestInputSource
-	data, err := json.Marshal(plain(v))
+	data, err := transportMarshal(plain(v))
 	if err != nil {
 		return nil, err
 	}
@@ -2928,7 +2614,7 @@ func (v RequestInputSource) MarshalJSON() ([]byte, error) {
 		return nil, err
 	}
 	object["kind"] = json.RawMessage("\"source\"")
-	return json.Marshal(object)
+	return transportMarshal(object)
 }
 
 type RequestSource struct {
@@ -2948,9 +2634,9 @@ type RequestInputEntities struct {
 	Items []RequestItem `json:"items"`
 }
 
-func (v RequestInputEntities) MarshalJSON() ([]byte, error) {
+func (v RequestInputEntities) marshalJSON() ([]byte, error) {
 	type plain RequestInputEntities
-	data, err := json.Marshal(plain(v))
+	data, err := transportMarshal(plain(v))
 	if err != nil {
 		return nil, err
 	}
@@ -2959,7 +2645,7 @@ func (v RequestInputEntities) MarshalJSON() ([]byte, error) {
 		return nil, err
 	}
 	object["kind"] = json.RawMessage("\"entities\"")
-	return json.Marshal(object)
+	return transportMarshal(object)
 }
 
 type RequestItem struct {
@@ -2984,9 +2670,9 @@ type RequestOriginalJson struct {
 	Value any `json:"value"`
 }
 
-func (v RequestOriginalJson) MarshalJSON() ([]byte, error) {
+func (v RequestOriginalJson) marshalJSON() ([]byte, error) {
 	type plain RequestOriginalJson
-	data, err := json.Marshal(plain(v))
+	data, err := transportMarshal(plain(v))
 	if err != nil {
 		return nil, err
 	}
@@ -2995,16 +2681,16 @@ func (v RequestOriginalJson) MarshalJSON() ([]byte, error) {
 		return nil, err
 	}
 	object["kind"] = json.RawMessage("\"json\"")
-	return json.Marshal(object)
+	return transportMarshal(object)
 }
 
 type RequestOriginalText struct {
 	Text string `json:"text"`
 }
 
-func (v RequestOriginalText) MarshalJSON() ([]byte, error) {
+func (v RequestOriginalText) marshalJSON() ([]byte, error) {
 	type plain RequestOriginalText
-	data, err := json.Marshal(plain(v))
+	data, err := transportMarshal(plain(v))
 	if err != nil {
 		return nil, err
 	}
@@ -3013,7 +2699,7 @@ func (v RequestOriginalText) MarshalJSON() ([]byte, error) {
 		return nil, err
 	}
 	object["kind"] = json.RawMessage("\"text\"")
-	return json.Marshal(object)
+	return transportMarshal(object)
 }
 
 type OptionSchema struct {
@@ -3047,9 +2733,9 @@ type RequestInputUnits struct {
 	Items []RequestItem `json:"items"`
 }
 
-func (v RequestInputUnits) MarshalJSON() ([]byte, error) {
+func (v RequestInputUnits) marshalJSON() ([]byte, error) {
 	type plain RequestInputUnits
-	data, err := json.Marshal(plain(v))
+	data, err := transportMarshal(plain(v))
 	if err != nil {
 		return nil, err
 	}
@@ -3058,16 +2744,16 @@ func (v RequestInputUnits) MarshalJSON() ([]byte, error) {
 		return nil, err
 	}
 	object["kind"] = json.RawMessage("\"units\"")
-	return json.Marshal(object)
+	return transportMarshal(object)
 }
 
 type RequestInputRecords struct {
 	Items []RequestItem `json:"items"`
 }
 
-func (v RequestInputRecords) MarshalJSON() ([]byte, error) {
+func (v RequestInputRecords) marshalJSON() ([]byte, error) {
 	type plain RequestInputRecords
-	data, err := json.Marshal(plain(v))
+	data, err := transportMarshal(plain(v))
 	if err != nil {
 		return nil, err
 	}
@@ -3076,7 +2762,7 @@ func (v RequestInputRecords) MarshalJSON() ([]byte, error) {
 		return nil, err
 	}
 	object["kind"] = json.RawMessage("\"records\"")
-	return json.Marshal(object)
+	return transportMarshal(object)
 }
 
 type RequestInputJson struct {
@@ -3084,9 +2770,9 @@ type RequestInputJson struct {
 	Value  any             `json:"value"`
 }
 
-func (v RequestInputJson) MarshalJSON() ([]byte, error) {
+func (v RequestInputJson) marshalJSON() ([]byte, error) {
 	type plain RequestInputJson
-	data, err := json.Marshal(plain(v))
+	data, err := transportMarshal(plain(v))
 	if err != nil {
 		return nil, err
 	}
@@ -3095,7 +2781,7 @@ func (v RequestInputJson) MarshalJSON() ([]byte, error) {
 		return nil, err
 	}
 	object["kind"] = json.RawMessage("\"json\"")
-	return json.Marshal(object)
+	return transportMarshal(object)
 }
 
 type RequestInputText struct {
@@ -3103,9 +2789,9 @@ type RequestInputText struct {
 	Text   string          `json:"text"`
 }
 
-func (v RequestInputText) MarshalJSON() ([]byte, error) {
+func (v RequestInputText) marshalJSON() ([]byte, error) {
 	type plain RequestInputText
-	data, err := json.Marshal(plain(v))
+	data, err := transportMarshal(plain(v))
 	if err != nil {
 		return nil, err
 	}
@@ -3114,7 +2800,7 @@ func (v RequestInputText) MarshalJSON() ([]byte, error) {
 		return nil, err
 	}
 	object["kind"] = json.RawMessage("\"text\"")
-	return json.Marshal(object)
+	return transportMarshal(object)
 }
 
 type RequestQuestion interface{ isRequestQuestion() }
@@ -3129,9 +2815,9 @@ type RequestQuestionReference struct {
 	Reference string `json:"reference"`
 }
 
-func (v RequestQuestionReference) MarshalJSON() ([]byte, error) {
+func (v RequestQuestionReference) marshalJSON() ([]byte, error) {
 	type plain RequestQuestionReference
-	data, err := json.Marshal(plain(v))
+	data, err := transportMarshal(plain(v))
 	if err != nil {
 		return nil, err
 	}
@@ -3140,16 +2826,16 @@ func (v RequestQuestionReference) MarshalJSON() ([]byte, error) {
 		return nil, err
 	}
 	object["kind"] = json.RawMessage("\"reference\"")
-	return json.Marshal(object)
+	return transportMarshal(object)
 }
 
 type RequestQuestionName struct {
 	Name string `json:"name"`
 }
 
-func (v RequestQuestionName) MarshalJSON() ([]byte, error) {
+func (v RequestQuestionName) marshalJSON() ([]byte, error) {
 	type plain RequestQuestionName
-	data, err := json.Marshal(plain(v))
+	data, err := transportMarshal(plain(v))
 	if err != nil {
 		return nil, err
 	}
@@ -3158,16 +2844,16 @@ func (v RequestQuestionName) MarshalJSON() ([]byte, error) {
 		return nil, err
 	}
 	object["kind"] = json.RawMessage("\"name\"")
-	return json.Marshal(object)
+	return transportMarshal(object)
 }
 
 type RequestQuestionFile struct {
 	Path string `json:"path"`
 }
 
-func (v RequestQuestionFile) MarshalJSON() ([]byte, error) {
+func (v RequestQuestionFile) marshalJSON() ([]byte, error) {
 	type plain RequestQuestionFile
-	data, err := json.Marshal(plain(v))
+	data, err := transportMarshal(plain(v))
 	if err != nil {
 		return nil, err
 	}
@@ -3176,16 +2862,16 @@ func (v RequestQuestionFile) MarshalJSON() ([]byte, error) {
 		return nil, err
 	}
 	object["kind"] = json.RawMessage("\"file\"")
-	return json.Marshal(object)
+	return transportMarshal(object)
 }
 
 type RequestQuestionDefinition struct {
 	Value RequestDefinition `json:"value"`
 }
 
-func (v RequestQuestionDefinition) MarshalJSON() ([]byte, error) {
+func (v RequestQuestionDefinition) marshalJSON() ([]byte, error) {
 	type plain RequestQuestionDefinition
-	data, err := json.Marshal(plain(v))
+	data, err := transportMarshal(plain(v))
 	if err != nil {
 		return nil, err
 	}
@@ -3194,7 +2880,7 @@ func (v RequestQuestionDefinition) MarshalJSON() ([]byte, error) {
 		return nil, err
 	}
 	object["kind"] = json.RawMessage("\"definition\"")
-	return json.Marshal(object)
+	return transportMarshal(object)
 }
 
 type RequestDefinition interface{ isRequestDefinition() }
@@ -3215,9 +2901,9 @@ type RequestDefinitionAnnotateDefinition struct {
 	Threshold *AuthoredThreshold           `json:"threshold,omitempty"`
 }
 
-func (v RequestDefinitionAnnotateDefinition) MarshalJSON() ([]byte, error) {
+func (v RequestDefinitionAnnotateDefinition) marshalJSON() ([]byte, error) {
 	type plain RequestDefinitionAnnotateDefinition
-	data, err := json.Marshal(plain(v))
+	data, err := transportMarshal(plain(v))
 	if err != nil {
 		return nil, err
 	}
@@ -3226,7 +2912,7 @@ func (v RequestDefinitionAnnotateDefinition) MarshalJSON() ([]byte, error) {
 		return nil, err
 	}
 	object["version"] = json.RawMessage("1")
-	return json.Marshal(object)
+	return transportMarshal(object)
 }
 
 type AuthoredThreshold interface{ isAuthoredThreshold() }
@@ -3283,7 +2969,7 @@ func (AuthoredCriterionNull) isAuthoredCriterion()   {}
 
 type AuthoredCriterionNull struct{}
 
-func (AuthoredCriterionNull) MarshalJSON() ([]byte, error) { return []byte("null"), nil }
+func (AuthoredCriterionNull) marshalJSON() ([]byte, error) { return []byte("null"), nil }
 
 type AuthoredCriterionArray []any
 type AuthoredCriterionObject map[string]any
@@ -3300,9 +2986,9 @@ type AuthoredInputDeclarationObject struct {
 	Required   *[]string                        `json:"required,omitempty"`
 }
 
-func (v AuthoredInputDeclarationObject) MarshalJSON() ([]byte, error) {
+func (v AuthoredInputDeclarationObject) marshalJSON() ([]byte, error) {
 	type plain AuthoredInputDeclarationObject
-	data, err := json.Marshal(plain(v))
+	data, err := transportMarshal(plain(v))
 	if err != nil {
 		return nil, err
 	}
@@ -3311,7 +2997,7 @@ func (v AuthoredInputDeclarationObject) MarshalJSON() ([]byte, error) {
 		return nil, err
 	}
 	object["type"] = json.RawMessage("\"object\"")
-	return json.Marshal(object)
+	return transportMarshal(object)
 }
 
 type AuthoredInputProperty interface{ isAuthoredInputProperty() }
@@ -3325,9 +3011,9 @@ type AuthoredInputPropertyArray struct {
 	Items AuthoredInputPropertyArrayItems `json:"items"`
 }
 
-func (v AuthoredInputPropertyArray) MarshalJSON() ([]byte, error) {
+func (v AuthoredInputPropertyArray) marshalJSON() ([]byte, error) {
 	type plain AuthoredInputPropertyArray
-	data, err := json.Marshal(plain(v))
+	data, err := transportMarshal(plain(v))
 	if err != nil {
 		return nil, err
 	}
@@ -3336,15 +3022,15 @@ func (v AuthoredInputPropertyArray) MarshalJSON() ([]byte, error) {
 		return nil, err
 	}
 	object["type"] = json.RawMessage("\"array\"")
-	return json.Marshal(object)
+	return transportMarshal(object)
 }
 
 type AuthoredInputPropertyArrayItems struct {
 }
 
-func (v AuthoredInputPropertyArrayItems) MarshalJSON() ([]byte, error) {
+func (v AuthoredInputPropertyArrayItems) marshalJSON() ([]byte, error) {
 	type plain AuthoredInputPropertyArrayItems
-	data, err := json.Marshal(plain(v))
+	data, err := transportMarshal(plain(v))
 	if err != nil {
 		return nil, err
 	}
@@ -3353,15 +3039,15 @@ func (v AuthoredInputPropertyArrayItems) MarshalJSON() ([]byte, error) {
 		return nil, err
 	}
 	object["type"] = json.RawMessage("\"string\"")
-	return json.Marshal(object)
+	return transportMarshal(object)
 }
 
 type AuthoredInputPropertyBoolean struct {
 }
 
-func (v AuthoredInputPropertyBoolean) MarshalJSON() ([]byte, error) {
+func (v AuthoredInputPropertyBoolean) marshalJSON() ([]byte, error) {
 	type plain AuthoredInputPropertyBoolean
-	data, err := json.Marshal(plain(v))
+	data, err := transportMarshal(plain(v))
 	if err != nil {
 		return nil, err
 	}
@@ -3370,15 +3056,15 @@ func (v AuthoredInputPropertyBoolean) MarshalJSON() ([]byte, error) {
 		return nil, err
 	}
 	object["type"] = json.RawMessage("\"boolean\"")
-	return json.Marshal(object)
+	return transportMarshal(object)
 }
 
 type AuthoredInputPropertyNumber struct {
 }
 
-func (v AuthoredInputPropertyNumber) MarshalJSON() ([]byte, error) {
+func (v AuthoredInputPropertyNumber) marshalJSON() ([]byte, error) {
 	type plain AuthoredInputPropertyNumber
-	data, err := json.Marshal(plain(v))
+	data, err := transportMarshal(plain(v))
 	if err != nil {
 		return nil, err
 	}
@@ -3387,15 +3073,15 @@ func (v AuthoredInputPropertyNumber) MarshalJSON() ([]byte, error) {
 		return nil, err
 	}
 	object["type"] = json.RawMessage("\"number\"")
-	return json.Marshal(object)
+	return transportMarshal(object)
 }
 
 type AuthoredInputPropertyString struct {
 }
 
-func (v AuthoredInputPropertyString) MarshalJSON() ([]byte, error) {
+func (v AuthoredInputPropertyString) marshalJSON() ([]byte, error) {
 	type plain AuthoredInputPropertyString
-	data, err := json.Marshal(plain(v))
+	data, err := transportMarshal(plain(v))
 	if err != nil {
 		return nil, err
 	}
@@ -3404,15 +3090,15 @@ func (v AuthoredInputPropertyString) MarshalJSON() ([]byte, error) {
 		return nil, err
 	}
 	object["type"] = json.RawMessage("\"string\"")
-	return json.Marshal(object)
+	return transportMarshal(object)
 }
 
 type AuthoredInputDeclarationString struct {
 }
 
-func (v AuthoredInputDeclarationString) MarshalJSON() ([]byte, error) {
+func (v AuthoredInputDeclarationString) marshalJSON() ([]byte, error) {
 	type plain AuthoredInputDeclarationString
-	data, err := json.Marshal(plain(v))
+	data, err := transportMarshal(plain(v))
 	if err != nil {
 		return nil, err
 	}
@@ -3421,7 +3107,7 @@ func (v AuthoredInputDeclarationString) MarshalJSON() ([]byte, error) {
 		return nil, err
 	}
 	object["type"] = json.RawMessage("\"string\"")
-	return json.Marshal(object)
+	return transportMarshal(object)
 }
 
 type AnnotateQuestionTag struct {
@@ -3456,7 +3142,7 @@ func (AuthoredDescriptionNull) isAuthoredDescription()   {}
 
 type AuthoredDescriptionNull struct{}
 
-func (AuthoredDescriptionNull) MarshalJSON() ([]byte, error) { return []byte("null"), nil }
+func (AuthoredDescriptionNull) marshalJSON() ([]byte, error) { return []byte("null"), nil }
 
 type AuthoredDescriptionArray []any
 type AuthoredDescriptionObject map[string]any
@@ -3479,8 +3165,8 @@ func (AuthoredOptionsObject) isAuthoredOptions() {}
 
 type AuthoredOptionsObject OrderedMap[AuthoredDescription]
 
-func (v AuthoredOptionsObject) MarshalJSON() ([]byte, error) {
-	return OrderedMap[AuthoredDescription](v).MarshalJSON()
+func (v AuthoredOptionsObject) marshalJSON() ([]byte, error) {
+	return OrderedMap[AuthoredDescription](v).marshalJSON()
 }
 func (v *AuthoredOptionsObject) UnmarshalJSON(data []byte) error {
 	return (*OrderedMap[AuthoredDescription])(v).UnmarshalJSON(data)
@@ -3512,9 +3198,9 @@ type RequestDefinitionRecognizeDefinition struct {
 	WordingVersion    *int64                    `json:"wording_version,omitempty"`
 }
 
-func (v RequestDefinitionRecognizeDefinition) MarshalJSON() ([]byte, error) {
+func (v RequestDefinitionRecognizeDefinition) marshalJSON() ([]byte, error) {
 	type plain RequestDefinitionRecognizeDefinition
-	data, err := json.Marshal(plain(v))
+	data, err := transportMarshal(plain(v))
 	if err != nil {
 		return nil, err
 	}
@@ -3523,7 +3209,7 @@ func (v RequestDefinitionRecognizeDefinition) MarshalJSON() ([]byte, error) {
 		return nil, err
 	}
 	object["version"] = json.RawMessage("1")
-	return json.Marshal(object)
+	return transportMarshal(object)
 }
 
 type RecognizeQuestion struct {
@@ -3576,9 +3262,9 @@ type RequestDefinitionAuthoredRelate struct {
 	WordingVersion *int64                    `json:"wording_version,omitempty"`
 }
 
-func (v RequestDefinitionAuthoredRelate) MarshalJSON() ([]byte, error) {
+func (v RequestDefinitionAuthoredRelate) marshalJSON() ([]byte, error) {
 	type plain RequestDefinitionAuthoredRelate
-	data, err := json.Marshal(plain(v))
+	data, err := transportMarshal(plain(v))
 	if err != nil {
 		return nil, err
 	}
@@ -3587,7 +3273,7 @@ func (v RequestDefinitionAuthoredRelate) MarshalJSON() ([]byte, error) {
 		return nil, err
 	}
 	object["version"] = json.RawMessage("1")
-	return json.Marshal(object)
+	return transportMarshal(object)
 }
 
 type RelateQuestion struct {
@@ -3682,9 +3368,9 @@ type RequestQuestionText struct {
 	Text string `json:"text"`
 }
 
-func (v RequestQuestionText) MarshalJSON() ([]byte, error) {
+func (v RequestQuestionText) marshalJSON() ([]byte, error) {
 	type plain RequestQuestionText
-	data, err := json.Marshal(plain(v))
+	data, err := transportMarshal(plain(v))
 	if err != nil {
 		return nil, err
 	}
@@ -3693,7 +3379,7 @@ func (v RequestQuestionText) MarshalJSON() ([]byte, error) {
 		return nil, err
 	}
 	object["kind"] = json.RawMessage("\"text\"")
-	return json.Marshal(object)
+	return transportMarshal(object)
 }
 
 type RequestOptions struct {
@@ -3766,9 +3452,9 @@ type Request struct {
 	Call RequestCall `json:"call"`
 }
 
-func (v Request) MarshalJSON() ([]byte, error) {
+func (v Request) marshalJSON() ([]byte, error) {
 	type plain Request
-	data, err := json.Marshal(plain(v))
+	data, err := transportMarshal(plain(v))
 	if err != nil {
 		return nil, err
 	}
@@ -3777,7 +3463,7 @@ func (v Request) MarshalJSON() ([]byte, error) {
 		return nil, err
 	}
 	object["schema"] = json.RawMessage("\"thinkthen.request/1\"")
-	return json.Marshal(object)
+	return transportMarshal(object)
 }
 
 type RequestCall struct {
@@ -3810,49 +3496,69 @@ type SessionSourceLocation struct {
 	FirstLine *uint64 `json:"first_line,omitempty"`
 	LastLine  *uint64 `json:"last_line,omitempty"`
 }
+type DecideInput interface{ RequestInput }
 
-func (c *Client) Decide(ctx context.Context, question RequestQuestion, input any, options *RequestOptions) (OwnedCall, error) {
+func (c *Client) Decide(ctx context.Context, question RequestQuestion, input DecideInput, options *RequestOptions) (Call, error) {
 	return c.call(ctx, "decide", question, input, options)
 }
-func (c *Client) Choose(ctx context.Context, question RequestQuestion, input any, options *RequestOptions) (OwnedCall, error) {
+
+type ChooseInput interface{ RequestInput }
+
+func (c *Client) Choose(ctx context.Context, question RequestQuestion, input ChooseInput, options *RequestOptions) (Call, error) {
 	return c.call(ctx, "choose", question, input, options)
 }
-func (c *Client) Tag(ctx context.Context, question RequestQuestion, input any, options *RequestOptions) (OwnedCall, error) {
+
+type TagInput interface{ RequestInput }
+
+func (c *Client) Tag(ctx context.Context, question RequestQuestion, input TagInput, options *RequestOptions) (Call, error) {
 	return c.call(ctx, "tag", question, input, options)
 }
-func (c *Client) Score(ctx context.Context, question RequestQuestion, input any, options *RequestOptions) (OwnedCall, error) {
+
+type ScoreInput interface{ RequestInput }
+
+func (c *Client) Score(ctx context.Context, question RequestQuestion, input ScoreInput, options *RequestOptions) (Call, error) {
 	return c.call(ctx, "score", question, input, options)
 }
-func (c *Client) Filter(ctx context.Context, question RequestQuestion, input any, options *RequestOptions) (OwnedCall, error) {
+
+type FilterInput interface{ RequestInput }
+
+func (c *Client) Filter(ctx context.Context, question RequestQuestion, input FilterInput, options *RequestOptions) (Call, error) {
 	return c.call(ctx, "filter", question, input, options)
 }
-func (c *Client) Rank(ctx context.Context, question RequestQuestion, input any, options *RequestOptions) (OwnedCall, error) {
+
+type RankInput interface{ RequestInput }
+
+func (c *Client) Rank(ctx context.Context, question RequestQuestion, input RankInput, options *RequestOptions) (Call, error) {
 	return c.call(ctx, "rank", question, input, options)
 }
-func (c *Client) Find(ctx context.Context, question RequestQuestion, input any, options *RequestOptions) (OwnedCall, error) {
+
+type FindInput interface{ RequestInput }
+
+func (c *Client) Find(ctx context.Context, question RequestQuestion, input FindInput, options *RequestOptions) (Call, error) {
 	return c.call(ctx, "find", question, input, options)
 }
-func (c *Client) Annotate(ctx context.Context, question RequestQuestion, input any, options *RequestOptions) (OwnedCall, error) {
+
+type AnnotateInput interface{ RequestInput }
+
+func (c *Client) Annotate(ctx context.Context, question RequestQuestion, input AnnotateInput, options *RequestOptions) (Call, error) {
 	return c.call(ctx, "annotate", question, input, options)
 }
-func (c *Client) Recognize(ctx context.Context, question RequestQuestion, input any, options *RequestOptions) (OwnedCall, error) {
+
+type RecognizeInput interface{ RequestInput }
+
+func (c *Client) Recognize(ctx context.Context, question RequestQuestion, input RecognizeInput, options *RequestOptions) (Call, error) {
 	return c.call(ctx, "recognize", question, input, options)
 }
-func (c *Client) Relate(ctx context.Context, question RequestQuestion, input any, options *RequestOptions) (OwnedCall, error) {
+
+type RelateInput interface{ RequestInput }
+
+func (c *Client) Relate(ctx context.Context, question RequestQuestion, input RelateInput, options *RequestOptions) (Call, error) {
 	return c.call(ctx, "relate", question, input, options)
 }
 func ownedObject(raw json.RawMessage) bool {
 	value := bytes.TrimSpace(raw)
 	return len(value) > 0 && value[0] == 123
 }
-
-type AnswerCardinalityError struct {
-	Function string
-	Count    int
-	Call     OwnedCall
-}
-
-func (e *AnswerCardinalityError) Error() string { return "Expected exactly one successful answer" }
 func ownedAnswerPath(raw json.RawMessage, path []string) Presence[json.RawMessage] {
 	result := Presence[json.RawMessage]{Present: true, Value: raw}
 	for _, field := range path {
@@ -3863,7 +3569,7 @@ func ownedAnswerPath(raw json.RawMessage, path []string) Presence[json.RawMessag
 	}
 	return result
 }
-func (v OwnedCall) answerTerminal() error {
+func (v Call) answerTerminal() error {
 	if v.Terminal == nil {
 		return &AnswerCardinalityError{Call: v}
 	}
@@ -3893,7 +3599,7 @@ func (v OwnedCall) answerTerminal() error {
 	}
 	return nil
 }
-func (v OwnedCall) answerJSON(function, judgment string) (json.RawMessage, error) {
+func (v Call) answerJSON(function, judgment string) (json.RawMessage, error) {
 	if err := v.answerTerminal(); err != nil {
 		return nil, err
 	}
@@ -3930,7 +3636,7 @@ func (v OwnedCall) answerJSON(function, judgment string) (json.RawMessage, error
 				raw = json.RawMessage("null")
 			}
 			if row {
-				raw, err := json.Marshal([]json.RawMessage{raw})
+				raw, err := transportMarshal([]json.RawMessage{raw})
 				if err != nil {
 					return nil, err
 				}
@@ -3949,7 +3655,7 @@ func (v OwnedCall) answerJSON(function, judgment string) (json.RawMessage, error
 			}
 			combined = append(combined, items...)
 		}
-		return json.Marshal(combined)
+		return transportMarshal(combined)
 	}
 	if len(values) != 1 {
 		return nil, &AnswerCardinalityError{Function: function, Count: len(values), Call: v}
@@ -3968,7 +3674,7 @@ func ownedAnswerProjection[T any](raw json.RawMessage, member string) ([]T, erro
 			return nil, field.Err
 		}
 		if !field.Present {
-			return nil, errOwnedAlternative
+			return nil, errAlternative
 		}
 		value := field.Value
 		if field.Null {
@@ -3982,7 +3688,7 @@ func ownedAnswerProjection[T any](raw json.RawMessage, member string) ([]T, erro
 	}
 	return values, nil
 }
-func (v OwnedCall) DecideAnswer() (*bool, error) {
+func (v Call) DecideAnswer() (*bool, error) {
 	raw, err := v.answerJSON("decide", "decision")
 	if err != nil {
 		var zero *bool
@@ -3990,7 +3696,7 @@ func (v OwnedCall) DecideAnswer() (*bool, error) {
 	}
 	return ownedDecode[*bool](raw)
 }
-func (c *Client) DecideAnswer(ctx context.Context, question RequestQuestion, input any, options *RequestOptions) (*bool, error) {
+func (c *Client) DecideAnswer(ctx context.Context, question RequestQuestion, input DecideInput, options *RequestOptions) (*bool, error) {
 	call, err := c.Decide(ctx, question, input, options)
 	if err != nil {
 		var zero *bool
@@ -3998,7 +3704,7 @@ func (c *Client) DecideAnswer(ctx context.Context, question RequestQuestion, inp
 	}
 	return call.DecideAnswer()
 }
-func (v OwnedCall) ChooseAnswer() (*string, error) {
+func (v Call) ChooseAnswer() (*string, error) {
 	raw, err := v.answerJSON("choose", "choice")
 	if err != nil {
 		var zero *string
@@ -4006,7 +3712,7 @@ func (v OwnedCall) ChooseAnswer() (*string, error) {
 	}
 	return ownedDecode[*string](raw)
 }
-func (c *Client) ChooseAnswer(ctx context.Context, question RequestQuestion, input any, options *RequestOptions) (*string, error) {
+func (c *Client) ChooseAnswer(ctx context.Context, question RequestQuestion, input ChooseInput, options *RequestOptions) (*string, error) {
 	call, err := c.Choose(ctx, question, input, options)
 	if err != nil {
 		var zero *string
@@ -4014,7 +3720,7 @@ func (c *Client) ChooseAnswer(ctx context.Context, question RequestQuestion, inp
 	}
 	return call.ChooseAnswer()
 }
-func (v OwnedCall) TagAnswer() ([]string, error) {
+func (v Call) TagAnswer() ([]string, error) {
 	raw, err := v.answerJSON("tag", "tags")
 	if err != nil {
 		var zero []string
@@ -4022,7 +3728,7 @@ func (v OwnedCall) TagAnswer() ([]string, error) {
 	}
 	return ownedDecode[[]string](raw)
 }
-func (c *Client) TagAnswer(ctx context.Context, question RequestQuestion, input any, options *RequestOptions) ([]string, error) {
+func (c *Client) TagAnswer(ctx context.Context, question RequestQuestion, input TagInput, options *RequestOptions) ([]string, error) {
 	call, err := c.Tag(ctx, question, input, options)
 	if err != nil {
 		var zero []string
@@ -4030,7 +3736,7 @@ func (c *Client) TagAnswer(ctx context.Context, question RequestQuestion, input 
 	}
 	return call.TagAnswer()
 }
-func (v OwnedCall) ScoreAnswer() (float64, error) {
+func (v Call) ScoreAnswer() (float64, error) {
 	raw, err := v.answerJSON("score", "score")
 	if err != nil {
 		var zero float64
@@ -4038,7 +3744,7 @@ func (v OwnedCall) ScoreAnswer() (float64, error) {
 	}
 	return ownedDecode[float64](raw)
 }
-func (c *Client) ScoreAnswer(ctx context.Context, question RequestQuestion, input any, options *RequestOptions) (float64, error) {
+func (c *Client) ScoreAnswer(ctx context.Context, question RequestQuestion, input ScoreInput, options *RequestOptions) (float64, error) {
 	call, err := c.Score(ctx, question, input, options)
 	if err != nil {
 		var zero float64
@@ -4046,7 +3752,7 @@ func (c *Client) ScoreAnswer(ctx context.Context, question RequestQuestion, inpu
 	}
 	return call.ScoreAnswer()
 }
-func (v OwnedCall) FilterAnswer() ([]any, error) {
+func (v Call) FilterAnswer() ([]any, error) {
 	raw, err := v.answerJSON("filter", "")
 	if err != nil {
 		var zero []any
@@ -4054,7 +3760,7 @@ func (v OwnedCall) FilterAnswer() ([]any, error) {
 	}
 	return ownedAnswerProjection[any](raw, "input")
 }
-func (c *Client) FilterAnswer(ctx context.Context, question RequestQuestion, input any, options *RequestOptions) ([]any, error) {
+func (c *Client) FilterAnswer(ctx context.Context, question RequestQuestion, input FilterInput, options *RequestOptions) ([]any, error) {
 	call, err := c.Filter(ctx, question, input, options)
 	if err != nil {
 		var zero []any
@@ -4062,7 +3768,7 @@ func (c *Client) FilterAnswer(ctx context.Context, question RequestQuestion, inp
 	}
 	return call.FilterAnswer()
 }
-func (v OwnedCall) RankAnswer() ([]uint64, error) {
+func (v Call) RankAnswer() ([]uint64, error) {
 	raw, err := v.answerJSON("rank", "")
 	if err != nil {
 		var zero []uint64
@@ -4070,7 +3776,7 @@ func (v OwnedCall) RankAnswer() ([]uint64, error) {
 	}
 	return ownedAnswerProjection[uint64](raw, "index")
 }
-func (c *Client) RankAnswer(ctx context.Context, question RequestQuestion, input any, options *RequestOptions) ([]uint64, error) {
+func (c *Client) RankAnswer(ctx context.Context, question RequestQuestion, input RankInput, options *RequestOptions) ([]uint64, error) {
 	call, err := c.Rank(ctx, question, input, options)
 	if err != nil {
 		var zero []uint64
@@ -4078,66 +3784,66 @@ func (c *Client) RankAnswer(ctx context.Context, question RequestQuestion, input
 	}
 	return call.RankAnswer()
 }
-func (v OwnedCall) FindAnswer() (OwnedFind, error) {
+func (v Call) FindAnswer() (Find, error) {
 	raw, err := v.answerJSON("find", "")
 	if err != nil {
-		var zero OwnedFind
+		var zero Find
 		return zero, err
 	}
-	return ownedDecode[OwnedFind](raw)
+	return ownedDecode[Find](raw)
 }
-func (c *Client) FindAnswer(ctx context.Context, question RequestQuestion, input any, options *RequestOptions) (OwnedFind, error) {
+func (c *Client) FindAnswer(ctx context.Context, question RequestQuestion, input FindInput, options *RequestOptions) (Find, error) {
 	call, err := c.Find(ctx, question, input, options)
 	if err != nil {
-		var zero OwnedFind
+		var zero Find
 		return zero, err
 	}
 	return call.FindAnswer()
 }
-func (v OwnedCall) AnnotateAnswer() ([]OwnedAnnotation, error) {
+func (v Call) AnnotateAnswer() ([]Annotation, error) {
 	raw, err := v.answerJSON("annotate", "")
 	if err != nil {
-		var zero []OwnedAnnotation
+		var zero []Annotation
 		return zero, err
 	}
-	return ownedDecode[[]OwnedAnnotation](raw)
+	return ownedDecode[[]Annotation](raw)
 }
-func (c *Client) AnnotateAnswer(ctx context.Context, question RequestQuestion, input any, options *RequestOptions) ([]OwnedAnnotation, error) {
+func (c *Client) AnnotateAnswer(ctx context.Context, question RequestQuestion, input AnnotateInput, options *RequestOptions) ([]Annotation, error) {
 	call, err := c.Annotate(ctx, question, input, options)
 	if err != nil {
-		var zero []OwnedAnnotation
+		var zero []Annotation
 		return zero, err
 	}
 	return call.AnnotateAnswer()
 }
-func (v OwnedCall) RecognizeAnswer() ([]OwnedRecognition, error) {
+func (v Call) RecognizeAnswer() ([]Recognition, error) {
 	raw, err := v.answerJSON("recognize", "")
 	if err != nil {
-		var zero []OwnedRecognition
+		var zero []Recognition
 		return zero, err
 	}
-	return ownedDecode[[]OwnedRecognition](raw)
+	return ownedDecode[[]Recognition](raw)
 }
-func (c *Client) RecognizeAnswer(ctx context.Context, question RequestQuestion, input any, options *RequestOptions) ([]OwnedRecognition, error) {
+func (c *Client) RecognizeAnswer(ctx context.Context, question RequestQuestion, input RecognizeInput, options *RequestOptions) ([]Recognition, error) {
 	call, err := c.Recognize(ctx, question, input, options)
 	if err != nil {
-		var zero []OwnedRecognition
+		var zero []Recognition
 		return zero, err
 	}
 	return call.RecognizeAnswer()
 }
-func (v OwnedCall) RelateAnswer() (OwnedRelation, error) {
+func (v Call) RelateAnswer() (Relation, error) {
 	raw, err := v.answerJSON("relate", "")
 	if err != nil {
-		var zero OwnedRelation
+		var zero Relation
 		return zero, err
 	}
-	return ownedDecode[OwnedRelation](raw)
+	return ownedDecode[Relation](raw)
 }
-func (c *Client) RelateAnswer(ctx context.Context, question RequestQuestion, input any, options *RequestOptions) (OwnedRelation, error) {
+func (c *Client) RelateAnswer(ctx context.Context, question RequestQuestion, input RelateInput, options *RequestOptions) (Relation, error) {
 	call, err := c.Relate(ctx, question, input, options)
 	if err != nil {
-		var zero OwnedRelation
+		var zero Relation
 		return zero, err
 	}
 	return call.RelateAnswer()

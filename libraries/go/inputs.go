@@ -27,3 +27,23 @@ func JSONItem(value any) RequestItem {
 func BytesImage(value []byte, media ImageMedia) RequestImage {
 	return RequestImageBytes{Bytes: base64.StdEncoding.EncodeToString(value), Media: media}
 }
+
+// FeedInput supplies ordered values with native backpressure.
+type FeedInput struct{ Producer Producer }
+
+func (FeedInput) isRequestInput() {}
+
+// TextInput supplies one text record.
+func TextInput(text string) RequestInputText { return RequestInputText{Text: text} }
+
+// RecordsInput keeps each original and its controls in order.
+func RecordsInput(items ...RequestItem) RequestInputRecords { return RequestInputRecords{Items: items} }
+
+// TextRecordsInput supplies ordered text records.
+func TextRecordsInput(texts ...string) RequestInputRecords {
+	items := make([]RequestItem, len(texts))
+	for i, text := range texts {
+		items[i] = TextItem(text)
+	}
+	return RecordsInput(items...)
+}
