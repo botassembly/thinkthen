@@ -10,8 +10,9 @@ let text = concat!(
     "Sam Patel says his Kindle arrived broken ",
     "in Denver.",
 );
-let facts = tt.recognize(&ask, text)?.into_value();
+let facts = tt.recognize(&ask, text)?;
 let names: Vec<_> = facts
+    .value()
     .entities()
     .iter()
     .map(|one| (one.text(), one.kind()))

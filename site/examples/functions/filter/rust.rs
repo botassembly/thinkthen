@@ -9,7 +9,5 @@ let reviews = [
     "Does this come in blue?",
     "The strap snapped on day two.",
 ];
-let complaints = tt
-    .filter(&complaint, reviews)?
-    .collect::<Result<Vec<_>, _>>()?;
-assert_eq!(complaints, [reviews[1], reviews[3]]);
+let complaints = tt.filter(&complaint, reviews)?;
+assert_eq!(complaints.value(), &[reviews[1], reviews[3]]);

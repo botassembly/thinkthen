@@ -1,4 +1,4 @@
-use thinkthen::{Answer, EngineBuilder, Question};
+use thinkthen::{EngineBuilder, Question};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let typesafe = EngineBuilder::from_env()?
@@ -18,10 +18,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "Please refund my order. It arrived broken.";
     let thanks = "Thanks for the quick help yesterday!";
     for tt in [typesafe, liquid, ollama] {
-        let yes = tt.decide(&refund, broken)?.into_value();
-        let no = tt.decide(&refund, thanks)?.into_value();
-        assert_eq!(yes, Answer::Yes);
-        assert_eq!(no, Answer::No);
+        let yes = tt.decide(&refund, broken)?;
+        let no = tt.decide(&refund, thanks)?;
+        assert_eq!(yes.value(), &Some(true));
+        assert_eq!(no.value(), &Some(false));
     }
     Ok(())
 }

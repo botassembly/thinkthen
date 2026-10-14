@@ -1,5 +1,7 @@
 # Rust examples
 
+Read a call with `call.value()` for its plain answer, `call.probability()` for its probability, `call.results()` for its complete typed records and `call.facts()` for its usage. A decide value is `Some(true)`, `Some(false)` or `None` for not sure.
+
 One runnable program for each `thinkthen` function, plus the deck's Rust slide and an offline recognition observer recipe. Each program depends on `thinkthen` the way an outside user does: by path, with default features off and `bundled-sqlite` on, through the public API alone. A build must name `bundled-sqlite` or `host-sqlite`, the SQLite the question cache runs on; only a SQLite extension names `host-sqlite`.
 
 `choices!` keeps `Variant => "label"` for a bare label. Add `: "description"` for text, or a block returning `Result<Description, Error>` for a structured description built with `Description::builder()`. In a typed `choose` or `tag` builder, `None` takes that variant default and `Some(description)` overrides it for that label. A question loaded from JSON keeps its own complete ordered map, including explicit `null` entries; binding it to a `Choice` checks labels without replacing its descriptions.
@@ -75,8 +77,8 @@ The [recognition observation contract](../../specification/recognize.md#read-nat
 
 ## Owned Rust calls in 0.2
 
-Replace global calls such as `thinkthen::decide(&question, text)` with an owned `engine.decide(&question, text)`, and replace `thinkthen::usage()` with `engine.usage()`. Build that engine with `Engine::from_env()` when environment settings are wanted, or with `EngineBuilder` for explicit settings. Global judging aliases and image aliases are removed. The hidden default-engine support remains only for older language adapters until their migrations remove those calls.
+Replace global calls such as `thinkthen::decide(&question, text)` with an owned `engine.decide(&question, text)`, and replace `thinkthen::usage()` with `engine.usage()`. Build that engine with `Engine::from_env()` when environment settings are wanted, or with `EngineBuilder` for explicit settings. Global judging aliases and image aliases are removed.
 
-Construct a typed `Request::new(RequestCall::Decide(arguments))`, admit it, then call `engine.execute_request(&admitted, RequestEnvironment::default())` for the common request contract. Match its `RequestOutcome` and `RequestValue` to read Rust-owned complete results; no JSON session or result reader is needed. `Call<T>` carries the native value and final facts and serializes the same envelope directly.
+Construct a typed `Request::new(RequestCall::Decide(arguments))`, admit it, then call `engine.execute_request(&admitted, RequestEnvironment::default())` for the common request contract. Match its `RequestOutcome` and `RequestValue` to read Rust-owned complete results; no JSON session or result reader is needed. `Call<T, R, P>` carries the plain value, probability, complete typed records and final facts. Its `to_json()` serializes the same envelope directly.
 
 The installed consumer under `consumer/` links the unpacked crate directly and runs the retained shared cases. It replaces the Rust fixture formerly copied from the Python package. Routine checks select `conformance/routine-ids.txt`; the full required matrix runs only at a candidate.

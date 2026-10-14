@@ -10,8 +10,9 @@ let names = [
     Entity::new("iPhone", "product")?,
     Entity::new("Kindle", "product")?,
 ];
-let who_makes = tt.relate(&ask, names)?.into_value();
+let who_makes = tt.relate(&ask, names)?;
 let pairs: Vec<_> = who_makes
+    .value()
     .iter()
     .map(|edge| {
         (edge.source().name(), edge.target().name())

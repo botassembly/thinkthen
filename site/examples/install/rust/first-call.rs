@@ -32,7 +32,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .iter()
         .map(|text| {
             tt.choose(&owner, text)
-                .map(|call| call.into_value())
+                .map(|call| *call.value())
         })
         .collect::<Result<Vec<_>, _>>()?;
     let expected = [
