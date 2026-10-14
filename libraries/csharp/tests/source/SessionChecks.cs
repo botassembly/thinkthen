@@ -4,8 +4,21 @@ using ThinkThen.Results;
 using System.Text.Json;
 static class SessionChecks
 {
-    static string FactsSnapshot(Facts facts) => JsonSerializer.Serialize(new { facts.CallId, facts.Records, facts.RequestsSent, facts.CacheAnswers, facts.Seconds, Model = facts.Model.State == PresenceState.Value ? facts.Model.Value : null });
-    static string RowSnapshot(SessionPacketDecideRow row) => JsonSerializer.Serialize(new { row.Value.AnswerId, Probability = ((AnswerYesNo)row.Value.Answer).Probability, Input = row.Value.Input.Value.GetRawText(), Value = row.Value.Value.GetRawText() });
+    static object? PublicValue(object? value) {
+        if (value is null || value is string || value.GetType().IsPrimitive || value.GetType().IsEnum) return value;
+        if (value is JsonElement json) return json.Clone();
+        var type = value.GetType();
+        if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(Presence<>)) {
+            var state = (PresenceState)type.GetProperty("State")!.GetValue(value)!;
+            return new { State = state, Value = state == PresenceState.Value ? PublicValue(type.GetProperty("Value")!.GetValue(value)) : null };
+        }
+        if (value is System.Collections.IDictionary dictionary) return dictionary.Keys.Cast<string>().ToDictionary(key => key, key => PublicValue(dictionary[key]));
+        if (value is System.Collections.IEnumerable sequence) return sequence.Cast<object?>().Select(PublicValue).ToArray();
+        return type.GetProperties(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance).ToDictionary(property => property.Name, property => PublicValue(property.GetValue(value)));
+    }
+    static readonly JsonSerializerOptions SnapshotOptions = new() { MaxDepth = int.MaxValue };
+    static string FactsSnapshot(Facts facts) => JsonSerializer.Serialize(PublicValue(facts), SnapshotOptions);
+    static string RowSnapshot(SessionPacketDecideRow row) => JsonSerializer.Serialize(PublicValue(row), SnapshotOptions);
     public static async Task Usage(string mode)
     {
         var engine = Engine.Open(new EngineSettings { Cache = new CacheDocumentDisabledCache { Value = new DisabledCache() }, MaxRetries = 0 });
@@ -59,13 +72,21 @@ static class SessionChecks
     {
         return engine.Plan(new Request { Schema = new RequestVersionThinkthenRequest1(), Call = new RequestCall { Function = new RequestFunctionDecide(), Question = question, Input = new RequestInputText { Text = "owned" } } });
     }
-    static HashSet<string> Threads() => Directory.EnumerateDirectories("/proc/self/task").Select(Path.GetFileName).Cast<string>().ToHashSet();
+    sealed class ManagedThreads : System.Diagnostics.Tracing.EventListener {
+        private int starts;
+        public int Starts => Volatile.Read(ref starts);
+        protected override void OnEventSourceCreated(System.Diagnostics.Tracing.EventSource source) {
+            if (source.Name == "Microsoft-Windows-DotNETRuntime") EnableEvents(source, System.Diagnostics.Tracing.EventLevel.Verbose, (System.Diagnostics.Tracing.EventKeywords)0x10000);
+        }
+        protected override void OnEventWritten(System.Diagnostics.Tracing.EventWrittenEventArgs observed) {
+            if (observed.EventId == 85) Interlocked.Increment(ref starts);
+        }
+    }
     static async Task WorkerOwnership(Engine engine) {
-        if (!OperatingSystem.IsLinux()) return;
-        var before = Threads();
-        var seen = new HashSet<string>();
+        using var threads = new ManagedThreads();
+        int before = threads.Starts;
         var session = engine.StartSession(Request(new RequestInputFeed { Name = "worker-lifetime" }));
-        const int turns = 8;
+        const int turns = 16;
         try {
             for (int turn = 0; turn < turns; turn++) {
                 var pending = session.ReadAsync();
@@ -74,15 +95,16 @@ static class SessionChecks
                     pending = session.ReadAsync();
                 }
                 await Task.Yield();
-                seen.UnionWith(Threads().Except(before));
                 if (!await session.PushAsync(Item("worker-lifetime-" + turn))) throw new Exception("worker input closed");
                 while (await pending is not SessionPacketDecideRow) pending = session.ReadAsync();
             }
-            if (seen.Count >= turns) throw new Exception("session operations churn native worker threads");
             session.Finish();
             while (await session.ReadAsync() is not null) { }
         }
         finally { session.Dispose(); }
+        // Runtime delivery is asynchronous; let its bounded event batch arrive.
+        await Task.Delay(100);
+        if (threads.Starts - before >= turns) throw new Exception("session operations churn managed worker threads: " + (threads.Starts - before));
         try { await session.ReadAsync(); throw new Exception("disposed session retained work"); }
         catch (ObjectDisposedException) { }
     }

@@ -186,7 +186,6 @@ def native_parity(consumer, command):
 
 
 try:
-    assert type_case(["carriers"], child_env(), "owned carrier fixtures") == {"carriers": "pass"}
     with tempfile.TemporaryDirectory(prefix="thinkthen-csharp-types-") as cache:
         # Ticket 0291, before any case sends: P1 and one invalid plan run with
         # no key through the public Engine.Plan; the zero budgets and the zero
@@ -194,6 +193,7 @@ try:
         env = child_env(home=cache, XDG_CACHE_HOME=cache, DOTNET_CLI_HOME=cache,
                         THINKTHEN_BASE_URL=f"http://127.0.0.1:{port}/generic/v1",
                         THINKTHEN_CACHE=str(Path(cache) / "plan"))
+        assert type_case(["carriers"], env, "owned carrier fixtures") == {"carriers": "pass"}
         p1 = next(case for case in corpus["cases"] if case["name"] == "plan-p1")
         actual = type_case(["plan", json.dumps(p1["plan_input"])], env, "plan-p1")
         assert actual == p1["response"] and checks["plan"].is_valid(actual), actual
