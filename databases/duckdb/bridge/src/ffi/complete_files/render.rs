@@ -70,7 +70,13 @@ fn project_packet(
     let index = packet.get("index").cloned().ok_or_else(defect)?;
     let events = observations
         .iter()
-        .filter(|event| event.get("index").is_none() || event.get("index") == Some(&index))
+        .filter(|event| {
+            matches!(
+                function,
+                thinkthen::RequestFunction::Rank | thinkthen::RequestFunction::Relate
+            ) || event.get("index").is_none()
+                || event.get("index") == Some(&index)
+        })
         .cloned()
         .collect::<Vec<_>>();
     let native = match packet.get("failure") {

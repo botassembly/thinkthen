@@ -5,6 +5,8 @@ from receipt_adapter import carrier
 
 
 def check(run):
+    duplicate_entities(run)
+    source_rank(run)
     entities = " UNION ALL ".join(f"SELECT {i} AS id, 'Person {i}' AS name" for i in range(1, 5))
     with Backend() as backend:
         got = run([
@@ -55,3 +57,42 @@ def check(run):
                 for key in ('question', 'input', 'meta'):
                     expect([row['result'][key] for row in ordered], [first['result'][key]] * count, 'relate preserves original ' + key)
         expect(backend.count(), 2, 'set details make only their two native sends')
+
+
+def duplicate_entities(run):
+    query = value("SELECT 1 AS id, 'Ada' AS name UNION ALL SELECT 2, 'Ada' UNION ALL SELECT 3, 'Bob'")
+    with Backend() as backend:
+        actual = rows(run(["SELECT d.ordinal,len(d.observations),d.value.source.name,d.value.target.name "
+                           "FROM (SELECT UNNEST(thinkthen_relate_details(" + query + ",['near'])) AS d) "
+                           "ORDER BY d.ordinal DESC"], backend.base())[0])
+        expect(actual, [[3,0,'3','2'],[2,0,'3','1'],[1,0,'2','3'],[0,3,'1','3']],
+               'expanded entity identifiers retain one observation owner')
+        expect(backend.count(), 1, 'expanded identifiers retain one native send')
+    from receipt_adapter import row_observations
+    event = {'kind':'row','index':0}
+    owned = {'ordinal':0,'failure':None,'observations':[event,event]}
+    expect(row_observations([owned], 'decide'), [event,event], 'native duplicate events retain their order')
+    try:
+        row_observations([owned, {**owned,'ordinal':1}], 'decide')
+    except AssertionError:
+        pass
+    else:
+        raise AssertionError('duplicate observation ownership must fail')
+
+
+def source_rank(run):
+    import tempfile
+    from pathlib import Path
+    from native_queries import call
+    with tempfile.TemporaryDirectory(prefix='thinkthen-rank-observations-') as folder:
+        path = Path(folder) / 'rows.txt'
+        path.write_text('alpha\nbeta\ngamma\n')
+        query = call('rank', value({'decide':'Refund?'}), {'files':{'paths':[str(path)]}})
+        with Backend() as backend:
+            actual = rows(run(['SELECT ordinal,observations FROM ' + query + ' ORDER BY ordinal DESC'], backend.base())[0])
+            expect([row[0] for row in actual], [2,1,0], 'source rank keeps original ordinals')
+            expect([row[1] for row in actual[:2]], [[],[]], 'source rank keeps sole observation ownership')
+            expect([(event['kind'], event['index']) for event in actual[2][1]],
+                   [(kind,index) for index in range(3) for kind in ('question','row')],
+                   'source rank retains every native observation')
+            expect(backend.count(), 1, 'source rank retains one packed send')

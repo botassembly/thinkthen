@@ -56,6 +56,10 @@ fn mapped_details(
             }
         }
     }
+    for row in expanded.iter_mut().skip(1) {
+        crate::complete_native::put(row, "observations", serde_json::json!([]))
+            .map_err(|error| RowError::from(error).text)?;
+    }
     Ok(expanded)
 }
 

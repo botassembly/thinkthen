@@ -2,7 +2,7 @@
 import json,sys,threading
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[3] / 'duckdb/tools'))
-from receipt_adapter import carrier
+from receipt_adapter import carrier, row_observations
 payload=json.loads(sys.stdin.readline())
 def literal(value):return "'"+str(value).replace("'","''")+"'"
 import duckdb
@@ -74,13 +74,7 @@ try:
     if payload['verb'] == 'rank' and actual[0]['failure'] is None and actual[0]['result'] is not None:
         actual.sort(key=lambda row: row['result']['value'])
     first = next((row for row in actual if row['failure'] is not None), actual[0])
-    if payload['verb'] in ('rank','relate') and all(row['failure'] is None for row in actual):
-        observation_row = next(row for row in actual if row['ordinal'] == 0)
-        assert all(row['observations'] == [] for row in actual if row['ordinal'] != 0)
-        events = observation_row['observations']
-    else:
-        unique = {json.dumps(event,sort_keys=True):event for row in actual for event in (row['observations'] or [])}
-        events = list(unique.values())
+    events = row_observations(actual, payload['verb'])
     assert isinstance(first['facts'],dict) or first['facts'] is None
     assert isinstance(first['failure'],dict) or first['failure'] is None
     receipt = {'results':[row['result'] for row in actual if row['result'] is not None],

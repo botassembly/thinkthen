@@ -85,3 +85,19 @@ def carrier(receipt, verb, json_text=False):
     if error is not None and results:
         wrapper['completed'] = results[0] if verb in ('find', 'relate') else results
     return wrapper
+
+
+def row_observations(rows, verb):
+    """Retain native event order and refuse ownership shared between rows."""
+    if verb in ('rank', 'relate') and all(row['failure'] is None for row in rows):
+        owner = next(row for row in rows if row['ordinal'] == 0)
+        assert all(row['observations'] == [] for row in rows if row['ordinal'] != 0)
+        return owner['observations']
+    events, previous = [], set()
+    for row in rows:
+        owned = row['observations'] or []
+        identities = {json.dumps(event, sort_keys=True) for event in owned}
+        assert previous.isdisjoint(identities), 'native observation belongs to multiple rows'
+        events.extend(owned)
+        previous.update(identities)
+    return events
