@@ -39,6 +39,18 @@ def call_results(definitions):
             'scalar_value': scalar[1] if scalar else None,
             'probability_mode': mode,
         }
+        if scalar and isinstance(scalar[1].get('type'), list) and 'null' in scalar[1]['type']:
+            route, guards = judgment_route(definitions)
+            row_path = next(path[:-1] for path, literal in guards if literal == 'row')
+            result[function]['resolution'] = {
+                'path': tuple(route) + ('value',),
+                'guards': guards + [(route + ['kind'], scalar[0])],
+                'index_path': tuple(row_path) + ('index',),
+            }
+        elif mode == 'picked':
+            if 'index' not in receipt['properties']:
+                raise ValueError(function + ' needs its canonical selected index')
+            result[function]['selection_path'] = ('index',)
         if mode in ('yes', 'picked'):
             answer = receipt['properties']['answer']
             answer = definitions[answer['$ref'].split('/')[-1]]
