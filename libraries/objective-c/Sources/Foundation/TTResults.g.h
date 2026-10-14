@@ -1030,18 +1030,6 @@ TTSourceRelationEndpoint, TTThreshold, TTTokenBand, TTTokenUsage, TTValue, TTImm
 @property(nonatomic, readonly) TTPresence<NSString *> *kind;
 @property(nonatomic, readonly) TTPresence<NSNumber *> *value;
 @end
-@interface TTSessionPacket (Answers)
-@property(nonatomic, readonly) TTPresence<NSArray<TTDecisionRecord *> *> *decideAnswer;
-@property(nonatomic, readonly) TTPresence<NSArray<TTChoiceRecord *> *> *chooseAnswer;
-@property(nonatomic, readonly) TTPresence<NSArray<TTTagRecord *> *> *tagAnswer;
-@property(nonatomic, readonly) TTPresence<NSArray<TTScoreRecord *> *> *scoreAnswer;
-@property(nonatomic, readonly) TTPresence<NSArray<TTFilteredRecord *> *> *filterAnswer;
-@property(nonatomic, readonly) TTPresence<NSArray<TTRankedRecord *> *> *rankAnswer;
-@property(nonatomic, readonly) TTPresence<TTFind *> *findAnswer;
-@property(nonatomic, readonly) TTPresence<NSArray<TTAnnotation *> *> *annotateAnswer;
-@property(nonatomic, readonly) TTPresence<NSArray<TTRecognition *> *> *recognizeAnswer;
-@property(nonatomic, readonly) TTPresence<TTRelation *> *relateAnswer;
-@end
 @interface TTOrderedEntry : NSObject
 @property(nonatomic, copy, readonly) NSString *key;
 @property(nonatomic, strong, readonly) id value;
@@ -1453,8 +1441,8 @@ typedef TTRequestSessionDescriptor * _Nullable (^TTFeed)(TTRequestObject * _Null
 - (nullable TTPresence<NSString *> *)chooseAnswer:(NSError * _Nullable * _Nullable)error;
 - (nullable TTPresence<NSArray<NSString *> *> *)tagAnswer:(NSError * _Nullable * _Nullable)error;
 - (nullable TTPresence<NSNumber *> *)scoreAnswer:(NSError * _Nullable * _Nullable)error;
-- (nullable TTPresence<NSArray *> *)filterAnswer:(NSError * _Nullable * _Nullable)error;
-- (nullable TTPresence<NSArray<NSNumber *> *> *)rankAnswer:(NSError * _Nullable * _Nullable)error;
+- (nullable NSArray *)filterAnswer:(NSError * _Nullable * _Nullable)error;
+- (nullable NSArray<NSNumber *> *)rankAnswer:(NSError * _Nullable * _Nullable)error;
 - (nullable TTPresence<TTFind *> *)findAnswer:(NSError * _Nullable * _Nullable)error;
 - (nullable TTPresence<NSArray<TTAnnotation *> *> *)annotateAnswer:(NSError * _Nullable * _Nullable)error;
 - (nullable TTPresence<NSArray<TTRecognition *> *> *)recognizeAnswer:(NSError * _Nullable * _Nullable)error;
@@ -1481,6 +1469,15 @@ typedef TTRequestSessionDescriptor * _Nullable (^TTFeed)(TTRequestObject * _Null
 - (nullable TTTask *)recognize:(TTQuestion *)question input:(TTInput *)input options:(nullable TTControls *)options feed:(nullable TTFeed)feed completion:(TTCompletion)completion error:(NSError * _Nullable * _Nullable)error;
 - (nullable TTTask *)relate:(TTQuestion *)question input:(TTInput *)input options:(nullable TTControls *)options feed:(nullable TTFeed)feed completion:(TTCompletion)completion error:(NSError * _Nullable * _Nullable)error;
 @end
+FOUNDATION_EXPORT NSErrorDomain const TTErrorDomain;
+typedef NS_ERROR_ENUM(TTErrorDomain, TTErrorCode) {
+    TTErrorUsage = 1,
+    TTErrorBackend = 2,
+    TTErrorLocal = 4,
+    TTErrorCancelled = 5,
+    TTErrorDeadline = 3,
+    TTErrorDefect = 6,
+};
 typedef NS_ENUM(uint32_t, TTUsagePersistenceState) {
     TTUsagePersistenceDisabled = 1,
     TTUsagePersistenceFailed = 4,

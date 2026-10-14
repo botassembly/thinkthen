@@ -1496,8 +1496,10 @@
           "cancel"
         ],
         "TTFailureError": [
+          "kind",
           "retryable",
-          "facts"
+          "facts",
+          "failure"
         ],
         "TTOrderedEntry": [
           "key",

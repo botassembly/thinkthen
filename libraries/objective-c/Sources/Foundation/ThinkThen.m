@@ -12,10 +12,18 @@ TTRequestImageBytes *TTImageBytes(NSData *bytes, NSString *media) {
 }
 @interface TTFailureError ()
 @property(nonatomic) BOOL retryable;
+@property(nonatomic, strong, nullable) TTCallError *failure;
 @property(nonatomic, strong, nullable) TTImmediateFacts *facts;
 @end
 @implementation TTFailureError
+- (TTErrorCode)kind { return (TTErrorCode)self.code; }
 @end
+TTFailureError *TTFailureForCall(TTCallError *failure, id call) {
+    TTFailureError *error = [[TTFailureError alloc] initWithDomain:TTErrorDomain code:TTNativeErrorCode(failure.error.value.kind.value) userInfo:@{NSLocalizedDescriptionKey:failure.error.value.message.value, TTFailureDetailsKey:failure, @"ThinkThenCall":call}];
+    error.retryable = failure.error.value.retryable.value.boolValue; error.failure = failure;
+    if (failure.facts.state == TTPresenceValue) error.facts = [TTImmediateFacts read:failure.facts.value.rawFields];
+    return error;
+}
 static NSError *TTNativeFailure(const struct thinkthen_error_view_v1 *view, int code, NSString *fallback) {
     NSString *message = view ? [[NSString alloc] initWithBytes:view->message.data length:view->message.len encoding:NSUTF8StringEncoding] : fallback;
     TTFailureError *error = [[TTFailureError alloc] initWithDomain:TTErrorDomain code:code userInfo:@{NSLocalizedDescriptionKey:message ?: fallback}];
@@ -186,7 +194,7 @@ static NSData *TTEncode(id object, NSError **error) {
             TTCall *call = [[TTCall alloc] initWithPackets:_packets terminal:_terminal];
             if (_terminal.failure.state == TTPresenceValue) {
                 TTCallError *failure = _terminal.failure.value;
-                error = [NSError errorWithDomain:TTErrorDomain code:TTNativeErrorCode(failure.error.value.kind.value) userInfo:@{NSLocalizedDescriptionKey:failure.error.value.message.value, TTFailureDetailsKey:failure, @"ThinkThenCall":call}];
+                error = TTFailureForCall(failure, call);
             }
             [self settle:error call:call]; return;
         }

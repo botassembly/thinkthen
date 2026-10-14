@@ -35,4 +35,5 @@ FOUNDATION_EXPORT TTPresence *TTAnswerPresence(id payload, id (^convert)(id));
 
 FOUNDATION_EXPORT NSString * const TTRequestVersion;
 
+FOUNDATION_EXPORT TTFailureError *TTFailureForCall(TTCallError *failure, id call);
 NS_ASSUME_NONNULL_END

@@ -136,15 +136,6 @@ def outputs(definitions, version, input_definitions=None, abi=None):
         value = abi['constants'][symbol]
         implementation += [f'if ([kind isEqual:{literal(kind)}]) return {value};']
     implementation += ['TTInvalidResult(); return 0;', '}']
-    header += ['@interface TTSessionPacket (Answers)']
-    implementation += ['@implementation TTSessionPacket (Answers)']
-    for function, _, payload in aggregate_answers(definitions):
-        target, decode = conversion(payload, definitions)
-        accessor = function + 'Answer'
-        header += [f'@property(nonatomic, readonly) TTPresence<{target}> *{accessor};']
-        implementation += [f'- (TTPresence<{target}> *){accessor} {{ if (![self.rawFields[@"kind"] isEqual:@"aggregate"] || ![self.rawFields[@"function"] isEqual:{literal(function)}]) TTInvalidResult(); return [self presence:@"value" required:YES convert:^id(id value) {{ return {decode}; }}]; }}']
-    header += ['@end']
-    implementation += ['@end']
     ordered_header, ordered_implementation = ordered_maps()
     header += ordered_header
     implementation += ordered_implementation
@@ -170,6 +161,11 @@ def outputs(definitions, version, input_definitions=None, abi=None):
                '- (nullable TTUsagePersistenceStatus *)finishUsageStatus:(NSError **)error;',
                '@end', '@interface TTFoundationClient (NamedCalls)', declarations('TT_GENERATED_NAMED_DECLARATIONS', calls), '@end']
     header += [line for line in calls + answer_header if line.startswith('#define') and 'IMPLEMENTATIONS' in line.split()[1]]
+    header += ['FOUNDATION_EXPORT NSErrorDomain const TTErrorDomain;', 'typedef NS_ERROR_ENUM(TTErrorDomain, TTErrorCode) {']
+    for entry in definitions['completefailureKind']['oneOf']:
+        kind = entry['const']
+        header += ['TTError' + name(kind)[2:] + ' = ' + str(abi['constants']['THINKTHEN_E' + kind.upper()]) + ',']
+    header += ['};']
     header += ['typedef NS_ENUM(uint32_t, TTUsagePersistenceState) {']
     header += ['TTUsagePersistence' + word.removeprefix('THINKTHEN_COMPLETE_USAGE_PERSISTENCE_').removesuffix('_V1').title() + ' = ' + str(value) + ','
                for word, value in abi['constants'].items() if word.startswith('THINKTHEN_COMPLETE_USAGE_PERSISTENCE_') and word.endswith('_V1')]
@@ -329,7 +325,7 @@ def answer_helpers(definitions):
                       'extern NSErrorDomain const TTErrorDomain;', 'extern NSString * const TTFailureDetailsKey;',
                       'TTPresence *TTAnswerPresence(id payload, id (^convert)(id)) { TTResultNode *node = [[TTResultNode alloc] initWithFields:@{@"value":payload}]; return [node presence:@"value" required:YES convert:convert]; }',
                       'id TTAnswerPayload(NSArray<TTSessionPacket *> *packets, TTSessionPacketTerminal *terminal, NSString *function, NSString *judgment, id call, NSError **error) {',
-                      'if (terminal.failure.state == TTPresenceValue) { TTCallError *failure = terminal.failure.value; if (error) *error = [NSError errorWithDomain:TTErrorDomain code:TTNativeErrorCode(failure.error.value.kind.value) userInfo:@{NSLocalizedDescriptionKey:failure.error.value.message.value, TTFailureDetailsKey:failure, @"ThinkThenCall":call}]; return nil; }',
+                      'if (terminal.failure.state == TTPresenceValue) { if (error) *error = TTFailureForCall(terminal.failure.value, call); return nil; }',
                       'NSMutableArray *values = [NSMutableArray array];',
                       'if (terminal) for (TTSessionPacket *packet in packets) { NSDictionary *fields = packet.rawFields; if (![fields[@"function"] isEqual:function]) continue; id value;',
                       'if (!judgment.length) { if (![fields[@"kind"] isEqual:@"aggregate"]) continue; value = fields[@"value"]; } else {',
@@ -345,9 +341,12 @@ def answer_helpers(definitions):
         if function == 'rank': target, decode = 'NSArray<NSNumber *> *', 'TTArray(value, ^id(id item) { return TTInteger(TTObject(item)[@"index"]); })'
         if function == 'filter': target, decode = 'NSArray *', 'TTArray(value, ^id(id item) { id original = TTObject(item)[@"input"]; if (!original) TTInvalidResult(); return original; })'
         method = function + 'Answer'
-        signature = f'- (nullable TTPresence<{target}> *){method}:(NSError **)error'
+        collection = function in ('rank', 'filter')
+        result_type = target if collection else f'TTPresence<{target}> *'
+        signature = f'- (nullable {result_type}){method}:(NSError **)error'
         declarations += [signature + ';']
-        bodies += [signature + ' { id payload = TTAnswerPayload(self.packets, self.terminal, ' + literal(function) + ', ' + literal(kind) + ', self, error); if (!payload) return nil; return TTAnswerPresence(payload, ^id(id value) { return ' + decode + '; }); }']
+        returned = decode.replace('TTArray(value,', 'TTArray(payload,') if collection else 'TTAnswerPresence(payload, ^id(id value) { return ' + decode + '; })'
+        bodies += [signature + ' { id payload = TTAnswerPayload(self.packets, self.terminal, ' + literal(function) + ', ' + literal(kind) + ', self, error); if (!payload) return nil; return ' + returned + '; }']
         signature = f'- (nullable TTPresence<{target}> *){method}:(NSDictionary *)question input:(NSDictionary *)input options:(nullable NSDictionary *)options error:(NSError **)error'
         client_declarations += [signature + ';']
         client_bodies += [signature + ' { __block TTCall *result; __block NSError *failure = nil; dispatch_semaphore_t settled = dispatch_semaphore_create(0); TTTask *task = [self ' + function + ':question input:input options:options feed:nil completion:^(TTCall *call, NSError *problem) { result = call; failure = problem; dispatch_semaphore_signal(settled); } error:&failure]; if (!task) { if (error) *error = failure; return nil; } dispatch_semaphore_wait(settled, DISPATCH_TIME_FOREVER); if (failure) { if (error) *error = failure; return nil; } return [result ' + method + ':error]; }']
@@ -358,9 +357,16 @@ def answer_helpers(definitions):
 def native_values():
     """Copy native typed graphs; Foundation never reparses result JSON."""
     import c
-    from generate import SCHEMA, graph, immediate_schema, prepare
+    from generate import SCHEMA, graph, immediate_schema, prepare, references
     definitions = prepare(graph(immediate_schema(json.loads(SCHEMA.read_text())),
                                 ('completesessionPacket', 'completeImmediateFacts')))
+    available, definitions, pending = definitions, {}, ['completesessionPacket', 'completeImmediateFacts']
+    while pending:
+        key = pending.pop()
+        if key in definitions: continue
+        schema = definitions[key] = available[key]
+        pending.extend(references(schema))
+        pending.extend(child for child, _ in schema.get('variants', []))
     class Layout(c.Target):
         def __init__(self):
             super().__init__(definitions)

@@ -102,13 +102,13 @@ int main(int argc, const char *argv[]) {
             NSArray<TTSessionPacket *> *values = retained ? retained.packets : explicitPackets;
             typed(values, retained ? retained.terminal : explicitTerminal);
             if (retained && [verb isEqual:@"rank"] && !failure) {
-                TTPresence<NSArray<NSNumber *> *> *answer = [retained rankAnswer:&error];
-                require(answer.state == TTPresenceValue && error == nil);
+                NSArray<NSNumber *> *answer = [retained rankAnswer:&error];
+                require(answer != nil && error == nil);
                 NSMutableArray *indices = [NSMutableArray array];
                 for (TTSessionPacket *packet in values) if ([packet isKindOfClass:TTSessionPacketRankAggregate.class]) {
                     for (TTRankedRecord *row in ((TTSessionPacketRankAggregate *)packet).value.value) [indices addObject:row.index.value];
                 }
-                require([answer.value isEqual:indices]);
+                require([answer isEqual:indices]);
             }
             NSMutableArray *packets = [NSMutableArray array];
             for (TTSessionPacket *packet in values) [packets addObject:packet.rawFields];

@@ -5,7 +5,9 @@ FOUNDATION_EXPORT NSErrorDomain const TTErrorDomain;
 FOUNDATION_EXPORT NSString * const TTFailureDetailsKey;
 /** Native refusals retain their facts before the thread diagnostic changes. */
 @interface TTFailureError : NSError
+@property(nonatomic, readonly) TTErrorCode kind;
 @property(nonatomic, readonly) BOOL retryable;
+@property(nonatomic, strong, readonly, nullable) TTCallError *failure;
 @property(nonatomic, strong, readonly, nullable) TTImmediateFacts *facts;
 @end
 /** An immutable snapshot owned independently of the native engine. */
