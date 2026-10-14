@@ -22,6 +22,7 @@ from pathlib import Path
 
 from harness import EXTENSION, STRESS, Backend, case, child_env, expect, main, said, timed, within
 from harness import select as select_cases
+from native_queries import call
 
 CANCELLED = "thinkthen cancelled: the call was cancelled (retryable: no)"
 
@@ -121,7 +122,7 @@ def complete_file_cancel_returns_while_provider_remains_held():
         path=Path(tmp)/'source';path.write_text('Refund held file.')
         inputs=json.dumps({'files':{'paths':[str(path)]},'incremental':True})
         literal=lambda value:"'"+value.replace("'","''")+"'"
-        held_cancel("SELECT thinkthen_decide_complete('Refund?',"+literal(inputs)+",'{\"batch\":1}')",1)
+        held_cancel("SELECT failure FROM " + call("decide", "'Refund?'", inputs, '{"batch":1}'), 1)
 
 
 @case

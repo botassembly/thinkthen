@@ -6,6 +6,7 @@ import tempfile
 from pathlib import Path
 
 from harness import Backend, expect, rows, run, said
+from harness import native_reading
 
 
 SPECS = (
@@ -43,7 +44,7 @@ def complete_question_files_keep_identity():
         expect(backend.capture(), list(EXPECTED), "independently fixed request bodies")
         expect(backend.count(), 3, "one send per complete question, inline cache hit")
         for index, item in enumerate(got[4:7]):
-            meta = json.loads(rows(item)[0][0])["meta"]
+            meta = native_reading(rows(item)[0][0])["meta"]
             expect(meta["question_sha256"], hashlib.sha256(CANONICAL[index].encode()).hexdigest(), "canonical question digest")
             expect(meta["model"], "jev-1.13.0", "saved effective model")
             expect(meta["cached"], True, "same question and evidence cache identity")
@@ -110,22 +111,19 @@ def complete_question_rechecks_prepared_authority():
 
 
 def native_complete_file_authorization_precedes_content_parsing():
-    """The additive complete door authorizes every prepared execution before parsing."""
+    """Native ordinary calls reauthorize each prepared execution before content parsing."""
     with Backend() as backend, tempfile.TemporaryDirectory() as folder:
         path = Path(folder) / "question.json"
         path.write_text('{"decide":"Refund?"}')
-        payload = '{"records":[]}'
-        got = run([f"PREPARE complete AS SELECT thinkthen_decide_complete('@{path}', '{payload}')",
-                   "EXECUTE complete", "SET enable_external_access=false", "EXECUTE complete"], backend.base())
-        first = json.loads(rows(got[1])[0][0])
-        assert 'error' not in first['native'], first
-        refused = json.loads(rows(got[3])[0][0])
-        assert refused['native']['error']['kind'] == 'local' and 'facts' not in refused['native'], refused
-        assert refused['observations'] == []
+        call = f"SELECT facts,failure,observations FROM thinkthen_decide('@{path}', [])"
+        got = run(["PREPARE complete AS " + call, "EXECUTE complete",
+                   "SET enable_external_access=false", "EXECUTE complete"], backend.base())
+        assert rows(got[1])[0][1] is None, got[1]
+        facts, failure, observations = rows(got[3])[0]
+        assert failure['kind']=='local' and facts is None and observations==[], got[3]
         path.write_text('{"decide":"PRIVATE_DENIED_COMPLETE_CONTENT"')
-        denied = json.loads(rows(run(["SET enable_external_access=false",
-                               f"SELECT thinkthen_decide_complete('@{path}', '{payload}')"], backend.base())[-1])[0][0])
-        assert denied['native']['error']['kind'] == 'local'
-        assert 'file' in denied['native']['error']['message'] and 'parse' not in denied['native']['error']['message'], denied
+        denied = rows(run(["SET enable_external_access=false", call], backend.base())[-1])[0]
+        assert denied[1]['kind']=='local', denied
+        assert 'file' in denied[1]['message'] and 'parse' not in denied[1]['message'], denied
         assert 'PRIVATE_DENIED_COMPLETE_CONTENT' not in json.dumps(denied), denied
-        expect(backend.count(), 0, "denied complete question content sends nothing")
+        expect(backend.count(),0,"denied question content sends nothing")

@@ -15,6 +15,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "sqlite" / "tests")
 from conditional_backend import ConditionalBackend
 
 from harness import Backend, case, expect, main, rows, run, said
+from harness import native_reading
 from verbs_budget import (
     PACKED_PAIR_BODIES, PackedReplies,
     b13c_try_details_denied_retry_keeps_later_answer,
@@ -99,7 +100,7 @@ def rank_probability_equals_details_with_no_added_send():
         got = run(
             [
                 "SELECT probability FROM thinkthen_rank('Is it a refund?', '{\"a\":\"refund now\"}')",
-                "SELECT CAST(thinkthen_details('Is it a refund?', 'refund now') ->> '$.answer.probability' AS DOUBLE)",
+                "SELECT (thinkthen_details('Is it a refund?', 'refund now')).results[1].decide.answer.probability",
             ],
             backend.base(),
         )
@@ -410,8 +411,8 @@ def b13c_context_and_batch_one_wire_identity():
             b'{"state":"Each question quotes the text it asks about.","model":"jev-1.13.0","questions":{"q1":{"type":"noul","instructions":"The text is \\"delta\\". Is it a refund?"}}}',
         }
         expect(set(backend.bodies), expected, "context and batch-one full request bytes")
-        details = [json.loads(value) for value in column(got[2])]
-        expect(["input" in value for value in details], [False, False], "scalar details omit record input")
+        details = [native_reading(value) for value in column(got[2])]
+        expect([value["input"] for value in details], ['"alpha"', '"beta"'], "typed details retain actual record originals")
         expect(len({value["meta"]["context_sha256"] for value in details}), 1, "one context identity")
 
 
