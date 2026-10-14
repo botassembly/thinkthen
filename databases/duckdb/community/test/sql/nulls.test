@@ -24,18 +24,52 @@ SELECT thinkthen_decide(NULL, 'ignored', 4) IS NULL,
 1	1	1	1	1	1	1	1	1	1
 
 query IIIIIIIIII
-SELECT thinkthen_decide_complete(NULL, 'not JSON') IS NULL,
-       thinkthen_choose_complete(NULL, 'not JSON') IS NULL,
-       thinkthen_tag_complete(NULL, 'not JSON') IS NULL,
-       thinkthen_score_complete(NULL, 'not JSON') IS NULL,
-       thinkthen_filter_complete(NULL, 'not JSON') IS NULL,
-       thinkthen_rank_complete(NULL, 'not JSON') IS NULL,
-       thinkthen_find_complete(NULL, 'not JSON') IS NULL,
-       thinkthen_annotate_complete(NULL, 'not JSON') IS NULL,
-       thinkthen_recognize_complete(NULL, 'not JSON') IS NULL,
-       thinkthen_relate_complete(NULL, 'not JSON') IS NULL;
+SELECT (SELECT count(*) FROM thinkthen_decide(
+           question := NULL, records := 'not JSON', reading := NULL, settings := 'bad')),
+       (SELECT count(*) FROM thinkthen_choose(
+           question := NULL, records := 'not JSON', reading := NULL, settings := 'bad')),
+       (SELECT count(*) FROM thinkthen_tag(
+           question := NULL, records := 'not JSON', reading := NULL, settings := 'bad')),
+       (SELECT count(*) FROM thinkthen_score(
+           question := NULL, records := 'not JSON', reading := NULL, settings := 'bad')),
+       (SELECT count(*) FROM thinkthen_filter(
+           question := NULL, records := 'not JSON', reading := NULL, settings := 'bad')),
+       (SELECT count(*) FROM thinkthen_rank(
+           question := NULL, records := 'not JSON', reading := NULL, settings := 'bad')),
+       (SELECT count(*) FROM thinkthen_find(
+           question := NULL, records := 'not JSON', reading := NULL, settings := 'bad')),
+       (SELECT count(*) FROM thinkthen_annotate(
+           question := NULL, records := 'not JSON', reading := NULL, settings := 'bad')),
+       (SELECT count(*) FROM thinkthen_recognize(
+           question := NULL, records := 'not JSON', reading := NULL, settings := 'bad')),
+       (SELECT count(*) FROM thinkthen_relate(
+           question := NULL, records := 'not JSON', reading := NULL, settings := 'bad'));
 ----
-1	1	1	1	1	1	1	1	1	1
+0	0	0	0	0	0	0	0	0	0
+
+query IIIIIIIIII
+SELECT (SELECT count(*) FROM thinkthen_decide(
+           question := 'not JSON', records := NULL, reading := NULL, settings := 'bad')),
+       (SELECT count(*) FROM thinkthen_choose(
+           question := 'not JSON', records := NULL, reading := NULL, settings := 'bad')),
+       (SELECT count(*) FROM thinkthen_tag(
+           question := 'not JSON', records := NULL, reading := NULL, settings := 'bad')),
+       (SELECT count(*) FROM thinkthen_score(
+           question := 'not JSON', records := NULL, reading := NULL, settings := 'bad')),
+       (SELECT count(*) FROM thinkthen_filter(
+           question := 'not JSON', records := NULL, reading := NULL, settings := 'bad')),
+       (SELECT count(*) FROM thinkthen_rank(
+           question := 'not JSON', records := NULL, reading := NULL, settings := 'bad')),
+       (SELECT count(*) FROM thinkthen_find(
+           question := 'not JSON', records := NULL, reading := NULL, settings := 'bad')),
+       (SELECT count(*) FROM thinkthen_annotate(
+           question := 'not JSON', records := NULL, reading := NULL, settings := 'bad')),
+       (SELECT count(*) FROM thinkthen_recognize(
+           question := 'not JSON', records := NULL, reading := NULL, settings := 'bad')),
+       (SELECT count(*) FROM thinkthen_relate(
+           question := 'not JSON', records := NULL, reading := NULL, settings := 'bad'));
+----
+0	0	0	0	0	0	0	0	0	0
 
 query I
 SELECT count(*) FROM thinkthen_read_files(NULL::VARCHAR);
