@@ -96,6 +96,22 @@ class Cases(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, 'malformed|duplicate'):
                 authority(path)
 
+    def test_profiles_validate_before_tools_and_never_fall_back(self):
+        marker = self.root / 'compiler-ran'
+        script(self.root / 'shim/cargo', f'touch "{marker}"; exit 99')
+        env = {**self.env, 'PATH': f'{self.root}/shim:{self.env["PATH"]}',
+               'THINKTHEN_TOOLCHAINS': str(self.root / 'missing-tools')}
+        entry = ['/bin/sh', str(HERE.parent / 'check.sh'), '9000']
+        result = run(entry, {**env, 'THINKTHEN_TEST_PROFILE': 'invalid'})
+        self.assertEqual(result.returncode, 2, result.stderr)
+        self.assertIn('unknown THINKTHEN_TEST_PROFILE', result.stderr)
+        for profile in ('routine', 'full', 'stress', 'smoke'):
+            result = run(entry, {**env, 'THINKTHEN_TEST_PROFILE': profile,
+                                 'THINKTHEN_ARTIFACT': str(self.root / 'selected.tar.gz')})
+            self.assertEqual(result.returncode, 77, result.stderr)
+            self.assertIn('toolchain is missing', result.stdout)
+        self.assertFalse(marker.exists(), 'a profile compiled instead of refusing missing tools')
+
     def test_shared_checksum_accepts_exact_bytes_and_refuses_changes(self):
         data = self.root / 'fixture.zip'; data.write_bytes(b'fixture bytes')
         args = ['/bin/sh', '-c', '. "$1"; input_verify "$2" "$3"', 'checksum-fixture',

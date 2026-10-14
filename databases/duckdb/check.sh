@@ -60,7 +60,16 @@ if [ "$profile" = smoke ]; then
 	smoke_guard
 	# The replay smoke (ticket 0335): the loadable extension copied to a scratch folder, as the
 	# archive lays it out, and loaded from there by its path.
-	sh cpp/build.sh
+	if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
+		release=$(sed -n 's/^version = "\(.*\)"$/\1/p' "$REPO/crates/thinkthen/Cargo.toml" | head -n 1)
+		python3 cpp/verify_repository.py "$THINKTHEN_ARTIFACT" "$host_target" "$release"
+		installed_unpack
+		python3 cpp/verify_repository.py "$scratch" "$host_target" "$release"
+		THINKTHEN_DUCKDB_EXTENSION=$scratch/$DUCKDB_VERSION/$platform/thinkthen.duckdb_extension
+		export THINKTHEN_DUCKDB_EXTENSION
+	else
+		sh cpp/build.sh
+	fi
 	scratch_dir installed
 	cp "$THINKTHEN_DUCKDB_EXTENSION" "$installed/"
 	cd "$installed"
