@@ -281,7 +281,7 @@ class PublicSurface(unittest.TestCase):
         manifest = json.loads((ROOT / 'conformance/library-surface.json').read_text())
         with tempfile.TemporaryDirectory(prefix='library-surface-records-') as folder:
             root = Path(folder)
-            for name in ['sdlc', 'specification']:
+            for name in ['sdlc', 'specification', 'crates']:
                 (root / name).symlink_to(ROOT / name, target_is_directory=True)
             paths = [ROOT / 'libraries/c/include/thinkthen.h']
             for pattern in manifest['libraries']['jvm']['declarations']:
