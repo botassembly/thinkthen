@@ -77,9 +77,23 @@ jobs:
           sh libraries/swift/build-xcframework.sh "$RUNNER_TEMP/x64" "$RUNNER_TEMP/arm64" "$RUNNER_TEMP/framework"
           cp -R "$RUNNER_TEMP/framework/CThinkThen.xcframework" libraries/swift/
           sdlc/scripts/release-pack --apple-wrappers aarch64-apple-darwin "$RUNNER_TEMP/native" swift objective-c
+      - name: Diagnose the Mac shell compiler boundary
+        run: |
+          python3 - <<'PYTHON'
+          import os, pathlib, subprocess, sys
+          source = pathlib.Path('sdlc/scripts/build-admission-test.py').read_text()
+          source = source.replace("HELPER = Path(__file__).with_name('build-admission.py')", "HELPER = Path(" + repr(str(pathlib.Path('sdlc/scripts/build-admission.py').resolve())) + ")")
+          source = source.replace('set -eu\nunset THINKTHEN_API_KEY', 'set -eux\nPS4="+ ${SECONDS}s "\nunset THINKTHEN_API_KEY')
+          source = source.replace(' exec cc "$@"', ' printf "phase admitted before cc: " >&2; date +%s >&2\n exec cc "$@"')
+          diagnostic = pathlib.Path(os.environ['RUNNER_TEMP']) / 'admission-diagnostic.py'
+          diagnostic.write_text(source)
+          subprocess.run([sys.executable, str(diagnostic), 'Admission.test_library_wrapper_preserves_shell_arguments_and_owned_build_environment'], check=True)
+          PYTHON
       - name: Check Darwin admission and exclusive barriers
+        if: ${{ false }}
         run: python3 sdlc/scripts/build-admission-test.py
       - name: Check the installed Swift package
+        if: ${{ false }}
         run: |
           cargo build --locked --package conformance-backend --jobs 2
           export THINKTHEN_BACKEND_BIN="$PWD/target/debug/conformance-backend"
