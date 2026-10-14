@@ -7,9 +7,7 @@ use thinkthen::{
 };
 pub(crate) type Crossed<T> = Result<T, crate::NativeError>;
 
-#[derive(Debug)]
 pub(crate) struct Completion(Mutex<State>);
-#[derive(Debug)]
 struct State {
     name: &'static str,
     kind: Option<String>,
@@ -19,6 +17,11 @@ struct State {
     packet: Value,
     value: Option<RequestValue>,
     error: Option<thinkthen::Error>,
+}
+impl std::fmt::Debug for Completion {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        formatter.write_str("Completion { content withheld }")
+    }
 }
 impl Completion {
     pub(crate) fn new() -> Self {
