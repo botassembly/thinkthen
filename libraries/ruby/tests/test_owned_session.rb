@@ -3,6 +3,41 @@ require "minitest/autorun"
 require_relative "backend"
 
 class TestOwnedSession < Minitest::Test
+  def test_authored_decide_values_match_the_installed_return_signature
+    require "rbs"
+    require "rbs/test"
+    loader = RBS::EnvironmentLoader.new
+    loader.add(path: Pathname.new(File.expand_path("../sig", TestBackend::LIB)))
+    environment = RBS::Environment.from_loader(loader).resolve_type_names
+    builder = RBS::DefinitionBuilder.new(env: environment)
+    client = builder.build_instance(RBS::TypeName.parse("::ThinkThen::Client"))
+    value_type = client.methods.fetch(:decide).method_types.first.type.return_type.args.first
+    checker = RBS::Test::TypeCheck.new(self_class: Object, builder: builder,
+      sample_size: 100, unchecked_classes: [])
+    TestBackend.with(<<~RUBY) do |backend, child|
+      T::Client.open(cache: false) do |client|
+        meanings = ["approved", {status: "approved"}, ["approved", {code: 7}]]
+        answers = meanings.flat_map do |meaning|
+          ["text", ["text"]].map do |input|
+            result = client.decide({decide: "Approve?", true: meaning}, input)
+            [result.value, result.probability]
+          end
+        end
+        say answers
+      end
+    RUBY
+      answers = child.hear
+      assert_equal [["approved", 0.9], [["approved"], [0.9]],
+        [{"status" => "approved"}, 0.9], [[{"status" => "approved"}], [0.9]],
+        [["approved", {"code" => 7}], 0.9], [[["approved", {"code" => 7}]], [0.9]]], answers
+      answers.each { |value, _| assert checker.value(value, value_type), "authored value rejected by installed RBS" }
+      refute checker.value(7, value_type), "decide signature accepts an arbitrary scalar"
+      status, errors = child.finish
+      assert status.success?, errors
+      assert_equal 6, backend.count
+    end
+  end
+
   def test_producer_exception_and_native_admission_message_survive
     script = <<~RUBY
       marker = RuntimeError.new("private producer marker")
@@ -21,6 +56,18 @@ class TestOwnedSession < Minitest::Test
         raise "unsupported declaration admitted"
       rescue T::UsageError => error
         raise "native admission changed" unless error.message == "the question declaration uses an unsupported feature"
+      end
+      %i[decide plan].each do |method|
+        begin
+          method == :plan ? client.plan("decide", "Is it?", "unreachable", details: true) : client.decide("Is it?", "unreachable", details: true)
+          raise "details admitted"
+        rescue T::UsageError
+        end
+      end
+      begin
+        client.start("unknown", "Is it?", "unreachable")
+        raise "unknown function admitted"
+      rescue T::UsageError
       end
       client.close
       say true
@@ -65,6 +112,8 @@ class TestOwnedSession < Minitest::Test
       say retained[5].last.value
       say retained[6].last.value
       say retained[9].last.value.map(&:relation)
+      say retained.map { |_, result| result.probability }
+      raise "recognition span probability" unless retained[8].last.probability == retained[8].last.results.first.answer.proposals.select(&:kept).map(&:span_probability)
     RUBY
     TestBackend.with(script) do |backend, child|
       results = child.hear
@@ -76,9 +125,34 @@ class TestOwnedSession < Minitest::Test
       assert_equal [0, 1], child.hear
       assert_equal "first", child.hear
       assert_equal %w[knows knows], child.hear
+      probabilities = child.hear
+      assert_equal 0.9, probabilities[0]
+      assert_equal 0.9, probabilities[1]
+      assert_nil probabilities[2]
+      assert_nil probabilities[3]
+      assert_equal [0.9, 0.9], probabilities[4]
+      assert_equal [0.9, 0.9], probabilities[5]
+      assert_nil probabilities[7]
+      assert_equal 2, probabilities[9].length
       status, errors = child.finish
       assert status.success?, errors
       assert_operator backend.count, :>=, 10
+    end
+  end
+
+  def test_one_record_collections_keep_probability_arrays
+    TestBackend.with(<<~RUBY) do |backend, child|
+      T::Client.open(cache: false) do |client|
+        path = File.join(ENV.fetch("HOME"), "records.jsonl")
+        File.write(path, JSON.generate(note: "first") + 10.chr)
+        inputs = ["first", ["first"], ["first"].each, T::Client.files([path], framing: "jsonl")]
+        say inputs.map { |input| result = client.decide("Is it urgent?", input); [result.value, result.probability] }
+      end
+    RUBY
+      assert_equal [[true, 0.9], [[true], [0.9]], [[true], [0.9]], [[true], [0.9]]], child.hear
+      status, errors = child.finish
+      assert status.success?, errors
+      assert_equal 4, backend.count
     end
   end
 

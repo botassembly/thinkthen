@@ -1,5 +1,6 @@
 """Rust-owned Ruby results derived from the prepared shared graph."""
 import json
+from host_answers import call_results
 ROOTS = ('completesessionPacket', 'completeplan')
 
 def name(key):
@@ -15,6 +16,8 @@ def render(definitions):
         for member in source['properties']:
             lines += [f'      define_method({member!r}) {{ self[{member!r}] }}']
         lines += ['    end']
+    metadata = {verb: {key: value for key, value in spec.items() if key in ('value_projection', 'probability_mode', 'probability_path', 'pick_path', 'call_shape')} for verb, spec in call_results(definitions).items()}
+    lines += ['    CALL_RESULTS = JSON.parse(' + repr(json.dumps(metadata)) + ').freeze']
     lines += ['  end', '  class Client', *['    def self.choose_question(text, options:)', '      {choose: text, options: options}.freeze', '    end', '    def self.recognize_question(kinds:, **fields)', '      {version: 1, recognize: {kinds: kinds, **fields}}.freeze', '    end', '    def self.relation(name, **fields)', '      {name: name, **fields}.freeze', '    end', '    def self.relate_question(relations:, fields: nil)', '      body = {relations: relations}', '      body[:fields] = fields unless fields.nil?', '      {version: 1, relate: body}.freeze', '    end'], '  end', 'end']
     return '\n'.join(lines) + '\n'
 

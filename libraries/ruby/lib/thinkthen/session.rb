@@ -19,9 +19,40 @@ module ThinkThen
       end
       def facts = terminal.facts
       def value
-        return results.map { |row| @verb == "filter" ? row.input : row.index }.freeze if %w[filter rank].include?(@verb)
-        values = results.map { |row| row.key?("value") ? row.value : row }
-        @scalar && values.size == 1 ? values.first : values.freeze
+        spec = CALL_RESULTS.fetch(@verb)
+        values = results.map { |row| row.public_send(spec.fetch("value_projection")) }
+        project(values, spec)
+      end
+      def probability
+        spec = CALL_RESULTS.fetch(@verb)
+        mode = spec.fetch("probability_mode")
+        return nil if mode == "null"
+        values = results.map do |row|
+          case mode
+          when "yes" then read_path(row, spec.fetch("probability_path"))
+          when "picked"
+            read_path(row, spec.fetch("probability_path"))[read_path(row, spec.fetch("pick_path"))]
+          when "items" then item_probabilities(row)
+          end
+        end
+        project(values, spec)
+      end
+      private def project(values, spec)
+        return values.freeze if spec.fetch("call_shape") == "collection"
+        @scalar ? values.first : values.freeze
+      end
+      private def read_path(row, path)
+        path.reduce(row) { |value, member| value.public_send(member) }
+      end
+      private def item_probabilities(row)
+        return row.answer.probability if row.answer.respond_to?(:probability)
+        return nil if CALL_RESULTS.fetch(@verb).fetch("call_shape") == "collection"
+        return row.value.map(&:probability).freeze if row.value.is_a?(Array)
+        return row.value.proposals.map(&:probability).freeze if row.value.key?("proposals")
+        proposals = row.answer.proposals.select(&:kept).to_h do |proposal|
+          [[proposal.selected.start, proposal.selected.end, proposal.kind], proposal.span_probability]
+        end
+        row.value.entities.map { |entity| proposals.fetch([entity.start, entity.end, entity.kind]) }.freeze
       end
       def inspect = "<ThinkThen::Results::Completed: content withheld>"
     end
@@ -76,8 +107,10 @@ module ThinkThen
       source[:framing] = framing unless framing.nil?
       Source.send(:new, source)
     end
-    def self.item(value, **fields)
-      Item.send(:new, {original: original(value), **fields})
+    ITEM_UNSET = Object.new.freeze
+    private_constant :ITEM_UNSET
+    def self.item(value = ITEM_UNSET, **fields)
+      Item.send(:new, value.equal?(ITEM_UNSET) ? fields : {original: original(value), **fields})
     end
     def self.dump(value)
       JSON.generate(value)
@@ -151,11 +184,11 @@ module ThinkThen
           @producer = input.to_enum
           @owner = input
         end
-        @scalar = %w[find relate].include?(verb) || !(input.is_a?(Array) || input.is_a?(Source) || @producer)
         if token&.cancelled?
           raise CancelledError.new("the call was cancelled", "cancelled")
         end
         @session = engine.request_session(verb, question, input, [options, !@producer.nil?])
+        @scalar = Results::CALL_RESULTS.fetch(verb).fetch("call_shape") == "aggregate" || !(input.is_a?(Array) || input.is_a?(Source) || @producer)
       rescue Exception => error
         begin
           close_producer

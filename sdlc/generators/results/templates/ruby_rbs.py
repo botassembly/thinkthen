@@ -2,6 +2,7 @@
 import json
 from pathlib import Path
 import re
+from host_answers import call_results
 
 HEADER = '# Generated from the shared Rust result and request graphs; do not edit.'
 
@@ -98,7 +99,7 @@ def render(definitions, name):
     recognition = next(source for source in request['RequestDefinition']['anyOf'] if source.get('title') == 'RecognizeDefinition')
     recognition_fields = recognition['properties']['recognize']['properties']
     recognition_keywords = ', '.join(f'?{member}: {schema_type(field, request_type, objects=True)}' for member, field in recognition_fields.items() if member != 'kinds')
-    options = keywords('RequestOptions')
+    options = keywords('RequestOptions', ('details',))
     settings = keywords('EngineSettings')
     reading = keywords('RequestReader')
     fields = keywords('RequestItem', ('original',))
@@ -106,10 +107,30 @@ def render(definitions, name):
     args = f'{question}, untyped input'
     # Ruby consumes cancel separately; the native RequestOptions grammar sees
     # every other keyword unchanged and rejects invalid controls.
-    for verb in request['RequestFunction']['oneOf']:
-        value = {'decide': result_type('completeDecideValue'), 'choose': 'String | nil', 'tag': 'Array[String] | nil', 'score': 'Integer | Float | nil', 'find': 'Results::answer', 'rank': 'Array[Integer]' }.get(verb['const'], 'Array[Native::Result]' if verb['const'] in ('rank', 'relate') else 'Native::Result | Array[Native::Result]' if verb['const'] in ('annotate', 'recognize') else 'Array[untyped]')
-        answer = value if verb['const'] in ('filter', 'rank', 'relate') else f'{value} | Array[{value}]'
-        lines.append(f'    def {verb["const"]}: ({args}, ?cancel: Cancel?, {options}) -> Results::Completed[{answer}]')
+    def public_type(key):
+        source = definitions[key]
+        if 'properties' in source: return 'Results::' + name(key)
+        if 'variants' in source: return union(public_type(child) for child, _ in source['variants'])
+        if 'primitive_schemas' in source:
+            return union(schema_type(child, public_type) for child in source['primitive_schemas'].values())
+        if key == 'completeDecideValue': return union(['bool', request_type('Authored_criterion')])
+        return schema_type(source, public_type)
+
+    for function, spec in call_results(definitions).items():
+        payload = spec['receipt_payload']
+        receipt = schema_type(payload.get('items', payload), public_type)
+        value_schema = spec['aggregate_value']
+        if spec['call_shape'] == 'input':
+            value_schema = value_schema['items']
+        value = schema_type(value_schema, public_type)
+        mode = spec['probability_mode']
+        probability = 'nil' if mode == 'null' else ('Array[Integer | Float]' if mode == 'items' and spec['value_projection'] == 'value' else 'Integer | Float | nil')
+        if spec['call_shape'] == 'collection':
+            if mode != 'null': probability = f'Array[{probability}]'
+        elif spec['call_shape'] == 'input':
+            value = f'{value} | Array[{value}]'
+            if mode != 'null': probability = f'{probability} | Array[{probability}]'
+        lines.append(f'    def {function}: ({args}, ?cancel: Cancel?, {options}) -> Results::Completed[{value}, {probability}, {receipt}]')
     lines += [f'    def initialize: ({settings}) -> void',
               f'    def self.open: ({settings}) {{ (Client client) -> untyped }} -> untyped',
               f'                 | ({settings}) -> Client',
@@ -117,7 +138,7 @@ def render(definitions, name):
               f'    def start: (String verb, {args}, ?cancel: Cancel?, {options}) {{ (Client::Operation operation) -> untyped }} -> untyped',
               f'             | (String verb, {args}, ?cancel: Cancel?, {options}) -> Client::Operation',
               f'    def self.files: (String | Array[String] paths, ?framing: {request_type("RequestFraming")} | nil, ?media: {request_type("ReaderMedia")}, {reading}) -> Client::Source',
-              f'    def self.item: (untyped value, {fields}) -> Client::Item', f'    def self.choose_question: ({request_type("Authored_questionText")} text, options: {request_type("Authored_options")}) -> {request_type("Authored_choose")}',
+              f'    def self.item: (?untyped value, {fields}) -> Client::Item', f'    def self.choose_question: ({request_type("Authored_questionText")} text, options: {request_type("Authored_options")}) -> {request_type("Authored_choose")}',
               f'    def self.relation: (String name, {keywords("Authored_relation", ("name",))}) -> {request_type("Authored_relation")}',
               f'    def self.relate_question: (relations: Array[{request_type("Authored_relation")}], ?fields: {{ name: String, kind: String }}?) -> {request_type("Authored_relate")}',
               f'    def self.recognize_question: (kinds: {schema_type(recognition_fields["kinds"], request_type, objects=True)}, {recognition_keywords}) -> ({schema_type(recognition, request_type, objects=True)})', '  end']
