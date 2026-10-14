@@ -114,11 +114,9 @@ class Result(Generic[T]):
             elif self.function == 'recognize':
                 if 'entities' in row.value:
                     # Canonical kept proposals own span probabilities; entity strength ranks names.
-                    proposals = [proposal for proposal in row.answer.proposals if proposal.kept]
-                    chance = [next(proposal.span_probability for proposal in proposals
-                                   if proposal.kind == entity.kind and
-                                   (proposal.selected.start, proposal.selected.end) == (entity.start, entity.end))
-                              for entity in row.value.entities]
+                    proposals = {(proposal.selected.start, proposal.selected.end, proposal.kind): proposal.span_probability
+                                 for proposal in row.answer.proposals if proposal.kept}
+                    chance = [proposals[(entity.start, entity.end, entity.kind)] for entity in row.value.entities]
                 else: chance = [proposal.probability for proposal in row.value.proposals]
             elif self.function == 'relate':
                 chance = [edge.probability for edge in row.value]
