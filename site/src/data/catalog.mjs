@@ -615,9 +615,9 @@ export const SURFACES = [
     backends: 'code',
     lang: 'ada', tab: 'Ada',
     blurb: "Call the ten functions from Ada 2022 through a GNAT project.",
-    call: 'Build the question and input and call a named procedure in `Thinkthen.Inputs.Calls`. Finish the session, then read its result with `Thinkthen.Answers`.',
-    unsureWord: 'a present null generated answer; typed failures remain separate',
-    facts: "Generated native records retain result presence and terminal facts.",
+    call: 'Build the question and input and call a named function in `Thinkthen.Inputs.Calls`, such as `Decide`. Read the returned result\'s `Value` field.',
+    unsureWord: 'a null answer with null probability; a resolved authored JSON null keeps its probability',
+    facts: "The returned result has `Value`, `Probability`, `Results` and `Facts`. Its owned records survive session finalization.",
     errors: "Typed native failures preserve kind, retryability and owned messages.",
     settings: "`Configure` forwards engine settings to Rust.",
     install: [
