@@ -302,3 +302,23 @@ fn source_reading(args: &Arguments, fields: &mut Vec<String>) -> Result<(), Fail
     }
     Ok(())
 }
+
+pub(super) fn ordinary_find(
+    args: &Arguments,
+    inputs: &mut complete_native::Inputs,
+) -> Result<(), thinkthen::Error> {
+    if args.supplied("request_records") {
+        return Ok(());
+    }
+    if let Some(text) = args.text("text")? {
+        let units = serde_json::from_str::<Vec<String>>(&text)
+            .map_err(|_| Failure::usage("find units is a JSON array of text"))?;
+        *inputs = complete_native::Inputs::parse_request(
+            &serde_json::json!({"records":units.into_iter()
+            .map(|text| serde_json::json!({"text":text})).collect::<Vec<_>>(),
+            "attempts":args.flag("attempts")?,"cancelled":args.flag("cancelled")?})
+            .to_string(),
+        )?;
+    }
+    Ok(())
+}

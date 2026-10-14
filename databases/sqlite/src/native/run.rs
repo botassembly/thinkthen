@@ -42,14 +42,14 @@ pub(super) fn execute(db: *mut sqlite3, invocation: Invocation) -> Result<Receip
             .as_deref()
             .map_or(controls, |context| controls.context(context));
         if details && recover {
-            return sql_request::run_recovering(
+            return Ok(sql_request::run_recovering(
                 engine,
                 &prepared,
                 &request,
                 inputs,
                 controls,
                 Surface::Sqlite,
-            );
+            )?);
         }
         Ok(sql_request::run(
             engine,
@@ -86,6 +86,7 @@ fn project(
     let mut receipt = Receipt::default();
     let native = carrier
         .get("native")
+        .cloned()
         .ok_or_else(|| Failure::defect("a native call lost its receipt"))?;
     if let Some(facts) = native.get("facts") {
         receipt.add("facts", facts)?;
@@ -95,33 +96,7 @@ fn project(
     }
     let call_facts = carrier.pointer("/native/facts").cloned();
     if let Some(rows) = carrier.get_mut("rows").and_then(Json::as_array_mut) {
-        for row in rows {
-            for (field, kind) in [
-                ("result", root(verb)),
-                ("failure", "error"),
-                ("facts", "facts"),
-            ] {
-                if let Some(value) = row.get(field).filter(|value| !value.is_null()).cloned() {
-                    let index = if field == "facts" && call_facts.as_ref() == Some(&value) {
-                        0
-                    } else {
-                        receipt.add(kind, &value)?
-                    };
-                    if field == "result" {
-                        receipt.add("record_order", &json!({"ordinal":row.get("ordinal"),"result_index":index,"completed":false}))?;
-                    }
-                    row[field] = json!(index);
-                }
-            }
-            if let Some(events) = row.get("observations").and_then(Json::as_array).cloned() {
-                let mut first = None;
-                for event in events {
-                    let index = receipt.add("event", &event)?;
-                    first.get_or_insert(index);
-                }
-                row["observations"] = json!(first);
-            }
-        }
+        project_details(&mut receipt, rows, verb, call_facts.as_ref())?;
     }
     let completed = carrier.get("completed");
     let value = native.get("value").or(completed);
@@ -229,19 +204,8 @@ pub(super) fn prepare(
     } else {
         prepared
     };
-    if details
-        && verb == "find"
-        && !args.supplied("request_records")
-        && let Some(text) = args.text("text")?
-    {
-        let units = serde_json::from_str::<Vec<String>>(&text)
-            .map_err(|_| Failure::usage("find units is a JSON array of text"))?;
-        inputs = complete_native::Inputs::parse_request(
-            &json!({"records":units.into_iter()
-            .map(|text| json!({"text":text})).collect::<Vec<_>>(),
-            "attempts":args.flag("attempts")?,"cancelled":args.flag("cancelled")?})
-            .to_string(),
-        )?;
+    if details && verb == "find" {
+        input::ordinary_find(args, &mut inputs)?;
     }
     let options = input::options(args)?;
     let source_route = args.text("paths")?.is_some() || options.files_only;
@@ -252,6 +216,9 @@ pub(super) fn prepare(
     };
     let request = admit(&prepared, selector, native_source, options)?;
     let mut identity = input::identity(verb, args)?;
+    if details {
+        identity.insert_str(0, "details:");
+    }
     let mut ids = std::collections::HashMap::new();
     if let Some(query) = query {
         let (entities, rows) = crate::tables::Relater::entities(db, &query)?;
@@ -374,6 +341,46 @@ fn details_carrier(verb: &str, mut carrier: Json) -> Result<Json, Failure> {
         return Err(Failure::defect("a hard error was not raised"));
     }
     let rows = sql_request::project_carrier(function, &carrier);
-    carrier["rows"] = json!(rows);
+    complete_native::put(&mut carrier, "rows", json!(rows))?;
     Ok(carrier)
+}
+
+fn project_details(
+    receipt: &mut Receipt,
+    rows: &mut [Json],
+    verb: &str,
+    call_facts: Option<&Json>,
+) -> Result<(), Failure> {
+    for row in rows {
+        for (field, kind) in [
+            ("result", root(verb)),
+            ("failure", "error"),
+            ("facts", "facts"),
+        ] {
+            let Some(value) = row.get(field).filter(|value| !value.is_null()).cloned() else {
+                continue;
+            };
+            let index = if field == "facts" && call_facts == Some(&value) {
+                0
+            } else {
+                receipt.add(kind, &value)?
+            };
+            if field == "result" {
+                receipt.add(
+                    "record_order",
+                    &json!({"ordinal":row.get("ordinal"),"result_index":index,"completed":false}),
+                )?;
+            }
+            complete_native::put(row, field, json!(index))?;
+        }
+        if let Some(events) = row.get("observations").and_then(Json::as_array).cloned() {
+            let mut first = None;
+            for event in events {
+                let index = receipt.add("event", &event)?;
+                first.get_or_insert(index);
+            }
+            complete_native::put(row, "observations", json!(first))?;
+        }
+    }
+    Ok(())
 }

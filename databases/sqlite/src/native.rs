@@ -133,26 +133,13 @@ impl<T: Verb> Table for Native<T> {
         store: &Mutex<Store>,
     ) -> Result<Scan, Failure> {
         let arguments = crate::tables::arguments::<Self>(mask, filters)?;
-        if (0..T::REQUIRED).any(|at| {
+        let required = if T::DETAILS { 2 } else { T::REQUIRED };
+        if (0..required).any(|at| {
             mask & (1 << at) != 0
                 && arguments
                     .get(at)
                     .is_some_and(|value| matches!(value, Value::Null))
         }) {
-            return Ok(Scan {
-                rows: Arc::new(Vec::new()),
-                selected: None,
-                projections: None,
-            });
-        }
-        if T::DETAILS
-            && (0..2).any(|at| {
-                mask & (1 << at) != 0
-                    && arguments
-                        .get(at)
-                        .is_some_and(|value| matches!(value, Value::Null))
-            })
-        {
             return Ok(Scan {
                 rows: Arc::new(Vec::new()),
                 selected: None,
@@ -169,20 +156,8 @@ impl<T: Verb> Table for Native<T> {
             values: arguments,
             bound: mask,
         };
-        if T::DETAILS && !args.supplied("request_records") {
-            for field in ["text", "body", "keyed_json", "paths", "query"] {
-                if let Some(value) = args.text(field)?
-                    && serde_json::from_str::<serde_json::Value>(&value).is_ok_and(|value| {
-                        value
-                            .as_array()
-                            .is_some_and(|rows| rows.iter().all(serde_json::Value::is_object))
-                    })
-                {
-                    args = args.with_value("request_records", Value::Text(value));
-                    args = args.with_value(field, Value::Null);
-                    break;
-                }
-            }
+        if T::DETAILS {
+            args = record_arguments(args)?;
         }
         if !T::DETAILS && args.supplied("request_records") {
             return Err(Failure::usage(
@@ -430,4 +405,29 @@ fn cached<T: Verb>(
         .receipts
         .put(identity, Arc::clone(&receipt));
     Ok(receipt)
+}
+
+fn record_arguments(mut args: Arguments) -> Result<Arguments, Failure> {
+    if args.supplied("request_records") {
+        return Ok(args);
+    }
+    for field in ["text", "body", "keyed_json", "paths", "query"] {
+        let Some(value) = args.text(field)? else {
+            continue;
+        };
+        let list = serde_json::from_str::<serde_json::Value>(&value)
+            .ok()
+            .and_then(|value| {
+                value
+                    .as_array()
+                    .map(|rows| rows.iter().all(serde_json::Value::is_object))
+            })
+            .unwrap_or(false);
+        if list {
+            args = args.with_value("request_records", Value::Text(value));
+            args = args.with_value(field, Value::Null);
+            break;
+        }
+    }
+    Ok(args)
 }
