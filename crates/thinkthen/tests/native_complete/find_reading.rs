@@ -2,6 +2,62 @@ use super::*;
 use thinkthen::QuestionKind;
 
 #[test]
+fn find_with_record_reading_refuses_other_question_kinds_before_sending() {
+    use thinkthen::{
+        LoadedQuestion, RawRecord, RecordReading, Request, RequestArguments, RequestEnvironment,
+        RequestInput, RequestItem, RequestOptions, RequestOriginal, RequestQuestion,
+    };
+    let listener = Listener::answering(|_| Canned::ok("unused")).unwrap();
+    let engine = engine(&listener);
+    for definition in [
+        r#"{"decide":"Fits?"}"#,
+        r#"{"choose":"Fits?","options":["yes","no"]}"#,
+        r#"{"tag":"Fits?","labels":["yes","no"]}"#,
+        r#"{"score":"Fits?","levels":["low","high"]}"#,
+    ] {
+        let LoadedQuestion::Question(question) = Question::from_json(definition).unwrap() else {
+            panic!("ordinary question");
+        };
+        let reading = RecordReading::new(&["/body"], None, None).unwrap();
+        let refusal = Request::named(
+            "find",
+            RequestArguments {
+                question: RequestQuestion::Definition {
+                    value: (question, reading).into(),
+                },
+                input: RequestInput::Records {
+                    items: [r#"{"body":"First."}"#, r#"{"body":"Second."}"#]
+                        .into_iter()
+                        .map(|value| RequestItem {
+                            original: Some(RequestOriginal::Json {
+                                value: RawRecord::json(value).unwrap(),
+                            }),
+                            context: None,
+                            options: None,
+                            examples: None,
+                            seed_spans: None,
+                            images: vec![],
+                        })
+                        .collect(),
+                },
+                options: RequestOptions::default(),
+            },
+        )
+        .unwrap()
+        .admit()
+        .and_then(|request| engine.execute_request(&request, RequestEnvironment::default()))
+        .unwrap_err();
+        assert_eq!(refusal.kind(), ErrorKind::Usage);
+        assert_eq!(
+            refusal.detail().message(),
+            "question kind does not match the requested function"
+        );
+        assert!(refusal.facts().is_none());
+        assert_eq!(listener.count(), 0);
+    }
+}
+
+#[test]
 fn saved_find_reading_uses_actual_ordered_units_and_preserves_model_profile_and_full_answer() {
     let listener = Listener::answering(|_| Canned::ok(r#"{"model":"actual-model","answers":{"q1":{"type":"choice","probabilities":{"u001":0.2,"u002":0.8}}},"usage":{"input_tokens":887}}"#)).unwrap();
     let folder = folder();

@@ -28,6 +28,10 @@ Reviews: revision a82cc47, reject
 Reviews: revision 6bc15d6, accept
 Reviews: revision e1fd5b9, accept
 
+Reviews: revision 3b3d67b, reject
+
+Reviews: revision 1d312d5, accept
+
 ## Outcome
 
 Every language library, database extension and the MCP server feels native to a senior developer on that platform and grades B or better on the library rubric below. The public API of each exposes no transport JSON, no schema-path names and no raw C layouts.
@@ -93,3 +97,5 @@ Stage 2 starts when G1 and G2 land. One lane per language owns `libraries/<lang>
 - C++ (≤466, falling by about 243): delete `json.hpp` and read native views; typed `Client` settings; private C header; one failure type; ASan over the ten examples.
 - Ada (adb ≤200, ads ≤80): `T_EngineSettings`; make `Thinkthen_Session_C` and `Requests` private.
 - COBOL (c ≤12, h ≤12): settings record; one `CALL` per answer; rank and filter tables; the session check uses the blocking call; correct the README.
+- 2026-10-13 started
+- 2026-10-13 next: Merged the reviewed native helper slice as 8b2a47981a416a324514920e8b72197a89b263e5 after installed C ownership, all 42 shared cases, fourteen ASan door checks and unchanged Ada prerequisite passed; continue the language slices and combined checkpoint.

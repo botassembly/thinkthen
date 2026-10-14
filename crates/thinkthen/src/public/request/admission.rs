@@ -339,7 +339,9 @@ fn admit_definition_for(
             _ => false,
         },
         RequestDefinition::Rank(_) | RequestDefinition::RankSet(_) => function == Function::Rank,
-        RequestDefinition::Find(_) => function == Function::Find,
+        RequestDefinition::Find(q) => {
+            function == Function::Find && q.question().kind() == QuestionKind::Find
+        }
         RequestDefinition::Annotate(_) => function == Function::Annotate,
         RequestDefinition::Recognize(_) | RequestDefinition::Recognition(_) => {
             function == Function::Recognize
