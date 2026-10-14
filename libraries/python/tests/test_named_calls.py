@@ -329,7 +329,7 @@ def test_recognition_probabilities_follow_kept_spans_with_duplicate_names(backen
                     answers[name] = {'type': 'choice', 'probabilities': odds}
                 response = json.dumps({'model': 'jev-latest', 'answers': answers}).encode()
                 self.send_response(200); self.send_header('Content-Length', str(len(response)))
-                self.send_header('Connection', 'close')
+                self.send_header("Connection", "close")
                 self.end_headers(); self.wfile.write(response)
         server = HTTPServer(('127.0.0.1', 0), Reply)
         threading.Thread(target=server.serve_forever, daemon=True).start()
