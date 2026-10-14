@@ -9,12 +9,15 @@ import thinkthen.Results.RecognizeEntities;
 
 public class Recognize {
     public static void main(String[] args) {
-        var kinds = new LinkedHashMap<String, Inputs.AuthoredDescription>();
+        var kinds =
+            new LinkedHashMap<String,
+                Inputs.AuthoredDescription>();
         kinds.put("person", null);
         kinds.put("product", null);
         kinds.put("place", null);
         var ask = new RequestQuestionDefinition().value(
-            new Inputs.RequestDefinitionRecognizeDefinition()
+            new Inputs
+                .RequestDefinitionRecognizeDefinition()
                 .recognize(new Inputs.RecognizeQuestion()
                     .kinds(kinds)));
         var text = new RequestInputText().text(

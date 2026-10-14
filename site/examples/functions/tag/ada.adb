@@ -20,7 +20,8 @@ begin
      Text_Input (Evidence));
    Finish (Owner);
    declare
-      Fitting_Labels : constant Thinkthen.Answers.Text_List :=
+      Fitting_Labels : constant
+        Thinkthen.Answers.Text_List :=
         Tag_Answer (Owner, Completed);
    begin
       pragma Assert (Fitting_Labels =

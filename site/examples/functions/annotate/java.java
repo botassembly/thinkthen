@@ -19,7 +19,8 @@ public class Annotate {
             assert triage.equals(Map.of(
                 "steps", new AnnotatedFieldBoolean(true),
                 "area", new AnnotatedFieldString("login"),
-                "impact", new AnnotatedFieldNumber(new BigDecimal("1.98"))));
+                "impact", new AnnotatedFieldNumber(
+                    new BigDecimal("1.98"))));
         }
     }
 }

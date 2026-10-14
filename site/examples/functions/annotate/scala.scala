@@ -17,6 +17,7 @@ import thinkthen.scala.ScalaEngine
     assert(triage == Map(
       "steps" -> AnnotatedFieldBoolean(true),
       "area" -> AnnotatedFieldString("login"),
-      "impact" -> AnnotatedFieldNumber(java.math.BigDecimal("1.98")),
+      "impact" -> AnnotatedFieldNumber(
+        java.math.BigDecimal("1.98")),
     ).asJava)
   }

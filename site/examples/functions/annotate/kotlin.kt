@@ -13,6 +13,7 @@ suspend fun main() = KotlinEngine().use { tt ->
     check(triage == mapOf(
         "steps" to AnnotatedFieldBoolean(true),
         "area" to AnnotatedFieldString("login"),
-        "impact" to AnnotatedFieldNumber(BigDecimal("1.98")),
+        "impact" to AnnotatedFieldNumber(
+            BigDecimal("1.98")),
     ))
 }
