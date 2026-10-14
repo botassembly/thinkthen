@@ -257,7 +257,27 @@ FUNCTION = r'(?<![\w])(?:thinkthen_|tt_)?' + FUNCTION_NAMES + r'(?:Answer(?:Asyn
 
 def database_functions(code):
     # SQL strings and comments cannot stand in for executable named calls.
-    sql = re.sub(r"--[^\n]*|/\*[\s\S]*?\*/|'(?:''|[^'])*'|\$(\w*)\$[\s\S]*?\$\1\$", ' ', code)
+    tokens = re.compile(r"--[^\n]*|/\*|[eE]'(?:\\.|''|[^'\\])*'|'(?:''|[^'])*'|"
+                        r'\$(\w*)\$[\s\S]*?\$\1\$|"(?:""|[^"])*"')
+    pieces, pos = [], 0
+    while token := tokens.search(code, pos):
+        pieces.append(code[pos:token.start()])
+        end = token.end()
+        if token[0] == '/*':
+            depth = 1
+            for delimiter in re.finditer(r'/\*|\*/', code[end:]):
+                depth += 1 if delimiter[0] == '/*' else -1
+                if not depth:
+                    end += delimiter.end()
+                    break
+            else:
+                end = len(code)
+        # Preserve only complete route identifiers; call syntax is checked after masking.
+        quoted = token[0][1:-1] if token[0].startswith('"') else ''
+        pieces.append(quoted if re.fullmatch(r'(?:thinkthen_|tt_)\w+', quoted, re.I) else ' ')
+        pos = end
+    pieces.append(code[pos:])
+    sql = ''.join(pieces)
     functions = set()
     for route in re.findall(r'\b((?:thinkthen_|tt_)[A-Za-z_]\w*)"?\s*\(', sql, re.I):
         call = re.fullmatch(r'(?:thinkthen_|tt_)' + FUNCTION_NAMES + r'(?:_details)?', route, re.I)

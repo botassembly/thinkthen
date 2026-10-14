@@ -581,6 +581,10 @@ extraPublicExport <- function(context = NULL, enabled = FALSE,
             self.assertIn('unlisted public call/export: Controls.cancel', errors)
             code, errors = invoke(declarations.replace('readonly context?: string;', 'readonly context?: string; value(): string;'))
             self.assertIn('unlisted public call/export: Controls.value', errors)
+            code, errors = invoke(declarations + '\nexport class Result { readonly probability: number; }')
+            self.assertNotIn('unlisted public field: Result.probability', errors)
+            code, errors = invoke(declarations + '\nexport class Other { readonly probability: number; }')
+            self.assertIn('unlisted public field: Other.probability', errors)
             code, errors = invoke(declarations + '\nexport class Completed { cancel(): void; }')
             self.assertIn('unlisted public call/export: Completed.cancel', errors)
             code, errors = invoke(declarations.replace('readonly backend?: string;', ''))
@@ -684,6 +688,11 @@ extraPublicExport <- function(context = NULL, enabled = FALSE,
             for owner, field in [('Other', 'FactsJson'), ('Other', 'Failure'),
                                  ('RequestOptions', 'SurpriseOption'), ('EngineSettings', 'SurpriseSetting')]:
                 self.assertIn('unlisted public field: ' + owner + '.' + field, unexpected)
+            for signature in ('public T ExtraGeneric<T>() {}',
+                              'public ValueTask<CallResult<T, double?>> ExtraGeneric<T>() {}',
+                              'public Dictionary<string, List<int?[]>> ExtraGeneric<T, U>() {}'):
+                extra.write_text('public class Other { ' + signature + ' }')
+                self.assertIn('unlisted public call/export: Other.ExtraGeneric', invoke(original))
             extra.write_text('public class TransportBase { public string TransportJson {get;} }\n'
                              'public class Engine : TransportBase {}\n')
             self.assertIn('unlisted public field: TransportBase.TransportJson', invoke(original))

@@ -279,7 +279,7 @@ def cstyle(source, language):
     patterns = {
         'typescript': r'(?m)(?:^|[;{}\n])\s*(?:(?:export|declare|readonly|static|async)\s+)*(\w+)\s*(?:\??\s*:|(?:<[^\n]*?>)?\s*\()',
         'java': r'\bpublic\s+(?:(?:static|final|abstract|synchronized)\s+)*(?:[\w<>?,.\[\]]+\s+)(\w+)\s*(?:\(|[=;])',
-        'csharp': r'\bpublic\s+(?:(?:static|readonly|override|abstract|required|sealed|async|partial)\s+)*(?:[\w.]+(?:<[\w<>?,.\[\] \t\r\n]+>)?(?:\[\]|\?)?\s+)(\w+)\s*(?:\(|\{|[=;])',
+        'csharp': r'\bpublic\s+(?:(?:static|readonly|override|abstract|required|sealed|async|partial)\s+)*(?:[\w.]+(?:<[\w<>?,.\[\] \t\r\n]+>)?(?:\[\]|\?)?\s+)(\w+)\s*(?:<[\w<>?,.\[\] \t\r\n]+>\s*)?(?:\(|\{|[=;])',
         'swift': r'\bpublic\s+(?:(?:static|class|mutating|convenience)\s+)*(?:func|var|let)\s+`?(\w+)',
         'kotlin': r'(?m)(?:^|[;{}\n])\s*(?:(?:public|override|open|final|suspend)\s+)*(?:fun|val|var)\s+`?(\w+)' ,
         'scala': r'(?m)(?:^|[;{}\n])\s*(?:(?:override|final|lazy)\s+)*(?:def|val|var)\s+`?(\w+)' ,
