@@ -26,14 +26,18 @@ A complete call carrier of class \code{thinkthen_Call}. \code{$results} holds
 one typed row of class \code{thinkthen_RecognizeResult} per record, each
 with \code{$question}, \code{$meta}, and \code{$answer_id}, and, when the
 reading provides them, the zero-based native \code{$index} and
-\code{$input}. \code{$answer} holds the typed answer
-view: a list with \code{$entities}, each carrying its \code{$text},
-\code{$kind}, and zero-based Unicode-scalar \code{$start} and \code{$end}
-offsets, and, when the question asks for relations, the recognized
-\code{$relations}. A question that selects boundary-only mode returns
+\code{$input}. \code{$answer} is an outer list with one entry per
+record, in the same order as \code{$results}. Each entry is that
+record's typed answer view: whole recognition gives the entry
+\code{$entities}, each carrying its \code{$text}, \code{$kind}, and
+zero-based Unicode-scalar \code{$start} and \code{$end} offsets, and,
+when the question asks for relations, the recognized \code{$relations}.
+A question that selects boundary-only mode gives the entry
 \code{$mode} and \code{$proposals} instead, each proposal carrying its
 \code{$text}, zero-based \code{$start} and \code{$end}, \code{$length},
-and \code{$probability}, with no entities. \code{$facts} holds the call's
+and \code{$probability}, with no entities. Read the fields per record,
+as in \code{result$answer[[1]]$entities} or
+\code{result$answer[[1]]$proposals}. \code{$facts} holds the call's
 facts, including \code{requests_sent}.
 }
 \description{
