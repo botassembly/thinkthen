@@ -36,3 +36,4 @@ PM amendment, 2026-10-13. Remaining work. Score numbering is done: d9181d5f7 doc
 
 PM amendment, 2026-10-14. The evidence at e363ee504 discharges both reported failures. The annotate `--context` and status reports came from older builds, and the status exit 5 matches a 0.1 binary reading a cache that a newer build had migrated. Keep one outside-in test for annotate shared context with exactly one send and one for status on default paths, then close.
 - 2026-10-14 started
+- 2026-10-14 next: The f708e070c ruling discharges both reported failures at e363ee504; retained outside-in shared-context one-send and default-path status assertions are undergoing routine checks and fresh review.
