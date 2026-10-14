@@ -1,12 +1,17 @@
 # Generated from the canonical request schema; do not edit.
 from __future__ import annotations
 from os import PathLike
-from typing import Literal, TypedDict, TYPE_CHECKING, Union
+from typing import Literal, TypedDict, TYPE_CHECKING, Union, _SpecialForm
 
 if TYPE_CHECKING:
     from . import CancelToken
 Labels = (
-    list[str] | dict[str, str] | dict[str, object] | type[object] | tuple[object, ...]
+    list[str]
+    | dict[str, str]
+    | dict[str, object]
+    | type[object]
+    | tuple[object, ...]
+    | _SpecialForm
 )
 RequestBatch = Union[int, str]
 DisabledCache = Literal[False]

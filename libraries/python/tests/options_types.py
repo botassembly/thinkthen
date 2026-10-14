@@ -1,5 +1,6 @@
 """Installed caller controls retain native request types on every call family."""
 from pathlib import Path
+from typing import Literal
 import thinkthen as tt
 from thinkthen._named_generated import RecognitionSeedSpan, RecognitionExampleText, RecognitionExampleEntity, RecognitionStageContext
 
@@ -15,7 +16,8 @@ def controls() -> None:
                                           deadline_ms=-1, details=True, model="local",
                                           context="", threshold=.5, max_requests_total=0)
     engine.choose("Team?", "text", options=["a", "b"], options_field="/options")
-    engine.tag("Kinds?", "text", labels=["a", "b"])
+    engine.choose("Team?", "text", options=Literal["billing", "shipping"])
+    engine.tag("Kinds?", "text", labels=Literal["billing", "shipping"])
     engine.score("Urgency?", "text", levels=["low", "high"])
     engine.filter("Late?", ["text"], field=["/body"], files_only=True)
     engine.rank("Late?", ["text"], top=2)

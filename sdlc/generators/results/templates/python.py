@@ -138,9 +138,9 @@ def option_types(schema):
     emitted = set()
     lines = ['from __future__ import annotations',
              'from os import PathLike',
-             'from typing import Literal, TypedDict, TYPE_CHECKING, Union',
+             'from typing import Literal, TypedDict, TYPE_CHECKING, Union, _SpecialForm',
              'if TYPE_CHECKING:', '    from . import CancelToken',
-             'Labels = list[str] | dict[str, str] | dict[str, object] | type[object] | tuple[object, ...]']
+             'Labels = list[str] | dict[str, str] | dict[str, object] | type[object] | tuple[object, ...] | _SpecialForm']
 
     def emit(key):
         if key in emitted:
