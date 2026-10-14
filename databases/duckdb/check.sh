@@ -138,6 +138,7 @@ if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
 	python3 cpp/verify_repository.py "$THINKTHEN_ARTIFACT" "$host_target" "$release"
 	installed_unpack
 	python3 cpp/verify_repository.py "$scratch" "$host_target" "$release"
+	python3 tools/source_checks.py
 	for version in $DUCKDB_VERSIONS; do
 		select_host "$version"
 		export THINKTHEN_DUCKDB_EXTENSION="$scratch/$duckdb_metadata_version/$platform/thinkthen.duckdb_extension"
