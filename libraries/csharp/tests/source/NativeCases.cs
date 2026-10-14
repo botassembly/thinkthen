@@ -183,7 +183,7 @@ static class AsyncFixtureCases
                     ["answered_by"]=source?.AnsweredBy,["observations"]=detail.Observations.Count,["sources"]=detail.QuestionSources.Count,["input"]=Optional(detail.Input),
                     ["observation_ids"]=detail.Observations.OfType<ThinkThen.Results.ObservationObservationId>().Select(v=>v.ObservationId).ToArray(),["detail_inputs"]=Array.Empty<object>(),["answer_kind"]="YesNo"
                 };
-                Location(row,Optional(detail.Source));
+                Location(row,Optional(detail.InputSource));
                 if(detail.Probabilities.State==ThinkThen.Results.PresenceState.Value && detail.Probabilities.Value is ThinkThen.Results.SessionProbabilitiesYesNo odds)row["probability"]=odds.Value;
                 foreach(var author in Author(detail.Question))row[author.Key]=author.Value;
                 all.Add(row);

@@ -32,7 +32,11 @@ work.mkdir()
 home=work/'home';home.mkdir();cache=work/'cache';cache.mkdir();nuget=work/'nuget';nuget.mkdir()
 local=work/'feed';local.mkdir();shutil.copyfile(package,local/f'Botassembly.ThinkThen.{V}.nupkg')
 # Only consumer source and package feed are visible; compiler and original source are absent.
-if mode.startswith('example'):
+if mode=='example-public':
+ import re
+ sample=re.search(r'```csharp\n(.*?)```', (R/'README-PUBLIC.md').read_text(), re.S).group(1)
+ (work/'Installed.cs').write_text(sample)
+elif mode.startswith('example'):
  sample = 'Program.cs' if mode == 'example' else mode.removeprefix('example-').capitalize()+'.cs'
  shutil.copyfile(R/'examples'/sample,work/'Installed.cs')
 else:
@@ -80,7 +84,7 @@ try:
   assert server.attempts==server.connections==len(server.arrivals),counted
   print('installed C# owned sessions, bounded Full/Closed, held cancellation, explicit drain, ownership and presence PASS',flush=True)
  elif mode.startswith('example'):
-  function='decide' if mode=='example' else mode.removeprefix('example-')
+  function='decide' if mode in ('example','example-public') else mode.removeprefix('example-')
   outputs={'decide':'True','choose':'first','score':'0.1','tag':'first,second','filter':'1:first',
            'rank':'0,1','find':'0','annotate':'True','recognize':'John Smith','relate':'A -> B'}
   sends=2 if function=='recognize' else 1
@@ -91,7 +95,7 @@ try:
   quoted={'model':'jev-1.13.0','state':'Each question quotes the text it asks about.'}
   question=lambda kind,instructions,**extra: dict(type=kind,instructions=instructions,**extra)
   if function in ('decide','annotate'):
-   expected=dict(quoted,questions={'q1':question('noul','The text is "example". Is it?')})
+   expected=dict(quoted,questions={'q1':question('noul','The text is "Please refund my order.". Does this ask for a refund?' if mode=='example-public' else 'The text is "example". Is it?')})
   elif function=='choose':
    expected=dict(quoted,questions={'q1':question('choice','The text is "example". Which?',criteria={'first':None,'second':None})})
   elif function=='score':

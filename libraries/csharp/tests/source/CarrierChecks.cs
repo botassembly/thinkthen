@@ -1,6 +1,7 @@
 using ThinkThen;
 using ThinkThen.Inputs;
-using ThinkThen.Results;
+using PresenceState = ThinkThen.Results.PresenceState;
+using Plan = ThinkThen.Results.Plan;
 static class CarrierChecks
 {
  public static void Run() {
@@ -15,12 +16,12 @@ static class CarrierChecks
    (new RequestFunctionFilter(),decide),
    (new RequestFunctionRank(),decide)
   };
-  var retained=new List<Plan>();
+  var retained=new List<(Plan Value,bool Upper)>();
   foreach(var (function,question) in calls) {
-   var options=new RequestOptions {None=false};
+   var options=new RequestOptions {None=false,Batch=new RequestBatchInteger {Value=1}};
    var plan=engine.Plan(new Request {Schema=new RequestVersionThinkthenRequest1(),Call=new RequestCall {Function=function,Question=question,Input=input,Options=options}});
-   if(plan.Records!=2 || plan.Requests==0 || plan.EstimatedBytes==0 || plan.LargestRequestBytes>plan.EstimatedBytes || plan.EstimatedInputTokens.Lower>plan.EstimatedInputTokens.Upper || plan.LargestRequestEstimatedInputTokens==0 || plan.TokenEstimateMethod.Length==0 || plan.FirstBodyUtf8.State!=PresenceState.Value || plan.UpperBound || !options.None.IsPresent || options.None.Value) throw new Exception("typed canonical plan fields or explicit false changed");
-   retained.Add(plan);
+   if(plan.Records!=2 || plan.Requests==0 || plan.EstimatedBytes==0 || plan.LargestRequestBytes>plan.EstimatedBytes || plan.EstimatedInputTokens.Lower>plan.EstimatedInputTokens.Upper || plan.LargestRequestEstimatedInputTokens==0 || plan.TokenEstimateMethod.Length==0 || plan.FirstBodyUtf8.State!=PresenceState.Value || !options.None.IsPresent || options.None.Value) throw new Exception("typed canonical plan fields or explicit false changed: " + function.GetType().Name + " records=" + plan.Records + " requests=" + plan.Requests + " bytes=" + plan.EstimatedBytes + " largest=" + plan.LargestRequestBytes + " tokens=" + plan.LargestRequestEstimatedInputTokens + " body=" + plan.FirstBodyUtf8.State + " upper=" + plan.UpperBound);
+   retained.Add((plan,plan.UpperBound));
   }
   foreach(RequestFunction function in new RequestFunction[] {new RequestFunctionFind(),new RequestFunctionAnnotate(),new RequestFunctionRecognize(),new RequestFunctionRelate()}) {
    try {engine.Plan(new Request {Schema=new RequestVersionThinkthenRequest1(),Call=new RequestCall {Function=function,Question=decide,Input=input}});throw new Exception("unsupported plan admitted");}
@@ -29,6 +30,6 @@ static class CarrierChecks
   var empty=engine.Plan(new Request {Schema=new RequestVersionThinkthenRequest1(),Call=new RequestCall {Function=new RequestFunctionDecide(),Question=decide,Input=new RequestInputRecords {Items=Array.Empty<RequestItem>()}}});
   if(empty.Records!=0 || empty.Requests!=0 || empty.FirstBodyUtf8.State!=PresenceState.Null) throw new Exception("empty plan lost nullable body");
   engine.Dispose();
-  if(retained.Any(plan=>plan.Records!=2 || plan.EstimatedInputTokens.Lower>plan.EstimatedInputTokens.Upper)) throw new Exception("owned typed plan changed");
+  if(retained.Any(snapshot=>snapshot.Value.Records!=2 || snapshot.Value.EstimatedInputTokens.Lower>snapshot.Value.EstimatedInputTokens.Upper || snapshot.Value.UpperBound!=snapshot.Upper)) throw new Exception("owned typed plan changed");
  }
 }
