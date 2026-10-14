@@ -8,9 +8,9 @@ The released 0.1.2 module keeps its released API. The examples here describe the
 client, err := thinkthen.NewClient(thinkthen.EngineSettings{})
 if err != nil { return err }
 defer client.Close()
-answer, err := client.DecideAnswer(ctx, thinkthen.TextQuestion("Is this urgent?"), thinkthen.TextInput("Please respond today."), nil)
+answer, err := client.Decide(ctx, thinkthen.TextQuestion("Is this urgent?"), thinkthen.TextInput("Please respond today."), nil)
 if err != nil { return err }
-if answer != nil { fmt.Println(*answer) }
+if answer.Value != nil { fmt.Println(answer.Value) }
 ```
 
 `Decide`, `Choose`, `Tag`, `Score`, `Filter`, `Rank`, `Find`, `Annotate`, `Recognize` and `Relate` take a `context.Context`, a generated `RequestQuestion`, a named typed input and optional generated `RequestOptions`. `TextQuestion` treats all wording literally. `DefinedQuestion` accepts a generated authored definition or question set. `RequestQuestionFile`, `RequestQuestionName` and `RequestQuestionReference` explicitly select native saved questions. Generated declarations follow [the Rust-owned request schema](../../specification/request.schema.json).

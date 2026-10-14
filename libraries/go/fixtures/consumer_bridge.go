@@ -17,6 +17,15 @@ func fixtureInput(value any) tt.RequestInput {
 	if source, ok := value.(tt.RequestSource); ok {
 		return tt.RequestInputSource{Source: source}
 	}
+	if text, ok := value.(string); ok {
+		return tt.TextInput(text)
+	}
+	rvScalar := reflect.ValueOf(value)
+	if !rvScalar.IsValid() || rvScalar.Kind() != reflect.Slice && rvScalar.Kind() != reflect.Array {
+		if _, item := value.(tt.RequestItem); !item {
+			return tt.RequestInputJson{Value: value}
+		}
+	}
 	items := []tt.RequestItem{}
 	rv := reflect.ValueOf(value)
 	values := []any{value}
@@ -131,5 +140,5 @@ func fixtureCall(call tt.Call) any {
 	if call.Terminal != nil {
 		terminal = fixtureValue(call.Terminal)
 	}
-	return map[string]any{"Packets": packets, "Terminal": terminal}
+	return map[string]any{"Packets": packets, "Terminal": terminal, "Value": fixtureValue(call.Value), "Probability": fixtureValue(call.Probability), "Results": fixtureValue(call.Results), "Facts": fixtureValue(call.Facts)}
 }

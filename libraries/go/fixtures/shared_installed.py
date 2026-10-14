@@ -77,6 +77,20 @@ with tempfile.TemporaryDirectory(prefix='thinkthen-go-shared-') as folder:
         shutil.copy2(home/'consumer-bin', stage / 'shared-consumer')
     server=Backend(Path(os.environ.get('CARGO_TARGET_DIR', str(ROOT/'target')))/'debug/conformance-backend',env)
     try:
+        canonical = json.loads((ROOT / 'conformance/cases.json').read_text())
+        pair = next(case for case in canonical['parity']['required_cases'] if case['id'] == 'library-call-result')
+        for identifier, expected in zip(pair['input']['case_refs'], pair['expect']['calls'], strict=True):
+            case = next(case for case in canonical['cases'] if case['id'] == identifier)
+            path = home / 'call-question.json'; path.write_text(json.dumps(case['question']))
+            fixture = {'verb': case['verb'], 'items': case['exchanges'][0]['evidence'], 'question_file': str(path),
+                       'settings': {'base_url': f'http://127.0.0.1:{server.port}/case/{identifier}/v1', 'model': 'jev-1.13.0', 'max_retries': 0}}
+            before = int(server.read('count'))
+            run = subprocess.run([str(home/'consumer-bin')], input=json.dumps(fixture), env=env|{'THINKTHEN_API_KEY':'sk-conformance-loopback'}, cwd=home, text=True, capture_output=True, timeout=5)
+            assert run.returncode == 0, (identifier, run.stderr)
+            call = json.loads(run.stdout)
+            actual = {'value': call['Value'], 'probability': call['Probability'], 'results_count': len(call['Results']), 'requests_sent': call['Facts']['requests_sent']}
+            assert actual == expected and int(server.read('count')) == before + expected['requests_sent'], (identifier, actual, expected)
+        print('GO_CALL_RESULT_INSTALLED_PASS library-call-result decide refund and choose billing', flush=True)
         for case in cases:
             request=dict(case['request'])
             verb=next(v for v in ('decide','choose','tag','score','filter','rank','find','annotate','recognize','relate') if v in request)
@@ -110,6 +124,16 @@ with tempfile.TemporaryDirectory(prefix='thinkthen-go-shared-') as folder:
                 found=aggregates[-1]
                 actual=None if found['value'] is None else {'index':found['index'],'unit':found['value'],'probability':found['answer']['probabilities'][found['answer']['pick']]}
             assert checks.subset(actual,case['response']),(case['name'],actual,case['response'])
+            if verb in ('decide', 'choose', 'tag', 'score'):
+                assert call['Value'] == rows[0]['value'], (case['name'], call['Value'])
+            elif verb == 'filter':
+                assert call['Value'] == actual and call['Probability'] == [row['answer']['probability'] for row in rows], (case['name'], call)
+            elif verb == 'rank':
+                assert call['Value'] == [row['index'] for row in aggregates[-1]] and call['Probability'] == [row['answer']['probability'] for row in aggregates[-1]], (case['name'], call)
+            elif verb == 'find':
+                assert call['Value'] == aggregates[-1]['value'] and call['Probability'] == aggregates[-1]['answer']['probabilities'].get(aggregates[-1]['answer']['pick']), (case['name'], call)
+            if verb in ('tag', 'score', 'annotate'):
+                assert call['Probability'] is None, (case['name'], call['Probability'])
             assert facts['call_id'] and any(p['kind']=='observation' for p in packets),case['name']
             print('GO_SHARED_INSTALLED_PASS',case['name'],flush=True)
         # Cache and replay observations keep their native identity and send nothing.
