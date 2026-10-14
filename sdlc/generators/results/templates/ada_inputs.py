@@ -5,7 +5,7 @@ from templates.ada import identifier, enum_values, ada_string
 
 def friendly(raw):
     if raw == 'T_Authored_inputProperty_array_field_items': return 'Array_Item_Type'
-    semantic = {'T_Authored_options':'Choice_Options', 'T_Authored_questionText':'Question_Wording', 'T_Authored_threshold':'Probability_Band', 'T_Authored_labels':'Tag_Labels', 'T_Authored_levels':'Score_Levels'}
+    semantic = {'T_Authored_options':'Choice_Options', 'T_Authored_questionText':'Question_Wording', 'T_Authored_threshold':'Probability_Band', 'T_Authored_labels':'Tag_Labels', 'T_Authored_levels':'Score_Levels', 'T_Authored_questionBatch':'Question_Batch'}
     if raw in semantic: return semantic[raw]
     if raw == 'T_RecognizeQuestion': return 'Recognition_Rules'
     if raw == 'T_RelateQuestion': return 'Relation_Rules'
@@ -19,7 +19,7 @@ def friendly(raw):
     return {'JSON':'Value', 'Call':'Call', 'Engine_Settings':'Engine_Settings', 'Function':'Function_Kind'}.get(value, value)
 
 
-def outputs(definitions, names, schemas, metadata=None):
+def outputs(definitions, names, schemas, metadata=None, plan_definitions=None):
     representatives = {}
     ordered = sorted(names, key=lambda key: (identifier(key) != names[key], key))
     for key in ordered:
@@ -138,7 +138,8 @@ def outputs(definitions, names, schemas, metadata=None):
         variants = source.get('variants')
         branches = [(branch,{'$ref':'#/$defs/'+branch}) for branch,_ in variants] if variants else [(str(i),child) for i,child in enumerate(alternatives)]
         if branches and not values:
-            kind_labels = [label + '_' + (friendly(names[child['$ref'].removeprefix('#/$defs/')]) if '$ref' in child else str(actual(child).get('const', actual(child).get('type', 'Value'))).title()) for _,child in branches]
+            kind_labels = [label + '_' + (friendly(names[child['$ref'].removeprefix('#/$defs/')]).removeprefix(label + '_') if '$ref' in child else str(actual(child).get('const', actual(child).get('type', 'Value'))).title()) for _,child in branches]
+            kind_labels = [name + '_Case' for name in kind_labels]
             public.append('type ' + label + '_Kind is (' + ', '.join(kind_labels) + ');')
             public.append(f'function Kind (Item : Thinkthen.Inputs.{label}) return {label}_Kind;')
             bodies.append(f"function Kind (Item : Thinkthen.Inputs.{label}) return {label}_Kind is ({label}_Kind'Val (Requests.{raw}_Kind'Pos (Item.Data.Kind)));")
@@ -147,7 +148,7 @@ def outputs(definitions, names, schemas, metadata=None):
                 child_raw = names[host_key]
                 child_schema = actual(child)
                 child_label = public_names[child_raw]
-                suffix = friendly(child_raw) if variants else str(child_schema.get('const',child_schema.get('type','Value'))).title()
+                suffix = friendly(child_raw).removeprefix(label + '_') if variants else str(child_schema.get('const',child_schema.get('type','Value'))).title()
                 suffix = {'Null':'Null_Item', 'Integer':'Integer_Value'}.get(suffix,suffix)
                 signature = f'function {label}_From_{suffix}' + (f' (Item : {argument(child_raw)})' if child_label else '') + f' return Thinkthen.Inputs.{label}'
                 public.append(signature+';')
@@ -191,12 +192,41 @@ def outputs(definitions, names, schemas, metadata=None):
     if metadata is not None:
         metadata.update(public_names=public_names, scalar_kinds=scalar_kinds, representatives=representatives)
     call_spec = ['-- Generated named calls over friendly inputs.', 'with Thinkthen.Sessions;', 'package Thinkthen.Inputs.Calls is']
-    call_body = ['-- Generated native admission; Rust owns all question semantics.', 'with Thinkthen.Inputs.Native;', 'with Thinkthen.Requests; use Thinkthen.Requests;', 'package body Thinkthen.Inputs.Calls is']
+    call_body = ['-- Generated native admission; Rust owns all question semantics.', 'with Thinkthen.Inputs.Native;', 'with Thinkthen.Native_Sessions;', 'with Thinkthen.Requests; use Thinkthen.Requests;', 'package body Thinkthen.Inputs.Calls is']
     for function in enum_values(definitions['RequestFunction']):
         signature = f'procedure {function.title()} (Owner : in out Thinkthen.Sessions.Session; Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input; Options : Call_Options := No_Options)'
         shared = signature.replace('(Owner', '(Client : Engine; Owner')
         call_spec += [signature+';',shared+';']
         for declaration,owner in ((signature,'Owner'),(shared,'Client, Owner')):
-            call_body.append(declaration+' is\nbegin\nThinkthen.Sessions.Start ('+owner+', (T_question => Native.Unwrap (Question), T_input => Native.Unwrap (Input), T_options => Native.Unwrap (Options), others => <>), "'+function+'");\nend '+function.title()+';')
+            call_body.append(declaration+' is\nbegin\nThinkthen.Native_Sessions.Start ('+owner+', (T_question => Native.Unwrap (Question), T_input => Native.Unwrap (Input), T_options => Native.Unwrap (Options), others => <>), "'+function+'");\nend '+function.title()+';')
+    call_spec += ['procedure Configure (Client : in out Engine; Settings : Engine_Settings; Error : out Failure);',
+                  'procedure Push (Owner : in out Thinkthen.Sessions.Session; Item : Feed_Item; Status : out Thinkthen.Sessions.Push_Status);',
+                  'procedure Finish (Owner : in out Thinkthen.Sessions.Session; Error : Reader_Error);',
+                  'function Plan (Client : Engine; Function_Name : Function_Kind; Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input; Options : Call_Options := No_Options) return Plan_Estimate;']
+    call_body += ['procedure Push (Owner : in out Thinkthen.Sessions.Session; Item : Feed_Item; Status : out Thinkthen.Sessions.Push_Status) is\nbegin\nThinkthen.Native_Sessions.Push (Owner, Native.Unwrap (Item), Status);\nend Push;',
+                  'procedure Finish (Owner : in out Thinkthen.Sessions.Session; Error : Reader_Error) is\nbegin\nThinkthen.Native_Sessions.Finish (Owner, Native.Unwrap (Error));\nend Finish;']
+    call_body.insert(1, 'with Ada.Unchecked_Conversion;\nwith Interfaces.C.Strings;\nwith Thinkthen.Session_C;\nwith Thinkthen.Requests.Native;\nwith System;')
+    call_spec.insert(3, 'type Plan_Estimate is private;\ntype Token_Band is record Lower, Upper : Interfaces.Unsigned_64; end record;\ntype Optional_Text (Present : Boolean := False) is record\ncase Present is when True => Value : Ada.Strings.Unbounded.Unbounded_String; when False => null; end case;\nend record;')
+    for member, field in plan_definitions['plan']['properties'].items():
+        raw = 'Thinkthen.Values.Field_Value (Item.Data, "' + member + '")'
+        method = member.title()
+        kind = field.get('type')
+        if '$ref' in field:
+            target = 'Token_Band'
+            value = '(Lower => Interfaces.Unsigned_64\'Value (Thinkthen.Values.As_Number (Thinkthen.Values.Field_Value (' + raw + ', "lower"))), Upper => Interfaces.Unsigned_64\'Value (Thinkthen.Values.As_Number (Thinkthen.Values.Field_Value (' + raw + ', "upper"))))'
+        elif isinstance(kind, list):
+            target = 'Optional_Text'
+            value = '(if Thinkthen.Values.Kind (' + raw + ') = Thinkthen.Values.Null_Value then (Present => False) else (Present => True, Value => Ada.Strings.Unbounded.To_Unbounded_String (Thinkthen.Values.As_String (' + raw + '))))'
+        else:
+            target = {'integer':'Interfaces.Unsigned_64', 'boolean':'Boolean', 'string':'String'}[kind]
+            value = {'integer':"Interfaces.Unsigned_64'Value (Thinkthen.Values.As_Number (" + raw + '))', 'boolean':'Thinkthen.Values.As_Boolean (' + raw + ')', 'string':'Thinkthen.Values.As_String (' + raw + ')'}[kind]
+        signature = 'function ' + method + ' (Item : Plan_Estimate) return ' + target
+        call_spec.append(signature + ';')
+        call_body.append(signature + ' is (' + value + ');')
+    call_body.insert(next(i for i, line in enumerate(call_body) if line.startswith('package body')) + 1, 'use type Thinkthen.Values.Value_Kind;')
+    function_names = ', '.join('when Function_Kind_' + name.title() + ' => "' + name + '"' for name in enum_values(definitions['RequestFunction']))
+    call_body.append('function Plan (Client : Engine; Function_Name : Function_Kind; Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input; Options : Call_Options := No_Options) return Plan_Estimate is\nbegin\nreturn (Data => Thinkthen.Native_Sessions.Plan (Client, (T_question => Native.Unwrap (Question), T_input => Native.Unwrap (Input), T_options => Native.Unwrap (Options), others => <>), (case Function_Name is ' + function_names + ')));\nend Plan;')
+    call_body.append('procedure Configure (Client : in out Engine; Settings : Engine_Settings; Error : out Failure) is\nuse Thinkthen.Session_C;\nuse Interfaces.C;\nStorage : Thinkthen.Requests.Native.Arena;\ntype Settings_Access is access constant thinkthen_request_engine_settings_v1;\nfunction Pointer is new Ada.Unchecked_Conversion (System.Address, Settings_Access);\nTree : constant Settings_Access := Pointer (Thinkthen.Requests.Native.Convert (Native.Unwrap (Settings), Storage));\nReplacement : constant Engine_Access := Engine_Access (thinkthen_engine_new_typed (Tree));\nCode : int;\nbegin\nif Replacement = null then\nCode := thinkthen_error_code (null);\nif Code not in 1 .. 6 then raise Program_Error with "unknown native error kind"; end if;\nError := (Kind => Error_Kind\'Val (Code), Retryable => thinkthen_error_retryable (null) /= 0,\nText => Ada.Strings.Unbounded.To_Unbounded_String (Interfaces.C.Strings.Value (thinkthen_error_message (null))));\nelse\nthinkthen_engine_free (Engine_Pointer (Client.Handle));\nClient.Handle := Engine_Address (Replacement);\nError := (others => <>);\nend if;\nend Configure;')
+    call_spec += ['private', 'type Plan_Estimate is record Data : Thinkthen.Values.Value; end record;']
     call_spec.append('end Thinkthen.Inputs.Calls;'); call_body.append('end Thinkthen.Inputs.Calls;')
     return {'thinkthen-inputs.ads':spec, 'thinkthen-inputs.adb':body, 'thinkthen-inputs-native.ads':bridge_spec,'thinkthen-inputs-native.adb':bridge_body, 'thinkthen-inputs-calls.ads':'\n'.join(call_spec)+'\n', 'thinkthen-inputs-calls.adb':'\n'.join(call_body)+'\n'}

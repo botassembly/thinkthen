@@ -5,12 +5,13 @@ with Ada.Unchecked_Conversion;
 with Ada.Strings.Fixed;
 with System;
 with Interfaces.C;
-with Thinkthen_Session_C;
+with Thinkthen.Native_Sessions; use Thinkthen.Native_Sessions;
+with Thinkthen.Session_C;
 package body Thinkthen.Answers is
    use Ada.Strings.Unbounded;
    use Thinkthen.Values;
    use Thinkthen.Sessions;
-   use Thinkthen_Session_C;
+   use Thinkthen.Session_C;
    use Interfaces.C;
    use type Interfaces.Unsigned_32;
    package Packet_Lists is new Ada.Containers.Vectors (Positive, Value);
@@ -5544,7 +5545,7 @@ end Read_thinkthen_complete_session_packet_v1;
       Result : Completion;
    begin
       loop
-         Next_Packet (Owner, Packet, Read);
+         Thinkthen.Sessions.Next_Packet (Owner, Packet, Read);
          exit when Read = Finished;
          if Read /= Thinkthen.Sessions.Result then
             Result.Valid := False;
@@ -5751,14 +5752,14 @@ Item : constant Value := Answer (Call, "tag", "tags");
 begin
 return Texts (Item);
 end Tag_Answer;
-function Filter_Answer (Call : Completion) return Boolean_List is
+function Filter_Answer (Call : Completion) return Thinkthen.Values.Value_List is
 Item : constant Value := Answer (Call, "filter", "");
 begin
 declare
-Items : Boolean_List (1 .. Length (Item));
+Items : Thinkthen.Values.Value_List (1 .. Length (Item));
 begin
 for I in Items'Range loop
-Items (I) := As_Boolean (Field_Value (Element (Item, I), "value"));
+Items (I) := Field_Value (Element (Item, I), "input");
 end loop;
 return Items;
 end;
@@ -5770,7 +5771,7 @@ declare
 Items : Rank_List (1 .. Length (Item));
 begin
 for I in Items'Range loop
-Items (I) := Interfaces.Unsigned_64'Value (As_Number (Field_Value (Element (Item, I), "value")));
+Items (I) := Interfaces.Unsigned_64'Value (As_Number (Field_Value (Element (Item, I), "index")));
 end loop;
 return Items;
 end;
@@ -5825,7 +5826,7 @@ begin
 Call := Collect (Owner);
 return Score_Answer (Call);
 end Score_Answer;
-function Filter_Answer (Owner : in out Thinkthen.Sessions.Session; Call : in out Completion) return Boolean_List is
+function Filter_Answer (Owner : in out Thinkthen.Sessions.Session; Call : in out Completion) return Thinkthen.Values.Value_List is
 begin
 Call := Collect (Owner);
 return Filter_Answer (Call);

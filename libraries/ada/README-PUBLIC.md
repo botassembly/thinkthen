@@ -13,7 +13,7 @@ procedure Registry_Example is
       (To_Unbounded_String ("billing"), description_From_String ("Invoices, fees, and refunds.")),
       (To_Unbounded_String ("shipping"), description_From_String ("Parcels and delivery.")),
       (To_Unbounded_String ("account"), description_From_String ("Logins and passwords."))];
-   Team_Question : constant Question := Definition_Question (Definition_From_Definition_choose (
+   Team_Question : constant Question := Definition_Question (Definition_From_choose (
       With_Options (Make_Definition_choose (Question_Wording_From_String ("Which team owns this?")), Choice_Options_From_Object (Teams))));
    Refunds : constant Texts := [To_Unbounded_String ("Please refund my order. It arrived broken."),
       To_Unbounded_String ("Thanks for the quick help yesterday!"), To_Unbounded_String ("I want to send this back.")];

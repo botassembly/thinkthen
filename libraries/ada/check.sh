@@ -7,9 +7,9 @@ case "${THINKTHEN_TEST_PROFILE:-routine}" in routine|full|smoke) ;; stress) exit
 for tool in gprbuild gnatmake gcc python3 flock nm node; do
   command -v "$tool" >/dev/null 2>&1 || { echo "Ada gate missing $tool" >&2; exit 77; }
 done
-lock=${THINKTHEN_HEAVY_LOCK:-/run/user/1000/thinkthen-heavy.lock}
-if [ "${TT_ADA_LOCKED:-0}" != 1 ] && [ "${THINKTHEN_HEAVY_LOCK_HELD:-}" != "$lock" ]; then
-  TT_ADA_LOCKED=1 exec flock -w 180 -E 75 -o "$lock" env TT_ADA_LOCKED=1 "$0" "$@"
+lock=${THINKTHEN_HEAVY_LOCK:-/tmp/thinkthen-heavy.lock}
+if [ "${THINKTHEN_HEAVY_LOCK_HELD:-}" != "$lock" ]; then
+  exec python3 "$REPO/sdlc/scripts/build-admission.py" --lock "$lock" -- /bin/sh "$0" "$@"
 fi
 . "$REPO/sdlc/scripts/scratch.sh"
 usage_home
@@ -17,10 +17,12 @@ scratch_dir fixture_config
 export XDG_CONFIG_HOME="$fixture_config"
 unset THINKTHEN_API_KEY
 export CARGO_NET_OFFLINE=true CARGO_BUILD_RUSTC_WRAPPER= RUSTC_WRAPPER=
-export CARGO_TARGET_DIR=${CARGO_TARGET_DIR:-$REPO/libraries/c/target}
+export RUSTFLAGS="${RUSTFLAGS:+$RUSTFLAGS }--remap-path-prefix=$HOME=/build --remap-path-prefix=$REPO=/build/thinkthen"
+export CFLAGS="${CFLAGS:+$CFLAGS }-ffile-prefix-map=$HOME=/build -ffile-prefix-map=$REPO=/build/thinkthen"
+export CARGO_TARGET_DIR=${CARGO_TARGET_DIR:-/tmp/thinkthen-target-ada}
 THINKTHEN_C_LIBRARY=${THINKTHEN_C_LIBRARY:-$CARGO_TARGET_DIR/debug/libthinkthen_c.so}
 THINKTHEN_C_STATIC_LIBRARY=${THINKTHEN_C_STATIC_LIBRARY:-$CARGO_TARGET_DIR/debug/libthinkthen_c.a}
-THINKTHEN_BACKEND_BIN=${THINKTHEN_BACKEND_BIN:-$REPO/target/debug/conformance-backend}
+THINKTHEN_BACKEND_BIN=${THINKTHEN_BACKEND_BIN:-$CARGO_TARGET_DIR/debug/conformance-backend}
 export THINKTHEN_C_LIBRARY THINKTHEN_C_STATIC_LIBRARY THINKTHEN_BACKEND_BIN
 if [ -n "${THINKTHEN_C_ARTIFACT:-}" ]; then
   . "$REPO/sdlc/scripts/installed.sh"
@@ -29,11 +31,11 @@ if [ -n "${THINKTHEN_C_ARTIFACT:-}" ]; then
   THINKTHEN_C_LIBRARY=$native/lib/libthinkthen.so
   THINKTHEN_C_STATIC_LIBRARY=$native/lib/libthinkthen.a
 fi
-if [ ! -f "$THINKTHEN_C_LIBRARY" ] || [ ! -f "$THINKTHEN_C_STATIC_LIBRARY" ]; then
+if [ -z "${THINKTHEN_C_ARTIFACT:-}" ]; then
   cargo build --locked --offline --manifest-path "$REPO/libraries/c/Cargo.toml" --lib -j2
 fi
 if [ ! -x "$THINKTHEN_BACKEND_BIN" ]; then
-  CARGO_TARGET_DIR="$REPO/target" cargo build --locked --offline --manifest-path "$REPO/Cargo.toml" --package conformance-backend -j2
+  cargo build --locked --offline --manifest-path "$REPO/Cargo.toml" --package conformance-backend -j2
 fi
 python3 "$ROOT/checks/privacy.py"
 for config in "$ROOT"/ratchet.*.json; do node "$REPO/sdlc/scripts/ratchet.mjs" "$config"; done

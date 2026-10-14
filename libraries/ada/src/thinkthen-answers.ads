@@ -52,7 +52,6 @@ package Thinkthen.Answers is
       end case;
    end record;
    type Text_List is array (Positive range <>) of Ada.Strings.Unbounded.Unbounded_String;
-   type Boolean_List is array (Positive range <>) of Boolean;
    type Rank_List is array (Positive range <>) of Interfaces.Unsigned_64;
    type Find_Result is private;
    type Annotation is private;
@@ -90,7 +89,7 @@ function Decide_Answer (Call : Completion) return Decision;
 function Choose_Answer (Call : Completion) return Choice;
 function Score_Answer (Call : Completion) return Long_Float;
 function Tag_Answer (Call : Completion) return Text_List;
-function Filter_Answer (Call : Completion) return Boolean_List;
+function Filter_Answer (Call : Completion) return Thinkthen.Values.Value_List;
 function Rank_Answer (Call : Completion) return Rank_List;
 function Find_Answer (Call : Completion) return Find_Result;
 function Annotate_Answer (Call : Completion) return Annotation_List;
@@ -100,7 +99,7 @@ function Decide_Answer (Owner : in out Thinkthen.Sessions.Session; Call : in out
 function Choose_Answer (Owner : in out Thinkthen.Sessions.Session; Call : in out Completion) return Choice;
 function Tag_Answer (Owner : in out Thinkthen.Sessions.Session; Call : in out Completion) return Text_List;
 function Score_Answer (Owner : in out Thinkthen.Sessions.Session; Call : in out Completion) return Long_Float;
-function Filter_Answer (Owner : in out Thinkthen.Sessions.Session; Call : in out Completion) return Boolean_List;
+function Filter_Answer (Owner : in out Thinkthen.Sessions.Session; Call : in out Completion) return Thinkthen.Values.Value_List;
 function Rank_Answer (Owner : in out Thinkthen.Sessions.Session; Call : in out Completion) return Rank_List;
 function Find_Answer (Owner : in out Thinkthen.Sessions.Session; Call : in out Completion) return Find_Result;
 function Annotate_Answer (Owner : in out Thinkthen.Sessions.Session; Call : in out Completion) return Annotation_List;

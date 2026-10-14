@@ -22,8 +22,8 @@ end Thinkthen_Kinds;
 '''
     kinds_body = '''-- Generated native kinds and diagnostics; do not edit.
 with Interfaces.C.Strings;
-with Thinkthen_Session_C; use Thinkthen_Session_C;
 package body Thinkthen_Kinds is
+function thinkthen_session_error_message return Interfaces.C.Strings.chars_ptr with Import, Convention => C, External_Name => "thinkthen_session_error_message";
 use type Interfaces.C.int;
 procedure Check (Code : Interfaces.C.int) is
 begin
@@ -33,6 +33,8 @@ begin case Code is
 ''' + '\n'.join('when K_' + symbol + ' => raise ' + name + '_Error with Message;' for _, name, symbol in errors) + '\nwhen others => raise Native_Error with Message;\nend case; end; end Check;\n'
     kinds_body += 'function Failure_Kind_For (Kind : Interfaces.Unsigned_32) return Error_Status is\n(case Kind is\n' + ',\n'.join('when K_THINKTHEN_COMPLETE_FAILURE_KIND_' + name.upper() + '_V1 => ' + name for _, name, _ in errors) + ',\nwhen others => Defect);\n'
     kinds_body += 'function Persistence_State_For (Kind : Interfaces.Unsigned_32) return Persistence_State is\n(case Kind is\n' + ',\n'.join('when K_' + symbol + ' => ' + name for _, name, symbol in persistence) + ',\nwhen others => raise Program_Error with "unknown native persistence state");\nend Thinkthen_Kinds;\n'
+    for symbol, value in constants.items():
+        kinds_body = re.sub(r'\bK_' + symbol + r'\b', str(value), kinds_body)
     usage_spec = '''-- Generated native usage status wrappers; do not edit.
 with Ada.Strings.Unbounded;
 with Thinkthen_Kinds;
@@ -48,8 +50,9 @@ end Thinkthen.Persistence;
 '''
     usage_body = '''-- Generated native usage status wrappers; do not edit.
 with Interfaces.C;
+with Thinkthen.Native_Sessions;
 with Thinkthen.Sessions;
-with Thinkthen_Session_C; use Thinkthen_Session_C;
+with Thinkthen.Session_C; use Thinkthen.Session_C;
 package body Thinkthen.Persistence is
 function Observe (Client : Engine; Finish : Boolean) return Observation is
 State : aliased thinkthen_complete_usage_persistence_v1;
@@ -57,13 +60,13 @@ Advice : aliased thinkthen_complete_utf8_v1;
 Code : Interfaces.C.int;
 begin
 if Finish then
-Code := thinkthen_engine_finish_usage_status_v1 (Client.Handle, State'Access, Advice'Access);
+Code := thinkthen_engine_finish_usage_status_v1 (Engine_Pointer (Client.Handle), State'Access, Advice'Access);
 else
-Code := thinkthen_engine_usage_persistence_v1 (Client.Handle, State'Access, Advice'Access);
+Code := thinkthen_engine_usage_persistence_v1 (Engine_Pointer (Client.Handle), State'Access, Advice'Access);
 end if;
 Thinkthen_Kinds.Check (Code);
 return (State => Persistence_State (Thinkthen_Kinds.Persistence_State_For (State.kind)),
-Advice => Ada.Strings.Unbounded.To_Unbounded_String (Thinkthen.Sessions.Text (Advice)));
+Advice => Ada.Strings.Unbounded.To_Unbounded_String (Thinkthen.Native_Sessions.Text (Advice)));
 end Observe;
 function Usage_Persistence (Client : Engine) return Observation is (Observe (Client, False));
 function Finish_Usage_Status (Client : Engine) return Observation is (Observe (Client, True));

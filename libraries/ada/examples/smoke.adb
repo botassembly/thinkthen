@@ -1,45 +1,20 @@
-with Ada.Environment_Variables; use Ada.Environment_Variables;
-with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
-with Interfaces; use type Interfaces.Unsigned_32;
-with Ada.Text_IO; use Ada.Text_IO;
-with Thinkthen.Requests; use Thinkthen.Requests;
-with Thinkthen.Sessions; use Thinkthen.Sessions;
-with Thinkthen.Sessions.Calls;
-with Thinkthen_Session_C; use Thinkthen_Session_C;
+with Ada.Environment_Variables;
+with Ada.Text_IO;
+with Thinkthen.Inputs;
+with Thinkthen.Inputs.Calls;
+with Thinkthen.Sessions;
+with Thinkthen.Answers;
 procedure Smoke is
-   Owner : Session;
-   Answer : Packet;
-   Read : Read_Status;
-   Request : T_RequestCall;
+   Owner : Thinkthen.Sessions.Session;
+   Completed : Thinkthen.Answers.Completion;
 begin
-   Request.T_question.V_0.T_text := T_Text
-     (Ada.Strings.Unbounded.To_Unbounded_String (Value ("THINKTHEN_TEST_SMOKE_QUESTION")));
-   Request.T_input.V_0.T_text := T_Text
-     (Ada.Strings.Unbounded.To_Unbounded_String (Value ("THINKTHEN_TEST_SMOKE_TEXT")));
-   Thinkthen.Sessions.Calls.Decide (Owner, Request);
-   Finish (Owner);
-   loop
-      Next_Packet (Owner, Answer, Read);
-      case Read is
-         when Pending => raise Program_Error with "blocking read returned pending";
-         when Finished => exit;
-         when Result =>
-            if Status (Answer) /= Success then raise Program_Error with "smoke judgment failed"; end if;
-            declare
-               P : constant access constant thinkthen_complete_session_packet_v1 := View (Answer);
-            begin
-               if P.kind = K_THINKTHEN_COMPLETE_SESSION_PACKET_DECIDE_ROW_V1 then
-                  case State (P.data.decide_row.value.value.presence) is
-                     when Null_Value => Put_Line ("smoke: null");
-                     when Missing => raise Program_Error with "smoke answer missing";
-                     when Present =>
-                        if P.data.decide_row.value.value.value.value.data.boolean = 1 then
-                           Put_Line ("smoke: true");
-                        else Put_Line ("smoke: false");
-                        end if;
-                  end case;
-               end if;
-            end;
-      end case;
-   end loop;
+   Thinkthen.Inputs.Calls.Decide (Owner,
+     Thinkthen.Inputs.Text_Question (Ada.Environment_Variables.Value ("THINKTHEN_TEST_SMOKE_QUESTION")),
+     Thinkthen.Inputs.Text_Input (Ada.Environment_Variables.Value ("THINKTHEN_TEST_SMOKE_TEXT")));
+   Thinkthen.Sessions.Finish (Owner);
+   declare Answer : constant Thinkthen.Answers.Decision := Thinkthen.Answers.Decide_Answer (Owner, Completed);
+   begin
+      Ada.Text_IO.Put_Line (if not Answer.Known then "smoke: null"
+        elsif Answer.Value then "smoke: true" else "smoke: false");
+   end;
 end Smoke;

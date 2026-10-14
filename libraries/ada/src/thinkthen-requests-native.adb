@@ -3,7 +3,7 @@ with Ada.Unchecked_Conversion;
 with Ada.Unchecked_Deallocation;
 with Interfaces.C.Strings;
 with System.Address_To_Access_Conversions;
-with Thinkthen_Session_C; use Thinkthen_Session_C;
+with Thinkthen.Session_C; use Thinkthen.Session_C;
 with Thinkthen.Values;
 package body Thinkthen.Requests.Native is
 use Interfaces.C;
@@ -83,6 +83,9 @@ function Store_thinkthen_request_batch_v1 is new Store (thinkthen_request_batch_
 type A_thinkthen_request_boolean_v1 is access all thinkthen_request_boolean_v1;
 function P_thinkthen_request_boolean_v1 is new Ada.Unchecked_Conversion (System.Address, A_thinkthen_request_boolean_v1);
 function Store_thinkthen_request_boolean_v1 is new Store (thinkthen_request_boolean_v1);
+type A_thinkthen_request_cache_document_v1 is access all thinkthen_request_cache_document_v1;
+function P_thinkthen_request_cache_document_v1 is new Ada.Unchecked_Conversion (System.Address, A_thinkthen_request_cache_document_v1);
+function Store_thinkthen_request_cache_document_v1 is new Store (thinkthen_request_cache_document_v1);
 type A_thinkthen_request_call_options_v1 is access all thinkthen_request_call_options_v1;
 function P_thinkthen_request_call_options_v1 is new Ada.Unchecked_Conversion (System.Address, A_thinkthen_request_call_options_v1);
 function Store_thinkthen_request_call_options_v1 is new Store (thinkthen_request_call_options_v1);
@@ -118,9 +121,6 @@ function Store_thinkthen_request_definition_authored_find_v1 is new Store (think
 type A_thinkthen_request_definition_authored_relate_v1 is access all thinkthen_request_definition_authored_relate_v1;
 function P_thinkthen_request_definition_authored_relate_v1 is new Ada.Unchecked_Conversion (System.Address, A_thinkthen_request_definition_authored_relate_v1);
 function Store_thinkthen_request_definition_authored_relate_v1 is new Store (thinkthen_request_definition_authored_relate_v1);
-type A_thinkthen_request_definition_authored_score_batch_v1 is access all thinkthen_request_definition_authored_score_batch_v1;
-function P_thinkthen_request_definition_authored_score_batch_v1 is new Ada.Unchecked_Conversion (System.Address, A_thinkthen_request_definition_authored_score_batch_v1);
-function Store_thinkthen_request_definition_authored_score_batch_v1 is new Store (thinkthen_request_definition_authored_score_batch_v1);
 type A_thinkthen_request_definition_authored_score_v1 is access all thinkthen_request_definition_authored_score_v1;
 function P_thinkthen_request_definition_authored_score_v1 is new Ada.Unchecked_Conversion (System.Address, A_thinkthen_request_definition_authored_score_v1);
 function Store_thinkthen_request_definition_authored_score_v1 is new Store (thinkthen_request_definition_authored_score_v1);
@@ -141,6 +141,16 @@ function Store_thinkthen_request_description_map_v1 is new Store (thinkthen_requ
 type A_thinkthen_request_description_v1 is access all thinkthen_request_description_v1;
 function P_thinkthen_request_description_v1 is new Ada.Unchecked_Conversion (System.Address, A_thinkthen_request_description_v1);
 function Store_thinkthen_request_description_v1 is new Store (thinkthen_request_description_v1);
+type A_thinkthen_request_disabled_cache_v1 is access all thinkthen_request_disabled_cache_v1;
+function P_thinkthen_request_disabled_cache_v1 is new Ada.Unchecked_Conversion (System.Address, A_thinkthen_request_disabled_cache_v1);
+function Store_thinkthen_request_disabled_cache_v1 is new Store (thinkthen_request_disabled_cache_v1);
+type A_thinkthen_request_engine_settings_max_estimated_input_tokens_total_v1 is access all thinkthen_request_engine_settings_max_estimated_input_tokens_total_v1;
+function P_thinkthen_request_engine_settings_max_estimated_input_tokens_total_v1 is new Ada.Unchecked_Conversion (System.Address, A_thinkthen_request_engine_settings_max_estimated_input_tokens_total_v1);
+function Store_thinkthen_request_engine_settings_max_estimated_input_tokens_total_v1 is new Store (thinkthen_request_engine_settings_max_estimated_input_tokens_total_v1);
+type A_thinkthen_request_engine_settings_max_requests_v1 is access all thinkthen_request_engine_settings_max_requests_v1;
+function P_thinkthen_request_engine_settings_max_requests_v1 is new Ada.Unchecked_Conversion (System.Address, A_thinkthen_request_engine_settings_max_requests_v1);
+function Store_thinkthen_request_engine_settings_max_requests_v1 is new Store (thinkthen_request_engine_settings_max_requests_v1);
+function Store_thinkthen_request_engine_settings_v1 is new Store (thinkthen_request_engine_settings_v1);
 type A_thinkthen_request_framing_v1 is access all thinkthen_request_framing_v1;
 function P_thinkthen_request_framing_v1 is new Ada.Unchecked_Conversion (System.Address, A_thinkthen_request_framing_v1);
 function Store_thinkthen_request_framing_v1 is new Store (thinkthen_request_framing_v1);
@@ -324,6 +334,9 @@ function Store_thinkthen_request_pointers_v1 is new Store (thinkthen_request_poi
 type A_thinkthen_request_profile_v1 is access all thinkthen_request_profile_v1;
 function P_thinkthen_request_profile_v1 is new Ada.Unchecked_Conversion (System.Address, A_thinkthen_request_profile_v1);
 function Store_thinkthen_request_profile_v1 is new Store (thinkthen_request_profile_v1);
+type A_thinkthen_request_question_batch_v1 is access all thinkthen_request_question_batch_v1;
+function P_thinkthen_request_question_batch_v1 is new Ada.Unchecked_Conversion (System.Address, A_thinkthen_request_question_batch_v1);
+function Store_thinkthen_request_question_batch_v1 is new Store (thinkthen_request_question_batch_v1);
 type A_thinkthen_request_question_selector_definition_v1 is access all thinkthen_request_question_selector_definition_v1;
 function P_thinkthen_request_question_selector_definition_v1 is new Ada.Unchecked_Conversion (System.Address, A_thinkthen_request_question_selector_definition_v1);
 function Store_thinkthen_request_question_selector_definition_v1 is new Store (thinkthen_request_question_selector_definition_v1);
@@ -471,6 +484,7 @@ end Convert_Json_Value;
 function Convert_RequestCall_RequestArguments (Value : T_RequestCall; Storage : in out Arena) return System.Address;
 function Convert_RequestSessionDescriptor_RequestSessionDescriptor (Value : T_RequestSessionDescriptor; Storage : in out Arena) return System.Address;
 function Convert_RequestReaderFailure_RequestReaderFailure (Value : T_RequestReaderFailure; Storage : in out Arena) return System.Address;
+function Convert_EngineSettings_EngineSettings (Value : T_EngineSettings; Storage : in out Arena) return System.Address;
 function Convert_RequestInput_RequestInput (Value : T_RequestInput; Storage : in out Arena) return System.Address;
 function Convert_RequestOptions_RequestOptions (Value : T_RequestOptions; Storage : in out Arena) return System.Address;
 function Convert_RequestQuestion_RequestQuestion (Value : T_RequestQuestion; Storage : in out Arena) return System.Address;
@@ -480,6 +494,25 @@ function Convert_RequestReaderFailure_producer_RequestReaderFailure_producer (Va
 function Convert_RequestReaderFailure_io_RequestReaderFailure_io (Value : T_RequestReaderFailure_io; Storage : in out Arena) return System.Address;
 function Convert_RequestReaderFailure_utf8_RequestReaderFailure_utf8 (Value : T_RequestReaderFailure_utf8; Storage : in out Arena) return System.Address;
 function Convert_RequestReaderFailure_invalid_input_RequestReaderFailure_invalid_input (Value : T_RequestReaderFailure_invalid_input; Storage : in out Arena) return System.Address;
+function Convert_EngineSettings_field_backend_Text (Value : T_Text; Storage : in out Arena) return System.Address;
+function Convert_EngineSettings_field_base_url_Text (Value : T_Text; Storage : in out Arena) return System.Address;
+function Convert_RequestBatch_RequestBatch (Value : T_RequestBatch; Storage : in out Arena) return System.Address;
+function Convert_CacheDocument_CacheDocument (Value : T_CacheDocument; Storage : in out Arena) return System.Address;
+function Convert_EngineSettings_field_max_estimated_input_tokens_total_EngineSettings_max_estimated_input_tokens_total (Value : T_EngineSettings_field_max_estimated_input_tokens_total; Storage : in out Arena) return System.Address;
+function Convert_EngineSettings_field_max_request_bytes_Unsigned (Value : T_Unsigned; Storage : in out Arena) return System.Address;
+function Convert_EngineSettings_field_max_requests_EngineSettings_max_requests (Value : T_EngineSettings_field_max_requests; Storage : in out Arena) return System.Address;
+function Convert_EngineSettings_field_max_requests_total_EngineSettings_max_estimated_input_tokens_total (Value : T_EngineSettings_field_max_requests_total; Storage : in out Arena) return System.Address;
+function Convert_EngineSettings_field_max_retries_Unsigned (Value : T_Unsigned; Storage : in out Arena) return System.Address;
+function Convert_EngineSettings_field_model_Text (Value : T_Text; Storage : in out Arena) return System.Address;
+function Convert_EngineSettings_field_profile_Text (Value : T_Text; Storage : in out Arena) return System.Address;
+function Convert_EngineSettings_field_proxy_JsonValue (Value : T_JSON; Storage : in out Arena) return System.Address;
+function Convert_EngineSettings_field_record_Text (Value : T_Text; Storage : in out Arena) return System.Address;
+function Convert_EngineSettings_field_refresh_cache_Boolean (Value : T_Boolean; Storage : in out Arena) return System.Address;
+function Convert_EngineSettings_field_replay_Text (Value : T_Text; Storage : in out Arena) return System.Address;
+function Convert_EngineSettings_field_throttle_Unsigned (Value : T_Unsigned; Storage : in out Arena) return System.Address;
+function Convert_EngineSettings_field_timeout_Unsigned (Value : T_Unsigned; Storage : in out Arena) return System.Address;
+function Convert_EngineSettings_field_usd_per_million_input_Text (Value : T_Text; Storage : in out Arena) return System.Address;
+function Convert_EngineSettings_field_usd_per_million_output_Text (Value : T_Text; Storage : in out Arena) return System.Address;
 function Convert_RequestInput_text_RequestInput_text (Value : T_RequestInput_text; Storage : in out Arena) return System.Address;
 function Convert_RequestInput_json_RequestInput_json (Value : T_RequestInput_json; Storage : in out Arena) return System.Address;
 function Convert_RequestInput_records_RequestInput_records (Value : T_RequestInput_records; Storage : in out Arena) return System.Address;
@@ -488,7 +521,6 @@ function Convert_RequestInput_entities_RequestInput_entities (Value : T_RequestI
 function Convert_RequestInput_source_RequestInput_source (Value : T_RequestInput_source; Storage : in out Arena) return System.Address;
 function Convert_RequestInput_feed_RequestInput_feed (Value : T_RequestInput_feed; Storage : in out Arena) return System.Address;
 function Convert_RequestOptions_field_attempts_Boolean (Value : T_Boolean; Storage : in out Arena) return System.Address;
-function Convert_RequestBatch_RequestBatch (Value : T_RequestBatch; Storage : in out Arena) return System.Address;
 function Convert_RequestOptions_field_context_Text (Value : T_Text; Storage : in out Arena) return System.Address;
 function Convert_RequestOptions_field_context_field_Text (Value : T_Text; Storage : in out Arena) return System.Address;
 function Convert_RequestOptions_field_deadline_ms_Integer (Value : T_Integer; Storage : in out Arena) return System.Address;
@@ -522,6 +554,16 @@ function Convert_RequestItem_field_seed_spans_RecognitionSeedSpan_list (Value : 
 function Convert_SessionSourceLocation_field_file_Text (Value : T_Text; Storage : in out Arena) return System.Address;
 function Convert_SessionSourceLocation_field_first_line_Unsigned (Value : T_Unsigned; Storage : in out Arena) return System.Address;
 function Convert_SessionSourceLocation_field_last_line_Unsigned (Value : T_Unsigned; Storage : in out Arena) return System.Address;
+function Convert_RequestBatch_value_0_Unsigned (Value : T_Unsigned; Storage : in out Arena) return System.Address;
+function Convert_RequestBatch_value_1_Text (Value : T_Text; Storage : in out Arena) return System.Address;
+function Convert_CacheDocument_value_0_Text (Value : T_Text; Storage : in out Arena) return System.Address;
+function Convert_DisabledCache_DisabledCache (Value : T_DisabledCache; Storage : in out Arena) return System.Address;
+function Convert_EngineSettings_field_max_estimated_input_tokens_total_value_0_Unsigned (Value : T_Unsigned; Storage : in out Arena) return System.Address;
+function Convert_EngineSettings_field_max_estimated_input_tokens_total_value_1_Null (Value : T_Null; Storage : in out Arena) return System.Address;
+function Convert_EngineSettings_field_max_requests_value_0_Unsigned (Value : T_Unsigned; Storage : in out Arena) return System.Address;
+function Convert_EngineSettings_field_max_requests_value_1_Null (Value : T_Null; Storage : in out Arena) return System.Address;
+function Convert_EngineSettings_field_max_requests_total_value_0_Unsigned (Value : T_Unsigned; Storage : in out Arena) return System.Address;
+function Convert_EngineSettings_field_max_requests_total_value_1_Null (Value : T_Null; Storage : in out Arena) return System.Address;
 function Convert_RequestInput_text_field_images_RequestImage_list (Value : T_RequestImage_List; Storage : in out Arena) return System.Address;
 function Convert_RequestInput_text_field_text_Text (Value : T_Text; Storage : in out Arena) return System.Address;
 function Convert_RequestInput_json_field_images_RequestImage_list (Value : T_RequestImage_List; Storage : in out Arena) return System.Address;
@@ -534,8 +576,6 @@ function Convert_RequestFraming_RequestFraming (Value : T_RequestFraming; Storag
 function Convert_RequestInput_feed_field_images_RequestImage_list (Value : T_RequestImage_List; Storage : in out Arena) return System.Address;
 function Convert_RequestInput_feed_field_name_Text (Value : T_Text; Storage : in out Arena) return System.Address;
 function Convert_RequestReader_RequestReader (Value : T_RequestReader; Storage : in out Arena) return System.Address;
-function Convert_RequestBatch_value_0_Unsigned (Value : T_Unsigned; Storage : in out Arena) return System.Address;
-function Convert_RequestBatch_value_1_Text (Value : T_Text; Storage : in out Arena) return System.Address;
 function Convert_RecognitionExample_RecognitionExample (Value : T_RecognitionExample; Storage : in out Arena) return System.Address;
 function Convert_RequestOptions_field_field_element_Text (Value : T_Text; Storage : in out Arena) return System.Address;
 function Convert_RequestThreshold_value_0_Number (Value : T_Number; Storage : in out Arena) return System.Address;
@@ -583,7 +623,7 @@ function Convert_RequestSource_field_paths_element_Text (Value : T_Text; Storage
 function Convert_RecognitionExampleText_field_entities_RecognitionExampleEntity_list (Value : T_RecognitionExampleEntity_List; Storage : in out Arena) return System.Address;
 function Convert_RecognitionExampleText_field_kinds_Text_list (Value : T_Text_List; Storage : in out Arena) return System.Address;
 function Convert_RecognitionExampleText_field_text_Text (Value : T_Text; Storage : in out Arena) return System.Address;
-function Convert_RequestDefinition_Authored_decide_field_batch_RequestDefinition_Authored_score_batch (Value : T_RequestDefinition_Authored_decide_field_batch; Storage : in out Arena) return System.Address;
+function Convert_Authored_questionBatch_Authored_questionBatch (Value : T_Authored_questionBatch; Storage : in out Arena) return System.Address;
 function Convert_Authored_inputDeclaration_Authored_inputDeclaration (Value : T_Authored_inputDeclaration; Storage : in out Arena) return System.Address;
 function Convert_Authored_questionText_Authored_questionText (Value : T_Authored_questionText; Storage : in out Arena) return System.Address;
 function Convert_Authored_criterion_Authored_criterion (Value : T_Authored_criterion; Storage : in out Arena) return System.Address;
@@ -593,16 +633,13 @@ function Convert_Authored_pointers_Authored_pointers (Value : T_Authored_pointer
 function Convert_Authored_profile_Authored_profile (Value : T_Authored_profile; Storage : in out Arena) return System.Address;
 function Convert_Authored_threshold_Authored_threshold (Value : T_Authored_threshold; Storage : in out Arena) return System.Address;
 function Convert_RequestDefinition_Authored_decide_field_wording_version_Integer (Value : T_Integer; Storage : in out Arena) return System.Address;
-function Convert_RequestDefinition_Authored_choose_field_batch_RequestDefinition_Authored_score_batch (Value : T_RequestDefinition_Authored_choose_field_batch; Storage : in out Arena) return System.Address;
 function Convert_RequestDefinition_Authored_choose_field_name_Text (Value : T_Text; Storage : in out Arena) return System.Address;
 function Convert_Authored_options_Authored_options (Value : T_Authored_options; Storage : in out Arena) return System.Address;
 function Convert_Authored_cut_Authored_cut (Value : T_Authored_cut; Storage : in out Arena) return System.Address;
 function Convert_RequestDefinition_Authored_choose_field_wording_version_Integer (Value : T_Integer; Storage : in out Arena) return System.Address;
-function Convert_RequestDefinition_Authored_tag_field_batch_RequestDefinition_Authored_score_batch (Value : T_RequestDefinition_Authored_tag_field_batch; Storage : in out Arena) return System.Address;
 function Convert_Authored_labels_Authored_labels (Value : T_Authored_labels; Storage : in out Arena) return System.Address;
 function Convert_RequestDefinition_Authored_tag_field_name_Text (Value : T_Text; Storage : in out Arena) return System.Address;
 function Convert_RequestDefinition_Authored_tag_field_wording_version_Integer (Value : T_Integer; Storage : in out Arena) return System.Address;
-function Convert_RequestDefinition_Authored_score_field_batch_RequestDefinition_Authored_score_batch (Value : T_RequestDefinition_Authored_score_field_batch; Storage : in out Arena) return System.Address;
 function Convert_Authored_levels_Authored_levels (Value : T_Authored_levels; Storage : in out Arena) return System.Address;
 function Convert_RequestDefinition_Authored_score_field_name_Text (Value : T_Text; Storage : in out Arena) return System.Address;
 function Convert_RequestDefinition_Authored_score_field_wording_version_Integer (Value : T_Integer; Storage : in out Arena) return System.Address;
@@ -621,8 +658,8 @@ function Convert_RequestImage_file_field_path_Text (Value : T_Text; Storage : in
 function Convert_RequestImage_bytes_field_bytes_Text (Value : T_Text; Storage : in out Arena) return System.Address;
 function Convert_RecognitionExampleEntity_RecognitionExampleEntity (Value : T_RecognitionExampleEntity; Storage : in out Arena) return System.Address;
 function Convert_RecognitionExampleText_field_kinds_element_Text (Value : T_Text; Storage : in out Arena) return System.Address;
-function Convert_RequestDefinition_Authored_decide_field_batch_value_0_Literal_max (Value : T_Literal_max; Storage : in out Arena) return System.Address;
-function Convert_RequestDefinition_Authored_decide_field_batch_value_1_Integer (Value : T_Integer; Storage : in out Arena) return System.Address;
+function Convert_Authored_questionBatch_value_0_Literal_max (Value : T_Literal_max; Storage : in out Arena) return System.Address;
+function Convert_Authored_questionBatch_value_1_Integer (Value : T_Integer; Storage : in out Arena) return System.Address;
 function Convert_Authored_inputDeclaration_string_Authored_inputDeclaration_string (Value : T_Authored_inputDeclaration_string; Storage : in out Arena) return System.Address;
 function Convert_Authored_inputDeclaration_object_Authored_inputDeclaration_object (Value : T_Authored_inputDeclaration_object; Storage : in out Arena) return System.Address;
 function Convert_Authored_questionText_value_0_Text (Value : T_Text; Storage : in out Arena) return System.Address;
@@ -636,18 +673,12 @@ function Convert_Authored_pointers_value_0_Text (Value : T_Text; Storage : in ou
 function Convert_Authored_pointers_value_1_Text_list (Value : T_Text_List; Storage : in out Arena) return System.Address;
 function Convert_Authored_threshold_value_0_Number (Value : T_Number; Storage : in out Arena) return System.Address;
 function Convert_Authored_threshold_value_1_Text (Value : T_Text; Storage : in out Arena) return System.Address;
-function Convert_RequestDefinition_Authored_choose_field_batch_value_0_Literal_max (Value : T_Literal_max; Storage : in out Arena) return System.Address;
-function Convert_RequestDefinition_Authored_choose_field_batch_value_1_Integer (Value : T_Integer; Storage : in out Arena) return System.Address;
 function Convert_Authored_options_value_0_Authored_name_list (Value : T_Authored_name_List; Storage : in out Arena) return System.Address;
 function Convert_Authored_options_value_1_Authored_description_map (Value : T_Authored_description_Map; Storage : in out Arena) return System.Address;
 function Convert_Authored_cut_value_0_Number (Value : T_Number; Storage : in out Arena) return System.Address;
 function Convert_Authored_cut_value_1_Text (Value : T_Text; Storage : in out Arena) return System.Address;
-function Convert_RequestDefinition_Authored_tag_field_batch_value_0_Literal_max (Value : T_Literal_max; Storage : in out Arena) return System.Address;
-function Convert_RequestDefinition_Authored_tag_field_batch_value_1_Integer (Value : T_Integer; Storage : in out Arena) return System.Address;
 function Convert_Authored_labels_value_0_Authored_name_list (Value : T_Authored_name_List; Storage : in out Arena) return System.Address;
 function Convert_Authored_labels_value_1_Authored_description_map (Value : T_Authored_description_Map; Storage : in out Arena) return System.Address;
-function Convert_RequestDefinition_Authored_score_field_batch_value_0_Literal_max (Value : T_Literal_max; Storage : in out Arena) return System.Address;
-function Convert_RequestDefinition_Authored_score_field_batch_value_1_Integer (Value : T_Integer; Storage : in out Arena) return System.Address;
 function Convert_Authored_levels_value_0_Authored_name_list (Value : T_Authored_name_List; Storage : in out Arena) return System.Address;
 function Convert_Authored_levels_value_1_Authored_criterion_map (Value : T_Authored_criterion_Map; Storage : in out Arena) return System.Address;
 function Convert_RelateFields_RelateFields (Value : T_RelateFields; Storage : in out Arena) return System.Address;
@@ -731,6 +762,30 @@ Result.data := (discr => 3, arm_4 => P_thinkthen_request_reader_failure_invalid_
 end case;
 return Store_thinkthen_request_reader_failure_v1 (Result, Storage);
 end Convert_RequestReaderFailure_RequestReaderFailure;
+function Convert_EngineSettings_EngineSettings (Value : T_EngineSettings; Storage : in out Arena) return System.Address is
+Result : thinkthen_request_engine_settings_v1;
+begin
+if Value.T_backend.Present then Result.m_backend := P_thinkthen_request_text_v1 (Convert_EngineSettings_field_backend_Text (Value.T_backend.Value, Storage)); else Result.m_backend := null; end if;
+if Value.T_base_url.Present then Result.m_base_url := P_thinkthen_request_text_v1 (Convert_EngineSettings_field_base_url_Text (Value.T_base_url.Value, Storage)); else Result.m_base_url := null; end if;
+if Value.T_batch.Present then Result.m_batch := P_thinkthen_request_batch_v1 (Convert_RequestBatch_RequestBatch (Value.T_batch.Value, Storage)); else Result.m_batch := null; end if;
+if Value.T_cache.Present then Result.m_cache := P_thinkthen_request_cache_document_v1 (Convert_CacheDocument_CacheDocument (Value.T_cache.Value, Storage)); else Result.m_cache := null; end if;
+if Value.T_max_estimated_input_tokens_total.Present then Result.m_max_estimated_input_tokens_total := P_thinkthen_request_engine_settings_max_estimated_input_tokens_total_v1 (Convert_EngineSettings_field_max_estimated_input_tokens_total_EngineSettings_max_estimated_input_tokens_total (Value.T_max_estimated_input_tokens_total.Value, Storage)); else Result.m_max_estimated_input_tokens_total := null; end if;
+if Value.T_max_request_bytes.Present then Result.m_max_request_bytes := P_thinkthen_request_unsigned_v1 (Convert_EngineSettings_field_max_request_bytes_Unsigned (Value.T_max_request_bytes.Value, Storage)); else Result.m_max_request_bytes := null; end if;
+if Value.T_max_requests.Present then Result.m_max_requests := P_thinkthen_request_engine_settings_max_requests_v1 (Convert_EngineSettings_field_max_requests_EngineSettings_max_requests (Value.T_max_requests.Value, Storage)); else Result.m_max_requests := null; end if;
+if Value.T_max_requests_total.Present then Result.m_max_requests_total := P_thinkthen_request_engine_settings_max_estimated_input_tokens_total_v1 (Convert_EngineSettings_field_max_requests_total_EngineSettings_max_estimated_input_tokens_total (Value.T_max_requests_total.Value, Storage)); else Result.m_max_requests_total := null; end if;
+if Value.T_max_retries.Present then Result.m_max_retries := P_thinkthen_request_unsigned_v1 (Convert_EngineSettings_field_max_retries_Unsigned (Value.T_max_retries.Value, Storage)); else Result.m_max_retries := null; end if;
+if Value.T_model.Present then Result.m_model := P_thinkthen_request_text_v1 (Convert_EngineSettings_field_model_Text (Value.T_model.Value, Storage)); else Result.m_model := null; end if;
+if Value.T_profile.Present then Result.m_profile := P_thinkthen_request_text_v1 (Convert_EngineSettings_field_profile_Text (Value.T_profile.Value, Storage)); else Result.m_profile := null; end if;
+if Value.T_proxy.Present then Result.m_proxy := P_thinkthen_request_json_value_v1 (Convert_EngineSettings_field_proxy_JsonValue (Value.T_proxy.Value, Storage)); else Result.m_proxy := null; end if;
+if Value.T_record.Present then Result.m_record := P_thinkthen_request_text_v1 (Convert_EngineSettings_field_record_Text (Value.T_record.Value, Storage)); else Result.m_record := null; end if;
+if Value.T_refresh_cache.Present then Result.m_refresh_cache := P_thinkthen_request_boolean_v1 (Convert_EngineSettings_field_refresh_cache_Boolean (Value.T_refresh_cache.Value, Storage)); else Result.m_refresh_cache := null; end if;
+if Value.T_replay.Present then Result.m_replay := P_thinkthen_request_text_v1 (Convert_EngineSettings_field_replay_Text (Value.T_replay.Value, Storage)); else Result.m_replay := null; end if;
+if Value.T_throttle.Present then Result.m_throttle := P_thinkthen_request_unsigned_v1 (Convert_EngineSettings_field_throttle_Unsigned (Value.T_throttle.Value, Storage)); else Result.m_throttle := null; end if;
+if Value.T_timeout.Present then Result.m_timeout := P_thinkthen_request_unsigned_v1 (Convert_EngineSettings_field_timeout_Unsigned (Value.T_timeout.Value, Storage)); else Result.m_timeout := null; end if;
+if Value.T_usd_per_million_input.Present then Result.m_usd_per_million_input := P_thinkthen_request_text_v1 (Convert_EngineSettings_field_usd_per_million_input_Text (Value.T_usd_per_million_input.Value, Storage)); else Result.m_usd_per_million_input := null; end if;
+if Value.T_usd_per_million_output.Present then Result.m_usd_per_million_output := P_thinkthen_request_text_v1 (Convert_EngineSettings_field_usd_per_million_output_Text (Value.T_usd_per_million_output.Value, Storage)); else Result.m_usd_per_million_output := null; end if;
+return Store_thinkthen_request_engine_settings_v1 (Result, Storage);
+end Convert_EngineSettings_EngineSettings;
 function Convert_RequestInput_RequestInput (Value : T_RequestInput; Storage : in out Arena) return System.Address is
 Result : thinkthen_request_input_v1;
 begin
@@ -852,6 +907,155 @@ begin
 if Value.T_location.Present then Result.m_location := P_thinkthen_request_session_source_location_v1 (Convert_SessionSourceLocation_SessionSourceLocation (Value.T_location.Value, Storage)); else Result.m_location := null; end if;
 return Store_thinkthen_request_reader_failure_invalid_input_v1 (Result, Storage);
 end Convert_RequestReaderFailure_invalid_input_RequestReaderFailure_invalid_input;
+function Convert_EngineSettings_field_backend_Text (Value : T_Text; Storage : in out Arena) return System.Address is
+Result : thinkthen_request_text_v1;
+begin
+Result.text := UTF8 (To_String (Unbounded_String (Value)), Storage);
+return Store_thinkthen_request_text_v1 (Result, Storage);
+end Convert_EngineSettings_field_backend_Text;
+function Convert_EngineSettings_field_base_url_Text (Value : T_Text; Storage : in out Arena) return System.Address is
+Result : thinkthen_request_text_v1;
+begin
+Result.text := UTF8 (To_String (Unbounded_String (Value)), Storage);
+return Store_thinkthen_request_text_v1 (Result, Storage);
+end Convert_EngineSettings_field_base_url_Text;
+function Convert_RequestBatch_RequestBatch (Value : T_RequestBatch; Storage : in out Arena) return System.Address is
+Result : thinkthen_request_batch_v1;
+begin
+case Value.Kind is
+when T_RequestBatch_arm_0 =>
+Result.kind := 1;
+Result.data := (discr => 0, arm_1 => P_thinkthen_request_unsigned_v1 (Convert_RequestBatch_value_0_Unsigned (Value.V_0, Storage)));
+when T_RequestBatch_arm_1 =>
+Result.kind := 2;
+Result.data := (discr => 1, arm_2 => P_thinkthen_request_text_v1 (Convert_RequestBatch_value_1_Text (Value.V_1, Storage)));
+end case;
+return Store_thinkthen_request_batch_v1 (Result, Storage);
+end Convert_RequestBatch_RequestBatch;
+function Convert_CacheDocument_CacheDocument (Value : T_CacheDocument; Storage : in out Arena) return System.Address is
+Result : thinkthen_request_cache_document_v1;
+begin
+case Value.Kind is
+when T_CacheDocument_arm_0 =>
+Result.kind := 1;
+Result.data := (discr => 0, arm_1 => P_thinkthen_request_text_v1 (Convert_CacheDocument_value_0_Text (Value.V_0, Storage)));
+when T_CacheDocument_arm_1 =>
+Result.kind := 2;
+Result.data := (discr => 1, arm_2 => P_thinkthen_request_disabled_cache_v1 (Convert_DisabledCache_DisabledCache (Value.V_1, Storage)));
+end case;
+return Store_thinkthen_request_cache_document_v1 (Result, Storage);
+end Convert_CacheDocument_CacheDocument;
+function Convert_EngineSettings_field_max_estimated_input_tokens_total_EngineSettings_max_estimated_input_tokens_total (Value : T_EngineSettings_field_max_estimated_input_tokens_total; Storage : in out Arena) return System.Address is
+Result : thinkthen_request_engine_settings_max_estimated_input_tokens_total_v1;
+begin
+case Value.Kind is
+when T_EngineSettings_field_max_estimated_input_tokens_total_arm_0 =>
+Result.kind := 1;
+Result.data := (discr => 0, arm_1 => P_thinkthen_request_unsigned_v1 (Convert_EngineSettings_field_max_estimated_input_tokens_total_value_0_Unsigned (Value.V_0, Storage)));
+when T_EngineSettings_field_max_estimated_input_tokens_total_arm_1 =>
+Result.kind := 2;
+Result.data := (discr => 1, arm_2 => P_thinkthen_request_null_v1 (Convert_EngineSettings_field_max_estimated_input_tokens_total_value_1_Null (Value.V_1, Storage)));
+end case;
+return Store_thinkthen_request_engine_settings_max_estimated_input_tokens_total_v1 (Result, Storage);
+end Convert_EngineSettings_field_max_estimated_input_tokens_total_EngineSettings_max_estimated_input_tokens_total;
+function Convert_EngineSettings_field_max_request_bytes_Unsigned (Value : T_Unsigned; Storage : in out Arena) return System.Address is
+Result : thinkthen_request_unsigned_v1;
+begin
+Result.value := Interfaces.Unsigned_64 (Value);
+return Store_thinkthen_request_unsigned_v1 (Result, Storage);
+end Convert_EngineSettings_field_max_request_bytes_Unsigned;
+function Convert_EngineSettings_field_max_requests_EngineSettings_max_requests (Value : T_EngineSettings_field_max_requests; Storage : in out Arena) return System.Address is
+Result : thinkthen_request_engine_settings_max_requests_v1;
+begin
+case Value.Kind is
+when T_EngineSettings_field_max_requests_arm_0 =>
+Result.kind := 1;
+Result.data := (discr => 0, arm_1 => P_thinkthen_request_unsigned_v1 (Convert_EngineSettings_field_max_requests_value_0_Unsigned (Value.V_0, Storage)));
+when T_EngineSettings_field_max_requests_arm_1 =>
+Result.kind := 2;
+Result.data := (discr => 1, arm_2 => P_thinkthen_request_null_v1 (Convert_EngineSettings_field_max_requests_value_1_Null (Value.V_1, Storage)));
+end case;
+return Store_thinkthen_request_engine_settings_max_requests_v1 (Result, Storage);
+end Convert_EngineSettings_field_max_requests_EngineSettings_max_requests;
+function Convert_EngineSettings_field_max_requests_total_EngineSettings_max_estimated_input_tokens_total (Value : T_EngineSettings_field_max_requests_total; Storage : in out Arena) return System.Address is
+Result : thinkthen_request_engine_settings_max_estimated_input_tokens_total_v1;
+begin
+case Value.Kind is
+when T_EngineSettings_field_max_requests_total_arm_0 =>
+Result.kind := 1;
+Result.data := (discr => 0, arm_1 => P_thinkthen_request_unsigned_v1 (Convert_EngineSettings_field_max_requests_total_value_0_Unsigned (Value.V_0, Storage)));
+when T_EngineSettings_field_max_requests_total_arm_1 =>
+Result.kind := 2;
+Result.data := (discr => 1, arm_2 => P_thinkthen_request_null_v1 (Convert_EngineSettings_field_max_requests_total_value_1_Null (Value.V_1, Storage)));
+end case;
+return Store_thinkthen_request_engine_settings_max_estimated_input_tokens_total_v1 (Result, Storage);
+end Convert_EngineSettings_field_max_requests_total_EngineSettings_max_estimated_input_tokens_total;
+function Convert_EngineSettings_field_max_retries_Unsigned (Value : T_Unsigned; Storage : in out Arena) return System.Address is
+Result : thinkthen_request_unsigned_v1;
+begin
+Result.value := Interfaces.Unsigned_64 (Value);
+return Store_thinkthen_request_unsigned_v1 (Result, Storage);
+end Convert_EngineSettings_field_max_retries_Unsigned;
+function Convert_EngineSettings_field_model_Text (Value : T_Text; Storage : in out Arena) return System.Address is
+Result : thinkthen_request_text_v1;
+begin
+Result.text := UTF8 (To_String (Unbounded_String (Value)), Storage);
+return Store_thinkthen_request_text_v1 (Result, Storage);
+end Convert_EngineSettings_field_model_Text;
+function Convert_EngineSettings_field_profile_Text (Value : T_Text; Storage : in out Arena) return System.Address is
+Result : thinkthen_request_text_v1;
+begin
+Result.text := UTF8 (To_String (Unbounded_String (Value)), Storage);
+return Store_thinkthen_request_text_v1 (Result, Storage);
+end Convert_EngineSettings_field_profile_Text;
+function Convert_EngineSettings_field_proxy_JsonValue (Value : T_JSON; Storage : in out Arena) return System.Address is
+Result : thinkthen_request_json_value_v1;
+begin
+Result.value := P_thinkthen_complete_json_v1 (Convert_Json_Value (Thinkthen.Values.Value (Value), Storage));
+return Store_thinkthen_request_json_value_v1 (Result, Storage);
+end Convert_EngineSettings_field_proxy_JsonValue;
+function Convert_EngineSettings_field_record_Text (Value : T_Text; Storage : in out Arena) return System.Address is
+Result : thinkthen_request_text_v1;
+begin
+Result.text := UTF8 (To_String (Unbounded_String (Value)), Storage);
+return Store_thinkthen_request_text_v1 (Result, Storage);
+end Convert_EngineSettings_field_record_Text;
+function Convert_EngineSettings_field_refresh_cache_Boolean (Value : T_Boolean; Storage : in out Arena) return System.Address is
+Result : thinkthen_request_boolean_v1;
+begin
+Result.value := (if Value then 1 else 0);
+return Store_thinkthen_request_boolean_v1 (Result, Storage);
+end Convert_EngineSettings_field_refresh_cache_Boolean;
+function Convert_EngineSettings_field_replay_Text (Value : T_Text; Storage : in out Arena) return System.Address is
+Result : thinkthen_request_text_v1;
+begin
+Result.text := UTF8 (To_String (Unbounded_String (Value)), Storage);
+return Store_thinkthen_request_text_v1 (Result, Storage);
+end Convert_EngineSettings_field_replay_Text;
+function Convert_EngineSettings_field_throttle_Unsigned (Value : T_Unsigned; Storage : in out Arena) return System.Address is
+Result : thinkthen_request_unsigned_v1;
+begin
+Result.value := Interfaces.Unsigned_64 (Value);
+return Store_thinkthen_request_unsigned_v1 (Result, Storage);
+end Convert_EngineSettings_field_throttle_Unsigned;
+function Convert_EngineSettings_field_timeout_Unsigned (Value : T_Unsigned; Storage : in out Arena) return System.Address is
+Result : thinkthen_request_unsigned_v1;
+begin
+Result.value := Interfaces.Unsigned_64 (Value);
+return Store_thinkthen_request_unsigned_v1 (Result, Storage);
+end Convert_EngineSettings_field_timeout_Unsigned;
+function Convert_EngineSettings_field_usd_per_million_input_Text (Value : T_Text; Storage : in out Arena) return System.Address is
+Result : thinkthen_request_text_v1;
+begin
+Result.text := UTF8 (To_String (Unbounded_String (Value)), Storage);
+return Store_thinkthen_request_text_v1 (Result, Storage);
+end Convert_EngineSettings_field_usd_per_million_input_Text;
+function Convert_EngineSettings_field_usd_per_million_output_Text (Value : T_Text; Storage : in out Arena) return System.Address is
+Result : thinkthen_request_text_v1;
+begin
+Result.text := UTF8 (To_String (Unbounded_String (Value)), Storage);
+return Store_thinkthen_request_text_v1 (Result, Storage);
+end Convert_EngineSettings_field_usd_per_million_output_Text;
 function Convert_RequestInput_text_RequestInput_text (Value : T_RequestInput_text; Storage : in out Arena) return System.Address is
 Result : thinkthen_request_input_text_v1;
 begin
@@ -905,19 +1109,6 @@ begin
 Result.value := (if Value then 1 else 0);
 return Store_thinkthen_request_boolean_v1 (Result, Storage);
 end Convert_RequestOptions_field_attempts_Boolean;
-function Convert_RequestBatch_RequestBatch (Value : T_RequestBatch; Storage : in out Arena) return System.Address is
-Result : thinkthen_request_batch_v1;
-begin
-case Value.Kind is
-when T_RequestBatch_arm_0 =>
-Result.kind := 1;
-Result.data := (discr => 0, arm_1 => P_thinkthen_request_unsigned_v1 (Convert_RequestBatch_value_0_Unsigned (Value.V_0, Storage)));
-when T_RequestBatch_arm_1 =>
-Result.kind := 2;
-Result.data := (discr => 1, arm_2 => P_thinkthen_request_text_v1 (Convert_RequestBatch_value_1_Text (Value.V_1, Storage)));
-end case;
-return Store_thinkthen_request_batch_v1 (Result, Storage);
-end Convert_RequestBatch_RequestBatch;
 function Convert_RequestOptions_field_context_Text (Value : T_Text; Storage : in out Arena) return System.Address is
 Result : thinkthen_request_text_v1;
 begin
@@ -1215,6 +1406,70 @@ begin
 Result.value := Interfaces.Unsigned_64 (Value);
 return Store_thinkthen_request_unsigned_v1 (Result, Storage);
 end Convert_SessionSourceLocation_field_last_line_Unsigned;
+function Convert_RequestBatch_value_0_Unsigned (Value : T_Unsigned; Storage : in out Arena) return System.Address is
+Result : thinkthen_request_unsigned_v1;
+begin
+Result.value := Interfaces.Unsigned_64 (Value);
+return Store_thinkthen_request_unsigned_v1 (Result, Storage);
+end Convert_RequestBatch_value_0_Unsigned;
+function Convert_RequestBatch_value_1_Text (Value : T_Text; Storage : in out Arena) return System.Address is
+Result : thinkthen_request_text_v1;
+begin
+Result.text := UTF8 (To_String (Unbounded_String (Value)), Storage);
+return Store_thinkthen_request_text_v1 (Result, Storage);
+end Convert_RequestBatch_value_1_Text;
+function Convert_CacheDocument_value_0_Text (Value : T_Text; Storage : in out Arena) return System.Address is
+Result : thinkthen_request_text_v1;
+begin
+Result.text := UTF8 (To_String (Unbounded_String (Value)), Storage);
+return Store_thinkthen_request_text_v1 (Result, Storage);
+end Convert_CacheDocument_value_0_Text;
+function Convert_DisabledCache_DisabledCache (Value : T_DisabledCache; Storage : in out Arena) return System.Address is
+Result : thinkthen_request_disabled_cache_v1;
+pragma Unreferenced (Value);
+begin
+Result.reserved := 0;
+return Store_thinkthen_request_disabled_cache_v1 (Result, Storage);
+end Convert_DisabledCache_DisabledCache;
+function Convert_EngineSettings_field_max_estimated_input_tokens_total_value_0_Unsigned (Value : T_Unsigned; Storage : in out Arena) return System.Address is
+Result : thinkthen_request_unsigned_v1;
+begin
+Result.value := Interfaces.Unsigned_64 (Value);
+return Store_thinkthen_request_unsigned_v1 (Result, Storage);
+end Convert_EngineSettings_field_max_estimated_input_tokens_total_value_0_Unsigned;
+function Convert_EngineSettings_field_max_estimated_input_tokens_total_value_1_Null (Value : T_Null; Storage : in out Arena) return System.Address is
+Result : thinkthen_request_null_v1;
+pragma Unreferenced (Value);
+begin
+Result.reserved := 0;
+return Store_thinkthen_request_null_v1 (Result, Storage);
+end Convert_EngineSettings_field_max_estimated_input_tokens_total_value_1_Null;
+function Convert_EngineSettings_field_max_requests_value_0_Unsigned (Value : T_Unsigned; Storage : in out Arena) return System.Address is
+Result : thinkthen_request_unsigned_v1;
+begin
+Result.value := Interfaces.Unsigned_64 (Value);
+return Store_thinkthen_request_unsigned_v1 (Result, Storage);
+end Convert_EngineSettings_field_max_requests_value_0_Unsigned;
+function Convert_EngineSettings_field_max_requests_value_1_Null (Value : T_Null; Storage : in out Arena) return System.Address is
+Result : thinkthen_request_null_v1;
+pragma Unreferenced (Value);
+begin
+Result.reserved := 0;
+return Store_thinkthen_request_null_v1 (Result, Storage);
+end Convert_EngineSettings_field_max_requests_value_1_Null;
+function Convert_EngineSettings_field_max_requests_total_value_0_Unsigned (Value : T_Unsigned; Storage : in out Arena) return System.Address is
+Result : thinkthen_request_unsigned_v1;
+begin
+Result.value := Interfaces.Unsigned_64 (Value);
+return Store_thinkthen_request_unsigned_v1 (Result, Storage);
+end Convert_EngineSettings_field_max_requests_total_value_0_Unsigned;
+function Convert_EngineSettings_field_max_requests_total_value_1_Null (Value : T_Null; Storage : in out Arena) return System.Address is
+Result : thinkthen_request_null_v1;
+pragma Unreferenced (Value);
+begin
+Result.reserved := 0;
+return Store_thinkthen_request_null_v1 (Result, Storage);
+end Convert_EngineSettings_field_max_requests_total_value_1_Null;
 function Convert_RequestInput_text_field_images_RequestImage_list (Value : T_RequestImage_List; Storage : in out Arena) return System.Address is
 Result : thinkthen_request_image_list_v1;
 type Items is array (size_t range <>) of aliased System.Address with Convention => C;
@@ -1363,18 +1618,6 @@ if Value.T_unit.Present then Result.m_unit := P_thinkthen_request_source_unit_v1
 if Value.T_window.Present then Result.m_window := P_thinkthen_request_unsigned_v1 (Convert_RequestReader_field_window_Unsigned (Value.T_window.Value, Storage)); else Result.m_window := null; end if;
 return Store_thinkthen_request_reader_v1 (Result, Storage);
 end Convert_RequestReader_RequestReader;
-function Convert_RequestBatch_value_0_Unsigned (Value : T_Unsigned; Storage : in out Arena) return System.Address is
-Result : thinkthen_request_unsigned_v1;
-begin
-Result.value := Interfaces.Unsigned_64 (Value);
-return Store_thinkthen_request_unsigned_v1 (Result, Storage);
-end Convert_RequestBatch_value_0_Unsigned;
-function Convert_RequestBatch_value_1_Text (Value : T_Text; Storage : in out Arena) return System.Address is
-Result : thinkthen_request_text_v1;
-begin
-Result.text := UTF8 (To_String (Unbounded_String (Value)), Storage);
-return Store_thinkthen_request_text_v1 (Result, Storage);
-end Convert_RequestBatch_value_1_Text;
 function Convert_RecognitionExample_RecognitionExample (Value : T_RecognitionExample; Storage : in out Arena) return System.Address is
 Result : thinkthen_request_recognition_example_v1;
 begin
@@ -1624,7 +1867,7 @@ end Convert_RecognitionSeedSpan_field_start_Unsigned;
 function Convert_RequestDefinition_Authored_decide_RequestDefinition_Authored_decide (Value : T_RequestDefinition_Authored_decide; Storage : in out Arena) return System.Address is
 Result : thinkthen_request_definition_authored_decide_v1;
 begin
-if Value.T_batch.Present then Result.m_batch := P_thinkthen_request_definition_authored_score_batch_v1 (Convert_RequestDefinition_Authored_decide_field_batch_RequestDefinition_Authored_score_batch (Value.T_batch.Value, Storage)); else Result.m_batch := null; end if;
+if Value.T_batch.Present then Result.m_batch := P_thinkthen_request_question_batch_v1 (Convert_Authored_questionBatch_Authored_questionBatch (Value.T_batch.Value, Storage)); else Result.m_batch := null; end if;
 if Value.T_context_schema.Present then Result.m_context_schema := P_thinkthen_request_input_declaration_v1 (Convert_Authored_inputDeclaration_Authored_inputDeclaration (Value.T_context_schema.Value, Storage)); else Result.m_context_schema := null; end if;
 Result.m_decide := P_thinkthen_request_question_text_v1 (Convert_Authored_questionText_Authored_questionText (Value.T_decide, Storage));
 if Value.T_false.Present then Result.m_false := P_thinkthen_request_criterion_v1 (Convert_Authored_criterion_Authored_criterion (Value.T_false.Value, Storage)); else Result.m_false := null; end if;
@@ -1641,7 +1884,7 @@ end Convert_RequestDefinition_Authored_decide_RequestDefinition_Authored_decide;
 function Convert_RequestDefinition_Authored_choose_RequestDefinition_Authored_choose (Value : T_RequestDefinition_Authored_choose; Storage : in out Arena) return System.Address is
 Result : thinkthen_request_definition_authored_choose_v1;
 begin
-if Value.T_batch.Present then Result.m_batch := P_thinkthen_request_definition_authored_score_batch_v1 (Convert_RequestDefinition_Authored_choose_field_batch_RequestDefinition_Authored_score_batch (Value.T_batch.Value, Storage)); else Result.m_batch := null; end if;
+if Value.T_batch.Present then Result.m_batch := P_thinkthen_request_question_batch_v1 (Convert_Authored_questionBatch_Authored_questionBatch (Value.T_batch.Value, Storage)); else Result.m_batch := null; end if;
 Result.m_choose := P_thinkthen_request_question_text_v1 (Convert_Authored_questionText_Authored_questionText (Value.T_choose, Storage));
 if Value.T_context_schema.Present then Result.m_context_schema := P_thinkthen_request_input_declaration_v1 (Convert_Authored_inputDeclaration_Authored_inputDeclaration (Value.T_context_schema.Value, Storage)); else Result.m_context_schema := null; end if;
 if Value.T_item_schema.Present then Result.m_item_schema := P_thinkthen_request_input_declaration_v1 (Convert_Authored_inputDeclaration_Authored_inputDeclaration (Value.T_item_schema.Value, Storage)); else Result.m_item_schema := null; end if;
@@ -1657,7 +1900,7 @@ end Convert_RequestDefinition_Authored_choose_RequestDefinition_Authored_choose;
 function Convert_RequestDefinition_Authored_tag_RequestDefinition_Authored_tag (Value : T_RequestDefinition_Authored_tag; Storage : in out Arena) return System.Address is
 Result : thinkthen_request_definition_authored_tag_v1;
 begin
-if Value.T_batch.Present then Result.m_batch := P_thinkthen_request_definition_authored_score_batch_v1 (Convert_RequestDefinition_Authored_tag_field_batch_RequestDefinition_Authored_score_batch (Value.T_batch.Value, Storage)); else Result.m_batch := null; end if;
+if Value.T_batch.Present then Result.m_batch := P_thinkthen_request_question_batch_v1 (Convert_Authored_questionBatch_Authored_questionBatch (Value.T_batch.Value, Storage)); else Result.m_batch := null; end if;
 if Value.T_context_schema.Present then Result.m_context_schema := P_thinkthen_request_input_declaration_v1 (Convert_Authored_inputDeclaration_Authored_inputDeclaration (Value.T_context_schema.Value, Storage)); else Result.m_context_schema := null; end if;
 if Value.T_item_schema.Present then Result.m_item_schema := P_thinkthen_request_input_declaration_v1 (Convert_Authored_inputDeclaration_Authored_inputDeclaration (Value.T_item_schema.Value, Storage)); else Result.m_item_schema := null; end if;
 if Value.T_labels.Present then Result.m_labels := P_thinkthen_request_labels_v1 (Convert_Authored_labels_Authored_labels (Value.T_labels.Value, Storage)); else Result.m_labels := null; end if;
@@ -1673,7 +1916,7 @@ end Convert_RequestDefinition_Authored_tag_RequestDefinition_Authored_tag;
 function Convert_RequestDefinition_Authored_score_RequestDefinition_Authored_score (Value : T_RequestDefinition_Authored_score; Storage : in out Arena) return System.Address is
 Result : thinkthen_request_definition_authored_score_v1;
 begin
-if Value.T_batch.Present then Result.m_batch := P_thinkthen_request_definition_authored_score_batch_v1 (Convert_RequestDefinition_Authored_score_field_batch_RequestDefinition_Authored_score_batch (Value.T_batch.Value, Storage)); else Result.m_batch := null; end if;
+if Value.T_batch.Present then Result.m_batch := P_thinkthen_request_question_batch_v1 (Convert_Authored_questionBatch_Authored_questionBatch (Value.T_batch.Value, Storage)); else Result.m_batch := null; end if;
 if Value.T_context_schema.Present then Result.m_context_schema := P_thinkthen_request_input_declaration_v1 (Convert_Authored_inputDeclaration_Authored_inputDeclaration (Value.T_context_schema.Value, Storage)); else Result.m_context_schema := null; end if;
 if Value.T_item_schema.Present then Result.m_item_schema := P_thinkthen_request_input_declaration_v1 (Convert_Authored_inputDeclaration_Authored_inputDeclaration (Value.T_item_schema.Value, Storage)); else Result.m_item_schema := null; end if;
 if Value.T_levels.Present then Result.m_levels := P_thinkthen_request_levels_v1 (Convert_Authored_levels_Authored_levels (Value.T_levels.Value, Storage)); else Result.m_levels := null; end if;
@@ -1823,19 +2066,19 @@ begin
 Result.text := UTF8 (To_String (Unbounded_String (Value)), Storage);
 return Store_thinkthen_request_text_v1 (Result, Storage);
 end Convert_RecognitionExampleText_field_text_Text;
-function Convert_RequestDefinition_Authored_decide_field_batch_RequestDefinition_Authored_score_batch (Value : T_RequestDefinition_Authored_decide_field_batch; Storage : in out Arena) return System.Address is
-Result : thinkthen_request_definition_authored_score_batch_v1;
+function Convert_Authored_questionBatch_Authored_questionBatch (Value : T_Authored_questionBatch; Storage : in out Arena) return System.Address is
+Result : thinkthen_request_question_batch_v1;
 begin
 case Value.Kind is
-when T_RequestDefinition_Authored_decide_field_batch_arm_0 =>
+when T_Authored_questionBatch_arm_0 =>
 Result.kind := 1;
-Result.data := (discr => 0, arm_1 => P_thinkthen_request_literal_max_v1 (Convert_RequestDefinition_Authored_decide_field_batch_value_0_Literal_max (Value.V_0, Storage)));
-when T_RequestDefinition_Authored_decide_field_batch_arm_1 =>
+Result.data := (discr => 0, arm_1 => P_thinkthen_request_literal_max_v1 (Convert_Authored_questionBatch_value_0_Literal_max (Value.V_0, Storage)));
+when T_Authored_questionBatch_arm_1 =>
 Result.kind := 2;
-Result.data := (discr => 1, arm_2 => P_thinkthen_request_integer_v1 (Convert_RequestDefinition_Authored_decide_field_batch_value_1_Integer (Value.V_1, Storage)));
+Result.data := (discr => 1, arm_2 => P_thinkthen_request_integer_v1 (Convert_Authored_questionBatch_value_1_Integer (Value.V_1, Storage)));
 end case;
-return Store_thinkthen_request_definition_authored_score_batch_v1 (Result, Storage);
-end Convert_RequestDefinition_Authored_decide_field_batch_RequestDefinition_Authored_score_batch;
+return Store_thinkthen_request_question_batch_v1 (Result, Storage);
+end Convert_Authored_questionBatch_Authored_questionBatch;
 function Convert_Authored_inputDeclaration_Authored_inputDeclaration (Value : T_Authored_inputDeclaration; Storage : in out Arena) return System.Address is
 Result : thinkthen_request_input_declaration_v1;
 begin
@@ -1934,19 +2177,6 @@ begin
 Result.value := Interfaces.Integer_64 (Value);
 return Store_thinkthen_request_integer_v1 (Result, Storage);
 end Convert_RequestDefinition_Authored_decide_field_wording_version_Integer;
-function Convert_RequestDefinition_Authored_choose_field_batch_RequestDefinition_Authored_score_batch (Value : T_RequestDefinition_Authored_choose_field_batch; Storage : in out Arena) return System.Address is
-Result : thinkthen_request_definition_authored_score_batch_v1;
-begin
-case Value.Kind is
-when T_RequestDefinition_Authored_choose_field_batch_arm_0 =>
-Result.kind := 1;
-Result.data := (discr => 0, arm_1 => P_thinkthen_request_literal_max_v1 (Convert_RequestDefinition_Authored_choose_field_batch_value_0_Literal_max (Value.V_0, Storage)));
-when T_RequestDefinition_Authored_choose_field_batch_arm_1 =>
-Result.kind := 2;
-Result.data := (discr => 1, arm_2 => P_thinkthen_request_integer_v1 (Convert_RequestDefinition_Authored_choose_field_batch_value_1_Integer (Value.V_1, Storage)));
-end case;
-return Store_thinkthen_request_definition_authored_score_batch_v1 (Result, Storage);
-end Convert_RequestDefinition_Authored_choose_field_batch_RequestDefinition_Authored_score_batch;
 function Convert_RequestDefinition_Authored_choose_field_name_Text (Value : T_Text; Storage : in out Arena) return System.Address is
 Result : thinkthen_request_text_v1;
 begin
@@ -1985,19 +2215,6 @@ begin
 Result.value := Interfaces.Integer_64 (Value);
 return Store_thinkthen_request_integer_v1 (Result, Storage);
 end Convert_RequestDefinition_Authored_choose_field_wording_version_Integer;
-function Convert_RequestDefinition_Authored_tag_field_batch_RequestDefinition_Authored_score_batch (Value : T_RequestDefinition_Authored_tag_field_batch; Storage : in out Arena) return System.Address is
-Result : thinkthen_request_definition_authored_score_batch_v1;
-begin
-case Value.Kind is
-when T_RequestDefinition_Authored_tag_field_batch_arm_0 =>
-Result.kind := 1;
-Result.data := (discr => 0, arm_1 => P_thinkthen_request_literal_max_v1 (Convert_RequestDefinition_Authored_tag_field_batch_value_0_Literal_max (Value.V_0, Storage)));
-when T_RequestDefinition_Authored_tag_field_batch_arm_1 =>
-Result.kind := 2;
-Result.data := (discr => 1, arm_2 => P_thinkthen_request_integer_v1 (Convert_RequestDefinition_Authored_tag_field_batch_value_1_Integer (Value.V_1, Storage)));
-end case;
-return Store_thinkthen_request_definition_authored_score_batch_v1 (Result, Storage);
-end Convert_RequestDefinition_Authored_tag_field_batch_RequestDefinition_Authored_score_batch;
 function Convert_Authored_labels_Authored_labels (Value : T_Authored_labels; Storage : in out Arena) return System.Address is
 Result : thinkthen_request_labels_v1;
 begin
@@ -2023,19 +2240,6 @@ begin
 Result.value := Interfaces.Integer_64 (Value);
 return Store_thinkthen_request_integer_v1 (Result, Storage);
 end Convert_RequestDefinition_Authored_tag_field_wording_version_Integer;
-function Convert_RequestDefinition_Authored_score_field_batch_RequestDefinition_Authored_score_batch (Value : T_RequestDefinition_Authored_score_field_batch; Storage : in out Arena) return System.Address is
-Result : thinkthen_request_definition_authored_score_batch_v1;
-begin
-case Value.Kind is
-when T_RequestDefinition_Authored_score_field_batch_arm_0 =>
-Result.kind := 1;
-Result.data := (discr => 0, arm_1 => P_thinkthen_request_literal_max_v1 (Convert_RequestDefinition_Authored_score_field_batch_value_0_Literal_max (Value.V_0, Storage)));
-when T_RequestDefinition_Authored_score_field_batch_arm_1 =>
-Result.kind := 2;
-Result.data := (discr => 1, arm_2 => P_thinkthen_request_integer_v1 (Convert_RequestDefinition_Authored_score_field_batch_value_1_Integer (Value.V_1, Storage)));
-end case;
-return Store_thinkthen_request_definition_authored_score_batch_v1 (Result, Storage);
-end Convert_RequestDefinition_Authored_score_field_batch_RequestDefinition_Authored_score_batch;
 function Convert_Authored_levels_Authored_levels (Value : T_Authored_levels; Storage : in out Arena) return System.Address is
 Result : thinkthen_request_levels_v1;
 begin
@@ -2176,19 +2380,19 @@ begin
 Result.text := UTF8 (To_String (Unbounded_String (Value)), Storage);
 return Store_thinkthen_request_text_v1 (Result, Storage);
 end Convert_RecognitionExampleText_field_kinds_element_Text;
-function Convert_RequestDefinition_Authored_decide_field_batch_value_0_Literal_max (Value : T_Literal_max; Storage : in out Arena) return System.Address is
+function Convert_Authored_questionBatch_value_0_Literal_max (Value : T_Literal_max; Storage : in out Arena) return System.Address is
 Result : thinkthen_request_literal_max_v1;
 pragma Unreferenced (Value);
 begin
 Result.reserved := 0;
 return Store_thinkthen_request_literal_max_v1 (Result, Storage);
-end Convert_RequestDefinition_Authored_decide_field_batch_value_0_Literal_max;
-function Convert_RequestDefinition_Authored_decide_field_batch_value_1_Integer (Value : T_Integer; Storage : in out Arena) return System.Address is
+end Convert_Authored_questionBatch_value_0_Literal_max;
+function Convert_Authored_questionBatch_value_1_Integer (Value : T_Integer; Storage : in out Arena) return System.Address is
 Result : thinkthen_request_integer_v1;
 begin
 Result.value := Interfaces.Integer_64 (Value);
 return Store_thinkthen_request_integer_v1 (Result, Storage);
-end Convert_RequestDefinition_Authored_decide_field_batch_value_1_Integer;
+end Convert_Authored_questionBatch_value_1_Integer;
 function Convert_Authored_inputDeclaration_string_Authored_inputDeclaration_string (Value : T_Authored_inputDeclaration_string; Storage : in out Arena) return System.Address is
 Result : thinkthen_request_input_declaration_string_v1;
 pragma Unreferenced (Value);
@@ -2320,19 +2524,6 @@ begin
 Result.text := UTF8 (To_String (Unbounded_String (Value)), Storage);
 return Store_thinkthen_request_text_v1 (Result, Storage);
 end Convert_Authored_threshold_value_1_Text;
-function Convert_RequestDefinition_Authored_choose_field_batch_value_0_Literal_max (Value : T_Literal_max; Storage : in out Arena) return System.Address is
-Result : thinkthen_request_literal_max_v1;
-pragma Unreferenced (Value);
-begin
-Result.reserved := 0;
-return Store_thinkthen_request_literal_max_v1 (Result, Storage);
-end Convert_RequestDefinition_Authored_choose_field_batch_value_0_Literal_max;
-function Convert_RequestDefinition_Authored_choose_field_batch_value_1_Integer (Value : T_Integer; Storage : in out Arena) return System.Address is
-Result : thinkthen_request_integer_v1;
-begin
-Result.value := Interfaces.Integer_64 (Value);
-return Store_thinkthen_request_integer_v1 (Result, Storage);
-end Convert_RequestDefinition_Authored_choose_field_batch_value_1_Integer;
 function Convert_Authored_options_value_0_Authored_name_list (Value : T_Authored_name_List; Storage : in out Arena) return System.Address is
 Result : thinkthen_request_name_list_v1;
 type Items is array (size_t range <>) of aliased System.Address with Convention => C;
@@ -2377,19 +2568,6 @@ begin
 Result.text := UTF8 (To_String (Unbounded_String (Value)), Storage);
 return Store_thinkthen_request_text_v1 (Result, Storage);
 end Convert_Authored_cut_value_1_Text;
-function Convert_RequestDefinition_Authored_tag_field_batch_value_0_Literal_max (Value : T_Literal_max; Storage : in out Arena) return System.Address is
-Result : thinkthen_request_literal_max_v1;
-pragma Unreferenced (Value);
-begin
-Result.reserved := 0;
-return Store_thinkthen_request_literal_max_v1 (Result, Storage);
-end Convert_RequestDefinition_Authored_tag_field_batch_value_0_Literal_max;
-function Convert_RequestDefinition_Authored_tag_field_batch_value_1_Integer (Value : T_Integer; Storage : in out Arena) return System.Address is
-Result : thinkthen_request_integer_v1;
-begin
-Result.value := Interfaces.Integer_64 (Value);
-return Store_thinkthen_request_integer_v1 (Result, Storage);
-end Convert_RequestDefinition_Authored_tag_field_batch_value_1_Integer;
 function Convert_Authored_labels_value_0_Authored_name_list (Value : T_Authored_name_List; Storage : in out Arena) return System.Address is
 Result : thinkthen_request_name_list_v1;
 type Items is array (size_t range <>) of aliased System.Address with Convention => C;
@@ -2422,19 +2600,6 @@ Result.len := Length;
 Result.data := P_thinkthen_request_description_map_entry_v1 (Address);
 return Store_thinkthen_request_description_map_v1 (Result, Storage);
 end Convert_Authored_labels_value_1_Authored_description_map;
-function Convert_RequestDefinition_Authored_score_field_batch_value_0_Literal_max (Value : T_Literal_max; Storage : in out Arena) return System.Address is
-Result : thinkthen_request_literal_max_v1;
-pragma Unreferenced (Value);
-begin
-Result.reserved := 0;
-return Store_thinkthen_request_literal_max_v1 (Result, Storage);
-end Convert_RequestDefinition_Authored_score_field_batch_value_0_Literal_max;
-function Convert_RequestDefinition_Authored_score_field_batch_value_1_Integer (Value : T_Integer; Storage : in out Arena) return System.Address is
-Result : thinkthen_request_integer_v1;
-begin
-Result.value := Interfaces.Integer_64 (Value);
-return Store_thinkthen_request_integer_v1 (Result, Storage);
-end Convert_RequestDefinition_Authored_score_field_batch_value_1_Integer;
 function Convert_Authored_levels_value_0_Authored_name_list (Value : T_Authored_name_List; Storage : in out Arena) return System.Address is
 Result : thinkthen_request_name_list_v1;
 type Items is array (size_t range <>) of aliased System.Address with Convention => C;
@@ -2900,4 +3065,5 @@ end Convert_Authored_inputProperty_array_field_items_Authored_inputProperty_arra
 function Convert (Value : T_RequestCall; Storage : in out Arena) return System.Address is (Convert_RequestCall_RequestArguments (Value, Storage));
 function Convert (Value : T_RequestSessionDescriptor; Storage : in out Arena) return System.Address is (Convert_RequestSessionDescriptor_RequestSessionDescriptor (Value, Storage));
 function Convert (Value : T_RequestReaderFailure; Storage : in out Arena) return System.Address is (Convert_RequestReaderFailure_RequestReaderFailure (Value, Storage));
+function Convert (Value : T_EngineSettings; Storage : in out Arena) return System.Address is (Convert_EngineSettings_EngineSettings (Value, Storage));
 end Thinkthen.Requests.Native;

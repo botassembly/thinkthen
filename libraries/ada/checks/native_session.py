@@ -41,23 +41,23 @@ with tempfile.TemporaryDirectory(prefix='thinkthen-ada-session-') as temporary:
     if not (unpacked / 'src').is_dir():
         unpacked = unpacked / 'thinkthen'
     unpacked.rename(installed)
-    expected = {'thinkthen', 'thinkthen-sessions', 'thinkthen-sessions-calls', 'thinkthen-persistence', 'thinkthen-requests-native', 'thinkthen_kinds', 'thinkthen-values', 'thinkthen-answers', 'thinkthen-native_values', 'thinkthen-inputs', 'thinkthen-inputs-native', 'thinkthen-inputs-calls'}
+    expected = {'thinkthen', 'thinkthen-sessions', 'thinkthen-sessions-calls', 'thinkthen-persistence', 'thinkthen-requests-native', 'thinkthen_kinds', 'thinkthen-values', 'thinkthen-answers', 'thinkthen-native_values', 'thinkthen-inputs', 'thinkthen-inputs-native', 'thinkthen-inputs-calls', 'thinkthen-native_sessions'}
     assert {p.stem for p in (installed / 'src').glob('*.adb')} == expected
-    assert {p.stem for p in (installed / 'src').glob('*.ads')} == expected | {'thinkthen_session_c', 'thinkthen-requests'}
+    assert {p.stem for p in (installed / 'src').glob('*.ads')} == expected | {'thinkthen-session_c', 'thinkthen-requests', 'thinkthen-native_sessions'}
     if '--full' in sys.argv:
         subprocess.run([sys.executable, str(PACKAGE / 'checks/complete_parity.py'), '--package', str(installed)], env=child_env(THINKTHEN_BACKEND_BIN=os.environ.get('THINKTHEN_BACKEND_BIN', str(ROOT / 'target/debug/conformance-backend'))), check=True)
         raise SystemExit(0)
     declarations, calls = [], []
     for verb, case, expression in cases():
         declarations.append(f'R_{verb} : constant T_RequestCall := {expression};')
-        calls.append(f'Select_Route ("case/{case}/v1"); Thinkthen.Sessions.Calls.{verb.title()} (Client, Owner, R_{verb}); Finish (Owner); Drain{" (Odds => 0.99)" if verb == "decide" else ""}; Put_Line ("SHARED_CASE {case}");')
+        calls.append(f'Select_Route ("case/{case}/v1"); Thinkthen.Native_Sessions.Start (Client, Owner, R_{verb}, "{verb}"); Finish (Owner); Drain{" (Odds => 0.99)" if verb == "decide" else ""}; Put_Line ("SHARED_CASE {case}");')
     answer_checks = {
         'decide': '''Require (Decide_Answer (Completed).Known and then Decide_Answer (Completed).Value, "safe decide"); declare Refused : Boolean := False; begin begin declare Ignored : constant Choice := Choose_Answer (Completed); begin if Ignored.Known then null; end if; end; exception when Answer_Cardinality_Error => Refused := True; end; Require (Refused and then Has_Facts (Completed) and then Packet_Count (Completed) > 0, "cardinality refusal retained completion"); end;''',
         'choose': '''Require (Choose_Answer (Completed).Known and then To_String (Choose_Answer (Completed).Value) = "billing", "safe choose");''',
         'tag': '''Require (Tag_Answer (Completed)'Length = 2, "safe tags");''',
         'score': '''Require (Score_Answer (Completed) > 0.0, "safe score");''',
-        'filter': '''Require (Filter_Answer (Completed)'Length = 2, "plain filter list");''',
-        'rank': '''Require (Rank_Answer (Completed)'Length = 3, "plain rank list");''',
+        'filter': '''Require (Filter_Answer (Completed)'Length = 2 and then Thinkthen.Values.As_String (Filter_Answer (Completed) (1)) = "row 0" and then Thinkthen.Values.As_String (Filter_Answer (Completed) (2)) = "row 2", "plain filter originals");''',
+        'rank': '''Require (Rank_Answer (Completed) = Rank_List'[1, 2, 0], "plain original rank indexes");''',
         'find': '''Require (Has_Match (Find_Answer (Completed)), "safe find");''',
         'annotate': '''Require (Annotate_Answer (Completed)'Length > 0, "safe annotations");''',
         'recognize': '''Require (Recognize_Answer (Completed)'Length = 1, "safe recognition aggregate");''',
@@ -70,6 +70,13 @@ with tempfile.TemporaryDirectory(prefix='thinkthen-ada-session-') as temporary:
             di = next(i for i,(key,_) in enumerate(definitions['RequestDefinition']['variants']) if verb in definitions[key].get('properties',{}))
             question = f'Thinkthen.Inputs.{verb.title()}_Question (Thinkthen.Inputs.Native.Wrap (R_{verb}.T_question.V_{qi}.T_value.V_{di}))'
         calls.append(f'Select_Route ("case/{case}/v1"); Thinkthen.Sessions.Calls.{verb.title()} (Client, Owner, {question}, Thinkthen.Inputs.Native.Wrap (R_{verb}.T_input), Thinkthen.Inputs.Native.Wrap (R_{verb}.T_options)); Finish (Owner); declare use Thinkthen.Answers; Completed : constant Completion := Collect (Owner); begin Close (Owner); Require (Status (Completed) = Succeeded and then Has_Facts (Completed) and then Requests_Sent (Call_Facts (Completed)) > 0, "owned safe completion"); {answer_checks[verb]} end;')
+    # Planning crosses the public typed API and preserves the native zero-send refusals.
+    for verb, _, _ in cases():
+        preview = f'Thinkthen.Inputs.Calls.Plan (Client, Thinkthen.Inputs.Function_Kind_{verb.title()}, Thinkthen.Inputs.Native.Wrap (R_{verb}.T_question), Thinkthen.Inputs.Native.Wrap (R_{verb}.T_input), Thinkthen.Inputs.Native.Wrap (R_{verb}.T_options))'
+        if verb in ('decide', 'choose', 'tag', 'score', 'filter', 'rank'):
+            calls.append('declare use Thinkthen.Inputs.Calls; Item : constant Plan_Estimate := ' + preview + '; begin Require (Records (Item) > 0 and then Thinkthen.Inputs.Calls.Requests (Item) > 0 and then Estimated_Bytes (Item) > 0 and then Largest_Request_Bytes (Item) > 0 and then Largest_Request_Estimated_Input_Tokens (Item) > 0 and then Token_Estimate_Method (Item)\'Length > 0 and then Estimated_Input_Tokens (Item).Upper >= Estimated_Input_Tokens (Item).Lower and then Upper_Bound (Item) = ' + ('True' if verb == 'tag' else 'False') + ' and then First_Body_Utf8 (Item).Present, "nine typed plan fields"); end;')
+        else:
+            calls.append('declare Refused : Boolean := False; begin begin declare Item : constant Thinkthen.Inputs.Calls.Plan_Estimate := ' + preview + '; begin if Thinkthen.Inputs.Calls.Records (Item) > 0 then null; end if; end; exception when Usage_Error => Refused := True; end; Require (Refused, "native unsupported plan refusal"); end;')
     # Admission, cancellation and execution failures add no host-side semantic rules.
     key = 'RequestCall'
     def request(question, original):
@@ -81,23 +88,23 @@ with tempfile.TemporaryDirectory(prefix='thinkthen-ada-session-') as temporary:
     null_request = request({'kind':'definition','value':{'decide':'Does it pass?', 'threshold':'0.7:0.95'}}, {'kind':'text','text':'Null evidence.'})
     item = construct('RequestSessionDescriptor', definitions['RequestSessionDescriptor'], {'item':{'original':{'kind':'text','text':'Located evidence.'}}, 'location':{'file':'owned.txt','first_line':1,'last_line':1}})
     declarations += [f'False_Request : constant T_RequestCall := {false_request};', f'Null_Request : constant T_RequestCall := {null_request};', f'Item : T_RequestSessionDescriptor := {item};', 'Pushed : Push_Status;', f'Failed : constant T_RequestCall := {failure};', f'Feed : constant T_RequestCall := {feed};', f'Invalid : constant T_RequestCall := {invalid};']
-    calls += ['Select_Route ("generic/v1");', 'declare Preview : constant Thinkthen.Values.Value := Thinkthen.Sessions.Calls.Plan (Client, False_Request); begin Require (Thinkthen.Values.As_Number (Thinkthen.Values.Field_Value (Preview, "records")) = "1", "typed plan result"); end;', 'Thinkthen.Sessions.Calls.Decide (Owner, False_Request); Finish (Owner); Drain (Decision => 0);', 'Thinkthen.Sessions.Calls.Decide (Owner, Null_Request); Finish (Owner); Drain (Decision => 1);', 'Thinkthen.Sessions.Calls.Decide (Owner, Feed); Push (Owner, Item, Pushed); if Pushed /= Accepted then raise Program_Error with "feed refused"; end if; Finish (Owner); Drain (Located => True);', 'Thinkthen.Sessions.Calls.Decide (Owner, Feed); Cancel (Owner); Drain (Cancelled);', '''declare
+    calls += ['Select_Route ("generic/v1");', 'declare Preview : constant Thinkthen.Values.Value := Thinkthen.Native_Sessions.Plan (Client, False_Request, "decide"); begin Require (Thinkthen.Values.As_Number (Thinkthen.Values.Field_Value (Preview, "records")) = "1", "typed plan result"); end;', 'Thinkthen.Native_Sessions.Start (Owner, False_Request, "decide"); Finish (Owner); Drain (Decision => 0);', 'Thinkthen.Native_Sessions.Start (Owner, Null_Request, "decide"); Finish (Owner); Drain (Decision => 1);', 'Thinkthen.Native_Sessions.Start (Owner, Feed, "decide"); Push (Owner, Item, Pushed); if Pushed /= Accepted then raise Program_Error with "feed refused"; end if; Finish (Owner); Drain (Located => True);', 'Thinkthen.Native_Sessions.Start (Owner, Feed, "decide"); Cancel (Owner); Drain (Cancelled);', '''declare
 Refused : Boolean := False;
 begin
 begin
-declare Preview : constant Thinkthen.Values.Value := Thinkthen.Sessions.Calls.Plan (Client, Invalid); begin Require (Thinkthen.Values.Length (Preview) = 0, "invalid plan admitted"); end;
+declare Preview : constant Thinkthen.Values.Value := Thinkthen.Native_Sessions.Plan (Client, Invalid, "decide"); begin Require (Thinkthen.Values.Length (Preview) = 0, "invalid plan admitted"); end;
 exception
 when Usage_Error => Refused := True;
 end;
 if not Refused then raise Program_Error with "invalid plan admitted"; end if;
 Refused := False;
-begin Thinkthen.Sessions.Calls.Decide (Owner, Invalid); exception when Usage_Error => Refused := True; end;
+begin Thinkthen.Native_Sessions.Start (Owner, Invalid, "decide"); exception when Usage_Error => Refused := True; end;
 if not Refused then raise Program_Error with "invalid question admitted"; end if;
 end;''']
     calls += [
-        'Thinkthen.Sessions.Calls.Decide (Owner, False_Request); Finish (Owner); declare Completed : Thinkthen.Answers.Completion; Answer : constant Thinkthen.Answers.Decision := Thinkthen.Answers.Decide_Answer (Owner, Completed); begin Require (Answer.Known and then not Answer.Value, "safe false value"); Require (Thinkthen.Answers.Requests_Sent (Thinkthen.Answers.Call_Facts (Completed)) = 0 and then Thinkthen.Answers.Cache_Answers (Thinkthen.Answers.Call_Facts (Completed)) = 1, "safe cached facts"); end;',
-        'Thinkthen.Sessions.Calls.Decide (Owner, Null_Request); Finish (Owner); declare Completed : Thinkthen.Answers.Completion; Answer : constant Thinkthen.Answers.Decision := Thinkthen.Answers.Decide_Answer (Owner, Completed); begin Require (not Answer.Known, "safe null value"); end;',
-        '''Thinkthen.Sessions.Calls.Decide (Owner, Feed); Cancel (Owner); declare use Thinkthen.Answers; Completed : constant Completion := Collect (Owner); Refused : Boolean := False; begin Require (Status (Completed) = Thinkthen.Answers.Failed and then Kind (Call_Failure (Completed)) = Cancelled, "retained cancellation"); begin declare Ignored : constant Decision := Decide_Answer (Completed); begin if Ignored.Known then null; end if; end; exception when Session_Failure => Refused := True; end; Require (Refused and then Message (Call_Failure (Completed))'Length > 0, "typed execution failure retained"); end;''',
+        'Thinkthen.Native_Sessions.Start (Owner, False_Request, "decide"); Finish (Owner); declare Completed : Thinkthen.Answers.Completion; Answer : constant Thinkthen.Answers.Decision := Thinkthen.Answers.Decide_Answer (Owner, Completed); begin Require (Answer.Known and then not Answer.Value, "safe false value"); Require (Thinkthen.Answers.Requests_Sent (Thinkthen.Answers.Call_Facts (Completed)) = 0 and then Thinkthen.Answers.Cache_Answers (Thinkthen.Answers.Call_Facts (Completed)) = 1, "safe cached facts"); end;',
+        'Thinkthen.Native_Sessions.Start (Owner, Null_Request, "decide"); Finish (Owner); declare Completed : Thinkthen.Answers.Completion; Answer : constant Thinkthen.Answers.Decision := Thinkthen.Answers.Decide_Answer (Owner, Completed); begin Require (not Answer.Known, "safe null value"); end;',
+        '''Thinkthen.Native_Sessions.Start (Owner, Feed, "decide"); Cancel (Owner); declare use Thinkthen.Answers; Completed : constant Completion := Collect (Owner); Refused : Boolean := False; begin Require (Status (Completed) = Thinkthen.Answers.Failed and then Kind (Call_Failure (Completed)) = Cancelled, "retained cancellation"); begin declare Ignored : constant Decision := Decide_Answer (Completed); begin if Ignored.Known then null; end if; end; exception when Session_Failure => Refused := True; end; Require (Refused and then Message (Call_Failure (Completed))'Length > 0, "typed execution failure retained"); end;''',
     ]
     evidence = work / 'evidence.txt'
     evidence.write_text('File evidence.\n')
@@ -111,30 +118,36 @@ end;''']
     }
     declarations += [f'{name} : constant T_RequestCall := {expression};' for name, expression in extras.items()]
     calls += [
-        'Thinkthen.Sessions.Calls.Decide (Client, Owner, File_Request); Finish (Owner); Drain (Located => True, Expected_Sends => 1);',
-        'Select_Settings ("generic/v1", "' + json.dumps({'cache':str(work / 'answer-cache')})[1:-1].replace('"','""') + '");',
-        'Thinkthen.Sessions.Calls.Decide (Client, Owner, Cached_Request); Finish (Owner); Drain (Expected_Sends => 1);',
-        'Thinkthen.Sessions.Calls.Decide (Client, Owner, Cached_Request); Finish (Owner); Drain (Expected_Sends => 0, Cache_Hit => True);',
-        'Select_Settings ("generic/v1", "' + json.dumps({'cache':False,'record':str(work / 'recording')})[1:-1].replace('"','""') + '");',
-        'Thinkthen.Sessions.Calls.Decide (Client, Owner, Recorded_Request); Finish (Owner); Drain (Expected_Sends => 1);',
-        'Select_Settings ("generic/v1", "' + json.dumps({'cache':False,'replay':str(work / 'recording')})[1:-1].replace('"','""') + '");',
-        'Thinkthen.Sessions.Calls.Decide (Client, Owner, Recorded_Request); Finish (Owner); Drain (Expected_Sends => 0);',
-        'Select_Settings ("arm/images/liquid/decide/v1", "' + json.dumps({'cache':False,'backend':'liquid','model':'d1'})[1:-1].replace('"','""') + '");',
-        'Thinkthen.Sessions.Calls.Decide (Client, Owner, Image_Request); Finish (Owner); Drain (Expected_Sends => 1, Images => True);',
+        'Thinkthen.Native_Sessions.Start (Client, Owner, File_Request, "decide"); Finish (Owner); Drain (Located => True, Expected_Sends => 1);',
+        'Select_Settings ("generic/v1", ' + 'Thinkthen.Inputs.Native.Wrap (' + construct('EngineSettings', definitions['EngineSettings'], {'cache':str(work / 'answer-cache')}) + ')' + ');',
+        'Thinkthen.Native_Sessions.Start (Client, Owner, Cached_Request, "decide"); Finish (Owner); Drain (Expected_Sends => 1);',
+        'Thinkthen.Native_Sessions.Start (Client, Owner, Cached_Request, "decide"); Finish (Owner); Drain (Expected_Sends => 0, Cache_Hit => True);',
+        'Select_Settings ("generic/v1", ' + 'Thinkthen.Inputs.Native.Wrap (' + construct('EngineSettings', definitions['EngineSettings'], {'cache':False,'record':str(work / 'recording')}) + ')' + ');',
+        'Thinkthen.Native_Sessions.Start (Client, Owner, Recorded_Request, "decide"); Finish (Owner); Drain (Expected_Sends => 1);',
+        'Select_Settings ("generic/v1", ' + 'Thinkthen.Inputs.Native.Wrap (' + construct('EngineSettings', definitions['EngineSettings'], {'cache':False,'replay':str(work / 'recording')}) + ')' + ');',
+        'Thinkthen.Native_Sessions.Start (Client, Owner, Recorded_Request, "decide"); Finish (Owner); Drain (Expected_Sends => 0);',
+        'Select_Settings ("arm/images/liquid/decide/v1", ' + 'Thinkthen.Inputs.Native.Wrap (' + construct('EngineSettings', definitions['EngineSettings'], {'cache':False,'backend':'liquid','model':'d1'}) + ')' + ');',
+        'Thinkthen.Native_Sessions.Start (Client, Owner, Image_Request, "decide"); Finish (Owner); Drain (Expected_Sends => 1, Images => True);',
     ]
-    source = ('with Thinkthen.Inputs;\nwith Thinkthen.Inputs.Native;\nwith Ada.Strings.Fixed;\n' + (PACKAGE / 'checks/native_session.adb').read_text()).replace('-- DECLARATIONS', '\n'.join(declarations)).replace('-- CALLS', '\n'.join(calls))
-    source = __import__('re').sub(r'\bText\s*\(', 'Thinkthen.Sessions.Text (', source)
+    source = ('with Thinkthen.Native_Sessions; use Thinkthen.Native_Sessions;\nwith Thinkthen.Inputs.Calls;\nwith Thinkthen.Inputs;\nwith Thinkthen.Inputs.Native;\nwith Ada.Strings.Fixed;\n' + (PACKAGE / 'checks/native_session.adb').read_text()).replace('-- DECLARATIONS', '\n'.join(declarations)).replace('-- CALLS', '\n'.join(calls))
+    source = __import__('re').sub(r'(?<![.\w])(?:Close|Finish|Cancel|Next_Packet|Try_Read)\s*\(', lambda match: 'Thinkthen.Native_Sessions.' + match.group(0), source)
+    source = __import__('re').sub(r'\bText\s*\(', 'Thinkthen.Native_Sessions.Text (', source)
     (work / 'thinkthen-inputs-native_check.ads').write_text('procedure Thinkthen.Inputs.Native_Check;\n')
     source = source.replace('procedure Native_Session is', 'procedure Thinkthen.Inputs.Native_Check is').replace('end Native_Session;', 'end Thinkthen.Inputs.Native_Check;')
     (work / 'thinkthen-inputs-native_check.adb').write_text(source)
     shutil.copy2(installed / 'examples/session_demo.adb', work / 'session_demo.adb')
-    subprocess.run([sys.executable, str(PACKAGE / 'checks/session_abi.py'), str(installed / 'native/include/thinkthen.h'), str(installed / 'src/thinkthen_session_c.ads')], env=child_env(), check=True)
+    subprocess.run([sys.executable, str(PACKAGE / 'checks/session_abi.py'), str(installed / 'native/include/thinkthen.h'), str(installed / 'src/thinkthen-session_c.ads')], env=child_env(), check=True)
     (work / 'consumer.gpr').write_text('with "installed package/thinkthen.gpr";\nproject Consumer is\nfor Main use ("thinkthen-inputs-native_check.adb", "session_demo.adb");\nfor Object_Dir use "objects";\npackage Compiler is\nfor Default_Switches ("Ada") use ("-gnat2022");\nend Compiler;\nend Consumer;\n')
     build = subprocess.run(['gprbuild', '-p', '-P', 'consumer.gpr', '-j2', '-cargs', '-O0'], cwd=work, env=child_env(), capture_output=True, text=True, timeout=60)
     assert build.returncode == 0, build.stdout + build.stderr
     if os.environ.get('THINKTHEN_COVERAGE_STAGE'):
         stage = Path(os.environ['THINKTHEN_COVERAGE_STAGE']); stage.mkdir(parents=True, exist_ok=True)
         shutil.copy2(work / 'objects/thinkthen-inputs-native_check', stage / 'native_session')
+    for unit in ('Thinkthen.Requests', 'Thinkthen.Session_C', 'Thinkthen.Native_Sessions'):
+        (work / 'privacy_probe.adb').write_text('with ' + unit + ';\nprocedure Privacy_Probe is begin null; end Privacy_Probe;\n')
+        denied = subprocess.run(['gnatmake', '-q', '-gnat2022', '-gnatc', '-I' + str(installed / 'src'), 'privacy_probe.adb', '-D', str(work / 'objects')], cwd=work, env=child_env(), capture_output=True, text=True)
+        assert denied.returncode != 0 and 'private' in denied.stderr, denied.stdout + denied.stderr
+    print('Installed Ada private carrier and C package refusals PASS')
     backend = subprocess.Popen([os.environ.get('THINKTHEN_BACKEND_BIN', str(ROOT / 'target/debug/conformance-backend'))], env=child_env(), stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
     try:
         port = int(backend.stdout.readline())

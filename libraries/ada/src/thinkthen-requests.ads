@@ -3,7 +3,7 @@ with Ada.Containers.Vectors;
 with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
 with Interfaces;
 with Thinkthen.Values;
-package Thinkthen.Requests is
+private package Thinkthen.Requests is
 -- Arbitrary values use owned native trees; Rust owns their admission.
 subtype JSON_Value is Thinkthen.Values.Value;
 use type Thinkthen.Values.Value;
@@ -278,20 +278,20 @@ T_threshold : T_Authored_threshold_Optional;
 T_version : T_Literal_1;
 end record;
 type T_Literal_max is null record;
-type T_Authored_choose_field_batch_Kind is (T_Authored_choose_field_batch_arm_0,
-T_Authored_choose_field_batch_arm_1);
-type T_Authored_choose_field_batch (Kind : T_Authored_choose_field_batch_Kind := T_Authored_choose_field_batch_arm_0) is record
+type T_Authored_questionBatch_Kind is (T_Authored_questionBatch_arm_0,
+T_Authored_questionBatch_arm_1);
+type T_Authored_questionBatch (Kind : T_Authored_questionBatch_Kind := T_Authored_questionBatch_arm_0) is record
 case Kind is
-when T_Authored_choose_field_batch_arm_0 => V_0 : T_Literal_max;
-when T_Authored_choose_field_batch_arm_1 => V_1 : T_Integer;
+when T_Authored_questionBatch_arm_0 => V_0 : T_Literal_max;
+when T_Authored_questionBatch_arm_1 => V_1 : T_Integer;
 end case;
 end record;
-package T_Authored_choose_field_batch_Options is new Optional_Values (T_Authored_choose_field_batch);
-subtype T_Authored_choose_field_batch_Optional is T_Authored_choose_field_batch_Options.Optional;
+package T_Authored_questionBatch_Options is new Optional_Values (T_Authored_questionBatch);
+subtype T_Authored_questionBatch_Optional is T_Authored_questionBatch_Options.Optional;
 package T_Authored_name_Options is new Optional_Values (T_Authored_name);
 subtype T_Authored_name_Optional is T_Authored_name_Options.Optional;
 type T_Authored_choose is record
-T_batch : T_Authored_choose_field_batch_Optional;
+T_batch : T_Authored_questionBatch_Optional;
 T_choose : T_Authored_questionText;
 T_context_schema : T_Authored_inputDeclaration_Optional;
 T_item_schema : T_Authored_inputDeclaration_Optional;
@@ -303,18 +303,8 @@ T_profile : T_Authored_profile_Optional;
 T_threshold : T_Authored_cut_Optional;
 T_wording_version : T_Integer_Optional;
 end record;
-type T_Authored_decide_field_batch_Kind is (T_Authored_decide_field_batch_arm_0,
-T_Authored_decide_field_batch_arm_1);
-type T_Authored_decide_field_batch (Kind : T_Authored_decide_field_batch_Kind := T_Authored_decide_field_batch_arm_0) is record
-case Kind is
-when T_Authored_decide_field_batch_arm_0 => V_0 : T_Literal_max;
-when T_Authored_decide_field_batch_arm_1 => V_1 : T_Integer;
-end case;
-end record;
-package T_Authored_decide_field_batch_Options is new Optional_Values (T_Authored_decide_field_batch);
-subtype T_Authored_decide_field_batch_Optional is T_Authored_decide_field_batch_Options.Optional;
 type T_Authored_decide is record
-T_batch : T_Authored_decide_field_batch_Optional;
+T_batch : T_Authored_questionBatch_Optional;
 T_context_schema : T_Authored_inputDeclaration_Optional;
 T_decide : T_Authored_questionText;
 T_false : T_Authored_criterion_Optional;
@@ -371,18 +361,8 @@ T_threshold : T_Authored_cut_Optional;
 T_version : T_Literal_1;
 T_wording_version : T_Integer_Optional;
 end record;
-type T_Authored_score_field_batch_Kind is (T_Authored_score_field_batch_arm_0,
-T_Authored_score_field_batch_arm_1);
-type T_Authored_score_field_batch (Kind : T_Authored_score_field_batch_Kind := T_Authored_score_field_batch_arm_0) is record
-case Kind is
-when T_Authored_score_field_batch_arm_0 => V_0 : T_Literal_max;
-when T_Authored_score_field_batch_arm_1 => V_1 : T_Integer;
-end case;
-end record;
-package T_Authored_score_field_batch_Options is new Optional_Values (T_Authored_score_field_batch);
-subtype T_Authored_score_field_batch_Optional is T_Authored_score_field_batch_Options.Optional;
 type T_Authored_score is record
-T_batch : T_Authored_score_field_batch_Optional;
+T_batch : T_Authored_questionBatch_Optional;
 T_context_schema : T_Authored_inputDeclaration_Optional;
 T_item_schema : T_Authored_inputDeclaration_Optional;
 T_levels : T_Authored_levels_Optional;
@@ -393,18 +373,8 @@ T_profile : T_Authored_profile_Optional;
 T_score : T_Authored_questionText;
 T_wording_version : T_Integer_Optional;
 end record;
-type T_Authored_tag_field_batch_Kind is (T_Authored_tag_field_batch_arm_0,
-T_Authored_tag_field_batch_arm_1);
-type T_Authored_tag_field_batch (Kind : T_Authored_tag_field_batch_Kind := T_Authored_tag_field_batch_arm_0) is record
-case Kind is
-when T_Authored_tag_field_batch_arm_0 => V_0 : T_Literal_max;
-when T_Authored_tag_field_batch_arm_1 => V_1 : T_Integer;
-end case;
-end record;
-package T_Authored_tag_field_batch_Options is new Optional_Values (T_Authored_tag_field_batch);
-subtype T_Authored_tag_field_batch_Optional is T_Authored_tag_field_batch_Options.Optional;
 type T_Authored_tag is record
-T_batch : T_Authored_tag_field_batch_Optional;
+T_batch : T_Authored_questionBatch_Optional;
 T_context_schema : T_Authored_inputDeclaration_Optional;
 T_item_schema : T_Authored_inputDeclaration_Optional;
 T_labels : T_Authored_labels_Optional;
@@ -416,6 +386,15 @@ T_tag : T_Authored_questionText;
 T_threshold : T_Authored_cut_Optional;
 T_wording_version : T_Integer_Optional;
 end record;
+type T_DisabledCache is null record;
+type T_CacheDocument_Kind is (T_CacheDocument_arm_0,
+T_CacheDocument_arm_1);
+type T_CacheDocument (Kind : T_CacheDocument_Kind := T_CacheDocument_arm_0) is record
+case Kind is
+when T_CacheDocument_arm_0 => V_0 : T_Text;
+when T_CacheDocument_arm_1 => V_1 : T_DisabledCache;
+end case;
+end record;
 type T_ContextSchema_Kind is (T_ContextSchema_arm_0,
 T_ContextSchema_arm_1);
 type T_ContextSchema (Kind : T_ContextSchema_Kind := T_ContextSchema_arm_0) is record
@@ -423,6 +402,72 @@ case Kind is
 when T_ContextSchema_arm_0 => V_0 : T_Text;
 when T_ContextSchema_arm_1 => V_1 : T_JSON_Map;
 end case;
+end record;
+type T_Unsigned is new Interfaces.Unsigned_64;
+type T_RequestBatch_Kind is (T_RequestBatch_arm_0,
+T_RequestBatch_arm_1);
+type T_RequestBatch (Kind : T_RequestBatch_Kind := T_RequestBatch_arm_0) is record
+case Kind is
+when T_RequestBatch_arm_0 => V_0 : T_Unsigned;
+when T_RequestBatch_arm_1 => V_1 : T_Text;
+end case;
+end record;
+package T_RequestBatch_Options is new Optional_Values (T_RequestBatch);
+subtype T_RequestBatch_Optional is T_RequestBatch_Options.Optional;
+package T_CacheDocument_Options is new Optional_Values (T_CacheDocument);
+subtype T_CacheDocument_Optional is T_CacheDocument_Options.Optional;
+type T_EngineSettings_field_max_estimated_input_tokens_total_Kind is (T_EngineSettings_field_max_estimated_input_tokens_total_arm_0,
+T_EngineSettings_field_max_estimated_input_tokens_total_arm_1);
+type T_EngineSettings_field_max_estimated_input_tokens_total (Kind : T_EngineSettings_field_max_estimated_input_tokens_total_Kind := T_EngineSettings_field_max_estimated_input_tokens_total_arm_0) is record
+case Kind is
+when T_EngineSettings_field_max_estimated_input_tokens_total_arm_0 => V_0 : T_Unsigned;
+when T_EngineSettings_field_max_estimated_input_tokens_total_arm_1 => V_1 : T_Null;
+end case;
+end record;
+package T_EngineSettings_field_max_estimated_input_tokens_total_Options is new Optional_Values (T_EngineSettings_field_max_estimated_input_tokens_total);
+subtype T_EngineSettings_field_max_estimated_input_tokens_total_Optional is T_EngineSettings_field_max_estimated_input_tokens_total_Options.Optional;
+package T_Unsigned_Options is new Optional_Values (T_Unsigned);
+subtype T_Unsigned_Optional is T_Unsigned_Options.Optional;
+type T_EngineSettings_field_max_requests_Kind is (T_EngineSettings_field_max_requests_arm_0,
+T_EngineSettings_field_max_requests_arm_1);
+type T_EngineSettings_field_max_requests (Kind : T_EngineSettings_field_max_requests_Kind := T_EngineSettings_field_max_requests_arm_0) is record
+case Kind is
+when T_EngineSettings_field_max_requests_arm_0 => V_0 : T_Unsigned;
+when T_EngineSettings_field_max_requests_arm_1 => V_1 : T_Null;
+end case;
+end record;
+package T_EngineSettings_field_max_requests_Options is new Optional_Values (T_EngineSettings_field_max_requests);
+subtype T_EngineSettings_field_max_requests_Optional is T_EngineSettings_field_max_requests_Options.Optional;
+type T_EngineSettings_field_max_requests_total_Kind is (T_EngineSettings_field_max_requests_total_arm_0,
+T_EngineSettings_field_max_requests_total_arm_1);
+type T_EngineSettings_field_max_requests_total (Kind : T_EngineSettings_field_max_requests_total_Kind := T_EngineSettings_field_max_requests_total_arm_0) is record
+case Kind is
+when T_EngineSettings_field_max_requests_total_arm_0 => V_0 : T_Unsigned;
+when T_EngineSettings_field_max_requests_total_arm_1 => V_1 : T_Null;
+end case;
+end record;
+package T_EngineSettings_field_max_requests_total_Options is new Optional_Values (T_EngineSettings_field_max_requests_total);
+subtype T_EngineSettings_field_max_requests_total_Optional is T_EngineSettings_field_max_requests_total_Options.Optional;
+type T_EngineSettings is record
+T_backend : T_Text_Optional;
+T_base_url : T_Text_Optional;
+T_batch : T_RequestBatch_Optional;
+T_cache : T_CacheDocument_Optional;
+T_max_estimated_input_tokens_total : T_EngineSettings_field_max_estimated_input_tokens_total_Optional;
+T_max_request_bytes : T_Unsigned_Optional;
+T_max_requests : T_EngineSettings_field_max_requests_Optional;
+T_max_requests_total : T_EngineSettings_field_max_requests_total_Optional;
+T_max_retries : T_Unsigned_Optional;
+T_model : T_Text_Optional;
+T_profile : T_Text_Optional;
+T_proxy : T_JSON_Optional;
+T_record : T_Text_Optional;
+T_refresh_cache : T_Boolean_Optional;
+T_replay : T_Text_Optional;
+T_throttle : T_Unsigned_Optional;
+T_timeout : T_Unsigned_Optional;
+T_usd_per_million_input : T_Text_Optional;
+T_usd_per_million_output : T_Text_Optional;
 end record;
 type T_ImageMedia is (T_ImageMedia_image_jpeg,
 T_ImageMedia_image_png);
@@ -432,7 +477,6 @@ T_name : T_Text;
 end record;
 type T_ReaderMedia is (T_ReaderMedia_text,
 T_ReaderMedia_image);
-type T_Unsigned is new Interfaces.Unsigned_64;
 type T_RecognitionExampleEntity is record
 T_end : T_Unsigned;
 T_kind : T_Text;
@@ -473,8 +517,6 @@ package T_RecognitionMode_Options is new Optional_Values (T_RecognitionMode);
 subtype T_RecognitionMode_Optional is T_RecognitionMode_Options.Optional;
 package T_Authored_relation_List_Options is new Optional_Values (T_Authored_relation_List);
 subtype T_Authored_relation_List_Optional is T_Authored_relation_List_Options.Optional;
-package T_Unsigned_Options is new Optional_Values (T_Unsigned);
-subtype T_Unsigned_Optional is T_Unsigned_Options.Optional;
 package T_RecognitionStageContext_Options is new Optional_Values (T_RecognitionStageContext);
 subtype T_RecognitionStageContext_Optional is T_RecognitionStageContext_Options.Optional;
 type T_RecognizeQuestion is record
@@ -661,16 +703,6 @@ when T_RequestInput_arm_source => V_5 : T_RequestInput_source;
 when T_RequestInput_arm_feed => V_6 : T_RequestInput_feed;
 end case;
 end record;
-type T_RequestBatch_Kind is (T_RequestBatch_arm_0,
-T_RequestBatch_arm_1);
-type T_RequestBatch (Kind : T_RequestBatch_Kind := T_RequestBatch_arm_0) is record
-case Kind is
-when T_RequestBatch_arm_0 => V_0 : T_Unsigned;
-when T_RequestBatch_arm_1 => V_1 : T_Text;
-end case;
-end record;
-package T_RequestBatch_Options is new Optional_Values (T_RequestBatch);
-subtype T_RequestBatch_Optional is T_RequestBatch_Options.Optional;
 type T_RequestThreshold_Kind is (T_RequestThreshold_arm_0,
 T_RequestThreshold_arm_1);
 type T_RequestThreshold (Kind : T_RequestThreshold_Kind := T_RequestThreshold_arm_0) is record
@@ -712,18 +744,8 @@ T_kind : T_Literal_text;
 T_text : Thinkthen.Requests.T_Text;
 end record;
 type T_Literal_definition is null record;
-type T_RequestDefinition_Authored_decide_field_batch_Kind is (T_RequestDefinition_Authored_decide_field_batch_arm_0,
-T_RequestDefinition_Authored_decide_field_batch_arm_1);
-type T_RequestDefinition_Authored_decide_field_batch (Kind : T_RequestDefinition_Authored_decide_field_batch_Kind := T_RequestDefinition_Authored_decide_field_batch_arm_0) is record
-case Kind is
-when T_RequestDefinition_Authored_decide_field_batch_arm_0 => V_0 : T_Literal_max;
-when T_RequestDefinition_Authored_decide_field_batch_arm_1 => V_1 : T_Integer;
-end case;
-end record;
-package T_RequestDefinition_Authored_decide_field_batch_Options is new Optional_Values (T_RequestDefinition_Authored_decide_field_batch);
-subtype T_RequestDefinition_Authored_decide_field_batch_Optional is T_RequestDefinition_Authored_decide_field_batch_Options.Optional;
 type T_RequestDefinition_Authored_decide is record
-T_batch : T_RequestDefinition_Authored_decide_field_batch_Optional;
+T_batch : T_Authored_questionBatch_Optional;
 T_context_schema : T_Authored_inputDeclaration_Optional;
 T_decide : T_Authored_questionText;
 T_false : T_Authored_criterion_Optional;
@@ -736,18 +758,8 @@ T_threshold : T_Authored_threshold_Optional;
 T_true : T_Authored_criterion_Optional;
 T_wording_version : T_Integer_Optional;
 end record;
-type T_RequestDefinition_Authored_choose_field_batch_Kind is (T_RequestDefinition_Authored_choose_field_batch_arm_0,
-T_RequestDefinition_Authored_choose_field_batch_arm_1);
-type T_RequestDefinition_Authored_choose_field_batch (Kind : T_RequestDefinition_Authored_choose_field_batch_Kind := T_RequestDefinition_Authored_choose_field_batch_arm_0) is record
-case Kind is
-when T_RequestDefinition_Authored_choose_field_batch_arm_0 => V_0 : T_Literal_max;
-when T_RequestDefinition_Authored_choose_field_batch_arm_1 => V_1 : T_Integer;
-end case;
-end record;
-package T_RequestDefinition_Authored_choose_field_batch_Options is new Optional_Values (T_RequestDefinition_Authored_choose_field_batch);
-subtype T_RequestDefinition_Authored_choose_field_batch_Optional is T_RequestDefinition_Authored_choose_field_batch_Options.Optional;
 type T_RequestDefinition_Authored_choose is record
-T_batch : T_RequestDefinition_Authored_choose_field_batch_Optional;
+T_batch : T_Authored_questionBatch_Optional;
 T_choose : T_Authored_questionText;
 T_context_schema : T_Authored_inputDeclaration_Optional;
 T_item_schema : T_Authored_inputDeclaration_Optional;
@@ -759,18 +771,8 @@ T_profile : T_Authored_profile_Optional;
 T_threshold : T_Authored_cut_Optional;
 T_wording_version : T_Integer_Optional;
 end record;
-type T_RequestDefinition_Authored_tag_field_batch_Kind is (T_RequestDefinition_Authored_tag_field_batch_arm_0,
-T_RequestDefinition_Authored_tag_field_batch_arm_1);
-type T_RequestDefinition_Authored_tag_field_batch (Kind : T_RequestDefinition_Authored_tag_field_batch_Kind := T_RequestDefinition_Authored_tag_field_batch_arm_0) is record
-case Kind is
-when T_RequestDefinition_Authored_tag_field_batch_arm_0 => V_0 : T_Literal_max;
-when T_RequestDefinition_Authored_tag_field_batch_arm_1 => V_1 : T_Integer;
-end case;
-end record;
-package T_RequestDefinition_Authored_tag_field_batch_Options is new Optional_Values (T_RequestDefinition_Authored_tag_field_batch);
-subtype T_RequestDefinition_Authored_tag_field_batch_Optional is T_RequestDefinition_Authored_tag_field_batch_Options.Optional;
 type T_RequestDefinition_Authored_tag is record
-T_batch : T_RequestDefinition_Authored_tag_field_batch_Optional;
+T_batch : T_Authored_questionBatch_Optional;
 T_context_schema : T_Authored_inputDeclaration_Optional;
 T_item_schema : T_Authored_inputDeclaration_Optional;
 T_labels : T_Authored_labels_Optional;
@@ -782,18 +784,8 @@ T_tag : T_Authored_questionText;
 T_threshold : T_Authored_cut_Optional;
 T_wording_version : T_Integer_Optional;
 end record;
-type T_RequestDefinition_Authored_score_field_batch_Kind is (T_RequestDefinition_Authored_score_field_batch_arm_0,
-T_RequestDefinition_Authored_score_field_batch_arm_1);
-type T_RequestDefinition_Authored_score_field_batch (Kind : T_RequestDefinition_Authored_score_field_batch_Kind := T_RequestDefinition_Authored_score_field_batch_arm_0) is record
-case Kind is
-when T_RequestDefinition_Authored_score_field_batch_arm_0 => V_0 : T_Literal_max;
-when T_RequestDefinition_Authored_score_field_batch_arm_1 => V_1 : T_Integer;
-end case;
-end record;
-package T_RequestDefinition_Authored_score_field_batch_Options is new Optional_Values (T_RequestDefinition_Authored_score_field_batch);
-subtype T_RequestDefinition_Authored_score_field_batch_Optional is T_RequestDefinition_Authored_score_field_batch_Options.Optional;
 type T_RequestDefinition_Authored_score is record
-T_batch : T_RequestDefinition_Authored_score_field_batch_Optional;
+T_batch : T_Authored_questionBatch_Optional;
 T_context_schema : T_Authored_inputDeclaration_Optional;
 T_item_schema : T_Authored_inputDeclaration_Optional;
 T_levels : T_Authored_levels_Optional;

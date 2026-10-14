@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 import subprocess
 import sys
-from session_values import ROOT, definitions, matches, name
+from session_values import ROOT, definitions, matches, name, template
 sys.path.insert(0, str(ROOT / 'conformance/children'))
 from children import child_env
 
@@ -32,12 +32,15 @@ class Reader:
         if '$ref' in source:
             key = source['$ref'].removeprefix('#/$defs/')
             return self.value(key, definitions[key], value, encode)
+        alternatives = shape(source)
+        if alternatives and len(alternatives) == 1 and not template.enum_values(source):
+            return self.value(key, alternatives[0], value, encode)
         typ = name(key)
         call = 'Read_' + typ
-        if not encode and key in self.functions:
+        if not encode and typ in self.functions:
             return call
         if not encode:
-            self.functions[key] = ''
+            self.functions[typ] = ''
         declarations, body = [], []
         def token(text):
             self.tokens.append(str(text))
@@ -45,8 +48,12 @@ class Reader:
             return self.value(child_key, child_source, child_value, encode)
         variants = source.get('variants')
         alternatives = shape(source)
-        if variants or alternatives and len(alternatives) > 1:
-            branches = [(branch, definitions[branch], name(key + '_arm_' + branch)) for branch, _ in variants] if variants else [(key + '_value_' + str(i), branch, name(key + '_arm_' + str(i))) for i, branch in enumerate(alternatives)]
+        values = template.enum_values(source)
+        if values:
+            if encode: token(values.index(value))
+            else: body.append(f"return {typ}'Val (Integer'Value (Get_Line (Input)));")
+        elif variants or alternatives and len(alternatives) > 1:
+            branches = [(branch, definitions[branch], template.identifier(key + '_arm_' + branch.removeprefix(key + '_'))) for branch, _ in variants] if variants else [(key + '_value_' + str(i), branch, name(key + '_arm_' + str(i))) for i, branch in enumerate(alternatives)]
             if encode:
                 index = next(i for i, (_, branch, _) in enumerate(branches) if matches(branch, value))
                 token(index)
@@ -77,14 +84,14 @@ class Reader:
                             declarations.append(f'{variable} : constant {name(field_key)} := {reader};')
                         else:
                             # Optional wrapper names are defined by the package generator.
-                            optional = name(key + '_Optional_T_' + member)
+                            optional = name(field_key) + '_Optional'
                             declarations.append(f'function Read_{variable} return {optional} is begin if Boolean\'Value (Get_Line (Input)) then return (Present => True, Value => {reader}); else return (Present => False); end if; end;')
                             declarations.append(f'{variable} : constant {optional} := Read_{variable};')
                         fields.append(name(member) + ' => ' + variable)
                 body.append('return (' + (', '.join(fields) if fields else 'null record') + ');')
-            elif source.get('type') == 'array' or source.get('type') == 'object' and isinstance(source.get('additionalProperties'), dict):
+            elif source.get('type') in ('array', 'object'):
                 mapping = source.get('type') == 'object'
-                item_source = source['additionalProperties'] if mapping else source.get('items', {})
+                item_source = (source.get('additionalProperties') if isinstance(source.get('additionalProperties'), dict) else {}) if mapping else source.get('items', {})
                 if encode:
                     token(len(value))
                     for item in value.items() if mapping else value:
@@ -95,7 +102,7 @@ class Reader:
                     reader = child(key + '_element', item_source)
                     declarations.extend([f'Result : {typ};', 'Count : constant Natural := Natural\'Value (Get_Line (Input));'])
                     if mapping:
-                        body.append(f"for Index in 1 .. Count loop declare Key : constant Unbounded_String := Read_Text; Item : constant {name(key + '_element')} := {reader}; begin Result.Append ({name(key + '_Entry')}'(Key => Key, Value => Item)); end; end loop; return Result;")
+                        body.append(f"for Index in 1 .. Count loop declare Key : constant Unbounded_String := Read_Text; Item : constant {name(key + '_element')} := {reader}; begin Result.Append ({typ + '_Entry'}'(Key => Key, Value => Item)); end; end loop; return Result;")
                     else:
                         body.append(f'for Index in 1 .. Count loop Result.Append ({reader}); end loop; return Result;')
             elif 'const' in source or source.get('type') == 'null':
@@ -110,7 +117,7 @@ class Reader:
                 if encode: self.native_value(value)
                 else: body.append(f'return {typ} (Read_Native_Value);')
         if not encode:
-            self.functions[key] = f'function {call} return {typ} is\n' + '\n'.join(declarations) + '\nbegin\n' + '\n'.join(body) + f'\nend {call};'
+            self.functions[typ] = f'function {call} return {typ} is\n' + '\n'.join(declarations) + '\nbegin\n' + '\n'.join(body) + f'\nend {call};'
         return call
 
     def native_value(self, value):
@@ -145,22 +152,23 @@ def build(package, home):
     for verb in ('decide', 'choose', 'tag', 'score', 'filter', 'rank', 'find', 'annotate', 'recognize', 'relate'):
         key = 'RequestCall'
         function = reader.value(key, definitions[key])
-        calls.append(f'{"if" if not calls else "elsif"} Verb = "{verb}" then Thinkthen.Sessions.Calls.{verb.title()} (Client, Owner, {function});')
+        calls.append(f'{"if" if not calls else "elsif"} Verb = "{verb}" then Thinkthen.Native_Sessions.Start (Client, Owner, {function}, "{verb}");')
     feed = reader.value('RequestSessionDescriptor', definitions['RequestSessionDescriptor'])
     source = Path(__file__).with_name('full_case.adb').read_text()
     source = source.replace('with Ada.Exceptions;', 'with Ada.Exceptions;\nwith Ada.Command_Line;\nwith Thinkthen.Values;')
-    source = source.replace('-- REQUEST', 'Input : Ada.Text_IO.File_Type;\nfunction Read_Text return Unbounded_String is begin return Fixture_Text (Get_Line (Input)); end;\n' + NATIVE_READER + '\n'.join('function Read_' + name(key) + ' return ' + name(key) + ';' for key in reader.functions) + '\n' + '\n'.join(reader.functions.values()))
+    source = source.replace('-- REQUEST', 'Input : Ada.Text_IO.File_Type;\nfunction Read_Text return Unbounded_String is begin return Fixture_Text (Get_Line (Input)); end;\n' + NATIVE_READER + '\n'.join('function Read_' + typ + ' return ' + typ + ';' for typ in reader.functions) + '\n' + '\n'.join(reader.functions.values()))
     source = source.replace('-- SETTINGS', 'Ada.Command_Line.Argument (2),')
     source = source.replace('Thinkthen.Sessions.Calls.CALL_NAME (Client, Owner, Request);', 'Ada.Text_IO.Open (Input, Ada.Text_IO.In_File, Ada.Command_Line.Argument (1));\ndeclare Verb : constant String := Get_Line (Input); begin\n' + '\n'.join(calls) + '\nelse raise Program_Error with "unknown fixture call"; end if; end;')
-    source = source.replace('-- CANCEL', 'if Boolean\'Value (Get_Line (Input)) then Cancel (Owner); end if;')
-    source = source.replace('-- FEED', f'declare Count : constant Natural := Natural\'Value (Get_Line (Input)); begin for Index in 1 .. Count loop declare Item : constant T_RequestSessionDescriptor := {feed}; Status : Push_Status; begin loop Push (Owner, Item, Status); exit when Status /= Full; Drain_One; end loop; end; end loop; end;')
+    source = source.replace('-- CANCEL', 'if Boolean\'Value (Get_Line (Input)) then Thinkthen.Native_Sessions.Cancel (Owner); end if;')
+    source = source.replace('-- FEED', f'declare Count : constant Natural := Natural\'Value (Get_Line (Input)); begin for Index in 1 .. Count loop declare Item : constant T_RequestSessionDescriptor := {feed}; Status : Push_Status; begin loop Thinkthen.Native_Sessions.Push (Owner, Item, Status); exit when Status /= Full; Drain_One; end loop; end; end loop; end;')
     source = source.replace('if HELD_CANCEL then', "if Boolean'Value (Get_Line (Input)) then")
     path = home / 'thinkthen-sessions-parity_case.adb'
     path.write_text(source)
+    (home / 'thinkthen-sessions-parity_case.ads').write_text('procedure Thinkthen.Sessions.Parity_Case;\n')
     objects = home / 'ada-objects'
     objects.mkdir(exist_ok=True)
     binary = home / 'ada-consumer'
-    result = subprocess.run(['gnatmake', '-q', '-gnat2022', '-I' + str(package / 'src'), str(path), '-D', str(objects), '-o', str(binary), '-largs', str(package / 'native/lib/libthinkthen.a'), '-ldl', '-lpthread', '-lm'], env=child_env(), text=True, capture_output=True, timeout=180)
+    result = subprocess.run(['gnatmake', '-q', '-gnat2022', '-I' + str(home), '-I' + str(package / 'src'), str(path), '-D', str(objects), '-o', str(binary), '-largs', str(package / 'native/lib/libthinkthen.a'), '-ldl', '-lpthread', '-lm'], env=child_env(), text=True, capture_output=True, timeout=180)
     assert result.returncode == 0, result.stdout + result.stderr
     return binary
 
