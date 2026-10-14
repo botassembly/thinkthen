@@ -11,9 +11,7 @@ $reviews = [
     'Does this come in blue?',
     'The strap snapped on day two.',
 ];
-$complaints = array_map(
-    fn ($row) => $row->input,
-    $client->filter($question, $reviews)->results,
-);
+$complaints = $client->filter($question, $reviews)
+    ->filterAnswer();
 assert($complaints === [$reviews[1], $reviews[3]]);
 $client->close();

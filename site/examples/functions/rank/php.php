@@ -12,7 +12,6 @@ $inbox = [
     'Reminder: your invoice is due in 30 days',
     'Please send the signed quote by 5 pm today',
 ];
-$byUrgency = $client->rank($question, $inbox)->results;
-$order = array_map(fn ($one) => $one->index, $byUrgency);
+$order = $client->rank($question, $inbox)->rankAnswer();
 assert($order === [1, 3, 2, 0]);
 $client->close();
