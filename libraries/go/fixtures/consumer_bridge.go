@@ -96,6 +96,10 @@ func fixtureValue(value any) any {
 		if reader.Type().NumOut() != 1 || !strings.HasPrefix(reader.Type().Out(0).Name(), "Presence[") {
 			continue
 		}
+		// Convenience endpoint names duplicate the typed Source and Target fields.
+		if method.Name == "SourceName" || method.Name == "TargetName" {
+			continue
+		}
 		if method.Name != "Answer" && strings.HasSuffix(method.Name, "Answer") {
 			continue
 		}
