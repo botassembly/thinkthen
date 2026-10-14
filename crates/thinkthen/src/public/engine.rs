@@ -260,11 +260,13 @@ impl Engine {
         evidence: &str,
         options: CallOptions<'_>,
     ) -> Result<Call<Answer>, Error> {
-        self.decide_input_with(
-            question,
-            &super::QuestionInput::Text(evidence.to_owned()),
-            options,
-        )
+        Ok(self
+            .decide_input_complete_with(
+                question,
+                &super::QuestionInput::Text(evidence.to_owned()),
+                options,
+            )?
+            .map(|result| result.value()))
     }
 
     /// Pick one option of `C`, or `None` when the answer is not sure.
@@ -291,11 +293,23 @@ impl Engine {
         evidence: &str,
         options: CallOptions<'_>,
     ) -> Result<Call<Option<C>>, Error> {
-        self.choose_input_with(
-            question,
+        self.atomic_complete(
+            super::InputFunction::Choose,
+            question.question(),
             &super::QuestionInput::Text(evidence.to_owned()),
             options,
-        )
+        )?
+        .try_map(super::complete::choice)?
+        .try_map(|result| {
+            result
+                .value()
+                .map(|label| {
+                    C::from_label(label).ok_or(Error::defect(
+                        "the backend answered a label the choice does not hold",
+                    ))
+                })
+                .transpose()
+        })
     }
 
     /// Place the evidence on the question's levels: 0 at the lowest, 1 at the highest.
@@ -318,11 +332,15 @@ impl Engine {
         evidence: &str,
         options: CallOptions<'_>,
     ) -> Result<Call<f64>, Error> {
-        self.score_input_with(
-            question,
-            &super::QuestionInput::Text(evidence.to_owned()),
-            options,
-        )
+        Ok(self
+            .atomic_complete(
+                super::InputFunction::Score,
+                question,
+                &super::QuestionInput::Text(evidence.to_owned()),
+                options,
+            )?
+            .try_map(super::complete::score)?
+            .map(|result| result.value()))
     }
 
     /// Every label of `C` that reached the cut, in declared order.
