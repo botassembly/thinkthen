@@ -37,6 +37,8 @@ typedef struct thinkthen_cobol_text {
 #define THINKTHEN_COBOL_OPTIONSARM2_KIND 2
 #define THINKTHEN_COBOL_POINTERSARM1_KIND 1
 #define THINKTHEN_COBOL_POINTERSARM2_KIND 2
+#define THINKTHEN_COBOL_QUESTIONBATCHARM1_KIND 1
+#define THINKTHEN_COBOL_QUESTIONBATCHARM2_KIND 2
 #define THINKTHEN_COBOL_QUESTIONTEXTARM1_KIND 1
 #define THINKTHEN_COBOL_QUESTIONTEXTARM2_KIND 2
 #define THINKTHEN_COBOL_QUESTIONTEXTARM3_KIND 3
@@ -104,28 +106,12 @@ typedef struct thinkthen_cobol_text {
 #define THINKTHEN_COBOL_SOURCEUNITARM1_KIND 1
 #define THINKTHEN_COBOL_SOURCEUNITARM2_KIND 2
 #define THINKTHEN_COBOL_SOURCEUNITARM3_KIND 3
-#define THINKTHEN_COBOL_CHOOSEBATCHARM1_KIND 1
-#define THINKTHEN_COBOL_CHOOSEBATCHARM2_KIND 2
-#define THINKTHEN_COBOL_DECIDEBATCHARM1_KIND 1
-#define THINKTHEN_COBOL_DECIDEBATCHARM2_KIND 2
-#define THINKTHEN_COBOL_SCOREBATCHARM1_KIND 1
-#define THINKTHEN_COBOL_SCOREBATCHARM2_KIND 2
-#define THINKTHEN_COBOL_TAGBATCHARM1_KIND 1
-#define THINKTHEN_COBOL_TAGBATCHARM2_KIND 2
 #define THINKTHEN_COBOL_SETTINGSINPUTTOKENBUDGETARM1_KIND 1
 #define THINKTHEN_COBOL_SETTINGSINPUTTOKENBUDGETARM2_KIND 2
 #define THINKTHEN_COBOL_SETTINGSMAXREQUESTSARM1_KIND 1
 #define THINKTHEN_COBOL_SETTINGSMAXREQUESTSARM2_KIND 2
 #define THINKTHEN_COBOL_SETTINGSMAXREQUESTSTOTALARM1_KIND 1
 #define THINKTHEN_COBOL_SETTINGSMAXREQUESTSTOTALARM2_KIND 2
-#define THINKTHEN_COBOL_DEFINITIONCHOOSEBATCHARM1_KIND 1
-#define THINKTHEN_COBOL_DEFINITIONCHOOSEBATCHARM2_KIND 2
-#define THINKTHEN_COBOL_DEFINITIONDECIDEBATCHARM1_KIND 1
-#define THINKTHEN_COBOL_DEFINITIONDECIDEBATCHARM2_KIND 2
-#define THINKTHEN_COBOL_DEFINITIONSCOREBATCHARM1_KIND 1
-#define THINKTHEN_COBOL_DEFINITIONSCOREBATCHARM2_KIND 2
-#define THINKTHEN_COBOL_DEFINITIONTAGBATCHARM1_KIND 1
-#define THINKTHEN_COBOL_DEFINITIONTAGBATCHARM2_KIND 2
 typedef struct thinkthen_cobol_AnnotateDefinition {
     uint64_t reserved;
     const void * m_batch;
@@ -293,6 +279,10 @@ typedef struct thinkthen_cobol_Profile {
     const char * data;
     uint64_t len;
 } thinkthen_cobol_Profile;
+typedef struct thinkthen_cobol_QuestionBatch {
+    uint64_t kind;
+    const void * value;
+} thinkthen_cobol_QuestionBatch;
 typedef struct thinkthen_cobol_QuestionText {
     uint64_t kind;
     const void * value;
@@ -823,10 +813,6 @@ typedef struct thinkthen_cobol_AnnotateQuestionTagName {
 typedef struct thinkthen_cobol_AnnotateQuestionTagWordingVersion {
     int64_t value;
 } thinkthen_cobol_AnnotateQuestionTagWordingVersion;
-typedef struct thinkthen_cobol_ChooseBatch {
-    uint64_t kind;
-    const void * value;
-} thinkthen_cobol_ChooseBatch;
 typedef struct thinkthen_cobol_ChooseName {
     const char * data;
     uint64_t len;
@@ -857,10 +843,6 @@ typedef struct thinkthen_cobol_CutArm2 {
     const char * data;
     uint64_t len;
 } thinkthen_cobol_CutArm2;
-typedef struct thinkthen_cobol_DecideBatch {
-    uint64_t kind;
-    const void * value;
-} thinkthen_cobol_DecideBatch;
 typedef struct thinkthen_cobol_DecideName {
     const char * data;
     uint64_t len;
@@ -957,6 +939,12 @@ typedef struct thinkthen_cobol_PointersArm2 {
     const void *const * data;
     uint64_t len;
 } thinkthen_cobol_PointersArm2;
+typedef struct thinkthen_cobol_QuestionBatchArm1 {
+    uint64_t reserved;
+} thinkthen_cobol_QuestionBatchArm1;
+typedef struct thinkthen_cobol_QuestionBatchArm2 {
+    int64_t value;
+} thinkthen_cobol_QuestionBatchArm2;
 typedef struct thinkthen_cobol_QuestionTextArm1 {
     const char * data;
     uint64_t len;
@@ -986,10 +974,6 @@ typedef struct thinkthen_cobol_RelationEither {
 typedef struct thinkthen_cobol_RelationSingle {
     uint64_t value;
 } thinkthen_cobol_RelationSingle;
-typedef struct thinkthen_cobol_ScoreBatch {
-    uint64_t kind;
-    const void * value;
-} thinkthen_cobol_ScoreBatch;
 typedef struct thinkthen_cobol_ScoreName {
     const char * data;
     uint64_t len;
@@ -997,10 +981,6 @@ typedef struct thinkthen_cobol_ScoreName {
 typedef struct thinkthen_cobol_ScoreWordingVersion {
     int64_t value;
 } thinkthen_cobol_ScoreWordingVersion;
-typedef struct thinkthen_cobol_TagBatch {
-    uint64_t kind;
-    const void * value;
-} thinkthen_cobol_TagBatch;
 typedef struct thinkthen_cobol_TagName {
     const char * data;
     uint64_t len;
@@ -1215,10 +1195,6 @@ typedef struct thinkthen_cobol_DefinitionAnnotateDefinitionQuestions {
 typedef struct thinkthen_cobol_DefinitionAnnotateDefinitionVersion {
     uint64_t reserved;
 } thinkthen_cobol_DefinitionAnnotateDefinitionVersion;
-typedef struct thinkthen_cobol_DefinitionChooseBatch {
-    uint64_t kind;
-    const void * value;
-} thinkthen_cobol_DefinitionChooseBatch;
 typedef struct thinkthen_cobol_DefinitionChooseName {
     const char * data;
     uint64_t len;
@@ -1226,10 +1202,6 @@ typedef struct thinkthen_cobol_DefinitionChooseName {
 typedef struct thinkthen_cobol_DefinitionChooseWordingVersion {
     int64_t value;
 } thinkthen_cobol_DefinitionChooseWordingVersion;
-typedef struct thinkthen_cobol_DefinitionDecideBatch {
-    uint64_t kind;
-    const void * value;
-} thinkthen_cobol_DefinitionDecideBatch;
 typedef struct thinkthen_cobol_DefinitionDecideName {
     const char * data;
     uint64_t len;
@@ -1254,10 +1226,6 @@ typedef struct thinkthen_cobol_DefinitionRelateVersion {
 typedef struct thinkthen_cobol_DefinitionRelateWordingVersion {
     int64_t value;
 } thinkthen_cobol_DefinitionRelateWordingVersion;
-typedef struct thinkthen_cobol_DefinitionScoreBatch {
-    uint64_t kind;
-    const void * value;
-} thinkthen_cobol_DefinitionScoreBatch;
 typedef struct thinkthen_cobol_DefinitionScoreName {
     const char * data;
     uint64_t len;
@@ -1265,10 +1233,6 @@ typedef struct thinkthen_cobol_DefinitionScoreName {
 typedef struct thinkthen_cobol_DefinitionScoreWordingVersion {
     int64_t value;
 } thinkthen_cobol_DefinitionScoreWordingVersion;
-typedef struct thinkthen_cobol_DefinitionTagBatch {
-    uint64_t kind;
-    const void * value;
-} thinkthen_cobol_DefinitionTagBatch;
 typedef struct thinkthen_cobol_DefinitionTagName {
     const char * data;
     uint64_t len;
@@ -1566,24 +1530,12 @@ typedef struct thinkthen_cobol_SourceUnitArm2 {
 typedef struct thinkthen_cobol_SourceUnitArm3 {
     uint64_t reserved;
 } thinkthen_cobol_SourceUnitArm3;
-typedef struct thinkthen_cobol_ChooseBatchArm1 {
-    uint64_t reserved;
-} thinkthen_cobol_ChooseBatchArm1;
-typedef struct thinkthen_cobol_ChooseBatchArm2 {
-    int64_t value;
-} thinkthen_cobol_ChooseBatchArm2;
 typedef struct thinkthen_cobol_CriterionArm2Entry {
     const struct thinkthen_complete_json_v1 * value;
 } thinkthen_cobol_CriterionArm2Entry;
 typedef struct thinkthen_cobol_CriterionArm3Item {
     const struct thinkthen_complete_json_v1 * value;
 } thinkthen_cobol_CriterionArm3Item;
-typedef struct thinkthen_cobol_DecideBatchArm1 {
-    uint64_t reserved;
-} thinkthen_cobol_DecideBatchArm1;
-typedef struct thinkthen_cobol_DecideBatchArm2 {
-    int64_t value;
-} thinkthen_cobol_DecideBatchArm2;
 typedef struct thinkthen_cobol_DescriptionArm2Entry {
     const struct thinkthen_complete_json_v1 * value;
 } thinkthen_cobol_DescriptionArm2Entry;
@@ -1607,18 +1559,6 @@ typedef struct thinkthen_cobol_QuestionTextArm2Entry {
 typedef struct thinkthen_cobol_QuestionTextArm3Item {
     const struct thinkthen_complete_json_v1 * value;
 } thinkthen_cobol_QuestionTextArm3Item;
-typedef struct thinkthen_cobol_ScoreBatchArm1 {
-    uint64_t reserved;
-} thinkthen_cobol_ScoreBatchArm1;
-typedef struct thinkthen_cobol_ScoreBatchArm2 {
-    int64_t value;
-} thinkthen_cobol_ScoreBatchArm2;
-typedef struct thinkthen_cobol_TagBatchArm1 {
-    uint64_t reserved;
-} thinkthen_cobol_TagBatchArm1;
-typedef struct thinkthen_cobol_TagBatchArm2 {
-    int64_t value;
-} thinkthen_cobol_TagBatchArm2;
 typedef struct thinkthen_cobol_ContextSchemaArm2Entry {
     const struct thinkthen_complete_json_v1 * value;
 } thinkthen_cobol_ContextSchemaArm2Entry;
@@ -1644,30 +1584,6 @@ typedef struct thinkthen_cobol_RecognitionExampleTextKindsItem {
     const char * data;
     uint64_t len;
 } thinkthen_cobol_RecognitionExampleTextKindsItem;
-typedef struct thinkthen_cobol_DefinitionChooseBatchArm1 {
-    uint64_t reserved;
-} thinkthen_cobol_DefinitionChooseBatchArm1;
-typedef struct thinkthen_cobol_DefinitionChooseBatchArm2 {
-    int64_t value;
-} thinkthen_cobol_DefinitionChooseBatchArm2;
-typedef struct thinkthen_cobol_DefinitionDecideBatchArm1 {
-    uint64_t reserved;
-} thinkthen_cobol_DefinitionDecideBatchArm1;
-typedef struct thinkthen_cobol_DefinitionDecideBatchArm2 {
-    int64_t value;
-} thinkthen_cobol_DefinitionDecideBatchArm2;
-typedef struct thinkthen_cobol_DefinitionScoreBatchArm1 {
-    uint64_t reserved;
-} thinkthen_cobol_DefinitionScoreBatchArm1;
-typedef struct thinkthen_cobol_DefinitionScoreBatchArm2 {
-    int64_t value;
-} thinkthen_cobol_DefinitionScoreBatchArm2;
-typedef struct thinkthen_cobol_DefinitionTagBatchArm1 {
-    uint64_t reserved;
-} thinkthen_cobol_DefinitionTagBatchArm1;
-typedef struct thinkthen_cobol_DefinitionTagBatchArm2 {
-    int64_t value;
-} thinkthen_cobol_DefinitionTagBatchArm2;
 typedef struct thinkthen_cobol_RequestOptionsFieldItem {
     const char * data;
     uint64_t len;

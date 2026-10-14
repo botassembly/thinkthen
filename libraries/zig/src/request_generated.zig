@@ -122,7 +122,7 @@ pub const AnnotateQuestionTag = struct {
 };
 
 pub const AuthoredChoose = struct {
-    batch: ?AuthoredChooseBatch = null,
+    batch: ?AuthoredQuestionBatch = null,
 
     choose: AuthoredQuestionText,
 
@@ -182,7 +182,7 @@ pub const AuthoredCut = union(enum) {
 };
 
 pub const AuthoredDecide = struct {
-    batch: ?AuthoredDecideBatch = null,
+    batch: ?AuthoredQuestionBatch = null,
 
     context_schema: ?AuthoredInputDeclaration = null,
 
@@ -353,6 +353,20 @@ pub const AuthoredPointers = union(enum) {
 
 pub const AuthoredProfile = []const u8;
 
+pub const AuthoredQuestionBatch = union(enum) {
+    max: enum { max },
+
+    integer: i64,
+
+    pub fn jsonStringify(self: @This(), writer: anytype) !void {
+        switch (self) {
+            .max => |value| try writer.write(value),
+
+            .integer => |value| try writer.write(value),
+        }
+    }
+};
+
 pub const AuthoredQuestionText = union(enum) {
     string: []const u8,
 
@@ -406,7 +420,7 @@ pub const AuthoredRelation = struct {
 };
 
 pub const AuthoredScore = struct {
-    batch: ?AuthoredScoreBatch = null,
+    batch: ?AuthoredQuestionBatch = null,
 
     context_schema: ?AuthoredInputDeclaration = null,
 
@@ -428,7 +442,7 @@ pub const AuthoredScore = struct {
 };
 
 pub const AuthoredTag = struct {
-    batch: ?AuthoredTagBatch = null,
+    batch: ?AuthoredQuestionBatch = null,
 
     context_schema: ?AuthoredInputDeclaration = null,
 
@@ -726,7 +740,7 @@ pub const RequestDefinitionAnnotateDefinition = struct {
 };
 
 pub const RequestDefinitionAuthoredChoose = struct {
-    batch: ?RequestDefinitionAuthoredChooseBatch = null,
+    batch: ?AuthoredQuestionBatch = null,
 
     choose: AuthoredQuestionText,
 
@@ -750,7 +764,7 @@ pub const RequestDefinitionAuthoredChoose = struct {
 };
 
 pub const RequestDefinitionAuthoredDecide = struct {
-    batch: ?RequestDefinitionAuthoredDecideBatch = null,
+    batch: ?AuthoredQuestionBatch = null,
 
     context_schema: ?AuthoredInputDeclaration = null,
 
@@ -814,7 +828,7 @@ pub const RequestDefinitionAuthoredRelate = struct {
 };
 
 pub const RequestDefinitionAuthoredScore = struct {
-    batch: ?RequestDefinitionAuthoredScoreBatch = null,
+    batch: ?AuthoredQuestionBatch = null,
 
     context_schema: ?AuthoredInputDeclaration = null,
 
@@ -836,7 +850,7 @@ pub const RequestDefinitionAuthoredScore = struct {
 };
 
 pub const RequestDefinitionAuthoredTag = struct {
-    batch: ?RequestDefinitionAuthoredTagBatch = null,
+    batch: ?AuthoredQuestionBatch = null,
 
     context_schema: ?AuthoredInputDeclaration = null,
 
@@ -1193,34 +1207,6 @@ pub const SessionSourceLocation = struct {
 
 pub const SourceUnit = enum { line, window, file };
 
-pub const AuthoredChooseBatch = union(enum) {
-    max: enum { max },
-
-    integer: i64,
-
-    pub fn jsonStringify(self: @This(), writer: anytype) !void {
-        switch (self) {
-            .max => |value| try writer.write(value),
-
-            .integer => |value| try writer.write(value),
-        }
-    }
-};
-
-pub const AuthoredDecideBatch = union(enum) {
-    max: enum { max },
-
-    integer: i64,
-
-    pub fn jsonStringify(self: @This(), writer: anytype) !void {
-        switch (self) {
-            .max => |value| try writer.write(value),
-
-            .integer => |value| try writer.write(value),
-        }
-    }
-};
-
 pub const AuthoredDescriptionValue = union(enum) {
     string: []const u8,
 
@@ -1245,88 +1231,4 @@ pub const AuthoredDescriptionValue = union(enum) {
 
 pub const AuthoredInputPropertyArrayItems = struct {
     type: enum { string } = .string,
-};
-
-pub const AuthoredScoreBatch = union(enum) {
-    max: enum { max },
-
-    integer: i64,
-
-    pub fn jsonStringify(self: @This(), writer: anytype) !void {
-        switch (self) {
-            .max => |value| try writer.write(value),
-
-            .integer => |value| try writer.write(value),
-        }
-    }
-};
-
-pub const AuthoredTagBatch = union(enum) {
-    max: enum { max },
-
-    integer: i64,
-
-    pub fn jsonStringify(self: @This(), writer: anytype) !void {
-        switch (self) {
-            .max => |value| try writer.write(value),
-
-            .integer => |value| try writer.write(value),
-        }
-    }
-};
-
-pub const RequestDefinitionAuthoredChooseBatch = union(enum) {
-    max: enum { max },
-
-    integer: i64,
-
-    pub fn jsonStringify(self: @This(), writer: anytype) !void {
-        switch (self) {
-            .max => |value| try writer.write(value),
-
-            .integer => |value| try writer.write(value),
-        }
-    }
-};
-
-pub const RequestDefinitionAuthoredDecideBatch = union(enum) {
-    max: enum { max },
-
-    integer: i64,
-
-    pub fn jsonStringify(self: @This(), writer: anytype) !void {
-        switch (self) {
-            .max => |value| try writer.write(value),
-
-            .integer => |value| try writer.write(value),
-        }
-    }
-};
-
-pub const RequestDefinitionAuthoredScoreBatch = union(enum) {
-    max: enum { max },
-
-    integer: i64,
-
-    pub fn jsonStringify(self: @This(), writer: anytype) !void {
-        switch (self) {
-            .max => |value| try writer.write(value),
-
-            .integer => |value| try writer.write(value),
-        }
-    }
-};
-
-pub const RequestDefinitionAuthoredTagBatch = union(enum) {
-    max: enum { max },
-
-    integer: i64,
-
-    pub fn jsonStringify(self: @This(), writer: anytype) !void {
-        switch (self) {
-            .max => |value| try writer.write(value),
-
-            .integer => |value| try writer.write(value),
-        }
-    }
 };
