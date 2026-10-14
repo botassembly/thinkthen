@@ -59,9 +59,9 @@ class Admission(unittest.TestCase):
             'runpy.run_path(' + repr(str(HELPER)) + ',run_name="__main__")\n')
         return scripts
 
-    def launch(self, name, priority='normal', command=None, timeout=None):
+    def launch(self, name, priority='normal', command=None, timeout=None, lock=None):
         release = self.root / name
-        args = [sys.executable, '-c', LAUNCH, str(self.load), str(HELPER), '--lock', str(self.lock), '--priority', priority]
+        args = [sys.executable, '-c', LAUNCH, str(self.load), str(HELPER), '--lock', str(lock or self.lock), '--priority', priority]
         if timeout:
             args += ['--timeout', str(timeout)]
         args += ['--', *(command or [sys.executable, '-c', COMPILER, str(release)])]
@@ -133,6 +133,43 @@ class Admission(unittest.TestCase):
                     fcntl.flock(checkpoint, fcntl.LOCK_EX | fcntl.LOCK_NB)
             self.release(str(index))
             self.assertEqual(self.children[index].wait(timeout=2), 0)
+        self.assert_resources_available()
+        self.assertEqual(self.lock.stat().st_ino, inode)
+
+    def test_symlink_lock_aliases_share_permits_priority_and_exclusive_barrier(self):
+        self.lock.touch()
+        alias = self.root / 'lock-alias'
+        alias.symlink_to(self.lock)
+        directory = self.root / 'directory-alias'
+        directory.symlink_to(self.root, target_is_directory=True)
+        locks = (self.lock, alias, directory / 'lock', directory / 'lock-alias')
+        with self.lock.open('a+b') as checkpoint:
+            inode = self.lock.stat().st_ino
+            fcntl.flock(checkpoint, fcntl.LOCK_EX)
+            for index, lock in enumerate(locks):
+                self.launch(str(index), lock=lock)
+            time.sleep(.1)
+            self.assertFalse(any(self.started(str(i)) for i in range(4)))
+        self.wait_for(lambda: all(self.started(str(i)) for i in range(4)))
+        self.launch('alias-normal', lock=directory / 'lock')
+        high = self.launch('alias-high', 'high', lock=alias)
+        self.wait_for(lambda: bool(list(Path(str(self.lock.resolve()) + '.priority').glob('wait-*'))))
+        time.sleep(.1)
+        self.assertFalse(self.started('alias-normal'))
+        self.assertFalse(self.started('alias-high'))
+        with alias.open('a+b') as checkpoint:
+            with self.assertRaises(BlockingIOError):
+                fcntl.flock(checkpoint, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        self.release('0')
+        self.wait_for(lambda: self.started('alias-high'))
+        self.assertFalse(self.started('alias-normal'))
+        self.release('alias-high')
+        self.assertEqual(high.wait(timeout=2), 0)
+        self.wait_for(lambda: self.started('alias-normal'))
+        for name in ('1', '2', '3', 'alias-normal'):
+            self.release(name)
+        for child in self.children:
+            self.assertEqual(child.wait(timeout=2), 0)
         self.assert_resources_available()
         self.assertEqual(self.lock.stat().st_ino, inode)
 

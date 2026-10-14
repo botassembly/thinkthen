@@ -188,7 +188,9 @@ def main():
     for signum in (signal.SIGTERM, signal.SIGINT, signal.SIGHUP):
         signal.signal(signum, interrupted)
     deadline = time.monotonic() + args.timeout if args.timeout is not None else None
-    directory = Path(args.lock + '.priority')
+    # Symlink filenames and directory aliases must share permits and priority.
+    # Preserve the caller's spelling below for nested shell held markers.
+    directory = Path(str(Path(args.lock).resolve()) + '.priority')
     directory.mkdir(mode=0o700, exist_ok=True)
     marker = None
     waiter = None
