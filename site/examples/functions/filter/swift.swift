@@ -15,9 +15,8 @@ let judgment = try await client.filter(
   .text(question),
   input: .records(records)
 )
-let complaints = judgment.value.compactMap { value -> String? in
-  if case .string(let text) = value.kind { return text }
-  return nil
-}
-precondition(complaints == [reviews[1], reviews[3]])
+let complaints = judgment.value
+precondition(
+  complaints == [.string(reviews[1]), .string(reviews[3])]
+)
 client.close()

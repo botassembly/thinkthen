@@ -17,7 +17,7 @@ int main(void) { @autoreleasepool {
         input:report
         options:nil feed:nil error:&error];
     assert(judgment && !error);
-    triage = judgment.value.scalar;
+    triage = [judgment.value scalar];
     assert([triage[@"steps"] isEqual:@YES]);
     assert([triage[@"area"] isEqual:@"login"]);
     assert([triage[@"impact"] isEqual:@1.98]);

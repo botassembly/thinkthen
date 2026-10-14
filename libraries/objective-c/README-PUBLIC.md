@@ -21,13 +21,13 @@ int main(void) { @autoreleasepool {
         TTTextInput *input = [TTTextInput new]; input.text = text;
         TTCall *refund = [client decide:refundQuestion input:input options:nil feed:nil error:&error];
         if (!refund || error) return 1;
-        puts(refund.value.scalar ? ([refund.value.scalar boolValue] ? "true" : "false") : "not sure");
+        puts([refund.value scalar] ? ([[refund.value scalar] boolValue] ? "true" : "false") : "not sure");
     }
     for (NSString *text in messages) {
         TTTextInput *input = [TTTextInput new]; input.text = text;
         TTCall *team = [client choose:teamQuestion input:input options:nil feed:nil error:&error];
         if (!team || error) return 1;
-        puts(team.value.scalar ? [team.value.scalar UTF8String] : "not sure");
+        puts([team.value scalar] ? [[team.value scalar] UTF8String] : "not sure");
     }
     return 0;
 } }

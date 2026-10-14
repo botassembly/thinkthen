@@ -18,7 +18,7 @@ int main(void) { @autoreleasepool {
         input:text
         options:nil feed:nil error:&error];
     assert(judgment && !error);
-    TTRecognizeEntities *facts = (id)judgment.value.scalar;
+    TTRecognizeEntities *facts = [judgment.value scalar];
         for (TTEntity *one in facts.entities.value) {
             [names addObject:[NSString stringWithFormat:
                 @"%@ (%@)", one.text.value,
