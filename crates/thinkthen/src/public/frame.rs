@@ -13,10 +13,13 @@ use std::path::PathBuf;
 mod column;
 mod complete;
 mod eager;
+mod expressions;
 mod inputs;
 mod lazy;
 mod options;
 mod request;
+mod result;
+mod schema;
 mod typed;
 mod typed_batches;
 pub use lazy::PolarsExprOptions;
@@ -109,7 +112,7 @@ pub trait PolarsEngine {
         question: &Question,
         texts: &Series,
         options: PolarsCallOptions<'_>,
-    ) -> Result<Call<DataFrame>, Error>;
+    ) -> Result<Call<DataFrame, crate::RequestValue, Series>, Error>;
 
     /// Preview the same packed request bodies a column call would prepare.
     /// No key, cache or network is read.
@@ -137,7 +140,7 @@ pub trait PolarsEngine {
         question: &Q,
         texts: &Series,
         options: CallOptions<'_>,
-    ) -> Result<Call<Series>, Error>;
+    ) -> Result<Call<Series, crate::RequestValue, Series>, Error>;
 
     /// Pick one option for every text: a `String` series with a null where
     /// nothing fits.
@@ -151,7 +154,7 @@ pub trait PolarsEngine {
         question: &Question,
         texts: &Series,
         options: CallOptions<'_>,
-    ) -> Result<Call<Series>, Error>;
+    ) -> Result<Call<Series, crate::RequestValue, Series>, Error>;
 
     /// Place every text on the levels: a `Float64` series of positions from
     /// 0 to one less than the number of levels.
@@ -164,7 +167,7 @@ pub trait PolarsEngine {
         question: &Question,
         texts: &Series,
         options: CallOptions<'_>,
-    ) -> Result<Call<Series>, Error>;
+    ) -> Result<Call<Series, crate::RequestValue, Series>, Error>;
 
     /// Test every label on every text: a `List(String)` series.
     ///
@@ -176,7 +179,7 @@ pub trait PolarsEngine {
         question: &Question,
         texts: &Series,
         options: CallOptions<'_>,
-    ) -> Result<Call<Series>, Error>;
+    ) -> Result<Call<Series, crate::RequestValue, Series>, Error>;
 
     /// Ask every question of the text column `on`: the caller's frame with
     /// one typed column per question, followed by nullable `failed` markers.
@@ -192,7 +195,7 @@ pub trait PolarsEngine {
         frame: &DataFrame,
         on: &str,
         options: CallOptions<'_>,
-    ) -> Result<Call<DataFrame>, Error>;
+    ) -> Result<Call<DataFrame, crate::RequestValue, Series>, Error>;
     /// Judge ordered explicit text/images, retaining null rows and selected
     /// probabilities. Ordinary strings and bytes do not imply images.
     /// # Errors
@@ -202,7 +205,7 @@ pub trait PolarsEngine {
         question: &Question,
         inputs: &[Option<QuestionInput>],
         options: PolarsCallOptions<'_>,
-    ) -> Result<Call<DataFrame>, Error>;
+    ) -> Result<Call<DataFrame, crate::RequestValue, Series>, Error>;
 
     /// Materialize selected files through the single native reader. Text lines
     /// stay physical; whole-file images have null text line coordinates.
@@ -214,7 +217,7 @@ pub trait PolarsEngine {
         paths: &[PathBuf],
         reading: InputReaderOptions,
         options: PolarsCallOptions<'_>,
-    ) -> Result<Call<DataFrame>, Error>;
+    ) -> Result<Call<DataFrame, crate::RequestValue, Series>, Error>;
 
     /// Keep matching present cells, preserving their input name and order.
     /// Null inputs ask no question and are omitted.
@@ -225,7 +228,7 @@ pub trait PolarsEngine {
         question: &Question,
         texts: &Series,
         options: CallOptions<'_>,
-    ) -> Result<Call<Series>, Error>;
+    ) -> Result<Call<Series, crate::RequestValue, Series>, Error>;
 
     /// Rank the complete present collection. Output has original zero-based
     /// `index`, `record` and `probability`; ties keep duplicate input order.
@@ -236,7 +239,7 @@ pub trait PolarsEngine {
         question: &Question,
         texts: &Series,
         options: CallOptions<'_>,
-    ) -> Result<Call<DataFrame>, Error>;
+    ) -> Result<Call<DataFrame, crate::RequestValue, Series>, Error>;
 
     /// Compare every present candidate in one native find call. Output keeps
     /// every candidate's `index`, `unit`, `probability` and real-unit `selected` flag.
@@ -248,7 +251,7 @@ pub trait PolarsEngine {
         question: &Question,
         texts: &Series,
         options: CallOptions<'_>,
-    ) -> Result<Call<DataFrame>, Error>;
+    ) -> Result<Call<DataFrame, crate::RequestValue, Series>, Error>;
 
     /// Recognize each present text, retaining complete spans and relations;
     /// null cells remain None. All calls share one fixed deadline.
@@ -259,7 +262,7 @@ pub trait PolarsEngine {
         ask: &Recognize,
         texts: &Series,
         options: CallOptions<'_>,
-    ) -> Result<Call<Vec<Option<Recognized>>>, Error>;
+    ) -> Result<Call<Vec<Option<Recognized>>, crate::RequestValue, Series>, Error>;
 
     /// Relate the complete entity collection from text name/kind columns.
     /// Paired null cells are omitted; a partly null entity is refused.
@@ -272,7 +275,7 @@ pub trait PolarsEngine {
         name: &str,
         kind: &str,
         options: CallOptions<'_>,
-    ) -> Result<Call<Vec<Edge>>, Error>;
+    ) -> Result<Call<Vec<Edge>, crate::RequestValue, Series>, Error>;
 
     /// Materialize a lazy frame's whole logical collection before ranking.
     /// # Errors
@@ -283,7 +286,7 @@ pub trait PolarsEngine {
         frame: LazyFrame,
         on: &str,
         options: CallOptions<'_>,
-    ) -> Result<Call<DataFrame>, Error> {
+    ) -> Result<Call<DataFrame, crate::RequestValue, Series>, Error> {
         let frame = frame
             .collect()
             .map_err(|_| Error::usage("the lazy frame could not be collected"))?;
@@ -302,7 +305,7 @@ pub trait PolarsEngine {
         frame: LazyFrame,
         on: &str,
         options: CallOptions<'_>,
-    ) -> Result<Call<DataFrame>, Error> {
+    ) -> Result<Call<DataFrame, crate::RequestValue, Series>, Error> {
         let frame = frame
             .collect()
             .map_err(|_| Error::usage("the lazy frame could not be collected"))?;

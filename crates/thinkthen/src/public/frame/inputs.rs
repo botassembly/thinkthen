@@ -1,98 +1,53 @@
 //! Explicit typed inputs and the one native located-file reader.
-use super::column::Answers;
 use super::{PolarsCallOptions, PolarsEngine};
 use crate::public::{
-    Annotated, Call, CallOptions, Details, Engine, Error, InputEvidence, InputFunction,
-    InputReaderOptions, Judgment, Question, QuestionInput, QuestionKind, SourceItem, read_inputs,
+    Call, Engine, Error, InputEvidence, InputReaderOptions, Question, QuestionInput, QuestionKind,
+    SourceItem, read_inputs,
 };
 use polars::prelude::{DataFrame, NamedFrom, Series};
 use std::path::PathBuf;
-
-pub(super) fn details(
-    engine: &Engine,
-    question: &Question,
-    inputs: &[Option<QuestionInput>],
-    options: CallOptions<'_>,
-) -> Result<Call<Vec<Option<Details>>>, Error> {
-    let function = match question.kind() {
-        QuestionKind::Decide => InputFunction::Decide,
-        QuestionKind::Choose => InputFunction::Choose,
-        QuestionKind::Score => InputFunction::Score,
-        QuestionKind::Tag => InputFunction::Tag,
-        _ => {
-            return Err(Error::usage(
-                "input columns take decide, choose, score or tag",
-            ));
-        }
-    };
-    // Validate every function/media combination before starting the column;
-    // a later image cannot cause a text-only column's earlier rows to send.
-    for input in inputs.iter().flatten() {
-        crate::public::images::guard(function, input)?;
-    }
-    let mut batch = engine.try_details_input_many_with(
-        question,
-        inputs.iter().flatten().cloned().map(Ok),
-        options,
-    );
-    let mut rows = Vec::with_capacity(inputs.len());
-    for input in inputs {
-        rows.push(if input.is_none() {
-            None
-        } else {
-            Some(
-                batch
-                    .next()
-                    .ok_or_else(|| Error::defect("input column lost a row"))??
-                    .value()
-                    .clone(),
-            )
-        });
-    }
-    if let Some(extra) = batch.next() {
-        extra?;
-        return Err(Error::defect("input column added a row"));
-    }
-    let facts = batch
-        .facts()
-        .cloned()
-        .ok_or_else(|| Error::defect("input column lost facts"))?;
-    Ok(Call::new(rows, facts))
-}
 
 pub(super) fn column(
     engine: &Engine,
     question: &Question,
     inputs: &[Option<QuestionInput>],
     options: PolarsCallOptions<'_>,
-) -> Result<Call<DataFrame>, Error> {
+) -> Result<Call<DataFrame, crate::RequestValue, Series>, Error> {
     let (question, call) = options.apply(question)?;
-    details(engine, &question, inputs, call)?.try_map(|rows| {
-        let mut answers = Answers::new("value", question.kind(), rows.len())?;
-        let mut probabilities = Vec::with_capacity(rows.len());
-        for row in &rows {
-            let answer = row.as_ref().map(|detail| match detail.value() {
-                Judgment::Decision(answer) => Annotated::Decision(*answer),
-                Judgment::Choice(answer) => Annotated::Choice(answer.clone()),
-                Judgment::Score(answer) => Annotated::Score(*answer),
-                Judgment::Tags(answer) => Annotated::Tags(answer.clone()),
-            });
-            answers.push(answer.as_ref())?;
-            {
-                probabilities.push(
-                    row.as_ref()
-                        .map(super::eager::selected_probability)
-                        .transpose()?
-                        .flatten(),
-                );
-            }
+    let (function, media) = match question.kind() {
+        QuestionKind::Decide => (crate::RequestFunction::Decide, crate::InputFunction::Decide),
+        QuestionKind::Choose => (crate::RequestFunction::Choose, crate::InputFunction::Choose),
+        QuestionKind::Score => (crate::RequestFunction::Score, crate::InputFunction::Score),
+        QuestionKind::Tag => (crate::RequestFunction::Tag, crate::InputFunction::Tag),
+        _ => {
+            return Err(Error::usage(
+                "input columns take decide, choose, score or tag",
+            ));
         }
-        let mut columns = vec![answers.finish().into()];
-        {
-            columns.push(Series::new("probability".into(), probabilities).into());
-        }
-        DataFrame::new(rows.len(), columns)
-            .map_err(|_| Error::defect("input value frame could not be built"))
+    };
+    for input in inputs.iter().flatten() {
+        crate::public::images::guard(media, input)?;
+    }
+    let column = Series::new(
+        "input".into(),
+        inputs
+            .iter()
+            .map(|input| input.as_ref().map(|_| "present"))
+            .collect::<Vec<_>>(),
+    );
+    let rows = inputs.iter().flatten().cloned().map(|original| {
+        Ok(crate::RecordInput {
+            original,
+            context: None,
+            options: None,
+            seed_spans: None,
+            examples: None,
+        })
+    });
+    let call =
+        super::request::execute_records(engine, question.clone().into(), function, call, rows)?;
+    super::result::enrich(call, function, &column, |value| {
+        super::eager::project_atomic(value, &column, question.kind())
     })
 }
 
@@ -102,7 +57,7 @@ pub(super) fn sources(
     paths: &[PathBuf],
     reading: InputReaderOptions,
     options: PolarsCallOptions<'_>,
-) -> Result<Call<DataFrame>, Error> {
+) -> Result<Call<DataFrame, crate::RequestValue, Series>, Error> {
     let rows = read_inputs(paths, reading)?.collect::<Result<Vec<_>, _>>()?;
     let inputs = rows
         .iter()

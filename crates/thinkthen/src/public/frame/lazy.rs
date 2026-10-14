@@ -108,7 +108,32 @@ impl PolarsExprOptions {
         self
     }
 
-    fn question(&self, source: &Question) -> Result<Question, Error> {
+    pub(super) fn aggregate(&self) -> Result<(), Error> {
+        if self.threshold.is_some() || self.yes.is_some() || self.no.is_some() {
+            return Err(Error::usage(
+                "threshold and meanings require an atomic question",
+            ));
+        }
+        self.validate()
+    }
+    pub(super) fn validate(&self) -> Result<(), Error> {
+        if let Some(context) = &self.context {
+            crate::public::engine::evidence(context)?;
+        }
+        self.call()?;
+        Ok(())
+    }
+    pub(super) fn run<T>(
+        &self,
+        call: impl FnOnce() -> Result<crate::Call<T>, Error>,
+    ) -> Result<crate::Call<T>, Error> {
+        match &self.tally {
+            Some(tally) => tally.run(call),
+            None => call(),
+        }
+    }
+
+    pub(super) fn question(&self, source: &Question) -> Result<Question, Error> {
         let mut controls = PolarsCallOptions::new();
         if let Some(value) = &self.threshold {
             controls = controls.threshold(value);
@@ -122,7 +147,7 @@ impl PolarsExprOptions {
         controls.apply(source).map(|(question, _)| question)
     }
 
-    fn call(&self) -> Result<CallOptions<'_>, Error> {
+    pub(super) fn call(&self) -> Result<CallOptions<'_>, Error> {
         let mut call = CallOptions::new();
         if let Some(token) = &self.token {
             call = call.cancel(token);
@@ -220,11 +245,11 @@ fn evaluate(
     .map_err(compute_error)
 }
 
-fn compute_error(error: Error) -> PolarsError {
+pub(super) fn compute_error(error: Error) -> PolarsError {
     PolarsError::ComputeError(error.to_string().into())
 }
 
-fn caught<T>(call: impl FnOnce() -> Result<T, PolarsError>) -> Result<T, PolarsError> {
+pub(super) fn caught<T>(call: impl FnOnce() -> Result<T, PolarsError>) -> Result<T, PolarsError> {
     catch_unwind(AssertUnwindSafe(call)).unwrap_or_else(|_| {
         Err(PolarsError::ComputeError(
             "thinkthen expression panicked".into(),

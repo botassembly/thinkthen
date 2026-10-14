@@ -353,7 +353,7 @@ fn remaining_zero_send_cases(
             .relate_frame(&relate, &invalid, "name", "kind", CallOptions::new())
             .expect_err("late unmatched null"),
         engine
-            .probability_frame(decide, numbers, CallOptions::new())
+            .column_with(decide, numbers, thinkthen::PolarsCallOptions::new())
             .expect_err("non-text probability"),
     ] {
         assert_eq!(error.kind(), ErrorKind::Usage);
@@ -372,7 +372,11 @@ fn remaining_zero_send_cases(
             )
             .expect_err("cancel relate"),
         engine
-            .probability_frame(decide, text, CallOptions::new().cancel(token))
+            .column_with(
+                decide,
+                text,
+                thinkthen::PolarsCallOptions::new().call(CallOptions::new().cancel(token)),
+            )
             .expect_err("cancel probability"),
     ] {
         assert_eq!(error.kind(), ErrorKind::Cancelled);
@@ -392,4 +396,204 @@ fn collection_listener() -> Listener {
             Canned::ok(&format!(r#"{{"model":"jev-latest","answers":{{"q1":{{"type":"noul","noul":{probability}}}}},"usage":{{"input_tokens":10,"output_tokens":2}}}}"#))
         }
     }).expect("listener")
+}
+
+#[test]
+fn collection_expressions_preserve_logical_sets_and_nullable_original_positions() {
+    use thinkthen::PolarsExprOptions;
+    use thinkthen::polars::prelude::col;
+    let listener = collection_listener();
+    let engine = common::builder(listener.base())
+        .no_cache()
+        .build()
+        .expect("engine");
+    let column = Series::new(
+        "body".into(),
+        [Some("strong"), None, Some("weak"), Some("strong")],
+    );
+    let frame = DataFrame::new(4, vec![column.into()]).expect("frame");
+    let options = PolarsExprOptions::new().batch(thinkthen::BatchSetting::Records(
+        std::num::NonZeroUsize::MIN,
+    ));
+    let rank = Question::rank("Relevant?").expect("rank");
+    let ranked = frame
+        .clone()
+        .lazy()
+        .select([engine
+            .rank_expr(&rank, col("body"), options.clone())
+            .expect("rank expression")])
+        .collect()
+        .expect("rank collection");
+    let ranked = ranked
+        .column("body")
+        .expect("ranked")
+        .struct_()
+        .expect("Struct");
+    assert_eq!(
+        ranked
+            .field_by_name("value")
+            .expect("indices")
+            .u64()
+            .expect("UInt64")
+            .iter()
+            .collect::<Vec<_>>(),
+        [Some(0), Some(3), Some(2)]
+    );
+    assert_eq!(
+        ranked
+            .field_by_name("probability")
+            .expect("probability")
+            .f64()
+            .expect("Float64")
+            .iter()
+            .collect::<Vec<_>>(),
+        [Some(0.9), Some(0.9), Some(0.2)]
+    );
+    let decide = Question::decide("Relevant?").expect("decide").cut();
+    let filtered = frame
+        .clone()
+        .lazy()
+        .select([engine
+            .filter_expr(&decide, col("body"), options.clone())
+            .expect("filter expression")])
+        .collect()
+        .expect("filter collection");
+    let filtered = filtered
+        .column("body")
+        .expect("filtered")
+        .struct_()
+        .expect("Struct");
+    assert_eq!(
+        filtered
+            .field_by_name("value")
+            .expect("values")
+            .str()
+            .expect("String")
+            .iter()
+            .collect::<Vec<_>>(),
+        [Some("strong"), Some("strong")]
+    );
+    let before = listener.count();
+    let find = Question::find("Which?")
+        .expect("find")
+        .offering_none()
+        .expect("none");
+    let found = frame
+        .lazy()
+        .select([engine
+            .find_expr(&find, col("body"), options)
+            .expect("find expression")])
+        .collect()
+        .expect("find collection");
+    let found = found
+        .column("body")
+        .expect("found")
+        .struct_()
+        .expect("Struct");
+    assert_eq!(
+        found
+            .field_by_name("value")
+            .expect("picked")
+            .str()
+            .expect("String")
+            .get(0),
+        Some("weak")
+    );
+    assert_eq!(
+        found
+            .field_by_name("probability")
+            .expect("picked probability")
+            .f64()
+            .expect("Float64")
+            .get(0),
+        Some(0.8)
+    );
+    assert_eq!(
+        listener.count() - before,
+        1,
+        "find compares one complete candidate set"
+    );
+    let requests = listener.requests();
+    let body: serde_json::Value =
+        serde_json::from_slice(&requests.last().expect("find request").body).expect("body");
+    let candidates: serde_json::Value =
+        serde_json::from_str(body["state"].as_str().expect("state")).expect("candidates");
+    assert_eq!(candidates.as_array().expect("all candidates").len(), 3);
+}
+
+#[test]
+fn relation_expression_omits_paired_nulls_and_refuses_a_partial_entity_before_sending() {
+    use thinkthen::PolarsExprOptions;
+    use thinkthen::polars::prelude::col;
+    let listener = Listener::answering(|_| Canned::ok(r#"{"model":"jev-latest","answers":{"q1":{"type":"noul","noul":0.9},"q2":{"type":"noul","noul":0.8}}}"#)).expect("listener");
+    let engine = common::builder(listener.base())
+        .no_cache()
+        .build()
+        .expect("engine");
+    let question = Relate::from_json(r#"{"version":1,"relate":{"relations":[{"name":"knows","source":"person","target":"person"}]}}"#).expect("relation");
+    let expression = engine
+        .relate_expr(
+            &question,
+            col("name"),
+            col("kind"),
+            PolarsExprOptions::new(),
+        )
+        .expect("expression");
+    let frame = |kinds: [Option<&str>; 3]| {
+        DataFrame::new(
+            3,
+            vec![
+                Series::new("name".into(), [Some("Ada"), None, Some("Bo")]).into(),
+                Series::new("kind".into(), kinds).into(),
+            ],
+        )
+        .expect("entities")
+    };
+    let related = frame([Some("person"), None, Some("person")])
+        .lazy()
+        .select([expression.clone()])
+        .collect()
+        .expect("complete set");
+    let result = related
+        .column("name")
+        .expect("result")
+        .struct_()
+        .expect("Struct");
+    assert_eq!(
+        result
+            .field_by_name("value")
+            .expect("edges")
+            .list()
+            .expect("List(Struct)")
+            .get_as_series(0)
+            .expect("edges")
+            .len(),
+        2
+    );
+    let probabilities = result
+        .field_by_name("probability")
+        .expect("probability")
+        .list()
+        .expect("List(Float64)")
+        .get_as_series(0)
+        .expect("probabilities");
+    assert_eq!(
+        probabilities
+            .f64()
+            .expect("Float64")
+            .iter()
+            .collect::<Vec<_>>(),
+        [Some(0.9), Some(0.8)]
+    );
+    assert_eq!(listener.count(), 1);
+    assert!(
+        frame([Some("person"), Some("person"), Some("person")])
+            .lazy()
+            .select([expression])
+            .collect()
+            .expect_err("partial entity")
+            .to_string()
+            .contains("only one null")
+    );
+    assert_eq!(listener.count(), 1, "invalid collection sends nothing");
 }

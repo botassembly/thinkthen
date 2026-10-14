@@ -10,8 +10,7 @@ use thinkthen::polars::prelude::{
     DataFrame, DataType, IntoLazy, LazyFrame, NamedFrom, Series, col,
 };
 use thinkthen::{
-    BatchSetting, CancelToken, Engine, PolarsEngine, PolarsExprOptions, Question, QuestionKind,
-    Tally,
+    BatchSetting, CancelToken, Engine, PolarsEngine, PolarsExprOptions, Question, Tally,
 };
 
 fn listener() -> Listener {
@@ -60,31 +59,6 @@ fn decide() -> Question {
         .cut()
 }
 
-fn probability_refuses_for_score_and_tag(engine: &Engine, score: &Question, tag: &Question) {
-    for question in [score, tag] {
-        let refused = match question.kind() {
-            QuestionKind::Score => engine.score_expr(
-                question,
-                col("body"),
-                PolarsExprOptions::new().probability(true),
-            ),
-            QuestionKind::Tag => engine.tag_expr(
-                question,
-                col("body"),
-                PolarsExprOptions::new().probability(true),
-            ),
-            _ => unreachable!("score and tag only"),
-        };
-        let error = refused.expect_err("probability refusal");
-        assert_eq!(error.kind(), thinkthen::ErrorKind::Usage);
-        assert!(
-            error
-                .to_string()
-                .contains("probability belongs to decide and choose")
-        );
-    }
-}
-
 fn assert_probability_matches_eager(result: &DataFrame, eager: &DataFrame) {
     let judged = result
         .column("judged")
@@ -112,22 +86,20 @@ fn lazy_matches_eager_values_bodies_and_shared_tally() {
     let source = frame(&[Some("Refund me"), None, Some("Please refund this")]);
     let question = decide();
     let eager = engine
-        .probability_frame(
+        .column_with(
             &question,
             source
                 .column("body")
                 .expect("body")
                 .as_materialized_series(),
-            thinkthen::CallOptions::new(),
+            thinkthen::PolarsCallOptions::new(),
         )
         .expect("eager probability");
     assert_eq!(eager.facts().records(), 2);
     assert_eq!(eager.facts().requests_sent(), 1);
     let eager_body = listener.requests()[0].body.clone();
     let tally = Tally::new();
-    let options = PolarsExprOptions::new()
-        .probability(true)
-        .tally(tally.clone());
+    let options = PolarsExprOptions::new().tally(tally.clone());
     let ordinary = engine
         .decide_expr(&question, col("body"), options.clone())
         .expect("ordinary expression");
@@ -181,7 +153,7 @@ fn lazy_matches_eager_values_bodies_and_shared_tally() {
 }
 
 #[test]
-fn each_expression_keeps_its_type_and_score_tag_refuse_probability() {
+fn each_expression_returns_typed_value_and_nullable_probability() {
     let listener = listener();
     let engine = engine(listener.base());
     let source = frame(&[Some("Refund me")]);
@@ -206,14 +178,9 @@ fn each_expression_keeps_its_type_and_score_tag_refuse_probability() {
         .expect("label")
         .build()
         .expect("tag");
-    probability_refuses_for_score_and_tag(&engine, &score, &tag);
     assert_eq!(listener.count(), 0, "invalid construction sends nothing");
     let choose_expr = engine
-        .choose_expr(
-            &choose,
-            col("body"),
-            PolarsExprOptions::new().probability(true),
-        )
+        .choose_expr(&choose, col("body"), PolarsExprOptions::new())
         .expect("choose expression");
     let score_expr = engine
         .score_expr(&score, col("body"), PolarsExprOptions::new())
@@ -262,6 +229,10 @@ fn assert_expression_values(result: &DataFrame) {
         result
             .column("scored")
             .expect("score")
+            .struct_()
+            .expect("Struct")
+            .field_by_name("value")
+            .expect("value")
             .f64()
             .expect("Float64")
             .get(0),
@@ -271,6 +242,10 @@ fn assert_expression_values(result: &DataFrame) {
         result
             .column("tagged")
             .expect("tags")
+            .struct_()
+            .expect("Struct")
+            .field_by_name("value")
+            .expect("value")
             .list()
             .expect("List")
             .get(0)
