@@ -248,6 +248,22 @@ FROM thinkthen_decide(
 );
 ```
 
+Read a named choice from `value` and its probability from the same typed receipt:
+
+```sql
+SELECT value AS team, ((result).answer).probability AS probability
+FROM thinkthen_choose(
+  'Which team owns this?',
+  ARRAY[thinkthen_record(text => 'Please refund the duplicate charge.')],
+  thinkthen_reading(options => ARRAY[
+    ROW('billing', NULL)::thinkthen_option,
+    ROW('shipping', NULL)::thinkthen_option
+  ])
+);
+```
+
+`team` is the selected option name. SQL `NULL` represents an unresolved choice. The receipt retains the resolved question, option order, answer identity and actual probability.
+
 `thinkthen_record(value => 'null'::json)` holds authored JSON null. Omitting `value` leaves the original absent. The `context_value` argument accepts an object context. Typed option, image, seed and example arrays retain their order. Examples accept bracket text or explicit entity spans through `thinkthen_example` composites.
 
 Reading controls include ordered question options, levels and labels, typed context declarations, model, threshold, batch, deadline, send budget, recognition stages, projection pointers, ranking limits and file selection. `incremental => true` retains completed rows before a later record fails. The default admits the whole collection before sending. A failure row preserves the native error's kind, safe message, stop position and any final facts. A required NULL question or collection returns no rows before inspecting its partners.

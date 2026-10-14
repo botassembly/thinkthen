@@ -28,7 +28,7 @@ fn find_records(
             failure,
             Option<pgrx::composite_type!('static, "thinkthen_error")>
         ),
-        name!(observations, Array<'static, pgrx::composite_type!('static, "thinkthen_event")>),
+        name!(observations, crate::ffi::EventArray),
     ),
 > {
     call::guarded(|| {
@@ -76,7 +76,7 @@ fn relate_records(
     (
         name!(
             value,
-            Option<Array<'static, pgrx::composite_type!('static, "thinkthen_edge")>>
+            Option<crate::ffi::EdgeArray>
         ),
         name!(result, Option<pgrx::composite_type!('static, "thinkthen_related")>),
         name!(
@@ -87,7 +87,7 @@ fn relate_records(
             failure,
             Option<pgrx::composite_type!('static, "thinkthen_error")>
         ),
-        name!(observations, Array<'static, pgrx::composite_type!('static, "thinkthen_event")>),
+        name!(observations, crate::ffi::EventArray),
     ),
 > {
     call::guarded(|| {

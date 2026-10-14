@@ -17,7 +17,7 @@ fn decide_records(
     name!(result, Option<pgrx::composite_type!('static, "thinkthen_decision")>),
     name!(facts, Option<pgrx::composite_type!('static, "thinkthen_facts")>),
     name!(failure, Option<pgrx::composite_type!('static, "thinkthen_error")>),
-    name!(observations, Array<'static, pgrx::composite_type!('static, "thinkthen_event")>),
+    name!(observations, crate::ffi::EventArray),
 )> {
     call::guarded(|| {
         let (Some(question), Some(records)) = (question, records) else {
@@ -59,7 +59,7 @@ fn choose_records(
     name!(result, Option<pgrx::composite_type!('static, "thinkthen_choice")>),
     name!(facts, Option<pgrx::composite_type!('static, "thinkthen_facts")>),
     name!(failure, Option<pgrx::composite_type!('static, "thinkthen_error")>),
-    name!(observations, Array<'static, pgrx::composite_type!('static, "thinkthen_event")>),
+    name!(observations, crate::ffi::EventArray),
 )> {
     call::guarded(|| {
         let (Some(question), Some(records)) = (question, records) else {
@@ -101,7 +101,7 @@ fn tag_records(
     name!(result, Option<pgrx::composite_type!('static, "thinkthen_tags")>),
     name!(facts, Option<pgrx::composite_type!('static, "thinkthen_facts")>),
     name!(failure, Option<pgrx::composite_type!('static, "thinkthen_error")>),
-    name!(observations, Array<'static, pgrx::composite_type!('static, "thinkthen_event")>),
+    name!(observations, crate::ffi::EventArray),
 )> {
     call::guarded(|| {
         let (Some(question), Some(records)) = (question, records) else {
@@ -143,7 +143,7 @@ fn score_records(
     name!(result, Option<pgrx::composite_type!('static, "thinkthen_score")>),
     name!(facts, Option<pgrx::composite_type!('static, "thinkthen_facts")>),
     name!(failure, Option<pgrx::composite_type!('static, "thinkthen_error")>),
-    name!(observations, Array<'static, pgrx::composite_type!('static, "thinkthen_event")>),
+    name!(observations, crate::ffi::EventArray),
 )> {
     call::guarded(|| {
         let (Some(question), Some(records)) = (question, records) else {
@@ -185,7 +185,7 @@ fn filter_records(
     name!(result, Option<pgrx::composite_type!('static, "thinkthen_filtered")>),
     name!(facts, Option<pgrx::composite_type!('static, "thinkthen_facts")>),
     name!(failure, Option<pgrx::composite_type!('static, "thinkthen_error")>),
-    name!(observations, Array<'static, pgrx::composite_type!('static, "thinkthen_event")>),
+    name!(observations, crate::ffi::EventArray),
 )> {
     call::guarded(|| {
         let (Some(question), Some(records)) = (question, records) else {
@@ -227,7 +227,7 @@ fn rank_records(
     name!(result, Option<pgrx::composite_type!('static, "thinkthen_ranked")>),
     name!(facts, Option<pgrx::composite_type!('static, "thinkthen_facts")>),
     name!(failure, Option<pgrx::composite_type!('static, "thinkthen_error")>),
-    name!(observations, Array<'static, pgrx::composite_type!('static, "thinkthen_event")>),
+    name!(observations, crate::ffi::EventArray),
 )> {
     call::guarded(|| {
         let (Some(question), Some(records)) = (question, records) else {
@@ -274,7 +274,7 @@ fn annotate_records(
     name!(result, Option<pgrx::composite_type!('static, "thinkthen_annotation")>),
     name!(facts, Option<pgrx::composite_type!('static, "thinkthen_facts")>),
     name!(failure, Option<pgrx::composite_type!('static, "thinkthen_error")>),
-    name!(observations, Array<'static, pgrx::composite_type!('static, "thinkthen_event")>),
+    name!(observations, crate::ffi::EventArray),
 )> {
     call::guarded(|| {
         let (Some(question), Some(records)) = (question, records) else {
@@ -312,11 +312,11 @@ fn recognize_records(
     records: Option<Array<'_, pgrx::composite_type!("thinkthen_record")>>,
     reading: default!(Option<pgrx::composite_type!("thinkthen_reading")>, "NULL"),
 ) -> TableIterator<'static, (
-    name!(ordinal, Option<i64>), name!(value, Option<Array<'static, pgrx::composite_type!('static, "thinkthen_name")>>),
+    name!(ordinal, Option<i64>), name!(value, Option<crate::ffi::NameArray>),
     name!(result, Option<pgrx::composite_type!('static, "thinkthen_recognized")>),
     name!(facts, Option<pgrx::composite_type!('static, "thinkthen_facts")>),
     name!(failure, Option<pgrx::composite_type!('static, "thinkthen_error")>),
-    name!(observations, Array<'static, pgrx::composite_type!('static, "thinkthen_event")>),
+    name!(observations, crate::ffi::EventArray),
 )> {
     call::guarded(|| {
         let (Some(question), Some(records)) = (question, records) else {

@@ -7,13 +7,13 @@ use thinkthen::{
 };
 mod collections;
 mod constructors;
+mod context_schema;
 mod functions_generated;
 mod input;
 mod options;
 mod output;
 mod plan;
 mod question_settings;
-mod context_schema;
 mod reading;
 mod results_generated;
 
@@ -163,7 +163,10 @@ pub(super) fn number(value: i64) -> Result<usize, Error> {
     usize::try_from(value).map_err(|_| call::usage("reading counts cannot be negative"))
 }
 
-fn composed_request(verb: &str, request: &thinkthen::AdmittedRequest) -> Result<thinkthen::AdmittedRequest, Error> {
+fn composed_request(
+    verb: &str,
+    request: &thinkthen::AdmittedRequest,
+) -> Result<thinkthen::AdmittedRequest, Error> {
     let mut args = request.request().call.arguments().clone();
     args.options.field = None;
     args.options.context_field = None;
@@ -173,13 +176,23 @@ fn composed_request(verb: &str, request: &thinkthen::AdmittedRequest) -> Result<
     Request::named(verb, args)?.admit()
 }
 
-fn observation(function: thinkthen::RequestFunction, event: thinkthen::RecordObservation<'_>) -> Result<serde_json::Value, Error> {
-    let inputs = complete_native::observations::event(&event)?.get("inputs").cloned();
-    let packet = thinkthen::RequestSessionResult::Observation { function, value: event.to_owned() };
+fn observation(
+    function: thinkthen::RequestFunction,
+    event: thinkthen::RecordObservation<'_>,
+) -> Result<serde_json::Value, Error> {
+    let inputs = complete_native::observations::event(&event)?
+        .get("inputs")
+        .cloned();
+    let packet = thinkthen::RequestSessionResult::Observation {
+        function,
+        value: event.to_owned(),
+    };
     let mut value: serde_json::Value = serde_json::from_str(&packet.to_json()?)
         .map_err(|_| call::defect("native observation could not be projected"))?;
     if let Some(inputs) = inputs {
-        value.get_mut("value").and_then(serde_json::Value::as_object_mut)
+        value
+            .get_mut("value")
+            .and_then(serde_json::Value::as_object_mut)
             .ok_or_else(|| call::defect("native observation is invalid"))?
             .insert("inputs".to_owned(), inputs);
     }

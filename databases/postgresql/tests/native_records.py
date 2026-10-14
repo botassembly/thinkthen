@@ -43,6 +43,11 @@ def main():
             failed = json.loads(query("SELECT to_jsonb(r) FROM thinkthen_decide('Fits?',ARRAY[" + record + ",NULL]) r"))
             assert failed['failure']['kind'] == 'usage' and failed['facts'] is None, failed
             assert 'Alpha.' not in failed['failure']['message'], failed
+            failed = json.loads(query("SELECT to_jsonb(r) FROM thinkthen_decide('Fits?',ARRAY[thinkthen_record(text=>'private-reader-row',read_error=>ROW('local','Reader stopped.')::thinkthen_reader_failure)]) r"))
+            assert failed['failure']['kind'] == 'usage' and failed['facts'] is None, failed
+            assert failed['failure']['message'] == 'a terminal reader error has no record fields', failed
+            assert 'private-reader-row' not in json.dumps(failed), failed
+
             rows = [json.loads(row) for row in query("SELECT to_jsonb(r) FROM thinkthen_decide('Fits?',ARRAY[" + record +
                          ",NULL],thinkthen_reading(incremental=>true,attempts=>true)) r", 1).splitlines()]
             assert rows[0]['value'] is True and rows[0]['ordinal'] == 0, rows
@@ -63,14 +68,18 @@ def main():
             assert row['value'] is True and row['result']['threshold']['number_value'] == 0.5, row
             wire = json.loads(json.loads(backend.read('capture'))['bodies'][-1])
             assert 'Saved fallback.' not in json.dumps(wire), wire
-            assert wire['questions']['q1']['instructions'] == 'The text is Alpha.. Fits?', wire
+            assert wire['questions']['q1']['instructions'] == 'The text is \"Alpha.\". Fits?', wire
             saved = quoted(json.dumps({'find': 'Fits?', 'field': ['/body']}))
             item = "thinkthen_record(value=>'{\"body\":\"Alpha.\",\"private\":\"not submitted\"}'::json)"
-            row = json.loads(query("SELECT to_jsonb(r) FROM thinkthen_find(" + saved + ",ARRAY[" + item + "]) r", 1))
+            row = json.loads(query("SELECT to_jsonb(r) FROM thinkthen_find(" + saved + ",ARRAY[" + item + "," + item + "]) r", 1))
             assert row['index'] == 0, row
             wire = json.loads(json.loads(backend.read('capture'))['bodies'][-1])
             assert 'not submitted' not in json.dumps(wire), wire
 
+            row = json.loads(query("SELECT to_jsonb(r) FROM thinkthen_choose('Which team owns this?',ARRAY[" + record +
+                             "],thinkthen_reading(options=>ARRAY[ROW('billing',NULL)::thinkthen_option,ROW('shipping',NULL)::thinkthen_option])) r", 1))
+            assert row['value'] in ('billing', 'shipping') and row['result']['answer']['probability'] is not None, row
+            assert row['result']['question']['options'] == ['billing', 'shipping'], row
             assert query("SELECT (thinkthen_record(value=>'null'::json)).value IS NULL") == 'f'
             assert query("SELECT (thinkthen_record()).value IS NULL") == 't'
             row = json.loads(query("SELECT to_jsonb(r) FROM thinkthen_decide('Fits?',ARRAY[thinkthen_record(value=>'null'::json)]) r", 1))

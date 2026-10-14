@@ -13,8 +13,8 @@ CREATE TYPE thinkthen_edge AS (relation text, source_name text, source_kind text
 
 pub(super) type FactsTuple = pgrx::composite_type!('static, "thinkthen_facts");
 pub(super) type FailureTuple = pgrx::composite_type!('static, "thinkthen_error");
-pub(super) type Names = Array<'static, pgrx::composite_type!('static, "thinkthen_name")>;
-pub(super) type Edges = Array<'static, pgrx::composite_type!('static, "thinkthen_edge")>;
+pub(super) type Names = crate::ffi::NameArray;
+pub(super) type Edges = crate::ffi::EdgeArray;
 
 pub(super) fn tuple(name: &str) -> PgHeapTuple<'static, AllocatedByRust> {
     PgHeapTuple::new_composite_type(name)
@@ -127,7 +127,7 @@ pub(super) fn names(value: &thinkthen::Recognized) -> Names {
             Some(value)
         })
         .collect();
-    crate::ffi::composite_array("thinkthen_name", values).or_raise()
+    crate::ffi::NameArray(crate::ffi::composite_array("thinkthen_name", values).or_raise())
 }
 pub(super) fn edges(edges: &[thinkthen::Edge]) -> Edges {
     let values = edges
@@ -144,12 +144,10 @@ pub(super) fn edges(edges: &[thinkthen::Edge]) -> Edges {
             Some(value)
         })
         .collect();
-    crate::ffi::composite_array("thinkthen_edge", values).or_raise()
+    crate::ffi::EdgeArray(crate::ffi::composite_array("thinkthen_edge", values).or_raise())
 }
 
-pub(super) fn events(
-    values: &[serde_json::Value],
-) -> Array<'static, pgrx::composite_type!('static, "thinkthen_event")> {
+pub(super) fn events(values: &[serde_json::Value]) -> crate::ffi::EventArray {
     let values = values
         .iter()
         .map(|value| {
@@ -157,5 +155,5 @@ pub(super) fn events(
             Some(super::results_generated::convert("thinkthen_event", value).or_raise())
         })
         .collect();
-    crate::ffi::composite_array("thinkthen_event", values).or_raise()
+    crate::ffi::EventArray(crate::ffi::composite_array("thinkthen_event", values).or_raise())
 }

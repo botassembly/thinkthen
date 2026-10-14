@@ -260,9 +260,13 @@ fn has_record_fields(tuple: &pgrx::composite_type!("thinkthen_record")) -> Resul
         || field::<crate::ffi::RawJson>(tuple, "value")?.is_some()
         || field::<String>(tuple, "context")?.is_some()
         || field::<crate::ffi::RawJson>(tuple, "context_value")?.is_some()
-        || field::<Array<'_, pgrx::composite_type!("thinkthen_option")>>(tuple, "options")?.is_some()
-        || field::<Array<'_, pgrx::composite_type!("thinkthen_seed")>>(tuple, "seed_spans")?.is_some()
-        || field::<Array<'_, pgrx::composite_type!("thinkthen_example")>>(tuple, "examples")?.is_some()
-        || field::<Array<'_, pgrx::composite_type!("thinkthen_image_value")>>(tuple, "images")?.is_some()
+        || field::<Array<'_, pgrx::composite_type!("thinkthen_option")>>(tuple, "options")?
+            .is_some()
+        || field::<Array<'_, pgrx::composite_type!("thinkthen_seed")>>(tuple, "seed_spans")?
+            .is_some()
+        || field::<Array<'_, pgrx::composite_type!("thinkthen_example")>>(tuple, "examples")?
+            .is_some()
+        || field::<Array<'_, pgrx::composite_type!("thinkthen_image_value")>>(tuple, "images")?
+            .is_some()
         || field::<pgrx::composite_type!("thinkthen_source")>(tuple, "source")?.is_some())
 }
