@@ -167,6 +167,28 @@ class Cases(unittest.TestCase):
                           str(path)], self.env, REPO)
             self.assertNotEqual(result.returncode, 0)
             self.assertIn('missing or malformed', result.stderr)
+    def test_changed_source_refuses_build_before_compiler(self):
+        tree = self.root / 'build-tree'
+        copy_packer(tree)
+        cache = self.root / 'source-cache'
+        source = cache / 'duckdb/community/v1.5.6/source'
+        source.parent.mkdir(parents=True)
+        commit = self.source_fixture(source)
+        run(['git', '-C', str(source), 'tag', 'v1.5.6'], self.env)
+        pins = tree / 'databases/duckdb/tools/version.env'
+        pins.write_text(pins.read_text().replace(selected('v1.5.6', TARGET)['source_commit'], commit))
+        run(['git', '-C', str(source), 'update-index', '--assume-unchanged', 'source.cc'], self.env)
+        (source / 'source.cc').write_text('masked source change\n')
+        marker = self.root / 'compiler-starts'
+        shim = self.root / 'build-shim'
+        for tool in ('cargo', 'cmake', 'make', 'rustc'):
+            script(shim / tool, f'touch "{marker}"; exit 99')
+        env = {**self.env, 'PATH': f'{shim}:{self.env["PATH"]}', 'THINKTHEN_TOOLCHAINS': str(cache)}
+        result = run(['/bin/sh', str(tree / 'databases/duckdb/cpp/build.sh')], env)
+        self.assertNotEqual(result.returncode, 0, result.stderr)
+        self.assertIn('raw Git source file differs: source.cc', result.stderr)
+        self.assertFalse(marker.exists(), 'changed source reached a compiler')
+
     def test_release_repository_keeps_both_source_hosts(self):
         import json
         tree = self.root / 'tree'
