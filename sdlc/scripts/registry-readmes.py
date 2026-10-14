@@ -262,6 +262,8 @@ def database_functions(code, family):
     # SQL strings and comments cannot stand in for executable named calls.
     tokens = re.compile(r"--[^\n]*|/\*|[eE]'(?:\\.|''|[^'\\])*'|'(?:''|[^'])*'|"
                         r'\$(\w*)\$[\s\S]*?\$\1\$|"(?:""|[^"])*"')
+    if family == 'sqlite':
+        tokens = re.compile(tokens.pattern + r'|`(?:``|[^`])*`|\[[^\]]*\]')
     pieces, pos = [], 0
     while token := tokens.search(code, pos):
         pieces.append(code[pos:token.start()])
@@ -276,7 +278,7 @@ def database_functions(code, family):
             else:
                 end = len(code)
         # Preserve only complete route identifiers; call syntax is checked after masking.
-        quoted = token[0][1:-1] if token[0].startswith('"') else ''
+        quoted = token[0][1:-1] if token[0].startswith(('"', '`', '[')) else ''
         pieces.append(quoted if re.fullmatch(r'(?:thinkthen_|tt_)\w+', quoted, re.I) else ' ')
         pos = end
     pieces.append(code[pos:])

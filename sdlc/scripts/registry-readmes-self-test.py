@@ -41,6 +41,18 @@ def archive(path, files):
             package.addfile(entry, io.BytesIO(data))
 
 
+def cli_root(root):
+    for name in ('sdlc/scripts/registry-readmes.py', 'README.md', 'specification/request.schema.json'):
+        target = root / name; target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(readmes.REPO / name, target)
+    return root / 'sdlc/scripts/registry-readmes.py'
+
+
+def cli_examples(runner, packages, family):
+    return subprocess.run([sys.executable, str(runner), 'examples', str(packages), '--family', family],
+                          capture_output=True, text=True)
+
+
 class PackageText(unittest.TestCase):
     def test_public_package_uses_reviewed_text(self):
         with tempfile.TemporaryDirectory() as scratch:
@@ -141,67 +153,59 @@ class PackageText(unittest.TestCase):
             with self.assertRaisesRegex(readmes.Refusal, 'example-needs-two-functions: python'):
                 readmes.example('python', root)
 
-    def test_database_examples_accept_named_details_and_refuse_retired_routes(self):
+    def test_database_routes_through_release_cli(self):
         with tempfile.TemporaryDirectory() as scratch:
             root = Path(scratch)
+            runner = cli_root(root)
+            packages = root / 'packages'; packages.mkdir()
+            contract = json.loads((root / 'specification/request.schema.json').read_text())
+            functions = [variant['const'] for variant in contract['$defs']['RequestFunction']['oneOf']]
             for family in ('sqlite', 'postgresql', 'duckdb'):
-                page = readmes.source(family, root)
-                page.parent.mkdir(parents=True)
-                install = {'sqlite': '.load thinkthen', 'postgresql': 'CREATE EXTENSION thinkthen;',
-                           'duckdb': 'INSTALL thinkthen FROM community;\nLOAD thinkthen;'}[family]
-                contract = json.loads((readmes.REPO / 'specification/request.schema.json').read_text())
-                functions = [variant['const'] for variant in contract['$defs']['RequestFunction']['oneOf']]
+                page = readmes.source(family, root); page.parent.mkdir(parents=True)
+                admitted = 'missing-or-ambiguous-example-package: ' + family
+                cases = []
                 for suffix in ('', '_details'):
-                    calls = ''.join("SELECT thinkthen_" + function + suffix
-                                    + "('thinkthen_unknown(', 'i');\n" for function in functions)
-                    page.write_text('```sql\n' + install + '\n```\n```sql\n' + calls + '```\n')
-                    with self.subTest(family=family, suffix=suffix):
-                        samples = readmes.examples(family, root)
-                        self.assertEqual(len(samples), 1)
-                        for function in functions:
-                            self.assertIn('thinkthen_' + function + suffix + '(', samples[0][1])
-                page.write_text('```sql\nSELECT "thinkthen_decide" /* call */ (\'q\', \'i\');\n'
-                                'SELECT "thinkthen_choose_details"(\'q\', \'i\');\n```\n')
-                self.assertEqual(len(readmes.examples(family, root)), 1)
-                page.write_text("```sql\nSELECT 'thinkthen_decide(' AS prose;\n"
-                                "-- thinkthen_choose('q', 'i');\n```\n")
-                with self.assertRaisesRegex(readmes.Refusal, 'example-needs-two-functions: ' + family):
-                    readmes.examples(family, root)
-                for prose in ('SELECT 1 AS "thinkthen_decide(", 2 AS "thinkthen_choose(";',
+                    cases.append((''.join("SELECT thinkthen_" + function + suffix
+                        + "('thinkthen_unknown(', 'i');\n" for function in functions), admitted))
+                for quote in ('"', '`', '[') if family == 'sqlite' else ('"',):
+                    close = ']' if quote == '[' else quote
+                    cases.append(('SELECT ' + quote + 'thinkthen_decide' + close + " /* call */ ('q', 'i'); "
+                        + 'SELECT ' + quote + 'thinkthen_choose_details' + close + "('q', 'i');", admitted))
+                    cases.append(('SELECT ' + quote + 'thinkthen_unknown' + close + "('q', 'i');",
+                                  'unsupported-database-example-route: thinkthen_unknown'))
+                    cases.append(('SELECT 1 AS ' + quote + 'thinkthen_decide(' + close
+                        + ', 2 AS ' + quote + 'thinkthen_choose(' + close + ';',
+                        'example-needs-two-functions: ' + family))
+                helpers = readmes.DATABASE_HELPERS[family]
+                for helper in helpers:
+                    one = "SELECT thinkthen_decide_details('q', " + helper + "('i'));"
+                    cases.append((one, 'example-needs-two-functions: ' + family))
+                    cases.append((one + "SELECT thinkthen_choose_details('q', " + helper + "('i'));", admitted))
+                for prose in ("SELECT 'thinkthen_decide(' AS prose; -- thinkthen_choose('q', 'i');",
+                              'SELECT 1 AS "thinkthen_decide(", 2 AS "thinkthen_choose(";',
                               '/* outer /* inner */ thinkthen_decide( thinkthen_choose( */',
-                              "SELECT E'escaped \\' thinkthen_decide( thinkthen_choose(';"):
-                    page.write_text('```sql\n' + prose + '\n```\n')
-                    with self.subTest(family=family, prose=prose):
-                        with self.assertRaisesRegex(readmes.Refusal, 'example-needs-two-functions: ' + family):
-                            readmes.examples(family, root)
+                              "SELECT E'escaped \\\' thinkthen_decide( thinkthen_choose(';",
+                              "SELECT $body$thinkthen_decide( thinkthen_choose($body$;"):
+                    cases.append((prose, 'example-needs-two-functions: ' + family))
                 for route in ('thinkthen_call', 'thinkthen_complete', 'thinkthen_decide_complete',
                               'thinkthen_unknown', 'tt_unknown_details', '"thinkthen_complete" /* call */'):
-                    page.write_text("```sql\nSELECT thinkthen_decide('q', 'i');\n"
-                                    "SELECT thinkthen_choose_details('q', 'i');\nSELECT "
-                                    + route + "('q', 'i');\n```\n")
-                    with self.subTest(family=family, route=route):
-                        with self.assertRaisesRegex(readmes.Refusal, 'unsupported-database-example-route: '
-                                                   + route.split()[0].strip('"')):
-                            readmes.examples(family, root)
-
-    def test_database_helpers_do_not_count_as_functions(self):
-        for family, helpers in readmes.DATABASE_HELPERS.items():
-            for helper in helpers:
-                with self.subTest(family=family, helper=helper), tempfile.TemporaryDirectory() as scratch:
-                    root = Path(scratch); page = readmes.source(family, root)
-                    page.parent.mkdir(parents=True)
-                    page.write_text("```sql\nSELECT thinkthen_decide_details('q', " + helper + "('i'));\n```\n")
-                    with self.assertRaisesRegex(readmes.Refusal, 'example-needs-two-functions: ' + family):
-                        readmes.examples(family, root)
-                    page.write_text(page.read_text().replace('\n```', "\nSELECT thinkthen_choose_details('q', " + helper + "('i'));\n```"))
-                    self.assertEqual(len(readmes.examples(family, root)), 1)
+                    cases.append(("SELECT thinkthen_decide('q', 'i'); SELECT thinkthen_choose_details('q', 'i'); SELECT "
+                        + route + "('q', 'i');", 'unsupported-database-example-route: '
+                        + route.split()[0].strip('"')))
+                for code, error in cases:
+                    with self.subTest(family=family, code=code):
+                        page.write_text('```sql\n' + code + '\n```\n')
+                        done = cli_examples(runner, packages, family)
+                        self.assertNotEqual(done.returncode, 0)
+                        self.assertIn(error, done.stderr)
 
     def test_python_assertions_execute_and_refuse_wrong_answers(self):
         with tempfile.TemporaryDirectory() as scratch:
             tree = Path(scratch); root = tree / 'root'; packages = tree / 'packages'
             packages.mkdir()
+            runner = cli_root(root)
             for name in ('rust-toolchain.toml', 'site/recordings/thinkthen.jsonl',
-                         'crates/thinkthen/Cargo.toml', 'libraries/python/pyproject.toml', 'README.md'):
+                         'crates/thinkthen/Cargo.toml', 'libraries/python/pyproject.toml'):
                 target = root / name; target.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copyfile(readmes.REPO / name, target)
             page = readmes.source('python', root)
@@ -220,7 +224,7 @@ class PackageText(unittest.TestCase):
                      ('        assert engine.score(refund, text).value == 4\n', False),
                      ('        assert engine.decide(refund, text).probability == .97\n', True),
                      ('        assert engine.decide(refund, text).probability == .01\n', False)]
-            for index, (assertion, passes) in enumerate(cases):
+            for assertion, passes in cases:
                 with self.subTest(assertion=assertion):
                     text = approved.replace('        assert is_refund is expected\n',
                                             assertion or '        assert is_refund is expected\n')
@@ -235,16 +239,11 @@ class PackageText(unittest.TestCase):
                                         + release + '\nSummary: ' + summary + '\n\n' + text)
                         bundle.writestr(dist + 'WHEEL', 'Wheel-Version: 1.0\nGenerator: fixture\nRoot-Is-Purelib: true\nTag: py3-none-any\n')
                         bundle.writestr(dist + 'RECORD', '')
-                    work = tree / str(index); work.mkdir()
-                    packed_check = readmes.check_package
-                    with patch.object(readmes, 'check_package', side_effect=lambda family, package:
-                                      packed_check(family, package, root)):
-                        if passes:
-                            readmes.run_example('python', packages, work, root)
-                        else:
-                            with self.assertRaisesRegex(readmes.Refusal, 'example-did-not-run: python') as refused:
-                                readmes.run_example('python', packages, work, root)
-                            self.assertIn('AssertionError', str(refused.exception))
+                    done = cli_examples(runner, packages, 'python')
+                    self.assertEqual(done.returncode == 0, passes, done.stderr)
+                    if not passes:
+                        self.assertIn('example-did-not-run: python', done.stderr)
+                        self.assertIn('AssertionError', done.stderr)
 
     def test_archive_replay_preserves_package_roots_with_vendored_readmes(self):
         with tempfile.TemporaryDirectory() as scratch:
@@ -512,6 +511,7 @@ class PackageText(unittest.TestCase):
         with tempfile.TemporaryDirectory() as scratch:
             tree = Path(scratch)
             root = tree / 'root'; root.mkdir()
+            runner = cli_root(root)
             families = ('command', 'typescript', 'duckdb', 'flutter')
             for family in families:
                 page = readmes.source(family, root)
@@ -519,11 +519,13 @@ class PackageText(unittest.TestCase):
                 language = readmes.SAMPLES[family][0]
                 code = ("SELECT thinkthen_decide('q', 'i'); SELECT thinkthen_choose('q', 'i');"
                         if family == 'duckdb' else 'decide(); choose();')
-                page.write_text('```' + language + '\n' + code + '\n```\n')
+                page.write_text(readmes.OPENING + '\n\n```' + language + '\n' + code + '\n```\n')
             packages = tree / 'packages'; packages.mkdir()
-            with self.assertRaises(readmes.Refusal) as error:
-                readmes.check_examples(packages, root, families=families)
-            self.assertEqual(str(error.exception).splitlines(), [
+            done = subprocess.run([sys.executable, str(runner), 'examples', str(packages),
+                                   *[arg for family in families for arg in ('--family', family)]],
+                                  capture_output=True, text=True)
+            self.assertNotEqual(done.returncode, 0)
+            self.assertEqual(done.stderr.removeprefix('registry-readmes: ').splitlines(), [
                 family + ' block 1: missing-or-ambiguous-example-package: ' + family
                 for family in families])
 
