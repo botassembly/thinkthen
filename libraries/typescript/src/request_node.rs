@@ -90,14 +90,7 @@ fn malformed(env: Env, _: serde_json::Error) -> napi::Error {
     )
 }
 
-#[napi]
-pub fn request_session(
-    env: Env,
-    engine: &NativeEngine,
-    verb: String,
-    values: RequestValues,
-    options: String,
-) -> Result<NativeSession> {
+fn request(env: Env, verb: String, values: RequestValues, options: String) -> Result<Request> {
     use thinkthen::{RequestArguments, RequestInput, RequestQuestion};
     let question = if values.selector {
         RequestQuestion::from_json(&values.question).map_err(|error| failure(env, error))?
@@ -135,7 +128,36 @@ pub fn request_session(
         input,
         options: serde_json::from_str(&options).map_err(|error| malformed(env, error))?,
     };
-    let request = Request::named(verb.as_str(), args).map_err(|error| failure(env, error))?;
+    Request::named(verb.as_str(), args).map_err(|error| failure(env, error))
+}
+
+#[napi]
+pub fn request_plan(
+    env: Env,
+    engine: &NativeEngine,
+    verb: String,
+    values: RequestValues,
+    options: String,
+) -> Result<String> {
+    let admitted = request(env, verb, values, options)?
+        .admit()
+        .map_err(|error| failure(env, error))?;
+    let plan = engine
+        .engine
+        .plan_request(&admitted, thinkthen::RequestEnvironment::default())
+        .map_err(|error| failure(env, error))?;
+    serde_json::to_string(&plan).map_err(|error| malformed(env, error))
+}
+
+#[napi]
+pub fn request_session(
+    env: Env,
+    engine: &NativeEngine,
+    verb: String,
+    values: RequestValues,
+    options: String,
+) -> Result<NativeSession> {
+    let request = request(env, verb, values, options)?;
     let session = engine
         .engine
         .request_session_with_surface(request, thinkthen::Surface::Javascript)

@@ -38,3 +38,54 @@ async function allNamed(client:Client,question:Question,input:Input) {
  void [decide,choose,tag,score,filter,rank,find,annotate,recognize,relate];
 }
 void allNamed;
+
+async function oneLine(client:Client) {
+ const decide:boolean|null=await client.decideAnswer('Question?','text');
+ const choose:string|null=await client.chooseAnswer({choose:'Which?',options:['yes','no']},'text');
+ const tag:readonly string[]=(await client.tag({tag:'Which?',labels:['yes']},'text')).tagAnswer();
+ const score:number|Results.NativeNumber|null=await client.scoreAnswer({score:'How?',levels:['low','high']},'text');
+ const rank:readonly (number|Results.NativeNumber)[]=await client.rankAnswer('Question?',['first','second']);
+ const filter:readonly Results.JsonValue[]=await client.filterAnswer('Question?',['first',null]);
+ void [decide,choose,tag,score,rank,filter];
+}
+void oneLine;
+
+function typedControls() {
+ const client=new Client({cache:false,timeout:1000,max_retries:2});
+ const settings:import('thinkthen').EngineSettings={cache:false,refresh_cache:false};
+ const controls:import('thinkthen').Controls={attempts:true,deadline_ms:-1,signal:new AbortController().signal};
+ const question:import('thinkthen').RequestDefinition={choose:'Which?',options:['first','second']};
+ void client.choose(question,'text',controls);
+ // @ts-expect-error unknown engine setting
+ new Client({typo:true});
+ // @ts-expect-error timeout uses a number
+ new Client({timeout:'slow'});
+ // @ts-expect-error unknown call control
+ void client.decide('Question?','text',{typo:true});
+ // @ts-expect-error attempts uses a boolean
+ void client.decide('Question?','text',{attempts:'yes'});
+ // @ts-expect-error null is not an optional control
+ void client.decide('Question?','text',{attempts:null});
+ // @ts-expect-error authored question wording uses text
+ const invalid:Question={choose:false};
+ // @ts-expect-error input option arrays are immutable
+ controls.field?.push('/body');
+ // @ts-expect-error plain object cannot impersonate a file question
+ const file:import('thinkthen').QuestionFile={};
+ // @ts-expect-error one authored question selects one function
+ const mixed:Question={decide:'Question?',choose:'Which?'};
+ const recognize:Question={version:1,recognize:{kinds:{person:null}}};
+ const relate:Question={version:1,relate:{relations:[{name:'knows',source:'person',target:'person',either:false}]}};
+ void [settings,invalid,file,mixed,recognize,relate];client.close();
+}
+void typedControls;
+
+function typedPlan(client:Client) {
+ const plan:Results.NativePlan=client.plan('decide','Question?',['text']);
+ const records:number|Results.NativeNumber=plan.records;
+ const body:string|null=plan.first_body_utf8;
+ // @ts-expect-error a preview requires a complete input
+ client.plan('decide','Question?',(function*(){yield 'text';})());
+ void [records,body];
+}
+void typedPlan;

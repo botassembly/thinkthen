@@ -105,6 +105,21 @@ test('the ten Client functions retain generated values after close',async t=>{
     if(!(held[0][1].results[0].answer instanceof tt.Results.NativeAnswerYesNo) || !(held[0][1].results[0].answer.probability>0))throw Error('lost decision probabilities');
     if(!(held[1][1].results[0].answer instanceof tt.Results.NativeAnswerChoice) || !Object.values(held[1][1].results[0].answer.probabilities).every(v=>typeof v==='number'))throw Error('lost choice probabilities');
     if(typeof held[0][1].facts.largest_request_bytes!=='number' || !(held[0][1].facts.input_tokens>0) || !held[0][1].facts.token_estimate_method || !(held[0][1].facts.usage_persistence instanceof tt.Results.NativePersistenceObservation))throw Error('lost observed cost facts');
+    for(const [verb,done] of held) {
+      const answer=done[verb+'Answer']();
+      if(verb==='rank' && JSON.stringify(answer)!==JSON.stringify(done.results.map(row=>row.index)))throw Error('rank returned receipts');
+      if(verb==='filter' && JSON.stringify(answer)!==JSON.stringify(done.results.map(row=>row.input)))throw Error('filter returned receipts');
+      if(['decide','choose','tag','score'].includes(verb) && JSON.stringify(answer)!==JSON.stringify(done.results[0].value))throw Error('scalar answer changed');
+      if(['find','relate'].includes(verb) && answer!==done.results[0])throw Error('aggregate answer changed');
+      if(verb==='recognize' && JSON.stringify(answer)!==JSON.stringify(done.results))throw Error('recognition answer changed');
+    }
+    const direct=new tt.Client({cache:false});
+    if(typeof await direct.decideAnswer('Question?','text')!=='boolean')throw Error('direct answer changed');
+    try{(await direct.decide('Question?',['first','second'])).decideAnswer();throw Error('accepted multiple answers');}
+    catch(error){if(!(error instanceof tt.ClientError) || !error.facts || error.results.length!==2)throw error;}
+    try{held[0][1].filterAnswer();throw Error('accepted wrong reader');}
+    catch(error){if(!(error instanceof tt.ClientError) || error.facts!==held[0][1].facts)throw error;}
+    direct.close();
     return held.map(([verb,done])=>[verb,done.results.length,done.facts.requests_sent]);
   `,{arm:'arm/full/capture'});
   assert.deepEqual(value.map(row=>row[0]),['decide','choose','tag','score','filter','rank','find','annotate','recognize','relate']);
@@ -269,4 +284,25 @@ test('Client retains producer exceptions and native admission messages',async t=
     client.close();return true;
   `);
   assert.equal(value,true);assert.equal(await backend.count(),0);
+});
+
+
+test('Client previews complete inputs through native admission without sending',async t=>{
+  const backend=await startBackend(t);
+  const {value}=await ask(backend,`
+    const client=new tt.Client({cache:false});
+    const plan=client.plan('decide','Question?',['first','second'],{batch:1});
+    let advanced=false;const input=(function*(){advanced=true;yield 'text';})();
+    const errors=[];
+    for(const [verb,question,rows,controls] of [['decide','Question?',input,{}],['decide','Question?',['text'],{batch:0}],['recognize',{version:1,recognize:{kinds:{person:null}}},['text'],{}],['decide','Question?',['text'],{signal:AbortSignal.abort()}]]) {
+      try{client.plan(verb,question,rows,controls);throw Error('preview accepted invalid input');}
+      catch(error){if(!(error instanceof tt.ClientError))throw error;errors.push(error.kind);}
+    }
+    client.close();return {plan,advanced,errors};
+  `);
+  assert.equal(value.plan.records,2);assert.equal(value.plan.requests,2);
+  assert.ok(value.plan.token_estimate_method);assert.ok(value.plan.estimated_bytes>0);
+  assert.ok(value.plan.first_body_utf8.includes('first'));
+  assert.equal(value.advanced,false);assert.deepEqual(value.errors,['usage','usage','usage','cancelled']);
+  assert.equal(await backend.count(),0);
 });

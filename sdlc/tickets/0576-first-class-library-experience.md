@@ -12,6 +12,8 @@ Reviews: revision 340f966, accept
 
 Reviews: revision bd54638, accept
 
+Reviews: revision f6f4f90, accept
+
 ## Outcome
 
 Every language library, database extension and the MCP server feels native to a senior developer on that platform and grades B or better on the library rubric below. The public API of each exposes no transport JSON, no schema-path names and no raw C layouts.

@@ -52,7 +52,7 @@ const graph = {
         items: { $ref: "#/$defs/completeObservation" },
         type: "array",
       },
-      question: { $ref: "#/$defs/completeReadableQuestion" },
+      question: { $ref: "#/$defs/completequestionDocument" },
       question_sources: {
         items: { $ref: "#/$defs/completeQuestionSource" },
         type: "array",
@@ -85,7 +85,7 @@ const graph = {
         items: { $ref: "#/$defs/completeObservation" },
         type: "array",
       },
-      question: { $ref: "#/$defs/completeReadableQuestion" },
+      question: { $ref: "#/$defs/completequestionDocument" },
       question_sources: {
         items: { $ref: "#/$defs/completeQuestionSource" },
         type: "array",
@@ -191,7 +191,7 @@ const graph = {
       input: true,
       members: { items: { $ref: "#/$defs/completeRankMember" }, type: "array" },
       meta: { $ref: "#/$defs/completeMeta" },
-      question: { $ref: "#/$defs/completeReadableQuestion" },
+      question: { $ref: "#/$defs/completequestionDocument" },
       question_name: { type: "string" },
       schema: { $ref: "#/$defs/completeVersion" },
       source: { anyOf: [{ $ref: "#/$defs/completePhysicalSource" }] },
@@ -226,7 +226,7 @@ const graph = {
       input: true,
       members: { items: { $ref: "#/$defs/completeRankMember" }, type: "array" },
       meta: { $ref: "#/$defs/completeMeta" },
-      question: { $ref: "#/$defs/completeReadableQuestion" },
+      question: { $ref: "#/$defs/completequestionDocument" },
       question_name: { type: "string" },
       schema: { $ref: "#/$defs/completeVersion" },
       source: { anyOf: [{ $ref: "#/$defs/completePhysicalSource" }] },
@@ -261,7 +261,7 @@ const graph = {
       input: true,
       members: { items: { $ref: "#/$defs/completeRankMember" }, type: "array" },
       meta: { $ref: "#/$defs/completeMeta" },
-      question: { $ref: "#/$defs/completeReadableQuestion" },
+      question: { $ref: "#/$defs/completequestionDocument" },
       question_name: { type: "string" },
       schema: { $ref: "#/$defs/completeVersion" },
       source: { anyOf: [{ $ref: "#/$defs/completePhysicalSource" }] },
@@ -301,7 +301,7 @@ const graph = {
       input: true,
       members: { items: { $ref: "#/$defs/completeRankMember" }, type: "array" },
       meta: { $ref: "#/$defs/completeMeta" },
-      question: { $ref: "#/$defs/completeReadableQuestion" },
+      question: { $ref: "#/$defs/completequestionDocument" },
       question_name: { type: "string" },
       schema: { $ref: "#/$defs/completeVersion" },
       source: { anyOf: [{ $ref: "#/$defs/completePhysicalSource" }] },
@@ -336,7 +336,7 @@ const graph = {
       input: true,
       members: { items: { $ref: "#/$defs/completeRankMember" }, type: "array" },
       meta: { $ref: "#/$defs/completeMeta" },
-      question: { $ref: "#/$defs/completeReadableQuestion" },
+      question: { $ref: "#/$defs/completequestionDocument" },
       question_name: { type: "string" },
       schema: { $ref: "#/$defs/completeVersion" },
       source: { anyOf: [{ $ref: "#/$defs/completePhysicalSource" }] },
@@ -371,7 +371,7 @@ const graph = {
       input: true,
       members: { items: { $ref: "#/$defs/completeRankMember" }, type: "array" },
       meta: { $ref: "#/$defs/completeMeta" },
-      question: { $ref: "#/$defs/completeReadableQuestion" },
+      question: { $ref: "#/$defs/completequestionDocument" },
       question_name: { type: "string" },
       schema: { $ref: "#/$defs/completeVersion" },
       source: { anyOf: [{ $ref: "#/$defs/completePhysicalSource" }] },
@@ -686,7 +686,7 @@ const graph = {
       },
       meta: { $ref: "#/$defs/completeMeta" },
       position: { $ref: "#/$defs/completePosition" },
-      question: { $ref: "#/$defs/completeReadableQuestion2" },
+      question: { $ref: "#/$defs/completefindQuestionDocument" },
       schema: { $ref: "#/$defs/completeVersion" },
       threshold: { type: "null" },
       value: true,
@@ -1021,7 +1021,7 @@ const graph = {
       answer_id: { $ref: "#/$defs/completeAnswerId" },
       images: { items: { $ref: "#/$defs/completeImage" }, type: "array" },
       meta: { $ref: "#/$defs/completeMeta" },
-      question: { $ref: "#/$defs/completeReadableQuestion" },
+      question: { $ref: "#/$defs/completequestionDocument" },
       schema: { $ref: "#/$defs/completeVersion" },
       source: { anyOf: [{ $ref: "#/$defs/completePhysicalSource" }] },
       threshold: { type: "null" },
@@ -1043,186 +1043,6 @@ const graph = {
     ],
     type: "object",
     unevaluatedProperties: false,
-  },
-  completeReadableQuestion: {
-    variants: [
-      ["completeReadableQuestion_decide", ["literal", "verb", "decide"]],
-      ["completeReadableQuestion_choose", ["literal", "verb", "choose"]],
-      ["completeReadableQuestion_tag", ["literal", "verb", "tag"]],
-      ["completeReadableQuestion_score", ["literal", "verb", "score"]],
-    ],
-  },
-  completeReadableQuestion2: {
-    properties: {
-      batch: { anyOf: [{ $ref: "#/$defs/completeBatch" }] },
-      context_schema: { anyOf: [{ $ref: "#/$defs/completeInputDeclaration" }] },
-      item_schema: { anyOf: [{ $ref: "#/$defs/completeInputDeclaration" }] },
-      label_details: {
-        items: { $ref: "#/$defs/completeLabel" },
-        type: "array",
-      },
-      model: { type: "string" },
-      name: { anyOf: [{ $ref: "#/$defs/completeQuestionName" }] },
-      none: { type: "boolean" },
-      on: { items: { type: "string" }, type: "array" },
-      profile: { type: "string" },
-      text: {},
-      verb: { const: "find" },
-      wording_version: { anyOf: [{ $ref: "#/$defs/completeWordingVersion" }] },
-    },
-    required: ["text", "none", "verb"],
-    type: "object",
-    unevaluatedProperties: false,
-  },
-  completeReadableQuestion3: {
-    properties: {
-      batch: { anyOf: [{ $ref: "#/$defs/completeBatch" }] },
-      context_schema: { anyOf: [{ $ref: "#/$defs/completeInputDeclaration" }] },
-      entity_definition: {},
-      instructions: {},
-      item_schema: { anyOf: [{ $ref: "#/$defs/completeInputDeclaration" }] },
-      kinds: { additionalProperties: {}, type: "object" },
-      label_details: {
-        items: { $ref: "#/$defs/completeLabel" },
-        type: "array",
-      },
-      mode: { $ref: "#/$defs/completeRecognitionMode" },
-      model: { type: "string" },
-      name: { anyOf: [{ $ref: "#/$defs/completeQuestionName" }] },
-      on: { items: { type: "string" }, type: "array" },
-      profile: { type: "string" },
-      relation_threshold: { anyOf: [{ $ref: "#/$defs/completethreshold" }] },
-      relations: {
-        items: { $ref: "#/$defs/completerelationRule" },
-        type: "array",
-      },
-      snippet_pieces: {
-        format: "uint32",
-        maximum: 4294967295,
-        minimum: 0,
-        type: "integer",
-      },
-      stage_context: { $ref: "#/$defs/completeRecognitionStageContext" },
-      threshold: { $ref: "#/$defs/completethreshold" },
-      verb: { $ref: "#/$defs/completeVerb" },
-      wording_version: { anyOf: [{ $ref: "#/$defs/completeWordingVersion" }] },
-    },
-    required: ["verb", "kinds", "threshold"],
-    type: "object",
-    unevaluatedProperties: false,
-  },
-  completeReadableQuestion4: {
-    properties: {
-      batch: { anyOf: [{ $ref: "#/$defs/completeBatch" }] },
-      context_schema: { anyOf: [{ $ref: "#/$defs/completeInputDeclaration" }] },
-      fields: {
-        anyOf: [{ $ref: "#/$defs/completerelateFields" }, { type: "null" }],
-      },
-      item_schema: { anyOf: [{ $ref: "#/$defs/completeInputDeclaration" }] },
-      label_details: {
-        items: { $ref: "#/$defs/completeLabel" },
-        type: "array",
-      },
-      model: { type: "string" },
-      name: { anyOf: [{ $ref: "#/$defs/completeQuestionName" }] },
-      on: { items: { type: "string" }, type: "array" },
-      profile: { type: "string" },
-      relations: {
-        items: { $ref: "#/$defs/completerelationRule" },
-        type: "array",
-      },
-      threshold: { $ref: "#/$defs/completethreshold" },
-      verb: { const: "relate" },
-      wording_version: { anyOf: [{ $ref: "#/$defs/completeWordingVersion" }] },
-    },
-    required: ["verb", "fields", "relations", "threshold"],
-    type: "object",
-    unevaluatedProperties: false,
-  },
-  completeReadableQuestion_choose: {
-    properties: {
-      batch: { anyOf: [{ $ref: "#/$defs/completeBatch" }] },
-      context_schema: { anyOf: [{ $ref: "#/$defs/completeInputDeclaration" }] },
-      item_schema: { anyOf: [{ $ref: "#/$defs/completeInputDeclaration" }] },
-      label_details: {
-        items: { $ref: "#/$defs/completeLabel" },
-        type: "array",
-      },
-      model: { type: "string" },
-      name: { anyOf: [{ $ref: "#/$defs/completeQuestionName" }] },
-      on: { items: { type: "string" }, type: "array" },
-      profile: { type: "string" },
-      wording_version: { anyOf: [{ $ref: "#/$defs/completeWordingVersion" }] },
-      options: { items: { type: "string" }, type: "array" },
-      text: {},
-      verb: { const: "choose", type: "string" },
-    },
-    required: ["verb", "text", "options"],
-    type: "object",
-  },
-  completeReadableQuestion_decide: {
-    properties: {
-      batch: { anyOf: [{ $ref: "#/$defs/completeBatch" }] },
-      context_schema: { anyOf: [{ $ref: "#/$defs/completeInputDeclaration" }] },
-      item_schema: { anyOf: [{ $ref: "#/$defs/completeInputDeclaration" }] },
-      label_details: {
-        items: { $ref: "#/$defs/completeLabel" },
-        type: "array",
-      },
-      model: { type: "string" },
-      name: { anyOf: [{ $ref: "#/$defs/completeQuestionName" }] },
-      on: { items: { type: "string" }, type: "array" },
-      profile: { type: "string" },
-      wording_version: { anyOf: [{ $ref: "#/$defs/completeWordingVersion" }] },
-      false: {},
-      text: {},
-      true: {},
-      verb: { const: "decide", type: "string" },
-    },
-    required: ["verb", "text"],
-    type: "object",
-  },
-  completeReadableQuestion_score: {
-    properties: {
-      batch: { anyOf: [{ $ref: "#/$defs/completeBatch" }] },
-      context_schema: { anyOf: [{ $ref: "#/$defs/completeInputDeclaration" }] },
-      item_schema: { anyOf: [{ $ref: "#/$defs/completeInputDeclaration" }] },
-      label_details: {
-        items: { $ref: "#/$defs/completeLabel" },
-        type: "array",
-      },
-      model: { type: "string" },
-      name: { anyOf: [{ $ref: "#/$defs/completeQuestionName" }] },
-      on: { items: { type: "string" }, type: "array" },
-      profile: { type: "string" },
-      wording_version: { anyOf: [{ $ref: "#/$defs/completeWordingVersion" }] },
-      levels: { items: { type: "string" }, type: "array" },
-      text: {},
-      verb: { const: "score", type: "string" },
-    },
-    required: ["verb", "text", "levels"],
-    type: "object",
-  },
-  completeReadableQuestion_tag: {
-    properties: {
-      batch: { anyOf: [{ $ref: "#/$defs/completeBatch" }] },
-      context_schema: { anyOf: [{ $ref: "#/$defs/completeInputDeclaration" }] },
-      item_schema: { anyOf: [{ $ref: "#/$defs/completeInputDeclaration" }] },
-      label_details: {
-        items: { $ref: "#/$defs/completeLabel" },
-        type: "array",
-      },
-      model: { type: "string" },
-      name: { anyOf: [{ $ref: "#/$defs/completeQuestionName" }] },
-      on: { items: { type: "string" }, type: "array" },
-      profile: { type: "string" },
-      wording_version: { anyOf: [{ $ref: "#/$defs/completeWordingVersion" }] },
-      labels: { items: { type: "string" }, type: "array" },
-      text: {},
-      verb: { const: "tag", type: "string" },
-    },
-    required: ["verb", "text", "labels"],
-    type: "object",
   },
   completeRecognition: {
     properties: {
@@ -1250,7 +1070,7 @@ const graph = {
       },
       meta: { $ref: "#/$defs/completeMeta" },
       position: { $ref: "#/$defs/completePosition" },
-      question: { $ref: "#/$defs/completeReadableQuestion3" },
+      question: { $ref: "#/$defs/completerecognizeQuestionDocument" },
       schema: { $ref: "#/$defs/completeVersion" },
       source: { anyOf: [{ $ref: "#/$defs/completePhysicalSource" }] },
       value: { $ref: "#/$defs/completerecognize" },
@@ -1387,7 +1207,7 @@ const graph = {
       },
       meta: { $ref: "#/$defs/completeMeta" },
       position: { $ref: "#/$defs/completePosition" },
-      question: { $ref: "#/$defs/completeReadableQuestion4" },
+      question: { $ref: "#/$defs/completerelateQuestionDocument" },
       schema: { $ref: "#/$defs/completeVersion" },
       value: {
         items: { $ref: "#/$defs/completerelatedEntityEdge" },
@@ -1482,7 +1302,7 @@ const graph = {
         items: { $ref: "#/$defs/completeObservation" },
         type: "array",
       },
-      question: { $ref: "#/$defs/completeReadableQuestion" },
+      question: { $ref: "#/$defs/completequestionDocument" },
       question_sources: {
         items: { $ref: "#/$defs/completeQuestionSource" },
         type: "array",
@@ -1528,7 +1348,7 @@ const graph = {
         items: { $ref: "#/$defs/completeObservation" },
         type: "array",
       },
-      question: { $ref: "#/$defs/completeReadableQuestion" },
+      question: { $ref: "#/$defs/completequestionDocument" },
       question_sources: {
         items: { $ref: "#/$defs/completeQuestionSource" },
         type: "array",
@@ -1927,6 +1747,28 @@ const graph = {
     type: "object",
     unevaluatedProperties: false,
   },
+  completefindQuestionDocument: {
+    properties: {
+      batch: { anyOf: [{ $ref: "#/$defs/completeBatch" }] },
+      context_schema: { anyOf: [{ $ref: "#/$defs/completeInputDeclaration" }] },
+      item_schema: { anyOf: [{ $ref: "#/$defs/completeInputDeclaration" }] },
+      label_details: {
+        items: { $ref: "#/$defs/completeLabel" },
+        type: "array",
+      },
+      model: { type: "string" },
+      name: { anyOf: [{ $ref: "#/$defs/completeQuestionName" }] },
+      none: { type: "boolean" },
+      on: { items: { type: "string" }, type: "array" },
+      profile: { type: "string" },
+      text: {},
+      verb: { const: "find" },
+      wording_version: { anyOf: [{ $ref: "#/$defs/completeWordingVersion" }] },
+    },
+    required: ["text", "none", "verb"],
+    type: "object",
+    unevaluatedProperties: false,
+  },
   completenameOdds: {
     properties: {
       edges: {
@@ -2007,6 +1849,57 @@ const graph = {
     type: "object",
     unevaluatedProperties: false,
   },
+  completeplan: {
+    properties: {
+      estimated_bytes: {
+        format: "uint",
+        maximum: 18446744073709551615,
+        minimum: 0,
+        type: "integer",
+      },
+      estimated_input_tokens: { $ref: "#/$defs/completetokenBand" },
+      first_body_utf8: { type: ["string", "null"] },
+      largest_request_bytes: {
+        format: "uint",
+        maximum: 18446744073709551615,
+        minimum: 0,
+        type: "integer",
+      },
+      largest_request_estimated_input_tokens: {
+        format: "uint64",
+        maximum: 18446744073709551615,
+        minimum: 0,
+        type: "integer",
+      },
+      records: {
+        format: "uint",
+        maximum: 18446744073709551615,
+        minimum: 0,
+        type: "integer",
+      },
+      requests: {
+        format: "uint",
+        maximum: 18446744073709551615,
+        minimum: 0,
+        type: "integer",
+      },
+      token_estimate_method: { type: "string" },
+      upper_bound: { type: "boolean" },
+    },
+    required: [
+      "records",
+      "requests",
+      "estimated_bytes",
+      "largest_request_bytes",
+      "largest_request_estimated_input_tokens",
+      "token_estimate_method",
+      "estimated_input_tokens",
+      "upper_bound",
+      "first_body_utf8",
+    ],
+    type: "object",
+    unevaluatedProperties: false,
+  },
   completeprofileWarning: {
     properties: {
       running: { type: "string" },
@@ -2015,6 +1908,99 @@ const graph = {
     required: ["tuned_for", "running"],
     type: "object",
     unevaluatedProperties: false,
+  },
+  completequestionDocument: {
+    variants: [
+      ["completequestionDocument_decide", ["literal", "verb", "decide"]],
+      ["completequestionDocument_choose", ["literal", "verb", "choose"]],
+      ["completequestionDocument_tag", ["literal", "verb", "tag"]],
+      ["completequestionDocument_score", ["literal", "verb", "score"]],
+    ],
+  },
+  completequestionDocument_choose: {
+    properties: {
+      batch: { anyOf: [{ $ref: "#/$defs/completeBatch" }] },
+      context_schema: { anyOf: [{ $ref: "#/$defs/completeInputDeclaration" }] },
+      item_schema: { anyOf: [{ $ref: "#/$defs/completeInputDeclaration" }] },
+      label_details: {
+        items: { $ref: "#/$defs/completeLabel" },
+        type: "array",
+      },
+      model: { type: "string" },
+      name: { anyOf: [{ $ref: "#/$defs/completeQuestionName" }] },
+      on: { items: { type: "string" }, type: "array" },
+      profile: { type: "string" },
+      wording_version: { anyOf: [{ $ref: "#/$defs/completeWordingVersion" }] },
+      options: { items: { type: "string" }, type: "array" },
+      text: {},
+      verb: { const: "choose", type: "string" },
+    },
+    required: ["verb", "text", "options"],
+    type: "object",
+  },
+  completequestionDocument_decide: {
+    properties: {
+      batch: { anyOf: [{ $ref: "#/$defs/completeBatch" }] },
+      context_schema: { anyOf: [{ $ref: "#/$defs/completeInputDeclaration" }] },
+      item_schema: { anyOf: [{ $ref: "#/$defs/completeInputDeclaration" }] },
+      label_details: {
+        items: { $ref: "#/$defs/completeLabel" },
+        type: "array",
+      },
+      model: { type: "string" },
+      name: { anyOf: [{ $ref: "#/$defs/completeQuestionName" }] },
+      on: { items: { type: "string" }, type: "array" },
+      profile: { type: "string" },
+      wording_version: { anyOf: [{ $ref: "#/$defs/completeWordingVersion" }] },
+      false: {},
+      text: {},
+      true: {},
+      verb: { const: "decide", type: "string" },
+    },
+    required: ["verb", "text"],
+    type: "object",
+  },
+  completequestionDocument_score: {
+    properties: {
+      batch: { anyOf: [{ $ref: "#/$defs/completeBatch" }] },
+      context_schema: { anyOf: [{ $ref: "#/$defs/completeInputDeclaration" }] },
+      item_schema: { anyOf: [{ $ref: "#/$defs/completeInputDeclaration" }] },
+      label_details: {
+        items: { $ref: "#/$defs/completeLabel" },
+        type: "array",
+      },
+      model: { type: "string" },
+      name: { anyOf: [{ $ref: "#/$defs/completeQuestionName" }] },
+      on: { items: { type: "string" }, type: "array" },
+      profile: { type: "string" },
+      wording_version: { anyOf: [{ $ref: "#/$defs/completeWordingVersion" }] },
+      levels: { items: { type: "string" }, type: "array" },
+      text: {},
+      verb: { const: "score", type: "string" },
+    },
+    required: ["verb", "text", "levels"],
+    type: "object",
+  },
+  completequestionDocument_tag: {
+    properties: {
+      batch: { anyOf: [{ $ref: "#/$defs/completeBatch" }] },
+      context_schema: { anyOf: [{ $ref: "#/$defs/completeInputDeclaration" }] },
+      item_schema: { anyOf: [{ $ref: "#/$defs/completeInputDeclaration" }] },
+      label_details: {
+        items: { $ref: "#/$defs/completeLabel" },
+        type: "array",
+      },
+      model: { type: "string" },
+      name: { anyOf: [{ $ref: "#/$defs/completeQuestionName" }] },
+      on: { items: { type: "string" }, type: "array" },
+      profile: { type: "string" },
+      wording_version: { anyOf: [{ $ref: "#/$defs/completeWordingVersion" }] },
+      labels: { items: { type: "string" }, type: "array" },
+      text: {},
+      verb: { const: "tag", type: "string" },
+    },
+    required: ["verb", "text", "labels"],
+    type: "object",
   },
   completerecognize: {
     variants: [
@@ -2050,6 +2036,43 @@ const graph = {
     type: "object",
     unevaluatedProperties: false,
   },
+  completerecognizeQuestionDocument: {
+    properties: {
+      batch: { anyOf: [{ $ref: "#/$defs/completeBatch" }] },
+      context_schema: { anyOf: [{ $ref: "#/$defs/completeInputDeclaration" }] },
+      entity_definition: {},
+      instructions: {},
+      item_schema: { anyOf: [{ $ref: "#/$defs/completeInputDeclaration" }] },
+      kinds: { additionalProperties: {}, type: "object" },
+      label_details: {
+        items: { $ref: "#/$defs/completeLabel" },
+        type: "array",
+      },
+      mode: { $ref: "#/$defs/completeRecognitionMode" },
+      model: { type: "string" },
+      name: { anyOf: [{ $ref: "#/$defs/completeQuestionName" }] },
+      on: { items: { type: "string" }, type: "array" },
+      profile: { type: "string" },
+      relation_threshold: { anyOf: [{ $ref: "#/$defs/completethreshold" }] },
+      relations: {
+        items: { $ref: "#/$defs/completerelationRule" },
+        type: "array",
+      },
+      snippet_pieces: {
+        format: "uint32",
+        maximum: 4294967295,
+        minimum: 0,
+        type: "integer",
+      },
+      stage_context: { $ref: "#/$defs/completeRecognitionStageContext" },
+      threshold: { $ref: "#/$defs/completethreshold" },
+      verb: { $ref: "#/$defs/completeVerb" },
+      wording_version: { anyOf: [{ $ref: "#/$defs/completeWordingVersion" }] },
+    },
+    required: ["verb", "kinds", "threshold"],
+    type: "object",
+    unevaluatedProperties: false,
+  },
   completerecognize_entities: {
     properties: {
       entities: { items: { $ref: "#/$defs/completeentity" }, type: "array" },
@@ -2080,6 +2103,34 @@ const graph = {
       name: { type: "string" },
     },
     required: ["name", "kind"],
+    type: "object",
+    unevaluatedProperties: false,
+  },
+  completerelateQuestionDocument: {
+    properties: {
+      batch: { anyOf: [{ $ref: "#/$defs/completeBatch" }] },
+      context_schema: { anyOf: [{ $ref: "#/$defs/completeInputDeclaration" }] },
+      fields: {
+        anyOf: [{ $ref: "#/$defs/completerelateFields" }, { type: "null" }],
+      },
+      item_schema: { anyOf: [{ $ref: "#/$defs/completeInputDeclaration" }] },
+      label_details: {
+        items: { $ref: "#/$defs/completeLabel" },
+        type: "array",
+      },
+      model: { type: "string" },
+      name: { anyOf: [{ $ref: "#/$defs/completeQuestionName" }] },
+      on: { items: { type: "string" }, type: "array" },
+      profile: { type: "string" },
+      relations: {
+        items: { $ref: "#/$defs/completerelationRule" },
+        type: "array",
+      },
+      threshold: { $ref: "#/$defs/completethreshold" },
+      verb: { const: "relate" },
+      wording_version: { anyOf: [{ $ref: "#/$defs/completeWordingVersion" }] },
+    },
+    required: ["verb", "fields", "relations", "threshold"],
     type: "object",
     unevaluatedProperties: false,
   },
@@ -2644,7 +2695,7 @@ const graph = {
       probabilities: {
         anyOf: [{ $ref: "#/$defs/completesessionProbabilities" }],
       },
-      question: { $ref: "#/$defs/completeReadableQuestion" },
+      question: { $ref: "#/$defs/completequestionDocument" },
       question_sha256: { type: "string" },
       question_sources: {
         items: { $ref: "#/$defs/completeQuestionSource" },
@@ -2741,6 +2792,25 @@ const graph = {
   },
   completethreshold: {
     type: ["number", "string"],
+  },
+  completetokenBand: {
+    properties: {
+      lower: {
+        format: "uint",
+        maximum: 18446744073709551615,
+        minimum: 0,
+        type: "integer",
+      },
+      upper: {
+        format: "uint",
+        maximum: 18446744073709551615,
+        minimum: 0,
+        type: "integer",
+      },
+    },
+    required: ["lower", "upper"],
+    type: "object",
+    unevaluatedProperties: false,
   },
   completetokenUsage: {
     properties: {
@@ -3049,48 +3119,6 @@ class NativeRankMemberResult {
   }
 }
 classes["completeRankMemberResult"] = NativeRankMemberResult;
-class NativeReadableQuestion2 {
-  has(key) {
-    return Object.hasOwn(this, key);
-  }
-}
-classes["completeReadableQuestion2"] = NativeReadableQuestion2;
-class NativeReadableQuestion3 {
-  has(key) {
-    return Object.hasOwn(this, key);
-  }
-}
-classes["completeReadableQuestion3"] = NativeReadableQuestion3;
-class NativeReadableQuestion4 {
-  has(key) {
-    return Object.hasOwn(this, key);
-  }
-}
-classes["completeReadableQuestion4"] = NativeReadableQuestion4;
-class NativeReadableQuestionChoose {
-  has(key) {
-    return Object.hasOwn(this, key);
-  }
-}
-classes["completeReadableQuestion_choose"] = NativeReadableQuestionChoose;
-class NativeReadableQuestionDecide {
-  has(key) {
-    return Object.hasOwn(this, key);
-  }
-}
-classes["completeReadableQuestion_decide"] = NativeReadableQuestionDecide;
-class NativeReadableQuestionScore {
-  has(key) {
-    return Object.hasOwn(this, key);
-  }
-}
-classes["completeReadableQuestion_score"] = NativeReadableQuestionScore;
-class NativeReadableQuestionTag {
-  has(key) {
-    return Object.hasOwn(this, key);
-  }
-}
-classes["completeReadableQuestion_tag"] = NativeReadableQuestionTag;
 class NativeRecognition {
   has(key) {
     return Object.hasOwn(this, key);
@@ -3259,6 +3287,12 @@ class NativeFindAnswer {
   }
 }
 classes["completefindAnswer"] = NativeFindAnswer;
+class NativeFindQuestionDocument {
+  has(key) {
+    return Object.hasOwn(this, key);
+  }
+}
+classes["completefindQuestionDocument"] = NativeFindQuestionDocument;
 class NativeNameOdds {
   has(key) {
     return Object.hasOwn(this, key);
@@ -3283,18 +3317,54 @@ class NativePlace {
   }
 }
 classes["completeplace"] = NativePlace;
+class NativePlan {
+  has(key) {
+    return Object.hasOwn(this, key);
+  }
+}
+classes["completeplan"] = NativePlan;
 class NativeProfileWarning {
   has(key) {
     return Object.hasOwn(this, key);
   }
 }
 classes["completeprofileWarning"] = NativeProfileWarning;
+class NativeQuestionDocumentChoose {
+  has(key) {
+    return Object.hasOwn(this, key);
+  }
+}
+classes["completequestionDocument_choose"] = NativeQuestionDocumentChoose;
+class NativeQuestionDocumentDecide {
+  has(key) {
+    return Object.hasOwn(this, key);
+  }
+}
+classes["completequestionDocument_decide"] = NativeQuestionDocumentDecide;
+class NativeQuestionDocumentScore {
+  has(key) {
+    return Object.hasOwn(this, key);
+  }
+}
+classes["completequestionDocument_score"] = NativeQuestionDocumentScore;
+class NativeQuestionDocumentTag {
+  has(key) {
+    return Object.hasOwn(this, key);
+  }
+}
+classes["completequestionDocument_tag"] = NativeQuestionDocumentTag;
 class NativeRecognizeAnswer {
   has(key) {
     return Object.hasOwn(this, key);
   }
 }
 classes["completerecognizeAnswer"] = NativeRecognizeAnswer;
+class NativeRecognizeQuestionDocument {
+  has(key) {
+    return Object.hasOwn(this, key);
+  }
+}
+classes["completerecognizeQuestionDocument"] = NativeRecognizeQuestionDocument;
 class NativeRecognizeEntities {
   has(key) {
     return Object.hasOwn(this, key);
@@ -3313,6 +3383,12 @@ class NativeRelateFields {
   }
 }
 classes["completerelateFields"] = NativeRelateFields;
+class NativeRelateQuestionDocument {
+  has(key) {
+    return Object.hasOwn(this, key);
+  }
+}
+classes["completerelateQuestionDocument"] = NativeRelateQuestionDocument;
 class NativeRelatedEntity {
   has(key) {
     return Object.hasOwn(this, key);
@@ -3575,6 +3651,12 @@ class NativeSourceRelationEndpoint {
   }
 }
 classes["completesourceRelationEndpoint"] = NativeSourceRelationEndpoint;
+class NativeTokenBand {
+  has(key) {
+    return Object.hasOwn(this, key);
+  }
+}
+classes["completetokenBand"] = NativeTokenBand;
 class NativeTokenUsage {
   has(key) {
     return Object.hasOwn(this, key);
@@ -3663,11 +3745,146 @@ function convert(schema, value, key) {
   }
   return Object.freeze(held);
 }
+function plan(value) {
+  return convert(graph.completeplan, value, "completeplan");
+}
 function packet(value) {
   return convert(graph.completesessionPacket, value, "completesessionPacket");
 }
 
+const answerRules = {
+  decide: {
+    path: ["value", "value", "value"],
+    guards: [
+      [["kind"], "observation"],
+      [["value", "kind"], "row"],
+      [["value", "value", "kind"], "judgment"],
+    ],
+    kind: "decision",
+    member: null,
+    collection: false,
+  },
+  choose: {
+    path: ["value", "value", "value"],
+    guards: [
+      [["kind"], "observation"],
+      [["value", "kind"], "row"],
+      [["value", "value", "kind"], "judgment"],
+    ],
+    kind: "choice",
+    member: null,
+    collection: false,
+  },
+  tag: {
+    path: ["value", "value", "value"],
+    guards: [
+      [["kind"], "observation"],
+      [["value", "kind"], "row"],
+      [["value", "value", "kind"], "judgment"],
+    ],
+    kind: "tags",
+    member: null,
+    collection: false,
+  },
+  score: {
+    path: ["value", "value", "value"],
+    guards: [
+      [["kind"], "observation"],
+      [["value", "kind"], "row"],
+      [["value", "value", "kind"], "judgment"],
+    ],
+    kind: "score",
+    member: null,
+    collection: false,
+  },
+  filter: {
+    path: ["value"],
+    guards: [],
+    kind: null,
+    member: "input",
+    collection: true,
+  },
+  rank: {
+    path: ["value"],
+    guards: [],
+    kind: null,
+    member: "index",
+    collection: true,
+  },
+  find: {
+    path: ["value"],
+    guards: [],
+    kind: null,
+    member: null,
+    collection: false,
+  },
+  annotate: {
+    path: ["value"],
+    guards: [],
+    kind: null,
+    member: null,
+    collection: true,
+  },
+  recognize: {
+    path: ["value"],
+    guards: [],
+    kind: null,
+    member: null,
+    collection: true,
+  },
+  relate: {
+    path: ["value"],
+    guards: [],
+    kind: null,
+    member: null,
+    collection: false,
+  },
+};
+function answer(packets, functionName) {
+  const rule = answerRules[functionName],
+    values = [];
+  for (const packet of packets) {
+    if (packet.function !== functionName) continue;
+    let value;
+    if (rule.kind) {
+      if (
+        !rule.guards.every(
+          ([path, expected]) =>
+            path.reduce((v, key) => v?.[key], packet) === expected,
+        )
+      )
+        continue;
+      const carrier = rule.path.reduce((v, key) => v?.[key], packet);
+      if (carrier?.kind !== rule.kind) continue;
+      value = carrier.value;
+    } else {
+      if (packet.kind === "aggregate") value = packet.value;
+      else if (rule.collection && packet.kind === "row") value = [packet.value];
+      else continue;
+    }
+    if (rule.collection) values.push(...value);
+    else values.push(value);
+  }
+  if (rule.collection)
+    return Object.freeze(
+      rule.member
+        ? values.map((value) => {
+            if (!Object.hasOwn(value, rule.member))
+              throw new TypeError(
+                "Native answer is missing its projected member",
+              );
+            return value[rule.member];
+          })
+        : values,
+    );
+  if (values.length !== 1)
+    throw new RangeError("Expected exactly one successful answer");
+  return values[0];
+}
+
 module.exports = {
+  answer,
+  plan,
   packet,
   parse,
   NativeNumber,
@@ -3717,13 +3934,6 @@ module.exports = {
   NativeQuestionSource,
   NativeRankMember,
   NativeRankMemberResult,
-  NativeReadableQuestion2,
-  NativeReadableQuestion3,
-  NativeReadableQuestion4,
-  NativeReadableQuestionChoose,
-  NativeReadableQuestionDecide,
-  NativeReadableQuestionScore,
-  NativeReadableQuestionTag,
   NativeRecognition,
   NativeRecognitionEdgeDocument,
   NativeRecognitionOddsBoundaryOdds,
@@ -3751,15 +3961,23 @@ module.exports = {
   NativeFailed,
   NativeFailure,
   NativeFindAnswer,
+  NativeFindQuestionDocument,
   NativeNameOdds,
   NativePairOdds,
   NativePieceOdds,
   NativePlace,
+  NativePlan,
   NativeProfileWarning,
+  NativeQuestionDocumentChoose,
+  NativeQuestionDocumentDecide,
+  NativeQuestionDocumentScore,
+  NativeQuestionDocumentTag,
   NativeRecognizeAnswer,
+  NativeRecognizeQuestionDocument,
   NativeRecognizeEntities,
   NativeRecognizeModeProposals,
   NativeRelateFields,
+  NativeRelateQuestionDocument,
   NativeRelatedEntity,
   NativeRelatedEntityEdge,
   NativeRelationRule,
@@ -3801,5 +4019,6 @@ module.exports = {
   NativeSessionRecognition,
   NativeSessionRelationEdge,
   NativeSourceRelationEndpoint,
+  NativeTokenBand,
   NativeTokenUsage,
 };

@@ -1,6 +1,6 @@
 'use strict';
 const addon=require('./loader.js');
-const Results=require('./results_generated.js');
+const {answer:readAnswer,plan:readPlan,...Results}=require('./results_generated.js');
 class ClientError extends Error {
   constructor(kind,message,retryable=false) {super(message);this.name='ClientError';this.kind=kind;this.retryable=retryable;}
 }
@@ -30,8 +30,13 @@ function crossing(call) {
 }
 const original=value=>typeof value==='string'?{kind:'text',text:value}:{kind:'json',value};
 const descriptor=value=>value?.[itemTag] || {original:original(value)};
+const iterable=input=>!input?.[sourceTag] && !Array.isArray(input) && typeof input!=='string' && (input?.[Symbol.asyncIterator] || input?.[Symbol.iterator]);
+function requestValues(question,input,feed=false) {
+  return {question:dump(question?.[questionTag] || question),selector:!!question?.[questionTag],literal:typeof question==='string',source:input?.[sourceTag]?dump(input[sourceTag]):undefined,items:feed || input?.[sourceTag]?[]:(Array.isArray(input)?input:[input]).map(v=>dump(descriptor(v))),feed};
+}
+const completedPackets=new WeakMap();
 class Completed {
-  constructor(results,terminal) {this.results=Object.freeze(results);this.terminal=terminal;Object.freeze(this);}
+  constructor(results,terminal,packets=[],verb) {completedPackets.set(this,{packets,verb});this.results=Object.freeze(results);this.terminal=terminal;Object.freeze(this);}
   get facts(){return this.terminal.facts;}
 }
 class Client {
@@ -50,6 +55,15 @@ class Client {
   static questionFile(path){return Object.freeze({[questionTag]:{kind:'file',path}});}
   static questionName(name){return Object.freeze({[questionTag]:{kind:'name',name}});}
   static questionReference(reference){return Object.freeze({[questionTag]:{kind:'reference',reference}});}
+  plan(verb,question,input,controls={}) {
+    if(this.#closed) throw new ClientError('usage','client is closed');
+    const {signal,...options}=controls;
+    if(signal && !(signal instanceof AbortSignal)) throw new ClientError('usage','signal is an AbortSignal');
+    if(signal?.aborted) throw new ClientError('cancelled','the call was cancelled');
+    if(iterable(input)) throw new ClientError('usage','plan reads a complete input, not an iterator');
+    dump(verb);if(typeof verb!=='string')throw new ClientError('usage','invalid canonical request');
+    return readPlan(Results.parse(crossing(()=>addon.requestPlan(this.#engine,verb,requestValues(question,input),dump(options)))));
+  }
   start(verb,question,input,controls={}) {
     if(this.#closed) throw new ClientError('usage','client is closed');
     const operation=new Operation(this.#engine,verb,question,input,controls,op=>this.#operations.delete(op));
@@ -58,18 +72,18 @@ class Client {
   close(){this.#closed=true;for(const op of this.#operations) op.close();this.#engine=null;}
 }
 class Operation {
-  #native; #waiting; #iterator; #pending; #rows=[]; #remove; #signal; #abort; #closed=false; #busy=false; #done=false;
+  #native; #waiting; #iterator; #pending; #rows=[]; #packets=[]; #verb; #remove; #signal; #abort; #closed=false; #busy=false; #done=false;
   terminal;
   #producerError;
   constructor(engine,verb,question,input,controls,remove) {
-    this.#remove=remove;
+    this.#remove=remove;this.#verb=verb;
     const {signal,...options}=controls;this.#signal=signal;
     if(signal && !(signal instanceof AbortSignal)) throw new ClientError('usage','signal is an AbortSignal');
     if(signal?.aborted) throw new ClientError('cancelled','the call was cancelled');
     try {
       dump(verb);if(typeof verb!=='string')throw new ClientError('usage','invalid canonical request');
-      if(!input?.[sourceTag] && !Array.isArray(input) && typeof input!=='string' && (input?.[Symbol.asyncIterator] || input?.[Symbol.iterator])) this.#iterator=input[Symbol.asyncIterator]?.() || input[Symbol.iterator]();
-      const values={question:dump(question?.[questionTag] || question),selector:!!question?.[questionTag],literal:typeof question==='string',source:input?.[sourceTag]?dump(input[sourceTag]):undefined,items:this.#iterator || input?.[sourceTag]?[]:(Array.isArray(input)?input:[input]).map(v=>dump(descriptor(v))),feed:!!this.#iterator};
+      if(iterable(input)) this.#iterator=input[Symbol.asyncIterator]?.() || input[Symbol.iterator]();
+      const values=requestValues(question,input,!!this.#iterator);
       this.#native=crossing(()=>addon.requestSession(engine,verb,values,dump(options)));
     }
     catch(error){this.close();throw error;}
@@ -95,7 +109,7 @@ class Operation {
         const text=crossing(()=>this.#native.poll());
         if(text==='end'){this.#done=true;this.close();return {done:true,value:undefined};}
         if(text) {
-          const packet=Results.packet(Results.parse(text));
+          const packet=Results.packet(Results.parse(text));this.#packets.push(packet);
           if(packet.kind==='terminal') {
             this.terminal=packet;this.#done=true;this.close();
             if(packet.has('failure')) {
@@ -121,7 +135,7 @@ class Operation {
       }
     } finally {this.#busy=false;}
   }
-  async result(){try {while(!(await this.next()).done){}return new Completed(this.#rows,this.terminal);} finally {this.close();}}
+  async result(){try {while(!(await this.next()).done){}return new Completed(this.#rows,this.terminal,this.#packets,this.#verb);} finally {this.close();}}
   cancel(){this.#native?.cancel();this.close();}
   #releaseProducer(){
     const iterator=this.#iterator;this.#iterator=undefined;
@@ -136,5 +150,12 @@ class Operation {
   }
   async return(){this.#done=true;this.close();return {done:true,value:undefined};}
 }
-for(const verb of FUNCTIONS) Object.defineProperty(Client.prototype,verb,{value:function(q,i,c){return this.start(verb,q,i,c).result();}});
+for(const verb of FUNCTIONS) {
+  Object.defineProperty(Client.prototype,verb,{value:function(q,i,c){return this.start(verb,q,i,c).result();}});
+  Object.defineProperty(Completed.prototype,verb+'Answer',{value:function(){
+    try{const call=completedPackets.get(this);if(call.verb!==verb)throw new RangeError('Answer reader does not match the call');return readAnswer(call.packets,verb);}
+    catch(cause){const error=new ClientError('usage',cause.message);error.cause=cause;error.facts=this.facts;error.terminal=this.terminal;error.results=this.results;throw error;}
+  }});
+  Object.defineProperty(Client.prototype,verb+'Answer',{value:async function(q,i,c){return (await this[verb](q,i,c))[verb+'Answer']();}});
+}
 module.exports={Client,ClientError,Operation,Completed,Results};
