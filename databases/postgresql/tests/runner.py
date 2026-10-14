@@ -161,25 +161,27 @@ def swap(value, renamed):
 
 
 def detailed(got, want):
-    answer, wanted = got.get("answer", {}), want["details"]["answer"]
+    wanted = want["details"]["answer"]
     key = "probability" if "probability" in wanted else "probabilities"
-    same(key, answer.get(key), wanted[key])
+    probabilities = got["probabilities"]["value"]
+    actual = probabilities["number_value"] if key == "probability" else {
+        row["name"]: row["probability"] for row in probabilities["array_value"]}
+    same(key, actual, wanted[key])
     if "level" in wanted:
-        same("level", answer.get("level"), wanted["level"])
-    same("confidence", answer.get("confidence", "absent"), wanted.get("confidence", "absent"))
+        same("level", got["raw_pick"], wanted["level"])
+    same("confidence", got["confidence"], wanted.get("confidence"))
     for key in ("model", "question_sha256", "usage", "requests_sent", "cached"):
-        same(key, got["meta"].get(key, "absent"), want["details"].get(key, "absent"))
-    # A request stands for the list of its keys, so a row reads the flattened list.
+        same(key, got[key], want["details"].get(key))
     wanted = want["details"].get("requests")
-    same("requests", got["meta"].get("requests", "absent"),
-         "absent" if wanted is None else [key for held in wanted for key in held])
+    same("requests", got["requests"],
+         None if wanted is None else [key for held in wanted for key in held])
 
 
 TYPED = {
     "decide": "thinkthen_decide({q}, {e})::text",
-    "choose": "thinkthen_choose({q}, {e}, NULL)",
-    "score": "thinkthen_score({q}, {e}, NULL)::text",
-    "tag": "array_to_json(thinkthen_tag({q}, {e}, NULL))::text",
+    "choose": "thinkthen_choose({q}, {e}, members => NULL)",
+    "score": "thinkthen_score({q}, {e}, members => NULL)::text",
+    "tag": "array_to_json(thinkthen_tag({q}, {e}, members => NULL))::text",
 }
 
 
@@ -194,10 +196,12 @@ def typed(verb, text):
 def single(case, success):
     want = success["answers"][0]
     question, evidence = lit(json.dumps(case["question"])), lit(case["exchanges"][0]["evidence"])
-    got = json.loads(psql(f"SELECT thinkthen_details({question}, {evidence})"))
-    same("bare", got["value"], want["bare"])
+    got = json.loads(psql(f"SELECT to_jsonb(thinkthen_details({question}, {evidence}))"))
+    field = {"decide": "boolean_value", "choose": "string_value",
+             "score": "number_value", "tag": "array_value"}[case["verb"]]
+    same("bare", got["value"][field], want["bare"])
     detailed(got, want)
-    same("url", got["meta"]["url"], url(case))
+    same("url", got["url"], url(case))
     bare = psql("SELECT " + TYPED[case["verb"]].format(q=question, e=evidence))
     same("typed", typed(case["verb"], bare), want["bare"])
     counters = success.get("counters")

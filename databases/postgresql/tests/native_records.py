@@ -32,6 +32,42 @@ def main():
                 assert int(backend.read('count')) - before == sends, out
                 return out
 
+            signature = "thinkthen_details(text,text,json,text,text,text,text,bigint)"
+            assert query("SELECT prorettype::regtype FROM pg_proc WHERE oid=" +
+                         quoted(signature) + "::regprocedure") == 'thinkthen_question_detail'
+            receipt = "thinkthen_details('Fits?','Alpha.')"
+            assert query("SELECT ((d).value).boolean_value, ((d).probabilities).kind, "
+                         "(((d).probabilities).value).number_value, length((d).answer_id), "
+                         "(d).model, (d).requests_sent, (d).cached FROM (SELECT " + receipt + " AS d) s", 1) == 't|yes_no|0.9|64|jev-1.13.0|1|f'
+            assert query("SELECT (d.value).boolean_value IS NULL, d.answer_id IS NOT NULL "
+                         "FROM thinkthen_details('Fits?','Alpha.',threshold=>'0.1:0.95') d", 1) == 't|t'
+            assert query("SELECT thinkthen_details(NULL,'Alpha.',threshold=>'bad') IS NULL, "
+                         "thinkthen_details('@not-read',NULL,threshold=>'bad') IS NULL") == 't|t'
+
+            questions = [
+                ('{"choose":"Which?","options":["billing","shipping"]}', 'string_value', 'billing'),
+                ('{"score":"How much?","levels":["low","high"]}', 'number_value', '0.1'),
+                ('{"tag":"Which?","labels":["billing","shipping"]}', 'array_value', '{billing,shipping}'),
+            ]
+            for question, field, answer in questions:
+                receipt = "thinkthen_details(" + quoted(question) + ",'Alpha.')"
+                assert query("SELECT (d.value)." + field + ", (d.probabilities).kind, "
+                             "cardinality(((d.probabilities).value).array_value), d.input IS NULL, "
+                             "d.inputs IS NULL FROM " + receipt + " d", 1) == answer + '|named|2|t|t'
+            for statement, state, message in [
+                ("SELECT thinkthen_details('Fits?','private-original',threshold=>'bad')", '22023', 'threshold'),
+                ("SELECT thinkthen_details('@missing-question','private-original')", '58030', 'question'),
+            ]:
+                before = int(backend.read('count'))
+                out, err = sql(host.socket, statement)
+                assert state in err and message in err and 'private-original' not in err, (out, err)
+                assert int(backend.read('count')) == before
+            query("CREATE ROLE receipt_reader; GRANT EXECUTE ON FUNCTION " + signature + " TO receipt_reader")
+            before = int(backend.read('count'))
+            out, err = sql(host.socket, "SET ROLE receipt_reader", "SELECT thinkthen_details('@missing-question','private-original')")
+            assert '22023' in err and 'needs pg_read_server_files' in err and 'private-original' not in err, (out, err)
+            assert int(backend.read('count')) == before
+
             record = "thinkthen_record(text=>'Alpha.')"
             before = int(backend.read('count'))
             out, err = sql(host.socket, "SELECT thinkthen_reading(proxy=>'{}'::json)")
@@ -145,6 +181,12 @@ def main():
             rows = [json.loads(row) for row in query("SELECT to_jsonb(r) FROM thinkthen_filter('Fits?',ARRAY[" + sourced + "," + record + "],thinkthen_reading(files_only=>true,incremental=>true)) r", 1).splitlines()]
             assert rows[0]['result']['source']['file'] == 'caller-read.txt', rows
             assert rows[-1]['failure']['kind'] == 'usage' and rows[-1]['facts']['requests_sent'] == 1, rows
+            host.start({**env, 'THINKTHEN_BASE_URL': f'http://127.0.0.1:{backend.port}/arm/refuse/v1'})
+            before = int(backend.read('count'))
+            out, err = sql(host.socket, "SET thinkthen.max_retries=0", "SET thinkthen.cache='off'",
+                           "SELECT thinkthen_details('Fits?','private-original')")
+            assert '38000' in err and 'private-original' not in err, (out, err)
+            assert int(backend.read('count')) - before == 1
             print('postgresql: native typed records, readings, facts, prefix, NULL, source and no-send plan pass')
         finally:
             host.stop()
