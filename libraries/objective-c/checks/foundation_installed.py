@@ -71,6 +71,30 @@ with contextlib.ExitStack() as installed:
      linkerSettings: [.linkedFramework("Foundation")])])
     ''')
         env = child_env(keep=("LLVM_PROFILE_FILE", "CARGO_TARGET_DIR"), home=work)
+        # Compile the removed selectors against the installed public header.
+        # Restoring their declarations must make the same consumer compile.
+        verbs = ("decide", "choose", "tag", "score", "filter", "rank", "find", "annotate", "recognize", "relate")
+        old_api = work / "old-api.m"
+        imports = '#import "ThinkThenFoundation.h"\n'
+        declarations = "@interface TTCall (OldAnswers)\n" + "".join(
+            f"- (id){verb}Answer:(NSError **)error;\n" for verb in verbs) + "@end\n"
+        declarations += "@interface TTFoundationClient (OldAnswers)\n" + "".join(
+            f"- (id){verb}Answer:(TTQuestion *)question input:(TTInput *)input options:(TTControls *)options feed:(TTFeed)feed call:(TTCall **)call error:(NSError **)error;\n"
+            for verb in verbs) + "@end\n"
+        consumer = "void oldAnswers(TTCall *call, TTFoundationClient *client) {\n" + "".join(
+            f"(void)[call {verb}Answer:NULL];\n(void)[client {verb}Answer:nil input:nil options:nil feed:nil call:NULL error:NULL];\n"
+            for verb in verbs) + "}\n"
+        compiler = ["xcrun", "clang", "-fsyntax-only", "-fobjc-arc", "-fblocks", "-Werror",
+                    "-Wno-nonnull", "-ferror-limit=0", "-I", str(work / "package/Sources/Foundation"), str(old_api)]
+        old_api.write_text(imports + declarations + consumer)
+        subprocess.run(compiler, env=env, check=True, capture_output=True, timeout=30)
+        old_api.write_text(imports + consumer)
+        removed = subprocess.run(compiler, env=env, text=True, capture_output=True, timeout=30)
+        assert removed.returncode != 0, "removed Foundation answer selectors still compile"
+        for verb in verbs:
+            for selector in (f"{verb}Answer:", f"{verb}Answer:input:options:feed:call:error:"):
+                assert f"declares the selector '{selector}'" in removed.stderr, removed.stderr
+        print("Foundation removed answer selectors rejected by installed-header compiler; restored-declaration control passed")
         profile_link = []
         if os.environ.get("THINKTHEN_COVERAGE_INITIALIZER"):
             profile_link = ["-Xlinker", os.environ["THINKTHEN_COVERAGE_INITIALIZER"],
