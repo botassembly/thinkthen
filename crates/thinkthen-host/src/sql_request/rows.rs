@@ -35,12 +35,26 @@ pub(super) fn complete(
                 );
             }
         } else {
-            let (value, probability) = project_value(function, &result);
+            let (mut value, probability) = project_value(function, &result);
+            if function == F::Decide {
+                value = observations
+                    .iter()
+                    .find(|event| {
+                        event.get("kind").and_then(Value::as_str) == Some("row")
+                            && event.get("index") == result.get("index")
+                    })
+                    .and_then(|event| event.get("value"))
+                    .cloned()
+                    .unwrap_or(value);
+            }
             rows.push(
                 json!({"ordinal":ordinal,"value":value,"probability":probability,
                 "result":result,"failure":null,"facts":facts,"observations":observations}),
             );
         }
+    }
+    if function == F::Rank {
+        rows.sort_by_key(|row| row.get("ordinal").and_then(Value::as_u64));
     }
     rows
 }
@@ -53,6 +67,23 @@ pub(super) fn failed(
 ) -> Value {
     json!({"ordinal":ordinal,"value":null,"probability":null,"result":null,
         "failure":failure,"facts":facts,"observations":observations})
+}
+
+pub(super) fn plain_decisions(
+    result: &thinkthen::RequestValue,
+    rows: &mut [Value],
+) -> Result<(), Error> {
+    if let thinkthen::RequestValue::Decisions(decisions) = result {
+        for (row, decision) in rows.iter_mut().zip(decisions) {
+            let value = match decision.result().value() {
+                thinkthen::Answer::Yes => Value::Bool(true),
+                thinkthen::Answer::No => Value::Bool(false),
+                thinkthen::Answer::Unsure => Value::Null,
+            };
+            crate::complete_native::put(row, "value", value)?;
+        }
+    }
+    Ok(())
 }
 
 /// Project a canonical SQL record into its ordinary value and probability.
@@ -101,7 +132,7 @@ pub fn project_outcome(
 ) -> Result<Vec<Value>, Error> {
     let (result, facts, failure) = match outcome {
         RequestOutcome::Complete(call) => {
-            let facts = serde_json::to_value(call.facts()).map_err(|_| defect())?;
+            let facts = serde_json::to_value(call.facts().complete()).map_err(|_| defect())?;
             (call.into_value(), facts, None)
         }
         RequestOutcome::Failed { completed, error } => {
@@ -128,6 +159,7 @@ pub fn project_outcome(
         &facts,
         &observations,
     );
+    plain_decisions(&result, &mut rows)?;
     if let Some(failure) = failure {
         if matches!(function, F::Rank | F::Find | F::Relate) {
             rows.clear();

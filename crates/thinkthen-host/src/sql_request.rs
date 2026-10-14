@@ -238,11 +238,6 @@ pub fn run_records_recovering<'a>(
         _ => "sql",
     };
     let feed = RequestFeed::from_records(name, records).eager();
-    let feed = if matches!(prepared, Prepared::Filter(_)) {
-        feed.with_all_filter_results()
-    } else {
-        feed
-    };
     run_feed_recovering(engine, prepared, request, feed, controls, surface)
 }
 
@@ -255,11 +250,24 @@ pub fn run_feed_recovering(
     controls: CallOptions<'_>,
     surface: Surface,
 ) -> Result<Value, Error> {
-    let feed = if matches!(prepared, Prepared::Filter(_)) {
-        feed.with_all_filter_results()
-    } else {
-        feed
-    };
+    recover(engine, prepared, request, Some(feed), controls, surface)
+}
+
+fn recover(
+    engine: &Engine,
+    prepared: &Prepared,
+    request: &AdmittedRequest,
+    feed: Option<RequestFeed<'_>>,
+    controls: CallOptions<'_>,
+    surface: Surface,
+) -> Result<Value, Error> {
+    let feed = feed.map(|feed| {
+        if matches!(prepared, Prepared::Filter(_)) {
+            feed.with_all_filter_results()
+        } else {
+            feed
+        }
+    });
     let events = Mutex::new(Vec::new());
     let observer = |event: RecordObservation<'_>| {
         events
@@ -270,19 +278,37 @@ pub fn run_feed_recovering(
                     .unwrap_or_else(|error| crate::complete_native::failure(&error)),
             );
     };
-    let call = engine.execute_request_recovering(
+    let recovered = Mutex::new(Vec::new());
+    let sink = |row| {
+        recovered
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+            .push(row)
+    };
+    let outcome = engine.execute_request_recovering_sink(
         request,
         RequestEnvironment {
             controls: controls.surface(surface).observe(&observer),
-            feed: Some(feed),
+            feed,
         },
-    )?;
-    let facts = serde_json::to_value(call.facts()).map_err(|_| defect())?;
+        &sink,
+    );
+    let mut carrier = match outcome {
+        Ok(call) => json!({"native":{"facts":call.facts().complete()}}),
+        Err(error) => failure_carrier(request.request().call.function(), error)?,
+    };
+    let facts = carrier
+        .pointer("/native/facts")
+        .cloned()
+        .unwrap_or(Value::Null);
+    let recovered = recovered
+        .into_inner()
+        .unwrap_or_else(std::sync::PoisonError::into_inner);
     let events = events
         .into_inner()
         .unwrap_or_else(std::sync::PoisonError::into_inner);
     let mut rows = Vec::new();
-    for row in call.value() {
+    for row in &recovered {
         let observed = events
             .iter()
             .filter(|event| {
@@ -292,22 +318,37 @@ pub fn run_feed_recovering(
             .cloned()
             .collect::<Vec<_>>();
         match row.outcome() {
-            Ok(result) => rows.extend(rows::complete(
-                request.request().call.function(),
-                row.ordinal(),
-                serde_json::to_value(result).map_err(|_| defect())?,
-                &facts,
-                &observed,
-            )),
+            Ok(result) => {
+                let mut recovered = rows::complete(
+                    request.request().call.function(),
+                    row.ordinal(),
+                    serde_json::to_value(result).map_err(|_| defect())?,
+                    &facts,
+                    &observed,
+                );
+                rows::plain_decisions(result, &mut recovered)?;
+                rows.extend(recovered);
+            }
             Err(error) => rows.push(rows::failed(
                 row.ordinal(),
-                serde_json::to_value(error.complete().error()).map_err(|_| defect())?,
+                serde_json::to_value(row)
+                    .map_err(|_| defect())?
+                    .get("failure")
+                    .cloned()
+                    .unwrap_or(
+                        serde_json::to_value(error.complete().error()).map_err(|_| defect())?,
+                    ),
                 &facts,
                 &observed,
             )),
         }
     }
-    Ok(json!({"native":{"facts":facts},"rows":rows,"observations":events}))
+    if let Some(failed) = carrier.get("rows").and_then(Value::as_array) {
+        rows.extend(failed.iter().cloned());
+    }
+    crate::complete_native::put(&mut carrier, "rows", json!(rows))?;
+    crate::complete_native::put(&mut carrier, "observations", json!(events))?;
+    Ok(carrier)
 }
 
 /// Decode SQL-owned readers only after admission, then use shared row recovery.
@@ -329,6 +370,12 @@ pub fn run_recovering(
     } else {
         controls
     };
+    if matches!(
+        request.request().call.arguments().input,
+        RequestInput::Source { .. }
+    ) {
+        return recover(engine, prepared, request, None, controls, surface);
+    }
     let reading = request.record_reading()?;
     let name = match &request.request().call.arguments().input {
         RequestInput::Feed { name, .. } => name.as_str(),
@@ -349,4 +396,20 @@ pub fn run_recovering(
         feed.eager()
     };
     run_feed_recovering(engine, prepared, request, feed, controls, surface)
+}
+
+/// Retain one whole-call refusal with only metadata the actual error owns.
+pub fn failure_carrier(function: thinkthen::RequestFunction, error: Error) -> Result<Value, Error> {
+    if matches!(
+        error.kind(),
+        thinkthen::ErrorKind::Cancelled
+            | thinkthen::ErrorKind::Deadline
+            | thinkthen::ErrorKind::Defect
+    ) {
+        return Err(error);
+    }
+    let mut carrier = crate::complete_native::admission(&error);
+    let rows = project_carrier(function, &carrier);
+    crate::complete_native::put(&mut carrier, "rows", json!(rows))?;
+    Ok(carrier)
 }
