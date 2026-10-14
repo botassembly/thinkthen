@@ -557,6 +557,18 @@ module ThinkThen
       define_method('end') { self['end'] }
       define_method('start') { self['start'] }
     end
+    class NativePlan < Native::Result
+      FIELDS = ['estimated_bytes', 'estimated_input_tokens', 'first_body_utf8', 'largest_request_bytes', 'largest_request_estimated_input_tokens', 'records', 'requests', 'token_estimate_method', 'upper_bound'].freeze
+      define_method('estimated_bytes') { self['estimated_bytes'] }
+      define_method('estimated_input_tokens') { self['estimated_input_tokens'] }
+      define_method('first_body_utf8') { self['first_body_utf8'] }
+      define_method('largest_request_bytes') { self['largest_request_bytes'] }
+      define_method('largest_request_estimated_input_tokens') { self['largest_request_estimated_input_tokens'] }
+      define_method('records') { self['records'] }
+      define_method('requests') { self['requests'] }
+      define_method('token_estimate_method') { self['token_estimate_method'] }
+      define_method('upper_bound') { self['upper_bound'] }
+    end
     class NativeProfileWarning < Native::Result
       define_method('running') { self['running'] }
       define_method('tuned_for') { self['tuned_for'] }
@@ -898,9 +910,29 @@ module ThinkThen
       define_method('ordinal') { self['ordinal'] }
       define_method('record') { self['record'] }
     end
+    class NativeTokenBand < Native::Result
+      define_method('lower') { self['lower'] }
+      define_method('upper') { self['upper'] }
+    end
     class NativeTokenUsage < Native::Result
       define_method('input_tokens') { self['input_tokens'] }
       define_method('output_tokens') { self['output_tokens'] }
+    end
+  end
+  class Client
+    def self.choose_question(text, options:)
+      {choose: text, options: options}.freeze
+    end
+    def self.recognize_question(kinds:, **fields)
+      {version: 1, recognize: {kinds: kinds, **fields}}.freeze
+    end
+    def self.relation(name, **fields)
+      {name: name, **fields}.freeze
+    end
+    def self.relate_question(relations:, fields: nil)
+      body = {relations: relations}
+      body[:fields] = fields unless fields.nil?
+      {version: 1, relate: body}.freeze
     end
   end
 end

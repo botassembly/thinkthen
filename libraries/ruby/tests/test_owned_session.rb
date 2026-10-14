@@ -36,15 +36,15 @@ class TestOwnedSession < Minitest::Test
       retained = T::Client.open(cache: false) do |client|
         asks = {
           "decide" => [{decide: "Is it urgent?"}, "text"],
-          "choose" => [{choose: "Which team?", options: %w[billing shipping]}, "text"],
+          "choose" => [T::Client.choose_question("Which team?", options: {billing: "Money", shipping: "Delivery"}), "text"],
           "tag" => [{tag: "Which labels?", labels: %w[money shipping]}, "text"],
           "score" => [{score: "How urgent?", levels: %w[low mid high]}, "text"],
           "filter" => [{decide: "Is it urgent?"}, ["first", {note: "second"}]],
           "rank" => ["Is it urgent?", ["first", "second"]],
           "find" => ["Which line?", %w[first second]],
           "annotate" => [{version: 1, questions: {ok: {decide: "Is it urgent?"}}}, ["text"]],
-          "recognize" => [{version: 1, recognize: {kinds: {person: nil}}}, "Ana Lima"],
-          "relate" => [{version: 1, relate: {relations: [{name: "knows", source: "person", target: "person", either: false}]}}, [{name: "Ana", kind: "person"}, {name: "Bob", kind: "person"}]]
+          "recognize" => [T::Client.recognize_question(kinds: {person: nil}), "Ana Lima"],
+          "relate" => [T::Client.relate_question(relations: [T::Client.relation("knows", source: "person", target: "person", either: false)]), [{name: "Ana", kind: "person"}, {name: "Bob", kind: "person"}]]
         }
         asks.map { |verb, (question, input)| [verb, client.public_send(verb, question, input)] }
       end
@@ -62,6 +62,7 @@ class TestOwnedSession < Minitest::Test
       say retained.first.last.value
       say retained[1].last.value
       say retained[3].last.value
+      say retained[5].last.value
       say retained[6].last.value
       say retained[9].last.value.map(&:relation)
     RUBY
@@ -72,6 +73,7 @@ class TestOwnedSession < Minitest::Test
       assert_equal true, child.hear
       assert_equal "billing", child.hear
       assert_equal 0.15, child.hear
+      assert_equal [1, 2], child.hear
       assert_equal "first", child.hear
       assert_equal %w[knows knows], child.hear
       status, errors = child.finish
@@ -80,14 +82,114 @@ class TestOwnedSession < Minitest::Test
     end
   end
 
+  def test_rank_keeps_a_plain_position_list_for_every_input_shape
+    TestBackend.with(<<~RUBY) do |backend, child|
+      T::Client.open(cache: false) do |client|
+        answers = ["first", %w[first second], []].map { |input| client.rank("Which record?", input) }
+        say answers.map(&:value)
+        say answers.map { |answer| answer.value.is_a?(Array) && answer.value.frozen? }
+        say answers.map { |answer| answer.facts.requests_sent }
+      end
+    RUBY
+      assert_equal [[1], [1, 2], []], child.hear
+      assert_equal [true, true, true], child.hear
+      assert_equal [1, 1, 0], child.hear
+      status, errors = child.finish
+      assert status.success?, errors
+      assert_equal 2, backend.count
+    end
+  end
+
+  def test_find_keeps_the_selected_original_hash_and_wide_integer
+    TestBackend.with(<<~RUBY) do |backend, child|
+      retained = T::Client.open(cache: false) do |client|
+        client.find("Which record?", [T::Client.item({body: "first", extra: 18446744073709551615}), {body: "second"}], field: ["/body"])
+      end
+      say retained.value
+      say [retained.value.is_a?(Hash), retained.value.frozen?, retained.value["extra"].is_a?(Integer)]
+      say retained.facts.requests_sent
+    RUBY
+      assert_equal({"body" => "first", "extra" => 18446744073709551615}, child.hear)
+      assert_equal [true, true, true], child.hear
+      assert_equal 1, child.hear
+      status, errors = child.finish
+      assert status.success?, errors
+      assert_equal 1, backend.count
+    end
+  end
+
+  def test_input_helpers_hide_native_envelopes_and_constructors
+    TestBackend.with(<<~RUBY) do |backend, child|
+      helpers = [[T::Client.item({body: "private marker"}, context: {tag: "private context"}), :descriptor],
+        [T::Client.question_file("private path"), :selector],
+        [T::Client.files(["private path"]), :source]]
+      helpers.each do |helper, accessor|
+        [accessor, :to_h, :[], :[]=].each do |method|
+          raise "public envelope \#{method}" if helper.respond_to?(method)
+          begin
+            helper.public_send(method, *([:[], :[]=].include?(method) ? [0] : []))
+            raise "public envelope invoked"
+          rescue NoMethodError => error
+            raise "wrong missing method" unless error.name == method
+          end
+        end
+        %i[new allocate].each do |method|
+          raise "public constructor" if helper.class.respond_to?(method)
+          begin
+            helper.class.public_send(method, * (method == :new ? [{original: {kind: "text", text: "private marker"}}] : []))
+            raise "public constructor invoked"
+          rescue NoMethodError => error
+            raise "wrong missing constructor" unless error.name == method
+          end
+        end
+        raise "inspect leak" if helper.inspect.include?("private")
+        raise "mutable carrier" unless helper.frozen?
+      end
+      say true
+    RUBY
+      assert_equal true, child.hear
+      status, errors = child.finish
+      assert status.success?, errors
+      assert_equal 0, backend.count
+    end
+  end
+
   def test_preview_and_retired_names_use_the_single_native_family
     TestBackend.with(<<~RUBY) do |backend, child|
       T::Client.open(cache: false) do |client|
         preview = client.plan("decide", "Question?", ["one", "two"], batch: 1)
-        say [preview.fetch("records"), preview.fetch("requests")]
-        say client.plan("decide", "Question?", {body: "one"}, batch: 1).fetch("records")
+        raise "untyped preview" unless preview.is_a?(T::Plan) && T::Plan::FIELDS.length == 9
+        %i[dump original descriptor cleanup].each do |method|
+          raise "public helper" if T::Client.respond_to?(method)
+          begin
+            T::Client.public_send(method, "caller input")
+            raise "public helper invoked"
+          rescue NoMethodError => error
+            raise "wrong missing method" unless error.name == method
+          end
+        end
+        say [preview.records, preview.requests]
+        say client.plan("decide", "Question?", {body: "one"}, batch: 1).records
         say [T.const_defined?(:Engine, false), T.const_defined?(:Complete, false), T.respond_to?(:decide)]
         say client.inspect
+        questions = {decide: "Question?", filter: "Question?", rank: "Question?",
+          choose: T::Client.choose_question("Question?", options: %w[first second]),
+          tag: {tag: "Question?", labels: %w[first second]}, score: {score: "Question?", levels: %w[low high]}}
+        questions.each do |verb, question|
+          plan = client.plan(verb.to_s, question, ["one", "two"], batch: 1)
+          raise "missing preview field" unless T::Plan::FIELDS.all? { |field| plan.key?(field) }
+          raise "wrong preview" unless plan.records == 2 && plan.requests == (verb == :tag ? 4 : 2)
+        end
+        unsupported = {find: "Question?", annotate: {version: 1, questions: {ok: {decide: "Question?"}}},
+          recognize: T::Client.recognize_question(kinds: {person: nil}),
+          relate: T::Client.relate_question(relations: [T::Client.relation("knows")])}
+        unsupported.each do |verb, question|
+          begin
+            client.plan(verb.to_s, question, ["one", "two"])
+            raise "unsupported preview admitted"
+          rescue T::UsageError
+          end
+        end
       end
     RUBY
       assert_equal [2, 2], child.hear
@@ -143,7 +245,7 @@ class TestOwnedSession < Minitest::Test
         File.write(path, JSON.generate(decide: "File wording?"))
         File.write("refund", JSON.generate(decide: "Local wording?"))
         selectors = [T::Client.question_file(path), T::Client.question_name("refund"), T::Client.question_reference("@refund")]
-        say selectors.map { |selector| JSON.parse(T::Client.dump(selector.selector)) }
+        say selectors.map { |selector| [selector.is_a?(T::Client::Question), selector.respond_to?(:selector)] }
         raise "selector leak" unless selectors.all? { |selector| selector.inspect == "<ThinkThen::Client::Question: content withheld>" }
         T::Client.open(cache: false) do |client|
           results = selectors.map { |selector| client.decide(selector, "text") }
@@ -155,7 +257,7 @@ class TestOwnedSession < Minitest::Test
         end
       end
     RUBY
-      assert_equal [{"kind" => "file", "path" => "@literal.json"}, {"kind" => "name", "name" => "refund"}, {"kind" => "reference", "reference" => "@refund"}], child.hear
+      assert_equal [[true, false], [true, false], [true, false]], child.hear
       assert_equal ["File wording?", "Saved wording?", "Local wording?", "Saved wording?", "@refund"], child.hear
       assert_equal [1, 1, 1, 1, 1], child.hear
       status, errors = child.finish

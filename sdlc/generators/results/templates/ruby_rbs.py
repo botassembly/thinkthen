@@ -84,15 +84,20 @@ def render(definitions, name):
         if 'properties' not in source:
             continue
         lines.append(f'    class {name(key)} < Native::Result')
+        if key == 'completeplan':
+            lines.append('      FIELDS: Array[String]')
         lines.extend(f'      def {member}: () -> ({member_type(member, field)})'
                      for member, field in source['properties'].items())
         lines.append('    end')
-    lines += ['  end', '  class Client', '    REQUEST_VERSION: String']
+    lines += ['  end', '  class Client']
 
     def keywords(key, omit=()):
         return ', '.join(f'?{member}: {schema_type(field, request_type, objects=True)}'
                          for member, field in request[key]['properties'].items() if member not in omit)
 
+    recognition = next(source for source in request['RequestDefinition']['anyOf'] if source.get('title') == 'RecognizeDefinition')
+    recognition_fields = recognition['properties']['recognize']['properties']
+    recognition_keywords = ', '.join(f'?{member}: {schema_type(field, request_type, objects=True)}' for member, field in recognition_fields.items() if member != 'kinds')
     options = keywords('RequestOptions')
     settings = keywords('EngineSettings')
     reading = keywords('RequestReader')
@@ -102,15 +107,20 @@ def render(definitions, name):
     # Ruby consumes cancel separately; the native RequestOptions grammar sees
     # every other keyword unchanged and rejects invalid controls.
     for verb in request['RequestFunction']['oneOf']:
-        lines.append(f'    def {verb["const"]}: ({args}, ?cancel: Cancel?, {options}) -> Results::Completed')
+        value = {'decide': result_type('completeDecideValue'), 'choose': 'String | nil', 'tag': 'Array[String] | nil', 'score': 'Integer | Float | nil', 'find': 'Results::answer', 'rank': 'Array[Integer]' }.get(verb['const'], 'Array[Native::Result]' if verb['const'] in ('rank', 'relate') else 'Native::Result | Array[Native::Result]' if verb['const'] in ('annotate', 'recognize') else 'Array[untyped]')
+        answer = value if verb['const'] in ('filter', 'rank', 'relate') else f'{value} | Array[{value}]'
+        lines.append(f'    def {verb["const"]}: ({args}, ?cancel: Cancel?, {options}) -> Results::Completed[{answer}]')
     lines += [f'    def initialize: ({settings}) -> void',
               f'    def self.open: ({settings}) {{ (Client client) -> untyped }} -> untyped',
               f'                 | ({settings}) -> Client',
-              f'    def plan: (String verb, {args}, {options}) -> Hash[String, untyped]',
+              f'    def plan: (String verb, {args}, {options}) -> Results::NativePlan',
               f'    def start: (String verb, {args}, ?cancel: Cancel?, {options}) {{ (Client::Operation operation) -> untyped }} -> untyped',
               f'             | (String verb, {args}, ?cancel: Cancel?, {options}) -> Client::Operation',
               f'    def self.files: (String | Array[String] paths, ?framing: {request_type("RequestFraming")} | nil, ?media: {request_type("ReaderMedia")}, {reading}) -> Client::Source',
-              f'    def self.item: (untyped value, {fields}) -> Client::Item', '  end']
+              f'    def self.item: (untyped value, {fields}) -> Client::Item', f'    def self.choose_question: ({request_type("Authored_questionText")} text, options: {request_type("Authored_options")}) -> {request_type("Authored_choose")}',
+              f'    def self.relation: (String name, {keywords("Authored_relation", ("name",))}) -> {request_type("Authored_relation")}',
+              f'    def self.relate_question: (relations: Array[{request_type("Authored_relation")}], ?fields: {{ name: String, kind: String }}?) -> {request_type("Authored_relate")}',
+              f'    def self.recognize_question: (kinds: {schema_type(recognition_fields["kinds"], request_type, objects=True)}, {recognition_keywords}) -> ({schema_type(recognition, request_type, objects=True)})', '  end']
     # Reachable aliases include authored text, cache documents and nested
     # recognition fields; no handwritten request member inventory remains.
     lines.extend(f'  type {alias(key)} = {value}' for key, value in sorted(selected.items()))
