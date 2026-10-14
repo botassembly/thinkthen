@@ -102,7 +102,7 @@ pub(super) fn probabilities(value: &RequestValue) -> Result<Vec<Value>, Error> {
         RequestValue::Tags(rows) => Ok(vec![Value::Null; rows.len()]),
         RequestValue::Scores(rows) => Ok(vec![Value::Null; rows.len()]),
         RequestValue::Annotations(rows) => Ok(vec![Value::Null; rows.len()]),
-        RequestValue::SetRanked(rows) => Ok(vec![Value::Null; rows.len()]),
+        RequestValue::SetRanked(rows) => rows!(rows),
     }
 }
 fn documents(value: &RequestValue) -> Result<Vec<Value>, Error> {
