@@ -368,7 +368,7 @@ public sealed partial class Engine {
         var result = ProjectScore(call);
         return new(call, result.Value.Single(), result.Probability, result.Results);
     }
-    public async Task<CallResult<IReadOnlyList<JsonElement?>, IReadOnlyList<double?>, IReadOnlyList<AtomicBoolean>>> FilterAsync(RequestQuestion question,
+    public async Task<CallResult<IReadOnlyList<JsonElement>, IReadOnlyList<double?>, IReadOnlyList<AtomicBoolean>>> FilterAsync(RequestQuestion question,
     RequestInputText input,
     RequestOptions? options = null, CancellationToken cancellation = default) {
         ArgumentNullException.ThrowIfNull(input);
@@ -376,7 +376,7 @@ public sealed partial class Engine {
         null, cancellation).ConfigureAwait(false);
         return ProjectFilter(call);
     }
-    public async Task<CallResult<IReadOnlyList<JsonElement?>, IReadOnlyList<double?>, IReadOnlyList<AtomicBoolean>>> FilterAsync(RequestQuestion question,
+    public async Task<CallResult<IReadOnlyList<JsonElement>, IReadOnlyList<double?>, IReadOnlyList<AtomicBoolean>>> FilterAsync(RequestQuestion question,
     RequestInputJson input,
     RequestOptions? options = null, CancellationToken cancellation = default) {
         ArgumentNullException.ThrowIfNull(input);
@@ -384,7 +384,7 @@ public sealed partial class Engine {
         null, cancellation).ConfigureAwait(false);
         return ProjectFilter(call);
     }
-    public async Task<CallResult<IReadOnlyList<JsonElement?>, IReadOnlyList<double?>, IReadOnlyList<AtomicBoolean>>> FilterAsync(RequestQuestion question,
+    public async Task<CallResult<IReadOnlyList<JsonElement>, IReadOnlyList<double?>, IReadOnlyList<AtomicBoolean>>> FilterAsync(RequestQuestion question,
     RequestInputRecords input,
     RequestOptions? options = null, CancellationToken cancellation = default) {
         ArgumentNullException.ThrowIfNull(input);
@@ -392,7 +392,7 @@ public sealed partial class Engine {
         null, cancellation).ConfigureAwait(false);
         return ProjectFilter(call);
     }
-    public async Task<CallResult<IReadOnlyList<JsonElement?>, IReadOnlyList<double?>, IReadOnlyList<AtomicBoolean>>> FilterAsync(RequestQuestion question,
+    public async Task<CallResult<IReadOnlyList<JsonElement>, IReadOnlyList<double?>, IReadOnlyList<AtomicBoolean>>> FilterAsync(RequestQuestion question,
     RequestInputSource input,
     RequestOptions? options = null, CancellationToken cancellation = default) {
         ArgumentNullException.ThrowIfNull(input);
@@ -400,7 +400,7 @@ public sealed partial class Engine {
         null, cancellation).ConfigureAwait(false);
         return ProjectFilter(call);
     }
-    public async Task<CallResult<IReadOnlyList<JsonElement?>, IReadOnlyList<double?>, IReadOnlyList<AtomicBoolean>>> FilterAsync(RequestQuestion question,
+    public async Task<CallResult<IReadOnlyList<JsonElement>, IReadOnlyList<double?>, IReadOnlyList<AtomicBoolean>>> FilterAsync(RequestQuestion question,
     RequestInputUnits input,
     RequestOptions? options = null, CancellationToken cancellation = default) {
         ArgumentNullException.ThrowIfNull(input);
@@ -408,7 +408,7 @@ public sealed partial class Engine {
         null, cancellation).ConfigureAwait(false);
         return ProjectFilter(call);
     }
-    public async Task<CallResult<IReadOnlyList<JsonElement?>, IReadOnlyList<double?>, IReadOnlyList<AtomicBoolean>>> FilterAsync(RequestQuestion question,
+    public async Task<CallResult<IReadOnlyList<JsonElement>, IReadOnlyList<double?>, IReadOnlyList<AtomicBoolean>>> FilterAsync(RequestQuestion question,
     RequestInputEntities input,
     RequestOptions? options = null, CancellationToken cancellation = default) {
         ArgumentNullException.ThrowIfNull(input);
@@ -416,7 +416,7 @@ public sealed partial class Engine {
         null, cancellation).ConfigureAwait(false);
         return ProjectFilter(call);
     }
-    public async Task<CallResult<IReadOnlyList<JsonElement?>, IReadOnlyList<double?>, IReadOnlyList<AtomicBoolean>>> FilterAsync(RequestQuestion question,
+    public async Task<CallResult<IReadOnlyList<JsonElement>, IReadOnlyList<double?>, IReadOnlyList<AtomicBoolean>>> FilterAsync(RequestQuestion question,
     RequestInputFeed input,
     RequestOptions? options = null, CancellationToken cancellation = default) {
         ArgumentNullException.ThrowIfNull(input);
@@ -424,7 +424,7 @@ public sealed partial class Engine {
         null, cancellation).ConfigureAwait(false);
         return ProjectFilter(call);
     }
-    public async Task<CallResult<IReadOnlyList<JsonElement?>, IReadOnlyList<double?>, IReadOnlyList<AtomicBoolean>>> FilterAsync(RequestQuestion question,
+    public async Task<CallResult<IReadOnlyList<JsonElement>, IReadOnlyList<double?>, IReadOnlyList<AtomicBoolean>>> FilterAsync(RequestQuestion question,
     IAsyncEnumerable<RequestSessionDescriptor> input,
     RequestOptions? options = null, CancellationToken cancellation = default) {
         ArgumentNullException.ThrowIfNull(input);
@@ -432,14 +432,14 @@ public sealed partial class Engine {
         options), input, cancellation).ConfigureAwait(false);
         return ProjectFilter(call);
     }
-    private static CallResult<IReadOnlyList<JsonElement?>, IReadOnlyList<double?>, IReadOnlyList<AtomicBoolean>> ProjectFilter(OwnedCall call) {
+    private static CallResult<IReadOnlyList<JsonElement>, IReadOnlyList<double?>, IReadOnlyList<AtomicBoolean>> ProjectFilter(OwnedCall call) {
         var receipts = new List<AtomicBoolean>();
         foreach (var packet in call.Packets) {
             if (packet is SessionPacketFilterAggregate aggregate) receipts.AddRange(aggregate.Value);
             else if (packet is SessionPacketFilterRow row) receipts.Add(row.Value);
         }
         var results = receipts.AsReadOnly();
-        var values = results.Select(row => row.Input.State == PresenceState.Value ? row.Input.Value : (JsonElement?)null).ToArray();
+        var values = results.Select(row => row.Input.State == PresenceState.Value ? row.Input.Value : JsonSerializer.SerializeToElement<object?>(null)).ToArray();
         return new(call, Array.AsReadOnly(values), Array.AsReadOnly(results.Select(row => (double?)((AnswerYesNo)row.Answer).Probability).ToArray()),
         results);
     }

@@ -602,7 +602,8 @@ def answer_helpers(definitions):
         aggregate_value = spec['aggregate_value']
         item_schema = aggregate_value['items'] if array else aggregate_value
         item_type, _ = conversion(scalar if scalar is not None else item_schema, definitions)
-        if nullable(scalar if scalar is not None else item_schema, definitions): item_type += '?'
+        original_json = spec['value_projection'] == 'input' and item_type == 'JsonElement'
+        if not original_json and nullable(scalar if scalar is not None else item_schema, definitions): item_type += '?'
         mode = spec['probability_mode']
         probability_type = 'IReadOnlyList<double>' if mode == 'items' and function != 'rank' else 'double?'
         per_input = spec['call_shape'] == 'input'
@@ -624,7 +625,9 @@ def answer_helpers(definitions):
         values_expr = 'row.' + projection
         receipt_schema = definitions[(payload['items'] if array else payload)['$ref'].split('/')[-1]]
         optional_projection = spec['value_projection'] not in receipt_schema.get('required', [])
-        if nullable(item_schema, definitions):
+        if original_json:
+            values_expr = 'row.' + projection + '.State == PresenceState.Value ? row.' + projection + '.Value : JsonSerializer.SerializeToElement<object?>(null)'
+        elif nullable(item_schema, definitions):
             values_expr = 'row.' + projection + '.State == PresenceState.Value ? row.' + projection + '.Value : (' + item_type + ')null'
         elif optional_projection:
             values_expr += '.Value'
