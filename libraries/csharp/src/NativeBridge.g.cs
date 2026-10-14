@@ -40,8 +40,16 @@ internal static class NativeNamed {
 }
 internal static class NativeWait {
     internal const uint Input = 1;
+    internal const uint InterruptibleSettlement = 4;
     internal const uint Result = 0;
+    internal const uint SettlementArm = 3;
     internal const uint Settlement = 2;
+    internal const uint ReadyCancelled = 4;
+    internal const uint ReadyClosed = 2;
+    internal const uint ReadyEnd = 3;
+    internal const uint ReadyInput = 1;
+    internal const uint ReadyResult = 0;
+    internal const uint ReadyTimeout = 5;
     [DllImport("thinkthen", CallingConvention=CallingConvention.Cdecl)] internal static extern int thinkthen_session_wait(SessionHandle session,
     uint interest, uint timeoutMilliseconds, out uint ready);
     [DllImport("thinkthen", CallingConvention=CallingConvention.Cdecl)] internal static extern int thinkthen_session_next_packet(SessionHandle session,

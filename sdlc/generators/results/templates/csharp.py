@@ -468,9 +468,10 @@ public readonly struct AuthoredPresence<T> {
     public static implicit operator AuthoredPresence<T>(T value) => new(value);
 }
 public abstract class AuthoredDocument {
+    private protected AuthoredDocument() {}
     private static readonly System.Text.Encoding StrictUtf8 = new System.Text.UTF8Encoding(false, true);
-    protected static void WriteText(Utf8JsonWriter writer, string? value) { if (value is not null) _ = StrictUtf8.GetByteCount(value); writer.WriteStringValue(value); }
-    protected static void WriteName(Utf8JsonWriter writer, string value) { _ = StrictUtf8.GetByteCount(value); writer.WritePropertyName(value); }
+    private protected static void WriteText(Utf8JsonWriter writer, string? value) { if (value is not null) _ = StrictUtf8.GetByteCount(value); writer.WriteStringValue(value); }
+    private protected static void WriteName(Utf8JsonWriter writer, string value) { _ = StrictUtf8.GetByteCount(value); writer.WritePropertyName(value); }
     // Only internal readers retain native-admitted JSON; raw writes bypass host depth validation.
     private protected JsonElement? ParsedDocument { get; init; }
     internal abstract void Write(Utf8JsonWriter writer);

@@ -90,6 +90,11 @@ tar -czf "$here/target/artifacts/thinkthen-c-$version-x86_64-linux-gnu.tar.gz" -
 "$dotnet" pack "$here/ThinkThen.csproj" -p:ThinkThenNativeAsset="$native" -p:ThinkThenNativeRid=linux-x64 -p:ThinkThenNativeName=libthinkthen.so -c Release --source "$here/target/scratch/nuget" -o "$here/target/scratch/managed" -v quiet
 test -f "$here/target/scratch/managed/Botassembly.ThinkThen.$version.nupkg"
 python3 "$root/sdlc/scripts/package-inventory.py" csharp --out "$here/obj/Release" --check "$here/target/scratch/managed/Botassembly.ThinkThen.$version.nupkg" > /dev/null
+# Decoder-only refusal checks stay in the generated assembly; installed callers receive typed values.
+"$dotnet" build "$root/sdlc/generators/results/csharp/Conformance.csproj" -c Release \
+    -p:BaseIntermediateOutputPath="$here/target/scratch/decoder-obj/" \
+    --source "$here/target/scratch/nuget" -o "$here/target/scratch/decoder" -v quiet
+"$dotnet" "$here/target/scratch/decoder/Conformance.dll" "$root/conformance/fixtures/complete.json"
 python3 "$here/tests/package_check.py"
 python3 "$here/tests/named_backends.py"
 python3 "$here/tests/run_matrix.py"

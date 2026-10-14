@@ -108,6 +108,39 @@ static class SessionChecks
         try { await session.ReadAsync(); throw new Exception("disposed session retained work"); }
         catch (ObjectDisposedException) { }
     }
+    static async Task<Task<SessionPacket?>> BlockedDrain(OwnedSession session, CancellationToken token = default)
+    {
+        while (true)
+        {
+            var pending = session.ReadAsync(token);
+            try { if (await pending.WaitAsync(TimeSpan.FromMilliseconds(100)) is null) throw new Exception("held provider settled before release"); }
+            catch (TimeoutException) { return pending; }
+        }
+    }
+    static async Task HeldDrainDisposal(Engine engine)
+    {
+        using var session = engine.StartSession(Request(new RequestInputText { Text = "hold-session-dispose" }));
+        await Arrived("hold-session-dispose");
+        session.Cancel();
+        try
+        {
+            // Each fresh reader can drain after the preceding reader was cancelled.
+            for (int attempt = 0; attempt < 3; attempt++)
+            {
+                using var cancellation = new CancellationTokenSource();
+                var pending = await BlockedDrain(session, cancellation.Token);
+                cancellation.Cancel();
+                try { await pending.WaitAsync(TimeSpan.FromSeconds(2)); throw new Exception("cancelled drain returned"); }
+                catch (OperationCanceledException) { }
+            }
+            var disposed = await BlockedDrain(session);
+            await Task.Run(session.Dispose).WaitAsync(TimeSpan.FromSeconds(2));
+            try { await disposed.WaitAsync(TimeSpan.FromSeconds(2)); throw new Exception("disposed drain returned"); }
+            catch (OperationCanceledException) { }
+            if (File.Exists("barrier/release-hold-session-dispose")) throw new Exception("drain disposal waited for provider release");
+        }
+        finally { File.WriteAllText("barrier/release-hold-session-dispose", ""); }
+    }
     public static async Task Run()
     {
         using var engine = Engine.Open(new EngineSettings {
@@ -156,6 +189,7 @@ static class SessionChecks
             catch (ThinkThen.Failure error) when (error.Kind == ThinkThen.FailureKind.Usage && error.Facts is null) { }
         }
         await WorkerOwnership(engine);
+        await HeldDrainDisposal(engine);
         ImmediateDiagnostics(engine);
         foreach (RequestReaderFailure failure in new RequestReaderFailure[] {
             new RequestReaderFailureIo(),

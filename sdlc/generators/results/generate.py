@@ -386,7 +386,11 @@ def bridge():
               '}', 'internal static class NativeWait {']
     for name, value in native['constants'].items():
         if name.startswith('THINKTHEN_SESSION_WAIT_'):
-            lines += [' internal const uint ' + name.removeprefix('THINKTHEN_SESSION_WAIT_').removesuffix('_V1').title() + ' = ' + str(value) + ';']
+            lines += [' internal const uint ' + ''.join(part.title() for part in name.removeprefix('THINKTHEN_SESSION_WAIT_').removesuffix('_V1').split('_')) + ' = ' + str(value) + ';']
+    for name, value in native['constants'].items():
+        if name.startswith('THINKTHEN_SESSION_READY_'):
+            suffix = ''.join(part.title() for part in name.removeprefix('THINKTHEN_SESSION_READY_').removesuffix('_V1').split('_'))
+            lines += [' internal const uint Ready' + suffix + ' = ' + str(value) + ';']
     prototype = native['functions']['thinkthen_session_wait']
     parameters = {'const thinkthen_session *': 'SessionHandle session', 'uint32_t': 'uint', 'uint32_t *': 'out uint ready'}
     arguments = [parameters[typ] + (' interest' if at == 1 else ' timeoutMilliseconds' if at == 2 else '') for at, typ in enumerate(prototype['arguments'])]

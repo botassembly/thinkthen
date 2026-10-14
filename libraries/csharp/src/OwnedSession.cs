@@ -80,23 +80,33 @@ public sealed class OwnedSession : IDisposable
     {
         while (true)
         {
-            uint interest = Volatile.Read(ref cancelled) != 0 ? NativeWait.Settlement : NativeWait.Result;
             uint status;
             IntPtr pointer;
             try
             {
                 // Native diagnostics belong to this worker thread.
                 cancellation.ThrowIfCancellationRequested();
-                NativeSession.Check(NativeWait.thinkthen_session_wait(handle, interest, 50, out _));
-                cancellation.ThrowIfCancellationRequested();
-                NativeSession.Check(NativeSession.thinkthen_session_try_read(handle, out status, out pointer));
+                if (Volatile.Read(ref cancelled) == 0)
+                    NativeSession.Check(NativeWait.thinkthen_session_next_packet(handle, NativeWait.Result, out status, out pointer));
+                else
+                {
+                    // Arm before checking the token so cancellation cannot race native entry.
+                    NativeSession.Check(NativeWait.thinkthen_session_wait(handle, NativeWait.SettlementArm, 0, out uint ready));
+                    cancellation.ThrowIfCancellationRequested();
+                    if (ready != NativeWait.ReadyResult && ready != NativeWait.ReadyEnd)
+                        NativeSession.Check(NativeWait.thinkthen_session_wait(handle, NativeWait.InterruptibleSettlement, uint.MaxValue, out ready));
+                    cancellation.ThrowIfCancellationRequested();
+                    if (ready == NativeWait.ReadyCancelled) continue;
+                    if (ready == NativeWait.ReadyTimeout) throw new TimeoutException("Native settlement wait expired.");
+                    NativeSession.Check(NativeSession.thinkthen_session_try_read(handle, out status, out pointer));
+                }
             }
             catch (Failure failure) when (failure.Kind == FailureKind.Cancelled && Volatile.Read(ref cancelled) != 0)
             {
                 cancellation.ThrowIfCancellationRequested();
                 continue;
             }
-            if (status == NativeWait.ReadPending) continue;
+            if (status == NativeWait.ReadPending) throw new InvalidOperationException("Native readiness returned no packet.");
             if (status == NativeWait.ReadEnd) return null;
             if (status != NativeWait.ReadResult) throw new InvalidOperationException("Invalid native read status.");
             using var packet = new PacketHandle(pointer);

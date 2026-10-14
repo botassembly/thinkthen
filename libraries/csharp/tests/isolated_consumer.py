@@ -77,7 +77,7 @@ try:
  elif mode=='sessions':
   assert b'INSTALLED_CSHARP_SESSION_PASS' in result.stdout,result.stdout
   assert server.user_agents and set(server.user_agents)=={f'thinkthen/{V} (csharp)'},server.user_agents
-  required=collections.Counter(['session-owned','hold-session-task','hold-session-drain']+[f'worker-lifetime-{turn}' for turn in range(16)])
+  required=collections.Counter(['session-owned','hold-session-task','hold-session-drain','hold-session-dispose']+[f'worker-lifetime-{turn}' for turn in range(16)])
   actual=collections.Counter(server.arrivals)
   admitted=collections.Counter((barrier/'admitted-feed').read_text().splitlines())
   assert required <= actual and actual <= required + admitted,counted
