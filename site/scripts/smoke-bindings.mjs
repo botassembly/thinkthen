@@ -60,6 +60,15 @@ function doorDigest() {
 }
 function cDoor() {
   if (door) return door;
+  if (process.env.SITE_NATIVE_PACKAGE) {
+    const installed = path.resolve(process.env.SITE_NATIVE_PACKAGE);
+    const library = process.platform === 'darwin' ? 'libthinkthen.dylib' : 'libthinkthen.so';
+    for (const file of ['include/thinkthen.h', `lib/${library}`]) {
+      if (!fs.existsSync(path.join(installed, file))) throw new Error(`the installed C package lacks ${file}`);
+    }
+    door = installed;
+    return door;
+  }
   const checkout = createHash('sha256').update(repo).digest('hex').slice(0, 12);
   const root = path.join(os.homedir(), '.cache/thinkthen-site/c-door', checkout);
   const out = path.join(root, doorDigest());
