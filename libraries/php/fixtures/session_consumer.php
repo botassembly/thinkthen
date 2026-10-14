@@ -251,7 +251,7 @@ if ($mode === 'usage-written' || $mode === 'usage-failed') {
     try { $client->decide('Is it?', 'precancel', cancel: $token); throw new RuntimeException('cancel admitted'); }
     catch (ThinkThen\CancelledFailure) {}
 } elseif ($mode === 'destroy') {
-    $operation = $client->start('decide', 'Is it?', (function() { yield 'hold-php'; })());
+    $operation = $client->start('decide', 'Is it?', (function() { yield 'hold-php'; })(), cancel: new ThinkThen\Cancellation());
     $deadline = microtime(true) + 3;
     while (!file_exists(getenv('TT_BARRIER').'/arrived-hold-php')) {
         $operation->poll();

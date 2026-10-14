@@ -60,7 +60,7 @@ try:
                 if packet.value: owners.append(packet.value)
                 else:
                     ready = ct.c_uint32()
-                    assert native.thinkthen_session_wait(session,1,50,ct.byref(ready)) == 0
+                    assert native.thinkthen_session_wait(session,1,0xffffffff,ct.byref(ready)) == 0
         assert native.thinkthen_session_finish(session,None,0) == 0
         if value['held_cancel']:
             assert sys.stdin.read(1) == '!'
