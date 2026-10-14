@@ -37,7 +37,7 @@ import thinkthen.pandas
 refund = series.tt.decide("Does this ask for a refund?", engine=engine)
 ```
 
-All ten namespace methods retain original row positions and null masks. Filter returns selected original rows. Rank, find and relate issue one whole-set call. `on=` selects DataFrame input columns for the ordinary engine methods; annotation adds named typed columns and failures, while recognition preserves its documented dataframe presentation. Async calls share this conversion. The package imports neither dataframe library by default. Pydantic support is available through `thinkthen[pydantic]`.
+All ten namespace methods retain original row positions and null masks. Filter returns selected original rows. Rank, find and relate issue one whole-set call. Polars presents ordinary answers as typed columns, including nested lists and structs. Columns retain Object values when a typed representation would change a value or add an absent member. Detailed results retain the native result objects. `on=` selects DataFrame input columns for the ordinary engine methods; annotation adds named typed columns and failures, while recognition preserves its documented dataframe presentation. Async calls share this conversion. The package imports neither dataframe library by default. Pydantic support is available through `thinkthen[pydantic]`.
 
 ## Replace old calls
 

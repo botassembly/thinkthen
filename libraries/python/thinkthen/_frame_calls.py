@@ -133,11 +133,11 @@ class PolarsFrameResult(FrameResult):
 
     def _annotated(self):
         import polars as pl
-        from ._polars_calls import answer_column
+        from ._polars_calls import answer_column, _dtype
+        from ._native_results import NativeFailed
         columns, failures = self._annotation_columns()
-        marker = pl.Struct({'failed': pl.Struct({'kind': pl.String, 'cause': pl.String})})
-        failure_type = pl.Struct({name: marker for name, _ in self.members})
         added = [answer_column(name, columns[name], kind, False) for name, kind in self.members]
+        failure_type = pl.Struct({name: _dtype([], NativeFailed._column_schema) for name, _ in self.members})
         added.append(pl.Series('failed', failures, dtype=failure_type))
         return self.source.with_columns(added)
 
@@ -146,14 +146,20 @@ class PolarsFrameResult(FrameResult):
         if self.function == 'annotate' and not self.detailed:
             return self._annotated()
         if self.function != 'recognize' or self.detailed:
-            return PandasResult.value.fget(self)
+            value = PandasResult.value.fget(self)
+            if self.detailed or self.function not in ('rank', 'find', 'relate'): return value
+            return self._column([value] if self.function == 'find' else value)
         import polars as pl
-        rows = [dict(row=at + 1, **entity.to_dict())
-                for at, result in zip(self.positions, self.results, strict=True)
-                for entity in result.value.entities]
-        schema = dict(row=pl.Int64, text=pl.String, start=pl.Int64, end=pl.Int64,
-                      length=pl.Int64, kind=pl.String, strength=pl.Float64)
-        return pl.DataFrame(rows, schema=schema)
+        from ._polars_calls import answer_column, _dtype
+        from ._native_results import NativeEntity
+        entities = [(at + 1, entity) for at, result in zip(self.positions, self.results, strict=True)
+                    for entity in result.value.entities]
+        schema = {name: NativeEntity._column_schema[name] for name in NativeEntity._column_required}
+        column = (answer_column('names', [entity for _, entity in entities], 'recognize', False) if entities
+                  else pl.Series('names', [], dtype=_dtype([], schema)))
+        frame = pl.DataFrame({'row': pl.Series([at for at, _ in entities], dtype=pl.Int64), 'names': column})
+        return (frame.unnest('names').select('row', *NativeEntity._column_required, pl.exclude('row', *NativeEntity._column_required))
+                if column.dtype.base_type() == pl.Struct else frame)
 
 
 def _restore(results, terminal, function, scalar, detailed, columns, present, on, members):
