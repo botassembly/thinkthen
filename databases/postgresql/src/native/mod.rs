@@ -89,6 +89,7 @@ pub(super) fn execute(
     }
     let request = composed_request(&request)?;
     let function = request.request().call.function();
+    let files_only = request.request().call.arguments().options.files_only;
     let records = input::deferred(records);
     let images = records.iter().any(|record| {
         record
@@ -100,7 +101,7 @@ pub(super) fn execute(
             .into_iter()
             .map(|record| input::compose(record?, &projection));
         let mut feed = thinkthen::RequestFeed::from_records("postgresql", records);
-        if verb == "filter" {
+        if verb == "filter" && !files_only {
             feed = feed.with_all_filter_results();
         }
         if !incremental {

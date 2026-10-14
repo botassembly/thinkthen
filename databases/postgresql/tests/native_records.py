@@ -98,6 +98,18 @@ def main():
             row = json.loads(query("SELECT to_jsonb(r) FROM thinkthen_decide('Fits?',ARRAY[thinkthen_record(text=>'Alpha.',source=>" + source + ")]) r", 1))
             assert row['result']['source']['file'] == 'caller-read.txt', row
             assert row['result']['source']['first_line'] == row['result']['source']['last_line'] == 1, row
+            sourced = "thinkthen_record(text=>'Alpha.',source=>" + source + ")"
+            failed = json.loads(query("SELECT to_jsonb(r) FROM thinkthen_filter('Fits?',ARRAY[" + sourced + "," + record + "],thinkthen_reading(files_only=>true)) r"))
+            assert failed['failure']['kind'] == 'usage' and failed['facts'] is None, failed
+            assert failed['failure']['message'] == 'files_only requires filter source input', failed
+            other = "thinkthen_record(text=>'Alpha.',source=>ROW('other.txt',1,1)::thinkthen_source)"
+            rows = [json.loads(row) for row in query("SELECT to_jsonb(r) FROM thinkthen_filter('Fits?',ARRAY[" + sourced + "," + sourced + "," + other + "],thinkthen_reading(files_only=>true,attempts=>true)) r", 3).splitlines()]
+            assert [row['result']['source']['file'] for row in rows] == ['caller-read.txt', 'other.txt'], rows
+            assert all(row['value'] == 'Alpha.' and row['facts']['requests_sent'] == 3 for row in rows), rows
+            assert all(len(row['facts']['attempts']) == 3 for row in rows), rows
+            rows = [json.loads(row) for row in query("SELECT to_jsonb(r) FROM thinkthen_filter('Fits?',ARRAY[" + sourced + "," + record + "],thinkthen_reading(files_only=>true,incremental=>true)) r", 1).splitlines()]
+            assert rows[0]['result']['source']['file'] == 'caller-read.txt', rows
+            assert rows[-1]['failure']['kind'] == 'usage' and rows[-1]['facts']['requests_sent'] == 1, rows
             print('postgresql: native typed records, readings, facts, prefix, NULL, source and no-send plan pass')
         finally:
             host.stop()
