@@ -86,20 +86,6 @@ impl Failure {
     pub(crate) fn defect(message: impl Into<String>) -> Self {
         Self::of(ErrorKind::Defect, message)
     }
-
-    pub(crate) fn value(&self) -> Option<serde_json::Value> {
-        let message = match self.kind {
-            ErrorKind::Usage => {
-                "check the row's question and arguments, or raise the process request total when it is spent"
-            }
-            ErrorKind::Local => "check the named file and its permissions",
-            ErrorKind::Backend => "the backend did not answer; retry if allowed",
-            ErrorKind::Cancelled | ErrorKind::Deadline | ErrorKind::Defect => return None,
-        };
-        Some(
-            serde_json::json!({"status":"failed","error":{"kind":self.kind.name(),"message":message,"retryable":self.retryable}}),
-        )
-    }
 }
 
 impl From<Failure> for thinkthen::Error {

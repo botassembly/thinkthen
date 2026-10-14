@@ -318,29 +318,74 @@ fn register_native(
             )?;
         };
     }
-    register!(c"thinkthen_decide", native::Decide, DECIDE);
-    register!(c"thinkthen_choose", native::Choose, CHOOSE);
-    register!(c"thinkthen_tag", native::Tag, TAG);
-    register!(c"thinkthen_score", native::Score, SCORE);
-    register!(c"thinkthen_find", native::Find, FIND);
-    register!(c"thinkthen_annotate", native::Annotate, ANNOTATE);
-    register!(c"thinkthen_details", native::Details, DETAILS);
     register!(
-        c"thinkthen_details_images",
-        native::DetailsImages,
-        DETAILS_IMAGES
+        c"thinkthen_decide_details",
+        native::details::Decide,
+        DECIDE_DETAILS
+    );
+    register!(
+        c"thinkthen_choose_details",
+        native::details::Choose,
+        CHOOSE_DETAILS
+    );
+    register!(c"thinkthen_tag_details", native::details::Tag, TAG_DETAILS);
+    register!(
+        c"thinkthen_score_details",
+        native::details::Score,
+        SCORE_DETAILS
+    );
+    register!(
+        c"thinkthen_find_details",
+        native::details::Find,
+        FIND_DETAILS
+    );
+    register!(
+        c"thinkthen_annotate_details",
+        native::details::Annotate,
+        ANNOTATE_DETAILS
+    );
+    register!(
+        c"thinkthen_filter_details",
+        native::details::Filter,
+        FILTER_DETAILS
+    );
+    register!(
+        c"thinkthen_rank_details",
+        native::details::Rank,
+        RANK_DETAILS
+    );
+    register!(
+        c"thinkthen_recognize_details",
+        native::details::Recognize,
+        RECOGNIZE_DETAILS
+    );
+    register!(
+        c"thinkthen_relate_details",
+        native::details::Relate,
+        RELATE_DETAILS
     );
     Ok(())
 }
-const DECIDE: Module<'static, Tab<Native<native::Decide>>> = Module::eponymous_only_module();
-const CHOOSE: Module<'static, Tab<Native<native::Choose>>> = Module::eponymous_only_module();
-const TAG: Module<'static, Tab<Native<native::Tag>>> = Module::eponymous_only_module();
-const SCORE: Module<'static, Tab<Native<native::Score>>> = Module::eponymous_only_module();
-const FIND: Module<'static, Tab<Native<native::Find>>> = Module::eponymous_only_module();
-const ANNOTATE: Module<'static, Tab<Native<native::Annotate>>> = Module::eponymous_only_module();
-const DETAILS_IMAGES: Module<'static, Tab<Native<native::DetailsImages>>> =
+const DECIDE_DETAILS: Module<'static, Tab<Native<native::details::Decide>>> =
     Module::eponymous_only_module();
-const DETAILS: Module<'static, Tab<Native<native::Details>>> = Module::eponymous_only_module();
+const CHOOSE_DETAILS: Module<'static, Tab<Native<native::details::Choose>>> =
+    Module::eponymous_only_module();
+const TAG_DETAILS: Module<'static, Tab<Native<native::details::Tag>>> =
+    Module::eponymous_only_module();
+const SCORE_DETAILS: Module<'static, Tab<Native<native::details::Score>>> =
+    Module::eponymous_only_module();
+const FIND_DETAILS: Module<'static, Tab<Native<native::details::Find>>> =
+    Module::eponymous_only_module();
+const ANNOTATE_DETAILS: Module<'static, Tab<Native<native::details::Annotate>>> =
+    Module::eponymous_only_module();
+const FILTER_DETAILS: Module<'static, Tab<Native<native::details::Filter>>> =
+    Module::eponymous_only_module();
+const RANK_DETAILS: Module<'static, Tab<Native<native::details::Rank>>> =
+    Module::eponymous_only_module();
+const RECOGNIZE_DETAILS: Module<'static, Tab<Native<native::details::Recognize>>> =
+    Module::eponymous_only_module();
+const RELATE_DETAILS: Module<'static, Tab<Native<native::details::Relate>>> =
+    Module::eponymous_only_module();
 const FILTER: Module<'static, Tab<Native<crate::source_filter::Filter>>> =
     Module::eponymous_only_module();
 const RECOGNIZE: Module<'static, Tab<Native<Recognizer>>> = Module::eponymous_only_module();

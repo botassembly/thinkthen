@@ -33,6 +33,7 @@ pub(super) fn execute(db: *mut sqlite3, invocation: Invocation) -> Result<Receip
         settings,
         keys,
         ids,
+        details,
         ..
     } = invocation;
     let shared = settings.context().map(str::to_owned);
@@ -40,6 +41,16 @@ pub(super) fn execute(db: *mut sqlite3, invocation: Invocation) -> Result<Receip
         let controls = shared
             .as_deref()
             .map_or(controls, |context| controls.context(context));
+        if details {
+            return sql_request::run_recovering(
+                engine,
+                &prepared,
+                &request,
+                inputs,
+                controls,
+                Surface::Sqlite,
+            );
+        }
         Ok(sql_request::run(
             engine,
             &prepared,
@@ -63,7 +74,7 @@ pub(super) fn admission(error: &Error) -> Result<Receipt, Failure> {
 
 fn project(
     verb: &str,
-    carrier: Json,
+    mut carrier: Json,
     keys: Vec<String>,
     ids: crate::tables::Ids,
 ) -> Result<Receipt, Failure> {
@@ -76,6 +87,31 @@ fn project(
     }
     if let Some(error) = native.get("error") {
         receipt.add("error", error)?;
+    }
+    if let Some(rows) = carrier.get_mut("rows").and_then(Json::as_array_mut) {
+        for row in rows {
+            for (field, kind) in [
+                ("result", root(verb)),
+                ("failure", "error"),
+                ("facts", "facts"),
+            ] {
+                if let Some(value) = row.get(field).filter(|value| !value.is_null()).cloned() {
+                    let index = receipt.add(kind, &value)?;
+                    if field == "result" {
+                        receipt.add("record_order", &json!({"ordinal":row.get("ordinal"),"result_index":index,"completed":false}))?;
+                    }
+                    row[field] = json!(index);
+                }
+            }
+            if let Some(events) = row.get("observations").and_then(Json::as_array).cloned() {
+                let mut first = None;
+                for event in events {
+                    let index = receipt.add("event", &event)?;
+                    first.get_or_insert(index);
+                }
+                row["observations"] = json!(first);
+            }
+        }
     }
     let completed = carrier.get("completed");
     let value = native.get("value").or(completed);
@@ -125,12 +161,14 @@ pub(super) struct Invocation {
     settings: thinkthen::Settings,
     keys: Vec<String>,
     ids: crate::tables::Ids,
+    details: bool,
 }
 
 pub(super) fn prepare(
     db: *mut sqlite3,
     verb: &'static str,
     args: &Arguments,
+    details: bool,
 ) -> Result<Invocation, Error> {
     if verb == "relate"
         && (4..=9).any(|at| {
@@ -212,6 +250,7 @@ pub(super) fn prepare(
         request,
         inputs,
         settings,
+        details,
         keys: input::keys(args)?,
         ids,
     })

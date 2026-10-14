@@ -13,6 +13,7 @@ use std::marker::PhantomData;
 use std::sync::{Arc, Mutex};
 
 mod answers;
+pub(crate) mod details;
 mod input;
 mod run;
 
@@ -52,6 +53,7 @@ pub(crate) trait Verb: Table {
     const VERB: &'static str;
     const FRESH_ANSWER: bool = false;
     const STRICT_ANSWER: bool = false;
+    const DETAILS: bool = false;
 }
 
 fn hidden<T: Table>() -> Result<Vec<String>, Failure> {
@@ -147,23 +149,43 @@ impl<T: Verb> Table for Native<T> {
         let legacy = extra.iter().all(|value| matches!(value, Value::Null));
         let mut names = hidden::<T>()?;
         names.extend(FIELDS.iter().map(|field| (*field).to_owned()));
-        let args = Arguments {
+        let mut args = Arguments {
             names,
             values: arguments,
             bound: mask,
         };
+        if T::DETAILS && !args.supplied("request_records") {
+            for field in ["text", "body", "keyed_json", "paths", "query"] {
+                if let Some(value) = args.text(field)?
+                    && serde_json::from_str::<serde_json::Value>(&value)
+                        .is_ok_and(|value| value.is_array())
+                {
+                    args = args.with_value("request_records", Value::Text(value));
+                    args = args.with_value(field, Value::Null);
+                    break;
+                }
+            }
+        }
+        if !T::DETAILS && args.supplied("request_records") {
+            return Err(Failure::usage(
+                "record lists require the function's _details form",
+            ));
+        }
         let selection = args.text("projection")?;
         let kind = selection.as_deref().unwrap_or_else(|| run::root(T::VERB));
         crate::receipt::projection(kind)?;
-        let receipt = match run::prepare(db, T::VERB, &args) {
+        let receipt = match run::prepare(db, T::VERB, &args, T::DETAILS) {
             Err(error)
                 if matches!(
                     error.kind(),
-                    thinkthen::ErrorKind::Cancelled | thinkthen::ErrorKind::Deadline
+                    thinkthen::ErrorKind::Cancelled
+                        | thinkthen::ErrorKind::Deadline
+                        | thinkthen::ErrorKind::Defect
                 ) =>
             {
                 return Err(error.into());
             }
+            Err(error) if T::DETAILS => return Err(error.into()),
             Err(error) => Arc::new(run::admission(&error)?),
             Ok(invocation) => cached::<T>(db, invocation, selection.is_none(), store)?,
         };
@@ -171,8 +193,13 @@ impl<T: Verb> Table for Native<T> {
             run::legacy_error(&receipt)?;
         }
         let mut rows = receipt.projected(kind, Self::COLUMNS)?;
+        if T::DETAILS && selection.is_none() {
+            rows = details::rows(&receipt)?;
+        }
         if selection.is_none() {
-            answers::rows(T::VERB, &receipt, &mut rows)?;
+            if !T::DETAILS {
+                answers::rows(T::VERB, &receipt, &mut rows)?;
+            }
             let facts = receipt.projected("facts", Self::COLUMNS)?;
             let errors = receipt.projected("error", Self::COLUMNS)?;
             if rows.is_empty() && !(T::STRICT_ANSWER && legacy) {
@@ -326,28 +353,6 @@ atomic!(
     c"CREATE TABLE x(value TEXT, question HIDDEN, text HIDDEN, settings HIDDEN)",
     1
 );
-atomic!(Details, "thinkthen_details", "details", c"CREATE TABLE x(value, confidence REAL, answer_id TEXT, answer_model TEXT, requests_sent INTEGER, question HIDDEN, text HIDDEN, settings HIDDEN)", 5);
-
-#[derive(Debug)]
-pub(crate) struct DetailsImages;
-impl Table for DetailsImages {
-    const NAME: &'static str = "thinkthen_details_images";
-    const SCHEMA: &'static CStr = c"CREATE TABLE x(value, confidence REAL, answer_id TEXT, answer_model TEXT, requests_sent INTEGER, question HIDDEN, images HIDDEN, image_text HIDDEN, settings HIDDEN)";
-    const FIRST_HIDDEN: usize = 5;
-    const COLUMNS: usize = 9 + crate::named::COUNT;
-    const REQUIRED: usize = 2;
-    fn schema() -> Result<Cow<'static, CStr>, Failure> {
-        crate::named::schema(Self::SCHEMA)
-    }
-    fn rows(_: *mut sqlite3, _: &[Value]) -> Result<Vec<Vec<Value>>, Failure> {
-        Err(Failure::defect("image details lost their native scan"))
-    }
-}
-impl Verb for DetailsImages {
-    const VERB: &'static str = "details_images";
-    const FRESH_ANSWER: bool = true;
-    const STRICT_ANSWER: bool = true;
-}
 impl Verb for crate::many::RankSetTable {
     const VERB: &'static str = "rank_set";
     const STRICT_ANSWER: bool = true;
