@@ -6,8 +6,8 @@ extern id TTNative_thinkthen_complete_immediate_facts_v1(const struct thinkthen_
 extern id TTNative_thinkthen_complete_json_v1(const struct thinkthen_complete_json_v1 *value);
 NSErrorDomain const TTErrorDomain = @"io.github.botassembly.thinkthen";
 NSString * const TTFailureDetailsKey = @"ThinkThenFailureDetails";
-TTRequestImageBytes *TTImageBytes(NSData *bytes, NSString *media) {
-    TTRequestImageBytes *image = [TTRequestImageBytes new];
+TTByteImage *TTImageBytes(NSData *bytes, NSString *media) {
+    TTByteImage *image = [TTByteImage new];
     image.bytes = [bytes base64EncodedStringWithOptions:0]; image.media = media; return image;
 }
 @interface TTFailureError ()
@@ -62,7 +62,7 @@ static NSData *TTEncode(id object, NSError **error) {
     if (error) *error = [NSError errorWithDomain:TTErrorDomain code:THINKTHEN_ELOCAL userInfo:@{NSLocalizedDescriptionKey:@"Session is closed"}];
     return NO;
 }
-- (BOOL)tryPush:(TTRequestSessionDescriptor *)descriptor accepted:(BOOL *)accepted closed:(BOOL *)closed error:(NSError **)error {
+- (BOOL)tryPush:(TTDescriptor *)descriptor accepted:(BOOL *)accepted closed:(BOOL *)closed error:(NSError **)error {
     NSData *data = TTEncode(descriptor, error); if (!data) return NO;
     [_lock lock];
     @try {
@@ -132,7 +132,7 @@ static NSData *TTEncode(id object, NSError **error) {
     TTFeed _feed;
     TTCompletion _completion;
     dispatch_queue_t _queue;
-    TTRequestSessionDescriptor *_pending;
+    TTDescriptor *_pending;
     NSMutableArray *_packets;
     TTSessionPacketTerminal *_terminal;
     BOOL _finished;

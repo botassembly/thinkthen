@@ -4624,30 +4624,30 @@ NSData *TTRequestJSONData(id value, NSError **error) {
     return self;
 }
 @end
-TTImageMediaBuilder const TTImageMediaImageJpegBuilder = @"image/jpeg";
-TTImageMediaBuilder const TTImageMediaImagePngBuilder = @"image/png";
-TTReaderMediaBuilder const TTReaderMediaTextBuilder = @"text";
-TTReaderMediaBuilder const TTReaderMediaImageBuilder = @"image";
-TTRecognitionModeBuilder const TTRecognitionModeWholeBuilder = @"whole";
-TTRecognitionModeBuilder const TTRecognitionModeBoundaryOnlyBuilder = @"boundary_only";
-TTRequestFraming const TTRequestFramingDocument = @"document";
-TTRequestFraming const TTRequestFramingLines = @"lines";
-TTRequestFraming const TTRequestFramingJsonl = @"jsonl";
-TTRequestFraming const TTRequestFramingCsv = @"csv";
-TTRequestFraming const TTRequestFramingTsv = @"tsv";
-TTRequestFunction const TTRequestFunctionDecide = @"decide";
-TTRequestFunction const TTRequestFunctionChoose = @"choose";
-TTRequestFunction const TTRequestFunctionTag = @"tag";
-TTRequestFunction const TTRequestFunctionScore = @"score";
-TTRequestFunction const TTRequestFunctionFilter = @"filter";
-TTRequestFunction const TTRequestFunctionRank = @"rank";
-TTRequestFunction const TTRequestFunctionFind = @"find";
-TTRequestFunction const TTRequestFunctionAnnotate = @"annotate";
-TTRequestFunction const TTRequestFunctionRecognize = @"recognize";
-TTRequestFunction const TTRequestFunctionRelate = @"relate";
-TTSourceUnitBuilder const TTSourceUnitLineBuilder = @"line";
-TTSourceUnitBuilder const TTSourceUnitWindowBuilder = @"window";
-TTSourceUnitBuilder const TTSourceUnitFileBuilder = @"file";
+TTImageMedia const TTImageMediaImageJpeg = @"image/jpeg";
+TTImageMedia const TTImageMediaImagePng = @"image/png";
+TTReaderMedia const TTReaderMediaText = @"text";
+TTReaderMedia const TTReaderMediaImage = @"image";
+TTRecognitionMode const TTRecognitionModeWhole = @"whole";
+TTRecognitionMode const TTRecognitionModeBoundaryOnly = @"boundary_only";
+TTFraming const TTFramingDocument = @"document";
+TTFraming const TTFramingLines = @"lines";
+TTFraming const TTFramingJsonl = @"jsonl";
+TTFraming const TTFramingCsv = @"csv";
+TTFraming const TTFramingTsv = @"tsv";
+TTFunction const TTFunctionDecide = @"decide";
+TTFunction const TTFunctionChoose = @"choose";
+TTFunction const TTFunctionTag = @"tag";
+TTFunction const TTFunctionScore = @"score";
+TTFunction const TTFunctionFilter = @"filter";
+TTFunction const TTFunctionRank = @"rank";
+TTFunction const TTFunctionFind = @"find";
+TTFunction const TTFunctionAnnotate = @"annotate";
+TTFunction const TTFunctionRecognize = @"recognize";
+TTFunction const TTFunctionRelate = @"relate";
+TTSourceUnit const TTSourceUnitLine = @"line";
+TTSourceUnit const TTSourceUnitWindow = @"window";
+TTSourceUnit const TTSourceUnitFile = @"file";
 @implementation TTAnnotateDefinitionBuilder
 - (id)batch {
     return self.requestFields[@"batch"];
@@ -5801,10 +5801,10 @@ TTSourceUnitBuilder const TTSourceUnitFileBuilder = @"file";
     if (value) self.requestFields[@"kinds"] = value;
     else [self.requestFields removeObjectForKey:@"kinds"];
 }
-- (TTRecognitionModeBuilder)mode {
+- (TTRecognitionMode)mode {
     return self.requestFields[@"mode"];
 }
-- (void)setMode:(TTRecognitionModeBuilder)value {
+- (void)setMode:(TTRecognitionMode)value {
     if (value) self.requestFields[@"mode"] = value;
     else [self.requestFields removeObjectForKey:@"mode"];
 }
@@ -5863,10 +5863,10 @@ TTSourceUnitBuilder const TTSourceUnitFileBuilder = @"file";
 }
 @end
 @implementation TTRequest
-- (TTRequestCall *)call {
+- (TTCallArguments *)call {
     return self.requestFields[@"call"];
 }
-- (void)setCall:(TTRequestCall *)value {
+- (void)setCall:(TTCallArguments *)value {
     if (value) self.requestFields[@"call"] = value;
     else [self.requestFields removeObjectForKey:@"call"];
 }
@@ -5876,11 +5876,11 @@ TTSourceUnitBuilder const TTSourceUnitFileBuilder = @"file";
     } return self;
 }
 @end
-@implementation TTRequestCall
-- (TTRequestFunction)function {
+@implementation TTCallArguments
+- (TTFunction)function {
     return self.requestFields[@"function"];
 }
-- (void)setFunction:(TTRequestFunction)value {
+- (void)setFunction:(TTFunction)value {
     if (value) self.requestFields[@"function"] = value;
     else [self.requestFields removeObjectForKey:@"function"];
 }
@@ -5906,7 +5906,7 @@ TTSourceUnitBuilder const TTSourceUnitFileBuilder = @"file";
     else [self.requestFields removeObjectForKey:@"question"];
 }
 @end
-@implementation TTRequestImageBytes
+@implementation TTByteImage
 - (NSString *)bytes {
     return self.requestFields[@"bytes"];
 }
@@ -5914,10 +5914,10 @@ TTSourceUnitBuilder const TTSourceUnitFileBuilder = @"file";
     if (value) self.requestFields[@"bytes"] = value;
     else [self.requestFields removeObjectForKey:@"bytes"];
 }
-- (TTImageMediaBuilder)media {
+- (TTImageMedia)media {
     return self.requestFields[@"media"];
 }
-- (void)setMedia:(TTImageMediaBuilder)value {
+- (void)setMedia:(TTImageMedia)value {
     if (value) self.requestFields[@"media"] = value;
     else [self.requestFields removeObjectForKey:@"media"];
 }
@@ -5927,11 +5927,11 @@ TTSourceUnitBuilder const TTSourceUnitFileBuilder = @"file";
     } return self;
 }
 @end
-@implementation TTRequestImageFile
-- (TTImageMediaBuilder)media {
+@implementation TTFileImage
+- (TTImageMedia)media {
     return self.requestFields[@"media"];
 }
-- (void)setMedia:(TTImageMediaBuilder)value {
+- (void)setMedia:(TTImageMedia)value {
     if (value) self.requestFields[@"media"] = value;
     else [self.requestFields removeObjectForKey:@"media"];
 }
@@ -5963,10 +5963,10 @@ TTSourceUnitBuilder const TTSourceUnitFileBuilder = @"file";
 }
 @end
 @implementation TTFeedInput
-- (TTRequestFraming)framing {
+- (TTFraming)framing {
     return self.requestFields[@"framing"];
 }
-- (void)setFraming:(TTRequestFraming)value {
+- (void)setFraming:(TTFraming)value {
     if (value) self.requestFields[@"framing"] = value;
     else [self.requestFields removeObjectForKey:@"framing"];
 }
@@ -5984,10 +5984,10 @@ TTSourceUnitBuilder const TTSourceUnitFileBuilder = @"file";
     if (value) self.requestFields[@"name"] = value;
     else [self.requestFields removeObjectForKey:@"name"];
 }
-- (TTRequestReader *)reading {
+- (TTReading *)reading {
     return self.requestFields[@"reading"];
 }
-- (void)setReading:(TTRequestReader *)value {
+- (void)setReading:(TTReading *)value {
     if (value) self.requestFields[@"reading"] = value;
     else [self.requestFields removeObjectForKey:@"reading"];
 }
@@ -6203,10 +6203,10 @@ TTSourceUnitBuilder const TTSourceUnitFileBuilder = @"file";
     if (value) self.requestFields[@"max_requests_total"] = value;
     else [self.requestFields removeObjectForKey:@"max_requests_total"];
 }
-- (TTRecognitionModeBuilder)mode {
+- (TTRecognitionMode)mode {
     return self.requestFields[@"mode"];
 }
-- (void)setMode:(TTRecognitionModeBuilder)value {
+- (void)setMode:(TTRecognitionMode)value {
     if (value) self.requestFields[@"mode"] = value;
     else [self.requestFields removeObjectForKey:@"mode"];
 }
@@ -6281,7 +6281,7 @@ TTSourceUnitBuilder const TTSourceUnitFileBuilder = @"file";
     else [self.requestFields removeObjectForKey:@"top"];
 }
 @end
-@implementation TTRequestOriginalJson
+@implementation TTOriginalJSON
 - (id)value {
     return self.requestFields[@"value"];
 }
@@ -6295,7 +6295,7 @@ TTSourceUnitBuilder const TTSourceUnitFileBuilder = @"file";
     } return self;
 }
 @end
-@implementation TTRequestOriginalText
+@implementation TTOriginalText
 - (NSString *)text {
     return self.requestFields[@"text"];
 }
@@ -6379,11 +6379,11 @@ TTSourceUnitBuilder const TTSourceUnitFileBuilder = @"file";
     } return self;
 }
 @end
-@implementation TTRequestReader
-- (TTSourceUnitBuilder)unit {
+@implementation TTReading
+- (TTSourceUnit)unit {
     return self.requestFields[@"unit"];
 }
-- (void)setUnit:(TTSourceUnitBuilder)value {
+- (void)setUnit:(TTSourceUnit)value {
     if (value) self.requestFields[@"unit"] = value;
     else [self.requestFields removeObjectForKey:@"unit"];
 }
@@ -6395,7 +6395,7 @@ TTSourceUnitBuilder const TTSourceUnitFileBuilder = @"file";
     else [self.requestFields removeObjectForKey:@"window"];
 }
 @end
-@implementation TTRequestReaderFailureInvalidInput
+@implementation TTInvalidInputFailure
 - (TTSessionSourceLocationBuilder *)location {
     return self.requestFields[@"location"];
 }
@@ -6409,7 +6409,7 @@ TTSourceUnitBuilder const TTSourceUnitFileBuilder = @"file";
     } return self;
 }
 @end
-@implementation TTRequestReaderFailureIo
+@implementation TTReaderIOFailure
 - (TTSessionSourceLocationBuilder *)location {
     return self.requestFields[@"location"];
 }
@@ -6423,14 +6423,14 @@ TTSourceUnitBuilder const TTSourceUnitFileBuilder = @"file";
     } return self;
 }
 @end
-@implementation TTRequestReaderFailureProducer
+@implementation TTProducerFailure
 - (instancetype)init {
     if ((self = [super init])) {
         self.requestFields[@"kind"] = @"producer";
     } return self;
 }
 @end
-@implementation TTRequestReaderFailureUtf8
+@implementation TTReaderUTF8Failure
 - (TTSessionSourceLocationBuilder *)location {
     return self.requestFields[@"location"];
 }
@@ -6444,7 +6444,7 @@ TTSourceUnitBuilder const TTSourceUnitFileBuilder = @"file";
     } return self;
 }
 @end
-@implementation TTRequestSessionDescriptor
+@implementation TTDescriptor
 - (TTItem *)item {
     return self.requestFields[@"item"];
 }
@@ -6461,17 +6461,17 @@ TTSourceUnitBuilder const TTSourceUnitFileBuilder = @"file";
 }
 @end
 @implementation TTFiles
-- (TTRequestFraming)framing {
+- (TTFraming)framing {
     return self.requestFields[@"framing"];
 }
-- (void)setFraming:(TTRequestFraming)value {
+- (void)setFraming:(TTFraming)value {
     if (value) self.requestFields[@"framing"] = value;
     else [self.requestFields removeObjectForKey:@"framing"];
 }
-- (TTReaderMediaBuilder)media {
+- (TTReaderMedia)media {
     return self.requestFields[@"media"];
 }
-- (void)setMedia:(TTReaderMediaBuilder)value {
+- (void)setMedia:(TTReaderMedia)value {
     if (value) self.requestFields[@"media"] = value;
     else [self.requestFields removeObjectForKey:@"media"];
 }
@@ -6482,10 +6482,10 @@ TTSourceUnitBuilder const TTSourceUnitFileBuilder = @"file";
     if (value) self.requestFields[@"paths"] = value;
     else [self.requestFields removeObjectForKey:@"paths"];
 }
-- (TTRequestReader *)reading {
+- (TTReading *)reading {
     return self.requestFields[@"reading"];
 }
-- (void)setReading:(TTRequestReader *)value {
+- (void)setReading:(TTReading *)value {
     if (value) self.requestFields[@"reading"] = value;
     else [self.requestFields removeObjectForKey:@"reading"];
 }

@@ -1045,36 +1045,36 @@ TTSourceRelationEndpoint, TTThreshold, TTTokenBand, TTTokenUsage, TTValue, TTImm
 @end
 @interface TTInput : TTRequestObject
 @end
-typedef NSString *TTImageMediaBuilder NS_TYPED_ENUM;
-FOUNDATION_EXPORT TTImageMediaBuilder const TTImageMediaImageJpegBuilder;
-FOUNDATION_EXPORT TTImageMediaBuilder const TTImageMediaImagePngBuilder;
-typedef NSString *TTReaderMediaBuilder NS_TYPED_ENUM;
-FOUNDATION_EXPORT TTReaderMediaBuilder const TTReaderMediaTextBuilder;
-FOUNDATION_EXPORT TTReaderMediaBuilder const TTReaderMediaImageBuilder;
-typedef NSString *TTRecognitionModeBuilder NS_TYPED_ENUM;
-FOUNDATION_EXPORT TTRecognitionModeBuilder const TTRecognitionModeWholeBuilder;
-FOUNDATION_EXPORT TTRecognitionModeBuilder const TTRecognitionModeBoundaryOnlyBuilder;
-typedef NSString *TTRequestFraming NS_TYPED_ENUM;
-FOUNDATION_EXPORT TTRequestFraming const TTRequestFramingDocument;
-FOUNDATION_EXPORT TTRequestFraming const TTRequestFramingLines;
-FOUNDATION_EXPORT TTRequestFraming const TTRequestFramingJsonl;
-FOUNDATION_EXPORT TTRequestFraming const TTRequestFramingCsv;
-FOUNDATION_EXPORT TTRequestFraming const TTRequestFramingTsv;
-typedef NSString *TTRequestFunction NS_TYPED_ENUM;
-FOUNDATION_EXPORT TTRequestFunction const TTRequestFunctionDecide;
-FOUNDATION_EXPORT TTRequestFunction const TTRequestFunctionChoose;
-FOUNDATION_EXPORT TTRequestFunction const TTRequestFunctionTag;
-FOUNDATION_EXPORT TTRequestFunction const TTRequestFunctionScore;
-FOUNDATION_EXPORT TTRequestFunction const TTRequestFunctionFilter;
-FOUNDATION_EXPORT TTRequestFunction const TTRequestFunctionRank;
-FOUNDATION_EXPORT TTRequestFunction const TTRequestFunctionFind;
-FOUNDATION_EXPORT TTRequestFunction const TTRequestFunctionAnnotate;
-FOUNDATION_EXPORT TTRequestFunction const TTRequestFunctionRecognize;
-FOUNDATION_EXPORT TTRequestFunction const TTRequestFunctionRelate;
-typedef NSString *TTSourceUnitBuilder NS_TYPED_ENUM;
-FOUNDATION_EXPORT TTSourceUnitBuilder const TTSourceUnitLineBuilder;
-FOUNDATION_EXPORT TTSourceUnitBuilder const TTSourceUnitWindowBuilder;
-FOUNDATION_EXPORT TTSourceUnitBuilder const TTSourceUnitFileBuilder;
+typedef NSString *TTImageMedia NS_TYPED_ENUM;
+FOUNDATION_EXPORT TTImageMedia const TTImageMediaImageJpeg;
+FOUNDATION_EXPORT TTImageMedia const TTImageMediaImagePng;
+typedef NSString *TTReaderMedia NS_TYPED_ENUM;
+FOUNDATION_EXPORT TTReaderMedia const TTReaderMediaText;
+FOUNDATION_EXPORT TTReaderMedia const TTReaderMediaImage;
+typedef NSString *TTRecognitionMode NS_TYPED_ENUM;
+FOUNDATION_EXPORT TTRecognitionMode const TTRecognitionModeWhole;
+FOUNDATION_EXPORT TTRecognitionMode const TTRecognitionModeBoundaryOnly;
+typedef NSString *TTFraming NS_TYPED_ENUM;
+FOUNDATION_EXPORT TTFraming const TTFramingDocument;
+FOUNDATION_EXPORT TTFraming const TTFramingLines;
+FOUNDATION_EXPORT TTFraming const TTFramingJsonl;
+FOUNDATION_EXPORT TTFraming const TTFramingCsv;
+FOUNDATION_EXPORT TTFraming const TTFramingTsv;
+typedef NSString *TTFunction NS_TYPED_ENUM;
+FOUNDATION_EXPORT TTFunction const TTFunctionDecide;
+FOUNDATION_EXPORT TTFunction const TTFunctionChoose;
+FOUNDATION_EXPORT TTFunction const TTFunctionTag;
+FOUNDATION_EXPORT TTFunction const TTFunctionScore;
+FOUNDATION_EXPORT TTFunction const TTFunctionFilter;
+FOUNDATION_EXPORT TTFunction const TTFunctionRank;
+FOUNDATION_EXPORT TTFunction const TTFunctionFind;
+FOUNDATION_EXPORT TTFunction const TTFunctionAnnotate;
+FOUNDATION_EXPORT TTFunction const TTFunctionRecognize;
+FOUNDATION_EXPORT TTFunction const TTFunctionRelate;
+typedef NSString *TTSourceUnit NS_TYPED_ENUM;
+FOUNDATION_EXPORT TTSourceUnit const TTSourceUnitLine;
+FOUNDATION_EXPORT TTSourceUnit const TTSourceUnitWindow;
+FOUNDATION_EXPORT TTSourceUnit const TTSourceUnitFile;
 @class TTAnnotateDefinitionBuilder, TTAnnotateQuestionChooseBuilder, TTAnnotateQuestionDecideBuilder,
 TTAnnotateQuestionScoreBuilder, TTAnnotateQuestionTagBuilder, TTAuthoredChooseBuilder, TTAuthoredDecideBuilder,
 TTAuthoredFindBuilder, TTAuthoredInputDeclarationObjectBuilder, TTAuthoredInputDeclarationStringBuilder,
@@ -1083,12 +1083,11 @@ TTAuthoredInputPropertyStringBuilder, TTAuthoredRelateBuilder, TTAuthoredRelatio
 TTAuthoredTagBuilder, TTSettings, TTOptionSchemaBuilder, TTRecognitionExampleEntityBuilder,
 TTRecognitionExampleTextBuilder, TTRecognitionSeedSpanBuilder, TTRecognitionStageContextBuilder,
 TTRecognizeDefinitionBuilder, TTRecognizeQuestionBuilder, TTRelateFieldsBuilder, TTRelateQuestionBuilder,
-TTRequest, TTRequestCall, TTRequestImageBytes, TTRequestImageFile, TTEntitiesInput, TTFeedInput,
-TTJSONInput, TTRecordsInput, TTSourceInput, TTTextInput, TTUnitsInput, TTItem, TTControls,
-TTRequestOriginalJson, TTRequestOriginalText, TTQuestionDefinition, TTQuestionFile, TTQuestionName,
-TTQuestionReference, TTTextQuestion, TTRequestReader, TTRequestReaderFailureInvalidInput, TTRequestReaderFailureIo,
-TTRequestReaderFailureProducer, TTRequestReaderFailureUtf8, TTRequestSessionDescriptor, TTFiles,
-TTSessionSourceLocationBuilder;
+TTRequest, TTCallArguments, TTByteImage, TTFileImage, TTEntitiesInput, TTFeedInput, TTJSONInput,
+TTRecordsInput, TTSourceInput, TTTextInput, TTUnitsInput, TTItem, TTControls, TTOriginalJSON,
+TTOriginalText, TTQuestionDefinition, TTQuestionFile, TTQuestionName, TTQuestionReference,
+TTTextQuestion, TTReading, TTInvalidInputFailure, TTReaderIOFailure, TTProducerFailure, TTReaderUTF8Failure,
+TTDescriptor, TTFiles, TTSessionSourceLocationBuilder;
 @interface TTAnnotateDefinitionBuilder : TTRequestObject
 @property(nonatomic, strong, nullable) id batch;
 @property(nonatomic, strong, nullable) NSString * profile;
@@ -1291,7 +1290,7 @@ TTSessionSourceLocationBuilder;
 @property(nonatomic, strong, nullable) id entityDefinition;
 @property(nonatomic, strong, nullable) id instructions;
 @property(nonatomic, strong, nullable) TTOrderedMap * kinds;
-@property(nonatomic, strong, nullable) TTRecognitionModeBuilder mode;
+@property(nonatomic, strong, nullable) TTRecognitionMode mode;
 @property(nonatomic, strong, nullable) NSArray * relations;
 @property(nonatomic, strong, nullable) NSNumber * snippetPieces;
 @property(nonatomic, strong, nullable) TTRecognitionStageContextBuilder * stageContext;
@@ -1305,30 +1304,30 @@ TTSessionSourceLocationBuilder;
 @property(nonatomic, strong, nullable) NSArray * relations;
 @end
 @interface TTRequest : TTRequestObject
-@property(nonatomic, strong, nullable) TTRequestCall * call;
+@property(nonatomic, strong, nullable) TTCallArguments * call;
 @end
-@interface TTRequestCall : TTRequestObject
-@property(nonatomic, strong, nullable) TTRequestFunction function;
+@interface TTCallArguments : TTRequestObject
+@property(nonatomic, strong, nullable) TTFunction function;
 @property(nonatomic, strong, nullable) TTInput * input;
 @property(nonatomic, strong, nullable) TTControls * options;
 @property(nonatomic, strong, nullable) TTQuestion * question;
 @end
-@interface TTRequestImageBytes : TTRequestObject
+@interface TTByteImage : TTRequestObject
 @property(nonatomic, strong, nullable) NSString * bytes;
-@property(nonatomic, strong, nullable) TTImageMediaBuilder media;
+@property(nonatomic, strong, nullable) TTImageMedia media;
 @end
-@interface TTRequestImageFile : TTRequestObject
-@property(nonatomic, strong, nullable) TTImageMediaBuilder media;
+@interface TTFileImage : TTRequestObject
+@property(nonatomic, strong, nullable) TTImageMedia media;
 @property(nonatomic, strong, nullable) NSString * path;
 @end
 @interface TTEntitiesInput : TTInput
 @property(nonatomic, strong, nullable) NSArray * items;
 @end
 @interface TTFeedInput : TTInput
-@property(nonatomic, strong, nullable) TTRequestFraming framing;
+@property(nonatomic, strong, nullable) TTFraming framing;
 @property(nonatomic, strong, nullable) NSArray * images;
 @property(nonatomic, strong, nullable) NSString * name;
-@property(nonatomic, strong, nullable) TTRequestReader * reading;
+@property(nonatomic, strong, nullable) TTReading * reading;
 @end
 @interface TTJSONInput : TTInput
 @property(nonatomic, strong, nullable) NSArray * images;
@@ -1367,7 +1366,7 @@ TTSessionSourceLocationBuilder;
 @property(nonatomic, strong, nullable) NSArray * field;
 @property(nonatomic, strong, nullable) NSNumber * filesOnly;
 @property(nonatomic, strong, nullable) NSNumber * maxRequestsTotal;
-@property(nonatomic, strong, nullable) TTRecognitionModeBuilder mode;
+@property(nonatomic, strong, nullable) TTRecognitionMode mode;
 @property(nonatomic, strong, nullable) NSString * model;
 @property(nonatomic, strong, nullable) NSNumber * none;
 @property(nonatomic, strong, nullable) NSString * optionsField;
@@ -1379,10 +1378,10 @@ TTSessionSourceLocationBuilder;
 @property(nonatomic, strong, nullable) id threshold;
 @property(nonatomic, strong, nullable) NSNumber * top;
 @end
-@interface TTRequestOriginalJson : TTRequestObject
+@interface TTOriginalJSON : TTRequestObject
 @property(nonatomic, strong, nullable) id value;
 @end
-@interface TTRequestOriginalText : TTRequestObject
+@interface TTOriginalText : TTRequestObject
 @property(nonatomic, strong, nullable) NSString * text;
 @end
 @interface TTQuestionDefinition : TTQuestion
@@ -1400,30 +1399,30 @@ TTSessionSourceLocationBuilder;
 @interface TTTextQuestion : TTQuestion
 @property(nonatomic, strong, nullable) NSString * text;
 @end
-@interface TTRequestReader : TTRequestObject
-@property(nonatomic, strong, nullable) TTSourceUnitBuilder unit;
+@interface TTReading : TTRequestObject
+@property(nonatomic, strong, nullable) TTSourceUnit unit;
 @property(nonatomic, strong, nullable) NSNumber * window;
 @end
-@interface TTRequestReaderFailureInvalidInput : TTRequestObject
+@interface TTInvalidInputFailure : TTRequestObject
 @property(nonatomic, strong, nullable) TTSessionSourceLocationBuilder * location;
 @end
-@interface TTRequestReaderFailureIo : TTRequestObject
+@interface TTReaderIOFailure : TTRequestObject
 @property(nonatomic, strong, nullable) TTSessionSourceLocationBuilder * location;
 @end
-@interface TTRequestReaderFailureProducer : TTRequestObject
+@interface TTProducerFailure : TTRequestObject
 @end
-@interface TTRequestReaderFailureUtf8 : TTRequestObject
+@interface TTReaderUTF8Failure : TTRequestObject
 @property(nonatomic, strong, nullable) TTSessionSourceLocationBuilder * location;
 @end
-@interface TTRequestSessionDescriptor : TTRequestObject
+@interface TTDescriptor : TTRequestObject
 @property(nonatomic, strong, nullable) TTItem * item;
 @property(nonatomic, strong, nullable) TTSessionSourceLocationBuilder * location;
 @end
 @interface TTFiles : TTRequestObject
-@property(nonatomic, strong, nullable) TTRequestFraming framing;
-@property(nonatomic, strong, nullable) TTReaderMediaBuilder media;
+@property(nonatomic, strong, nullable) TTFraming framing;
+@property(nonatomic, strong, nullable) TTReaderMedia media;
 @property(nonatomic, strong, nullable) NSArray * paths;
-@property(nonatomic, strong, nullable) TTRequestReader * reading;
+@property(nonatomic, strong, nullable) TTReading * reading;
 @end
 @interface TTSessionSourceLocationBuilder : TTRequestObject
 @property(nonatomic, strong, nullable) NSString * file;
@@ -1432,8 +1431,10 @@ TTSessionSourceLocationBuilder;
 @end
 @class TTCall, TTSession, TTTask, TTUsagePersistenceStatus;
 typedef void (^TTCompletion)(TTCall * _Nullable call, NSError * _Nullable error);
-typedef TTRequestSessionDescriptor * _Nullable (^TTFeed)(TTRequestObject * _Nullable * _Nonnull readerFailure);
+typedef TTDescriptor * _Nullable (^TTFeed)(TTRequestObject * _Nullable * _Nonnull readerFailure);
 @interface TTCall : NSObject
+- (instancetype)init NS_UNAVAILABLE;
++ (instancetype)new NS_UNAVAILABLE;
 @property(nonatomic, strong, readonly) TTPresence<TTFacts *> *facts;
 @end
 @interface TTCall (Answers)

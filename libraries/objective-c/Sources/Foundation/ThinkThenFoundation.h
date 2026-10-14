@@ -18,10 +18,12 @@ FOUNDATION_EXPORT NSString * const TTFailureDetailsKey;
 + (instancetype)new NS_UNAVAILABLE;
 @end
 /** Foundation byte data becomes the native attachment representation; Rust admits media and bytes. */
-FOUNDATION_EXPORT TTRequestImageBytes *TTImageBytes(NSData *bytes, NSString *media);
+FOUNDATION_EXPORT TTByteImage *TTImageBytes(NSData *bytes, NSString *media);
 /** A bounded owned session. Native work never calls a caller block. */
 @interface TTSession : NSObject
-- (BOOL)tryPush:(TTRequestSessionDescriptor *)descriptor accepted:(BOOL *)accepted closed:(BOOL *)closed error:(NSError * _Nullable * _Nullable)error;
+- (instancetype)init NS_UNAVAILABLE;
++ (instancetype)new NS_UNAVAILABLE;
+- (BOOL)tryPush:(TTDescriptor *)descriptor accepted:(BOOL *)accepted closed:(BOOL *)closed error:(NSError * _Nullable * _Nullable)error;
 - (BOOL)finish:(nullable TTRequestObject *)readerFailure error:(NSError * _Nullable * _Nullable)error;
 - (nullable TTSessionPacket *)tryReadEnded:(BOOL *)ended error:(NSError * _Nullable * _Nullable)error;
 /** Consumes nothing and waits at most 50 ms. YES observes input room; NO waits for final output or end after cancellation. The owner remains live through concurrent close. */
@@ -32,6 +34,8 @@ FOUNDATION_EXPORT TTRequestImageBytes *TTImageBytes(NSData *bytes, NSString *med
 @end
 /** Waits on native queues from a private dispatch queue; buffers no feed or result queue. */
 @interface TTTask : NSObject
+- (instancetype)init NS_UNAVAILABLE;
++ (instancetype)new NS_UNAVAILABLE;
 - (void)cancel;
 @end
 NS_ASSUME_NONNULL_END

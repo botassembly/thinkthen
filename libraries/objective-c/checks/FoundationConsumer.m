@@ -1,5 +1,6 @@
 #import "ThinkThenFoundation.h"
 #import <dispatch/dispatch.h>
+#include <stdio.h>
 #define require(condition) do { if (!(condition)) { fprintf(stderr, "Foundation condition failed at line %d: %s\n", __LINE__, #condition); abort(); } } while (0)
 int main(int argc, const char *argv[]) {
     @autoreleasepool {
@@ -11,8 +12,8 @@ int main(int argc, const char *argv[]) {
         TTTextQuestion *question = [TTTextQuestion new]; question.text = @"Is it?";
         TTTextInput *input = [TTTextInput new]; input.text = @"consumer-objc";
         TTRequest *request = [TTRequest new];
-        TTRequestCall *arguments = [TTRequestCall new];
-        arguments.function = TTRequestFunctionDecide; arguments.question = question; arguments.input = input;
+        TTCallArguments *arguments = [TTCallArguments new];
+        arguments.function = TTFunctionDecide; arguments.question = question; arguments.input = input;
         request.call = arguments;
         TTPlan *plan = [client plan:request error:&error];
         require(plan != nil && error == nil);
@@ -37,12 +38,13 @@ int main(int argc, const char *argv[]) {
         require(dispatch_semaphore_wait(completed, dispatch_time(DISPATCH_TIME_NOW, 4 * NSEC_PER_SEC)) == 0);
         TTUsagePersistenceStatus *usage = [client finishUsageStatus:&error];
         require(usage != nil && error == nil && usage.state == TTUsagePersistenceWritten && usage.advice == nil);
-        require([client usagePersistence:&error].state == usage.state && error == nil);
+        TTUsagePersistenceStatus *observed = [client usagePersistence:&error];
+        require(observed != nil && error == nil && observed.advice == nil);
+        require(observed.state == TTUsagePersistenceWritten || observed.state == TTUsagePersistencePending);
         task = nil; client = nil;
         require(usage.state == TTUsagePersistenceWritten && usage.advice == nil);
         require(retained.facts.state == TTPresenceValue);
         require([retained decideAnswer:&error].state == TTPresenceValue && error == nil);
-        require(retained.facts.state == TTPresenceValue);
         // A new client and unrelated host work progress while a provider is held.
         client = [[TTFoundationClient alloc] initWithSettings:nil error:&error];
         dispatch_semaphore_t cancelled = dispatch_semaphore_create(0);

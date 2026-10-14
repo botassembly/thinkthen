@@ -148,8 +148,8 @@ def outputs(definitions, version, input_definitions=None, abi=None):
     declarations = lambda macro, lines: next(line.split(' ', 2)[2] for line in lines if line.startswith('#define ' + macro + ' '))
     header += ['@class TTCall, TTSession, TTTask, TTUsagePersistenceStatus;',
                'typedef void (^TTCompletion)(TTCall * _Nullable call, NSError * _Nullable error);',
-               'typedef TTRequestSessionDescriptor * _Nullable (^TTFeed)(TTRequestObject * _Nullable * _Nonnull readerFailure);',
-               '@interface TTCall : NSObject',
+               'typedef TTInputRequestSessionDescriptor * _Nullable (^TTFeed)(TTRequestObject * _Nullable * _Nonnull readerFailure);',
+               '@interface TTCall : NSObject', '- (instancetype)init NS_UNAVAILABLE;', '+ (instancetype)new NS_UNAVAILABLE;',
                '@property(nonatomic, strong, readonly) TTPresence<TTFacts *> *facts;',
                '@end', '@interface TTCall (Answers)', declarations('TT_GENERATED_ANSWER_DECLARATIONS', answer_header), '@end',
                '@interface TTFoundationClient : NSObject',
@@ -456,7 +456,17 @@ id TTNative_thinkthen_complete_json_v1(const struct thinkthen_complete_json_v1 *
 
 
 def rename_inputs(outputs):
-    replacements = {'TTInputEngineSettings':'TTSettings', 'TTInputRequestOptions':'TTControls',
+    replacements = {'TTInputImageMedia':'TTImageMedia', 'TTInputReaderMedia':'TTReaderMedia',
+                    'TTInputRecognitionMode':'TTRecognitionMode', 'TTInputSourceUnit':'TTSourceUnit',
+                    'TTInputRequestFraming':'TTFraming', 'TTInputRequestFunction':'TTFunction',
+                    'TTInputRequestSessionDescriptor':'TTDescriptor', 'TTInputRequestReader':'TTReading',
+                    'TTInputRequestReaderFailureInvalidInput':'TTInvalidInputFailure',
+                    'TTInputRequestReaderFailureIo':'TTReaderIOFailure',
+                    'TTInputRequestReaderFailureProducer':'TTProducerFailure',
+                    'TTInputRequestReaderFailureUtf8':'TTReaderUTF8Failure',
+                    'TTInputRequestOriginalJson':'TTOriginalJSON', 'TTInputRequestOriginalText':'TTOriginalText',
+                    'TTInputRequestImageBytes':'TTByteImage', 'TTInputRequestImageFile':'TTFileImage',
+                    'TTInputEngineSettings':'TTSettings', 'TTInputRequestOptions':'TTControls',
                     'TTInputRequestQuestionText':'TTTextQuestion', 'TTInputRequestQuestionFile':'TTQuestionFile',
                     'TTInputRequestQuestionName':'TTQuestionName', 'TTInputRequestQuestionReference':'TTQuestionReference',
                     'TTInputRequestQuestionDefinition':'TTQuestionDefinition',
@@ -464,7 +474,7 @@ def rename_inputs(outputs):
                     'TTInputRequestInputRecords':'TTRecordsInput', 'TTInputRequestInputFeed':'TTFeedInput',
                     'TTInputRequestInputSource':'TTSourceInput', 'TTInputRequestInputEntities':'TTEntitiesInput',
                     'TTInputRequestInputUnits':'TTUnitsInput', 'TTInputRequestItem':'TTItem',
-                    'TTInputRequestSource':'TTFiles', 'TTInputRequestCall':'TTRequestCall', 'TTInputRequest':'TTRequest'}
+                    'TTInputRequestSource':'TTFiles', 'TTInputRequestCall':'TTCallArguments', 'TTInputRequest':'TTRequest'}
     def rename(text):
         for old in sorted(replacements, key=len, reverse=True): text = text.replace(old, replacements[old])
         return re.sub(r'\bTTInput([A-Z]\w*)', r'TT\1Builder', text)

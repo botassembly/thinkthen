@@ -81,10 +81,10 @@ int main(int argc, const char *argv[]) {
             NSArray *items = fixture[@"feed_items"];
             if (items) {
                 __block NSUInteger index = 0;
-                feed = ^TTRequestSessionDescriptor *(TTRequestObject **readerFailure) {
+                feed = ^TTDescriptor *(TTRequestObject **readerFailure) {
                     *readerFailure = nil;
                     if (index == items.count) return nil;
-                    return [[TTRequestSessionDescriptor alloc] initWithFields:@{@"item":items[index++]}];
+                    return [[TTDescriptor alloc] initWithFields:@{@"item":items[index++]}];
                 };
             }
 #define NAMED(name) if ([verb isEqual:@#name]) task = [client name:[[TTQuestion alloc] initWithFields:fixture[@"question"]] input:[[TTInput alloc] initWithFields:fixture[@"input"]] options:[[TTControls alloc] initWithFields:fixture[@"options"]] feed:feed completion:completion error:&error];
