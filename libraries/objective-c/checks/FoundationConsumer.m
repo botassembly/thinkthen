@@ -45,6 +45,13 @@ int main(int argc, const char *argv[]) {
         require(usage.state == TTUsagePersistenceWritten && usage.advice == nil);
         require(retained.facts.state == TTPresenceValue);
         require([retained decideAnswer:&error].state == TTPresenceValue && error == nil);
+        require([retained filterAnswer:&error] == nil);
+        require([error.domain isEqual:TTAnswerErrorDomain] && error.code == 1);
+        require([error.localizedDescription isEqual:@"Expected exactly one successful answer"]);
+        require([error.userInfo[@"ThinkThenFunction"] isEqual:@"filter"]);
+        require([error.userInfo[@"ThinkThenAnswerCount"] unsignedIntegerValue] == 0);
+        require(error.userInfo[@"ThinkThenCall"] == retained);
+        error = nil;
         // Authored finite numbers survive native copying beyond decimal's exponent range.
         client = [[TTFoundationClient alloc] initWithSettings:nil error:&error];
         for (NSNumber *number in @[@(1e308), @(1e-308)]) {

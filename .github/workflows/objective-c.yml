@@ -19,7 +19,7 @@ jobs:
           persist-credentials: false
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
         with:
-          ref: 8b2a47981a416a324514920e8b72197a89b263e5
+          ref: b38f96f7ee01ea134e8e31aa81debc3c43819f41
           path: native-source
           persist-credentials: false
       - name: Build matching native test dependency
