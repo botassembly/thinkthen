@@ -12,4 +12,8 @@ pub fn build(b: *std.Build) void {
     example.root_module.addImport("thinkthen", module);
     pkg.linkNative(b, example, module, null, .static);
     b.installArtifact(example);
+    const public = b.addExecutable(.{ .name = "public-example", .root_module = b.createModule(.{ .root_source_file = b.path("public.zig"), .target = target }) });
+    public.root_module.addImport("thinkthen", module);
+    pkg.linkNative(b, public, module, null, .static);
+    b.installArtifact(public);
 }

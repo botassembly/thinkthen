@@ -42,21 +42,39 @@ pub fn main() !void {
     var request_arena = std.heap.ArenaAllocator.init(a);
     defer request_arena.deinit();
     const descriptor = try request_fixture.decode(tt.inputs.RequestCall, request_arena.allocator(), call);
-    const request = try tt.Request.init(a, descriptor);
+    const request = try tt.Request.init(a, @tagName(descriptor.function), descriptor.question, descriptor.input, descriptor.options);
     defer request.deinit();
+    if (!doc.get("cancel").?.bool and !doc.get("held_cancel").?.bool and descriptor.input != .feed) {
+        inline for (std.meta.fields(tt.inputs.RequestFunction)) |function| {
+            if (descriptor.function == @field(tt.inputs.RequestFunction, function.name)) {
+                if (@field(tt.calls, function.name)(&engine, .{ .question = descriptor.question, .input = descriptor.input, .options = descriptor.options })) |result| {
+                    var answer = result;
+                    defer answer.deinit();
+                    engine.deinit();
+                    if (answer.failure() == null) {
+                        var rows: usize = 0;
+                        for (answer.packets) |packet| if (packet.value().* == .observation and packet.value().observation.value == .row) {
+                            rows += 1;
+                        };
+                        if (comptime !std.mem.eql(u8, function.name, "rank") and !std.mem.eql(u8, function.name, "filter")) {
+                            if (rows != 1) {
+                                if (answer.value()) |_| return error.MultipleAnswersAccepted else |err| if (err != error.Cardinality) return err;
+                            } else try compareAnswer(function.name, answer, a);
+                        } else try compareAnswer(function.name, answer, a);
+                    } else {
+                        if (answer.value()) |_| return error.FailedAnswerAccepted else |err| if (err != error.CallFailed) return err;
+                    }
+                    try writePackets(answer.packets, a);
+                    return;
+                } else |err| {
+                    try writeAdmission(err);
+                    return;
+                }
+            }
+        }
+    }
     var session = request.start(&engine) catch |err| {
-        var out = std.fs.File.stdout().writer(&.{});
-        const code: u32 = switch (err) {
-            error.Usage => 1,
-            error.Backend => 2,
-            error.Deadline => 3,
-            error.Local => 4,
-            error.Cancelled => 5,
-            else => 6,
-        };
-        try out.interface.print("{{\"admission\":{{\"code\":{d},\"message\":", .{code});
-        try std.json.Stringify.value(tt.session.message(), .{}, &out.interface);
-        try out.interface.writeAll("}}\n");
+        try writeAdmission(err);
         return;
     };
     if (doc.get("cancel").?.bool) session.cancel();
@@ -91,14 +109,60 @@ pub fn main() !void {
         .packet => |packet| try packets.append(a, packet),
     };
     session.deinit();
+    try writePackets(packets.items, a);
+}
+
+fn writePackets(packets: []const *tt.session.Packet, a: std.mem.Allocator) !void {
     var projection_arena = std.heap.ArenaAllocator.init(a);
     defer projection_arena.deinit();
     var out = std.fs.File.stdout().writer(&.{});
     try out.interface.writeAll("{\"packets\":[");
-    for (packets.items, 0..) |packet, i| {
+    for (packets, 0..) |packet, i| {
         if (i > 0) try out.interface.writeAll(",");
         var writer: std.json.Stringify = .{ .writer = &out.interface };
-        try request_fixture.writeNative(try request_fixture.projectAnswers(packet, packets.items, projection_arena.allocator()), &writer);
+        try request_fixture.writeNative(try request_fixture.projectAnswers(packet, packets, projection_arena.allocator()), &writer);
     }
     try out.interface.writeAll("]}\n");
+}
+
+fn writeAdmission(err: anyerror) !void {
+    var out = std.fs.File.stdout().writer(&.{});
+    const code: u32 = switch (err) {
+        error.Usage => 1,
+        error.Backend => 2,
+        error.Deadline => 3,
+        error.Local => 4,
+        error.Cancelled => 5,
+        else => 6,
+    };
+    try out.interface.print("{{\"admission\":{{\"code\":{d},\"message\":", .{code});
+    try std.json.Stringify.value(tt.session.message(), .{}, &out.interface);
+    try out.interface.writeAll("}}\n");
+}
+
+fn compareAnswer(comptime function: []const u8, answer: anytype, a: std.mem.Allocator) !void {
+    const actual = try answer.value();
+    if (comptime std.mem.eql(u8, function, "rank") or std.mem.eql(u8, function, "filter")) {
+        const Element = @typeInfo(@TypeOf(actual)).pointer.child;
+        var expected: std.ArrayList(Element) = .empty;
+        defer expected.deinit(a);
+        for (answer.packets) |packet| {
+            const aggregate = if (comptime std.mem.eql(u8, function, "rank")) packet.value().* == .rank_aggregate else packet.value().* == .filter_aggregate;
+            if (aggregate) {
+                expected.clearRetainingCapacity();
+                const view = packet.answers();
+                try expected.appendSlice(a, try @field(@TypeOf(view), function)(view));
+                break;
+            }
+            if (comptime std.mem.eql(u8, function, "filter")) if (packet.value().* == .filter_row) try expected.appendSlice(a, try packet.answers().filter());
+        }
+        try std.testing.expectEqualDeep(@as(@TypeOf(actual), expected.items), actual);
+    } else {
+        for (answer.packets) |packet| if (packet.value().* == .observation and packet.value().observation.value == .row) {
+            const view = packet.answers();
+            try std.testing.expectEqualDeep(try @field(@TypeOf(view), function)(view), actual);
+            return;
+        };
+        return error.MissingAnswer;
+    }
 }

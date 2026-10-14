@@ -83,11 +83,24 @@ pub fn main() !void {
         };
         typed.deinit();
     }
-    const request = try tt.Request.init(a, .{ .function = .decide, .question = .{ .text = .{ .text = "Does it pass?" } }, .input = .{ .text = .{ .text = "Evidence." } }, .options = .{ .details = false } });
+    const request = try tt.Request.init(a, "decide", .{ .text = .{ .text = "Does it pass?" } }, .{ .text = .{ .text = "Evidence." } }, .{ .details = false });
     var plan = try request.plan(&engine);
     request.deinit();
     defer plan.deinit();
     if (plan.value.records != 1 or plan.value.requests != 1 or plan.value.largest_request_bytes == 0 or plan.value.estimated_input_tokens.upper == 0) return error.WrongPlan;
+    if (plan.value.estimated_bytes == 0 or plan.value.estimated_input_tokens.lower > plan.value.estimated_input_tokens.upper or plan.value.first_body_utf8 == null or plan.value.largest_request_estimated_input_tokens == 0 or plan.value.token_estimate_method.len == 0 or plan.value.upper_bound) return error.WrongPlanFields;
+    const unknown = try tt.Request.init(a, "unknown-function", .{ .text = .{ .text = "Does it pass?" } }, .{ .text = .{ .text = "Evidence." } }, null);
+    defer unknown.deinit();
+    if (unknown.start(&engine)) |unexpected| {
+        var owned = unexpected;
+        owned.deinit();
+        return error.UnknownFunctionAccepted;
+    } else |err| {
+        if (err != error.Usage) return err;
+        const immediate = try tt.capture(a, &engine, 1);
+        defer tt.releaseFailure(a, immediate);
+        if (immediate.kind != .usage or immediate.message.len == 0) return error.WrongImmediateFailure;
+    }
     const args = try std.process.argsAlloc(a);
     defer std.process.argsFree(a, args);
     if (args.len > 1 and std.mem.eql(u8, args[1], "helpers")) {
@@ -102,7 +115,7 @@ pub fn main() !void {
         std.debug.print("installed Zig plan PASS\n", .{});
         return;
     }
-    var session = try tt.calls.decide(&engine, .{ .question = .{ .text = .{ .text = "Does it pass?" } }, .input = .{ .feed = .{ .name = "owned" } } });
+    var session = try tt.session.startNamed(&engine, .decide, .{ .question = .{ .text = .{ .text = "Does it pass?" } }, .input = .{ .feed = .{ .name = "owned" } } });
     if (try session.push(a, .{ .item = .{ .original = .{ .text = .{ .text = if (failure_case) "status-401" else if (usage_case) "consumer-zig" else "Evidence." } } }, .location = .{ .file = "owned.txt", .first_line = 1, .last_line = 1 } }) != .accepted) return error.FeedRefused;
     try session.finish();
     var retained_row: ?*tt.session.Packet = null;
@@ -134,7 +147,7 @@ pub fn main() !void {
         defer observed.deinit(a);
         status = try engine.finishUsageStatus();
     }
-    const closed_request = try tt.Request.init(a, .{ .function = .decide, .question = .{ .text = .{ .text = "Does it pass?" } }, .input = .{ .text = .{ .text = "Evidence." } } });
+    const closed_request = try tt.Request.init(a, "decide", .{ .text = .{ .text = "Does it pass?" } }, .{ .text = .{ .text = "Evidence." } }, null);
     defer closed_request.deinit();
     engine.deinit();
     if (closed_request.start(&engine)) |unexpected| {
@@ -201,7 +214,7 @@ pub fn main() !void {
 fn helperInputs(engine: *tt.Engine, a: std.mem.Allocator) !void {
     const original = try std.json.parseFromSlice(std.json.Value, a, "{\"ticket\":1}", .{});
     defer original.deinit();
-    var call = try tt.calls.filter(engine, .{ .options = .{ .batch = .{ .integer = 1 } }, .question = .{ .text = .{ .text = "Does it pass?" } }, .input = .{ .records = .{ .items = &.{
+    var call = try tt.session.startNamed(engine, .filter, .{ .options = .{ .batch = .{ .integer = 1 } }, .question = .{ .text = .{ .text = "Does it pass?" } }, .input = .{ .records = .{ .items = &.{
         .{ .original = .{ .json = .{ .value = .null } } },
         .{ .original = .{ .json = .{ .value = original.value } } },
     } } } });

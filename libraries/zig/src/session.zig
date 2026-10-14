@@ -129,7 +129,10 @@ pub const Session = struct {
     }
 };
 pub fn startNamed(engine: *tt.Engine, function: tt.inputs.RequestFunction, arguments: calls.Arguments) !Session {
-    const request = try tt.Request.init(engine.allocator, .{ .function = function, .question = arguments.question, .input = arguments.input, .options = arguments.options });
+    const request = try tt.Request.init(engine.allocator, @tagName(function), arguments.question, arguments.input, arguments.options);
     defer request.deinit();
     return request.start(engine);
 }
+
+pub const Answer = @import("blocking.zig").Answer;
+pub const completeNamed = @import("blocking.zig").completeNamed;

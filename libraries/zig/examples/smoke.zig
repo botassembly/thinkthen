@@ -12,7 +12,7 @@ pub fn main() !void {
     defer engine.deinit();
     const question = std.posix.getenv("THINKTHEN_TEST_SMOKE_QUESTION") orelse return error.NoQuestion;
     const text = std.posix.getenv("THINKTHEN_TEST_SMOKE_TEXT") orelse return error.NoText;
-    var call = try tt.calls.decide(&engine, .{ .question = .{ .text = .{ .text = question } }, .input = .{ .text = .{ .text = text } } });
+    var call = try tt.session.startNamed(&engine, .decide, .{ .question = .{ .text = .{ .text = question } }, .input = .{ .text = .{ .text = text } } });
     defer call.deinit();
     while (true) switch (try call.next()) {
         .pending => return error.BlockingPending,
