@@ -218,9 +218,14 @@ function selfTest() {
   }
   const dartReadme = real.find(([path]) => path === 'libraries/dart/README.md');
   if (!dartReadme || scan(...dartReadme).problems.length) throw new Error('real Dart README is not clean');
-  const genericReadme = dartReadme[1].replaceAll('refundDecision', 'result');
+  const dartCall = /^([ \t]*final[ \t]+)([A-Za-z_]\w*)([ \t]*=[ \t]*await[ \t]+engine\.decide[ \t]*\()/m.exec(dartReadme[1]);
+  if (!dartCall) throw new Error('real Dart call did not reach the shared generic-name rule');
+  const genericReadme = dartReadme[1].replace(dartCall[0], `${dartCall[1]}result${dartCall[3]}`);
+  const callLine = dartReadme[1].slice(0, dartCall.index).split('\n').length;
+  const genericProblems = scan(dartReadme[0], genericReadme).problems;
+  const expectedGeneric = `named answers: ${dartReadme[0]}:${callLine}: generic: the answer is named result. Name it for its meaning.`;
   if (genericReadme === dartReadme[1] ||
-      !scan(dartReadme[0], genericReadme).problems.some((line) => /: generic: /.test(line))) {
+      genericProblems.length !== 1 || genericProblems[0] !== expectedGeneric) {
     throw new Error('real Dart call did not reach the shared generic-name rule');
   }
   console.log('named answers: self-test passed');
