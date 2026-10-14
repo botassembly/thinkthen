@@ -77,12 +77,17 @@ def main():
                 elif function == 'relate':
                     assert row['value']['source_name'] == 'Alice' and row['value']['target_name'] == 'Acme', row
                     assert row['probability'] == .9, row
+                    assert len(row['result']['value']) == 1, row
                 else:
                     assert row['probability'] == probability, (function, row)
 
-            failed = rows("SELECT to_jsonb(r) FROM thinkthen_decide_details('Fits?',ARRAY[" + record + ",NULL," + record + "]) r")
-            assert len(failed) == 1 and failed[0]['failure']['kind'] == 'usage', failed
-            assert 'Alpha.' not in failed[0]['failure']['message'], failed
+            for function in ('decide', 'rank'):
+                for incremental in ('false', 'true'):
+                    failed = rows("SELECT to_jsonb(r) FROM thinkthen_" + function + "_details(" + quoted('{"decide":"Fits?"}') + ",ARRAY[" + record + ",NULL," + record + "],thinkthen_reading(incremental=>" + incremental + ")) r")
+                    assert len(failed) == 1 and failed[0]['failure']['kind'] == 'usage', failed
+                    assert failed[0]['failure']['message'] == 'record list contains NULL', failed
+                    assert failed[0]['facts'] is None and failed[0]['observations'] == [], failed
+                    assert 'Alpha.' not in failed[0]['failure']['message'], failed
             with ConditionalBackend(f'http://127.0.0.1:{backend.port}/arm/full/v1') as proxy:
                 host.start({**env, 'THINKTHEN_BASE_URL': proxy.base})
                 failed = "thinkthen_record(text=>'private evidence')"

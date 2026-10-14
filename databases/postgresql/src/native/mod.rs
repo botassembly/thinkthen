@@ -95,26 +95,12 @@ pub(super) fn execute(
         projection = projection.with_context_schema(schema);
     }
     let request = composed_request(&request)?;
-    let records = input::deferred(records);
-    let image_inputs = records.iter().any(|record| {
-        record
-            .as_ref()
-            .is_ok_and(|record| !record.item.images.is_empty())
-    });
-    let records = if incremental {
-        records
-    } else {
-        records
-            .into_iter()
-            .collect::<Result<Vec<_>, _>>()?
-            .into_iter()
-            .map(Ok)
-            .collect()
-    };
+    let records = input::deferred(records)?;
+    let image_inputs = records.iter().any(input::Record::has_images);
     call::run_result(call::read_result()?, move |engine, controls| {
         let records = records
             .into_iter()
-            .map(|record| input::compose(record?, &projection));
+            .map(|record| input::compose(record, &projection));
         let records: Box<
             dyn Iterator<Item = Result<thinkthen::RecordInput<thinkthen::QuestionInput>, Error>>,
         > = if incremental {
