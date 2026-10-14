@@ -1301,7 +1301,8 @@
       "declarations": [
         "libraries/zig/src/thinkthen.zig",
         "libraries/zig/src/authored.zig",
-        "libraries/zig/src/session.zig"
+        "libraries/zig/src/session.zig",
+        "libraries/zig/src/blocking.zig"
       ],
       "option_containers": [
         "RequestOptions"
@@ -1336,7 +1337,8 @@
         "Plan",
         "Question",
         "Request",
-        "UsageStatus"
+        "UsageStatus",
+        "CallResult"
       ],
       "representation_owners": [
         "Presence",
@@ -1349,7 +1351,8 @@
       "representation_types": [
         "Packet",
         "Read",
-        "Role"
+        "Role",
+        "CallResult"
       ],
       "representation_calls": [
         "Result",
@@ -1365,7 +1368,8 @@
         "checked",
         "message",
         "bytes",
-        "Answer"
+        "Answer",
+        "CallResult"
       ],
       "representation_members": {
         "Packet": [
@@ -1413,6 +1417,32 @@
           "rank",
           "rank_set",
           "find"
+        ],
+        "CallResult": [
+          "arena",
+          "packets"
+        ],
+        "Result": [
+          "ok",
+          "failed"
+        ]
+      },
+      "exported_declarations": {
+        "libraries/zig/src/blocking.zig": [
+          "CallResult"
+        ]
+      },
+      "result_members": {
+        "CallResult": [
+          "value",
+          "probability",
+          "results",
+          "facts"
+        ]
+      },
+      "result_methods": {
+        "CallResult": [
+          "deinit"
         ]
       }
     },

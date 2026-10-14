@@ -256,6 +256,21 @@ def cstyle(source, language):
                         result.add(Declaration(name, accessor[1], 'call'))
         if not match[0].startswith('extension'):
             result.add(Declaration('', name, 'type'))
+    if language == 'zig':
+        # A public type factory exposes the members of its returned anonymous type.
+        function_bodies = [text.rfind('{', m.start(), m.end()) for m in
+                           re.finditer(r'\bfn\s+\w+\s*\([^{};]*\)[^{};]*\{', text)]
+        for match in re.finditer(r'\bpub\s+(?:(?:inline|noinline)\s+)?fn\s+(\w+)\s*\([^{};]*\)\s+type\s*\{', text):
+            body = text.rfind('{', match.start(), match.end())
+            if body not in pairs:
+                continue
+            for returned in re.finditer(r'\breturn\s+(?:(?:extern|packed)\s+)?(?:struct|union|enum)(?:\s*\([^{}]*\))?\s*\{', text[body:pairs[body]]):
+                start = body + returned.end() - 1
+                position = body + returned.start()
+                enclosing = max((b for b in function_bodies if b < position < pairs.get(b, b)), default=None)
+                if start in pairs and enclosing == body:
+                    scopes.append((start, pairs[start], match[1]))
+                    result.add(Declaration('', match[1], 'type'))
     if language == 'go':
         for match in re.finditer(r'\btype\s+([A-Z]\w*)\s+(?:struct|interface)\s*\{', text):
             start = text.rfind('{', match.start(), match.end())
@@ -283,7 +298,7 @@ def cstyle(source, language):
         'swift': r'\bpublic\s+(?:(?:static|class|mutating|convenience)\s+)*(?:func|var|let)\s+`?(\w+)',
         'kotlin': r'(?m)(?:^|[;{}\n])\s*(?:(?:public|override|open|final|suspend)\s+)*(?:fun|val|var)\s+`?(\w+)' ,
         'scala': r'(?m)(?:^|[;{}\n])\s*(?:(?:override|final|lazy)\s+)*(?:def|val|var)\s+`?(\w+)' ,
-        'zig': r'\bpub\s+(?:fn|const|var)\s+(\w+)|(?:^|[{},\n])\s*(\w+)\s*:',
+        'zig': r'\bpub\s+(?:(?:inline|noinline)\s+)?(?:fn|const|var)\s+(\w+)|(?:^|[{},\n])\s*(\w+)\s*:',
         'go': r'(?m:^\s*)([A-Z]\w*)\s+[^\n{}]+',
         'php': r'\bpublic\s+(?:static\s+)?function\s+(\w+)\s*\(|\bpublic\s+(?:readonly\s+)?[\w?\\]+\s+\$(\w+)',
         'dart': r'(?m)(?:^|[;{}\n])\s*(?:(?:static|final|late|const|external|factory)\s+)*[\w.]+(?:<[\w<>?,.\[\] \t\r\n]+>)?\??\s+(?:get\s+)?(\w+)\s*(?:\(|=>|[;=])|\bget\s+(\w+)\s*(?:=>|\{)',
@@ -303,14 +318,14 @@ def cstyle(source, language):
             continue
         if language == 'go' and not container:
             continue
-        if container is None or name.startswith('_') or language == 'dart' and (name == 'Function' or re.match(r'\s*(?:library|part)\b', match[0])):
+        if container is None or name.startswith('_') and language != 'zig' or language == 'dart' and (name == 'Function' or re.match(r'\s*(?:library|part)\b', match[0])):
             continue
         if language == 'cpp' and container:
             if not cpp_public(pos):
                 continue
         tail = text[match.end():match.end() + 3]
         kind = 'call' if '(' in match[0] or language in ('swift', 'objc', 'php') and 'func' in match[0] or language in ('kotlin', 'scala', 'zig') and re.search(r'\b(fun|def|fn)\b', match[0]) else 'field'
-        if language == 'zig' and re.search(r'\bpub\s+const\b', match[0]):
+        if language == 'zig' and re.search(r'\bpub\s+(?:const|var)\b', match[0]):
             kind = 'export'
         if language == 'zig' and kind == 'field' and not container:
             continue
@@ -398,7 +413,7 @@ def cstyle(source, language):
             result.add(Declaration(match[1], match[2], 'embedded'))
     if language in ('typescript', 'zig', 'swift', 'go'):
         patterns = {'typescript': r'\bexport\s+(?:declare\s+)?(?:class|interface|type|function|const|enum)\s+(\w+)',
-                    'zig': r'\bpub\s+(?:const|fn)\s+(\w+)',
+                    'zig': r'\bpub\s+(?:(?:inline|noinline)\s+)?(?:const|var|fn)\s+(\w+)',
                     'swift': r'\bpublic\s+(?:typealias|enum|struct|class)\s+(\w+)',
                     'go': r'\btype\s+([A-Z]\w*)'}
         for match in re.finditer(patterns[language], text):

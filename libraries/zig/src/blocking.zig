@@ -23,7 +23,7 @@ pub fn completeNamed(engine: *tt.Engine, comptime function: tt.inputs.RequestFun
     const Input = @TypeOf(arguments.input);
     const arguments_typed: tt.calls.Arguments(Input) = arguments;
     var session = tt.session.startNamed(engine, function, .{ .question = arguments_typed.question, .input = tt.calls.nativeInput(arguments_typed.input), .options = arguments_typed.options }) catch |err| {
-        return .{ .failed = try tt.captureSession(engine.allocator, err) };
+        return .{ .failed = try captureSession(engine.allocator, err) };
     };
     defer session.deinit();
     try session.finish();
@@ -84,4 +84,20 @@ pub fn completeNamed(engine: *tt.Engine, comptime function: tt.inputs.RequestFun
         probability.* = try values.callProbability(function, receipt, i, native, a);
     }
     return .{ .ok = .{ .value = if (list) result_values else result_values[0], .probability = if (list) probabilities else probabilities[0], .results = receipts.items, .facts = facts, .arena = arena, .packets = packets.items } };
+}
+
+fn captureSession(allocator: std.mem.Allocator, err: anyerror) !tt.Failure {
+    inline for (std.meta.fields(tt.FailureKind)) |kind| {
+        if (std.ascii.eqlIgnoreCase(@errorName(err), kind.name)) return captureView(allocator, @import("native.zig").c.thinkthen_session_error_view(), kind.value);
+    }
+    return err;
+}
+pub fn captureView(allocator: std.mem.Allocator, raw: anytype, code: c_int) !tt.Failure {
+    if (raw == null) return error.Defect;
+    const view = raw[0];
+    var arena = std.heap.ArenaAllocator.init(allocator);
+    errdefer arena.deinit();
+    const facts = if (view.facts != null) try values.readImmediateFacts(arena.allocator(), view.facts[0]) else null;
+    const message = try allocator.dupe(u8, if (view.message.len == 0) &.{} else view.message.data[0..view.message.len]);
+    return .{ .code = code, .kind = std.meta.intToEnum(tt.FailureKind, code) catch .defect, .retryable = view.retryable != 0, .message = message, .facts = facts, .arena = arena };
 }

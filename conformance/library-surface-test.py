@@ -112,6 +112,75 @@ class PublicSurface(unittest.TestCase):
                             self.assertEqual(invoke(), [])
                         path.write_text(original)
 
+    def test_zig_call_result_members_and_exports(self):
+        cases = [
+            ('src/blocking.zig', field + ':', 'missing_' + field + ':',
+             'missing result field: CallResult.' + field)
+            for field in ('value', 'probability', 'results', 'facts')
+        ] + [
+            ('src/thinkthen.zig', 'pub const authored', 'pub var unknownVariable: bool = false;\npub const authored',
+             'unlisted public call/export: .unknownVariable'),
+            ('src/blocking.zig', 'value: V,', 'value: V, _extraField: bool,',
+             'unlisted public field: CallResult._extraField'),
+            ('src/blocking.zig', 'value: V,', 'value: V, pub fn _extraExport() void {}',
+             'unlisted public call/export: CallResult._extraExport'),
+            ('src/blocking.zig', 'return struct {',
+             'if (@sizeOf(V) == 0) { return struct { extraConditional: bool }; } return struct {',
+             'unlisted public field: CallResult.extraConditional'),
+            ('src/blocking.zig', 'value: V,', 'value: V, pub fn init() void {}',
+             'unlisted public call/export: CallResult.init'),
+            ('src/blocking.zig', 'value: V,', 'value: V, pub const Result = bool;',
+             'unlisted public call/export: CallResult.Result'),
+            ('src/blocking.zig', 'pub fn deinit(', 'fn deinit(',
+             'missing result method: CallResult.deinit'),
+            ('src/thinkthen.zig', 'pub const authored', 'pub inline fn extraInline() void {}\npub const authored',
+             'unlisted public call/export: .extraInline'),
+            ('src/blocking.zig', 'value: V,', 'value: V, extraField: bool,',
+             'unlisted public field: CallResult.extraField'),
+            ('src/blocking.zig', 'value: V,', 'value: V, state: bool,',
+             'unlisted public field: CallResult.state'),
+            ('src/blocking.zig', 'value: V,', 'value: V, pub fn extraExport() void {}',
+             'unlisted public call/export: CallResult.extraExport'),
+            ('src/thinkthen.zig', 'pub const authored', 'pub const UnknownExport = bool;\npub const authored',
+             'unlisted public type/export: .UnknownExport'),
+            ('src/results_generated.zig', 'value: T,', 'missing_value: T,',
+             'missing generated declaration: results_generated.zig:Presence.value'),
+            ('src/calls_generated.zig', 'input: Input,', 'missing_input: Input,',
+             'missing generated declaration: calls_generated.zig:Arguments.input'),
+        ]
+        with tempfile.TemporaryDirectory(prefix='library-surface-zig-result-') as folder:
+            root = Path(folder)
+            for name in ('sdlc', 'specification', 'conformance'):
+                (root / name).symlink_to(ROOT / name, target_is_directory=True)
+            shutil.copytree(ROOT / 'libraries/zig/src', root / 'libraries/zig/src')
+            header = root / 'libraries/c/include/thinkthen.h'
+            header.parent.mkdir(parents=True)
+            shutil.copyfile(ROOT / 'libraries/c/include/thinkthen.h', header)
+            def invoke():
+                run = subprocess.run(['python3', str(CHECK), '--root', str(root), '--library', 'zig', '--json'],
+                                     capture_output=True, text=True, env=child_env(home=folder))
+                self.assertIn(run.returncode, (0, 1), run.stderr)
+                errors = json.loads(run.stdout)['libraries']['zig']
+                self.assertEqual(run.returncode, int(bool(errors)))
+                return errors
+            self.assertEqual(invoke(), [])
+            for filename, before, after, diagnostic in cases:
+                with self.subTest(diagnostic=diagnostic):
+                    path = root / 'libraries/zig' / filename
+                    original = path.read_text()
+                    self.assertIn(before, original)
+                    path.write_text(original.replace(before, after, 1))
+                    self.assertIn(diagnostic, invoke())
+                    path.write_text(original)
+            path = root / 'libraries/zig/src/blocking.zig'
+            original = path.read_text()
+            for before, after in [('pub fn CallResult', 'pub inline fn CallResult'),
+                                  ('return struct {', 'const unused = true; _ = unused; return struct {'),
+                                  ('return struct {', '// return struct { fake: bool };\nreturn struct {')]:
+                path.write_text(original.replace(before, after, 1))
+                self.assertEqual(invoke(), [])
+            path.write_text(original)
+
     def test_dart_mixins_and_generated_schema_still_detect_omissions(self):
         with tempfile.TemporaryDirectory(prefix='library-surface-dart-') as folder:
             root = Path(folder)
@@ -360,7 +429,7 @@ class PublicSurface(unittest.TestCase):
     def test_cobol_outer_guard_preserves_real_public_macros(self):
         with tempfile.TemporaryDirectory(prefix='library-surface-cobol-') as folder:
             root = Path(folder)
-            for name in ('sdlc', 'specification', 'conformance'):
+            for name in ('sdlc', 'specification', 'conformance', 'crates'):
                 (root / name).symlink_to(ROOT / name, target_is_directory=True)
             shutil.copytree(ROOT / 'libraries/cobol', root / 'libraries/cobol')
             header = root / 'libraries/c/include/thinkthen.h'
