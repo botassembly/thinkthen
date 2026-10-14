@@ -111,7 +111,7 @@ with contextlib.ExitStack() as installed:
         adapter = work / "ordered-cases"
         adapter.write_text("#!/usr/bin/env python3\n" +
                            f"import sys\nsys.path.insert(0, {str(REPO / 'conformance/children')!r})\n" +
-                           r'''import json, os, subprocess, sys
+                           r'''import json, os, sys
 from pathlib import Path
 from children import child_env
 
@@ -132,7 +132,7 @@ env = child_env(keep=("LLVM_PROFILE_FILE",), home=source.parent,
                 ASAN_OPTIONS="detect_leaks=1", UBSAN_OPTIONS="halt_on_error=1")
 for name in ("THINKTHEN_API_KEY", "LIQUIDAI_API_KEY", "OPENROUTER_API_KEY", "PERPLEXITY_API_KEY"):
     env[name] = "sk-conformance-loopback"
-sys.exit(subprocess.run([str(binary), *sys.argv[1:], *[]], env=env).returncode)
+os.execve(str(binary), [str(binary), *sys.argv[1:], *[]], env)
 ''')
         adapter.chmod(0o700)
         native_cases(adapter, consumer="objective-c")
