@@ -191,8 +191,6 @@ private package Thinkthen.Session_C is
    K_THINKTHEN_REQUEST_DEFINITION_ARM_6_V1 : constant := 6;
    K_THINKTHEN_REQUEST_DEFINITION_ARM_7_V1 : constant := 7;
    K_THINKTHEN_REQUEST_DEFINITION_ARM_8_V1 : constant := 8;
-   K_THINKTHEN_REQUEST_DEFINITION_AUTHORED_SCORE_BATCH_ARM_1_V1 : constant := 1;
-   K_THINKTHEN_REQUEST_DEFINITION_AUTHORED_SCORE_BATCH_ARM_2_V1 : constant := 2;
    K_THINKTHEN_REQUEST_DESCRIPTION_ARM_1_V1 : constant := 1;
    K_THINKTHEN_REQUEST_DESCRIPTION_ARM_2_V1 : constant := 2;
    K_THINKTHEN_REQUEST_DESCRIPTION_ARM_3_V1 : constant := 3;
@@ -233,6 +231,8 @@ private package Thinkthen.Session_C is
    K_THINKTHEN_REQUEST_ORIGINAL_ARM_2_V1 : constant := 2;
    K_THINKTHEN_REQUEST_POINTERS_ARM_1_V1 : constant := 1;
    K_THINKTHEN_REQUEST_POINTERS_ARM_2_V1 : constant := 2;
+   K_THINKTHEN_REQUEST_QUESTION_BATCH_ARM_1_V1 : constant := 1;
+   K_THINKTHEN_REQUEST_QUESTION_BATCH_ARM_2_V1 : constant := 2;
    K_THINKTHEN_REQUEST_QUESTION_SELECTOR_ARM_1_V1 : constant := 1;
    K_THINKTHEN_REQUEST_QUESTION_SELECTOR_ARM_2_V1 : constant := 2;
    K_THINKTHEN_REQUEST_QUESTION_SELECTOR_ARM_3_V1 : constant := 3;
@@ -1017,7 +1017,7 @@ private package Thinkthen.Session_C is
       reserved : aliased Interfaces.Unsigned_32;
    end record
    with Convention => C_Pass_By_Copy;
-   type thinkthen_request_definition_authored_score_batch_data_v1 (discr : unsigned := 0) is record
+   type thinkthen_request_question_batch_data_v1 (discr : unsigned := 0) is record
       case discr is
          when 0 =>
             arm_1 : access constant thinkthen_request_literal_max_v1;
@@ -1027,9 +1027,9 @@ private package Thinkthen.Session_C is
    end record
    with Convention => C_Pass_By_Copy,
         Unchecked_Union => True;
-   type thinkthen_request_definition_authored_score_batch_v1 is record
+   type thinkthen_request_question_batch_v1 is record
       kind : aliased Interfaces.Unsigned_32;
-      data : aliased thinkthen_request_definition_authored_score_batch_data_v1;
+      data : aliased thinkthen_request_question_batch_data_v1;
    end record
    with Convention => C_Pass_By_Copy;
    type thinkthen_request_input_declaration_string_v1 is record
@@ -1185,7 +1185,7 @@ private package Thinkthen.Session_C is
    end record
    with Convention => C_Pass_By_Copy;
    type thinkthen_request_definition_authored_decide_v1 is record
-      m_batch : access constant thinkthen_request_definition_authored_score_batch_v1;
+      m_batch : access constant thinkthen_request_question_batch_v1;
       m_context_schema : access constant thinkthen_request_input_declaration_v1;
       m_decide : access constant thinkthen_request_question_text_v1;
       m_false : access constant thinkthen_request_criterion_v1;
@@ -1264,7 +1264,7 @@ private package Thinkthen.Session_C is
    end record
    with Convention => C_Pass_By_Copy;
    type thinkthen_request_definition_authored_choose_v1 is record
-      m_batch : access constant thinkthen_request_definition_authored_score_batch_v1;
+      m_batch : access constant thinkthen_request_question_batch_v1;
       m_choose : access constant thinkthen_request_question_text_v1;
       m_context_schema : access constant thinkthen_request_input_declaration_v1;
       m_item_schema : access constant thinkthen_request_input_declaration_v1;
@@ -1293,7 +1293,7 @@ private package Thinkthen.Session_C is
    end record
    with Convention => C_Pass_By_Copy;
    type thinkthen_request_definition_authored_tag_v1 is record
-      m_batch : access constant thinkthen_request_definition_authored_score_batch_v1;
+      m_batch : access constant thinkthen_request_question_batch_v1;
       m_context_schema : access constant thinkthen_request_input_declaration_v1;
       m_item_schema : access constant thinkthen_request_input_declaration_v1;
       m_labels : access constant thinkthen_request_labels_v1;
@@ -1332,7 +1332,7 @@ private package Thinkthen.Session_C is
    end record
    with Convention => C_Pass_By_Copy;
    type thinkthen_request_definition_authored_score_v1 is record
-      m_batch : access constant thinkthen_request_definition_authored_score_batch_v1;
+      m_batch : access constant thinkthen_request_question_batch_v1;
       m_context_schema : access constant thinkthen_request_input_declaration_v1;
       m_item_schema : access constant thinkthen_request_input_declaration_v1;
       m_levels : access constant thinkthen_request_levels_v1;

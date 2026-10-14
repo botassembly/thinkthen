@@ -24,15 +24,11 @@ type Annotate_Question_decide is private;
 type Annotate_Question_score is private;
 type Annotate_Question_tag is private;
 type choose is private;
-type choose_batch is private;
-type choose_batch_Kind is (choose_batch_Max_Case, choose_batch_Integer_Case);
 type criterion is private;
 type criterion_Kind is (criterion_String_Case, criterion_Object_Case, criterion_Array_Case, criterion_Null_Case);
 type cut is private;
 type cut_Kind is (cut_Number_Case, cut_String_Case);
 type decide is private;
-type decide_batch is private;
-type decide_batch_Kind is (decide_batch_Max_Case, decide_batch_Integer_Case);
 type description is private;
 type description_Kind is (description_String_Case, description_Object_Case, description_Array_Case, description_Null_Case);
 type find is private;
@@ -55,16 +51,14 @@ type Choice_Options is private;
 type Choice_Options_Kind is (Choice_Options_Array_Case, Choice_Options_Object_Case);
 type pointers is private;
 type pointers_Kind is (pointers_String_Case, pointers_Array_Case);
+type Question_Batch is private;
+type Question_Batch_Kind is (Question_Batch_Max_Case, Question_Batch_Integer_Case);
 type Question_Wording is private;
 type Question_Wording_Kind is (Question_Wording_String_Case, Question_Wording_Object_Case, Question_Wording_Array_Case);
 type relate is private;
 type relation is private;
 type score is private;
-type score_batch is private;
-type score_batch_Kind is (score_batch_Max_Case, score_batch_Integer_Case);
 type tag is private;
-type tag_batch is private;
-type tag_batch_Kind is (tag_batch_Max_Case, tag_batch_Integer_Case);
 type Probability_Band is private;
 type Probability_Band_Kind is (Probability_Band_Number_Case, Probability_Band_String_Case);
 type Cache_Document is private;
@@ -95,19 +89,11 @@ type Definition is private;
 type Definition_Kind is (Definition_decide_Case, Definition_choose_Case, Definition_tag_Case, Definition_score_Case, Definition_relate_Case, Definition_find_Case, Definition_Recognize_Definition_Case, Definition_Annotate_Definition_Case);
 type Definition_Annotate_Definition is private;
 type Definition_choose is private;
-type Definition_choose_batch is private;
-type Definition_choose_batch_Kind is (Definition_choose_batch_Max_Case, Definition_choose_batch_Integer_Case);
 type Definition_decide is private;
-type Definition_decide_batch is private;
-type Definition_decide_batch_Kind is (Definition_decide_batch_Max_Case, Definition_decide_batch_Integer_Case);
 type Definition_find is private;
 type Definition_relate is private;
 type Definition_score is private;
-type Definition_score_batch is private;
-type Definition_score_batch_Kind is (Definition_score_batch_Max_Case, Definition_score_batch_Integer_Case);
 type Definition_tag is private;
-type Definition_tag_batch is private;
-type Definition_tag_batch_Kind is (Definition_tag_batch_Max_Case, Definition_tag_batch_Integer_Case);
 type Definition_Recognize_Definition is private;
 type Image is private;
 type Image_Kind is (Image_file_Case, Image_bytes_Case);
@@ -301,8 +287,8 @@ function With_Wording_Version (Item : Thinkthen.Inputs.Annotate_Question_tag; Fi
 function Get_Wording_Version (Item : Thinkthen.Inputs.Annotate_Question_tag) return Thinkthen.Inputs.Integer_Value;
 function Has_Wording_Version (Item : Thinkthen.Inputs.Annotate_Question_tag) return Boolean;
 function Make_choose (Choose : Thinkthen.Inputs.Question_Wording) return Thinkthen.Inputs.choose;
-function With_Batch (Item : Thinkthen.Inputs.choose; Field : Thinkthen.Inputs.choose_batch) return Thinkthen.Inputs.choose;
-function Get_Batch (Item : Thinkthen.Inputs.choose) return Thinkthen.Inputs.choose_batch;
+function With_Batch (Item : Thinkthen.Inputs.choose; Field : Thinkthen.Inputs.Question_Batch) return Thinkthen.Inputs.choose;
+function Get_Batch (Item : Thinkthen.Inputs.choose) return Thinkthen.Inputs.Question_Batch;
 function Has_Batch (Item : Thinkthen.Inputs.choose) return Boolean;
 function With_Choose (Item : Thinkthen.Inputs.choose; Field : Thinkthen.Inputs.Question_Wording) return Thinkthen.Inputs.choose;
 function Get_Choose (Item : Thinkthen.Inputs.choose) return Thinkthen.Inputs.Question_Wording;
@@ -333,10 +319,6 @@ function Has_Threshold (Item : Thinkthen.Inputs.choose) return Boolean;
 function With_Wording_Version (Item : Thinkthen.Inputs.choose; Field : Thinkthen.Inputs.Integer_Value) return Thinkthen.Inputs.choose;
 function Get_Wording_Version (Item : Thinkthen.Inputs.choose) return Thinkthen.Inputs.Integer_Value;
 function Has_Wording_Version (Item : Thinkthen.Inputs.choose) return Boolean;
-function Kind (Item : Thinkthen.Inputs.choose_batch) return choose_batch_Kind;
-function choose_batch_From_Max return Thinkthen.Inputs.choose_batch;
-function choose_batch_From_Integer_Value (Item : Thinkthen.Inputs.Integer_Value) return Thinkthen.Inputs.choose_batch;
-function As_Integer_Value (Item : Thinkthen.Inputs.choose_batch) return Thinkthen.Inputs.Integer_Value;
 function Kind (Item : Thinkthen.Inputs.criterion) return criterion_Kind;
 function criterion_From_String (Item : String) return Thinkthen.Inputs.criterion;
 function As_String (Item : Thinkthen.Inputs.criterion) return Thinkthen.Inputs.Text;
@@ -351,8 +333,8 @@ function As_Number (Item : Thinkthen.Inputs.cut) return Thinkthen.Inputs.Number;
 function cut_From_String (Item : String) return Thinkthen.Inputs.cut;
 function As_String (Item : Thinkthen.Inputs.cut) return Thinkthen.Inputs.Text;
 function Make_decide (Decide : Thinkthen.Inputs.Question_Wording) return Thinkthen.Inputs.decide;
-function With_Batch (Item : Thinkthen.Inputs.decide; Field : Thinkthen.Inputs.decide_batch) return Thinkthen.Inputs.decide;
-function Get_Batch (Item : Thinkthen.Inputs.decide) return Thinkthen.Inputs.decide_batch;
+function With_Batch (Item : Thinkthen.Inputs.decide; Field : Thinkthen.Inputs.Question_Batch) return Thinkthen.Inputs.decide;
+function Get_Batch (Item : Thinkthen.Inputs.decide) return Thinkthen.Inputs.Question_Batch;
 function Has_Batch (Item : Thinkthen.Inputs.decide) return Boolean;
 function With_Context_Schema (Item : Thinkthen.Inputs.decide; Field : Thinkthen.Inputs.input_Declaration) return Thinkthen.Inputs.decide;
 function Get_Context_Schema (Item : Thinkthen.Inputs.decide) return Thinkthen.Inputs.input_Declaration;
@@ -386,10 +368,6 @@ function Has_True (Item : Thinkthen.Inputs.decide) return Boolean;
 function With_Wording_Version (Item : Thinkthen.Inputs.decide; Field : Thinkthen.Inputs.Integer_Value) return Thinkthen.Inputs.decide;
 function Get_Wording_Version (Item : Thinkthen.Inputs.decide) return Thinkthen.Inputs.Integer_Value;
 function Has_Wording_Version (Item : Thinkthen.Inputs.decide) return Boolean;
-function Kind (Item : Thinkthen.Inputs.decide_batch) return decide_batch_Kind;
-function decide_batch_From_Max return Thinkthen.Inputs.decide_batch;
-function decide_batch_From_Integer_Value (Item : Thinkthen.Inputs.Integer_Value) return Thinkthen.Inputs.decide_batch;
-function As_Integer_Value (Item : Thinkthen.Inputs.decide_batch) return Thinkthen.Inputs.Integer_Value;
 function Kind (Item : Thinkthen.Inputs.description) return description_Kind;
 function description_From_String (Item : String) return Thinkthen.Inputs.description;
 function As_String (Item : Thinkthen.Inputs.description) return Thinkthen.Inputs.Text;
@@ -470,6 +448,10 @@ function pointers_From_String (Item : String) return Thinkthen.Inputs.pointers;
 function As_String (Item : Thinkthen.Inputs.pointers) return Thinkthen.Inputs.Text;
 function pointers_From_Array (Item : Thinkthen.Inputs.Text_List) return Thinkthen.Inputs.pointers;
 function As_Array (Item : Thinkthen.Inputs.pointers) return Thinkthen.Inputs.Text_List;
+function Kind (Item : Thinkthen.Inputs.Question_Batch) return Question_Batch_Kind;
+function Question_Batch_From_Max return Thinkthen.Inputs.Question_Batch;
+function Question_Batch_From_Integer_Value (Item : Thinkthen.Inputs.Integer_Value) return Thinkthen.Inputs.Question_Batch;
+function As_Integer_Value (Item : Thinkthen.Inputs.Question_Batch) return Thinkthen.Inputs.Integer_Value;
 function Kind (Item : Thinkthen.Inputs.Question_Wording) return Question_Wording_Kind;
 function Question_Wording_From_String (Item : String) return Thinkthen.Inputs.Question_Wording;
 function As_String (Item : Thinkthen.Inputs.Question_Wording) return Thinkthen.Inputs.Text;
@@ -520,8 +502,8 @@ function With_Target (Item : Thinkthen.Inputs.relation; Field : String) return T
 function Get_Target (Item : Thinkthen.Inputs.relation) return Thinkthen.Inputs.Text;
 function Has_Target (Item : Thinkthen.Inputs.relation) return Boolean;
 function Make_score (Score : Thinkthen.Inputs.Question_Wording) return Thinkthen.Inputs.score;
-function With_Batch (Item : Thinkthen.Inputs.score; Field : Thinkthen.Inputs.score_batch) return Thinkthen.Inputs.score;
-function Get_Batch (Item : Thinkthen.Inputs.score) return Thinkthen.Inputs.score_batch;
+function With_Batch (Item : Thinkthen.Inputs.score; Field : Thinkthen.Inputs.Question_Batch) return Thinkthen.Inputs.score;
+function Get_Batch (Item : Thinkthen.Inputs.score) return Thinkthen.Inputs.Question_Batch;
 function Has_Batch (Item : Thinkthen.Inputs.score) return Boolean;
 function With_Context_Schema (Item : Thinkthen.Inputs.score; Field : Thinkthen.Inputs.input_Declaration) return Thinkthen.Inputs.score;
 function Get_Context_Schema (Item : Thinkthen.Inputs.score) return Thinkthen.Inputs.input_Declaration;
@@ -549,13 +531,9 @@ function Get_Score (Item : Thinkthen.Inputs.score) return Thinkthen.Inputs.Quest
 function With_Wording_Version (Item : Thinkthen.Inputs.score; Field : Thinkthen.Inputs.Integer_Value) return Thinkthen.Inputs.score;
 function Get_Wording_Version (Item : Thinkthen.Inputs.score) return Thinkthen.Inputs.Integer_Value;
 function Has_Wording_Version (Item : Thinkthen.Inputs.score) return Boolean;
-function Kind (Item : Thinkthen.Inputs.score_batch) return score_batch_Kind;
-function score_batch_From_Max return Thinkthen.Inputs.score_batch;
-function score_batch_From_Integer_Value (Item : Thinkthen.Inputs.Integer_Value) return Thinkthen.Inputs.score_batch;
-function As_Integer_Value (Item : Thinkthen.Inputs.score_batch) return Thinkthen.Inputs.Integer_Value;
 function Make_tag (Tag : Thinkthen.Inputs.Question_Wording) return Thinkthen.Inputs.tag;
-function With_Batch (Item : Thinkthen.Inputs.tag; Field : Thinkthen.Inputs.tag_batch) return Thinkthen.Inputs.tag;
-function Get_Batch (Item : Thinkthen.Inputs.tag) return Thinkthen.Inputs.tag_batch;
+function With_Batch (Item : Thinkthen.Inputs.tag; Field : Thinkthen.Inputs.Question_Batch) return Thinkthen.Inputs.tag;
+function Get_Batch (Item : Thinkthen.Inputs.tag) return Thinkthen.Inputs.Question_Batch;
 function Has_Batch (Item : Thinkthen.Inputs.tag) return Boolean;
 function With_Context_Schema (Item : Thinkthen.Inputs.tag; Field : Thinkthen.Inputs.input_Declaration) return Thinkthen.Inputs.tag;
 function Get_Context_Schema (Item : Thinkthen.Inputs.tag) return Thinkthen.Inputs.input_Declaration;
@@ -586,10 +564,6 @@ function Has_Threshold (Item : Thinkthen.Inputs.tag) return Boolean;
 function With_Wording_Version (Item : Thinkthen.Inputs.tag; Field : Thinkthen.Inputs.Integer_Value) return Thinkthen.Inputs.tag;
 function Get_Wording_Version (Item : Thinkthen.Inputs.tag) return Thinkthen.Inputs.Integer_Value;
 function Has_Wording_Version (Item : Thinkthen.Inputs.tag) return Boolean;
-function Kind (Item : Thinkthen.Inputs.tag_batch) return tag_batch_Kind;
-function tag_batch_From_Max return Thinkthen.Inputs.tag_batch;
-function tag_batch_From_Integer_Value (Item : Thinkthen.Inputs.Integer_Value) return Thinkthen.Inputs.tag_batch;
-function As_Integer_Value (Item : Thinkthen.Inputs.tag_batch) return Thinkthen.Inputs.Integer_Value;
 function Kind (Item : Thinkthen.Inputs.Probability_Band) return Probability_Band_Kind;
 function Probability_Band_From_Number (Item : Thinkthen.Inputs.Number) return Thinkthen.Inputs.Probability_Band;
 function As_Number (Item : Thinkthen.Inputs.Probability_Band) return Thinkthen.Inputs.Number;
@@ -816,8 +790,8 @@ function With_Threshold (Item : Thinkthen.Inputs.Definition_Annotate_Definition;
 function Get_Threshold (Item : Thinkthen.Inputs.Definition_Annotate_Definition) return Thinkthen.Inputs.Probability_Band;
 function Has_Threshold (Item : Thinkthen.Inputs.Definition_Annotate_Definition) return Boolean;
 function Make_Definition_choose (Choose : Thinkthen.Inputs.Question_Wording) return Thinkthen.Inputs.Definition_choose;
-function With_Batch (Item : Thinkthen.Inputs.Definition_choose; Field : Thinkthen.Inputs.Definition_choose_batch) return Thinkthen.Inputs.Definition_choose;
-function Get_Batch (Item : Thinkthen.Inputs.Definition_choose) return Thinkthen.Inputs.Definition_choose_batch;
+function With_Batch (Item : Thinkthen.Inputs.Definition_choose; Field : Thinkthen.Inputs.Question_Batch) return Thinkthen.Inputs.Definition_choose;
+function Get_Batch (Item : Thinkthen.Inputs.Definition_choose) return Thinkthen.Inputs.Question_Batch;
 function Has_Batch (Item : Thinkthen.Inputs.Definition_choose) return Boolean;
 function With_Choose (Item : Thinkthen.Inputs.Definition_choose; Field : Thinkthen.Inputs.Question_Wording) return Thinkthen.Inputs.Definition_choose;
 function Get_Choose (Item : Thinkthen.Inputs.Definition_choose) return Thinkthen.Inputs.Question_Wording;
@@ -848,13 +822,9 @@ function Has_Threshold (Item : Thinkthen.Inputs.Definition_choose) return Boolea
 function With_Wording_Version (Item : Thinkthen.Inputs.Definition_choose; Field : Thinkthen.Inputs.Integer_Value) return Thinkthen.Inputs.Definition_choose;
 function Get_Wording_Version (Item : Thinkthen.Inputs.Definition_choose) return Thinkthen.Inputs.Integer_Value;
 function Has_Wording_Version (Item : Thinkthen.Inputs.Definition_choose) return Boolean;
-function Kind (Item : Thinkthen.Inputs.Definition_choose_batch) return Definition_choose_batch_Kind;
-function Definition_choose_batch_From_Max return Thinkthen.Inputs.Definition_choose_batch;
-function Definition_choose_batch_From_Integer_Value (Item : Thinkthen.Inputs.Integer_Value) return Thinkthen.Inputs.Definition_choose_batch;
-function As_Integer_Value (Item : Thinkthen.Inputs.Definition_choose_batch) return Thinkthen.Inputs.Integer_Value;
 function Make_Definition_decide (Decide : Thinkthen.Inputs.Question_Wording) return Thinkthen.Inputs.Definition_decide;
-function With_Batch (Item : Thinkthen.Inputs.Definition_decide; Field : Thinkthen.Inputs.Definition_decide_batch) return Thinkthen.Inputs.Definition_decide;
-function Get_Batch (Item : Thinkthen.Inputs.Definition_decide) return Thinkthen.Inputs.Definition_decide_batch;
+function With_Batch (Item : Thinkthen.Inputs.Definition_decide; Field : Thinkthen.Inputs.Question_Batch) return Thinkthen.Inputs.Definition_decide;
+function Get_Batch (Item : Thinkthen.Inputs.Definition_decide) return Thinkthen.Inputs.Question_Batch;
 function Has_Batch (Item : Thinkthen.Inputs.Definition_decide) return Boolean;
 function With_Context_Schema (Item : Thinkthen.Inputs.Definition_decide; Field : Thinkthen.Inputs.input_Declaration) return Thinkthen.Inputs.Definition_decide;
 function Get_Context_Schema (Item : Thinkthen.Inputs.Definition_decide) return Thinkthen.Inputs.input_Declaration;
@@ -888,10 +858,6 @@ function Has_True (Item : Thinkthen.Inputs.Definition_decide) return Boolean;
 function With_Wording_Version (Item : Thinkthen.Inputs.Definition_decide; Field : Thinkthen.Inputs.Integer_Value) return Thinkthen.Inputs.Definition_decide;
 function Get_Wording_Version (Item : Thinkthen.Inputs.Definition_decide) return Thinkthen.Inputs.Integer_Value;
 function Has_Wording_Version (Item : Thinkthen.Inputs.Definition_decide) return Boolean;
-function Kind (Item : Thinkthen.Inputs.Definition_decide_batch) return Definition_decide_batch_Kind;
-function Definition_decide_batch_From_Max return Thinkthen.Inputs.Definition_decide_batch;
-function Definition_decide_batch_From_Integer_Value (Item : Thinkthen.Inputs.Integer_Value) return Thinkthen.Inputs.Definition_decide_batch;
-function As_Integer_Value (Item : Thinkthen.Inputs.Definition_decide_batch) return Thinkthen.Inputs.Integer_Value;
 function Make_Definition_find (Find : Thinkthen.Inputs.Question_Wording) return Thinkthen.Inputs.Definition_find;
 function With_Context_Schema (Item : Thinkthen.Inputs.Definition_find; Field : Thinkthen.Inputs.input_Declaration) return Thinkthen.Inputs.Definition_find;
 function Get_Context_Schema (Item : Thinkthen.Inputs.Definition_find) return Thinkthen.Inputs.input_Declaration;
@@ -941,8 +907,8 @@ function With_Wording_Version (Item : Thinkthen.Inputs.Definition_relate; Field 
 function Get_Wording_Version (Item : Thinkthen.Inputs.Definition_relate) return Thinkthen.Inputs.Integer_Value;
 function Has_Wording_Version (Item : Thinkthen.Inputs.Definition_relate) return Boolean;
 function Make_Definition_score (Score : Thinkthen.Inputs.Question_Wording) return Thinkthen.Inputs.Definition_score;
-function With_Batch (Item : Thinkthen.Inputs.Definition_score; Field : Thinkthen.Inputs.Definition_score_batch) return Thinkthen.Inputs.Definition_score;
-function Get_Batch (Item : Thinkthen.Inputs.Definition_score) return Thinkthen.Inputs.Definition_score_batch;
+function With_Batch (Item : Thinkthen.Inputs.Definition_score; Field : Thinkthen.Inputs.Question_Batch) return Thinkthen.Inputs.Definition_score;
+function Get_Batch (Item : Thinkthen.Inputs.Definition_score) return Thinkthen.Inputs.Question_Batch;
 function Has_Batch (Item : Thinkthen.Inputs.Definition_score) return Boolean;
 function With_Context_Schema (Item : Thinkthen.Inputs.Definition_score; Field : Thinkthen.Inputs.input_Declaration) return Thinkthen.Inputs.Definition_score;
 function Get_Context_Schema (Item : Thinkthen.Inputs.Definition_score) return Thinkthen.Inputs.input_Declaration;
@@ -970,13 +936,9 @@ function Get_Score (Item : Thinkthen.Inputs.Definition_score) return Thinkthen.I
 function With_Wording_Version (Item : Thinkthen.Inputs.Definition_score; Field : Thinkthen.Inputs.Integer_Value) return Thinkthen.Inputs.Definition_score;
 function Get_Wording_Version (Item : Thinkthen.Inputs.Definition_score) return Thinkthen.Inputs.Integer_Value;
 function Has_Wording_Version (Item : Thinkthen.Inputs.Definition_score) return Boolean;
-function Kind (Item : Thinkthen.Inputs.Definition_score_batch) return Definition_score_batch_Kind;
-function Definition_score_batch_From_Max return Thinkthen.Inputs.Definition_score_batch;
-function Definition_score_batch_From_Integer_Value (Item : Thinkthen.Inputs.Integer_Value) return Thinkthen.Inputs.Definition_score_batch;
-function As_Integer_Value (Item : Thinkthen.Inputs.Definition_score_batch) return Thinkthen.Inputs.Integer_Value;
 function Make_Definition_tag (Tag : Thinkthen.Inputs.Question_Wording) return Thinkthen.Inputs.Definition_tag;
-function With_Batch (Item : Thinkthen.Inputs.Definition_tag; Field : Thinkthen.Inputs.Definition_tag_batch) return Thinkthen.Inputs.Definition_tag;
-function Get_Batch (Item : Thinkthen.Inputs.Definition_tag) return Thinkthen.Inputs.Definition_tag_batch;
+function With_Batch (Item : Thinkthen.Inputs.Definition_tag; Field : Thinkthen.Inputs.Question_Batch) return Thinkthen.Inputs.Definition_tag;
+function Get_Batch (Item : Thinkthen.Inputs.Definition_tag) return Thinkthen.Inputs.Question_Batch;
 function Has_Batch (Item : Thinkthen.Inputs.Definition_tag) return Boolean;
 function With_Context_Schema (Item : Thinkthen.Inputs.Definition_tag; Field : Thinkthen.Inputs.input_Declaration) return Thinkthen.Inputs.Definition_tag;
 function Get_Context_Schema (Item : Thinkthen.Inputs.Definition_tag) return Thinkthen.Inputs.input_Declaration;
@@ -1007,10 +969,6 @@ function Has_Threshold (Item : Thinkthen.Inputs.Definition_tag) return Boolean;
 function With_Wording_Version (Item : Thinkthen.Inputs.Definition_tag; Field : Thinkthen.Inputs.Integer_Value) return Thinkthen.Inputs.Definition_tag;
 function Get_Wording_Version (Item : Thinkthen.Inputs.Definition_tag) return Thinkthen.Inputs.Integer_Value;
 function Has_Wording_Version (Item : Thinkthen.Inputs.Definition_tag) return Boolean;
-function Kind (Item : Thinkthen.Inputs.Definition_tag_batch) return Definition_tag_batch_Kind;
-function Definition_tag_batch_From_Max return Thinkthen.Inputs.Definition_tag_batch;
-function Definition_tag_batch_From_Integer_Value (Item : Thinkthen.Inputs.Integer_Value) return Thinkthen.Inputs.Definition_tag_batch;
-function As_Integer_Value (Item : Thinkthen.Inputs.Definition_tag_batch) return Thinkthen.Inputs.Integer_Value;
 function Make_Definition_Recognize_Definition (Recognize : Thinkthen.Inputs.Recognition_Rules) return Thinkthen.Inputs.Definition_Recognize_Definition;
 function With_Context_Schema (Item : Thinkthen.Inputs.Definition_Recognize_Definition; Field : Thinkthen.Inputs.input_Declaration) return Thinkthen.Inputs.Definition_Recognize_Definition;
 function Get_Context_Schema (Item : Thinkthen.Inputs.Definition_Recognize_Definition) return Thinkthen.Inputs.input_Declaration;
@@ -1336,9 +1294,6 @@ end record;
 type choose is record
 Data : Requests.T_Authored_choose;
 end record;
-type choose_batch is record
-Data : Requests.T_Authored_choose_field_batch;
-end record;
 type criterion is record
 Data : Requests.T_Authored_criterion;
 end record;
@@ -1347,9 +1302,6 @@ Data : Requests.T_Authored_cut;
 end record;
 type decide is record
 Data : Requests.T_Authored_decide;
-end record;
-type decide_batch is record
-Data : Requests.T_Authored_decide_field_batch;
 end record;
 type description is record
 Data : Requests.T_Authored_description;
@@ -1396,6 +1348,9 @@ end record;
 type pointers is record
 Data : Requests.T_Authored_pointers;
 end record;
+type Question_Batch is record
+Data : Requests.T_Authored_questionBatch;
+end record;
 type Question_Wording is record
 Data : Requests.T_Authored_questionText;
 end record;
@@ -1408,14 +1363,8 @@ end record;
 type score is record
 Data : Requests.T_Authored_score;
 end record;
-type score_batch is record
-Data : Requests.T_Authored_score_field_batch;
-end record;
 type tag is record
 Data : Requests.T_Authored_tag;
-end record;
-type tag_batch is record
-Data : Requests.T_Authored_tag_field_batch;
 end record;
 type Probability_Band is record
 Data : Requests.T_Authored_threshold;
@@ -1480,14 +1429,8 @@ end record;
 type Definition_choose is record
 Data : Requests.T_RequestDefinition_Authored_choose;
 end record;
-type Definition_choose_batch is record
-Data : Requests.T_RequestDefinition_Authored_choose_field_batch;
-end record;
 type Definition_decide is record
 Data : Requests.T_RequestDefinition_Authored_decide;
-end record;
-type Definition_decide_batch is record
-Data : Requests.T_RequestDefinition_Authored_decide_field_batch;
 end record;
 type Definition_find is record
 Data : Requests.T_RequestDefinition_Authored_find;
@@ -1498,14 +1441,8 @@ end record;
 type Definition_score is record
 Data : Requests.T_RequestDefinition_Authored_score;
 end record;
-type Definition_score_batch is record
-Data : Requests.T_RequestDefinition_Authored_score_field_batch;
-end record;
 type Definition_tag is record
 Data : Requests.T_RequestDefinition_Authored_tag;
-end record;
-type Definition_tag_batch is record
-Data : Requests.T_RequestDefinition_Authored_tag_field_batch;
 end record;
 type Definition_Recognize_Definition is record
 Data : Requests.T_RequestDefinition_RecognizeDefinition;

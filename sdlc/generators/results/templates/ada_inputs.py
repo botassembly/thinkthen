@@ -5,7 +5,7 @@ from templates.ada import identifier, enum_values, ada_string
 
 def friendly(raw):
     if raw == 'T_Authored_inputProperty_array_field_items': return 'Array_Item_Type'
-    semantic = {'T_Authored_options':'Choice_Options', 'T_Authored_questionText':'Question_Wording', 'T_Authored_threshold':'Probability_Band', 'T_Authored_labels':'Tag_Labels', 'T_Authored_levels':'Score_Levels'}
+    semantic = {'T_Authored_options':'Choice_Options', 'T_Authored_questionText':'Question_Wording', 'T_Authored_threshold':'Probability_Band', 'T_Authored_labels':'Tag_Labels', 'T_Authored_levels':'Score_Levels', 'T_Authored_questionBatch':'Question_Batch'}
     if raw in semantic: return semantic[raw]
     if raw == 'T_RecognizeQuestion': return 'Recognition_Rules'
     if raw == 'T_RelateQuestion': return 'Relation_Rules'

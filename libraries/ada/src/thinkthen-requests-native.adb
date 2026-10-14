@@ -121,9 +121,6 @@ function Store_thinkthen_request_definition_authored_find_v1 is new Store (think
 type A_thinkthen_request_definition_authored_relate_v1 is access all thinkthen_request_definition_authored_relate_v1;
 function P_thinkthen_request_definition_authored_relate_v1 is new Ada.Unchecked_Conversion (System.Address, A_thinkthen_request_definition_authored_relate_v1);
 function Store_thinkthen_request_definition_authored_relate_v1 is new Store (thinkthen_request_definition_authored_relate_v1);
-type A_thinkthen_request_definition_authored_score_batch_v1 is access all thinkthen_request_definition_authored_score_batch_v1;
-function P_thinkthen_request_definition_authored_score_batch_v1 is new Ada.Unchecked_Conversion (System.Address, A_thinkthen_request_definition_authored_score_batch_v1);
-function Store_thinkthen_request_definition_authored_score_batch_v1 is new Store (thinkthen_request_definition_authored_score_batch_v1);
 type A_thinkthen_request_definition_authored_score_v1 is access all thinkthen_request_definition_authored_score_v1;
 function P_thinkthen_request_definition_authored_score_v1 is new Ada.Unchecked_Conversion (System.Address, A_thinkthen_request_definition_authored_score_v1);
 function Store_thinkthen_request_definition_authored_score_v1 is new Store (thinkthen_request_definition_authored_score_v1);
@@ -337,6 +334,9 @@ function Store_thinkthen_request_pointers_v1 is new Store (thinkthen_request_poi
 type A_thinkthen_request_profile_v1 is access all thinkthen_request_profile_v1;
 function P_thinkthen_request_profile_v1 is new Ada.Unchecked_Conversion (System.Address, A_thinkthen_request_profile_v1);
 function Store_thinkthen_request_profile_v1 is new Store (thinkthen_request_profile_v1);
+type A_thinkthen_request_question_batch_v1 is access all thinkthen_request_question_batch_v1;
+function P_thinkthen_request_question_batch_v1 is new Ada.Unchecked_Conversion (System.Address, A_thinkthen_request_question_batch_v1);
+function Store_thinkthen_request_question_batch_v1 is new Store (thinkthen_request_question_batch_v1);
 type A_thinkthen_request_question_selector_definition_v1 is access all thinkthen_request_question_selector_definition_v1;
 function P_thinkthen_request_question_selector_definition_v1 is new Ada.Unchecked_Conversion (System.Address, A_thinkthen_request_question_selector_definition_v1);
 function Store_thinkthen_request_question_selector_definition_v1 is new Store (thinkthen_request_question_selector_definition_v1);
@@ -623,7 +623,7 @@ function Convert_RequestSource_field_paths_element_Text (Value : T_Text; Storage
 function Convert_RecognitionExampleText_field_entities_RecognitionExampleEntity_list (Value : T_RecognitionExampleEntity_List; Storage : in out Arena) return System.Address;
 function Convert_RecognitionExampleText_field_kinds_Text_list (Value : T_Text_List; Storage : in out Arena) return System.Address;
 function Convert_RecognitionExampleText_field_text_Text (Value : T_Text; Storage : in out Arena) return System.Address;
-function Convert_RequestDefinition_Authored_decide_field_batch_RequestDefinition_Authored_score_batch (Value : T_RequestDefinition_Authored_decide_field_batch; Storage : in out Arena) return System.Address;
+function Convert_Authored_questionBatch_Authored_questionBatch (Value : T_Authored_questionBatch; Storage : in out Arena) return System.Address;
 function Convert_Authored_inputDeclaration_Authored_inputDeclaration (Value : T_Authored_inputDeclaration; Storage : in out Arena) return System.Address;
 function Convert_Authored_questionText_Authored_questionText (Value : T_Authored_questionText; Storage : in out Arena) return System.Address;
 function Convert_Authored_criterion_Authored_criterion (Value : T_Authored_criterion; Storage : in out Arena) return System.Address;
@@ -633,16 +633,13 @@ function Convert_Authored_pointers_Authored_pointers (Value : T_Authored_pointer
 function Convert_Authored_profile_Authored_profile (Value : T_Authored_profile; Storage : in out Arena) return System.Address;
 function Convert_Authored_threshold_Authored_threshold (Value : T_Authored_threshold; Storage : in out Arena) return System.Address;
 function Convert_RequestDefinition_Authored_decide_field_wording_version_Integer (Value : T_Integer; Storage : in out Arena) return System.Address;
-function Convert_RequestDefinition_Authored_choose_field_batch_RequestDefinition_Authored_score_batch (Value : T_RequestDefinition_Authored_choose_field_batch; Storage : in out Arena) return System.Address;
 function Convert_RequestDefinition_Authored_choose_field_name_Text (Value : T_Text; Storage : in out Arena) return System.Address;
 function Convert_Authored_options_Authored_options (Value : T_Authored_options; Storage : in out Arena) return System.Address;
 function Convert_Authored_cut_Authored_cut (Value : T_Authored_cut; Storage : in out Arena) return System.Address;
 function Convert_RequestDefinition_Authored_choose_field_wording_version_Integer (Value : T_Integer; Storage : in out Arena) return System.Address;
-function Convert_RequestDefinition_Authored_tag_field_batch_RequestDefinition_Authored_score_batch (Value : T_RequestDefinition_Authored_tag_field_batch; Storage : in out Arena) return System.Address;
 function Convert_Authored_labels_Authored_labels (Value : T_Authored_labels; Storage : in out Arena) return System.Address;
 function Convert_RequestDefinition_Authored_tag_field_name_Text (Value : T_Text; Storage : in out Arena) return System.Address;
 function Convert_RequestDefinition_Authored_tag_field_wording_version_Integer (Value : T_Integer; Storage : in out Arena) return System.Address;
-function Convert_RequestDefinition_Authored_score_field_batch_RequestDefinition_Authored_score_batch (Value : T_RequestDefinition_Authored_score_field_batch; Storage : in out Arena) return System.Address;
 function Convert_Authored_levels_Authored_levels (Value : T_Authored_levels; Storage : in out Arena) return System.Address;
 function Convert_RequestDefinition_Authored_score_field_name_Text (Value : T_Text; Storage : in out Arena) return System.Address;
 function Convert_RequestDefinition_Authored_score_field_wording_version_Integer (Value : T_Integer; Storage : in out Arena) return System.Address;
@@ -661,8 +658,8 @@ function Convert_RequestImage_file_field_path_Text (Value : T_Text; Storage : in
 function Convert_RequestImage_bytes_field_bytes_Text (Value : T_Text; Storage : in out Arena) return System.Address;
 function Convert_RecognitionExampleEntity_RecognitionExampleEntity (Value : T_RecognitionExampleEntity; Storage : in out Arena) return System.Address;
 function Convert_RecognitionExampleText_field_kinds_element_Text (Value : T_Text; Storage : in out Arena) return System.Address;
-function Convert_RequestDefinition_Authored_decide_field_batch_value_0_Literal_max (Value : T_Literal_max; Storage : in out Arena) return System.Address;
-function Convert_RequestDefinition_Authored_decide_field_batch_value_1_Integer (Value : T_Integer; Storage : in out Arena) return System.Address;
+function Convert_Authored_questionBatch_value_0_Literal_max (Value : T_Literal_max; Storage : in out Arena) return System.Address;
+function Convert_Authored_questionBatch_value_1_Integer (Value : T_Integer; Storage : in out Arena) return System.Address;
 function Convert_Authored_inputDeclaration_string_Authored_inputDeclaration_string (Value : T_Authored_inputDeclaration_string; Storage : in out Arena) return System.Address;
 function Convert_Authored_inputDeclaration_object_Authored_inputDeclaration_object (Value : T_Authored_inputDeclaration_object; Storage : in out Arena) return System.Address;
 function Convert_Authored_questionText_value_0_Text (Value : T_Text; Storage : in out Arena) return System.Address;
@@ -676,18 +673,12 @@ function Convert_Authored_pointers_value_0_Text (Value : T_Text; Storage : in ou
 function Convert_Authored_pointers_value_1_Text_list (Value : T_Text_List; Storage : in out Arena) return System.Address;
 function Convert_Authored_threshold_value_0_Number (Value : T_Number; Storage : in out Arena) return System.Address;
 function Convert_Authored_threshold_value_1_Text (Value : T_Text; Storage : in out Arena) return System.Address;
-function Convert_RequestDefinition_Authored_choose_field_batch_value_0_Literal_max (Value : T_Literal_max; Storage : in out Arena) return System.Address;
-function Convert_RequestDefinition_Authored_choose_field_batch_value_1_Integer (Value : T_Integer; Storage : in out Arena) return System.Address;
 function Convert_Authored_options_value_0_Authored_name_list (Value : T_Authored_name_List; Storage : in out Arena) return System.Address;
 function Convert_Authored_options_value_1_Authored_description_map (Value : T_Authored_description_Map; Storage : in out Arena) return System.Address;
 function Convert_Authored_cut_value_0_Number (Value : T_Number; Storage : in out Arena) return System.Address;
 function Convert_Authored_cut_value_1_Text (Value : T_Text; Storage : in out Arena) return System.Address;
-function Convert_RequestDefinition_Authored_tag_field_batch_value_0_Literal_max (Value : T_Literal_max; Storage : in out Arena) return System.Address;
-function Convert_RequestDefinition_Authored_tag_field_batch_value_1_Integer (Value : T_Integer; Storage : in out Arena) return System.Address;
 function Convert_Authored_labels_value_0_Authored_name_list (Value : T_Authored_name_List; Storage : in out Arena) return System.Address;
 function Convert_Authored_labels_value_1_Authored_description_map (Value : T_Authored_description_Map; Storage : in out Arena) return System.Address;
-function Convert_RequestDefinition_Authored_score_field_batch_value_0_Literal_max (Value : T_Literal_max; Storage : in out Arena) return System.Address;
-function Convert_RequestDefinition_Authored_score_field_batch_value_1_Integer (Value : T_Integer; Storage : in out Arena) return System.Address;
 function Convert_Authored_levels_value_0_Authored_name_list (Value : T_Authored_name_List; Storage : in out Arena) return System.Address;
 function Convert_Authored_levels_value_1_Authored_criterion_map (Value : T_Authored_criterion_Map; Storage : in out Arena) return System.Address;
 function Convert_RelateFields_RelateFields (Value : T_RelateFields; Storage : in out Arena) return System.Address;
@@ -1876,7 +1867,7 @@ end Convert_RecognitionSeedSpan_field_start_Unsigned;
 function Convert_RequestDefinition_Authored_decide_RequestDefinition_Authored_decide (Value : T_RequestDefinition_Authored_decide; Storage : in out Arena) return System.Address is
 Result : thinkthen_request_definition_authored_decide_v1;
 begin
-if Value.T_batch.Present then Result.m_batch := P_thinkthen_request_definition_authored_score_batch_v1 (Convert_RequestDefinition_Authored_decide_field_batch_RequestDefinition_Authored_score_batch (Value.T_batch.Value, Storage)); else Result.m_batch := null; end if;
+if Value.T_batch.Present then Result.m_batch := P_thinkthen_request_question_batch_v1 (Convert_Authored_questionBatch_Authored_questionBatch (Value.T_batch.Value, Storage)); else Result.m_batch := null; end if;
 if Value.T_context_schema.Present then Result.m_context_schema := P_thinkthen_request_input_declaration_v1 (Convert_Authored_inputDeclaration_Authored_inputDeclaration (Value.T_context_schema.Value, Storage)); else Result.m_context_schema := null; end if;
 Result.m_decide := P_thinkthen_request_question_text_v1 (Convert_Authored_questionText_Authored_questionText (Value.T_decide, Storage));
 if Value.T_false.Present then Result.m_false := P_thinkthen_request_criterion_v1 (Convert_Authored_criterion_Authored_criterion (Value.T_false.Value, Storage)); else Result.m_false := null; end if;
@@ -1893,7 +1884,7 @@ end Convert_RequestDefinition_Authored_decide_RequestDefinition_Authored_decide;
 function Convert_RequestDefinition_Authored_choose_RequestDefinition_Authored_choose (Value : T_RequestDefinition_Authored_choose; Storage : in out Arena) return System.Address is
 Result : thinkthen_request_definition_authored_choose_v1;
 begin
-if Value.T_batch.Present then Result.m_batch := P_thinkthen_request_definition_authored_score_batch_v1 (Convert_RequestDefinition_Authored_choose_field_batch_RequestDefinition_Authored_score_batch (Value.T_batch.Value, Storage)); else Result.m_batch := null; end if;
+if Value.T_batch.Present then Result.m_batch := P_thinkthen_request_question_batch_v1 (Convert_Authored_questionBatch_Authored_questionBatch (Value.T_batch.Value, Storage)); else Result.m_batch := null; end if;
 Result.m_choose := P_thinkthen_request_question_text_v1 (Convert_Authored_questionText_Authored_questionText (Value.T_choose, Storage));
 if Value.T_context_schema.Present then Result.m_context_schema := P_thinkthen_request_input_declaration_v1 (Convert_Authored_inputDeclaration_Authored_inputDeclaration (Value.T_context_schema.Value, Storage)); else Result.m_context_schema := null; end if;
 if Value.T_item_schema.Present then Result.m_item_schema := P_thinkthen_request_input_declaration_v1 (Convert_Authored_inputDeclaration_Authored_inputDeclaration (Value.T_item_schema.Value, Storage)); else Result.m_item_schema := null; end if;
@@ -1909,7 +1900,7 @@ end Convert_RequestDefinition_Authored_choose_RequestDefinition_Authored_choose;
 function Convert_RequestDefinition_Authored_tag_RequestDefinition_Authored_tag (Value : T_RequestDefinition_Authored_tag; Storage : in out Arena) return System.Address is
 Result : thinkthen_request_definition_authored_tag_v1;
 begin
-if Value.T_batch.Present then Result.m_batch := P_thinkthen_request_definition_authored_score_batch_v1 (Convert_RequestDefinition_Authored_tag_field_batch_RequestDefinition_Authored_score_batch (Value.T_batch.Value, Storage)); else Result.m_batch := null; end if;
+if Value.T_batch.Present then Result.m_batch := P_thinkthen_request_question_batch_v1 (Convert_Authored_questionBatch_Authored_questionBatch (Value.T_batch.Value, Storage)); else Result.m_batch := null; end if;
 if Value.T_context_schema.Present then Result.m_context_schema := P_thinkthen_request_input_declaration_v1 (Convert_Authored_inputDeclaration_Authored_inputDeclaration (Value.T_context_schema.Value, Storage)); else Result.m_context_schema := null; end if;
 if Value.T_item_schema.Present then Result.m_item_schema := P_thinkthen_request_input_declaration_v1 (Convert_Authored_inputDeclaration_Authored_inputDeclaration (Value.T_item_schema.Value, Storage)); else Result.m_item_schema := null; end if;
 if Value.T_labels.Present then Result.m_labels := P_thinkthen_request_labels_v1 (Convert_Authored_labels_Authored_labels (Value.T_labels.Value, Storage)); else Result.m_labels := null; end if;
@@ -1925,7 +1916,7 @@ end Convert_RequestDefinition_Authored_tag_RequestDefinition_Authored_tag;
 function Convert_RequestDefinition_Authored_score_RequestDefinition_Authored_score (Value : T_RequestDefinition_Authored_score; Storage : in out Arena) return System.Address is
 Result : thinkthen_request_definition_authored_score_v1;
 begin
-if Value.T_batch.Present then Result.m_batch := P_thinkthen_request_definition_authored_score_batch_v1 (Convert_RequestDefinition_Authored_score_field_batch_RequestDefinition_Authored_score_batch (Value.T_batch.Value, Storage)); else Result.m_batch := null; end if;
+if Value.T_batch.Present then Result.m_batch := P_thinkthen_request_question_batch_v1 (Convert_Authored_questionBatch_Authored_questionBatch (Value.T_batch.Value, Storage)); else Result.m_batch := null; end if;
 if Value.T_context_schema.Present then Result.m_context_schema := P_thinkthen_request_input_declaration_v1 (Convert_Authored_inputDeclaration_Authored_inputDeclaration (Value.T_context_schema.Value, Storage)); else Result.m_context_schema := null; end if;
 if Value.T_item_schema.Present then Result.m_item_schema := P_thinkthen_request_input_declaration_v1 (Convert_Authored_inputDeclaration_Authored_inputDeclaration (Value.T_item_schema.Value, Storage)); else Result.m_item_schema := null; end if;
 if Value.T_levels.Present then Result.m_levels := P_thinkthen_request_levels_v1 (Convert_Authored_levels_Authored_levels (Value.T_levels.Value, Storage)); else Result.m_levels := null; end if;
@@ -2075,19 +2066,19 @@ begin
 Result.text := UTF8 (To_String (Unbounded_String (Value)), Storage);
 return Store_thinkthen_request_text_v1 (Result, Storage);
 end Convert_RecognitionExampleText_field_text_Text;
-function Convert_RequestDefinition_Authored_decide_field_batch_RequestDefinition_Authored_score_batch (Value : T_RequestDefinition_Authored_decide_field_batch; Storage : in out Arena) return System.Address is
-Result : thinkthen_request_definition_authored_score_batch_v1;
+function Convert_Authored_questionBatch_Authored_questionBatch (Value : T_Authored_questionBatch; Storage : in out Arena) return System.Address is
+Result : thinkthen_request_question_batch_v1;
 begin
 case Value.Kind is
-when T_RequestDefinition_Authored_decide_field_batch_arm_0 =>
+when T_Authored_questionBatch_arm_0 =>
 Result.kind := 1;
-Result.data := (discr => 0, arm_1 => P_thinkthen_request_literal_max_v1 (Convert_RequestDefinition_Authored_decide_field_batch_value_0_Literal_max (Value.V_0, Storage)));
-when T_RequestDefinition_Authored_decide_field_batch_arm_1 =>
+Result.data := (discr => 0, arm_1 => P_thinkthen_request_literal_max_v1 (Convert_Authored_questionBatch_value_0_Literal_max (Value.V_0, Storage)));
+when T_Authored_questionBatch_arm_1 =>
 Result.kind := 2;
-Result.data := (discr => 1, arm_2 => P_thinkthen_request_integer_v1 (Convert_RequestDefinition_Authored_decide_field_batch_value_1_Integer (Value.V_1, Storage)));
+Result.data := (discr => 1, arm_2 => P_thinkthen_request_integer_v1 (Convert_Authored_questionBatch_value_1_Integer (Value.V_1, Storage)));
 end case;
-return Store_thinkthen_request_definition_authored_score_batch_v1 (Result, Storage);
-end Convert_RequestDefinition_Authored_decide_field_batch_RequestDefinition_Authored_score_batch;
+return Store_thinkthen_request_question_batch_v1 (Result, Storage);
+end Convert_Authored_questionBatch_Authored_questionBatch;
 function Convert_Authored_inputDeclaration_Authored_inputDeclaration (Value : T_Authored_inputDeclaration; Storage : in out Arena) return System.Address is
 Result : thinkthen_request_input_declaration_v1;
 begin
@@ -2186,19 +2177,6 @@ begin
 Result.value := Interfaces.Integer_64 (Value);
 return Store_thinkthen_request_integer_v1 (Result, Storage);
 end Convert_RequestDefinition_Authored_decide_field_wording_version_Integer;
-function Convert_RequestDefinition_Authored_choose_field_batch_RequestDefinition_Authored_score_batch (Value : T_RequestDefinition_Authored_choose_field_batch; Storage : in out Arena) return System.Address is
-Result : thinkthen_request_definition_authored_score_batch_v1;
-begin
-case Value.Kind is
-when T_RequestDefinition_Authored_choose_field_batch_arm_0 =>
-Result.kind := 1;
-Result.data := (discr => 0, arm_1 => P_thinkthen_request_literal_max_v1 (Convert_RequestDefinition_Authored_choose_field_batch_value_0_Literal_max (Value.V_0, Storage)));
-when T_RequestDefinition_Authored_choose_field_batch_arm_1 =>
-Result.kind := 2;
-Result.data := (discr => 1, arm_2 => P_thinkthen_request_integer_v1 (Convert_RequestDefinition_Authored_choose_field_batch_value_1_Integer (Value.V_1, Storage)));
-end case;
-return Store_thinkthen_request_definition_authored_score_batch_v1 (Result, Storage);
-end Convert_RequestDefinition_Authored_choose_field_batch_RequestDefinition_Authored_score_batch;
 function Convert_RequestDefinition_Authored_choose_field_name_Text (Value : T_Text; Storage : in out Arena) return System.Address is
 Result : thinkthen_request_text_v1;
 begin
@@ -2237,19 +2215,6 @@ begin
 Result.value := Interfaces.Integer_64 (Value);
 return Store_thinkthen_request_integer_v1 (Result, Storage);
 end Convert_RequestDefinition_Authored_choose_field_wording_version_Integer;
-function Convert_RequestDefinition_Authored_tag_field_batch_RequestDefinition_Authored_score_batch (Value : T_RequestDefinition_Authored_tag_field_batch; Storage : in out Arena) return System.Address is
-Result : thinkthen_request_definition_authored_score_batch_v1;
-begin
-case Value.Kind is
-when T_RequestDefinition_Authored_tag_field_batch_arm_0 =>
-Result.kind := 1;
-Result.data := (discr => 0, arm_1 => P_thinkthen_request_literal_max_v1 (Convert_RequestDefinition_Authored_tag_field_batch_value_0_Literal_max (Value.V_0, Storage)));
-when T_RequestDefinition_Authored_tag_field_batch_arm_1 =>
-Result.kind := 2;
-Result.data := (discr => 1, arm_2 => P_thinkthen_request_integer_v1 (Convert_RequestDefinition_Authored_tag_field_batch_value_1_Integer (Value.V_1, Storage)));
-end case;
-return Store_thinkthen_request_definition_authored_score_batch_v1 (Result, Storage);
-end Convert_RequestDefinition_Authored_tag_field_batch_RequestDefinition_Authored_score_batch;
 function Convert_Authored_labels_Authored_labels (Value : T_Authored_labels; Storage : in out Arena) return System.Address is
 Result : thinkthen_request_labels_v1;
 begin
@@ -2275,19 +2240,6 @@ begin
 Result.value := Interfaces.Integer_64 (Value);
 return Store_thinkthen_request_integer_v1 (Result, Storage);
 end Convert_RequestDefinition_Authored_tag_field_wording_version_Integer;
-function Convert_RequestDefinition_Authored_score_field_batch_RequestDefinition_Authored_score_batch (Value : T_RequestDefinition_Authored_score_field_batch; Storage : in out Arena) return System.Address is
-Result : thinkthen_request_definition_authored_score_batch_v1;
-begin
-case Value.Kind is
-when T_RequestDefinition_Authored_score_field_batch_arm_0 =>
-Result.kind := 1;
-Result.data := (discr => 0, arm_1 => P_thinkthen_request_literal_max_v1 (Convert_RequestDefinition_Authored_score_field_batch_value_0_Literal_max (Value.V_0, Storage)));
-when T_RequestDefinition_Authored_score_field_batch_arm_1 =>
-Result.kind := 2;
-Result.data := (discr => 1, arm_2 => P_thinkthen_request_integer_v1 (Convert_RequestDefinition_Authored_score_field_batch_value_1_Integer (Value.V_1, Storage)));
-end case;
-return Store_thinkthen_request_definition_authored_score_batch_v1 (Result, Storage);
-end Convert_RequestDefinition_Authored_score_field_batch_RequestDefinition_Authored_score_batch;
 function Convert_Authored_levels_Authored_levels (Value : T_Authored_levels; Storage : in out Arena) return System.Address is
 Result : thinkthen_request_levels_v1;
 begin
@@ -2428,19 +2380,19 @@ begin
 Result.text := UTF8 (To_String (Unbounded_String (Value)), Storage);
 return Store_thinkthen_request_text_v1 (Result, Storage);
 end Convert_RecognitionExampleText_field_kinds_element_Text;
-function Convert_RequestDefinition_Authored_decide_field_batch_value_0_Literal_max (Value : T_Literal_max; Storage : in out Arena) return System.Address is
+function Convert_Authored_questionBatch_value_0_Literal_max (Value : T_Literal_max; Storage : in out Arena) return System.Address is
 Result : thinkthen_request_literal_max_v1;
 pragma Unreferenced (Value);
 begin
 Result.reserved := 0;
 return Store_thinkthen_request_literal_max_v1 (Result, Storage);
-end Convert_RequestDefinition_Authored_decide_field_batch_value_0_Literal_max;
-function Convert_RequestDefinition_Authored_decide_field_batch_value_1_Integer (Value : T_Integer; Storage : in out Arena) return System.Address is
+end Convert_Authored_questionBatch_value_0_Literal_max;
+function Convert_Authored_questionBatch_value_1_Integer (Value : T_Integer; Storage : in out Arena) return System.Address is
 Result : thinkthen_request_integer_v1;
 begin
 Result.value := Interfaces.Integer_64 (Value);
 return Store_thinkthen_request_integer_v1 (Result, Storage);
-end Convert_RequestDefinition_Authored_decide_field_batch_value_1_Integer;
+end Convert_Authored_questionBatch_value_1_Integer;
 function Convert_Authored_inputDeclaration_string_Authored_inputDeclaration_string (Value : T_Authored_inputDeclaration_string; Storage : in out Arena) return System.Address is
 Result : thinkthen_request_input_declaration_string_v1;
 pragma Unreferenced (Value);
@@ -2572,19 +2524,6 @@ begin
 Result.text := UTF8 (To_String (Unbounded_String (Value)), Storage);
 return Store_thinkthen_request_text_v1 (Result, Storage);
 end Convert_Authored_threshold_value_1_Text;
-function Convert_RequestDefinition_Authored_choose_field_batch_value_0_Literal_max (Value : T_Literal_max; Storage : in out Arena) return System.Address is
-Result : thinkthen_request_literal_max_v1;
-pragma Unreferenced (Value);
-begin
-Result.reserved := 0;
-return Store_thinkthen_request_literal_max_v1 (Result, Storage);
-end Convert_RequestDefinition_Authored_choose_field_batch_value_0_Literal_max;
-function Convert_RequestDefinition_Authored_choose_field_batch_value_1_Integer (Value : T_Integer; Storage : in out Arena) return System.Address is
-Result : thinkthen_request_integer_v1;
-begin
-Result.value := Interfaces.Integer_64 (Value);
-return Store_thinkthen_request_integer_v1 (Result, Storage);
-end Convert_RequestDefinition_Authored_choose_field_batch_value_1_Integer;
 function Convert_Authored_options_value_0_Authored_name_list (Value : T_Authored_name_List; Storage : in out Arena) return System.Address is
 Result : thinkthen_request_name_list_v1;
 type Items is array (size_t range <>) of aliased System.Address with Convention => C;
@@ -2629,19 +2568,6 @@ begin
 Result.text := UTF8 (To_String (Unbounded_String (Value)), Storage);
 return Store_thinkthen_request_text_v1 (Result, Storage);
 end Convert_Authored_cut_value_1_Text;
-function Convert_RequestDefinition_Authored_tag_field_batch_value_0_Literal_max (Value : T_Literal_max; Storage : in out Arena) return System.Address is
-Result : thinkthen_request_literal_max_v1;
-pragma Unreferenced (Value);
-begin
-Result.reserved := 0;
-return Store_thinkthen_request_literal_max_v1 (Result, Storage);
-end Convert_RequestDefinition_Authored_tag_field_batch_value_0_Literal_max;
-function Convert_RequestDefinition_Authored_tag_field_batch_value_1_Integer (Value : T_Integer; Storage : in out Arena) return System.Address is
-Result : thinkthen_request_integer_v1;
-begin
-Result.value := Interfaces.Integer_64 (Value);
-return Store_thinkthen_request_integer_v1 (Result, Storage);
-end Convert_RequestDefinition_Authored_tag_field_batch_value_1_Integer;
 function Convert_Authored_labels_value_0_Authored_name_list (Value : T_Authored_name_List; Storage : in out Arena) return System.Address is
 Result : thinkthen_request_name_list_v1;
 type Items is array (size_t range <>) of aliased System.Address with Convention => C;
@@ -2674,19 +2600,6 @@ Result.len := Length;
 Result.data := P_thinkthen_request_description_map_entry_v1 (Address);
 return Store_thinkthen_request_description_map_v1 (Result, Storage);
 end Convert_Authored_labels_value_1_Authored_description_map;
-function Convert_RequestDefinition_Authored_score_field_batch_value_0_Literal_max (Value : T_Literal_max; Storage : in out Arena) return System.Address is
-Result : thinkthen_request_literal_max_v1;
-pragma Unreferenced (Value);
-begin
-Result.reserved := 0;
-return Store_thinkthen_request_literal_max_v1 (Result, Storage);
-end Convert_RequestDefinition_Authored_score_field_batch_value_0_Literal_max;
-function Convert_RequestDefinition_Authored_score_field_batch_value_1_Integer (Value : T_Integer; Storage : in out Arena) return System.Address is
-Result : thinkthen_request_integer_v1;
-begin
-Result.value := Interfaces.Integer_64 (Value);
-return Store_thinkthen_request_integer_v1 (Result, Storage);
-end Convert_RequestDefinition_Authored_score_field_batch_value_1_Integer;
 function Convert_Authored_levels_value_0_Authored_name_list (Value : T_Authored_name_List; Storage : in out Arena) return System.Address is
 Result : thinkthen_request_name_list_v1;
 type Items is array (size_t range <>) of aliased System.Address with Convention => C;
