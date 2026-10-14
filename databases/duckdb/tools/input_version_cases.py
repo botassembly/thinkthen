@@ -66,6 +66,11 @@ class Cases(unittest.TestCase):
             self.assertEqual(result.returncode, 77, result.stderr)
             self.assertIn('toolchain is missing', result.stdout)
         self.assertFalse(marker.exists(), 'a profile compiled instead of refusing missing tools')
+        result = run([sys.executable, str(HERE / 'source_hosts.py')],
+                     {**env, 'THINKTHEN_DUCKDB_VERSION': 'v9.9.9'})
+        self.assertEqual(result.returncode, 2, result.stderr)
+        self.assertIn('unsupported DuckDB version', result.stderr)
+        self.assertFalse(marker.exists())
 
 
     def source_fixture(self, folder):

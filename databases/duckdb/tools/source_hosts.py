@@ -36,6 +36,9 @@ def tool_environment():
 
 def hosts():
     pins = authority()
+    requested = os.environ.get('THINKTHEN_DUCKDB_VERSION')
+    if requested is not None and requested not in versions():
+        raise ValueError(f'unsupported DuckDB version: {requested}')
     for version in versions():
         if os.environ.get('THINKTHEN_DUCKDB_VERSION', version) != version:
             continue
@@ -145,4 +148,8 @@ def stage(version, extension):
 
 
 if __name__ == '__main__':
-    raise SystemExit(main())
+    try:
+        raise SystemExit(main())
+    except ValueError as error:
+        print(f'inputs: {error}', file=sys.stderr)
+        raise SystemExit(2) from error
