@@ -533,7 +533,7 @@ def run_example(family, packages, work, root=REPO, selected=None, sample_index=0
         env.update(DOTNET_CLI_HOME=str(home), NUGET_PACKAGES=str(work / 'nuget'),
                    DOTNET_CLI_TELEMETRY_OPTOUT='1', DOTNET_SKIP_FIRST_TIME_EXPERIENCE='1')
         dotnet = os.environ.get('THINKTHEN_DOTNET', 'dotnet')
-        run([dotnet, 'restore', 'example.csproj', '--source', str(feed)], True)
+        run([dotnet, 'restore', 'example.csproj', '--source', str(feed), '-p:NuGetAudit=false'], True)
         run([dotnet, 'build', 'example.csproj', '--no-restore', '-o', str(work / 'bin')], True)
         output = run([dotnet, str(work / 'bin/example.dll')])
     elif family == 'dart':
