@@ -42,3 +42,4 @@ PM amendment, 2026-10-13. Remaining work. `ticket/0579-backend-errors` holds 18 
 
 PM amendment, 2026-10-13. Yes: replace only the evidence inputs in the `status_reason` fixtures whose evidence is a short word such as `model` or `a` with unrelated evidence. Keep every diagnostic, kind, facts and send assertion, and keep the separate short-reflection refusal tests.
 - 2026-10-13 started
+- 2026-10-13 next: Qualify the reviewed backend repairs with the landed staging fixes and corrected generated outputs before merge; the combined Rust ceiling gates the candidate under the approved ruling.
