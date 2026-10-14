@@ -107,7 +107,7 @@ def render(definitions, name):
     # Ruby consumes cancel separately; the native RequestOptions grammar sees
     # every other keyword unchanged and rejects invalid controls.
     for verb in request['RequestFunction']['oneOf']:
-        value = {'decide': result_type('completeDecideValue'), 'choose': 'String | nil', 'tag': 'Array[String] | nil', 'score': 'Integer | Float | nil', 'find': 'String | nil', 'rank': 'Array[Integer]' }.get(verb['const'], 'Array[Native::Result]' if verb['const'] in ('rank', 'relate') else 'Native::Result | Array[Native::Result]' if verb['const'] in ('annotate', 'recognize') else 'Array[untyped]')
+        value = {'decide': result_type('completeDecideValue'), 'choose': 'String | nil', 'tag': 'Array[String] | nil', 'score': 'Integer | Float | nil', 'find': 'Results::answer', 'rank': 'Array[Integer]' }.get(verb['const'], 'Array[Native::Result]' if verb['const'] in ('rank', 'relate') else 'Native::Result | Array[Native::Result]' if verb['const'] in ('annotate', 'recognize') else 'Array[untyped]')
         answer = value if verb['const'] in ('filter', 'rank', 'relate') else f'{value} | Array[{value}]'
         lines.append(f'    def {verb["const"]}: ({args}, ?cancel: Cancel?, {options}) -> Results::Completed[{answer}]')
     lines += [f'    def initialize: ({settings}) -> void',

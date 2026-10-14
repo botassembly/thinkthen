@@ -82,6 +82,42 @@ class TestOwnedSession < Minitest::Test
     end
   end
 
+  def test_rank_keeps_a_plain_position_list_for_every_input_shape
+    TestBackend.with(<<~RUBY) do |backend, child|
+      T::Client.open(cache: false) do |client|
+        answers = ["first", %w[first second], []].map { |input| client.rank("Which record?", input) }
+        say answers.map(&:value)
+        say answers.map { |answer| answer.value.is_a?(Array) && answer.value.frozen? }
+        say answers.map { |answer| answer.facts.requests_sent }
+      end
+    RUBY
+      assert_equal [[1], [1, 2], []], child.hear
+      assert_equal [true, true, true], child.hear
+      assert_equal [1, 1, 0], child.hear
+      status, errors = child.finish
+      assert status.success?, errors
+      assert_equal 2, backend.count
+    end
+  end
+
+  def test_find_keeps_the_selected_original_hash_and_wide_integer
+    TestBackend.with(<<~RUBY) do |backend, child|
+      retained = T::Client.open(cache: false) do |client|
+        client.find("Which record?", [{body: "first", extra: 18446744073709551615}, {body: "second"}], field: ["/body"])
+      end
+      say retained.value
+      say [retained.value.is_a?(Hash), retained.value.frozen?, retained.value["extra"].is_a?(Integer)]
+      say retained.facts.requests_sent
+    RUBY
+      assert_equal({"body" => "first", "extra" => 18446744073709551615}, child.hear)
+      assert_equal [true, true, true], child.hear
+      assert_equal 1, child.hear
+      status, errors = child.finish
+      assert status.success?, errors
+      assert_equal 1, backend.count
+    end
+  end
+
   def test_preview_and_retired_names_use_the_single_native_family
     TestBackend.with(<<~RUBY) do |backend, child|
       T::Client.open(cache: false) do |client|

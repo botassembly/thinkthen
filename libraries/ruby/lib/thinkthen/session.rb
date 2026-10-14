@@ -21,6 +21,7 @@ module ThinkThen
       def value
         return results.map(&:input).freeze if @verb == "filter"
         values = results.map { |row| row.key?("value") ? row.value : row }
+        return values.freeze if @verb == "rank"
         @scalar && values.size == 1 ? values.first : values.freeze
       end
       def inspect = "<ThinkThen::Results::Completed: content withheld>"
