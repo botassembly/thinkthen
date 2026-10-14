@@ -27,6 +27,11 @@ int main(int argc, const char *argv[]) {
         TTTask *refused = [client decide:[TTTextQuestion new] input:input options:nil feed:nil completion:^(TTCall *call, NSError *failure) { (void)call; (void)failure; abort(); } error:&error];
         require(refused == nil && [error isKindOfClass:TTFailureError.class] && !((TTFailureError *)error).retryable);
         error = nil;
+        TTCall *refusedCall = nil;
+        require([client decideAnswer:[TTTextQuestion new] input:input options:nil feed:nil call:&refusedCall error:&error] == nil);
+        require(refusedCall == nil && [error isKindOfClass:TTFailureError.class] && ((TTFailureError *)error).kind == TTErrorUsage);
+        TTFailureError *savedRefusal = (id)error;
+        error = nil;
         __block TTCall *retained = nil;
         dispatch_semaphore_t completed = dispatch_semaphore_create(0);
         TTTask *task = [client decide:question input:input options:nil feed:nil completion:^(TTCall *call, NSError *failure) {
@@ -44,6 +49,7 @@ int main(int argc, const char *argv[]) {
         task = nil; client = nil;
         require(usage.state == TTUsagePersistenceWritten && usage.advice == nil);
         require(retained.facts.state == TTPresenceValue);
+        require(savedRefusal.kind == TTErrorUsage && !savedRefusal.retryable);
         require([retained decideAnswer:&error].state == TTPresenceValue && error == nil);
         require([retained filterAnswer:&error] == nil);
         require([error.domain isEqual:@"io.github.botassembly.thinkthen.answer"] && error.code == 1);

@@ -7,7 +7,6 @@ Set your hosted backend key: `export THINKTHEN_API_KEY=...`. Backends include Je
 
 ```objc
 #import "ThinkThenFoundation.h"
-#import <dispatch/dispatch.h>
 #include <stdio.h>
 int main(void) { @autoreleasepool {
     NSError *error = nil; TTFoundationClient *client = [[TTFoundationClient alloc] initWithSettings:nil error:&error];
@@ -18,17 +17,17 @@ int main(void) { @autoreleasepool {
     TTAuthoredChooseBuilder *teams = [TTAuthoredChooseBuilder new]; teams.choose = @"Which team owns this?";
     teams.options = [[TTOrderedMap alloc] initWithEntries:@[[[TTOrderedEntry alloc] initWithKey:@"billing" value:@"Invoices, fees, and refunds."], [[TTOrderedEntry alloc] initWithKey:@"shipping" value:@"Parcels and delivery."], [[TTOrderedEntry alloc] initWithKey:@"account" value:@"Logins and passwords."]]];
     TTQuestionDefinition *teamQuestion = [TTQuestionDefinition new]; teamQuestion.value = teams;
-    for (NSUInteger i = 0; i < 2; i++) for (NSString *text in (i == 0 ? refunds : messages)) {
-        TTTextInput *input = [TTTextInput new]; input.text = text; dispatch_semaphore_t completed = dispatch_semaphore_create(0); __block BOOL failed = NO;
-        TTCompletion completion = ^(TTCall *call, NSError *failure) {
-            NSError *answerError = nil;
-            if (failure) failed = YES;
-            else if (i == 0) { TTPresence<NSNumber *> *refund = [call decideAnswer:&answerError]; puts(refund.value ? (refund.value.boolValue ? "true" : "false") : "not sure"); }
-            else { TTPresence<NSString *> *team = [call chooseAnswer:&answerError]; puts(team.value ? team.value.UTF8String : "not sure"); }
-            failed = failed || answerError != nil; dispatch_semaphore_signal(completed);
-        };
-        TTTask *task = i == 0 ? [client decide:refundQuestion input:input options:nil feed:nil completion:completion error:&error] : [client choose:teamQuestion input:input options:nil feed:nil completion:completion error:&error];
-        if (!task || error) return 1; dispatch_semaphore_wait(completed, DISPATCH_TIME_FOREVER); if (failed) return 1;
+    for (NSString *text in refunds) {
+        TTTextInput *input = [TTTextInput new]; input.text = text;
+        TTPresence<NSNumber *> *refund = [client decideAnswer:refundQuestion input:input options:nil feed:nil call:NULL error:&error];
+        if (!refund || error) return 1;
+        puts(refund.value ? (refund.value.boolValue ? "true" : "false") : "not sure");
+    }
+    for (NSString *text in messages) {
+        TTTextInput *input = [TTTextInput new]; input.text = text;
+        TTPresence<NSString *> *team = [client chooseAnswer:teamQuestion input:input options:nil feed:nil call:NULL error:&error];
+        if (!team || error) return 1;
+        puts(team.value ? team.value.UTF8String : "not sure");
     }
     return 0;
 } }
