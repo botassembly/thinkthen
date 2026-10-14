@@ -242,3 +242,48 @@ pub(in crate::public) fn shared_context(
         .check_state(&state)
         .map_err(|error| context_failure(engine, error))
 }
+
+/// One renderer owns canonical row fields for ordinary and recovering calls.
+pub(super) fn complete_row<T>(
+    (engine, profile, setting, scalar, function): (
+        &facade::Engine,
+        Option<&core::BackendProfile>,
+        core::Setting,
+        bool,
+        InputFunction,
+    ),
+    stop: &crate::public::options::Stop<'_>,
+    held: &Held<T>,
+    at: usize,
+    row: pull::Row<Records>,
+) -> Result<core::CompleteAtomic, Error> {
+    let question = &held.question;
+    let keys = row
+        .as_ref()
+        .map_or_else(|_| Vec::new(), |row| row.keys.clone());
+    let judged = crate::public::bulk::judged(stop, question, engine.backend(), at, row)
+        .map_err(|error| error.at_record(at))?;
+    let mut run = if scalar {
+        super::run(engine, question, profile)
+    } else {
+        super::batch_run(engine, question, profile, setting)
+    };
+    run.context_sha256 = held.context_sha256.clone();
+    let events = stop
+        .facts()
+        .attempts()
+        .is_some()
+        .then(|| judged.answered.attempts.clone());
+    let mut canonical = super::atomic(
+        run,
+        &judged,
+        super::spec(function, question, judged.value.clone(), at),
+        keys,
+        None,
+        events,
+    )
+    .map_err(|_| super::wrong())?;
+    canonical.source = held.source.clone();
+    canonical.images = held.images.clone();
+    Ok(canonical)
+}

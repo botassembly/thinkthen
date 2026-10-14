@@ -961,7 +961,6 @@
           "$ref": "#/$defs/RequestOptions",
           "default": {
             "attempts": false,
-            "details": false,
             "files_only": false,
             "none": false
           }
@@ -1651,11 +1650,6 @@
           "description": "Existing millisecond deadline, including -1 for no deadline.",
           "type": "integer",
           "format": "int64"
-        },
-        "details": {
-          "description": "Compatibility details output for scalar calls.",
-          "type": "boolean",
-          "default": false
         },
         "examples": {
           "description": "Optional recognition boundary examples; an empty list clears the fallback.",

@@ -342,3 +342,31 @@ impl CallReply {
         })
     }
 }
+
+/// One nullable yes/no answer and its complete record.
+pub type DecisionCall = Call<Option<bool>, Vec<super::CompleteDecision>>;
+/// One typed choice and its complete record.
+pub type ChoiceCall<C> = Call<Option<C>, Vec<super::CompleteChoice>>;
+/// One weighted score and its complete record.
+pub type ScoreCall = Call<f64, Vec<super::CompleteScore>>;
+/// Selected typed labels and the complete tag record.
+pub type TagCall<C> = Call<Vec<C>, Vec<super::CompleteTags>>;
+/// Selected original records with every input's filter judgment.
+pub type FilterCall<T> =
+    Call<Vec<T>, Vec<super::CompleteRecord<T, super::CompleteFilter>>, Vec<Option<f64>>>;
+/// Original indexes in ranked order with complete ranked records.
+pub type RankCall<T> =
+    Call<Vec<usize>, Vec<super::CompleteRecord<T, super::CompleteRank>>, Vec<Option<f64>>>;
+/// Original indexes selected by a question set and their complete records.
+pub type SetRankCall<T> =
+    Call<Vec<usize>, Vec<super::CompleteRecord<T, super::CompleteSetRank>>, Vec<Option<f64>>>;
+/// One optional original unit and its complete candidate set.
+pub type FindCall<T> = Call<Option<T>, super::CompleteFound<T>>;
+/// Named values on every input and the complete annotation records.
+pub type AnnotationCall<T> =
+    Call<Vec<Vec<crate::NamedAnnotation>>, Vec<super::CompleteRecord<T, super::CompleteAnnotated>>>;
+/// Recognized names and the complete staged record.
+pub type RecognitionCall =
+    Call<crate::Recognized, Vec<super::CompleteRecognized>, Vec<Option<f64>>>;
+/// Selected relation edges and the complete aggregate record.
+pub type RelationCall = Call<Vec<crate::Edge>, Vec<super::CompleteRelated>, Vec<Option<f64>>>;

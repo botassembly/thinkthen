@@ -161,3 +161,8 @@ pub use results::{
 
 #[cfg(feature = "cli")]
 pub(crate) use options::AnnotationRecovery;
+
+pub use results::{
+    AnnotationCall, ChoiceCall, DecisionCall, FilterCall, FindCall, RankCall, RecognitionCall,
+    RelationCall, ScoreCall, SetRankCall, TagCall,
+};
