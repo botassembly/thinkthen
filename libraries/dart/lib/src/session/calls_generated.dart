@@ -179,14 +179,16 @@ mixin CallAnswers {
         .map((row) => row.input.value));
   }
 
-  List<Object?> rankAnswer() {
+  List<BigInt> rankAnswer() {
     _successful();
     final answers = <RankResult>[];
     for (final packet in packets) {
       if (packet is SessionPacketRankAggregate) answers.addAll(packet.value);
     }
     answers.sort((a, b) => a.value.compareTo(b.value));
-    return List.unmodifiable(answers.map((row) => row.input.value));
+    return List.unmodifiable(answers.map((row) =>
+        row.index.value ??
+        (throw StateError("Rank answer has no input index"))));
   }
 
   Find findAnswer() {

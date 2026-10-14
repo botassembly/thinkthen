@@ -22,7 +22,9 @@ from fixture_types import write as write_fixture_types
 
 def run(command, cwd, env, expected=None, timeout=180):
     if len(command) > 1 and command[1] == "build":
-        command = ["/usr/bin/flock", "-w", "180", "-o", os.environ.get("THINKTHEN_HEAVY_LOCK", "/tmp/thinkthen-heavy.lock"), *command]
+        command = [sys.executable, str(ROOT / "sdlc/scripts/build-admission.py"),
+                   "--lock", os.environ.get("THINKTHEN_HEAVY_LOCK", "/tmp/thinkthen-heavy.lock"),
+                   "--", *command]
     result = subprocess.run(command, cwd=cwd, env=env, text=True, stdout=subprocess.PIPE,
                             stderr=subprocess.STDOUT, timeout=timeout)
     if expected:

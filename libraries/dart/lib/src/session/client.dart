@@ -177,6 +177,11 @@ final class Engine with NamedCalls implements Finalizable {
     _owner.close();
   }
 
+  /// Preview native admission and request size without sending.
+  Plan plan(String function, Question question, Input input, {Options? options}) =>
+      _abi.takePlan(_abi.startNamed(_owner.live, function, question, input,
+          options, _surfaceToken, preview: true));
+
   /// Observe without waiting for the usage writer.
   UsagePersistenceStatus usagePersistence() =>
       _abi.usagePersistence(_owner.live);

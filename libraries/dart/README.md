@@ -17,11 +17,13 @@ try {
 }
 ```
 
-The ten named methods return `Future<OwnedCall>`. Generated classes retain typed answers, observations, row metadata and terminal facts. `Presence` distinguishes absence from present null. Wide counters and caller integers remain exact `BigInt`; unknown output fields and arbitrary authored JSON remain present. Rust admits requests and owns file reading, image admission, cache identity, recording and replay. Use generated `InputSource` for files, `ImageFile` for image files, and `imageBytes` for `Uint8List` attachments.
+The ten named methods return `Future<OwnedCall>`. Generated classes retain typed answers, observations, row metadata and terminal facts. `Presence` distinguishes absence from present null. `rankAnswer()` returns input indexes in rank order as `List<BigInt>`; `filterAnswer()` returns accepted original values. Wide counters and caller integers remain exact `BigInt`; unknown output fields and arbitrary authored JSON remain present. Rust admits requests and owns file reading, image admission, cache identity, recording and replay. Use generated `InputSource` for files, `ImageFile` for image files, and `imageBytes` for `Uint8List` attachments.
 
 `CallFailure` carries a generated error kind, retryability and owned typed facts. Terminal failures retain the owned call and its completed rows. An unresolved answer stays separate from a failed call. Reader failures use generated failure values; native diagnostics do not expose host exception text.
 
 Pass `Cancellation` to stop a call explicitly. A persistent helper isolate performs native blocking waits while Dart's calling isolate remains responsive. A `feed` stream supplies bounded intake. Cancellation stops further intake and returns before a held provider or asynchronous subscription cleanup finishes; in-flight helpers retain native owners until their waits settle. Ordinary completion awaits subscription cleanup and reports `StreamCleanupFailure` if it fails. `OwnedSession` exposes `push`, `finish`, `read` and the typed `packets` stream for explicit session control. Close sessions before the engine. Native finalizers backstop forgotten cleanup; copied results survive close.
+
+`plan(function, question, input, options: ...)` returns a typed `Plan` through native admission without sending. Atomic functions and rank support previews; other functions refuse. Estimates retain exact `BigInt` counts and an optional first request body.
 
 `usagePersistence()` observes count persistence without waiting. `finishUsageStatus()` finishes current deltas and returns an owned `UsagePersistenceStatus` with a header-derived state and optional safe advice. Persistence failures preserve answers and call facts. Only usage-lock acquisition has a deadline; other filesystem work can take longer. Closed engines reject these methods.
 

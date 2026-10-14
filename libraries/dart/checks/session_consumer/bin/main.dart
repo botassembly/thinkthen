@@ -56,7 +56,9 @@ Future<void> main(List<String> args) async {
       if (kind == 'noul')
         answers[entry.key] = {
           'type': kind,
-          'noul': jsonEncode(body).contains('uncertain') ? 0.5 : 0.9
+          'noul': jsonEncode(body).contains('uncertain')
+              ? 0.5
+              : jsonEncode(question).contains('rank-low-original') ? 0.2 : 0.9
         };
       else {
         final keys = kind == 'score'
@@ -318,7 +320,48 @@ Future<void> main(List<String> args) async {
                   : text;
       final result = await methods[i](questions[i], input);
       check(!result.terminal.failure.isPresent, 'named call $i');
+      switch (i) {
+        case 0: check(result.decideAnswer() == true, 'decide helper');
+        case 1: check(result.chooseAnswer() == 'a', 'choose helper');
+        case 2: check(result.tagAnswer()?.join(',') == 'a,b', 'tag helper');
+        case 3: check(result.scoreAnswer() == 0.1, 'score helper');
+        case 4: check(result.filterAnswer().single == 'owned', 'filter helper');
+        case 5: check(result.rankAnswer().single == BigInt.zero, 'rank helper');
+        case 6: check(result.findAnswer().value == 'owned', 'find helper');
+        case 7: check(result.annotateAnswer().single.value.containsKey('refund'), 'annotate helper');
+        case 8: check(result.recognizeAnswer().isNotEmpty, 'recognize helper');
+        case 9: check(result.relateAnswer().value.every((edge) =>
+            ['Alice', 'Bob'].contains(edge.sourceName) &&
+            ['Alice', 'Bob'].contains(edge.targetName)), 'relate helper');
+      }
+      final beforePreview = sends;
+      if (i < 6) {
+        final preview = engine.plan(['decide', 'choose', 'tag', 'score', 'filter', 'rank'][i], questions[i], input);
+        check(preview.records == BigInt.one && preview.requests == BigInt.from(i == 2 ? 2 : 1) &&
+            preview.firstBodyUtf8 != null && preview.estimatedBytes > BigInt.zero,
+            'typed plan $i');
+      } else {
+        try {
+          engine.plan(['decide', 'choose', 'tag', 'score', 'filter', 'rank',
+              'find', 'annotate', 'recognize', 'relate'][i], questions[i], input);
+          throw StateError('unsupported preview succeeded');
+        } on CallFailure catch (error) {
+          check(error.kind == ErrorKind.usage, 'unsupported preview refuses');
+        }
+      }
+      check(sends == beforePreview, 'preview sends nothing');
     }
+    final rankedRecords = InputRecords(items: [
+      for (final original in ['rank-low-original', 'rank-high-original', 'rank-high-original'])
+        Item(original: Presence.present(OriginalText(text: original))),
+    ]);
+    final ranked = (await engine.rank(question, rankedRecords)).rankAnswer();
+    check(ranked.length == 3 && ranked[0] == BigInt.one &&
+        ranked[1] == BigInt.two && ranked[2] == BigInt.zero,
+        'rank returns input indexes for reordered ties and duplicate originals');
+    final filtered = (await engine.filter(question, rankedRecords)).filterAnswer();
+    check(filtered.length == 2 && filtered.every((value) => value == 'rank-high-original'),
+        'filter preserves duplicate original values');
     await dataCases(engine, 'http://127.0.0.1:${server.port}', () => sends);
     final streamed =
         await engine.decide(question, InputFeed(name: 'feed'),
