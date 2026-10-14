@@ -30,7 +30,8 @@ public class DeveloperExample {
             var refund = tt.decide(question, broken).join();
             var isRefund = refund.value();
             var probability = refund.probability();
-            assert probability != null;
+            assert probability.compareTo(
+                new java.math.BigDecimal("0.99")) == 0;
             assert Boolean.TRUE.equals(isRefund);
         }
     }

@@ -17,15 +17,15 @@ $teams = ['billing' => 'Invoices, fees, and refunds.',
           'shipping' => 'Parcels and delivery.', 'account' => 'Logins and passwords.'];
 $client = new ThinkThen\Client();
 try {
-    foreach ($refunds as $text) {
+    foreach ($refunds as $index => $text) {
         $refund = $client->decide('Does the customer ask for a refund?', $text);
         $isRefund = $refund->value; $refundProbability = $refund->probability;
-        assert(is_bool($isRefund) && is_float($refundProbability));
+        assert($isRefund === [true, false, true][$index] && $refundProbability === [0.99, 0.01, 0.54][$index]);
     }
-    foreach ($messages as $text) {
+    foreach ($messages as $index => $text) {
         $team = $client->choose(new ThinkThen\Inputs\ChooseQuestion(choose: 'Which team owns this?', options: $teams), $text);
         $owner = $team->value; $ownerProbability = $team->probability;
-        assert(in_array($owner, array_keys($teams), true));
+        assert($owner === ['billing', 'shipping', 'account'][$index] && $ownerProbability === 1.0);
     }
 } finally { $client->close(); }
 ```

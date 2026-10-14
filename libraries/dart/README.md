@@ -13,9 +13,10 @@ Future<void> main() async {
       InputText(text: 'Please refund my order. It arrived broken.'),
     );
     final isRefund = refund.value;
-    final probability = refund.probability;
+    final probability =
+        (refund.probability as ScalarProbability).value;
     assert(isRefund == true);
-    assert(probability is ScalarProbability);
+    assert(probability == 0.99);
   } finally { engine.close(); }
 }
 ```

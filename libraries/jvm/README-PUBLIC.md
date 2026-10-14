@@ -18,15 +18,16 @@ public class RegistryExample {
         var teamQuestion = new RequestQuestionDefinition().value(new RequestDefinitionAuthoredChoose()
             .choose(new AuthoredQuestionText("Which team owns this?")).options(new AuthoredOptions(teams)));
         try (var engine = new Engine(new EngineSettings())) {
-            for (var text : new String[]{"Please refund my order. It arrived broken.", "Thanks for the quick help yesterday!", "I want to send this back."}) {
-                var refund = engine.decide(new RequestQuestionText().text("Does the customer ask for a refund?"), new RequestInputText().text(text)).join();
+            var refunds = new String[]{"Please refund my order. It arrived broken.", "Thanks for the quick help yesterday!", "I want to send this back."};
+            for (var index = 0; index < refunds.length; index++) {
+                var refund = engine.decide(new RequestQuestionText().text("Does the customer ask for a refund?"), new RequestInputText().text(refunds[index])).join();
                 var isRefund = refund.value(); var odds = refund.probability();
-                assert isRefund instanceof Boolean && odds != null;
+                assert Boolean.valueOf(new boolean[]{true, false, true}[index]).equals(isRefund) && odds.compareTo(new java.math.BigDecimal(new String[]{"0.99", "0.01", "0.54"}[index])) == 0;
             }
-            for (var text : new String[]{"Please refund the extra fee on my invoice.", "My parcel went to the wrong address.", "I cannot reset my password."}) {
-                var team = engine.choose(teamQuestion, new RequestInputText().text(text)).join();
+            var messages = new String[]{"Please refund the extra fee on my invoice.", "My parcel went to the wrong address.", "I cannot reset my password."}; for (var index = 0; index < messages.length; index++) {
+                var team = engine.choose(teamQuestion, new RequestInputText().text(messages[index])).join();
                 var owner = team.value(); var odds = team.probability();
-                assert owner != null && odds != null;
+                assert owner.equals(new String[]{"billing", "shipping", "account"}[index]) && odds.compareTo(java.math.BigDecimal.ONE) == 0;
             }
         }
     }

@@ -16,17 +16,17 @@ Future<void> main() async {
       'billing': 'Invoices, fees, and refunds.', 'shipping': 'Parcels and delivery.',
       'account': 'Logins and passwords.'}))));
   try {
-    for (final text in ['Please refund my order. It arrived broken.',
-         'Thanks for the quick help yesterday!', 'I want to send this back.']) {
+    for (final (index, text) in ['Please refund my order. It arrived broken.',
+         'Thanks for the quick help yesterday!', 'I want to send this back.'].indexed) {
       final refund = (await engine.decide(QuestionText(text: 'Does the customer ask for a refund?'), InputText(text: text)));
-      final isRefund = refund.value; final odds = refund.probability;
-      assert(isRefund is bool && odds is ScalarProbability);
+      final isRefund = refund.value; final odds = (refund.probability as ScalarProbability).value;
+      assert(isRefund == [true, false, true][index] && odds == [0.99, 0.01, 0.54][index]);
     }
-    for (final text in ['Please refund the extra fee on my invoice.',
-         'My parcel went to the wrong address.', 'I cannot reset my password.']) {
+    for (final (index, text) in ['Please refund the extra fee on my invoice.',
+         'My parcel went to the wrong address.', 'I cannot reset my password.'].indexed) {
       final team = (await engine.choose(teamQuestion, InputText(text: text)));
-      final owner = team.value; final odds = team.probability;
-      assert(owner is String && odds is ScalarProbability);
+      final owner = team.value; final odds = (team.probability as ScalarProbability).value;
+      assert(owner == ['billing', 'shipping', 'account'][index] && odds == 1.0);
     }
   } finally { engine.close(); }
 }

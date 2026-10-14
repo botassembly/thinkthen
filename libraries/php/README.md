@@ -14,7 +14,7 @@ try {
     $isRefund = $refund->value;
     $refundProbability = $refund->probability;
     assert($isRefund === true);
-    assert(is_float($refundProbability));
+    assert($refundProbability === 0.99);
 } finally { $client->close(); }
 ```
 
