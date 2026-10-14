@@ -48,9 +48,9 @@ def python(source):
     return result
 
 
-def masked(source):
+def masked(source, comments=r'//[^\n]*|/\*[\s\S]*?\*/'):
     # Preserve positions and newlines for scope matching, but never match words in comments/strings.
-    pattern = r'//[^\n]*|/\*[\s\S]*?\*/|"(?:\\.|[^"\\])*"|\'(?:\\.|[^\'\\])*\''
+    pattern = comments + r'|"(?:\\.|[^"\\])*"|\'(?:\\.|[^\'\\])*\''
     return re.sub(pattern, lambda m: ''.join('\n' if c == '\n' else ' ' for c in m[0]), source)
 
 
@@ -339,7 +339,7 @@ def other(source, language):
     result = set()
     if language == 'r':
         result.update(Declaration('', name, 'export') for name in re.findall(r'(?m)^export\((\w+)\)', source))
-        text = masked(re.sub(r'#[^\n]*', '', source))
+        text = masked(source, r'#[^\n]*')
         for match in re.finditer(r'(?m)^([\w.]+)\s*(?:<-|=)\s*function\s*\(', text):
             result.add(Declaration('', match[1], 'call'))
             start, depth = match.end(), 1

@@ -49,6 +49,19 @@ extraPublicExport <- function(context = NULL, enabled = FALSE,
             generated.write_text(original.replace('function(entity_definition = NULL', 'function(extra_field = NULL', 1))
             self.assertIn('unlisted public field: tt_recognize_question.extra_field', invoke())
             generated.write_text(original)
+            feed = root / 'libraries/r/thinkthen/R/feeds.R'
+            original_feed = feed.read_text()
+            for default in ['"records"', '"#"', "'#'", '"escaped\\\"#,)]}"']:
+                with self.subTest(default=default):
+                    feed.write_text(original_feed.replace('name = "records",', 'name = ' + default + ',', 1))
+                    self.assertEqual(invoke(), baseline)
+                    for extra in ['NULL', 'list(a = c(1, 2), b = function() { "#" })']:
+                        feed.write_text(original_feed.replace('name = "records",',
+                            'name = ' + default + ', # Ignore extra_hidden = NULL, )\n'
+                            '                    extra_option = ' + extra + ',', 1))
+                        self.assertEqual(set(invoke()) - set(baseline),
+                                         {'unlisted public field: tt_feed.extra_option'})
+            feed.write_text(original_feed)
             namespace.write_text(namespace.read_text() + '\nexport(extraPublicExport)\n')
             errors = invoke()
             self.assertIn('unlisted public call/export: .extraPublicExport', errors)
