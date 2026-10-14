@@ -23,6 +23,15 @@ readmes = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(readmes)
 
 
+REAL_RUN_BUILD = readmes.run_build
+
+
+def fixture_build(command, work, env, input):
+    # Synthetic compilers test permits and cleanup without depending on host load.
+    return REAL_RUN_BUILD(command, work, dict(env, GITHUB_ACTIONS='true',
+                                            RUNNER_ENVIRONMENT='github-hosted'), input)
+
+
 def archive(path, files):
     with tarfile.open(path, 'w:gz') as package:
         for name, data in files.items():
@@ -121,7 +130,9 @@ class PackageText(unittest.TestCase):
         self.assertEqual(filename, 'sample.py')
         self.assertIn('engine.decide(', code)
         self.assertIn('engine.choose(', code)
-        self.assertEqual(output, 'True\nFalse\nTrue\nbilling\nshipping\naccount\n')
+        self.assertIsNone(output)
+        self.assertIn('assert is_refund is expected', code)
+        self.assertIn('assert team == expected', code)
         with tempfile.TemporaryDirectory() as scratch:
             root = Path(scratch)
             page = root / 'libraries/python/README-PUBLIC.md'
@@ -172,6 +183,68 @@ class PackageText(unittest.TestCase):
                         with self.assertRaisesRegex(readmes.Refusal, 'unsupported-database-example-route: '
                                                    + route.split()[0].strip('"')):
                             readmes.examples(family, root)
+
+    def test_database_helpers_do_not_count_as_functions(self):
+        for family, helpers in readmes.DATABASE_HELPERS.items():
+            for helper in helpers:
+                with self.subTest(family=family, helper=helper), tempfile.TemporaryDirectory() as scratch:
+                    root = Path(scratch); page = readmes.source(family, root)
+                    page.parent.mkdir(parents=True)
+                    page.write_text("```sql\nSELECT thinkthen_decide_details('q', " + helper + "('i'));\n```\n")
+                    with self.assertRaisesRegex(readmes.Refusal, 'example-needs-two-functions: ' + family):
+                        readmes.examples(family, root)
+                    page.write_text(page.read_text().replace('\n```', "\nSELECT thinkthen_choose_details('q', " + helper + "('i'));\n```"))
+                    self.assertEqual(len(readmes.examples(family, root)), 1)
+
+    def test_python_assertions_execute_and_refuse_wrong_answers(self):
+        with tempfile.TemporaryDirectory() as scratch:
+            tree = Path(scratch); root = tree / 'root'; packages = tree / 'packages'
+            packages.mkdir()
+            for name in ('rust-toolchain.toml', 'site/recordings/thinkthen.jsonl',
+                         'crates/thinkthen/Cargo.toml', 'libraries/python/pyproject.toml', 'README.md'):
+                target = root / name; target.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copyfile(readmes.REPO / name, target)
+            page = readmes.source('python', root)
+            approved = readmes.source('python').read_text()
+            module = ('from types import SimpleNamespace\n'
+                      'class Engine:\n'
+                      ' def __enter__(self): return self\n'
+                      ' def __exit__(self, *args): pass\n'
+                      ' def decide(self, question, text):\n'
+                      '  return SimpleNamespace(value=not text.startswith("Thanks"), probability=.97)\n'
+                      ' def choose(self, question, text, options):\n'
+                      '  return SimpleNamespace(value="billing" if "invoice" in text else "shipping" if "parcel" in text else "account")\n'
+                      ' def score(self, question, text): return SimpleNamespace(value=3)\n')
+            cases = [('', True), ('        assert is_refund is not expected\n', False),
+                     ('        assert engine.score(refund, text).value == 3\n', True),
+                     ('        assert engine.score(refund, text).value == 4\n', False),
+                     ('        assert engine.decide(refund, text).probability == .97\n', True),
+                     ('        assert engine.decide(refund, text).probability == .01\n', False)]
+            for index, (assertion, passes) in enumerate(cases):
+                with self.subTest(assertion=assertion):
+                    text = approved.replace('        assert is_refund is expected\n',
+                                            assertion or '        assert is_refund is expected\n')
+                    page.write_text(text)
+                    release = readmes.version(root)
+                    dist = 'thinkthen-' + release + '.dist-info/'
+                    wheel = packages / ('thinkthen-' + release + '-py3-none-any.whl')
+                    summary = readmes.description('python', root)
+                    with zipfile.ZipFile(wheel, 'w') as bundle:
+                        bundle.writestr('thinkthen/__init__.py', module)
+                        bundle.writestr(dist + 'METADATA', 'Metadata-Version: 2.1\nName: thinkthen\nVersion: '
+                                        + release + '\nSummary: ' + summary + '\n\n' + text)
+                        bundle.writestr(dist + 'WHEEL', 'Wheel-Version: 1.0\nGenerator: fixture\nRoot-Is-Purelib: true\nTag: py3-none-any\n')
+                        bundle.writestr(dist + 'RECORD', '')
+                    work = tree / str(index); work.mkdir()
+                    packed_check = readmes.check_package
+                    with patch.object(readmes, 'check_package', side_effect=lambda family, package:
+                                      packed_check(family, package, root)):
+                        if passes:
+                            readmes.run_example('python', packages, work, root)
+                        else:
+                            with self.assertRaisesRegex(readmes.Refusal, 'example-did-not-run: python') as refused:
+                                readmes.run_example('python', packages, work, root)
+                            self.assertIn('AssertionError', str(refused.exception))
 
     def test_archive_replay_preserves_package_roots_with_vendored_readmes(self):
         with tempfile.TemporaryDirectory() as scratch:
@@ -388,7 +461,9 @@ class PackageText(unittest.TestCase):
                     '    out.chmod(0o755)\n')
                 tool.chmod(0o755)
                 work = tree / family; work.mkdir()
-                with self.subTest(family=family), patch.dict(os.environ, {'PATH': str(tools), 'PUB_CACHE': str(cache), 'THINKTHEN_HEAVY_LOCK': str(lock)}, clear=True):
+                with self.subTest(family=family), patch.object(readmes, 'run_build', side_effect=fixture_build), \
+                        patch.dict(os.environ, {'PATH': str(tools), 'PUB_CACHE': str(cache),
+                                               'THINKTHEN_HEAVY_LOCK': str(lock)}, clear=True):
                     readmes.run_example(family, packages, work, root)
 
     def test_flutter_replay_uses_installed_wrapper_and_core_and_collects_failures(self):
@@ -435,11 +510,22 @@ class PackageText(unittest.TestCase):
 
     def test_release_refuses_when_examples_cannot_run(self):
         with tempfile.TemporaryDirectory() as scratch:
-            with self.assertRaisesRegex(readmes.Refusal, 'missing-or-ambiguous-example-package: command') as error:
-                readmes.check_examples(Path(scratch))
-            self.assertIn('missing-or-ambiguous-example-package: typescript', str(error.exception))
-            self.assertIn('missing-or-ambiguous-example-package: duckdb', str(error.exception))
-            self.assertIn('missing-or-ambiguous-example-package: flutter', str(error.exception))
+            tree = Path(scratch)
+            root = tree / 'root'; root.mkdir()
+            families = ('command', 'typescript', 'duckdb', 'flutter')
+            for family in families:
+                page = readmes.source(family, root)
+                page.parent.mkdir(parents=True, exist_ok=True)
+                language = readmes.SAMPLES[family][0]
+                code = ("SELECT thinkthen_decide('q', 'i'); SELECT thinkthen_choose('q', 'i');"
+                        if family == 'duckdb' else 'decide(); choose();')
+                page.write_text('```' + language + '\n' + code + '\n```\n')
+            packages = tree / 'packages'; packages.mkdir()
+            with self.assertRaises(readmes.Refusal) as error:
+                readmes.check_examples(packages, root, families=families)
+            self.assertEqual(str(error.exception).splitlines(), [
+                family + ' block 1: missing-or-ambiguous-example-package: ' + family
+                for family in families])
 
     @unittest.skipUnless(sys.platform in ('linux', 'darwin'), 'compiler replay requires POSIX process groups')
     def test_timed_out_compiler_and_worker_exit_before_replay_releases_build(self):
@@ -494,7 +580,8 @@ class PackageText(unittest.TestCase):
             if sys.platform == 'linux':
                 cases.append((str(tools), 'first-detached'))
             for search_path, first_name in cases:
-                with self.subTest(path=search_path), patch.dict(os.environ, {
+                with self.subTest(path=search_path), patch.object(readmes, 'run_build', side_effect=fixture_build), \
+                        patch.dict(os.environ, {
                     'PATH': search_path, 'THINKTHEN_HEAVY_LOCK': str(tree / 'compiler.lock')}, clear=True), \
                         patch.object(subprocess, 'Popen', bounded_popen), \
                         patch.object(popen, 'communicate', bounded_communicate):

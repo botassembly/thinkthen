@@ -396,6 +396,25 @@ def main():
                 raise AssertionError(("Zig private native bytes", private_result.returncode, private_result.stderr))
         expect(run("sh", gate, "php-dart-gate", str(base / "paired"), host, commit), "", success=True)
         expect(run("sh", gate, "ada-objc-cobol-gate", str(base / "paired"), host, commit), "", success=True)
+        # Consumer-required examples must survive source package assembly.
+        cobol_name = f"thinkthen-cobol-{version}-{host}.tar.gz"
+        with tarfile.open(base / "paired" / cobol_name) as packed:
+            assert packed.extractfile("./examples/blocking.cob").read() == (source / "libraries/cobol/examples/blocking.cob").read_bytes()
+        incomplete = base / "missing-cobol-example"
+        shutil.copytree(base / "paired", incomplete)
+        damaged = incomplete / cobol_name
+        replacement = incomplete / "replacement.tar.gz"
+        with tarfile.open(damaged) as packed, tarfile.open(replacement, "w:gz") as output:
+            for member in packed:
+                if member.name == "./examples/blocking.cob":
+                    continue
+                payload = packed.extractfile(member) if member.isfile() else None
+                output.addfile(member, payload)
+        replacement.replace(damaged)
+        damaged.with_name(damaged.name + ".sha256").write_text(
+            f"{hashlib.sha256(damaged.read_bytes()).hexdigest()}  {damaged.name}\n")
+        expect(run("sh", str(REPO / "sdlc/scripts/release-go-cpp-pair"), str(incomplete),
+                   "ada-objective-c-cobol"), "source members differ for " + cobol_name)
         # Exercise the shared Dart/Flutter route with the real builder and fake native outputs.
         flutter_env = {key: value for key, value in env.items() if not key.startswith("THINKTHEN_ARCHIVED_SOURCE_")}
         flutter_pair = base / "flutter-pair"

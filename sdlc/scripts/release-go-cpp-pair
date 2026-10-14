@@ -236,8 +236,9 @@ if [ "$mode" = ada-objective-c-cobol ]; then
 				printf '%s\n' ./ ./LICENSE ./README.md \
 					./source-package.json ./copybooks/ \
 					./copybooks/tt-native-generated.cpy ./src/ ./src/tt_session.h ./src/tt_session.c \
-					./src/tt_requests_generated.h ./src/tt_requests_generated.c ./examples/ \
-					./examples/session.cob ./THINKTHEN-PACKAGE-INPUTS ./native/
+					./src/tt_requests_generated.h ./src/tt_requests_generated.c \
+					./THINKTHEN-PACKAGE-INPUTS ./native/
+				source_members libraries/cobol/ libraries/cobol/examples
 				tar -tzf "$dir/$c" | sed -n '\|^\./include/|s|^\./|./native/|p; \|^\./lib/|s|^\./|./native/|p'
 			} | LC_ALL=C sort >"$work/expected-members" ;;
 		esac

@@ -251,11 +251,14 @@ SAMPLES = {
 }
 
 
-FUNCTION_NAMES = r'(decide|choose|tag|score|filter|rank|find|annotate|recognize|relate)'
+FUNCTION_NAMES = '(' + '|'.join(variant['const'] for variant in json.loads(
+    (REPO / 'specification/request.schema.json').read_text())['$defs']['RequestFunction']['oneOf']) + ')'
+DATABASE_HELPERS = {'sqlite': set(), 'postgresql': {'thinkthen_record'},
+                    'duckdb': {'thinkthen_record', 'thinkthen_location'}}
 FUNCTION = r'(?<![\w])(?:thinkthen_|tt_)?' + FUNCTION_NAMES + r'(?:Answer(?:Async)?|ValueAsync|_Answer|_details)?(?![\w])'
 
 
-def database_functions(code):
+def database_functions(code, family):
     # SQL strings and comments cannot stand in for executable named calls.
     tokens = re.compile(r"--[^\n]*|/\*|[eE]'(?:\\.|''|[^'\\])*'|'(?:''|[^'])*'|"
                         r'\$(\w*)\$[\s\S]*?\$\1\$|"(?:""|[^"])*"')
@@ -282,6 +285,8 @@ def database_functions(code):
     for route in re.findall(r'\b((?:thinkthen_|tt_)[A-Za-z_]\w*)"?\s*\(', sql, re.I):
         call = re.fullmatch(r'(?:thinkthen_|tt_)' + FUNCTION_NAMES + r'(?:_details)?', route, re.I)
         if not call:
+            if route.lower() in DATABASE_HELPERS[family]:
+                continue
             raise Refusal('unsupported-database-example-route: ' + route)
         functions.add(call[1].lower())
     return functions
@@ -295,7 +300,7 @@ def examples(family, root=REPO):
     functions = set()
     for block in blocks:
         code = block.group(1) + '\n'
-        calls = (database_functions(code) if family in ('sqlite', 'postgresql', 'duckdb')
+        calls = (database_functions(code, family) if family in ('sqlite', 'postgresql', 'duckdb')
                  else {name.lower() for name in re.findall(FUNCTION, code, re.I)})
         # Installation belongs to package assembly, not offline sample replay.
         if not calls and re.fullmatch(
