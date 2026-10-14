@@ -131,7 +131,8 @@ int main(int argc, const char *argv[]) {
                 require(answer.value.count == rows.count);
                 for (NSUInteger index = 0; index < rows.count; index++) {
                     TTAnnotation *row = rows[index], *projected = answer.value[index];
-                    require([projected.input.value isEqual:row.input.value]);
+                    require(projected.input.state == row.input.state);
+                    require([projected.rawFields[@"input"] isEqual:row.rawFields[@"input"]]);
                     require(projected.value.value.count == row.value.value.count);
                     for (NSString *key in row.value.value) require([projected.value.value[key].rawFields isEqual:row.value.value[key].rawFields]);
                 }
