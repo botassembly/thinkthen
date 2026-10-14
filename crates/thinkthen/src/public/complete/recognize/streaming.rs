@@ -92,8 +92,9 @@ impl Engine {
                 options.readiness,
                 read,
                 &|(ordinal, prepared)| {
-                    let storage = prepared.engine.storage();
-                    let _entered = (storage.cache_answers && !storage.refresh_cache)
+                    let _entered = prepared
+                        .engine
+                        .reuses_recognition_answers()
                         .then(|| in_flight.enter(&prepared, &cancel))
                         .transpose()
                         .map_err(|error| error.at_record(ordinal))?;

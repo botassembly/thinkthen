@@ -29,10 +29,11 @@ fn recognition_response(body: &[u8]) -> Canned {
 
 #[test]
 fn repeated_recognition_retains_sources_and_replays_at_parallel_width() {
-    for session_mode in [false, true] {
+    for mode in 0..3 {
+        let session_mode = mode == 2;
         let listener = Listener::answering(recognition_response).unwrap();
         let cache = std::env::temp_dir().join(format!(
-            "thinkthen-recognition-{}-{session_mode}",
+            "thinkthen-recognition-{}-{mode}",
             std::process::id()
         ));
         std::fs::create_dir(&cache).unwrap();
@@ -61,7 +62,7 @@ fn repeated_recognition_retains_sources_and_replays_at_parallel_width() {
             let rows = if session_mode {
                 session_rows(&engine, &request, expected_sends)
             } else {
-                native_rows(&engine, &request, expected_sends)
+                native_rows(&engine, &request, expected_sends, mode == 1)
             };
             assert_rows(&rows, session_mode);
             assert_eq!(listener.count(), 2);
@@ -209,10 +210,23 @@ fn native_rows(
     engine: &Engine,
     request: &Request,
     expected_sends: u64,
+    observe: bool,
 ) -> Vec<CompleteRecord<QuestionInput, CompleteRecognized>> {
     let admitted = request.clone().admit().unwrap();
+    let observer = |_: RecordObservation<'_>| {};
+    let controls = if observe {
+        CallOptions::new().observe(&observer)
+    } else {
+        CallOptions::new()
+    };
     let call = engine
-        .execute_request(&admitted, RequestEnvironment::default())
+        .execute_request(
+            &admitted,
+            RequestEnvironment {
+                controls,
+                feed: None,
+            },
+        )
         .unwrap();
     let RequestOutcome::Complete(call) = call else {
         panic!("complete recognition")
@@ -222,4 +236,53 @@ fn native_rows(
         panic!("recognized rows")
     };
     rows
+}
+
+#[test]
+fn uncached_and_refreshed_repeated_recognition_keep_parallel_sends() {
+    for refresh in [false, true] {
+        let release = Arc::new(Rendezvous::new(3));
+        let held = Arc::clone(&release);
+        let (sent, received) = mpsc::channel();
+        let listener = Listener::answering_with_events(
+            move |body| recognition_response(body).after_release(Arc::clone(&held)),
+            sent,
+        )
+        .unwrap();
+        let cache = std::env::temp_dir().join(format!(
+            "thinkthen-recognition-parallel-{}-{refresh}",
+            std::process::id()
+        ));
+        std::fs::create_dir(&cache).unwrap();
+        let builder = crate::api::fixed(listener.base(), "recognition-fixture")
+            .throttle(4)
+            .unwrap()
+            .max_retries(0);
+        let builder = if refresh {
+            builder.cache_at(&cache).unwrap().refresh_cache(true)
+        } else {
+            builder.no_cache()
+        };
+        let engine = builder.build().unwrap();
+        let session = engine
+            .request_session(recognition_request(RequestInput::Records {
+                items: vec![descriptor("Ada").item; 2],
+            }))
+            .unwrap();
+        for _ in 0..2 {
+            received.recv_timeout(Duration::from_secs(5)).unwrap();
+            received.recv_timeout(Duration::from_secs(5)).unwrap();
+            assert!(release.wait());
+        }
+        let packets = drain(&session);
+        let RequestSessionResult::Terminal(terminal) = packets.last().unwrap() else {
+            panic!("joined terminal")
+        };
+        assert!(terminal.error.is_none());
+        assert_eq!(terminal.facts.as_ref().unwrap().requests_sent(), 4);
+        assert_eq!(terminal.facts.as_ref().unwrap().records(), 2);
+        assert_eq!(listener.count(), 4);
+        drop(engine);
+        std::fs::remove_dir_all(cache).unwrap();
+    }
 }
