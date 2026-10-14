@@ -14,6 +14,7 @@ import unittest
 from unittest.mock import patch
 from conformance import parity
 from conformance import c_images
+from conformance.source_fixtures import stage_generated_source
 
 
 class NativeFixtureEnvironment(unittest.TestCase):
@@ -428,8 +429,9 @@ class PublicAssertions(unittest.TestCase):
         import venv
         with tempfile.TemporaryDirectory() as scratch:
             root = Path(scratch)
+            stage_generated_source(parity.ROOT, root, 'python')
             library = root / 'libraries/python'
-            library.mkdir(parents=True)
+            library.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(parity.ROOT / 'libraries/python/check.sh', library / 'check.sh')
             (library / 'host.sh').write_text('python_host() { command -v python3; }\n')
             scripts = root / 'sdlc/scripts'
@@ -443,7 +445,7 @@ class PublicAssertions(unittest.TestCase):
             (assets / 'tests').mkdir()
             (assets / 'tests/native_case.py').write_text('# compiled installed caller fixture\n')
             children = root / 'conformance/children'
-            children.mkdir(parents=True)
+            children.mkdir(parents=True, exist_ok=True)
             (children / 'native_fixture.py').write_text(
                 'import os, sys\nfrom pathlib import Path\n'
                 'def run(consumer, command, root, **kwargs):\n'

@@ -18,7 +18,7 @@ class CampaignEnvironment(unittest.TestCase):
             scripts = root / 'sdlc/scripts'
             scripts.mkdir(parents=True)
             for name in ('test-full-cases', 'surfaces', 'smoke', 'heavy-lock',
-                         'allow-list', 'full-compiler', 'scratch.sh', 'verdict.sh'):
+                         'build-admission.py', 'allow-list', 'full-compiler', 'scratch.sh', 'verdict.sh'):
                 shutil.copyfile(parity.ROOT / 'sdlc/scripts' / name, scripts / name)
             (scripts / 'installed.sh').write_text('backend_start() { port=12345; }\n')
             for name in ('release-pack', 'release-smoke'):
@@ -63,11 +63,18 @@ with (Path({str(root)!r})/'probes.jsonl').open('a') as stream:
                 'cargo': f'/usr/bin/python3 "{probe}" compiler\n',
                 'rustc': 'echo "host: x86_64-unknown-linux-gnu"\n',
                 'jq': 'case "$*" in *expect.success*) echo true ;; *) echo fixture ;; esac\n',
-                'python3': f'''case "$*" in
-*--tool-environment*) echo THINKTHEN_TOOLCHAINS={tools}; exit 0 ;;
-*--validate*) exit 0 ;;
-*) exec /usr/bin/python3 "{probe}" parity ;;
-esac
+                'python3': f'''if [ "$1" = "{scripts / 'build-admission.py'}" ]; then
+    exec /usr/bin/python3 -c 'import os,runpy,sys; os.getloadavg=lambda:(0,0,0); sys.argv=sys.argv[1:]; runpy.run_path(sys.argv[0],run_name="__main__")' "$@"
+fi
+if [ "$#" -eq 2 ] && [ "$1" = conformance/parity.py ]; then
+    case "$2" in
+    --tool-environment) echo THINKTHEN_TOOLCHAINS={tools}; exit 0 ;;
+    --validate) exit 0 ;;
+    12345) exec /usr/bin/python3 "{probe}" parity ;;
+    esac
+fi
+printf 'unsupported Python invocation: %s\\n' "$*" >&2
+exit 2
 ''',
             }
             for name, body in commands.items():
@@ -104,6 +111,18 @@ esac
             rows = [json.loads(line) for line in (root / 'probes.jsonl').read_text().splitlines()]
             self.assertEqual(rows, [{'stage': 'routine',
                                      'settings': {'RUSTC_WRAPPER': '/ambient/rustc-wrapper'}}])
+            with (scripts / 'test-full-cases').open('a') as stream:
+                stream.write('\npython3 conformance/not-a-real-helper.py\n')
+            (root / 'probes.jsonl').write_text('')
+            result = subprocess.run(['sh', str(scripts / 'test-full-cases'), '--run'], cwd=root,
+                                    env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+            self.assertEqual(result.returncode, 2, result.stdout.decode())
+            self.assertIn(b'unsupported Python invocation: conformance/not-a-real-helper.py',
+                          result.stdout)
+            rows = [json.loads(line) for line in (root / 'probes.jsonl').read_text().splitlines()]
+            self.assertTrue({'compiler', 'smoke', 'full', 'parity'} <= {row['stage'] for row in rows})
+            for row in rows:
+                self.assertEqual(row['settings'], expected, row['stage'])
 
     def test_duckdb_build_boundary_keeps_full_and_smoke_compiler_inputs_stable(self):
         with tempfile.TemporaryDirectory(prefix='thinkthen-duckdb-env-') as folder:

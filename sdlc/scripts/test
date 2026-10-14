@@ -49,6 +49,8 @@ usage_guard
 config_home
 temp_home
 
+python3 sdlc/scripts/build-admission-test.py
+
 cargo nextest run --profile default --locked --offline --workspace --all-targets
 cargo test --locked --offline --workspace --doc
 cargo nextest run --profile default --config-file "$REPO/.config/nextest.toml" \

@@ -346,6 +346,13 @@
         "ClientError": [
           "constructor"
         ]
+      },
+      "helper_names": {
+        "question_file": "Client.questionFile",
+        "question_name": "Client.questionName",
+        "question_reference": "Client.questionReference",
+        "item": "Client.item",
+        "files": "Client.files"
       }
     },
     "ruby": {
@@ -379,7 +386,14 @@
       ],
       "representation_owners": [
         "Completed"
-      ]
+      ],
+      "helper_names": {
+        "question_file": "Client.question_file",
+        "question_name": "Client.question_name",
+        "question_reference": "Client.question_reference",
+        "item": "Client.item",
+        "files": "Client.files"
+      }
     },
     "r": {
       "root": "libraries/r",
@@ -390,7 +404,7 @@
         "libraries/r/thinkthen/R/*.R"
       ],
       "option_containers": [
-        "tt_request_options"
+        "tt_options"
       ],
       "setting_containers": [
         "tt_engine"
@@ -406,7 +420,13 @@
       "lifecycle_owners": [
         ""
       ],
-      "representation_owners": []
+      "representation_owners": [],
+      "helper_names": {
+        "question_file": "tt_question.file",
+        "question_name": "tt_question.name",
+        "question_reference": "tt_question.reference",
+        "files": "tt_files"
+      }
     },
     "c": {
       "root": "libraries/c",
@@ -416,10 +436,10 @@
         "libraries/c/include/thinkthen.h"
       ],
       "option_containers": [
-        "thinkthen_request_options_v1"
+        "thinkthen_request_call_options_v1"
       ],
       "setting_containers": [
-        "thinkthen_engine_settings_v1"
+        "thinkthen_request_engine_settings_v1"
       ],
       "function_prefix": "thinkthen_",
       "test_folders": [
@@ -437,7 +457,8 @@
       "lifecycle_owners": [
         ""
       ],
-      "representation_owners": []
+      "representation_owners": [],
+      "field_prefix": "m_"
     },
     "cpp": {
       "root": "libraries/cpp",
@@ -1022,10 +1043,10 @@
         "libraries/dart/lib/**/*.dart"
       ],
       "option_containers": [
-        "InputRequestOptions"
+        "Options"
       ],
       "setting_containers": [
-        "InputEngineSettings"
+        "EngineSettings"
       ],
       "function_prefix": "",
       "test_folders": [
@@ -1033,11 +1054,11 @@
         "example"
       ],
       "helper_names": {
-        "question_file": "InputRequestQuestionFile",
-        "question_name": "InputRequestQuestionName",
-        "question_reference": "InputRequestQuestionReference",
-        "item": "InputRequestItem",
-        "files": "InputRequestSource"
+        "question_file": "QuestionFile",
+        "question_name": "QuestionName",
+        "question_reference": "QuestionReference",
+        "item": "Item",
+        "files": "InputSource"
       },
       "entrypoint": "libraries/dart/lib/thinkthen_dart.dart",
       "function_containers": [
