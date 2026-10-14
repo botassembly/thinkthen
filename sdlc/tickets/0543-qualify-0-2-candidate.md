@@ -34,59 +34,43 @@ Reviews: revision 6712593, accept
 
 ## Outcome
 
-One reviewed commit, tagged `rc/0.2.0-rc.N`, passes the local release suite and the hosted rehearsal on Linux, macOS and Windows. It publishes nothing. This closes the build side of 0.2. Release QA and publication stay with 0425.
+One reviewed commit on `ticket/0543-final`, tagged `rc/0.2.0-rc.13`, passes the local release suite, the coverage comparison and the nonpublishing hosted runs on Linux, macOS and Windows, and publishes nothing.
 
 ## Evidence
 
-- Starts from: [the 2026-10-10 ruling](../decisions/2026-10-10-drive-0-2-to-done.md), which lets the coordinator cut candidates and run nonpublishing workflows, and moves every Windows check to the candidate. This ticket takes the release preparation and candidate stages from 0425.
-- Keeps: no registry publication, no approval of the `release` environment, and no paid call. The exact-commit rehearsal guard from 0398.
-- Changes: prepare release workflows and qualify one candidate across platforms.
-  - Local release suite on the candidate commit: `sdlc/scripts/test-full-cases --run`, `sdlc/scripts/package` and `sdlc/scripts/test-stress --run`, including the bounded MCP timing from 0455 and the 0524 full Go matrix, load and large-input cases.
-  - Release preparation, moved from 0425, lands before the final candidate. The checkpoint sweep runs `npm run test-docs` and names the result. The release workflow runs `site/scripts/check-binding-proofs.mjs` in strict mode and fails when `site/examples/bindings-proof.json` does not match the tagged commit. The release workflow builds the R source tarball from the published-crate shape before the GitHub release goes public. The 0425 record notes when the Maven Central token, its signing key and `TAP_DEPLOY_KEY` expire and when each was last rotated. No rehearsal reads a secret; 0398 keeps that rule. `install-check.yml` gains `windows-2025` rows for `install.ps1`, npm, NuGet, Maven Central and every other channel that ships Windows. Report each account prerequisite to Ian: the Maven namespace and token, pub.dev trusted publishing, and any unconfirmed trusted-publisher registration. Claim `.github/workflows/**`, `sdlc/planning/release-process.md`, `sdlc/scripts/surfaces*`, `sdlc/scripts/release-workflow`, `CHANGELOG.md`, `site/scripts/check-binding-proofs.mjs` and `sdlc/records/0543*`.
-  - Tag the commit and dispatch `.github/workflows/release.yml` in rehearse mode and `.github/workflows/windows.yml`. Cover Linux x86 and ARM, `macos-15`, `macos-15-intel` and Windows.
-  - The Windows run carries the platform proofs for 0383, 0384, 0385 and 0455, and the 0474 and 0480 cache writer, reader, conversion and replay checks.
-  - The macOS run executes the installed Foundation consumer from 0518 if 0530 has not already run it on the M5.
-  - Windows failures become new bug tickets. Other failures get a fix here, or a bug ticket when they need their own design. Batch fixes and cut the next candidate. 0543 closes when one candidate passes every platform, after the Windows bug tickets land.
-- Proof: the run identifiers and the commit, named once in this ticket's landing record.
-- Defers: release QA, publication and after-publication checks stay with 0425, 0393 and 0398.
+- Starts from: `ticket/0543-final`, which collects every 0.2 lane. [The 2026-10-10 ruling](../decisions/2026-10-10-drive-0-2-to-done.md) lets the coordinator cut candidates and run nonpublishing workflows. This ticket takes release preparation and the candidate stage from 0425.
+- 0575 depends on this ticket for landing and deploy only, so it is not listed above. Its merge of `docs/0.2-refresh` into `ticket/0543-final` is still a freeze gate, because `site/scripts/check-binding-samples.mjs` checks the site samples.
 
-PM amendment, 2026-10-11. The [adversarial review](../records/2026-10-11-0-2-adversarial-review.md) found defects and gaps after 0542 closed. Stop qualifying rc.11 when its current run exits. Land 0549 first, then 0550 to 0554, and cut the next candidate after they land. Before cutting it, a fresh reviewer searches the code for every item in the Changes lines of 0549 to 0554 and confirms each one is gone or done. The candidate's local campaign uses the 0549 runner. Ian approved 0555 and 0556 the same day, and the same rules cover them: they land before the candidate, and the pre-candidate search covers 0549 to 0556.
+## Decisions
 
-PM amendment, 2026-10-11, second. One revision gets tested, accepted and landed.
-- Combine 0549, 0555 and the 0550 to 0558 stack onto current `origin/main` as one revision. The campaign running on `ad4b49b4a` contains none of the 0550 to 0558 product code, so its result only checks the runner.
-- On that combined revision, run routine `test` and `lint`, then the Polars nextest and clippy lane and the C library checks. Record a review accept only after those pass on the same SHA. A source-only review is evidence, not acceptance.
-- Run the full campaign once on that SHA. A candidate run fails on exit 77 and on platform-pending rows. Linux may skip only Objective-C and Swift, and the M5 run covers them.
-- Install the Apple packages that the Swift and Objective-C `check.sh` scripts need on the M5, then rerun both. If they need full Xcode or an Apple account, tell the PM, who will raise it with Ian. 0556 does not close on exit 77.
-- Land from the tested SHA.
+- PM decision, 2026-10-13: drive this ticket and every ticket it depends on by [maximum parallelism](../decisions/2026-10-13-drive-0-2-with-maximum-parallelism.md) and [the standing build rulings](../decisions/2026-10-13-standing-build-rulings.md). Ian ruled that all library quality work ships in 0.2.
+- PM decision, 2026-10-13: every `check.sh` shares one heavy-build lock with four permits. A checkpoint or candidate routine run takes all four, records `/proc/pressure/io` before and after, and reruns a timeout under high disk pressure once under the same hold before anyone treats it as a failure. The load cap applies only on the Beelink.
+- PM decision, 2026-10-13: use only standard hosted runners, which cost nothing for this public repo. A lane dispatches only its own language's check by a manual run. Apple checks run on GitHub macOS, never on the M5 in their place.
+- PM decision, 2026-10-14: the Rust ratchet is not a gate on a lane or the candidate. At freeze it equals the measured total, and the record names the 0.2 features that raised it above main. The consolidated final stood 1,567 lines above main after 0564 found no safe cut that kept every distinct check.
+- PM decision, 2026-10-13: 0560, 0561, 0563 and 0565 close on the passing candidate SHA with 0562, 0564 and the other wave tickets.
 
-PM amendment, 2026-10-12, third. Source limits and Apple checks.
-- Apple: this replaces the M5 bullet above. The M5 has only Command Line Tools, so the Swift and Objective-C package checks cannot run there. Under [the 2026-10-10 ruling](../decisions/2026-10-10-drive-0-2-to-done.md), Apple runs on a GitHub macOS workflow at the candidate, and platform qualification does not hold 0556 open. 0556 closes on its routine installed checks. The candidate fails if the GitHub Swift or Objective-C run exits nonzero or 77.
-- The six binding limits that block lint at `e52ac9593` may rise only by the measured amount, and only with a named cause in the commit:
-  - Ada declarations, 8,638 to 8,653, generated from the approved named C export;
-  - Ada Python, 550 to 551, for the child-environment helper import;
-  - C examples and tests, 3,340 to the measured total after the shared helper saves its 23 lines, for the direct named-export checks this ticket required;
-  - Java, 4,071 to 4,161, plus Kotlin and Scala by one line each, for the JVM wait fixes and their regression tests.
-- Before landing, list every binding and database limit that differs from `origin/main` in the combined record, with each limit's change and its cause. The fresh reviewer accepts or rejects each raise, as `AGENTS.md` requires. Against main the binding limits rise by 1,634 lines and fall by 214. The largest raises are the C library's Rust, up 419, Python's Rust, up 205, and the C++ header, up 171. The record must not say "no limit was raised".
-- The record is the evidence. State results in its text. Drop pointers to `target/` and `builds/` directories, because sweeps delete them.
-- Explain the C nextest timeouts and the 80 unrun cases before acceptance, or show that they reproduce on `origin/main`.
+## Scope
 
-PM amendment, 2026-10-12, fourth. Order after the [2026-10-12 ruling](../decisions/2026-10-12-solid-0-2.md).
-- Land the current batch, 0549 to 0558, from the combined revision once its gates pass, a fresh review accepts it and the third amendment's items are done, all on that same SHA. It does not need another full campaign first. Rc.12 already ran the campaign on this batch, and its two failures were repaired with targeted checks.
-- 0555's full-campaign proof moves to the final candidate. A campaign now would qualify C exports that 0561 deletes.
-- Then 0560 records the coverage baseline. Next come 0561, 0562 and 0563 in order, because they touch the same C and generated files. 0564 runs alongside them once 0560 lands.
-- The final candidate runs the full campaign once, the GitHub Apple and Windows runs, and a 0560 coverage run, all on one SHA.
+- Changes: `.github/workflows/**`, `sdlc/planning/release-process.md`, `sdlc/scripts/surfaces*`, `sdlc/scripts/release-workflow`, `site/scripts/check-binding-samples.mjs` and `sdlc/records/0543*`. Fixes found by the candidate go to the lane that owns the file.
+- Checklist:
+  1. Merge every lane into `ticket/0543-final` with an accepting review: 0560 to 0565, 0568, 0569, 0573 to 0579, 0580, 0581 and 0582, plus `docs/0.2-refresh` from 0575. Ian has approved the public texts from 0575, 0577 and 0578.
+  2. Prepare the release workflows. `release.yml` rehearse mode gains a `macos-15` job that runs `libraries/swift/check.sh`, `libraries/objective-c/check.sh` and the Foundation consumer from 0518. `release.yml` builds the R source tarball from the published-crate shape and runs `check-binding-samples.mjs` in strict mode. `install-check.yml` gains `windows-2025` rows for every channel that ships Windows. Write the expiry and rotation dates of the Maven token, the signing key and `TAP_DEPLOY_KEY` into the 0425 record, as dates only. Tell the PM which account prerequisites remain: the Maven namespace, pub.dev trusted publishing and any unconfirmed trusted publisher.
+  3. Freeze one SHA. Run routine `test` and `lint`, the Polars nextest and Clippy, complete C and installed C, and a build of every library, collecting every failure.
+  4. Fresh reviewers review that SHA by area: core, generators, each language group and docs. They accept or reject each source-limit change against main with its cause.
+  5. Tag `rc/0.2.0-rc.13`.
+  6. Run in parallel: on the Beelink, `sdlc/scripts/test-full-cases --run`, `sdlc/scripts/package` and `sdlc/scripts/test-stress --run`, where exit 77 or a pending platform row fails and only Swift and Objective-C may skip; on the Beelink, `sdlc/scripts/coverage` compared by counts with the 0560 baseline net of deletions; on GitHub, `release.yml` in rehearse mode and `windows.yml`, covering Linux x86 and ARM, `macos-15`, `macos-15-intel` and Windows. The Windows run carries the platform proofs for 0383, 0384, 0385 and 0455 and the 0474 and 0480 cache checks.
+  7. Record each run's ID, exit and counts in the 0543 record, with no `target/` or `builds/` paths.
+  8. Fix forward on `ticket/0543-final`, Windows included. A fix confined to one language reruns that language's tier and its hosted job. A core or generator fix reruns step 6. File a separate ticket only for a fix that needs its own design.
+  9. Close this ticket and the wave tickets on the passing SHA and hand the SHA to the PM, who brings 0425 to Ian. Main takes that SHA after Ian's go.
+- Keeps: no registry publication, no approval of the `release` environment, no paid call, and no secret read in any rehearsal. The exact-commit rehearsal guard from 0398.
 
-PM amendment, 2026-10-12, fifth. Build in waves and test once, under the [2026-10-12 waves ruling](../decisions/2026-10-12-build-in-waves-test-once.md). This replaces the order in the fourth amendment.
-- Waves: 0560 baseline; then 0561 with 0565, alongside the Rust-only part of 0564; then 0562; then 0563 fanned out by language group, with the library part of 0564 joining each group; then the candidate.
-- All waves build on `ticket/0543-final`. Main receives the batch once, from the accepted candidate SHA.
-- Developers run only fast checks: build, lint with source limits, and routine checks of what they touch. Each wave ends with one routine suite run and a build of every language library.
-- Language developers edit only their own library directory and limit file. Only the 0562 developer edits generators and generated files. The coordinator edits shared files and batches requests for core or generator changes.
-- The fresh review is split by area on one SHA. The candidate then runs the full campaign, the GitHub Apple and Windows runs, and a coverage run that must not fall below the baseline except for deleted code. 0560 to 0565 close together on that SHA.
-- A campaign fix confined to one language reruns that language's full tier. A fix to the core or the generators reruns the full campaign.
+## Proof
 
-PM amendment, 2026-10-12, sixth. Two tickets join the waves. 0569 (annotate context, score levels and status) is core CLI work and joins wave 2. 0568 (language-library parity) starts once 0562 lands: its manifest, lint, typed options and size report go with the generator work, and each language's part joins that language's 0563 group in wave 4. Both close with 0560 to 0565 on the candidate SHA.
+The 0543 record names the candidate SHA once with each run's ID, exit and counts, and every run in step 6 passes on that SHA.
 
-PM amendment, 2026-10-12, seventh. 0573 (caller order and one aggregate packet) and 0574 (one-line answer reading) join the waves. Their engine parts join wave 2, their generator parts join 0562, and each language's part joins its 0563 group. Both close with the rest on the candidate SHA.
+## Defers
+
+Release QA, publication and after-publication checks stay with 0425, 0393 and 0398. Text changes Ian asks for after the freeze rerun the README check, `sdlc/scripts/package`, the site build and the hosted rehearsal under 0575, not the full campaign. Pinning and pushing the DuckDB descriptor follows Ian's go under 0577.
 
 ## Progress
 
@@ -115,25 +99,3 @@ PM amendment, 2026-10-12, seventh. 0573 (caller order and one aggregate packet) 
 - 2026-10-12 next: The fourth amendment moves the next full campaign to the final candidate; exact-source gates passed on 48b22e71f, fresh review found Go request duplication and JVM/Dart immediate metadata loss, and targeted repairs passed before integration and new same-revision gates.
 - 2026-10-12 landed aa595d6950d0f7243e980d27f417570b65239a49; next: The tested and freshly reviewed corrective batch is pushed and its nine tickets are closed; follow the fourth amendment with 0560 baseline, then 0561, 0565, 0562 and 0563, with 0564 after baseline and final candidate qualification after those changes.
 - 2026-10-12 next: Follow the fifth amendment: finish the 0560 baseline, combine 0561 and 0565 alongside Rust-only 0564, then 0562 and language groups for 0563 with library 0564, using wave checkpoints and one final candidate on ticket/0543-final.
-
-PM amendment, 2026-10-13. The Rust ratchet may rise from the core checkpoint of 186,955 to the measured combined total of 187,452, which stays below main. The added lines come from required queue changes and their regression tests. Make no assertion or formatting cuts to meet the old checkpoint. Set the final ratchet to the candidate's measured total, and no higher than main.
-
-PM amendment, 2026-10-13. 0576 joins 0.2. Its engine and generator parts follow 0562 and 0574, and its language parts join the 0563 groups.
-
-PM amendment, 2026-10-13. Ian ruled that the DuckDB community listing ships through 0.2, so 0577 joins it. 0577 runs in its own lane beside the waves, and its descriptor pins the candidate commit.
-
-PM amendment, 2026-10-13. Candidate checklist. This replaces any earlier ordering it contradicts.
-
-1. Merge every lane into `ticket/0543-final` on the Beelink: main, 0576, 0579, 0578, the Zig checkpoint from `ticket/0563-php-dart-zig-runtime`, the 0560 script commit, 0569's fixes, 0574's remaining languages, and `docs/0.2-refresh` from 0575. Before the freeze, 0560 to 0565, 0568, 0569 and 0573 to 0579 are merged with accepting reviews, and Ian has approved the public texts from 0575, 0577 and 0578. The language groups, 0569, 0579, 0576 and the docs lane run in parallel.
-2. Prepare the release workflows. Add a `macos-15` job to `release.yml` rehearse mode that runs `libraries/swift/check.sh`, `libraries/objective-c/check.sh` and the Foundation consumer; run Apple checks on GitHub, never on the M5 in their place. Confirm `release.yml` builds the R tarball. Replace the stale names `check-binding-proofs.mjs` and `bindings-proof.json` with `site/scripts/check-binding-samples.mjs`. Write the expiry and rotation dates of the Maven token, the signing key and `TAP_DEPLOY_KEY` into the 0425 record, as dates only. Tell the PM which account prerequisites remain: the Maven namespace, pub.dev trusted publishing and any unconfirmed trusted publisher.
-3. Freeze one SHA. Run routine `test` and `lint`, the Polars nextest and Clippy, complete C and installed C, and a build of every library.
-4. Fresh reviewers review that SHA by area: core, generators, each language group and docs. They accept or reject each source-limit change against main with its cause. The Rust ratchet equals the measured total, and the record names the 0.2 features that raised it above main.
-5. Tag `rc/0.2.0-rc.13`.
-6. Run these in parallel: on the Beelink, `sdlc/scripts/test-full-cases --run`, `sdlc/scripts/package` and `sdlc/scripts/test-stress --run`, where exit 77 or a pending platform row fails and only Swift and Objective-C may skip; on the Beelink, `sdlc/scripts/coverage` compared by counts with the 0560 baseline net of deletions; on GitHub, `release.yml` in rehearse mode and `windows.yml`.
-7. Record each run's ID, exit and counts in the 0543 record, with no `target/` paths.
-8. Fix forward on `ticket/0543-final`, Windows included. A fix confined to one language reruns that language's tier and its hosted job. A core or generator fix reruns step 6. File a separate ticket only for a fix that needs its own design.
-9. Close 0543 and the wave tickets on the passing SHA and hand the SHA to the PM, who brings 0425 to Ian. Pinning and pushing the DuckDB descriptor follows Ian's go and is not a candidate gate.
-
-PM amendment, 2026-10-13. Follow `sdlc/decisions/2026-10-13-standing-build-rulings.md` for size, measurement, checks, ownership, questions, records, scope and recovery. 0560, 0561, 0563 and 0565 have no work left; their remainders moved to 0562, 0564, 0576 and this ticket, and they close when the candidate merge lands them. 0575's merge of `docs/0.2-refresh` into `ticket/0543-final` is a gate before the freeze.
-
-PM amendment, 2026-10-13. Drive this ticket and every ticket it depends on by `sdlc/decisions/2026-10-13-drive-0-2-with-maximum-parallelism.md`. Ian ruled that all the library quality work ships in 0.2.
