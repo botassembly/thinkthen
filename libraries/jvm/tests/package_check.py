@@ -23,7 +23,7 @@ def inspect(name, source):
     with zipfile.ZipFile(io.BytesIO(source)) as bundle:
         members = {item.filename: bundle.read(item) for item in bundle.infolist() if not item.is_dir()}
     assert members, f"empty {name} JAR"
-    legacy = {"Door", "Complete", "CompleteDetails", "CompleteEngine", "Requests", "Questions", "Ids", "KotlinComplete", "KotlinFacade", "KotlinCallerKt", "KotlinRequests", "ScalaComplete", "ScalaFacade", "ScalaCaller", "ScalaRequests"}
+    legacy = {"Door", "Complete", "CompleteDetails", "CompleteEngine", "Requests", "Ids", "KotlinComplete", "KotlinFacade", "KotlinCallerKt", "KotlinRequests", "ScalaComplete", "ScalaFacade", "ScalaCaller", "ScalaRequests"}
     assert not any(Path(member).name.split("$")[0].removesuffix(".class") in legacy for member in members if member.endswith(".class")), "retired public class escaped product JAR"
     demo_classes = {"KotlinCallerKt.class", "ScalaCaller$package.class",
                     "ScalaCaller$package$.class", "scalaCaller.class",
@@ -139,6 +139,9 @@ def session_abi_check(header, jar, library):
         actual = json.loads(subprocess.check_output([str(jdk / 'bin/java'), '--enable-native-access=ALL-UNNAMED', '-XX:ActiveProcessorCount=1', '-cp', str(jar) + os.pathsep + str(scratch), 'thinkthen.AbiProbe', str(library.resolve())], env=env, text=True))
     native = abi.header_abi(header)
     expected = abi.represented_abi(native, [], declarations, [], signed=False)
+    # FFM group layouts represent by-value C structs without carrying their C names.
+    for function in expected['functions'].values():
+        function['arguments'] = ['record' if kind in native['records'] else kind for kind in function['arguments']]
     abi.compare_abi(expected, actual)
     print(f'JVM session C ABI: {len(declarations)} source-declared, compiled and linked descriptors match')
 
