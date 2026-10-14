@@ -2,7 +2,7 @@
 import re
 import json
 from csharp import shape
-from host_answers import named_object_fields, usage_operations, call_results
+from host_answers import named_object_fields, usage_operations, call_results, scalar_input_selectors
 ROOTS = ('completesessionPacket', 'completeplan')
 def name(key):
     if key.startswith('complete') and key.removeprefix('complete').lower() == 'error': return 'FailureDetail'
@@ -240,25 +240,9 @@ def call_helpers(definitions, input_definitions):
     lines += ['}']
     # Input shape comes from the canonical selector grammar, independently of
     # a nested array in an authored answer.
-    selectors = {'text': 'text', 'json': 'value'}
-    scalars = {}
-    for child, _ in input_definitions['RequestInput'].get('variants', []):
-        source = input_definitions[child]
-        fields = source.get('properties', {})
-        kind = fields.get('kind', {}).get('const')
-        if kind in selectors:
-            member = selectors[kind]
-            if member not in source.get('required', []) or member not in fields:
-                raise ValueError('single input selector needs its canonical payload')
-            if kind == 'text' and fields[member].get('type') != 'string':
-                raise ValueError('literal text selector needs a text payload')
-            if kind == 'json' and any(key in fields[member] for key in ('type', '$ref', 'oneOf', 'anyOf')):
-                raise ValueError('authored JSON selector needs an unrestricted payload')
-            scalars[kind] = name(child)
-    if scalars.keys() != selectors.keys():
-        raise ValueError('canonical single input selectors are missing')
+    scalars = [name(child) for child in scalar_input_selectors(input_definitions)]
     lines += ['func scalarInput(input RequestInput) bool { switch input.(type) {',
-              'case ' + ','.join(scalars.values()) + ': return true', '}; return false }']
+              'case ' + ','.join(scalars) + ': return true', '}; return false }']
     return '\n'.join(lines) + '\n' + call_runtime()
 
 

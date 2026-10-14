@@ -583,7 +583,16 @@ func main() {
 	n, err = uncertainChoice.Terminal.Facts().Value.RequestsSent().Value.Int64()
 	require(err == nil, "uncertain choice requests missing")
 	expectedRequests += n
-	require(uncertainChoice.Value == nil, "nullable choice judgment changed")
+	require(uncertainChoice.Value == nil && uncertainChoice.Probability == nil, "nullable choice judgment changed")
+	nullableChoice, err := client.Choose(context.Background(), tt.DefinedQuestion(tt.RequestDefinitionAuthoredChoose{Choose: tt.AuthoredQuestionTextString("Which?"), Options: tt.Ptr[tt.AuthoredOptions](tt.AuthoredOptionsArray{"a", "b"}), Threshold: tt.Ptr[tt.AuthoredCut](tt.AuthoredCutNumber(.95))}), tt.TextRecordsInput("uncertain-choice", "text"), nil)
+	require(err == nil, "nullable choice list failed")
+	nullableValues := nullableChoice.Value.([]any)
+	nullableProbabilities := nullableChoice.Probability.(tt.ProbabilityList)
+	require(len(nullableValues) == 2 && nullableValues[0] == nil && nullableValues[1] == nil && len(nullableProbabilities) == 2 && nullableProbabilities[0] == nil && nullableProbabilities[1] == nil, "nullable list probability lost input alignment")
+	nullableSends, err := nullableChoice.Facts.RequestsSent().Value.Int64()
+	require(err == nil, "nullable list facts missing")
+	expectedRequests += nullableSends
+	retained = append(retained, nullableChoice)
 	path := os.Getenv("HOME") + "/records.txt"
 	require(os.WriteFile(path, []byte("alpha\n\nbeta\n"), 0600) == nil, "fixture file")
 	files, err := client.Decide(context.Background(), tt.TextQuestion("Is it?"), fixtureInput(tt.RequestSource{Paths: []string{path}, Reading: tt.Ptr(tt.RequestReader{Unit: tt.Ptr(tt.RequestSourceUnitLine)})}), nil)
