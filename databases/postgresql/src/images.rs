@@ -191,19 +191,3 @@ fn thinkthen_score_images(
     })
 }
 }
-
-crate::descriptions::describe! {
-["Judge an ordered native image collection with optional text and return detailed judgment jsonb. ", crate::descriptions::SCALAR_IMAGES].concat();
-[parallel_restricted, requires = ["image_value_type"]];
-fn thinkthen_details_images(
-    question: Option<&str>,
-    images: Option<Array<'_, pgrx::composite_type!("thinkthen_image_value")>>,
-    text: default!(Option<&str>, "NULL"),
-    settings: default!(Option<RawJson>, "NULL"),
-) -> Option<pgrx::datum::JsonB> {
-    call::guarded(|| {
-        let held = judged(question?, images?, text, settings, None);
-        Some(crate::jsonb(&held.json))
-    })
-}
-}

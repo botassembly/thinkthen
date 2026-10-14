@@ -1,3 +1,4 @@
+//! Stays: private relation-rule admission tables distinguish wildcard kinds and queries without kinds before SPI executes a query.
 //! `thinkthen_relate(query, rules)`: relations among the rows a query
 //! returns (decision 10, ADR 0047 item 9).
 
@@ -44,7 +45,7 @@ fn inline_rule(text: &str, kinds: bool) -> Result<RelationRule, Error> {
 }
 
 /// The inline rules as one relate request.
-fn inline(rules: &[String], kinds: bool) -> Result<Relate, Error> {
+pub(crate) fn inline(rules: &[String], kinds: bool) -> Result<Relate, Error> {
     let mut ask = Relate::builder();
     for rule in rules {
         ask = ask.relation(inline_rule(rule, kinds)?)?;
@@ -65,7 +66,7 @@ fn cell<T: pgrx::FromDatum + pgrx::IntoDatum>(
 
 /// Whether the query names kinds, and its rows as `(id, name, kind)`,
 /// refused at the 256th.
-fn rows(query: &str) -> Result<(bool, Vec<Row>), Error> {
+pub(crate) fn rows(query: &str) -> Result<(bool, Vec<Row>), Error> {
     let query = query.trim().trim_end_matches(';');
     if query.is_empty() {
         return Err(call::usage("the relate query is empty"));

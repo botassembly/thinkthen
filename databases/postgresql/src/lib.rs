@@ -17,6 +17,7 @@ mod descriptions;
 )]
 mod ffi;
 mod files;
+mod filter;
 mod find;
 mod forms;
 mod images;

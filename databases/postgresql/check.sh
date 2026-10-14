@@ -279,10 +279,10 @@ plain_question_contract() {
 	same "$(q -c "SELECT count(*) FROM thinkthen_decide_many('Does this need attention?', '{\"a\":\"A short note.\"}'::jsonb)")" 1
 	same "$(bcount)" 1
 	fresh generic
-	same "$(q -c "SELECT thinkthen_try_details('Does this need attention?', 'A short note.')->>'status'")" answered
+	same "$(q -c "SELECT value FROM thinkthen_decide_details('Does this need attention?', 'A short note.')")" t
 	same "$(bcount)" 1
 	fresh arm/full/capture
-	digest=$(q -c "SELECT (thinkthen_details('Does this need attention?', 'A short note.')).requests[1]")
+	digest=$(q -c "SELECT (((observations)[1]).detail).requests[1] FROM thinkthen_decide_details('Does this need attention?', 'A short note.')")
 	same "$(bcount)" 1
 	# A row names its question keys, not a request digest (ADR 0111 section 2).
 	bcapture | python3 -c '
@@ -401,7 +401,7 @@ named_bindings() {
 	out=$(q -c "SELECT thinkthen_decide('Is it red?', 'red', misspelled => 'x')")
 	has "$out" 'does not exist'
 	same "$(bcount)" 0
-	out=$(q -c "SELECT (thinkthen_details('Is it red?', 'red', model => 'judge-b', threshold => '0.3:0.7')).model")
+	out=$(q -c "SELECT (((observations)[1]).detail).model FROM thinkthen_decide_details('Is it red?', 'red', model => 'judge-b', threshold => '0.3:0.7')")
 	same "$out" judge-b
 	same "$(bcount)" 1
 	fresh generic
@@ -553,7 +553,7 @@ check rank_set_backend_failure_preserves_error_and_secrecy
 find_settings_choose_the_model() {
 	fresh arm/full/capture
 	local out
-	out=$(q -c "SELECT thinkthen_find('Which unit?', ARRAY['first','second'], '{\"model\":\"judge-b\"}'::json)->>'value'")
+	out=$(q -c "SELECT thinkthen_find('Which unit?', ARRAY['first','second'], '{\"model\":\"judge-b\"}'::json)")
 	hasnt "$out" ERROR
 	same "$(bcount)" 1
 	bcapture | python3 -c 'import json,sys
@@ -790,34 +790,34 @@ complete_question_resolution_keeps_privilege_and_content_boundaries() {
 	printf '{"decide":"private-complete-evidence"' >"$allowed/broken.json"
 	printf '{"decide":"Refund?","threshold":0.6}' >"$allowed/context.json"
 	fresh generic
-	q -c 'CREATE ROLE tt_complete LOGIN' -c 'GRANT EXECUTE ON FUNCTION thinkthen_decide(text,thinkthen_record[],thinkthen_reading) TO tt_complete' >/dev/null
+	q -c 'CREATE ROLE tt_complete LOGIN' -c 'GRANT EXECUTE ON FUNCTION thinkthen_decide_details(text,thinkthen_record[],thinkthen_reading) TO tt_complete' >/dev/null
 	q -c "$(q -c "SELECT 'GRANT EXECUTE ON FUNCTION ' || oid::regprocedure || ' TO tt_complete' FROM pg_proc WHERE proname = 'thinkthen_reading'")" >/dev/null
-	same "$(q -c "SELECT count(*) FROM pg_proc WHERE proname ~ '^thinkthen_(decide|choose|tag|score|filter|rank|find|annotate|recognize|relate)$' AND proargtypes[1] = 'thinkthen_record[]'::regtype AND pronargdefaults = 1 AND proparallel = 'r' AND NOT has_function_privilege('public', oid, 'EXECUTE')")" 10
+	same "$(q -c "SELECT count(*) FROM pg_proc WHERE proname ~ '^thinkthen_(decide|choose|tag|score|filter|rank|find|annotate|recognize|relate)_details$' AND proargtypes[1] = 'thinkthen_record[]'::regtype AND pronargdefaults = 1 AND proparallel = 'r' AND NOT has_function_privilege('public', oid, 'EXECUTE')")" 10
 	# Metadata selection cannot disclose a missing/invalid catalog to an unauthorized role.
 	for name in '@@bad/name' '@@absent' '@missing.json'; do
-		has "$(PGUSER_AS=tt_complete q -c "SELECT (failure).message FROM thinkthen_decide('$name',ARRAY[]::thinkthen_record[])")" "a named file needs pg_read_server_files"
+		has "$(PGUSER_AS=tt_complete q -c "SELECT (failure).message FROM thinkthen_decide_details('$name',ARRAY[]::thinkthen_record[])")" "a named file needs pg_read_server_files"
 	done
-	same "$(q -c "SELECT failure IS NOT NULL FROM thinkthen_decide('@@refund',ARRAY[]::thinkthen_record[])")" f
-	same "$(q -c "SELECT (failure).kind FROM thinkthen_decide('@@bad/name',ARRAY[]::thinkthen_record[])")" usage
+	same "$(q -c "SELECT EXISTS(SELECT 1 FROM thinkthen_decide_details('@@refund',ARRAY[]::thinkthen_record[]) WHERE failure IS NOT NULL)")" f
+	same "$(q -c "SELECT (failure).kind FROM thinkthen_decide_details('@@bad/name',ARRAY[]::thinkthen_record[])")" usage
 	same "$(bcount)" 0
 	fresh generic "thinkthen.file_directory = '$allowed'"
-	same "$(PGUSER_AS=tt_complete q -c "SELECT failure IS NOT NULL FROM thinkthen_decide('@refund.json',ARRAY[]::thinkthen_record[])")" f
-	same "$(PGUSER_AS=tt_complete q -c "SELECT (failure).kind FROM thinkthen_decide('@@refund',ARRAY[]::thinkthen_record[])")" local
+	same "$(PGUSER_AS=tt_complete q -c "SELECT EXISTS(SELECT 1 FROM thinkthen_decide_details('@refund.json',ARRAY[]::thinkthen_record[]) WHERE failure IS NOT NULL)")" f
+	same "$(PGUSER_AS=tt_complete q -c "SELECT (failure).kind FROM thinkthen_decide_details('@@refund',ARRAY[]::thinkthen_record[])")" local
 	ln -s refund.json "$allowed/symlink.json"
 	ln "$allowed/refund.json" "$allowed/hardlink.json"
 	ln -s "$catalog" "$allowed/hop"
 	mkfifo "$allowed/fifo"
 	python3 -c 'import pathlib,sys; pathlib.Path(sys.argv[1]).write_bytes(b" " * 1048577)' "$allowed/big.json"
 	for name in symlink.json hardlink.json hop/refund.json fifo big.json duplicate.json broken.json ../complete-questions/refund.json; do
-		kind=$(PGUSER_AS=tt_complete q -c "SELECT (failure).kind FROM thinkthen_decide('@$name',ARRAY[]::thinkthen_record[])")
+		kind=$(PGUSER_AS=tt_complete q -c "SELECT (failure).kind FROM thinkthen_decide_details('@$name',ARRAY[]::thinkthen_record[])")
 		same "$kind" local
 	done
-	same "$(PGUSER_AS=tt_complete q -c "SELECT (failure).kind FROM thinkthen_decide('@wrong.json',ARRAY[]::thinkthen_record[])")" usage
-	same "$(PGUSER_AS=tt_complete q -c "SELECT failure IS NOT NULL FROM thinkthen_decide('@context.json',ARRAY[]::thinkthen_record[],thinkthen_reading(threshold=>'0.7'))")" f
-	same "$(PGUSER_AS=tt_complete q -c "SELECT failure IS NOT NULL FROM thinkthen_decide('@context.json',ARRAY[]::thinkthen_record[],thinkthen_reading(context=>''))")" f
+	same "$(PGUSER_AS=tt_complete q -c "SELECT (failure).kind FROM thinkthen_decide_details('@wrong.json',ARRAY[]::thinkthen_record[])")" usage
+	same "$(PGUSER_AS=tt_complete q -c "SELECT EXISTS(SELECT 1 FROM thinkthen_decide_details('@context.json',ARRAY[]::thinkthen_record[],thinkthen_reading(threshold=>'0.7')) WHERE failure IS NOT NULL)")" f
+	same "$(PGUSER_AS=tt_complete q -c "SELECT EXISTS(SELECT 1 FROM thinkthen_decide_details('@context.json',ARRAY[]::thinkthen_record[],thinkthen_reading(context=>'')) WHERE failure IS NOT NULL)")" f
 	same "$(bcount)" 0
 	q -c 'GRANT pg_read_server_files TO tt_complete' >/dev/null
-	same "$(PGUSER_AS=tt_complete q -c "SELECT failure IS NOT NULL FROM thinkthen_decide('@@refund',ARRAY[]::thinkthen_record[])")" f
+	same "$(PGUSER_AS=tt_complete q -c "SELECT EXISTS(SELECT 1 FROM thinkthen_decide_details('@@refund',ARRAY[]::thinkthen_record[]) WHERE failure IS NOT NULL)")" f
 	same "$(bcount)" 0
 }
 check complete_question_resolution_keeps_privilege_and_content_boundaries
@@ -1200,60 +1200,6 @@ a_changed_throttle_refuses() {
     same "$(bcount)" 2
 }
 check a_changed_throttle_refuses
-try_details_keeps_later_rows() {
-    fresh generic
-    out=$(q -c "WITH rows(i,q,e) AS (VALUES (1, '$Q', 'first'), (2, '{broken', 'bad'), (3, '@missing-private-question.json', 'bad'), (4, '$Q', 'last')),
-        measured AS MATERIALIZED (SELECT i, thinkthen_try_details(q,e) AS v FROM rows)
-        SELECT i::text || ':' || coalesce(v->>'status', 'null') || ':' ||
-            coalesce(v->'error'->>'kind', 'ok') FROM measured ORDER BY i")
-    same "$out" "$(printf '1:answered:ok\n2:failed:usage\n3:failed:local\n4:answered:ok')"
-    same "$(bcount)" 2
-}
-check try_details_keeps_later_rows
-try_details_keeps_good_after_backend_failure() {
-    fresh generic
-    pg_stop
-    proxy_start proxy python3 ../sqlite/tests/conditional_backend.py "http://127.0.0.1:$BPORT/generic/v1" 'private evidence'
-    pg_start "http://127.0.0.1:$PROXYPORT/v1" "$CACHEDIR"
-    out=$(q -c "WITH rows(i,q,e) AS (VALUES (1, '$Q', 'first'), (2, '$Q', 'private evidence'), (3, '$Q', 'last')),
-        measured AS MATERIALIZED (SELECT i, thinkthen_try_details(q,e) AS v FROM rows)
-        SELECT i::text || ':' || (v->>'status') || ':' || coalesce(v->'error'->>'kind','ok') || ':' ||
-            CASE WHEN v::text LIKE '%private evidence%' THEN 'leaked' ELSE 'safe' END FROM measured ORDER BY i")
-    same "$out" "$(printf '1:answered:ok:safe\n2:failed:backend:safe\n3:answered:ok:safe')"
-    same "$(bcount)" 2
-    proxy_stop
-    same "$PROXYCOUNT" 3
-}
-check try_details_keeps_good_after_backend_failure
-try_details_null_skips_settings() {
-    fresh generic
-    out=$(q -c "SET thinkthen.api_key = 'planted-private-key'" \
-        -c "SELECT thinkthen_try_details(NULL, 'private evidence') IS NULL")
-    has "$out" "WARNING:  thinkthen.api_key is never read; unset it and set THINKTHEN_API_KEY in the server's environment"
-    same "$(tail -n1 <<<"$out")" t
-    same "$(bcount)" 0
-}
-check try_details_null_skips_settings
-try_details_keeps_unresolved_and_spent_total_distinct() {
-    fresh generic "thinkthen.max_requests_total = 1"
-    out=$(q -c "SELECT (v->>'status') || ':' || coalesce(v->'details'->>'value', 'null') || ':' || (v ? 'error')::text
-        FROM (SELECT thinkthen_try_details('{\"decide\":\"Is it red?\",\"threshold\":\"0:1\"}', 'red door') AS v) s" \
-        -c "SELECT (v->>'status') || ':' || (v->'error'->>'kind') || ':' || (v->'error'->>'message') || ':' || (v->'error'->>'retryable') || ':' || (v ? 'details')::text
-        FROM (SELECT thinkthen_try_details('$Q', 'second row') AS v) s")
-    same "$out" "$(printf 'answered:null:false\nfailed:usage:check the row\047s question and arguments, or raise the process request total when it is spent:false:false')"
-    same "$(bcount)" 1
-}
-check try_details_keeps_unresolved_and_spent_total_distinct
-try_details_keeps_native_timeout() {
-    fresh arm/held
-    held "SET statement_timeout = '300ms'; SELECT thinkthen_try_details('$Q', 'held')"
-    bwait 1
-    wait "$HELD" || true
-    has "$(cat "$RUN/held.out")" "canceling statement due to statement timeout"
-    brelease
-    same "$(bcount)" 1
-}
-check try_details_keeps_native_timeout
 a_role_limit_applies() {
 	fresh generic
 	q -c "CREATE ROLE tt_limited LOGIN" -c "GRANT EXECUTE ON FUNCTION thinkthen_decide_many(text,jsonb,json) TO tt_limited" \
@@ -1337,33 +1283,6 @@ portable_batch_identity() {
 }
 check portable_batch_identity
 
-context_settings_keep_shapes_and_legacy_refusal() {
-    fresh generic
-    out=$(q -c "SET thinkthen.batch = '2'" -c "SET thinkthen.cache = 'off'" \
-        -c "SET thinkthen.record = '$RUN/context-packed'" \
-        -c "SELECT key || ':' || coalesce(value::text, 'null') FROM thinkthen_decide_many('$Q', '{\"a\":\"b\",\"b\":\"a\"}'::jsonb, '{\"context\":\"shared reference\"}'::json) ORDER BY key")
-    same "$out" $'a:true\nb:true'
-    same "$(bcount)" 1
-    same "$(python3 tests/batching_cases.py context "$RUN/context-packed")" 'pass context'
-    fresh generic
-    same "$(q -c "SELECT thinkthen_decide('$Q', 'one', context => 'shared reference')")" t
-    same "$(bcount)" 1
-    fresh generic
-    out=$(q -c "SET thinkthen.cache = 'off'" \
-        -c "SELECT thinkthen_choose('{\"choose\":\"Which?\",\"options\":[\"first\",\"last\"]}', 'one', context => 'shared reference')" \
-        -c "SELECT thinkthen_score('{\"score\":\"Which?\",\"levels\":[\"low\",\"high\"]}', 'one', context => 'shared reference')" \
-        -c "SELECT array_length(thinkthen_tag('{\"tag\":\"Which?\",\"labels\":[\"first\",\"last\"]}', 'one', context => 'shared reference'), 1)" \
-        -c "SELECT ((thinkthen_details('$Q', 'one', context => 'shared reference')).value).boolean_value" \
-        -c "SELECT thinkthen_try_details('$Q', 'one', context => 'shared reference')->>'status'")
-    same "$out" $'first\n0.1\n2\nt\nanswered'
-    same "$(bcount)" 5
-    fresh generic
-    same "$(q -c "SELECT thinkthen_try_details(NULL, 'one', context => 'shared reference') IS NULL")" t
-    has "$(q -c "SELECT thinkthen_decide('$Q', 'one', 'shared reference')")" 'the context argument moved into the settings object'
-    has "$(q -c "SELECT thinkthen_decide('$Q', 'one', context => '   ')")" '`context` is text that is not blank'
-    same "$(bcount)" 0
-}
-check context_settings_keep_shapes_and_legacy_refusal
 
 keyed_contexts_do_not_project_a_scalar_cache_entry() {
     fresh generic "thinkthen.batch = '2'"
@@ -1590,6 +1509,7 @@ complete_environment() {
     export THINKTHEN_POSTGRESQL_BIN=$BIN THINKTHEN_POSTGRESQL_DATA=$DATA THINKTHEN_POSTGRESQL_SOCKET=$SOCK
 }
 complete_cases() {
+    failed=0
     complete_environment
     if [ "$profile" = routine ]; then
         python3 tests/runner.py plan >"$RUN/complete.plan"
@@ -1607,12 +1527,13 @@ for line in pathlib.Path(sys.argv[1]).read_text().splitlines():
         print(f"native parity: not run {identity}: no outside defect boundary", file=sys.stderr)
 PY
         while IFS= read -r id; do
-            sh "$LIMIT" 300 python3 ../sqlite/tests/complete/parity.py postgresql "$id"
+            sh "$LIMIT" 300 python3 ../sqlite/tests/complete/parity.py postgresql "$id" || failed=1
         done <"$RUN/complete.ids"
     else
-        sh "$LIMIT" 1800 python3 ../sqlite/tests/complete/parity.py postgresql
+        sh "$LIMIT" 1800 python3 ../sqlite/tests/complete/parity.py postgresql || failed=1
     fi
-    sh "$LIMIT" 300 python3 ../sqlite/tests/complete/facts.py postgresql
+    sh "$LIMIT" 300 python3 ../sqlite/tests/complete/facts.py postgresql || failed=1
+    [ "$failed" -eq 0 ]
 }
 check complete_cases
 complete_request_contract_cases() {

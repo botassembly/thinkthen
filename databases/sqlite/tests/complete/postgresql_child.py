@@ -33,7 +33,9 @@ if payload.get('held_cancel'):
     threading.Thread(target=cancel,daemon=True).start()
 stdout,stderr=running.communicate(timeout=120)
 if running.returncode:
-    print(json.dumps({'host_error':stderr,'host_cancelled':'57014:' in stderr}),flush=True)
+    print(json.dumps({'host_error':stderr,'host_cancelled':'57014:' in stderr and 'thinkthen deadline:' not in stderr}),flush=True)
 else:
     rows=[json.loads(line) for line in stdout.splitlines()]
-    print(json.dumps(native(rows,payload['verb']),ensure_ascii=False,separators=(',',':')),flush=True)
+    carrier=native(rows,payload['verb'])
+    carrier['details_rows']=rows
+    print(json.dumps(carrier,ensure_ascii=False,separators=(',',':')),flush=True)

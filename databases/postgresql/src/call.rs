@@ -1,3 +1,4 @@
+//! Stays: private worker-channel and panic tests pin cleanup, suppressed panic output and every error SQLSTATE before PostgreSQL raises it.
 //! One call: the error table, the setter plan, the engine each backend
 //! keeps, and the worker every call runs on (ticket 0111 decisions 3, 7,
 //! and 11; ADR 0043 as amended).
@@ -44,21 +45,6 @@ pub(crate) fn text(error: &Error) -> String {
 #[cfg(test)]
 pub(crate) fn shown<T>(result: Result<T, Error>) -> Result<T, String> {
     result.map_err(|error| text(&error))
-}
-
-/// A failed row carries only its public kind and fixed advice.
-pub(crate) fn failed_row(error: &Error) -> Option<serde_json::Value> {
-    let message = match error.kind() {
-        ErrorKind::Usage => {
-            "check the row's question and arguments, or raise the process request total when it is spent"
-        }
-        ErrorKind::Local => "check the named file and its permissions",
-        ErrorKind::Backend => "the backend did not answer; retry if allowed",
-        ErrorKind::Cancelled | ErrorKind::Deadline | ErrorKind::Defect => return None,
-    };
-    Some(
-        serde_json::json!({"status":"failed","error":{"kind":error.kind().name(),"message":message,"retryable":error.retryable()}}),
-    )
 }
 
 /// An engine error as PostgreSQL reports it: a spent process send budget

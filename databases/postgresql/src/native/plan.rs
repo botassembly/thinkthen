@@ -32,10 +32,10 @@ fn plan_records(
         let mut projection = request.record_reading().or_raise();
         if let Some(schema) = context_schema { projection = projection.with_context_schema(schema); }
         let request = super::composed_request(&request).or_raise();
-        let records = super::input::deferred(records);
-        let images = records.iter().any(|record| record.as_ref().is_ok_and(|record| !record.item.images.is_empty()));
+        let records = super::input::deferred(records).or_raise();
+        let images = records.iter().any(super::input::Record::has_images);
         let plan = call::run(call::read(), move |engine, controls| {
-            let records = records.into_iter().map(|record| super::input::compose(record?, &projection));
+            let records = records.into_iter().map(|record| super::input::compose(record, &projection));
             let mut feed = thinkthen::RequestFeed::from_records("postgresql", records).eager();
             if images { feed = feed.with_image_inputs(); }
             engine.plan_request(&request, RequestEnvironment {

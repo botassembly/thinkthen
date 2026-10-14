@@ -49,14 +49,20 @@ pub(super) fn seeds(
 }
 
 #[derive(Debug)]
-pub(super) struct Record {
-    pub(super) item: RequestItem,
-    pub(super) source: Option<thinkthen::SourceLocation>,
+pub(super) enum Record {
+    Item(RequestItem, Option<thinkthen::SourceLocation>),
+    ReaderFailure(Error),
+}
+
+impl Record {
+    pub(super) fn has_images(&self) -> bool {
+        matches!(self, Self::Item(item, _) if !item.images.is_empty())
+    }
 }
 
 pub(super) fn deferred(
     records: Array<'_, pgrx::composite_type!("thinkthen_record")>,
-) -> Vec<Result<Record, Error>> {
+) -> Result<Vec<Record>, Error> {
     records.iter().map(record).collect()
 }
 fn record(tuple: Option<pgrx::composite_type!("thinkthen_record")>) -> Result<Record, Error> {
@@ -76,7 +82,7 @@ fn record(tuple: Option<pgrx::composite_type!("thinkthen_record")>) -> Result<Re
         };
         let message: String = field(&failure, "message")?
             .ok_or_else(|| call::usage("reader failure message is NULL"))?;
-        return Err(thinkthen::Error::new(kind, message));
+        return Ok(Record::ReaderFailure(thinkthen::Error::new(kind, message)));
     }
     let text: Option<String> = field(&tuple, "text")?;
     let value: Option<crate::ffi::RawJson> = field(&tuple, "value")?;
@@ -137,7 +143,7 @@ fn record(tuple: Option<pgrx::composite_type!("thinkthen_record")>) -> Result<Re
             )
         })
         .transpose()?;
-    Ok(Record { item, source })
+    Ok(Record::Item(item, source))
 }
 
 fn read_description(value: crate::ffi::RawJson) -> Result<thinkthen::Description, Error> {
@@ -148,8 +154,12 @@ pub(super) fn compose(
     record: Record,
     reading: &thinkthen::RecordReading,
 ) -> Result<thinkthen::RecordInput<thinkthen::QuestionInput>, Error> {
-    let mut row = record.item.compose_record(reading)?;
-    if let Some(location) = record.source {
+    let (item, source) = match record {
+        Record::Item(item, source) => (item, source),
+        Record::ReaderFailure(error) => return Err(error),
+    };
+    let mut row = item.compose_record(reading)?;
+    if let Some(location) = source {
         row.original = match row.original {
             thinkthen::QuestionInput::Record(record) => {
                 thinkthen::QuestionInput::Record(record.with_location(location))

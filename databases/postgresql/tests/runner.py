@@ -196,7 +196,7 @@ def typed(verb, text):
 def single(case, success):
     want = success["answers"][0]
     question, evidence = lit(json.dumps(case["question"])), lit(case["exchanges"][0]["evidence"])
-    got = json.loads(psql(f"SELECT to_jsonb(thinkthen_details({question}, {evidence}))"))
+    got = json.loads(psql(f"SELECT to_jsonb((observations)[1])->'detail' FROM thinkthen_{case['verb']}_details({question}, {evidence})"))
     field = {"decide": "boolean_value", "choose": "string_value",
              "score": "number_value", "tag": "array_value"}[case["verb"]]
     same("bare", got["value"][field], want["bare"])
@@ -207,7 +207,7 @@ def single(case, success):
     counters = success.get("counters")
     if counters:  # last, on an empty cache folder of their own
         usage = "SELECT requests_sent || ' ' || cache_answers FROM thinkthen_usage()"
-        calls = [f"SELECT 1 FROM thinkthen_details({question}, {evidence})"] * counters["calls"]
+        calls = [f"SELECT 1 FROM thinkthen_{case['verb']}_details({question}, {evidence})"] * counters["calls"]
         with tempfile.TemporaryDirectory() as folder:
             lines = psql(f"SET thinkthen.cache = {lit(folder)}", usage, *calls, usage).splitlines()
         (sent0, cached0), (sent1, cached1) = map(int, lines[0].split()), map(int, lines[-1].split())
@@ -250,17 +250,9 @@ def found(case, success):
     units = question["units"]
     none = "true" if question.get("none", False) else "false"
     settings = lit(json.dumps({"none": True})) + "::json" if none == "true" else "NULL::json"
-    answer = json.loads(psql(f"SELECT thinkthen_find({lit(question['find'])}, {texts(units)}, {settings})"))
-    operation = success["operation"]
-    selected = operation["selected"]
-    wanted = {
-        "index": selected,
-        "value": units[selected] if selected is not None else None,
-        "probability": next(one["probability"] for one in operation["probabilities"]
-                            if one["index"] == selected),
-        "candidates": operation["probabilities"],
-    }
-    same("find result", answer, wanted)
+    answer = psql(f"SELECT thinkthen_find({lit(question['find'])}, {texts(units)}, {settings})")
+    selected = success["operation"]["selected"]
+    same("find result", answer, units[selected] if selected is not None else "")
 
 
 def captured(case, path):

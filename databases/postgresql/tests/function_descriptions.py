@@ -24,14 +24,14 @@ def main(socket):
     assert not err, err
     rows = json.loads(out)
     assert rows, 'the installed extension owns no functions'
-    assert not any(row['signature'].split('(')[0].endswith('_complete') for row in rows), rows
+    assert not any(row['signature'].split('(')[0].endswith('_complete') or row['signature'].split('(')[0] in {'thinkthen_details', 'thinkthen_try_details', 'thinkthen_details_images'} or row['signature'].startswith('thinkthen_native_records_') for row in rows), rows
     for row in rows:
         assert row['description'] and row['description'].strip(), row
     def description(signature):
         found = [row['description'] for row in rows if row['signature'] == signature]
         assert len(found) == 1, (signature, found)
         return found[0]
-    image = description('thinkthen_decide(text,thinkthen_record[],thinkthen_reading)')
+    image = description('thinkthen_decide_details(text,thinkthen_record[],thinkthen_reading)')
     assert all(word in image for word in ('typed', 'NULL', 'client', 'facts', 'failures')), image
     removed = description('thinkthen_decide(text,text[])')
     assert all(word in removed for word in ('Removed', 'Usage', 'NULL', 'sends nothing')), removed

@@ -99,6 +99,5 @@ pub(super) fn read(
         none: field(&tuple, "none")?.unwrap_or(false),
         top: field::<i64>(&tuple, "top")?.map(number).transpose()?,
         files_only: field(&tuple, "files_only")?.unwrap_or(false),
-        ..RequestOptions::default()
     })
 }

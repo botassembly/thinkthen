@@ -146,10 +146,9 @@ mod arrays {
         };
     }
     returned_array!(NameArray, "thinkthen_name[]");
-    returned_array!(EdgeArray, "thinkthen_edge[]");
     returned_array!(EventArray, "thinkthen_event[]");
 }
-pub(crate) use arrays::{EdgeArray, EventArray, NameArray, composite_array};
+pub(crate) use arrays::{EventArray, NameArray, composite_array};
 
 impl pgrx::IntoDatum for RawJson {
     fn into_datum(self) -> Option<Datum> {

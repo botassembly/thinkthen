@@ -1,4 +1,4 @@
-"""Installed PostgreSQL typed fields retain shared Request admission and prefixes."""
+"""Installed PostgreSQL typed fields retain shared Request admission and retained values."""
 import json
 import os
 import subprocess
@@ -19,9 +19,9 @@ from children import child_env
 def main():
     with tempfile.TemporaryDirectory(prefix='thinkthen-pg-request-') as tmp:
         home = Path(tmp)
-        env = child_env(keep=('LANG', 'LC_ALL', 'LD_LIBRARY_PATH'), home=home,
+        env = child_env(keep=('LANG', 'LC_ALL', 'LD_LIBRARY_PATH', 'CARGO_TARGET_DIR'), home=home,
                         THINKTHEN_API_KEY='sk-conformance-loopback')
-        backend = Backend(ROOT / 'target/debug/conformance-backend', env)
+        backend = Backend(Path(os.environ.get('CARGO_TARGET_DIR', ROOT / 'target')) / 'debug/conformance-backend', env)
         host = PostgresqlHost()
         base = f'http://127.0.0.1:{backend.port}/generic/v1'
         try:
@@ -62,10 +62,12 @@ def main():
                         int(incremental))
                     assert got['code'] == ERRORS['usage'], got
                     assert len(got['completed']) == int(incremental), got
-                    assert got.get('stopped_at') == 2, got
                     if incremental:
+                        assert got.get('stopped_at') == 2, got
                         assert got['completed'][0]['index'] == 0, got
                         assert got['completed'][0]['input'] == 'Alpha.', got
+                    else:
+                        assert 'stopped_at' not in got and 'facts' not in got, got
 
             question = {'version': 1, 'questions': {'body': {
                 'decide': 'Fits?', 'on': '/body', 'item_schema': {'type': 'string'}}}}
@@ -80,11 +82,9 @@ def main():
             for threshold in (0.5, 0.95):
                 for incremental in (False, True):
                     records = [{'text': 'Alpha.'}]
-                    if incremental:
-                        records.append({'text': 'Beta.', 'images': None})
                     got = call('filter', {'decide': 'Fits?', 'threshold': threshold},
                                {'records': records, 'incremental': incremental}, 1)
-                    rows = got['completed'] if incremental else got['rows']
+                    rows = got['rows']
                     assert len(rows) == 1 and rows[0]['value'] is (threshold == 0.5), got
                     assert rows[0]['index'] == 0 and rows[0]['input'] == 'Alpha.', got
 
@@ -97,7 +97,7 @@ def main():
                 got = call('decide', {'decide': 'Fits?'}, inputs, 0)
                 assert got['code'] == ERRORS['usage'] and 'facts' not in got, got
             assert int(backend.read('count')) == 8
-            print('postgresql: typed declaration, projection, eager/prefix, false filter and file-authority cases pass')
+            print('postgresql: typed declaration, projection, eager admission, false filter and file-authority cases pass')
         finally:
             host.stop()
             backend.close()
