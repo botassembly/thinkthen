@@ -16,6 +16,33 @@ from conformance.children.children import child_env
 
 
 class PublicSurface(unittest.TestCase):
+    def test_cobol_outer_guard_preserves_real_public_macros(self):
+        with tempfile.TemporaryDirectory(prefix='library-surface-cobol-') as folder:
+            root = Path(folder)
+            for name in ('sdlc', 'specification', 'conformance'):
+                (root / name).symlink_to(ROOT / name, target_is_directory=True)
+            shutil.copytree(ROOT / 'libraries/cobol', root / 'libraries/cobol')
+            header = root / 'libraries/c/include/thinkthen.h'
+            header.parent.mkdir(parents=True)
+            shutil.copyfile(ROOT / 'libraries/c/include/thinkthen.h', header)
+            bridge = root / 'libraries/cobol/src/tt_session.h'
+            def invoke():
+                result = subprocess.run(['python3', str(CHECK), '--root', str(root), '--library', 'cobol', '--json'], capture_output=True, text=True, env=child_env(home=folder))
+                self.assertIn(result.returncode, (0, 1), result.stderr)
+                return result.returncode, json.loads(result.stdout)['libraries']['cobol']
+            self.assertEqual(invoke(), (0, []))
+            original = bridge.read_text()
+            bridge.write_text(original.replace('#endif', '#define TT_PUBLIC_EMPTY\n#define TT_PUBLIC_NUMBER 17\n#define TT_UNMATCHED\n#endif'))
+            code, errors = invoke()
+            self.assertEqual(code, 1)
+            for name in ('TT_PUBLIC_EMPTY', 'TT_PUBLIC_NUMBER', 'TT_UNMATCHED'):
+                self.assertIn('unlisted public type/export: .' + name, errors)
+            self.assertFalse(any('TT_COBOL_SESSION_H' in error for error in errors))
+            bridge.write_text(original.replace('#endif', ''))
+            code, errors = invoke()
+            self.assertEqual(code, 1)
+            self.assertIn('unlisted public type/export: .TT_COBOL_SESSION_H', errors)
+
     def test_r_namespace_and_nested_formal_defaults(self):
         with tempfile.TemporaryDirectory(prefix='library-surface-r-') as folder:
             root = Path(folder)

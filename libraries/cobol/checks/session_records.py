@@ -17,7 +17,7 @@ generator = module('cobol_generator', ROOT / 'sdlc/generators/results/generate.p
 template = module('cobol_template', ROOT / 'sdlc/generators/results/templates/cobol.py')
 schema = json.loads((ROOT / 'specification/request.schema.json').read_text())
 schema['$defs']['Request'] = {k: v for k, v in schema.items() if k != '$defs'}
-definitions = generator.prepare(generator.graph(schema, ('Request', 'RequestSessionDescriptor')))
+definitions = generator.prepare(generator.graph(schema, ('Request', 'RequestSessionDescriptor', 'EngineSettings')))
 
 class Utf8(ct.Structure):
     _fields_ = [('data', ct.c_void_p), ('len', ct.c_size_t)]
@@ -50,6 +50,8 @@ class Records:
         self.types = {}
         header = (package / 'src/tt_requests_generated.h').read_text()
         for name, body in re.findall(r'typedef struct (thinkthen_cobol_\w+) \{([^}]+)\}', header):
+            if name.startswith('thinkthen_cobol_Answer'):
+                continue
             fields = []
             for kind, field in re.findall(r'([^;]+?)\b(\w+)\s*;', body):
                 kind = kind.strip()

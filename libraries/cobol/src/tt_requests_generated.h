@@ -42,6 +42,8 @@ typedef struct thinkthen_cobol_text {
 #define THINKTHEN_COBOL_QUESTIONTEXTARM3_KIND 3
 #define THINKTHEN_COBOL_THRESHOLDARM1_KIND 1
 #define THINKTHEN_COBOL_THRESHOLDARM2_KIND 2
+#define THINKTHEN_COBOL_CACHEDOCUMENTARM1_KIND 1
+#define THINKTHEN_COBOL_CACHEDOCUMENT_ARM_2_KIND 2
 #define THINKTHEN_COBOL_CONTEXTSCHEMAARM1_KIND 1
 #define THINKTHEN_COBOL_CONTEXTSCHEMAARM2_KIND 2
 #define THINKTHEN_COBOL_IMAGEMEDIAARM1_KIND 1
@@ -110,6 +112,12 @@ typedef struct thinkthen_cobol_text {
 #define THINKTHEN_COBOL_SCOREBATCHARM2_KIND 2
 #define THINKTHEN_COBOL_TAGBATCHARM1_KIND 1
 #define THINKTHEN_COBOL_TAGBATCHARM2_KIND 2
+#define THINKTHEN_COBOL_SETTINGSINPUTTOKENBUDGETARM1_KIND 1
+#define THINKTHEN_COBOL_SETTINGSINPUTTOKENBUDGETARM2_KIND 2
+#define THINKTHEN_COBOL_SETTINGSMAXREQUESTSARM1_KIND 1
+#define THINKTHEN_COBOL_SETTINGSMAXREQUESTSARM2_KIND 2
+#define THINKTHEN_COBOL_SETTINGSMAXREQUESTSTOTALARM1_KIND 1
+#define THINKTHEN_COBOL_SETTINGSMAXREQUESTSTOTALARM2_KIND 2
 #define THINKTHEN_COBOL_DEFINITIONCHOOSEBATCHARM1_KIND 1
 #define THINKTHEN_COBOL_DEFINITIONCHOOSEBATCHARM2_KIND 2
 #define THINKTHEN_COBOL_DEFINITIONDECIDEBATCHARM1_KIND 1
@@ -341,10 +349,39 @@ typedef struct thinkthen_cobol_Threshold {
     uint64_t kind;
     const void * value;
 } thinkthen_cobol_Threshold;
+typedef struct thinkthen_cobol_CacheDocument {
+    uint64_t kind;
+    const void * value;
+} thinkthen_cobol_CacheDocument;
 typedef struct thinkthen_cobol_ContextSchema {
     uint64_t kind;
     const void * value;
 } thinkthen_cobol_ContextSchema;
+typedef struct thinkthen_cobol_DisabledCache {
+    uint64_t reserved;
+} thinkthen_cobol_DisabledCache;
+typedef struct thinkthen_cobol_Settings {
+    uint64_t reserved;
+    const void * m_backend;
+    const void * m_base_url;
+    const void * m_batch;
+    const void * m_cache;
+    const void * m_max_estimated_input_tokens_total;
+    const void * m_max_request_bytes;
+    const void * m_max_requests;
+    const void * m_max_requests_total;
+    const void * m_max_retries;
+    const void * m_model;
+    const void * m_profile;
+    const void * m_proxy;
+    const void * m_record;
+    const void * m_refresh_cache;
+    const void * m_replay;
+    const void * m_throttle;
+    const void * m_timeout;
+    const void * m_usd_per_million_input;
+    const void * m_usd_per_million_output;
+} thinkthen_cobol_Settings;
 typedef struct thinkthen_cobol_ImageMedia {
     uint64_t kind;
     const void * value;
@@ -978,6 +1015,10 @@ typedef struct thinkthen_cobol_ThresholdArm2 {
     const char * data;
     uint64_t len;
 } thinkthen_cobol_ThresholdArm2;
+typedef struct thinkthen_cobol_CacheDocumentArm1 {
+    const char * data;
+    uint64_t len;
+} thinkthen_cobol_CacheDocumentArm1;
 typedef struct thinkthen_cobol_ContextSchemaArm1 {
     const char * data;
     uint64_t len;
@@ -987,6 +1028,68 @@ typedef struct thinkthen_cobol_ContextSchemaArm2 {
     const void *const * values;
     uint64_t len;
 } thinkthen_cobol_ContextSchemaArm2;
+typedef struct thinkthen_cobol_SettingsBackend {
+    const char * data;
+    uint64_t len;
+} thinkthen_cobol_SettingsBackend;
+typedef struct thinkthen_cobol_SettingsBaseUrl {
+    const char * data;
+    uint64_t len;
+} thinkthen_cobol_SettingsBaseUrl;
+typedef struct thinkthen_cobol_SettingsInputTokenBudget {
+    uint64_t kind;
+    const void * value;
+} thinkthen_cobol_SettingsInputTokenBudget;
+typedef struct thinkthen_cobol_SettingsMaxRequestBytes {
+    uint64_t value;
+} thinkthen_cobol_SettingsMaxRequestBytes;
+typedef struct thinkthen_cobol_SettingsMaxRequests {
+    uint64_t kind;
+    const void * value;
+} thinkthen_cobol_SettingsMaxRequests;
+typedef struct thinkthen_cobol_SettingsMaxRequestsTotal {
+    uint64_t kind;
+    const void * value;
+} thinkthen_cobol_SettingsMaxRequestsTotal;
+typedef struct thinkthen_cobol_SettingsMaxRetries {
+    uint64_t value;
+} thinkthen_cobol_SettingsMaxRetries;
+typedef struct thinkthen_cobol_SettingsModel {
+    const char * data;
+    uint64_t len;
+} thinkthen_cobol_SettingsModel;
+typedef struct thinkthen_cobol_SettingsProfile {
+    const char * data;
+    uint64_t len;
+} thinkthen_cobol_SettingsProfile;
+typedef struct thinkthen_cobol_SettingsProxy {
+    const struct thinkthen_complete_json_v1 * value;
+} thinkthen_cobol_SettingsProxy;
+typedef struct thinkthen_cobol_SettingsRecord {
+    const char * data;
+    uint64_t len;
+} thinkthen_cobol_SettingsRecord;
+typedef struct thinkthen_cobol_SettingsRefreshCache {
+    uint64_t value;
+} thinkthen_cobol_SettingsRefreshCache;
+typedef struct thinkthen_cobol_SettingsReplay {
+    const char * data;
+    uint64_t len;
+} thinkthen_cobol_SettingsReplay;
+typedef struct thinkthen_cobol_SettingsThrottle {
+    uint64_t value;
+} thinkthen_cobol_SettingsThrottle;
+typedef struct thinkthen_cobol_SettingsTimeout {
+    uint64_t value;
+} thinkthen_cobol_SettingsTimeout;
+typedef struct thinkthen_cobol_SettingsUsdPerMillionInput {
+    const char * data;
+    uint64_t len;
+} thinkthen_cobol_SettingsUsdPerMillionInput;
+typedef struct thinkthen_cobol_SettingsUsdPerMillionOutput {
+    const char * data;
+    uint64_t len;
+} thinkthen_cobol_SettingsUsdPerMillionOutput;
 typedef struct thinkthen_cobol_ImageMediaArm1 {
     uint64_t reserved;
 } thinkthen_cobol_ImageMediaArm1;
@@ -1519,6 +1622,24 @@ typedef struct thinkthen_cobol_TagBatchArm2 {
 typedef struct thinkthen_cobol_ContextSchemaArm2Entry {
     const struct thinkthen_complete_json_v1 * value;
 } thinkthen_cobol_ContextSchemaArm2Entry;
+typedef struct thinkthen_cobol_SettingsInputTokenBudgetArm1 {
+    uint64_t value;
+} thinkthen_cobol_SettingsInputTokenBudgetArm1;
+typedef struct thinkthen_cobol_SettingsInputTokenBudgetArm2 {
+    uint64_t reserved;
+} thinkthen_cobol_SettingsInputTokenBudgetArm2;
+typedef struct thinkthen_cobol_SettingsMaxRequestsArm1 {
+    uint64_t value;
+} thinkthen_cobol_SettingsMaxRequestsArm1;
+typedef struct thinkthen_cobol_SettingsMaxRequestsArm2 {
+    uint64_t reserved;
+} thinkthen_cobol_SettingsMaxRequestsArm2;
+typedef struct thinkthen_cobol_SettingsMaxRequestsTotalArm1 {
+    uint64_t value;
+} thinkthen_cobol_SettingsMaxRequestsTotalArm1;
+typedef struct thinkthen_cobol_SettingsMaxRequestsTotalArm2 {
+    uint64_t reserved;
+} thinkthen_cobol_SettingsMaxRequestsTotalArm2;
 typedef struct thinkthen_cobol_RecognitionExampleTextKindsItem {
     const char * data;
     uint64_t len;
@@ -1572,9 +1693,419 @@ int TT_SESSION_RELATE(const void *,const thinkthen_cobol_RequestCall *,void **);
 #define TT_VALUE_ARRAY_KIND 5
 #define TT_VALUE_OBJECT_KIND 6
 typedef struct tt_value tt_value;
+int TT_ENGINE_NEW(const thinkthen_cobol_Settings *,void **);
 int TT_PLAN(const void *,const char *,uint64_t,const thinkthen_cobol_RequestCall *,tt_value **);
 int TT_SESSION_PUSH(const void *,const thinkthen_cobol_RequestSessionDescriptor *,uint32_t *);
 int TT_SESSION_REQUEST(const void *engine,const thinkthen_cobol_Request *request,void **out);
+typedef struct tt_answer_owner tt_answer_owner;
+typedef struct thinkthen_cobol_AnswerText {
+    uint64_t length;
+    char text[8192];
+} thinkthen_cobol_AnswerText;
+typedef struct thinkthen_cobol_AnswerDecision {
+    uint64_t present;
+    uint64_t value;
+} thinkthen_cobol_AnswerDecision;
+typedef struct thinkthen_cobol_AnswerChoice {
+    uint64_t present;
+    thinkthen_cobol_AnswerText value;
+} thinkthen_cobol_AnswerChoice;
+typedef struct thinkthen_cobol_AnswerScore {
+    double value;
+} thinkthen_cobol_AnswerScore;
+typedef struct thinkthen_cobol_AnswerRankIndex {
+    uint64_t value;
+} thinkthen_cobol_AnswerRankIndex;
+typedef struct thinkthen_cobol_AnswerFilterOriginal {
+    const tt_value *original;
+} thinkthen_cobol_AnswerFilterOriginal;
+typedef struct thinkthen_cobol_AnswerFindSelection {
+    uint64_t present;
+    uint64_t index;
+    const tt_value *original;
+} thinkthen_cobol_AnswerFindSelection;
+typedef struct thinkthen_cobol_AnswerAnnotationField {
+    uint64_t record;
+    thinkthen_cobol_AnswerText name;
+    uint64_t kind;
+    uint64_t boolean;
+    double number;
+    thinkthen_cobol_AnswerText text;
+    const thinkthen_cobol_AnswerText *tags;
+    uint64_t tag_count;
+    uint64_t failure_kind;
+    uint64_t failure_cause;
+} thinkthen_cobol_AnswerAnnotationField;
+typedef struct thinkthen_cobol_AnswerRecognition {
+    uint64_t record;
+    uint64_t proposal;
+    thinkthen_cobol_AnswerText kind;
+    thinkthen_cobol_AnswerText text;
+    uint64_t start;
+    uint64_t end;
+    uint64_t length;
+    double probability;
+    uint64_t mode;
+    uint64_t file_present;
+    thinkthen_cobol_AnswerText file;
+    uint64_t first_line_present;
+    uint64_t first_line;
+    uint64_t last_line_present;
+    uint64_t last_line;
+    const struct thinkthen_cobol_AnswerExtensions *extensions;
+} thinkthen_cobol_AnswerRecognition;
+typedef struct thinkthen_cobol_AnswerRecognitionEdge {
+    uint64_t record;
+    uint64_t either_present;
+    uint64_t either;
+    double probability;
+    thinkthen_cobol_AnswerText relation;
+    thinkthen_cobol_AnswerRecognition source;
+    thinkthen_cobol_AnswerRecognition target;
+    const struct thinkthen_cobol_AnswerExtensions *extensions;
+} thinkthen_cobol_AnswerRecognitionEdge;
+typedef struct thinkthen_cobol_AnswerRelation {
+    uint64_t record;
+    thinkthen_cobol_AnswerText relation;
+    thinkthen_cobol_AnswerText source;
+    thinkthen_cobol_AnswerText source_kind;
+    thinkthen_cobol_AnswerText target;
+    thinkthen_cobol_AnswerText target_kind;
+    double probability;
+    uint64_t either_present;
+    uint64_t either;
+} thinkthen_cobol_AnswerRelation;
+typedef struct thinkthen_cobol_AnswerError thinkthen_cobol_AnswerError;
+typedef struct thinkthen_cobol_AnswerExtensions thinkthen_cobol_AnswerExtensions;
+typedef struct thinkthen_cobol_AnswerExtension thinkthen_cobol_AnswerExtension;
+typedef struct thinkthen_cobol_AnswerStopped thinkthen_cobol_AnswerStopped;
+typedef struct thinkthen_cobol_AnswerU64Presence thinkthen_cobol_AnswerU64Presence;
+typedef struct thinkthen_cobol_AnswerStopCause thinkthen_cobol_AnswerStopCause;
+typedef struct thinkthen_cobol_AnswerSendDenialPresence thinkthen_cobol_AnswerSendDenialPresence;
+typedef struct thinkthen_cobol_AnswerSendDenial thinkthen_cobol_AnswerSendDenial;
+typedef struct thinkthen_cobol_AnswerSendDenialData thinkthen_cobol_AnswerSendDenialData;
+typedef struct thinkthen_cobol_AnswerSendDenialBeforeRetry thinkthen_cobol_AnswerSendDenialBeforeRetry;
+typedef struct thinkthen_cobol_AnswerSendDenialBeforeAdditionalSend thinkthen_cobol_AnswerSendDenialBeforeAdditionalSend;
+typedef struct thinkthen_cobol_AnswerSendDenialBeforeFirstSend thinkthen_cobol_AnswerSendDenialBeforeFirstSend;
+typedef struct thinkthen_cobol_AnswerFailureKind thinkthen_cobol_AnswerFailureKind;
+typedef struct thinkthen_cobol_AnswerInputDenialPresence thinkthen_cobol_AnswerInputDenialPresence;
+typedef struct thinkthen_cobol_AnswerInputDenial thinkthen_cobol_AnswerInputDenial;
+typedef struct thinkthen_cobol_AnswerInputDenialData thinkthen_cobol_AnswerInputDenialData;
+typedef struct thinkthen_cobol_AnswerInputDenialRetry thinkthen_cobol_AnswerInputDenialRetry;
+typedef struct thinkthen_cobol_AnswerInputDenialAdditionalRequest thinkthen_cobol_AnswerInputDenialAdditionalRequest;
+typedef struct thinkthen_cobol_AnswerInputDenialInitialRequest thinkthen_cobol_AnswerInputDenialInitialRequest;
+typedef struct thinkthen_cobol_AnswerImmediateFacts thinkthen_cobol_AnswerImmediateFacts;
+typedef struct thinkthen_cobol_AnswerPersistenceObservationPresence thinkthen_cobol_AnswerPersistenceObservationPresence;
+typedef struct thinkthen_cobol_AnswerPersistenceObservation thinkthen_cobol_AnswerPersistenceObservation;
+typedef struct thinkthen_cobol_AnswerUsagePersistence thinkthen_cobol_AnswerUsagePersistence;
+typedef struct thinkthen_cobol_AnswerUtf8Presence thinkthen_cobol_AnswerUtf8Presence;
+typedef struct thinkthen_cobol_AnswerU32Presence thinkthen_cobol_AnswerU32Presence;
+typedef struct thinkthen_cobol_AnswerCallIdPresence thinkthen_cobol_AnswerCallIdPresence;
+typedef struct thinkthen_cobol_AnswerCallId thinkthen_cobol_AnswerCallId;
+typedef struct thinkthen_cobol_AnswerAttemptListPresence thinkthen_cobol_AnswerAttemptListPresence;
+typedef struct thinkthen_cobol_AnswerAttemptList thinkthen_cobol_AnswerAttemptList;
+typedef struct thinkthen_cobol_AnswerAttempt thinkthen_cobol_AnswerAttempt;
+typedef struct thinkthen_cobol_AnswerSdkRequestId thinkthen_cobol_AnswerSdkRequestId;
+typedef struct thinkthen_cobol_AnswerAttemptOutcome thinkthen_cobol_AnswerAttemptOutcome;
+typedef struct thinkthen_cobol_AnswerFacts thinkthen_cobol_AnswerFacts;
+struct thinkthen_cobol_AnswerExtensions {
+    const thinkthen_cobol_AnswerExtension *data;
+    size_t len;
+};
+struct thinkthen_cobol_AnswerExtension {
+    thinkthen_cobol_AnswerText name;
+    const tt_value *value;
+};
+struct thinkthen_cobol_AnswerU64Presence {
+    uint32_t presence;
+    uint64_t value;
+};
+struct thinkthen_cobol_AnswerStopCause {
+    uint32_t kind;
+};
+struct thinkthen_cobol_AnswerSendDenialPresence {
+    uint32_t presence;
+    const thinkthen_cobol_AnswerSendDenial *value;
+};
+struct thinkthen_cobol_AnswerSendDenialData {
+    const thinkthen_cobol_AnswerSendDenialBeforeFirstSend *before_first_send;
+    const thinkthen_cobol_AnswerSendDenialBeforeAdditionalSend *before_additional_send;
+    const thinkthen_cobol_AnswerSendDenialBeforeRetry *before_retry;
+};
+struct thinkthen_cobol_AnswerSendDenialBeforeRetry {
+    thinkthen_cobol_AnswerText kind;
+    uint64_t last_status;
+    thinkthen_cobol_AnswerExtensions extensions;
+};
+struct thinkthen_cobol_AnswerSendDenialBeforeAdditionalSend {
+    thinkthen_cobol_AnswerText kind;
+    thinkthen_cobol_AnswerExtensions extensions;
+};
+struct thinkthen_cobol_AnswerSendDenialBeforeFirstSend {
+    thinkthen_cobol_AnswerText kind;
+    thinkthen_cobol_AnswerExtensions extensions;
+};
+struct thinkthen_cobol_AnswerFailureKind {
+    uint32_t kind;
+};
+struct thinkthen_cobol_AnswerInputDenialPresence {
+    uint32_t presence;
+    const thinkthen_cobol_AnswerInputDenial *value;
+};
+struct thinkthen_cobol_AnswerInputDenialData {
+    const thinkthen_cobol_AnswerInputDenialInitialRequest *initial_request;
+    const thinkthen_cobol_AnswerInputDenialAdditionalRequest *additional_request;
+    const thinkthen_cobol_AnswerInputDenialRetry *retry;
+};
+struct thinkthen_cobol_AnswerInputDenialRetry {
+    thinkthen_cobol_AnswerText kind;
+    uint64_t last_status;
+    uint64_t limit;
+    thinkthen_cobol_AnswerExtensions extensions;
+};
+struct thinkthen_cobol_AnswerInputDenialAdditionalRequest {
+    thinkthen_cobol_AnswerText kind;
+    uint64_t limit;
+    thinkthen_cobol_AnswerExtensions extensions;
+};
+struct thinkthen_cobol_AnswerInputDenialInitialRequest {
+    thinkthen_cobol_AnswerText kind;
+    uint64_t limit;
+    thinkthen_cobol_AnswerExtensions extensions;
+};
+struct thinkthen_cobol_AnswerPersistenceObservationPresence {
+    uint32_t presence;
+    const thinkthen_cobol_AnswerPersistenceObservation *value;
+};
+struct thinkthen_cobol_AnswerUsagePersistence {
+    uint32_t kind;
+};
+struct thinkthen_cobol_AnswerUtf8Presence {
+    uint32_t presence;
+    thinkthen_cobol_AnswerText value;
+};
+struct thinkthen_cobol_AnswerU32Presence {
+    uint32_t presence;
+    uint32_t value;
+};
+struct thinkthen_cobol_AnswerCallIdPresence {
+    uint32_t presence;
+    const thinkthen_cobol_AnswerCallId *value;
+};
+struct thinkthen_cobol_AnswerCallId {
+    thinkthen_cobol_AnswerText value;
+};
+struct thinkthen_cobol_AnswerAttemptList {
+    const thinkthen_cobol_AnswerAttempt *data;
+    size_t len;
+};
+struct thinkthen_cobol_AnswerAttempt {
+    uint64_t ordinal;
+    const thinkthen_cobol_AnswerAttemptOutcome *outcome;
+    thinkthen_cobol_AnswerUtf8Presence request_id;
+    thinkthen_cobol_AnswerText request_sha256;
+    const thinkthen_cobol_AnswerSdkRequestId *sdk_request_id;
+    thinkthen_cobol_AnswerU64Presence server_ms;
+    thinkthen_cobol_AnswerU64Presence status;
+    uint64_t wall_ms;
+    thinkthen_cobol_AnswerExtensions extensions;
+};
+struct thinkthen_cobol_AnswerSdkRequestId {
+    thinkthen_cobol_AnswerText value;
+};
+struct thinkthen_cobol_AnswerAttemptOutcome {
+    uint32_t kind;
+};
+struct thinkthen_cobol_AnswerError {
+    thinkthen_cobol_AnswerInputDenialPresence estimated_input_denial;
+    const thinkthen_cobol_AnswerFailureKind *kind;
+    thinkthen_cobol_AnswerText message;
+    uint32_t retryable;
+    thinkthen_cobol_AnswerSendDenialPresence send_budget_denial;
+    const thinkthen_cobol_AnswerStopped *stopped;
+    thinkthen_cobol_AnswerExtensions extensions;
+};
+struct thinkthen_cobol_AnswerStopped {
+    thinkthen_cobol_AnswerU64Presence at;
+    const thinkthen_cobol_AnswerStopCause *cause;
+    uint32_t retryable;
+    thinkthen_cobol_AnswerU64Presence status;
+    thinkthen_cobol_AnswerExtensions extensions;
+};
+struct thinkthen_cobol_AnswerSendDenial {
+    uint32_t kind;
+    thinkthen_cobol_AnswerSendDenialData data;
+};
+struct thinkthen_cobol_AnswerInputDenial {
+    uint32_t kind;
+    thinkthen_cobol_AnswerInputDenialData data;
+};
+struct thinkthen_cobol_AnswerPersistenceObservation {
+    thinkthen_cobol_AnswerUtf8Presence advice;
+    thinkthen_cobol_AnswerText observed_at;
+    const thinkthen_cobol_AnswerUsagePersistence *state;
+    thinkthen_cobol_AnswerExtensions extensions;
+};
+struct thinkthen_cobol_AnswerAttemptListPresence {
+    uint32_t presence;
+    thinkthen_cobol_AnswerAttemptList value;
+};
+struct thinkthen_cobol_AnswerFacts {
+    thinkthen_cobol_AnswerAttemptListPresence attempts;
+    uint64_t cache_answers;
+    const thinkthen_cobol_AnswerCallId *call_id;
+    thinkthen_cobol_AnswerUtf8Presence estimated_cost_usd;
+    thinkthen_cobol_AnswerU32Presence held_model_mismatch;
+    thinkthen_cobol_AnswerU64Presence input_tokens;
+    uint64_t largest_request_bytes;
+    thinkthen_cobol_AnswerU64Presence largest_request_estimated_input_tokens;
+    thinkthen_cobol_AnswerUtf8Presence model;
+    thinkthen_cobol_AnswerU64Presence output_tokens;
+    uint64_t records;
+    uint64_t requests_sent;
+    double seconds;
+    thinkthen_cobol_AnswerText token_estimate_method;
+    thinkthen_cobol_AnswerPersistenceObservationPresence usage_persistence;
+    thinkthen_cobol_AnswerExtensions extensions;
+};
+struct thinkthen_cobol_AnswerImmediateFacts {
+    thinkthen_cobol_AnswerAttemptListPresence attempts;
+    uint64_t cache_answers;
+    thinkthen_cobol_AnswerCallIdPresence call_id;
+    thinkthen_cobol_AnswerUtf8Presence estimated_cost_usd;
+    thinkthen_cobol_AnswerU32Presence held_model_mismatch;
+    thinkthen_cobol_AnswerU64Presence input_tokens;
+    uint64_t largest_request_bytes;
+    thinkthen_cobol_AnswerU64Presence largest_request_estimated_input_tokens;
+    thinkthen_cobol_AnswerUtf8Presence model;
+    thinkthen_cobol_AnswerU64Presence output_tokens;
+    uint64_t records;
+    uint64_t requests_sent;
+    double seconds;
+    thinkthen_cobol_AnswerText token_estimate_method;
+    thinkthen_cobol_AnswerPersistenceObservationPresence usage_persistence;
+    thinkthen_cobol_AnswerExtensions extensions;
+};
+typedef struct thinkthen_cobol_AnswerStatus {
+    int64_t code;
+    uint64_t retryable;
+    uint64_t failure_kind;
+    thinkthen_cobol_AnswerText message;
+    uint64_t facts_present;
+    thinkthen_cobol_AnswerFacts facts;
+    const thinkthen_cobol_AnswerImmediateFacts *immediate_facts;
+    const thinkthen_cobol_AnswerError *details;
+    tt_answer_owner *owner;
+} thinkthen_cobol_AnswerStatus;
+typedef struct thinkthen_cobol_AnswerTable {
+    tt_answer_owner *owner;
+    const void *rows;
+    uint64_t count;
+    const thinkthen_cobol_AnswerRecognitionEdge *edges;
+    uint64_t edge_count;
+} thinkthen_cobol_AnswerTable;
+void TT_ANSWER_FREE(tt_answer_owner *);
+typedef struct thinkthen_cobol_AnswerTokenBand {
+    uint64_t lower;
+    uint64_t upper;
+} thinkthen_cobol_AnswerTokenBand;
+typedef struct thinkthen_cobol_AnswerPlan {
+    uint64_t estimated_bytes;
+    thinkthen_cobol_AnswerTokenBand estimated_input_tokens;
+    uint64_t first_body_utf8_presence;
+    thinkthen_cobol_AnswerText first_body_utf8;
+    uint64_t largest_request_bytes;
+    uint64_t largest_request_estimated_input_tokens;
+    uint64_t records;
+    uint64_t requests;
+    thinkthen_cobol_AnswerText token_estimate_method;
+    uint64_t upper_bound;
+} thinkthen_cobol_AnswerPlan;
+int TT_PREVIEW(const void *engine,const char *function,const uint64_t *length,const thinkthen_cobol_RequestQuestion *question,
+const thinkthen_cobol_RequestInput *input,const thinkthen_cobol_RequestOptions *options,thinkthen_cobol_AnswerPlan *out,
+thinkthen_cobol_AnswerStatus *status_out);
+typedef struct thinkthen_cobol_AnswerDecideResult {
+    tt_answer_owner *owner;
+    const thinkthen_cobol_AnswerDecision *rows;
+    uint64_t count;
+    thinkthen_cobol_AnswerDecision first;
+} thinkthen_cobol_AnswerDecideResult;
+int TT_DECIDE(const void *engine,const thinkthen_cobol_RequestQuestion *question,const thinkthen_cobol_RequestInput *input,
+const thinkthen_cobol_RequestOptions *options,thinkthen_cobol_AnswerDecideResult *out,thinkthen_cobol_AnswerStatus *status_out);
+typedef struct thinkthen_cobol_AnswerChooseResult {
+    tt_answer_owner *owner;
+    const thinkthen_cobol_AnswerChoice *rows;
+    uint64_t count;
+    thinkthen_cobol_AnswerChoice first;
+} thinkthen_cobol_AnswerChooseResult;
+int TT_CHOOSE(const void *engine,const thinkthen_cobol_RequestQuestion *question,const thinkthen_cobol_RequestInput *input,
+const thinkthen_cobol_RequestOptions *options,thinkthen_cobol_AnswerChooseResult *out,thinkthen_cobol_AnswerStatus *status_out);
+typedef struct thinkthen_cobol_AnswerTagResult {
+    tt_answer_owner *owner;
+    const thinkthen_cobol_AnswerTable *rows;
+    uint64_t count;
+    thinkthen_cobol_AnswerTable first;
+} thinkthen_cobol_AnswerTagResult;
+int TT_TAG(const void *engine,const thinkthen_cobol_RequestQuestion *question,const thinkthen_cobol_RequestInput *input,
+const thinkthen_cobol_RequestOptions *options,thinkthen_cobol_AnswerTagResult *out,thinkthen_cobol_AnswerStatus *status_out);
+typedef struct thinkthen_cobol_AnswerScoreResult {
+    tt_answer_owner *owner;
+    const thinkthen_cobol_AnswerScore *rows;
+    uint64_t count;
+    thinkthen_cobol_AnswerScore first;
+} thinkthen_cobol_AnswerScoreResult;
+int TT_SCORE(const void *engine,const thinkthen_cobol_RequestQuestion *question,const thinkthen_cobol_RequestInput *input,
+const thinkthen_cobol_RequestOptions *options,thinkthen_cobol_AnswerScoreResult *out,thinkthen_cobol_AnswerStatus *status_out);
+typedef struct thinkthen_cobol_AnswerFilterResult {
+    tt_answer_owner *owner;
+    const thinkthen_cobol_AnswerFilterOriginal *rows;
+    uint64_t count;
+    thinkthen_cobol_AnswerFilterOriginal first;
+} thinkthen_cobol_AnswerFilterResult;
+int TT_FILTER(const void *engine,const thinkthen_cobol_RequestQuestion *question,const thinkthen_cobol_RequestInput *input,
+const thinkthen_cobol_RequestOptions *options,thinkthen_cobol_AnswerFilterResult *out,thinkthen_cobol_AnswerStatus *status_out);
+typedef struct thinkthen_cobol_AnswerRankResult {
+    tt_answer_owner *owner;
+    const thinkthen_cobol_AnswerRankIndex *rows;
+    uint64_t count;
+    thinkthen_cobol_AnswerRankIndex first;
+} thinkthen_cobol_AnswerRankResult;
+int TT_RANK(const void *engine,const thinkthen_cobol_RequestQuestion *question,const thinkthen_cobol_RequestInput *input,
+const thinkthen_cobol_RequestOptions *options,thinkthen_cobol_AnswerRankResult *out,thinkthen_cobol_AnswerStatus *status_out);
+typedef struct thinkthen_cobol_AnswerFindResult {
+    tt_answer_owner *owner;
+    const thinkthen_cobol_AnswerFindSelection *rows;
+    uint64_t count;
+    thinkthen_cobol_AnswerFindSelection first;
+} thinkthen_cobol_AnswerFindResult;
+int TT_FIND(const void *engine,const thinkthen_cobol_RequestQuestion *question,const thinkthen_cobol_RequestInput *input,
+const thinkthen_cobol_RequestOptions *options,thinkthen_cobol_AnswerFindResult *out,thinkthen_cobol_AnswerStatus *status_out);
+typedef struct thinkthen_cobol_AnswerAnnotateResult {
+    tt_answer_owner *owner;
+    const thinkthen_cobol_AnswerAnnotationField *rows;
+    uint64_t count;
+    thinkthen_cobol_AnswerAnnotationField first;
+} thinkthen_cobol_AnswerAnnotateResult;
+int TT_ANNOTATE(const void *engine,const thinkthen_cobol_RequestQuestion *question,const thinkthen_cobol_RequestInput *input,
+const thinkthen_cobol_RequestOptions *options,thinkthen_cobol_AnswerAnnotateResult *out,thinkthen_cobol_AnswerStatus *status_out);
+typedef struct thinkthen_cobol_AnswerRecognizeResult {
+    tt_answer_owner *owner;
+    const thinkthen_cobol_AnswerRecognition *rows;
+    uint64_t count;
+    thinkthen_cobol_AnswerRecognition first;
+    const thinkthen_cobol_AnswerRecognitionEdge *edges;
+    uint64_t edge_count;
+} thinkthen_cobol_AnswerRecognizeResult;
+int TT_RECOGNIZE(const void *engine,const thinkthen_cobol_RequestQuestion *question,const thinkthen_cobol_RequestInput *input,
+const thinkthen_cobol_RequestOptions *options,thinkthen_cobol_AnswerRecognizeResult *out,thinkthen_cobol_AnswerStatus *status_out);
+typedef struct thinkthen_cobol_AnswerRelateResult {
+    tt_answer_owner *owner;
+    const thinkthen_cobol_AnswerRelation *rows;
+    uint64_t count;
+    thinkthen_cobol_AnswerRelation first;
+} thinkthen_cobol_AnswerRelateResult;
+int TT_RELATE(const void *engine,const thinkthen_cobol_RequestQuestion *question,const thinkthen_cobol_RequestInput *input,
+const thinkthen_cobol_RequestOptions *options,thinkthen_cobol_AnswerRelateResult *out,thinkthen_cobol_AnswerStatus *status_out);
 void TT_VALUE_FREE(tt_value *);
 int TT_VALUE_KIND(const tt_value *,uint32_t *);
 int TT_VALUE_LENGTH(const tt_value *,uint64_t *);

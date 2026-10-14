@@ -33,6 +33,7 @@ libraries/c/src/ffi/session/operations_generated.rs linguist-generated
 libraries/c/src/session/primitives_generated.rs linguist-generated
 libraries/c/src/session/views_generated.rs linguist-generated
 libraries/cobol/copybooks/tt-native-generated.cpy linguist-generated
+libraries/cobol/native-helpers.json linguist-generated
 libraries/cobol/src/tt_requests_generated.c linguist-generated
 libraries/cobol/src/tt_requests_generated.h linguist-generated
 libraries/cpp/include/thinkthen/calls_generated.hpp linguist-generated

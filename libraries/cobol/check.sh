@@ -48,6 +48,8 @@ fi
 python3 "$ROOT/checks/exports.py" "$library" "$header" "$evidence/exports.txt" "$package"
 THINKTHEN_SESSION_PACKAGE="$package" THINKTHEN_C_HEADER="$header" THINKTHEN_C_LIBRARY="$library" \
   python3 "$ROOT/checks/session.py"
+THINKTHEN_SESSION_PACKAGE="$package" THINKTHEN_C_HEADER="$header" THINKTHEN_C_LIBRARY="$library" \
+  python3 "$ROOT/checks/blocking.py"
 THINKTHEN_PARITY_PACKAGE="$package" THINKTHEN_C_HEADER="$header" THINKTHEN_C_LIBRARY="$library" \
   python3 "$ROOT/checks/native_parity.py"
 THINKTHEN_C_LIBRARY="$library" THINKTHEN_USAGE_COBOL_PACKAGE="$package" THINKTHEN_C_HEADER="$header" \
