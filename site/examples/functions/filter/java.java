@@ -21,7 +21,7 @@ public class Filter {
                 .toList());
         try (var tt = new Engine()) {
             var complaints = tt.filter(question, records)
-                .join().filter();
+                .join().value();
             assert complaints.equals(
                 List.of(reviews.get(1), reviews.get(3)));
         }

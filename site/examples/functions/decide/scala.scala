@@ -12,6 +12,6 @@ import thinkthen.scala.ScalaEngine
       "Please refund my order. It arrived broken.")
     val call = tt.decide(question, broken)
     val isRefund = Await.result(call.result, 10.seconds)
-      .decide()
+      .value
     assert(isRefund.contains(true))
   }

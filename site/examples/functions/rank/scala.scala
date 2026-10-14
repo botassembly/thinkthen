@@ -24,6 +24,6 @@ import thinkthen.scala.ScalaEngine
       }.asJava)
     val call = tt.rank(question, records)
     val order = Await.result(call.result, 10.seconds)
-      .rank().map(_.intValue())
+      .value.map(_.intValue())
     assert(order == List(1, 3, 2, 0))
   }

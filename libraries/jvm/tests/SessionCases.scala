@@ -15,9 +15,9 @@ object SessionCases {
           val session=engine.startSession(Fixtures.request(data,question,Fixtures.sessionInput(data,input),options))
           val feed=new Fixtures.Feed {
             def push(d:Inputs.RequestSessionDescriptor):Int=session.tryPush(d)
-            def finish(f:Inputs.RequestReaderFailure):Unit=session.finish(f)
+            def finish(f:Inputs.RequestReaderFailure):Unit=session.finish(Option(f))
             def cancel():Unit=session.cancel()
-            def waitReady(input:Boolean):Unit={session.waitReady(input).join();()}
+            def waitReady(input:Boolean):Unit={Await.result(session.waitReady(input),30.seconds);()}
             def read():thinkthen.OwnedSession.Read={val read=session.tryRead();new thinkthen.OwnedSession.Read(read.packet.orNull,read.ended)}
             def close():Unit=session.close()
           }
@@ -31,10 +31,15 @@ object SessionCases {
           case "recognize"=>engine.recognize(question,input,options);case "relate"=>engine.relate(question,input,options)
           case _=>throw new IllegalArgumentException("unknown fixture function")
         }
-        val call=try Await.result(pending.result,30.seconds) catch {case failure:SessionFailure=>failure.call()}
+        val call=Await.result(pending.result,30.seconds)
         call.terminal().facts().state()
-        println(thinkthen.SessionCases.write(Fixtures.normalize(Fixtures.javaCall(call.packets().map(thinkthen.SessionCases.tree(_)).asJava,thinkthen.SessionCases.tree(call.terminal())),data)))
+        val output=new java.util.LinkedHashMap[String,Object](Fixtures.normalize(Fixtures.javaCall(call.packets().map(thinkthen.SessionCases.tree(_)).asJava,thinkthen.SessionCases.tree(call.terminal())),data))
+        if(data.get("call_result_contract") == true) {
+          val result = call
+           output.put("call_result", Map("value" -> result.value.asInstanceOf[Option[?]].getOrElse(null), "probability" -> result.probability.asInstanceOf[Option[?]].getOrElse(null), "results" -> result.results.map(thinkthen.SessionCases.tree(_)).asJava, "facts" -> thinkthen.SessionCases.tree(result.facts)).asJava)
+        }
+        println(thinkthen.SessionCases.write(output))
       } finally engine.close()
-    } catch {case failure:NativeFailure=>println(Fixtures.failure(failure.code,failure.getMessage))}
+    } catch {case failure:SessionFailure=>println(thinkthen.SessionCases.write(Fixtures.normalize(failure.call(),data))); case failure:NativeFailure=>println(Fixtures.failure(failure.code,failure.getMessage))}
   }
 }

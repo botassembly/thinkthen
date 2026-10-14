@@ -23,6 +23,6 @@ import thinkthen.scala.ScalaEngine
       "My parcel went to the wrong address.")
     val call = tt.choose(owner, parcel)
     val team = Await.result(call.result, 10.seconds)
-      .choose()
+      .value
     assert(team.contains("shipping"))
   }

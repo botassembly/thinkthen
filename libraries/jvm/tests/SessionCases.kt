@@ -14,24 +14,27 @@ fun main(args: Array<String>): Unit = runBlocking {
                     override fun push(d:Inputs.RequestSessionDescriptor)=session.tryPush(d)
                     override fun finish(f:Inputs.RequestReaderFailure?)=session.finish(f)
                     override fun cancel()=session.cancel()
-                    override fun waitReady(input:Boolean){session.waitReady(input).join()}
+                    override fun waitReady(input:Boolean){runBlocking { session.waitReady(input) }}
                     override fun read():thinkthen.OwnedSession.Read {val read=session.tryRead();return thinkthen.OwnedSession.Read(read.packet,read.ended)}
                     override fun close()=session.close()
                 }
                 println(thinkthen.SessionCases.write(SessionCases.normalize(SessionCases.drain(feed,data,input),data)))
                 return@use
             }
-            val call = try { when(data["verb"]) {
+            val call = when(data["verb"]) {
                 "decide"->engine.decide(question,input,options); "choose"->engine.choose(question,input,options)
                 "tag"->engine.tag(question,input,options); "score"->engine.score(question,input,options)
                 "filter"->engine.filter(question,input,options); "rank"->engine.rank(question,input,options)
                 "find"->engine.find(question,input,options); "annotate"->engine.annotate(question,input,options)
                 "recognize"->engine.recognize(question,input,options); "relate"->engine.relate(question,input,options)
                 else->error("unknown fixture function")
-            } } catch(failure: SessionFailure) { failure.call() }
+            }
             // Read the owning language's facts before projecting the shared fixture shape.
             call.terminal().facts().state()
-            println(thinkthen.SessionCases.write(SessionCases.normalize(SessionCases.javaCall(call.packets().map { thinkthen.SessionCases.tree(it) },thinkthen.SessionCases.tree(call.terminal())),data)))
+            val output = SessionCases.normalize(SessionCases.javaCall(call.packets().map { thinkthen.SessionCases.tree(it) },thinkthen.SessionCases.tree(call.terminal())),data).toMutableMap()
+            if(data["call_result_contract"] == true) output["call_result"] = mapOf("value" to thinkthen.SessionCases.tree(call.value), "probability" to call.probability, "results" to call.results.map { thinkthen.SessionCases.tree(it) }, "facts" to thinkthen.SessionCases.tree(call.facts))
+            println(thinkthen.SessionCases.write(output))
         }
-    } catch(failure: NativeFailure) { println(SessionCases.failure(failure.code,failure.message ?: "")) }
+    } catch(failure: SessionFailure) { println(thinkthen.SessionCases.write(SessionCases.normalize(failure.call(),data))) }
+    catch(failure: NativeFailure) { println(SessionCases.failure(failure.code,failure.message ?: "")) }
 }

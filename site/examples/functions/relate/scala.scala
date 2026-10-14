@@ -29,7 +29,7 @@ import thinkthen.scala.ScalaEngine
       }.asJava)
     val call = tt.relate(ask, names)
     val whoMakes = Await.result(call.result, 10.seconds)
-      .relate().value().asScala.toList
+      .value
     val pairs = whoMakes.map { edge =>
       edge.sourceName() -> edge.targetName()
     }

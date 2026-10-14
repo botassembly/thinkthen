@@ -122,7 +122,7 @@ def native_parity(consumer, running):
                                 LC_ALL="C.UTF-8",
                                 DOTNET_CLI_TELEMETRY_OPTOUT="1",
                                 LD_LIBRARY_PATH=str(native))
-                backend = c_parity.Backend(ROOT / "target/debug/conformance-backend", env)
+                backend = c_parity.Backend(Path(os.environ.get("CARGO_TARGET_DIR", str(ROOT / "target"))) / "debug/conformance-backend", env)
                 try:
                     env.update(THINKTHEN_API_KEY="sk-conformance-loopback", LIQUIDAI_API_KEY="sk-conformance-loopback", OPENROUTER_API_KEY="sk-conformance-loopback", PERPLEXITY_API_KEY="sk-conformance-loopback")
                     c_parity.prepare(home, value)
@@ -138,7 +138,7 @@ def native_parity(consumer, running):
                                 db.execute("UPDATE answers SET answer='damaged fixture answer'")
                         if value.get("image_variants"):
                             backend.close()
-                            backend = c_parity.Backend(ROOT / "target/debug/conformance-backend", env)
+                            backend = c_parity.Backend(Path(os.environ.get("CARGO_TARGET_DIR", str(ROOT / "target"))) / "debug/conformance-backend", env)
                             c_parity.prepare(home, step)
                         for key in ("paths", "image_paths"):
                             if key in step and not step.get("owned_jsonl"):
@@ -153,7 +153,7 @@ def native_parity(consumer, running):
                         if row["kind"] in ("images", "image-location"):
                             settings["record"] = str(home / "recorded")
                         def invoke(given):
-                            framing = {**step, "engine_settings": c_parity.compact(given)}
+                            framing = {**step, "engine_settings": c_parity.compact(given), "call_result_contract": "call_result" in step["expect"]}
                             if step.get("caption_files"):
                                 framing["items"] = [""] * len(step["items"])
                             framing.update(batch_home=str(home), batch_environment=env)

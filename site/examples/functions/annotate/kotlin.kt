@@ -8,8 +8,7 @@ suspend fun main() = KotlinEngine().use { tt ->
     val form = RequestQuestionFile().path("form.json")
     val report = RequestInputText()
         .text("Steps: click Log in. Nobody gets in.")
-    val triage = tt.annotate(form, report).annotate()
-        .first().value().value()
+    val triage = tt.annotate(form, report).value.value()
     check(triage == mapOf(
         "steps" to AnnotatedFieldBoolean(true),
         "area" to AnnotatedFieldString("login"),

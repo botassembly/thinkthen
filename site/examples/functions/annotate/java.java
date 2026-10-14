@@ -14,8 +14,7 @@ public class Annotate {
 
         try (var tt = new Engine()) {
             var triage = tt.annotate(form, report)
-                .join().annotate().getFirst()
-                .value().value();
+                .join().value().value();
             assert triage.equals(Map.of(
                 "steps", new AnnotatedFieldBoolean(true),
                 "area", new AnnotatedFieldString("login"),

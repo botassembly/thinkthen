@@ -18,6 +18,6 @@ suspend fun main() = KotlinEngine().use { tt ->
             RequestItem().original(
                 RequestOriginalText().text(text))
         })
-    val complaints = tt.filter(question, records).filter()
+    val complaints = tt.filter(question, records).value
     check(complaints == listOf(reviews[1], reviews[3]))
 }

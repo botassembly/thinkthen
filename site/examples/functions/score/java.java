@@ -21,7 +21,7 @@ public class Score {
 
         try (var tt = new Engine()) {
             var urgency = tt.score(scale, outage)
-                .join().score();
+                .join().value();
             assert urgency.doubleValue() == 2.0;
         }
     }

@@ -50,6 +50,10 @@ public final class SessionCases {
         result.put(text && value instanceof String ? "text" : "value",value); return result;
     }
     public static RequestInput input(Map<String,Object> data) throws Exception {
+        if(yes(data,"call_result_contract")) {
+            Object original=list(data.get("items")).getFirst();
+            return original instanceof String text ? new RequestInputText().text(text) : new RequestInputJson().value(original);
+        }
         var paths=list(data.get("paths"));
         if(!paths.isEmpty() && !yes(data,"owned_jsonl")) {
             int unit=((Number)data.get("source_unit")).intValue();
@@ -85,7 +89,7 @@ public final class SessionCases {
         if(text(map(data.get("operation")),"injection").equals("expired_deadline")) options.deadlineMs(0);
         return options;
     }
-    public static CompletableFuture<Engine.OwnedCall> named(Engine engine,String function,RequestQuestion question,RequestInput input,RequestOptions options) {
+    public static CompletableFuture<? extends Engine.OwnedCall> named(Engine engine,String function,RequestQuestion question,RequestInput input,RequestOptions options) {
         return switch(function) {
             case "decide" -> engine.decide(question,input,options); case "choose" -> engine.choose(question,input,options);
             case "tag" -> engine.tag(question,input,options); case "score" -> engine.score(question,input,options);
@@ -155,6 +159,8 @@ public final class SessionCases {
         var output=new LinkedHashMap<String,Object>();output.put("code",0);output.put("schema","thinkthen.result/2");output.put("observations",call.packets().stream().filter(p->p instanceof SessionPacketObservation).count());output.put("rows",rows);
         if(optional(call.terminal().facts()) instanceof Facts facts){output.put("call_id",facts.callId());output.put("requests_sent",facts.requestsSent());output.put("cache_answers",facts.cacheAnswers());output.put("records",facts.records());if(optional(facts.inputTokens())!=null)output.put("input_tokens",facts.inputTokens().value());if(optional(facts.outputTokens())!=null)output.put("output_tokens",facts.outputTokens().value());}
         if(optional(call.terminal().failure()) instanceof CallError error){output.put("code",code(error.error().kind().value()));output.put("message",error.error().message());if(optional(error.error().stopped().at())!=null)output.put("stopped_at",error.error().stopped().at().value());}
+        if(yes(data,"call_result_contract") && call instanceof CallResult<?,?,?> result)
+            output.put("call_result",Map.of("value",Values.json(result.value()),"probability",result.probability(),"results",result.results().stream().map(Values::json).toList(),"facts",Values.json(result.facts())));
         if(yes(data,"incremental"))output.put("completed",rows);
         return Values.object(Values.freeze(output));
     }

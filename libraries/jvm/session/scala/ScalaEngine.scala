@@ -5,19 +5,19 @@ import thinkthen.Results
 import scala.concurrent.{Future, Promise}
 import scala.jdk.CollectionConverters.*
 /** A Scala Future and explicit cancellation over the shared JVM session. */
-final case class Call(result: Future[OwnedCall], cancel: () => Boolean)
+final case class Call[+T <: OwnedCall](result: Future[T], cancel: () => Boolean)
 final class ScalaEngine private (private val engine: Engine) extends ScalaNamedCalls(engine) with AutoCloseable {
   def this(settings: Inputs.EngineSettings) = this(ScalaEngine.native(new Engine(settings, Engine.Surface.SCALA)))
   def this() = this(new Inputs.EngineSettings())
-  protected override def run(native: java.util.concurrent.CompletableFuture[Engine.OwnedCall]): Call = {
-    val result = Promise[OwnedCall]()
-    native.whenComplete((value, error) => { try { if (error == null) result.trySuccess(new OwnedCall(value)) else result.tryFailure(ScalaEngine.failure(error)) } catch { case error: Throwable => result.tryFailure(ScalaEngine.failure(error)) }; () })
+  protected override def run[A,B <: OwnedCall](native: java.util.concurrent.CompletableFuture[A])(convert: A => B): Call[B] = {
+    val result = Promise[B]()
+    native.whenComplete((value, error) => { try { if (error == null) result.trySuccess(convert(value)) else result.tryFailure(ScalaEngine.failure(error)) } catch { case error: Throwable => result.tryFailure(ScalaEngine.failure(error)) }; () })
     Call(result.future, () => native.cancel(false))
   }
   def plan(request: Inputs.Request): Results.Plan = try engine.plan(request) catch { case error: Throwable => throw ScalaEngine.failure(error) }
   def startSession(request: Inputs.Request): OwnedSession = ScalaEngine.native(new OwnedSession(engine.startSession(request)))
-  def execute(request: Inputs.Request): Call = run(engine.execute(request))
-  def execute(request: Inputs.Request, feed: Iterable[Inputs.RequestSessionDescriptor]): Call = run(engine.execute(request, feed.asJava))
+  def execute(request: Inputs.Request): Call[OwnedCall] = run(engine.execute(request))(new OwnedCall(_))
+  def execute(request: Inputs.Request, feed: Iterable[Inputs.RequestSessionDescriptor]): Call[OwnedCall] = run(engine.execute(request, feed.asJava))(new OwnedCall(_))
   def usagePersistence(): UsagePersistence = ScalaEngine.native(UsagePersistence.read(engine.usagePersistence()))
   def finishUsageStatus(): UsagePersistence = ScalaEngine.native(UsagePersistence.read(engine.finishUsageStatus()))
   override def close(): Unit = engine.close()

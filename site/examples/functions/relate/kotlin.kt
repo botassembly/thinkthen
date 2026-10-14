@@ -26,7 +26,7 @@ suspend fun main() = KotlinEngine().use { tt ->
             RequestItem().original(
                 RequestOriginalJson().value(one))
         })
-    val whoMakes = tt.relate(ask, names).relate().value()
+    val whoMakes = tt.relate(ask, names).value
     val pairs = whoMakes.map { edge ->
         edge.sourceName() to edge.targetName()
     }

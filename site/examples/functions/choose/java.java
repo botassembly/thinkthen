@@ -26,7 +26,7 @@ public class Choose {
 
         try (var tt = new Engine()) {
             var team = tt.choose(owner, parcel)
-                .join().choose();
+                .join().value();
             assert team.equals("shipping");
         }
     }

@@ -8,7 +8,8 @@ import thinkthen.Results.RecognizeEntities;
 public class Recognize {
     public static void main(String[] args) {
         var kinds =
-            new Inputs.Ordered<Inputs.AuthoredDescription>();
+            new Inputs.Ordered<
+                Inputs.AuthoredDescription>();
         kinds.entry("person", null);
         kinds.entry("product", null);
         kinds.entry("place", null);
@@ -24,7 +25,7 @@ public class Recognize {
         try (var tt = new Engine()) {
             var facts = (RecognizeEntities) tt
                 .recognize(ask, text)
-                .join().recognize().getFirst().value();
+                .join().value();
             var names = facts.entities().stream()
                 .map(one -> List.of(one.text(), one.kind()))
                 .toList();

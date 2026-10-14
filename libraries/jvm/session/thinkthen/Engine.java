@@ -59,19 +59,14 @@ public final class Engine extends NamedCalls implements AutoCloseable {
             finally { NativeSession.free("thinkthen_value_free", owner); }
         }
     }
-    public record OwnedCall(List<Results.SessionPacket> packets, Results.SessionPacketTerminal terminal) {
-        public OwnedCall { packets = List.copyOf(packets); Objects.requireNonNull(terminal); }
-        public Boolean decide() { return Results.CallAnswers.decide(this); }
-        public String choose() { return Results.CallAnswers.choose(this); }
-        public List<String> tag() { return Results.CallAnswers.tag(this); }
-        public java.math.BigDecimal score() { return Results.CallAnswers.score(this); }
-        public List<Object> filter() { return Results.CallAnswers.filter(this); }
-        public List<java.math.BigInteger> rank() { return Results.CallAnswers.rank(this); }
-        public Results.Find find() { return Results.CallAnswers.find(this); }
-        public List<Results.Annotation> annotate() { return Results.CallAnswers.annotate(this); }
-        public List<Results.Recognition> recognize() { return Results.CallAnswers.recognize(this); }
-        public Results.Relation relate() { return Results.CallAnswers.relate(this); }
-
+    public static class OwnedCall {
+        private final List<Results.SessionPacket> packets;
+        private final Results.SessionPacketTerminal terminal;
+        public OwnedCall(List<Results.SessionPacket> packets, Results.SessionPacketTerminal terminal) {
+            this.packets = List.copyOf(packets); this.terminal = Objects.requireNonNull(terminal);
+        }
+        public final List<Results.SessionPacket> packets() { return packets; }
+        public final Results.SessionPacketTerminal terminal() { return terminal; }
     }
     public static final class SessionFailure extends RuntimeException {
         private static final long serialVersionUID = 1L;
