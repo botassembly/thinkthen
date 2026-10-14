@@ -6,7 +6,7 @@ Read `README.md`, `specification/README.md` and `sdlc/planning/rust-standards.md
 
 - Gates: `sdlc/scripts/{install,lint,test,spec,surfaces}`, offline. Run focused checks per change, `spec` and affected surfaces as needed, and `lint` and `test` once at closure. Large-input cases, full parity and load are release-only: `sdlc/decisions/2026-10-09-two-test-suites.md`.
 - Before asking anyone to bless a release, run the release suite (`test-full-cases`, `package`, `test-stress`) locally on the candidate. Run each in the background with a log file; do not watch or poll it, and read the log once it exits.
-- Tests are outside-in through the Rust API, the CLI and each installed library. Red, green, remove: delete scaffolding unit tests before landing.
+- Write tests as `repos/agents/skills/outside-in-tests.md` says.
 - Before Rust code review, run `CARGO_NET_OFFLINE=true python3 sdlc/scripts/policy.py` for file caps and the adapter-word boundary. `sdlc/ratchet.json` holds the measured source ceiling. Explain warnings and growth in the commit; avoid mechanical splits. A ceiling raise needs explicit reviewer acceptance before landing; deleting source lowers it.
 - Run Git-history checks after committing; finish them before the next commit.
 - Beelink is primary. M5 may run experiments and Mac-specific checks before candidates, not after every ticket. Reduce jobs under pressure; isolate lane output and keep toolchain/cache mutation locks.
