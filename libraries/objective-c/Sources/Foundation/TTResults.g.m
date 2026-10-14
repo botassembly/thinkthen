@@ -147,9 +147,9 @@ NSString * const TTRequestVersion = @"thinkthen.request/1";
         return [TTMeta read:value];
     }];
 }
-- (TTPresence<TTReadableQuestion *> *)question {
+- (TTPresence<TTQuestionDocument *> *)question {
     return [self presence:@"question" required:YES convert:^id(id value) {
-        return [TTReadableQuestion read:value];
+        return [TTQuestionDocument read:value];
     }];
 }
 - (TTPresence<NSString *> *)questionName {
@@ -223,9 +223,9 @@ NSString * const TTRequestVersion = @"thinkthen.request/1";
         return [TTMeta read:value];
     }];
 }
-- (TTPresence<TTReadableQuestion *> *)question {
+- (TTPresence<TTQuestionDocument *> *)question {
     return [self presence:@"question" required:YES convert:^id(id value) {
-        return [TTReadableQuestion read:value];
+        return [TTQuestionDocument read:value];
     }];
 }
 - (TTPresence<NSString *> *)questionName {
@@ -297,9 +297,9 @@ NSString * const TTRequestVersion = @"thinkthen.request/1";
         return [TTMeta read:value];
     }];
 }
-- (TTPresence<TTReadableQuestion *> *)question {
+- (TTPresence<TTQuestionDocument *> *)question {
     return [self presence:@"question" required:YES convert:^id(id value) {
-        return [TTReadableQuestion read:value];
+        return [TTQuestionDocument read:value];
     }];
 }
 - (TTPresence<NSString *> *)questionName {
@@ -371,9 +371,9 @@ NSString * const TTRequestVersion = @"thinkthen.request/1";
         return [TTMeta read:value];
     }];
 }
-- (TTPresence<TTReadableQuestion *> *)question {
+- (TTPresence<TTQuestionDocument *> *)question {
     return [self presence:@"question" required:YES convert:^id(id value) {
-        return [TTReadableQuestion read:value];
+        return [TTQuestionDocument read:value];
     }];
 }
 - (TTPresence<NSString *> *)questionName {
@@ -445,9 +445,9 @@ NSString * const TTRequestVersion = @"thinkthen.request/1";
         return [TTMeta read:value];
     }];
 }
-- (TTPresence<TTReadableQuestion *> *)question {
+- (TTPresence<TTQuestionDocument *> *)question {
     return [self presence:@"question" required:YES convert:^id(id value) {
-        return [TTReadableQuestion read:value];
+        return [TTQuestionDocument read:value];
     }];
 }
 - (TTPresence<NSString *> *)questionName {
@@ -519,9 +519,9 @@ NSString * const TTRequestVersion = @"thinkthen.request/1";
         return [TTMeta read:value];
     }];
 }
-- (TTPresence<TTReadableQuestion *> *)question {
+- (TTPresence<TTQuestionDocument *> *)question {
     return [self presence:@"question" required:YES convert:^id(id value) {
-        return [TTReadableQuestion read:value];
+        return [TTQuestionDocument read:value];
     }];
 }
 - (TTPresence<NSString *> *)questionName {
@@ -870,9 +870,9 @@ NSString * const TTRequestVersion = @"thinkthen.request/1";
         return [TTPosition read:value];
     }];
 }
-- (TTPresence<TTReadableQuestion2 *> *)question {
+- (TTPresence<TTFindQuestionDocument *> *)question {
     return [self presence:@"question" required:YES convert:^id(id value) {
-        return [TTReadableQuestion2 read:value];
+        return [TTFindQuestionDocument read:value];
     }];
 }
 - (TTPresence<NSString *> *)schema {
@@ -1245,9 +1245,9 @@ NSString * const TTRequestVersion = @"thinkthen.request/1";
         return [TTMeta read:value];
     }];
 }
-- (TTPresence<TTReadableQuestion *> *)question {
+- (TTPresence<TTQuestionDocument *> *)question {
     return [self presence:@"question" required:YES convert:^id(id value) {
-        return [TTReadableQuestion read:value];
+        return [TTQuestionDocument read:value];
     }];
 }
 - (TTPresence<NSString *> *)schema {
@@ -1267,270 +1267,6 @@ NSString * const TTRequestVersion = @"thinkthen.request/1";
 }
 - (TTPresence<NSNumber *> *)value {
     return [self presence:@"value" required:YES convert:^id(id value) {
-        return TTInteger(value);
-    }];
-}
-@end
-@implementation TTReadableQuestion
-+ (instancetype)read:(id)value {
-    NSDictionary *object = TTObject(value);
-    if ([object[@"verb"] isEqual:@"decide"]) return (id)[TTReadableQuestionDecide read:value];
-    if ([object[@"verb"] isEqual:@"choose"]) return (id)[TTReadableQuestionChoose read:value];
-    if ([object[@"verb"] isEqual:@"tag"]) return (id)[TTReadableQuestionTag read:value];
-    if ([object[@"verb"] isEqual:@"score"]) return (id)[TTReadableQuestionScore read:value];
-    TTInvalidResult();
-    return nil;
-}
-@end
-@implementation TTReadableQuestion2
-+ (instancetype)read:(id)value {
-    return [[self alloc] initWithFields:TTObject(value)];
-}
-- (TTPresence<TTBatch *> *)batch {
-    return [self presence:@"batch" required:NO convert:^id(id value) {
-        return [TTBatch read:value];
-    }];
-}
-- (TTPresence<TTInputDeclaration *> *)contextSchema {
-    return [self presence:@"context_schema" required:NO convert:^id(id value) {
-        return [TTInputDeclaration read:value];
-    }];
-}
-- (TTPresence<TTInputDeclaration *> *)itemSchema {
-    return [self presence:@"item_schema" required:NO convert:^id(id value) {
-        return [TTInputDeclaration read:value];
-    }];
-}
-- (TTPresence<NSArray<TTLabel *> *> *)labelDetails {
-    return [self presence:@"label_details" required:NO convert:^id(id value) {
-        return TTArray(value, ^id(id item) {
-            return [TTLabel read:item];
-        });
-    }];
-}
-- (TTPresence<NSString *> *)model {
-    return [self presence:@"model" required:NO convert:^id(id value) {
-        return TTString(value);
-    }];
-}
-- (TTPresence<NSString *> *)name {
-    return [self presence:@"name" required:NO convert:^id(id value) {
-        return TTString(value);
-    }];
-}
-- (TTPresence<NSNumber *> *)none {
-    return [self presence:@"none" required:YES convert:^id(id value) {
-        return TTBoolean(value);
-    }];
-}
-- (TTPresence<NSArray<NSString *> *> *)on {
-    return [self presence:@"on" required:NO convert:^id(id value) {
-        return TTArray(value, ^id(id item) {
-            return TTString(item);
-        });
-    }];
-}
-- (TTPresence<NSString *> *)profile {
-    return [self presence:@"profile" required:NO convert:^id(id value) {
-        return TTString(value);
-    }];
-}
-- (TTPresence<id> *)text {
-    return [self presence:@"text" required:YES convert:^id(id value) {
-        return value;
-    }];
-}
-- (TTPresence<NSString *> *)verb {
-    return [self presence:@"verb" required:YES convert:^id(id value) {
-        return TTString(value);
-    }];
-}
-- (TTPresence<NSNumber *> *)wordingVersion {
-    return [self presence:@"wording_version" required:NO convert:^id(id value) {
-        return TTInteger(value);
-    }];
-}
-@end
-@implementation TTReadableQuestion3
-+ (instancetype)read:(id)value {
-    return [[self alloc] initWithFields:TTObject(value)];
-}
-- (TTPresence<TTBatch *> *)batch {
-    return [self presence:@"batch" required:NO convert:^id(id value) {
-        return [TTBatch read:value];
-    }];
-}
-- (TTPresence<TTInputDeclaration *> *)contextSchema {
-    return [self presence:@"context_schema" required:NO convert:^id(id value) {
-        return [TTInputDeclaration read:value];
-    }];
-}
-- (TTPresence<id> *)entityDefinition {
-    return [self presence:@"entity_definition" required:NO convert:^id(id value) {
-        return value;
-    }];
-}
-- (TTPresence<id> *)instructions {
-    return [self presence:@"instructions" required:NO convert:^id(id value) {
-        return value;
-    }];
-}
-- (TTPresence<TTInputDeclaration *> *)itemSchema {
-    return [self presence:@"item_schema" required:NO convert:^id(id value) {
-        return [TTInputDeclaration read:value];
-    }];
-}
-- (TTPresence<NSDictionary<NSString *, id> *> *)kinds {
-    return [self presence:@"kinds" required:YES convert:^id(id value) {
-        return TTMap(value, ^id(id item) {
-            return item;
-        });
-    }];
-}
-- (TTPresence<NSArray<TTLabel *> *> *)labelDetails {
-    return [self presence:@"label_details" required:NO convert:^id(id value) {
-        return TTArray(value, ^id(id item) {
-            return [TTLabel read:item];
-        });
-    }];
-}
-- (TTPresence<NSString *> *)mode {
-    return [self presence:@"mode" required:NO convert:^id(id value) {
-        return TTString(value);
-    }];
-}
-- (TTPresence<NSString *> *)model {
-    return [self presence:@"model" required:NO convert:^id(id value) {
-        return TTString(value);
-    }];
-}
-- (TTPresence<NSString *> *)name {
-    return [self presence:@"name" required:NO convert:^id(id value) {
-        return TTString(value);
-    }];
-}
-- (TTPresence<NSArray<NSString *> *> *)on {
-    return [self presence:@"on" required:NO convert:^id(id value) {
-        return TTArray(value, ^id(id item) {
-            return TTString(item);
-        });
-    }];
-}
-- (TTPresence<NSString *> *)profile {
-    return [self presence:@"profile" required:NO convert:^id(id value) {
-        return TTString(value);
-    }];
-}
-- (TTPresence<TTThreshold *> *)relationThreshold {
-    return [self presence:@"relation_threshold" required:NO convert:^id(id value) {
-        return [TTThreshold read:value];
-    }];
-}
-- (TTPresence<NSArray<TTRelationRule *> *> *)relations {
-    return [self presence:@"relations" required:NO convert:^id(id value) {
-        return TTArray(value, ^id(id item) {
-            return [TTRelationRule read:item];
-        });
-    }];
-}
-- (TTPresence<NSNumber *> *)snippetPieces {
-    return [self presence:@"snippet_pieces" required:NO convert:^id(id value) {
-        return TTInteger(value);
-    }];
-}
-- (TTPresence<TTRecognitionStageContext *> *)stageContext {
-    return [self presence:@"stage_context" required:NO convert:^id(id value) {
-        return [TTRecognitionStageContext read:value];
-    }];
-}
-- (TTPresence<TTThreshold *> *)threshold {
-    return [self presence:@"threshold" required:YES convert:^id(id value) {
-        return [TTThreshold read:value];
-    }];
-}
-- (TTPresence<NSString *> *)verb {
-    return [self presence:@"verb" required:YES convert:^id(id value) {
-        return TTString(value);
-    }];
-}
-- (TTPresence<NSNumber *> *)wordingVersion {
-    return [self presence:@"wording_version" required:NO convert:^id(id value) {
-        return TTInteger(value);
-    }];
-}
-@end
-@implementation TTReadableQuestion4
-+ (instancetype)read:(id)value {
-    return [[self alloc] initWithFields:TTObject(value)];
-}
-- (TTPresence<TTBatch *> *)batch {
-    return [self presence:@"batch" required:NO convert:^id(id value) {
-        return [TTBatch read:value];
-    }];
-}
-- (TTPresence<TTInputDeclaration *> *)contextSchema {
-    return [self presence:@"context_schema" required:NO convert:^id(id value) {
-        return [TTInputDeclaration read:value];
-    }];
-}
-- (TTPresence<TTRelateFields *> *)fields {
-    return [self presence:@"fields" required:YES convert:^id(id value) {
-        return [TTRelateFields read:value];
-    }];
-}
-- (TTPresence<TTInputDeclaration *> *)itemSchema {
-    return [self presence:@"item_schema" required:NO convert:^id(id value) {
-        return [TTInputDeclaration read:value];
-    }];
-}
-- (TTPresence<NSArray<TTLabel *> *> *)labelDetails {
-    return [self presence:@"label_details" required:NO convert:^id(id value) {
-        return TTArray(value, ^id(id item) {
-            return [TTLabel read:item];
-        });
-    }];
-}
-- (TTPresence<NSString *> *)model {
-    return [self presence:@"model" required:NO convert:^id(id value) {
-        return TTString(value);
-    }];
-}
-- (TTPresence<NSString *> *)name {
-    return [self presence:@"name" required:NO convert:^id(id value) {
-        return TTString(value);
-    }];
-}
-- (TTPresence<NSArray<NSString *> *> *)on {
-    return [self presence:@"on" required:NO convert:^id(id value) {
-        return TTArray(value, ^id(id item) {
-            return TTString(item);
-        });
-    }];
-}
-- (TTPresence<NSString *> *)profile {
-    return [self presence:@"profile" required:NO convert:^id(id value) {
-        return TTString(value);
-    }];
-}
-- (TTPresence<NSArray<TTRelationRule *> *> *)relations {
-    return [self presence:@"relations" required:YES convert:^id(id value) {
-        return TTArray(value, ^id(id item) {
-            return [TTRelationRule read:item];
-        });
-    }];
-}
-- (TTPresence<TTThreshold *> *)threshold {
-    return [self presence:@"threshold" required:YES convert:^id(id value) {
-        return [TTThreshold read:value];
-    }];
-}
-- (TTPresence<NSString *> *)verb {
-    return [self presence:@"verb" required:YES convert:^id(id value) {
-        return TTString(value);
-    }];
-}
-- (TTPresence<NSNumber *> *)wordingVersion {
-    return [self presence:@"wording_version" required:NO convert:^id(id value) {
         return TTInteger(value);
     }];
 }
@@ -1584,9 +1320,9 @@ NSString * const TTRequestVersion = @"thinkthen.request/1";
         return [TTPosition read:value];
     }];
 }
-- (TTPresence<TTReadableQuestion3 *> *)question {
+- (TTPresence<TTRecognizeQuestionDocument *> *)question {
     return [self presence:@"question" required:YES convert:^id(id value) {
-        return [TTReadableQuestion3 read:value];
+        return [TTRecognizeQuestionDocument read:value];
     }];
 }
 - (TTPresence<NSString *> *)schema {
@@ -1760,9 +1496,9 @@ NSString * const TTRequestVersion = @"thinkthen.request/1";
         return [TTPosition read:value];
     }];
 }
-- (TTPresence<TTReadableQuestion4 *> *)question {
+- (TTPresence<TTRelateQuestionDocument *> *)question {
     return [self presence:@"question" required:YES convert:^id(id value) {
-        return [TTReadableQuestion4 read:value];
+        return [TTRelateQuestionDocument read:value];
     }];
 }
 - (TTPresence<NSString *> *)schema {
@@ -2064,6 +1800,75 @@ NSString * const TTRequestVersion = @"thinkthen.request/1";
     }];
 }
 @end
+@implementation TTFindQuestionDocument
++ (instancetype)read:(id)value {
+    return [[self alloc] initWithFields:TTObject(value)];
+}
+- (TTPresence<TTBatch *> *)batch {
+    return [self presence:@"batch" required:NO convert:^id(id value) {
+        return [TTBatch read:value];
+    }];
+}
+- (TTPresence<TTInputDeclaration *> *)contextSchema {
+    return [self presence:@"context_schema" required:NO convert:^id(id value) {
+        return [TTInputDeclaration read:value];
+    }];
+}
+- (TTPresence<TTInputDeclaration *> *)itemSchema {
+    return [self presence:@"item_schema" required:NO convert:^id(id value) {
+        return [TTInputDeclaration read:value];
+    }];
+}
+- (TTPresence<NSArray<TTLabel *> *> *)labelDetails {
+    return [self presence:@"label_details" required:NO convert:^id(id value) {
+        return TTArray(value, ^id(id item) {
+            return [TTLabel read:item];
+        });
+    }];
+}
+- (TTPresence<NSString *> *)model {
+    return [self presence:@"model" required:NO convert:^id(id value) {
+        return TTString(value);
+    }];
+}
+- (TTPresence<NSString *> *)name {
+    return [self presence:@"name" required:NO convert:^id(id value) {
+        return TTString(value);
+    }];
+}
+- (TTPresence<NSNumber *> *)none {
+    return [self presence:@"none" required:YES convert:^id(id value) {
+        return TTBoolean(value);
+    }];
+}
+- (TTPresence<NSArray<NSString *> *> *)on {
+    return [self presence:@"on" required:NO convert:^id(id value) {
+        return TTArray(value, ^id(id item) {
+            return TTString(item);
+        });
+    }];
+}
+- (TTPresence<NSString *> *)profile {
+    return [self presence:@"profile" required:NO convert:^id(id value) {
+        return TTString(value);
+    }];
+}
+- (TTPresence<id> *)text {
+    return [self presence:@"text" required:YES convert:^id(id value) {
+        return value;
+    }];
+}
+- (TTPresence<NSString *> *)verb {
+    return [self presence:@"verb" required:YES convert:^id(id value) {
+        return TTString(value);
+    }];
+}
+- (TTPresence<NSNumber *> *)wordingVersion {
+    return [self presence:@"wording_version" required:NO convert:^id(id value) {
+        return TTInteger(value);
+    }];
+}
+@end
 @implementation TTNameOdds
 + (instancetype)read:(id)value {
     return [[self alloc] initWithFields:TTObject(value)];
@@ -2220,6 +2025,17 @@ NSString * const TTRequestVersion = @"thinkthen.request/1";
     }];
 }
 @end
+@implementation TTQuestionDocument
++ (instancetype)read:(id)value {
+    NSDictionary *object = TTObject(value);
+    if ([object[@"verb"] isEqual:@"decide"]) return (id)[TTQuestionDocumentDecide read:value];
+    if ([object[@"verb"] isEqual:@"choose"]) return (id)[TTQuestionDocumentChoose read:value];
+    if ([object[@"verb"] isEqual:@"tag"]) return (id)[TTQuestionDocumentTag read:value];
+    if ([object[@"verb"] isEqual:@"score"]) return (id)[TTQuestionDocumentScore read:value];
+    TTInvalidResult();
+    return nil;
+}
+@end
 @implementation TTRecognize
 + (instancetype)read:(id)value {
     NSDictionary *object = TTObject(value);
@@ -2262,6 +2078,114 @@ NSString * const TTRequestVersion = @"thinkthen.request/1";
     }];
 }
 @end
+@implementation TTRecognizeQuestionDocument
++ (instancetype)read:(id)value {
+    return [[self alloc] initWithFields:TTObject(value)];
+}
+- (TTPresence<TTBatch *> *)batch {
+    return [self presence:@"batch" required:NO convert:^id(id value) {
+        return [TTBatch read:value];
+    }];
+}
+- (TTPresence<TTInputDeclaration *> *)contextSchema {
+    return [self presence:@"context_schema" required:NO convert:^id(id value) {
+        return [TTInputDeclaration read:value];
+    }];
+}
+- (TTPresence<id> *)entityDefinition {
+    return [self presence:@"entity_definition" required:NO convert:^id(id value) {
+        return value;
+    }];
+}
+- (TTPresence<id> *)instructions {
+    return [self presence:@"instructions" required:NO convert:^id(id value) {
+        return value;
+    }];
+}
+- (TTPresence<TTInputDeclaration *> *)itemSchema {
+    return [self presence:@"item_schema" required:NO convert:^id(id value) {
+        return [TTInputDeclaration read:value];
+    }];
+}
+- (TTPresence<NSDictionary<NSString *, id> *> *)kinds {
+    return [self presence:@"kinds" required:YES convert:^id(id value) {
+        return TTMap(value, ^id(id item) {
+            return item;
+        });
+    }];
+}
+- (TTPresence<NSArray<TTLabel *> *> *)labelDetails {
+    return [self presence:@"label_details" required:NO convert:^id(id value) {
+        return TTArray(value, ^id(id item) {
+            return [TTLabel read:item];
+        });
+    }];
+}
+- (TTPresence<NSString *> *)mode {
+    return [self presence:@"mode" required:NO convert:^id(id value) {
+        return TTString(value);
+    }];
+}
+- (TTPresence<NSString *> *)model {
+    return [self presence:@"model" required:NO convert:^id(id value) {
+        return TTString(value);
+    }];
+}
+- (TTPresence<NSString *> *)name {
+    return [self presence:@"name" required:NO convert:^id(id value) {
+        return TTString(value);
+    }];
+}
+- (TTPresence<NSArray<NSString *> *> *)on {
+    return [self presence:@"on" required:NO convert:^id(id value) {
+        return TTArray(value, ^id(id item) {
+            return TTString(item);
+        });
+    }];
+}
+- (TTPresence<NSString *> *)profile {
+    return [self presence:@"profile" required:NO convert:^id(id value) {
+        return TTString(value);
+    }];
+}
+- (TTPresence<TTThreshold *> *)relationThreshold {
+    return [self presence:@"relation_threshold" required:NO convert:^id(id value) {
+        return [TTThreshold read:value];
+    }];
+}
+- (TTPresence<NSArray<TTRelationRule *> *> *)relations {
+    return [self presence:@"relations" required:NO convert:^id(id value) {
+        return TTArray(value, ^id(id item) {
+            return [TTRelationRule read:item];
+        });
+    }];
+}
+- (TTPresence<NSNumber *> *)snippetPieces {
+    return [self presence:@"snippet_pieces" required:NO convert:^id(id value) {
+        return TTInteger(value);
+    }];
+}
+- (TTPresence<TTRecognitionStageContext *> *)stageContext {
+    return [self presence:@"stage_context" required:NO convert:^id(id value) {
+        return [TTRecognitionStageContext read:value];
+    }];
+}
+- (TTPresence<TTThreshold *> *)threshold {
+    return [self presence:@"threshold" required:YES convert:^id(id value) {
+        return [TTThreshold read:value];
+    }];
+}
+- (TTPresence<NSString *> *)verb {
+    return [self presence:@"verb" required:YES convert:^id(id value) {
+        return TTString(value);
+    }];
+}
+- (TTPresence<NSNumber *> *)wordingVersion {
+    return [self presence:@"wording_version" required:NO convert:^id(id value) {
+        return TTInteger(value);
+    }];
+}
+@end
 @implementation TTRelateFields
 + (instancetype)read:(id)value {
     return [[self alloc] initWithFields:TTObject(value)];
@@ -2274,6 +2198,82 @@ NSString * const TTRequestVersion = @"thinkthen.request/1";
 - (TTPresence<NSString *> *)name {
     return [self presence:@"name" required:YES convert:^id(id value) {
         return TTString(value);
+    }];
+}
+@end
+@implementation TTRelateQuestionDocument
++ (instancetype)read:(id)value {
+    return [[self alloc] initWithFields:TTObject(value)];
+}
+- (TTPresence<TTBatch *> *)batch {
+    return [self presence:@"batch" required:NO convert:^id(id value) {
+        return [TTBatch read:value];
+    }];
+}
+- (TTPresence<TTInputDeclaration *> *)contextSchema {
+    return [self presence:@"context_schema" required:NO convert:^id(id value) {
+        return [TTInputDeclaration read:value];
+    }];
+}
+- (TTPresence<TTRelateFields *> *)fields {
+    return [self presence:@"fields" required:YES convert:^id(id value) {
+        return [TTRelateFields read:value];
+    }];
+}
+- (TTPresence<TTInputDeclaration *> *)itemSchema {
+    return [self presence:@"item_schema" required:NO convert:^id(id value) {
+        return [TTInputDeclaration read:value];
+    }];
+}
+- (TTPresence<NSArray<TTLabel *> *> *)labelDetails {
+    return [self presence:@"label_details" required:NO convert:^id(id value) {
+        return TTArray(value, ^id(id item) {
+            return [TTLabel read:item];
+        });
+    }];
+}
+- (TTPresence<NSString *> *)model {
+    return [self presence:@"model" required:NO convert:^id(id value) {
+        return TTString(value);
+    }];
+}
+- (TTPresence<NSString *> *)name {
+    return [self presence:@"name" required:NO convert:^id(id value) {
+        return TTString(value);
+    }];
+}
+- (TTPresence<NSArray<NSString *> *> *)on {
+    return [self presence:@"on" required:NO convert:^id(id value) {
+        return TTArray(value, ^id(id item) {
+            return TTString(item);
+        });
+    }];
+}
+- (TTPresence<NSString *> *)profile {
+    return [self presence:@"profile" required:NO convert:^id(id value) {
+        return TTString(value);
+    }];
+}
+- (TTPresence<NSArray<TTRelationRule *> *> *)relations {
+    return [self presence:@"relations" required:YES convert:^id(id value) {
+        return TTArray(value, ^id(id item) {
+            return [TTRelationRule read:item];
+        });
+    }];
+}
+- (TTPresence<TTThreshold *> *)threshold {
+    return [self presence:@"threshold" required:YES convert:^id(id value) {
+        return [TTThreshold read:value];
+    }];
+}
+- (TTPresence<NSString *> *)verb {
+    return [self presence:@"verb" required:YES convert:^id(id value) {
+        return TTString(value);
+    }];
+}
+- (TTPresence<NSNumber *> *)wordingVersion {
+    return [self presence:@"wording_version" required:NO convert:^id(id value) {
+        return TTInteger(value);
     }];
 }
 @end
@@ -2553,9 +2553,9 @@ NSString * const TTRequestVersion = @"thinkthen.request/1";
         return [TTSessionProbabilities read:value];
     }];
 }
-- (TTPresence<TTReadableQuestion *> *)question {
+- (TTPresence<TTQuestionDocument *> *)question {
     return [self presence:@"question" required:YES convert:^id(id value) {
-        return [TTReadableQuestion read:value];
+        return [TTQuestionDocument read:value];
     }];
 }
 - (TTPresence<NSString *> *)questionSha256 {
@@ -2822,9 +2822,9 @@ NSString * const TTRequestVersion = @"thinkthen.request/1";
         });
     }];
 }
-- (TTPresence<TTReadableQuestion *> *)question {
+- (TTPresence<TTQuestionDocument *> *)question {
     return [self presence:@"question" required:YES convert:^id(id value) {
-        return [TTReadableQuestion read:value];
+        return [TTQuestionDocument read:value];
     }];
 }
 - (TTPresence<NSArray<TTQuestionSource *> *> *)questionSources {
@@ -2876,9 +2876,9 @@ NSString * const TTRequestVersion = @"thinkthen.request/1";
         });
     }];
 }
-- (TTPresence<TTReadableQuestion *> *)question {
+- (TTPresence<TTQuestionDocument *> *)question {
     return [self presence:@"question" required:YES convert:^id(id value) {
-        return [TTReadableQuestion read:value];
+        return [TTQuestionDocument read:value];
     }];
 }
 - (TTPresence<NSArray<TTQuestionSource *> *> *)questionSources {
@@ -3130,293 +3130,6 @@ NSString * const TTRequestVersion = @"thinkthen.request/1";
     }];
 }
 @end
-@implementation TTReadableQuestionChoose
-+ (instancetype)read:(id)value {
-    return [[self alloc] initWithFields:TTObject(value)];
-}
-- (TTPresence<TTBatch *> *)batch {
-    return [self presence:@"batch" required:NO convert:^id(id value) {
-        return [TTBatch read:value];
-    }];
-}
-- (TTPresence<TTInputDeclaration *> *)contextSchema {
-    return [self presence:@"context_schema" required:NO convert:^id(id value) {
-        return [TTInputDeclaration read:value];
-    }];
-}
-- (TTPresence<TTInputDeclaration *> *)itemSchema {
-    return [self presence:@"item_schema" required:NO convert:^id(id value) {
-        return [TTInputDeclaration read:value];
-    }];
-}
-- (TTPresence<NSArray<TTLabel *> *> *)labelDetails {
-    return [self presence:@"label_details" required:NO convert:^id(id value) {
-        return TTArray(value, ^id(id item) {
-            return [TTLabel read:item];
-        });
-    }];
-}
-- (TTPresence<NSString *> *)model {
-    return [self presence:@"model" required:NO convert:^id(id value) {
-        return TTString(value);
-    }];
-}
-- (TTPresence<NSString *> *)name {
-    return [self presence:@"name" required:NO convert:^id(id value) {
-        return TTString(value);
-    }];
-}
-- (TTPresence<NSArray<NSString *> *> *)on {
-    return [self presence:@"on" required:NO convert:^id(id value) {
-        return TTArray(value, ^id(id item) {
-            return TTString(item);
-        });
-    }];
-}
-- (TTPresence<NSString *> *)profile {
-    return [self presence:@"profile" required:NO convert:^id(id value) {
-        return TTString(value);
-    }];
-}
-- (TTPresence<NSNumber *> *)wordingVersion {
-    return [self presence:@"wording_version" required:NO convert:^id(id value) {
-        return TTInteger(value);
-    }];
-}
-- (TTPresence<NSArray<NSString *> *> *)options {
-    return [self presence:@"options" required:YES convert:^id(id value) {
-        return TTArray(value, ^id(id item) {
-            return TTString(item);
-        });
-    }];
-}
-- (TTPresence<id> *)text {
-    return [self presence:@"text" required:YES convert:^id(id value) {
-        return value;
-    }];
-}
-- (TTPresence<NSString *> *)verb {
-    return [self presence:@"verb" required:YES convert:^id(id value) {
-        return TTString(value);
-    }];
-}
-@end
-@implementation TTReadableQuestionDecide
-+ (instancetype)read:(id)value {
-    return [[self alloc] initWithFields:TTObject(value)];
-}
-- (TTPresence<TTBatch *> *)batch {
-    return [self presence:@"batch" required:NO convert:^id(id value) {
-        return [TTBatch read:value];
-    }];
-}
-- (TTPresence<TTInputDeclaration *> *)contextSchema {
-    return [self presence:@"context_schema" required:NO convert:^id(id value) {
-        return [TTInputDeclaration read:value];
-    }];
-}
-- (TTPresence<TTInputDeclaration *> *)itemSchema {
-    return [self presence:@"item_schema" required:NO convert:^id(id value) {
-        return [TTInputDeclaration read:value];
-    }];
-}
-- (TTPresence<NSArray<TTLabel *> *> *)labelDetails {
-    return [self presence:@"label_details" required:NO convert:^id(id value) {
-        return TTArray(value, ^id(id item) {
-            return [TTLabel read:item];
-        });
-    }];
-}
-- (TTPresence<NSString *> *)model {
-    return [self presence:@"model" required:NO convert:^id(id value) {
-        return TTString(value);
-    }];
-}
-- (TTPresence<NSString *> *)name {
-    return [self presence:@"name" required:NO convert:^id(id value) {
-        return TTString(value);
-    }];
-}
-- (TTPresence<NSArray<NSString *> *> *)on {
-    return [self presence:@"on" required:NO convert:^id(id value) {
-        return TTArray(value, ^id(id item) {
-            return TTString(item);
-        });
-    }];
-}
-- (TTPresence<NSString *> *)profile {
-    return [self presence:@"profile" required:NO convert:^id(id value) {
-        return TTString(value);
-    }];
-}
-- (TTPresence<NSNumber *> *)wordingVersion {
-    return [self presence:@"wording_version" required:NO convert:^id(id value) {
-        return TTInteger(value);
-    }];
-}
-- (TTPresence<id> *)falseValue {
-    return [self presence:@"false" required:NO convert:^id(id value) {
-        return value;
-    }];
-}
-- (TTPresence<id> *)text {
-    return [self presence:@"text" required:YES convert:^id(id value) {
-        return value;
-    }];
-}
-- (TTPresence<id> *)trueValue {
-    return [self presence:@"true" required:NO convert:^id(id value) {
-        return value;
-    }];
-}
-- (TTPresence<NSString *> *)verb {
-    return [self presence:@"verb" required:YES convert:^id(id value) {
-        return TTString(value);
-    }];
-}
-@end
-@implementation TTReadableQuestionScore
-+ (instancetype)read:(id)value {
-    return [[self alloc] initWithFields:TTObject(value)];
-}
-- (TTPresence<TTBatch *> *)batch {
-    return [self presence:@"batch" required:NO convert:^id(id value) {
-        return [TTBatch read:value];
-    }];
-}
-- (TTPresence<TTInputDeclaration *> *)contextSchema {
-    return [self presence:@"context_schema" required:NO convert:^id(id value) {
-        return [TTInputDeclaration read:value];
-    }];
-}
-- (TTPresence<TTInputDeclaration *> *)itemSchema {
-    return [self presence:@"item_schema" required:NO convert:^id(id value) {
-        return [TTInputDeclaration read:value];
-    }];
-}
-- (TTPresence<NSArray<TTLabel *> *> *)labelDetails {
-    return [self presence:@"label_details" required:NO convert:^id(id value) {
-        return TTArray(value, ^id(id item) {
-            return [TTLabel read:item];
-        });
-    }];
-}
-- (TTPresence<NSString *> *)model {
-    return [self presence:@"model" required:NO convert:^id(id value) {
-        return TTString(value);
-    }];
-}
-- (TTPresence<NSString *> *)name {
-    return [self presence:@"name" required:NO convert:^id(id value) {
-        return TTString(value);
-    }];
-}
-- (TTPresence<NSArray<NSString *> *> *)on {
-    return [self presence:@"on" required:NO convert:^id(id value) {
-        return TTArray(value, ^id(id item) {
-            return TTString(item);
-        });
-    }];
-}
-- (TTPresence<NSString *> *)profile {
-    return [self presence:@"profile" required:NO convert:^id(id value) {
-        return TTString(value);
-    }];
-}
-- (TTPresence<NSNumber *> *)wordingVersion {
-    return [self presence:@"wording_version" required:NO convert:^id(id value) {
-        return TTInteger(value);
-    }];
-}
-- (TTPresence<NSArray<NSString *> *> *)levels {
-    return [self presence:@"levels" required:YES convert:^id(id value) {
-        return TTArray(value, ^id(id item) {
-            return TTString(item);
-        });
-    }];
-}
-- (TTPresence<id> *)text {
-    return [self presence:@"text" required:YES convert:^id(id value) {
-        return value;
-    }];
-}
-- (TTPresence<NSString *> *)verb {
-    return [self presence:@"verb" required:YES convert:^id(id value) {
-        return TTString(value);
-    }];
-}
-@end
-@implementation TTReadableQuestionTag
-+ (instancetype)read:(id)value {
-    return [[self alloc] initWithFields:TTObject(value)];
-}
-- (TTPresence<TTBatch *> *)batch {
-    return [self presence:@"batch" required:NO convert:^id(id value) {
-        return [TTBatch read:value];
-    }];
-}
-- (TTPresence<TTInputDeclaration *> *)contextSchema {
-    return [self presence:@"context_schema" required:NO convert:^id(id value) {
-        return [TTInputDeclaration read:value];
-    }];
-}
-- (TTPresence<TTInputDeclaration *> *)itemSchema {
-    return [self presence:@"item_schema" required:NO convert:^id(id value) {
-        return [TTInputDeclaration read:value];
-    }];
-}
-- (TTPresence<NSArray<TTLabel *> *> *)labelDetails {
-    return [self presence:@"label_details" required:NO convert:^id(id value) {
-        return TTArray(value, ^id(id item) {
-            return [TTLabel read:item];
-        });
-    }];
-}
-- (TTPresence<NSString *> *)model {
-    return [self presence:@"model" required:NO convert:^id(id value) {
-        return TTString(value);
-    }];
-}
-- (TTPresence<NSString *> *)name {
-    return [self presence:@"name" required:NO convert:^id(id value) {
-        return TTString(value);
-    }];
-}
-- (TTPresence<NSArray<NSString *> *> *)on {
-    return [self presence:@"on" required:NO convert:^id(id value) {
-        return TTArray(value, ^id(id item) {
-            return TTString(item);
-        });
-    }];
-}
-- (TTPresence<NSString *> *)profile {
-    return [self presence:@"profile" required:NO convert:^id(id value) {
-        return TTString(value);
-    }];
-}
-- (TTPresence<NSNumber *> *)wordingVersion {
-    return [self presence:@"wording_version" required:NO convert:^id(id value) {
-        return TTInteger(value);
-    }];
-}
-- (TTPresence<NSArray<NSString *> *> *)labels {
-    return [self presence:@"labels" required:YES convert:^id(id value) {
-        return TTArray(value, ^id(id item) {
-            return TTString(item);
-        });
-    }];
-}
-- (TTPresence<id> *)text {
-    return [self presence:@"text" required:YES convert:^id(id value) {
-        return value;
-    }];
-}
-- (TTPresence<NSString *> *)verb {
-    return [self presence:@"verb" required:YES convert:^id(id value) {
-        return TTString(value);
-    }];
-}
-@end
 @implementation TTRecognitionOddsBoundaryOdds
 + (instancetype)read:(id)value {
     return [[self alloc] initWithFields:TTObject(value)];
@@ -3545,9 +3258,9 @@ NSString * const TTRequestVersion = @"thinkthen.request/1";
         });
     }];
 }
-- (TTPresence<TTReadableQuestion *> *)question {
+- (TTPresence<TTQuestionDocument *> *)question {
     return [self presence:@"question" required:YES convert:^id(id value) {
-        return [TTReadableQuestion read:value];
+        return [TTQuestionDocument read:value];
     }];
 }
 - (TTPresence<NSArray<TTQuestionSource *> *> *)questionSources {
@@ -3639,9 +3352,9 @@ NSString * const TTRequestVersion = @"thinkthen.request/1";
         });
     }];
 }
-- (TTPresence<TTReadableQuestion *> *)question {
+- (TTPresence<TTQuestionDocument *> *)question {
     return [self presence:@"question" required:YES convert:^id(id value) {
-        return [TTReadableQuestion read:value];
+        return [TTQuestionDocument read:value];
     }];
 }
 - (TTPresence<NSArray<TTQuestionSource *> *> *)questionSources {
@@ -3820,6 +3533,293 @@ NSString * const TTRequestVersion = @"thinkthen.request/1";
 - (TTPresence<NSNumber *> *)probability {
     return [self presence:@"probability" required:YES convert:^id(id value) {
         return TTNumber(value);
+    }];
+}
+@end
+@implementation TTQuestionDocumentChoose
++ (instancetype)read:(id)value {
+    return [[self alloc] initWithFields:TTObject(value)];
+}
+- (TTPresence<TTBatch *> *)batch {
+    return [self presence:@"batch" required:NO convert:^id(id value) {
+        return [TTBatch read:value];
+    }];
+}
+- (TTPresence<TTInputDeclaration *> *)contextSchema {
+    return [self presence:@"context_schema" required:NO convert:^id(id value) {
+        return [TTInputDeclaration read:value];
+    }];
+}
+- (TTPresence<TTInputDeclaration *> *)itemSchema {
+    return [self presence:@"item_schema" required:NO convert:^id(id value) {
+        return [TTInputDeclaration read:value];
+    }];
+}
+- (TTPresence<NSArray<TTLabel *> *> *)labelDetails {
+    return [self presence:@"label_details" required:NO convert:^id(id value) {
+        return TTArray(value, ^id(id item) {
+            return [TTLabel read:item];
+        });
+    }];
+}
+- (TTPresence<NSString *> *)model {
+    return [self presence:@"model" required:NO convert:^id(id value) {
+        return TTString(value);
+    }];
+}
+- (TTPresence<NSString *> *)name {
+    return [self presence:@"name" required:NO convert:^id(id value) {
+        return TTString(value);
+    }];
+}
+- (TTPresence<NSArray<NSString *> *> *)on {
+    return [self presence:@"on" required:NO convert:^id(id value) {
+        return TTArray(value, ^id(id item) {
+            return TTString(item);
+        });
+    }];
+}
+- (TTPresence<NSString *> *)profile {
+    return [self presence:@"profile" required:NO convert:^id(id value) {
+        return TTString(value);
+    }];
+}
+- (TTPresence<NSNumber *> *)wordingVersion {
+    return [self presence:@"wording_version" required:NO convert:^id(id value) {
+        return TTInteger(value);
+    }];
+}
+- (TTPresence<NSArray<NSString *> *> *)options {
+    return [self presence:@"options" required:YES convert:^id(id value) {
+        return TTArray(value, ^id(id item) {
+            return TTString(item);
+        });
+    }];
+}
+- (TTPresence<id> *)text {
+    return [self presence:@"text" required:YES convert:^id(id value) {
+        return value;
+    }];
+}
+- (TTPresence<NSString *> *)verb {
+    return [self presence:@"verb" required:YES convert:^id(id value) {
+        return TTString(value);
+    }];
+}
+@end
+@implementation TTQuestionDocumentDecide
++ (instancetype)read:(id)value {
+    return [[self alloc] initWithFields:TTObject(value)];
+}
+- (TTPresence<TTBatch *> *)batch {
+    return [self presence:@"batch" required:NO convert:^id(id value) {
+        return [TTBatch read:value];
+    }];
+}
+- (TTPresence<TTInputDeclaration *> *)contextSchema {
+    return [self presence:@"context_schema" required:NO convert:^id(id value) {
+        return [TTInputDeclaration read:value];
+    }];
+}
+- (TTPresence<TTInputDeclaration *> *)itemSchema {
+    return [self presence:@"item_schema" required:NO convert:^id(id value) {
+        return [TTInputDeclaration read:value];
+    }];
+}
+- (TTPresence<NSArray<TTLabel *> *> *)labelDetails {
+    return [self presence:@"label_details" required:NO convert:^id(id value) {
+        return TTArray(value, ^id(id item) {
+            return [TTLabel read:item];
+        });
+    }];
+}
+- (TTPresence<NSString *> *)model {
+    return [self presence:@"model" required:NO convert:^id(id value) {
+        return TTString(value);
+    }];
+}
+- (TTPresence<NSString *> *)name {
+    return [self presence:@"name" required:NO convert:^id(id value) {
+        return TTString(value);
+    }];
+}
+- (TTPresence<NSArray<NSString *> *> *)on {
+    return [self presence:@"on" required:NO convert:^id(id value) {
+        return TTArray(value, ^id(id item) {
+            return TTString(item);
+        });
+    }];
+}
+- (TTPresence<NSString *> *)profile {
+    return [self presence:@"profile" required:NO convert:^id(id value) {
+        return TTString(value);
+    }];
+}
+- (TTPresence<NSNumber *> *)wordingVersion {
+    return [self presence:@"wording_version" required:NO convert:^id(id value) {
+        return TTInteger(value);
+    }];
+}
+- (TTPresence<id> *)falseValue {
+    return [self presence:@"false" required:NO convert:^id(id value) {
+        return value;
+    }];
+}
+- (TTPresence<id> *)text {
+    return [self presence:@"text" required:YES convert:^id(id value) {
+        return value;
+    }];
+}
+- (TTPresence<id> *)trueValue {
+    return [self presence:@"true" required:NO convert:^id(id value) {
+        return value;
+    }];
+}
+- (TTPresence<NSString *> *)verb {
+    return [self presence:@"verb" required:YES convert:^id(id value) {
+        return TTString(value);
+    }];
+}
+@end
+@implementation TTQuestionDocumentScore
++ (instancetype)read:(id)value {
+    return [[self alloc] initWithFields:TTObject(value)];
+}
+- (TTPresence<TTBatch *> *)batch {
+    return [self presence:@"batch" required:NO convert:^id(id value) {
+        return [TTBatch read:value];
+    }];
+}
+- (TTPresence<TTInputDeclaration *> *)contextSchema {
+    return [self presence:@"context_schema" required:NO convert:^id(id value) {
+        return [TTInputDeclaration read:value];
+    }];
+}
+- (TTPresence<TTInputDeclaration *> *)itemSchema {
+    return [self presence:@"item_schema" required:NO convert:^id(id value) {
+        return [TTInputDeclaration read:value];
+    }];
+}
+- (TTPresence<NSArray<TTLabel *> *> *)labelDetails {
+    return [self presence:@"label_details" required:NO convert:^id(id value) {
+        return TTArray(value, ^id(id item) {
+            return [TTLabel read:item];
+        });
+    }];
+}
+- (TTPresence<NSString *> *)model {
+    return [self presence:@"model" required:NO convert:^id(id value) {
+        return TTString(value);
+    }];
+}
+- (TTPresence<NSString *> *)name {
+    return [self presence:@"name" required:NO convert:^id(id value) {
+        return TTString(value);
+    }];
+}
+- (TTPresence<NSArray<NSString *> *> *)on {
+    return [self presence:@"on" required:NO convert:^id(id value) {
+        return TTArray(value, ^id(id item) {
+            return TTString(item);
+        });
+    }];
+}
+- (TTPresence<NSString *> *)profile {
+    return [self presence:@"profile" required:NO convert:^id(id value) {
+        return TTString(value);
+    }];
+}
+- (TTPresence<NSNumber *> *)wordingVersion {
+    return [self presence:@"wording_version" required:NO convert:^id(id value) {
+        return TTInteger(value);
+    }];
+}
+- (TTPresence<NSArray<NSString *> *> *)levels {
+    return [self presence:@"levels" required:YES convert:^id(id value) {
+        return TTArray(value, ^id(id item) {
+            return TTString(item);
+        });
+    }];
+}
+- (TTPresence<id> *)text {
+    return [self presence:@"text" required:YES convert:^id(id value) {
+        return value;
+    }];
+}
+- (TTPresence<NSString *> *)verb {
+    return [self presence:@"verb" required:YES convert:^id(id value) {
+        return TTString(value);
+    }];
+}
+@end
+@implementation TTQuestionDocumentTag
++ (instancetype)read:(id)value {
+    return [[self alloc] initWithFields:TTObject(value)];
+}
+- (TTPresence<TTBatch *> *)batch {
+    return [self presence:@"batch" required:NO convert:^id(id value) {
+        return [TTBatch read:value];
+    }];
+}
+- (TTPresence<TTInputDeclaration *> *)contextSchema {
+    return [self presence:@"context_schema" required:NO convert:^id(id value) {
+        return [TTInputDeclaration read:value];
+    }];
+}
+- (TTPresence<TTInputDeclaration *> *)itemSchema {
+    return [self presence:@"item_schema" required:NO convert:^id(id value) {
+        return [TTInputDeclaration read:value];
+    }];
+}
+- (TTPresence<NSArray<TTLabel *> *> *)labelDetails {
+    return [self presence:@"label_details" required:NO convert:^id(id value) {
+        return TTArray(value, ^id(id item) {
+            return [TTLabel read:item];
+        });
+    }];
+}
+- (TTPresence<NSString *> *)model {
+    return [self presence:@"model" required:NO convert:^id(id value) {
+        return TTString(value);
+    }];
+}
+- (TTPresence<NSString *> *)name {
+    return [self presence:@"name" required:NO convert:^id(id value) {
+        return TTString(value);
+    }];
+}
+- (TTPresence<NSArray<NSString *> *> *)on {
+    return [self presence:@"on" required:NO convert:^id(id value) {
+        return TTArray(value, ^id(id item) {
+            return TTString(item);
+        });
+    }];
+}
+- (TTPresence<NSString *> *)profile {
+    return [self presence:@"profile" required:NO convert:^id(id value) {
+        return TTString(value);
+    }];
+}
+- (TTPresence<NSNumber *> *)wordingVersion {
+    return [self presence:@"wording_version" required:NO convert:^id(id value) {
+        return TTInteger(value);
+    }];
+}
+- (TTPresence<NSArray<NSString *> *> *)labels {
+    return [self presence:@"labels" required:YES convert:^id(id value) {
+        return TTArray(value, ^id(id item) {
+            return TTString(item);
+        });
+    }];
+}
+- (TTPresence<id> *)text {
+    return [self presence:@"text" required:YES convert:^id(id value) {
+        return value;
+    }];
+}
+- (TTPresence<NSString *> *)verb {
+    return [self presence:@"verb" required:YES convert:^id(id value) {
+        return TTString(value);
     }];
 }
 @end

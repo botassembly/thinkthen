@@ -126,7 +126,7 @@ final class AnnotationMemberAnswerId extends Node {
     /** @return Presence<AnswerYesNo|AnswerChoice|AnswerTag|AnswerScore> */ public function answer(): Presence { return $this->field('answer'); }
     /** @return Presence<string> */ public function answer_id(): Presence { return $this->field('answer_id'); }
     /** @return Presence<list<ObservationObservationId|ObservationFailureId>> */ public function observations(): Presence { return $this->field('observations'); }
-    /** @return Presence<ReadableQuestionDecide|ReadableQuestionChoose|ReadableQuestionTag|ReadableQuestionScore> */ public function question(): Presence { return $this->field('question'); }
+    /** @return Presence<QuestionDocumentDecide|QuestionDocumentChoose|QuestionDocumentTag|QuestionDocumentScore> */ public function question(): Presence { return $this->field('question'); }
     /** @return Presence<list<QuestionSource>> */ public function question_sources(): Presence { return $this->field('question_sources'); }
     /** @return Presence<string> */ public function request(): Presence { return $this->field('request'); }
     /** @return Presence<int|float|string|null> */ public function threshold(): Presence { return $this->field('threshold'); }
@@ -137,7 +137,7 @@ final class AnnotationMemberFailureId extends Node {
     /** @return Presence<Failure> */ public function failure(): Presence { return $this->field('failure'); }
     /** @return Presence<string> */ public function failure_id(): Presence { return $this->field('failure_id'); }
     /** @return Presence<list<ObservationObservationId|ObservationFailureId>> */ public function observations(): Presence { return $this->field('observations'); }
-    /** @return Presence<ReadableQuestionDecide|ReadableQuestionChoose|ReadableQuestionTag|ReadableQuestionScore> */ public function question(): Presence { return $this->field('question'); }
+    /** @return Presence<QuestionDocumentDecide|QuestionDocumentChoose|QuestionDocumentTag|QuestionDocumentScore> */ public function question(): Presence { return $this->field('question'); }
     /** @return Presence<list<QuestionSource>> */ public function question_sources(): Presence { return $this->field('question_sources'); }
     /** @return Presence<string> */ public function request(): Presence { return $this->field('request'); }
     /** @return Presence<int|float|string|null> */ public function threshold(): Presence { return $this->field('threshold'); }
@@ -174,7 +174,7 @@ final class TagResult extends Node {
     /** @return Presence<mixed> */ public function input(): Presence { return $this->field('input'); }
     /** @return Presence<list<RankMember>> */ public function members(): Presence { return $this->field('members'); }
     /** @return Presence<Meta> */ public function meta(): Presence { return $this->field('meta'); }
-    /** @return Presence<ReadableQuestionDecide|ReadableQuestionChoose|ReadableQuestionTag|ReadableQuestionScore> */ public function question(): Presence { return $this->field('question'); }
+    /** @return Presence<QuestionDocumentDecide|QuestionDocumentChoose|QuestionDocumentTag|QuestionDocumentScore> */ public function question(): Presence { return $this->field('question'); }
     /** @return Presence<string> */ public function question_name(): Presence { return $this->field('question_name'); }
     /** @return Presence<string> */ public function schema(): Presence { return $this->field('schema'); }
     /** @return Presence<PhysicalSource> */ public function source(): Presence { return $this->field('source'); }
@@ -189,7 +189,7 @@ final class DecisionResult extends Node {
     /** @return Presence<mixed> */ public function input(): Presence { return $this->field('input'); }
     /** @return Presence<list<RankMember>> */ public function members(): Presence { return $this->field('members'); }
     /** @return Presence<Meta> */ public function meta(): Presence { return $this->field('meta'); }
-    /** @return Presence<ReadableQuestionDecide|ReadableQuestionChoose|ReadableQuestionTag|ReadableQuestionScore> */ public function question(): Presence { return $this->field('question'); }
+    /** @return Presence<QuestionDocumentDecide|QuestionDocumentChoose|QuestionDocumentTag|QuestionDocumentScore> */ public function question(): Presence { return $this->field('question'); }
     /** @return Presence<string> */ public function question_name(): Presence { return $this->field('question_name'); }
     /** @return Presence<string> */ public function schema(): Presence { return $this->field('schema'); }
     /** @return Presence<PhysicalSource> */ public function source(): Presence { return $this->field('source'); }
@@ -204,7 +204,7 @@ final class RankResult extends Node {
     /** @return Presence<mixed> */ public function input(): Presence { return $this->field('input'); }
     /** @return Presence<list<RankMember>> */ public function members(): Presence { return $this->field('members'); }
     /** @return Presence<Meta> */ public function meta(): Presence { return $this->field('meta'); }
-    /** @return Presence<ReadableQuestionDecide|ReadableQuestionChoose|ReadableQuestionTag|ReadableQuestionScore> */ public function question(): Presence { return $this->field('question'); }
+    /** @return Presence<QuestionDocumentDecide|QuestionDocumentChoose|QuestionDocumentTag|QuestionDocumentScore> */ public function question(): Presence { return $this->field('question'); }
     /** @return Presence<string> */ public function question_name(): Presence { return $this->field('question_name'); }
     /** @return Presence<string> */ public function schema(): Presence { return $this->field('schema'); }
     /** @return Presence<PhysicalSource> */ public function source(): Presence { return $this->field('source'); }
@@ -219,7 +219,7 @@ final class ChoiceResult extends Node {
     /** @return Presence<mixed> */ public function input(): Presence { return $this->field('input'); }
     /** @return Presence<list<RankMember>> */ public function members(): Presence { return $this->field('members'); }
     /** @return Presence<Meta> */ public function meta(): Presence { return $this->field('meta'); }
-    /** @return Presence<ReadableQuestionDecide|ReadableQuestionChoose|ReadableQuestionTag|ReadableQuestionScore> */ public function question(): Presence { return $this->field('question'); }
+    /** @return Presence<QuestionDocumentDecide|QuestionDocumentChoose|QuestionDocumentTag|QuestionDocumentScore> */ public function question(): Presence { return $this->field('question'); }
     /** @return Presence<string> */ public function question_name(): Presence { return $this->field('question_name'); }
     /** @return Presence<string> */ public function schema(): Presence { return $this->field('schema'); }
     /** @return Presence<PhysicalSource> */ public function source(): Presence { return $this->field('source'); }
@@ -234,7 +234,7 @@ final class FilterResult extends Node {
     /** @return Presence<mixed> */ public function input(): Presence { return $this->field('input'); }
     /** @return Presence<list<RankMember>> */ public function members(): Presence { return $this->field('members'); }
     /** @return Presence<Meta> */ public function meta(): Presence { return $this->field('meta'); }
-    /** @return Presence<ReadableQuestionDecide|ReadableQuestionChoose|ReadableQuestionTag|ReadableQuestionScore> */ public function question(): Presence { return $this->field('question'); }
+    /** @return Presence<QuestionDocumentDecide|QuestionDocumentChoose|QuestionDocumentTag|QuestionDocumentScore> */ public function question(): Presence { return $this->field('question'); }
     /** @return Presence<string> */ public function question_name(): Presence { return $this->field('question_name'); }
     /** @return Presence<string> */ public function schema(): Presence { return $this->field('schema'); }
     /** @return Presence<PhysicalSource> */ public function source(): Presence { return $this->field('source'); }
@@ -249,7 +249,7 @@ final class ScoreResult extends Node {
     /** @return Presence<mixed> */ public function input(): Presence { return $this->field('input'); }
     /** @return Presence<list<RankMember>> */ public function members(): Presence { return $this->field('members'); }
     /** @return Presence<Meta> */ public function meta(): Presence { return $this->field('meta'); }
-    /** @return Presence<ReadableQuestionDecide|ReadableQuestionChoose|ReadableQuestionTag|ReadableQuestionScore> */ public function question(): Presence { return $this->field('question'); }
+    /** @return Presence<QuestionDocumentDecide|QuestionDocumentChoose|QuestionDocumentTag|QuestionDocumentScore> */ public function question(): Presence { return $this->field('question'); }
     /** @return Presence<string> */ public function question_name(): Presence { return $this->field('question_name'); }
     /** @return Presence<string> */ public function schema(): Presence { return $this->field('schema'); }
     /** @return Presence<PhysicalSource> */ public function source(): Presence { return $this->field('source'); }
@@ -333,7 +333,7 @@ final class Find extends Node {
     /** @return Presence<int|string> */ public function last_line(): Presence { return $this->field('last_line'); }
     /** @return Presence<Meta> */ public function meta(): Presence { return $this->field('meta'); }
     /** @return Presence<Position> */ public function position(): Presence { return $this->field('position'); }
-    /** @return Presence<FindQuestionInfo> */ public function question(): Presence { return $this->field('question'); }
+    /** @return Presence<FindQuestionDocument> */ public function question(): Presence { return $this->field('question'); }
     /** @return Presence<string> */ public function schema(): Presence { return $this->field('schema'); }
     /** @return Presence<null> */ public function threshold(): Presence { return $this->field('threshold'); }
     /** @return Presence<mixed> */ public function value(): Presence { return $this->field('value'); }
@@ -454,118 +454,11 @@ final class RankMemberResult extends Node {
     /** @return Presence<string> */ public function answer_id(): Presence { return $this->field('answer_id'); }
     /** @return Presence<list<Image>> */ public function images(): Presence { return $this->field('images'); }
     /** @return Presence<Meta> */ public function meta(): Presence { return $this->field('meta'); }
-    /** @return Presence<ReadableQuestionDecide|ReadableQuestionChoose|ReadableQuestionTag|ReadableQuestionScore> */ public function question(): Presence { return $this->field('question'); }
+    /** @return Presence<QuestionDocumentDecide|QuestionDocumentChoose|QuestionDocumentTag|QuestionDocumentScore> */ public function question(): Presence { return $this->field('question'); }
     /** @return Presence<string> */ public function schema(): Presence { return $this->field('schema'); }
     /** @return Presence<PhysicalSource> */ public function source(): Presence { return $this->field('source'); }
     /** @return Presence<null> */ public function threshold(): Presence { return $this->field('threshold'); }
     /** @return Presence<int|string> */ public function value(): Presence { return $this->field('value'); }
-}
-final class FindQuestionInfo extends Node {
-    /** @return Presence<int|string|string> */ public function batch(): Presence { return $this->field('batch'); }
-    /** @return Presence<InputDeclarationStringRoot|InputDeclarationObjectRoot> */ public function context_schema(): Presence { return $this->field('context_schema'); }
-    /** @return Presence<InputDeclarationStringRoot|InputDeclarationObjectRoot> */ public function item_schema(): Presence { return $this->field('item_schema'); }
-    /** @return Presence<list<Label>> */ public function label_details(): Presence { return $this->field('label_details'); }
-    /** @return Presence<string> */ public function model(): Presence { return $this->field('model'); }
-    /** @return Presence<string> */ public function name(): Presence { return $this->field('name'); }
-    /** @return Presence<bool> */ public function none(): Presence { return $this->field('none'); }
-    /** @return Presence<list<string>> */ public function on(): Presence { return $this->field('on'); }
-    /** @return Presence<string> */ public function profile(): Presence { return $this->field('profile'); }
-    /** @return Presence<mixed> */ public function text(): Presence { return $this->field('text'); }
-    /** @return Presence<mixed> */ public function verb(): Presence { return $this->field('verb'); }
-    /** @return Presence<int|string> */ public function wording_version(): Presence { return $this->field('wording_version'); }
-}
-final class RecognitionQuestionInfo extends Node {
-    /** @return Presence<int|string|string> */ public function batch(): Presence { return $this->field('batch'); }
-    /** @return Presence<InputDeclarationStringRoot|InputDeclarationObjectRoot> */ public function context_schema(): Presence { return $this->field('context_schema'); }
-    /** @return Presence<mixed> */ public function entity_definition(): Presence { return $this->field('entity_definition'); }
-    /** @return Presence<mixed> */ public function instructions(): Presence { return $this->field('instructions'); }
-    /** @return Presence<InputDeclarationStringRoot|InputDeclarationObjectRoot> */ public function item_schema(): Presence { return $this->field('item_schema'); }
-    /** @return Presence<\stdClass> */ public function kinds(): Presence { return $this->field('kinds'); }
-    /** @return Presence<list<Label>> */ public function label_details(): Presence { return $this->field('label_details'); }
-    /** @return Presence<mixed> */ public function mode(): Presence { return $this->field('mode'); }
-    /** @return Presence<string> */ public function model(): Presence { return $this->field('model'); }
-    /** @return Presence<string> */ public function name(): Presence { return $this->field('name'); }
-    /** @return Presence<list<string>> */ public function on(): Presence { return $this->field('on'); }
-    /** @return Presence<string> */ public function profile(): Presence { return $this->field('profile'); }
-    /** @return Presence<int|float|string> */ public function relation_threshold(): Presence { return $this->field('relation_threshold'); }
-    /** @return Presence<list<RelationRule>> */ public function relations(): Presence { return $this->field('relations'); }
-    /** @return Presence<int|string> */ public function snippet_pieces(): Presence { return $this->field('snippet_pieces'); }
-    /** @return Presence<RecognitionStageContext> */ public function stage_context(): Presence { return $this->field('stage_context'); }
-    /** @return Presence<int|float|string> */ public function threshold(): Presence { return $this->field('threshold'); }
-    /** @return Presence<string> */ public function verb(): Presence { return $this->field('verb'); }
-    /** @return Presence<int|string> */ public function wording_version(): Presence { return $this->field('wording_version'); }
-}
-final class RelationQuestionInfo extends Node {
-    /** @return Presence<int|string|string> */ public function batch(): Presence { return $this->field('batch'); }
-    /** @return Presence<InputDeclarationStringRoot|InputDeclarationObjectRoot> */ public function context_schema(): Presence { return $this->field('context_schema'); }
-    /** @return Presence<RelateFields|null> */ public function fields(): Presence { return $this->field('fields'); }
-    /** @return Presence<InputDeclarationStringRoot|InputDeclarationObjectRoot> */ public function item_schema(): Presence { return $this->field('item_schema'); }
-    /** @return Presence<list<Label>> */ public function label_details(): Presence { return $this->field('label_details'); }
-    /** @return Presence<string> */ public function model(): Presence { return $this->field('model'); }
-    /** @return Presence<string> */ public function name(): Presence { return $this->field('name'); }
-    /** @return Presence<list<string>> */ public function on(): Presence { return $this->field('on'); }
-    /** @return Presence<string> */ public function profile(): Presence { return $this->field('profile'); }
-    /** @return Presence<list<RelationRule>> */ public function relations(): Presence { return $this->field('relations'); }
-    /** @return Presence<int|float|string> */ public function threshold(): Presence { return $this->field('threshold'); }
-    /** @return Presence<mixed> */ public function verb(): Presence { return $this->field('verb'); }
-    /** @return Presence<int|string> */ public function wording_version(): Presence { return $this->field('wording_version'); }
-}
-final class ReadableQuestionChoose extends Node {
-    /** @return Presence<int|string|string> */ public function batch(): Presence { return $this->field('batch'); }
-    /** @return Presence<InputDeclarationStringRoot|InputDeclarationObjectRoot> */ public function context_schema(): Presence { return $this->field('context_schema'); }
-    /** @return Presence<InputDeclarationStringRoot|InputDeclarationObjectRoot> */ public function item_schema(): Presence { return $this->field('item_schema'); }
-    /** @return Presence<list<Label>> */ public function label_details(): Presence { return $this->field('label_details'); }
-    /** @return Presence<string> */ public function model(): Presence { return $this->field('model'); }
-    /** @return Presence<string> */ public function name(): Presence { return $this->field('name'); }
-    /** @return Presence<list<string>> */ public function on(): Presence { return $this->field('on'); }
-    /** @return Presence<string> */ public function profile(): Presence { return $this->field('profile'); }
-    /** @return Presence<int|string> */ public function wording_version(): Presence { return $this->field('wording_version'); }
-    /** @return Presence<list<string>> */ public function options(): Presence { return $this->field('options'); }
-    /** @return Presence<mixed> */ public function text(): Presence { return $this->field('text'); }
-    /** @return Presence<string> */ public function verb(): Presence { return $this->field('verb'); }
-}
-final class ReadableQuestionDecide extends Node {
-    /** @return Presence<int|string|string> */ public function batch(): Presence { return $this->field('batch'); }
-    /** @return Presence<InputDeclarationStringRoot|InputDeclarationObjectRoot> */ public function context_schema(): Presence { return $this->field('context_schema'); }
-    /** @return Presence<InputDeclarationStringRoot|InputDeclarationObjectRoot> */ public function item_schema(): Presence { return $this->field('item_schema'); }
-    /** @return Presence<list<Label>> */ public function label_details(): Presence { return $this->field('label_details'); }
-    /** @return Presence<string> */ public function model(): Presence { return $this->field('model'); }
-    /** @return Presence<string> */ public function name(): Presence { return $this->field('name'); }
-    /** @return Presence<list<string>> */ public function on(): Presence { return $this->field('on'); }
-    /** @return Presence<string> */ public function profile(): Presence { return $this->field('profile'); }
-    /** @return Presence<int|string> */ public function wording_version(): Presence { return $this->field('wording_version'); }
-    /** @return Presence<mixed> */ public function false(): Presence { return $this->field('false'); }
-    /** @return Presence<mixed> */ public function text(): Presence { return $this->field('text'); }
-    /** @return Presence<mixed> */ public function true(): Presence { return $this->field('true'); }
-    /** @return Presence<string> */ public function verb(): Presence { return $this->field('verb'); }
-}
-final class ReadableQuestionScore extends Node {
-    /** @return Presence<int|string|string> */ public function batch(): Presence { return $this->field('batch'); }
-    /** @return Presence<InputDeclarationStringRoot|InputDeclarationObjectRoot> */ public function context_schema(): Presence { return $this->field('context_schema'); }
-    /** @return Presence<InputDeclarationStringRoot|InputDeclarationObjectRoot> */ public function item_schema(): Presence { return $this->field('item_schema'); }
-    /** @return Presence<list<Label>> */ public function label_details(): Presence { return $this->field('label_details'); }
-    /** @return Presence<string> */ public function model(): Presence { return $this->field('model'); }
-    /** @return Presence<string> */ public function name(): Presence { return $this->field('name'); }
-    /** @return Presence<list<string>> */ public function on(): Presence { return $this->field('on'); }
-    /** @return Presence<string> */ public function profile(): Presence { return $this->field('profile'); }
-    /** @return Presence<int|string> */ public function wording_version(): Presence { return $this->field('wording_version'); }
-    /** @return Presence<list<string>> */ public function levels(): Presence { return $this->field('levels'); }
-    /** @return Presence<mixed> */ public function text(): Presence { return $this->field('text'); }
-    /** @return Presence<string> */ public function verb(): Presence { return $this->field('verb'); }
-}
-final class ReadableQuestionTag extends Node {
-    /** @return Presence<int|string|string> */ public function batch(): Presence { return $this->field('batch'); }
-    /** @return Presence<InputDeclarationStringRoot|InputDeclarationObjectRoot> */ public function context_schema(): Presence { return $this->field('context_schema'); }
-    /** @return Presence<InputDeclarationStringRoot|InputDeclarationObjectRoot> */ public function item_schema(): Presence { return $this->field('item_schema'); }
-    /** @return Presence<list<Label>> */ public function label_details(): Presence { return $this->field('label_details'); }
-    /** @return Presence<string> */ public function model(): Presence { return $this->field('model'); }
-    /** @return Presence<string> */ public function name(): Presence { return $this->field('name'); }
-    /** @return Presence<list<string>> */ public function on(): Presence { return $this->field('on'); }
-    /** @return Presence<string> */ public function profile(): Presence { return $this->field('profile'); }
-    /** @return Presence<int|string> */ public function wording_version(): Presence { return $this->field('wording_version'); }
-    /** @return Presence<list<string>> */ public function labels(): Presence { return $this->field('labels'); }
-    /** @return Presence<mixed> */ public function text(): Presence { return $this->field('text'); }
-    /** @return Presence<string> */ public function verb(): Presence { return $this->field('verb'); }
 }
 final class Recognition extends Node {
     /** @return Presence<RecognitionOddsRecognizeAnswer|RecognitionOddsBoundaryOdds> */ public function answer(): Presence { return $this->field('answer'); }
@@ -577,7 +470,7 @@ final class Recognition extends Node {
     /** @return Presence<int|string> */ public function last_line(): Presence { return $this->field('last_line'); }
     /** @return Presence<Meta> */ public function meta(): Presence { return $this->field('meta'); }
     /** @return Presence<Position> */ public function position(): Presence { return $this->field('position'); }
-    /** @return Presence<RecognitionQuestionInfo> */ public function question(): Presence { return $this->field('question'); }
+    /** @return Presence<RecognizeQuestionDocument> */ public function question(): Presence { return $this->field('question'); }
     /** @return Presence<string> */ public function schema(): Presence { return $this->field('schema'); }
     /** @return Presence<PhysicalSource> */ public function source(): Presence { return $this->field('source'); }
     /** @return Presence<RecognizeEntities|RecognizeModeProposals> */ public function value(): Presence { return $this->field('value'); }
@@ -624,7 +517,7 @@ final class Relation extends Node {
     /** @return Presence<int|string> */ public function last_line(): Presence { return $this->field('last_line'); }
     /** @return Presence<Meta> */ public function meta(): Presence { return $this->field('meta'); }
     /** @return Presence<Position> */ public function position(): Presence { return $this->field('position'); }
-    /** @return Presence<RelationQuestionInfo> */ public function question(): Presence { return $this->field('question'); }
+    /** @return Presence<RelateQuestionDocument> */ public function question(): Presence { return $this->field('question'); }
     /** @return Presence<string> */ public function schema(): Presence { return $this->field('schema'); }
     /** @return Presence<list<RelatedEntityEdge>> */ public function value(): Presence { return $this->field('value'); }
 }
@@ -645,7 +538,7 @@ final class RelationMemberAnswerId extends Node {
     /** @return Presence<mixed> */ public function direction(): Presence { return $this->field('direction'); }
     /** @return Presence<mixed> */ public function method(): Presence { return $this->field('method'); }
     /** @return Presence<list<ObservationObservationId|ObservationFailureId>> */ public function observations(): Presence { return $this->field('observations'); }
-    /** @return Presence<ReadableQuestionDecide|ReadableQuestionChoose|ReadableQuestionTag|ReadableQuestionScore> */ public function question(): Presence { return $this->field('question'); }
+    /** @return Presence<QuestionDocumentDecide|QuestionDocumentChoose|QuestionDocumentTag|QuestionDocumentScore> */ public function question(): Presence { return $this->field('question'); }
     /** @return Presence<list<QuestionSource>> */ public function question_sources(): Presence { return $this->field('question_sources'); }
     /** @return Presence<string> */ public function reads(): Presence { return $this->field('reads'); }
     /** @return Presence<string> */ public function relation(): Presence { return $this->field('relation'); }
@@ -664,7 +557,7 @@ final class RelationMemberFailureId extends Node {
     /** @return Presence<mixed> */ public function direction(): Presence { return $this->field('direction'); }
     /** @return Presence<mixed> */ public function method(): Presence { return $this->field('method'); }
     /** @return Presence<list<ObservationObservationId|ObservationFailureId>> */ public function observations(): Presence { return $this->field('observations'); }
-    /** @return Presence<ReadableQuestionDecide|ReadableQuestionChoose|ReadableQuestionTag|ReadableQuestionScore> */ public function question(): Presence { return $this->field('question'); }
+    /** @return Presence<QuestionDocumentDecide|QuestionDocumentChoose|QuestionDocumentTag|QuestionDocumentScore> */ public function question(): Presence { return $this->field('question'); }
     /** @return Presence<list<QuestionSource>> */ public function question_sources(): Presence { return $this->field('question_sources'); }
     /** @return Presence<string> */ public function reads(): Presence { return $this->field('reads'); }
     /** @return Presence<string> */ public function relation(): Presence { return $this->field('relation'); }
@@ -755,6 +648,20 @@ final class FindAnswer extends Node {
     /** @return Presence<string> */ public function pick(): Presence { return $this->field('pick'); }
     /** @return Presence<\stdClass> */ public function probabilities(): Presence { return $this->field('probabilities'); }
 }
+final class FindQuestionDocument extends Node {
+    /** @return Presence<int|string|string> */ public function batch(): Presence { return $this->field('batch'); }
+    /** @return Presence<InputDeclarationStringRoot|InputDeclarationObjectRoot> */ public function context_schema(): Presence { return $this->field('context_schema'); }
+    /** @return Presence<InputDeclarationStringRoot|InputDeclarationObjectRoot> */ public function item_schema(): Presence { return $this->field('item_schema'); }
+    /** @return Presence<list<Label>> */ public function label_details(): Presence { return $this->field('label_details'); }
+    /** @return Presence<string> */ public function model(): Presence { return $this->field('model'); }
+    /** @return Presence<string> */ public function name(): Presence { return $this->field('name'); }
+    /** @return Presence<bool> */ public function none(): Presence { return $this->field('none'); }
+    /** @return Presence<list<string>> */ public function on(): Presence { return $this->field('on'); }
+    /** @return Presence<string> */ public function profile(): Presence { return $this->field('profile'); }
+    /** @return Presence<mixed> */ public function text(): Presence { return $this->field('text'); }
+    /** @return Presence<mixed> */ public function verb(): Presence { return $this->field('verb'); }
+    /** @return Presence<int|string> */ public function wording_version(): Presence { return $this->field('wording_version'); }
+}
 final class NameOdds extends Node {
     /** @return Presence<\stdClass|null> */ public function edges(): Presence { return $this->field('edges'); }
     /** @return Presence<int|string> */ public function end(): Presence { return $this->field('end'); }
@@ -780,11 +687,89 @@ final class ProfileWarning extends Node {
     /** @return Presence<string> */ public function running(): Presence { return $this->field('running'); }
     /** @return Presence<string> */ public function tuned_for(): Presence { return $this->field('tuned_for'); }
 }
+final class QuestionDocumentChoose extends Node {
+    /** @return Presence<int|string|string> */ public function batch(): Presence { return $this->field('batch'); }
+    /** @return Presence<InputDeclarationStringRoot|InputDeclarationObjectRoot> */ public function context_schema(): Presence { return $this->field('context_schema'); }
+    /** @return Presence<InputDeclarationStringRoot|InputDeclarationObjectRoot> */ public function item_schema(): Presence { return $this->field('item_schema'); }
+    /** @return Presence<list<Label>> */ public function label_details(): Presence { return $this->field('label_details'); }
+    /** @return Presence<string> */ public function model(): Presence { return $this->field('model'); }
+    /** @return Presence<string> */ public function name(): Presence { return $this->field('name'); }
+    /** @return Presence<list<string>> */ public function on(): Presence { return $this->field('on'); }
+    /** @return Presence<string> */ public function profile(): Presence { return $this->field('profile'); }
+    /** @return Presence<int|string> */ public function wording_version(): Presence { return $this->field('wording_version'); }
+    /** @return Presence<list<string>> */ public function options(): Presence { return $this->field('options'); }
+    /** @return Presence<mixed> */ public function text(): Presence { return $this->field('text'); }
+    /** @return Presence<string> */ public function verb(): Presence { return $this->field('verb'); }
+}
+final class QuestionDocumentDecide extends Node {
+    /** @return Presence<int|string|string> */ public function batch(): Presence { return $this->field('batch'); }
+    /** @return Presence<InputDeclarationStringRoot|InputDeclarationObjectRoot> */ public function context_schema(): Presence { return $this->field('context_schema'); }
+    /** @return Presence<InputDeclarationStringRoot|InputDeclarationObjectRoot> */ public function item_schema(): Presence { return $this->field('item_schema'); }
+    /** @return Presence<list<Label>> */ public function label_details(): Presence { return $this->field('label_details'); }
+    /** @return Presence<string> */ public function model(): Presence { return $this->field('model'); }
+    /** @return Presence<string> */ public function name(): Presence { return $this->field('name'); }
+    /** @return Presence<list<string>> */ public function on(): Presence { return $this->field('on'); }
+    /** @return Presence<string> */ public function profile(): Presence { return $this->field('profile'); }
+    /** @return Presence<int|string> */ public function wording_version(): Presence { return $this->field('wording_version'); }
+    /** @return Presence<mixed> */ public function false(): Presence { return $this->field('false'); }
+    /** @return Presence<mixed> */ public function text(): Presence { return $this->field('text'); }
+    /** @return Presence<mixed> */ public function true(): Presence { return $this->field('true'); }
+    /** @return Presence<string> */ public function verb(): Presence { return $this->field('verb'); }
+}
+final class QuestionDocumentScore extends Node {
+    /** @return Presence<int|string|string> */ public function batch(): Presence { return $this->field('batch'); }
+    /** @return Presence<InputDeclarationStringRoot|InputDeclarationObjectRoot> */ public function context_schema(): Presence { return $this->field('context_schema'); }
+    /** @return Presence<InputDeclarationStringRoot|InputDeclarationObjectRoot> */ public function item_schema(): Presence { return $this->field('item_schema'); }
+    /** @return Presence<list<Label>> */ public function label_details(): Presence { return $this->field('label_details'); }
+    /** @return Presence<string> */ public function model(): Presence { return $this->field('model'); }
+    /** @return Presence<string> */ public function name(): Presence { return $this->field('name'); }
+    /** @return Presence<list<string>> */ public function on(): Presence { return $this->field('on'); }
+    /** @return Presence<string> */ public function profile(): Presence { return $this->field('profile'); }
+    /** @return Presence<int|string> */ public function wording_version(): Presence { return $this->field('wording_version'); }
+    /** @return Presence<list<string>> */ public function levels(): Presence { return $this->field('levels'); }
+    /** @return Presence<mixed> */ public function text(): Presence { return $this->field('text'); }
+    /** @return Presence<string> */ public function verb(): Presence { return $this->field('verb'); }
+}
+final class QuestionDocumentTag extends Node {
+    /** @return Presence<int|string|string> */ public function batch(): Presence { return $this->field('batch'); }
+    /** @return Presence<InputDeclarationStringRoot|InputDeclarationObjectRoot> */ public function context_schema(): Presence { return $this->field('context_schema'); }
+    /** @return Presence<InputDeclarationStringRoot|InputDeclarationObjectRoot> */ public function item_schema(): Presence { return $this->field('item_schema'); }
+    /** @return Presence<list<Label>> */ public function label_details(): Presence { return $this->field('label_details'); }
+    /** @return Presence<string> */ public function model(): Presence { return $this->field('model'); }
+    /** @return Presence<string> */ public function name(): Presence { return $this->field('name'); }
+    /** @return Presence<list<string>> */ public function on(): Presence { return $this->field('on'); }
+    /** @return Presence<string> */ public function profile(): Presence { return $this->field('profile'); }
+    /** @return Presence<int|string> */ public function wording_version(): Presence { return $this->field('wording_version'); }
+    /** @return Presence<list<string>> */ public function labels(): Presence { return $this->field('labels'); }
+    /** @return Presence<mixed> */ public function text(): Presence { return $this->field('text'); }
+    /** @return Presence<string> */ public function verb(): Presence { return $this->field('verb'); }
+}
 final class RecognizeAnswer extends Node {
     /** @return Presence<list<NameOdds>> */ public function names(): Presence { return $this->field('names'); }
     /** @return Presence<list<PairOdds>> */ public function pairs(): Presence { return $this->field('pairs'); }
     /** @return Presence<list<PieceOdds>> */ public function pieces(): Presence { return $this->field('pieces'); }
     /** @return Presence<list<RecognitionProposal>> */ public function proposals(): Presence { return $this->field('proposals'); }
+}
+final class RecognizeQuestionDocument extends Node {
+    /** @return Presence<int|string|string> */ public function batch(): Presence { return $this->field('batch'); }
+    /** @return Presence<InputDeclarationStringRoot|InputDeclarationObjectRoot> */ public function context_schema(): Presence { return $this->field('context_schema'); }
+    /** @return Presence<mixed> */ public function entity_definition(): Presence { return $this->field('entity_definition'); }
+    /** @return Presence<mixed> */ public function instructions(): Presence { return $this->field('instructions'); }
+    /** @return Presence<InputDeclarationStringRoot|InputDeclarationObjectRoot> */ public function item_schema(): Presence { return $this->field('item_schema'); }
+    /** @return Presence<\stdClass> */ public function kinds(): Presence { return $this->field('kinds'); }
+    /** @return Presence<list<Label>> */ public function label_details(): Presence { return $this->field('label_details'); }
+    /** @return Presence<mixed> */ public function mode(): Presence { return $this->field('mode'); }
+    /** @return Presence<string> */ public function model(): Presence { return $this->field('model'); }
+    /** @return Presence<string> */ public function name(): Presence { return $this->field('name'); }
+    /** @return Presence<list<string>> */ public function on(): Presence { return $this->field('on'); }
+    /** @return Presence<string> */ public function profile(): Presence { return $this->field('profile'); }
+    /** @return Presence<int|float|string> */ public function relation_threshold(): Presence { return $this->field('relation_threshold'); }
+    /** @return Presence<list<RelationRule>> */ public function relations(): Presence { return $this->field('relations'); }
+    /** @return Presence<int|string> */ public function snippet_pieces(): Presence { return $this->field('snippet_pieces'); }
+    /** @return Presence<RecognitionStageContext> */ public function stage_context(): Presence { return $this->field('stage_context'); }
+    /** @return Presence<int|float|string> */ public function threshold(): Presence { return $this->field('threshold'); }
+    /** @return Presence<string> */ public function verb(): Presence { return $this->field('verb'); }
+    /** @return Presence<int|string> */ public function wording_version(): Presence { return $this->field('wording_version'); }
 }
 final class RecognizeEntities extends Node {
     /** @return Presence<list<Entity>> */ public function entities(): Presence { return $this->field('entities'); }
@@ -797,6 +782,21 @@ final class RecognizeModeProposals extends Node {
 final class RelateFields extends Node {
     /** @return Presence<string> */ public function kind(): Presence { return $this->field('kind'); }
     /** @return Presence<string> */ public function name(): Presence { return $this->field('name'); }
+}
+final class RelateQuestionDocument extends Node {
+    /** @return Presence<int|string|string> */ public function batch(): Presence { return $this->field('batch'); }
+    /** @return Presence<InputDeclarationStringRoot|InputDeclarationObjectRoot> */ public function context_schema(): Presence { return $this->field('context_schema'); }
+    /** @return Presence<RelateFields|null> */ public function fields(): Presence { return $this->field('fields'); }
+    /** @return Presence<InputDeclarationStringRoot|InputDeclarationObjectRoot> */ public function item_schema(): Presence { return $this->field('item_schema'); }
+    /** @return Presence<list<Label>> */ public function label_details(): Presence { return $this->field('label_details'); }
+    /** @return Presence<string> */ public function model(): Presence { return $this->field('model'); }
+    /** @return Presence<string> */ public function name(): Presence { return $this->field('name'); }
+    /** @return Presence<list<string>> */ public function on(): Presence { return $this->field('on'); }
+    /** @return Presence<string> */ public function profile(): Presence { return $this->field('profile'); }
+    /** @return Presence<list<RelationRule>> */ public function relations(): Presence { return $this->field('relations'); }
+    /** @return Presence<int|float|string> */ public function threshold(): Presence { return $this->field('threshold'); }
+    /** @return Presence<mixed> */ public function verb(): Presence { return $this->field('verb'); }
+    /** @return Presence<int|string> */ public function wording_version(): Presence { return $this->field('wording_version'); }
 }
 final class RelatedEntity extends Node {
     /** @return Presence<string> */ public function kind(): Presence { return $this->field('kind'); }
@@ -992,7 +992,7 @@ final class SessionQuestionDetail extends Node {
     /** @return Presence<string> */ public function model(): Presence { return $this->field('model'); }
     /** @return Presence<list<ObservationObservationId|ObservationFailureId>> */ public function observations(): Presence { return $this->field('observations'); }
     /** @return Presence<SessionProbabilitiesYesNo|SessionProbabilitiesNamed> */ public function probabilities(): Presence { return $this->field('probabilities'); }
-    /** @return Presence<ReadableQuestionDecide|ReadableQuestionChoose|ReadableQuestionTag|ReadableQuestionScore> */ public function question(): Presence { return $this->field('question'); }
+    /** @return Presence<QuestionDocumentDecide|QuestionDocumentChoose|QuestionDocumentTag|QuestionDocumentScore> */ public function question(): Presence { return $this->field('question'); }
     /** @return Presence<string> */ public function question_sha256(): Presence { return $this->field('question_sha256'); }
     /** @return Presence<list<QuestionSource>> */ public function question_sources(): Presence { return $this->field('question_sources'); }
     /** @return Presence<string> */ public function raw_pick(): Presence { return $this->field('raw_pick'); }
@@ -1115,7 +1115,7 @@ final class Decoder
         $values['answer'] = self::readAnswer($native->answer[0]);
         $values['answer_id'] = self::readAnswerId($native->answer_id[0]);
         $values['observations'] = self::sequence($native->observations, fn($v) => self::readObservation($v[0]));
-        $values['question'] = self::readReadableQuestion($native->question[0]);
+        $values['question'] = self::readQuestionDocument($native->question[0]);
         $values['question_sources'] = self::sequence($native->question_sources, fn($v) => self::readQuestionSource($v[0]));
         $values['request'] = self::text($native->request);
         if ($native->threshold->presence !== 0) $values['threshold'] = $native->threshold->presence === 1 ? null : (self::readThreshold($native->threshold->value[0]));
@@ -1129,7 +1129,7 @@ final class Decoder
         $values['failure'] = self::readFailure($native->failure[0]);
         $values['failure_id'] = self::readFailureId($native->failure_id[0]);
         $values['observations'] = self::sequence($native->observations, fn($v) => self::readObservation($v[0]));
-        $values['question'] = self::readReadableQuestion($native->question[0]);
+        $values['question'] = self::readQuestionDocument($native->question[0]);
         $values['question_sources'] = self::sequence($native->question_sources, fn($v) => self::readQuestionSource($v[0]));
         $values['request'] = self::text($native->request);
         if ($native->threshold->presence !== 0) $values['threshold'] = $native->threshold->presence === 1 ? null : (self::readThreshold($native->threshold->value[0]));
@@ -1202,7 +1202,7 @@ final class Decoder
         if ($native->input->presence !== 0) $values['input'] = $native->input->presence === 1 ? null : (self::jsonValue($native->input->value[0]));
         if ($native->members->presence !== 0) $values['members'] = $native->members->presence === 1 ? null : (self::sequence($native->members->value, fn($v) => self::readRankMember($v[0])));
         $values['meta'] = self::readMeta($native->meta[0]);
-        $values['question'] = self::readReadableQuestion($native->question[0]);
+        $values['question'] = self::readQuestionDocument($native->question[0]);
         if ($native->question_name->presence !== 0) $values['question_name'] = $native->question_name->presence === 1 ? null : (self::text($native->question_name->value));
         $values['schema'] = self::readVersion($native->schema[0]);
         if ($native->source->presence !== 0) $values['source'] = $native->source->presence === 1 ? null : (self::readPhysicalSource($native->source->value[0]));
@@ -1220,7 +1220,7 @@ final class Decoder
         if ($native->input->presence !== 0) $values['input'] = $native->input->presence === 1 ? null : (self::jsonValue($native->input->value[0]));
         if ($native->members->presence !== 0) $values['members'] = $native->members->presence === 1 ? null : (self::sequence($native->members->value, fn($v) => self::readRankMember($v[0])));
         $values['meta'] = self::readMeta($native->meta[0]);
-        $values['question'] = self::readReadableQuestion($native->question[0]);
+        $values['question'] = self::readQuestionDocument($native->question[0]);
         if ($native->question_name->presence !== 0) $values['question_name'] = $native->question_name->presence === 1 ? null : (self::text($native->question_name->value));
         $values['schema'] = self::readVersion($native->schema[0]);
         if ($native->source->presence !== 0) $values['source'] = $native->source->presence === 1 ? null : (self::readPhysicalSource($native->source->value[0]));
@@ -1238,7 +1238,7 @@ final class Decoder
         if ($native->input->presence !== 0) $values['input'] = $native->input->presence === 1 ? null : (self::jsonValue($native->input->value[0]));
         if ($native->members->presence !== 0) $values['members'] = $native->members->presence === 1 ? null : (self::sequence($native->members->value, fn($v) => self::readRankMember($v[0])));
         $values['meta'] = self::readMeta($native->meta[0]);
-        $values['question'] = self::readReadableQuestion($native->question[0]);
+        $values['question'] = self::readQuestionDocument($native->question[0]);
         if ($native->question_name->presence !== 0) $values['question_name'] = $native->question_name->presence === 1 ? null : (self::text($native->question_name->value));
         $values['schema'] = self::readVersion($native->schema[0]);
         if ($native->source->presence !== 0) $values['source'] = $native->source->presence === 1 ? null : (self::readPhysicalSource($native->source->value[0]));
@@ -1256,7 +1256,7 @@ final class Decoder
         if ($native->input->presence !== 0) $values['input'] = $native->input->presence === 1 ? null : (self::jsonValue($native->input->value[0]));
         if ($native->members->presence !== 0) $values['members'] = $native->members->presence === 1 ? null : (self::sequence($native->members->value, fn($v) => self::readRankMember($v[0])));
         $values['meta'] = self::readMeta($native->meta[0]);
-        $values['question'] = self::readReadableQuestion($native->question[0]);
+        $values['question'] = self::readQuestionDocument($native->question[0]);
         if ($native->question_name->presence !== 0) $values['question_name'] = $native->question_name->presence === 1 ? null : (self::text($native->question_name->value));
         $values['schema'] = self::readVersion($native->schema[0]);
         if ($native->source->presence !== 0) $values['source'] = $native->source->presence === 1 ? null : (self::readPhysicalSource($native->source->value[0]));
@@ -1274,7 +1274,7 @@ final class Decoder
         if ($native->input->presence !== 0) $values['input'] = $native->input->presence === 1 ? null : (self::jsonValue($native->input->value[0]));
         if ($native->members->presence !== 0) $values['members'] = $native->members->presence === 1 ? null : (self::sequence($native->members->value, fn($v) => self::readRankMember($v[0])));
         $values['meta'] = self::readMeta($native->meta[0]);
-        $values['question'] = self::readReadableQuestion($native->question[0]);
+        $values['question'] = self::readQuestionDocument($native->question[0]);
         if ($native->question_name->presence !== 0) $values['question_name'] = $native->question_name->presence === 1 ? null : (self::text($native->question_name->value));
         $values['schema'] = self::readVersion($native->schema[0]);
         if ($native->source->presence !== 0) $values['source'] = $native->source->presence === 1 ? null : (self::readPhysicalSource($native->source->value[0]));
@@ -1292,7 +1292,7 @@ final class Decoder
         if ($native->input->presence !== 0) $values['input'] = $native->input->presence === 1 ? null : (self::jsonValue($native->input->value[0]));
         if ($native->members->presence !== 0) $values['members'] = $native->members->presence === 1 ? null : (self::sequence($native->members->value, fn($v) => self::readRankMember($v[0])));
         $values['meta'] = self::readMeta($native->meta[0]);
-        $values['question'] = self::readReadableQuestion($native->question[0]);
+        $values['question'] = self::readQuestionDocument($native->question[0]);
         if ($native->question_name->presence !== 0) $values['question_name'] = $native->question_name->presence === 1 ? null : (self::text($native->question_name->value));
         $values['schema'] = self::readVersion($native->schema[0]);
         if ($native->source->presence !== 0) $values['source'] = $native->source->presence === 1 ? null : (self::readPhysicalSource($native->source->value[0]));
@@ -1445,7 +1445,7 @@ final class Decoder
         if ($native->last_line->presence !== 0) $values['last_line'] = $native->last_line->presence === 1 ? null : (self::unsigned($native->last_line->value));
         $values['meta'] = self::readMeta($native->meta[0]);
         if ($native->position->presence !== 0) $values['position'] = $native->position->presence === 1 ? null : (self::readPosition($native->position->value[0]));
-        $values['question'] = self::readFindQuestionInfo($native->question[0]);
+        $values['question'] = self::readFindQuestionDocument($native->question[0]);
         $values['schema'] = self::readVersion($native->schema[0]);
         if ($native->threshold->presence !== 0) $values['threshold'] = $native->threshold->presence === 1 ? null : (self::jsonValue($native->threshold->value[0]));
         if ($native->value->presence !== 0) $values['value'] = $native->value->presence === 1 ? null : (self::jsonValue($native->value->value[0]));
@@ -1686,150 +1686,12 @@ final class Decoder
         $values['answer_id'] = self::readAnswerId($native->answer_id[0]);
         if ($native->images->presence !== 0) $values['images'] = $native->images->presence === 1 ? null : (self::sequence($native->images->value, fn($v) => self::readImage($v[0])));
         $values['meta'] = self::readMeta($native->meta[0]);
-        $values['question'] = self::readReadableQuestion($native->question[0]);
+        $values['question'] = self::readQuestionDocument($native->question[0]);
         $values['schema'] = self::readVersion($native->schema[0]);
         if ($native->source->presence !== 0) $values['source'] = $native->source->presence === 1 ? null : (self::readPhysicalSource($native->source->value[0]));
         if ($native->threshold->presence !== 0) $values['threshold'] = $native->threshold->presence === 1 ? null : (self::jsonValue($native->threshold->value[0]));
         $values['value'] = self::unsigned($native->value);
         return new \ThinkThen\Results\RankMemberResult((object)$values, $values);
-    }
-    private static function readReadableQuestion(\FFI\CData $native): mixed
-    {
-        return match ($native->kind) {
-            1 => self::readReadableQuestionDecide($native->data->decide[0]),
-            2 => self::readReadableQuestionChoose($native->data->choose[0]),
-            3 => self::readReadableQuestionTag($native->data->tag[0]),
-            4 => self::readReadableQuestionScore($native->data->score[0]),
-            default => throw new \LogicException('invalid native discriminator'),
-        };
-    }
-    private static function readFindQuestionInfo(\FFI\CData $native): mixed
-    {
-        $values = (array)self::mapping($native->extensions, fn($v) => self::jsonValue($v[0]));
-        if ($native->batch->presence !== 0) $values['batch'] = $native->batch->presence === 1 ? null : (self::readBatch($native->batch->value[0]));
-        if ($native->context_schema->presence !== 0) $values['context_schema'] = $native->context_schema->presence === 1 ? null : (self::readInputDeclaration($native->context_schema->value[0]));
-        if ($native->item_schema->presence !== 0) $values['item_schema'] = $native->item_schema->presence === 1 ? null : (self::readInputDeclaration($native->item_schema->value[0]));
-        if ($native->label_details->presence !== 0) $values['label_details'] = $native->label_details->presence === 1 ? null : (self::sequence($native->label_details->value, fn($v) => self::readLabel($v[0])));
-        if ($native->model->presence !== 0) $values['model'] = $native->model->presence === 1 ? null : (self::text($native->model->value));
-        if ($native->name->presence !== 0) $values['name'] = $native->name->presence === 1 ? null : (self::readQuestionName($native->name->value[0]));
-        $values['none'] = (bool)($native->none);
-        if ($native->on->presence !== 0) $values['on'] = $native->on->presence === 1 ? null : (self::sequence($native->on->value, fn($v) => self::text($v)));
-        if ($native->profile->presence !== 0) $values['profile'] = $native->profile->presence === 1 ? null : (self::text($native->profile->value));
-        if ($native->text->presence !== 0) $values['text'] = $native->text->presence === 1 ? null : (self::jsonValue($native->text->value[0]));
-        $values['verb'] = self::text($native->verb);
-        if ($native->wording_version->presence !== 0) $values['wording_version'] = $native->wording_version->presence === 1 ? null : (self::readWordingVersion($native->wording_version->value[0]));
-        return new \ThinkThen\Results\FindQuestionInfo((object)$values, $values);
-    }
-    private static function readRecognitionQuestionInfo(\FFI\CData $native): mixed
-    {
-        $values = (array)self::mapping($native->extensions, fn($v) => self::jsonValue($v[0]));
-        if ($native->batch->presence !== 0) $values['batch'] = $native->batch->presence === 1 ? null : (self::readBatch($native->batch->value[0]));
-        if ($native->context_schema->presence !== 0) $values['context_schema'] = $native->context_schema->presence === 1 ? null : (self::readInputDeclaration($native->context_schema->value[0]));
-        if ($native->entity_definition->presence !== 0) $values['entity_definition'] = $native->entity_definition->presence === 1 ? null : (self::jsonValue($native->entity_definition->value[0]));
-        if ($native->instructions->presence !== 0) $values['instructions'] = $native->instructions->presence === 1 ? null : (self::jsonValue($native->instructions->value[0]));
-        if ($native->item_schema->presence !== 0) $values['item_schema'] = $native->item_schema->presence === 1 ? null : (self::readInputDeclaration($native->item_schema->value[0]));
-        $values['kinds'] = self::mapping($native->kinds, fn($v) => self::jsonValue($v[0]));
-        if ($native->label_details->presence !== 0) $values['label_details'] = $native->label_details->presence === 1 ? null : (self::sequence($native->label_details->value, fn($v) => self::readLabel($v[0])));
-        if ($native->mode->presence !== 0) $values['mode'] = $native->mode->presence === 1 ? null : (self::readRecognitionMode($native->mode->value[0]));
-        if ($native->model->presence !== 0) $values['model'] = $native->model->presence === 1 ? null : (self::text($native->model->value));
-        if ($native->name->presence !== 0) $values['name'] = $native->name->presence === 1 ? null : (self::readQuestionName($native->name->value[0]));
-        if ($native->on->presence !== 0) $values['on'] = $native->on->presence === 1 ? null : (self::sequence($native->on->value, fn($v) => self::text($v)));
-        if ($native->profile->presence !== 0) $values['profile'] = $native->profile->presence === 1 ? null : (self::text($native->profile->value));
-        if ($native->relation_threshold->presence !== 0) $values['relation_threshold'] = $native->relation_threshold->presence === 1 ? null : (self::readThreshold($native->relation_threshold->value[0]));
-        if ($native->relations->presence !== 0) $values['relations'] = $native->relations->presence === 1 ? null : (self::sequence($native->relations->value, fn($v) => self::readRelationRule($v[0])));
-        if ($native->snippet_pieces->presence !== 0) $values['snippet_pieces'] = $native->snippet_pieces->presence === 1 ? null : (self::unsigned($native->snippet_pieces->value));
-        if ($native->stage_context->presence !== 0) $values['stage_context'] = $native->stage_context->presence === 1 ? null : (self::readRecognitionStageContext($native->stage_context->value[0]));
-        $values['threshold'] = self::readThreshold($native->threshold[0]);
-        $values['verb'] = self::readVerb($native->verb[0]);
-        if ($native->wording_version->presence !== 0) $values['wording_version'] = $native->wording_version->presence === 1 ? null : (self::readWordingVersion($native->wording_version->value[0]));
-        return new \ThinkThen\Results\RecognitionQuestionInfo((object)$values, $values);
-    }
-    private static function readRelationQuestionInfo(\FFI\CData $native): mixed
-    {
-        $values = (array)self::mapping($native->extensions, fn($v) => self::jsonValue($v[0]));
-        if ($native->batch->presence !== 0) $values['batch'] = $native->batch->presence === 1 ? null : (self::readBatch($native->batch->value[0]));
-        if ($native->context_schema->presence !== 0) $values['context_schema'] = $native->context_schema->presence === 1 ? null : (self::readInputDeclaration($native->context_schema->value[0]));
-        if ($native->fields->presence !== 0) $values['fields'] = $native->fields->presence === 1 ? null : (self::readRelateFields($native->fields->value[0]));
-        if ($native->item_schema->presence !== 0) $values['item_schema'] = $native->item_schema->presence === 1 ? null : (self::readInputDeclaration($native->item_schema->value[0]));
-        if ($native->label_details->presence !== 0) $values['label_details'] = $native->label_details->presence === 1 ? null : (self::sequence($native->label_details->value, fn($v) => self::readLabel($v[0])));
-        if ($native->model->presence !== 0) $values['model'] = $native->model->presence === 1 ? null : (self::text($native->model->value));
-        if ($native->name->presence !== 0) $values['name'] = $native->name->presence === 1 ? null : (self::readQuestionName($native->name->value[0]));
-        if ($native->on->presence !== 0) $values['on'] = $native->on->presence === 1 ? null : (self::sequence($native->on->value, fn($v) => self::text($v)));
-        if ($native->profile->presence !== 0) $values['profile'] = $native->profile->presence === 1 ? null : (self::text($native->profile->value));
-        $values['relations'] = self::sequence($native->relations, fn($v) => self::readRelationRule($v[0]));
-        $values['threshold'] = self::readThreshold($native->threshold[0]);
-        $values['verb'] = self::text($native->verb);
-        if ($native->wording_version->presence !== 0) $values['wording_version'] = $native->wording_version->presence === 1 ? null : (self::readWordingVersion($native->wording_version->value[0]));
-        return new \ThinkThen\Results\RelationQuestionInfo((object)$values, $values);
-    }
-    private static function readReadableQuestionChoose(\FFI\CData $native): mixed
-    {
-        $values = (array)self::mapping($native->extensions, fn($v) => self::jsonValue($v[0]));
-        if ($native->batch->presence !== 0) $values['batch'] = $native->batch->presence === 1 ? null : (self::readBatch($native->batch->value[0]));
-        if ($native->context_schema->presence !== 0) $values['context_schema'] = $native->context_schema->presence === 1 ? null : (self::readInputDeclaration($native->context_schema->value[0]));
-        if ($native->item_schema->presence !== 0) $values['item_schema'] = $native->item_schema->presence === 1 ? null : (self::readInputDeclaration($native->item_schema->value[0]));
-        if ($native->label_details->presence !== 0) $values['label_details'] = $native->label_details->presence === 1 ? null : (self::sequence($native->label_details->value, fn($v) => self::readLabel($v[0])));
-        if ($native->model->presence !== 0) $values['model'] = $native->model->presence === 1 ? null : (self::text($native->model->value));
-        if ($native->name->presence !== 0) $values['name'] = $native->name->presence === 1 ? null : (self::readQuestionName($native->name->value[0]));
-        if ($native->on->presence !== 0) $values['on'] = $native->on->presence === 1 ? null : (self::sequence($native->on->value, fn($v) => self::text($v)));
-        if ($native->profile->presence !== 0) $values['profile'] = $native->profile->presence === 1 ? null : (self::text($native->profile->value));
-        if ($native->wording_version->presence !== 0) $values['wording_version'] = $native->wording_version->presence === 1 ? null : (self::readWordingVersion($native->wording_version->value[0]));
-        $values['options'] = self::sequence($native->options, fn($v) => self::text($v));
-        if ($native->text->presence !== 0) $values['text'] = $native->text->presence === 1 ? null : (self::jsonValue($native->text->value[0]));
-        $values['verb'] = self::text($native->verb);
-        return new \ThinkThen\Results\ReadableQuestionChoose((object)$values, $values);
-    }
-    private static function readReadableQuestionDecide(\FFI\CData $native): mixed
-    {
-        $values = (array)self::mapping($native->extensions, fn($v) => self::jsonValue($v[0]));
-        if ($native->batch->presence !== 0) $values['batch'] = $native->batch->presence === 1 ? null : (self::readBatch($native->batch->value[0]));
-        if ($native->context_schema->presence !== 0) $values['context_schema'] = $native->context_schema->presence === 1 ? null : (self::readInputDeclaration($native->context_schema->value[0]));
-        if ($native->item_schema->presence !== 0) $values['item_schema'] = $native->item_schema->presence === 1 ? null : (self::readInputDeclaration($native->item_schema->value[0]));
-        if ($native->label_details->presence !== 0) $values['label_details'] = $native->label_details->presence === 1 ? null : (self::sequence($native->label_details->value, fn($v) => self::readLabel($v[0])));
-        if ($native->model->presence !== 0) $values['model'] = $native->model->presence === 1 ? null : (self::text($native->model->value));
-        if ($native->name->presence !== 0) $values['name'] = $native->name->presence === 1 ? null : (self::readQuestionName($native->name->value[0]));
-        if ($native->on->presence !== 0) $values['on'] = $native->on->presence === 1 ? null : (self::sequence($native->on->value, fn($v) => self::text($v)));
-        if ($native->profile->presence !== 0) $values['profile'] = $native->profile->presence === 1 ? null : (self::text($native->profile->value));
-        if ($native->wording_version->presence !== 0) $values['wording_version'] = $native->wording_version->presence === 1 ? null : (self::readWordingVersion($native->wording_version->value[0]));
-        if ($native->false_->presence !== 0) $values['false'] = $native->false_->presence === 1 ? null : (self::jsonValue($native->false_->value[0]));
-        if ($native->text->presence !== 0) $values['text'] = $native->text->presence === 1 ? null : (self::jsonValue($native->text->value[0]));
-        if ($native->true_->presence !== 0) $values['true'] = $native->true_->presence === 1 ? null : (self::jsonValue($native->true_->value[0]));
-        $values['verb'] = self::text($native->verb);
-        return new \ThinkThen\Results\ReadableQuestionDecide((object)$values, $values);
-    }
-    private static function readReadableQuestionScore(\FFI\CData $native): mixed
-    {
-        $values = (array)self::mapping($native->extensions, fn($v) => self::jsonValue($v[0]));
-        if ($native->batch->presence !== 0) $values['batch'] = $native->batch->presence === 1 ? null : (self::readBatch($native->batch->value[0]));
-        if ($native->context_schema->presence !== 0) $values['context_schema'] = $native->context_schema->presence === 1 ? null : (self::readInputDeclaration($native->context_schema->value[0]));
-        if ($native->item_schema->presence !== 0) $values['item_schema'] = $native->item_schema->presence === 1 ? null : (self::readInputDeclaration($native->item_schema->value[0]));
-        if ($native->label_details->presence !== 0) $values['label_details'] = $native->label_details->presence === 1 ? null : (self::sequence($native->label_details->value, fn($v) => self::readLabel($v[0])));
-        if ($native->model->presence !== 0) $values['model'] = $native->model->presence === 1 ? null : (self::text($native->model->value));
-        if ($native->name->presence !== 0) $values['name'] = $native->name->presence === 1 ? null : (self::readQuestionName($native->name->value[0]));
-        if ($native->on->presence !== 0) $values['on'] = $native->on->presence === 1 ? null : (self::sequence($native->on->value, fn($v) => self::text($v)));
-        if ($native->profile->presence !== 0) $values['profile'] = $native->profile->presence === 1 ? null : (self::text($native->profile->value));
-        if ($native->wording_version->presence !== 0) $values['wording_version'] = $native->wording_version->presence === 1 ? null : (self::readWordingVersion($native->wording_version->value[0]));
-        $values['levels'] = self::sequence($native->levels, fn($v) => self::text($v));
-        if ($native->text->presence !== 0) $values['text'] = $native->text->presence === 1 ? null : (self::jsonValue($native->text->value[0]));
-        $values['verb'] = self::text($native->verb);
-        return new \ThinkThen\Results\ReadableQuestionScore((object)$values, $values);
-    }
-    private static function readReadableQuestionTag(\FFI\CData $native): mixed
-    {
-        $values = (array)self::mapping($native->extensions, fn($v) => self::jsonValue($v[0]));
-        if ($native->batch->presence !== 0) $values['batch'] = $native->batch->presence === 1 ? null : (self::readBatch($native->batch->value[0]));
-        if ($native->context_schema->presence !== 0) $values['context_schema'] = $native->context_schema->presence === 1 ? null : (self::readInputDeclaration($native->context_schema->value[0]));
-        if ($native->item_schema->presence !== 0) $values['item_schema'] = $native->item_schema->presence === 1 ? null : (self::readInputDeclaration($native->item_schema->value[0]));
-        if ($native->label_details->presence !== 0) $values['label_details'] = $native->label_details->presence === 1 ? null : (self::sequence($native->label_details->value, fn($v) => self::readLabel($v[0])));
-        if ($native->model->presence !== 0) $values['model'] = $native->model->presence === 1 ? null : (self::text($native->model->value));
-        if ($native->name->presence !== 0) $values['name'] = $native->name->presence === 1 ? null : (self::readQuestionName($native->name->value[0]));
-        if ($native->on->presence !== 0) $values['on'] = $native->on->presence === 1 ? null : (self::sequence($native->on->value, fn($v) => self::text($v)));
-        if ($native->profile->presence !== 0) $values['profile'] = $native->profile->presence === 1 ? null : (self::text($native->profile->value));
-        if ($native->wording_version->presence !== 0) $values['wording_version'] = $native->wording_version->presence === 1 ? null : (self::readWordingVersion($native->wording_version->value[0]));
-        $values['labels'] = self::sequence($native->labels, fn($v) => self::text($v));
-        if ($native->text->presence !== 0) $values['text'] = $native->text->presence === 1 ? null : (self::jsonValue($native->text->value[0]));
-        $values['verb'] = self::text($native->verb);
-        return new \ThinkThen\Results\ReadableQuestionTag((object)$values, $values);
     }
     private static function readRecognition(\FFI\CData $native): mixed
     {
@@ -1843,7 +1705,7 @@ final class Decoder
         if ($native->last_line->presence !== 0) $values['last_line'] = $native->last_line->presence === 1 ? null : (self::unsigned($native->last_line->value));
         $values['meta'] = self::readMeta($native->meta[0]);
         if ($native->position->presence !== 0) $values['position'] = $native->position->presence === 1 ? null : (self::readPosition($native->position->value[0]));
-        $values['question'] = self::readRecognitionQuestionInfo($native->question[0]);
+        $values['question'] = self::readRecognizeQuestionDocument($native->question[0]);
         $values['schema'] = self::readVersion($native->schema[0]);
         if ($native->source->presence !== 0) $values['source'] = $native->source->presence === 1 ? null : (self::readPhysicalSource($native->source->value[0]));
         $values['value'] = self::readRecognize($native->value[0]);
@@ -1924,7 +1786,7 @@ final class Decoder
         if ($native->last_line->presence !== 0) $values['last_line'] = $native->last_line->presence === 1 ? null : (self::unsigned($native->last_line->value));
         $values['meta'] = self::readMeta($native->meta[0]);
         if ($native->position->presence !== 0) $values['position'] = $native->position->presence === 1 ? null : (self::readPosition($native->position->value[0]));
-        $values['question'] = self::readRelationQuestionInfo($native->question[0]);
+        $values['question'] = self::readRelateQuestionDocument($native->question[0]);
         $values['schema'] = self::readVersion($native->schema[0]);
         $values['value'] = self::sequence($native->value, fn($v) => self::readRelatedEntityEdge($v[0]));
         return new \ThinkThen\Results\Relation((object)$values, $values);
@@ -1978,7 +1840,7 @@ final class Decoder
         $values['direction'] = self::readRelationDirection($native->direction[0]);
         $values['method'] = self::readRelationMethod($native->method[0]);
         $values['observations'] = self::sequence($native->observations, fn($v) => self::readObservation($v[0]));
-        $values['question'] = self::readReadableQuestion($native->question[0]);
+        $values['question'] = self::readQuestionDocument($native->question[0]);
         $values['question_sources'] = self::sequence($native->question_sources, fn($v) => self::readQuestionSource($v[0]));
         $values['reads'] = self::text($native->reads);
         $values['relation'] = self::text($native->relation);
@@ -1999,7 +1861,7 @@ final class Decoder
         $values['direction'] = self::readRelationDirection($native->direction[0]);
         $values['method'] = self::readRelationMethod($native->method[0]);
         $values['observations'] = self::sequence($native->observations, fn($v) => self::readObservation($v[0]));
-        $values['question'] = self::readReadableQuestion($native->question[0]);
+        $values['question'] = self::readQuestionDocument($native->question[0]);
         $values['question_sources'] = self::sequence($native->question_sources, fn($v) => self::readQuestionSource($v[0]));
         $values['reads'] = self::text($native->reads);
         $values['relation'] = self::text($native->relation);
@@ -2294,6 +2156,23 @@ final class Decoder
         $values['probabilities'] = self::mapping($native->probabilities, fn($v) => $v);
         return new \ThinkThen\Results\FindAnswer((object)$values, $values);
     }
+    private static function readFindQuestionDocument(\FFI\CData $native): mixed
+    {
+        $values = (array)self::mapping($native->extensions, fn($v) => self::jsonValue($v[0]));
+        if ($native->batch->presence !== 0) $values['batch'] = $native->batch->presence === 1 ? null : (self::readBatch($native->batch->value[0]));
+        if ($native->context_schema->presence !== 0) $values['context_schema'] = $native->context_schema->presence === 1 ? null : (self::readInputDeclaration($native->context_schema->value[0]));
+        if ($native->item_schema->presence !== 0) $values['item_schema'] = $native->item_schema->presence === 1 ? null : (self::readInputDeclaration($native->item_schema->value[0]));
+        if ($native->label_details->presence !== 0) $values['label_details'] = $native->label_details->presence === 1 ? null : (self::sequence($native->label_details->value, fn($v) => self::readLabel($v[0])));
+        if ($native->model->presence !== 0) $values['model'] = $native->model->presence === 1 ? null : (self::text($native->model->value));
+        if ($native->name->presence !== 0) $values['name'] = $native->name->presence === 1 ? null : (self::readQuestionName($native->name->value[0]));
+        $values['none'] = (bool)($native->none);
+        if ($native->on->presence !== 0) $values['on'] = $native->on->presence === 1 ? null : (self::sequence($native->on->value, fn($v) => self::text($v)));
+        if ($native->profile->presence !== 0) $values['profile'] = $native->profile->presence === 1 ? null : (self::text($native->profile->value));
+        if ($native->text->presence !== 0) $values['text'] = $native->text->presence === 1 ? null : (self::jsonValue($native->text->value[0]));
+        $values['verb'] = self::text($native->verb);
+        if ($native->wording_version->presence !== 0) $values['wording_version'] = $native->wording_version->presence === 1 ? null : (self::readWordingVersion($native->wording_version->value[0]));
+        return new \ThinkThen\Results\FindQuestionDocument((object)$values, $values);
+    }
     private static function readNameOdds(\FFI\CData $native): mixed
     {
         $values = (array)self::mapping($native->extensions, fn($v) => self::jsonValue($v[0]));
@@ -2334,6 +2213,85 @@ final class Decoder
         $values['tuned_for'] = self::text($native->tuned_for);
         return new \ThinkThen\Results\ProfileWarning((object)$values, $values);
     }
+    private static function readQuestionDocument(\FFI\CData $native): mixed
+    {
+        return match ($native->kind) {
+            1 => self::readQuestionDocumentDecide($native->data->decide[0]),
+            2 => self::readQuestionDocumentChoose($native->data->choose[0]),
+            3 => self::readQuestionDocumentTag($native->data->tag[0]),
+            4 => self::readQuestionDocumentScore($native->data->score[0]),
+            default => throw new \LogicException('invalid native discriminator'),
+        };
+    }
+    private static function readQuestionDocumentChoose(\FFI\CData $native): mixed
+    {
+        $values = (array)self::mapping($native->extensions, fn($v) => self::jsonValue($v[0]));
+        if ($native->batch->presence !== 0) $values['batch'] = $native->batch->presence === 1 ? null : (self::readBatch($native->batch->value[0]));
+        if ($native->context_schema->presence !== 0) $values['context_schema'] = $native->context_schema->presence === 1 ? null : (self::readInputDeclaration($native->context_schema->value[0]));
+        if ($native->item_schema->presence !== 0) $values['item_schema'] = $native->item_schema->presence === 1 ? null : (self::readInputDeclaration($native->item_schema->value[0]));
+        if ($native->label_details->presence !== 0) $values['label_details'] = $native->label_details->presence === 1 ? null : (self::sequence($native->label_details->value, fn($v) => self::readLabel($v[0])));
+        if ($native->model->presence !== 0) $values['model'] = $native->model->presence === 1 ? null : (self::text($native->model->value));
+        if ($native->name->presence !== 0) $values['name'] = $native->name->presence === 1 ? null : (self::readQuestionName($native->name->value[0]));
+        if ($native->on->presence !== 0) $values['on'] = $native->on->presence === 1 ? null : (self::sequence($native->on->value, fn($v) => self::text($v)));
+        if ($native->profile->presence !== 0) $values['profile'] = $native->profile->presence === 1 ? null : (self::text($native->profile->value));
+        if ($native->wording_version->presence !== 0) $values['wording_version'] = $native->wording_version->presence === 1 ? null : (self::readWordingVersion($native->wording_version->value[0]));
+        $values['options'] = self::sequence($native->options, fn($v) => self::text($v));
+        if ($native->text->presence !== 0) $values['text'] = $native->text->presence === 1 ? null : (self::jsonValue($native->text->value[0]));
+        $values['verb'] = self::text($native->verb);
+        return new \ThinkThen\Results\QuestionDocumentChoose((object)$values, $values);
+    }
+    private static function readQuestionDocumentDecide(\FFI\CData $native): mixed
+    {
+        $values = (array)self::mapping($native->extensions, fn($v) => self::jsonValue($v[0]));
+        if ($native->batch->presence !== 0) $values['batch'] = $native->batch->presence === 1 ? null : (self::readBatch($native->batch->value[0]));
+        if ($native->context_schema->presence !== 0) $values['context_schema'] = $native->context_schema->presence === 1 ? null : (self::readInputDeclaration($native->context_schema->value[0]));
+        if ($native->item_schema->presence !== 0) $values['item_schema'] = $native->item_schema->presence === 1 ? null : (self::readInputDeclaration($native->item_schema->value[0]));
+        if ($native->label_details->presence !== 0) $values['label_details'] = $native->label_details->presence === 1 ? null : (self::sequence($native->label_details->value, fn($v) => self::readLabel($v[0])));
+        if ($native->model->presence !== 0) $values['model'] = $native->model->presence === 1 ? null : (self::text($native->model->value));
+        if ($native->name->presence !== 0) $values['name'] = $native->name->presence === 1 ? null : (self::readQuestionName($native->name->value[0]));
+        if ($native->on->presence !== 0) $values['on'] = $native->on->presence === 1 ? null : (self::sequence($native->on->value, fn($v) => self::text($v)));
+        if ($native->profile->presence !== 0) $values['profile'] = $native->profile->presence === 1 ? null : (self::text($native->profile->value));
+        if ($native->wording_version->presence !== 0) $values['wording_version'] = $native->wording_version->presence === 1 ? null : (self::readWordingVersion($native->wording_version->value[0]));
+        if ($native->false_->presence !== 0) $values['false'] = $native->false_->presence === 1 ? null : (self::jsonValue($native->false_->value[0]));
+        if ($native->text->presence !== 0) $values['text'] = $native->text->presence === 1 ? null : (self::jsonValue($native->text->value[0]));
+        if ($native->true_->presence !== 0) $values['true'] = $native->true_->presence === 1 ? null : (self::jsonValue($native->true_->value[0]));
+        $values['verb'] = self::text($native->verb);
+        return new \ThinkThen\Results\QuestionDocumentDecide((object)$values, $values);
+    }
+    private static function readQuestionDocumentScore(\FFI\CData $native): mixed
+    {
+        $values = (array)self::mapping($native->extensions, fn($v) => self::jsonValue($v[0]));
+        if ($native->batch->presence !== 0) $values['batch'] = $native->batch->presence === 1 ? null : (self::readBatch($native->batch->value[0]));
+        if ($native->context_schema->presence !== 0) $values['context_schema'] = $native->context_schema->presence === 1 ? null : (self::readInputDeclaration($native->context_schema->value[0]));
+        if ($native->item_schema->presence !== 0) $values['item_schema'] = $native->item_schema->presence === 1 ? null : (self::readInputDeclaration($native->item_schema->value[0]));
+        if ($native->label_details->presence !== 0) $values['label_details'] = $native->label_details->presence === 1 ? null : (self::sequence($native->label_details->value, fn($v) => self::readLabel($v[0])));
+        if ($native->model->presence !== 0) $values['model'] = $native->model->presence === 1 ? null : (self::text($native->model->value));
+        if ($native->name->presence !== 0) $values['name'] = $native->name->presence === 1 ? null : (self::readQuestionName($native->name->value[0]));
+        if ($native->on->presence !== 0) $values['on'] = $native->on->presence === 1 ? null : (self::sequence($native->on->value, fn($v) => self::text($v)));
+        if ($native->profile->presence !== 0) $values['profile'] = $native->profile->presence === 1 ? null : (self::text($native->profile->value));
+        if ($native->wording_version->presence !== 0) $values['wording_version'] = $native->wording_version->presence === 1 ? null : (self::readWordingVersion($native->wording_version->value[0]));
+        $values['levels'] = self::sequence($native->levels, fn($v) => self::text($v));
+        if ($native->text->presence !== 0) $values['text'] = $native->text->presence === 1 ? null : (self::jsonValue($native->text->value[0]));
+        $values['verb'] = self::text($native->verb);
+        return new \ThinkThen\Results\QuestionDocumentScore((object)$values, $values);
+    }
+    private static function readQuestionDocumentTag(\FFI\CData $native): mixed
+    {
+        $values = (array)self::mapping($native->extensions, fn($v) => self::jsonValue($v[0]));
+        if ($native->batch->presence !== 0) $values['batch'] = $native->batch->presence === 1 ? null : (self::readBatch($native->batch->value[0]));
+        if ($native->context_schema->presence !== 0) $values['context_schema'] = $native->context_schema->presence === 1 ? null : (self::readInputDeclaration($native->context_schema->value[0]));
+        if ($native->item_schema->presence !== 0) $values['item_schema'] = $native->item_schema->presence === 1 ? null : (self::readInputDeclaration($native->item_schema->value[0]));
+        if ($native->label_details->presence !== 0) $values['label_details'] = $native->label_details->presence === 1 ? null : (self::sequence($native->label_details->value, fn($v) => self::readLabel($v[0])));
+        if ($native->model->presence !== 0) $values['model'] = $native->model->presence === 1 ? null : (self::text($native->model->value));
+        if ($native->name->presence !== 0) $values['name'] = $native->name->presence === 1 ? null : (self::readQuestionName($native->name->value[0]));
+        if ($native->on->presence !== 0) $values['on'] = $native->on->presence === 1 ? null : (self::sequence($native->on->value, fn($v) => self::text($v)));
+        if ($native->profile->presence !== 0) $values['profile'] = $native->profile->presence === 1 ? null : (self::text($native->profile->value));
+        if ($native->wording_version->presence !== 0) $values['wording_version'] = $native->wording_version->presence === 1 ? null : (self::readWordingVersion($native->wording_version->value[0]));
+        $values['labels'] = self::sequence($native->labels, fn($v) => self::text($v));
+        if ($native->text->presence !== 0) $values['text'] = $native->text->presence === 1 ? null : (self::jsonValue($native->text->value[0]));
+        $values['verb'] = self::text($native->verb);
+        return new \ThinkThen\Results\QuestionDocumentTag((object)$values, $values);
+    }
     private static function readRecognize(\FFI\CData $native): mixed
     {
         return match ($native->kind) {
@@ -2350,6 +2308,30 @@ final class Decoder
         $values['pieces'] = self::sequence($native->pieces, fn($v) => self::readPieceOdds($v[0]));
         $values['proposals'] = self::sequence($native->proposals, fn($v) => self::readRecognitionProposal($v[0]));
         return new \ThinkThen\Results\RecognizeAnswer((object)$values, $values);
+    }
+    private static function readRecognizeQuestionDocument(\FFI\CData $native): mixed
+    {
+        $values = (array)self::mapping($native->extensions, fn($v) => self::jsonValue($v[0]));
+        if ($native->batch->presence !== 0) $values['batch'] = $native->batch->presence === 1 ? null : (self::readBatch($native->batch->value[0]));
+        if ($native->context_schema->presence !== 0) $values['context_schema'] = $native->context_schema->presence === 1 ? null : (self::readInputDeclaration($native->context_schema->value[0]));
+        if ($native->entity_definition->presence !== 0) $values['entity_definition'] = $native->entity_definition->presence === 1 ? null : (self::jsonValue($native->entity_definition->value[0]));
+        if ($native->instructions->presence !== 0) $values['instructions'] = $native->instructions->presence === 1 ? null : (self::jsonValue($native->instructions->value[0]));
+        if ($native->item_schema->presence !== 0) $values['item_schema'] = $native->item_schema->presence === 1 ? null : (self::readInputDeclaration($native->item_schema->value[0]));
+        $values['kinds'] = self::mapping($native->kinds, fn($v) => self::jsonValue($v[0]));
+        if ($native->label_details->presence !== 0) $values['label_details'] = $native->label_details->presence === 1 ? null : (self::sequence($native->label_details->value, fn($v) => self::readLabel($v[0])));
+        if ($native->mode->presence !== 0) $values['mode'] = $native->mode->presence === 1 ? null : (self::readRecognitionMode($native->mode->value[0]));
+        if ($native->model->presence !== 0) $values['model'] = $native->model->presence === 1 ? null : (self::text($native->model->value));
+        if ($native->name->presence !== 0) $values['name'] = $native->name->presence === 1 ? null : (self::readQuestionName($native->name->value[0]));
+        if ($native->on->presence !== 0) $values['on'] = $native->on->presence === 1 ? null : (self::sequence($native->on->value, fn($v) => self::text($v)));
+        if ($native->profile->presence !== 0) $values['profile'] = $native->profile->presence === 1 ? null : (self::text($native->profile->value));
+        if ($native->relation_threshold->presence !== 0) $values['relation_threshold'] = $native->relation_threshold->presence === 1 ? null : (self::readThreshold($native->relation_threshold->value[0]));
+        if ($native->relations->presence !== 0) $values['relations'] = $native->relations->presence === 1 ? null : (self::sequence($native->relations->value, fn($v) => self::readRelationRule($v[0])));
+        if ($native->snippet_pieces->presence !== 0) $values['snippet_pieces'] = $native->snippet_pieces->presence === 1 ? null : (self::unsigned($native->snippet_pieces->value));
+        if ($native->stage_context->presence !== 0) $values['stage_context'] = $native->stage_context->presence === 1 ? null : (self::readRecognitionStageContext($native->stage_context->value[0]));
+        $values['threshold'] = self::readThreshold($native->threshold[0]);
+        $values['verb'] = self::readVerb($native->verb[0]);
+        if ($native->wording_version->presence !== 0) $values['wording_version'] = $native->wording_version->presence === 1 ? null : (self::readWordingVersion($native->wording_version->value[0]));
+        return new \ThinkThen\Results\RecognizeQuestionDocument((object)$values, $values);
     }
     private static function readRecognizeEntities(\FFI\CData $native): mixed
     {
@@ -2371,6 +2353,24 @@ final class Decoder
         $values['kind'] = self::text($native->kind);
         $values['name'] = self::text($native->name);
         return new \ThinkThen\Results\RelateFields((object)$values, $values);
+    }
+    private static function readRelateQuestionDocument(\FFI\CData $native): mixed
+    {
+        $values = (array)self::mapping($native->extensions, fn($v) => self::jsonValue($v[0]));
+        if ($native->batch->presence !== 0) $values['batch'] = $native->batch->presence === 1 ? null : (self::readBatch($native->batch->value[0]));
+        if ($native->context_schema->presence !== 0) $values['context_schema'] = $native->context_schema->presence === 1 ? null : (self::readInputDeclaration($native->context_schema->value[0]));
+        if ($native->fields->presence !== 0) $values['fields'] = $native->fields->presence === 1 ? null : (self::readRelateFields($native->fields->value[0]));
+        if ($native->item_schema->presence !== 0) $values['item_schema'] = $native->item_schema->presence === 1 ? null : (self::readInputDeclaration($native->item_schema->value[0]));
+        if ($native->label_details->presence !== 0) $values['label_details'] = $native->label_details->presence === 1 ? null : (self::sequence($native->label_details->value, fn($v) => self::readLabel($v[0])));
+        if ($native->model->presence !== 0) $values['model'] = $native->model->presence === 1 ? null : (self::text($native->model->value));
+        if ($native->name->presence !== 0) $values['name'] = $native->name->presence === 1 ? null : (self::readQuestionName($native->name->value[0]));
+        if ($native->on->presence !== 0) $values['on'] = $native->on->presence === 1 ? null : (self::sequence($native->on->value, fn($v) => self::text($v)));
+        if ($native->profile->presence !== 0) $values['profile'] = $native->profile->presence === 1 ? null : (self::text($native->profile->value));
+        $values['relations'] = self::sequence($native->relations, fn($v) => self::readRelationRule($v[0]));
+        $values['threshold'] = self::readThreshold($native->threshold[0]);
+        $values['verb'] = self::text($native->verb);
+        if ($native->wording_version->presence !== 0) $values['wording_version'] = $native->wording_version->presence === 1 ? null : (self::readWordingVersion($native->wording_version->value[0]));
+        return new \ThinkThen\Results\RelateQuestionDocument((object)$values, $values);
     }
     private static function readRelatedEntity(\FFI\CData $native): mixed
     {
@@ -2738,7 +2738,7 @@ final class Decoder
         $values['model'] = self::text($native->model);
         $values['observations'] = self::sequence($native->observations, fn($v) => self::readObservation($v[0]));
         if ($native->probabilities->presence !== 0) $values['probabilities'] = $native->probabilities->presence === 1 ? null : (self::readSessionProbabilities($native->probabilities->value[0]));
-        $values['question'] = self::readReadableQuestion($native->question[0]);
+        $values['question'] = self::readQuestionDocument($native->question[0]);
         $values['question_sha256'] = self::text($native->question_sha256);
         $values['question_sources'] = self::sequence($native->question_sources, fn($v) => self::readQuestionSource($v[0]));
         if ($native->raw_pick->presence !== 0) $values['raw_pick'] = $native->raw_pick->presence === 1 ? null : (self::text($native->raw_pick->value));

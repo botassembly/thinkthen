@@ -187,7 +187,7 @@ Future<void> main(List<String> args) async {
             value: {'wide': wide, 'false': false, 'null': null}));
     final value =
         present.packets.whereType<SessionPacketDecideRow>().single.value;
-    final saved = value.question as ReadableQuestionDecide;
+    final saved = value.question as QuestionDocumentDecide;
     check(
         saved.trueValue.isPresent &&
             saved.trueValue.value == null &&
@@ -204,7 +204,7 @@ Future<void> main(List<String> args) async {
     check((extended.extensions['future'] as Map)['wide'] == wide,
         'unknown output retained');
     final absent =
-        ReadableQuestionDecide.read({'verb': 'decide', 'text': 'Is it?'});
+        QuestionDocumentDecide.read({'verb': 'decide', 'text': 'Is it?'});
     check(!absent.trueValue.isPresent, 'absent reading differs from null');
     final unresolved = await engine.decide(
         question, InputText(text: 'uncertain'),

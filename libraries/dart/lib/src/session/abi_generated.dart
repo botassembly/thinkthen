@@ -894,7 +894,7 @@ final class _NativePacketReader {
       values["probabilities"] = _u32(_at(p, 176)) == 1
           ? null
           : readSessionProbabilities(_pointer(_at(_at(p, 176), 8)));
-    values["question"] = readReadableQuestion(_pointer(_at(p, 192)));
+    values["question"] = readQuestionDocument(_pointer(_at(p, 192)));
     values["question_sha256"] = _text(_at(p, 200));
     values["question_sources"] =
         _list(_at(p, 216), 8, (p) => readQuestionSource(_pointer(p)));
@@ -981,17 +981,17 @@ final class _NativePacketReader {
     };
   }
 
-  static Object? readReadableQuestion(Pointer<Void> p) {
+  static Object? readQuestionDocument(Pointer<Void> p) {
     return switch (_u32(_at(p, 0))) {
-      1 => readReadableQuestionDecide(_pointer(_at(p, 8))),
-      2 => readReadableQuestionChoose(_pointer(_at(p, 8))),
-      3 => readReadableQuestionTag(_pointer(_at(p, 8))),
-      4 => readReadableQuestionScore(_pointer(_at(p, 8))),
+      1 => readQuestionDocumentDecide(_pointer(_at(p, 8))),
+      2 => readQuestionDocumentChoose(_pointer(_at(p, 8))),
+      3 => readQuestionDocumentTag(_pointer(_at(p, 8))),
+      4 => readQuestionDocumentScore(_pointer(_at(p, 8))),
       _ => throw StateError('Invalid native discriminator'),
     };
   }
 
-  static Object? readReadableQuestionScore(Pointer<Void> p) {
+  static Object? readQuestionDocumentScore(Pointer<Void> p) {
     final values = _extensions(_at(p, 224));
     if (_u32(_at(p, 0)) != 0)
       values["batch"] =
@@ -1140,7 +1140,7 @@ final class _NativePacketReader {
     };
   }
 
-  static Object? readReadableQuestionTag(Pointer<Void> p) {
+  static Object? readQuestionDocumentTag(Pointer<Void> p) {
     final values = _extensions(_at(p, 224));
     if (_u32(_at(p, 0)) != 0)
       values["batch"] =
@@ -1183,7 +1183,7 @@ final class _NativePacketReader {
     return values;
   }
 
-  static Object? readReadableQuestionChoose(Pointer<Void> p) {
+  static Object? readQuestionDocumentChoose(Pointer<Void> p) {
     final values = _extensions(_at(p, 224));
     if (_u32(_at(p, 0)) != 0)
       values["batch"] =
@@ -1226,7 +1226,7 @@ final class _NativePacketReader {
     return values;
   }
 
-  static Object? readReadableQuestionDecide(Pointer<Void> p) {
+  static Object? readQuestionDocumentDecide(Pointer<Void> p) {
     final values = _extensions(_at(p, 240));
     if (_u32(_at(p, 0)) != 0)
       values["batch"] =
@@ -1407,7 +1407,7 @@ final class _NativePacketReader {
       values["position"] = _u32(_at(p, 136)) == 1
           ? null
           : readPosition(_pointer(_at(_at(p, 136), 8)));
-    values["question"] = readRelationQuestionInfo(_pointer(_at(p, 152)));
+    values["question"] = readRelateQuestionDocument(_pointer(_at(p, 152)));
     values["schema"] = readVersion(_pointer(_at(p, 160)));
     values["value"] =
         _list(_at(p, 168), 8, (p) => readRelatedEntityEdge(_pointer(p)));
@@ -1467,7 +1467,7 @@ final class _NativePacketReader {
     };
   }
 
-  static Object? readRelationQuestionInfo(Pointer<Void> p) {
+  static Object? readRelateQuestionDocument(Pointer<Void> p) {
     final values = _extensions(_at(p, 232));
     if (_u32(_at(p, 0)) != 0)
       values["batch"] =
@@ -1645,7 +1645,7 @@ final class _NativePacketReader {
     values["method"] = readRelationMethod(_pointer(_at(p, 8)));
     values["observations"] =
         _list(_at(p, 16), 8, (p) => readObservation(_pointer(p)));
-    values["question"] = readReadableQuestion(_pointer(_at(p, 32)));
+    values["question"] = readQuestionDocument(_pointer(_at(p, 32)));
     values["question_sources"] =
         _list(_at(p, 40), 8, (p) => readQuestionSource(_pointer(p)));
     values["reads"] = _text(_at(p, 56));
@@ -1695,7 +1695,7 @@ final class _NativePacketReader {
     values["method"] = readRelationMethod(_pointer(_at(p, 8)));
     values["observations"] =
         _list(_at(p, 16), 8, (p) => readObservation(_pointer(p)));
-    values["question"] = readReadableQuestion(_pointer(_at(p, 32)));
+    values["question"] = readQuestionDocument(_pointer(_at(p, 32)));
     values["question_sources"] =
         _list(_at(p, 40), 8, (p) => readQuestionSource(_pointer(p)));
     values["reads"] = _text(_at(p, 56));
@@ -1798,7 +1798,7 @@ final class _NativePacketReader {
       values["position"] = _u32(_at(p, 112)) == 1
           ? null
           : readPosition(_pointer(_at(_at(p, 112), 8)));
-    values["question"] = readRecognitionQuestionInfo(_pointer(_at(p, 128)));
+    values["question"] = readRecognizeQuestionDocument(_pointer(_at(p, 128)));
     values["schema"] = readVersion(_pointer(_at(p, 136)));
     if (_u32(_at(p, 144)) != 0)
       values["source"] = _u32(_at(p, 144)) == 1
@@ -1853,7 +1853,7 @@ final class _NativePacketReader {
     return values;
   }
 
-  static Object? readRecognitionQuestionInfo(Pointer<Void> p) {
+  static Object? readRecognizeQuestionDocument(Pointer<Void> p) {
     final values = _extensions(_at(p, 328));
     if (_u32(_at(p, 0)) != 0)
       values["batch"] =
@@ -2101,7 +2101,7 @@ final class _NativePacketReader {
     values["failure_id"] = readFailureId(_pointer(_at(p, 8)));
     values["observations"] =
         _list(_at(p, 16), 8, (p) => readObservation(_pointer(p)));
-    values["question"] = readReadableQuestion(_pointer(_at(p, 32)));
+    values["question"] = readQuestionDocument(_pointer(_at(p, 32)));
     values["question_sources"] =
         _list(_at(p, 40), 8, (p) => readQuestionSource(_pointer(p)));
     values["request"] = _text(_at(p, 56));
@@ -2122,7 +2122,7 @@ final class _NativePacketReader {
     values["answer_id"] = readAnswerId(_pointer(_at(p, 8)));
     values["observations"] =
         _list(_at(p, 16), 8, (p) => readObservation(_pointer(p)));
-    values["question"] = readReadableQuestion(_pointer(_at(p, 32)));
+    values["question"] = readQuestionDocument(_pointer(_at(p, 32)));
     values["question_sources"] =
         _list(_at(p, 40), 8, (p) => readQuestionSource(_pointer(p)));
     values["request"] = _text(_at(p, 56));
@@ -2173,7 +2173,7 @@ final class _NativePacketReader {
       values["position"] = _u32(_at(p, 120)) == 1
           ? null
           : readPosition(_pointer(_at(_at(p, 120), 8)));
-    values["question"] = readFindQuestionInfo(_pointer(_at(p, 136)));
+    values["question"] = readFindQuestionDocument(_pointer(_at(p, 136)));
     values["schema"] = readVersion(_pointer(_at(p, 144)));
     if (_u32(_at(p, 152)) != 0)
       values["threshold"] =
@@ -2184,7 +2184,7 @@ final class _NativePacketReader {
     return values;
   }
 
-  static Object? readFindQuestionInfo(Pointer<Void> p) {
+  static Object? readFindQuestionDocument(Pointer<Void> p) {
     final values = _extensions(_at(p, 216));
     if (_u32(_at(p, 0)) != 0)
       values["batch"] =
@@ -2282,7 +2282,7 @@ final class _NativePacketReader {
           ? null
           : _list(_at(_at(p, 72), 8), 8, (p) => readRankMember(_pointer(p)));
     values["meta"] = readMeta(_pointer(_at(p, 96)));
-    values["question"] = readReadableQuestion(_pointer(_at(p, 104)));
+    values["question"] = readQuestionDocument(_pointer(_at(p, 104)));
     if (_u32(_at(p, 112)) != 0)
       values["question_name"] =
           _u32(_at(p, 112)) == 1 ? null : _text(_at(_at(p, 112), 8));
@@ -2315,7 +2315,7 @@ final class _NativePacketReader {
           ? null
           : _list(_at(_at(p, 16), 8), 8, (p) => readImage(_pointer(p)));
     values["meta"] = readMeta(_pointer(_at(p, 40)));
-    values["question"] = readReadableQuestion(_pointer(_at(p, 48)));
+    values["question"] = readQuestionDocument(_pointer(_at(p, 48)));
     values["schema"] = readVersion(_pointer(_at(p, 56)));
     if (_u32(_at(p, 64)) != 0)
       values["source"] = _u32(_at(p, 64)) == 1
@@ -2373,7 +2373,7 @@ final class _NativePacketReader {
           ? null
           : _list(_at(_at(p, 72), 8), 8, (p) => readRankMember(_pointer(p)));
     values["meta"] = readMeta(_pointer(_at(p, 96)));
-    values["question"] = readReadableQuestion(_pointer(_at(p, 104)));
+    values["question"] = readQuestionDocument(_pointer(_at(p, 104)));
     if (_u32(_at(p, 112)) != 0)
       values["question_name"] =
           _u32(_at(p, 112)) == 1 ? null : _text(_at(_at(p, 112), 8));
@@ -2417,7 +2417,7 @@ final class _NativePacketReader {
           ? null
           : _list(_at(_at(p, 72), 8), 8, (p) => readRankMember(_pointer(p)));
     values["meta"] = readMeta(_pointer(_at(p, 96)));
-    values["question"] = readReadableQuestion(_pointer(_at(p, 104)));
+    values["question"] = readQuestionDocument(_pointer(_at(p, 104)));
     if (_u32(_at(p, 112)) != 0)
       values["question_name"] =
           _u32(_at(p, 112)) == 1 ? null : _text(_at(_at(p, 112), 8));
@@ -2461,7 +2461,7 @@ final class _NativePacketReader {
           ? null
           : _list(_at(_at(p, 72), 8), 8, (p) => readRankMember(_pointer(p)));
     values["meta"] = readMeta(_pointer(_at(p, 96)));
-    values["question"] = readReadableQuestion(_pointer(_at(p, 104)));
+    values["question"] = readQuestionDocument(_pointer(_at(p, 104)));
     if (_u32(_at(p, 112)) != 0)
       values["question_name"] =
           _u32(_at(p, 112)) == 1 ? null : _text(_at(_at(p, 112), 8));
@@ -2506,7 +2506,7 @@ final class _NativePacketReader {
           ? null
           : _list(_at(_at(p, 72), 8), 8, (p) => readRankMember(_pointer(p)));
     values["meta"] = readMeta(_pointer(_at(p, 96)));
-    values["question"] = readReadableQuestion(_pointer(_at(p, 104)));
+    values["question"] = readQuestionDocument(_pointer(_at(p, 104)));
     if (_u32(_at(p, 112)) != 0)
       values["question_name"] =
           _u32(_at(p, 112)) == 1 ? null : _text(_at(_at(p, 112), 8));
@@ -2553,7 +2553,7 @@ final class _NativePacketReader {
           ? null
           : _list(_at(_at(p, 72), 8), 8, (p) => readRankMember(_pointer(p)));
     values["meta"] = readMeta(_pointer(_at(p, 96)));
-    values["question"] = readReadableQuestion(_pointer(_at(p, 104)));
+    values["question"] = readQuestionDocument(_pointer(_at(p, 104)));
     if (_u32(_at(p, 112)) != 0)
       values["question_name"] =
           _u32(_at(p, 112)) == 1 ? null : _text(_at(_at(p, 112), 8));
