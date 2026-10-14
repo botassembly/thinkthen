@@ -107,8 +107,10 @@ module ThinkThen
       source[:framing] = framing unless framing.nil?
       Source.send(:new, source)
     end
-    def self.item(value, **fields)
-      Item.send(:new, {original: original(value), **fields})
+    ITEM_UNSET = Object.new.freeze
+    private_constant :ITEM_UNSET
+    def self.item(value = ITEM_UNSET, **fields)
+      Item.send(:new, value.equal?(ITEM_UNSET) ? fields : {original: original(value), **fields})
     end
     def self.dump(value)
       JSON.generate(value)

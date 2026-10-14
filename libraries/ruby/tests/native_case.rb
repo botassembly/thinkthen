@@ -23,10 +23,14 @@ begin
     ThinkThen::Client.files(source.fetch("paths"), framing: source["framing"], media: source.fetch("media", "text"), **source.fetch("reading", {}).transform_keys(&:to_sym))
   else
     input.fetch("items").map do |item|
-      original = item.fetch("original")
-      value = original.fetch(original.fetch("kind") == "text" ? "text" : "value")
       fields = item.reject { |key, _| key == "original" }.transform_keys(&:to_sym)
-      ThinkThen::Client.item(value, **fields)
+      if item.key?("original")
+        original = item.fetch("original")
+        value = original.fetch(original.fetch("kind") == "text" ? "text" : "value")
+        ThinkThen::Client.item(value, **fields)
+      else
+        ThinkThen::Client.item(**fields)
+      end
     end
   end
   input = input.first if doc["call_result_contract"] && input.is_a?(Array)

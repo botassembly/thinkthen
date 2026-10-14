@@ -138,7 +138,7 @@ def render(definitions, name):
               f'    def start: (String verb, {args}, ?cancel: Cancel?, {options}) {{ (Client::Operation operation) -> untyped }} -> untyped',
               f'             | (String verb, {args}, ?cancel: Cancel?, {options}) -> Client::Operation',
               f'    def self.files: (String | Array[String] paths, ?framing: {request_type("RequestFraming")} | nil, ?media: {request_type("ReaderMedia")}, {reading}) -> Client::Source',
-              f'    def self.item: (untyped value, {fields}) -> Client::Item', f'    def self.choose_question: ({request_type("Authored_questionText")} text, options: {request_type("Authored_options")}) -> {request_type("Authored_choose")}',
+              f'    def self.item: (?untyped value, {fields}) -> Client::Item', f'    def self.choose_question: ({request_type("Authored_questionText")} text, options: {request_type("Authored_options")}) -> {request_type("Authored_choose")}',
               f'    def self.relation: (String name, {keywords("Authored_relation", ("name",))}) -> {request_type("Authored_relation")}',
               f'    def self.relate_question: (relations: Array[{request_type("Authored_relation")}], ?fields: {{ name: String, kind: String }}?) -> {request_type("Authored_relate")}',
               f'    def self.recognize_question: (kinds: {schema_type(recognition_fields["kinds"], request_type, objects=True)}, {recognition_keywords}) -> ({schema_type(recognition, request_type, objects=True)})', '  end']
