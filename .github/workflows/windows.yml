@@ -7,6 +7,10 @@ name: windows
 on:
   workflow_dispatch:
     inputs:
+      candidate_sha:
+        description: Exact candidate commit for Windows qualification
+        type: string
+        required: true
       lane:
         description: Run Windows core checks or the DuckDB community build
         type: choice
@@ -43,6 +47,10 @@ jobs:
         uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
         with:
           persist-credentials: false
+
+      - name: Require the exact candidate commit
+        env: {CANDIDATE_SHA: "${{ inputs.candidate_sha }}", DISPATCH_SHA: "${{ github.sha }}"}
+        run: python3 sdlc/scripts/hosted-candidate.py checkout "$CANDIDATE_SHA" "$DISPATCH_SHA"
 
       - name: Install the toolchain that rust-toolchain.toml pins
         run: rustup show active-toolchain || rustup toolchain install

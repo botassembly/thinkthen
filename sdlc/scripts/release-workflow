@@ -141,6 +141,25 @@ linux-work)
 		printf '%s\n' "$2"
 	fi
 	;;
+apple-check)
+	[ "$#" = 5 ] || fail 'apple-check TARGET DIR swift|objective-c SHA'
+	case $(uname -s):$(uname -m):$2 in
+	Darwin:arm64:aarch64-apple-darwin | Darwin:x86_64:x86_64-apple-darwin) ;;
+	*) fail 'Apple installed check requires its matching macOS host' ;;
+	esac
+	case $4 in swift | objective-c) ;; *) fail 'select exactly one Apple language' ;; esac
+	python3 sdlc/scripts/hosted-candidate.py checkout "$5" "$5"
+	archive=$3/thinkthen-$4-$version-$2.tar.gz
+	(cd "$3" && sha256 -c "${archive##*/}.sha256") || fail 'Apple package checksum differs'
+	tar -xOzf "$archive" ./THINKTHEN-PACKAGE-INPUTS |
+		grep -Fxq "source_commit=$5" || fail 'Apple package source differs from candidate SHA'
+	THINKTHEN_ARTIFACT=$(CDPATH='' cd -- "$3" && pwd)/${archive##*/}
+	export THINKTHEN_ARTIFACT
+	# Only a completed check qualifies. A missing tool or package (77) fails.
+	sh "libraries/$4/check.sh" && code=0 || code=$?
+	. sdlc/scripts/verdict.sh
+	verdict release "libraries/$4" "$code"
+	;;
 source-capture)
 	[ "$#" = 3 ] || fail 'source-capture PROVENANCE_DIR SHA'
 	[ "$3" = "$(git rev-parse HEAD)" ] || fail 'checkout differs from resolved SHA'
