@@ -42,7 +42,7 @@ def main():
             checks = [
                 ('decide', 'Fits?', record, True, .9, 1),
                 ('choose', '{"choose":"Which?","options":["billing","shipping"]}', record, 'billing', .9, 1),
-                ('tag', '{"tag":"Which?","labels":["billing","shipping"]}', record, ['billing', 'shipping'], None, 2),
+                ('tag', '{"tag":"Which?","labels":["billing","shipping"]}', record, ['billing', 'shipping'], None, 1),
                 ('score', '{"score":"How much?","levels":["low","high"]}', record, .1, None, 1),
                 ('filter', 'Fits?', record, 'Alpha.', .9, 1),
                 ('rank', '{"decide":"Fits?"}', record, 1, .9, 1),
@@ -83,7 +83,7 @@ def main():
             with ConditionalBackend(f'http://127.0.0.1:{backend.port}/arm/full/capture/v1') as proxy:
                 host.start({**env, 'THINKTHEN_BASE_URL': proxy.base})
                 failed = "thinkthen_record(text=>'private evidence')"
-                got = rows("SELECT to_jsonb(r) FROM thinkthen_decide_details('Fits?',ARRAY[" + record + "," + failed + "," + record + "]) r", 2)
+                got = rows("SELECT to_jsonb(r) FROM thinkthen_decide_details('Fits?',ARRAY[" + record + "," + failed + ",thinkthen_record(text=>'Beta.')]) r", 2)
                 assert proxy.count() == 3, got
                 assert [r['ordinal'] for r in got] == [0, 1, 2], got
                 assert [r['value'] for r in got] == [True, None, True], got
@@ -96,6 +96,14 @@ def main():
             source = "ROW('caller-read.txt',1,1)::thinkthen_source"
             got = rows("SELECT to_jsonb(r) FROM thinkthen_decide_details('Fits?',ARRAY[thinkthen_record(text=>'Alpha.',source=>" + source + ")]) r", 1)
             assert got[0]['result']['source']['file'] == 'caller-read.txt', got
+            nullable = rows("SELECT to_jsonb(r) FROM thinkthen_decide_details('Fits?',ARRAY[thinkthen_record(value=>'null'::json)]) r", 1)
+            assert nullable[0]['result']['input'] is None and nullable[0]['result']['input_present'] is True, nullable
+            selected = "thinkthen_record(value=>'{\"body\":\"Alpha.\",\"private\":\"not submitted\"}'::json,context=>'')"
+            declared = quoted(json.dumps({'decide': 'Fits?', 'item_schema': {'type': 'string'}}))
+            located = rows("SELECT to_jsonb(r) FROM thinkthen_decide_details(" + declared + ",ARRAY[" + selected + "],thinkthen_reading(field=>ARRAY['/body'],context=>'Saved fallback.')) r", 1)
+            assert located[0]['result']['input']['private'] == 'not submitted', located
+            wire = json.loads(json.loads(backend.read('capture'))['bodies'][-1])
+            assert 'not submitted' not in json.dumps(wire) and 'Saved fallback.' not in json.dumps(wire), wire
             assert query("SELECT count(*) FROM thinkthen_decide_details(NULL,ARRAY[NULL]::thinkthen_record[],thinkthen_reading(batch=>'bad'))") == '0'
             assert query("SELECT count(*) FROM thinkthen_decide_details('@not-read',NULL::thinkthen_record[],thinkthen_reading(batch=>'bad'))") == '0'
             assert query("SELECT count(*) FROM pg_proc WHERE proname IN ('thinkthen_details','thinkthen_try_details','thinkthen_details_images') OR proname LIKE 'thinkthen_%_complete' OR proname LIKE 'thinkthen_native_records_%'") == '0'

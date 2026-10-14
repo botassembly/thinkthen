@@ -77,20 +77,14 @@ CREATE TYPE thinkthen_plan AS ("estimated_bytes" numeric, "estimated_input_token
 CREATE TYPE thinkthen_input_budget_denial AS ("kind" text, "last_status" bigint, "limit" numeric);
 CREATE TYPE thinkthen_send_budget_denial AS ("kind" text, "last_status" bigint);
 CREATE TYPE thinkthen_stopped AS ("at" numeric, "cause" text, "retryable" boolean, "status" bigint);
-CREATE TYPE thinkthen_error AS ("estimated_input_denial" thinkthen_input_budget_denial, "kind" text, "message" text, "retryable" boolean, "send_budget_denial" thinkthen_send_budget_denial, "stopped" thinkthen_stopped);
+CREATE TYPE thinkthen_error AS ("cause" text, "estimated_input_denial" thinkthen_input_budget_denial, "kind" text, "message" text, "retryable" boolean, "send_budget_denial" thinkthen_send_budget_denial, "stopped" thinkthen_stopped);
 CREATE TYPE thinkthen_observed_probability AS ("name" text, "probability" double precision);
 CREATE TYPE thinkthen_probability_values AS ("array_value" thinkthen_observed_probability[], "number_value" double precision);
 CREATE TYPE thinkthen_probability_distribution AS ("kind" text, "value" thinkthen_probability_values);
 CREATE TYPE thinkthen_reported_usage AS ("input_tokens" numeric, "output_tokens" numeric);
 CREATE TYPE thinkthen_question_detail AS ("answer_id" text, "cached" boolean, "confidence" double precision, "failed_questions" numeric, "failure" thinkthen_failure, "failure_id" text, "input" jsonb, "input_present" boolean, "input_source" thinkthen_source_location, "input_sources" thinkthen_indexed_source[], "inputs" jsonb[], "model" text, "observations" thinkthen_observation[], "probabilities" thinkthen_probability_distribution, "question" thinkthen_question, "question_sha256" text, "question_sources" thinkthen_question_source[], "raw_pick" text, "reported_usage" thinkthen_reported_usage, "requests" text[], "requests_sent" numeric, "threshold" thinkthen_threshold, "url" text, "usage" thinkthen_token_usage, "value" thinkthen_answer_value);
 CREATE TYPE thinkthen_observed_input AS ("images" thinkthen_image[], "input" jsonb, "input_present" boolean, "source" thinkthen_source_location);
-CREATE TYPE thinkthen_judgment_value AS ("array_value" text[], "boolean_value" boolean, "number_value" double precision, "object_value" thinkthen_failure, "string_value" text);
-CREATE TYPE thinkthen_judgment AS ("kind" text, "value" thinkthen_judgment_value);
-CREATE TYPE thinkthen_observed_member AS ("either" boolean, "name" text, "probability" double precision, "relation" text, "source" thinkthen_relation_endpoint, "target" thinkthen_relation_endpoint, "value" thinkthen_judgment);
-CREATE TYPE thinkthen_observed_record AS ("entities" thinkthen_entity[], "kind" text, "mode" text, "proposals" thinkthen_boundary_proposal[], "relations" thinkthen_entity_edge[], "value" thinkthen_answer_value);
-CREATE TYPE thinkthen_observed_value AS ("array_value" thinkthen_observed_member[], "integer_value" numeric, "object_value" thinkthen_observed_record);
-CREATE TYPE thinkthen_observed_row AS ("kind" text, "value" thinkthen_observed_value);
-CREATE TYPE thinkthen_event AS ("detail" thinkthen_question_detail, "index" numeric, "inputs" thinkthen_observed_input[], "kind" text, "member" text, "position" numeric, "stage" text, "value" thinkthen_observed_row);
+CREATE TYPE thinkthen_event AS ("detail" thinkthen_question_detail, "index" numeric, "inputs" thinkthen_observed_input[], "kind" text, "member" text, "position" numeric, "stage" text, "value" jsonb, "value_present" boolean);
 "#,
     name = "native_generated_types"
 );
@@ -4975,6 +4969,13 @@ pub(super) fn convert(
         }
         "thinkthen_error" => {
             let mut tuple = super::output::tuple(kind);
+            let held = value.get("cause");
+            let converted: Option<String> = held.and_then(Value::as_str).map(str::to_owned);
+            if let Some(converted) = converted {
+                tuple
+                    .set_by_name("cause", converted)
+                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
+            }
             let held = value.get("estimated_input_denial");
             let converted: Option<PgHeapTuple<'static, AllocatedByRust>> = held
                 .filter(|value| !value.is_null())
@@ -5434,299 +5435,6 @@ pub(super) fn convert(
             }
             Ok(tuple)
         }
-        "thinkthen_judgment_value" => {
-            let mut tuple = super::output::tuple(kind);
-            let held = Some(value);
-            let converted: Option<Vec<Option<String>>> = held
-                .and_then(Value::as_array)
-                .map(|values| {
-                    values
-                        .iter()
-                        .map(|value| Ok(Some(value).and_then(Value::as_str).map(str::to_owned)))
-                        .collect::<Result<Vec<_>, thinkthen::Error>>()
-                })
-                .transpose()?;
-            if let Some(converted) = converted {
-                tuple
-                    .set_by_name("array_value", converted)
-                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
-            }
-            let held = Some(value);
-            let converted: Option<bool> = held.and_then(Value::as_bool);
-            if let Some(converted) = converted {
-                tuple
-                    .set_by_name("boolean_value", converted)
-                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
-            }
-            let held = Some(value);
-            let converted: Option<f64> = held.and_then(Value::as_f64);
-            if let Some(converted) = converted {
-                tuple
-                    .set_by_name("number_value", converted)
-                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
-            }
-            let held = Some(value);
-            let converted: Option<PgHeapTuple<'static, AllocatedByRust>> = held
-                .filter(|value| !value.is_null())
-                .map(|value| convert("thinkthen_failure", value))
-                .transpose()?;
-            if let Some(converted) = converted {
-                tuple
-                    .set_by_name("object_value", converted)
-                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
-            }
-            let held = Some(value);
-            let converted: Option<String> = held.and_then(Value::as_str).map(str::to_owned);
-            if let Some(converted) = converted {
-                tuple
-                    .set_by_name("string_value", converted)
-                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
-            }
-            Ok(tuple)
-        }
-        "thinkthen_judgment" => {
-            let mut tuple = super::output::tuple(kind);
-            let held = value.get("kind");
-            let converted: Option<String> = held.and_then(Value::as_str).map(str::to_owned);
-            if let Some(converted) = converted {
-                tuple
-                    .set_by_name("kind", converted)
-                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
-            }
-            let held = value.get("value");
-            let converted: Option<PgHeapTuple<'static, AllocatedByRust>> = held
-                .map(|value| convert("thinkthen_judgment_value", value))
-                .transpose()?;
-            if let Some(converted) = converted {
-                tuple
-                    .set_by_name("value", converted)
-                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
-            }
-            Ok(tuple)
-        }
-        "thinkthen_observed_member" => {
-            let mut tuple = super::output::tuple(kind);
-            let held = value.get("either");
-            let converted: Option<bool> = held.and_then(Value::as_bool);
-            if let Some(converted) = converted {
-                tuple
-                    .set_by_name("either", converted)
-                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
-            }
-            let held = value.get("name");
-            let converted: Option<String> = held.and_then(Value::as_str).map(str::to_owned);
-            if let Some(converted) = converted {
-                tuple
-                    .set_by_name("name", converted)
-                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
-            }
-            let held = value.get("probability");
-            let converted: Option<f64> = held.and_then(Value::as_f64);
-            if let Some(converted) = converted {
-                tuple
-                    .set_by_name("probability", converted)
-                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
-            }
-            let held = value.get("relation");
-            let converted: Option<String> = held.and_then(Value::as_str).map(str::to_owned);
-            if let Some(converted) = converted {
-                tuple
-                    .set_by_name("relation", converted)
-                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
-            }
-            let held = value.get("source");
-            let converted: Option<PgHeapTuple<'static, AllocatedByRust>> = held
-                .filter(|value| !value.is_null())
-                .map(|value| convert("thinkthen_relation_endpoint", value))
-                .transpose()?;
-            if let Some(converted) = converted {
-                tuple
-                    .set_by_name("source", converted)
-                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
-            }
-            let held = value.get("target");
-            let converted: Option<PgHeapTuple<'static, AllocatedByRust>> = held
-                .filter(|value| !value.is_null())
-                .map(|value| convert("thinkthen_relation_endpoint", value))
-                .transpose()?;
-            if let Some(converted) = converted {
-                tuple
-                    .set_by_name("target", converted)
-                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
-            }
-            let held = value.get("value");
-            let converted: Option<PgHeapTuple<'static, AllocatedByRust>> = held
-                .filter(|value| !value.is_null())
-                .map(|value| convert("thinkthen_judgment", value))
-                .transpose()?;
-            if let Some(converted) = converted {
-                tuple
-                    .set_by_name("value", converted)
-                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
-            }
-            Ok(tuple)
-        }
-        "thinkthen_observed_record" => {
-            let mut tuple = super::output::tuple(kind);
-            let held = value.get("entities");
-            let converted: Option<Array<'static, PgHeapTuple<'static, AllocatedByRust>>> = held
-                .and_then(Value::as_array)
-                .map(|values| {
-                    crate::ffi::composite_array(
-                        "thinkthen_entity",
-                        values
-                            .iter()
-                            .map(|value| {
-                                Some(value)
-                                    .filter(|value| !value.is_null())
-                                    .map(|value| convert("thinkthen_entity", value))
-                                    .transpose()
-                            })
-                            .collect::<Result<Vec<_>, thinkthen::Error>>()?,
-                    )
-                })
-                .transpose()?;
-            if let Some(converted) = converted {
-                tuple
-                    .set_by_name("entities", converted)
-                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
-            }
-            let held = value.get("kind");
-            let converted: Option<String> = held.and_then(Value::as_str).map(str::to_owned);
-            if let Some(converted) = converted {
-                tuple
-                    .set_by_name("kind", converted)
-                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
-            }
-            let held = value.get("mode");
-            let converted: Option<String> = held.and_then(Value::as_str).map(str::to_owned);
-            if let Some(converted) = converted {
-                tuple
-                    .set_by_name("mode", converted)
-                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
-            }
-            let held = value.get("proposals");
-            let converted: Option<Array<'static, PgHeapTuple<'static, AllocatedByRust>>> = held
-                .and_then(Value::as_array)
-                .map(|values| {
-                    crate::ffi::composite_array(
-                        "thinkthen_boundary_proposal",
-                        values
-                            .iter()
-                            .map(|value| {
-                                Some(value)
-                                    .filter(|value| !value.is_null())
-                                    .map(|value| convert("thinkthen_boundary_proposal", value))
-                                    .transpose()
-                            })
-                            .collect::<Result<Vec<_>, thinkthen::Error>>()?,
-                    )
-                })
-                .transpose()?;
-            if let Some(converted) = converted {
-                tuple
-                    .set_by_name("proposals", converted)
-                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
-            }
-            let held = value.get("relations");
-            let converted: Option<Array<'static, PgHeapTuple<'static, AllocatedByRust>>> = held
-                .and_then(Value::as_array)
-                .map(|values| {
-                    crate::ffi::composite_array(
-                        "thinkthen_entity_edge",
-                        values
-                            .iter()
-                            .map(|value| {
-                                Some(value)
-                                    .filter(|value| !value.is_null())
-                                    .map(|value| convert("thinkthen_entity_edge", value))
-                                    .transpose()
-                            })
-                            .collect::<Result<Vec<_>, thinkthen::Error>>()?,
-                    )
-                })
-                .transpose()?;
-            if let Some(converted) = converted {
-                tuple
-                    .set_by_name("relations", converted)
-                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
-            }
-            let held = value.get("value");
-            let converted: Option<PgHeapTuple<'static, AllocatedByRust>> = held
-                .map(|value| convert("thinkthen_answer_value", value))
-                .transpose()?;
-            if let Some(converted) = converted {
-                tuple
-                    .set_by_name("value", converted)
-                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
-            }
-            Ok(tuple)
-        }
-        "thinkthen_observed_value" => {
-            let mut tuple = super::output::tuple(kind);
-            let held = Some(value);
-            let converted: Option<Array<'static, PgHeapTuple<'static, AllocatedByRust>>> = held
-                .and_then(Value::as_array)
-                .map(|values| {
-                    crate::ffi::composite_array(
-                        "thinkthen_observed_member",
-                        values
-                            .iter()
-                            .map(|value| {
-                                Some(value)
-                                    .filter(|value| !value.is_null())
-                                    .map(|value| convert("thinkthen_observed_member", value))
-                                    .transpose()
-                            })
-                            .collect::<Result<Vec<_>, thinkthen::Error>>()?,
-                    )
-                })
-                .transpose()?;
-            if let Some(converted) = converted {
-                tuple
-                    .set_by_name("array_value", converted)
-                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
-            }
-            let held = Some(value);
-            let converted: Option<pgrx::AnyNumeric> =
-                held.and_then(Value::as_u64).map(pgrx::AnyNumeric::from);
-            if let Some(converted) = converted {
-                tuple
-                    .set_by_name("integer_value", converted)
-                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
-            }
-            let held = Some(value);
-            let converted: Option<PgHeapTuple<'static, AllocatedByRust>> = held
-                .filter(|value| !value.is_null())
-                .map(|value| convert("thinkthen_observed_record", value))
-                .transpose()?;
-            if let Some(converted) = converted {
-                tuple
-                    .set_by_name("object_value", converted)
-                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
-            }
-            Ok(tuple)
-        }
-        "thinkthen_observed_row" => {
-            let mut tuple = super::output::tuple(kind);
-            let held = value.get("kind");
-            let converted: Option<String> = held.and_then(Value::as_str).map(str::to_owned);
-            if let Some(converted) = converted {
-                tuple
-                    .set_by_name("kind", converted)
-                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
-            }
-            let held = value.get("value");
-            let converted: Option<PgHeapTuple<'static, AllocatedByRust>> = held
-                .map(|value| convert("thinkthen_observed_value", value))
-                .transpose()?;
-            if let Some(converted) = converted {
-                tuple
-                    .set_by_name("value", converted)
-                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
-            }
-            Ok(tuple)
-        }
         "thinkthen_event" => {
             let mut tuple = super::output::tuple(kind);
             let held = value.get("detail");
@@ -5800,10 +5508,11 @@ pub(super) fn convert(
                     .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
             }
             let held = value.get("value");
-            let converted: Option<PgHeapTuple<'static, AllocatedByRust>> = held
-                .filter(|value| !value.is_null())
-                .map(|value| convert("thinkthen_observed_row", value))
-                .transpose()?;
+            tuple
+                .set_by_name("value_present", held.is_some())
+                .map_err(|_| crate::call::defect("generated result presence is unavailable"))?;
+            let converted: Option<pgrx::datum::JsonB> =
+                held.map(|value| pgrx::datum::JsonB(value.clone()));
             if let Some(converted) = converted {
                 tuple
                     .set_by_name("value", converted)

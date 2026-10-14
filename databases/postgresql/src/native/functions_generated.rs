@@ -417,13 +417,7 @@ crate::descriptions::describe! {
 [name = "thinkthen_annotate_details", parallel_restricted, requires = ["native_record_types", "native_reading_type", "native_result_types", "native_generated_types"]];
 #[allow(clippy::type_complexity, clippy::too_many_arguments, reason = "pgrx reads named SQL arguments and columns from the signature")]
 fn annotate_plain(
-    set: Option<&str>, input: Option<&str>,
-                    settings: default!(Option<crate::ffi::RawJson>, "NULL"),
-                    threshold: default!(Option<&str>, "NULL"),
-                    context: default!(Option<&str>, "NULL"),
-                    model: default!(Option<&str>, "NULL"),
-                    batch: default!(Option<&str>, "NULL"),
-                    deadline_ms: default!(Option<i64>, "NULL"),
+    set: Option<&str>, input: Option<&str>, settings: default!(Option<crate::ffi::RawJson>, "NULL"),
 ) -> TableIterator<'static, (name!(ordinal, Option<i64>), name!(value, Option<JsonB>),
             name!(probability, Option<f64>),
             name!(result, Option<pgrx::composite_type!('static, "thinkthen_annotation")>),
@@ -434,7 +428,7 @@ fn annotate_plain(
         let (Some(question), Some(input)) = (set, input) else {
             return TableIterator::new(Vec::new());
         };
-        let rows = super::row_values(super::execute_plain("annotate", question, input, None, settings, crate::forms::Named::new(threshold, context, model, batch, deadline_ms)));
+        let rows = super::row_values(super::plain::annotate(question, input, settings));
         TableIterator::new(rows.into_iter().map(|row| {
             let value = row.get("value");
             (row.get("ordinal").and_then(Value::as_i64), value.filter(|v| !v.is_null()).cloned().map(JsonB), row.get("probability").and_then(Value::as_f64),

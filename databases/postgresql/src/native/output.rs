@@ -47,7 +47,14 @@ pub(super) fn events(values: &[serde_json::Value]) -> crate::ffi::EventArray {
     let values = values
         .iter()
         .map(|value| {
-            let value = value.get("value").unwrap_or(value);
+            let value = if matches!(
+                value.get("kind").and_then(serde_json::Value::as_str),
+                Some("question" | "row")
+            ) {
+                value
+            } else {
+                value.get("value").unwrap_or(value)
+            };
             Some(super::results_generated::convert("thinkthen_event", value).or_raise())
         })
         .collect();

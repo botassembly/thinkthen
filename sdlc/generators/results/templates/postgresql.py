@@ -1,4 +1,5 @@
 """Native PostgreSQL composites and projections from the canonical result schema."""
+import copy
 import json
 import re
 
@@ -301,7 +302,10 @@ def render_functions():
                 operand = 'input'
                 member_argument = 'members' if members else 'None'
                 execute = f'super::execute_plain("{verb}", question, input, {member_argument}, settings, crate::forms::Named::new(threshold, context, model, batch, deadline_ms))'
-            if form == 'plain' and verb in ('rank', 'filter'):
+            if form == 'plain' and verb == 'annotate':
+                parameters = 'input: Option<&str>, settings: default!(Option<crate::ffi::RawJson>, "NULL"),'
+                execute = 'super::plain::annotate(question, input, settings)'
+            elif form == 'plain' and verb in ('rank', 'filter'):
                 parameters = 'input: Option<JsonB>, settings: default!(Option<crate::ffi::RawJson>, "NULL"),'
                 execute = f'super::plain::keyed("{verb}", question, input, settings)'
             elif form == 'plain' and verb == 'find':
@@ -352,6 +356,22 @@ fn {verb}_{form}(
 ''')
     return '\n'.join(result)
 
+def sql_schema(schema):
+    """Project SQL observations and row causes without changing native packet schemas."""
+    schema = copy.deepcopy(schema)
+    definitions = schema['$defs']
+    definitions['postgresqlObservedInput'] = {'type': 'object', 'properties': {
+        'input': True, 'source': {'$ref': '#/$defs/completePhysicalSource'},
+        'images': {'type': 'array', 'items': {'$ref': '#/$defs/completeImage'}}},
+        'required': ['input', 'images']}
+    observations = definitions['completesessionObservation']['oneOf']
+    observations[0]['properties']['inputs'] = {
+        'type': 'array', 'items': {'$ref': '#/$defs/postgresqlObservedInput'}}
+    observations[1]['properties']['value'] = True
+    definitions['completeError']['properties']['cause'] = {'$ref': '#/$defs/completefailureCause'}
+    return schema
+
+
 def main():
     import argparse
     from pathlib import Path
@@ -365,13 +385,7 @@ def main():
     sys.path.insert(0, str(root / 'conformance/children'))
     from children import CARGO, child_env
     schema = json.loads((root / 'crates/thinkthen/src/public/results/complete.schema.json').read_text())
-    # Generic original-value serialization omits ancillary image metadata. SQL
-    # retains real native detail.inputs() metadata in the existing observation.
-    schema['$defs']['postgresqlObservedInput'] = {'type': 'object', 'properties': {
-        'input': True, 'source': {'$ref': '#/$defs/completePhysicalSource'},
-        'images': {'type': 'array', 'items': {'$ref': '#/$defs/completeImage'}}}, 'required': ['input', 'images']}
-    schema['$defs']['completesessionObservation']['oneOf'][0]['properties']['inputs'] = {
-        'type': 'array', 'items': {'$ref': '#/$defs/postgresqlObservedInput'}}
+    schema = sql_schema(schema)
     outputs = {'results_generated.rs': render(schema), 'functions_generated.rs': render_functions()}
     for name, source in outputs.items():
         target = root / 'databases/postgresql/src/native' / name

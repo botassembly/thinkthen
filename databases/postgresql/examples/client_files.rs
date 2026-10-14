@@ -64,9 +64,9 @@ SELECT jsonb_agg(jsonb_build_object('id',s.id,'rank',r.rank,'probability',r.prob
  FROM thinkthen_rank('Which needs attention?', (SELECT jsonb_object_agg(id,record) FROM source_rows)) r
  JOIN source_rows s ON r.key=s.id::text;
 {rank_sends}
-WITH found AS (SELECT thinkthen_find('Which source?', (SELECT array_agg(record ORDER BY id) FROM source_rows)) AS value)
+WITH found AS (SELECT ordinal FROM thinkthen_find_details('Which source?', (SELECT array_agg(record ORDER BY id) FROM source_rows)))
  SELECT jsonb_build_object('id',s.id,'file',s.file,'record',s.record) FROM found
- JOIN source_rows s ON s.id=(value->>'index')::integer+1;
+ JOIN source_rows s ON s.id=ordinal+1;
 {find_sends}
 CREATE TEMP TABLE entity_rows AS SELECT row_number() OVER (ORDER BY s.id,n.start)::bigint AS id,
  s.id AS source_id,n.text,n.start,n.end FROM source_rows s,

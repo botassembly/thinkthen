@@ -187,3 +187,20 @@ pub(super) fn relate_spec(query: &str, spec: &str) -> Result<super::Execution, E
         call::read_result()?,
     )
 }
+
+pub(super) fn annotate(
+    set: &str,
+    input: &str,
+    settings: Option<crate::ffi::RawJson>,
+) -> Result<super::Execution, Error> {
+    let controls = crate::forms::aggregate_controls(settings.as_ref());
+    let set =
+        crate::files::Given::read(Some(set), "question set", call::file_directory().as_deref())?
+            .parse(thinkthen::QuestionSet::from_json)?;
+    run(
+        RequestFunction::Annotate,
+        set.into(),
+        vec![crate::request::document(input.to_owned())?],
+        controls,
+    )
+}

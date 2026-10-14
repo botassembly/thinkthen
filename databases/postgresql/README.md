@@ -231,11 +231,11 @@ PUBLIC execution is revoked by the extension default.
 
 ## Native records and readings
 
-Each function accepts an ordered `thinkthen_record[]` and an optional `thinkthen_reading` alongside its question. Construct both with named SQL arguments. The returned `value` has the function's ordinary SQL type. The `result`, `facts`, `failure` and `observations` columns carry typed complete readings and final call facts. Observations retain the actual input image and source metadata separately from the generic original-value serialization.
+Each details function accepts an ordered `thinkthen_record[]` and an optional `thinkthen_reading` alongside its question. Construct both with named SQL arguments. The returned `value` has the function's ordinary SQL type. The `result`, `facts`, `failure` and `observations` columns carry typed complete readings and final call facts. Observations retain the actual input image and source metadata separately from the generic original-value serialization.
 
 ```sql
 SELECT attention.value AS needs_attention, (attention.facts).requests_sent, (attention.result).answer_id
-FROM thinkthen_decide(
+FROM thinkthen_decide_details(
   'Does this need attention?',
   ARRAY[thinkthen_record(text => 'A short note.')],
   thinkthen_reading(threshold => '0.9', context => 'Use this policy note.')
@@ -246,7 +246,7 @@ Read a named choice from `value` and its confidence from the same typed receipt:
 
 ```sql
 SELECT ownership.value AS team, ((ownership.result).answer).confidence AS confidence
-FROM thinkthen_choose(
+FROM thinkthen_choose_details(
   'Which team owns this?',
   ARRAY[thinkthen_record(text => 'Please refund the duplicate charge.')],
   thinkthen_reading(options => ARRAY[
@@ -260,9 +260,9 @@ FROM thinkthen_choose(
 
 `thinkthen_record(value => 'null'::json)` holds authored JSON null. Omitting `value` leaves the original absent. The `context_value` argument accepts an object context. Typed option, image, seed and example arrays retain their order. Examples accept bracket text or explicit entity spans through `thinkthen_example` composites.
 
-Reading controls include ordered question options, levels and labels, typed context declarations, model, threshold, batch, deadline, send budget, recognition stages, projection pointers, ranking limits and file selection. `incremental => true` retains completed rows before a later record fails. The default admits the whole collection before sending. A failure row preserves the native error's kind, safe message, stop position and any final facts. A required NULL question or collection returns no rows before inspecting its partners.
+Reading controls include ordered question options, levels and labels, typed context declarations, model, threshold, batch, deadline, send budget, recognition stages, projection pointers, ranking limits and file selection. The whole collection is admitted before sending. Recoverable execution failures remain on their rows and later rows complete. A failure row preserves the native error's kind, safe message, stop position and any final facts. A required NULL question or collection returns no rows before inspecting its partners.
 
-Rank returns zero-based original indexes. Filter returns original authored values as `jsonb`; rejected records have a NULL `value` while their reading remains available. Read their plain arrays with `array_agg(value)` and `FILTER (WHERE value IS NOT NULL)`. Order rank's array by `(result).value` to retain ranking order.
+Rank exposes the one-based rank in `value` and the zero-based original index in `ordinal`. Filter returns original authored values as `jsonb`; rejected records have a NULL `value` while their reading remains available. Read their plain arrays with `array_agg(value)` and `FILTER (WHERE value IS NOT NULL)`. Order rank's array by `(result).value` to retain ranking order.
 
 For filter, `files_only => true` returns the first selected record from each physical file in input order. Each record needs a `thinkthen_source` location. Every record still contributes to the call's final facts. The default rejects any missing location before sending; incremental reading retains an already completed prefix.
 

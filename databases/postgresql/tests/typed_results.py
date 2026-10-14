@@ -121,7 +121,7 @@ def native(rows, verb):
     else:
         result['native']['value'] = values[0] if verb in ('find', 'relate') else values
     if verb == 'find' and rows and failure is None:
-        result['selection'] = values[0].get('answer', {}).get('selected')
+        result['selection'] = values[0].get('index')
     elif verb != 'relate':
         result['ordinals'] = [row['ordinal'] for row in completed if row.get('ordinal') is not None]
     Draft202012Validator(SCHEMA).validate(result['native'])

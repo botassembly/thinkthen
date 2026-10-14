@@ -83,7 +83,6 @@ pub(crate) fn details(
                     Ok(JudgmentRow {
                         value: $value(result),
                         probabilities: result.probabilities(),
-                        json: result.to_scalar_json()?,
                     })
                 })
                 .collect()
@@ -110,5 +109,4 @@ pub(crate) fn details(
 pub(crate) struct JudgmentRow {
     pub(crate) value: thinkthen::Judgment,
     pub(crate) probabilities: thinkthen::Probabilities,
-    pub(crate) json: String,
 }

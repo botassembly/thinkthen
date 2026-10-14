@@ -73,6 +73,12 @@ pub(super) fn execute(
     records: Array<'_, pgrx::composite_type!("thinkthen_record")>,
     reading: Option<pgrx::composite_type!("thinkthen_reading")>,
 ) -> Result<Execution, Error> {
+    let incremental = reading
+        .as_ref()
+        .map(|tuple| field::<bool>(tuple, "incremental"))
+        .transpose()?
+        .flatten()
+        .unwrap_or(false);
     let cancelled = reading
         .as_ref()
         .map(|tuple| field::<bool>(tuple, "cancelled"))
@@ -89,10 +95,39 @@ pub(super) fn execute(
     }
     let request = composed_request(&request)?;
     let records = input::deferred(records);
+    let image_inputs = records.iter().any(|record| {
+        record
+            .as_ref()
+            .is_ok_and(|record| !record.item.images.is_empty())
+    });
+    let records = if incremental {
+        records
+    } else {
+        records
+            .into_iter()
+            .collect::<Result<Vec<_>, _>>()?
+            .into_iter()
+            .map(Ok)
+            .collect()
+    };
     call::run_result(call::read_result()?, move |engine, controls| {
         let records = records
             .into_iter()
             .map(|record| input::compose(record?, &projection));
+        let records: Box<
+            dyn Iterator<Item = Result<thinkthen::RecordInput<thinkthen::QuestionInput>, Error>>,
+        > = if incremental {
+            Box::new(records)
+        } else {
+            Box::new(records.collect::<Result<Vec<_>, _>>()?.into_iter().map(Ok))
+        };
+        let feed = thinkthen::RequestFeed::from_records("postgresql", records);
+        let feed = if incremental { feed } else { feed.eager() };
+        let feed = if image_inputs {
+            feed.with_image_inputs()
+        } else {
+            feed
+        };
         let token = thinkthen::CancelToken::new();
         if cancelled {
             token.cancel();
@@ -102,11 +137,11 @@ pub(super) fn execute(
         } else {
             controls
         };
-        let value = thinkthen_host::sql_request::run_records_recovering(
+        let value = thinkthen_host::sql_request::run_feed_recovering(
             engine,
             &prepared,
             &request,
-            records,
+            feed,
             controls.surface(thinkthen::Surface::Postgresql),
             thinkthen::Surface::Postgresql,
         )?;

@@ -401,7 +401,7 @@ named_bindings() {
 	out=$(q -c "SELECT thinkthen_decide('Is it red?', 'red', misspelled => 'x')")
 	has "$out" 'does not exist'
 	same "$(bcount)" 0
-	out=$(q -c "SELECT ((observations)[1]).detail.model FROM thinkthen_decide_details('Is it red?', 'red', model => 'judge-b', threshold => '0.3:0.7')")
+	out=$(q -c "SELECT (((observations)[1]).detail).model FROM thinkthen_decide_details('Is it red?', 'red', model => 'judge-b', threshold => '0.3:0.7')")
 	same "$out" judge-b
 	same "$(bcount)" 1
 	fresh generic
@@ -797,11 +797,11 @@ complete_question_resolution_keeps_privilege_and_content_boundaries() {
 	for name in '@@bad/name' '@@absent' '@missing.json'; do
 		has "$(PGUSER_AS=tt_complete q -c "SELECT (failure).message FROM thinkthen_decide_details('$name',ARRAY[]::thinkthen_record[])")" "a named file needs pg_read_server_files"
 	done
-	same "$(q -c "SELECT failure IS NOT NULL FROM thinkthen_decide_details('@@refund',ARRAY[]::thinkthen_record[])")" f
+	same "$(q -c "SELECT EXISTS(SELECT 1 FROM thinkthen_decide_details('@@refund',ARRAY[]::thinkthen_record[]) WHERE failure IS NOT NULL)")" f
 	same "$(q -c "SELECT (failure).kind FROM thinkthen_decide_details('@@bad/name',ARRAY[]::thinkthen_record[])")" usage
 	same "$(bcount)" 0
 	fresh generic "thinkthen.file_directory = '$allowed'"
-	same "$(PGUSER_AS=tt_complete q -c "SELECT failure IS NOT NULL FROM thinkthen_decide_details('@refund.json',ARRAY[]::thinkthen_record[])")" f
+	same "$(PGUSER_AS=tt_complete q -c "SELECT EXISTS(SELECT 1 FROM thinkthen_decide_details('@refund.json',ARRAY[]::thinkthen_record[]) WHERE failure IS NOT NULL)")" f
 	same "$(PGUSER_AS=tt_complete q -c "SELECT (failure).kind FROM thinkthen_decide_details('@@refund',ARRAY[]::thinkthen_record[])")" local
 	ln -s refund.json "$allowed/symlink.json"
 	ln "$allowed/refund.json" "$allowed/hardlink.json"
@@ -813,11 +813,11 @@ complete_question_resolution_keeps_privilege_and_content_boundaries() {
 		same "$kind" local
 	done
 	same "$(PGUSER_AS=tt_complete q -c "SELECT (failure).kind FROM thinkthen_decide_details('@wrong.json',ARRAY[]::thinkthen_record[])")" usage
-	same "$(PGUSER_AS=tt_complete q -c "SELECT failure IS NOT NULL FROM thinkthen_decide_details('@context.json',ARRAY[]::thinkthen_record[],thinkthen_reading(threshold=>'0.7'))")" f
-	same "$(PGUSER_AS=tt_complete q -c "SELECT failure IS NOT NULL FROM thinkthen_decide_details('@context.json',ARRAY[]::thinkthen_record[],thinkthen_reading(context=>''))")" f
+	same "$(PGUSER_AS=tt_complete q -c "SELECT EXISTS(SELECT 1 FROM thinkthen_decide_details('@context.json',ARRAY[]::thinkthen_record[],thinkthen_reading(threshold=>'0.7')) WHERE failure IS NOT NULL)")" f
+	same "$(PGUSER_AS=tt_complete q -c "SELECT EXISTS(SELECT 1 FROM thinkthen_decide_details('@context.json',ARRAY[]::thinkthen_record[],thinkthen_reading(context=>'')) WHERE failure IS NOT NULL)")" f
 	same "$(bcount)" 0
 	q -c 'GRANT pg_read_server_files TO tt_complete' >/dev/null
-	same "$(PGUSER_AS=tt_complete q -c "SELECT failure IS NOT NULL FROM thinkthen_decide_details('@@refund',ARRAY[]::thinkthen_record[])")" f
+	same "$(PGUSER_AS=tt_complete q -c "SELECT EXISTS(SELECT 1 FROM thinkthen_decide_details('@@refund',ARRAY[]::thinkthen_record[]) WHERE failure IS NOT NULL)")" f
 	same "$(bcount)" 0
 }
 check complete_question_resolution_keeps_privilege_and_content_boundaries
@@ -1043,7 +1043,7 @@ removed_forms_refuse_before_send() {
     has "$out" 'thinkthen_probability was removed; order records with thinkthen_rank'
     out=$(q -c "SELECT thinkthen_probability('$Q', 'one', 'old context')")
     has "$out" 'thinkthen_probability was removed; order records with thinkthen_rank'
-    out=$(q -c "SELECT count(*) FROM thinkthen_decide_details('$Q', ARRAY['one'])")
+    out=$(q -c "SELECT count(*) FROM thinkthen_decide('$Q', ARRAY['one'])")
     has "$out" 'the array form was removed; pass a keyed jsonb object to thinkthen_decide_many'
     out=$(q -c "SELECT thinkthen_decide('$Q', 'one', 'old context')")
     has "$out" 'the context argument moved into the settings object or the context named parameter'

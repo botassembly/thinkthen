@@ -48,7 +48,7 @@
       "expected": "{\"band\": true, \"spam\": true}"
     },
     "details": {
-      "sql": "SELECT cardinality((thinkthen_details('{\"decide\":\"Is this a complaint?\"}', 'i want a refund now')).requests);",
+      "sql": "SELECT cardinality((((observations)[1]).detail).requests) FROM thinkthen_decide_details('{\"decide\":\"Is this a complaint?\"}', 'i want a refund now');",
       "expected": "1"
     },
     "usage": {
