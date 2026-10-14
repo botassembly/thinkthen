@@ -12,7 +12,6 @@ import tempfile
 import shutil
 
 from inputs import authority, canonical, native_target, selected, versions
-from harness import child_env
 
 ROOT = Path(__file__).resolve().parents[1]
 REPO = ROOT.parent.parent
@@ -119,6 +118,7 @@ def check_hosts(cache, fetch):
         if env.get('THINKTHEN_HEAVY_LOCK_HELD') != lock:
             admission = [sys.executable, str(REPO / 'sdlc/scripts/build-admission.py'), '--lock', lock, '--']
         subprocess.run(admission + command + ['release'], cwd=build, env=env, check=True)
+        from harness import child_env
         with tempfile.TemporaryDirectory(prefix='thinkthen-duckdb-sql-') as folder:
             test_env = child_env('http://127.0.0.1:9/generic/v1', Path(folder), keyless=True)
             subprocess.run(command + ['test_release'], cwd=build, env=test_env, check=True)
