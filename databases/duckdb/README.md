@@ -58,11 +58,11 @@ Authored decide, choose, score and tag questions, annotation sets, keyed inputs 
 SELECT thinkthen_decide({'decide': 'Does the writer ask for a refund?',
                         'true': {'meaning': 'refund', 'optional': NULL},
                         'false': {'meaning': 'other', 'enabled': FALSE}},
-                       body, settings := {'batch': 'max'}, model := 'jev-1.13.0')
+                       body, settings := {'batch': 'max'}, model := 'jev-1.13.0') AS asks_refund
 FROM tickets;
 SELECT thinkthen_choose('Which team owns this?', body,
                        {'billing': 'Handles charges', 'shipping': NULL},
-                       settings := {'deadline_ms': -1})
+                       settings := {'deadline_ms': -1}) AS owning_team
 FROM tickets;
 SELECT * FROM thinkthen_decide_many('Does the writer ask for a refund?',
                                     MAP(['first', 'second'], ['Refund me', 'Hello']),
