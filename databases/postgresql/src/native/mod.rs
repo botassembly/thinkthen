@@ -32,8 +32,8 @@ fn request(
         complete_native::prepare(verb, question, settings)?
     };
     let definition = thinkthen_host::sql_request::definition(&prepared);
-    Request::named(
-        verb,
+    Request::for_function(
+        verb.parse()?,
         RequestArguments {
             question: RequestQuestion::Definition { value: definition },
             input: RequestInput::Feed {
@@ -44,7 +44,7 @@ fn request(
             },
             options,
         },
-    )?
+    )
     .admit()
 }
 
@@ -87,8 +87,8 @@ pub(super) fn execute(
     if let Some(schema) = context_schema {
         projection = projection.with_context_schema(schema);
     }
-    let request = composed_request(verb, &request)?;
-    let function = verb.parse()?;
+    let request = composed_request(&request)?;
+    let function = request.request().call.function();
     let records = input::deferred(records);
     let images = records.iter().any(|record| {
         record
@@ -164,7 +164,6 @@ pub(super) fn number(value: i64) -> Result<usize, Error> {
 }
 
 fn composed_request(
-    verb: &str,
     request: &thinkthen::AdmittedRequest,
 ) -> Result<thinkthen::AdmittedRequest, Error> {
     let mut args = request.request().call.arguments().clone();
@@ -173,7 +172,7 @@ fn composed_request(
     args.options.options_field = None;
     args.options.seed_spans_field = None;
     args.options.examples_field = None;
-    Request::named(verb, args)?.admit()
+    Request::for_function(request.request().call.function(), args).admit()
 }
 
 fn observation(

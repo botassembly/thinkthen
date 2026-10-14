@@ -30,7 +30,7 @@ fn plan_records(
         let request = super::request(verb, question, super::options::read(reading).or_raise(), &settings).or_raise();
         let mut projection = request.record_reading().or_raise();
         if let Some(schema) = context_schema { projection = projection.with_context_schema(schema); }
-        let request = super::composed_request(verb, &request).or_raise();
+        let request = super::composed_request(&request).or_raise();
         let records = super::input::deferred(records);
         let images = records.iter().any(|record| record.as_ref().is_ok_and(|record| !record.item.images.is_empty()));
         let plan = call::run(call::read(), move |engine, controls| {
