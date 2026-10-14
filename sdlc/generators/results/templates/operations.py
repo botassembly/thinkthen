@@ -102,7 +102,7 @@ def render(operations, statuses=(), projections=()):
             if argument.ownership == 'borrow':
                 lines.extend(['        // SAFETY: the caller retains this live owner throughout the operation.',
                               '        let ' + argument.name + ' = unsafe { ' + argument.name + '.as_ref() }.ok_or(ErrorKind::Usage)?;'])
-        allowed_literals = {'@None', '@Some(interest)', '@false', '@true', '@thinkthen::Engine::usage_persistence', '@thinkthen::Engine::finish_usage_status', '@super::super::request_preview::json_output', '@super::super::request_preview::value_output'}
+        allowed_literals = {'@None', '@Some(interest)', '@false', '@true', '@thinkthen::Engine::usage_persistence', '@thinkthen::Engine::finish_usage_status', '@super::request_preview::json_output', '@super::request_preview::value_output', '@super::super::request_preview::json_output', '@super::super::request_preview::value_output'}
         if any(value.startswith('@') and value not in allowed_literals for value in operation.inputs):
             raise ValueError('operation inputs must name arguments or registered native selectors')
         inputs = ', '.join(value.removeprefix('@') for value in operation.inputs)

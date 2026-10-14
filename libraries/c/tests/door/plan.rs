@@ -33,8 +33,8 @@ fn canonical_request_preview_owns_bytes_and_sends_nothing() {
         .collect::<Vec<_>>();
     assert_eq!(
         lines.len(),
-        3,
-        "typed graph, named graph and existing Rust serializer"
+        4,
+        "typed, named, full-request graphs and existing Rust serializer"
     );
     assert_eq!(
         lines.first(),
@@ -45,6 +45,11 @@ fn canonical_request_preview_owns_bytes_and_sends_nothing() {
         lines.get(1),
         lines.last(),
         "named Plan preserves exact Rust serialization"
+    );
+    assert_eq!(
+        lines.get(2),
+        lines.last(),
+        "full Request Plan preserves exact Rust serialization"
     );
     let plan: serde_json::Value =
         serde_json::from_slice(lines.last().expect("Plan JSON")).expect("native plan JSON");

@@ -243,9 +243,64 @@ static thinkthen_engine *typed_settings(void) {
     settings.m_model=NULL;
     return thinkthen_engine_new_typed(&settings);
 }
+static thinkthen_value *full_plan(thinkthen_engine *engine) {
+    thinkthen_value *owner=(thinkthen_value *)(uintptr_t)7;
+    const char bad_utf8[]={ (char)0xff };
+    struct {const char *bytes;size_t len;} bad[]={
+        {NULL,0},{NULL,1},{p1,SIZE_MAX},{bad_utf8,sizeof(bad_utf8)},
+        {"{}",2},{"{\"schema\":\"thinkthen.request/1\",\"PRIVATE\":false}",sizeof("{\"schema\":\"thinkthen.request/1\",\"PRIVATE\":false}")-1}};
+    for(size_t i=0;i<sizeof(bad)/sizeof(bad[0]);i++) {
+        check(thinkthen_request_plan_value(engine,bad[i].bytes,bad[i].len,&owner)==THINKTHEN_EUSAGE,"full Plan refuses invalid input");
+        check(owner==(thinkthen_value *)(uintptr_t)7,"full Plan refusal preserves output");
+    }
+    check(thinkthen_request_plan_value(NULL,p1,sizeof(p1)-1,&owner)==THINKTHEN_EUSAGE,"full Plan needs engine");
+    check(thinkthen_request_plan_value(engine,p1,sizeof(p1)-1,NULL)==THINKTHEN_EUSAGE,"full Plan needs output");
+    char unknown[sizeof(p1)+32];
+    memcpy(unknown,p1,sizeof(p1)-2);
+    strcpy(unknown+sizeof(p1)-2,",\"PRIVATE\":false}");
+    check(thinkthen_request_plan_value(engine,unknown,strlen(unknown),&owner)==THINKTHEN_EUSAGE && owner==(thinkthen_value *)(uintptr_t)7,"full Plan refuses unknown field without dropping it");
+    char request[sizeof(p1)-1];memcpy(request,p1,sizeof(request));
+    check(thinkthen_request_plan_value(engine,request,sizeof(request),&owner)==THINKTHEN_OK,"full Plan shares native admission");
+    memset(request,'?',sizeof(request));
+    return owner;
+}
+static void arbitrary_values(void) {
+    thinkthen_value *owner=(thinkthen_value *)(uintptr_t)7;
+    const char bad_utf8[]={ (char)0xff };
+    struct {const char *bytes;size_t len;} bad[]={
+        {NULL,0},{NULL,1},{"null",SIZE_MAX},{bad_utf8,sizeof(bad_utf8)},
+        {"[",1},{"true false",10}};
+    for(size_t i=0;i<sizeof(bad)/sizeof(bad[0]);i++) {
+        check(thinkthen_value_parse(bad[i].bytes,bad[i].len,&owner)==THINKTHEN_EUSAGE,"arbitrary value refuses invalid input");
+        check(owner==(thinkthen_value *)(uintptr_t)7,"arbitrary refusal preserves output");
+    }
+    check(thinkthen_value_parse("null",4,NULL)==THINKTHEN_EUSAGE,"arbitrary value needs output");
+    char value[]="{\"exact\\u0000key\":[null,false,18446744073709551617,1e400]}";
+    const char *constructor=thinkthen_error_message(NULL);
+    check(thinkthen_value_parse(value,sizeof(value)-1,&owner)==THINKTHEN_OK,"arbitrary values parse without Request shape");
+    const char *diagnostic=thinkthen_session_error_message();
+    memset(value,'?',sizeof(value));
+    const thinkthen_complete_json_v1 *root=NULL,*again=NULL;
+    check(thinkthen_value_view(owner,&root)==THINKTHEN_OK,"arbitrary owner survives source overwrite");
+    check(thinkthen_value_view(owner,&again)==THINKTHEN_OK && root==again,"arbitrary root is stable");
+    check(thinkthen_error_message(NULL)==constructor && thinkthen_session_error_message()==diagnostic,"arbitrary success preserves independent diagnostics");
+    check(root->kind==THINKTHEN_COMPLETE_JSON_OBJECT_V1 && root->data.object.len==1,"arbitrary object retains keys");
+    const thinkthen_complete_json_entry_v1 *entry=&root->data.object.data[0];
+    check(entry->name.len==9 && !memcmp(entry->name.data,"exact\0key",9),"counted key retains embedded null");
+    const thinkthen_complete_json_v1 *array=entry->value;
+    check(array->kind==THINKTHEN_COMPLETE_JSON_ARRAY_V1 && array->data.array.len==4,"arbitrary array retains entries");
+    check(array->data.array.data[0]->kind==THINKTHEN_COMPLETE_JSON_NULL_V1,"null retains kind");
+    check(array->data.array.data[1]->kind==THINKTHEN_COMPLETE_JSON_BOOLEAN_V1 && array->data.array.data[1]->data.boolean==0,"false retains value");
+    thinkthen_complete_utf8_v1 integer=array->data.array.data[2]->data.number, exponent=array->data.array.data[3]->data.number;
+    check(integer.len==20 && !memcmp(integer.data,"18446744073709551617",20),"integer precision retains original bytes");
+    check(exponent.len==5 && !memcmp(exponent.data,"1e400",5),"large exponent retains original bytes");
+    thinkthen_value_free(owner);thinkthen_value_free(NULL);
+}
 int main(void) {
     thinkthen_engine *engine = typed_settings();
     check(engine != NULL, "engine construction");
+    arbitrary_values();
+    thinkthen_value *full=full_plan(engine);
     typed_json_preview(engine);
     char *typed = typed_preview(engine);
     char *out = (char *)(uintptr_t)7;
@@ -281,6 +336,8 @@ int main(void) {
     const thinkthen_complete_json_v1 *root=NULL;
     check(thinkthen_value_view(owner,&root)==THINKTHEN_OK,"Plan owner survives engine and source destruction");
     print_value(root);putchar('\n');thinkthen_value_free(owner);
+    check(thinkthen_value_view(full,&root)==THINKTHEN_OK,"full Plan survives engine destruction");
+    print_value(root);putchar('\n');thinkthen_value_free(full);
     check(out && strlen(out) == len && out[len] == 0, "independent owned preview");
     check(!strcmp(typed, out), "typed preview survives engine and carrier destruction");
     thinkthen_free_string(typed);
