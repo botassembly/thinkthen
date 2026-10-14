@@ -110,6 +110,16 @@ test('the ten Client functions retain generated values after close',async t=>{
       if(!(done instanceof tt.Result) || !Object.isFrozen(done))throw Error('unowned result');
       if(verb+'Answer' in done || verb+'Answer' in client)throw Error('obsolete reader');
       const answer=done.value;
+      if(['score','tag','annotate'].includes(verb) && done.probability!==null)throw Error('map became a scalar probability');
+      if(verb==='rank' && JSON.stringify(done.probability)!==JSON.stringify(done.results.map(row=>row.answer.probability)))throw Error('rank probability order changed');
+      if(verb==='filter' && JSON.stringify(done.probability)!==JSON.stringify(done.results.map(row=>row.answer.probability)))throw Error('filter probability order changed');
+      if(verb==='find' && done.probability!==(done.results[0].answer.probabilities[done.results[0].answer.pick]??null))throw Error('find probability changed');
+      if(verb==='relate' && JSON.stringify(done.probability)!==JSON.stringify(done.results[0].value.map(edge=>edge.probability)))throw Error('relation probability order changed');
+      if(verb==='recognize') {
+        const row=done.results[0],proposals=row.answer.proposals.filter(proposal=>proposal.kept);
+        const expected=row.value.entities.map(entity=>proposals.find(proposal=>proposal.kind===entity.kind && proposal.selected.start===entity.start && proposal.selected.end===entity.end).span_probability);
+        if(JSON.stringify(done.probability)!==JSON.stringify(expected))throw Error('recognition used entity strength');
+      }
       if(verb==='rank' && JSON.stringify(answer)!==JSON.stringify(done.results.map(row=>row.index)))throw Error('rank returned receipts');
       if(verb==='filter' && JSON.stringify(answer)!==JSON.stringify(done.results.map(row=>row.input)))throw Error('filter returned receipts');
       if(['decide','choose','tag','score'].includes(verb) && JSON.stringify(answer)!==JSON.stringify(done.results[0].value))throw Error('scalar answer changed');

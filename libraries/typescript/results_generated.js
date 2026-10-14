@@ -3797,9 +3797,10 @@ function callResult(rows, functionName, scalar) {
           : values;
   if (rule.probability_mode === "null")
     return frozen({ value, probability: null });
+  const at = (row, path) => path.reduce((value, key) => value?.[key], row);
   const chances = rows.map((row) => {
     if (rule.probability_mode === "picked")
-      return row.answer.probabilities[row.answer.pick] ?? null;
+      return at(row, rule.probability_path)[at(row, rule.pick_path)] ?? null;
     if (functionName === "recognize") {
       if (!Object.hasOwn(row.value, "entities"))
         return row.value.proposals.map((p) => p.probability);
@@ -3818,8 +3819,7 @@ function callResult(rows, functionName, scalar) {
     if (functionName === "relate")
       return row.value.map((edge) => edge.probability);
     return rule.probability_path
-      ? (rule.probability_path.reduce((value, key) => value?.[key], row) ??
-          null)
+      ? (at(row, rule.probability_path) ?? null)
       : (row.answer?.probability ?? null);
   });
   const probability = single

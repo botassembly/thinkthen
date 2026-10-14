@@ -14,7 +14,7 @@ export type Input = R.JsonValue | Source | Item | readonly (R.JsonValue | Item)[
 export interface ImageBytes { readonly kind: "bytes"; readonly bytes: Uint8Array | string; readonly media?: string; }
 export interface ItemFields { readonly images?: readonly ImageBytes[]; readonly context?: R.JsonValue; readonly options?: readonly {readonly name:string; readonly description?:R.JsonValue}[]; }
 export interface Controls extends R.RequestOptions { readonly signal?: AbortSignal; }
-export class Result<T = R.NativeDecideResult | R.NativeChooseResult | R.NativeTagResult | R.NativeScoreResult | R.NativeFilterResult | R.NativeRankResult | R.NativeFindResult | R.NativeAnnotateResult | R.NativeRecognizeResult | R.NativeRelateResult, V = R.JsonValue, P = number | null | readonly (number | null | readonly number[])[]> {
+export class Result<T = R.NativeDecideResult | R.NativeChooseResult | R.NativeTagResult | R.NativeScoreResult | R.NativeFilterResult | R.NativeRankResult | R.NativeFindResult | R.NativeAnnotateResult | R.NativeRecognizeResult | R.NativeRelateResult, V = unknown, P = number | null | readonly (number | null | readonly number[])[]> {
  readonly value: V;
  readonly probability: P;
  readonly results: readonly T[];

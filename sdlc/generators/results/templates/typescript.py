@@ -169,15 +169,16 @@ function callResult(rows,functionName,scalar) {
   const single=functionName==='find' || functionName==='relate';
   const value=project!=='value' ? values : single ? values[0] ?? (functionName==='find'?null:[]) : scalar && values.length ? values[0] : values;
   if(rule.probability_mode==='null') return frozen({value,probability:null});
+  const at=(row,path)=>path.reduce((value,key)=>value?.[key],row);
   const chances=rows.map(row=>{
-    if(rule.probability_mode==='picked') return row.answer.probabilities[row.answer.pick] ?? null;
+    if(rule.probability_mode==='picked') return at(row,rule.probability_path)[at(row,rule.pick_path)] ?? null;
     if(functionName==='recognize') {
       if(!Object.hasOwn(row.value,'entities')) return row.value.proposals.map(p=>p.probability);
       const kept=new Map(row.answer.proposals.filter(p=>p.kept).map(p=>[JSON.stringify([p.selected.start,p.selected.end,p.kind]),p.span_probability]));
       return row.value.entities.map(e=>kept.get(JSON.stringify([e.start,e.end,e.kind])) ?? null);
     }
     if(functionName==='relate') return row.value.map(edge=>edge.probability);
-    return rule.probability_path ? rule.probability_path.reduce((value,key)=>value?.[key],row) ?? null : row.answer?.probability ?? null;
+    return rule.probability_path ? at(row,rule.probability_path) ?? null : row.answer?.probability ?? null;
   });
   const probability=single ? chances[0] ?? (functionName==='find'?null:[]) : functionName==='rank' ? chances : scalar && chances.length ? chances[0] : chances;
   return frozen({value,probability});
