@@ -51,7 +51,7 @@ if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
     module=$scratch
 else
     compile cargo build --locked --offline --manifest-path "$repo/libraries/c/Cargo.toml" --lib -j2
-    out="$repo/target/go/native"
+    out="${CARGO_TARGET_DIR:-$repo/target}/go/native"
     mkdir -p "$out/include" "$out/lib"
     cp "$repo/libraries/c/include/thinkthen.h" "$out/include/thinkthen.h"
     sh "$repo/libraries/c/localize.sh" "${CARGO_TARGET_DIR:-$repo/libraries/c/target}/debug/libthinkthen_c.a" "$out/lib/libthinkthen.a"

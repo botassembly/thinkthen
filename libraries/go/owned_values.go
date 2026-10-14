@@ -66,12 +66,3 @@ func (v ownedJSON) jsonValue() (any, error) { return ownedDecode[any](v.raw) }
 
 func (v ownedJSON) String() string   { return "<ThinkThen owned result>" }
 func (v ownedJSON) GoString() string { return v.String() }
-
-// AnswerCardinalityError retains a completed call with zero or multiple answers.
-type AnswerCardinalityError struct {
-	Function string
-	Count    int
-	Call     Call
-}
-
-func (e *AnswerCardinalityError) Error() string { return "Expected exactly one successful answer" }

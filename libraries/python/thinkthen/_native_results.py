@@ -888,6 +888,16 @@ _CALL_RESULTS = {
         "scalar_kind": "decision",
         "scalar_value": {"type": ["boolean", "null"]},
         "probability_mode": "yes",
+        "resolution": {
+            "path": ("value", "value", "value", "value"),
+            "guards": [
+                (["kind"], "observation"),
+                (["value", "kind"], "row"),
+                (["value", "value", "kind"], "judgment"),
+                (["value", "value", "value", "kind"], "decision"),
+            ],
+            "index_path": ("value", "index"),
+        },
         "probability_schema": {"format": "double", "type": "number"},
         "probability_path": ("answer", "probability"),
     },
@@ -903,6 +913,16 @@ _CALL_RESULTS = {
         "scalar_kind": "choice",
         "scalar_value": {"type": ["string", "null"]},
         "probability_mode": "picked",
+        "resolution": {
+            "path": ("value", "value", "value", "value"),
+            "guards": [
+                (["kind"], "observation"),
+                (["value", "kind"], "row"),
+                (["value", "value", "kind"], "judgment"),
+                (["value", "value", "value", "kind"], "choice"),
+            ],
+            "index_path": ("value", "index"),
+        },
         "probability_schema": {
             "additionalProperties": {"format": "double", "type": "number"},
             "type": "object",
@@ -987,6 +1007,7 @@ _CALL_RESULTS = {
         "scalar_kind": None,
         "scalar_value": None,
         "probability_mode": "picked",
+        "selection_path": ("index",),
         "probability_schema": {
             "additionalProperties": {"format": "double", "type": "number"},
             "type": "object",
@@ -1040,6 +1061,24 @@ _CALL_RESULTS = {
         "probability_mode": "items",
     },
 }
+
+
+def _call_path(value, path):
+    for key in path:
+        value = value.get(key) if isinstance(value, dict) else getattr(value, key, None)
+    return value
+
+
+def _call_resolution(packet, function):
+    spec = _CALL_RESULTS[function].get("resolution")
+    if not spec or _call_path(packet, ("function",)) != function:
+        return None
+    if any(_call_path(packet, path) != literal for path, literal in spec["guards"]):
+        return None
+    return (
+        _call_path(packet, spec["index_path"]),
+        _call_path(packet, spec["path"]) is not None,
+    )
 
 
 class NativeAnnotation(_NativeResult):

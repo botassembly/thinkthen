@@ -73,7 +73,7 @@ func feedChecks(client *tt.Client) {
 			require(original.Present && original.Value == fmt.Sprintf("record-%d", rows), "feed changed input order")
 		}
 	}
-	require(rows == 3, "bounded feed lost ordered rows")
+	require(rows == 3 && len(call.Value.([]any)) == 3 && len(call.Probability.(tt.ProbabilityList)) == 3 && len(call.Results) == 3, "bounded feed lost ordered rows")
 	started := 0
 	invalid := producerFunc(func(context.Context) (any, error) { started++; return nil, io.EOF })
 	_, err = client.Decide(context.Background(), tt.TextQuestion("Is it?"), fixtureInput(invalid), &tt.RequestOptions{Field: tt.Ptr([]string{"bad pointer"})})
@@ -101,9 +101,6 @@ func feedChecks(client *tt.Client) {
 	}
 	kind, kindErr := failure.Detail.Kind().Value.Value()
 	require(prefix == 1 && kindErr == nil && kind == "local", "reader failure lost completed prefix")
-	_, answerErr := failure.Call.DecideAnswer()
-	var answerFailure *tt.SessionError
-	require(errors.As(answerErr, &answerFailure) && len(answerFailure.Call.Packets) == len(failure.Call.Packets), "one-answer reader failure lost its prefix")
 	client.Close()
 	for i, result := range []tt.Call{call, failure.Call} {
 		facts := result.Terminal.Facts()
@@ -114,42 +111,43 @@ func feedChecks(client *tt.Client) {
 	fmt.Println("bounded-feed-results-pass requests=4")
 }
 
-func collectionAnswerChecks() {
-	var terminal tt.SessionPacketTerminal
-	require(json.Unmarshal([]byte(`{"kind":"terminal"}`), &terminal) == nil, "decode collection terminal")
-	for _, test := range []struct {
-		function string
-		kind     string
-		value    string
-		want     string
-		fails    bool
-	}{
-		{"filter", "aggregate", `[{"input":false},{"input":null},{"input":{"id":7}},{"input":["x"]}]`, `[false,null,{"id":7},["x"]]`, false},
-		{"filter", "row", `{"input":"original"}`, `["original"]`, false},
-		{"filter", "aggregate", `[]`, `[]`, false},
-		{"filter", "aggregate", `[{}]`, ``, true},
-		{"rank", "aggregate", `[{"index":3,"value":1},{"index":0,"value":2}]`, `[3,0]`, false},
-		{"rank", "aggregate", `[]`, `[]`, false},
-		{"rank", "aggregate", `[{"value":1}]`, ``, true},
-		{"rank", "aggregate", `[{"index":null}]`, ``, true},
-		{"rank", "aggregate", `[{"index":-1}]`, ``, true},
-		{"rank", "aggregate", `[{"index":1.5}]`, ``, true},
-	} {
-		var packet tt.SessionPacket
-		raw := fmt.Sprintf(`{"function":%q,"kind":%q,"value":%s}`, test.function, test.kind, test.value)
-		require(json.Unmarshal([]byte(raw), &packet) == nil, "decode collection packet")
-		call := tt.Call{Packets: []tt.SessionPacket{packet}, Terminal: &terminal}
-		var answer any
-		var err error
-		if test.function == "rank" {
-			answer, err = call.RankAnswer()
-		} else {
-			answer, err = call.FilterAnswer()
-		}
-		require((err != nil) == test.fails, "collection answer admission changed")
-		if !test.fails {
-			encoded, err := json.Marshal(answer)
-			require(err == nil && string(encoded) == test.want, "collection answer changed originals or indexes")
+func checkProbability(result tt.Call) {
+	for index, receipt := range result.Results {
+		if row, err := receipt.AsRecognize(); err == nil {
+			original := fixtureValue(row).(map[string]any)
+			value := original["value"].(map[string]any)
+			chances := []any{}
+			if entities, ok := value["entities"].([]any); ok {
+				answer := original["answer"].(map[string]any)
+				proposals := answer["proposals"].([]any)
+				for _, entityValue := range entities {
+					entity := entityValue.(map[string]any)
+					var chance any
+					for _, proposalValue := range proposals {
+						proposal := proposalValue.(map[string]any)
+						if proposal["kept"] != true {
+							continue
+						}
+						selected := proposal["selected"].(map[string]any)
+						if proposal["kept"] == true && selected["start"] == entity["start"] && selected["end"] == entity["end"] && proposal["kind"] == entity["kind"] {
+							chance = proposal["span_probability"]
+							break
+						}
+					}
+					chances = append(chances, chance)
+				}
+			} else {
+				for _, proposalValue := range value["proposals"].([]any) {
+					chances = append(chances, proposalValue.(map[string]any)["probability"])
+				}
+			}
+			var probability any = result.Probability
+			if rows, ok := result.Probability.(tt.ProbabilityRows); ok {
+				probability = rows[index]
+			}
+			actual, _ := json.Marshal(probability)
+			expected, _ := json.Marshal(chances)
+			require(string(actual) == string(expected), "recognize used strength or the wrong kept span")
 		}
 	}
 }
@@ -192,7 +190,6 @@ func main() {
 	}
 	inputType := reflect.TypeOf((*tt.Client).Decide).In(3)
 	require(inputType.Name() == "DecideInput" && inputType.NumMethod() > 0, "decision input became untyped")
-	collectionAnswerChecks()
 	client, err := tt.NewClient(tt.EngineSettings{BaseUrl: tt.Ptr(os.Getenv("THINKTHEN_BASE_URL")), Cache: tt.Ptr[tt.CacheDocument](tt.DisabledCache(false))})
 	if err != nil {
 		panic(err)
@@ -451,30 +448,86 @@ func main() {
 		}
 	}
 	require(recognitionAggregates == 1, "recognize did not emit exactly one aggregate")
-	decision, decisionErr := retained[0].DecideAnswer()
-	require(decisionErr == nil && decision != nil && *decision, "single normalized decision missing")
-	choice, choiceErr := retained[1].ChooseAnswer()
-	require(choiceErr == nil && choice != nil && *choice == "a", "single normalized choice missing")
-	tags, tagsErr := retained[2].TagAnswer()
-	require(tagsErr == nil && len(tags) == 2 && tags[0] == "a" && tags[1] == "b", "single normalized tags missing")
-	score, scoreErr := retained[3].ScoreAnswer()
-	require(scoreErr == nil && score == 0.1, "single normalized score missing")
-	var filtered []any
-	filtered, filterErr := retained[4].FilterAnswer()
-	require(filterErr == nil && len(filtered) == 2 && filtered[0] == "alpha" && filtered[1] == "beta", "filter answer changed original inputs")
-	var ranked []uint64
-	ranked, rankErr := retained[5].RankAnswer()
-	require(rankErr == nil && len(ranked) == 2 && ranked[0] == 0 && ranked[1] == 1, "rank answer lost zero-based stable input indexes")
-	for _, input := range [][]string{{}, {"cardinality-one", "cardinality-two"}} {
-		completed, err := client.Decide(context.Background(), tt.TextQuestion("Is it?"), fixtureInput(input), nil)
-		require(err == nil && completed.Terminal != nil, "cardinality call did not settle")
-		n, err := completed.Terminal.Facts().Value.RequestsSent().Value.Int64()
-		require(err == nil, "cardinality call requests missing")
-		expectedRequests += n
-		_, err = completed.DecideAnswer()
-		var cardinality *tt.AnswerCardinalityError
-		require(errors.As(err, &cardinality) && cardinality.Count == len(input), "answer cardinality did not refuse")
+	for _, result := range retained {
+		checkProbability(result)
 	}
+	boundary, err := client.Recognize(context.Background(), asks[8].q, tt.TextInput("Ana Lima"), &tt.RequestOptions{Mode: tt.Ptr(tt.RecognitionModeBoundaryOnly)})
+	require(err == nil, "boundary call failed")
+	checkProbability(boundary)
+	nBoundary, err := boundary.Facts.RequestsSent().Value.Int64()
+	require(err == nil, "boundary facts missing")
+	expectedRequests += nBoundary
+	retained = append(retained, boundary)
+	for _, texts := range [][]string{{}, {"Ana Lima"}, {"Ana Lima", "Bob Smith"}} {
+		result, err := client.Recognize(context.Background(), asks[8].q, tt.TextRecordsInput(texts...), nil)
+		require(err == nil && len(result.Value.([]any)) == len(texts) && len(result.Probability.(tt.ProbabilityRows)) == len(texts), "recognize nested probability shape changed")
+		checkProbability(result)
+		n, err := result.Facts.RequestsSent().Value.Int64()
+		require(err == nil, "recognize list facts missing")
+		expectedRequests += n
+		retained = append(retained, result)
+	}
+
+	require(retained[0].Value == true && retained[0].Probability != nil && len(retained[0].Results) == 1, "decision call result missing")
+	require(retained[1].Value == "a", "choice call value missing")
+	tags := retained[2].Value.([]any)
+	require(len(tags) == 2 && tags[0] == "a" && tags[1] == "b" && retained[2].Probability == nil, "tag value changed")
+	require(retained[3].Value == json.Number("0.1") && retained[3].Probability == nil, "score value changed")
+	filtered := retained[4].Value.([]any)
+	require(len(filtered) == 2 && filtered[0] == "alpha" && filtered[1] == "beta", "filter originals changed")
+	ranked := retained[5].Value.([]any)
+	require(len(ranked) == 2 && ranked[0] == json.Number("0") && ranked[1] == json.Number("1"), "rank original indexes changed")
+	for _, input := range [][]string{{}, {"cardinality-one"}, {"cardinality-one", "cardinality-two"}} {
+		completed, err := client.Decide(context.Background(), tt.TextQuestion("Is it?"), fixtureInput(input), nil)
+		require(err == nil && completed.Terminal != nil, "list call did not settle")
+		n, err := completed.Facts.RequestsSent().Value.Int64()
+		require(err == nil, "list facts missing")
+		expectedRequests += n
+		require(len(completed.Value.([]any)) == len(input) && len(completed.Results) == len(input) && len(completed.Probability.(tt.ProbabilityList)) == len(input), "input list shape changed")
+	}
+	// Authored readings retain their own shape and exact wide numbers.
+	for _, authored := range []tt.AuthoredCriterion{
+		tt.AuthoredCriterionString("refund requested"),
+		tt.AuthoredCriterionObject{"id": json.Number("9007199254740993"), "ok": false, "missing": nil},
+		tt.AuthoredCriterionArray{[]any{false, nil, json.Number("18446744073709551615")}},
+	} {
+		call, err := client.Decide(context.Background(), tt.DefinedQuestion(tt.RequestDefinitionAuthoredDecide{Decide: tt.AuthoredQuestionTextString("Is it?"), True: tt.Ptr[tt.AuthoredCriterion](authored)}), tt.TextInput("text"), nil)
+		require(err == nil && len(call.Results) == 1, "authored result failed")
+		n, err := call.Facts.RequestsSent().Value.Int64()
+		require(err == nil, "authored facts missing")
+		expectedRequests += n
+		raw, err := json.Marshal(call.Value)
+		require(err == nil, "authored value cannot encode")
+		switch authored.(type) {
+		case tt.AuthoredCriterionString:
+			require(string(raw) == `"refund requested"`, "authored string became Boolean")
+		case tt.AuthoredCriterionObject:
+			require(string(raw) == `{"id":9007199254740993,"missing":null,"ok":false}`, "authored object or wide number changed")
+		case tt.AuthoredCriterionArray:
+			require(string(raw) == `[[false,null,18446744073709551615]]`, "authored nested list lost a dimension")
+		}
+		retained = append(retained, call)
+	}
+	originals, err := client.Filter(context.Background(), tt.TextQuestion("Does this qualify?"), tt.RecordsInput(tt.JSONItem(false), tt.JSONItem(nil), tt.JSONItem(map[string]any{"id": json.Number("9007199254740993")})), &tt.RequestOptions{Batch: tt.Ptr[tt.RequestBatch](tt.RequestBatchInteger(1))})
+	require(err == nil, "filter original-value call failed")
+	originalJSON, err := json.Marshal(originals.Value)
+	require(err == nil && string(originalJSON) == `[false,null,{"id":9007199254740993}]`, "filter originals changed false, null or wide number")
+	originalSends, err := originals.Facts.RequestsSent().Value.Int64()
+	require(err == nil, "filter original facts missing")
+	expectedRequests += originalSends
+	retained = append(retained, originals)
+	jsonScalar, err := client.Decide(context.Background(), tt.DefinedQuestion(tt.RequestDefinitionAuthoredDecide{Decide: tt.AuthoredQuestionTextString("Does this qualify?"), True: tt.Ptr[tt.AuthoredCriterion](tt.AuthoredCriterionArray{[]any{false, nil, json.Number("9007199254740993")}})}), tt.RequestInputJson{Value: []any{false, nil, "original"}}, nil)
+	require(err == nil && len(jsonScalar.Results) == 1, "JSON array input did not remain one item")
+	jsonScalarValue, err := json.Marshal(jsonScalar.Value)
+	require(err == nil && string(jsonScalarValue) == `[[false,null,9007199254740993]]`, "JSON scalar authored array gained or lost a dimension")
+	jsonReceipt, err := jsonScalar.Results[0].AsDecide()
+	require(err == nil, "JSON scalar receipt type changed")
+	jsonOriginal, err := json.Marshal(jsonReceipt.Input().Value)
+	require(err == nil && string(jsonOriginal) == `[false,null,"original"]`, "JSON array original changed")
+	jsonSends, err := jsonScalar.Facts.RequestsSent().Value.Int64()
+	require(err == nil && jsonSends == 1, "JSON scalar sends changed")
+	expectedRequests += jsonSends
+	retained = append(retained, jsonScalar)
 	// A false value must remain false, not absent or null.
 	falsity, err := client.Decide(context.Background(), tt.DefinedQuestion(tt.RequestDefinitionAuthoredDecide{Decide: tt.AuthoredQuestionTextString("Is it?"), Threshold: tt.Ptr[tt.AuthoredThreshold](tt.AuthoredThresholdNumber(.95))}), fixtureInput("text"), nil)
 	if err != nil {
@@ -484,6 +537,7 @@ func main() {
 	n, err := falseSends.Value.Int64()
 	require(falseSends.Present && err == nil, "missing false requests")
 	expectedRequests += n
+	require(falsity.Value == false, "public false value changed")
 	var row tt.SessionPacketDecideRow
 	found := false
 	for _, packet := range falsity.Packets {
@@ -517,22 +571,28 @@ func main() {
 		}
 	}
 	require(nullFound, "null row missing")
-	normalized, normalizedErr := nullCall.DecideAnswer()
-	require(normalizedErr == nil && normalized != nil && *normalized, "authored null replaced normalized judgment")
+	require(nullCall.Value == nil && nullCall.Probability != nil, "resolved authored null lost its yes probability")
 	uncertain, err := client.Decide(context.Background(), tt.DefinedQuestion(tt.RequestDefinitionAuthoredDecide{Decide: tt.AuthoredQuestionTextString("Is it?"), Threshold: tt.Ptr[tt.AuthoredThreshold](tt.AuthoredThresholdString("0.2:0.8"))}), fixtureInput("unsure"), nil)
 	require(err == nil, "uncertain call failed")
 	n, err = uncertain.Terminal.Facts().Value.RequestsSent().Value.Int64()
 	require(err == nil, "uncertain requests missing")
 	expectedRequests += n
-	unknown, unknownErr := uncertain.DecideAnswer()
-	require(unknownErr == nil && unknown == nil, "nullable judgment changed")
+	require(uncertain.Value == nil && uncertain.Probability == nil, "unsure decision retained a probability")
 	uncertainChoice, err := client.Choose(context.Background(), tt.DefinedQuestion(tt.RequestDefinitionAuthoredChoose{Choose: tt.AuthoredQuestionTextString("Which?"), Options: tt.Ptr[tt.AuthoredOptions](tt.AuthoredOptionsArray{"a", "b"}), Threshold: tt.Ptr[tt.AuthoredCut](tt.AuthoredCutNumber(.95))}), fixtureInput("uncertain-choice"), nil)
 	require(err == nil, "uncertain choice call failed")
 	n, err = uncertainChoice.Terminal.Facts().Value.RequestsSent().Value.Int64()
 	require(err == nil, "uncertain choice requests missing")
 	expectedRequests += n
-	unknownChoice, choiceErr := uncertainChoice.ChooseAnswer()
-	require(choiceErr == nil && unknownChoice == nil, "nullable choice judgment changed")
+	require(uncertainChoice.Value == nil && uncertainChoice.Probability == nil, "nullable choice judgment changed")
+	nullableChoice, err := client.Choose(context.Background(), tt.DefinedQuestion(tt.RequestDefinitionAuthoredChoose{Choose: tt.AuthoredQuestionTextString("Which?"), Options: tt.Ptr[tt.AuthoredOptions](tt.AuthoredOptionsArray{"a", "b"}), Threshold: tt.Ptr[tt.AuthoredCut](tt.AuthoredCutNumber(.95))}), tt.TextRecordsInput("uncertain-choice", "text"), &tt.RequestOptions{Batch: tt.Ptr[tt.RequestBatch](tt.RequestBatchInteger(1))})
+	require(err == nil, "nullable choice list failed")
+	nullableValues := nullableChoice.Value.([]any)
+	nullableProbabilities := nullableChoice.Probability.(tt.ProbabilityList)
+	require(len(nullableValues) == 2 && nullableValues[0] == nil && nullableValues[1] == nil && len(nullableProbabilities) == 2 && nullableProbabilities[0] == nil && nullableProbabilities[1] == nil, "nullable list probability lost input alignment")
+	nullableSends, err := nullableChoice.Facts.RequestsSent().Value.Int64()
+	require(err == nil, "nullable list facts missing")
+	expectedRequests += nullableSends
+	retained = append(retained, nullableChoice)
 	path := os.Getenv("HOME") + "/records.txt"
 	require(os.WriteFile(path, []byte("alpha\n\nbeta\n"), 0600) == nil, "fixture file")
 	files, err := client.Decide(context.Background(), tt.TextQuestion("Is it?"), fixtureInput(tt.RequestSource{Paths: []string{path}, Reading: tt.Ptr(tt.RequestReader{Unit: tt.Ptr(tt.RequestSourceUnitLine)})}), nil)
@@ -575,8 +635,20 @@ func main() {
 	require(err == nil && terminal.Failure().Present && terminal.Failure().Null && !terminal.Facts().Present, "null/absence changed")
 	_, err = packet.AsSessionPacketDecideRow()
 	require(err != nil, "wrong alternative accepted")
+	// Every public projection and receipt remains owned after engine close.
+	snapshots := make([]string, len(retained))
+	for index, call := range retained {
+		raw, err := json.Marshal(fixtureCall(call))
+		require(err == nil, "retained snapshot failed")
+		snapshots[index] = string(raw)
+	}
 	// Unknown-member retention is checked through the installed private codec.
 	client.Close()
+	for index, call := range retained {
+		raw, err := json.Marshal(fixtureCall(call))
+		require(err == nil && string(raw) == snapshots[index], "public call data changed after close")
+	}
+
 	for _, call := range retained {
 		facts := call.Terminal.Facts()
 		require(facts.Present && facts.Value.CallId().Present, "owned facts lost after close")

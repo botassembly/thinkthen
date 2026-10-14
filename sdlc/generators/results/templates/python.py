@@ -136,7 +136,16 @@ def types(definitions, stubs=False):
                  '    def _to_dict(self) -> dict[str, Any]: ...']
     if not stubs:
         lines += ['', '_COLUMN_SCHEMAS = ' + repr({key: column_schema(source) for key, source in definitions.items()}),
-                  '_CALL_RESULTS = ' + repr(call_results(definitions))]
+                  '_CALL_RESULTS = ' + repr(call_results(definitions)), '''def _call_path(value, path):
+    for key in path:
+        value = value.get(key) if isinstance(value, dict) else getattr(value, key, None)
+    return value
+def _call_resolution(packet, function):
+    spec = _CALL_RESULTS[function].get("resolution")
+    if not spec or _call_path(packet, ("function",)) != function: return None
+    if any(_call_path(packet, path) != literal for path, literal in spec["guards"]): return None
+    return (_call_path(packet, spec["index_path"]), _call_path(packet, spec["path"]) is not None)
+''' ]
     for key, source in definitions.items():
         if 'properties' in source:
             lines += ['', f'class {name(key)}(_NativeResult):', '    __slots__ = ()']

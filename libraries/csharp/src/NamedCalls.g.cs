@@ -83,6 +83,10 @@ public sealed partial class Engine {
         options), feed, cancellation).ConfigureAwait(false);
         return ProjectDecide(call);
     }
+    private static bool ResolvedDecide(OwnedCall call, AtomicDecideValue row, int ordinal) =>
+    call.Packets.OfType<SessionPacketObservation>().Any(packet => packet.Function == ThinkThen.Results.RequestFunction.Decide &&
+    packet.Value is SessionObservationRow observation && observation.Index == (row.Index.State == PresenceState.Value ? row.Index.Value : (ulong)ordinal) &&
+    observation.Value is SessionObservedRowJudgment judgment && judgment.Value is SessionJudgmentDecision settled && settled.Value.State == PresenceState.Value);
     private static CallResult<IReadOnlyList<JsonElement>, IReadOnlyList<double?>, IReadOnlyList<AtomicDecideValue>> ProjectDecide(OwnedCall call) {
         var receipts = new List<AtomicDecideValue>();
         foreach (var packet in call.Packets) {
@@ -91,7 +95,8 @@ public sealed partial class Engine {
         }
         var results = receipts.AsReadOnly();
         var values = results.Select(row => row.Value).ToArray();
-        return new(call, Array.AsReadOnly(values), Array.AsReadOnly(results.Select(row => (double?)((AnswerYesNo)row.Answer).Probability).ToArray()),
+        return new(call, Array.AsReadOnly(values), Array.AsReadOnly(results.Select((row, ordinal) => (ResolvedDecide(call,
+        row, ordinal) ? (double?)((AnswerYesNo)row.Answer).Probability : (double?)null)).ToArray()),
         results);
     }
     private static CallResult<JsonElement, double?, IReadOnlyList<AtomicDecideValue>> ProjectDecideScalar(OwnedCall call) {
@@ -155,6 +160,10 @@ public sealed partial class Engine {
         options), feed, cancellation).ConfigureAwait(false);
         return ProjectChoose(call);
     }
+    private static bool ResolvedChoose(OwnedCall call, AtomicNullableString row, int ordinal) =>
+    call.Packets.OfType<SessionPacketObservation>().Any(packet => packet.Function == ThinkThen.Results.RequestFunction.Choose &&
+    packet.Value is SessionObservationRow observation && observation.Index == (row.Index.State == PresenceState.Value ? row.Index.Value : (ulong)ordinal) &&
+    observation.Value is SessionObservedRowJudgment judgment && judgment.Value is SessionJudgmentChoice settled && settled.Value.State == PresenceState.Value);
     private static CallResult<IReadOnlyList<string?>, IReadOnlyList<double?>, IReadOnlyList<AtomicNullableString>> ProjectChoose(OwnedCall call) {
         var receipts = new List<AtomicNullableString>();
         foreach (var packet in call.Packets) {
@@ -163,7 +172,8 @@ public sealed partial class Engine {
         }
         var results = receipts.AsReadOnly();
         var values = results.Select(row => row.Value.State == PresenceState.Value ? row.Value.Value : (string?)null).ToArray();
-        return new(call, Array.AsReadOnly(values), Array.AsReadOnly(results.Select(row => row.Answer is AnswerChoice odds ? (double?)odds.Probabilities[odds.Pick] : null).ToArray()),
+        return new(call, Array.AsReadOnly(values), Array.AsReadOnly(results.Select((row, ordinal) => (ResolvedChoose(call,
+        row, ordinal) ? row.Answer is AnswerChoice odds ? (double?)odds.Probabilities[odds.Pick] : null : (double?)null)).ToArray()),
         results);
     }
     private static CallResult<string?, double?, IReadOnlyList<AtomicNullableString>> ProjectChooseScalar(OwnedCall call) {
@@ -377,7 +387,7 @@ public sealed partial class Engine {
         }
         var results = receipts.AsReadOnly();
         var values = results.Select(row => row.Input.State == PresenceState.Value ? row.Input.Value : JsonSerializer.SerializeToElement((string?)null)).ToArray();
-        return new(call, Array.AsReadOnly(values), Array.AsReadOnly(results.Select(row => (double?)((AnswerYesNo)row.Answer).Probability).ToArray()),
+        return new(call, Array.AsReadOnly(values), Array.AsReadOnly(results.Select((row, ordinal) => (double?)((AnswerYesNo)row.Answer).Probability).ToArray()),
         results);
     }
     public async Task<CallResult<IReadOnlyList<ulong>, IReadOnlyList<double?>, IReadOnlyList<AtomicNonZeroUsize>>> RankAsync(RequestQuestion question,
@@ -444,7 +454,7 @@ public sealed partial class Engine {
         }
         var results = receipts.AsReadOnly();
         var values = results.Select(row => row.Index.Value).ToArray();
-        return new(call, Array.AsReadOnly(values), Array.AsReadOnly(results.Select(row => (double?)((AnswerYesNo)row.Answer).Probability).ToArray()),
+        return new(call, Array.AsReadOnly(values), Array.AsReadOnly(results.Select((row, ordinal) => (double?)((AnswerYesNo)row.Answer).Probability).ToArray()),
         results);
     }
     public async Task<CallResult<JsonElement, double?, IReadOnlyList<Find>>> FindAsync(RequestQuestion question,
@@ -512,7 +522,7 @@ public sealed partial class Engine {
         var results = receipts.AsReadOnly();
         var values = results.Select(row => row.Value.State == PresenceState.Value ? row.Value.Value : JsonSerializer.SerializeToElement((string?)null)).ToArray();
         if (results.Count != 1) throw new JsonException("Missing aggregate result.");
-        return new(call, values.Single(), results.Select(row => row.Answer is FindAnswer odds ? (double?)odds.Probabilities[odds.Pick] : null).Single(),
+        return new(call, values.Single(), results.Select((row, ordinal) => (row.Index.State == PresenceState.Value ? row.Answer is FindAnswer odds ? (double?)odds.Probabilities[odds.Pick] : null : (double?)null)).Single(),
         results);
     }
     public async Task<CallResult<IReadOnlyDictionary<string, AnnotatedField>, double?, IReadOnlyList<Annotation>>> AnnotateAsync(RequestQuestion question,
@@ -651,7 +661,7 @@ public sealed partial class Engine {
         }
         var results = receipts.AsReadOnly();
         var values = results.Select(row => row.Value).ToArray();
-        return new(call, Array.AsReadOnly(values), Array.AsReadOnly(results.Select(row => RecognitionProbabilities(row)).ToArray()),
+        return new(call, Array.AsReadOnly(values), Array.AsReadOnly(results.Select((row, ordinal) => RecognitionProbabilities(row)).ToArray()),
         results);
     }
     private static CallResult<Recognize, IReadOnlyList<double>, IReadOnlyList<Recognition>> ProjectRecognizeScalar(OwnedCall call) {
@@ -723,7 +733,7 @@ public sealed partial class Engine {
         var results = receipts.AsReadOnly();
         var values = results.Select(row => row.Value).ToArray();
         if (results.Count != 1) throw new JsonException("Missing aggregate result.");
-        return new(call, values.Single(), results.Select(row => Array.AsReadOnly(row.Value.Select(edge => edge.Probability).ToArray())).Single(),
+        return new(call, values.Single(), results.Select((row, ordinal) => Array.AsReadOnly(row.Value.Select(edge => edge.Probability).ToArray())).Single(),
         results);
     }
     private static IReadOnlyList<double> RecognitionProbabilities(Recognition row) {

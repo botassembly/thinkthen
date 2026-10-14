@@ -6,6 +6,7 @@ import (
 	"context"
 	"encoding/json"
 	"reflect"
+	"strconv"
 )
 
 type Annotation struct{ ownedJSON }
@@ -2425,66 +2426,6 @@ func (v TokenUsage) OutputTokens() Presence[json.Number] {
 type Value struct{ ownedJSON }
 
 func (v Value) Value() (any, error) { return v.jsonValue() }
-func (v SessionPacket) DecideAnswer() Presence[[]AtomicDecideValue] {
-	if !ownedLiteral(v.raw, "kind", "aggregate") || !ownedLiteral(v.raw, "function", "decide") {
-		return Presence[[]AtomicDecideValue]{Err: errAlternative}
-	}
-	return ownedMember[[]AtomicDecideValue](v.raw, "value")
-}
-func (v SessionPacket) ChooseAnswer() Presence[[]AtomicNullableString] {
-	if !ownedLiteral(v.raw, "kind", "aggregate") || !ownedLiteral(v.raw, "function", "choose") {
-		return Presence[[]AtomicNullableString]{Err: errAlternative}
-	}
-	return ownedMember[[]AtomicNullableString](v.raw, "value")
-}
-func (v SessionPacket) TagAnswer() Presence[[]AtomicArrayOfString] {
-	if !ownedLiteral(v.raw, "kind", "aggregate") || !ownedLiteral(v.raw, "function", "tag") {
-		return Presence[[]AtomicArrayOfString]{Err: errAlternative}
-	}
-	return ownedMember[[]AtomicArrayOfString](v.raw, "value")
-}
-func (v SessionPacket) ScoreAnswer() Presence[[]AtomicDouble] {
-	if !ownedLiteral(v.raw, "kind", "aggregate") || !ownedLiteral(v.raw, "function", "score") {
-		return Presence[[]AtomicDouble]{Err: errAlternative}
-	}
-	return ownedMember[[]AtomicDouble](v.raw, "value")
-}
-func (v SessionPacket) FilterAnswer() Presence[[]AtomicBoolean] {
-	if !ownedLiteral(v.raw, "kind", "aggregate") || !ownedLiteral(v.raw, "function", "filter") {
-		return Presence[[]AtomicBoolean]{Err: errAlternative}
-	}
-	return ownedMember[[]AtomicBoolean](v.raw, "value")
-}
-func (v SessionPacket) RankAnswer() Presence[[]AtomicNonZeroUsize] {
-	if !ownedLiteral(v.raw, "kind", "aggregate") || !ownedLiteral(v.raw, "function", "rank") {
-		return Presence[[]AtomicNonZeroUsize]{Err: errAlternative}
-	}
-	return ownedMember[[]AtomicNonZeroUsize](v.raw, "value")
-}
-func (v SessionPacket) FindAnswer() Presence[Find] {
-	if !ownedLiteral(v.raw, "kind", "aggregate") || !ownedLiteral(v.raw, "function", "find") {
-		return Presence[Find]{Err: errAlternative}
-	}
-	return ownedMember[Find](v.raw, "value")
-}
-func (v SessionPacket) AnnotateAnswer() Presence[[]Annotation] {
-	if !ownedLiteral(v.raw, "kind", "aggregate") || !ownedLiteral(v.raw, "function", "annotate") {
-		return Presence[[]Annotation]{Err: errAlternative}
-	}
-	return ownedMember[[]Annotation](v.raw, "value")
-}
-func (v SessionPacket) RecognizeAnswer() Presence[[]Recognition] {
-	if !ownedLiteral(v.raw, "kind", "aggregate") || !ownedLiteral(v.raw, "function", "recognize") {
-		return Presence[[]Recognition]{Err: errAlternative}
-	}
-	return ownedMember[[]Recognition](v.raw, "value")
-}
-func (v SessionPacket) RelateAnswer() Presence[Relation] {
-	if !ownedLiteral(v.raw, "kind", "aggregate") || !ownedLiteral(v.raw, "function", "relate") {
-		return Presence[Relation]{Err: errAlternative}
-	}
-	return ownedMember[Relation](v.raw, "value")
-}
 
 // OrderedEntry carries one authored object member.
 type OrderedEntry[V any] struct {
@@ -4619,298 +4560,337 @@ type RelateInput interface{ RequestInput }
 func (c *Client) Relate(ctx context.Context, question RequestQuestion, input RelateInput, options *RequestOptions) (Call, error) {
 	return c.call(ctx, "relate", question, input, options)
 }
-func ownedObject(raw json.RawMessage) bool {
-	value := bytes.TrimSpace(raw)
-	return len(value) > 0 && value[0] == 123
+
+type Receipt struct {
+	ownedJSON
+	function string
 }
-func ownedAnswerPath(raw json.RawMessage, path []string) Presence[json.RawMessage] {
-	result := Presence[json.RawMessage]{Present: true, Value: raw}
+type Probability interface{ isProbability() }
+type ProbabilityScalar float64
+type ProbabilityList []*float64
+type ProbabilityRows []ProbabilityList
+
+func (ProbabilityScalar) isProbability() {}
+func (ProbabilityList) isProbability()   {}
+func (ProbabilityRows) isProbability()   {}
+func (v Receipt) AsDecide() (AtomicDecideValue, error) {
+	if v.function != "decide" {
+		return AtomicDecideValue{}, errAlternative
+	}
+	return ownedDecode[AtomicDecideValue](v.raw)
+}
+func (v Receipt) AsChoose() (AtomicNullableString, error) {
+	if v.function != "choose" {
+		return AtomicNullableString{}, errAlternative
+	}
+	return ownedDecode[AtomicNullableString](v.raw)
+}
+func (v Receipt) AsTag() (AtomicArrayOfString, error) {
+	if v.function != "tag" {
+		return AtomicArrayOfString{}, errAlternative
+	}
+	return ownedDecode[AtomicArrayOfString](v.raw)
+}
+func (v Receipt) AsScore() (AtomicDouble, error) {
+	if v.function != "score" {
+		return AtomicDouble{}, errAlternative
+	}
+	return ownedDecode[AtomicDouble](v.raw)
+}
+func (v Receipt) AsFilter() (AtomicBoolean, error) {
+	if v.function != "filter" {
+		return AtomicBoolean{}, errAlternative
+	}
+	return ownedDecode[AtomicBoolean](v.raw)
+}
+func (v Receipt) AsRank() (AtomicNonZeroUsize, error) {
+	if v.function != "rank" {
+		return AtomicNonZeroUsize{}, errAlternative
+	}
+	return ownedDecode[AtomicNonZeroUsize](v.raw)
+}
+func (v Receipt) AsFind() (Find, error) {
+	if v.function != "find" {
+		return Find{}, errAlternative
+	}
+	return ownedDecode[Find](v.raw)
+}
+func (v Receipt) AsAnnotate() (Annotation, error) {
+	if v.function != "annotate" {
+		return Annotation{}, errAlternative
+	}
+	return ownedDecode[Annotation](v.raw)
+}
+func (v Receipt) AsRecognize() (Recognition, error) {
+	if v.function != "recognize" {
+		return Recognition{}, errAlternative
+	}
+	return ownedDecode[Recognition](v.raw)
+}
+func (v Receipt) AsRelate() (Relation, error) {
+	if v.function != "relate" {
+		return Relation{}, errAlternative
+	}
+	return ownedDecode[Relation](v.raw)
+}
+
+type callRule struct {
+	projection, shape, probability string
+	path, pick, selection          []string
+	collection, nested             bool
+	resolution                     *resolutionRule
+}
+type resolutionGuard struct {
+	path  []string
+	value string
+}
+type resolutionRule struct {
+	path, index []string
+	guards      []resolutionGuard
+}
+
+var callRules = map[string]callRule{
+	"decide":    {"value", "input", "yes", []string{"answer", "probability"}, []string{}, []string{}, true, false, &resolutionRule{[]string{"value", "value", "value", "value"}, []string{"value", "index"}, []resolutionGuard{{[]string{"kind"}, "observation"}, {[]string{"value", "kind"}, "row"}, {[]string{"value", "value", "kind"}, "judgment"}, {[]string{"value", "value", "value", "kind"}, "decision"}}}},
+	"choose":    {"value", "input", "picked", []string{"answer", "probabilities"}, []string{"answer", "pick"}, []string{}, true, false, &resolutionRule{[]string{"value", "value", "value", "value"}, []string{"value", "index"}, []resolutionGuard{{[]string{"kind"}, "observation"}, {[]string{"value", "kind"}, "row"}, {[]string{"value", "value", "kind"}, "judgment"}, {[]string{"value", "value", "value", "kind"}, "choice"}}}},
+	"tag":       {"value", "input", "null", []string{}, []string{}, []string{}, true, false, nil},
+	"score":     {"value", "input", "null", []string{}, []string{}, []string{}, true, false, nil},
+	"filter":    {"input", "collection", "yes", []string{"answer", "probability"}, []string{}, []string{}, true, false, nil},
+	"rank":      {"index", "collection", "items", []string{}, []string{}, []string{}, true, false, nil},
+	"find":      {"value", "aggregate", "picked", []string{"answer", "probabilities"}, []string{"answer", "pick"}, []string{"index"}, false, false, nil},
+	"annotate":  {"value", "input", "null", []string{}, []string{}, []string{}, true, false, nil},
+	"recognize": {"value", "input", "items", []string{}, []string{}, []string{}, true, true, nil},
+	"relate":    {"value", "aggregate", "items", []string{}, []string{}, []string{}, false, false, nil},
+}
+
+func scalarInput(input RequestInput) bool {
+	switch input.(type) {
+	case RequestInputText, RequestInputJson:
+		return true
+	}
+	return false
+}
+func callPath(raw json.RawMessage, path []string) json.RawMessage {
 	for _, field := range path {
-		result = ownedMember[json.RawMessage](result.Value, field)
-		if result.Err != nil || !result.Present || result.Null {
-			return result
+		member := ownedMember[json.RawMessage](raw, field)
+		if member.Err != nil || !member.Present || member.Null {
+			return nil
 		}
+		raw = member.Value
 	}
-	return result
+	return raw
 }
-func (v Call) answerTerminal() error {
-	if v.Terminal == nil {
-		return &AnswerCardinalityError{Call: v}
+func callChance(raw json.RawMessage) Probability {
+	if len(raw) == 0 {
+		return nil
 	}
-	kind := v.Terminal.Kind()
-	if kind.Err != nil {
-		return kind.Err
+	value, err := ownedDecode[*float64](raw)
+	if err != nil || value == nil {
+		return nil
 	}
-	if !kind.Present || kind.Null || kind.Value != "terminal" {
-		return &AnswerCardinalityError{Call: v}
-	}
-	failure := v.Terminal.Failure()
-	if failure.Err != nil {
-		return failure.Err
-	}
-	if failure.Present {
-		if failure.Null || !ownedObject(failure.Value.raw) {
-			return &AnswerCardinalityError{Call: v}
-		}
-		detail := failure.Value.Error()
-		if detail.Err != nil {
-			return detail.Err
-		}
-		if !detail.Present || detail.Null || !ownedObject(detail.Value.raw) {
-			return &AnswerCardinalityError{Call: v}
-		}
-		return &SessionError{Call: v, Detail: detail.Value}
+	return ProbabilityScalar(*value)
+}
+func probabilityPointer(value Probability) *float64 {
+	if scalar, ok := value.(ProbabilityScalar); ok {
+		result := float64(scalar)
+		return &result
 	}
 	return nil
 }
-func (v Call) answerJSON(function, judgment string) (json.RawMessage, error) {
-	if err := v.answerTerminal(); err != nil {
-		return nil, err
+func receiptChance(receipt json.RawMessage, rule callRule) (Probability, error) {
+	if len(rule.selection) > 0 && len(callPath(receipt, rule.selection)) == 0 {
+		return nil, nil
 	}
-	values := make([]json.RawMessage, 0)
-	collection := function == "decide" || function == "choose" || function == "tag" || function == "score" || function == "filter" || function == "rank" || function == "annotate" || function == "recognize"
+	switch rule.probability {
+	case "null":
+		return nil, nil
+	case "yes":
+		return callChance(callPath(receipt, rule.path)), nil
+	case "picked":
+		pickRaw := callPath(receipt, rule.pick)
+		if len(pickRaw) == 0 {
+			return nil, nil
+		}
+		pick, err := ownedDecode[*string](pickRaw)
+		if err != nil {
+			return nil, err
+		}
+		if pick == nil {
+			return nil, nil
+		}
+		return callChance(callPath(callPath(receipt, rule.path), []string{*pick})), nil
+	}
+	answer := callPath(receipt, []string{"answer"})
+	value := callPath(receipt, []string{"value"})
+	if ownedHas(value, "entities") {
+		entities, err := ownedDecode[[]json.RawMessage](callPath(value, []string{"entities"}))
+		if err != nil {
+			return nil, err
+		}
+		proposals, err := ownedDecode[[]json.RawMessage](callPath(answer, []string{"proposals"}))
+		if err != nil {
+			return nil, err
+		}
+		chances := make(ProbabilityList, 0, len(entities))
+		for _, entity := range entities {
+			var chance *float64
+			for _, proposal := range proposals {
+				kept := ownedMember[bool](proposal, "kept")
+				if !kept.Value {
+					continue
+				}
+				selected := callPath(proposal, []string{"selected"})
+				if bytes.Equal(callPath(entity, []string{"start"}), callPath(selected, []string{"start"})) && bytes.Equal(callPath(entity, []string{"end"}), callPath(selected, []string{"end"})) && bytes.Equal(callPath(entity, []string{"kind"}), callPath(proposal, []string{"kind"})) {
+					chance = probabilityPointer(callChance(callPath(proposal, []string{"span_probability"})))
+					break
+				}
+			}
+			chances = append(chances, chance)
+		}
+		return chances, nil
+	}
+	if ownedHas(value, "proposals") {
+		proposals, err := ownedDecode[[]json.RawMessage](callPath(value, []string{"proposals"}))
+		if err != nil {
+			return nil, err
+		}
+		chances := make(ProbabilityList, 0, len(proposals))
+		for _, proposal := range proposals {
+			chances = append(chances, probabilityPointer(callChance(callPath(proposal, []string{"probability"}))))
+		}
+		return chances, nil
+	}
+	if len(bytes.TrimSpace(value)) > 0 && bytes.TrimSpace(value)[0] == '[' {
+		edges, err := ownedDecode[[]json.RawMessage](value)
+		if err != nil {
+			return nil, err
+		}
+		chances := make(ProbabilityList, 0, len(edges))
+		for _, edge := range edges {
+			chances = append(chances, probabilityPointer(callChance(callPath(edge, []string{"probability"}))))
+		}
+		return chances, nil
+	}
+	return callChance(callPath(answer, []string{"probability"})), nil
+}
+func (v *Call) settle(function string, input RequestInput) error {
+	rule := callRules[function]
+	resolved := map[string]bool{}
+	if rule.resolution != nil {
+		for _, packet := range v.Packets {
+			if !ownedLiteral(packet.raw, "function", function) {
+				continue
+			}
+			matches := true
+			for _, guard := range rule.resolution.guards {
+				if !bytes.Equal(callPath(packet.raw, guard.path), json.RawMessage(strconv.Quote(guard.value))) {
+					matches = false
+					break
+				}
+			}
+			if matches {
+				resolved[string(callPath(packet.raw, rule.resolution.index))] = len(callPath(packet.raw, rule.resolution.path)) > 0
+			}
+		}
+	}
+	rows := make([]json.RawMessage, 0)
+	aggregates := make([]json.RawMessage, 0)
+	hasAggregate := false
 	for _, packet := range v.Packets {
 		if !ownedLiteral(packet.raw, "function", function) {
 			continue
 		}
-		var value Presence[json.RawMessage]
-		row := false
-		if judgment == "" {
-			row = collection && ownedLiteral(packet.raw, "kind", "row")
-			if !row && !ownedLiteral(packet.raw, "kind", "aggregate") {
-				continue
-			}
-			value = ownedMember[json.RawMessage](packet.raw, "value")
-		} else {
-			if !(ownedLiteral(ownedAnswerPath(packet.raw, []string{}).Value, "kind", "observation") && ownedLiteral(ownedAnswerPath(packet.raw, []string{"value"}).Value, "kind", "row") && ownedLiteral(ownedAnswerPath(packet.raw, []string{"value", "value"}).Value, "kind", "judgment")) {
-				continue
-			}
-			carrier := ownedAnswerPath(packet.raw, []string{"value", "value", "value"})
-			if !ownedLiteral(carrier.Value, "kind", judgment) {
-				continue
-			}
-			value = ownedMember[json.RawMessage](carrier.Value, "value")
+		raw := callPath(packet.raw, []string{"value"})
+		if ownedLiteral(packet.raw, "kind", "row") {
+			rows = append(rows, raw)
 		}
-		if value.Err != nil {
-			return nil, value.Err
-		}
-		if value.Present {
-			raw := value.Value
-			if value.Null {
-				raw = json.RawMessage("null")
-			}
-			if row {
-				raw, err := transportMarshal([]json.RawMessage{raw})
+		if ownedLiteral(packet.raw, "kind", "aggregate") {
+			hasAggregate = true
+			if rule.collection {
+				chunk, err := ownedDecode[[]json.RawMessage](raw)
 				if err != nil {
-					return nil, err
+					return err
 				}
-				values = append(values, raw)
+				aggregates = append(aggregates, chunk...)
 			} else {
-				values = append(values, raw)
+				aggregates = append(aggregates, raw)
 			}
 		}
 	}
-	if judgment == "" && collection {
-		combined := make([]json.RawMessage, 0)
-		for _, value := range values {
-			var items []json.RawMessage
-			if err := json.Unmarshal(value, &items); err != nil {
-				return nil, err
+	if hasAggregate {
+		rows = aggregates
+	}
+	v.Results = make([]Receipt, 0, len(rows))
+	values := make([]any, 0, len(rows))
+	chances := make([]Probability, 0, len(rows))
+	for ordinal, raw := range rows {
+		projected := ownedMember[json.RawMessage](raw, rule.projection)
+		if projected.Err != nil {
+			return projected.Err
+		}
+		if !projected.Present {
+			return errAlternative
+		}
+		var value any
+		if !projected.Null {
+			decoded, err := ownedDecode[any](projected.Value)
+			if err != nil {
+				return err
 			}
-			combined = append(combined, items...)
+			value = decoded
 		}
-		return transportMarshal(combined)
-	}
-	if len(values) != 1 {
-		return nil, &AnswerCardinalityError{Function: function, Count: len(values), Call: v}
-	}
-	return values[0], nil
-}
-func ownedAnswerProjection[T any](raw json.RawMessage, member string) ([]T, error) {
-	rows, err := ownedDecode[[]json.RawMessage](raw)
-	if err != nil {
-		return nil, err
-	}
-	values := make([]T, 0, len(rows))
-	for _, row := range rows {
-		field := ownedMember[json.RawMessage](row, member)
-		if field.Err != nil {
-			return nil, field.Err
-		}
-		if !field.Present {
-			return nil, errAlternative
-		}
-		value := field.Value
-		if field.Null {
-			value = json.RawMessage("null")
-		}
-		decoded, err := ownedDecode[T](value)
+		chance, err := receiptChance(raw, rule)
 		if err != nil {
-			return nil, err
+			return err
 		}
-		values = append(values, decoded)
+		if rule.resolution != nil {
+			index := callPath(raw, []string{"index"})
+			if len(index) == 0 {
+				index = json.RawMessage(strconv.Itoa(ordinal))
+			}
+			if !resolved[string(index)] {
+				chance = nil
+			}
+		}
+		v.Results = append(v.Results, Receipt{ownedJSON{raw: raw}, function})
+		values = append(values, value)
+		chances = append(chances, chance)
 	}
-	return values, nil
-}
-func (v Call) DecideAnswer() (*bool, error) {
-	raw, err := v.answerJSON("decide", "decision")
-	if err != nil {
-		var zero *bool
-		return zero, err
+	v.Value = values
+	if rule.probability != "null" {
+		nested := rule.nested
+		if nested {
+			grouped := make(ProbabilityRows, 0, len(chances))
+			for _, chance := range chances {
+				group, _ := chance.(ProbabilityList)
+				grouped = append(grouped, group)
+			}
+			v.Probability = grouped
+		} else {
+			aligned := make(ProbabilityList, 0, len(chances))
+			for _, chance := range chances {
+				aligned = append(aligned, probabilityPointer(chance))
+			}
+			v.Probability = aligned
+		}
 	}
-	return ownedDecode[*bool](raw)
-}
-func (c *Client) DecideAnswer(ctx context.Context, question RequestQuestion, input DecideInput, options *RequestOptions) (*bool, error) {
-	call, err := c.Decide(ctx, question, input, options)
-	if err != nil {
-		var zero *bool
-		return zero, err
+	if rule.shape == "aggregate" || rule.shape == "input" && scalarInput(input) {
+		v.Value = nil
+		v.Probability = nil
+		if len(values) > 0 {
+			v.Value = values[0]
+			if rule.probability != "null" {
+				v.Probability = chances[0]
+			}
+		}
 	}
-	return call.DecideAnswer()
-}
-func (v Call) ChooseAnswer() (*string, error) {
-	raw, err := v.answerJSON("choose", "choice")
-	if err != nil {
-		var zero *string
-		return zero, err
+	if v.Terminal != nil {
+		facts := v.Terminal.Facts()
+		if facts.Err != nil {
+			return facts.Err
+		}
+		v.Facts = facts.Value
 	}
-	return ownedDecode[*string](raw)
-}
-func (c *Client) ChooseAnswer(ctx context.Context, question RequestQuestion, input ChooseInput, options *RequestOptions) (*string, error) {
-	call, err := c.Choose(ctx, question, input, options)
-	if err != nil {
-		var zero *string
-		return zero, err
-	}
-	return call.ChooseAnswer()
-}
-func (v Call) TagAnswer() ([]string, error) {
-	raw, err := v.answerJSON("tag", "tags")
-	if err != nil {
-		var zero []string
-		return zero, err
-	}
-	return ownedDecode[[]string](raw)
-}
-func (c *Client) TagAnswer(ctx context.Context, question RequestQuestion, input TagInput, options *RequestOptions) ([]string, error) {
-	call, err := c.Tag(ctx, question, input, options)
-	if err != nil {
-		var zero []string
-		return zero, err
-	}
-	return call.TagAnswer()
-}
-func (v Call) ScoreAnswer() (float64, error) {
-	raw, err := v.answerJSON("score", "score")
-	if err != nil {
-		var zero float64
-		return zero, err
-	}
-	return ownedDecode[float64](raw)
-}
-func (c *Client) ScoreAnswer(ctx context.Context, question RequestQuestion, input ScoreInput, options *RequestOptions) (float64, error) {
-	call, err := c.Score(ctx, question, input, options)
-	if err != nil {
-		var zero float64
-		return zero, err
-	}
-	return call.ScoreAnswer()
-}
-func (v Call) FilterAnswer() ([]any, error) {
-	raw, err := v.answerJSON("filter", "")
-	if err != nil {
-		var zero []any
-		return zero, err
-	}
-	return ownedAnswerProjection[any](raw, "input")
-}
-func (c *Client) FilterAnswer(ctx context.Context, question RequestQuestion, input FilterInput, options *RequestOptions) ([]any, error) {
-	call, err := c.Filter(ctx, question, input, options)
-	if err != nil {
-		var zero []any
-		return zero, err
-	}
-	return call.FilterAnswer()
-}
-func (v Call) RankAnswer() ([]uint64, error) {
-	raw, err := v.answerJSON("rank", "")
-	if err != nil {
-		var zero []uint64
-		return zero, err
-	}
-	return ownedAnswerProjection[uint64](raw, "index")
-}
-func (c *Client) RankAnswer(ctx context.Context, question RequestQuestion, input RankInput, options *RequestOptions) ([]uint64, error) {
-	call, err := c.Rank(ctx, question, input, options)
-	if err != nil {
-		var zero []uint64
-		return zero, err
-	}
-	return call.RankAnswer()
-}
-func (v Call) FindAnswer() (Find, error) {
-	raw, err := v.answerJSON("find", "")
-	if err != nil {
-		var zero Find
-		return zero, err
-	}
-	return ownedDecode[Find](raw)
-}
-func (c *Client) FindAnswer(ctx context.Context, question RequestQuestion, input FindInput, options *RequestOptions) (Find, error) {
-	call, err := c.Find(ctx, question, input, options)
-	if err != nil {
-		var zero Find
-		return zero, err
-	}
-	return call.FindAnswer()
-}
-func (v Call) AnnotateAnswer() ([]Annotation, error) {
-	raw, err := v.answerJSON("annotate", "")
-	if err != nil {
-		var zero []Annotation
-		return zero, err
-	}
-	return ownedDecode[[]Annotation](raw)
-}
-func (c *Client) AnnotateAnswer(ctx context.Context, question RequestQuestion, input AnnotateInput, options *RequestOptions) ([]Annotation, error) {
-	call, err := c.Annotate(ctx, question, input, options)
-	if err != nil {
-		var zero []Annotation
-		return zero, err
-	}
-	return call.AnnotateAnswer()
-}
-func (v Call) RecognizeAnswer() ([]Recognition, error) {
-	raw, err := v.answerJSON("recognize", "")
-	if err != nil {
-		var zero []Recognition
-		return zero, err
-	}
-	return ownedDecode[[]Recognition](raw)
-}
-func (c *Client) RecognizeAnswer(ctx context.Context, question RequestQuestion, input RecognizeInput, options *RequestOptions) ([]Recognition, error) {
-	call, err := c.Recognize(ctx, question, input, options)
-	if err != nil {
-		var zero []Recognition
-		return zero, err
-	}
-	return call.RecognizeAnswer()
-}
-func (v Call) RelateAnswer() (Relation, error) {
-	raw, err := v.answerJSON("relate", "")
-	if err != nil {
-		var zero Relation
-		return zero, err
-	}
-	return ownedDecode[Relation](raw)
-}
-func (c *Client) RelateAnswer(ctx context.Context, question RequestQuestion, input RelateInput, options *RequestOptions) (Relation, error) {
-	call, err := c.Relate(ctx, question, input, options)
-	if err != nil {
-		var zero Relation
-		return zero, err
-	}
-	return call.RelateAnswer()
+	return nil
 }
 
 const OwnedRequestVersion = "thinkthen.request/1"

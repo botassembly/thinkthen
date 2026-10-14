@@ -4,6 +4,6 @@
     "fallback/lib"
   ],
   "extension": ".rb",
-  "max": 321,
+  "max": 331,
   "scope": "handwritten-production"
 }

@@ -57,12 +57,19 @@ def test_named_calls_use_owned_typed_results_for_the_ten_functions(backend, tmp_
             assert item.results[0].meta.context_sha256 == context.results[0].meta.context_sha256
             assert bool(detailed.value) is True
             unresolved = engine.decide('Late?', ['first', 'second'], threshold='0.2:0.95')
-            assert unresolved.value == [None, None] and unresolved.probability == [.9, .9]
+            assert unresolved.value == [None, None] and unresolved.probability == [None, None]
             assert engine.decide('Late?', 'note').value is True
             try: engine.decide('Late?', 'note', details=True)
             except TypeError: pass
             else: raise AssertionError('removed details keyword admitted')
             assert engine.choose('Team?', 'note', options=['bill', 'ship']).probability == .9
+            authored_null = engine.decide({'decide': 'Late?', 'true': None}, 'note')
+            assert authored_null.value is None and authored_null.probability == .9
+            unsure_choice = engine.choose('Team?', ['first', 'second'], options=['bill', 'ship'], threshold=.95)
+            assert unsure_choice.value == [None, None] and unsure_choice.probability == [None, None]
+            selected_null = engine.find('Best?', [None, 'other'], none=True)
+            assert selected_null.value is None and selected_null.probability == .9 and selected_null.results[0].index == 0
+
             import asyncio
             assert asyncio.run(engine.asyncio.decide('Late?', 'note')).value is True
             assert engine.rank('Late?', ['first', 'second']).value[0] == 0

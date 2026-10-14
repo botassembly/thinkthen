@@ -36,6 +36,11 @@ static class NativeChecks
             Cache = new CacheDocumentDisabledCache { Value = new DisabledCache() },
             Batch = new RequestBatchString { Value = "max" }, Throttle = 1, MaxRetries = 0
         });
+        var unknownChoose = await engine.ChooseAsync(Choose, new RequestInputRecords { Items = new[] { Item("text"), Item("other") } }, new RequestOptions { Threshold = new RequestThresholdNumber { Value = .95 } });
+        Check(unknownChoose.Value.All(value => value is null) && unknownChoose.Probability.All(chance => chance is null), "unresolved choice probability");
+        var findQuestionForNull = Define(new RequestDefinitionAuthoredFind { Find = Text("Which?") });
+        var nullFind = await engine.FindAsync(findQuestionForNull, new RequestInputRecords { Items = new[] { new RequestItem { Original = new RequestOriginalJson { Value = JsonSerializer.SerializeToElement((string?)null) } }, Item("other") } }, new RequestOptions { None = true });
+        Check(nullFind.Value.ValueKind == JsonValueKind.Null && nullFind.Probability == .9 && nullFind.Results.Single().Index.State == R.PresenceState.Value && nullFind.Results.Single().Index.Value == 0, "selected null original probability");
         var controls = new RequestOptions { Attempts = true };
         var completeControls = new RequestOptions { Attempts = true };
         foreach (bool files in new[] { false, true })

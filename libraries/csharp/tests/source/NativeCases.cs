@@ -136,6 +136,7 @@ static class AsyncFixtureCases
                     "recognize" => await engine.RecognizeAsync(question,(dynamic)input!,options,cancel.Token), "relate" => await engine.RelateAsync(question,(dynamic)input!,options,cancel.Token),
                     _ => throw new InvalidOperationException("unknown fixture function")
                 });
+                if (Text(data,"verb") == "find" && call.Packets.OfType<ThinkThen.Results.SessionPacketFindAggregate>().Single().Value.Index.State != ThinkThen.Results.PresenceState.Value && call.GetType().GetProperty("Probability")!.GetValue(call) is not null) throw new Exception("unresolved find probability");
                 var output = Normalize(call, Text(data,"verb"),Yes(data,"incremental"),Get(data,"image_paths").ValueKind==JsonValueKind.Array && Get(data,"image_paths").GetArrayLength()>0 || Get(data,"source_unit").ValueKind==JsonValueKind.Number && Get(data,"source_unit").GetInt32()==4);
                 if (Text(data,"arm") == "case/library-call-result/v1") {
                     output["call_result"] = Text(data,"verb") == "decide"

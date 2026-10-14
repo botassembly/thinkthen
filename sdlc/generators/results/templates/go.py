@@ -2,7 +2,7 @@
 import re
 import json
 from csharp import shape
-from host_answers import aggregate_answers, named_object_fields, usage_operations
+from host_answers import named_object_fields, usage_operations, call_results, scalar_input_selectors
 ROOTS = ('completesessionPacket', 'completeplan')
 def name(key):
     if key.startswith('complete') and key.removeprefix('complete').lower() == 'error': return 'FailureDetail'
@@ -26,7 +26,7 @@ def condition(tag):
     if mode=='member': return f'ownedHas(v.raw, {json.dumps(field)})'
     return ' && '.join([f'ownedHas(v.raw, {json.dumps(k)})' for k in value['required']]+[f'!ownedHas(v.raw, {json.dumps(k)})' for k in value['excluded']])
 def render(definitions, input_definitions):
-    lines=['// Generated from the shared Rust result graph; do not edit.','package thinkthen','import ("encoding/json"; "bytes"; "reflect"; "context")']
+    lines=['// Generated from the shared Rust result graph; do not edit.','package thinkthen','import ("encoding/json"; "bytes"; "reflect"; "context"; "strconv")']
     for key, raw in definitions.items():
         n=name(key); s=shape(raw)
         lines += [f'type {n} struct {{ ownedJSON }}']
@@ -50,10 +50,8 @@ def render(definitions, input_definitions):
         for child,tag in s.get('variants',[]):
             cn=name(child)
             lines += [f'func (v {n}) As{cn}() ({cn}, error) {{ if !({condition(tag)}) {{ return {cn}{{}}, errAlternative }}; return ownedDecode[{cn}](v.raw) }}']
-    for function, _, payload in aggregate_answers(definitions):
-        result = typ(payload)
-        lines += [f'func (v SessionPacket) {function.title()}Answer() Presence[{result}] {{ if !ownedLiteral(v.raw, "kind", "aggregate") || !ownedLiteral(v.raw, "function", {json.dumps(function)}) {{ return Presence[{result}]{{Err:errAlternative}} }}; return ownedMember[{result}](v.raw, "value") }}']
-    return '\n'.join(lines)+'\n'+inputs(input_definitions)+named_calls(input_definitions)+answer_helpers(definitions)
+    return '\n'.join(lines)+'\n'+inputs(input_definitions)+named_calls(input_definitions)+call_helpers(definitions, input_definitions)
+
 
 
 def usage(header):
@@ -218,46 +216,118 @@ def named_calls(definitions):
         for item in functions) + '\n'
 
 
-def answer_helpers(definitions):
-    from host_answers import scalar_answers, judgment_route, aggregate_projection
-    route, guards = judgment_route(definitions)
-    checks = []
-    for path, value in guards:
-        checks.append('ownedLiteral(ownedAnswerPath(packet.raw, []string{' + ','.join(json.dumps(field) for field in path[:-1]) + '}).Value,' + json.dumps(path[-1]) + ',' + json.dumps(value) + ')')
-    path = '[]string{' + ','.join(json.dumps(field) for field in route) + '}'
-    collections = [function for function, _, payload in aggregate_answers(definitions) if payload.get('type') == 'array']
-    collection_test = ' || '.join('function==' + json.dumps(function) for function in collections)
-    lines = ['func ownedObject(raw json.RawMessage) bool { value:=bytes.TrimSpace(raw); return len(value)>0 && value[0]==123 }',
-             'func ownedAnswerPath(raw json.RawMessage, path []string) Presence[json.RawMessage] { result:=Presence[json.RawMessage]{Present:true,Value:raw}; for _,field:=range path { result=ownedMember[json.RawMessage](result.Value,field); if result.Err!=nil || !result.Present || result.Null { return result } }; return result }',
-             'func (v Call) answerTerminal() error { if v.Terminal==nil { return &AnswerCardinalityError{Call:v} }; kind:=v.Terminal.Kind(); if kind.Err!=nil { return kind.Err }; if !kind.Present || kind.Null || kind.Value!="terminal" { return &AnswerCardinalityError{Call:v} }; failure:=v.Terminal.Failure(); if failure.Err!=nil { return failure.Err }; if failure.Present { if failure.Null || !ownedObject(failure.Value.raw) { return &AnswerCardinalityError{Call:v} }; detail:=failure.Value.Error(); if detail.Err!=nil { return detail.Err }; if !detail.Present || detail.Null || !ownedObject(detail.Value.raw) { return &AnswerCardinalityError{Call:v} }; return &SessionError{Call:v,Detail:detail.Value} }; return nil }',
-             'func (v Call) answerJSON(function, judgment string) (json.RawMessage,error) {',
-             'if err:=v.answerTerminal();err!=nil { return nil,err }; values:=make([]json.RawMessage,0); collection:=' + collection_test,
-             'for _,packet:=range v.Packets { if !ownedLiteral(packet.raw,"function",function) { continue }; var value Presence[json.RawMessage]; row:=false',
-             'if judgment=="" { row=collection && ownedLiteral(packet.raw,"kind","row"); if !row && !ownedLiteral(packet.raw,"kind","aggregate") { continue }; value=ownedMember[json.RawMessage](packet.raw,"value") } else {',
-             'if !(' + ' && '.join(checks) + ') { continue }; carrier:=ownedAnswerPath(packet.raw,' + path + '); if !ownedLiteral(carrier.Value,"kind",judgment) { continue }; value=ownedMember[json.RawMessage](carrier.Value,"value")',
-             '}; if value.Err!=nil { return nil,value.Err }; if value.Present { raw:=value.Value; if value.Null { raw=json.RawMessage("null") }; if row { raw,err:=transportMarshal([]json.RawMessage{raw}); if err!=nil { return nil,err }; values=append(values,raw) } else { values=append(values,raw) } }',
-             '}; if judgment=="" && collection { combined:=make([]json.RawMessage,0); for _,value:=range values { var items []json.RawMessage; if err:=json.Unmarshal(value,&items);err!=nil { return nil,err }; combined=append(combined,items...) }; return transportMarshal(combined) }; if len(values)!=1 { return nil,&AnswerCardinalityError{Function:function,Count:len(values),Call:v} }; return values[0],nil', '}']
-    answers = {}
-    for function, _, payload in aggregate_answers(definitions):
-        projected, member = aggregate_projection(function, payload, definitions)
-        target = typ(projected)
-        if member and shape(projected['items']).get('format', '').startswith('uint'):
-            target = '[]uint64'
-        answers[function] = (target, '', member)
-    lines += ['func ownedAnswerProjection[T any](raw json.RawMessage, member string) ([]T,error) {',
-              'rows,err:=ownedDecode[[]json.RawMessage](raw); if err!=nil { return nil,err }; values:=make([]T,0,len(rows))',
-              'for _,row:=range rows { field:=ownedMember[json.RawMessage](row,member); if field.Err!=nil { return nil,field.Err }; if !field.Present { return nil,errAlternative }; value:=field.Value; if field.Null { value=json.RawMessage("null") }; decoded,err:=ownedDecode[T](value); if err!=nil { return nil,err }; values=append(values,decoded) }; return values,nil', '}']
-    for function, kind, payload in scalar_answers(definitions):
-        source = dict(payload)
-        kinds = source.get('type')
-        nullable = isinstance(kinds, list) and 'null' in kinds
-        if isinstance(kinds, list): source['type'] = next(value for value in kinds if value != 'null')
-        target = 'float64' if source.get('type') == 'number' else typ(source)
-        answers[function] = (('*' if nullable else '') + target, kind, None)
-    for function, (target, kind, member) in answers.items():
-        title = function.title()
-        reader = ('ownedAnswerProjection[' + target.removeprefix('[]') + '](raw,' + json.dumps(member) + ')'
-                  if member else 'ownedDecode[' + target + '](raw)')
-        lines += [f'func (v Call) {title}Answer() ({target},error) {{ raw,err:=v.answerJSON({json.dumps(function)},{json.dumps(kind)}); if err!=nil {{ var zero {target}; return zero,err }}; return {reader} }}',
-                  f'func (c *Client) {title}Answer(ctx context.Context, question RequestQuestion, input {title}Input, options *RequestOptions) ({target},error) {{ call,err:=c.{title}(ctx,question,input,options); if err!=nil {{ var zero {target}; return zero,err }}; return call.{title}Answer() }}']
-    return '\n'.join(lines) + '\n'
+def call_helpers(definitions, input_definitions):
+    rules = call_results(definitions)
+    lines = ['type Receipt struct { ownedJSON; function string }',
+             'type Probability interface { isProbability() }',
+             'type ProbabilityScalar float64', 'type ProbabilityList []*float64',
+             'type ProbabilityRows []ProbabilityList',
+             'func (ProbabilityScalar) isProbability() {}',
+             'func (ProbabilityList) isProbability() {}',
+             'func (ProbabilityRows) isProbability() {}']
+    for function, rule in rules.items():
+        payload = rule['receipt_payload'].get('items', rule['receipt_payload'])
+        target = typ(payload)
+        lines += [f'func (v Receipt) As{function.title()}() ({target},error) {{ if v.function!={json.dumps(function)} {{ return {target}{{}},errAlternative }}; return ownedDecode[{target}](v.raw) }}']
+    lines += ['type callRule struct { projection, shape, probability string; path, pick, selection []string; collection, nested bool; resolution *resolutionRule }',
+              'type resolutionGuard struct { path []string; value string }', 'type resolutionRule struct { path, index []string; guards []resolutionGuard }', 'var callRules = map[string]callRule{']
+    for function, rule in rules.items():
+        path = '[]string{' + ','.join(json.dumps(x) for x in rule.get('probability_path', ())) + '}'
+        pick = '[]string{' + ','.join(json.dumps(x) for x in rule.get('pick_path', ())) + '}'
+        collection = str(rule['receipt_payload'].get('type') == 'array').lower()
+        nested = str(rule['call_shape'] == 'input' and rule['probability_mode'] == 'items').lower()
+        selection = '[]string{' + ','.join(json.dumps(x) for x in rule.get('selection_path', ())) + '}'
+        resolution = 'nil'
+        if 'resolution' in rule:
+            spec = rule['resolution']
+            guards = '[]resolutionGuard{' + ','.join('{[]string{' + ','.join(json.dumps(x) for x in path) + '},' + json.dumps(value) + '}' for path, value in spec['guards']) + '}'
+            resolution = '&resolutionRule{[]string{' + ','.join(json.dumps(x) for x in spec['path']) + '},[]string{' + ','.join(json.dumps(x) for x in spec['index_path']) + '},' + guards + '}'
+        lines += [f'{json.dumps(function)}: {{{json.dumps(rule["value_projection"])},{json.dumps(rule["call_shape"])},{json.dumps(rule["probability_mode"])},{path},{pick},{selection},{collection},{nested},{resolution}}},']
+    lines += ['}']
+    # Input shape comes from the canonical selector grammar, independently of
+    # a nested array in an authored answer.
+    scalars = [name(child) for child in scalar_input_selectors(input_definitions)]
+    lines += ['func scalarInput(input RequestInput) bool { switch input.(type) {',
+              'case ' + ','.join(scalars) + ': return true', '}; return false }']
+    return '\n'.join(lines) + '\n' + call_runtime()
+
+
+def call_runtime():
+    return r'''func callPath(raw json.RawMessage, path []string) json.RawMessage {
+    for _,field:=range path { member:=ownedMember[json.RawMessage](raw,field); if member.Err!=nil || !member.Present || member.Null { return nil }; raw=member.Value }; return raw
+}
+func callChance(raw json.RawMessage) Probability {
+    if len(raw)==0 { return nil }; value,err:=ownedDecode[*float64](raw); if err!=nil || value==nil { return nil }; return ProbabilityScalar(*value)
+}
+func probabilityPointer(value Probability) *float64 { if scalar,ok:=value.(ProbabilityScalar); ok { result:=float64(scalar); return &result }; return nil }
+func receiptChance(receipt json.RawMessage, rule callRule) (Probability,error) {
+    if len(rule.selection)>0 && len(callPath(receipt,rule.selection))==0 { return nil,nil }
+    switch rule.probability {
+    case "null": return nil,nil
+    case "yes": return callChance(callPath(receipt,rule.path)),nil
+    case "picked":
+        pickRaw:=callPath(receipt,rule.pick); if len(pickRaw)==0 { return nil,nil }; pick,err:=ownedDecode[*string](pickRaw); if err!=nil { return nil,err }; if pick==nil { return nil,nil }
+        return callChance(callPath(callPath(receipt,rule.path),[]string{*pick})),nil
+    }
+    answer:=callPath(receipt,[]string{"answer"}); value:=callPath(receipt,[]string{"value"})
+    if ownedHas(value,"entities") {
+        entities,err:=ownedDecode[[]json.RawMessage](callPath(value,[]string{"entities"})); if err!=nil { return nil,err }
+        proposals,err:=ownedDecode[[]json.RawMessage](callPath(answer,[]string{"proposals"})); if err!=nil { return nil,err }
+        chances:=make(ProbabilityList,0,len(entities))
+        for _,entity:=range entities {
+            var chance *float64
+            for _,proposal:=range proposals {
+                kept:=ownedMember[bool](proposal,"kept"); if !kept.Value { continue }
+                selected:=callPath(proposal,[]string{"selected"})
+                if bytes.Equal(callPath(entity,[]string{"start"}),callPath(selected,[]string{"start"})) && bytes.Equal(callPath(entity,[]string{"end"}),callPath(selected,[]string{"end"})) && bytes.Equal(callPath(entity,[]string{"kind"}),callPath(proposal,[]string{"kind"})) { chance=probabilityPointer(callChance(callPath(proposal,[]string{"span_probability"}))); break }
+            }; chances=append(chances,chance)
+        }; return chances,nil
+    }
+    if ownedHas(value,"proposals") {
+        proposals,err:=ownedDecode[[]json.RawMessage](callPath(value,[]string{"proposals"})); if err!=nil { return nil,err }
+        chances:=make(ProbabilityList,0,len(proposals)); for _,proposal:=range proposals { chances=append(chances,probabilityPointer(callChance(callPath(proposal,[]string{"probability"})))) }; return chances,nil
+    }
+    if len(bytes.TrimSpace(value))>0 && bytes.TrimSpace(value)[0]=='[' {
+        edges,err:=ownedDecode[[]json.RawMessage](value); if err!=nil { return nil,err }
+        chances:=make(ProbabilityList,0,len(edges)); for _,edge:=range edges { chances=append(chances,probabilityPointer(callChance(callPath(edge,[]string{"probability"})))) }; return chances,nil
+    }
+    return callChance(callPath(answer,[]string{"probability"})),nil
+}
+func (v *Call) settle(function string, input RequestInput) error {
+    rule:=callRules[function]; resolved:=map[string]bool{}
+    if rule.resolution!=nil { for _,packet:=range v.Packets {
+        if !ownedLiteral(packet.raw,"function",function) { continue }; matches:=true
+        for _,guard:=range rule.resolution.guards { if !bytes.Equal(callPath(packet.raw,guard.path),json.RawMessage(strconv.Quote(guard.value))) { matches=false;break } }
+        if matches { resolved[string(callPath(packet.raw,rule.resolution.index))]=len(callPath(packet.raw,rule.resolution.path))>0 }
+    } }
+    rows:=make([]json.RawMessage,0); aggregates:=make([]json.RawMessage,0); hasAggregate:=false
+    for _,packet:=range v.Packets {
+        if !ownedLiteral(packet.raw,"function",function) { continue }
+        raw:=callPath(packet.raw,[]string{"value"})
+        if ownedLiteral(packet.raw,"kind","row") { rows=append(rows,raw) }
+        if ownedLiteral(packet.raw,"kind","aggregate") {
+            hasAggregate=true
+            if rule.collection { chunk,err:=ownedDecode[[]json.RawMessage](raw); if err!=nil { return err }; aggregates=append(aggregates,chunk...) } else { aggregates=append(aggregates,raw) }
+        }
+    }
+    if hasAggregate { rows=aggregates }
+    v.Results=make([]Receipt,0,len(rows)); values:=make([]any,0,len(rows)); chances:=make([]Probability,0,len(rows))
+    for ordinal,raw:=range rows {
+        projected:=ownedMember[json.RawMessage](raw,rule.projection); if projected.Err!=nil { return projected.Err }; if !projected.Present { return errAlternative }
+        var value any; if !projected.Null { decoded,err:=ownedDecode[any](projected.Value); if err!=nil { return err }; value=decoded }
+        chance,err:=receiptChance(raw,rule); if err!=nil { return err }
+        if rule.resolution!=nil { index:=callPath(raw,[]string{"index"}); if len(index)==0 { index=json.RawMessage(strconv.Itoa(ordinal)) }; if !resolved[string(index)] { chance=nil } }
+        v.Results=append(v.Results,Receipt{ownedJSON{raw:raw},function}); values=append(values,value); chances=append(chances,chance)
+    }
+    v.Value=values; if rule.probability!="null" {
+        nested:=rule.nested
+        if nested { grouped:=make(ProbabilityRows,0,len(chances)); for _,chance:=range chances { group,_:=chance.(ProbabilityList); grouped=append(grouped,group) }; v.Probability=grouped } else { aligned:=make(ProbabilityList,0,len(chances)); for _,chance:=range chances { aligned=append(aligned,probabilityPointer(chance)) }; v.Probability=aligned }
+    }
+    if rule.shape=="aggregate" || rule.shape=="input" && scalarInput(input) {
+        v.Value=nil; v.Probability=nil
+        if len(values)>0 { v.Value=values[0]; if rule.probability!="null" { v.Probability=chances[0] } }
+    }
+    if v.Terminal!=nil { facts:=v.Terminal.Facts(); if facts.Err!=nil { return facts.Err }; v.Facts=facts.Value }
+    return nil
+}
+'''

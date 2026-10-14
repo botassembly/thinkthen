@@ -14,13 +14,13 @@ func main() {
 		log.Fatal(err)
 	}
 	defer client.Close()
-	answer, err := client.DecideAnswer(context.Background(), tt.TextQuestion(os.Getenv("THINKTHEN_TEST_SMOKE_QUESTION")), tt.TextInput(os.Getenv("THINKTHEN_TEST_SMOKE_TEXT")), nil)
+	answer, err := client.Decide(context.Background(), tt.TextQuestion(os.Getenv("THINKTHEN_TEST_SMOKE_QUESTION")), tt.TextInput(os.Getenv("THINKTHEN_TEST_SMOKE_TEXT")), nil)
 	if err != nil {
 		log.Fatal(err)
 	}
-	if answer == nil {
+	if answer.Value == nil {
 		fmt.Println("smoke: null")
 		return
 	}
-	fmt.Printf("smoke: %t\n", *answer)
+	fmt.Printf("smoke: %t\n", answer.Value)
 }

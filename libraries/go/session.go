@@ -51,8 +51,12 @@ func (c *Client) Close() {
 }
 
 type Call struct {
-	Packets  []SessionPacket
-	Terminal *SessionPacketTerminal
+	Value       any
+	Probability Probability
+	Results     []Receipt
+	Facts       Facts
+	Packets     []SessionPacket
+	Terminal    *SessionPacketTerminal
 }
 type SessionError struct {
 	Call   Call
@@ -251,6 +255,9 @@ func (c *Client) call(ctx context.Context, verb string, question RequestQuestion
 				result.Terminal = &terminal
 				err = decodeErr
 				if err != nil {
+					return result, err
+				}
+				if err = result.settle(verb, input); err != nil {
 					return result, err
 				}
 				failed := result.Terminal.Failure()

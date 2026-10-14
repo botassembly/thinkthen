@@ -113,7 +113,7 @@ test('the ten Client functions retain generated values after close',async t=>{
       if(['score','tag','annotate'].includes(verb) && done.probability!==null)throw Error('map became a scalar probability');
       if(verb==='rank' && JSON.stringify(done.probability)!==JSON.stringify(done.results.map(row=>row.answer.probability)))throw Error('rank probability order changed');
       if(verb==='filter' && JSON.stringify(done.probability)!==JSON.stringify(done.results.map(row=>row.answer.probability)))throw Error('filter probability order changed');
-      if(verb==='find' && done.probability!==(done.results[0].answer.probabilities[done.results[0].answer.pick]??null))throw Error('find probability changed');
+      if(verb==='find' && done.probability!==(done.results[0].index==null?null:done.results[0].answer.probabilities[done.results[0].answer.pick]??null))throw Error('find probability changed');
       if(verb==='relate' && JSON.stringify(done.probability)!==JSON.stringify(done.results[0].value.map(edge=>edge.probability)))throw Error('relation probability order changed');
       if(verb==='recognize') {
         const row=done.results[0],proposals=row.answer.proposals.filter(proposal=>proposal.kept);
@@ -149,6 +149,10 @@ test('Client retains false, null, missing, exact numbers and physical positions'
     if(no.facts.has('input_tokens') || no.facts.has('output_tokens'))throw Error('invented observed tokens');
     const nil=await client.decide({decide:'Question?',true:null},'text');
     const uncertain=await client.decide({decide:'Question?',threshold:'0.2:0.95'},'text');
+    const unsureChoice=await client.choose({choose:'Question?',options:['a','b'],threshold:.95},['text','other']);
+    const selectedNull=await client.find('Question?',[null,'other'],{none:true});
+    if(nil.probability!==.9 || uncertain.probability!==null || JSON.stringify(unsureChoice.probability)!=='[null,null]' || selectedNull.probability!==.9 || selectedNull.results[0].index!==0)throw Error('unresolved and authored null probabilities conflated');
+
     const {writeFileSync}=await import('node:fs');
     const path=process.env.HOME+'/input.txt';writeFileSync(path,'first\\n\\nthird\\n');
     const located=await client.decide('Question?',tt.Client.files([path]));

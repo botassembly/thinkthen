@@ -20,14 +20,14 @@ func main() {
     teamQuestion := tt.DefinedQuestion(tt.RequestDefinitionAuthoredChoose{
         Choose: tt.AuthoredQuestionTextString("Which team owns this?"), Options: tt.Ptr[tt.AuthoredOptions](teams)})
     for _, text := range []string{"Please refund my order. It arrived broken.", "Thanks for the quick help yesterday!", "I want to send this back."} {
-        refund, err := client.DecideAnswer(context.Background(), tt.TextQuestion("Does the customer ask for a refund?"), tt.TextInput(text), nil)
+        refund, err := client.Decide(context.Background(), tt.TextQuestion("Does the customer ask for a refund?"), tt.TextInput(text), nil)
         if err != nil { log.Fatal(err) }
-        if err := json.NewEncoder(os.Stdout).Encode(refund); err != nil { log.Fatal(err) }
+        if err := json.NewEncoder(os.Stdout).Encode(refund.Value); err != nil { log.Fatal(err) }
     }
     for _, text := range []string{"Please refund the extra fee on my invoice.", "My parcel went to the wrong address.", "I cannot reset my password."} {
-        team, err := client.ChooseAnswer(context.Background(), teamQuestion, tt.TextInput(text), nil)
+        team, err := client.Choose(context.Background(), teamQuestion, tt.TextInput(text), nil)
         if err != nil { log.Fatal(err) }
-        if err := json.NewEncoder(os.Stdout).Encode(team); err != nil { log.Fatal(err) }
+        if err := json.NewEncoder(os.Stdout).Encode(team.Value); err != nil { log.Fatal(err) }
     }
 }
 ```

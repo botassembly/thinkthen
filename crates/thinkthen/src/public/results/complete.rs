@@ -233,10 +233,13 @@ pub(super) fn probabilities(answer: &core::Answer) -> Probabilities {
 }
 
 impl CompleteDecision {
-    /// The yes probability, independent of the final yes, no or unsure reading.
+    /// The yes probability for a resolved yes or no reading.
     #[must_use]
     pub fn probability(&self) -> Option<f64> {
-        self.canonical.answer().yes()
+        match self.value() {
+            Answer::Unsure => None,
+            _ => self.canonical.answer().yes(),
+        }
     }
 }
 impl CompleteFilter {

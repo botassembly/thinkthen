@@ -255,7 +255,7 @@ try:
                       TT_NATIVE_SETTINGS=settings,TT_NATIVE_FILE=str(path))
         before=sent()
         assert type_case(["native"],env,"native complete")=={"native":"pass"}
-        assert sent()-before==22,"complete native listener count"
+        assert sent()-before==24,"complete native listener count"
         print("C# named native: ten functions, typed fields and physical file locations PASS",flush=True)
 
 finally:

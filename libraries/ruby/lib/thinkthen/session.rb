@@ -27,7 +27,17 @@ module ThinkThen
         spec = CALL_RESULTS.fetch(@verb)
         mode = spec.fetch("probability_mode")
         return nil if mode == "null"
-        values = results.map do |row|
+        resolved = {}
+        if spec["resolution"]
+          route = spec.fetch("resolution")
+          observations.each do |packet|
+            next unless packet.function == @verb && route.fetch("guards").all? { |path, literal| read_path(packet, path) == literal }
+            resolved[read_path(packet, route.fetch("index_path"))] = !read_path(packet, route.fetch("path")).nil?
+          end
+        end
+        values = results.each_with_index.map do |row, ordinal|
+          next nil if spec["selection_path"] && read_path(row, spec.fetch("selection_path")).nil?
+          next nil if spec["resolution"] && !resolved[row.respond_to?(:index) && row.index || ordinal]
           case mode
           when "yes" then read_path(row, spec.fetch("probability_path"))
           when "picked"
@@ -42,7 +52,7 @@ module ThinkThen
         @scalar ? values.first : values.freeze
       end
       private def read_path(row, path)
-        path.reduce(row) { |value, member| value.public_send(member) }
+        path.reduce(row) { |value, member| value&.public_send(member) }
       end
       private def item_probabilities(row)
         return row.answer.probability if row.answer.respond_to?(:probability)
