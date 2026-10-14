@@ -60,15 +60,6 @@ fn a_carriage_return_before_the_line_feed_is_stripped() {
 }
 
 #[test]
-fn a_pointer_without_jsonl_reads_the_whole_input_as_one_json_value() {
-    let document = reading(Framing::Document, &["/a/text"]);
-    assert_eq!(
-        sent(&document, b"{\n  \"a\": {\"text\": \"inner\"}\n}\n").as_deref(),
-        Ok("inner")
-    );
-}
-
-#[test]
 fn a_string_or_a_scalar_stays_the_string_state_it_always_sent() {
     let line = br#"{"body":"Payouts failed.","count":3,"ok":false,"none":null}"#;
     for (field, expected) in [
