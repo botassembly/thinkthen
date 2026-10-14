@@ -87,6 +87,12 @@ fn run(f: Fixture) -> Result<String, Error> {
     let request = f.request()?;
     let admitted = fixture::admit(request.clone())?;
     let asked = admitted.resolve_question()?;
+    let asked = match asked {
+        Asked::Atomic(LoadedQuestion::Question(question)) if f.verb == "find" && f.options.none => {
+            Asked::from(question.offering_none()?)
+        }
+        asked => asked,
+    };
     let options = if let Some(context) = f.shared_context.as_deref() {
         options.context(context)
     } else {
