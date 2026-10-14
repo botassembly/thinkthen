@@ -164,7 +164,7 @@ static class SessionChecks
             string original = "{\"item_schema\":{\"type\":\"" + schema + "\"},\"decide\":\"Is it?\",\"batch\":\"" + batch + "\",\"true\":{\"future\":{\"second\":2,\"first\":1}}}";
             var parsed = FixtureQuestions.Parse(AuthoredQuestionKind.Atomic, original);
             var definition = ((RequestDefinitionAuthoredDecide)parsed.Value);
-            if (definition.Batch.Value is not RequestDefinitionAuthoredDecideBatchMax || definition.ItemSchema.Value is not AuthoredInputDeclarationString) throw new Exception("decoded authored constant types");
+            if (definition.Batch.Value is not AuthoredQuestionBatchMax || definition.ItemSchema.Value is not AuthoredInputDeclarationString) throw new Exception("decoded authored constant types");
             var plan = AuthoredPlan(engine, parsed, original);
             if (plan.Requests != 1 || plan.FirstBodyUtf8.State != PresenceState.Value) throw new Exception("decoded authored constant plan");
         }
