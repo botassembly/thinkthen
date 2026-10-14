@@ -260,66 +260,85 @@ def conversion(descriptor, value, kind):
 
 def render_functions():
     calls = (
-        ('decide', 'bool', 'Decisions', 'decision', 'crate::answer_value(row.result().value())'),
-        ('choose', 'String', 'Choices', 'choice', 'row.result().value().map(str::to_owned)'),
-        ('tag', 'Vec<String>', 'Tags', 'tags', 'Some(row.result().value().to_vec())'),
-        ('score', 'f64', 'Scores', 'score', 'Some(row.result().value())'),
-        ('filter', 'JsonB', 'Filtered', 'filtered', 'row.result().value().then(|| output::original(row.original()))'),
-        ('rank', 'i64', 'Ranked', 'ranked', 'Some(output::index(row.ordinal()))'),
-        ('annotate', 'JsonB', 'Annotations', 'annotation', 'Some(crate::jsonb(&row.result().value_json().or_raise()))'),
-        ('recognize', 'crate::ffi::NameArray', 'Recognized', 'recognized', 'Some(output::names(row.result().value()))'),
+        ('decide', 'bool', 'decision', 'f64', 'value.and_then(Value::as_bool)'),
+        ('choose', 'String', 'choice', 'f64', 'value.and_then(Value::as_str).map(str::to_owned)'),
+        ('tag', 'Vec<String>', 'tags', 'f64', 'output::strings(value)'),
+        ('score', 'f64', 'score', 'f64', 'value.and_then(Value::as_f64)'),
+        ('filter', 'JsonB', 'filtered', 'f64', 'value.filter(|v| !v.is_null()).cloned().map(JsonB)'),
+        ('rank', 'i64', 'ranked', 'f64', 'value.and_then(Value::as_i64)'),
+        ('annotate', 'JsonB', 'annotation', 'f64', 'value.filter(|v| !v.is_null()).cloned().map(JsonB)'),
+        ('recognize', 'crate::ffi::NameArray', 'recognized', 'Vec<f64>', 'value.map(output::name_values)'),
+        ('find', 'JsonB', 'found', 'f64', 'value.filter(|v| !v.is_null()).cloned().map(JsonB)'),
+        ('relate', '''pgrx::composite_type!('static, "thinkthen_edge")''', 'related', 'f64', 'value.filter(|v| !v.is_null()).map(output::edge_value)'),
     )
     result = ["// Generated native PostgreSQL declarations; do not edit.",
-              "use super::output;", "use crate::call::{self, OrRaise as _};",
+              "use super::output;", "use crate::call;",
               "use pgrx::prelude::*;", "use pgrx::datum::JsonB;",
-              "use thinkthen::RequestValue;"]
-    for verb, kind, variant, reading, expression in calls:
-        extra = ""
-        if verb == 'rank':
-            extra = """Some(RequestValue::SetRanked(rows)) => rows.into_iter().map(|row| {
-                let reading = output::reading("thinkthen_ranked", &serde_json::to_value(&row)
-                    .map_err(|_| call::defect("native result could not be projected")).or_raise());
-                (Some(output::index(row.ordinal())), Some(output::index(row.ordinal())), Some(reading),
-                    facts.as_ref().map(output::facts), None, output::events(&observations))
-            }).collect::<Vec<_>>(),"""
-        result.append(f'''crate::descriptions::describe! {{
-"Read ordered native SQL records with typed controls; return typed answers, full result readings, final facts, failures and observations. Required NULL operands return no rows. Evidence files must be read by the client.";
-[name = "thinkthen_{verb}", parallel_restricted, requires = ["native_record_types", "native_reading_type", "native_result_types", "native_generated_types"]];
-#[allow(clippy::type_complexity, reason = "pgrx reads SQL columns from the signature")]
-fn {verb}_records(
-    question: Option<&str>,
-    records: Option<Array<'_, pgrx::composite_type!("thinkthen_record")>>,
-    reading: default!(Option<pgrx::composite_type!("thinkthen_reading")>, "NULL"),
-) -> TableIterator<'static, (
-    name!(ordinal, Option<i64>), name!(value, Option<{kind}>),
-    name!(result, Option<pgrx::composite_type!('static, "thinkthen_{reading}")>),
-    name!(facts, Option<pgrx::composite_type!('static, "thinkthen_facts")>),
-    name!(failure, Option<pgrx::composite_type!('static, "thinkthen_error")>),
-    name!(observations, crate::ffi::EventArray),
-)> {{
+              "use serde_json::Value;"]
+    for verb, kind, reading, probability_type, expression in calls:
+        probability = 'output::numbers(row.get("probability"))' if probability_type == 'Vec<f64>' else 'row.get("probability").and_then(Value::as_f64)'
+        columns = f'''name!(ordinal, Option<i64>), name!(value, Option<{kind}>),
+            name!(probability, Option<{probability_type}>),
+            name!(result, Option<pgrx::composite_type!('static, "thinkthen_{reading}")>),
+            name!(failure, Option<pgrx::composite_type!('static, "thinkthen_error")>),
+            name!(facts, Option<pgrx::composite_type!('static, "thinkthen_facts")>),
+            name!(observations, crate::ffi::EventArray)'''
+        for form in (('records', 'plain', 'kinds') if verb == 'recognize' else ('records', 'plain', 'rules') if verb == 'relate' else ('records', 'plain')):
+            if form == 'records':
+                parameters = '''records: Option<Array<'_, pgrx::composite_type!("thinkthen_record")>>,
+                    reading: default!(Option<pgrx::composite_type!("thinkthen_reading")>, "NULL"),'''
+                operand = 'records'
+                execute = f'super::execute("{verb}", question, records, reading)'
+            else:
+                members = "members: default!(Option<Array<'_, &str>>, \"NULL\")," if verb in ('choose', 'tag', 'score') else ''
+                parameters = f'''input: Option<&str>, {members}
+                    settings: default!(Option<crate::ffi::RawJson>, "NULL"),
+                    threshold: default!(Option<&str>, "NULL"),
+                    context: default!(Option<&str>, "NULL"),
+                    model: default!(Option<&str>, "NULL"),
+                    batch: default!(Option<&str>, "NULL"),
+                    deadline_ms: default!(Option<i64>, "NULL"),'''
+                operand = 'input'
+                member_argument = 'members' if members else 'None'
+                execute = f'super::execute_plain("{verb}", question, input, {member_argument}, settings, crate::forms::Named::new(threshold, context, model, batch, deadline_ms))'
+            if form == 'plain' and verb in ('rank', 'filter'):
+                parameters = 'input: Option<JsonB>, settings: default!(Option<crate::ffi::RawJson>, "NULL"),'
+                execute = f'super::plain::keyed("{verb}", question, input, settings)'
+            elif form == 'plain' and verb == 'find':
+                parameters = 'input: Option<Array<\'_, &str>>, settings: default!(Option<crate::ffi::RawJson>, "NULL"),'
+                execute = 'super::plain::find(question, input, settings)'
+            elif verb == 'recognize' and form == 'kinds':
+                parameters = 'input: Option<Array<\'_, &str>>,'
+                execute = 'super::plain::recognize(question, input)'
+            elif verb == 'recognize' and form == 'plain':
+                parameters = 'input: Option<&str>,'
+                execute = 'super::execute_plain("recognize", input, question, None, None, Default::default())'
+            elif verb == 'relate' and form == 'rules':
+                parameters = 'input: Option<Array<\'_, &str>>,'
+                execute = 'super::plain::relate(question, input)'
+            elif verb == 'relate' and form == 'plain':
+                parameters = 'input: Option<&str>,'
+                execute = 'super::plain::relate_spec(question, input)'
+            result.append(f'''crate::descriptions::describe! {{
+"Return full typed records with values, probabilities, failures, facts and observations. Recoverable failures retain their rows; cancellation, deadline and defects raise. Required NULL operands return no rows. Evidence files must be read by the client.";
+[name = "thinkthen_{verb}_details", parallel_restricted, requires = ["native_record_types", "native_reading_type", "native_result_types", "native_generated_types"]];
+#[allow(clippy::type_complexity, clippy::too_many_arguments, reason = "pgrx reads named SQL arguments and columns from the signature")]
+fn {verb}_{form}(
+    question: Option<&str>, {parameters}
+) -> TableIterator<'static, ({columns})> {{
     call::guarded(|| {{
-        let (Some(question), Some(records)) = (question, records) else {{
+        let (Some(question), Some({operand})) = (question, {operand}) else {{
             return TableIterator::new(Vec::new());
         }};
-        let output::Projection {{ value, facts, failure, observations }} = output::outcome(
-            super::execute("{verb}", question, records, reading),
-        );
-        let mut rows = match value {{
-            Some(RequestValue::{variant}(rows)) => rows.into_iter().map(|row| {{
-                let reading = output::reading("thinkthen_{reading}", &serde_json::to_value(&row)
-                    .map_err(|_| call::defect("native result could not be projected")).or_raise());
-                (Some(output::index(row.ordinal())), {expression}, Some(reading),
-                    facts.as_ref().map(output::facts), None, output::events(&observations))
-            }}).collect::<Vec<_>>(),
-            {extra}
-            None => Vec::new(),
-            _ => call::raise(crate::request::wrong_result()),
-        }};
-        if failure.is_some() || rows.is_empty() {{
-            rows.push((None, None, None, facts.as_ref().map(output::facts),
-                failure.as_ref().map(output::failure), output::events(&observations)));
-        }}
-        TableIterator::new(rows)
+        let rows = super::row_values({execute});
+        TableIterator::new(rows.into_iter().map(|row| {{
+            let value = row.get("value");
+            (row.get("ordinal").and_then(Value::as_i64), {expression}, {probability},
+                output::optional_reading("thinkthen_{reading}", row.get("result")),
+                output::optional_reading("thinkthen_error", row.get("failure")),
+                output::optional_reading("thinkthen_facts", row.get("facts")),
+                output::events(row.get("observations").and_then(Value::as_array).map_or(&[], Vec::as_slice)))
+        }}).collect::<Vec<_>>())
     }})
 }}
 }}

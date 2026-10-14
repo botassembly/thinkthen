@@ -1,28 +1,18 @@
 //! Native PostgreSQL records execute canonical requests without transport JSON.
 use crate::{call, complete_native, files};
 use pgrx::prelude::*;
-use thinkthen::{
-    Error, Request, RequestArguments, RequestEnvironment, RequestInput, RequestOutcome,
-    RequestQuestion,
-};
-mod collections;
+use thinkthen::{Error, Request, RequestArguments, RequestInput, RequestQuestion};
 mod constructors;
 mod context_schema;
 mod functions_generated;
 mod input;
 mod options;
 mod output;
+mod plain;
 mod plan;
 mod question_settings;
 mod reading;
 mod results_generated;
-
-/// Project the existing question receipt used by native observations.
-pub(crate) fn receipt(
-    value: &serde_json::Value,
-) -> pgrx::composite_type!('static, "thinkthen_question_detail") {
-    output::reading("thinkthen_question_detail", value)
-}
 
 fn request(
     verb: &str,
@@ -31,14 +21,7 @@ fn request(
     settings: &thinkthen::Settings,
 ) -> Result<thinkthen::AdmittedRequest, Error> {
     let function = verb.parse()?;
-    let prepared = if question.starts_with('@') {
-        let (reference, source) =
-            files::read_resolved_question(question, call::file_directory().as_deref())?;
-        let parsed = complete_native::settings::parse_file(verb, &source, &reference)?;
-        complete_native::settings::prepare_file(verb, &source, settings, parsed)?
-    } else {
-        complete_native::prepare(verb, question, settings)?
-    };
+    let prepared = prepared(verb, question, settings)?;
     let definition = thinkthen_host::sql_request::definition(&prepared);
     Request::for_function(
         function,
@@ -57,7 +40,7 @@ fn request(
 }
 
 pub(super) struct Execution {
-    pub(super) outcome: RequestOutcome,
+    pub(super) value: serde_json::Value,
     pub(super) observations: Vec<serde_json::Value>,
 }
 
@@ -76,12 +59,6 @@ pub(super) fn execute(
     records: Array<'_, pgrx::composite_type!("thinkthen_record")>,
     reading: Option<pgrx::composite_type!("thinkthen_reading")>,
 ) -> Result<Execution, Error> {
-    let incremental = reading
-        .as_ref()
-        .map(|tuple| field::<bool>(tuple, "incremental"))
-        .transpose()?
-        .flatten()
-        .unwrap_or(false);
     let cancelled = reading
         .as_ref()
         .map(|tuple| field::<bool>(tuple, "cancelled"))
@@ -97,27 +74,12 @@ pub(super) fn execute(
     }
     let request = composed_request(&request)?;
     let function = request.request().call.function();
-    let files_only = request.request().call.arguments().options.files_only;
     let records = input::deferred(records);
-    let images = records.iter().any(|record| {
-        record
-            .as_ref()
-            .is_ok_and(|record| !record.item.images.is_empty())
-    });
+    let prepared = prepared(verb, question, &settings)?;
     call::run_result(call::read_result()?, move |engine, controls| {
         let records = records
             .into_iter()
             .map(|record| input::compose(record?, &projection));
-        let mut feed = thinkthen::RequestFeed::from_records("postgresql", records);
-        if verb == "filter" && !files_only {
-            feed = feed.with_all_filter_results();
-        }
-        if !incremental {
-            feed = feed.eager();
-        }
-        if images {
-            feed = feed.with_image_inputs();
-        }
         let token = thinkthen::CancelToken::new();
         if cancelled {
             token.cancel();
@@ -135,14 +97,15 @@ pub(super) fn execute(
                 .unwrap_or_else(std::sync::PoisonError::into_inner)
                 .push(value);
         };
-        let outcome = engine.execute_request(
+        let value = thinkthen_host::sql_request::run_records_recovering(
+            engine,
+            &prepared,
             &request,
-            RequestEnvironment {
-                controls: controls
-                    .surface(thinkthen::Surface::Postgresql)
-                    .observe(&observer),
-                feed: Some(feed),
-            },
+            records,
+            controls
+                .surface(thinkthen::Surface::Postgresql)
+                .observe(&observer),
+            thinkthen::Surface::Postgresql,
         )?;
         let observations = events
             .into_inner()
@@ -150,7 +113,7 @@ pub(super) fn execute(
             .into_iter()
             .collect::<Result<Vec<_>, _>>()?;
         Ok(Execution {
-            outcome,
+            value,
             observations,
         })
     })
@@ -205,4 +168,110 @@ fn observation(
             .insert("inputs".to_owned(), inputs);
     }
     Ok(value)
+}
+
+fn prepared(
+    verb: &str,
+    question: &str,
+    settings: &thinkthen::Settings,
+) -> Result<complete_native::Prepared, Error> {
+    let prepared = if question.starts_with('@') {
+        let (reference, source) =
+            files::read_resolved_question(question, call::file_directory().as_deref())?;
+        let parsed = complete_native::settings::parse_file(verb, &source, &reference)?;
+        complete_native::settings::prepare_file(verb, &source, settings, parsed)?
+    } else {
+        complete_native::prepare(verb, question, settings)?
+    };
+    Ok(prepared)
+}
+
+pub(super) fn row_values(result: Result<Execution, Error>) -> Vec<serde_json::Value> {
+    match result {
+        Ok(execution) => execution
+            .value
+            .get("rows")
+            .and_then(serde_json::Value::as_array)
+            .cloned()
+            .unwrap_or_else(|| call::raise(call::defect("recovery returned no rows"))),
+        Err(error) => {
+            if matches!(
+                error.kind(),
+                thinkthen::ErrorKind::Cancelled
+                    | thinkthen::ErrorKind::Deadline
+                    | thinkthen::ErrorKind::Defect
+            ) {
+                call::raise(error);
+            }
+            vec![
+                serde_json::json!({"ordinal": 0, "failure": error.complete().error(), "facts": error.facts().map(thinkthen::Facts::complete), "observations": []}),
+            ]
+        }
+    }
+}
+#[allow(clippy::too_many_arguments, reason = "native SQL argument mapping")]
+pub(super) fn execute_plain(
+    verb: &'static str,
+    question: &str,
+    input: &str,
+    members: Option<Array<'_, &str>>,
+    raw: Option<crate::ffi::RawJson>,
+    named: crate::forms::Named<'_>,
+) -> Result<Execution, Error> {
+    let (settings, controls) = crate::forms::controls_result(raw.as_ref(), named)?;
+    let prepared = match verb {
+        "decide" | "choose" | "score" | "tag" => {
+            let role = match verb {
+                "choose" => thinkthen::For::Choose,
+                "score" => thinkthen::For::Score,
+                "tag" => thinkthen::For::Tag,
+                _ => thinkthen::For::Decide,
+            };
+            complete_native::Prepared::Atomic(crate::forms::question_result(
+                Some(question),
+                members,
+                role,
+                &settings,
+            )?)
+        }
+        _ => prepared(verb, question, &settings)?,
+    };
+    let request = Request::for_function(
+        verb.parse()?,
+        RequestArguments {
+            question: RequestQuestion::Definition {
+                value: thinkthen_host::sql_request::definition(&prepared),
+            },
+            input: RequestInput::Feed {
+                name: "postgresql".to_owned(),
+                framing: Default::default(),
+                reading: Default::default(),
+                images: Vec::new(),
+            },
+            options: Default::default(),
+        },
+    )
+    .admit()?;
+    let projection = request.record_reading()?;
+    let request = composed_request(&request)?;
+    let item = if verb == "annotate" {
+        crate::request::document(input.to_owned())?
+    } else {
+        crate::request::text(input.to_owned())
+    };
+    let record = item.compose_record(&projection)?;
+    call::run_result(controls, move |engine, controls| {
+        let value = thinkthen_host::sql_request::run_records_recovering(
+            engine,
+            &prepared,
+            &request,
+            std::iter::once(Ok(record)),
+            controls,
+            thinkthen::Surface::Postgresql,
+        )?;
+        Ok(Execution {
+            value,
+            observations: Vec::new(),
+        })
+    })
 }

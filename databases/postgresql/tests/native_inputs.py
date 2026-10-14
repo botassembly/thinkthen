@@ -114,4 +114,4 @@ def query(payload):
             rendered = literal(str(child))
         arguments.append('\"' + key + '\"=>' + rendered)
     records = array(inputs['records'], 'thinkthen_record', record)
-    return 'thinkthen_' + payload['verb'] + '(' + literal(payload['question']) + ',' + records + ',thinkthen_reading(' + ','.join(arguments) + '))'
+    return 'thinkthen_' + payload['verb'] + '_details(' + literal(payload['question']) + ',' + records + ',thinkthen_reading(' + ','.join(arguments) + '))'

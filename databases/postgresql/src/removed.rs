@@ -1,6 +1,6 @@
 //! Plain refusals for pre-0.1 forms replaced by named and keyed calls.
 
-use pgrx::datum::{Array, JsonB};
+use pgrx::datum::Array;
 use pgrx::prelude::*;
 use thinkthen::Error;
 
@@ -123,30 +123,6 @@ fn tag_context(
     _members: Option<Array<'_, &str>>,
     _context: Option<&str>,
 ) -> Option<Vec<String>> {
-    call::guarded(|| call::raise(context_moved()))
-}
-}
-
-crate::descriptions::describe! {
-"Removed overload: always raise Usage, including NULL arguments; put context in settings or the named context parameter. Reads no file and sends nothing.";
-[name = "thinkthen_details", parallel_restricted];
-fn details_context(
-    _question: Option<&str>,
-    _input: Option<&str>,
-    _context: Option<&str>,
-) -> Option<JsonB> {
-    call::guarded(|| call::raise(context_moved()))
-}
-}
-
-crate::descriptions::describe! {
-"Removed overload: always raise Usage, including NULL arguments; put context in settings or the named context parameter. Reads no file and sends nothing.";
-[name = "thinkthen_try_details", parallel_restricted];
-fn try_details_context(
-    _question: Option<&str>,
-    _input: Option<&str>,
-    _context: Option<&str>,
-) -> Option<JsonB> {
     call::guarded(|| call::raise(context_moved()))
 }
 }

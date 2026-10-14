@@ -106,55 +106,6 @@ pub(crate) fn details(
     }
 }
 
-/// Retain the typed question receipt while keeping ordinary details scalar-only.
-pub(crate) fn receipt(
-    engine: &Engine,
-    question: &thinkthen::LoadedQuestion,
-    input: String,
-    options: CallOptions<'_>,
-) -> Result<serde_json::Value, Error> {
-    let receipts = std::sync::Mutex::new(Vec::new());
-    let function = RequestFunction::for_definition(&question.clone().into());
-    let observer = |event: thinkthen::RecordObservation<'_>| {
-        if matches!(event, thinkthen::RecordObservation::Question { .. }) {
-            let packet = thinkthen::RequestSessionResult::Observation {
-                function,
-                value: event.to_owned(),
-            };
-            receipts
-                .lock()
-                .unwrap_or_else(std::sync::PoisonError::into_inner)
-                .push(packet.to_json());
-        }
-    };
-    run(
-        engine,
-        function,
-        question.clone().into(),
-        vec![text(input)],
-        options.observe(&observer),
-    )?;
-    let held = receipts
-        .into_inner()
-        .unwrap_or_else(std::sync::PoisonError::into_inner)
-        .into_iter()
-        .next()
-        .ok_or_else(|| crate::call::defect("details returned no receipt"))??;
-    let mut packet: serde_json::Value = serde_json::from_str(&held)
-        .map_err(|_| crate::call::defect("details receipt could not be projected"))?;
-    let mut detail = packet
-        .get_mut("value")
-        .and_then(|value| value.get_mut("detail"))
-        .ok_or_else(|| crate::call::defect("details receipt is invalid"))?
-        .take();
-    let object = detail
-        .as_object_mut()
-        .ok_or_else(|| crate::call::defect("details receipt is invalid"))?;
-    object.remove("input");
-    object.remove("inputs");
-    Ok(detail)
-}
-
 /// SQL-owned ordinary judgment columns and their existing scalar document.
 pub(crate) struct JudgmentRow {
     pub(crate) value: thinkthen::Judgment,

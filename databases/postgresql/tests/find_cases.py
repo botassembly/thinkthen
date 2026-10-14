@@ -61,17 +61,9 @@ def verify(socket, mode):
     out, error = sql(socket, statement)
     if error:
         raise AssertionError(error)
-    expected = {
-        "index": selected,
-        "value": units[selected] if selected is not None else None,
-        "probability": probabilities[selected] if selected is not None else probabilities[-1],
-        "candidates": [{"index": index if index < len(units) else None,
-                        "probability": probability}
-                       for index, probability in enumerate(probabilities)],
-    }
-    got = json.loads(out)
-    if got != expected:
-        raise AssertionError(f"{mode}: got {got!r}, expected {expected!r}")
+    expected = units[selected] if selected is not None else ''
+    if out != expected:
+        raise AssertionError(f"{mode}: got {out!r}, expected {expected!r}")
 
 
 def invalid(socket):
@@ -120,7 +112,7 @@ def required_null(socket, scratch):
     bad = "'{\"threshold\":\"bad\"}'::json"
     unread = quoted('@' + str(pathlib.Path(scratch) / 'unread-null-question.json'))
     scalars = []
-    for name in ('decide', 'choose', 'score', 'tag', 'details', 'try_details'):
+    for name in ('decide', 'choose', 'score', 'tag'):
         members = ',NULL::text[]' if name in ('choose', 'score', 'tag') else ''
         for question, evidence in [('NULL', "'bad'"), (unread, 'NULL')]:
             scalars.append(f"thinkthen_{name}({question},{evidence}{members},{bad})")

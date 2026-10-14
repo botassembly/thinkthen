@@ -1,42 +1,30 @@
 # The PostgreSQL extension: goals and anti-goals
 
-Shared rules live in [README.md](README.md). That page fixes the nine functions and the eight rules. This page holds only what is particular to PostgreSQL.
+Shared rules live in [README.md](README.md). That page fixes the shared database rules. This page holds only what is particular to PostgreSQL.
 
 ## What really good looks like
 
 A person who runs their own server puts the key in the server's environment, runs one `CREATE EXTENSION`, and queries a table that is already there.
 
 ```sql
--- THINKTHEN_API_KEY sits in the server's environment. Never typed into a session.
 CREATE EXTENSION thinkthen;
-
--- the scalar form: one judgment per row, in series. IS NULL finds the unsure ones
 SELECT id, body FROM reviews
 WHERE thinkthen_decide('{"decide":"The reviewer asks for a refund."}', body);
-
--- the warm form: one pass at the full throttle fills the cache, and the query reads it back
-SELECT thinkthen_warm('{"decide":"The reviewer asks for a refund."}', body) FROM reviews;
-
--- the array form: one array in, one row per element out, position kept
-SELECT d.i, d.decided
-FROM (SELECT array_agg(body ORDER BY id) AS bodies FROM reviews) b,
-     thinkthen_decide('{"decide":"The reviewer asks for a refund."}', b.bodies) AS d(i, decided);
-
--- one request per row, every question at once, unpacked into columns
-SELECT i.id, a.spam, a.folder FROM inbox i,
-LATERAL jsonb_to_record(thinkthen_annotate('@triage.json', i.body)) AS a(spam boolean, folder text);
+SELECT ordinal, value, probability, (facts).requests_sent
+FROM thinkthen_decide_details('Does the writer ask for a refund?',
+  ARRAY[thinkthen_record(text=>'Please refund my order.')]);
 ```
 
 ## Goals
 
 - `CREATE EXTENSION thinkthen` from a prebuilt package, with no Rust toolchain on the server.
-- `thinkthen_warm(question, text)` is an aggregate. It runs the column at the engine's throttle, fills the cache on disk, and returns the count. The name and the meaning carry to the other two databases.
-- The array form overloads the same eight names on an array argument. No name beyond `thinkthen_warm` enters the surface. The set emits the position itself, so the join back needs no `WITH ORDINALITY`.
+- Plain functions return values. Each `thinkthen_<function>_details` returns typed value, probability, result, failure, facts and observation columns for plain arguments or an ordered record list.
+- Details record lists retain ordinals and recoverable failed rows. Cancellation, deadline and defect failures raise SQL errors. Images enter through the record constructor.
 - One array crosses into the engine once as pgrx's `Array<'_, &str>`. That type reads an element only when the iterator reaches it. `Vec<Option<String>>` detoasts and copies the whole array on entry.
 - A constant question is parsed once per backend, in a per-backend parse cache. `fn_extra` is replaced: pgrx offers nothing above raw `pg_sys`, and the map is stronger — one parse per backend, not per statement — at about 2 µs a parse saved per row (207).
 - Equal pairs of question and text inside one array or one warm pass are asked once.
 - `thinkthen_annotate` returns `jsonb`. `jsonb_to_record` names the columns and their types at the call site.
-- `thinkthen_score` answers the double — the specification's position from 0 to K−1 — and the nearest level's name rides in `thinkthen_details` (ADR 0017 pick 6). The round-two shape divergence resolves here: one shape rules across the three databases, and this page's double was it.
+- `thinkthen_score` answers the double — the specification's position from 0 to K−1 — and the nearest level's name rides in `thinkthen_score_details` (ADR 0017 pick 6). The round-two shape divergence resolves here: one shape rules across the three databases, and this page's double was it.
 - The key comes from `THINKTHEN_API_KEY` in the server's environment. `thinkthen.api_key` is never read, and a set value refuses the next call (ticket 0111 decision 12).
 - `pg_cancel_backend` and `statement_timeout` stop a call that waits on the network. Measured (207): with the engine's token, control returns 0.36–0.46 s after the interrupt and traffic freezes within one in-flight round; `statement_timeout 2s` aborted at 2.361 s frozen at 224 requests; round one, without the token, returned control in 80 ms by abandoning the batch. Nothing is billed past one round after the interrupt, and a client that dies leaves the orphan completion, which the engine's cancel promise bounds.
 

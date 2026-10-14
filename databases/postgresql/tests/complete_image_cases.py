@@ -41,7 +41,7 @@ def main():
                 controls['cache'] = str(home / 'cache') if controls.get('cache', True) else 'off'
                 statements = ['SET thinkthen.' + key + '=' + quoted(str(value)) for key, value in controls.items()]
                 out, err = sql(host.socket, "SET thinkthen.model='d1'", *statements,
-                               "SELECT to_jsonb(r) FROM thinkthen_decide('Is red visible?',ARRAY[thinkthen_record(images=>" + source + ')]) r')
+                               "SELECT to_jsonb(r) FROM thinkthen_decide_details('Is red visible?',ARRAY[thinkthen_record(images=>" + source + ')]) r')
                 assert not err, (out, err)
                 return native([json.loads(row) for row in out.splitlines()], 'decide')
             completed = complete(settings)
@@ -54,15 +54,15 @@ def main():
             assert 'facts' in replay, replay
             assert replay['facts']['requests_sent'] == 0 and backend.count() == 1, replay
             assert [(r['value'], r['answer_id'], r['input']) for r in replay['value']] == [(r['value'], r['answer_id'], r['input']) for r in got['value']]
-            for statement in ["SELECT count(*) = 0 FROM thinkthen_decide(NULL,ARRAY[thinkthen_record(images=>ARRAY[NULL]::thinkthen_image_value[])],thinkthen_reading(batch=>'bad'))",
-                              "SELECT count(*) = 0 FROM thinkthen_decide('@unread-question.json',NULL::thinkthen_record[],thinkthen_reading(batch=>'bad'))"]:
+            for statement in ["SELECT count(*) = 0 FROM thinkthen_decide_details(NULL,ARRAY[thinkthen_record(images=>ARRAY[NULL]::thinkthen_image_value[])],thinkthen_reading(batch=>'bad'))",
+                              "SELECT count(*) = 0 FROM thinkthen_decide_details('@unread-question.json',NULL::thinkthen_record[],thinkthen_reading(batch=>'bad'))"]:
                 assert query(statement) == 't'
             for value in ('ARRAY[]::thinkthen_image_value[]', 'ARRAY[NULL]::thinkthen_image_value[]',
                           "ARRAY[ROW('image/png','private-image-evidence'::bytea,NULL)::thinkthen_image_value]"):
-                failed = native([json.loads(row) for row in query("SELECT to_jsonb(r) FROM thinkthen_decide('Is red visible?',ARRAY[thinkthen_record(images=>" + value + ')]) r').splitlines()], 'decide')
+                failed = native([json.loads(row) for row in query("SELECT to_jsonb(r) FROM thinkthen_decide_details('Is red visible?',ARRAY[thinkthen_record(images=>" + value + ')]) r').splitlines()], 'decide')
                 assert failed['native']['error']['kind'] == 'usage' and 'private-image-evidence' not in json.dumps(failed), failed
             assert backend.count() == 1
-            bad_text = native([json.loads(row) for row in query("SELECT to_jsonb(r) FROM thinkthen_decide('Is red visible?',ARRAY[NULL]::thinkthen_record[]) r").splitlines()], 'decide')
+            bad_text = native([json.loads(row) for row in query("SELECT to_jsonb(r) FROM thinkthen_decide_details('Is red visible?',ARRAY[NULL]::thinkthen_record[]) r").splitlines()], 'decide')
             assert bad_text['native']['error']['kind'] == 'usage', bad_text
             first = complete(None)['native']
             cached = complete(None)['native']

@@ -21,7 +21,7 @@ def statements(create):
             "SELECT thinkthen_decide_images('Is red visible?', (SELECT array_agg(image ORDER BY ordinal) FROM images), 'Compare originals.')",
             'SELECT thinkthen_choose_images(' + quoted('{"choose":"Which color?","options":["red","blue"]}') + ", (SELECT array_agg(image ORDER BY ordinal) FROM images), 'Compare originals.')",
             'SELECT thinkthen_score_images(' + quoted('{"score":"How red?","levels":["none","all"]}') + ", (SELECT array_agg(image ORDER BY ordinal) FROM images), 'Compare originals.')",
-            'SELECT thinkthen_details_images(' + quoted('{"choose":"Which color?","options":["red","blue"]}') + ", (SELECT array_agg(image ORDER BY ordinal) FROM images), 'Compare originals.')->'answer'->'probabilities'",
+            'SELECT to_jsonb(result)->\'answer\'->\'probabilities\' FROM thinkthen_choose_details(' + quoted('{"choose":"Which color?","options":["red","blue"]}') + ",ARRAY[thinkthen_record(text=>'Compare originals.',images=>(SELECT array_agg(image ORDER BY ordinal) FROM images))])",
             'SELECT (image).file IS NULL FROM images ORDER BY ordinal']
 
 
@@ -39,8 +39,7 @@ def invalid(socket):
                       "SELECT thinkthen_decide_images('Is red visible?',ARRAY[]::thinkthen_image_value[])",
                       "SELECT thinkthen_decide_images('Is red visible?',ARRAY[NULL]::thinkthen_image_value[])",
                       "SELECT thinkthen_decide_images('Is red visible?',ARRAY[" + ','.join([red]*9) + '])',
-                      "SELECT thinkthen_decide_images('Is red visible?',ARRAY[ROW('image/png','private-image-evidence'::bytea,NULL)::thinkthen_image_value])",
-                      "SELECT thinkthen_details_images('{\"tag\":\"Which?\",\"labels\":[\"red\"]}',ARRAY[" + red + '])']:
+                      "SELECT thinkthen_decide_images('Is red visible?',ARRAY[ROW('image/png','private-image-evidence'::bytea,NULL)::thinkthen_image_value])"]:
         out, err = sql(socket, "SET thinkthen.model='d1'", statement)
         assert '22023' in err and 'thinkthen usage:' in err, (out, err)
         assert 'private-image-evidence' not in err, err
@@ -54,7 +53,7 @@ def verify(socket, create):
     out, err = sql(socket, *statements(create))
     lines = out.splitlines()
     assert not err and lines[:3] == ['t', 'red', '0.8'], (out, err)
-    assert json.loads(lines[3]) == {'red': 0.8, 'blue': 0.2}, out
+    assert {entry['name']: entry['value'] for entry in json.loads(lines[3])} == {'red': 0.8, 'blue': 0.2}, out
     assert lines[4:] == ['t'] * 3, out
 
 

@@ -123,7 +123,7 @@ def run_case(socket: str, case: dict, folder: pathlib.Path) -> None:
             records = json.dumps({str(index): value for index, value in enumerate(step["records"])})
             sql = f"SELECT * FROM thinkthen_decide_many({QUESTION}, {quote(records)}::jsonb)"
         elif "model" in step:
-            sql = f"SELECT (thinkthen_details({QUESTION}, {quote(step['text'])})).model"
+            sql = f"SELECT ((observations)[1]).detail.model FROM thinkthen_decide_details({QUESTION}, {quote(step['text'])})"
         else:
             sql = f"SELECT thinkthen_decide({QUESTION}, {quote(step['text'])})"
         done = query(socket, [*settings, sql])
