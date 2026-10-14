@@ -443,7 +443,7 @@ string ManyRows(const string &question, int32_t kind) {
         PortableOptions("settings", question + " IS NULL OR keyed_json IS NULL", false) + ", " +
         std::to_string(kind) + ")";
     return "FROM (WITH native_call AS MATERIALIZED (SELECT " + call +
-        " AS readings) SELECT item.* FROM native_call, json_each(readings) item) item";
+        " AS readings) SELECT item.* FROM native_call, json_each(readings) item ORDER BY item.id) item";
 }
 
 } // namespace
