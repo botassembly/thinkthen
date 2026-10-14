@@ -23,7 +23,7 @@ def document(row, cases, named):
     if kind == 'call-result':
         steps = []
         for source, expected in zip(row['input']['case_refs'], row['expect']['calls'], strict=True):
-            base = document({'kind': 'behavior', 'verb': cases[source]['verb'],
+            base = document({'id': source, 'kind': 'behavior', 'verb': cases[source]['verb'],
                              'input': {'case_ref': source}}, cases, named)
             base.update(arm='case/' + row['id'] + '/v1', count_delta=True,
                         settings={'model': 'jev-1.13.0'},
