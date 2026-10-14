@@ -54,6 +54,7 @@ if not core.is_symlink():
     core.symlink_to(folder.parent / 'source', target_is_directory=True)
 if core.resolve() != (folder.parent / 'source').resolve():
     raise SystemExit('setup: the Python core differs from its approved source')
+subprocess.run(['git', '-C', str(folder), 'submodule', 'init', 'external/duckdb'], check=True)
 PY
 			"$TOOLS/venv/bin/python" -m pip install 'scikit-build-core==0.11.6' 'nanobind==3.0.1' 'cmake==4.0.2' 'ninja==1.13.0'
 			heavy_compile env CMAKE_ARGS="-DDUCKDB_SOURCE_PATH=$TOOLS/source -DBUILD_EXTENSIONS=core_functions -DNATIVE_ARCH=OFF" \
