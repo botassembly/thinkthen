@@ -42,3 +42,5 @@ One new case in `conformance/cases.json`, replayed by every binding's installed 
 Registry pages (0578), the website (0575) and docs examples follow after this lands.
 
 PM amendment, 2026-10-14. In pandas and Polars `.tt` results, `.probability` for recognize and relate is a typed list of Float64 per original row, one per item. Decide, filter, choose, find and rank stay nullable Float64; score, tag and annotate stay null.
+
+PM amendment, 2026-10-14. A recognize item's probability is its kept proposal's `span_probability`, matched by the selected bounds and kind; boundary-only recognition uses `proposal.probability`. Entity strength is not a probability and is not exposed as one. No wire or diagnostic change.

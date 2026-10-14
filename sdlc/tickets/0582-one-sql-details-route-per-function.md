@@ -38,3 +38,5 @@ Each database runs one `_details` query per function over its saved recordings a
 ## Defers
 
 The DuckDB listing (0577), registry pages (0578) and website (0575) follow after this lands.
+
+PM amendment, 2026-10-14. Rank, find and relate judge one whole set. Their record-list `_details` treats the whole list as that one set and makes one call: rank returns one row per record with its rank and probability, find returns the picked record, relate returns one row per edge. A failure of that call returns one failure row. No nested sets: a caller with several sets calls once per set, such as with a lateral join over groups.
