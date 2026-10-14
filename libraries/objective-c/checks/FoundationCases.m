@@ -134,7 +134,17 @@ int main(int argc, const char *argv[]) {
                     require(projected.input.state == row.input.state);
                     require([projected.rawFields[@"input"] isEqual:row.rawFields[@"input"]]);
                     require(projected.value.value.count == row.value.value.count);
-                    for (NSString *key in row.value.value) require([projected.value.value[key].rawFields isEqual:row.value.value[key].rawFields]);
+                    for (NSString *key in row.value.value) {
+                        TTAnnotatedField *field = row.value.value[key], *copy = projected.value.value[key];
+                        require([copy.kind isEqual:field.kind]);
+                        if ([field.value isKindOfClass:TTFailed.class]) {
+                            TTFailure *failed = ((TTFailed *)field.value).failed.value;
+                            TTFailure *copied = ((TTFailed *)copy.value).failed.value;
+                            require([copied.kind.value isEqual:failed.kind.value]);
+                            require(copied.cause.state == failed.cause.state);
+                            if (failed.cause.state == TTPresenceValue) require([copied.cause.value isEqual:failed.cause.value]);
+                        } else require([copy.value isEqual:field.value]);
+                    }
                 }
             }
             if (retained && [verb isEqual:@"rank"] && !failure) {
