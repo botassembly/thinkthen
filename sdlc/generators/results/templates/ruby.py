@@ -15,7 +15,7 @@ def render(definitions):
         for member in source['properties']:
             lines += [f'      define_method({member!r}) {{ self[{member!r}] }}']
         lines += ['    end']
-    lines += ['  end', 'end']
+    lines += ['  end', '  class Client', *['    def self.choose_question(text, options:)', '      {choose: text, options: options}.freeze', '    end', '    def self.recognize_question(kinds:, **fields)', '      {version: 1, recognize: {kinds: kinds, **fields}}.freeze', '    end', '    def self.relation(name, **fields)', '      {name: name, **fields}.freeze', '    end', '    def self.relate_question(relations:, fields: nil)', '      body = {relations: relations}', '      body[:fields] = fields unless fields.nil?', '      {version: 1, relate: body}.freeze', '    end'], '  end', 'end']
     return '\n'.join(lines) + '\n'
 
 def rust(definitions):

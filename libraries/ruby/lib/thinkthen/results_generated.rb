@@ -919,6 +919,22 @@ module ThinkThen
       define_method('output_tokens') { self['output_tokens'] }
     end
   end
+  class Client
+    def self.choose_question(text, options:)
+      {choose: text, options: options}.freeze
+    end
+    def self.recognize_question(kinds:, **fields)
+      {version: 1, recognize: {kinds: kinds, **fields}}.freeze
+    end
+    def self.relation(name, **fields)
+      {name: name, **fields}.freeze
+    end
+    def self.relate_question(relations:, fields: nil)
+      body = {relations: relations}
+      body[:fields] = fields unless fields.nil?
+      {version: 1, relate: body}.freeze
+    end
+  end
 end
 module ThinkThen
   class Client

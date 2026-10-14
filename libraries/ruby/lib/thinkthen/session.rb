@@ -85,20 +85,6 @@ module ThinkThen
       raise UsageError.new("input cannot be converted to native JSON", "usage")
     end
     private_class_method :dump
-    def self.choose_question(text, options:)
-      {choose: text, options: options}.freeze
-    end
-    def self.recognize_question(kinds:, **fields)
-      {version: 1, recognize: {kinds: kinds, **fields}}.freeze
-    end
-    def self.relation(name, **fields)
-      {name: name, **fields}.freeze
-    end
-    def self.relate_question(relations:, fields: nil)
-      body = {relations: relations}
-      body[:fields] = fields unless fields.nil?
-      {version: 1, relate: body}.freeze
-    end
     def self.original(value)
       value.is_a?(String) ? {kind: "text", text: value} : {kind: "json", value: value}
     end
@@ -268,8 +254,5 @@ module ThinkThen
       end
       def inspect = "<ThinkThen::Client::Operation>"
     end
-  end
-  class Error
-    attr_reader :results, :terminal, :observations
   end
 end

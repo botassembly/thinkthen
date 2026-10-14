@@ -90,6 +90,24 @@ class TestOwnedSession < Minitest::Test
         say client.plan("decide", "Question?", {body: "one"}, batch: 1).records
         say [T.const_defined?(:Engine, false), T.const_defined?(:Complete, false), T.respond_to?(:decide)]
         say client.inspect
+        questions = {decide: "Question?", filter: "Question?", rank: "Question?",
+          choose: T::Client.choose_question("Question?", options: %w[first second]),
+          tag: {tag: "Question?", labels: %w[first second]}, score: {score: "Question?", levels: %w[low high]}}
+        questions.each do |verb, question|
+          plan = client.plan(verb.to_s, question, ["one", "two"], batch: 1)
+          raise "missing preview field" unless T::Plan::FIELDS.all? { |field| plan.key?(field) }
+          raise "wrong preview" unless plan.records == 2 && plan.requests == 2
+        end
+        unsupported = {find: "Question?", annotate: {version: 1, questions: {ok: {decide: "Question?"}}},
+          recognize: T::Client.recognize_question(kinds: {person: nil}),
+          relate: T::Client.relate_question(relations: [T::Client.relation("knows")])}
+        unsupported.each do |verb, question|
+          begin
+            client.plan(verb.to_s, question, ["one", "two"])
+            raise "unsupported preview admitted"
+          rescue T::UsageError
+          end
+        end
       end
     RUBY
       assert_equal [2, 2], child.hear
