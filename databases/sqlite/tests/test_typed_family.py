@@ -233,8 +233,9 @@ db.execute('SELECT thinkthen_configure(?)',[json.dumps({'cache':False,'batch':64
 records=[{'json':{'name':name,'kind':'organization'}} for name in ('one','two','three','four')]
 question=json.dumps({'version':1,'relate':{'relations':[{'name':'linked','source':'organization','target':'organization'}]}})
 items=json.dumps(records)
-rows=db.execute('SELECT ordinal,value,probability,result FROM thinkthen_relate_details WHERE request_question=? AND request_records=?',(question,items)).fetchall()
+rows=db.execute('SELECT ordinal,value,probability,result,observations FROM thinkthen_relate_details WHERE request_question=? AND request_records=?',(question,items)).fetchall()
 assert len(rows)==12,rows
+assert rows[0][4]==0 and all(row[4] is None for row in rows[1:]),rows
 reader=Read(db,'relate',question,{'records':records},None)
 reader.fields={'request_question':question,'request_records':items}
 results=[reader.object('related',row[3]) for row in rows]
@@ -247,6 +248,27 @@ say(edges=len(rows))
 ''',environment(backend))
     expect(got['edges'],12,'all directed edges retain one owning canonical record')
     expect(backend.close(),1,'twelve edges share the actual packed request')
+
+
+def test_rank_details_keep_call_observations_only_on_first_original_record():
+    backend=Backend()
+    got=child('''
+from native_receipts import Read
+db=connect();db.execute('SELECT thinkthen_configure(?)',('{"cache":false,"batch":64}',))
+records=[{'text':text} for text in ('refund','later','parcel')]
+question='{"decide":"Refund?"}';items=json.dumps(records)
+rows=db.execute('SELECT ordinal,observations FROM thinkthen_rank_details WHERE request_question=? AND request_records=?',(question,items)).fetchall()
+assert [row[0] for row in rows]==[0,1,2],rows
+assert rows[0][1]==0 and all(row[1] is None for row in rows[1:]),rows
+reader=Read(db,'rank',question,{'records':records},None)
+reader.fields={'request_question':question,'request_records':items}
+events=[reader.object('event',row['event_receipt_index']) for row in reader.rows('event')]
+assert sum(event['kind']=='question' for event in events)==3,events
+assert sum(event['kind']=='row' for event in events)==3,events
+say(rows=len(rows))
+''',environment(backend,'generic/v1'))
+    expect(got['rows'],3,'original record order owns the first call observation reference')
+    expect(backend.close(),1,'rank records share one packed request')
 
 
 def test_whole_call_quota_failure_owns_no_invented_ordinal():

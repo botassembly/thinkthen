@@ -197,6 +197,8 @@ Each of the ten functions has one `thinkthen_<function>_details` table. Plain ca
 
 Each details row exposes `ordinal, value, probability, result, failure, facts, observations`. Result, failure, facts and observation references select the named typed projections from the same evaluation. Decide and filter expose yes probability; choose and find expose the selected option's probability. Score, tag and annotate expose null probability. Rank exposes one row per ranked record with its rank and probability. Recognition retains probabilities for each span. Relate exposes one row per edge with its probability. Rank, find and relate consume the supplied records as one whole set. A failed aggregate returns one failure row.
 
+Rank and relate retain the call's observations on the first details row, whose ordinal is zero. Later rows expose an empty observation list. Read the first row to inspect the whole call. A single failure row retains all observations.
+
 For one ordinary receipt:
 
 ```sql

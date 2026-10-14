@@ -31,9 +31,10 @@ pub(super) fn complete(
             {
                 let mut edge_result = result.clone();
                 edge_result["value"] = json!([edge]);
+                let call_observations = if rows.is_empty() { observations } else { &[] };
                 rows.push(
                     json!({"ordinal":rows.len(),"value":edge,"probability":edge.get("probability"),
-                    "result":edge_result,"failure":null,"facts":facts,"observations":observations}),
+                    "result":edge_result,"failure":null,"facts":facts,"observations":call_observations}),
                 );
             }
         } else {
@@ -49,9 +50,14 @@ pub(super) fn complete(
                     .cloned()
                     .unwrap_or(value);
             }
+            let call_observations = if function == F::Rank && ordinal != json!(0) {
+                &[]
+            } else {
+                observations
+            };
             rows.push(
                 json!({"ordinal":ordinal,"value":value,"probability":probability,
-                "result":result,"failure":null,"facts":facts,"observations":observations}),
+                "result":result,"failure":null,"facts":facts,"observations":call_observations}),
             );
         }
     }
@@ -72,7 +78,10 @@ pub(super) fn failed(
 }
 
 fn failed_call(failure: Value, facts: &Value, observations: &[Value]) -> Value {
-    let ordinal = failure.pointer("/stopped/at").cloned().unwrap_or(Value::Null);
+    let ordinal = failure
+        .pointer("/stopped/at")
+        .cloned()
+        .unwrap_or(Value::Null);
     let mut row = failed(0, failure, facts, observations);
     row["ordinal"] = ordinal;
     row
