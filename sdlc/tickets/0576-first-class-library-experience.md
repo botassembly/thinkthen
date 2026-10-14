@@ -71,3 +71,5 @@ Stage 2 starts when G1 and G2 land. One lane per language owns `libraries/<lang>
 - C++ (≤466, falling by about 243): delete `json.hpp` and read native views; typed `Client` settings; private C header; one failure type; ASan over the ten examples.
 - Ada (adb ≤200, ads ≤80): `T_EngineSettings`; make `Thinkthen_Session_C` and `Requests` private.
 - COBOL (c ≤12, h ≤12): settings record; one `CALL` per answer; rank and filter tables; the session check uses the blocking call; correct the README.
+
+PM amendment, 2026-10-14. Ordinary `thinkthen_details` returns the existing typed receipt projection, not JSON. This supersedes the 0538 retention of ordinary details JSON. The approved packed try-details recovery envelope stays as it is.
