@@ -294,6 +294,10 @@ def unpack_example_package(family, packages, destination, selected=None):
     package = candidates[0]
     check_package(family, package)
     files = members(package.read_bytes(), package.suffix in ('.whl', '.nupkg', '.zip'))
+    executable = set()
+    if package.suffix not in ('.whl', '.nupkg', '.zip') and family != 'ruby':
+        with tarfile.open(package) as archive:
+            executable = {item.name for item in archive if item.isfile() and item.mode & 0o111}
     if family == 'ruby':
         files = members(files['data.tar.gz'])
     for name, data in files.items():
@@ -303,7 +307,7 @@ def unpack_example_package(family, packages, destination, selected=None):
         out = destination / path
         out.parent.mkdir(parents=True, exist_ok=True)
         out.write_bytes(data)
-        if path.name == 'thinkthen':
+        if path.name == 'thinkthen' or name in executable:
             out.chmod(0o755)
     if family == 'c':
         for filename, alias in (('libthinkthen.so', 'libthinkthen.so.0'), ('libthinkthen.dylib', 'libthinkthen.0.dylib')):

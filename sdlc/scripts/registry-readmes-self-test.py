@@ -28,6 +28,7 @@ def archive(path, files):
         for name, data in files.items():
             entry = tarfile.TarInfo(name)
             entry.size = len(data)
+            if name.endswith('/configure'): entry.mode = 0o755
             package.addfile(entry, io.BytesIO(data))
 
 
@@ -135,9 +136,11 @@ class PackageText(unittest.TestCase):
             archive(packages / 'thinkthen_0.2.0.tar.gz', {
                 'thinkthen/README.md': readmes.source('r').read_bytes(),
                 'thinkthen/src/rust/vendor/dependency/README.md': b'Vendored dependency',
+                'thinkthen/configure': b'#!/bin/sh\nexit 0\n',
                 'thinkthen/DESCRIPTION': (readmes.REPO / 'libraries/r/thinkthen/DESCRIPTION').read_bytes()})
             installed = readmes.unpack_example_package('r', packages, tree / 'installed')
             self.assertTrue((installed / 'DESCRIPTION').is_file())
+            self.assertTrue(os.access(installed / 'configure', os.X_OK))
             self.assertEqual(installed, tree / 'installed/thinkthen')
 
     def test_all_usage_blocks_are_selected_in_order(self):
