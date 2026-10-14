@@ -1012,7 +1012,7 @@
           "UnmarshalJSON"
         ]
       },
-      "representation_members": {
+      "wrapper_members": {
         "Call": [
           "Value",
           "Probability",
