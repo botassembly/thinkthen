@@ -51,8 +51,8 @@ def main():
                  "thinkthen_record(value=>'{\"body\":\"Alpha.\",\"untouched\":false}'::json)", None, None, 1),
                 ('recognize', '{"version":1,"recognize":{"kinds":{"person":"A person."}}}',
                  record, None, None, None),
-                ('relate', '{"version":1,"relate":{"relations":[{"name":"knows","source":"person","target":"person"}]}}',
-                 "thinkthen_record(value=>'{\"name\":\"Alice\",\"kind\":\"person\"}'::json),thinkthen_record(value=>'{\"name\":\"Bob\",\"kind\":\"person\"}'::json)", None, None, None),
+                ('relate', '{"version":1,"relate":{"relations":[{"name":"works_for","source":"person","target":"organization"}]}}',
+                 "thinkthen_record(value=>'{\"name\":\"Alice\",\"kind\":\"person\"}'::json),thinkthen_record(value=>'{\"name\":\"Acme\",\"kind\":\"organization\"}'::json)", None, None, None),
             ]
             for function, question, item, value, probability, sends in checks:
                 before = int(backend.read('count'))
@@ -74,7 +74,10 @@ def main():
                     assert row['value'] == value, (function, row)
                 if function == 'recognize':
                     assert isinstance(row['probability'], list), (function, row)
-                elif function != 'relate':
+                elif function == 'relate':
+                    assert row['value']['source_name'] == 'Alice' and row['value']['target_name'] == 'Acme', row
+                    assert row['probability'] == .9, row
+                else:
                     assert row['probability'] == probability, (function, row)
 
             failed = rows("SELECT to_jsonb(r) FROM thinkthen_decide_details('Fits?',ARRAY[" + record + ",NULL," + record + "]) r")

@@ -21,7 +21,7 @@ fn decide_records(
         let (Some(question), Some(records)) = (question, records) else {
             return TableIterator::new(Vec::new());
         };
-        let rows = super::row_values(super::execute("decide", question, records, reading));
+        let rows = super::row_values(thinkthen::RequestFunction::Decide, super::execute("decide", question, records, reading));
         TableIterator::new(rows.into_iter().map(|row| {
             let value = row.get("value");
             (row.get("ordinal").and_then(Value::as_i64), value.and_then(Value::as_bool), row.get("probability").and_then(Value::as_f64),
@@ -56,7 +56,7 @@ fn decide_plain(
         let (Some(question), Some(input)) = (question, input) else {
             return TableIterator::new(Vec::new());
         };
-        let rows = super::row_values(super::execute_plain("decide", question, input, None, settings, crate::forms::Named::new(threshold, context, model, batch, deadline_ms)));
+        let rows = super::row_values(thinkthen::RequestFunction::Decide, super::execute_plain("decide", question, input, None, settings, crate::forms::Named::new(threshold, context, model, batch, deadline_ms)));
         TableIterator::new(rows.into_iter().map(|row| {
             let value = row.get("value");
             (row.get("ordinal").and_then(Value::as_i64), value.and_then(Value::as_bool), row.get("probability").and_then(Value::as_f64),
@@ -86,7 +86,7 @@ fn choose_records(
         let (Some(question), Some(records)) = (question, records) else {
             return TableIterator::new(Vec::new());
         };
-        let rows = super::row_values(super::execute("choose", question, records, reading));
+        let rows = super::row_values(thinkthen::RequestFunction::Choose, super::execute("choose", question, records, reading));
         TableIterator::new(rows.into_iter().map(|row| {
             let value = row.get("value");
             (row.get("ordinal").and_then(Value::as_i64), value.and_then(Value::as_str).map(str::to_owned), row.get("probability").and_then(Value::as_f64),
@@ -121,7 +121,7 @@ fn choose_plain(
         let (Some(question), Some(input)) = (question, input) else {
             return TableIterator::new(Vec::new());
         };
-        let rows = super::row_values(super::execute_plain("choose", question, input, members, settings, crate::forms::Named::new(threshold, context, model, batch, deadline_ms)));
+        let rows = super::row_values(thinkthen::RequestFunction::Choose, super::execute_plain("choose", question, input, members, settings, crate::forms::Named::new(threshold, context, model, batch, deadline_ms)));
         TableIterator::new(rows.into_iter().map(|row| {
             let value = row.get("value");
             (row.get("ordinal").and_then(Value::as_i64), value.and_then(Value::as_str).map(str::to_owned), row.get("probability").and_then(Value::as_f64),
@@ -151,7 +151,7 @@ fn tag_records(
         let (Some(question), Some(records)) = (question, records) else {
             return TableIterator::new(Vec::new());
         };
-        let rows = super::row_values(super::execute("tag", question, records, reading));
+        let rows = super::row_values(thinkthen::RequestFunction::Tag, super::execute("tag", question, records, reading));
         TableIterator::new(rows.into_iter().map(|row| {
             let value = row.get("value");
             (row.get("ordinal").and_then(Value::as_i64), output::strings(value), row.get("probability").and_then(Value::as_f64),
@@ -186,7 +186,7 @@ fn tag_plain(
         let (Some(question), Some(input)) = (question, input) else {
             return TableIterator::new(Vec::new());
         };
-        let rows = super::row_values(super::execute_plain("tag", question, input, members, settings, crate::forms::Named::new(threshold, context, model, batch, deadline_ms)));
+        let rows = super::row_values(thinkthen::RequestFunction::Tag, super::execute_plain("tag", question, input, members, settings, crate::forms::Named::new(threshold, context, model, batch, deadline_ms)));
         TableIterator::new(rows.into_iter().map(|row| {
             let value = row.get("value");
             (row.get("ordinal").and_then(Value::as_i64), output::strings(value), row.get("probability").and_then(Value::as_f64),
@@ -216,7 +216,7 @@ fn score_records(
         let (Some(question), Some(records)) = (question, records) else {
             return TableIterator::new(Vec::new());
         };
-        let rows = super::row_values(super::execute("score", question, records, reading));
+        let rows = super::row_values(thinkthen::RequestFunction::Score, super::execute("score", question, records, reading));
         TableIterator::new(rows.into_iter().map(|row| {
             let value = row.get("value");
             (row.get("ordinal").and_then(Value::as_i64), value.and_then(Value::as_f64), row.get("probability").and_then(Value::as_f64),
@@ -251,7 +251,7 @@ fn score_plain(
         let (Some(question), Some(input)) = (question, input) else {
             return TableIterator::new(Vec::new());
         };
-        let rows = super::row_values(super::execute_plain("score", question, input, members, settings, crate::forms::Named::new(threshold, context, model, batch, deadline_ms)));
+        let rows = super::row_values(thinkthen::RequestFunction::Score, super::execute_plain("score", question, input, members, settings, crate::forms::Named::new(threshold, context, model, batch, deadline_ms)));
         TableIterator::new(rows.into_iter().map(|row| {
             let value = row.get("value");
             (row.get("ordinal").and_then(Value::as_i64), value.and_then(Value::as_f64), row.get("probability").and_then(Value::as_f64),
@@ -281,7 +281,7 @@ fn filter_records(
         let (Some(question), Some(records)) = (question, records) else {
             return TableIterator::new(Vec::new());
         };
-        let rows = super::row_values(super::execute("filter", question, records, reading));
+        let rows = super::row_values(thinkthen::RequestFunction::Filter, super::execute("filter", question, records, reading));
         TableIterator::new(rows.into_iter().map(|row| {
             let value = row.get("value");
             (row.get("ordinal").and_then(Value::as_i64), value.filter(|v| !v.is_null()).cloned().map(JsonB), row.get("probability").and_then(Value::as_f64),
@@ -310,7 +310,7 @@ fn filter_plain(
         let (Some(question), Some(input)) = (question, input) else {
             return TableIterator::new(Vec::new());
         };
-        let rows = super::row_values(super::plain::keyed("filter", question, input, settings));
+        let rows = super::row_values(thinkthen::RequestFunction::Filter, super::plain::keyed("filter", question, input, settings));
         TableIterator::new(rows.into_iter().map(|row| {
             let value = row.get("value");
             (row.get("ordinal").and_then(Value::as_i64), value.filter(|v| !v.is_null()).cloned().map(JsonB), row.get("probability").and_then(Value::as_f64),
@@ -340,7 +340,7 @@ fn rank_records(
         let (Some(question), Some(records)) = (question, records) else {
             return TableIterator::new(Vec::new());
         };
-        let rows = super::row_values(super::execute("rank", question, records, reading));
+        let rows = super::row_values(thinkthen::RequestFunction::Rank, super::execute("rank", question, records, reading));
         TableIterator::new(rows.into_iter().map(|row| {
             let value = row.get("value");
             (row.get("ordinal").and_then(Value::as_i64), value.and_then(Value::as_i64), row.get("probability").and_then(Value::as_f64),
@@ -369,7 +369,7 @@ fn rank_plain(
         let (Some(question), Some(input)) = (question, input) else {
             return TableIterator::new(Vec::new());
         };
-        let rows = super::row_values(super::plain::keyed("rank", question, input, settings));
+        let rows = super::row_values(thinkthen::RequestFunction::Rank, super::plain::keyed("rank", question, input, settings));
         TableIterator::new(rows.into_iter().map(|row| {
             let value = row.get("value");
             (row.get("ordinal").and_then(Value::as_i64), value.and_then(Value::as_i64), row.get("probability").and_then(Value::as_f64),
@@ -399,7 +399,7 @@ fn annotate_records(
         let (Some(question), Some(records)) = (question, records) else {
             return TableIterator::new(Vec::new());
         };
-        let rows = super::row_values(super::execute("annotate", question, records, reading));
+        let rows = super::row_values(thinkthen::RequestFunction::Annotate, super::execute("annotate", question, records, reading));
         TableIterator::new(rows.into_iter().map(|row| {
             let value = row.get("value");
             (row.get("ordinal").and_then(Value::as_i64), value.filter(|v| !v.is_null()).cloned().map(JsonB), row.get("probability").and_then(Value::as_f64),
@@ -428,7 +428,7 @@ fn annotate_plain(
         let (Some(question), Some(input)) = (set, input) else {
             return TableIterator::new(Vec::new());
         };
-        let rows = super::row_values(super::plain::annotate(question, input, settings));
+        let rows = super::row_values(thinkthen::RequestFunction::Annotate, super::plain::annotate(question, input, settings));
         TableIterator::new(rows.into_iter().map(|row| {
             let value = row.get("value");
             (row.get("ordinal").and_then(Value::as_i64), value.filter(|v| !v.is_null()).cloned().map(JsonB), row.get("probability").and_then(Value::as_f64),
@@ -458,7 +458,7 @@ fn recognize_records(
         let (Some(question), Some(records)) = (question, records) else {
             return TableIterator::new(Vec::new());
         };
-        let rows = super::row_values(super::execute("recognize", question, records, reading));
+        let rows = super::row_values(thinkthen::RequestFunction::Recognize, super::execute("recognize", question, records, reading));
         TableIterator::new(rows.into_iter().map(|row| {
             let value = row.get("value");
             (row.get("ordinal").and_then(Value::as_i64), value.map(output::name_values), output::numbers(row.get("probability")),
@@ -487,7 +487,7 @@ fn recognize_plain(
         let (Some(question), Some(input)) = (body, spec) else {
             return TableIterator::new(Vec::new());
         };
-        let rows = super::row_values(super::execute_plain("recognize", input, question, None, None, Default::default()));
+        let rows = super::row_values(thinkthen::RequestFunction::Recognize, super::execute_plain("recognize", input, question, None, None, Default::default()));
         TableIterator::new(rows.into_iter().map(|row| {
             let value = row.get("value");
             (row.get("ordinal").and_then(Value::as_i64), value.map(output::name_values), output::numbers(row.get("probability")),
@@ -516,7 +516,7 @@ fn recognize_kinds(
         let (Some(question), Some(input)) = (body, kinds) else {
             return TableIterator::new(Vec::new());
         };
-        let rows = super::row_values(super::plain::recognize(question, input));
+        let rows = super::row_values(thinkthen::RequestFunction::Recognize, super::plain::recognize(question, input));
         TableIterator::new(rows.into_iter().map(|row| {
             let value = row.get("value");
             (row.get("ordinal").and_then(Value::as_i64), value.map(output::name_values), output::numbers(row.get("probability")),
@@ -546,7 +546,7 @@ fn find_records(
         let (Some(question), Some(records)) = (question, records) else {
             return TableIterator::new(Vec::new());
         };
-        let rows = super::row_values(super::execute("find", question, records, reading));
+        let rows = super::row_values(thinkthen::RequestFunction::Find, super::execute("find", question, records, reading));
         TableIterator::new(rows.into_iter().map(|row| {
             let value = row.get("value");
             (row.get("ordinal").and_then(Value::as_i64), value.filter(|v| !v.is_null()).cloned().map(JsonB), row.get("probability").and_then(Value::as_f64),
@@ -575,7 +575,7 @@ fn find_plain(
         let (Some(question), Some(input)) = (question, units) else {
             return TableIterator::new(Vec::new());
         };
-        let rows = super::row_values(super::plain::find(question, input, settings));
+        let rows = super::row_values(thinkthen::RequestFunction::Find, super::plain::find(question, input, settings));
         TableIterator::new(rows.into_iter().map(|row| {
             let value = row.get("value");
             (row.get("ordinal").and_then(Value::as_i64), value.filter(|v| !v.is_null()).cloned().map(JsonB), row.get("probability").and_then(Value::as_f64),
@@ -605,7 +605,7 @@ fn relate_records(
         let (Some(question), Some(records)) = (question, records) else {
             return TableIterator::new(Vec::new());
         };
-        let rows = super::row_values(super::execute("relate", question, records, reading));
+        let rows = super::row_values(thinkthen::RequestFunction::Relate, super::execute("relate", question, records, reading));
         TableIterator::new(rows.into_iter().map(|row| {
             let value = row.get("value");
             (row.get("ordinal").and_then(Value::as_i64), value.filter(|v| !v.is_null()).map(output::edge_value), row.get("probability").and_then(Value::as_f64),
@@ -634,7 +634,7 @@ fn relate_plain(
         let (Some(question), Some(input)) = (query, rules) else {
             return TableIterator::new(Vec::new());
         };
-        let rows = super::row_values(super::plain::relate_spec(question, input));
+        let rows = super::row_values(thinkthen::RequestFunction::Relate, super::plain::relate_spec(question, input));
         TableIterator::new(rows.into_iter().map(|row| {
             let value = row.get("value");
             (row.get("ordinal").and_then(Value::as_i64), value.filter(|v| !v.is_null()).map(output::edge_value), row.get("probability").and_then(Value::as_f64),
@@ -663,7 +663,7 @@ fn relate_rules(
         let (Some(question), Some(input)) = (query, rules) else {
             return TableIterator::new(Vec::new());
         };
-        let rows = super::row_values(super::plain::relate(question, input));
+        let rows = super::row_values(thinkthen::RequestFunction::Relate, super::plain::relate(question, input));
         TableIterator::new(rows.into_iter().map(|row| {
             let value = row.get("value");
             (row.get("ordinal").and_then(Value::as_i64), value.filter(|v| !v.is_null()).map(output::edge_value), row.get("probability").and_then(Value::as_f64),

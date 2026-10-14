@@ -341,7 +341,7 @@ fn {verb}_{form}(
         let (Some(question), Some({operand})) = ({first_name}, {second_name}) else {{
             return TableIterator::new(Vec::new());
         }};
-        let rows = super::row_values({execute});
+        let rows = super::row_values(thinkthen::RequestFunction::{verb.capitalize()}, {execute});
         TableIterator::new(rows.into_iter().map(|row| {{
             let value = row.get("value");
             (row.get("ordinal").and_then(Value::as_i64), {expression}, {probability},

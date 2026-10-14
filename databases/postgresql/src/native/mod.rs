@@ -1,4 +1,5 @@
 //! Native PostgreSQL records execute canonical requests without transport JSON.
+use crate::call::OrRaise as _;
 use crate::{call, complete_native, files};
 use pgrx::prelude::*;
 use thinkthen::{Error, Request, RequestArguments, RequestInput, RequestQuestion};
@@ -216,28 +217,19 @@ fn prepared(
     Ok(prepared)
 }
 
-pub(super) fn row_values(result: Result<Execution, Error>) -> Vec<serde_json::Value> {
-    match result {
-        Ok(execution) => execution
-            .value
-            .get("rows")
-            .and_then(serde_json::Value::as_array)
-            .cloned()
-            .unwrap_or_else(|| call::raise(call::defect("recovery returned no rows"))),
-        Err(error) => {
-            if matches!(
-                error.kind(),
-                thinkthen::ErrorKind::Cancelled
-                    | thinkthen::ErrorKind::Deadline
-                    | thinkthen::ErrorKind::Defect
-            ) {
-                call::raise(error);
-            }
-            vec![
-                serde_json::json!({"ordinal": 0, "failure": error.complete().error(), "facts": error.facts().map(thinkthen::Facts::complete), "observations": []}),
-            ]
-        }
-    }
+pub(super) fn row_values(
+    function: thinkthen::RequestFunction,
+    result: Result<Execution, Error>,
+) -> Vec<serde_json::Value> {
+    let value = match result {
+        Ok(execution) => execution.value,
+        Err(error) => thinkthen_host::sql_request::failure_carrier(function, error).or_raise(),
+    };
+    value
+        .get("rows")
+        .and_then(serde_json::Value::as_array)
+        .cloned()
+        .unwrap_or_else(|| call::raise(call::defect("recovery returned no rows")))
 }
 #[allow(clippy::too_many_arguments, reason = "native SQL argument mapping")]
 pub(super) fn execute_plain(
