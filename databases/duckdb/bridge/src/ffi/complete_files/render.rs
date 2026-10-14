@@ -16,8 +16,26 @@ pub(super) fn packet(packet: Packet) -> Result<Value, Error> {
                 Row::Annotation(v) => v.ordinal(),
             };
             crate::complete_native::put(&mut value, "ordinals", json!([ordinal]))?;
+            let answer = match row {
+                Row::Decision(v) => {
+                    super::super::native_records::decision_value(v.result().value())
+                }
+                Row::Choice(v) => json!(v.result().value()),
+                Row::Tags(v) => json!(v.result().value()),
+                Row::Score(v) => json!(v.result().value()),
+                Row::Filter(v) => json!(v.result().value()),
+                Row::Annotation(_) => Value::Null,
+            };
+            crate::complete_native::put(&mut value, "answers", json!([answer]))?;
         }
-        Packet::Aggregate(result) => super::super::complete::supplement(&mut value, result)?,
+        Packet::Aggregate(result) => {
+            super::super::complete::supplement(&mut value, result)?;
+            crate::complete_native::put(
+                &mut value,
+                "answers",
+                super::super::native_records::plain_values(result),
+            )?;
+        }
         Packet::Observation { value: event, .. } => {
             crate::complete_native::put(&mut value, "value", observations::owned_event(event)?)?
         }
@@ -31,6 +49,7 @@ pub(super) fn finish(packets: &str, verb: &str) -> Result<Value, Error> {
     let mut rows = Vec::new();
     let mut observations = Vec::new();
     let mut ordinals = Vec::new();
+    let mut answers = Vec::new();
     let mut aggregate = None;
     let mut selection = None;
     let mut terminal = None;
@@ -55,6 +74,9 @@ pub(super) fn finish(packets: &str, verb: &str) -> Result<Value, Error> {
         if let Some(values) = packet.get("ordinals").and_then(Value::as_array) {
             ordinals.extend(values.iter().cloned());
         }
+        if let Some(values) = packet.get("answers").and_then(Value::as_array) {
+            answers.extend(values.iter().cloned());
+        }
         if packet.get("selection").is_some() {
             selection = Some(packet.get("selection").ok_or_else(defect)?.clone());
         }
@@ -78,8 +100,7 @@ pub(super) fn finish(packets: &str, verb: &str) -> Result<Value, Error> {
             crate::complete_native::put(&mut native, "ordinals", Value::Array(ordinals))?;
         }
     }
-    Ok(crate::complete_native::carrier(
-        native,
-        Value::Array(observations),
-    ))
+    let mut carrier = crate::complete_native::carrier(native, Value::Array(observations));
+    crate::complete_native::put(&mut carrier, "answers", Value::Array(answers))?;
+    Ok(carrier)
 }

@@ -7,16 +7,31 @@ ROOT = Path(__file__).resolve().parents[3]
 OUTPUT = ROOT / 'databases/duckdb/cpp/src/request_helpers_generated.hpp'
 
 
+def helper(name, fields, purpose):
+    parameters = ', '.join(f'"{field}"' + (f' := {default}' if default is not None else '')
+                           for field, default in fields)
+    members = ', '.join(f"'{field}':\"{field}\"" for field, _ in fields)
+    sql = f'CREATE MACRO thinkthen_{name}({parameters}) AS {{{members}}}'
+    return f'    RegisterPortableMacro(loader, {json.dumps(sql)}, {json.dumps(purpose)});\n'
+
+
 def render():
     schema = json.loads((ROOT / 'crates/thinkthen/src/public/request/request.schema.json').read_text())
     fields = list(schema['$defs']['RequestOptions']['properties']) + ['context_schema']
-    parameters = ', '.join(f'"{field}" := NULL' for field in fields)
-    members = ', '.join(f"'{field}':\"{field}\"" for field in fields)
-    sql = f'CREATE MACRO thinkthen_reading({parameters}) AS {{{members}}}'
-    return '// Generated from canonical request controls by request_helpers.py.\n' \
+    body = helper('reading', [(field, 'NULL') for field in fields],
+                  'Construct named native request reading controls without executing a call.')
+    body += helper('source', [('paths', None), ('unit', "'line'"), ('window', 'NULL'),
+                             ('format', 'NULL'), ('media', "'text'")],
+                   'Select explicit local source paths, physical reading units, logical framing and media for an authorized call.')
+    body += helper('location', [('file', None), ('first_line', 'NULL'), ('last_line', 'NULL')],
+                   'Retain physical source identity and optional line coordinates without adding model evidence.')
+    body += helper('record', [(field, 'NULL') for field in
+                             ['text', 'json', 'document', 'context', 'options', 'examples',
+                              'seed_spans', 'images', 'source']],
+                   'Construct one native original with its context, shortlist, recognition controls, images and source.')
+    return '// Generated native helpers; reading fields follow the canonical request controls.\n' \
            '#pragma once\nnamespace duckdb {\n' \
-           'inline void RegisterReadingHelper(ExtensionLoader &loader) {\n' \
-           f'    RegisterPortableMacro(loader, {json.dumps(sql)}, "Construct named native request reading controls without executing a call.");\n' \
+           'inline void RegisterRequestHelpers(ExtensionLoader &loader) {\n' + body + \
            '}\n} // namespace duckdb\n'
 
 

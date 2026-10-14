@@ -1,4 +1,7 @@
 """Native SQL collection checks shared by matching installed host runners."""
+from pathlib import Path
+import tempfile
+
 from harness import Backend, expect, rows
 
 
@@ -26,6 +29,7 @@ def check(run):
         expect(rows(got[4]), [[0]], "required NULL shields invalid reading")
         expect(backend.count(), 2, "only the two admitted calls send")
     helpers(run)
+    sources(run)
 
 
 def helpers(run):
@@ -46,3 +50,22 @@ def helpers(run):
         expect(rows(got[2]), [['usage', None]], "unlocated refusal has no invented facts")
         expect(rows(got[3]), [[True, 'example.txt']], "files_only accepts actual located input")
         expect(backend.count(), 1, "location preserves cache identity; refusal sends nothing")
+
+
+def sources(run):
+    with tempfile.TemporaryDirectory(prefix='duckdb-native-source-') as directory, Backend() as backend:
+        path = Path(directory) / 'records.txt'
+        path.write_text('alpha\nbeta\n')
+        quoted = "'" + str(path).replace("'", "''") + "'"
+        got = run([
+            "SET thinkthen_model='jev-1.13.0'",
+            "SELECT ordinal,value,result.source.first_line,result.source.last_line,"
+            "facts.records,facts.requests_sent,failure.kind FROM thinkthen_decide('Refund?',"
+            f"thinkthen_source({quoted}),reading := thinkthen_reading(batch := 2)) ORDER BY ordinal",
+            "SELECT failure.kind,facts.requests_sent FROM thinkthen_decide('Other?',"
+            f"thinkthen_source({quoted}),reading := thinkthen_reading(deadline_ms := 0))",
+        ], backend.base())
+        expect(rows(got[1]), [[0, True, 1, 1, 2, 1, None], [1, True, 2, 2, 2, 1, None]],
+               "native source readings retain physical coordinates and final facts")
+        expect(rows(got[2]), [['deadline', None]], "unstarted source deadline has no invented facts")
+        expect(backend.count(), 1, "spent source deadline sends nothing")

@@ -207,8 +207,16 @@ fn compose(
     Ok(row)
 }
 
-fn plain_values(value: &thinkthen::RequestValue) -> Value {
-    use thinkthen::{Answer, RequestValue};
+pub(super) fn decision_value(answer: thinkthen::Answer) -> Value {
+    match answer {
+        thinkthen::Answer::Yes => Value::Bool(true),
+        thinkthen::Answer::No => Value::Bool(false),
+        thinkthen::Answer::Unsure => Value::Null,
+    }
+}
+
+pub(super) fn plain_values(value: &thinkthen::RequestValue) -> Value {
+    use thinkthen::RequestValue;
     macro_rules! rows {
         ($rows:expr) => {
             serde_json::json!(
@@ -222,11 +230,7 @@ fn plain_values(value: &thinkthen::RequestValue) -> Value {
     match value {
         RequestValue::Decisions(rows) => Value::Array(
             rows.iter()
-                .map(|row| match row.result().value() {
-                    Answer::Yes => Value::Bool(true),
-                    Answer::No => Value::Bool(false),
-                    Answer::Unsure => Value::Null,
-                })
+                .map(|row| decision_value(row.result().value()))
                 .collect(),
         ),
         RequestValue::Choices(rows) => rows!(rows),
@@ -275,31 +279,17 @@ struct PreparedNative {
     records: Vec<Result<Record, Error>>,
 }
 
-fn prepare_native(
+pub(super) fn header(
     verb: &str,
-    question: &str,
-    records: &str,
+    prepared: &complete_native::Prepared,
     reading: &str,
-    settings: &str,
-    reference: Option<&thinkthen::QuestionFileReference>,
-) -> Result<PreparedNative, Error> {
-    let call =
-        thinkthen::Settings::parse(settings).map_err(|e| complete_native::usage(&e.to_string()))?;
-    // SAFETY: the host retains the selected question through synchronous return.
-    let saved = reference
-        .map(|held| complete_native::settings::parse_file(verb, question, held))
-        .transpose()?;
-    let prepared = if let Some(saved) = saved {
-        complete_native::settings::prepare_file(verb, question, &call, saved)?
-    } else {
-        complete_native::prepare(verb, question, &call)?
-    };
+) -> Result<(thinkthen::AdmittedRequest, thinkthen::RecordReading), Error> {
     let options = options(reading)?;
     let admitted = Request::named(
         verb,
         RequestArguments {
             question: RequestQuestion::Definition {
-                value: super::complete::request::definition(&prepared),
+                value: super::complete::request::definition(prepared),
             },
             input: RequestInput::Feed {
                 name: "duckdb".to_owned(),
@@ -330,7 +320,29 @@ fn prepare_native(
                 .ok_or_else(complete_native::defect)?,
         );
     }
-    let request = composed_request(verb, &admitted)?;
+    Ok((composed_request(verb, &admitted)?, projection))
+}
+
+fn prepare_native(
+    verb: &str,
+    question: &str,
+    records: &str,
+    reading: &str,
+    settings: &str,
+    reference: Option<&thinkthen::QuestionFileReference>,
+) -> Result<PreparedNative, Error> {
+    let call =
+        thinkthen::Settings::parse(settings).map_err(|e| complete_native::usage(&e.to_string()))?;
+    // SAFETY: the host retains the selected question through synchronous return.
+    let saved = reference
+        .map(|held| complete_native::settings::parse_file(verb, question, held))
+        .transpose()?;
+    let prepared = if let Some(saved) = saved {
+        complete_native::settings::prepare_file(verb, question, &call, saved)?
+    } else {
+        complete_native::prepare(verb, question, &call)?
+    };
+    let (request, projection) = header(verb, &prepared, reading)?;
     let raw: Vec<Box<RawValue>> = serde_json::from_str(records)
         .map_err(|_| complete_native::usage("records is an ordered native collection"))?;
     let records = raw

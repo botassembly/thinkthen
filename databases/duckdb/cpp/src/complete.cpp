@@ -24,6 +24,7 @@ ThinkThenReply thinkthen_cpp_complete_images(ThinkThenText, const ThinkThenImage
                                             const void *, int64_t, ThinkThenSettings, ThinkThenStop);
 ThinkThenReply thinkthen_cpp_complete_question_resolve(ThinkThenText, void **);
 void thinkthen_cpp_complete_question_free(void *);
+ThinkThenReply thinkthen_cpp_native_source_input(ThinkThenText, bool);
 ThinkThenReply thinkthen_cpp_native_records(ThinkThenText, ThinkThenText, ThinkThenText, ThinkThenText,
     ThinkThenText, const void *, bool, int64_t, ThinkThenSettings, ThinkThenStop);
 }
@@ -121,6 +122,16 @@ void NativeRecords(DataChunk &args, ExpressionState &state, Vector &result) {
             const auto inputs = NativeInputJSON(records, true);
             const auto incremental = args.data[4].GetValue(row);
             if (!session) { session.emplace(Settings(*context)); }
+            if (records.type().id() == LogicalTypeId::STRUCT) {
+                RustReply descriptor(thinkthen_cpp_native_source_input(View(inputs), !incremental.IsNull() && incremental.GetValue<bool>()));
+                if (descriptor.value.status != 0) {
+                    result.SetValue(row, DecodeReceipt(FailureEnvelope(ReplyText(descriptor.value)), verb)); continue;
+                }
+                string source_result;
+                CompleteFileCall(*context, verb, content, ReplyText(descriptor.value), controls, selection.value,
+                    owner->Remaining(*context), session->Bridge(), source_result, options);
+                result.SetValue(row, DecodeReceipt(source_result, verb)); continue;
+            }
             RustReply reply(thinkthen_cpp_native_records(View(verb), View(content), View(inputs), View(options), View(controls),
                 selection.value, !incremental.IsNull() && incremental.GetValue<bool>(), owner->Remaining(*context), session->Bridge(), StopFor(*context)));
             Checked(reply.value);
@@ -146,17 +157,7 @@ void RegisterComplete(ExtensionLoader &loader) {
         }
         RegisterPortableMacro(loader,string("CREATE MACRO thinkthen_")+verb+"_complete(question, inputs, settings := NULL) AS "+name+"(question, inputs, settings)", purpose);
     }
-    RegisterReadingHelper(loader);
-    RegisterPortableMacro(loader,
-        "CREATE MACRO thinkthen_location(file, first_line := NULL, last_line := NULL) AS "
-        "{'file':file, 'first_line':first_line, 'last_line':last_line}",
-        "Retain physical source identity and optional line coordinates without adding model evidence.");
-    RegisterPortableMacro(loader,
-        "CREATE MACRO thinkthen_record(text := NULL, json := NULL, document := NULL, context := NULL, "
-        "options := NULL, examples := NULL, seed_spans := NULL, images := NULL, source := NULL) AS "
-        "{'text':text,'json':json,'document':document,'context':context,'options':options,"
-        "'examples':examples,'seed_spans':seed_spans,'images':images,'source':source}",
-        "Construct one native original with its context, shortlist, recognition controls, images and source.");
+    RegisterRequestHelpers(loader);
     for (auto verb : {"decide", "choose", "tag", "score", "filter", "find", "annotate", "recognize"}) {
         const auto name = string("thinkthen_native_records_") + verb;
         const string purpose = "Read ordered native SQL records and return typed readings, final facts, failures and observations.";

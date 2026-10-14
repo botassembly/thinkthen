@@ -23,6 +23,7 @@ mod find;
 mod images;
 mod listed;
 mod native_records;
+mod native_source;
 mod nested;
 mod panic;
 #[path = "ffi/plan/ffi.rs"]
