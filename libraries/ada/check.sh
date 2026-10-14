@@ -34,7 +34,7 @@ fi
 if [ -z "${THINKTHEN_C_ARTIFACT:-}" ]; then
   cargo build --locked --offline --manifest-path "$REPO/libraries/c/Cargo.toml" --lib -j2
 fi
-if [ -z "${THINKTHEN_BACKEND_ARTIFACT:-}" ]; then
+if [ ! -x "$THINKTHEN_BACKEND_BIN" ]; then
   cargo build --locked --offline --manifest-path "$REPO/Cargo.toml" --package conformance-backend -j2
 fi
 python3 "$ROOT/checks/privacy.py"
