@@ -60,9 +60,17 @@ def restore(descriptor, value, json_text=False):
 
 def carrier(receipt, verb, json_text=False):
     results = [restore(('object', name(RESULTS[verb])), result, json_text) for result in receipt['results']]
+    if verb == 'relate' and results:
+        first = results[0]
+        assert all(len(row['value']) == 1 for row in results)
+        assert all({key:value for key,value in row.items() if key != 'value'} ==
+                   {key:value for key,value in first.items() if key != 'value'} for row in results)
+        results = [{**first, 'value':[row['value'][0] for row in results]}]
     native = {}
     facts = restore(('object', name('completeFacts')), receipt['facts'], json_text)
     error = restore(('object', name('completeError')), receipt['failure'], json_text)
+    if error is not None and receipt['failure'].get('cause') is not None:
+        error['cause'] = receipt['failure']['cause']
     if facts is not None:
         native['facts'] = facts
     if error is not None:
