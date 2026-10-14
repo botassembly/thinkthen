@@ -27,3 +27,5 @@ Learn whether PRD 01's tables and published views answer every curation, eval an
 ## Progress
 
 - 2026-10-14 started
+
+Ian ruling, 2026-10-14. A question has a stable identifier and a version number. A saved-answer lookup may name the version or leave it out. Without a version, the lookup matches the identifier and uses the latest version by default. The answer database keeps every answer, including the history of repeated calls. Clearing old answers is later work.
