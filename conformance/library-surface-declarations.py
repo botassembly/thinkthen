@@ -568,6 +568,7 @@ def python_keywords(declared):
 def rbs(source):
     """Read RBS member signatures, including nested typed keyword parameters."""
     result, scopes, private = set(), [], set()
+    owning_method = None
     for line in source.splitlines():
         indent = len(line) - len(line.lstrip())
         if line.strip() and not line.lstrip().startswith('#'):
@@ -584,11 +585,19 @@ def rbs(source):
         if owner in private:
             continue
         method = re.match(r'\s*def\s+(?:self\.)?(\w+)[!?]?:\s*\(', line)
+        continuation = re.match(r'\s*\|\s*\(', line)
         if method:
-            result.add(Declaration(owner, method[1], 'call'))
+            owning_method = (owner, method[1])
+        elif continuation and owning_method and owning_method[0] == owner:
+            method = continuation
+        elif line.strip() and not line.lstrip().startswith('#'):
+            owning_method = None
+        if method:
+            name = owning_method[1]
+            result.add(Declaration(owner, name, 'call'))
             if '->' in line:
                 returned = re.sub(r'\s+', '', line.rsplit('->', 1)[1])
-                result.add(Declaration(owner + '.' + method[1], returned, 'return'))
+                result.add(Declaration(owner + '.' + name, returned, 'return'))
             start, depth, pieces = method.end(), 0, []
             for pos in range(start, len(line)):
                 char = line[pos]
@@ -601,7 +610,7 @@ def rbs(source):
             for piece in pieces:
                 keyword = re.match(r'\s*\??(\w+):\s*(.+)', piece)
                 if keyword:
-                    container = owner + '.' + method[1]
+                    container = owner + '.' + name
                     result.add(Declaration(container, keyword[1], 'field'))
                     result.add(Declaration(container + '.' + keyword[1], keyword[2].strip(), 'annotation'))
         field = re.match(r'\s*attr_reader\s+(\w+):', line)

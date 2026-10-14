@@ -76,6 +76,12 @@ class PublicSurface(unittest.TestCase):
                     self.assertTrue(any(error.startswith('missing generated declaration: results_generated.rbs:')
                                         for error in invoke() - baseline))
             generated.write_text(original)
+            overload = '                 | (?backend: String'
+            self.assertIn(overload, original)
+            generated.write_text(original.replace(overload, overload.replace('String', 'Integer'), 1))
+            self.assertIn('unlisted generated declaration: results_generated.rbs:Client.open.backend.Integer',
+                          invoke() - baseline)
+            generated.write_text(original)
             runtime = root / 'libraries/ruby/lib/thinkthen/session.rb'
             source = runtime.read_text()
             hidden = source.replace('    def self.original(value)',
