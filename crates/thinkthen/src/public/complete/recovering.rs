@@ -50,7 +50,7 @@ impl Engine {
     }
 }
 
-fn atomic_value(
+pub(super) fn atomic_value(
     function: InputFunction,
     original: QuestionInput,
     ordinal: usize,
