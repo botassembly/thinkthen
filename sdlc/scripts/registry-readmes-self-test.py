@@ -154,6 +154,7 @@ class PackageText(unittest.TestCase):
             def run(command, cwd, env, input, timeout):
                 if '-c' in command:
                     return subprocess.CompletedProcess(command, 0, '069cc9f9b5\n', '')
+                self.assertIn('-bail', command)
                 self.assertIn('/v1.5.6/linux_amd64/thinkthen.duckdb_extension', input)
                 self.assertNotIn('/d4355d01c5/', input)
                 return subprocess.CompletedProcess(command, 0, '', '')

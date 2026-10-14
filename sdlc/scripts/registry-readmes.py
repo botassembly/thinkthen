@@ -519,7 +519,8 @@ def run_example(family, packages, work, root=REPO, selected=None, sample_index=0
         if len(libraries) != 1:
             raise Refusal('duckdb-example-host-member-mismatch')
         library = libraries[0]
-        output = run(['duckdb', '-unsigned', '-list', '-init', '/dev/null'], input="LOAD '" + str(library) + "';\n" + code)
+        output = run(['duckdb', '-unsigned', '-bail', '-list', '-init', '/dev/null'], input="LOAD '" + str(library) + "';\n" + code)
+        print('registry-readmes: DuckDB source ' + source_id + ' loaded ' + str(library.relative_to(package)))
     elif family == 'postgresql' and os.uname().sysname == 'Linux':
         pin = re.search(r'(?m)^VERSION=(.*)$', (root / 'databases/postgresql/runtime.sh').read_text()).group(1)
         tree = work / 'server'
