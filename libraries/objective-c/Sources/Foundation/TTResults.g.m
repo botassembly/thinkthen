@@ -6562,7 +6562,6 @@ TT_GENERATED_NAMED_IMPLEMENTATIONS
 // Generated from the shared Rust result graph; do not edit.
 #import "TTResultPrivate.h"
 #import <thinkthen.h>
-#include <math.h>
 id TTNative_thinkthen_complete_attempt_list_v1(const struct thinkthen_complete_attempt_list_v1 *value);
 id TTNative_thinkthen_complete_attempt_list_presence_v1(const struct thinkthen_complete_attempt_list_presence_v1 *value);
 id TTNative_thinkthen_complete_call_id_presence_v1(const struct thinkthen_complete_call_id_presence_v1 *value);
@@ -6841,14 +6840,11 @@ id TTNative_thinkthen_complete_json_v1(const struct thinkthen_complete_json_v1 *
         case THINKTHEN_COMPLETE_JSON_BOOLEAN_V1: return @((BOOL)value->data.boolean);
         case THINKTHEN_COMPLETE_JSON_STRING_V1: return TTNativeString(value->data.string);
         case THINKTHEN_COMPLETE_JSON_NUMBER_V1: {
-            NSString *text = TTNativeString(value->data.number);
-            NSDecimalNumber *number = [NSDecimalNumber decimalNumberWithString:text locale:@{
+            NSDecimalNumber *number = [NSDecimalNumber decimalNumberWithString:TTNativeString(value->data.number) locale:@{
                 NSLocaleDecimalSeparator:@"."
             }];
-            if (![number isEqual:NSDecimalNumber.notANumber]) return number;
-            double floating = text.doubleValue;
-            if (!isfinite(floating)) TTInvalidResult();
-            return @(floating);
+            if ([number isEqual:NSDecimalNumber.notANumber]) TTInvalidResult();
+            return number;
         }
         case THINKTHEN_COMPLETE_JSON_ARRAY_V1: {
             NSMutableArray *items = [NSMutableArray array];

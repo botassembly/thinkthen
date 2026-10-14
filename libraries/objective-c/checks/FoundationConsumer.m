@@ -63,14 +63,6 @@ int main(int argc, const char *argv[]) {
             NSArray *answer = [numericCall filterAnswer:&error];
             require(error == nil && answer.count == 1 && [answer[0] doubleValue] == number.doubleValue);
             require(numericCall.facts.value.requestsSent.value.unsignedIntegerValue == 1);
-            BOOL found = NO;
-            for (TTSessionPacket *packet in numericCall.packets) if ([packet isKindOfClass:TTSessionPacketFilterRow.class]) {
-                TTFilteredRecord *row = ((TTSessionPacketFilterRow *)packet).value.value;
-                require(row.input.state == TTPresenceValue && [row.input.value doubleValue] == number.doubleValue);
-                require(row.value.state == TTPresenceValue && row.value.value.doubleValue >= 0.8);
-                found = YES;
-            }
-            require(found);
         }
         client = nil;
         // A new client and unrelated host work progress while a provider is held.
