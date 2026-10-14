@@ -1,6 +1,6 @@
 # 0588: Experiment: the one-sheet spreadsheet writer keeps workbooks intact
 
-Status: OPEN.
+Status: COMPLETE.
 
 Milestone: 0.3
 
