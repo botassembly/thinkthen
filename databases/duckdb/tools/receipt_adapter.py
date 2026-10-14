@@ -28,12 +28,19 @@ def restore(descriptor, value, json_text=False):
                     return restore(shape[1], value[field], json_text)
             return None
         result = {}
+        required = MODEL.required[child]
+        populated = {field for field in fields if value[field] is not None}
+        for alternative in MODEL.object_alternatives.get(child, []):
+            members = alternative['properties']
+            if populated <= members.keys() and all(
+                    value[field] == shape['const'] for field, shape in members.items() if 'const' in shape):
+                required = required | set(alternative.get('required', []))
         for field, shape in fields.items():
             held = value[field]
             if shape[1] == 'json':
                 if value[field + '_present']:
                     result[field] = restore(shape[1], held, json_text)
-            elif held is not None or mapping or field in MODEL.required[child]:
+            elif held is not None or mapping or field in required:
                 result[field] = restore(shape[1], held, json_text)
         return result
     if mode == 'mapping':

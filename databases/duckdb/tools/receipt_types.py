@@ -27,6 +27,7 @@ class Composite:
         self.types = {}
         self.active = set()
         self.required = {}
+        self.object_alternatives = {}
 
     def alternatives(self, schema):
         if not isinstance(schema, dict):
@@ -68,6 +69,7 @@ class Composite:
                         else:
                             fields[member] = child
                 required = set.intersection(*(set(choice.get('required', [])) for choice in choices))
+                self.object_alternatives[name(key)] = choices
                 return self.object(key, fields, required=required)
             groups = {}
             for child in choices:
