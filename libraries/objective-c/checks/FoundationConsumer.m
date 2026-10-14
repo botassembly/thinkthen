@@ -77,7 +77,7 @@ int main(int argc, const char *argv[]) {
         NSArray *originals = @[NSNull.null, @NO, @(1e308), @(1e-308)];
         TTRecordsInput *multiple = [TTRecordsInput new];
         NSMutableArray *records = [NSMutableArray array];
-        for (id original in originals) { TTItem *item = [TTItem new]; item.original = original; [records addObject:item]; }
+        for (id original in originals) { TTOriginalJSON *value = [TTOriginalJSON new]; value.value = original; TTItem *item = [TTItem new]; item.original = value; [records addObject:item]; }
         multiple.items = records;
         TTTextInput *unselected = [TTTextInput new]; unselected.text = @"no";
         for (TTInput *filterInput in @[unselected, multiple, empty]) {
