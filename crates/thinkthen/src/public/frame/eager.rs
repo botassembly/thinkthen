@@ -19,14 +19,6 @@ impl PolarsEngine for Engine {
     ) -> Result<Call<DataFrame>, Error> {
         inputs::column(self, question, values, options)
     }
-    fn input_details_column(
-        &self,
-        question: &Question,
-        values: &[Option<crate::public::QuestionInput>],
-        options: CallOptions<'_>,
-    ) -> Result<Call<Vec<Option<Details>>>, Error> {
-        inputs::details(self, question, values, options)
-    }
     fn source_column(
         &self,
         question: &Question,
@@ -84,25 +76,8 @@ impl PolarsEngine for Engine {
         texts: &Series,
         options: PolarsCallOptions<'_>,
     ) -> Result<Call<DataFrame>, Error> {
-        let (question, call, probability) = options.apply(question)?;
-        if probability {
-            return self.probability_frame(&question, texts, call);
-        }
-        let value = match question.kind() {
-            QuestionKind::Decide => self.decide_series(&question, texts, call)?,
-            QuestionKind::Choose => self.choose_series(&question, texts, call)?,
-            QuestionKind::Score => self.score_series(&question, texts, call)?,
-            QuestionKind::Tag => self.tag_series(&question, texts, call)?,
-            _ => {
-                return Err(Error::usage(
-                    "this column interface takes decide, choose, score or tag",
-                ));
-            }
-        };
-        value.try_map(|value| {
-            DataFrame::new(value.len(), vec![value.into()])
-                .map_err(|error| Error::defect(&format!("the value frame was refused: {error}")))
-        })
+        let (question, call) = options.apply(question)?;
+        atomic_frame(self, &question, texts, call)
     }
 
     fn plan_series(
@@ -112,70 +87,6 @@ impl PolarsEngine for Engine {
         options: CallOptions<'_>,
     ) -> Result<PlanEstimate, Error> {
         self.plan_with(question, text(texts)?.iter().flatten(), options)
-    }
-
-    fn probability_frame(
-        &self,
-        question: &Question,
-        texts: &Series,
-        options: CallOptions<'_>,
-    ) -> Result<Call<DataFrame>, Error> {
-        let kind = question.kind();
-        if !matches!(kind, QuestionKind::Decide | QuestionKind::Choose) {
-            return Err(Error::usage(format!(
-                "probability belongs to decide and choose, not {}",
-                kind_word(kind)
-            )));
-        }
-        let cells = text(texts)?;
-        let rows = cells.len();
-        let mut probability =
-            PrimitiveChunkedBuilder::<Float64Type>::new("probability".into(), rows);
-        let mut values = Answers::new("value", kind, rows)?;
-        let named = match kind {
-            QuestionKind::Decide => crate::RequestFunction::Decide,
-            QuestionKind::Choose => crate::RequestFunction::Choose,
-            _ => return Err(Error::defect("a probability column lost its question kind")),
-        };
-        request::execute(self, question, texts, named, options)?.try_map(|value| {
-            let mut push = |value: Option<Judgment>, probabilities: Option<Probabilities>| {
-                probability.append_option(
-                    value
-                        .as_ref()
-                        .zip(probabilities.as_ref())
-                        .map(|(value, probabilities)| probability_of(value, probabilities))
-                        .transpose()?
-                        .flatten(),
-                );
-                values.push_judgment(value)
-            };
-            let bad = "a probability column received another result kind";
-            match kind {
-                QuestionKind::Decide => request::project(texts, &value.decisions(bad)?, |row| {
-                    push(
-                        row.map(|row| Judgment::Decision(row.value())),
-                        row.map(|row| row.probabilities()),
-                    )
-                })?,
-                QuestionKind::Choose => request::project(texts, &value.choices(bad)?, |row| {
-                    push(
-                        row.map(|row| Judgment::Choice(row.value().map(str::to_owned))),
-                        row.map(|row| row.probabilities()),
-                    )
-                })?,
-                _ => {
-                    return Err(Error::defect(bad));
-                }
-            }
-            DataFrame::new(
-                rows,
-                vec![
-                    values.finish().into(),
-                    probability.finish().into_series().into(),
-                ],
-            )
-            .map_err(|error| Error::defect(&format!("the probability frame was refused: {error}")))
-        })
     }
 
     fn decide_series<Q: DecisionQuestion + ?Sized>(
@@ -344,6 +255,7 @@ fn probability_of(value: &Judgment, probabilities: &Probabilities) -> Result<Opt
             .map(|option| Some(option.probability()))
             .ok_or_else(|| Error::defect("the chosen label has no probability")),
         (Judgment::Choice(None), Probabilities::Named(_)) => Ok(None),
+        (Judgment::Score(_) | Judgment::Tags(_), _) => Ok(None),
         _ => Err(Error::defect("a probability detail held another shape")),
     }
 }
@@ -386,5 +298,77 @@ fn single(
             }
         }
         Ok(answers.finish())
+    })
+}
+
+fn atomic_frame(
+    engine: &Engine,
+    question: &Question,
+    texts: &Series,
+    options: CallOptions<'_>,
+) -> Result<Call<DataFrame>, Error> {
+    let kind = question.kind();
+    if !matches!(
+        kind,
+        QuestionKind::Decide | QuestionKind::Choose | QuestionKind::Tag | QuestionKind::Score
+    ) {
+        return Err(Error::usage(format!(
+            "the atomic column does not accept {}",
+            kind_word(kind)
+        )));
+    }
+    let cells = text(texts)?;
+    let rows = cells.len();
+    let mut probability = PrimitiveChunkedBuilder::<Float64Type>::new("probability".into(), rows);
+    let mut values = Answers::new("value", kind, rows)?;
+    let named = match kind {
+        QuestionKind::Decide => crate::RequestFunction::Decide,
+        QuestionKind::Choose => crate::RequestFunction::Choose,
+        QuestionKind::Score => crate::RequestFunction::Score,
+        QuestionKind::Tag => crate::RequestFunction::Tag,
+        _ => return Err(Error::defect("a probability column lost its question kind")),
+    };
+    request::execute(engine, question, texts, named, options)?.try_map(|value| {
+        let mut push = |value: Option<Judgment>, probabilities: Option<Probabilities>| {
+            probability.append_option(
+                value
+                    .as_ref()
+                    .zip(probabilities.as_ref())
+                    .map(|(value, probabilities)| probability_of(value, probabilities))
+                    .transpose()?
+                    .flatten(),
+            );
+            values.push_judgment(value)
+        };
+        let bad = "a probability column received another result kind";
+        match kind {
+            QuestionKind::Decide => request::project(texts, &value.decisions(bad)?, |row| {
+                push(
+                    row.map(|row| Judgment::Decision(row.value())),
+                    row.map(|row| row.probabilities()),
+                )
+            })?,
+            QuestionKind::Choose => request::project(texts, &value.choices(bad)?, |row| {
+                push(
+                    row.map(|row| Judgment::Choice(row.value().map(str::to_owned))),
+                    row.map(|row| row.probabilities()),
+                )
+            })?,
+            QuestionKind::Score => request::project(texts, &value.scores(bad)?, |row| {
+                push(row.map(|row| Judgment::Score(row.value())), None)
+            })?,
+            QuestionKind::Tag => request::project(texts, &value.tags(bad)?, |row| {
+                push(row.map(|row| Judgment::Tags(row.value().to_vec())), None)
+            })?,
+            _ => return Err(Error::defect(bad)),
+        }
+        DataFrame::new(
+            rows,
+            vec![
+                values.finish().into(),
+                probability.finish().into_series().into(),
+            ],
+        )
+        .map_err(|error| Error::defect(&format!("the probability frame was refused: {error}")))
     })
 }

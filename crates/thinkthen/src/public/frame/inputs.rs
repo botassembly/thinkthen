@@ -66,10 +66,7 @@ pub(super) fn column(
     inputs: &[Option<QuestionInput>],
     options: PolarsCallOptions<'_>,
 ) -> Result<Call<DataFrame>, Error> {
-    let (question, call, probability) = options.apply(question)?;
-    if probability && !matches!(question.kind(), QuestionKind::Decide | QuestionKind::Choose) {
-        return Err(Error::usage("probability belongs to decide and choose"));
-    }
+    let (question, call) = options.apply(question)?;
     details(engine, &question, inputs, call)?.try_map(|rows| {
         let mut answers = Answers::new("value", question.kind(), rows.len())?;
         let mut probabilities = Vec::with_capacity(rows.len());
@@ -81,7 +78,7 @@ pub(super) fn column(
                 Judgment::Tags(answer) => Annotated::Tags(answer.clone()),
             });
             answers.push(answer.as_ref())?;
-            if probability {
+            {
                 probabilities.push(
                     row.as_ref()
                         .map(super::eager::selected_probability)
@@ -91,7 +88,7 @@ pub(super) fn column(
             }
         }
         let mut columns = vec![answers.finish().into()];
-        if probability {
+        {
             columns.push(Series::new("probability".into(), probabilities).into());
         }
         DataFrame::new(rows.len(), columns)

@@ -7,7 +7,7 @@ use super::{
     Recognize, Recognized, Relate,
 };
 
-use crate::public::{Details, InputReaderOptions, QuestionInput};
+use crate::public::{InputReaderOptions, QuestionInput};
 use std::path::PathBuf;
 
 mod column;
@@ -19,7 +19,6 @@ mod options;
 mod request;
 mod typed;
 mod typed_batches;
-mod typed_series;
 pub use lazy::PolarsExprOptions;
 pub use options::PolarsCallOptions;
 
@@ -124,19 +123,6 @@ pub trait PolarsEngine {
         options: CallOptions<'_>,
     ) -> Result<PlanEstimate, Error>;
 
-    /// Judge a decide or choose column once and return `value` beside its
-    /// nullable `probability` column. Score and tag have no selected-answer
-    /// probability and are refused before a send.
-    ///
-    /// # Errors
-    /// As [`PolarsEngine::decide_series`], or [`Error::Usage`] for score/tag.
-    fn probability_frame(
-        &self,
-        question: &Question,
-        texts: &Series,
-        options: CallOptions<'_>,
-    ) -> Result<Call<DataFrame>, Error>;
-
     /// Decide every text of the column: a `Boolean` series under the
     /// column's name, with a null where a band left the answer not sure.
     ///
@@ -217,16 +203,6 @@ pub trait PolarsEngine {
         inputs: &[Option<QuestionInput>],
         options: PolarsCallOptions<'_>,
     ) -> Result<Call<DataFrame>, Error>;
-
-    /// Complete typed native probabilities for every explicit present input.
-    /// # Errors
-    /// Returns the same validation and call errors as input_column.
-    fn input_details_column(
-        &self,
-        question: &Question,
-        inputs: &[Option<QuestionInput>],
-        options: CallOptions<'_>,
-    ) -> Result<Call<Vec<Option<Details>>>, Error>;
 
     /// Materialize selected files through the single native reader. Text lines
     /// stay physical; whole-file images have null text line coordinates.

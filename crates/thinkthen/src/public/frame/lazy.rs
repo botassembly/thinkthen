@@ -5,7 +5,7 @@ use std::fmt;
 use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::time::Duration;
 
-use polars::prelude::{Column, DataType, Expr, Field, IntoSeries, PolarsError};
+use polars::prelude::{Column, DataType, Expr, Field, PolarsError};
 
 use super::{PolarsCallOptions, PolarsEngine, column::kind_word};
 use crate::public::{
@@ -17,7 +17,6 @@ use crate::public::{
 /// tally share their state; a deadline starts anew for every evaluated morsel.
 #[derive(Clone, Default)]
 pub struct PolarsExprOptions {
-    probability: bool,
     threshold: Option<String>,
     yes: Option<Description>,
     no: Option<Description>,
@@ -32,7 +31,6 @@ impl fmt::Debug for PolarsExprOptions {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         formatter
             .debug_struct("PolarsExprOptions")
-            .field("probability", &self.probability)
             .field("threshold", &self.threshold.is_some())
             .field("meanings", &(self.yes.is_some() || self.no.is_some()))
             .field("context", &self.context.is_some())
@@ -49,13 +47,6 @@ impl PolarsExprOptions {
     #[must_use]
     pub fn new() -> Self {
         Self::default()
-    }
-
-    /// Return selected probability with decide or choose as a Struct.
-    #[must_use]
-    pub fn probability(mut self, value: bool) -> Self {
-        self.probability = value;
-        self
     }
 
     /// Apply the shared threshold grammar when the expression is built.
@@ -128,7 +119,7 @@ impl PolarsExprOptions {
         if let Some(value) = &self.no {
             controls = controls.false_meaning(value);
         }
-        controls.apply(source).map(|(question, _, _)| question)
+        controls.apply(source).map(|(question, _)| question)
     }
 
     fn call(&self) -> Result<CallOptions<'_>, Error> {
@@ -165,26 +156,18 @@ pub(super) fn expression(
             kind_word(question.kind())
         )));
     }
-    if controls.probability && !matches!(wanted, QuestionKind::Decide | QuestionKind::Choose) {
-        return Err(Error::usage(format!(
-            "probability belongs to decide and choose, not {}",
-            kind_word(wanted)
-        )));
-    }
     let question = controls.question(question)?;
     if let Some(context) = &controls.context {
         crate::public::engine::evidence(context)?;
     }
     controls.call()?;
-    let dtype = match (wanted, controls.probability) {
-        (QuestionKind::Decide, false) => DataType::Boolean,
-        (QuestionKind::Choose, false) => DataType::String,
-        (QuestionKind::Score, false) => DataType::Float64,
-        (QuestionKind::Tag, false) => DataType::List(Box::new(DataType::String)),
-        (QuestionKind::Decide, true) => probability_dtype(DataType::Boolean),
-        (QuestionKind::Choose, true) => probability_dtype(DataType::String),
+    let dtype = probability_dtype(match wanted {
+        QuestionKind::Decide => DataType::Boolean,
+        QuestionKind::Choose => DataType::String,
+        QuestionKind::Score => DataType::Float64,
+        QuestionKind::Tag => DataType::List(Box::new(DataType::String)),
         _ => return Err(Error::defect("an expression kind changed")),
-    };
+    });
     let engine = engine.clone();
     Ok(input.map(
         move |column| caught(|| evaluate(&engine, &question, &controls, column)),
@@ -210,9 +193,7 @@ fn evaluate(
         engine.column_with(
             question,
             series,
-            PolarsCallOptions::new()
-                .call(controls.call()?)
-                .probability(controls.probability),
+            PolarsCallOptions::new().call(controls.call()?),
         )
     };
     let answered = match &controls.tally {
@@ -221,18 +202,22 @@ fn evaluate(
     }
     .map_err(compute_error)?;
     let frame = answered.into_value();
-    if controls.probability {
-        Ok(frame
-            .into_struct(column.name().clone())
-            .into_series()
-            .into())
-    } else {
-        frame
+    let present = series
+        .is_not_null()
+        .iter()
+        .map(|value| value == Some(true))
+        .collect::<Vec<_>>();
+    super::column::struct_with_validity(
+        column.name().as_str(),
+        &frame
             .columns()
-            .first()
-            .cloned()
-            .ok_or_else(|| PolarsError::ComputeError("a frame value was missing".into()))
-    }
+            .iter()
+            .map(|column| column.as_materialized_series().clone())
+            .collect::<Vec<_>>(),
+        &present,
+    )
+    .map(Into::into)
+    .map_err(compute_error)
 }
 
 fn compute_error(error: Error) -> PolarsError {
