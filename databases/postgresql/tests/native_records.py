@@ -65,7 +65,7 @@ def main():
             query("CREATE ROLE receipt_reader; GRANT EXECUTE ON FUNCTION " + signature + " TO receipt_reader")
             before = int(backend.read('count'))
             out, err = sql(host.socket, "SET ROLE receipt_reader", "SELECT thinkthen_details('@missing-question','private-original')")
-            assert '42501' in err and 'private-original' not in err, (out, err)
+            assert '22023' in err and 'needs pg_read_server_files' in err and 'private-original' not in err, (out, err)
             assert int(backend.read('count')) == before
 
             record = "thinkthen_record(text=>'Alpha.')"
@@ -181,6 +181,12 @@ def main():
             rows = [json.loads(row) for row in query("SELECT to_jsonb(r) FROM thinkthen_filter('Fits?',ARRAY[" + sourced + "," + record + "],thinkthen_reading(files_only=>true,incremental=>true)) r", 1).splitlines()]
             assert rows[0]['result']['source']['file'] == 'caller-read.txt', rows
             assert rows[-1]['failure']['kind'] == 'usage' and rows[-1]['facts']['requests_sent'] == 1, rows
+            host.start({**env, 'THINKTHEN_BASE_URL': f'http://127.0.0.1:{backend.port}/arm/refuse/v1'})
+            before = int(backend.read('count'))
+            out, err = sql(host.socket, "SET thinkthen.max_retries=0", "SET thinkthen.cache='off'",
+                           "SELECT thinkthen_details('Fits?','private-original')")
+            assert '38000' in err and 'private-original' not in err, (out, err)
+            assert int(backend.read('count')) - before == 1
             print('postgresql: native typed records, readings, facts, prefix, NULL, source and no-send plan pass')
         finally:
             host.stop()
