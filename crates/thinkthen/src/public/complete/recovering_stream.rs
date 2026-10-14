@@ -25,6 +25,8 @@ impl Engine {
     {
         let setting = crate::public::bulk::selected_batch(&question, &options, self.batch)?;
         let engine = self.asking(&question)?;
+        let validates =
+            question.metadata.item_schema.is_some() || question.metadata.context_schema.is_some();
         let records = records.into_iter().enumerate().map(move |(at, record)| {
             let (held, prepared) = record
                 .and_then(|record| {
@@ -33,7 +35,7 @@ impl Engine {
                 .map_err(|error| error.at_record(at))?;
             Ok(Original { held, prepared })
         });
-        self.recover_prepared_stream(engine, setting, function, records, options)
+        self.recover_prepared_stream((engine, setting, function, validates), records, options)
     }
     pub(in crate::public) fn recover_dynamic_choose_stream<'a, I>(
         &self,
@@ -51,6 +53,8 @@ impl Engine {
             self.batch,
         )?;
         let engine = self.for_model(question.model.as_ref())?;
+        let validates =
+            question.metadata.item_schema.is_some() || question.metadata.context_schema.is_some();
         let records = records.into_iter().enumerate().map(move |(at, record)| {
             let (held, prepared) = record
                 .and_then(|record| {
@@ -59,13 +63,20 @@ impl Engine {
                 .map_err(|error| error.at_record(at))?;
             Ok(Original { held, prepared })
         });
-        self.recover_prepared_stream(engine, setting, InputFunction::Choose, records, options)
+        self.recover_prepared_stream(
+            (engine, setting, InputFunction::Choose, validates),
+            records,
+            options,
+        )
     }
     fn recover_prepared_stream<'a, I>(
         &self,
-        engine: Arc<crate::engine::facade::Engine>,
-        setting: crate::core::Setting,
-        function: InputFunction,
+        (engine, setting, function, validates): (
+            Arc<crate::engine::facade::Engine>,
+            crate::core::Setting,
+            InputFunction,
+            bool,
+        ),
         records: I,
         options: CallOptions<'a>,
     ) -> Result<Batch<'a, RequestRecoveredRow>, Error>
@@ -75,7 +86,7 @@ impl Engine {
         let stop = Stop::begin(options)?.with_prices(self.prices);
         let mut packing = pull::packing(setting, false, true);
         packing.detailed = stop.facts().attempts().is_some();
-        let preparing = Records(Arc::clone(&engine), true);
+        let preparing = Records(Arc::clone(&engine), validates);
         let records = records.enumerate().map(move |(at, original)| {
             let original = original?;
             preparing
@@ -85,7 +96,7 @@ impl Engine {
             Ok(original)
         });
         let records = self.admit_prepared_stream(records, &options)?;
-        let asker = Records(Arc::clone(&engine), true);
+        let asker = Records(Arc::clone(&engine), validates);
         let profile = self.profile.clone();
         let call = pull::Call {
             engine: Arc::clone(&engine),
@@ -100,6 +111,20 @@ impl Engine {
             records,
             Box::new(|_, original: &Original| Ok(original.prepared.clone())),
             Box::new(move |stop, at, original, row| {
+                if matches!(
+                    &row,
+                    Err(crate::engine::pipeline::Failed::Asker(
+                        crate::public::asking::Miss::Refused(_)
+                    ))
+                ) {
+                    return Err(row
+                        .err()
+                        .map_or_else(
+                            || Error::defect("a reader refusal lost its error"),
+                            crate::public::asking::failure,
+                        )
+                        .at_record(at));
+                }
                 let original = match original {
                     Some(original) => original,
                     None => {

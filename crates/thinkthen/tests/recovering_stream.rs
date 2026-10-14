@@ -7,8 +7,8 @@ use std::{
     time::{Duration, Instant},
 };
 use thinkthen::{
-    BatchSetting, CallOptions, CancelToken, ErrorKind, Question, QuestionInput, ReaderOptions,
-    Request, RequestArguments, RequestEnvironment, RequestFeed, RequestFraming, RequestFunction,
+    BatchSetting, CancelToken, ErrorKind, Question, QuestionInput, ReaderOptions, Request,
+    RequestArguments, RequestEnvironment, RequestFeed, RequestFraming, RequestFunction,
     RequestInput, RequestOptions, RequestQuestion, RequestReaderFailure, RequestRecoveredRow,
     RequestRecoveringRead, RequestRecoveringResult, RequestRecoveringSession,
     RequestSessionDescriptor, RequestSessionFeedOptions, RequestSessionPushStatus,
@@ -58,7 +58,7 @@ fn next(session: &RequestRecoveringSession) -> RequestRecoveringRead {
             return value;
         }
         assert!(Instant::now() < end, "recovering session did not settle");
-        session.wait(
+        let _ready = session.wait(
             RequestSessionWaitInterest::Settlement,
             end.saturating_duration_since(Instant::now()),
         );
@@ -83,7 +83,7 @@ fn push(session: &RequestRecoveringSession, text: &str) {
             RequestSessionPushStatus::Closed => panic!("feed closed before admission"),
             RequestSessionPushStatus::Full => {
                 assert!(Instant::now() < end, "feed did not admit descriptor");
-                session.wait(
+                let _ready = session.wait(
                     RequestSessionWaitInterest::Input,
                     end.saturating_duration_since(Instant::now()),
                 );
@@ -297,7 +297,7 @@ fn full_and_cancelled_intake_do_not_convert_and_drop_does_not_join_held_provider
     assert_eq!(conversions.get(), 0);
     session.cancel();
     assert_eq!(
-        session.wait(RequestSessionWaitInterest::Result, Duration::ZERO),
+        let _ready = session.wait(RequestSessionWaitInterest::Result, Duration::ZERO),
         RequestSessionReady::Cancelled
     );
     assert_eq!(
