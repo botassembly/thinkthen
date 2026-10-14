@@ -18,10 +18,12 @@ class TestExamples < Minitest::Test
       end
       say capture.string.lines.map(&:strip)
     CODE
-      assert_equal ["true", "true", "true", "billing", "billing", "billing"], child.hear
+      assert_equal ["billing: refund: Please refund the extra fee on my invoice.",
+                    "billing: refund: My parcel went to the wrong address.",
+                    "billing: refund: I cannot reset my password."], child.hear
       status, errors = child.finish
       assert status.success?, errors
-      assert_equal 6, backend.count
+      assert_equal 2, backend.count
     end
   end
 

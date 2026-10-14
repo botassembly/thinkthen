@@ -11,25 +11,26 @@ Set your hosted backend key: `export THINKTHEN_API_KEY=...`. Backends include Je
 ```ruby
 require "thinkthen"
 
-refunds = ["Please refund my order. It arrived broken.",
-           "Thanks for the quick help yesterday!", "I want to send this back."]
 messages = ["Please refund the extra fee on my invoice.",
-            "My parcel went to the wrong address.", "I cannot reset my password."]
-teams = {"billing" => "Invoices, fees, and refunds.",
-         "shipping" => "Parcels and delivery.", "account" => "Logins and passwords."}
+            "My parcel went to the wrong address.",
+            "I cannot reset my password."]
+refund_question = {decide: "Does the customer ask for a refund?",
+                   true: "refund", false: "keep"}
+team_question = {choose: "Which team owns this?", options: {
+  "billing" => "Invoices, fees, and refunds.",
+  "shipping" => "Parcels and delivery.",
+  "account" => "Logins and passwords."
+}}
 ThinkThen::Client.open do |client|
-  refunds.each do |text|
-    refund = client.decide("Does the customer ask for a refund?", text).value
-    puts refund
-  end
-  messages.each do |text|
-    team = client.choose({choose: "Which team owns this?", options: teams}, text).value
-    puts team
+  refund_routes = client.decide(refund_question, messages).value
+  teams = client.choose(team_question, messages).value
+  messages.zip(refund_routes, teams).each do |text, route, team|
+    puts "#{team}: #{route}: #{text}"
   end
 end
 ```
 
-
+Read `.value` in one line. The refund routes are the authored strings `refund` and `keep`, or `nil` for not sure. Keep the call to read `.probability`, `.results` for each record and `.facts` for request costs. A failure raises an exception.
 
 The library is free and MIT licensed. Hosted models charge per token. Local models are free to use; you supply the computer that runs them.
 
