@@ -8,7 +8,7 @@ tt_item(original, context = NULL, options = NULL, seed_spans = NULL,
 \arguments{
 \item{original}{The record's evidence, as text, a JSON value, or an input selector.}
 \item{context}{Optional context for this record.}
-\item{options}{Optional record controls from \code{\link{tt_options}}.}
+\item{options}{Optional replacement ordered shortlist, as a list of named option records.}
 \item{seed_spans}{Optional authored spans.}
 \item{examples}{Optional record examples.}
 \item{images}{Optional image inputs.}
