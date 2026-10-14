@@ -505,7 +505,7 @@ fn declared_file_source_yields_located_prefix_before_reading_invalid_utf8_suffix
         )
         .unwrap_err();
     std::fs::remove_file(&path).unwrap();
-    assert_eq!(error.kind(), ErrorKind::Local);
+    assert_eq!(error.kind(), ErrorKind::Usage);
     assert_eq!(rows.borrow().len(), 1);
     let rows = rows.into_inner();
     let RequestValue::Decisions(values) = rows[0].outcome().unwrap() else {
