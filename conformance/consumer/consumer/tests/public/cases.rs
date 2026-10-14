@@ -19,7 +19,7 @@ use serde_json::value::RawValue;
 use serde_json::{Value, json};
 use thinkthen::{
     Annotated, BatchSetting, CallOptions, Choice, Description, Engine, Entity, Error, FailureCause,
-    Judgment, Kind, LoadedQuestion, Question, QuestionSet, Recognize, Recognized, Relate,
+    Kind, LoadedQuestion, Question, QuestionKind, QuestionSet, Recognize, Recognized, Relate,
     RelationRule,
 };
 
@@ -209,8 +209,8 @@ fn check(backend: &Backend, case: &Value, verbatim: &Verbatim) -> Checked {
             let ranked = engine
                 .rank_with(&asked.map_err(said)?, texts.clone(), singleton_requests())
                 .map_err(said)?;
-            let rows = ranked.value().iter().map(
-                |row| json!({"index": at(&texts, row.input()), "probability": row.probability()}),
+            let rows = ranked.results().iter().map(
+                |row| json!({"index": at(&texts, row.original()), "probability": row.result().probability()}),
             );
             same("ranking", &rows.collect(), &success["operation"]["ranking"])
         }
@@ -238,11 +238,14 @@ fn loaded(
     let asked = match Question::from_json(question).map_err(said)? {
         LoadedQuestion::Question(asked) => asked,
         LoadedQuestion::Banded(banded) => {
-            let details = engine.details(&banded, texts[0]).map_err(said)?;
             let answer = engine.decide(&banded, texts[0]).map_err(said)?;
             let bare = &success["answers"][0]["bare"];
-            same("decide", &json!(decision(answer.into_value())), bare)?;
-            return detailed(details.value(), &success["answers"][0], base);
+            same("decide", &json!(answer.value()), bare)?;
+            return detailed(
+                &scalar(&answer.results()[0].to_scalar_json().map_err(said)?)?,
+                &success["answers"][0],
+                base,
+            );
         }
     };
     match kind {
@@ -290,34 +293,12 @@ fn loaded(
     }
 }
 
-/// One judgment by `details`, by its typed method, and, for a counters case, twice through a cache.
+/// One judgment and its complete result, then twice through a cache for a counters case.
 fn single(engine: &Engine, asked: &Question, text: &str, success: &Value, base: &str) -> Checked {
     let expected = &success["answers"][0];
-    let details = engine.details(asked, text).map_err(said)?;
-    same(
-        "bare",
-        &judgment(details.value().value()),
-        &expected["bare"],
-    )?;
-    detailed(details.value(), expected, base)?;
-    let typed = match details.value().value() {
-        Judgment::Decision(_) => json!(decision(
-            engine.decide(asked, text).map_err(said)?.into_value()
-        )),
-        Judgment::Score(_) => json!(engine.score(asked, text).map_err(said)?.into_value()),
-        Judgment::Choice(_) => {
-            let typed = asked.clone().into_choose::<Team>().map_err(said)?;
-            let pick = engine.choose(&typed, text).map_err(said)?;
-            json!(pick.into_value().map(|team| team.label()))
-        }
-        Judgment::Tags(_) => match asked.clone().into_tag::<Mark>() {
-            Ok(typed) => tags(engine.tag(&typed, text).map_err(said)?.into_value()),
-            Err(_) => {
-                let typed = asked.clone().into_tag::<Word>().map_err(said)?;
-                tags(engine.tag(&typed, text).map_err(said)?.into_value())
-            }
-        },
-    };
+    let (typed, details) = atomic(engine, asked, text)?;
+    same("bare", &details["answer"]["value"], &expected["bare"])?;
+    detailed(&details, expected, base)?;
     same("typed", &typed, &expected["bare"])?;
     let Some(counters) = success.get("counters") else {
         return Ok(());
@@ -332,7 +313,7 @@ fn single(engine: &Engine, asked: &Question, text: &str, success: &Value, base: 
         .map_err(said)?;
     let before = cached.usage();
     for _ in 0..counters["calls"].as_u64().unwrap_or_default() {
-        cached.details(asked, text).map_err(said)?;
+        atomic(&cached, asked, text)?;
     }
     let after = cached.usage();
     let moved = json!({
@@ -346,18 +327,15 @@ fn single(engine: &Engine, asked: &Question, text: &str, success: &Value, base: 
 /// With `one`, the case names one record, and every answer reads it.
 fn annotated(engine: &Engine, set: &str, texts: &[&str], success: &Value, one: bool) -> Checked {
     let set = QuestionSet::from_json(set).map_err(said)?;
-    let records: Result<Vec<_>, _> = engine
+    let call = engine
         .annotate_with(&set, texts.to_vec(), singleton_requests())
-        .collect();
-    let records = records.map_err(said)?;
+        .map_err(said)?;
+    let records = call.value();
     let mut failed = 0;
     for expected in success["answers"].as_array().into_iter().flatten() {
         let exchange = usize::try_from(expected["exchange"].as_u64().unwrap_or_default());
         let record = &records[if one { 0 } else { exchange.unwrap_or_default() }];
-        let named = record
-            .values()
-            .iter()
-            .find(|value| value.name() == expected["name"]);
+        let named = record.iter().find(|value| value.name() == expected["name"]);
         let value = named.ok_or("a named value is missing")?.value();
         let bare = match value {
             Annotated::Decision(answer) => json!(decision(*answer)),
@@ -481,13 +459,51 @@ fn decision(answer: thinkthen::Answer) -> Option<bool> {
     }
 }
 
-fn judgment(value: &Judgment) -> Value {
-    match value {
-        Judgment::Decision(answer) => json!(decision(*answer)),
-        Judgment::Choice(pick) => json!(pick),
-        Judgment::Score(score) => json!(score),
-        Judgment::Tags(tags) => json!(tags),
-    }
+fn scalar(written: &str) -> Checked<Value> {
+    serde_json::from_str(written).map_err(|error| error.to_string())
+}
+
+/// Read the primitive and scalar detail projection from the same completed call.
+fn atomic(engine: &Engine, asked: &Question, text: &str) -> Checked<(Value, Value)> {
+    let (value, written) = match asked.kind() {
+        QuestionKind::Decide => {
+            let call = engine.decide(asked, text).map_err(said)?;
+            (
+                json!(call.value()),
+                call.results()[0].to_scalar_json().map_err(said)?,
+            )
+        }
+        QuestionKind::Score => {
+            let call = engine.score(asked, text).map_err(said)?;
+            (
+                json!(call.value()),
+                call.results()[0].to_scalar_json().map_err(said)?,
+            )
+        }
+        QuestionKind::Choose => {
+            let typed = asked.clone().into_choose::<Team>().map_err(said)?;
+            let call = engine.choose(&typed, text).map_err(said)?;
+            (
+                json!(call.value().map(|team| team.label())),
+                call.results()[0].to_scalar_json().map_err(said)?,
+            )
+        }
+        QuestionKind::Tag => match asked.clone().into_tag::<Mark>() {
+            Ok(typed) => {
+                let call = engine.tag(&typed, text).map_err(said)?;
+                let written = call.results()[0].to_scalar_json().map_err(said)?;
+                (tags(call.into_value()), written)
+            }
+            Err(_) => {
+                let typed = asked.clone().into_tag::<Word>().map_err(said)?;
+                let call = engine.tag(&typed, text).map_err(said)?;
+                let written = call.results()[0].to_scalar_json().map_err(said)?;
+                (tags(call.into_value()), written)
+            }
+        },
+        _ => return Err("one atomic question required".to_owned()),
+    };
+    Ok((value, scalar(&written)?))
 }
 
 /// Typed tags as the shared cases spell them.
