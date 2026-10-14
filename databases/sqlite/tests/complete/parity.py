@@ -104,6 +104,8 @@ def main():
                 env=child_env(home=tmp,
                               PATH=os.environ['PATH'],
                               LANG='C.UTF-8',
+                              CARGO_TARGET_DIR=os.environ.get('CARGO_TARGET_DIR',str(ROOT/'target')),
+                              THINKTHEN_TEST_PROFILE=os.environ.get('THINKTHEN_TEST_PROFILE','routine'),
                               LD_LIBRARY_PATH=os.environ.get('LD_LIBRARY_PATH',''))
                 if consumer=='postgresql':env['THINKTHEN_POSTGRESQL_SOCKET']=os.environ['THINKTHEN_POSTGRESQL_SOCKET']
                 backend=Backend(BACKEND,env)
