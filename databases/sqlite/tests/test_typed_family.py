@@ -199,7 +199,7 @@ def test_empty_sql_frame_rejects_nonempty_and_malformed_claims():
     import sys
     from pathlib import Path
     sys.path.insert(0,str(Path(__file__).parent/'complete'))
-    from project import project,assert_empty_sql
+    from project import project,assert_empty_sql,NATIVE
     for marker in ({'empty_sql_rows':[1],'details_rows':[]},
                    {'empty_sql_rows':[],'details_rows':[{}]},
                    {'empty_sql_rows':[],'details_rows':[],'native':{}},
@@ -207,6 +207,13 @@ def test_empty_sql_frame_rejects_nonempty_and_malformed_claims():
         try: project(marker,'filter')
         except AssertionError: pass
         else: raise AssertionError(marker)
+    failure={'error':{'kind':'usage','message':'unsafe answer','retryable':False,'cause':'missing_answer','stopped':{'cause':'reply','retryable':False,'at':0}}}}
+    from jsonschema.exceptions import ValidationError
+    NATIVE.validate(failure)
+    assert project({'native':failure},'decide')['message']=='unsafe answer'
+    try: NATIVE.validate({'error':{**failure['error'],'cause':'invented'}})
+    except ValidationError: pass
+    else: raise AssertionError('an invented logical cause passed')
     frame=project({'empty_sql_rows':[],'details_rows':[]},'filter')
     valid={'verb':'filter','items':[],'expect':{'success':{'kind':'filter','answers':[],'operation':{'indexes':[]}}}}
     assert_empty_sql(valid,frame,0)
