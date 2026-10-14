@@ -62,7 +62,7 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
                     array(value, |value| convert("completeObservation", value))
                 }),
                 ("question", true, |value| {
-                    convert("completeReadableQuestion", value)
+                    convert("completequestionDocument", value)
                 }),
                 ("question_sources", true, |value| {
                     array(value, |value| convert("completeQuestionSource", value))
@@ -97,7 +97,7 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
                     array(value, |value| convert("completeObservation", value))
                 }),
                 ("question", true, |value| {
-                    convert("completeReadableQuestion", value)
+                    convert("completequestionDocument", value)
                 }),
                 ("question_sources", true, |value| {
                     array(value, |value| convert("completeQuestionSource", value))
@@ -194,7 +194,7 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
                 }),
                 ("meta", true, |value| convert("completeMeta", value)),
                 ("question", true, |value| {
-                    convert("completeReadableQuestion", value)
+                    convert("completequestionDocument", value)
                 }),
                 ("question_name", false, plain),
                 ("schema", true, |value| convert("completeVersion", value)),
@@ -233,7 +233,7 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
                 }),
                 ("meta", true, |value| convert("completeMeta", value)),
                 ("question", true, |value| {
-                    convert("completeReadableQuestion", value)
+                    convert("completequestionDocument", value)
                 }),
                 ("question_name", false, plain),
                 ("schema", true, |value| convert("completeVersion", value)),
@@ -272,7 +272,7 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
                 }),
                 ("meta", true, |value| convert("completeMeta", value)),
                 ("question", true, |value| {
-                    convert("completeReadableQuestion", value)
+                    convert("completequestionDocument", value)
                 }),
                 ("question_name", false, plain),
                 ("schema", true, |value| convert("completeVersion", value)),
@@ -311,7 +311,7 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
                 }),
                 ("meta", true, |value| convert("completeMeta", value)),
                 ("question", true, |value| {
-                    convert("completeReadableQuestion", value)
+                    convert("completequestionDocument", value)
                 }),
                 ("question_name", false, plain),
                 ("schema", true, |value| convert("completeVersion", value)),
@@ -350,7 +350,7 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
                 }),
                 ("meta", true, |value| convert("completeMeta", value)),
                 ("question", true, |value| {
-                    convert("completeReadableQuestion", value)
+                    convert("completequestionDocument", value)
                 }),
                 ("question_name", false, plain),
                 ("schema", true, |value| convert("completeVersion", value)),
@@ -389,7 +389,7 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
                 }),
                 ("meta", true, |value| convert("completeMeta", value)),
                 ("question", true, |value| {
-                    convert("completeReadableQuestion", value)
+                    convert("completequestionDocument", value)
                 }),
                 ("question_name", false, plain),
                 ("schema", true, |value| convert("completeVersion", value)),
@@ -581,7 +581,7 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
                     convert("completePosition", value)
                 }),
                 ("question", true, |value| {
-                    convert("completeReadableQuestion2", value)
+                    convert("completefindQuestionDocument", value)
                 }),
                 ("schema", true, |value| convert("completeVersion", value)),
                 ("threshold", true, plain),
@@ -848,7 +848,7 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
                 }),
                 ("meta", true, |value| convert("completeMeta", value)),
                 ("question", true, |value| {
-                    convert("completeReadableQuestion", value)
+                    convert("completequestionDocument", value)
                 }),
                 ("schema", true, |value| convert("completeVersion", value)),
                 ("source", false, |value| {
@@ -860,404 +860,6 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
                 }),
                 ("threshold", true, plain),
                 ("value", true, plain),
-            ],
-        ),
-        "completeReadableQuestion" => {
-            if value.get("verb").and_then(Value::as_str) == Some("decide") {
-                return convert("completeReadableQuestion_decide", value);
-            }
-            if value.get("verb").and_then(Value::as_str) == Some("choose") {
-                return convert("completeReadableQuestion_choose", value);
-            }
-            if value.get("verb").and_then(Value::as_str) == Some("tag") {
-                return convert("completeReadableQuestion_tag", value);
-            }
-            if value.get("verb").and_then(Value::as_str) == Some("score") {
-                return convert("completeReadableQuestion_score", value);
-            }
-            Err(crate::defect("native result has no generated alternative"))
-        }
-        "completeReadableQuestion2" => object(
-            value,
-            "ReadableQuestion2",
-            &[
-                ("batch", false, |value| {
-                    if value.is_null() {
-                        plain(value)
-                    } else {
-                        convert("completeBatch", value)
-                    }
-                }),
-                ("context_schema", false, |value| {
-                    if value.is_null() {
-                        plain(value)
-                    } else {
-                        convert("completeInputDeclaration", value)
-                    }
-                }),
-                ("item_schema", false, |value| {
-                    if value.is_null() {
-                        plain(value)
-                    } else {
-                        convert("completeInputDeclaration", value)
-                    }
-                }),
-                ("label_details", false, |value| {
-                    array(value, |value| convert("completeLabel", value))
-                }),
-                ("model", false, plain),
-                ("name", false, |value| {
-                    if value.is_null() {
-                        plain(value)
-                    } else {
-                        convert("completeQuestionName", value)
-                    }
-                }),
-                ("none", true, plain),
-                ("on", false, |value| array(value, plain)),
-                ("profile", false, plain),
-                ("text", true, plain),
-                ("verb", true, plain),
-                ("wording_version", false, |value| {
-                    if value.is_null() {
-                        plain(value)
-                    } else {
-                        convert("completeWordingVersion", value)
-                    }
-                }),
-            ],
-        ),
-        "completeReadableQuestion3" => object(
-            value,
-            "ReadableQuestion3",
-            &[
-                ("batch", false, |value| {
-                    if value.is_null() {
-                        plain(value)
-                    } else {
-                        convert("completeBatch", value)
-                    }
-                }),
-                ("context_schema", false, |value| {
-                    if value.is_null() {
-                        plain(value)
-                    } else {
-                        convert("completeInputDeclaration", value)
-                    }
-                }),
-                ("entity_definition", false, plain),
-                ("instructions", false, plain),
-                ("item_schema", false, |value| {
-                    if value.is_null() {
-                        plain(value)
-                    } else {
-                        convert("completeInputDeclaration", value)
-                    }
-                }),
-                ("kinds", true, |value| mapping(value, plain)),
-                ("label_details", false, |value| {
-                    array(value, |value| convert("completeLabel", value))
-                }),
-                ("mode", false, |value| {
-                    convert("completeRecognitionMode", value)
-                }),
-                ("model", false, plain),
-                ("name", false, |value| {
-                    if value.is_null() {
-                        plain(value)
-                    } else {
-                        convert("completeQuestionName", value)
-                    }
-                }),
-                ("on", false, |value| array(value, plain)),
-                ("profile", false, plain),
-                ("relation_threshold", false, |value| {
-                    if value.is_null() {
-                        plain(value)
-                    } else {
-                        convert("completethreshold", value)
-                    }
-                }),
-                ("relations", false, |value| {
-                    array(value, |value| convert("completerelationRule", value))
-                }),
-                ("snippet_pieces", false, plain),
-                ("stage_context", false, |value| {
-                    convert("completeRecognitionStageContext", value)
-                }),
-                ("threshold", true, |value| {
-                    convert("completethreshold", value)
-                }),
-                ("verb", true, |value| convert("completeVerb", value)),
-                ("wording_version", false, |value| {
-                    if value.is_null() {
-                        plain(value)
-                    } else {
-                        convert("completeWordingVersion", value)
-                    }
-                }),
-            ],
-        ),
-        "completeReadableQuestion4" => object(
-            value,
-            "ReadableQuestion4",
-            &[
-                ("batch", false, |value| {
-                    if value.is_null() {
-                        plain(value)
-                    } else {
-                        convert("completeBatch", value)
-                    }
-                }),
-                ("context_schema", false, |value| {
-                    if value.is_null() {
-                        plain(value)
-                    } else {
-                        convert("completeInputDeclaration", value)
-                    }
-                }),
-                ("fields", true, |value| {
-                    if value.is_null() {
-                        plain(value)
-                    } else {
-                        convert("completerelateFields", value)
-                    }
-                }),
-                ("item_schema", false, |value| {
-                    if value.is_null() {
-                        plain(value)
-                    } else {
-                        convert("completeInputDeclaration", value)
-                    }
-                }),
-                ("label_details", false, |value| {
-                    array(value, |value| convert("completeLabel", value))
-                }),
-                ("model", false, plain),
-                ("name", false, |value| {
-                    if value.is_null() {
-                        plain(value)
-                    } else {
-                        convert("completeQuestionName", value)
-                    }
-                }),
-                ("on", false, |value| array(value, plain)),
-                ("profile", false, plain),
-                ("relations", true, |value| {
-                    array(value, |value| convert("completerelationRule", value))
-                }),
-                ("threshold", true, |value| {
-                    convert("completethreshold", value)
-                }),
-                ("verb", true, plain),
-                ("wording_version", false, |value| {
-                    if value.is_null() {
-                        plain(value)
-                    } else {
-                        convert("completeWordingVersion", value)
-                    }
-                }),
-            ],
-        ),
-        "completeReadableQuestion_choose" => object(
-            value,
-            "ChooseQuestion",
-            &[
-                ("batch", false, |value| {
-                    if value.is_null() {
-                        plain(value)
-                    } else {
-                        convert("completeBatch", value)
-                    }
-                }),
-                ("context_schema", false, |value| {
-                    if value.is_null() {
-                        plain(value)
-                    } else {
-                        convert("completeInputDeclaration", value)
-                    }
-                }),
-                ("item_schema", false, |value| {
-                    if value.is_null() {
-                        plain(value)
-                    } else {
-                        convert("completeInputDeclaration", value)
-                    }
-                }),
-                ("label_details", false, |value| {
-                    array(value, |value| convert("completeLabel", value))
-                }),
-                ("model", false, plain),
-                ("name", false, |value| {
-                    if value.is_null() {
-                        plain(value)
-                    } else {
-                        convert("completeQuestionName", value)
-                    }
-                }),
-                ("on", false, |value| array(value, plain)),
-                ("profile", false, plain),
-                ("wording_version", false, |value| {
-                    if value.is_null() {
-                        plain(value)
-                    } else {
-                        convert("completeWordingVersion", value)
-                    }
-                }),
-                ("options", true, |value| array(value, plain)),
-                ("text", true, plain),
-                ("verb", true, plain),
-            ],
-        ),
-        "completeReadableQuestion_decide" => object(
-            value,
-            "DecideQuestion",
-            &[
-                ("batch", false, |value| {
-                    if value.is_null() {
-                        plain(value)
-                    } else {
-                        convert("completeBatch", value)
-                    }
-                }),
-                ("context_schema", false, |value| {
-                    if value.is_null() {
-                        plain(value)
-                    } else {
-                        convert("completeInputDeclaration", value)
-                    }
-                }),
-                ("item_schema", false, |value| {
-                    if value.is_null() {
-                        plain(value)
-                    } else {
-                        convert("completeInputDeclaration", value)
-                    }
-                }),
-                ("label_details", false, |value| {
-                    array(value, |value| convert("completeLabel", value))
-                }),
-                ("model", false, plain),
-                ("name", false, |value| {
-                    if value.is_null() {
-                        plain(value)
-                    } else {
-                        convert("completeQuestionName", value)
-                    }
-                }),
-                ("on", false, |value| array(value, plain)),
-                ("profile", false, plain),
-                ("wording_version", false, |value| {
-                    if value.is_null() {
-                        plain(value)
-                    } else {
-                        convert("completeWordingVersion", value)
-                    }
-                }),
-                ("false", false, plain),
-                ("text", true, plain),
-                ("true", false, plain),
-                ("verb", true, plain),
-            ],
-        ),
-        "completeReadableQuestion_score" => object(
-            value,
-            "ScoreQuestion",
-            &[
-                ("batch", false, |value| {
-                    if value.is_null() {
-                        plain(value)
-                    } else {
-                        convert("completeBatch", value)
-                    }
-                }),
-                ("context_schema", false, |value| {
-                    if value.is_null() {
-                        plain(value)
-                    } else {
-                        convert("completeInputDeclaration", value)
-                    }
-                }),
-                ("item_schema", false, |value| {
-                    if value.is_null() {
-                        plain(value)
-                    } else {
-                        convert("completeInputDeclaration", value)
-                    }
-                }),
-                ("label_details", false, |value| {
-                    array(value, |value| convert("completeLabel", value))
-                }),
-                ("model", false, plain),
-                ("name", false, |value| {
-                    if value.is_null() {
-                        plain(value)
-                    } else {
-                        convert("completeQuestionName", value)
-                    }
-                }),
-                ("on", false, |value| array(value, plain)),
-                ("profile", false, plain),
-                ("wording_version", false, |value| {
-                    if value.is_null() {
-                        plain(value)
-                    } else {
-                        convert("completeWordingVersion", value)
-                    }
-                }),
-                ("levels", true, |value| array(value, plain)),
-                ("text", true, plain),
-                ("verb", true, plain),
-            ],
-        ),
-        "completeReadableQuestion_tag" => object(
-            value,
-            "TagQuestion",
-            &[
-                ("batch", false, |value| {
-                    if value.is_null() {
-                        plain(value)
-                    } else {
-                        convert("completeBatch", value)
-                    }
-                }),
-                ("context_schema", false, |value| {
-                    if value.is_null() {
-                        plain(value)
-                    } else {
-                        convert("completeInputDeclaration", value)
-                    }
-                }),
-                ("item_schema", false, |value| {
-                    if value.is_null() {
-                        plain(value)
-                    } else {
-                        convert("completeInputDeclaration", value)
-                    }
-                }),
-                ("label_details", false, |value| {
-                    array(value, |value| convert("completeLabel", value))
-                }),
-                ("model", false, plain),
-                ("name", false, |value| {
-                    if value.is_null() {
-                        plain(value)
-                    } else {
-                        convert("completeQuestionName", value)
-                    }
-                }),
-                ("on", false, |value| array(value, plain)),
-                ("profile", false, plain),
-                ("wording_version", false, |value| {
-                    if value.is_null() {
-                        plain(value)
-                    } else {
-                        convert("completeWordingVersion", value)
-                    }
-                }),
-                ("labels", true, |value| array(value, plain)),
-                ("text", true, plain),
-                ("verb", true, plain),
             ],
         ),
         "completeRecognition" => object(
@@ -1280,7 +882,7 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
                     convert("completePosition", value)
                 }),
                 ("question", true, |value| {
-                    convert("completeReadableQuestion3", value)
+                    convert("completerecognizeQuestionDocument", value)
                 }),
                 ("schema", true, |value| convert("completeVersion", value)),
                 ("source", false, |value| {
@@ -1401,7 +1003,7 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
                     convert("completePosition", value)
                 }),
                 ("question", true, |value| {
-                    convert("completeReadableQuestion4", value)
+                    convert("completerelateQuestionDocument", value)
                 }),
                 ("schema", true, |value| convert("completeVersion", value)),
                 ("value", true, |value| {
@@ -1470,7 +1072,7 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
                     array(value, |value| convert("completeObservation", value))
                 }),
                 ("question", true, |value| {
-                    convert("completeReadableQuestion", value)
+                    convert("completequestionDocument", value)
                 }),
                 ("question_sources", true, |value| {
                     array(value, |value| convert("completeQuestionSource", value))
@@ -1520,7 +1122,7 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
                     array(value, |value| convert("completeObservation", value))
                 }),
                 ("question", true, |value| {
-                    convert("completeReadableQuestion", value)
+                    convert("completequestionDocument", value)
                 }),
                 ("question_sources", true, |value| {
                     array(value, |value| convert("completeQuestionSource", value))
@@ -1736,6 +1338,56 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
                 ("probabilities", true, |value| mapping(value, plain)),
             ],
         ),
+        "completefindQuestionDocument" => object(
+            value,
+            "FindQuestionDocument",
+            &[
+                ("batch", false, |value| {
+                    if value.is_null() {
+                        plain(value)
+                    } else {
+                        convert("completeBatch", value)
+                    }
+                }),
+                ("context_schema", false, |value| {
+                    if value.is_null() {
+                        plain(value)
+                    } else {
+                        convert("completeInputDeclaration", value)
+                    }
+                }),
+                ("item_schema", false, |value| {
+                    if value.is_null() {
+                        plain(value)
+                    } else {
+                        convert("completeInputDeclaration", value)
+                    }
+                }),
+                ("label_details", false, |value| {
+                    array(value, |value| convert("completeLabel", value))
+                }),
+                ("model", false, plain),
+                ("name", false, |value| {
+                    if value.is_null() {
+                        plain(value)
+                    } else {
+                        convert("completeQuestionName", value)
+                    }
+                }),
+                ("none", true, plain),
+                ("on", false, |value| array(value, plain)),
+                ("profile", false, plain),
+                ("text", true, plain),
+                ("verb", true, plain),
+                ("wording_version", false, |value| {
+                    if value.is_null() {
+                        plain(value)
+                    } else {
+                        convert("completeWordingVersion", value)
+                    }
+                }),
+            ],
+        ),
         "completenameOdds" => object(
             value,
             "NameOdds",
@@ -1775,6 +1427,222 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
             "ProfileWarning",
             &[("running", true, plain), ("tuned_for", true, plain)],
         ),
+        "completequestionDocument" => {
+            if value.get("verb").and_then(Value::as_str) == Some("decide") {
+                return convert("completequestionDocument_decide", value);
+            }
+            if value.get("verb").and_then(Value::as_str) == Some("choose") {
+                return convert("completequestionDocument_choose", value);
+            }
+            if value.get("verb").and_then(Value::as_str) == Some("tag") {
+                return convert("completequestionDocument_tag", value);
+            }
+            if value.get("verb").and_then(Value::as_str) == Some("score") {
+                return convert("completequestionDocument_score", value);
+            }
+            Err(crate::defect("native result has no generated alternative"))
+        }
+        "completequestionDocument_choose" => object(
+            value,
+            "QuestionDocument_choose",
+            &[
+                ("batch", false, |value| {
+                    if value.is_null() {
+                        plain(value)
+                    } else {
+                        convert("completeBatch", value)
+                    }
+                }),
+                ("context_schema", false, |value| {
+                    if value.is_null() {
+                        plain(value)
+                    } else {
+                        convert("completeInputDeclaration", value)
+                    }
+                }),
+                ("item_schema", false, |value| {
+                    if value.is_null() {
+                        plain(value)
+                    } else {
+                        convert("completeInputDeclaration", value)
+                    }
+                }),
+                ("label_details", false, |value| {
+                    array(value, |value| convert("completeLabel", value))
+                }),
+                ("model", false, plain),
+                ("name", false, |value| {
+                    if value.is_null() {
+                        plain(value)
+                    } else {
+                        convert("completeQuestionName", value)
+                    }
+                }),
+                ("on", false, |value| array(value, plain)),
+                ("profile", false, plain),
+                ("wording_version", false, |value| {
+                    if value.is_null() {
+                        plain(value)
+                    } else {
+                        convert("completeWordingVersion", value)
+                    }
+                }),
+                ("options", true, |value| array(value, plain)),
+                ("text", true, plain),
+                ("verb", true, plain),
+            ],
+        ),
+        "completequestionDocument_decide" => object(
+            value,
+            "QuestionDocument_decide",
+            &[
+                ("batch", false, |value| {
+                    if value.is_null() {
+                        plain(value)
+                    } else {
+                        convert("completeBatch", value)
+                    }
+                }),
+                ("context_schema", false, |value| {
+                    if value.is_null() {
+                        plain(value)
+                    } else {
+                        convert("completeInputDeclaration", value)
+                    }
+                }),
+                ("item_schema", false, |value| {
+                    if value.is_null() {
+                        plain(value)
+                    } else {
+                        convert("completeInputDeclaration", value)
+                    }
+                }),
+                ("label_details", false, |value| {
+                    array(value, |value| convert("completeLabel", value))
+                }),
+                ("model", false, plain),
+                ("name", false, |value| {
+                    if value.is_null() {
+                        plain(value)
+                    } else {
+                        convert("completeQuestionName", value)
+                    }
+                }),
+                ("on", false, |value| array(value, plain)),
+                ("profile", false, plain),
+                ("wording_version", false, |value| {
+                    if value.is_null() {
+                        plain(value)
+                    } else {
+                        convert("completeWordingVersion", value)
+                    }
+                }),
+                ("false", false, plain),
+                ("text", true, plain),
+                ("true", false, plain),
+                ("verb", true, plain),
+            ],
+        ),
+        "completequestionDocument_score" => object(
+            value,
+            "QuestionDocument_score",
+            &[
+                ("batch", false, |value| {
+                    if value.is_null() {
+                        plain(value)
+                    } else {
+                        convert("completeBatch", value)
+                    }
+                }),
+                ("context_schema", false, |value| {
+                    if value.is_null() {
+                        plain(value)
+                    } else {
+                        convert("completeInputDeclaration", value)
+                    }
+                }),
+                ("item_schema", false, |value| {
+                    if value.is_null() {
+                        plain(value)
+                    } else {
+                        convert("completeInputDeclaration", value)
+                    }
+                }),
+                ("label_details", false, |value| {
+                    array(value, |value| convert("completeLabel", value))
+                }),
+                ("model", false, plain),
+                ("name", false, |value| {
+                    if value.is_null() {
+                        plain(value)
+                    } else {
+                        convert("completeQuestionName", value)
+                    }
+                }),
+                ("on", false, |value| array(value, plain)),
+                ("profile", false, plain),
+                ("wording_version", false, |value| {
+                    if value.is_null() {
+                        plain(value)
+                    } else {
+                        convert("completeWordingVersion", value)
+                    }
+                }),
+                ("levels", true, |value| array(value, plain)),
+                ("text", true, plain),
+                ("verb", true, plain),
+            ],
+        ),
+        "completequestionDocument_tag" => object(
+            value,
+            "QuestionDocument_tag",
+            &[
+                ("batch", false, |value| {
+                    if value.is_null() {
+                        plain(value)
+                    } else {
+                        convert("completeBatch", value)
+                    }
+                }),
+                ("context_schema", false, |value| {
+                    if value.is_null() {
+                        plain(value)
+                    } else {
+                        convert("completeInputDeclaration", value)
+                    }
+                }),
+                ("item_schema", false, |value| {
+                    if value.is_null() {
+                        plain(value)
+                    } else {
+                        convert("completeInputDeclaration", value)
+                    }
+                }),
+                ("label_details", false, |value| {
+                    array(value, |value| convert("completeLabel", value))
+                }),
+                ("model", false, plain),
+                ("name", false, |value| {
+                    if value.is_null() {
+                        plain(value)
+                    } else {
+                        convert("completeQuestionName", value)
+                    }
+                }),
+                ("on", false, |value| array(value, plain)),
+                ("profile", false, plain),
+                ("wording_version", false, |value| {
+                    if value.is_null() {
+                        plain(value)
+                    } else {
+                        convert("completeWordingVersion", value)
+                    }
+                }),
+                ("labels", true, |value| array(value, plain)),
+                ("text", true, plain),
+                ("verb", true, plain),
+            ],
+        ),
         "completerecognize" => {
             if value.get("entities").is_some()
                 && value.get("mode").is_none()
@@ -1808,6 +1676,77 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
                 }),
             ],
         ),
+        "completerecognizeQuestionDocument" => object(
+            value,
+            "RecognizeQuestionDocument",
+            &[
+                ("batch", false, |value| {
+                    if value.is_null() {
+                        plain(value)
+                    } else {
+                        convert("completeBatch", value)
+                    }
+                }),
+                ("context_schema", false, |value| {
+                    if value.is_null() {
+                        plain(value)
+                    } else {
+                        convert("completeInputDeclaration", value)
+                    }
+                }),
+                ("entity_definition", false, plain),
+                ("instructions", false, plain),
+                ("item_schema", false, |value| {
+                    if value.is_null() {
+                        plain(value)
+                    } else {
+                        convert("completeInputDeclaration", value)
+                    }
+                }),
+                ("kinds", true, |value| mapping(value, plain)),
+                ("label_details", false, |value| {
+                    array(value, |value| convert("completeLabel", value))
+                }),
+                ("mode", false, |value| {
+                    convert("completeRecognitionMode", value)
+                }),
+                ("model", false, plain),
+                ("name", false, |value| {
+                    if value.is_null() {
+                        plain(value)
+                    } else {
+                        convert("completeQuestionName", value)
+                    }
+                }),
+                ("on", false, |value| array(value, plain)),
+                ("profile", false, plain),
+                ("relation_threshold", false, |value| {
+                    if value.is_null() {
+                        plain(value)
+                    } else {
+                        convert("completethreshold", value)
+                    }
+                }),
+                ("relations", false, |value| {
+                    array(value, |value| convert("completerelationRule", value))
+                }),
+                ("snippet_pieces", false, plain),
+                ("stage_context", false, |value| {
+                    convert("completeRecognitionStageContext", value)
+                }),
+                ("threshold", true, |value| {
+                    convert("completethreshold", value)
+                }),
+                ("verb", true, |value| convert("completeVerb", value)),
+                ("wording_version", false, |value| {
+                    if value.is_null() {
+                        plain(value)
+                    } else {
+                        convert("completeWordingVersion", value)
+                    }
+                }),
+            ],
+        ),
         "completerecognize_entities" => object(
             value,
             "Recognize_entities",
@@ -1834,6 +1773,67 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
             value,
             "RelateFields",
             &[("kind", true, plain), ("name", true, plain)],
+        ),
+        "completerelateQuestionDocument" => object(
+            value,
+            "RelateQuestionDocument",
+            &[
+                ("batch", false, |value| {
+                    if value.is_null() {
+                        plain(value)
+                    } else {
+                        convert("completeBatch", value)
+                    }
+                }),
+                ("context_schema", false, |value| {
+                    if value.is_null() {
+                        plain(value)
+                    } else {
+                        convert("completeInputDeclaration", value)
+                    }
+                }),
+                ("fields", true, |value| {
+                    if value.is_null() {
+                        plain(value)
+                    } else {
+                        convert("completerelateFields", value)
+                    }
+                }),
+                ("item_schema", false, |value| {
+                    if value.is_null() {
+                        plain(value)
+                    } else {
+                        convert("completeInputDeclaration", value)
+                    }
+                }),
+                ("label_details", false, |value| {
+                    array(value, |value| convert("completeLabel", value))
+                }),
+                ("model", false, plain),
+                ("name", false, |value| {
+                    if value.is_null() {
+                        plain(value)
+                    } else {
+                        convert("completeQuestionName", value)
+                    }
+                }),
+                ("on", false, |value| array(value, plain)),
+                ("profile", false, plain),
+                ("relations", true, |value| {
+                    array(value, |value| convert("completerelationRule", value))
+                }),
+                ("threshold", true, |value| {
+                    convert("completethreshold", value)
+                }),
+                ("verb", true, plain),
+                ("wording_version", false, |value| {
+                    if value.is_null() {
+                        plain(value)
+                    } else {
+                        convert("completeWordingVersion", value)
+                    }
+                }),
+            ],
         ),
         "completerelatedEntity" => object(
             value,
@@ -2402,7 +2402,7 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
                     }
                 }),
                 ("question", true, |value| {
-                    convert("completeReadableQuestion", value)
+                    convert("completequestionDocument", value)
                 }),
                 ("question_sha256", true, plain),
                 ("question_sources", true, |value| {

@@ -597,7 +597,7 @@
  02 v-presence usage binary-long unsigned.
  02 filler pic x(4).
  02 v-value usage pointer.
-01 tt-n-complete-readable-question-decide-v1 based.
+01 tt-n-complete-question-document-decide-v1 based.
  02 v-batch.
  03 v-batch-presence usage binary-long unsigned.
  03 filler pic x(4).
@@ -660,7 +660,7 @@
  02 v-extensions.
  03 v-extensions-data usage pointer.
  03 v-extensions-len usage binary-double unsigned.
-01 tt-n-complete-readable-question-choose-v1 based.
+01 tt-n-complete-question-document-choose-v1 based.
  02 v-batch.
  03 v-batch-presence usage binary-long unsigned.
  03 filler pic x(4).
@@ -718,7 +718,7 @@
  02 v-extensions.
  03 v-extensions-data usage pointer.
  03 v-extensions-len usage binary-double unsigned.
-01 tt-n-complete-readable-question-tag-v1 based.
+01 tt-n-complete-question-document-tag-v1 based.
  02 v-batch.
  03 v-batch-presence usage binary-long unsigned.
  03 filler pic x(4).
@@ -776,7 +776,7 @@
  02 v-extensions.
  03 v-extensions-data usage pointer.
  03 v-extensions-len usage binary-double unsigned.
-01 tt-n-complete-readable-question-score-v1 based.
+01 tt-n-complete-question-document-score-v1 based.
  02 v-batch.
  03 v-batch-presence usage binary-long unsigned.
  03 filler pic x(4).
@@ -834,7 +834,7 @@
  02 v-extensions.
  03 v-extensions-data usage pointer.
  03 v-extensions-len usage binary-double unsigned.
-01 tt-n-complete-readable-question-v1 based.
+01 tt-n-complete-question-document-v1 based.
  02 v-kind usage binary-long unsigned.
  02 filler pic x(4).
  02 v-data.
@@ -1600,7 +1600,7 @@
  02 v-value.
  03 v-value-data usage pointer.
  03 v-value-len usage binary-double unsigned.
-01 tt-n-complete-readable-question-2-v1 based.
+01 tt-n-complete-find-question-document-v1 based.
  02 v-batch.
  03 v-batch-presence usage binary-long unsigned.
  03 filler pic x(4).
@@ -1936,7 +1936,7 @@
  02 v-value usage pointer.
 01 tt-n-complete-verb-v1 based.
  02 v-kind usage binary-long unsigned.
-01 tt-n-complete-readable-question-3-v1 based.
+01 tt-n-complete-recognize-question-document-v1 based.
  02 v-batch.
  03 v-batch-presence usage binary-long unsigned.
  03 filler pic x(4).
@@ -2293,7 +2293,7 @@
  02 v-presence usage binary-long unsigned.
  02 filler pic x(4).
  02 v-value usage pointer.
-01 tt-n-complete-readable-question-4-v1 based.
+01 tt-n-complete-relate-question-document-v1 based.
  02 v-batch.
  03 v-batch-presence usage binary-long unsigned.
  03 filler pic x(4).
@@ -4423,10 +4423,10 @@
 78 tt-n-complete-presence-missing-v1-k value 0.
 78 tt-n-complete-presence-null-v1-k value 1.
 78 tt-n-complete-presence-value-v1-k value 2.
-78 tt-n-complete-readable-question-choose-v1-k value 2.
-78 tt-n-complete-readable-question-decide-v1-k value 1.
-78 tt-n-complete-readable-question-score-v1-k value 4.
-78 tt-n-complete-readable-question-tag-v1-k value 3.
+78 tt-n-complete-question-document-choose-v1-k value 2.
+78 tt-n-complete-question-document-decide-v1-k value 1.
+78 tt-n-complete-question-document-score-v1-k value 4.
+78 tt-n-complete-question-document-tag-v1-k value 3.
 78 tt-n-complete-recognition-mode-boundary-only-v1-k value 2.
 78 tt-n-complete-recognition-mode-whole-v1-k value 1.
 78 tt-n-complete-recognition-odds-boundary-odds-v1-k value 2.

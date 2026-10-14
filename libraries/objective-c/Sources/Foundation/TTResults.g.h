@@ -13,22 +13,22 @@ TTFacts, TTFind, TTFindCandidate, TTImage, TTInputDeclaration, TTInputDeclaratio
 TTInputDeclarationStringRoot, TTInputPropertyType, TTInputPropertyTypeArray, TTInputPropertyTypeBoolean,
 TTInputPropertyTypeNumber, TTInputPropertyTypeString, TTLabel, TTMeta, TTObjectRoot, TTObservation,
 TTObservationFailureId, TTObservationObservationId, TTPersistenceObservation, TTPhysicalSource,
-TTPosition, TTQuestionSource, TTRankMember, TTRankMemberResult, TTReadableQuestion, TTReadableQuestion2,
-TTReadableQuestion3, TTReadableQuestion4, TTReadableQuestionChoose, TTReadableQuestionDecide,
-TTReadableQuestionScore, TTReadableQuestionTag, TTRecognition, TTRecognitionEdgeDocument, TTRecognitionOdds,
-TTRecognitionOddsBoundaryOdds, TTRecognitionOddsRecognizeAnswer, TTRecognitionProposal, TTRecognitionStageContext,
-TTRelation, TTRelationEndpoint, TTRelationEndpointRelatedEntity, TTRelationEndpointSource,
-TTRelationMember, TTRelationMemberAnswerId, TTRelationMemberFailureId, TTSendBudgetDenial,
-TTSendBudgetDenialBeforeAdditionalSend, TTSendBudgetDenialBeforeFirstSend, TTSendBudgetDenialBeforeRetry,
-TTStopped, TTStringRoot, TTUsage, TTAnnotatedField, TTAnswer, TTAnswerChoice, TTAnswerScore,
-TTAnswerTag, TTAnswerYesNo, TTBatchSetting, TTBatchWarning, TTEntity, TTEntityEdge, TTFailed,
-TTFailure, TTFindAnswer, TTNameOdds, TTPairOdds, TTPieceOdds, TTPlace, TTPlan, TTProfileWarning,
-TTRecognize, TTRecognizeAnswer, TTRecognizeEntities, TTRecognizeModeProposals, TTRelateFields,
-TTRelatedEntity, TTRelatedEntityEdge, TTRelationRule, TTSessionAnnotation, TTSessionInputSource,
-TTSessionJudgment, TTSessionJudgmentChoice, TTSessionJudgmentDecision, TTSessionJudgmentScore,
-TTSessionJudgmentTags, TTSessionNamedProbability, TTSessionObservation, TTSessionObservationQuestion,
-TTSessionObservationRow, TTSessionObservedRow, TTSessionObservedRowAnnotated, TTSessionObservedRowFind,
-TTSessionObservedRowJudgment, TTSessionObservedRowRecognized, TTSessionObservedRowRelations,
+TTPosition, TTQuestionSource, TTRankMember, TTRankMemberResult, TTRecognition, TTRecognitionEdgeDocument,
+TTRecognitionOdds, TTRecognitionOddsBoundaryOdds, TTRecognitionOddsRecognizeAnswer, TTRecognitionProposal,
+TTRecognitionStageContext, TTRelation, TTRelationEndpoint, TTRelationEndpointRelatedEntity,
+TTRelationEndpointSource, TTRelationMember, TTRelationMemberAnswerId, TTRelationMemberFailureId,
+TTSendBudgetDenial, TTSendBudgetDenialBeforeAdditionalSend, TTSendBudgetDenialBeforeFirstSend,
+TTSendBudgetDenialBeforeRetry, TTStopped, TTStringRoot, TTUsage, TTAnnotatedField, TTAnswer,
+TTAnswerChoice, TTAnswerScore, TTAnswerTag, TTAnswerYesNo, TTBatchSetting, TTBatchWarning,
+TTEntity, TTEntityEdge, TTFailed, TTFailure, TTFindAnswer, TTFindQuestionDocument, TTNameOdds,
+TTPairOdds, TTPieceOdds, TTPlace, TTPlan, TTProfileWarning, TTQuestionDocument, TTQuestionDocumentChoose,
+TTQuestionDocumentDecide, TTQuestionDocumentScore, TTQuestionDocumentTag, TTRecognize, TTRecognizeAnswer,
+TTRecognizeQuestionDocument, TTRecognizeEntities, TTRecognizeModeProposals, TTRelateFields,
+TTRelateQuestionDocument, TTRelatedEntity, TTRelatedEntityEdge, TTRelationRule, TTSessionAnnotation,
+TTSessionInputSource, TTSessionJudgment, TTSessionJudgmentChoice, TTSessionJudgmentDecision,
+TTSessionJudgmentScore, TTSessionJudgmentTags, TTSessionNamedProbability, TTSessionObservation,
+TTSessionObservationQuestion, TTSessionObservationRow, TTSessionObservedRow, TTSessionObservedRowAnnotated,
+TTSessionObservedRowFind, TTSessionObservedRowJudgment, TTSessionObservedRowRecognized, TTSessionObservedRowRelations,
 TTSessionPacket, TTSessionPacketAnnotateAggregate, TTSessionPacketAnnotateRow, TTSessionPacketChooseAggregate,
 TTSessionPacketChooseRow, TTSessionPacketDecideAggregate, TTSessionPacketDecideRow, TTSessionPacketFilterAggregate,
 TTSessionPacketFilterRow, TTSessionPacketFindAggregate, TTSessionPacketObservation, TTSessionPacketRankAggregate,
@@ -70,7 +70,7 @@ TTTokenUsage, TTValue;
 @property(nonatomic, readonly) TTPresence<id> *input;
 @property(nonatomic, readonly) TTPresence<NSArray<TTRankMember *> *> *members;
 @property(nonatomic, readonly) TTPresence<TTMeta *> *meta;
-@property(nonatomic, readonly) TTPresence<TTReadableQuestion *> *question;
+@property(nonatomic, readonly) TTPresence<TTQuestionDocument *> *question;
 @property(nonatomic, readonly) TTPresence<NSString *> *questionName;
 @property(nonatomic, readonly) TTPresence<NSString *> *schema;
 @property(nonatomic, readonly) TTPresence<TTPhysicalSource *> *source;
@@ -86,7 +86,7 @@ TTTokenUsage, TTValue;
 @property(nonatomic, readonly) TTPresence<id> *input;
 @property(nonatomic, readonly) TTPresence<NSArray<TTRankMember *> *> *members;
 @property(nonatomic, readonly) TTPresence<TTMeta *> *meta;
-@property(nonatomic, readonly) TTPresence<TTReadableQuestion *> *question;
+@property(nonatomic, readonly) TTPresence<TTQuestionDocument *> *question;
 @property(nonatomic, readonly) TTPresence<NSString *> *questionName;
 @property(nonatomic, readonly) TTPresence<NSString *> *schema;
 @property(nonatomic, readonly) TTPresence<TTPhysicalSource *> *source;
@@ -102,7 +102,7 @@ TTTokenUsage, TTValue;
 @property(nonatomic, readonly) TTPresence<id> *input;
 @property(nonatomic, readonly) TTPresence<NSArray<TTRankMember *> *> *members;
 @property(nonatomic, readonly) TTPresence<TTMeta *> *meta;
-@property(nonatomic, readonly) TTPresence<TTReadableQuestion *> *question;
+@property(nonatomic, readonly) TTPresence<TTQuestionDocument *> *question;
 @property(nonatomic, readonly) TTPresence<NSString *> *questionName;
 @property(nonatomic, readonly) TTPresence<NSString *> *schema;
 @property(nonatomic, readonly) TTPresence<TTPhysicalSource *> *source;
@@ -118,7 +118,7 @@ TTTokenUsage, TTValue;
 @property(nonatomic, readonly) TTPresence<id> *input;
 @property(nonatomic, readonly) TTPresence<NSArray<TTRankMember *> *> *members;
 @property(nonatomic, readonly) TTPresence<TTMeta *> *meta;
-@property(nonatomic, readonly) TTPresence<TTReadableQuestion *> *question;
+@property(nonatomic, readonly) TTPresence<TTQuestionDocument *> *question;
 @property(nonatomic, readonly) TTPresence<NSString *> *questionName;
 @property(nonatomic, readonly) TTPresence<NSString *> *schema;
 @property(nonatomic, readonly) TTPresence<TTPhysicalSource *> *source;
@@ -134,7 +134,7 @@ TTTokenUsage, TTValue;
 @property(nonatomic, readonly) TTPresence<id> *input;
 @property(nonatomic, readonly) TTPresence<NSArray<TTRankMember *> *> *members;
 @property(nonatomic, readonly) TTPresence<TTMeta *> *meta;
-@property(nonatomic, readonly) TTPresence<TTReadableQuestion *> *question;
+@property(nonatomic, readonly) TTPresence<TTQuestionDocument *> *question;
 @property(nonatomic, readonly) TTPresence<NSString *> *questionName;
 @property(nonatomic, readonly) TTPresence<NSString *> *schema;
 @property(nonatomic, readonly) TTPresence<TTPhysicalSource *> *source;
@@ -150,7 +150,7 @@ TTTokenUsage, TTValue;
 @property(nonatomic, readonly) TTPresence<id> *input;
 @property(nonatomic, readonly) TTPresence<NSArray<TTRankMember *> *> *members;
 @property(nonatomic, readonly) TTPresence<TTMeta *> *meta;
-@property(nonatomic, readonly) TTPresence<TTReadableQuestion *> *question;
+@property(nonatomic, readonly) TTPresence<TTQuestionDocument *> *question;
 @property(nonatomic, readonly) TTPresence<NSString *> *questionName;
 @property(nonatomic, readonly) TTPresence<NSString *> *schema;
 @property(nonatomic, readonly) TTPresence<TTPhysicalSource *> *source;
@@ -237,7 +237,7 @@ TTTokenUsage, TTValue;
 @property(nonatomic, readonly) TTPresence<NSNumber *> *lastLine;
 @property(nonatomic, readonly) TTPresence<TTMeta *> *meta;
 @property(nonatomic, readonly) TTPresence<TTPosition *> *position;
-@property(nonatomic, readonly) TTPresence<TTReadableQuestion2 *> *question;
+@property(nonatomic, readonly) TTPresence<TTFindQuestionDocument *> *question;
 @property(nonatomic, readonly) TTPresence<NSString *> *schema;
 @property(nonatomic, readonly) TTPresence<id> *threshold;
 @property(nonatomic, readonly) TTPresence<id> *value;
@@ -334,67 +334,11 @@ TTTokenUsage, TTValue;
 @property(nonatomic, readonly) TTPresence<NSString *> *answerId;
 @property(nonatomic, readonly) TTPresence<NSArray<TTImage *> *> *images;
 @property(nonatomic, readonly) TTPresence<TTMeta *> *meta;
-@property(nonatomic, readonly) TTPresence<TTReadableQuestion *> *question;
+@property(nonatomic, readonly) TTPresence<TTQuestionDocument *> *question;
 @property(nonatomic, readonly) TTPresence<NSString *> *schema;
 @property(nonatomic, readonly) TTPresence<TTPhysicalSource *> *source;
 @property(nonatomic, readonly) TTPresence<id> *threshold;
 @property(nonatomic, readonly) TTPresence<NSNumber *> *value;
-+ (instancetype)read:(id)value;
-@end
-@interface TTReadableQuestion : TTResultNode
-+ (instancetype)read:(id)value;
-@end
-@interface TTReadableQuestion2 : TTResultNode
-@property(nonatomic, readonly) TTPresence<TTBatch *> *batch;
-@property(nonatomic, readonly) TTPresence<TTInputDeclaration *> *contextSchema;
-@property(nonatomic, readonly) TTPresence<TTInputDeclaration *> *itemSchema;
-@property(nonatomic, readonly) TTPresence<NSArray<TTLabel *> *> *labelDetails;
-@property(nonatomic, readonly) TTPresence<NSString *> *model;
-@property(nonatomic, readonly) TTPresence<NSString *> *name;
-@property(nonatomic, readonly) TTPresence<NSNumber *> *none;
-@property(nonatomic, readonly) TTPresence<NSArray<NSString *> *> *on;
-@property(nonatomic, readonly) TTPresence<NSString *> *profile;
-@property(nonatomic, readonly) TTPresence<id> *text;
-@property(nonatomic, readonly) TTPresence<NSString *> *verb;
-@property(nonatomic, readonly) TTPresence<NSNumber *> *wordingVersion;
-+ (instancetype)read:(id)value;
-@end
-@interface TTReadableQuestion3 : TTResultNode
-@property(nonatomic, readonly) TTPresence<TTBatch *> *batch;
-@property(nonatomic, readonly) TTPresence<TTInputDeclaration *> *contextSchema;
-@property(nonatomic, readonly) TTPresence<id> *entityDefinition;
-@property(nonatomic, readonly) TTPresence<id> *instructions;
-@property(nonatomic, readonly) TTPresence<TTInputDeclaration *> *itemSchema;
-@property(nonatomic, readonly) TTPresence<NSDictionary<NSString *, id> *> *kinds;
-@property(nonatomic, readonly) TTPresence<NSArray<TTLabel *> *> *labelDetails;
-@property(nonatomic, readonly) TTPresence<NSString *> *mode;
-@property(nonatomic, readonly) TTPresence<NSString *> *model;
-@property(nonatomic, readonly) TTPresence<NSString *> *name;
-@property(nonatomic, readonly) TTPresence<NSArray<NSString *> *> *on;
-@property(nonatomic, readonly) TTPresence<NSString *> *profile;
-@property(nonatomic, readonly) TTPresence<TTThreshold *> *relationThreshold;
-@property(nonatomic, readonly) TTPresence<NSArray<TTRelationRule *> *> *relations;
-@property(nonatomic, readonly) TTPresence<NSNumber *> *snippetPieces;
-@property(nonatomic, readonly) TTPresence<TTRecognitionStageContext *> *stageContext;
-@property(nonatomic, readonly) TTPresence<TTThreshold *> *threshold;
-@property(nonatomic, readonly) TTPresence<NSString *> *verb;
-@property(nonatomic, readonly) TTPresence<NSNumber *> *wordingVersion;
-+ (instancetype)read:(id)value;
-@end
-@interface TTReadableQuestion4 : TTResultNode
-@property(nonatomic, readonly) TTPresence<TTBatch *> *batch;
-@property(nonatomic, readonly) TTPresence<TTInputDeclaration *> *contextSchema;
-@property(nonatomic, readonly) TTPresence<TTRelateFields *> *fields;
-@property(nonatomic, readonly) TTPresence<TTInputDeclaration *> *itemSchema;
-@property(nonatomic, readonly) TTPresence<NSArray<TTLabel *> *> *labelDetails;
-@property(nonatomic, readonly) TTPresence<NSString *> *model;
-@property(nonatomic, readonly) TTPresence<NSString *> *name;
-@property(nonatomic, readonly) TTPresence<NSArray<NSString *> *> *on;
-@property(nonatomic, readonly) TTPresence<NSString *> *profile;
-@property(nonatomic, readonly) TTPresence<NSArray<TTRelationRule *> *> *relations;
-@property(nonatomic, readonly) TTPresence<TTThreshold *> *threshold;
-@property(nonatomic, readonly) TTPresence<NSString *> *verb;
-@property(nonatomic, readonly) TTPresence<NSNumber *> *wordingVersion;
 + (instancetype)read:(id)value;
 @end
 @interface TTRecognition : TTResultNode
@@ -407,7 +351,7 @@ TTTokenUsage, TTValue;
 @property(nonatomic, readonly) TTPresence<NSNumber *> *lastLine;
 @property(nonatomic, readonly) TTPresence<TTMeta *> *meta;
 @property(nonatomic, readonly) TTPresence<TTPosition *> *position;
-@property(nonatomic, readonly) TTPresence<TTReadableQuestion3 *> *question;
+@property(nonatomic, readonly) TTPresence<TTRecognizeQuestionDocument *> *question;
 @property(nonatomic, readonly) TTPresence<NSString *> *schema;
 @property(nonatomic, readonly) TTPresence<TTPhysicalSource *> *source;
 @property(nonatomic, readonly) TTPresence<TTRecognize *> *value;
@@ -451,7 +395,7 @@ TTTokenUsage, TTValue;
 @property(nonatomic, readonly) TTPresence<NSNumber *> *lastLine;
 @property(nonatomic, readonly) TTPresence<TTMeta *> *meta;
 @property(nonatomic, readonly) TTPresence<TTPosition *> *position;
-@property(nonatomic, readonly) TTPresence<TTReadableQuestion4 *> *question;
+@property(nonatomic, readonly) TTPresence<TTRelateQuestionDocument *> *question;
 @property(nonatomic, readonly) TTPresence<NSString *> *schema;
 @property(nonatomic, readonly) TTPresence<NSArray<TTRelatedEntityEdge *> *> *value;
 + (instancetype)read:(id)value;
@@ -535,6 +479,21 @@ TTTokenUsage, TTValue;
 @property(nonatomic, readonly) TTPresence<NSDictionary<NSString *, NSNumber *> *> *probabilities;
 + (instancetype)read:(id)value;
 @end
+@interface TTFindQuestionDocument : TTResultNode
+@property(nonatomic, readonly) TTPresence<TTBatch *> *batch;
+@property(nonatomic, readonly) TTPresence<TTInputDeclaration *> *contextSchema;
+@property(nonatomic, readonly) TTPresence<TTInputDeclaration *> *itemSchema;
+@property(nonatomic, readonly) TTPresence<NSArray<TTLabel *> *> *labelDetails;
+@property(nonatomic, readonly) TTPresence<NSString *> *model;
+@property(nonatomic, readonly) TTPresence<NSString *> *name;
+@property(nonatomic, readonly) TTPresence<NSNumber *> *none;
+@property(nonatomic, readonly) TTPresence<NSArray<NSString *> *> *on;
+@property(nonatomic, readonly) TTPresence<NSString *> *profile;
+@property(nonatomic, readonly) TTPresence<id> *text;
+@property(nonatomic, readonly) TTPresence<NSString *> *verb;
+@property(nonatomic, readonly) TTPresence<NSNumber *> *wordingVersion;
++ (instancetype)read:(id)value;
+@end
 @interface TTNameOdds : TTResultNode
 @property(nonatomic, readonly) TTPresence<NSDictionary<NSString *, NSNumber *> *> *edges;
 @property(nonatomic, readonly) TTPresence<NSNumber *> *end;
@@ -577,6 +536,9 @@ TTTokenUsage, TTValue;
 @property(nonatomic, readonly) TTPresence<NSString *> *tunedFor;
 + (instancetype)read:(id)value;
 @end
+@interface TTQuestionDocument : TTResultNode
++ (instancetype)read:(id)value;
+@end
 @interface TTRecognize : TTResultNode
 + (instancetype)read:(id)value;
 @end
@@ -587,9 +549,47 @@ TTTokenUsage, TTValue;
 @property(nonatomic, readonly) TTPresence<NSArray<TTRecognitionProposal *> *> *proposals;
 + (instancetype)read:(id)value;
 @end
+@interface TTRecognizeQuestionDocument : TTResultNode
+@property(nonatomic, readonly) TTPresence<TTBatch *> *batch;
+@property(nonatomic, readonly) TTPresence<TTInputDeclaration *> *contextSchema;
+@property(nonatomic, readonly) TTPresence<id> *entityDefinition;
+@property(nonatomic, readonly) TTPresence<id> *instructions;
+@property(nonatomic, readonly) TTPresence<TTInputDeclaration *> *itemSchema;
+@property(nonatomic, readonly) TTPresence<NSDictionary<NSString *, id> *> *kinds;
+@property(nonatomic, readonly) TTPresence<NSArray<TTLabel *> *> *labelDetails;
+@property(nonatomic, readonly) TTPresence<NSString *> *mode;
+@property(nonatomic, readonly) TTPresence<NSString *> *model;
+@property(nonatomic, readonly) TTPresence<NSString *> *name;
+@property(nonatomic, readonly) TTPresence<NSArray<NSString *> *> *on;
+@property(nonatomic, readonly) TTPresence<NSString *> *profile;
+@property(nonatomic, readonly) TTPresence<TTThreshold *> *relationThreshold;
+@property(nonatomic, readonly) TTPresence<NSArray<TTRelationRule *> *> *relations;
+@property(nonatomic, readonly) TTPresence<NSNumber *> *snippetPieces;
+@property(nonatomic, readonly) TTPresence<TTRecognitionStageContext *> *stageContext;
+@property(nonatomic, readonly) TTPresence<TTThreshold *> *threshold;
+@property(nonatomic, readonly) TTPresence<NSString *> *verb;
+@property(nonatomic, readonly) TTPresence<NSNumber *> *wordingVersion;
++ (instancetype)read:(id)value;
+@end
 @interface TTRelateFields : TTResultNode
 @property(nonatomic, readonly) TTPresence<NSString *> *kind;
 @property(nonatomic, readonly) TTPresence<NSString *> *name;
++ (instancetype)read:(id)value;
+@end
+@interface TTRelateQuestionDocument : TTResultNode
+@property(nonatomic, readonly) TTPresence<TTBatch *> *batch;
+@property(nonatomic, readonly) TTPresence<TTInputDeclaration *> *contextSchema;
+@property(nonatomic, readonly) TTPresence<TTRelateFields *> *fields;
+@property(nonatomic, readonly) TTPresence<TTInputDeclaration *> *itemSchema;
+@property(nonatomic, readonly) TTPresence<NSArray<TTLabel *> *> *labelDetails;
+@property(nonatomic, readonly) TTPresence<NSString *> *model;
+@property(nonatomic, readonly) TTPresence<NSString *> *name;
+@property(nonatomic, readonly) TTPresence<NSArray<NSString *> *> *on;
+@property(nonatomic, readonly) TTPresence<NSString *> *profile;
+@property(nonatomic, readonly) TTPresence<NSArray<TTRelationRule *> *> *relations;
+@property(nonatomic, readonly) TTPresence<TTThreshold *> *threshold;
+@property(nonatomic, readonly) TTPresence<NSString *> *verb;
+@property(nonatomic, readonly) TTPresence<NSNumber *> *wordingVersion;
 + (instancetype)read:(id)value;
 @end
 @interface TTRelatedEntity : TTResultNode
@@ -660,7 +660,7 @@ TTTokenUsage, TTValue;
 @property(nonatomic, readonly) TTPresence<NSString *> *model;
 @property(nonatomic, readonly) TTPresence<NSArray<TTObservation *> *> *observations;
 @property(nonatomic, readonly) TTPresence<TTSessionProbabilities *> *probabilities;
-@property(nonatomic, readonly) TTPresence<TTReadableQuestion *> *question;
+@property(nonatomic, readonly) TTPresence<TTQuestionDocument *> *question;
 @property(nonatomic, readonly) TTPresence<NSString *> *questionSha256;
 @property(nonatomic, readonly) TTPresence<NSArray<TTQuestionSource *> *> *questionSources;
 @property(nonatomic, readonly) TTPresence<NSString *> *rawPick;
@@ -724,7 +724,7 @@ TTTokenUsage, TTValue;
 @property(nonatomic, readonly) TTPresence<TTAnswer *> *answer;
 @property(nonatomic, readonly) TTPresence<NSString *> *answerId;
 @property(nonatomic, readonly) TTPresence<NSArray<TTObservation *> *> *observations;
-@property(nonatomic, readonly) TTPresence<TTReadableQuestion *> *question;
+@property(nonatomic, readonly) TTPresence<TTQuestionDocument *> *question;
 @property(nonatomic, readonly) TTPresence<NSArray<TTQuestionSource *> *> *questionSources;
 @property(nonatomic, readonly) TTPresence<NSString *> *request;
 @property(nonatomic, readonly) TTPresence<TTThreshold *> *threshold;
@@ -736,7 +736,7 @@ TTTokenUsage, TTValue;
 @property(nonatomic, readonly) TTPresence<TTFailure *> *failure;
 @property(nonatomic, readonly) TTPresence<NSString *> *failureId;
 @property(nonatomic, readonly) TTPresence<NSArray<TTObservation *> *> *observations;
-@property(nonatomic, readonly) TTPresence<TTReadableQuestion *> *question;
+@property(nonatomic, readonly) TTPresence<TTQuestionDocument *> *question;
 @property(nonatomic, readonly) TTPresence<NSArray<TTQuestionSource *> *> *questionSources;
 @property(nonatomic, readonly) TTPresence<NSString *> *request;
 @property(nonatomic, readonly) TTPresence<TTThreshold *> *threshold;
@@ -819,67 +819,6 @@ TTTokenUsage, TTValue;
 @property(nonatomic, readonly) TTPresence<NSString *> *observationId;
 + (instancetype)read:(id)value;
 @end
-@interface TTReadableQuestionChoose : TTReadableQuestion
-@property(nonatomic, readonly) TTPresence<TTBatch *> *batch;
-@property(nonatomic, readonly) TTPresence<TTInputDeclaration *> *contextSchema;
-@property(nonatomic, readonly) TTPresence<TTInputDeclaration *> *itemSchema;
-@property(nonatomic, readonly) TTPresence<NSArray<TTLabel *> *> *labelDetails;
-@property(nonatomic, readonly) TTPresence<NSString *> *model;
-@property(nonatomic, readonly) TTPresence<NSString *> *name;
-@property(nonatomic, readonly) TTPresence<NSArray<NSString *> *> *on;
-@property(nonatomic, readonly) TTPresence<NSString *> *profile;
-@property(nonatomic, readonly) TTPresence<NSNumber *> *wordingVersion;
-@property(nonatomic, readonly) TTPresence<NSArray<NSString *> *> *options;
-@property(nonatomic, readonly) TTPresence<id> *text;
-@property(nonatomic, readonly) TTPresence<NSString *> *verb;
-+ (instancetype)read:(id)value;
-@end
-@interface TTReadableQuestionDecide : TTReadableQuestion
-@property(nonatomic, readonly) TTPresence<TTBatch *> *batch;
-@property(nonatomic, readonly) TTPresence<TTInputDeclaration *> *contextSchema;
-@property(nonatomic, readonly) TTPresence<TTInputDeclaration *> *itemSchema;
-@property(nonatomic, readonly) TTPresence<NSArray<TTLabel *> *> *labelDetails;
-@property(nonatomic, readonly) TTPresence<NSString *> *model;
-@property(nonatomic, readonly) TTPresence<NSString *> *name;
-@property(nonatomic, readonly) TTPresence<NSArray<NSString *> *> *on;
-@property(nonatomic, readonly) TTPresence<NSString *> *profile;
-@property(nonatomic, readonly) TTPresence<NSNumber *> *wordingVersion;
-@property(nonatomic, readonly) TTPresence<id> *falseValue;
-@property(nonatomic, readonly) TTPresence<id> *text;
-@property(nonatomic, readonly) TTPresence<id> *trueValue;
-@property(nonatomic, readonly) TTPresence<NSString *> *verb;
-+ (instancetype)read:(id)value;
-@end
-@interface TTReadableQuestionScore : TTReadableQuestion
-@property(nonatomic, readonly) TTPresence<TTBatch *> *batch;
-@property(nonatomic, readonly) TTPresence<TTInputDeclaration *> *contextSchema;
-@property(nonatomic, readonly) TTPresence<TTInputDeclaration *> *itemSchema;
-@property(nonatomic, readonly) TTPresence<NSArray<TTLabel *> *> *labelDetails;
-@property(nonatomic, readonly) TTPresence<NSString *> *model;
-@property(nonatomic, readonly) TTPresence<NSString *> *name;
-@property(nonatomic, readonly) TTPresence<NSArray<NSString *> *> *on;
-@property(nonatomic, readonly) TTPresence<NSString *> *profile;
-@property(nonatomic, readonly) TTPresence<NSNumber *> *wordingVersion;
-@property(nonatomic, readonly) TTPresence<NSArray<NSString *> *> *levels;
-@property(nonatomic, readonly) TTPresence<id> *text;
-@property(nonatomic, readonly) TTPresence<NSString *> *verb;
-+ (instancetype)read:(id)value;
-@end
-@interface TTReadableQuestionTag : TTReadableQuestion
-@property(nonatomic, readonly) TTPresence<TTBatch *> *batch;
-@property(nonatomic, readonly) TTPresence<TTInputDeclaration *> *contextSchema;
-@property(nonatomic, readonly) TTPresence<TTInputDeclaration *> *itemSchema;
-@property(nonatomic, readonly) TTPresence<NSArray<TTLabel *> *> *labelDetails;
-@property(nonatomic, readonly) TTPresence<NSString *> *model;
-@property(nonatomic, readonly) TTPresence<NSString *> *name;
-@property(nonatomic, readonly) TTPresence<NSArray<NSString *> *> *on;
-@property(nonatomic, readonly) TTPresence<NSString *> *profile;
-@property(nonatomic, readonly) TTPresence<NSNumber *> *wordingVersion;
-@property(nonatomic, readonly) TTPresence<NSArray<NSString *> *> *labels;
-@property(nonatomic, readonly) TTPresence<id> *text;
-@property(nonatomic, readonly) TTPresence<NSString *> *verb;
-+ (instancetype)read:(id)value;
-@end
 @interface TTRecognitionOddsBoundaryOdds : TTRecognitionOdds
 @property(nonatomic, readonly) TTPresence<NSArray<TTPieceOdds *> *> *pieces;
 @property(nonatomic, readonly) TTPresence<NSArray<TTBoundaryProposal *> *> *proposals;
@@ -911,7 +850,7 @@ TTTokenUsage, TTValue;
 @property(nonatomic, readonly) TTPresence<NSString *> *direction;
 @property(nonatomic, readonly) TTPresence<NSString *> *method;
 @property(nonatomic, readonly) TTPresence<NSArray<TTObservation *> *> *observations;
-@property(nonatomic, readonly) TTPresence<TTReadableQuestion *> *question;
+@property(nonatomic, readonly) TTPresence<TTQuestionDocument *> *question;
 @property(nonatomic, readonly) TTPresence<NSArray<TTQuestionSource *> *> *questionSources;
 @property(nonatomic, readonly) TTPresence<NSString *> *reads;
 @property(nonatomic, readonly) TTPresence<NSString *> *relation;
@@ -931,7 +870,7 @@ TTTokenUsage, TTValue;
 @property(nonatomic, readonly) TTPresence<NSString *> *direction;
 @property(nonatomic, readonly) TTPresence<NSString *> *method;
 @property(nonatomic, readonly) TTPresence<NSArray<TTObservation *> *> *observations;
-@property(nonatomic, readonly) TTPresence<TTReadableQuestion *> *question;
+@property(nonatomic, readonly) TTPresence<TTQuestionDocument *> *question;
 @property(nonatomic, readonly) TTPresence<NSArray<TTQuestionSource *> *> *questionSources;
 @property(nonatomic, readonly) TTPresence<NSString *> *reads;
 @property(nonatomic, readonly) TTPresence<NSString *> *relation;
@@ -980,6 +919,67 @@ TTTokenUsage, TTValue;
 @interface TTAnswerYesNo : TTAnswer
 @property(nonatomic, readonly) TTPresence<NSString *> *kind;
 @property(nonatomic, readonly) TTPresence<NSNumber *> *probability;
++ (instancetype)read:(id)value;
+@end
+@interface TTQuestionDocumentChoose : TTQuestionDocument
+@property(nonatomic, readonly) TTPresence<TTBatch *> *batch;
+@property(nonatomic, readonly) TTPresence<TTInputDeclaration *> *contextSchema;
+@property(nonatomic, readonly) TTPresence<TTInputDeclaration *> *itemSchema;
+@property(nonatomic, readonly) TTPresence<NSArray<TTLabel *> *> *labelDetails;
+@property(nonatomic, readonly) TTPresence<NSString *> *model;
+@property(nonatomic, readonly) TTPresence<NSString *> *name;
+@property(nonatomic, readonly) TTPresence<NSArray<NSString *> *> *on;
+@property(nonatomic, readonly) TTPresence<NSString *> *profile;
+@property(nonatomic, readonly) TTPresence<NSNumber *> *wordingVersion;
+@property(nonatomic, readonly) TTPresence<NSArray<NSString *> *> *options;
+@property(nonatomic, readonly) TTPresence<id> *text;
+@property(nonatomic, readonly) TTPresence<NSString *> *verb;
++ (instancetype)read:(id)value;
+@end
+@interface TTQuestionDocumentDecide : TTQuestionDocument
+@property(nonatomic, readonly) TTPresence<TTBatch *> *batch;
+@property(nonatomic, readonly) TTPresence<TTInputDeclaration *> *contextSchema;
+@property(nonatomic, readonly) TTPresence<TTInputDeclaration *> *itemSchema;
+@property(nonatomic, readonly) TTPresence<NSArray<TTLabel *> *> *labelDetails;
+@property(nonatomic, readonly) TTPresence<NSString *> *model;
+@property(nonatomic, readonly) TTPresence<NSString *> *name;
+@property(nonatomic, readonly) TTPresence<NSArray<NSString *> *> *on;
+@property(nonatomic, readonly) TTPresence<NSString *> *profile;
+@property(nonatomic, readonly) TTPresence<NSNumber *> *wordingVersion;
+@property(nonatomic, readonly) TTPresence<id> *falseValue;
+@property(nonatomic, readonly) TTPresence<id> *text;
+@property(nonatomic, readonly) TTPresence<id> *trueValue;
+@property(nonatomic, readonly) TTPresence<NSString *> *verb;
++ (instancetype)read:(id)value;
+@end
+@interface TTQuestionDocumentScore : TTQuestionDocument
+@property(nonatomic, readonly) TTPresence<TTBatch *> *batch;
+@property(nonatomic, readonly) TTPresence<TTInputDeclaration *> *contextSchema;
+@property(nonatomic, readonly) TTPresence<TTInputDeclaration *> *itemSchema;
+@property(nonatomic, readonly) TTPresence<NSArray<TTLabel *> *> *labelDetails;
+@property(nonatomic, readonly) TTPresence<NSString *> *model;
+@property(nonatomic, readonly) TTPresence<NSString *> *name;
+@property(nonatomic, readonly) TTPresence<NSArray<NSString *> *> *on;
+@property(nonatomic, readonly) TTPresence<NSString *> *profile;
+@property(nonatomic, readonly) TTPresence<NSNumber *> *wordingVersion;
+@property(nonatomic, readonly) TTPresence<NSArray<NSString *> *> *levels;
+@property(nonatomic, readonly) TTPresence<id> *text;
+@property(nonatomic, readonly) TTPresence<NSString *> *verb;
++ (instancetype)read:(id)value;
+@end
+@interface TTQuestionDocumentTag : TTQuestionDocument
+@property(nonatomic, readonly) TTPresence<TTBatch *> *batch;
+@property(nonatomic, readonly) TTPresence<TTInputDeclaration *> *contextSchema;
+@property(nonatomic, readonly) TTPresence<TTInputDeclaration *> *itemSchema;
+@property(nonatomic, readonly) TTPresence<NSArray<TTLabel *> *> *labelDetails;
+@property(nonatomic, readonly) TTPresence<NSString *> *model;
+@property(nonatomic, readonly) TTPresence<NSString *> *name;
+@property(nonatomic, readonly) TTPresence<NSArray<NSString *> *> *on;
+@property(nonatomic, readonly) TTPresence<NSString *> *profile;
+@property(nonatomic, readonly) TTPresence<NSNumber *> *wordingVersion;
+@property(nonatomic, readonly) TTPresence<NSArray<NSString *> *> *labels;
+@property(nonatomic, readonly) TTPresence<id> *text;
+@property(nonatomic, readonly) TTPresence<NSString *> *verb;
 + (instancetype)read:(id)value;
 @end
 @interface TTRecognizeEntities : TTRecognize

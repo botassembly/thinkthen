@@ -72,7 +72,7 @@ final class AnnotationMemberAnswerId extends AnnotationMember {
   List<Observation> get observations => (_fields["observations"] as List)
       .map((v) => Observation.read(v))
       .toList(growable: false);
-  ReadableQuestion get question => ReadableQuestion.read(_fields["question"]);
+  QuestionDocument get question => QuestionDocument.read(_fields["question"]);
   List<QuestionSource> get questionSources =>
       (_fields["question_sources"] as List)
           .map((v) => QuestionSource.read(v))
@@ -110,7 +110,7 @@ final class AnnotationMemberFailureId extends AnnotationMember {
   List<Observation> get observations => (_fields["observations"] as List)
       .map((v) => Observation.read(v))
       .toList(growable: false);
-  ReadableQuestion get question => ReadableQuestion.read(_fields["question"]);
+  QuestionDocument get question => QuestionDocument.read(_fields["question"]);
   List<QuestionSource> get questionSources =>
       (_fields["question_sources"] as List)
           .map((v) => QuestionSource.read(v))
@@ -247,7 +247,7 @@ final class TagResult extends _NativeValue {
           .toList(growable: false))
       : const Presence.absent();
   Meta get meta => Meta.read(_fields["meta"]);
-  ReadableQuestion get question => ReadableQuestion.read(_fields["question"]);
+  QuestionDocument get question => QuestionDocument.read(_fields["question"]);
   Presence<String> get questionName => _fields.containsKey("question_name")
       ? Presence.present(_fields["question_name"] as String)
       : const Presence.absent();
@@ -304,7 +304,7 @@ final class DecisionResult extends _NativeValue {
           .toList(growable: false))
       : const Presence.absent();
   Meta get meta => Meta.read(_fields["meta"]);
-  ReadableQuestion get question => ReadableQuestion.read(_fields["question"]);
+  QuestionDocument get question => QuestionDocument.read(_fields["question"]);
   Presence<String> get questionName => _fields.containsKey("question_name")
       ? Presence.present(_fields["question_name"] as String)
       : const Presence.absent();
@@ -358,7 +358,7 @@ final class RankResult extends _NativeValue {
           .toList(growable: false))
       : const Presence.absent();
   Meta get meta => Meta.read(_fields["meta"]);
-  ReadableQuestion get question => ReadableQuestion.read(_fields["question"]);
+  QuestionDocument get question => QuestionDocument.read(_fields["question"]);
   Presence<String> get questionName => _fields.containsKey("question_name")
       ? Presence.present(_fields["question_name"] as String)
       : const Presence.absent();
@@ -413,7 +413,7 @@ final class ChoiceResult extends _NativeValue {
           .toList(growable: false))
       : const Presence.absent();
   Meta get meta => Meta.read(_fields["meta"]);
-  ReadableQuestion get question => ReadableQuestion.read(_fields["question"]);
+  QuestionDocument get question => QuestionDocument.read(_fields["question"]);
   Presence<String> get questionName => _fields.containsKey("question_name")
       ? Presence.present(_fields["question_name"] as String)
       : const Presence.absent();
@@ -469,7 +469,7 @@ final class FilterResult extends _NativeValue {
           .toList(growable: false))
       : const Presence.absent();
   Meta get meta => Meta.read(_fields["meta"]);
-  ReadableQuestion get question => ReadableQuestion.read(_fields["question"]);
+  QuestionDocument get question => QuestionDocument.read(_fields["question"]);
   Presence<String> get questionName => _fields.containsKey("question_name")
       ? Presence.present(_fields["question_name"] as String)
       : const Presence.absent();
@@ -523,7 +523,7 @@ final class ScoreResult extends _NativeValue {
           .toList(growable: false))
       : const Presence.absent();
   Meta get meta => Meta.read(_fields["meta"]);
-  ReadableQuestion get question => ReadableQuestion.read(_fields["question"]);
+  QuestionDocument get question => QuestionDocument.read(_fields["question"]);
   Presence<String> get questionName => _fields.containsKey("question_name")
       ? Presence.present(_fields["question_name"] as String)
       : const Presence.absent();
@@ -842,7 +842,8 @@ final class Find extends _NativeValue {
   Presence<Position> get position => _fields.containsKey("position")
       ? Presence.present(Position.read(_fields["position"]))
       : const Presence.absent();
-  FindQuestionInfo get question => FindQuestionInfo.read(_fields["question"]);
+  FindQuestionDocument get question =>
+      FindQuestionDocument.read(_fields["question"]);
   String get schema => _fields["schema"] as String;
   Object? get threshold => _fields["threshold"];
   Object? get value => _fields["value"];
@@ -1308,7 +1309,7 @@ final class RankMemberResult extends _NativeValue {
           .toList(growable: false))
       : const Presence.absent();
   Meta get meta => Meta.read(_fields["meta"]);
-  ReadableQuestion get question => ReadableQuestion.read(_fields["question"]);
+  QuestionDocument get question => QuestionDocument.read(_fields["question"]);
   String get schema => _fields["schema"] as String;
   Presence<PhysicalSource> get source => _fields.containsKey("source")
       ? Presence.present(PhysicalSource.read(_fields["source"]))
@@ -1327,489 +1328,6 @@ final class RankMemberResult extends _NativeValue {
             "source",
             "threshold",
             "value"
-          ].contains(entry.key))
-            entry.key: entry.value
-      });
-}
-
-sealed class ReadableQuestion extends _NativeValue {
-  ReadableQuestion(super.fields);
-  factory ReadableQuestion.read(Object? value) {
-    final map = _readObject(value);
-    if (map["verb"] == "decide") return ReadableQuestionDecide.read(map);
-    if (map["verb"] == "choose") return ReadableQuestionChoose.read(map);
-    if (map["verb"] == "tag") return ReadableQuestionTag.read(map);
-    if (map["verb"] == "score") return ReadableQuestionScore.read(map);
-    throw FormatException("Unknown ReadableQuestion alternative");
-  }
-}
-
-final class FindQuestionInfo extends _NativeValue {
-  FindQuestionInfo._(super.fields);
-  factory FindQuestionInfo.read(Object? value) =>
-      FindQuestionInfo._(_readObject(value));
-  Presence<Batch> get batch => _fields.containsKey("batch")
-      ? Presence.present(Batch.read(_fields["batch"]))
-      : const Presence.absent();
-  Presence<InputDeclaration> get contextSchema =>
-      _fields.containsKey("context_schema")
-          ? Presence.present(InputDeclaration.read(_fields["context_schema"]))
-          : const Presence.absent();
-  Presence<InputDeclaration> get itemSchema =>
-      _fields.containsKey("item_schema")
-          ? Presence.present(InputDeclaration.read(_fields["item_schema"]))
-          : const Presence.absent();
-  Presence<List<Label>> get labelDetails => _fields.containsKey("label_details")
-      ? Presence.present((_fields["label_details"] as List)
-          .map((v) => Label.read(v))
-          .toList(growable: false))
-      : const Presence.absent();
-  Presence<String> get model => _fields.containsKey("model")
-      ? Presence.present(_fields["model"] as String)
-      : const Presence.absent();
-  Presence<String> get name => _fields.containsKey("name")
-      ? Presence.present(_fields["name"] as String)
-      : const Presence.absent();
-  bool get none => _fields["none"] as bool;
-  Presence<List<String>> get on => _fields.containsKey("on")
-      ? Presence.present((_fields["on"] as List)
-          .map((v) => v as String)
-          .toList(growable: false))
-      : const Presence.absent();
-  Presence<String> get profile => _fields.containsKey("profile")
-      ? Presence.present(_fields["profile"] as String)
-      : const Presence.absent();
-  Object? get text => _fields["text"];
-  String get verb => _fields["verb"] as String;
-  Presence<BigInt> get wordingVersion => _fields.containsKey("wording_version")
-      ? Presence.present(_readInteger(_fields["wording_version"]))
-      : const Presence.absent();
-  Map<String, Object?> get extensions => Map.unmodifiable({
-        for (final entry in _fields.entries)
-          if (![
-            "batch",
-            "context_schema",
-            "item_schema",
-            "label_details",
-            "model",
-            "name",
-            "none",
-            "on",
-            "profile",
-            "text",
-            "verb",
-            "wording_version"
-          ].contains(entry.key))
-            entry.key: entry.value
-      });
-}
-
-final class RecognitionQuestionInfo extends _NativeValue {
-  RecognitionQuestionInfo._(super.fields);
-  factory RecognitionQuestionInfo.read(Object? value) =>
-      RecognitionQuestionInfo._(_readObject(value));
-  Presence<Batch> get batch => _fields.containsKey("batch")
-      ? Presence.present(Batch.read(_fields["batch"]))
-      : const Presence.absent();
-  Presence<InputDeclaration> get contextSchema =>
-      _fields.containsKey("context_schema")
-          ? Presence.present(InputDeclaration.read(_fields["context_schema"]))
-          : const Presence.absent();
-  Presence<Object?> get entityDefinition =>
-      _fields.containsKey("entity_definition")
-          ? Presence.present(_fields["entity_definition"])
-          : const Presence.absent();
-  Presence<Object?> get instructions => _fields.containsKey("instructions")
-      ? Presence.present(_fields["instructions"])
-      : const Presence.absent();
-  Presence<InputDeclaration> get itemSchema =>
-      _fields.containsKey("item_schema")
-          ? Presence.present(InputDeclaration.read(_fields["item_schema"]))
-          : const Presence.absent();
-  Map<String, Object?> get kinds =>
-      (_fields["kinds"] as Map<String, Object?>).map((k, v) => MapEntry(k, v));
-  Presence<List<Label>> get labelDetails => _fields.containsKey("label_details")
-      ? Presence.present((_fields["label_details"] as List)
-          .map((v) => Label.read(v))
-          .toList(growable: false))
-      : const Presence.absent();
-  Presence<String> get mode => _fields.containsKey("mode")
-      ? Presence.present(_fields["mode"] as String)
-      : const Presence.absent();
-  Presence<String> get model => _fields.containsKey("model")
-      ? Presence.present(_fields["model"] as String)
-      : const Presence.absent();
-  Presence<String> get name => _fields.containsKey("name")
-      ? Presence.present(_fields["name"] as String)
-      : const Presence.absent();
-  Presence<List<String>> get on => _fields.containsKey("on")
-      ? Presence.present((_fields["on"] as List)
-          .map((v) => v as String)
-          .toList(growable: false))
-      : const Presence.absent();
-  Presence<String> get profile => _fields.containsKey("profile")
-      ? Presence.present(_fields["profile"] as String)
-      : const Presence.absent();
-  Presence<Object?> get relationThreshold =>
-      _fields.containsKey("relation_threshold")
-          ? Presence.present(_fields["relation_threshold"])
-          : const Presence.absent();
-  Presence<List<RelationRule>> get relations => _fields.containsKey("relations")
-      ? Presence.present((_fields["relations"] as List)
-          .map((v) => RelationRule.read(v))
-          .toList(growable: false))
-      : const Presence.absent();
-  Presence<BigInt> get snippetPieces => _fields.containsKey("snippet_pieces")
-      ? Presence.present(_readInteger(_fields["snippet_pieces"]))
-      : const Presence.absent();
-  Presence<RecognitionStageContext> get stageContext => _fields
-          .containsKey("stage_context")
-      ? Presence.present(RecognitionStageContext.read(_fields["stage_context"]))
-      : const Presence.absent();
-  Object? get threshold => _fields["threshold"];
-  String get verb => _fields["verb"] as String;
-  Presence<BigInt> get wordingVersion => _fields.containsKey("wording_version")
-      ? Presence.present(_readInteger(_fields["wording_version"]))
-      : const Presence.absent();
-  Map<String, Object?> get extensions => Map.unmodifiable({
-        for (final entry in _fields.entries)
-          if (![
-            "batch",
-            "context_schema",
-            "entity_definition",
-            "instructions",
-            "item_schema",
-            "kinds",
-            "label_details",
-            "mode",
-            "model",
-            "name",
-            "on",
-            "profile",
-            "relation_threshold",
-            "relations",
-            "snippet_pieces",
-            "stage_context",
-            "threshold",
-            "verb",
-            "wording_version"
-          ].contains(entry.key))
-            entry.key: entry.value
-      });
-}
-
-final class RelationQuestionInfo extends _NativeValue {
-  RelationQuestionInfo._(super.fields);
-  factory RelationQuestionInfo.read(Object? value) =>
-      RelationQuestionInfo._(_readObject(value));
-  Presence<Batch> get batch => _fields.containsKey("batch")
-      ? Presence.present(Batch.read(_fields["batch"]))
-      : const Presence.absent();
-  Presence<InputDeclaration> get contextSchema =>
-      _fields.containsKey("context_schema")
-          ? Presence.present(InputDeclaration.read(_fields["context_schema"]))
-          : const Presence.absent();
-  RelateFields? get fields =>
-      _fields["fields"] == null ? null : RelateFields.read(_fields["fields"]);
-  Presence<InputDeclaration> get itemSchema =>
-      _fields.containsKey("item_schema")
-          ? Presence.present(InputDeclaration.read(_fields["item_schema"]))
-          : const Presence.absent();
-  Presence<List<Label>> get labelDetails => _fields.containsKey("label_details")
-      ? Presence.present((_fields["label_details"] as List)
-          .map((v) => Label.read(v))
-          .toList(growable: false))
-      : const Presence.absent();
-  Presence<String> get model => _fields.containsKey("model")
-      ? Presence.present(_fields["model"] as String)
-      : const Presence.absent();
-  Presence<String> get name => _fields.containsKey("name")
-      ? Presence.present(_fields["name"] as String)
-      : const Presence.absent();
-  Presence<List<String>> get on => _fields.containsKey("on")
-      ? Presence.present((_fields["on"] as List)
-          .map((v) => v as String)
-          .toList(growable: false))
-      : const Presence.absent();
-  Presence<String> get profile => _fields.containsKey("profile")
-      ? Presence.present(_fields["profile"] as String)
-      : const Presence.absent();
-  List<RelationRule> get relations => (_fields["relations"] as List)
-      .map((v) => RelationRule.read(v))
-      .toList(growable: false);
-  Object? get threshold => _fields["threshold"];
-  String get verb => _fields["verb"] as String;
-  Presence<BigInt> get wordingVersion => _fields.containsKey("wording_version")
-      ? Presence.present(_readInteger(_fields["wording_version"]))
-      : const Presence.absent();
-  Map<String, Object?> get extensions => Map.unmodifiable({
-        for (final entry in _fields.entries)
-          if (![
-            "batch",
-            "context_schema",
-            "fields",
-            "item_schema",
-            "label_details",
-            "model",
-            "name",
-            "on",
-            "profile",
-            "relations",
-            "threshold",
-            "verb",
-            "wording_version"
-          ].contains(entry.key))
-            entry.key: entry.value
-      });
-}
-
-final class ReadableQuestionChoose extends ReadableQuestion {
-  ReadableQuestionChoose._(super.fields);
-  factory ReadableQuestionChoose.read(Object? value) =>
-      ReadableQuestionChoose._(_readObject(value));
-  Presence<Batch> get batch => _fields.containsKey("batch")
-      ? Presence.present(Batch.read(_fields["batch"]))
-      : const Presence.absent();
-  Presence<InputDeclaration> get contextSchema =>
-      _fields.containsKey("context_schema")
-          ? Presence.present(InputDeclaration.read(_fields["context_schema"]))
-          : const Presence.absent();
-  Presence<InputDeclaration> get itemSchema =>
-      _fields.containsKey("item_schema")
-          ? Presence.present(InputDeclaration.read(_fields["item_schema"]))
-          : const Presence.absent();
-  Presence<List<Label>> get labelDetails => _fields.containsKey("label_details")
-      ? Presence.present((_fields["label_details"] as List)
-          .map((v) => Label.read(v))
-          .toList(growable: false))
-      : const Presence.absent();
-  Presence<String> get model => _fields.containsKey("model")
-      ? Presence.present(_fields["model"] as String)
-      : const Presence.absent();
-  Presence<String> get name => _fields.containsKey("name")
-      ? Presence.present(_fields["name"] as String)
-      : const Presence.absent();
-  Presence<List<String>> get on => _fields.containsKey("on")
-      ? Presence.present((_fields["on"] as List)
-          .map((v) => v as String)
-          .toList(growable: false))
-      : const Presence.absent();
-  Presence<String> get profile => _fields.containsKey("profile")
-      ? Presence.present(_fields["profile"] as String)
-      : const Presence.absent();
-  Presence<BigInt> get wordingVersion => _fields.containsKey("wording_version")
-      ? Presence.present(_readInteger(_fields["wording_version"]))
-      : const Presence.absent();
-  List<String> get options => (_fields["options"] as List)
-      .map((v) => v as String)
-      .toList(growable: false);
-  Object? get text => _fields["text"];
-  String get verb => _fields["verb"] as String;
-  Map<String, Object?> get extensions => Map.unmodifiable({
-        for (final entry in _fields.entries)
-          if (![
-            "batch",
-            "context_schema",
-            "item_schema",
-            "label_details",
-            "model",
-            "name",
-            "on",
-            "profile",
-            "wording_version",
-            "options",
-            "text",
-            "verb"
-          ].contains(entry.key))
-            entry.key: entry.value
-      });
-}
-
-final class ReadableQuestionDecide extends ReadableQuestion {
-  ReadableQuestionDecide._(super.fields);
-  factory ReadableQuestionDecide.read(Object? value) =>
-      ReadableQuestionDecide._(_readObject(value));
-  Presence<Batch> get batch => _fields.containsKey("batch")
-      ? Presence.present(Batch.read(_fields["batch"]))
-      : const Presence.absent();
-  Presence<InputDeclaration> get contextSchema =>
-      _fields.containsKey("context_schema")
-          ? Presence.present(InputDeclaration.read(_fields["context_schema"]))
-          : const Presence.absent();
-  Presence<InputDeclaration> get itemSchema =>
-      _fields.containsKey("item_schema")
-          ? Presence.present(InputDeclaration.read(_fields["item_schema"]))
-          : const Presence.absent();
-  Presence<List<Label>> get labelDetails => _fields.containsKey("label_details")
-      ? Presence.present((_fields["label_details"] as List)
-          .map((v) => Label.read(v))
-          .toList(growable: false))
-      : const Presence.absent();
-  Presence<String> get model => _fields.containsKey("model")
-      ? Presence.present(_fields["model"] as String)
-      : const Presence.absent();
-  Presence<String> get name => _fields.containsKey("name")
-      ? Presence.present(_fields["name"] as String)
-      : const Presence.absent();
-  Presence<List<String>> get on => _fields.containsKey("on")
-      ? Presence.present((_fields["on"] as List)
-          .map((v) => v as String)
-          .toList(growable: false))
-      : const Presence.absent();
-  Presence<String> get profile => _fields.containsKey("profile")
-      ? Presence.present(_fields["profile"] as String)
-      : const Presence.absent();
-  Presence<BigInt> get wordingVersion => _fields.containsKey("wording_version")
-      ? Presence.present(_readInteger(_fields["wording_version"]))
-      : const Presence.absent();
-  Presence<Object?> get falseValue => _fields.containsKey("false")
-      ? Presence.present(_fields["false"])
-      : const Presence.absent();
-  Object? get text => _fields["text"];
-  Presence<Object?> get trueValue => _fields.containsKey("true")
-      ? Presence.present(_fields["true"])
-      : const Presence.absent();
-  String get verb => _fields["verb"] as String;
-  Map<String, Object?> get extensions => Map.unmodifiable({
-        for (final entry in _fields.entries)
-          if (![
-            "batch",
-            "context_schema",
-            "item_schema",
-            "label_details",
-            "model",
-            "name",
-            "on",
-            "profile",
-            "wording_version",
-            "false",
-            "text",
-            "true",
-            "verb"
-          ].contains(entry.key))
-            entry.key: entry.value
-      });
-}
-
-final class ReadableQuestionScore extends ReadableQuestion {
-  ReadableQuestionScore._(super.fields);
-  factory ReadableQuestionScore.read(Object? value) =>
-      ReadableQuestionScore._(_readObject(value));
-  Presence<Batch> get batch => _fields.containsKey("batch")
-      ? Presence.present(Batch.read(_fields["batch"]))
-      : const Presence.absent();
-  Presence<InputDeclaration> get contextSchema =>
-      _fields.containsKey("context_schema")
-          ? Presence.present(InputDeclaration.read(_fields["context_schema"]))
-          : const Presence.absent();
-  Presence<InputDeclaration> get itemSchema =>
-      _fields.containsKey("item_schema")
-          ? Presence.present(InputDeclaration.read(_fields["item_schema"]))
-          : const Presence.absent();
-  Presence<List<Label>> get labelDetails => _fields.containsKey("label_details")
-      ? Presence.present((_fields["label_details"] as List)
-          .map((v) => Label.read(v))
-          .toList(growable: false))
-      : const Presence.absent();
-  Presence<String> get model => _fields.containsKey("model")
-      ? Presence.present(_fields["model"] as String)
-      : const Presence.absent();
-  Presence<String> get name => _fields.containsKey("name")
-      ? Presence.present(_fields["name"] as String)
-      : const Presence.absent();
-  Presence<List<String>> get on => _fields.containsKey("on")
-      ? Presence.present((_fields["on"] as List)
-          .map((v) => v as String)
-          .toList(growable: false))
-      : const Presence.absent();
-  Presence<String> get profile => _fields.containsKey("profile")
-      ? Presence.present(_fields["profile"] as String)
-      : const Presence.absent();
-  Presence<BigInt> get wordingVersion => _fields.containsKey("wording_version")
-      ? Presence.present(_readInteger(_fields["wording_version"]))
-      : const Presence.absent();
-  List<String> get levels => (_fields["levels"] as List)
-      .map((v) => v as String)
-      .toList(growable: false);
-  Object? get text => _fields["text"];
-  String get verb => _fields["verb"] as String;
-  Map<String, Object?> get extensions => Map.unmodifiable({
-        for (final entry in _fields.entries)
-          if (![
-            "batch",
-            "context_schema",
-            "item_schema",
-            "label_details",
-            "model",
-            "name",
-            "on",
-            "profile",
-            "wording_version",
-            "levels",
-            "text",
-            "verb"
-          ].contains(entry.key))
-            entry.key: entry.value
-      });
-}
-
-final class ReadableQuestionTag extends ReadableQuestion {
-  ReadableQuestionTag._(super.fields);
-  factory ReadableQuestionTag.read(Object? value) =>
-      ReadableQuestionTag._(_readObject(value));
-  Presence<Batch> get batch => _fields.containsKey("batch")
-      ? Presence.present(Batch.read(_fields["batch"]))
-      : const Presence.absent();
-  Presence<InputDeclaration> get contextSchema =>
-      _fields.containsKey("context_schema")
-          ? Presence.present(InputDeclaration.read(_fields["context_schema"]))
-          : const Presence.absent();
-  Presence<InputDeclaration> get itemSchema =>
-      _fields.containsKey("item_schema")
-          ? Presence.present(InputDeclaration.read(_fields["item_schema"]))
-          : const Presence.absent();
-  Presence<List<Label>> get labelDetails => _fields.containsKey("label_details")
-      ? Presence.present((_fields["label_details"] as List)
-          .map((v) => Label.read(v))
-          .toList(growable: false))
-      : const Presence.absent();
-  Presence<String> get model => _fields.containsKey("model")
-      ? Presence.present(_fields["model"] as String)
-      : const Presence.absent();
-  Presence<String> get name => _fields.containsKey("name")
-      ? Presence.present(_fields["name"] as String)
-      : const Presence.absent();
-  Presence<List<String>> get on => _fields.containsKey("on")
-      ? Presence.present((_fields["on"] as List)
-          .map((v) => v as String)
-          .toList(growable: false))
-      : const Presence.absent();
-  Presence<String> get profile => _fields.containsKey("profile")
-      ? Presence.present(_fields["profile"] as String)
-      : const Presence.absent();
-  Presence<BigInt> get wordingVersion => _fields.containsKey("wording_version")
-      ? Presence.present(_readInteger(_fields["wording_version"]))
-      : const Presence.absent();
-  List<String> get labels => (_fields["labels"] as List)
-      .map((v) => v as String)
-      .toList(growable: false);
-  Object? get text => _fields["text"];
-  String get verb => _fields["verb"] as String;
-  Map<String, Object?> get extensions => Map.unmodifiable({
-        for (final entry in _fields.entries)
-          if (![
-            "batch",
-            "context_schema",
-            "item_schema",
-            "label_details",
-            "model",
-            "name",
-            "on",
-            "profile",
-            "wording_version",
-            "labels",
-            "text",
-            "verb"
           ].contains(entry.key))
             entry.key: entry.value
       });
@@ -1839,8 +1357,8 @@ final class Recognition extends _NativeValue {
   Presence<Position> get position => _fields.containsKey("position")
       ? Presence.present(Position.read(_fields["position"]))
       : const Presence.absent();
-  RecognitionQuestionInfo get question =>
-      RecognitionQuestionInfo.read(_fields["question"]);
+  RecognizeQuestionDocument get question =>
+      RecognizeQuestionDocument.read(_fields["question"]);
   String get schema => _fields["schema"] as String;
   Presence<PhysicalSource> get source => _fields.containsKey("source")
       ? Presence.present(PhysicalSource.read(_fields["source"]))
@@ -2023,8 +1541,8 @@ final class Relation extends _NativeValue {
   Presence<Position> get position => _fields.containsKey("position")
       ? Presence.present(Position.read(_fields["position"]))
       : const Presence.absent();
-  RelationQuestionInfo get question =>
-      RelationQuestionInfo.read(_fields["question"]);
+  RelateQuestionDocument get question =>
+      RelateQuestionDocument.read(_fields["question"]);
   String get schema => _fields["schema"] as String;
   List<RelatedEntityEdge> get value => (_fields["value"] as List)
       .map((v) => RelatedEntityEdge.read(v))
@@ -2132,7 +1650,7 @@ final class RelationMemberAnswerId extends RelationMember {
   List<Observation> get observations => (_fields["observations"] as List)
       .map((v) => Observation.read(v))
       .toList(growable: false);
-  ReadableQuestion get question => ReadableQuestion.read(_fields["question"]);
+  QuestionDocument get question => QuestionDocument.read(_fields["question"]);
   List<QuestionSource> get questionSources =>
       (_fields["question_sources"] as List)
           .map((v) => QuestionSource.read(v))
@@ -2185,7 +1703,7 @@ final class RelationMemberFailureId extends RelationMember {
   List<Observation> get observations => (_fields["observations"] as List)
       .map((v) => Observation.read(v))
       .toList(growable: false);
-  ReadableQuestion get question => ReadableQuestion.read(_fields["question"]);
+  QuestionDocument get question => QuestionDocument.read(_fields["question"]);
   List<QuestionSource> get questionSources =>
       (_fields["question_sources"] as List)
           .map((v) => QuestionSource.read(v))
@@ -2527,6 +2045,66 @@ final class FindAnswer extends _NativeValue {
       });
 }
 
+final class FindQuestionDocument extends _NativeValue {
+  FindQuestionDocument._(super.fields);
+  factory FindQuestionDocument.read(Object? value) =>
+      FindQuestionDocument._(_readObject(value));
+  Presence<Batch> get batch => _fields.containsKey("batch")
+      ? Presence.present(Batch.read(_fields["batch"]))
+      : const Presence.absent();
+  Presence<InputDeclaration> get contextSchema =>
+      _fields.containsKey("context_schema")
+          ? Presence.present(InputDeclaration.read(_fields["context_schema"]))
+          : const Presence.absent();
+  Presence<InputDeclaration> get itemSchema =>
+      _fields.containsKey("item_schema")
+          ? Presence.present(InputDeclaration.read(_fields["item_schema"]))
+          : const Presence.absent();
+  Presence<List<Label>> get labelDetails => _fields.containsKey("label_details")
+      ? Presence.present((_fields["label_details"] as List)
+          .map((v) => Label.read(v))
+          .toList(growable: false))
+      : const Presence.absent();
+  Presence<String> get model => _fields.containsKey("model")
+      ? Presence.present(_fields["model"] as String)
+      : const Presence.absent();
+  Presence<String> get name => _fields.containsKey("name")
+      ? Presence.present(_fields["name"] as String)
+      : const Presence.absent();
+  bool get none => _fields["none"] as bool;
+  Presence<List<String>> get on => _fields.containsKey("on")
+      ? Presence.present((_fields["on"] as List)
+          .map((v) => v as String)
+          .toList(growable: false))
+      : const Presence.absent();
+  Presence<String> get profile => _fields.containsKey("profile")
+      ? Presence.present(_fields["profile"] as String)
+      : const Presence.absent();
+  Object? get text => _fields["text"];
+  String get verb => _fields["verb"] as String;
+  Presence<BigInt> get wordingVersion => _fields.containsKey("wording_version")
+      ? Presence.present(_readInteger(_fields["wording_version"]))
+      : const Presence.absent();
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (![
+            "batch",
+            "context_schema",
+            "item_schema",
+            "label_details",
+            "model",
+            "name",
+            "none",
+            "on",
+            "profile",
+            "text",
+            "verb",
+            "wording_version"
+          ].contains(entry.key))
+            entry.key: entry.value
+      });
+}
+
 final class NameOdds extends _NativeValue {
   NameOdds._(super.fields);
   factory NameOdds.read(Object? value) => NameOdds._(_readObject(value));
@@ -2600,6 +2178,270 @@ final class ProfileWarning extends _NativeValue {
       });
 }
 
+sealed class QuestionDocument extends _NativeValue {
+  QuestionDocument(super.fields);
+  factory QuestionDocument.read(Object? value) {
+    final map = _readObject(value);
+    if (map["verb"] == "decide") return QuestionDocumentDecide.read(map);
+    if (map["verb"] == "choose") return QuestionDocumentChoose.read(map);
+    if (map["verb"] == "tag") return QuestionDocumentTag.read(map);
+    if (map["verb"] == "score") return QuestionDocumentScore.read(map);
+    throw FormatException("Unknown QuestionDocument alternative");
+  }
+}
+
+final class QuestionDocumentChoose extends QuestionDocument {
+  QuestionDocumentChoose._(super.fields);
+  factory QuestionDocumentChoose.read(Object? value) =>
+      QuestionDocumentChoose._(_readObject(value));
+  Presence<Batch> get batch => _fields.containsKey("batch")
+      ? Presence.present(Batch.read(_fields["batch"]))
+      : const Presence.absent();
+  Presence<InputDeclaration> get contextSchema =>
+      _fields.containsKey("context_schema")
+          ? Presence.present(InputDeclaration.read(_fields["context_schema"]))
+          : const Presence.absent();
+  Presence<InputDeclaration> get itemSchema =>
+      _fields.containsKey("item_schema")
+          ? Presence.present(InputDeclaration.read(_fields["item_schema"]))
+          : const Presence.absent();
+  Presence<List<Label>> get labelDetails => _fields.containsKey("label_details")
+      ? Presence.present((_fields["label_details"] as List)
+          .map((v) => Label.read(v))
+          .toList(growable: false))
+      : const Presence.absent();
+  Presence<String> get model => _fields.containsKey("model")
+      ? Presence.present(_fields["model"] as String)
+      : const Presence.absent();
+  Presence<String> get name => _fields.containsKey("name")
+      ? Presence.present(_fields["name"] as String)
+      : const Presence.absent();
+  Presence<List<String>> get on => _fields.containsKey("on")
+      ? Presence.present((_fields["on"] as List)
+          .map((v) => v as String)
+          .toList(growable: false))
+      : const Presence.absent();
+  Presence<String> get profile => _fields.containsKey("profile")
+      ? Presence.present(_fields["profile"] as String)
+      : const Presence.absent();
+  Presence<BigInt> get wordingVersion => _fields.containsKey("wording_version")
+      ? Presence.present(_readInteger(_fields["wording_version"]))
+      : const Presence.absent();
+  List<String> get options => (_fields["options"] as List)
+      .map((v) => v as String)
+      .toList(growable: false);
+  Object? get text => _fields["text"];
+  String get verb => _fields["verb"] as String;
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (![
+            "batch",
+            "context_schema",
+            "item_schema",
+            "label_details",
+            "model",
+            "name",
+            "on",
+            "profile",
+            "wording_version",
+            "options",
+            "text",
+            "verb"
+          ].contains(entry.key))
+            entry.key: entry.value
+      });
+}
+
+final class QuestionDocumentDecide extends QuestionDocument {
+  QuestionDocumentDecide._(super.fields);
+  factory QuestionDocumentDecide.read(Object? value) =>
+      QuestionDocumentDecide._(_readObject(value));
+  Presence<Batch> get batch => _fields.containsKey("batch")
+      ? Presence.present(Batch.read(_fields["batch"]))
+      : const Presence.absent();
+  Presence<InputDeclaration> get contextSchema =>
+      _fields.containsKey("context_schema")
+          ? Presence.present(InputDeclaration.read(_fields["context_schema"]))
+          : const Presence.absent();
+  Presence<InputDeclaration> get itemSchema =>
+      _fields.containsKey("item_schema")
+          ? Presence.present(InputDeclaration.read(_fields["item_schema"]))
+          : const Presence.absent();
+  Presence<List<Label>> get labelDetails => _fields.containsKey("label_details")
+      ? Presence.present((_fields["label_details"] as List)
+          .map((v) => Label.read(v))
+          .toList(growable: false))
+      : const Presence.absent();
+  Presence<String> get model => _fields.containsKey("model")
+      ? Presence.present(_fields["model"] as String)
+      : const Presence.absent();
+  Presence<String> get name => _fields.containsKey("name")
+      ? Presence.present(_fields["name"] as String)
+      : const Presence.absent();
+  Presence<List<String>> get on => _fields.containsKey("on")
+      ? Presence.present((_fields["on"] as List)
+          .map((v) => v as String)
+          .toList(growable: false))
+      : const Presence.absent();
+  Presence<String> get profile => _fields.containsKey("profile")
+      ? Presence.present(_fields["profile"] as String)
+      : const Presence.absent();
+  Presence<BigInt> get wordingVersion => _fields.containsKey("wording_version")
+      ? Presence.present(_readInteger(_fields["wording_version"]))
+      : const Presence.absent();
+  Presence<Object?> get falseValue => _fields.containsKey("false")
+      ? Presence.present(_fields["false"])
+      : const Presence.absent();
+  Object? get text => _fields["text"];
+  Presence<Object?> get trueValue => _fields.containsKey("true")
+      ? Presence.present(_fields["true"])
+      : const Presence.absent();
+  String get verb => _fields["verb"] as String;
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (![
+            "batch",
+            "context_schema",
+            "item_schema",
+            "label_details",
+            "model",
+            "name",
+            "on",
+            "profile",
+            "wording_version",
+            "false",
+            "text",
+            "true",
+            "verb"
+          ].contains(entry.key))
+            entry.key: entry.value
+      });
+}
+
+final class QuestionDocumentScore extends QuestionDocument {
+  QuestionDocumentScore._(super.fields);
+  factory QuestionDocumentScore.read(Object? value) =>
+      QuestionDocumentScore._(_readObject(value));
+  Presence<Batch> get batch => _fields.containsKey("batch")
+      ? Presence.present(Batch.read(_fields["batch"]))
+      : const Presence.absent();
+  Presence<InputDeclaration> get contextSchema =>
+      _fields.containsKey("context_schema")
+          ? Presence.present(InputDeclaration.read(_fields["context_schema"]))
+          : const Presence.absent();
+  Presence<InputDeclaration> get itemSchema =>
+      _fields.containsKey("item_schema")
+          ? Presence.present(InputDeclaration.read(_fields["item_schema"]))
+          : const Presence.absent();
+  Presence<List<Label>> get labelDetails => _fields.containsKey("label_details")
+      ? Presence.present((_fields["label_details"] as List)
+          .map((v) => Label.read(v))
+          .toList(growable: false))
+      : const Presence.absent();
+  Presence<String> get model => _fields.containsKey("model")
+      ? Presence.present(_fields["model"] as String)
+      : const Presence.absent();
+  Presence<String> get name => _fields.containsKey("name")
+      ? Presence.present(_fields["name"] as String)
+      : const Presence.absent();
+  Presence<List<String>> get on => _fields.containsKey("on")
+      ? Presence.present((_fields["on"] as List)
+          .map((v) => v as String)
+          .toList(growable: false))
+      : const Presence.absent();
+  Presence<String> get profile => _fields.containsKey("profile")
+      ? Presence.present(_fields["profile"] as String)
+      : const Presence.absent();
+  Presence<BigInt> get wordingVersion => _fields.containsKey("wording_version")
+      ? Presence.present(_readInteger(_fields["wording_version"]))
+      : const Presence.absent();
+  List<String> get levels => (_fields["levels"] as List)
+      .map((v) => v as String)
+      .toList(growable: false);
+  Object? get text => _fields["text"];
+  String get verb => _fields["verb"] as String;
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (![
+            "batch",
+            "context_schema",
+            "item_schema",
+            "label_details",
+            "model",
+            "name",
+            "on",
+            "profile",
+            "wording_version",
+            "levels",
+            "text",
+            "verb"
+          ].contains(entry.key))
+            entry.key: entry.value
+      });
+}
+
+final class QuestionDocumentTag extends QuestionDocument {
+  QuestionDocumentTag._(super.fields);
+  factory QuestionDocumentTag.read(Object? value) =>
+      QuestionDocumentTag._(_readObject(value));
+  Presence<Batch> get batch => _fields.containsKey("batch")
+      ? Presence.present(Batch.read(_fields["batch"]))
+      : const Presence.absent();
+  Presence<InputDeclaration> get contextSchema =>
+      _fields.containsKey("context_schema")
+          ? Presence.present(InputDeclaration.read(_fields["context_schema"]))
+          : const Presence.absent();
+  Presence<InputDeclaration> get itemSchema =>
+      _fields.containsKey("item_schema")
+          ? Presence.present(InputDeclaration.read(_fields["item_schema"]))
+          : const Presence.absent();
+  Presence<List<Label>> get labelDetails => _fields.containsKey("label_details")
+      ? Presence.present((_fields["label_details"] as List)
+          .map((v) => Label.read(v))
+          .toList(growable: false))
+      : const Presence.absent();
+  Presence<String> get model => _fields.containsKey("model")
+      ? Presence.present(_fields["model"] as String)
+      : const Presence.absent();
+  Presence<String> get name => _fields.containsKey("name")
+      ? Presence.present(_fields["name"] as String)
+      : const Presence.absent();
+  Presence<List<String>> get on => _fields.containsKey("on")
+      ? Presence.present((_fields["on"] as List)
+          .map((v) => v as String)
+          .toList(growable: false))
+      : const Presence.absent();
+  Presence<String> get profile => _fields.containsKey("profile")
+      ? Presence.present(_fields["profile"] as String)
+      : const Presence.absent();
+  Presence<BigInt> get wordingVersion => _fields.containsKey("wording_version")
+      ? Presence.present(_readInteger(_fields["wording_version"]))
+      : const Presence.absent();
+  List<String> get labels => (_fields["labels"] as List)
+      .map((v) => v as String)
+      .toList(growable: false);
+  Object? get text => _fields["text"];
+  String get verb => _fields["verb"] as String;
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (![
+            "batch",
+            "context_schema",
+            "item_schema",
+            "label_details",
+            "model",
+            "name",
+            "on",
+            "profile",
+            "wording_version",
+            "labels",
+            "text",
+            "verb"
+          ].contains(entry.key))
+            entry.key: entry.value
+      });
+}
+
 sealed class Recognize extends _NativeValue {
   Recognize(super.fields);
   factory Recognize.read(Object? value) {
@@ -2633,6 +2475,100 @@ final class RecognizeAnswer extends _NativeValue {
   Map<String, Object?> get extensions => Map.unmodifiable({
         for (final entry in _fields.entries)
           if (!["names", "pairs", "pieces", "proposals"].contains(entry.key))
+            entry.key: entry.value
+      });
+}
+
+final class RecognizeQuestionDocument extends _NativeValue {
+  RecognizeQuestionDocument._(super.fields);
+  factory RecognizeQuestionDocument.read(Object? value) =>
+      RecognizeQuestionDocument._(_readObject(value));
+  Presence<Batch> get batch => _fields.containsKey("batch")
+      ? Presence.present(Batch.read(_fields["batch"]))
+      : const Presence.absent();
+  Presence<InputDeclaration> get contextSchema =>
+      _fields.containsKey("context_schema")
+          ? Presence.present(InputDeclaration.read(_fields["context_schema"]))
+          : const Presence.absent();
+  Presence<Object?> get entityDefinition =>
+      _fields.containsKey("entity_definition")
+          ? Presence.present(_fields["entity_definition"])
+          : const Presence.absent();
+  Presence<Object?> get instructions => _fields.containsKey("instructions")
+      ? Presence.present(_fields["instructions"])
+      : const Presence.absent();
+  Presence<InputDeclaration> get itemSchema =>
+      _fields.containsKey("item_schema")
+          ? Presence.present(InputDeclaration.read(_fields["item_schema"]))
+          : const Presence.absent();
+  Map<String, Object?> get kinds =>
+      (_fields["kinds"] as Map<String, Object?>).map((k, v) => MapEntry(k, v));
+  Presence<List<Label>> get labelDetails => _fields.containsKey("label_details")
+      ? Presence.present((_fields["label_details"] as List)
+          .map((v) => Label.read(v))
+          .toList(growable: false))
+      : const Presence.absent();
+  Presence<String> get mode => _fields.containsKey("mode")
+      ? Presence.present(_fields["mode"] as String)
+      : const Presence.absent();
+  Presence<String> get model => _fields.containsKey("model")
+      ? Presence.present(_fields["model"] as String)
+      : const Presence.absent();
+  Presence<String> get name => _fields.containsKey("name")
+      ? Presence.present(_fields["name"] as String)
+      : const Presence.absent();
+  Presence<List<String>> get on => _fields.containsKey("on")
+      ? Presence.present((_fields["on"] as List)
+          .map((v) => v as String)
+          .toList(growable: false))
+      : const Presence.absent();
+  Presence<String> get profile => _fields.containsKey("profile")
+      ? Presence.present(_fields["profile"] as String)
+      : const Presence.absent();
+  Presence<Object?> get relationThreshold =>
+      _fields.containsKey("relation_threshold")
+          ? Presence.present(_fields["relation_threshold"])
+          : const Presence.absent();
+  Presence<List<RelationRule>> get relations => _fields.containsKey("relations")
+      ? Presence.present((_fields["relations"] as List)
+          .map((v) => RelationRule.read(v))
+          .toList(growable: false))
+      : const Presence.absent();
+  Presence<BigInt> get snippetPieces => _fields.containsKey("snippet_pieces")
+      ? Presence.present(_readInteger(_fields["snippet_pieces"]))
+      : const Presence.absent();
+  Presence<RecognitionStageContext> get stageContext => _fields
+          .containsKey("stage_context")
+      ? Presence.present(RecognitionStageContext.read(_fields["stage_context"]))
+      : const Presence.absent();
+  Object? get threshold => _fields["threshold"];
+  String get verb => _fields["verb"] as String;
+  Presence<BigInt> get wordingVersion => _fields.containsKey("wording_version")
+      ? Presence.present(_readInteger(_fields["wording_version"]))
+      : const Presence.absent();
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (![
+            "batch",
+            "context_schema",
+            "entity_definition",
+            "instructions",
+            "item_schema",
+            "kinds",
+            "label_details",
+            "mode",
+            "model",
+            "name",
+            "on",
+            "profile",
+            "relation_threshold",
+            "relations",
+            "snippet_pieces",
+            "stage_context",
+            "threshold",
+            "verb",
+            "wording_version"
+          ].contains(entry.key))
             entry.key: entry.value
       });
 }
@@ -2679,6 +2615,71 @@ final class RelateFields extends _NativeValue {
   Map<String, Object?> get extensions => Map.unmodifiable({
         for (final entry in _fields.entries)
           if (!["kind", "name"].contains(entry.key)) entry.key: entry.value
+      });
+}
+
+final class RelateQuestionDocument extends _NativeValue {
+  RelateQuestionDocument._(super.fields);
+  factory RelateQuestionDocument.read(Object? value) =>
+      RelateQuestionDocument._(_readObject(value));
+  Presence<Batch> get batch => _fields.containsKey("batch")
+      ? Presence.present(Batch.read(_fields["batch"]))
+      : const Presence.absent();
+  Presence<InputDeclaration> get contextSchema =>
+      _fields.containsKey("context_schema")
+          ? Presence.present(InputDeclaration.read(_fields["context_schema"]))
+          : const Presence.absent();
+  RelateFields? get fields =>
+      _fields["fields"] == null ? null : RelateFields.read(_fields["fields"]);
+  Presence<InputDeclaration> get itemSchema =>
+      _fields.containsKey("item_schema")
+          ? Presence.present(InputDeclaration.read(_fields["item_schema"]))
+          : const Presence.absent();
+  Presence<List<Label>> get labelDetails => _fields.containsKey("label_details")
+      ? Presence.present((_fields["label_details"] as List)
+          .map((v) => Label.read(v))
+          .toList(growable: false))
+      : const Presence.absent();
+  Presence<String> get model => _fields.containsKey("model")
+      ? Presence.present(_fields["model"] as String)
+      : const Presence.absent();
+  Presence<String> get name => _fields.containsKey("name")
+      ? Presence.present(_fields["name"] as String)
+      : const Presence.absent();
+  Presence<List<String>> get on => _fields.containsKey("on")
+      ? Presence.present((_fields["on"] as List)
+          .map((v) => v as String)
+          .toList(growable: false))
+      : const Presence.absent();
+  Presence<String> get profile => _fields.containsKey("profile")
+      ? Presence.present(_fields["profile"] as String)
+      : const Presence.absent();
+  List<RelationRule> get relations => (_fields["relations"] as List)
+      .map((v) => RelationRule.read(v))
+      .toList(growable: false);
+  Object? get threshold => _fields["threshold"];
+  String get verb => _fields["verb"] as String;
+  Presence<BigInt> get wordingVersion => _fields.containsKey("wording_version")
+      ? Presence.present(_readInteger(_fields["wording_version"]))
+      : const Presence.absent();
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (![
+            "batch",
+            "context_schema",
+            "fields",
+            "item_schema",
+            "label_details",
+            "model",
+            "name",
+            "on",
+            "profile",
+            "relations",
+            "threshold",
+            "verb",
+            "wording_version"
+          ].contains(entry.key))
+            entry.key: entry.value
       });
 }
 
@@ -3352,7 +3353,7 @@ final class SessionQuestionDetail extends _NativeValue {
           .containsKey("probabilities")
       ? Presence.present(SessionProbabilities.read(_fields["probabilities"]))
       : const Presence.absent();
-  ReadableQuestion get question => ReadableQuestion.read(_fields["question"]);
+  QuestionDocument get question => QuestionDocument.read(_fields["question"]);
   String get questionSha256 => _fields["question_sha256"] as String;
   List<QuestionSource> get questionSources =>
       (_fields["question_sources"] as List)
