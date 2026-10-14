@@ -29,7 +29,6 @@ public sealed partial class Engine {
     public async Task<CallResult<bool?, double?, IReadOnlyList<AtomicDecideValue>>> DecideAsync(RequestQuestion question,
     RequestInputText input,
     RequestOptions? options = null, CancellationToken cancellation = default) {
-        ArgumentNullException.ThrowIfNull(input);
         var call = await ExecuteSessionAsync(() => StartNamedSession("decide", question, input, options),
         null, cancellation).ConfigureAwait(false);
         return ProjectDecideScalar(call);
@@ -37,7 +36,6 @@ public sealed partial class Engine {
     public async Task<CallResult<bool?, double?, IReadOnlyList<AtomicDecideValue>>> DecideAsync(RequestQuestion question,
     RequestInputJson input,
     RequestOptions? options = null, CancellationToken cancellation = default) {
-        ArgumentNullException.ThrowIfNull(input);
         var call = await ExecuteSessionAsync(() => StartNamedSession("decide", question, input, options),
         null, cancellation).ConfigureAwait(false);
         return ProjectDecideScalar(call);
@@ -45,7 +43,6 @@ public sealed partial class Engine {
     public async Task<CallResult<IReadOnlyList<bool?>, IReadOnlyList<double?>, IReadOnlyList<AtomicDecideValue>>> DecideAsync(RequestQuestion question,
     RequestInputRecords input,
     RequestOptions? options = null, CancellationToken cancellation = default) {
-        ArgumentNullException.ThrowIfNull(input);
         var call = await ExecuteSessionAsync(() => StartNamedSession("decide", question, input, options),
         null, cancellation).ConfigureAwait(false);
         return ProjectDecide(call);
@@ -53,7 +50,6 @@ public sealed partial class Engine {
     public async Task<CallResult<IReadOnlyList<bool?>, IReadOnlyList<double?>, IReadOnlyList<AtomicDecideValue>>> DecideAsync(RequestQuestion question,
     RequestInputSource input,
     RequestOptions? options = null, CancellationToken cancellation = default) {
-        ArgumentNullException.ThrowIfNull(input);
         var call = await ExecuteSessionAsync(() => StartNamedSession("decide", question, input, options),
         null, cancellation).ConfigureAwait(false);
         return ProjectDecide(call);
@@ -61,7 +57,6 @@ public sealed partial class Engine {
     public async Task<CallResult<IReadOnlyList<bool?>, IReadOnlyList<double?>, IReadOnlyList<AtomicDecideValue>>> DecideAsync(RequestQuestion question,
     RequestInputUnits input,
     RequestOptions? options = null, CancellationToken cancellation = default) {
-        ArgumentNullException.ThrowIfNull(input);
         var call = await ExecuteSessionAsync(() => StartNamedSession("decide", question, input, options),
         null, cancellation).ConfigureAwait(false);
         return ProjectDecide(call);
@@ -69,7 +64,6 @@ public sealed partial class Engine {
     public async Task<CallResult<IReadOnlyList<bool?>, IReadOnlyList<double?>, IReadOnlyList<AtomicDecideValue>>> DecideAsync(RequestQuestion question,
     RequestInputEntities input,
     RequestOptions? options = null, CancellationToken cancellation = default) {
-        ArgumentNullException.ThrowIfNull(input);
         var call = await ExecuteSessionAsync(() => StartNamedSession("decide", question, input, options),
         null, cancellation).ConfigureAwait(false);
         return ProjectDecide(call);
@@ -77,7 +71,6 @@ public sealed partial class Engine {
     public async Task<CallResult<IReadOnlyList<bool?>, IReadOnlyList<double?>, IReadOnlyList<AtomicDecideValue>>> DecideAsync(RequestQuestion question,
     RequestInputFeed input,
     RequestOptions? options = null, CancellationToken cancellation = default) {
-        ArgumentNullException.ThrowIfNull(input);
         var call = await ExecuteSessionAsync(() => StartNamedSession("decide", question, input, options),
         null, cancellation).ConfigureAwait(false);
         return ProjectDecide(call);
@@ -115,7 +108,6 @@ public sealed partial class Engine {
     public async Task<CallResult<string?, double?, IReadOnlyList<AtomicNullableString>>> ChooseAsync(RequestQuestion question,
     RequestInputText input,
     RequestOptions? options = null, CancellationToken cancellation = default) {
-        ArgumentNullException.ThrowIfNull(input);
         var call = await ExecuteSessionAsync(() => StartNamedSession("choose", question, input, options),
         null, cancellation).ConfigureAwait(false);
         return ProjectChooseScalar(call);
@@ -123,7 +115,6 @@ public sealed partial class Engine {
     public async Task<CallResult<string?, double?, IReadOnlyList<AtomicNullableString>>> ChooseAsync(RequestQuestion question,
     RequestInputJson input,
     RequestOptions? options = null, CancellationToken cancellation = default) {
-        ArgumentNullException.ThrowIfNull(input);
         var call = await ExecuteSessionAsync(() => StartNamedSession("choose", question, input, options),
         null, cancellation).ConfigureAwait(false);
         return ProjectChooseScalar(call);
@@ -131,7 +122,6 @@ public sealed partial class Engine {
     public async Task<CallResult<IReadOnlyList<string?>, IReadOnlyList<double?>, IReadOnlyList<AtomicNullableString>>> ChooseAsync(RequestQuestion question,
     RequestInputRecords input,
     RequestOptions? options = null, CancellationToken cancellation = default) {
-        ArgumentNullException.ThrowIfNull(input);
         var call = await ExecuteSessionAsync(() => StartNamedSession("choose", question, input, options),
         null, cancellation).ConfigureAwait(false);
         return ProjectChoose(call);
@@ -139,7 +129,6 @@ public sealed partial class Engine {
     public async Task<CallResult<IReadOnlyList<string?>, IReadOnlyList<double?>, IReadOnlyList<AtomicNullableString>>> ChooseAsync(RequestQuestion question,
     RequestInputSource input,
     RequestOptions? options = null, CancellationToken cancellation = default) {
-        ArgumentNullException.ThrowIfNull(input);
         var call = await ExecuteSessionAsync(() => StartNamedSession("choose", question, input, options),
         null, cancellation).ConfigureAwait(false);
         return ProjectChoose(call);
@@ -147,7 +136,6 @@ public sealed partial class Engine {
     public async Task<CallResult<IReadOnlyList<string?>, IReadOnlyList<double?>, IReadOnlyList<AtomicNullableString>>> ChooseAsync(RequestQuestion question,
     RequestInputUnits input,
     RequestOptions? options = null, CancellationToken cancellation = default) {
-        ArgumentNullException.ThrowIfNull(input);
         var call = await ExecuteSessionAsync(() => StartNamedSession("choose", question, input, options),
         null, cancellation).ConfigureAwait(false);
         return ProjectChoose(call);
@@ -155,7 +143,6 @@ public sealed partial class Engine {
     public async Task<CallResult<IReadOnlyList<string?>, IReadOnlyList<double?>, IReadOnlyList<AtomicNullableString>>> ChooseAsync(RequestQuestion question,
     RequestInputEntities input,
     RequestOptions? options = null, CancellationToken cancellation = default) {
-        ArgumentNullException.ThrowIfNull(input);
         var call = await ExecuteSessionAsync(() => StartNamedSession("choose", question, input, options),
         null, cancellation).ConfigureAwait(false);
         return ProjectChoose(call);
@@ -163,7 +150,6 @@ public sealed partial class Engine {
     public async Task<CallResult<IReadOnlyList<string?>, IReadOnlyList<double?>, IReadOnlyList<AtomicNullableString>>> ChooseAsync(RequestQuestion question,
     RequestInputFeed input,
     RequestOptions? options = null, CancellationToken cancellation = default) {
-        ArgumentNullException.ThrowIfNull(input);
         var call = await ExecuteSessionAsync(() => StartNamedSession("choose", question, input, options),
         null, cancellation).ConfigureAwait(false);
         return ProjectChoose(call);
@@ -201,7 +187,6 @@ public sealed partial class Engine {
     public async Task<CallResult<IReadOnlyList<string>, double?, IReadOnlyList<AtomicArrayOfString>>> TagAsync(RequestQuestion question,
     RequestInputText input,
     RequestOptions? options = null, CancellationToken cancellation = default) {
-        ArgumentNullException.ThrowIfNull(input);
         var call = await ExecuteSessionAsync(() => StartNamedSession("tag", question, input, options),
         null, cancellation).ConfigureAwait(false);
         return ProjectTagScalar(call);
@@ -209,7 +194,6 @@ public sealed partial class Engine {
     public async Task<CallResult<IReadOnlyList<string>, double?, IReadOnlyList<AtomicArrayOfString>>> TagAsync(RequestQuestion question,
     RequestInputJson input,
     RequestOptions? options = null, CancellationToken cancellation = default) {
-        ArgumentNullException.ThrowIfNull(input);
         var call = await ExecuteSessionAsync(() => StartNamedSession("tag", question, input, options),
         null, cancellation).ConfigureAwait(false);
         return ProjectTagScalar(call);
@@ -217,7 +201,6 @@ public sealed partial class Engine {
     public async Task<CallResult<IReadOnlyList<IReadOnlyList<string>>, double?, IReadOnlyList<AtomicArrayOfString>>> TagAsync(RequestQuestion question,
     RequestInputRecords input,
     RequestOptions? options = null, CancellationToken cancellation = default) {
-        ArgumentNullException.ThrowIfNull(input);
         var call = await ExecuteSessionAsync(() => StartNamedSession("tag", question, input, options),
         null, cancellation).ConfigureAwait(false);
         return ProjectTag(call);
@@ -225,7 +208,6 @@ public sealed partial class Engine {
     public async Task<CallResult<IReadOnlyList<IReadOnlyList<string>>, double?, IReadOnlyList<AtomicArrayOfString>>> TagAsync(RequestQuestion question,
     RequestInputSource input,
     RequestOptions? options = null, CancellationToken cancellation = default) {
-        ArgumentNullException.ThrowIfNull(input);
         var call = await ExecuteSessionAsync(() => StartNamedSession("tag", question, input, options),
         null, cancellation).ConfigureAwait(false);
         return ProjectTag(call);
@@ -233,7 +215,6 @@ public sealed partial class Engine {
     public async Task<CallResult<IReadOnlyList<IReadOnlyList<string>>, double?, IReadOnlyList<AtomicArrayOfString>>> TagAsync(RequestQuestion question,
     RequestInputUnits input,
     RequestOptions? options = null, CancellationToken cancellation = default) {
-        ArgumentNullException.ThrowIfNull(input);
         var call = await ExecuteSessionAsync(() => StartNamedSession("tag", question, input, options),
         null, cancellation).ConfigureAwait(false);
         return ProjectTag(call);
@@ -241,7 +222,6 @@ public sealed partial class Engine {
     public async Task<CallResult<IReadOnlyList<IReadOnlyList<string>>, double?, IReadOnlyList<AtomicArrayOfString>>> TagAsync(RequestQuestion question,
     RequestInputEntities input,
     RequestOptions? options = null, CancellationToken cancellation = default) {
-        ArgumentNullException.ThrowIfNull(input);
         var call = await ExecuteSessionAsync(() => StartNamedSession("tag", question, input, options),
         null, cancellation).ConfigureAwait(false);
         return ProjectTag(call);
@@ -249,7 +229,6 @@ public sealed partial class Engine {
     public async Task<CallResult<IReadOnlyList<IReadOnlyList<string>>, double?, IReadOnlyList<AtomicArrayOfString>>> TagAsync(RequestQuestion question,
     RequestInputFeed input,
     RequestOptions? options = null, CancellationToken cancellation = default) {
-        ArgumentNullException.ThrowIfNull(input);
         var call = await ExecuteSessionAsync(() => StartNamedSession("tag", question, input, options),
         null, cancellation).ConfigureAwait(false);
         return ProjectTag(call);
@@ -286,7 +265,6 @@ public sealed partial class Engine {
     public async Task<CallResult<double, double?, IReadOnlyList<AtomicDouble>>> ScoreAsync(RequestQuestion question,
     RequestInputText input,
     RequestOptions? options = null, CancellationToken cancellation = default) {
-        ArgumentNullException.ThrowIfNull(input);
         var call = await ExecuteSessionAsync(() => StartNamedSession("score", question, input, options),
         null, cancellation).ConfigureAwait(false);
         return ProjectScoreScalar(call);
@@ -294,7 +272,6 @@ public sealed partial class Engine {
     public async Task<CallResult<double, double?, IReadOnlyList<AtomicDouble>>> ScoreAsync(RequestQuestion question,
     RequestInputJson input,
     RequestOptions? options = null, CancellationToken cancellation = default) {
-        ArgumentNullException.ThrowIfNull(input);
         var call = await ExecuteSessionAsync(() => StartNamedSession("score", question, input, options),
         null, cancellation).ConfigureAwait(false);
         return ProjectScoreScalar(call);
@@ -302,7 +279,6 @@ public sealed partial class Engine {
     public async Task<CallResult<IReadOnlyList<double>, double?, IReadOnlyList<AtomicDouble>>> ScoreAsync(RequestQuestion question,
     RequestInputRecords input,
     RequestOptions? options = null, CancellationToken cancellation = default) {
-        ArgumentNullException.ThrowIfNull(input);
         var call = await ExecuteSessionAsync(() => StartNamedSession("score", question, input, options),
         null, cancellation).ConfigureAwait(false);
         return ProjectScore(call);
@@ -310,7 +286,6 @@ public sealed partial class Engine {
     public async Task<CallResult<IReadOnlyList<double>, double?, IReadOnlyList<AtomicDouble>>> ScoreAsync(RequestQuestion question,
     RequestInputSource input,
     RequestOptions? options = null, CancellationToken cancellation = default) {
-        ArgumentNullException.ThrowIfNull(input);
         var call = await ExecuteSessionAsync(() => StartNamedSession("score", question, input, options),
         null, cancellation).ConfigureAwait(false);
         return ProjectScore(call);
@@ -318,7 +293,6 @@ public sealed partial class Engine {
     public async Task<CallResult<IReadOnlyList<double>, double?, IReadOnlyList<AtomicDouble>>> ScoreAsync(RequestQuestion question,
     RequestInputUnits input,
     RequestOptions? options = null, CancellationToken cancellation = default) {
-        ArgumentNullException.ThrowIfNull(input);
         var call = await ExecuteSessionAsync(() => StartNamedSession("score", question, input, options),
         null, cancellation).ConfigureAwait(false);
         return ProjectScore(call);
@@ -326,7 +300,6 @@ public sealed partial class Engine {
     public async Task<CallResult<IReadOnlyList<double>, double?, IReadOnlyList<AtomicDouble>>> ScoreAsync(RequestQuestion question,
     RequestInputEntities input,
     RequestOptions? options = null, CancellationToken cancellation = default) {
-        ArgumentNullException.ThrowIfNull(input);
         var call = await ExecuteSessionAsync(() => StartNamedSession("score", question, input, options),
         null, cancellation).ConfigureAwait(false);
         return ProjectScore(call);
@@ -334,7 +307,6 @@ public sealed partial class Engine {
     public async Task<CallResult<IReadOnlyList<double>, double?, IReadOnlyList<AtomicDouble>>> ScoreAsync(RequestQuestion question,
     RequestInputFeed input,
     RequestOptions? options = null, CancellationToken cancellation = default) {
-        ArgumentNullException.ThrowIfNull(input);
         var call = await ExecuteSessionAsync(() => StartNamedSession("score", question, input, options),
         null, cancellation).ConfigureAwait(false);
         return ProjectScore(call);
@@ -371,7 +343,6 @@ public sealed partial class Engine {
     public async Task<CallResult<IReadOnlyList<JsonElement>, IReadOnlyList<double?>, IReadOnlyList<AtomicBoolean>>> FilterAsync(RequestQuestion question,
     RequestInputText input,
     RequestOptions? options = null, CancellationToken cancellation = default) {
-        ArgumentNullException.ThrowIfNull(input);
         var call = await ExecuteSessionAsync(() => StartNamedSession("filter", question, input, options),
         null, cancellation).ConfigureAwait(false);
         return ProjectFilter(call);
@@ -379,7 +350,6 @@ public sealed partial class Engine {
     public async Task<CallResult<IReadOnlyList<JsonElement>, IReadOnlyList<double?>, IReadOnlyList<AtomicBoolean>>> FilterAsync(RequestQuestion question,
     RequestInputJson input,
     RequestOptions? options = null, CancellationToken cancellation = default) {
-        ArgumentNullException.ThrowIfNull(input);
         var call = await ExecuteSessionAsync(() => StartNamedSession("filter", question, input, options),
         null, cancellation).ConfigureAwait(false);
         return ProjectFilter(call);
@@ -387,7 +357,6 @@ public sealed partial class Engine {
     public async Task<CallResult<IReadOnlyList<JsonElement>, IReadOnlyList<double?>, IReadOnlyList<AtomicBoolean>>> FilterAsync(RequestQuestion question,
     RequestInputRecords input,
     RequestOptions? options = null, CancellationToken cancellation = default) {
-        ArgumentNullException.ThrowIfNull(input);
         var call = await ExecuteSessionAsync(() => StartNamedSession("filter", question, input, options),
         null, cancellation).ConfigureAwait(false);
         return ProjectFilter(call);
@@ -395,7 +364,6 @@ public sealed partial class Engine {
     public async Task<CallResult<IReadOnlyList<JsonElement>, IReadOnlyList<double?>, IReadOnlyList<AtomicBoolean>>> FilterAsync(RequestQuestion question,
     RequestInputSource input,
     RequestOptions? options = null, CancellationToken cancellation = default) {
-        ArgumentNullException.ThrowIfNull(input);
         var call = await ExecuteSessionAsync(() => StartNamedSession("filter", question, input, options),
         null, cancellation).ConfigureAwait(false);
         return ProjectFilter(call);
@@ -403,7 +371,6 @@ public sealed partial class Engine {
     public async Task<CallResult<IReadOnlyList<JsonElement>, IReadOnlyList<double?>, IReadOnlyList<AtomicBoolean>>> FilterAsync(RequestQuestion question,
     RequestInputUnits input,
     RequestOptions? options = null, CancellationToken cancellation = default) {
-        ArgumentNullException.ThrowIfNull(input);
         var call = await ExecuteSessionAsync(() => StartNamedSession("filter", question, input, options),
         null, cancellation).ConfigureAwait(false);
         return ProjectFilter(call);
@@ -411,7 +378,6 @@ public sealed partial class Engine {
     public async Task<CallResult<IReadOnlyList<JsonElement>, IReadOnlyList<double?>, IReadOnlyList<AtomicBoolean>>> FilterAsync(RequestQuestion question,
     RequestInputEntities input,
     RequestOptions? options = null, CancellationToken cancellation = default) {
-        ArgumentNullException.ThrowIfNull(input);
         var call = await ExecuteSessionAsync(() => StartNamedSession("filter", question, input, options),
         null, cancellation).ConfigureAwait(false);
         return ProjectFilter(call);
@@ -419,7 +385,6 @@ public sealed partial class Engine {
     public async Task<CallResult<IReadOnlyList<JsonElement>, IReadOnlyList<double?>, IReadOnlyList<AtomicBoolean>>> FilterAsync(RequestQuestion question,
     RequestInputFeed input,
     RequestOptions? options = null, CancellationToken cancellation = default) {
-        ArgumentNullException.ThrowIfNull(input);
         var call = await ExecuteSessionAsync(() => StartNamedSession("filter", question, input, options),
         null, cancellation).ConfigureAwait(false);
         return ProjectFilter(call);
@@ -446,7 +411,6 @@ public sealed partial class Engine {
     public async Task<CallResult<IReadOnlyList<ulong>, IReadOnlyList<double?>, IReadOnlyList<AtomicNonZeroUsize>>> RankAsync(RequestQuestion question,
     RequestInputText input,
     RequestOptions? options = null, CancellationToken cancellation = default) {
-        ArgumentNullException.ThrowIfNull(input);
         var call = await ExecuteSessionAsync(() => StartNamedSession("rank", question, input, options),
         null, cancellation).ConfigureAwait(false);
         return ProjectRank(call);
@@ -454,7 +418,6 @@ public sealed partial class Engine {
     public async Task<CallResult<IReadOnlyList<ulong>, IReadOnlyList<double?>, IReadOnlyList<AtomicNonZeroUsize>>> RankAsync(RequestQuestion question,
     RequestInputJson input,
     RequestOptions? options = null, CancellationToken cancellation = default) {
-        ArgumentNullException.ThrowIfNull(input);
         var call = await ExecuteSessionAsync(() => StartNamedSession("rank", question, input, options),
         null, cancellation).ConfigureAwait(false);
         return ProjectRank(call);
@@ -462,7 +425,6 @@ public sealed partial class Engine {
     public async Task<CallResult<IReadOnlyList<ulong>, IReadOnlyList<double?>, IReadOnlyList<AtomicNonZeroUsize>>> RankAsync(RequestQuestion question,
     RequestInputRecords input,
     RequestOptions? options = null, CancellationToken cancellation = default) {
-        ArgumentNullException.ThrowIfNull(input);
         var call = await ExecuteSessionAsync(() => StartNamedSession("rank", question, input, options),
         null, cancellation).ConfigureAwait(false);
         return ProjectRank(call);
@@ -470,7 +432,6 @@ public sealed partial class Engine {
     public async Task<CallResult<IReadOnlyList<ulong>, IReadOnlyList<double?>, IReadOnlyList<AtomicNonZeroUsize>>> RankAsync(RequestQuestion question,
     RequestInputSource input,
     RequestOptions? options = null, CancellationToken cancellation = default) {
-        ArgumentNullException.ThrowIfNull(input);
         var call = await ExecuteSessionAsync(() => StartNamedSession("rank", question, input, options),
         null, cancellation).ConfigureAwait(false);
         return ProjectRank(call);
@@ -478,7 +439,6 @@ public sealed partial class Engine {
     public async Task<CallResult<IReadOnlyList<ulong>, IReadOnlyList<double?>, IReadOnlyList<AtomicNonZeroUsize>>> RankAsync(RequestQuestion question,
     RequestInputUnits input,
     RequestOptions? options = null, CancellationToken cancellation = default) {
-        ArgumentNullException.ThrowIfNull(input);
         var call = await ExecuteSessionAsync(() => StartNamedSession("rank", question, input, options),
         null, cancellation).ConfigureAwait(false);
         return ProjectRank(call);
@@ -486,7 +446,6 @@ public sealed partial class Engine {
     public async Task<CallResult<IReadOnlyList<ulong>, IReadOnlyList<double?>, IReadOnlyList<AtomicNonZeroUsize>>> RankAsync(RequestQuestion question,
     RequestInputEntities input,
     RequestOptions? options = null, CancellationToken cancellation = default) {
-        ArgumentNullException.ThrowIfNull(input);
         var call = await ExecuteSessionAsync(() => StartNamedSession("rank", question, input, options),
         null, cancellation).ConfigureAwait(false);
         return ProjectRank(call);
@@ -494,7 +453,6 @@ public sealed partial class Engine {
     public async Task<CallResult<IReadOnlyList<ulong>, IReadOnlyList<double?>, IReadOnlyList<AtomicNonZeroUsize>>> RankAsync(RequestQuestion question,
     RequestInputFeed input,
     RequestOptions? options = null, CancellationToken cancellation = default) {
-        ArgumentNullException.ThrowIfNull(input);
         var call = await ExecuteSessionAsync(() => StartNamedSession("rank", question, input, options),
         null, cancellation).ConfigureAwait(false);
         return ProjectRank(call);
@@ -520,7 +478,6 @@ public sealed partial class Engine {
     public async Task<CallResult<JsonElement?, double?, IReadOnlyList<Find>>> FindAsync(RequestQuestion question,
     RequestInputText input,
     RequestOptions? options = null, CancellationToken cancellation = default) {
-        ArgumentNullException.ThrowIfNull(input);
         var call = await ExecuteSessionAsync(() => StartNamedSession("find", question, input, options),
         null, cancellation).ConfigureAwait(false);
         return ProjectFind(call);
@@ -528,7 +485,6 @@ public sealed partial class Engine {
     public async Task<CallResult<JsonElement?, double?, IReadOnlyList<Find>>> FindAsync(RequestQuestion question,
     RequestInputJson input,
     RequestOptions? options = null, CancellationToken cancellation = default) {
-        ArgumentNullException.ThrowIfNull(input);
         var call = await ExecuteSessionAsync(() => StartNamedSession("find", question, input, options),
         null, cancellation).ConfigureAwait(false);
         return ProjectFind(call);
@@ -536,7 +492,6 @@ public sealed partial class Engine {
     public async Task<CallResult<JsonElement?, double?, IReadOnlyList<Find>>> FindAsync(RequestQuestion question,
     RequestInputRecords input,
     RequestOptions? options = null, CancellationToken cancellation = default) {
-        ArgumentNullException.ThrowIfNull(input);
         var call = await ExecuteSessionAsync(() => StartNamedSession("find", question, input, options),
         null, cancellation).ConfigureAwait(false);
         return ProjectFind(call);
@@ -544,7 +499,6 @@ public sealed partial class Engine {
     public async Task<CallResult<JsonElement?, double?, IReadOnlyList<Find>>> FindAsync(RequestQuestion question,
     RequestInputSource input,
     RequestOptions? options = null, CancellationToken cancellation = default) {
-        ArgumentNullException.ThrowIfNull(input);
         var call = await ExecuteSessionAsync(() => StartNamedSession("find", question, input, options),
         null, cancellation).ConfigureAwait(false);
         return ProjectFind(call);
@@ -552,7 +506,6 @@ public sealed partial class Engine {
     public async Task<CallResult<JsonElement?, double?, IReadOnlyList<Find>>> FindAsync(RequestQuestion question,
     RequestInputUnits input,
     RequestOptions? options = null, CancellationToken cancellation = default) {
-        ArgumentNullException.ThrowIfNull(input);
         var call = await ExecuteSessionAsync(() => StartNamedSession("find", question, input, options),
         null, cancellation).ConfigureAwait(false);
         return ProjectFind(call);
@@ -560,7 +513,6 @@ public sealed partial class Engine {
     public async Task<CallResult<JsonElement?, double?, IReadOnlyList<Find>>> FindAsync(RequestQuestion question,
     RequestInputEntities input,
     RequestOptions? options = null, CancellationToken cancellation = default) {
-        ArgumentNullException.ThrowIfNull(input);
         var call = await ExecuteSessionAsync(() => StartNamedSession("find", question, input, options),
         null, cancellation).ConfigureAwait(false);
         return ProjectFind(call);
@@ -568,7 +520,6 @@ public sealed partial class Engine {
     public async Task<CallResult<JsonElement?, double?, IReadOnlyList<Find>>> FindAsync(RequestQuestion question,
     RequestInputFeed input,
     RequestOptions? options = null, CancellationToken cancellation = default) {
-        ArgumentNullException.ThrowIfNull(input);
         var call = await ExecuteSessionAsync(() => StartNamedSession("find", question, input, options),
         null, cancellation).ConfigureAwait(false);
         return ProjectFind(call);
@@ -595,7 +546,6 @@ public sealed partial class Engine {
     public async Task<CallResult<IReadOnlyDictionary<string, AnnotatedField>, double?, IReadOnlyList<Annotation>>> AnnotateAsync(RequestQuestion question,
     RequestInputText input,
     RequestOptions? options = null, CancellationToken cancellation = default) {
-        ArgumentNullException.ThrowIfNull(input);
         var call = await ExecuteSessionAsync(() => StartNamedSession("annotate", question, input, options),
         null, cancellation).ConfigureAwait(false);
         return ProjectAnnotateScalar(call);
@@ -603,7 +553,6 @@ public sealed partial class Engine {
     public async Task<CallResult<IReadOnlyDictionary<string, AnnotatedField>, double?, IReadOnlyList<Annotation>>> AnnotateAsync(RequestQuestion question,
     RequestInputJson input,
     RequestOptions? options = null, CancellationToken cancellation = default) {
-        ArgumentNullException.ThrowIfNull(input);
         var call = await ExecuteSessionAsync(() => StartNamedSession("annotate", question, input, options),
         null, cancellation).ConfigureAwait(false);
         return ProjectAnnotateScalar(call);
@@ -611,7 +560,6 @@ public sealed partial class Engine {
     public async Task<CallResult<IReadOnlyList<IReadOnlyDictionary<string, AnnotatedField>>, double?,
     IReadOnlyList<Annotation>>> AnnotateAsync(RequestQuestion question, RequestInputRecords input,
     RequestOptions? options = null, CancellationToken cancellation = default) {
-        ArgumentNullException.ThrowIfNull(input);
         var call = await ExecuteSessionAsync(() => StartNamedSession("annotate", question, input, options),
         null, cancellation).ConfigureAwait(false);
         return ProjectAnnotate(call);
@@ -619,7 +567,6 @@ public sealed partial class Engine {
     public async Task<CallResult<IReadOnlyList<IReadOnlyDictionary<string, AnnotatedField>>, double?,
     IReadOnlyList<Annotation>>> AnnotateAsync(RequestQuestion question, RequestInputSource input,
     RequestOptions? options = null, CancellationToken cancellation = default) {
-        ArgumentNullException.ThrowIfNull(input);
         var call = await ExecuteSessionAsync(() => StartNamedSession("annotate", question, input, options),
         null, cancellation).ConfigureAwait(false);
         return ProjectAnnotate(call);
@@ -627,7 +574,6 @@ public sealed partial class Engine {
     public async Task<CallResult<IReadOnlyList<IReadOnlyDictionary<string, AnnotatedField>>, double?,
     IReadOnlyList<Annotation>>> AnnotateAsync(RequestQuestion question, RequestInputUnits input,
     RequestOptions? options = null, CancellationToken cancellation = default) {
-        ArgumentNullException.ThrowIfNull(input);
         var call = await ExecuteSessionAsync(() => StartNamedSession("annotate", question, input, options),
         null, cancellation).ConfigureAwait(false);
         return ProjectAnnotate(call);
@@ -635,7 +581,6 @@ public sealed partial class Engine {
     public async Task<CallResult<IReadOnlyList<IReadOnlyDictionary<string, AnnotatedField>>, double?,
     IReadOnlyList<Annotation>>> AnnotateAsync(RequestQuestion question, RequestInputEntities input,
     RequestOptions? options = null, CancellationToken cancellation = default) {
-        ArgumentNullException.ThrowIfNull(input);
         var call = await ExecuteSessionAsync(() => StartNamedSession("annotate", question, input, options),
         null, cancellation).ConfigureAwait(false);
         return ProjectAnnotate(call);
@@ -643,7 +588,6 @@ public sealed partial class Engine {
     public async Task<CallResult<IReadOnlyList<IReadOnlyDictionary<string, AnnotatedField>>, double?,
     IReadOnlyList<Annotation>>> AnnotateAsync(RequestQuestion question, RequestInputFeed input,
     RequestOptions? options = null, CancellationToken cancellation = default) {
-        ArgumentNullException.ThrowIfNull(input);
         var call = await ExecuteSessionAsync(() => StartNamedSession("annotate", question, input, options),
         null, cancellation).ConfigureAwait(false);
         return ProjectAnnotate(call);
@@ -674,7 +618,6 @@ public sealed partial class Engine {
     public async Task<CallResult<Recognize, IReadOnlyList<double>, IReadOnlyList<Recognition>>> RecognizeAsync(RequestQuestion question,
     RequestInputText input,
     RequestOptions? options = null, CancellationToken cancellation = default) {
-        ArgumentNullException.ThrowIfNull(input);
         var call = await ExecuteSessionAsync(() => StartNamedSession("recognize", question, input, options),
         null, cancellation).ConfigureAwait(false);
         return ProjectRecognizeScalar(call);
@@ -682,7 +625,6 @@ public sealed partial class Engine {
     public async Task<CallResult<Recognize, IReadOnlyList<double>, IReadOnlyList<Recognition>>> RecognizeAsync(RequestQuestion question,
     RequestInputJson input,
     RequestOptions? options = null, CancellationToken cancellation = default) {
-        ArgumentNullException.ThrowIfNull(input);
         var call = await ExecuteSessionAsync(() => StartNamedSession("recognize", question, input, options),
         null, cancellation).ConfigureAwait(false);
         return ProjectRecognizeScalar(call);
@@ -690,7 +632,6 @@ public sealed partial class Engine {
     public async Task<CallResult<IReadOnlyList<Recognize>, IReadOnlyList<IReadOnlyList<double>>,
     IReadOnlyList<Recognition>>> RecognizeAsync(RequestQuestion question, RequestInputRecords input,
     RequestOptions? options = null, CancellationToken cancellation = default) {
-        ArgumentNullException.ThrowIfNull(input);
         var call = await ExecuteSessionAsync(() => StartNamedSession("recognize", question, input, options),
         null, cancellation).ConfigureAwait(false);
         return ProjectRecognize(call);
@@ -698,7 +639,6 @@ public sealed partial class Engine {
     public async Task<CallResult<IReadOnlyList<Recognize>, IReadOnlyList<IReadOnlyList<double>>,
     IReadOnlyList<Recognition>>> RecognizeAsync(RequestQuestion question, RequestInputSource input,
     RequestOptions? options = null, CancellationToken cancellation = default) {
-        ArgumentNullException.ThrowIfNull(input);
         var call = await ExecuteSessionAsync(() => StartNamedSession("recognize", question, input, options),
         null, cancellation).ConfigureAwait(false);
         return ProjectRecognize(call);
@@ -706,7 +646,6 @@ public sealed partial class Engine {
     public async Task<CallResult<IReadOnlyList<Recognize>, IReadOnlyList<IReadOnlyList<double>>,
     IReadOnlyList<Recognition>>> RecognizeAsync(RequestQuestion question, RequestInputUnits input,
     RequestOptions? options = null, CancellationToken cancellation = default) {
-        ArgumentNullException.ThrowIfNull(input);
         var call = await ExecuteSessionAsync(() => StartNamedSession("recognize", question, input, options),
         null, cancellation).ConfigureAwait(false);
         return ProjectRecognize(call);
@@ -714,7 +653,6 @@ public sealed partial class Engine {
     public async Task<CallResult<IReadOnlyList<Recognize>, IReadOnlyList<IReadOnlyList<double>>,
     IReadOnlyList<Recognition>>> RecognizeAsync(RequestQuestion question, RequestInputEntities input,
     RequestOptions? options = null, CancellationToken cancellation = default) {
-        ArgumentNullException.ThrowIfNull(input);
         var call = await ExecuteSessionAsync(() => StartNamedSession("recognize", question, input, options),
         null, cancellation).ConfigureAwait(false);
         return ProjectRecognize(call);
@@ -722,7 +660,6 @@ public sealed partial class Engine {
     public async Task<CallResult<IReadOnlyList<Recognize>, IReadOnlyList<IReadOnlyList<double>>,
     IReadOnlyList<Recognition>>> RecognizeAsync(RequestQuestion question, RequestInputFeed input,
     RequestOptions? options = null, CancellationToken cancellation = default) {
-        ArgumentNullException.ThrowIfNull(input);
         var call = await ExecuteSessionAsync(() => StartNamedSession("recognize", question, input, options),
         null, cancellation).ConfigureAwait(false);
         return ProjectRecognize(call);
@@ -752,7 +689,6 @@ public sealed partial class Engine {
     public async Task<CallResult<IReadOnlyList<RelatedEntityEdge>, IReadOnlyList<double>, IReadOnlyList<Relation>>> RelateAsync(RequestQuestion question,
     RequestInputText input,
     RequestOptions? options = null, CancellationToken cancellation = default) {
-        ArgumentNullException.ThrowIfNull(input);
         var call = await ExecuteSessionAsync(() => StartNamedSession("relate", question, input, options),
         null, cancellation).ConfigureAwait(false);
         return ProjectRelate(call);
@@ -760,7 +696,6 @@ public sealed partial class Engine {
     public async Task<CallResult<IReadOnlyList<RelatedEntityEdge>, IReadOnlyList<double>, IReadOnlyList<Relation>>> RelateAsync(RequestQuestion question,
     RequestInputJson input,
     RequestOptions? options = null, CancellationToken cancellation = default) {
-        ArgumentNullException.ThrowIfNull(input);
         var call = await ExecuteSessionAsync(() => StartNamedSession("relate", question, input, options),
         null, cancellation).ConfigureAwait(false);
         return ProjectRelate(call);
@@ -768,7 +703,6 @@ public sealed partial class Engine {
     public async Task<CallResult<IReadOnlyList<RelatedEntityEdge>, IReadOnlyList<double>, IReadOnlyList<Relation>>> RelateAsync(RequestQuestion question,
     RequestInputRecords input,
     RequestOptions? options = null, CancellationToken cancellation = default) {
-        ArgumentNullException.ThrowIfNull(input);
         var call = await ExecuteSessionAsync(() => StartNamedSession("relate", question, input, options),
         null, cancellation).ConfigureAwait(false);
         return ProjectRelate(call);
@@ -776,7 +710,6 @@ public sealed partial class Engine {
     public async Task<CallResult<IReadOnlyList<RelatedEntityEdge>, IReadOnlyList<double>, IReadOnlyList<Relation>>> RelateAsync(RequestQuestion question,
     RequestInputSource input,
     RequestOptions? options = null, CancellationToken cancellation = default) {
-        ArgumentNullException.ThrowIfNull(input);
         var call = await ExecuteSessionAsync(() => StartNamedSession("relate", question, input, options),
         null, cancellation).ConfigureAwait(false);
         return ProjectRelate(call);
@@ -784,7 +717,6 @@ public sealed partial class Engine {
     public async Task<CallResult<IReadOnlyList<RelatedEntityEdge>, IReadOnlyList<double>, IReadOnlyList<Relation>>> RelateAsync(RequestQuestion question,
     RequestInputUnits input,
     RequestOptions? options = null, CancellationToken cancellation = default) {
-        ArgumentNullException.ThrowIfNull(input);
         var call = await ExecuteSessionAsync(() => StartNamedSession("relate", question, input, options),
         null, cancellation).ConfigureAwait(false);
         return ProjectRelate(call);
@@ -792,7 +724,6 @@ public sealed partial class Engine {
     public async Task<CallResult<IReadOnlyList<RelatedEntityEdge>, IReadOnlyList<double>, IReadOnlyList<Relation>>> RelateAsync(RequestQuestion question,
     RequestInputEntities input,
     RequestOptions? options = null, CancellationToken cancellation = default) {
-        ArgumentNullException.ThrowIfNull(input);
         var call = await ExecuteSessionAsync(() => StartNamedSession("relate", question, input, options),
         null, cancellation).ConfigureAwait(false);
         return ProjectRelate(call);
@@ -800,7 +731,6 @@ public sealed partial class Engine {
     public async Task<CallResult<IReadOnlyList<RelatedEntityEdge>, IReadOnlyList<double>, IReadOnlyList<Relation>>> RelateAsync(RequestQuestion question,
     RequestInputFeed input,
     RequestOptions? options = null, CancellationToken cancellation = default) {
-        ArgumentNullException.ThrowIfNull(input);
         var call = await ExecuteSessionAsync(() => StartNamedSession("relate", question, input, options),
         null, cancellation).ConfigureAwait(false);
         return ProjectRelate(call);

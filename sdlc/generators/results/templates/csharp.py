@@ -620,7 +620,7 @@ def answer_helpers(definitions):
             argument = 'feed' if feed else 'input'
             lines += ['public async Task<' + result_type + '> ' + function.title() + 'Async(RequestQuestion question, ' + input_type + ' ' + argument + ',',
                       'RequestOptions? options = null, CancellationToken cancellation = default) {',
-                      'ArgumentNullException.ThrowIfNull(' + argument + ');',
+                      *(['ArgumentNullException.ThrowIfNull(feed);'] if feed else []),
                       'var call = await ExecuteSessionAsync(() => StartNamedSession(' + quote(function) + ', question, ' + ('FeedInput' if feed else 'input') + ', options), ' + ('feed' if feed else 'null') + ', cancellation).ConfigureAwait(false);',
                       'return Project' + function.title() + suffix + '(call);', '}']
         values_expr = 'row.' + projection

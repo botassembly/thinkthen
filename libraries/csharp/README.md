@@ -14,16 +14,16 @@ using ThinkThen;
 using ThinkThen.Inputs;
 
 using var engine = Engine.Open(new EngineSettings { MaxRetries = 0 });
-OwnedCall call = await engine.DecideAsync(
+var call = await engine.DecideAsync(
     new RequestQuestionText { Text = "Does this answer the question?" },
     new RequestInputText { Text = "The supplied evidence." },
     cancellation: cancellationToken);
 Console.WriteLine(call.Value);
 ```
 
-The `examples/` folder contains a small installed sample for each function. Each sample reads its answer through a generated accessor. The recognize and relate samples build typed questions; the relate sample reads source and target names directly. Routine package checks replay the shipped source and count its sends.
+The `examples/` folder contains a small installed sample for each function. Each sample reads its result’s `Value`. The recognize and relate samples build typed questions; the relate sample reads source and target names directly. Routine package checks replay the shipped source and count its sends.
 
-The ten named `*Async` methods admit generated Request inputs and return owned generated row, aggregate, observation and terminal packets. `SessionFailure` retains the native typed failure and completed packet prefix. Immediate admission errors use `Failure`. Host cancellation throws `OperationCanceledException` promptly and releases session ownership. The native provider can still be settling after that exception.
+The ten named `*Async` methods admit generated Request inputs and return a typed `CallResult` with the answer, probability, complete records and actual terminal facts. The result retains owned generated packets for callers who also need session observations. `SessionFailure` retains the native typed failure and completed packet prefix. Immediate admission errors use `Failure`. Host cancellation throws `OperationCanceledException` promptly and releases session ownership. The native provider can still be settling after that exception.
 
 `Engine.StartSession` exposes `OwnedSession.ReadAsync`, `PushAsync`, `Finish`, `Cancel` and disposal. A read returns null only at native End. Push retries the same descriptor after Full; false means Closed and the producer must stop advancing its reader. One reader and one producer can run concurrently. `ExecuteAsync` runs an asynchronous feed and drain together, which prevents either bounded queue from blocking the other. `Finish` accepts an optional generated `RequestReaderFailure` for I/O, UTF-8 or input-grammar failures and an optional caller-owned source location. `ExecuteAsync` maps `IOException`, `DecoderFallbackException`, `JsonException` and `InvalidDataException` from its feed to these native failures without copying host diagnostics. Native admission validates settings and locations. An arbitrary asynchronous iterator must honor its cancellation token; the binding cannot interrupt foreign iterator code.
 
