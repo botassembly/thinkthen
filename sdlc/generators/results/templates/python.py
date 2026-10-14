@@ -108,7 +108,8 @@ def column_schema(source):
         key = source['$ref'].removeprefix('#/$defs/')
         return ('ref', key)
     if 'properties' in source:
-        return {key: column_schema(value) for key, value in source['properties'].items()}
+        keys = dict.fromkeys((*source.get('required', ()), *source['properties']))
+        return {key: column_schema(source['properties'][key]) for key in keys}
     alternatives = source.get('anyOf', source.get('oneOf', []))
     choices = [column_schema(value) for value in alternatives if value.get('type') != 'null']
     if choices: return choices[0] if len(choices) == 1 or all(value == choices[0] for value in choices) else None
@@ -139,6 +140,7 @@ def types(definitions, stubs=False):
             lines += ['', f'class {name(key)}(_NativeResult):', '    __slots__ = ()']
             if not stubs:
                 lines.append('    _column_schema = _COLUMN_SCHEMAS[' + repr(key) + ']')
+                lines.append('    _column_required = ' + repr(tuple(source.get('required', ()))))
             if stubs:
                 for member, field in source['properties'].items():
                     if member.isidentifier():

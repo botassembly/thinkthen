@@ -94,6 +94,72 @@ def test_polars_frame_answers_keep_native_types_false_null_and_field_projection(
     assert backend.count() == 8
 
 
+def test_polars_annotation_frames_keep_complete_failure_schema(backend, tmp_path):
+    printed = run('''
+        import json, threading, polars as pl, thinkthen as tt
+        from http.server import BaseHTTPRequestHandler, HTTPServer
+        class Reply(BaseHTTPRequestHandler):
+            def log_message(self, *args): pass
+            def do_POST(self):
+                request = json.loads(self.rfile.read(int(self.headers['Content-Length'])))
+                self.server.calls += 1
+                instructions = request['questions']['q1']['instructions']
+                omitted = 'q1' if 'The text is "first"' in instructions else 'q2' if 'The text is "second"' in instructions else None
+                answers = {name: {'type': 'noul', 'noul': .9} for name in request['questions'] if name != omitted}
+                response = json.dumps({'model': 'jev-latest', 'answers': answers,
+                                       'usage': {'input_tokens': 10, 'output_tokens': 2}}).encode()
+                self.send_response(200)
+                self.send_header('Connection', 'close')
+                self.send_header('Content-Length', str(len(response)))
+                self.end_headers(); self.wfile.write(response)
+        server = HTTPServer(('127.0.0.1', 0), Reply); server.calls = 0
+        threading.Thread(target=server.serve_forever, daemon=True).start()
+        form = {'version': 1, 'questions': {'first': {'decide': 'First?'}, 'second': {'decide': 'Second?'}}}
+        marker = pl.Struct({'failed': pl.Struct({'kind': pl.String, 'cause': pl.String})})
+        expected = {'body': pl.String, 'first': pl.Boolean, 'second': pl.Boolean,
+                    'failed': pl.Struct({'first': marker, 'second': marker})}
+        with tt.Engine(cache=False, batch=1, max_retries=0,
+                       base_url=f'http://127.0.0.1:{server.server_port}/v1') as engine:
+            for values in ([], [None, None], ['ok', None]):
+                source = pl.DataFrame({'body': pl.Series(values, dtype=pl.String)})
+                result = engine.annotate(form, source, on='body')
+                assert result.value.schema == expected
+                assert result.value['failed'].to_list() == [None] * len(values)
+                assert result.value['first'].to_list() == [True if value is not None else None for value in values]
+            source = pl.DataFrame({'body': ['first', None, 'second', 'ok']})
+            result = engine.annotate(form, source, on='body')
+            assert result.value.schema == expected
+            failure = {'failed': {'kind': 'backend', 'cause': 'missing_answer'}}
+            assert result.value['failed'].to_list() == [
+                {'first': failure, 'second': None}, None, {'first': None, 'second': failure}, None], result.value['failed'].to_list()
+            assert result.value['first'].to_list() == [None, None, True, True]
+            assert result.value['second'].to_list() == [True, None, None, True]
+        assert server.calls == 4
+        server.shutdown(); server.server_close()
+        print('stable annotation schema')
+    ''', child_env(backend, tmp_path))
+    assert printed.strip() == 'stable annotation schema'
+    assert backend.count() == 0
+
+
+def test_polars_recognition_frames_keep_empty_entity_schema(backend, tmp_path):
+    printed = run('''
+        import polars as pl, thinkthen as tt
+        with tt.Engine(cache=False) as engine:
+            for values in ([], [None, None]):
+                source = pl.DataFrame({'body': pl.Series(values, dtype=pl.String)})
+                result = engine.recognize(source, kinds=['person'], on='body')
+                assert result.value.schema == {'row': pl.Int64, 'text': pl.String, 'start': pl.Int64,
+                                              'end': pl.Int64, 'length': pl.Int64, 'kind': pl.String,
+                                              'strength': pl.Float64}
+                assert result.value.height == 0
+                assert result.facts.requests_sent == 0
+        print('stable empty entity schema')
+    ''', child_env(backend, tmp_path))
+    assert printed.strip() == 'stable empty entity schema'
+    assert backend.count() == 0
+
+
 @pytest.mark.parametrize("shape", ["pandas", "polars"])
 def test_named_and_async_series_calls_keep_owned_rows_and_original_positions(backend, tmp_path, shape):
     printed = run('''

@@ -4,39 +4,39 @@ from typing import Any, Literal, Union
 
 _COLUMN_SCHEMAS = {
     "completeAnnotation": {
+        "schema": ("ref", "completeVersion"),
         "answer_id": ("ref", "completeAnswerId"),
+        "input": None,
+        "value": ("ref", "completeannotatedRow"),
         "answers": None,
+        "meta": ("ref", "completeMeta"),
         "file": "string",
         "first_line": "integer",
         "index": "integer",
-        "input": None,
         "last_line": "integer",
-        "meta": ("ref", "completeMeta"),
         "position": ("ref", "completePosition"),
-        "schema": ("ref", "completeVersion"),
         "source": ("ref", "completePhysicalSource"),
-        "value": ("ref", "completeannotatedRow"),
     },
     "completeAnnotationMember": None,
     "completeAnnotationMember_answer_id": {
-        "answer": ("ref", "completeanswer"),
         "answer_id": ("ref", "completeAnswerId"),
-        "observations": [("ref", "completeObservation")],
-        "question": ("ref", "completequestionDocument"),
-        "question_sources": [("ref", "completeQuestionSource")],
-        "request": "string",
-        "threshold": ("ref", "completethreshold"),
-        "usage": ("ref", "completeUsage"),
         "value": ("ref", "completevalue"),
+        "question": ("ref", "completequestionDocument"),
+        "answer": ("ref", "completeanswer"),
+        "threshold": ("ref", "completethreshold"),
+        "request": "string",
+        "question_sources": [("ref", "completeQuestionSource")],
+        "observations": [("ref", "completeObservation")],
+        "usage": ("ref", "completeUsage"),
     },
     "completeAnnotationMember_failure_id": {
-        "failure": ("ref", "completefailure"),
         "failure_id": ("ref", "completeFailureId"),
-        "observations": [("ref", "completeObservation")],
         "question": ("ref", "completequestionDocument"),
-        "question_sources": [("ref", "completeQuestionSource")],
-        "request": "string",
+        "failure": ("ref", "completefailure"),
         "threshold": ("ref", "completethreshold"),
+        "request": "string",
+        "question_sources": [("ref", "completeQuestionSource")],
+        "observations": [("ref", "completeObservation")],
         "usage": ("ref", "completeUsage"),
     },
     "completeAnnotationValue": None,
@@ -51,104 +51,104 @@ _COLUMN_SCHEMAS = {
     "completeAnswerId": "string",
     "completeAnswers": {"questions": [("ref", "completeRelationMember")]},
     "completeAtomic_Array_of_string": {
-        "answer": ("ref", "completeanswer"),
+        "schema": ("ref", "completeVersion"),
         "answer_id": ("ref", "completeAnswerId"),
+        "value": ["string"],
+        "question": ("ref", "completequestionDocument"),
+        "answer": ("ref", "completeanswer"),
+        "threshold": ("ref", "completethreshold"),
+        "meta": ("ref", "completeMeta"),
         "images": [("ref", "completeImage")],
         "index": "integer",
         "input": None,
         "members": [("ref", "completeRankMember")],
-        "meta": ("ref", "completeMeta"),
-        "question": ("ref", "completequestionDocument"),
         "question_name": "string",
-        "schema": ("ref", "completeVersion"),
         "source": ("ref", "completePhysicalSource"),
-        "threshold": ("ref", "completethreshold"),
-        "value": ["string"],
     },
     "completeAtomic_DecideValue": {
-        "answer": ("ref", "completeanswer"),
+        "schema": ("ref", "completeVersion"),
         "answer_id": ("ref", "completeAnswerId"),
+        "value": ("ref", "completeDecideValue"),
+        "question": ("ref", "completequestionDocument"),
+        "answer": ("ref", "completeanswer"),
+        "threshold": ("ref", "completethreshold"),
+        "meta": ("ref", "completeMeta"),
         "images": [("ref", "completeImage")],
         "index": "integer",
         "input": None,
         "members": [("ref", "completeRankMember")],
-        "meta": ("ref", "completeMeta"),
-        "question": ("ref", "completequestionDocument"),
         "question_name": "string",
-        "schema": ("ref", "completeVersion"),
         "source": ("ref", "completePhysicalSource"),
-        "threshold": ("ref", "completethreshold"),
-        "value": ("ref", "completeDecideValue"),
     },
     "completeAtomic_NonZeroUsize": {
-        "answer": ("ref", "completeanswer"),
+        "schema": ("ref", "completeVersion"),
         "answer_id": ("ref", "completeAnswerId"),
+        "value": "integer",
+        "question": ("ref", "completequestionDocument"),
+        "answer": ("ref", "completeanswer"),
+        "threshold": ("ref", "completethreshold"),
+        "meta": ("ref", "completeMeta"),
         "images": [("ref", "completeImage")],
         "index": "integer",
         "input": None,
         "members": [("ref", "completeRankMember")],
-        "meta": ("ref", "completeMeta"),
-        "question": ("ref", "completequestionDocument"),
         "question_name": "string",
-        "schema": ("ref", "completeVersion"),
         "source": ("ref", "completePhysicalSource"),
-        "threshold": ("ref", "completethreshold"),
-        "value": "integer",
     },
     "completeAtomic_Nullable_string": {
-        "answer": ("ref", "completeanswer"),
+        "schema": ("ref", "completeVersion"),
         "answer_id": ("ref", "completeAnswerId"),
+        "value": "string",
+        "question": ("ref", "completequestionDocument"),
+        "answer": ("ref", "completeanswer"),
+        "threshold": ("ref", "completethreshold"),
+        "meta": ("ref", "completeMeta"),
         "images": [("ref", "completeImage")],
         "index": "integer",
         "input": None,
         "members": [("ref", "completeRankMember")],
-        "meta": ("ref", "completeMeta"),
-        "question": ("ref", "completequestionDocument"),
         "question_name": "string",
-        "schema": ("ref", "completeVersion"),
         "source": ("ref", "completePhysicalSource"),
-        "threshold": ("ref", "completethreshold"),
-        "value": "string",
     },
     "completeAtomic_boolean": {
-        "answer": ("ref", "completeanswer"),
+        "schema": ("ref", "completeVersion"),
         "answer_id": ("ref", "completeAnswerId"),
+        "value": "boolean",
+        "question": ("ref", "completequestionDocument"),
+        "answer": ("ref", "completeanswer"),
+        "threshold": ("ref", "completethreshold"),
+        "meta": ("ref", "completeMeta"),
         "images": [("ref", "completeImage")],
         "index": "integer",
         "input": None,
         "members": [("ref", "completeRankMember")],
-        "meta": ("ref", "completeMeta"),
-        "question": ("ref", "completequestionDocument"),
         "question_name": "string",
-        "schema": ("ref", "completeVersion"),
         "source": ("ref", "completePhysicalSource"),
-        "threshold": ("ref", "completethreshold"),
-        "value": "boolean",
     },
     "completeAtomic_double": {
-        "answer": ("ref", "completeanswer"),
+        "schema": ("ref", "completeVersion"),
         "answer_id": ("ref", "completeAnswerId"),
+        "value": "number",
+        "question": ("ref", "completequestionDocument"),
+        "answer": ("ref", "completeanswer"),
+        "threshold": ("ref", "completethreshold"),
+        "meta": ("ref", "completeMeta"),
         "images": [("ref", "completeImage")],
         "index": "integer",
         "input": None,
         "members": [("ref", "completeRankMember")],
-        "meta": ("ref", "completeMeta"),
-        "question": ("ref", "completequestionDocument"),
         "question_name": "string",
-        "schema": ("ref", "completeVersion"),
         "source": ("ref", "completePhysicalSource"),
-        "threshold": ("ref", "completethreshold"),
-        "value": "number",
     },
     "completeAttempt": {
         "ordinal": "integer",
-        "outcome": ("ref", "completeattemptOutcome"),
-        "request_id": "string",
         "request_sha256": "string",
+        "wall_ms": "integer",
+        "outcome": ("ref", "completeattemptOutcome"),
         "sdk_request_id": ("ref", "completeSdkRequestId"),
+        "request_id": "string",
         "server_ms": "integer",
         "status": "integer",
-        "wall_ms": "integer",
     },
     "completeBatch": None,
     "completeBoundaryMode": "string",
@@ -157,11 +157,11 @@ _COLUMN_SCHEMAS = {
         "proposals": [("ref", "completeBoundaryProposal")],
     },
     "completeBoundaryProposal": {
+        "text": "string",
+        "start": "integer",
         "end": "integer",
         "length": "integer",
         "probability": "number",
-        "start": "integer",
-        "text": "string",
     },
     "completeCallError": {
         "error": ("ref", "completeError"),
@@ -169,14 +169,14 @@ _COLUMN_SCHEMAS = {
     },
     "completeCallId": "string",
     "completeDecideValue": None,
-    "completeEntityDocument": {"kind": "string", "name": "string"},
+    "completeEntityDocument": {"name": "string", "kind": "string"},
     "completeError": {
-        "estimated_input_denial": ("ref", "completeEstimatedInputDenial"),
         "kind": ("ref", "completefailureKind"),
         "message": "string",
         "retryable": "boolean",
-        "send_budget_denial": ("ref", "completeSendBudgetDenial"),
         "stopped": ("ref", "completeStopped"),
+        "estimated_input_denial": ("ref", "completeEstimatedInputDenial"),
+        "send_budget_denial": ("ref", "completeSendBudgetDenial"),
     },
     "completeEstimatedInputDenial": None,
     "completeEstimatedInputDenial_additional_request": {
@@ -189,41 +189,41 @@ _COLUMN_SCHEMAS = {
     },
     "completeEstimatedInputDenial_retry": {
         "kind": "string",
-        "last_status": "integer",
         "limit": "integer",
+        "last_status": "integer",
     },
     "completeFacts": {
-        "attempts": [("ref", "completeAttempt")],
-        "cache_answers": "integer",
         "call_id": ("ref", "completeCallId"),
+        "cache_answers": "integer",
+        "records": "integer",
+        "requests_sent": "integer",
+        "largest_request_bytes": "integer",
+        "largest_request_estimated_input_tokens": "integer",
+        "token_estimate_method": "string",
+        "seconds": "number",
+        "attempts": [("ref", "completeAttempt")],
         "estimated_cost_usd": "string",
         "held_model_mismatch": "boolean",
         "input_tokens": "integer",
-        "largest_request_bytes": "integer",
-        "largest_request_estimated_input_tokens": "integer",
         "model": "string",
         "output_tokens": "integer",
-        "records": "integer",
-        "requests_sent": "integer",
-        "seconds": "number",
-        "token_estimate_method": "string",
         "usage_persistence": ("ref", "completePersistenceObservation"),
     },
     "completeFailureId": "string",
     "completeFind": {
-        "answer": ("ref", "completefindAnswer"),
+        "schema": ("ref", "completeVersion"),
         "answer_id": ("ref", "completeAnswerId"),
+        "value": None,
+        "index": "integer",
+        "question": ("ref", "completefindQuestionDocument"),
+        "answer": ("ref", "completefindAnswer"),
+        "threshold": None,
+        "meta": ("ref", "completeMeta"),
         "candidates": [("ref", "completeFindCandidate")],
         "file": "string",
         "first_line": "integer",
-        "index": "integer",
         "last_line": "integer",
-        "meta": ("ref", "completeMeta"),
         "position": ("ref", "completePosition"),
-        "question": ("ref", "completefindQuestionDocument"),
-        "schema": ("ref", "completeVersion"),
-        "threshold": None,
-        "value": None,
     },
     "completeFindCandidate": {
         "index": "integer",
@@ -232,53 +232,53 @@ _COLUMN_SCHEMAS = {
         "source": ("ref", "completePhysicalSource"),
     },
     "completeImage": {
-        "base64": "string",
-        "height": "integer",
         "media": ("ref", "completeImageMedia"),
+        "base64": "string",
         "width": "integer",
+        "height": "integer",
     },
     "completeImageMedia": "string",
     "completeInputDeclaration": None,
     "completeInputDeclaration_ObjectRoot": {
+        "type": ("ref", "completeObjectType"),
         "properties": None,
         "required": ["string"],
-        "type": ("ref", "completeObjectType"),
     },
     "completeInputDeclaration_StringRoot": {"type": ("ref", "completeStringType")},
     "completeInputPropertyType": None,
     "completeInputPropertyType_array": {
-        "items": ("ref", "completeStringRoot"),
         "type": "string",
+        "items": ("ref", "completeStringRoot"),
     },
     "completeInputPropertyType_boolean": {"type": "string"},
     "completeInputPropertyType_number": {"type": "string"},
     "completeInputPropertyType_string": {"type": "string"},
-    "completeLabel": {"description": None, "name": "string"},
+    "completeLabel": {"name": "string", "description": None},
     "completeMeta": {
+        "tool": "string",
+        "url": "string",
+        "model": "string",
+        "requests_sent": "integer",
+        "cached": "boolean",
+        "requests": ["string"],
+        "failed_questions": "integer",
+        "origin": ("ref", "completeOrigin"),
+        "question_sources": [("ref", "completeQuestionSource")],
+        "observations": [("ref", "completeObservation")],
         "answered_by": "string",
         "attempts": [("ref", "completeAttempt")],
         "batch_setting": ("ref", "completebatchSetting"),
         "batch_warning": ("ref", "completebatchWarning"),
-        "cached": "boolean",
         "context_sha256": "string",
-        "failed_questions": "integer",
-        "model": "string",
-        "observations": [("ref", "completeObservation")],
-        "origin": ("ref", "completeOrigin"),
         "profile_warning": ("ref", "completeprofileWarning"),
         "question_sha256": "string",
-        "question_sources": [("ref", "completeQuestionSource")],
         "questions_sha256": "string",
-        "requests": ["string"],
-        "requests_sent": "integer",
-        "tool": "string",
-        "url": "string",
         "usage": ("ref", "completeUsage"),
     },
     "completeObjectRoot": {
+        "type": ("ref", "completeObjectType"),
         "properties": None,
         "required": ["string"],
-        "type": ("ref", "completeObjectType"),
     },
     "completeObjectType": "string",
     "completeObservation": None,
@@ -289,9 +289,9 @@ _COLUMN_SCHEMAS = {
     },
     "completeOrigin": "string",
     "completePersistenceObservation": {
-        "advice": "string",
-        "observed_at": "string",
         "state": ("ref", "completeUsagePersistence"),
+        "observed_at": "string",
+        "advice": "string",
     },
     "completePhysicalSource": {
         "file": "string",
@@ -306,46 +306,46 @@ _COLUMN_SCHEMAS = {
     },
     "completeQuestionName": "string",
     "completeQuestionSource": {
+        "origin": ("ref", "completeOrigin"),
         "answered_by": "string",
         "batch_size": "integer",
-        "origin": ("ref", "completeOrigin"),
     },
     "completeRankMember": {
         "name": "string",
         "result": ("ref", "completeRankMemberResult"),
     },
     "completeRankMemberResult": {
-        "answer": ("ref", "completeanswer"),
-        "answer_id": ("ref", "completeAnswerId"),
-        "images": [("ref", "completeImage")],
-        "meta": ("ref", "completeMeta"),
-        "question": ("ref", "completequestionDocument"),
         "schema": ("ref", "completeVersion"),
-        "source": ("ref", "completePhysicalSource"),
-        "threshold": None,
+        "answer_id": ("ref", "completeAnswerId"),
         "value": "integer",
+        "question": ("ref", "completequestionDocument"),
+        "answer": ("ref", "completeanswer"),
+        "threshold": None,
+        "meta": ("ref", "completeMeta"),
+        "images": [("ref", "completeImage")],
+        "source": ("ref", "completePhysicalSource"),
     },
     "completeRecognition": {
-        "answer": ("ref", "completeRecognitionOdds"),
+        "schema": ("ref", "completeVersion"),
         "answer_id": ("ref", "completeAnswerId"),
+        "value": ("ref", "completerecognize"),
+        "question": ("ref", "completerecognizeQuestionDocument"),
+        "answer": ("ref", "completeRecognitionOdds"),
+        "meta": ("ref", "completeMeta"),
         "file": "string",
         "first_line": "integer",
         "index": "integer",
         "input": None,
         "last_line": "integer",
-        "meta": ("ref", "completeMeta"),
         "position": ("ref", "completePosition"),
-        "question": ("ref", "completerecognizeQuestionDocument"),
-        "schema": ("ref", "completeVersion"),
         "source": ("ref", "completePhysicalSource"),
-        "value": ("ref", "completerecognize"),
     },
     "completeRecognitionEdgeDocument": {
-        "either": "boolean",
-        "probability": "number",
         "relation": "string",
         "source": ("ref", "completeentity"),
         "target": ("ref", "completeentity"),
+        "probability": "number",
+        "either": "boolean",
     },
     "completeRecognitionMode": "string",
     "completeRecognitionOdds": None,
@@ -354,18 +354,18 @@ _COLUMN_SCHEMAS = {
         "proposals": [("ref", "completeBoundaryProposal")],
     },
     "completeRecognitionOdds_recognizeAnswer": {
-        "names": [("ref", "completenameOdds")],
-        "pairs": [("ref", "completepairOdds")],
         "pieces": [("ref", "completepieceOdds")],
+        "names": [("ref", "completenameOdds")],
         "proposals": [("ref", "completeRecognitionProposal")],
+        "pairs": [("ref", "completepairOdds")],
     },
     "completeRecognitionProposal": {
+        "start": "integer",
         "end": "integer",
+        "span_probability": "number",
         "kept": "boolean",
         "kind": "string",
         "selected": ("ref", "completeplace"),
-        "span_probability": "number",
-        "start": "integer",
         "strength": "number",
     },
     "completeRecognitionStageContext": {
@@ -374,66 +374,66 @@ _COLUMN_SCHEMAS = {
         "relation": "string",
     },
     "completeRelation": {
-        "answer": ("ref", "completeAnswers"),
+        "schema": ("ref", "completeVersion"),
         "answer_id": ("ref", "completeAnswerId"),
+        "value": [("ref", "completerelatedEntityEdge")],
+        "question": ("ref", "completerelateQuestionDocument"),
+        "answer": ("ref", "completeAnswers"),
+        "meta": ("ref", "completeMeta"),
         "file": "string",
         "first_line": "integer",
         "index": "integer",
         "input": None,
         "input_sources": [("ref", "completesessionInputSource")],
         "last_line": "integer",
-        "meta": ("ref", "completeMeta"),
         "position": ("ref", "completePosition"),
-        "question": ("ref", "completerelateQuestionDocument"),
-        "schema": ("ref", "completeVersion"),
-        "value": [("ref", "completerelatedEntityEdge")],
     },
     "completeRelationDirection": "string",
     "completeRelationEndpoint": None,
-    "completeRelationEndpoint_relatedEntity": {"kind": "string", "name": "string"},
+    "completeRelationEndpoint_relatedEntity": {"name": "string", "kind": "string"},
     "completeRelationEndpoint_source": {
-        "file": "string",
-        "first_line": "integer",
-        "kind": "string",
-        "last_line": "integer",
         "name": "string",
+        "kind": "string",
         "ordinal": "integer",
         "record": None,
+        "file": "string",
+        "first_line": "integer",
+        "last_line": "integer",
     },
     "completeRelationMember": None,
     "completeRelationMember_answer_id": {
-        "direction": ("ref", "completeRelationDirection"),
-        "method": ("ref", "completeRelationMethod"),
-        "observations": [("ref", "completeObservation")],
-        "question": ("ref", "completequestionDocument"),
-        "question_sources": [("ref", "completeQuestionSource")],
-        "reads": "string",
         "relation": "string",
-        "request": "string",
+        "reads": "string",
+        "method": ("ref", "completeRelationMethod"),
+        "direction": ("ref", "completeRelationDirection"),
         "source": ("ref", "completerelatedEntity"),
         "target": ("ref", "completerelatedEntity"),
+        "request": "string",
+        "question": ("ref", "completequestionDocument"),
         "threshold": ("ref", "completethreshold"),
-        "usage": ("ref", "completeUsage"),
-        "accepted": "boolean",
-        "answer": ("ref", "completeanswer"),
+        "question_sources": [("ref", "completeQuestionSource")],
+        "observations": [("ref", "completeObservation")],
         "answer_id": ("ref", "completeAnswerId"),
         "probability": "number",
+        "accepted": "boolean",
+        "answer": ("ref", "completeanswer"),
+        "usage": ("ref", "completeUsage"),
     },
     "completeRelationMember_failure_id": {
-        "direction": ("ref", "completeRelationDirection"),
-        "method": ("ref", "completeRelationMethod"),
-        "observations": [("ref", "completeObservation")],
-        "question": ("ref", "completequestionDocument"),
-        "question_sources": [("ref", "completeQuestionSource")],
-        "reads": "string",
         "relation": "string",
-        "request": "string",
+        "reads": "string",
+        "method": ("ref", "completeRelationMethod"),
+        "direction": ("ref", "completeRelationDirection"),
         "source": ("ref", "completerelatedEntity"),
         "target": ("ref", "completerelatedEntity"),
+        "request": "string",
+        "question": ("ref", "completequestionDocument"),
         "threshold": ("ref", "completethreshold"),
-        "usage": ("ref", "completeUsage"),
-        "failure": ("ref", "completefailure"),
+        "question_sources": [("ref", "completeQuestionSource")],
+        "observations": [("ref", "completeObservation")],
         "failure_id": ("ref", "completeFailureId"),
+        "failure": ("ref", "completefailure"),
+        "usage": ("ref", "completeUsage"),
     },
     "completeRelationMethod": "string",
     "completeRequestFunction": "string",
@@ -447,9 +447,9 @@ _COLUMN_SCHEMAS = {
     },
     "completeStopCause": "string",
     "completeStopped": {
-        "at": "integer",
         "cause": ("ref", "completeStopCause"),
         "retryable": "boolean",
+        "at": "integer",
         "status": "integer",
     },
     "completeStringRoot": {"type": ("ref", "completeStringType")},
@@ -463,95 +463,98 @@ _COLUMN_SCHEMAS = {
     "completeannotatedRow": None,
     "completeanswer": None,
     "completeanswer_choice": {
-        "confidence": "number",
         "kind": "string",
         "pick": "string",
         "probabilities": None,
+        "confidence": "number",
     },
     "completeanswer_score": {
-        "confidence": "number",
         "kind": "string",
         "level": "string",
         "probabilities": None,
+        "confidence": "number",
     },
     "completeanswer_tag": {"kind": "string", "probabilities": None},
     "completeanswer_yes_no": {"kind": "string", "probability": "number"},
     "completeattemptOutcome": "string",
     "completebatchSetting": None,
     "completebatchWarning": {
-        "running": ("ref", "completebatchSetting"),
         "tuned_for": ("ref", "completebatchSetting"),
+        "running": ("ref", "completebatchSetting"),
     },
     "completeentity": {
+        "text": "string",
+        "start": "integer",
         "end": "integer",
+        "length": "integer",
+        "kind": "string",
+        "strength": "number",
         "file": "string",
         "first_line": "integer",
-        "kind": "string",
         "last_line": "integer",
-        "length": "integer",
-        "start": "integer",
-        "strength": "number",
-        "text": "string",
     },
     "completeentityEdge": {
-        "either": "boolean",
-        "probability": "number",
         "relation": "string",
         "source": ("ref", "completeentity"),
         "target": ("ref", "completeentity"),
+        "probability": "number",
+        "either": "boolean",
     },
     "completefailed": {"failed": ("ref", "completefailure")},
-    "completefailure": {"cause": ("ref", "completefailureCause"), "kind": "string"},
+    "completefailure": {"kind": "string", "cause": ("ref", "completefailureCause")},
     "completefailureCause": "string",
     "completefailureKind": "string",
     "completefindAnswer": {
-        "confidence": "number",
-        "kind": None,
         "pick": "string",
         "probabilities": None,
+        "kind": None,
+        "confidence": "number",
     },
     "completefindQuestionDocument": {
+        "text": None,
+        "none": "boolean",
+        "verb": None,
         "batch": ("ref", "completeBatch"),
         "context_schema": ("ref", "completeInputDeclaration"),
         "item_schema": ("ref", "completeInputDeclaration"),
         "label_details": [("ref", "completeLabel")],
         "model": "string",
         "name": ("ref", "completeQuestionName"),
-        "none": "boolean",
         "on": ["string"],
         "profile": "string",
-        "text": None,
-        "verb": None,
         "wording_version": ("ref", "completeWordingVersion"),
     },
     "completenameOdds": {
-        "edges": None,
+        "start": "integer",
         "end": "integer",
         "kinds": None,
-        "start": "integer",
+        "edges": None,
     },
     "completepairOdds": {
-        "probability": "number",
         "relation": "string",
         "source": ("ref", "completeplace"),
         "target": ("ref", "completeplace"),
+        "probability": "number",
     },
-    "completepieceOdds": {"end": "integer", "start": "integer", "tags": None},
-    "completeplace": {"end": "integer", "start": "integer"},
+    "completepieceOdds": {"start": "integer", "end": "integer", "tags": None},
+    "completeplace": {"start": "integer", "end": "integer"},
     "completeplan": {
-        "estimated_bytes": "integer",
-        "estimated_input_tokens": ("ref", "completetokenBand"),
-        "first_body_utf8": "string",
-        "largest_request_bytes": "integer",
-        "largest_request_estimated_input_tokens": "integer",
         "records": "integer",
         "requests": "integer",
+        "estimated_bytes": "integer",
+        "largest_request_bytes": "integer",
+        "largest_request_estimated_input_tokens": "integer",
         "token_estimate_method": "string",
+        "estimated_input_tokens": ("ref", "completetokenBand"),
         "upper_bound": "boolean",
+        "first_body_utf8": "string",
     },
-    "completeprofileWarning": {"running": "string", "tuned_for": "string"},
+    "completeprofileWarning": {"tuned_for": "string", "running": "string"},
     "completequestionDocument": None,
     "completequestionDocument_choose": {
+        "verb": "string",
+        "text": None,
+        "options": ["string"],
         "batch": ("ref", "completeBatch"),
         "context_schema": ("ref", "completeInputDeclaration"),
         "item_schema": ("ref", "completeInputDeclaration"),
@@ -561,11 +564,10 @@ _COLUMN_SCHEMAS = {
         "on": ["string"],
         "profile": "string",
         "wording_version": ("ref", "completeWordingVersion"),
-        "options": ["string"],
-        "text": None,
-        "verb": "string",
     },
     "completequestionDocument_decide": {
+        "verb": "string",
+        "text": None,
         "batch": ("ref", "completeBatch"),
         "context_schema": ("ref", "completeInputDeclaration"),
         "item_schema": ("ref", "completeInputDeclaration"),
@@ -576,11 +578,12 @@ _COLUMN_SCHEMAS = {
         "profile": "string",
         "wording_version": ("ref", "completeWordingVersion"),
         "false": None,
-        "text": None,
         "true": None,
-        "verb": "string",
     },
     "completequestionDocument_score": {
+        "verb": "string",
+        "text": None,
+        "levels": ["string"],
         "batch": ("ref", "completeBatch"),
         "context_schema": ("ref", "completeInputDeclaration"),
         "item_schema": ("ref", "completeInputDeclaration"),
@@ -590,11 +593,11 @@ _COLUMN_SCHEMAS = {
         "on": ["string"],
         "profile": "string",
         "wording_version": ("ref", "completeWordingVersion"),
-        "levels": ["string"],
-        "text": None,
-        "verb": "string",
     },
     "completequestionDocument_tag": {
+        "verb": "string",
+        "text": None,
+        "labels": ["string"],
         "batch": ("ref", "completeBatch"),
         "context_schema": ("ref", "completeInputDeclaration"),
         "item_schema": ("ref", "completeInputDeclaration"),
@@ -604,24 +607,23 @@ _COLUMN_SCHEMAS = {
         "on": ["string"],
         "profile": "string",
         "wording_version": ("ref", "completeWordingVersion"),
-        "labels": ["string"],
-        "text": None,
-        "verb": "string",
     },
     "completerecognize": None,
     "completerecognizeAnswer": {
-        "names": [("ref", "completenameOdds")],
-        "pairs": [("ref", "completepairOdds")],
         "pieces": [("ref", "completepieceOdds")],
+        "names": [("ref", "completenameOdds")],
         "proposals": [("ref", "completeRecognitionProposal")],
+        "pairs": [("ref", "completepairOdds")],
     },
     "completerecognizeQuestionDocument": {
+        "verb": ("ref", "completeVerb"),
+        "kinds": None,
+        "threshold": ("ref", "completethreshold"),
         "batch": ("ref", "completeBatch"),
         "context_schema": ("ref", "completeInputDeclaration"),
         "entity_definition": None,
         "instructions": None,
         "item_schema": ("ref", "completeInputDeclaration"),
-        "kinds": None,
         "label_details": [("ref", "completeLabel")],
         "mode": ("ref", "completeRecognitionMode"),
         "model": "string",
@@ -632,8 +634,6 @@ _COLUMN_SCHEMAS = {
         "relations": [("ref", "completerelationRule")],
         "snippet_pieces": "integer",
         "stage_context": ("ref", "completeRecognitionStageContext"),
-        "threshold": ("ref", "completethreshold"),
-        "verb": ("ref", "completeVerb"),
         "wording_version": ("ref", "completeWordingVersion"),
     },
     "completerecognize_entities": {
@@ -644,37 +644,37 @@ _COLUMN_SCHEMAS = {
         "mode": ("ref", "completeBoundaryMode"),
         "proposals": [("ref", "completeBoundaryProposal")],
     },
-    "completerelateFields": {"kind": "string", "name": "string"},
+    "completerelateFields": {"name": "string", "kind": "string"},
     "completerelateQuestionDocument": {
+        "verb": None,
+        "fields": ("ref", "completerelateFields"),
+        "relations": [("ref", "completerelationRule")],
+        "threshold": ("ref", "completethreshold"),
         "batch": ("ref", "completeBatch"),
         "context_schema": ("ref", "completeInputDeclaration"),
-        "fields": ("ref", "completerelateFields"),
         "item_schema": ("ref", "completeInputDeclaration"),
         "label_details": [("ref", "completeLabel")],
         "model": "string",
         "name": ("ref", "completeQuestionName"),
         "on": ["string"],
         "profile": "string",
-        "relations": [("ref", "completerelationRule")],
-        "threshold": ("ref", "completethreshold"),
-        "verb": None,
         "wording_version": ("ref", "completeWordingVersion"),
     },
-    "completerelatedEntity": {"kind": "string", "name": "string"},
+    "completerelatedEntity": {"name": "string", "kind": "string"},
     "completerelatedEntityEdge": {
-        "either": "boolean",
-        "probability": "number",
         "relation": "string",
         "source": ("ref", "completeRelationEndpoint"),
         "target": ("ref", "completeRelationEndpoint"),
+        "probability": "number",
+        "either": "boolean",
     },
     "completerelationRule": {
-        "either": "boolean",
         "name": "string",
-        "reads": "string",
-        "single": "boolean",
         "source": "string",
         "target": "string",
+        "reads": "string",
+        "either": "boolean",
+        "single": "boolean",
     },
     "completesessionAnnotation": {
         "name": "string",
@@ -692,16 +692,16 @@ _COLUMN_SCHEMAS = {
     "completesessionNamedProbability": {"name": "string", "probability": "number"},
     "completesessionObservation": None,
     "completesessionObservation_question": {
-        "detail": ("ref", "completesessionQuestionDetail"),
-        "index": "integer",
         "kind": "string",
-        "member": "string",
+        "index": "integer",
         "position": "integer",
+        "detail": ("ref", "completesessionQuestionDetail"),
+        "member": "string",
         "stage": "string",
     },
     "completesessionObservation_row": {
-        "index": "integer",
         "kind": "string",
+        "index": "integer",
         "value": ("ref", "completesessionObservedRow"),
     },
     "completesessionObservedRow": None,
@@ -725,93 +725,93 @@ _COLUMN_SCHEMAS = {
     "completesessionPacket": None,
     "completesessionPacket_annotate_aggregate": {
         "function": "string",
-        "kind": "string",
         "value": [("ref", "completeAnnotation")],
+        "kind": "string",
     },
     "completesessionPacket_annotate_row": {
         "function": "string",
-        "kind": "string",
         "value": ("ref", "completeAnnotation"),
+        "kind": "string",
     },
     "completesessionPacket_choose_aggregate": {
         "function": "string",
-        "kind": "string",
         "value": [("ref", "completeAtomic_Nullable_string")],
+        "kind": "string",
     },
     "completesessionPacket_choose_row": {
         "function": "string",
-        "kind": "string",
         "value": ("ref", "completeAtomic_Nullable_string"),
+        "kind": "string",
     },
     "completesessionPacket_decide_aggregate": {
         "function": "string",
-        "kind": "string",
         "value": [("ref", "completeAtomic_DecideValue")],
+        "kind": "string",
     },
     "completesessionPacket_decide_row": {
         "function": "string",
-        "kind": "string",
         "value": ("ref", "completeAtomic_DecideValue"),
+        "kind": "string",
     },
     "completesessionPacket_filter_aggregate": {
         "function": "string",
-        "kind": "string",
         "value": [("ref", "completeAtomic_boolean")],
+        "kind": "string",
     },
     "completesessionPacket_filter_row": {
         "function": "string",
-        "kind": "string",
         "value": ("ref", "completeAtomic_boolean"),
+        "kind": "string",
     },
     "completesessionPacket_find_aggregate": {
         "function": "string",
-        "kind": "string",
         "value": ("ref", "completeFind"),
+        "kind": "string",
     },
     "completesessionPacket_observation": {
-        "function": ("ref", "completeRequestFunction"),
         "kind": "string",
+        "function": ("ref", "completeRequestFunction"),
         "value": ("ref", "completesessionObservation"),
     },
     "completesessionPacket_rank_aggregate": {
         "function": "string",
-        "kind": "string",
         "value": [("ref", "completeAtomic_NonZeroUsize")],
+        "kind": "string",
     },
     "completesessionPacket_recognize_aggregate": {
         "function": "string",
-        "kind": "string",
         "value": [("ref", "completeRecognition")],
+        "kind": "string",
     },
     "completesessionPacket_relate_aggregate": {
         "function": "string",
-        "kind": "string",
         "value": ("ref", "completeRelation"),
+        "kind": "string",
     },
     "completesessionPacket_score_aggregate": {
         "function": "string",
-        "kind": "string",
         "value": [("ref", "completeAtomic_double")],
+        "kind": "string",
     },
     "completesessionPacket_score_row": {
         "function": "string",
-        "kind": "string",
         "value": ("ref", "completeAtomic_double"),
+        "kind": "string",
     },
     "completesessionPacket_tag_aggregate": {
         "function": "string",
-        "kind": "string",
         "value": [("ref", "completeAtomic_Array_of_string")],
+        "kind": "string",
     },
     "completesessionPacket_tag_row": {
         "function": "string",
-        "kind": "string",
         "value": ("ref", "completeAtomic_Array_of_string"),
+        "kind": "string",
     },
     "completesessionPacket_terminal": {
+        "kind": "string",
         "facts": ("ref", "completeFacts"),
         "failure": ("ref", "completeCallError"),
-        "kind": "string",
     },
     "completesessionProbabilities": None,
     "completesessionProbabilities_named": {
@@ -820,52 +820,52 @@ _COLUMN_SCHEMAS = {
     },
     "completesessionProbabilities_yes_no": {"kind": "string", "value": "number"},
     "completesessionQuestionDetail": {
-        "answer_id": ("ref", "completeAnswerId"),
+        "question_sha256": "string",
+        "model": "string",
+        "url": "string",
+        "requests": ["string"],
+        "requests_sent": "integer",
         "cached": "boolean",
-        "confidence": "number",
         "failed_questions": "integer",
+        "question": ("ref", "completequestionDocument"),
+        "question_sources": [("ref", "completeQuestionSource")],
+        "observations": [("ref", "completeObservation")],
+        "inputs": [None],
+        "input_sources": [("ref", "completesessionInputSource")],
+        "answer_id": ("ref", "completeAnswerId"),
+        "confidence": "number",
         "failure": ("ref", "completefailure"),
         "failure_id": ("ref", "completeFailureId"),
         "input": None,
         "input_source": ("ref", "completePhysicalSource"),
-        "input_sources": [("ref", "completesessionInputSource")],
-        "inputs": [None],
-        "model": "string",
-        "observations": [("ref", "completeObservation")],
         "probabilities": ("ref", "completesessionProbabilities"),
-        "question": ("ref", "completequestionDocument"),
-        "question_sha256": "string",
-        "question_sources": [("ref", "completeQuestionSource")],
         "raw_pick": "string",
         "reported_usage": ("ref", "completeUsage"),
-        "requests": ["string"],
-        "requests_sent": "integer",
         "threshold": ("ref", "completethreshold"),
-        "url": "string",
         "usage": ("ref", "completetokenUsage"),
         "value": ("ref", "completevalue"),
     },
     "completesessionRecognition": {
-        "entities": [("ref", "completeentity")],
         "mode": ("ref", "completeRecognitionMode"),
+        "entities": [("ref", "completeentity")],
         "proposals": [("ref", "completeBoundaryProposal")],
         "relations": [("ref", "completeRecognitionEdgeDocument")],
     },
     "completesessionRelationEdge": {
-        "either": "boolean",
-        "probability": "number",
         "relation": "string",
         "source": ("ref", "completeEntityDocument"),
         "target": ("ref", "completeEntityDocument"),
+        "probability": "number",
+        "either": "boolean",
     },
     "completesourceRelationEndpoint": {
-        "file": "string",
-        "first_line": "integer",
-        "kind": "string",
-        "last_line": "integer",
         "name": "string",
+        "kind": "string",
         "ordinal": "integer",
         "record": None,
+        "file": "string",
+        "first_line": "integer",
+        "last_line": "integer",
     },
     "completethreshold": "number",
     "completetokenBand": {"lower": "integer", "upper": "integer"},
@@ -877,661 +877,954 @@ _COLUMN_SCHEMAS = {
 class NativeAnnotation(_NativeResult):
     __slots__ = ()
     _column_schema = _COLUMN_SCHEMAS["completeAnnotation"]
+    _column_required = ("schema", "answer_id", "input", "value", "answers", "meta")
 
 
 class NativeAnnotationMemberAnswerId(_NativeResult):
     __slots__ = ()
     _column_schema = _COLUMN_SCHEMAS["completeAnnotationMember_answer_id"]
+    _column_required = (
+        "answer_id",
+        "value",
+        "question",
+        "answer",
+        "threshold",
+        "request",
+        "question_sources",
+        "observations",
+    )
 
 
 class NativeAnnotationMemberFailureId(_NativeResult):
     __slots__ = ()
     _column_schema = _COLUMN_SCHEMAS["completeAnnotationMember_failure_id"]
+    _column_required = (
+        "failure_id",
+        "question",
+        "failure",
+        "threshold",
+        "request",
+        "question_sources",
+        "observations",
+    )
 
 
 class NativeAnnotationValueChoice(_NativeResult):
     __slots__ = ()
     _column_schema = _COLUMN_SCHEMAS["completeAnnotationValue_choice"]
+    _column_required = ("kind", "value")
 
 
 class NativeAnnotationValueDecision(_NativeResult):
     __slots__ = ()
     _column_schema = _COLUMN_SCHEMAS["completeAnnotationValue_decision"]
+    _column_required = ("kind", "value")
 
 
 class NativeAnnotationValueFailed(_NativeResult):
     __slots__ = ()
     _column_schema = _COLUMN_SCHEMAS["completeAnnotationValue_failed"]
+    _column_required = ("kind", "value")
 
 
 class NativeAnnotationValueScore(_NativeResult):
     __slots__ = ()
     _column_schema = _COLUMN_SCHEMAS["completeAnnotationValue_score"]
+    _column_required = ("kind", "value")
 
 
 class NativeAnnotationValueTags(_NativeResult):
     __slots__ = ()
     _column_schema = _COLUMN_SCHEMAS["completeAnnotationValue_tags"]
+    _column_required = ("kind", "value")
 
 
 class NativeAnswers(_NativeResult):
     __slots__ = ()
     _column_schema = _COLUMN_SCHEMAS["completeAnswers"]
+    _column_required = ("questions",)
 
 
 class NativeAtomicArrayOfString(_NativeResult):
     __slots__ = ()
     _column_schema = _COLUMN_SCHEMAS["completeAtomic_Array_of_string"]
+    _column_required = (
+        "schema",
+        "answer_id",
+        "value",
+        "question",
+        "answer",
+        "threshold",
+        "meta",
+    )
 
 
 class NativeAtomicDecideValue(_NativeResult):
     __slots__ = ()
     _column_schema = _COLUMN_SCHEMAS["completeAtomic_DecideValue"]
+    _column_required = (
+        "schema",
+        "answer_id",
+        "value",
+        "question",
+        "answer",
+        "threshold",
+        "meta",
+    )
 
 
 class NativeAtomicNonZeroUsize(_NativeResult):
     __slots__ = ()
     _column_schema = _COLUMN_SCHEMAS["completeAtomic_NonZeroUsize"]
+    _column_required = (
+        "schema",
+        "answer_id",
+        "value",
+        "question",
+        "answer",
+        "threshold",
+        "meta",
+    )
 
 
 class NativeAtomicNullableString(_NativeResult):
     __slots__ = ()
     _column_schema = _COLUMN_SCHEMAS["completeAtomic_Nullable_string"]
+    _column_required = (
+        "schema",
+        "answer_id",
+        "value",
+        "question",
+        "answer",
+        "threshold",
+        "meta",
+    )
 
 
 class NativeAtomicBoolean(_NativeResult):
     __slots__ = ()
     _column_schema = _COLUMN_SCHEMAS["completeAtomic_boolean"]
+    _column_required = (
+        "schema",
+        "answer_id",
+        "value",
+        "question",
+        "answer",
+        "threshold",
+        "meta",
+    )
 
 
 class NativeAtomicDouble(_NativeResult):
     __slots__ = ()
     _column_schema = _COLUMN_SCHEMAS["completeAtomic_double"]
+    _column_required = (
+        "schema",
+        "answer_id",
+        "value",
+        "question",
+        "answer",
+        "threshold",
+        "meta",
+    )
 
 
 class NativeAttempt(_NativeResult):
     __slots__ = ()
     _column_schema = _COLUMN_SCHEMAS["completeAttempt"]
+    _column_required = (
+        "ordinal",
+        "request_sha256",
+        "wall_ms",
+        "outcome",
+        "sdk_request_id",
+    )
 
 
 class NativeBoundaryOdds(_NativeResult):
     __slots__ = ()
     _column_schema = _COLUMN_SCHEMAS["completeBoundaryOdds"]
+    _column_required = ("pieces", "proposals")
 
 
 class NativeBoundaryProposal(_NativeResult):
     __slots__ = ()
     _column_schema = _COLUMN_SCHEMAS["completeBoundaryProposal"]
+    _column_required = ("text", "start", "end", "length", "probability")
 
 
 class NativeCallError(_NativeResult):
     __slots__ = ()
     _column_schema = _COLUMN_SCHEMAS["completeCallError"]
+    _column_required = ("error",)
 
 
 class NativeEntityDocument(_NativeResult):
     __slots__ = ()
     _column_schema = _COLUMN_SCHEMAS["completeEntityDocument"]
+    _column_required = ("name", "kind")
 
 
 class NativeError(_NativeResult):
     __slots__ = ()
     _column_schema = _COLUMN_SCHEMAS["completeError"]
+    _column_required = ("kind", "message", "retryable", "stopped")
 
 
 class NativeEstimatedInputDenialAdditionalRequest(_NativeResult):
     __slots__ = ()
     _column_schema = _COLUMN_SCHEMAS["completeEstimatedInputDenial_additional_request"]
+    _column_required = ("kind", "limit")
 
 
 class NativeEstimatedInputDenialInitialRequest(_NativeResult):
     __slots__ = ()
     _column_schema = _COLUMN_SCHEMAS["completeEstimatedInputDenial_initial_request"]
+    _column_required = ("kind", "limit")
 
 
 class NativeEstimatedInputDenialRetry(_NativeResult):
     __slots__ = ()
     _column_schema = _COLUMN_SCHEMAS["completeEstimatedInputDenial_retry"]
+    _column_required = ("kind", "limit", "last_status")
 
 
 class NativeFacts(_NativeResult):
     __slots__ = ()
     _column_schema = _COLUMN_SCHEMAS["completeFacts"]
+    _column_required = (
+        "call_id",
+        "cache_answers",
+        "records",
+        "requests_sent",
+        "largest_request_bytes",
+        "largest_request_estimated_input_tokens",
+        "token_estimate_method",
+        "seconds",
+    )
 
 
 class NativeFind(_NativeResult):
     __slots__ = ()
     _column_schema = _COLUMN_SCHEMAS["completeFind"]
+    _column_required = (
+        "schema",
+        "answer_id",
+        "value",
+        "index",
+        "question",
+        "answer",
+        "threshold",
+        "meta",
+    )
 
 
 class NativeFindCandidate(_NativeResult):
     __slots__ = ()
     _column_schema = _COLUMN_SCHEMAS["completeFindCandidate"]
+    _column_required = ("index", "input", "probability")
 
 
 class NativeImage(_NativeResult):
     __slots__ = ()
     _column_schema = _COLUMN_SCHEMAS["completeImage"]
+    _column_required = ("media", "base64", "width", "height")
 
 
 class NativeInputDeclarationObjectRoot(_NativeResult):
     __slots__ = ()
     _column_schema = _COLUMN_SCHEMAS["completeInputDeclaration_ObjectRoot"]
+    _column_required = ("type", "properties")
 
 
 class NativeInputDeclarationStringRoot(_NativeResult):
     __slots__ = ()
     _column_schema = _COLUMN_SCHEMAS["completeInputDeclaration_StringRoot"]
+    _column_required = ("type",)
 
 
 class NativeInputPropertyTypeArray(_NativeResult):
     __slots__ = ()
     _column_schema = _COLUMN_SCHEMAS["completeInputPropertyType_array"]
+    _column_required = ("type", "items")
 
 
 class NativeInputPropertyTypeBoolean(_NativeResult):
     __slots__ = ()
     _column_schema = _COLUMN_SCHEMAS["completeInputPropertyType_boolean"]
+    _column_required = ("type",)
 
 
 class NativeInputPropertyTypeNumber(_NativeResult):
     __slots__ = ()
     _column_schema = _COLUMN_SCHEMAS["completeInputPropertyType_number"]
+    _column_required = ("type",)
 
 
 class NativeInputPropertyTypeString(_NativeResult):
     __slots__ = ()
     _column_schema = _COLUMN_SCHEMAS["completeInputPropertyType_string"]
+    _column_required = ("type",)
 
 
 class NativeLabel(_NativeResult):
     __slots__ = ()
     _column_schema = _COLUMN_SCHEMAS["completeLabel"]
+    _column_required = ("name",)
 
 
 class NativeMeta(_NativeResult):
     __slots__ = ()
     _column_schema = _COLUMN_SCHEMAS["completeMeta"]
+    _column_required = (
+        "tool",
+        "url",
+        "model",
+        "requests_sent",
+        "cached",
+        "requests",
+        "failed_questions",
+        "origin",
+        "question_sources",
+        "observations",
+    )
 
 
 class NativeObjectRoot(_NativeResult):
     __slots__ = ()
     _column_schema = _COLUMN_SCHEMAS["completeObjectRoot"]
+    _column_required = ("type", "properties")
 
 
 class NativeObservationFailureId(_NativeResult):
     __slots__ = ()
     _column_schema = _COLUMN_SCHEMAS["completeObservation_failure_id"]
+    _column_required = ("failure_id",)
 
 
 class NativeObservationObservationId(_NativeResult):
     __slots__ = ()
     _column_schema = _COLUMN_SCHEMAS["completeObservation_observation_id"]
+    _column_required = ("observation_id",)
 
 
 class NativePersistenceObservation(_NativeResult):
     __slots__ = ()
     _column_schema = _COLUMN_SCHEMAS["completePersistenceObservation"]
+    _column_required = ("state", "observed_at")
 
 
 class NativePhysicalSource(_NativeResult):
     __slots__ = ()
     _column_schema = _COLUMN_SCHEMAS["completePhysicalSource"]
+    _column_required = ("file",)
 
 
 class NativePosition(_NativeResult):
     __slots__ = ()
     _column_schema = _COLUMN_SCHEMAS["completePosition"]
+    _column_required = ("file",)
 
 
 class NativeQuestionSource(_NativeResult):
     __slots__ = ()
     _column_schema = _COLUMN_SCHEMAS["completeQuestionSource"]
+    _column_required = ("origin", "answered_by")
 
 
 class NativeRankMember(_NativeResult):
     __slots__ = ()
     _column_schema = _COLUMN_SCHEMAS["completeRankMember"]
+    _column_required = ("name", "result")
 
 
 class NativeRankMemberResult(_NativeResult):
     __slots__ = ()
     _column_schema = _COLUMN_SCHEMAS["completeRankMemberResult"]
+    _column_required = (
+        "schema",
+        "answer_id",
+        "value",
+        "question",
+        "answer",
+        "threshold",
+        "meta",
+    )
 
 
 class NativeRecognition(_NativeResult):
     __slots__ = ()
     _column_schema = _COLUMN_SCHEMAS["completeRecognition"]
+    _column_required = ("schema", "answer_id", "value", "question", "answer", "meta")
 
 
 class NativeRecognitionEdgeDocument(_NativeResult):
     __slots__ = ()
     _column_schema = _COLUMN_SCHEMAS["completeRecognitionEdgeDocument"]
+    _column_required = ("relation", "source", "target", "probability", "either")
 
 
 class NativeRecognitionOddsBoundaryOdds(_NativeResult):
     __slots__ = ()
     _column_schema = _COLUMN_SCHEMAS["completeRecognitionOdds_BoundaryOdds"]
+    _column_required = ("pieces", "proposals")
 
 
 class NativeRecognitionOddsRecognizeAnswer(_NativeResult):
     __slots__ = ()
     _column_schema = _COLUMN_SCHEMAS["completeRecognitionOdds_recognizeAnswer"]
+    _column_required = ("pieces", "names", "proposals", "pairs")
 
 
 class NativeRecognitionProposal(_NativeResult):
     __slots__ = ()
     _column_schema = _COLUMN_SCHEMAS["completeRecognitionProposal"]
+    _column_required = ("start", "end", "span_probability", "kept")
 
 
 class NativeRecognitionStageContext(_NativeResult):
     __slots__ = ()
     _column_schema = _COLUMN_SCHEMAS["completeRecognitionStageContext"]
+    _column_required = ()
 
 
 class NativeRelation(_NativeResult):
     __slots__ = ()
     _column_schema = _COLUMN_SCHEMAS["completeRelation"]
+    _column_required = ("schema", "answer_id", "value", "question", "answer", "meta")
 
 
 class NativeRelationEndpointRelatedEntity(_NativeResult):
     __slots__ = ()
     _column_schema = _COLUMN_SCHEMAS["completeRelationEndpoint_relatedEntity"]
+    _column_required = ("name", "kind")
 
 
 class NativeRelationEndpointSource(_NativeResult):
     __slots__ = ()
     _column_schema = _COLUMN_SCHEMAS["completeRelationEndpoint_source"]
+    _column_required = ("name", "kind", "ordinal", "record", "file")
 
 
 class NativeRelationMemberAnswerId(_NativeResult):
     __slots__ = ()
     _column_schema = _COLUMN_SCHEMAS["completeRelationMember_answer_id"]
+    _column_required = (
+        "relation",
+        "reads",
+        "method",
+        "direction",
+        "source",
+        "target",
+        "request",
+        "question",
+        "threshold",
+        "question_sources",
+        "observations",
+        "answer_id",
+        "probability",
+        "accepted",
+        "answer",
+    )
 
 
 class NativeRelationMemberFailureId(_NativeResult):
     __slots__ = ()
     _column_schema = _COLUMN_SCHEMAS["completeRelationMember_failure_id"]
+    _column_required = (
+        "relation",
+        "reads",
+        "method",
+        "direction",
+        "source",
+        "target",
+        "request",
+        "question",
+        "threshold",
+        "question_sources",
+        "observations",
+        "failure_id",
+        "failure",
+    )
 
 
 class NativeSendBudgetDenialBeforeAdditionalSend(_NativeResult):
     __slots__ = ()
     _column_schema = _COLUMN_SCHEMAS["completeSendBudgetDenial_before_additional_send"]
+    _column_required = ("kind",)
 
 
 class NativeSendBudgetDenialBeforeFirstSend(_NativeResult):
     __slots__ = ()
     _column_schema = _COLUMN_SCHEMAS["completeSendBudgetDenial_before_first_send"]
+    _column_required = ("kind",)
 
 
 class NativeSendBudgetDenialBeforeRetry(_NativeResult):
     __slots__ = ()
     _column_schema = _COLUMN_SCHEMAS["completeSendBudgetDenial_before_retry"]
+    _column_required = ("kind", "last_status")
 
 
 class NativeStopped(_NativeResult):
     __slots__ = ()
     _column_schema = _COLUMN_SCHEMAS["completeStopped"]
+    _column_required = ("cause", "retryable")
 
 
 class NativeStringRoot(_NativeResult):
     __slots__ = ()
     _column_schema = _COLUMN_SCHEMAS["completeStringRoot"]
+    _column_required = ("type",)
 
 
 class NativeUsage(_NativeResult):
     __slots__ = ()
     _column_schema = _COLUMN_SCHEMAS["completeUsage"]
+    _column_required = ()
 
 
 class NativeAnswerChoice(_NativeResult):
     __slots__ = ()
     _column_schema = _COLUMN_SCHEMAS["completeanswer_choice"]
+    _column_required = ("kind", "pick", "probabilities")
 
 
 class NativeAnswerScore(_NativeResult):
     __slots__ = ()
     _column_schema = _COLUMN_SCHEMAS["completeanswer_score"]
+    _column_required = ("kind", "level", "probabilities")
 
 
 class NativeAnswerTag(_NativeResult):
     __slots__ = ()
     _column_schema = _COLUMN_SCHEMAS["completeanswer_tag"]
+    _column_required = ("kind", "probabilities")
 
 
 class NativeAnswerYesNo(_NativeResult):
     __slots__ = ()
     _column_schema = _COLUMN_SCHEMAS["completeanswer_yes_no"]
+    _column_required = ("kind", "probability")
 
 
 class NativeBatchWarning(_NativeResult):
     __slots__ = ()
     _column_schema = _COLUMN_SCHEMAS["completebatchWarning"]
+    _column_required = ("tuned_for", "running")
 
 
 class NativeEntity(_NativeResult):
     __slots__ = ()
     _column_schema = _COLUMN_SCHEMAS["completeentity"]
+    _column_required = ("text", "start", "end", "length", "kind", "strength")
 
 
 class NativeEntityEdge(_NativeResult):
     __slots__ = ()
     _column_schema = _COLUMN_SCHEMAS["completeentityEdge"]
+    _column_required = ("relation", "source", "target", "probability")
 
 
 class NativeFailed(_NativeResult):
     __slots__ = ()
     _column_schema = _COLUMN_SCHEMAS["completefailed"]
+    _column_required = ("failed",)
 
 
 class NativeFailure(_NativeResult):
     __slots__ = ()
     _column_schema = _COLUMN_SCHEMAS["completefailure"]
+    _column_required = ("kind", "cause")
 
 
 class NativeFindAnswer(_NativeResult):
     __slots__ = ()
     _column_schema = _COLUMN_SCHEMAS["completefindAnswer"]
+    _column_required = ("pick", "probabilities", "kind")
 
 
 class NativeFindQuestionDocument(_NativeResult):
     __slots__ = ()
     _column_schema = _COLUMN_SCHEMAS["completefindQuestionDocument"]
+    _column_required = ("text", "none", "verb")
 
 
 class NativeNameOdds(_NativeResult):
     __slots__ = ()
     _column_schema = _COLUMN_SCHEMAS["completenameOdds"]
+    _column_required = ("start", "end", "kinds", "edges")
 
 
 class NativePairOdds(_NativeResult):
     __slots__ = ()
     _column_schema = _COLUMN_SCHEMAS["completepairOdds"]
+    _column_required = ("relation", "source", "target", "probability")
 
 
 class NativePieceOdds(_NativeResult):
     __slots__ = ()
     _column_schema = _COLUMN_SCHEMAS["completepieceOdds"]
+    _column_required = ("start", "end", "tags")
 
 
 class NativePlace(_NativeResult):
     __slots__ = ()
     _column_schema = _COLUMN_SCHEMAS["completeplace"]
+    _column_required = ("start", "end")
 
 
 class NativePlan(_NativeResult):
     __slots__ = ()
     _column_schema = _COLUMN_SCHEMAS["completeplan"]
+    _column_required = (
+        "records",
+        "requests",
+        "estimated_bytes",
+        "largest_request_bytes",
+        "largest_request_estimated_input_tokens",
+        "token_estimate_method",
+        "estimated_input_tokens",
+        "upper_bound",
+        "first_body_utf8",
+    )
 
 
 class NativeProfileWarning(_NativeResult):
     __slots__ = ()
     _column_schema = _COLUMN_SCHEMAS["completeprofileWarning"]
+    _column_required = ("tuned_for", "running")
 
 
 class NativeQuestionDocumentChoose(_NativeResult):
     __slots__ = ()
     _column_schema = _COLUMN_SCHEMAS["completequestionDocument_choose"]
+    _column_required = ("verb", "text", "options")
 
 
 class NativeQuestionDocumentDecide(_NativeResult):
     __slots__ = ()
     _column_schema = _COLUMN_SCHEMAS["completequestionDocument_decide"]
+    _column_required = ("verb", "text")
 
 
 class NativeQuestionDocumentScore(_NativeResult):
     __slots__ = ()
     _column_schema = _COLUMN_SCHEMAS["completequestionDocument_score"]
+    _column_required = ("verb", "text", "levels")
 
 
 class NativeQuestionDocumentTag(_NativeResult):
     __slots__ = ()
     _column_schema = _COLUMN_SCHEMAS["completequestionDocument_tag"]
+    _column_required = ("verb", "text", "labels")
 
 
 class NativeRecognizeAnswer(_NativeResult):
     __slots__ = ()
     _column_schema = _COLUMN_SCHEMAS["completerecognizeAnswer"]
+    _column_required = ("pieces", "names", "proposals", "pairs")
 
 
 class NativeRecognizeQuestionDocument(_NativeResult):
     __slots__ = ()
     _column_schema = _COLUMN_SCHEMAS["completerecognizeQuestionDocument"]
+    _column_required = ("verb", "kinds", "threshold")
 
 
 class NativeRecognizeEntities(_NativeResult):
     __slots__ = ()
     _column_schema = _COLUMN_SCHEMAS["completerecognize_entities"]
+    _column_required = ("entities",)
 
 
 class NativeRecognizeModeProposals(_NativeResult):
     __slots__ = ()
     _column_schema = _COLUMN_SCHEMAS["completerecognize_mode_proposals"]
+    _column_required = ("mode", "proposals")
 
 
 class NativeRelateFields(_NativeResult):
     __slots__ = ()
     _column_schema = _COLUMN_SCHEMAS["completerelateFields"]
+    _column_required = ("name", "kind")
 
 
 class NativeRelateQuestionDocument(_NativeResult):
     __slots__ = ()
     _column_schema = _COLUMN_SCHEMAS["completerelateQuestionDocument"]
+    _column_required = ("verb", "fields", "relations", "threshold")
 
 
 class NativeRelatedEntity(_NativeResult):
     __slots__ = ()
     _column_schema = _COLUMN_SCHEMAS["completerelatedEntity"]
+    _column_required = ("name", "kind")
 
 
 class NativeRelatedEntityEdge(_NativeResult):
     __slots__ = ()
     _column_schema = _COLUMN_SCHEMAS["completerelatedEntityEdge"]
+    _column_required = ("relation", "source", "target", "probability")
 
 
 class NativeRelationRule(_NativeResult):
     __slots__ = ()
     _column_schema = _COLUMN_SCHEMAS["completerelationRule"]
+    _column_required = ("name", "source", "target", "reads", "either")
 
 
 class NativeSessionAnnotation(_NativeResult):
     __slots__ = ()
     _column_schema = _COLUMN_SCHEMAS["completesessionAnnotation"]
+    _column_required = ("name", "value")
 
 
 class NativeSessionInputSource(_NativeResult):
     __slots__ = ()
     _column_schema = _COLUMN_SCHEMAS["completesessionInputSource"]
+    _column_required = ("index", "source")
 
 
 class NativeSessionJudgmentChoice(_NativeResult):
     __slots__ = ()
     _column_schema = _COLUMN_SCHEMAS["completesessionJudgment_choice"]
+    _column_required = ("kind", "value")
 
 
 class NativeSessionJudgmentDecision(_NativeResult):
     __slots__ = ()
     _column_schema = _COLUMN_SCHEMAS["completesessionJudgment_decision"]
+    _column_required = ("kind", "value")
 
 
 class NativeSessionJudgmentScore(_NativeResult):
     __slots__ = ()
     _column_schema = _COLUMN_SCHEMAS["completesessionJudgment_score"]
+    _column_required = ("kind", "value")
 
 
 class NativeSessionJudgmentTags(_NativeResult):
     __slots__ = ()
     _column_schema = _COLUMN_SCHEMAS["completesessionJudgment_tags"]
+    _column_required = ("kind", "value")
 
 
 class NativeSessionNamedProbability(_NativeResult):
     __slots__ = ()
     _column_schema = _COLUMN_SCHEMAS["completesessionNamedProbability"]
+    _column_required = ("name", "probability")
 
 
 class NativeSessionObservationQuestion(_NativeResult):
     __slots__ = ()
     _column_schema = _COLUMN_SCHEMAS["completesessionObservation_question"]
+    _column_required = ("kind", "index", "position", "detail")
 
 
 class NativeSessionObservationRow(_NativeResult):
     __slots__ = ()
     _column_schema = _COLUMN_SCHEMAS["completesessionObservation_row"]
+    _column_required = ("kind", "index", "value")
 
 
 class NativeSessionObservedRowAnnotated(_NativeResult):
     __slots__ = ()
     _column_schema = _COLUMN_SCHEMAS["completesessionObservedRow_annotated"]
+    _column_required = ("kind", "value")
 
 
 class NativeSessionObservedRowFind(_NativeResult):
     __slots__ = ()
     _column_schema = _COLUMN_SCHEMAS["completesessionObservedRow_find"]
+    _column_required = ("kind", "value")
 
 
 class NativeSessionObservedRowJudgment(_NativeResult):
     __slots__ = ()
     _column_schema = _COLUMN_SCHEMAS["completesessionObservedRow_judgment"]
+    _column_required = ("kind", "value")
 
 
 class NativeSessionObservedRowRecognized(_NativeResult):
     __slots__ = ()
     _column_schema = _COLUMN_SCHEMAS["completesessionObservedRow_recognized"]
+    _column_required = ("kind", "value")
 
 
 class NativeSessionObservedRowRelations(_NativeResult):
     __slots__ = ()
     _column_schema = _COLUMN_SCHEMAS["completesessionObservedRow_relations"]
+    _column_required = ("kind", "value")
 
 
 class NativeSessionPacketAnnotateAggregate(_NativeResult):
     __slots__ = ()
     _column_schema = _COLUMN_SCHEMAS["completesessionPacket_annotate_aggregate"]
+    _column_required = ("function", "value", "kind")
 
 
 class NativeSessionPacketAnnotateRow(_NativeResult):
     __slots__ = ()
     _column_schema = _COLUMN_SCHEMAS["completesessionPacket_annotate_row"]
+    _column_required = ("function", "value", "kind")
 
 
 class NativeSessionPacketChooseAggregate(_NativeResult):
     __slots__ = ()
     _column_schema = _COLUMN_SCHEMAS["completesessionPacket_choose_aggregate"]
+    _column_required = ("function", "value", "kind")
 
 
 class NativeSessionPacketChooseRow(_NativeResult):
     __slots__ = ()
     _column_schema = _COLUMN_SCHEMAS["completesessionPacket_choose_row"]
+    _column_required = ("function", "value", "kind")
 
 
 class NativeSessionPacketDecideAggregate(_NativeResult):
     __slots__ = ()
     _column_schema = _COLUMN_SCHEMAS["completesessionPacket_decide_aggregate"]
+    _column_required = ("function", "value", "kind")
 
 
 class NativeSessionPacketDecideRow(_NativeResult):
     __slots__ = ()
     _column_schema = _COLUMN_SCHEMAS["completesessionPacket_decide_row"]
+    _column_required = ("function", "value", "kind")
 
 
 class NativeSessionPacketFilterAggregate(_NativeResult):
     __slots__ = ()
     _column_schema = _COLUMN_SCHEMAS["completesessionPacket_filter_aggregate"]
+    _column_required = ("function", "value", "kind")
 
 
 class NativeSessionPacketFilterRow(_NativeResult):
     __slots__ = ()
     _column_schema = _COLUMN_SCHEMAS["completesessionPacket_filter_row"]
+    _column_required = ("function", "value", "kind")
 
 
 class NativeSessionPacketFindAggregate(_NativeResult):
     __slots__ = ()
     _column_schema = _COLUMN_SCHEMAS["completesessionPacket_find_aggregate"]
+    _column_required = ("function", "value", "kind")
 
 
 class NativeSessionPacketObservation(_NativeResult):
     __slots__ = ()
     _column_schema = _COLUMN_SCHEMAS["completesessionPacket_observation"]
+    _column_required = ("kind", "function", "value")
 
 
 class NativeSessionPacketRankAggregate(_NativeResult):
     __slots__ = ()
     _column_schema = _COLUMN_SCHEMAS["completesessionPacket_rank_aggregate"]
+    _column_required = ("function", "value", "kind")
 
 
 class NativeSessionPacketRecognizeAggregate(_NativeResult):
     __slots__ = ()
     _column_schema = _COLUMN_SCHEMAS["completesessionPacket_recognize_aggregate"]
+    _column_required = ("function", "value", "kind")
 
 
 class NativeSessionPacketRelateAggregate(_NativeResult):
     __slots__ = ()
     _column_schema = _COLUMN_SCHEMAS["completesessionPacket_relate_aggregate"]
+    _column_required = ("function", "value", "kind")
 
 
 class NativeSessionPacketScoreAggregate(_NativeResult):
     __slots__ = ()
     _column_schema = _COLUMN_SCHEMAS["completesessionPacket_score_aggregate"]
+    _column_required = ("function", "value", "kind")
 
 
 class NativeSessionPacketScoreRow(_NativeResult):
     __slots__ = ()
     _column_schema = _COLUMN_SCHEMAS["completesessionPacket_score_row"]
+    _column_required = ("function", "value", "kind")
 
 
 class NativeSessionPacketTagAggregate(_NativeResult):
     __slots__ = ()
     _column_schema = _COLUMN_SCHEMAS["completesessionPacket_tag_aggregate"]
+    _column_required = ("function", "value", "kind")
 
 
 class NativeSessionPacketTagRow(_NativeResult):
     __slots__ = ()
     _column_schema = _COLUMN_SCHEMAS["completesessionPacket_tag_row"]
+    _column_required = ("function", "value", "kind")
 
 
 class NativeSessionPacketTerminal(_NativeResult):
     __slots__ = ()
     _column_schema = _COLUMN_SCHEMAS["completesessionPacket_terminal"]
+    _column_required = ("kind",)
 
 
 class NativeSessionProbabilitiesNamed(_NativeResult):
     __slots__ = ()
     _column_schema = _COLUMN_SCHEMAS["completesessionProbabilities_named"]
+    _column_required = ("kind", "value")
 
 
 class NativeSessionProbabilitiesYesNo(_NativeResult):
     __slots__ = ()
     _column_schema = _COLUMN_SCHEMAS["completesessionProbabilities_yes_no"]
+    _column_required = ("kind", "value")
 
 
 class NativeSessionQuestionDetail(_NativeResult):
     __slots__ = ()
     _column_schema = _COLUMN_SCHEMAS["completesessionQuestionDetail"]
+    _column_required = (
+        "question_sha256",
+        "model",
+        "url",
+        "requests",
+        "requests_sent",
+        "cached",
+        "failed_questions",
+        "question",
+        "question_sources",
+        "observations",
+        "inputs",
+        "input_sources",
+    )
 
 
 class NativeSessionRecognition(_NativeResult):
     __slots__ = ()
     _column_schema = _COLUMN_SCHEMAS["completesessionRecognition"]
+    _column_required = ("mode", "entities")
 
 
 class NativeSessionRelationEdge(_NativeResult):
     __slots__ = ()
     _column_schema = _COLUMN_SCHEMAS["completesessionRelationEdge"]
+    _column_required = ("relation", "source", "target", "probability", "either")
 
 
 class NativeSourceRelationEndpoint(_NativeResult):
     __slots__ = ()
     _column_schema = _COLUMN_SCHEMAS["completesourceRelationEndpoint"]
+    _column_required = ("name", "kind", "ordinal", "record", "file")
 
 
 class NativeTokenBand(_NativeResult):
     __slots__ = ()
     _column_schema = _COLUMN_SCHEMAS["completetokenBand"]
+    _column_required = ("lower", "upper")
 
 
 class NativeTokenUsage(_NativeResult):
     __slots__ = ()
     _column_schema = _COLUMN_SCHEMAS["completetokenUsage"]
+    _column_required = ("input_tokens", "output_tokens")
 
 
 NativeAnnotationMember = Union[
