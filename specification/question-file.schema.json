@@ -91,16 +91,7 @@
           "$ref": "#/$defs/profile"
         },
         "batch": {
-          "description": "`max`, or a whole number of at least 1.",
-          "anyOf": [
-            {
-              "const": "max"
-            },
-            {
-              "type": "integer",
-              "minimum": 1
-            }
-          ]
+          "$ref": "#/$defs/questionBatch"
         },
         "name": {
           "type": "string",
@@ -146,16 +137,7 @@
           "$ref": "#/$defs/profile"
         },
         "batch": {
-          "description": "`max`, or a whole number of at least 1.",
-          "anyOf": [
-            {
-              "const": "max"
-            },
-            {
-              "type": "integer",
-              "minimum": 1
-            }
-          ]
+          "$ref": "#/$defs/questionBatch"
         },
         "name": {
           "type": "string",
@@ -201,16 +183,7 @@
           "$ref": "#/$defs/profile"
         },
         "batch": {
-          "description": "`max`, or a whole number of at least 1.",
-          "anyOf": [
-            {
-              "const": "max"
-            },
-            {
-              "type": "integer",
-              "minimum": 1
-            }
-          ]
+          "$ref": "#/$defs/questionBatch"
         },
         "name": {
           "type": "string",
@@ -253,16 +226,7 @@
           "$ref": "#/$defs/profile"
         },
         "batch": {
-          "description": "`max`, or a whole number of at least 1.",
-          "anyOf": [
-            {
-              "const": "max"
-            },
-            {
-              "type": "integer",
-              "minimum": 1
-            }
-          ]
+          "$ref": "#/$defs/questionBatch"
         },
         "name": {
           "type": "string",
@@ -1187,6 +1151,18 @@
               }
             }
           }
+        }
+      ]
+    },
+    "questionBatch": {
+      "description": "`max`, or a whole number of at least 1.",
+      "anyOf": [
+        {
+          "const": "max"
+        },
+        {
+          "type": "integer",
+          "minimum": 1
         }
       ]
     }
