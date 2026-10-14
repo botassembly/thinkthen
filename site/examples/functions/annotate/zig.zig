@@ -14,9 +14,11 @@ pub fn main() !void {
 
     const form = "form.json";
     const report = "Steps: click Log in. Nobody gets in.";
-    var call = switch (try tt.calls.annotate(&engine, tt.calls.Arguments(tt.inputs.RequestInputText){
+    var call = switch (try tt.calls.annotate(&engine,
+        tt.calls.Arguments(tt.inputs.RequestInputText){
         .question = .{ .file = .{ .path = form } },
-        .input = tt.inputs.RequestInputText{ .text = report },
+        .input = tt.inputs.RequestInputText{
+            .text = report },
     })) {
         .ok => |result| result,
         .failed => |failure| {
@@ -46,6 +48,7 @@ pub fn main() !void {
         }
     }
     std.debug.assert(steps);
-    std.debug.assert(std.mem.eql(u8, area, "login"));
+    std.debug.assert(std.mem.eql(u8,
+        area, "login"));
     std.debug.assert(impact == 1.98);
 }

@@ -27,11 +27,13 @@ pub fn main() !void {
             .labels = .{ .array = &labels },
         },
     };
-    var call = switch (try tt.calls.tag(&engine, tt.calls.Arguments(tt.inputs.RequestInputText){
+    var call = switch (try tt.calls.tag(&engine,
+        tt.calls.Arguments(tt.inputs.RequestInputText){
         .question = .{
             .definition = .{ .value = which_labels },
         },
-        .input = tt.inputs.RequestInputText{ .text = message },
+        .input = tt.inputs.RequestInputText{
+            .text = message },
     })) {
         .ok => |result| result,
         .failed => |failure| {
@@ -44,6 +46,7 @@ pub fn main() !void {
     const fitting_labels = call.value;
     std.debug.assert(fitting_labels.len == 3);
     for (labels, fitting_labels) |label, fitting| {
-        std.debug.assert(std.mem.eql(u8, label, fitting));
+        std.debug.assert(std.mem.eql(u8,
+        label, fitting));
     }
 }

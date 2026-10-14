@@ -33,11 +33,13 @@ pub fn main() !void {
             .options = teams,
         },
     };
-    var call = switch (try tt.calls.choose(&engine, tt.calls.Arguments(tt.inputs.RequestInputText){
+    var call = switch (try tt.calls.choose(&engine,
+        tt.calls.Arguments(tt.inputs.RequestInputText){
         .question = .{
             .definition = .{ .value = which_team },
         },
-        .input = tt.inputs.RequestInputText{ .text = parcel },
+        .input = tt.inputs.RequestInputText{
+            .text = parcel },
     })) {
         .ok => |result| result,
         .failed => |failure| {
@@ -48,5 +50,6 @@ pub fn main() !void {
     defer call.deinit();
 
     const team = (call.value) orelse return error.NotSure;
-    std.debug.assert(std.mem.eql(u8, team, "shipping"));
+    std.debug.assert(std.mem.eql(u8,
+        team, "shipping"));
 }
