@@ -120,7 +120,7 @@ class Reader:
         if 'properties' not in source: return self.decode(source, value.value, key + '_value')
         result = {}
         for member, schema in source['properties'].items():
-            field = getattr(value, member)
+            field = getattr(value, member + '_' if member in ('true', 'false') else member)
             if member not in source.get('required', []) or nullable(schema, self.definitions):
                 if field.presence == 0: continue
                 if field.presence == 1: result[member] = None; continue
