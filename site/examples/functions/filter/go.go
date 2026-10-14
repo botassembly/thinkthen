@@ -30,10 +30,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	kept, err := call.FilterAnswer()
-	if err != nil {
-		log.Fatal(err)
-	}
+	kept := call.Value.([]any)
 	var complaints []string
 	for _, text := range kept {
 		complaints = append(complaints, text.(string))
@@ -41,5 +38,15 @@ func main() {
 	want := []string{reviews[1], reviews[3]}
 	if !slices.Equal(complaints, want) {
 		log.Fatal("expected two complaints")
+	}
+	probabilities := call.Probability.(tt.ProbabilityList)
+	wantProbabilities := []float64{0.9, 0.75}
+	if len(probabilities) != len(wantProbabilities) {
+		log.Fatal("expected aligned probabilities")
+	}
+	for i, probability := range probabilities {
+		if probability == nil || *probability != wantProbabilities[i] {
+			log.Fatal("unexpected recorded probability")
+		}
 	}
 }

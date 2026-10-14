@@ -37,12 +37,13 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	fittingLabels, err := call.TagAnswer()
-	if err != nil {
-		log.Fatal(err)
+	labelsReturned := call.Value.([]any)
+	var fittingLabels []string
+	for _, label := range labelsReturned {
+		fittingLabels = append(fittingLabels, label.(string))
 	}
 	want := []string{"praise", "bug", "billing"}
-	if !slices.Equal(fittingLabels, want) {
-		log.Fatal("expected all three labels")
+	if !slices.Equal(fittingLabels, want) || call.Probability != nil {
+		log.Fatal("expected all three labels with no scalar probability")
 	}
 }

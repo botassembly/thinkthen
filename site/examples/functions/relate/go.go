@@ -44,25 +44,26 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	related, err := call.RelateAnswer()
-	if err != nil {
-		log.Fatal(err)
-	}
+	edges := call.Value.([]any)
 	var pairs [][2]string
-	for _, edge := range related.Value().Value {
-		source, _ := edge.Source().Value.
-			AsRelationEndpointRelatedEntity()
-		target, _ := edge.Target().Value.
-			AsRelationEndpointRelatedEntity()
-		pairs = append(pairs, [2]string{
-			source.Name().Value, target.Name().Value,
-		})
+	for _, one := range edges {
+		edge := one.(map[string]any)
+		source := edge["source"].(map[string]any)
+		target := edge["target"].(map[string]any)
+		pairs = append(pairs, [2]string{source["name"].(string), target["name"].(string)})
 	}
-	want := [][2]string{
-		{"Apple", "iPhone"},
-		{"Amazon", "Kindle"},
-	}
+	want := [][2]string{{"Apple", "iPhone"}, {"Amazon", "Kindle"}}
 	if !slices.Equal(pairs, want) {
 		log.Fatal("expected two companies")
+	}
+	probabilities := call.Probability.(tt.ProbabilityList)
+	wantProbabilities := []float64{0.97, 0.91}
+	if len(probabilities) != len(wantProbabilities) {
+		log.Fatal("expected aligned probabilities")
+	}
+	for i, probability := range probabilities {
+		if probability == nil || *probability != wantProbabilities[i] {
+			log.Fatal("unexpected recorded probability")
+		}
 	}
 }

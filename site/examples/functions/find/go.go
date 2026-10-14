@@ -29,12 +29,8 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	found, err := call.FindAnswer()
-	if err != nil {
-		log.Fatal(err)
-	}
-	refundDeadline := found.Value().Value
-	if refundDeadline != policy[1] {
-		log.Fatal("expected the refund line")
+	refundDeadline, probability := call.Value.(string), float64(call.Probability.(tt.ProbabilityScalar))
+	if refundDeadline != policy[1] || probability != 1 {
+		log.Fatal("expected the refund line with probability 1")
 	}
 }
