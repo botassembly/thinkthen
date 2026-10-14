@@ -8553,7 +8553,7 @@ namespace tt::results::detail {
                         auto parsed=std::from_chars(text.data(),text.data()+text.size(),number);
                         if(parsed.ec==std::errc{
                         }) return Data(number);
-                    }
+                    } throw std::invalid_argument("native integer is outside the C++ range");
                 }
                 double number{
                 };
@@ -8577,7 +8577,9 @@ namespace tt::results::detail {
                 i<value.data.object.len;
                 ++i) {
                     auto& item=value.data.object.data[i];
-                    items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));
+                    auto name=native_value(item.name).get<std::string>();
+                    for(const auto& prior:items) if(prior.first==name) throw std::invalid_argument("duplicate original member");
+                    items.emplace_back(std::move(name),native_value(item.value));
                 } return Data(std::move(items));
             }
             default: throw std::invalid_argument("invalid native value kind");

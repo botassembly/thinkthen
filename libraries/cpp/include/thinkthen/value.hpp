@@ -1,5 +1,5 @@
 #pragma once
-// Local JSON value, parser and writer for host values. MIT, with this package.
+// Owned original values. Rust admits imported data.
 #include <cmath>
 #include <cstdint>
 #include <charconv>

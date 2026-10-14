@@ -8,6 +8,7 @@ endif()
 file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/client.cpp" "#include <thinkthen/native_implementation.hpp>\n")
 add_library(thinkthen_cpp_objects OBJECT "${CMAKE_CURRENT_BINARY_DIR}/client.cpp")
 target_compile_features(thinkthen_cpp_objects PRIVATE cxx_std_17)
+target_compile_options(thinkthen_cpp_objects PRIVATE -Wall -Wextra -Werror)
 target_include_directories(thinkthen_cpp_objects PRIVATE include "${CMAKE_CURRENT_BINARY_DIR}/include")
 option(THINKTHEN_ASAN "Instrument the C++ implementation for memory checks" OFF)
 if(THINKTHEN_ASAN)
@@ -26,7 +27,6 @@ foreach(kind shared static)
   endif()
   target_include_directories(thinkthen_cpp_${kind} INTERFACE
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/include>
     $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>)
   if(kind STREQUAL "shared")
     target_link_libraries(thinkthen_cpp_${kind} INTERFACE thinkthen::native_shared)
