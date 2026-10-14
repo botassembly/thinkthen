@@ -122,7 +122,7 @@ def duckdb_internal_call(folder, doc):
     dispatch = manual['workflow_dispatch'] or {}
     lane = dispatch.get('inputs', {}).get('lane', {})
     expected = {'if': "inputs.lane == 'duckdb-community'", 'uses': './.github/workflows/duckdb-community.yml'}
-    return (set(dispatch.get('inputs', {})) == {'lane'} and lane.get('type') == 'choice'
+    return (set(dispatch.get('inputs', {})) in ({'lane'}, {'lane', 'candidate_sha'}) and lane.get('type') == 'choice'
             and lane.get('options') == ['windows', 'duckdb-community'] and lane.get('default') == 'windows'
             and windows.get('permissions') == {'contents': 'read'}
             and windows.get('jobs', {}).get('duckdb-community') == expected)
@@ -130,6 +130,7 @@ def duckdb_internal_call(folder, doc):
 
 def every(name, doc, text, folder=None):
     out = []
+    out += runpy.run_path(str(REPO / 'sdlc/scripts/hosted-workflow.py'))['rules'](name, doc)
     triggers = doc.get("on", doc.get(True))
     triggers = [triggers] if isinstance(triggers, str) else list(triggers or [])
     for trigger in triggers:
@@ -861,6 +862,7 @@ def duckdb_hook_self_test():
 
 def self_test():
     duckdb_hook_self_test()
+    subprocess.run([sys.executable, str(REPO / 'sdlc/scripts/hosted-workflow-self-test.py')], check=True)
     real = check(REPO / ".github/workflows")
     cases = [
         ("real", None, None, []),
