@@ -30,11 +30,15 @@ func main() {
 			Relations: []tt.AuthoredRelation{makes},
 		},
 	}
+	var records []tt.RequestItem
+	for _, name := range names {
+		records = append(records, tt.JSONItem(name))
+	}
 	ask := tt.DefinedQuestion(definition)
 	call, err := client.Relate(
 		context.Background(),
 		ask,
-		names,
+		tt.RequestInputEntities{Items: records},
 		nil,
 	)
 	if err != nil {

@@ -11,6 +11,6 @@ try {
     refund, moneyBack,
   )).decideAnswer();
   assert.equal(
-    isRefund, "The customer asks for money back.",
+    isRefund, true,
   );
 } finally { tt.close(); }

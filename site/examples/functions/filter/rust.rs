@@ -10,6 +10,6 @@ let reviews = [
     "The strap snapped on day two.",
 ];
 let complaints = tt
-    .filter(&complaint, reviews)
+    .filter(&complaint, reviews)?
     .collect::<Result<Vec<_>, _>>()?;
 assert_eq!(complaints, [reviews[1], reviews[3]]);

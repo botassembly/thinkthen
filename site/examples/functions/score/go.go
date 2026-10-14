@@ -29,7 +29,7 @@ func main() {
 	call, err := client.Score(
 		context.Background(),
 		scale,
-		outage,
+		tt.TextInput(outage),
 		nil,
 	)
 	if err != nil {
@@ -39,7 +39,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	urgency, _ := level.Float64()
+	urgency := level
 	if urgency != 2 {
 		log.Fatal("expected 2")
 	}

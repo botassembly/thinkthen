@@ -19,7 +19,7 @@ func main() {
 	call, err := client.Annotate(
 		context.Background(),
 		form,
-		[]string{report},
+		tt.TextRecordsInput(report),
 		nil,
 	)
 	if err != nil {

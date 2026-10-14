@@ -270,7 +270,7 @@ function withBuild({ slug, tools, needs = () => null, versions, env = {}, buildE
         const lines = buildLines(slug, name, true);
         if (!lines) throw new Error(`src/data/build-lines.mjs has no lines for ${slug}`);
         for (const line of lines.lines) {
-          const done = (/^(cc|c\+\+|clang|gnatmake|cobc|go build|swift build|zig build|javac|kotlinc|scalac|dotnet build)(?:\s|$)/.test(line.join(' ')) ? compile : run)('sh', ['-c', line.join(' ')], { cwd: dir, env: { ...process.env, ...runEnv, ...buildEnv } });
+          const done = (/^(cc|c\+\+|cmake --build|clang|gnatmake|cobc|go build|swift build|zig build|javac|kotlinc|scalac|dotnet build)(?:\s|$)/.test(line.join(' ')) ? compile : run)('sh', ['-c', line.join(' ')], { cwd: dir, env: { ...process.env, ...runEnv, ...buildEnv } });
           if (done.status !== 0) throw new Error(`${rel} did not build\n${line.join(' ')}\n${done.stdout}${done.stderr}`);
         }
         if (slug === 'rust') {
@@ -399,6 +399,7 @@ const BINDINGS = {
       const pkg = path.join(staged, 'libraries', 'ruby');
       const lib = path.join(pkg, 'lib');
       fs.mkdirSync(path.join(lib, 'thinkthen'), { recursive: true });
+      for (const directory of ['lib', 'sig']) fs.cpSync(path.join(repo, 'libraries/ruby', directory), path.join(pkg, directory), { recursive: true });
       fs.copyFileSync(path.join(release, 'libthinkthen_ruby.so'), path.join(lib, 'thinkthen', 'thinkthen.so'));
       fs.copyFileSync(path.join(repo, 'libraries/ruby/thinkthen.gemspec'), path.join(pkg, 'thinkthen.gemspec'));
       const crate = path.join(staged, 'crates', 'thinkthen');

@@ -23,6 +23,6 @@ try {
   const outage = "Nobody can log in to the site right now.";
   const urgency = (await tt.score(
     urgencyScale, outage,
-  )).filterAnswer();
+  )).scoreAnswer();
   assert.equal(urgency, 2);
 } finally { tt.close(); }

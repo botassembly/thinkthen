@@ -18,7 +18,7 @@ func main() {
 	call, err := client.Choose(
 		context.Background(),
 		teamQuestion,
-		parcel,
+		tt.TextInput(parcel),
 		nil,
 	)
 	if err != nil {

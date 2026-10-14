@@ -20,7 +20,7 @@ func main() {
 	call, err := client.Recognize(
 		context.Background(),
 		ask,
-		text,
+		tt.TextInput(text),
 		nil,
 	)
 	if err != nil {

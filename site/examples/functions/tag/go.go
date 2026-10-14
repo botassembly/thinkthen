@@ -31,7 +31,7 @@ func main() {
 	call, err := client.Tag(
 		context.Background(),
 		labelQuestion,
-		message,
+		tt.TextInput(message),
 		nil,
 	)
 	if err != nil {

@@ -26,7 +26,7 @@ func main() {
 	call, err := client.Rank(
 		context.Background(),
 		tt.TextQuestion(question),
-		inbox,
+		tt.TextRecordsInput(inbox...),
 		nil,
 	)
 	if err != nil {

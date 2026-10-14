@@ -18,7 +18,7 @@ func main() {
 	call, err := client.Decide(
 		context.Background(),
 		tt.TextQuestion(question),
-		broken,
+		tt.TextInput(broken),
 		nil,
 	)
 	if err != nil {

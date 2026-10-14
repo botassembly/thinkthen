@@ -24,7 +24,7 @@ func main() {
 	call, err := client.Filter(
 		context.Background(),
 		tt.TextQuestion(question),
-		reviews,
+		tt.TextRecordsInput(reviews...),
 		nil,
 	)
 	if err != nil {

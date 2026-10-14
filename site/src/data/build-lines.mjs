@@ -33,12 +33,23 @@ export const BUILD_LINES = {
     ]],
     run: [`./${program(sample)}`],
   }),
-  // The C++ headers include <thinkthen/thinkthen.h> from the C archive.
+  // Install the matching CMake package, then link its C++ implementation.
   cpp: ({ sample }) => ({
     archive: 'thinkthen-cpp',
     lines: [
-      ['cp thinkthen-c/include/thinkthen.h', 'thinkthen-cpp/include/thinkthen/'],
-      ['c++ -std=c++17', '-I thinkthen-cpp/include', `${sample} -o ${program(sample)}`, ...C_LIB],
+      ['cmake -S thinkthen-cpp -B cpp-build',
+        '-DCMAKE_INSTALL_PREFIX="$PWD/cpp-install"',
+        '-DCMAKE_INSTALL_LIBDIR=lib',
+        '-DTHINKTHEN_C_HEADER="$PWD/thinkthen-c/include/thinkthen.h"',
+        '-DTHINKTHEN_NATIVE_SHARED="$PWD/thinkthen-c/lib/libthinkthen.so"',
+        '-DTHINKTHEN_NATIVE_STATIC="$PWD/thinkthen-c/lib/libthinkthen.a"'],
+      ['cmake --build cpp-build --parallel 2'],
+      ['cmake --install cpp-build'],
+      ['c++ -std=c++17 -I cpp-install/include',
+        `${sample} -o ${program(sample)}`,
+        '-L cpp-install/lib -lthinkthen_cpp_shared',
+        '-l:libthinkthen.so.0',
+        '-Wl,-rpath,"$PWD/cpp-install/lib"'],
     ],
     run: [`./${program(sample)}`],
   }),

@@ -23,7 +23,7 @@ func main() {
 	call, err := client.Find(
 		context.Background(),
 		tt.TextQuestion(question),
-		policy,
+		tt.TextRecordsInput(policy...),
 		nil,
 	)
 	if err != nil {
