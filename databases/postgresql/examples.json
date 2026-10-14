@@ -48,7 +48,7 @@
       "expected": "{\"band\": true, \"spam\": true}"
     },
     "details": {
-      "sql": "SELECT jsonb_array_length(thinkthen_details('{\"decide\":\"Is this a complaint?\"}', 'i want a refund now')->'meta'->'requests');",
+      "sql": "SELECT cardinality((thinkthen_details('{\"decide\":\"Is this a complaint?\"}', 'i want a refund now')).requests);",
       "expected": "1"
     },
     "usage": {
