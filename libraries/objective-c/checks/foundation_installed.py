@@ -109,8 +109,11 @@ with contextlib.ExitStack() as installed:
         # Foundation dictionaries have no insertion-order contract. Preserve the
         # authored fixture order through the public ordered-map builder.
         adapter = work / "ordered-cases"
-        adapter.write_text("#!/usr/bin/env python3\n" + r'''import json, os, sys
+        adapter.write_text("#!/usr/bin/env python3\n" +
+                           f"import sys\nsys.path.insert(0, {str(REPO / 'conformance/children')!r})\n" +
+                           r'''import json, os, subprocess, sys
 from pathlib import Path
+from children import child_env
 
 def ordered(value):
     if isinstance(value, dict):
@@ -124,7 +127,12 @@ fixture = json.loads(source.read_text())
 fixture["ordered"] = {key:ordered(fixture[key]) for key in ("question", "input", "options", "feed_items") if key in fixture}
 source.write_text(json.dumps(fixture, ensure_ascii=False, separators=(",", ":")))
 binary = Path(__file__).parent / ".build/debug/Cases"
-os.execve(str(binary), [str(binary), *sys.argv[1:], *[]], os.environ)
+env = child_env(keep=("LLVM_PROFILE_FILE",), home=source.parent,
+                THINKTHEN_BASE_URL=os.environ["THINKTHEN_BASE_URL"],
+                ASAN_OPTIONS="detect_leaks=1", UBSAN_OPTIONS="halt_on_error=1")
+for name in ("THINKTHEN_API_KEY", "LIQUIDAI_API_KEY", "OPENROUTER_API_KEY", "PERPLEXITY_API_KEY"):
+    env[name] = "sk-conformance-loopback"
+sys.exit(subprocess.run([str(binary), *sys.argv[1:], *[]], env=env).returncode)
 ''')
         adapter.chmod(0o700)
         native_cases(adapter, consumer="objective-c")

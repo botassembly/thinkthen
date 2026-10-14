@@ -330,10 +330,14 @@ def main():
     import argparse
     from pathlib import Path
     import subprocess
+    import sys
+    import tempfile
     parser = argparse.ArgumentParser()
     parser.add_argument('--check', action='store_true')
     args = parser.parse_args()
     root = Path(__file__).resolve().parents[4]
+    sys.path.insert(0, str(root / 'conformance/children'))
+    from children import CARGO, child_env
     schema = json.loads((root / 'crates/thinkthen/src/public/results/complete.schema.json').read_text())
     # Generic original-value serialization omits ancillary image metadata. SQL
     # retains real native detail.inputs() metadata in the existing observation.
@@ -345,8 +349,10 @@ def main():
     outputs = {'results_generated.rs': render(schema), 'functions_generated.rs': render_functions()}
     for name, source in outputs.items():
         target = root / 'databases/postgresql/src/native' / name
-        result = subprocess.run(['rustfmt', '--edition', '2024', '--emit', 'stdout'], input=source,
-                                text=True, capture_output=True, check=True).stdout
+        with tempfile.TemporaryDirectory(prefix='thinkthen-postgresql-rustfmt-') as home:
+            result = subprocess.run(['rustfmt', '--edition', '2024', '--emit', 'stdout'], input=source,
+                                    text=True, capture_output=True, check=True, env=child_env(
+                                        keep=(*CARGO, 'LANG', 'LC_ALL', 'TMPDIR'), home=home)).stdout
         if args.check:
             if target.read_text() != result:
                 raise SystemExit('PostgreSQL result generation is stale: ' + name)

@@ -8,6 +8,7 @@ from pathlib import Path
 import sys
 import subprocess
 import shutil
+import tempfile
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(1, str(Path(__file__).resolve().parent / 'templates'))
 from registry import OUTPUTS, attributes, invocations, output_path
@@ -453,7 +454,9 @@ def main():
         command = [sys.executable, str(Path(__file__).parent / 'templates/postgresql.py')]
         if args.check:
             command.append('--check')
-        return subprocess.run(command).returncode
+        with tempfile.TemporaryDirectory(prefix='thinkthen-postgresql-generator-') as home:
+            return subprocess.run(command, env=child_env(
+                keep=(*CARGO, 'LANG', 'LC_ALL', 'TMPDIR'), home=home)).returncode
     if args.operations:
         if args.target != 'c' or args.inputs or args.bridge:
             parser.error('operation transport is a separate C producer')
