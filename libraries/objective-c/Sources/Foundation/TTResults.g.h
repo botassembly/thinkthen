@@ -1,7 +1,6 @@
 // Generated from the shared Rust result graph; do not edit.
 #import "TTResult.h"
 NS_ASSUME_NONNULL_BEGIN
-FOUNDATION_EXPORT NSString * const TTRequestVersion;
 FOUNDATION_EXPORT NSInteger TTNativeErrorCode(NSString *kind);
 @class TTAnnotation, TTAnnotationMember, TTAnnotationMemberAnswerId, TTAnnotationMemberFailureId,
 TTAnnotationValue, TTAnnotationValueChoice, TTAnnotationValueDecision, TTAnnotationValueFailed,
@@ -1085,8 +1084,6 @@ FOUNDATION_EXPORT TTRequestFunction const TTRequestFunctionFind;
 FOUNDATION_EXPORT TTRequestFunction const TTRequestFunctionAnnotate;
 FOUNDATION_EXPORT TTRequestFunction const TTRequestFunctionRecognize;
 FOUNDATION_EXPORT TTRequestFunction const TTRequestFunctionRelate;
-typedef NSString *TTRequestVersion NS_TYPED_ENUM;
-FOUNDATION_EXPORT TTRequestVersion const TTRequestVersionThinkthenRequest1;
 typedef NSString *TTSourceUnitBuilder NS_TYPED_ENUM;
 FOUNDATION_EXPORT TTSourceUnitBuilder const TTSourceUnitLineBuilder;
 FOUNDATION_EXPORT TTSourceUnitBuilder const TTSourceUnitWindowBuilder;
@@ -1324,13 +1321,12 @@ TTRequestReaderFailureUtf8, TTRequestSessionDescriptor, TTFiles, TTSessionSource
 @end
 @interface TTRequest : TTRequestObject
 @property(nonatomic, strong, nullable) TTRequestCall * call;
-@property(nonatomic, strong, nullable) TTRequestVersion schema;
 @end
 @interface TTRequestCall : TTRequestObject
 @property(nonatomic, strong, nullable) TTRequestFunction function;
-@property(nonatomic, strong, nullable) id input;
+@property(nonatomic, strong, nullable) TTInput * input;
 @property(nonatomic, strong, nullable) TTControls * options;
-@property(nonatomic, strong, nullable) id question;
+@property(nonatomic, strong, nullable) TTQuestion * question;
 @end
 @interface TTRequestDefinitionAnnotateDefinition : TTRequestObject
 @property(nonatomic, strong, nullable) id batch;
@@ -1543,8 +1539,7 @@ TTRequestReaderFailureUtf8, TTRequestSessionDescriptor, TTFiles, TTSessionSource
 typedef void (^TTCompletion)(TTCall * _Nullable call, NSError * _Nullable error);
 typedef TTRequestSessionDescriptor * _Nullable (^TTFeed)(TTRequestObject * _Nullable * _Nonnull readerFailure);
 @interface TTCall : NSObject
-@property(nonatomic, copy, readonly) NSArray<TTSessionPacket *> *packets;
-@property(nonatomic, strong, readonly) TTSessionPacketTerminal *terminal;
+@property(nonatomic, strong, readonly) TTPresence<TTFacts *> *facts;
 @end
 @interface TTCall (Answers)
 - (nullable TTPresence<NSNumber *> *)decideAnswer:(NSError **)error;

@@ -6,8 +6,9 @@ extern id TTNative_thinkthen_complete_immediate_facts_v1(const struct thinkthen_
 extern id TTNative_thinkthen_complete_json_v1(const struct thinkthen_complete_json_v1 *value);
 NSErrorDomain const TTErrorDomain = @"io.github.botassembly.thinkthen";
 NSString * const TTFailureDetailsKey = @"ThinkThenFailureDetails";
-NSDictionary<NSString *, id> *TTImageBytes(NSData *bytes, NSString *media) {
-    return @{@"kind":@"bytes", @"bytes":[bytes base64EncodedStringWithOptions:0], @"media":media};
+TTRequestImageBytes *TTImageBytes(NSData *bytes, NSString *media) {
+    TTRequestImageBytes *image = [TTRequestImageBytes new];
+    image.bytes = [bytes base64EncodedStringWithOptions:0]; image.media = media; return image;
 }
 @interface TTFailureError ()
 @property(nonatomic) BOOL retryable;
@@ -107,9 +108,12 @@ static NSData *TTEncode(id object, NSError **error) {
 - (void)dealloc { thinkthen_session_free(_native); }
 @end
 @interface TTCall ()
+@property(nonatomic, copy) NSArray<TTSessionPacket *> *packets;
+@property(nonatomic, strong) TTSessionPacketTerminal *terminal;
 - (instancetype)initWithPackets:(NSArray *)packets terminal:(TTSessionPacketTerminal *)terminal;
 @end
 @implementation TTCall
+- (TTPresence<TTFacts *> *)facts { return self.terminal.facts; }
 - (instancetype)initWithPackets:(NSArray *)packets terminal:(TTSessionPacketTerminal *)terminal {
     if ((self = [super init])) { _packets = [packets copy]; _terminal = terminal; }
     return self;

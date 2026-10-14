@@ -4724,7 +4724,6 @@ TTRequestFunction const TTRequestFunctionFind = @"find";
 TTRequestFunction const TTRequestFunctionAnnotate = @"annotate";
 TTRequestFunction const TTRequestFunctionRecognize = @"recognize";
 TTRequestFunction const TTRequestFunctionRelate = @"relate";
-TTRequestVersion const TTRequestVersionThinkthenRequest1 = @"thinkthen.request/1";
 TTSourceUnitBuilder const TTSourceUnitLineBuilder = @"line";
 TTSourceUnitBuilder const TTSourceUnitWindowBuilder = @"window";
 TTSourceUnitBuilder const TTSourceUnitFileBuilder = @"file";
@@ -5950,12 +5949,10 @@ TTSourceUnitBuilder const TTSourceUnitFileBuilder = @"file";
     if (value) self.requestFields[@"call"] = value;
     else [self.requestFields removeObjectForKey:@"call"];
 }
-- (TTRequestVersion)schema {
-    return self.requestFields[@"schema"];
-}
-- (void)setSchema:(TTRequestVersion)value {
-    if (value) self.requestFields[@"schema"] = value;
-    else [self.requestFields removeObjectForKey:@"schema"];
+- (instancetype)init {
+    if ((self = [super init])) {
+        self.requestFields[@"schema"] = @"thinkthen.request/1";
+    } return self;
 }
 @end
 @implementation TTRequestCall
@@ -5966,10 +5963,10 @@ TTSourceUnitBuilder const TTSourceUnitFileBuilder = @"file";
     if (value) self.requestFields[@"function"] = value;
     else [self.requestFields removeObjectForKey:@"function"];
 }
-- (id)input {
+- (TTInput *)input {
     return self.requestFields[@"input"];
 }
-- (void)setInput:(id)value {
+- (void)setInput:(TTInput *)value {
     if (value) self.requestFields[@"input"] = value;
     else [self.requestFields removeObjectForKey:@"input"];
 }
@@ -5980,10 +5977,10 @@ TTSourceUnitBuilder const TTSourceUnitFileBuilder = @"file";
     if (value) self.requestFields[@"options"] = value;
     else [self.requestFields removeObjectForKey:@"options"];
 }
-- (id)question {
+- (TTQuestion *)question {
     return self.requestFields[@"question"];
 }
-- (void)setQuestion:(id)value {
+- (void)setQuestion:(TTQuestion *)value {
     if (value) self.requestFields[@"question"] = value;
     else [self.requestFields removeObjectForKey:@"question"];
 }

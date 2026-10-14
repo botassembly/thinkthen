@@ -80,7 +80,7 @@ def outputs(definitions, version, input_definitions=None, abi=None):
     definitions = {**definitions, **prepare(graph(immediate_schema(json.loads(SCHEMA.read_text())), ('completeImmediateFacts',)))}
     header = ['// Generated from the shared Rust result graph; do not edit.',
               '#import "TTResult.h"', 'NS_ASSUME_NONNULL_BEGIN',
-              'FOUNDATION_EXPORT NSString * const TTRequestVersion;', 'FOUNDATION_EXPORT NSInteger TTNativeErrorCode(NSString *kind);']
+              '' , 'FOUNDATION_EXPORT NSInteger TTNativeErrorCode(NSString *kind);']
     implementation = ['// Generated from the shared Rust result graph; do not edit.',
                       '#import "TTResults.g.h"', '#import "TTResultPrivate.h"',
                       'NSString * const TTRequestVersion = ' + literal(version) + ';']
@@ -156,8 +156,7 @@ def outputs(definitions, version, input_definitions=None, abi=None):
                'typedef void (^TTCompletion)(TTCall * _Nullable call, NSError * _Nullable error);',
                'typedef TTRequestSessionDescriptor * _Nullable (^TTFeed)(TTRequestObject * _Nullable * _Nonnull readerFailure);',
                '@interface TTCall : NSObject',
-               '@property(nonatomic, copy, readonly) NSArray<TTSessionPacket *> *packets;',
-               '@property(nonatomic, strong, readonly) TTSessionPacketTerminal *terminal;',
+               '@property(nonatomic, strong, readonly) TTPresence<TTFacts *> *facts;',
                '@end', '@interface TTCall (Answers)', declarations('TT_GENERATED_ANSWER_DECLARATIONS', answer_header), '@end',
                '@interface TTFoundationClient : NSObject',
                '- (nullable instancetype)initWithSettings:(nullable TTInputEngineSettings *)settings error:(NSError **)error NS_DESIGNATED_INITIALIZER;',
@@ -252,6 +251,8 @@ def inputs(definitions):
         if not isinstance(source, dict): return 'id'
         if '$ref' in source:
             key = source['$ref'].split('/')[-1]
+            if key == 'RequestQuestion': return 'TTQuestion *'
+            if key == 'RequestInput': return 'TTInput *'
             if key in objects: return 'TTInput' + name(key)[2:] + ' *'
             if key in enums: return 'TTInput' + name(key)[2:]
             return typ(definitions[key])
@@ -268,6 +269,7 @@ def inputs(definitions):
     implementation = ['@implementation TTQuestion', '@end', '@implementation TTInput', '@end', '@interface TTRequestObject ()', '@property(nonatomic, strong) NSMutableDictionary<NSString *, id> *requestFields;', '@end', '@implementation TTRequestObject',
                       '- (instancetype)init { if ((self = [super init])) _requestFields = [NSMutableDictionary dictionary]; return self; }', '- (instancetype)initWithFields:(NSDictionary *)fields { if ((self = [self init])) [_requestFields addEntriesFromDictionary:fields]; return self; }', '@end']
     for key, values in enums.items():
+        if key == 'RequestVersion': continue
         cls = 'TTInput' + name(key)[2:]
         header += [f'typedef NSString *{cls} NS_TYPED_ENUM;']
         for value in values:
@@ -280,8 +282,9 @@ def inputs(definitions):
         parent = 'TTQuestion' if key.startswith('RequestQuestion') else 'TTInput' if key.startswith('RequestInput') else 'TTRequestObject'
         header += [f'@interface {cls} : {parent}']
         implementation += [f'@implementation {cls}']
-        constants = {}
+        constants = {'schema': enum_values(definitions['RequestVersion'])[0]} if key == 'Request' else {}
         for prop, field in source['properties'].items():
+            if key == 'Request' and prop == 'schema': continue
             if isinstance(field, dict) and 'const' in field:
                 constants[prop] = field['const']; continue
             accessor, quoted = member(prop), literal(prop)

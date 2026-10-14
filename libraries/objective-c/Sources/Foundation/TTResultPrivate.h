@@ -28,3 +28,10 @@ FOUNDATION_EXPORT TTPresence *TTAnswerPresence(id payload, id (^convert)(id));
 @interface TTFoundationClient (Scheduling)
 - (TTTask *)start:(NSString *)verb question:(TTQuestion *)question input:(TTInput *)input options:(TTControls *)options feed:(TTFeed)feed completion:(TTCompletion)completion error:(NSError **)error;
 @end
+
+@interface TTCall (Transport)
+@property(nonatomic, copy, readonly) NSArray<TTSessionPacket *> *packets;
+@property(nonatomic, strong, readonly) TTSessionPacketTerminal *terminal;
+@end
+
+FOUNDATION_EXPORT NSString * const TTRequestVersion;

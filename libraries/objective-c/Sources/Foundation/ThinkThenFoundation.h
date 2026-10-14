@@ -16,7 +16,7 @@ FOUNDATION_EXPORT NSString * const TTFailureDetailsKey;
 + (instancetype)new NS_UNAVAILABLE;
 @end
 /** Foundation byte data becomes the native attachment representation; Rust admits media and bytes. */
-FOUNDATION_EXPORT NSDictionary<NSString *, id> *TTImageBytes(NSData *bytes, NSString *media);
+FOUNDATION_EXPORT TTRequestImageBytes *TTImageBytes(NSData *bytes, NSString *media);
 /** A bounded owned session. Native work never calls a caller block. */
 @interface TTSession : NSObject
 - (BOOL)tryPush:(TTRequestSessionDescriptor *)descriptor accepted:(BOOL *)accepted closed:(BOOL *)closed error:(NSError * _Nullable * _Nullable)error;

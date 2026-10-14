@@ -10,6 +10,16 @@ int main(int argc, const char *argv[]) {
         require(client != nil && error == nil);
         TTTextQuestion *question = [TTTextQuestion new]; question.text = @"Is it?";
         TTTextInput *input = [TTTextInput new]; input.text = @"consumer-objc";
+        TTRequest *request = [TTRequest new];
+        TTRequestCall *arguments = [TTRequestCall new];
+        arguments.function = TTRequestFunctionDecide; arguments.question = question; arguments.input = input;
+        request.call = arguments;
+        TTPlan *plan = [client plan:request error:&error];
+        require(plan != nil && error == nil);
+        require(plan.firstBodyUtf8.state == TTPresenceValue && plan.records.value.unsignedIntegerValue == 1);
+        TTTask *refused = [client decide:[TTTextQuestion new] input:input options:nil feed:nil completion:^(TTCall *call, NSError *failure) { (void)call; (void)failure; abort(); } error:&error];
+        require(refused == nil && [error isKindOfClass:TTFailureError.class] && !((TTFailureError *)error).retryable);
+        error = nil;
         __block TTCall *retained = nil;
         dispatch_semaphore_t completed = dispatch_semaphore_create(0);
         TTTask *task = [client decide:question input:input options:nil feed:nil completion:^(TTCall *call, NSError *failure) {
@@ -24,9 +34,9 @@ int main(int argc, const char *argv[]) {
         require([client usagePersistence:&error].state == usage.state && error == nil);
         task = nil; client = nil;
         require(usage.state == TTUsagePersistenceWritten && usage.advice == nil);
-        require(retained.terminal != nil && retained.packets.count > 0);
+        require(retained.facts.state == TTPresenceValue);
         require([retained decideAnswer:&error].state == TTPresenceValue && error == nil);
-        require(retained.terminal.facts.state == TTPresenceValue);
+        require(retained.facts.state == TTPresenceValue);
         // A new client and unrelated host work progress while a provider is held.
         client = [[TTFoundationClient alloc] initWithSettings:nil error:&error];
         dispatch_semaphore_t cancelled = dispatch_semaphore_create(0);
