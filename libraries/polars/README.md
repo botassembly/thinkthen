@@ -2,13 +2,15 @@
 
 Ask `thinkthen` questions of a Polars `Series` or `DataFrame` from Rust. The interface is the `polars` feature of the `thinkthen` crate. It is off by default, so a build that does not ask for it compiles no Polars.
 
+The calls below describe the reviewed development 0.2 API. The public release remains 0.1.2; use an unpacked candidate crate until 0.2 is published. Unpack the candidate crate beside your project as `thinkthen-0.2.0`, then enable the feature from that local path:
+
 ```toml
-thinkthen = { version = "0.1", features = ["polars"] }
+thinkthen = { path = "../thinkthen-0.2.0", version = "=0.2.0", features = ["polars"] }
 ```
 
-The feature adds `thinkthen::PolarsEngine` to your own `thinkthen::Engine`. Eager methods read one column in one call. Lazy expressions make one call per collect on the default engine. Both take the same batch path as a slice of strings, at the same throttle, and return answers in input order. The trait's rustdoc holds a full eager example.
+The feature adds `thinkthen::PolarsEngine` to your own `thinkthen::Engine`. Eager methods read one column in one call. Row-wise lazy expressions judge the collected column on the default engine. Rank, find and relate judge one complete logical collection. Row-wise judgments use the native batch path and throttle and preserve input order. The trait's rustdoc holds a full eager example.
 
-The feature turns on Polars' lazy API and not its streaming engine. The streaming engine brings Polars' cloud storage stack, about 140 more crates. To collect with `polars::prelude::Engine::Streaming`, add `polars = { version = "0.55", default-features = false, features = ["streaming"] }` to your own manifest. The expressions are ordinary column functions, so either engine runs them. The default engine holds the whole frame in memory and judges the column in one call. The streaming engine calls the expression once per morsel, so each morsel is its own call. Bounded memory for the frame itself needs the streaming opt-in or a batched read.
+The feature turns on Polars' lazy API and not its streaming engine. The streaming engine brings Polars' cloud storage stack, about 140 more crates. To collect with `polars::prelude::Engine::Streaming`, add `polars = { version = "0.55", default-features = false, features = ["streaming"] }` to your own manifest. The expressions are ordinary column functions, so either engine runs them. The default engine holds the whole frame in memory and judges the column in one call. The streaming engine calls row-wise expressions once per morsel, so each morsel is its own call. Rank, find and relate still need the complete logical collection. Bounded memory for the frame itself needs the streaming opt-in or a batched read.
 
 Named eager Series judgments and `annotate_frame` pass native records through shared Request admission and execution, then project joined native complete results into their output columns. These calls retain native results alongside the input and output columns. Use the typed `*_input_column_batch` methods for pull-based results. Whole-set rank/find and explicit source helpers materialize their complete logical collection.
 
@@ -16,13 +18,13 @@ With a cache or recording folder, a lazy frame collected again sends nothing, an
 
 Build that engine with `max_request_bytes`, `max_requests_total`, `timeout`, `max_retries`, `profile`, `record`, or strict `replay` before passing it to Polars.
 
-A file-backed Rust `Question` keeps its saved calibration profile when the engine asks a scalar or Series question. Read `record.result().meta()` on a returned native record for the pinned question digest and an optional mismatch warning. A profiled question cannot be inserted as a member of an annotate frame's `QuestionSet`; the builder refuses it before sending.
+A file-backed Rust `Question` keeps its saved calibration profile when the engine asks a scalar or Series question. Read the native records retained in `call.results()` for result metadata, including the pinned question digest and an optional mismatch warning. A profiled question cannot be inserted as a member of an annotate frame's `QuestionSet`; the builder refuses it before sending.
 
 The answer cache is on by default. Each entry holds the complete request and reply, the judged text included, in plain text, with no expiry. Whoever can write the selected cache or recording folder controls the answers read from it; keep that folder private to people whose answers you trust. `cache prune` is the only thing that removes entries. The column calls use your own `thinkthen::Engine`, so turn it off with `EngineBuilder::no_cache` when you build that engine.
 
 The interface takes Polars 0.55. Polars changes its Rust API between minor versions. `thinkthen::polars` re-exports the Polars the interface was built with, so it names the version your `Series` must come from. The throttle is the most requests in flight at once. It holds per loaded copy of the library, so a program that loads two copies can run up to twice the throttle.
 
-Each asking method returns a `Call` containing the typed value in the table below, its native records and its normalized probability. Read it with `call.value()` or take it with `call.into_value()`. `call.facts()` holds that completed invocation's record, request, cache, token, duration, and model facts, including when one column takes several requests. A started failure carries the same final account on its error. Caller-owned `Tally` joins completed call facts, including partial failures; absent token usage stays absent. Its seconds span the first start to the last finish, including concurrent calls. `Engine::usage()` remains a process total, and the result retains native records through `call.results()` and normalized probability through `call.probability()`.
+Each eager asking method returns a `Call` containing the typed value in the table below, its unchanged native records and its normalized probability Series. Read the eager value with `call.value()` or take it with `call.into_value()`. Lazy expressions return a Struct Series with typed `value` and nullable `probability` fields. `call.facts()` holds that completed invocation's record, request, cache, token, duration, and model facts, including when one column takes several requests. A started failure carries the same final account on its error. Caller-owned `Tally` joins completed call facts, including partial failures; absent token usage stays absent. Its seconds span the first start to the last finish, including concurrent calls. `Engine::usage()` remains a process total, and the result retains native records through `call.results()` and normalized probability through `call.probability()`.
 
 ## Eager methods
 
@@ -42,9 +44,9 @@ Each asking method returns a `Call` containing the typed value in the table belo
 | `source_column` | explicit paths and native `InputReaderOptions` | value columns plus physical file and nullable text line coordinates |
 | `plan_series` | a question and text `Series` | a no-send `PlanEstimate` using the engine's request planner |
 
-Asking methods take `CallOptions`. `column_with` also accepts `PolarsCallOptions` for a call-level threshold, decide true/false meanings overrides. Value and probability come from the same invocation. Score and tag return null probability. One deadline, cancel token, and interrupt check cover the whole column. The call runs on your thread and starts no worker of its own.
+Eager asking methods take `CallOptions`. The scalar dtypes in this table describe the eager method's `call.value()`, not the lazy expression Struct. `column_with` also accepts `PolarsCallOptions` for a call-level threshold, decide true/false meanings overrides. Value and probability come from the same invocation. Score, tag and annotate return null probability. A null probability means that the native result supplies no probability; it never means zero. An unresolved decide or choose judgment has null probability, as does an omitted null input. A resolved judgment whose authored output is null can retain a numeric probability; read the native records to distinguish that output from an unresolved judgment. One deadline, cancel token, and interrupt check cover the whole column. The call runs on your thread and starts no worker of its own.
 
-The named probability, recognition and relation calls use typed native Requests. Probability columns project value and probability from the same complete answer. Recognition preserves native spans and relations. Relation columns form one complete entity set; paired null fields omit an entity, and an unmatched null refuses before sending. These methods retain their existing signatures.
+The named judgments, recognition and relation calls use typed native Requests. Probability columns project value and probability from the same complete answer. Recognition preserves native spans and relations. Relation columns form one complete entity set; paired null fields omit an entity, and an unmatched null refuses before sending. Read the full native observations through `call.results()`.
 
 Null input cells are omitted from requests and restored as nulls in their original positions; non-null cells keep input order. `plan_series` validates the whole non-null input, discloses the first prepared body and full-input counts, and sends nothing. Its token range is a measured estimate of the prepared body, not billed usage.
 
@@ -52,9 +54,13 @@ Null input cells are omitted from requests and restored as nulls in their origin
 
 `filter_series`, `rank_series` and `find_series` retain their existing arguments and output columns. Their native Request execution applies the same question admission, cancellation and call facts as the other Request callers. No caller-side request document, JSON result reader or new call name is needed. Existing code using these methods, including `rank_lazy` and `find_lazy`, keeps working.
 
-Complete dataframe methods use the native result/2 calls and readers. Recognition collections now use one native collection call and its checked once-rounded cost. The shared native scheduler retains one deadline, cancellation scope and request budget for the whole collection.
+The dataframe adapter uses the native calls and readers. Recognition collections now use one native collection call and its checked once-rounded cost. The shared native scheduler retains one deadline, cancellation scope and request budget for the whole collection.
+
+In the eager `annotate_frame` result, each question has its own scalar column: a decide column is nullable `Boolean`, a choose column `String`, a score column nullable `Float64`, and a tag column `List(String)`. These dtypes stay fixed when a question fails. A failed answer is null in its question column; the final `failed` column holds a nullable Struct with one field per question and the full nested `failed: {kind, cause}` marker. A row with no failures has a null outer `failed` cell. A not-sure `decide` or unpicked `choose` has a null answer without a marker. Member failure details remain in the native annotation records returned by eager calls. Your own columns come back unchanged. A failed row in a series call ends the call with the engine's `Backend` error.
 
 ## Lazy expressions
+
+In `annotate_expr`, the named scalar answers sit inside the outer Struct's `value` field, and its `probability` field is null.
 
 All ten functions have expression methods: `decide_expr`, `choose_expr`, `tag_expr`, `score_expr`, `filter_expr`, `rank_expr`, `find_expr`, `annotate_expr`, `recognize_expr` and `relate_expr`. Each returns a typed Struct with `value` and `probability`. Decide and filter report yes probability; choose and find report picked probability; score, tag and annotate report null. Rank reports nullable probability for each ranked row. Recognize and relate report a typed list of nullable probabilities. Null inputs remain null without a request. Filter emits passing rows in original order, rank retains original row indices, and find returns one selected unit or null. Rank, find and relate evaluate one complete logical collection. Relate accepts paired name and kind expressions; paired nulls omit an entity and a partial null is refused.
 
@@ -76,11 +82,9 @@ let judged = frame.lazy().with_columns([judgment.alias("decision")]).collect()?;
 
 Apply cheap filters first, then add the judgment with `with_columns` and filter its result. Polars may push a judged `filter` into the scan, so `filter` or a later `head` does not bound requests to the first matching rows. Judge only the first matches through a batched or sliced read that stops once it has them. Collection errors from the UDF are Polars compute errors; an internal panic stays inside that boundary. No expression stores call facts on its output, so retain the explicit tally when facts matter.
 
-In a frame, a decide column is nullable `Boolean`, a choose column `String`, a score column nullable `Float64`, and a tag column `List(String)`. These dtypes stay fixed when a question fails. A failed answer is null in its question column; the final `failed` column holds a nullable Struct with one field per question and the full nested `failed: {kind, cause}` marker. A row with no failures has a null outer `failed` cell. A not-sure `decide` or `choose` has a null answer without a marker. Your own columns come back unchanged. A failed row in a series call ends the call with the engine's `Backend` error.
-
 ## Refusals
 
-Each refusal happens before any request and returns `thinkthen::Error::Usage`:
+Invalid column types, missing or conflicting names, question kinds and thresholds return `thinkthen::Error::Usage` before any request. Examples include:
 
 - `the column {name} is {dtype}, not text`. Cast a `Categorical` column to `String` first.
 - `the frame holds no column {on}`
@@ -98,6 +102,6 @@ The consumer under `consumer/` exercises actual frame associations through the p
 
 `Engine::records_column(function, definition, column, records, options)` returns a DataFrame containing one `records` Struct column. Its field types come from the generated native schema. Supply a real typed original Series and parallel nullable `RecordInput` values. Row counts, null positions, originals and admitted native inputs must match. Incompatible or heterogeneous originals are refused before any request. Null input positions remain null records. Ranked record indices retain original positions; find retains its candidate set. The records column maps compact native occurrence indices to original nullable column positions. Native records in `results()` preserve their ordinals.
 
-Every eager named method returns one `Call` with `value()`, `probability()`, `results()` and `facts()`. The probability getter is a typed Series. The results getter retains the full unchanged canonical native records, including rejected filter observations and original inputs. The six `*_input_column_batch` methods keep native pull behavior and their position map. No separate details or complete frame method exists.
+Every eager named method returns one `Call` with `value()`, `probability()`, `results()` and `facts()`. The probability getter is a typed Series. The results getter retains the full unchanged canonical native records, including rejected filter observations and original inputs. The six `*_input_column_batch` methods keep native pull behavior and their position map. No probability switch or separate details or complete frame method is needed.
 
-The records column projects schema unions into semantic Struct branches. A threshold that admits numbers or text has typed `number` and `string` children; the unused branch is null. This local column projection preserves scalar types without JSON text. `results()` retains the unchanged canonical records. Authored question values supply the explicit types for the schema's open description fields before execution. The adapter never infers a result type from a response sample.
+The records column projects schema unions into semantic Struct branches. A threshold that admits numbers or text has typed `number` and `string` children; the unused branch is null. This local column projection preserves scalar types without JSON text or a JSON tag wrapper. `results()` retains the unchanged canonical records. Authored question values supply the explicit types for the schema's open description fields before execution. The adapter never infers a result type from a response sample.
