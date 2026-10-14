@@ -15,13 +15,19 @@ def call_results(definitions):
                for function, kind, payload in scalar_answers(definitions)}
     result = {}
     for function, carrier, payload in aggregate_answers(definitions):
-        value, projection = aggregate_projection(function, payload, definitions)
+        projection = {'filter': 'input', 'rank': 'index'}.get(function, 'value')
+        receipt_schema = payload.get('items', payload)
+        receipt = definitions[receipt_schema['$ref'].split('/')[-1]]
+        value = receipt['properties'][projection]
+        if payload.get('type') == 'array':
+            value = {'type': 'array', 'items': value}
         scalar = scalars.get(function)
         mode = ('yes' if function in ('decide', 'filter') else
                 'picked' if function in ('choose', 'find') else
                 'items' if function in ('rank', 'recognize', 'relate') else 'null')
         result[function] = {
             'carrier': carrier,
+            'receipt_payload': payload,
             'aggregate_value': value,
             'value_projection': projection,
             'scalar_kind': scalar[0] if scalar else None,
@@ -29,8 +35,6 @@ def call_results(definitions):
             'probability_mode': mode,
         }
         if mode in ('yes', 'picked'):
-            receipt = payload.get('items', payload)
-            receipt = definitions[receipt['$ref'].split('/')[-1]]
             answer = receipt['properties']['answer']
             answer = definitions[answer['$ref'].split('/')[-1]]
             if 'variants' in answer:
