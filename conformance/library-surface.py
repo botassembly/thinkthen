@@ -181,6 +181,11 @@ def check(root, manifest, name):
         errors.extend('missing result field: ' + owner + '.' + field for field in fields if field not in actual)
         ownership = set(config.get('wrapper_members', {}).get(owner, []))
         errors.extend('unlisted public field: ' + owner + '.' + field for field in actual - set(fields) - ownership)
+    for owner, methods in config.get('result_methods', {}).items():
+        actual = {d.name for d in declared if d.owner == owner and d.kind == 'call'}
+        actual_exports = {d.name for d in declared if d.owner == owner and d.kind == 'export'}
+        errors.extend('missing result method: ' + owner + '.' + method for method in set(methods) - actual)
+        errors.extend('unlisted public call/export: ' + owner + '.' + method for method in (actual | actual_exports) - set(methods))
     expected = set()
     try:
         sources = SCHEMA.generated_sources(root, name, request, result)

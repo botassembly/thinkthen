@@ -118,6 +118,23 @@ class PublicSurface(unittest.TestCase):
              'missing result field: CallResult.' + field)
             for field in ('value', 'probability', 'results', 'facts')
         ] + [
+            ('src/thinkthen.zig', 'pub const authored', 'pub var unknownVariable: bool = false;\npub const authored',
+             'unlisted public call/export: .unknownVariable'),
+            ('src/blocking.zig', 'value: V,', 'value: V, _extraField: bool,',
+             'unlisted public field: CallResult._extraField'),
+            ('src/blocking.zig', 'value: V,', 'value: V, pub fn _extraExport() void {}',
+             'unlisted public call/export: CallResult._extraExport'),
+            ('src/blocking.zig', 'return struct {',
+             'if (@sizeOf(V) == 0) { return struct { extraConditional: bool }; } return struct {',
+             'unlisted public field: CallResult.extraConditional'),
+            ('src/blocking.zig', 'value: V,', 'value: V, pub fn init() void {}',
+             'unlisted public call/export: CallResult.init'),
+            ('src/blocking.zig', 'value: V,', 'value: V, pub const Result = bool;',
+             'unlisted public call/export: CallResult.Result'),
+            ('src/blocking.zig', 'pub fn deinit(', 'fn deinit(',
+             'missing result method: CallResult.deinit'),
+            ('src/thinkthen.zig', 'pub const authored', 'pub inline fn extraInline() void {}\npub const authored',
+             'unlisted public call/export: .extraInline'),
             ('src/blocking.zig', 'value: V,', 'value: V, extraField: bool,',
              'unlisted public field: CallResult.extraField'),
             ('src/blocking.zig', 'value: V,', 'value: V, state: bool,',
@@ -155,6 +172,14 @@ class PublicSurface(unittest.TestCase):
                     path.write_text(original.replace(before, after, 1))
                     self.assertIn(diagnostic, invoke())
                     path.write_text(original)
+            path = root / 'libraries/zig/src/blocking.zig'
+            original = path.read_text()
+            for before, after in [('pub fn CallResult', 'pub inline fn CallResult'),
+                                  ('return struct {', 'const unused = true; _ = unused; return struct {'),
+                                  ('return struct {', '// return struct { fake: bool };\nreturn struct {')]:
+                path.write_text(original.replace(before, after, 1))
+                self.assertEqual(invoke(), [])
+            path.write_text(original)
 
     def test_dart_mixins_and_generated_schema_still_detect_omissions(self):
         with tempfile.TemporaryDirectory(prefix='library-surface-dart-') as folder:

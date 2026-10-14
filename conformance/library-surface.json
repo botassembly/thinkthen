@@ -1439,6 +1439,11 @@
           "results",
           "facts"
         ]
+      },
+      "result_methods": {
+        "CallResult": [
+          "deinit"
+        ]
       }
     },
     "php": {
