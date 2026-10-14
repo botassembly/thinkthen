@@ -7,8 +7,10 @@ library(thinkthen)
 
 question <- "Does the customer ask for a refund?"
 broken <- "Please refund my order. It arrived broken."
-is_refund <- tt_decide(question, broken)$value
+refund <- tt_decide(question, broken)
+is_refund <- refund$value
 stopifnot(identical(is_refund, TRUE))
+stopifnot(identical(refund$probability, 0.99))
 ```
 
 An ordinary `NULL` input supplies an empty record collection. `tt_input("json", value = NULL)` retains explicit JSON null. A scalar character input is literal text. Other scalar or structured inputs become JSON evidence. Record functions take a vector, list, or data frame of original records; data frames convert by row. Character vectors also supply records to primitive calls. Ordinary atomic R columns retain missing slots separately from native evidence. Primitive calls and recognition submit only present values; `filter`, `rank`, `find`, `annotate` and `relate` refuse missing atomic records. Nested missing fields in structured JSON evidence retain JSON null. JSON null, an absent generated field, and R `NA` remain distinct values.

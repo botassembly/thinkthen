@@ -19,11 +19,11 @@ teams <- list(billing = "Invoices, fees, and refunds.", shipping = "Parcels and 
               account = "Logins and passwords.")
 is_refund <- tt_decide(question, refunds)
 stopifnot(identical(is_refund$value, c(TRUE, FALSE, TRUE)))
-stopifnot(length(is_refund$probability) == 3, length(is_refund$results) == 3)
+stopifnot(identical(is_refund$probability, c(0.99, 0.01, 0.54)), length(is_refund$results) == 3)
 routing <- list(choose = "Which team owns this?", options = teams)
 owners <- tt_choose(routing, messages)
 stopifnot(identical(owners$value, c("billing", "shipping", "account")))
-stopifnot(length(owners$probability) == 3, length(owners$results) == 3)
+stopifnot(identical(owners$probability, c(1, 1, 1)), length(owners$results) == 3)
 ```
 
 Read `$value`, `$probability`, `$results` and `$facts` on the same call. A failed call raises an R condition.

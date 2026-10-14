@@ -38,7 +38,7 @@ int main() {
     auto refund = client.decide(question, message).result();
     auto is_refund = refund.value.get<bool>();
     assert(is_refund);
-    assert(refund.probability.has_value());
+    assert(refund.probability == 0.99);
     assert(refund.results.size() == 1);
 }
 ```

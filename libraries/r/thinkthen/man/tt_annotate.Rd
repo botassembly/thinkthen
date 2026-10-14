@@ -50,7 +50,19 @@ are \code{thinkthen_absent} when missing and \code{NULL} when explicitly null.
 }
 \examples{
 \dontrun{
-form <- tt_question(file = "form.json")
+form <- list(version = 1, questions = list(
+  steps = list(
+    decide = "Does the report give steps to reproduce?"
+  ),
+  area = list(
+    choose = "Which part of the app is this?",
+    options = c("export", "login", "billing")
+  ),
+  impact = list(
+    score = "How much does this block the user?",
+    levels = c("None.", "Slows them.", "Blocks work.")
+  )
+))
 report <- "Steps: click Log in. Nobody gets in."
 triage <- tt_annotate(form, report)$value[[1]]
 stopifnot(
