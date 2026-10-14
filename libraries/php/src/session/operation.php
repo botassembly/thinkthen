@@ -15,9 +15,9 @@ final class Operation
     private array $rows = [];
     private array $packets = [];
     private ?\ThinkThen\Results\Node $terminal = null;
-    public function __construct(private ?Client $client, private readonly \FFI $ffi, \FFI\CData $engine,
-        string $function, string|array|\stdClass|\ThinkThen\Inputs\Document|\ThinkThen\Inputs\QuestionSource $question, mixed $input,
-        array|\ThinkThen\Inputs\Options $options, private readonly ?Cancellation $token)
+    private function __construct(private ?Client $client, private readonly \FFI $ffi, \FFI\CData $engine,
+        string $function, string|array|\stdClass|\ThinkThen\Inputs\QuestionDefinition|\ThinkThen\Inputs\QuestionSource $question, mixed $input,
+        \ThinkThen\Inputs\Options $options, private readonly ?Cancellation $token)
     {
         if ($input instanceof \Traversable) $this->producer = $input instanceof \Iterator ? $input : $input->getIterator();
         $request = new \ThinkThen\Internal\Request($ffi, $function, $question, $input, $options);

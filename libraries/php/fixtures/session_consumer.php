@@ -2,6 +2,7 @@
 declare(strict_types=1);
 require getenv('TT_AUTOLOAD');
 use ThinkThen\Client;
+use ThinkThen\Inputs\{Settings, Options, ChooseQuestion, RecognitionSpec, RecognizeQuestion, RelationRule, RelationSpec, RelateQuestion};
 
 /** Test adapter serialization is not a public library operation. */
 function fixtureValue(mixed $value): mixed
@@ -18,18 +19,18 @@ function fixtureValue(mixed $value): mixed
 }
 
 function check(bool $ok, string $message): void { if (!$ok) throw new RuntimeException($message); }
-$client = new Client(['cache' => false, 'batch' => 1, 'max_retries' => 0]);
+$client = new Client(new Settings(cache: false, batch: 1, max_retries: 0));
 $asks = [
     'decide' => ['Is it urgent?', 'text'],
-    'choose' => [['choose' => 'Which?', 'options' => ['first', 'second']], 'text'],
+    'choose' => [new ChooseQuestion(choose: 'Which?', options: ['first', 'second']), 'text'],
     'tag' => [['tag' => 'Which?', 'labels' => ['first', 'second']], 'text'],
     'score' => [['score' => 'Which?', 'levels' => ['low', 'high']], 'text'],
     'filter' => ['Is it urgent?', ['filter-yes', 'no']],
     'rank' => ['Is it urgent?', ['rank-yes', 'no']],
     'find' => ['Which line?', ['find-first', 'find-second']],
     'annotate' => [['version' => 1, 'questions' => ['ok' => ['decide' => 'Is it urgent?']]], ['text']],
-    'recognize' => [['version' => 1, 'recognize' => ['kinds' => ['person' => null]]], 'Maria Chen'],
-    'relate' => [['version' => 1, 'relate' => ['relations' => [['name' => 'knows', 'source' => 'person', 'target' => 'person', 'either' => false]]]],
+    'recognize' => [new RecognizeQuestion(new RecognitionSpec(kinds: ['person' => null])), 'Maria Chen'],
+    'relate' => [new RelateQuestion(new RelationSpec([new RelationRule(name: 'knows', source: 'person', target: 'person', either: false)])),
         [['name' => 'Ana', 'kind' => 'person'], ['name' => 'Bob', 'kind' => 'person']]],
 ];
 $mode = $argv[1];
@@ -173,7 +174,7 @@ if ($mode === 'usage-written' || $mode === 'usage-failed') {
     try { $client->plan('decide', 'Is it?', (function() use (&$produced) { $produced = true; yield 'unreachable'; })()); throw new RuntimeException('feed plan admitted'); }
     catch (ThinkThen\UsageFailure) {}
     check(!$produced, 'plan consumed producer');
-    try { new Client([], getenv('TT_ERROR_LIBRARY')); throw new RuntimeException('synthetic constructor answered'); }
+    try { new Client(new Settings(), getenv('TT_ERROR_LIBRARY')); throw new RuntimeException('synthetic constructor answered'); }
     catch (ThinkThen\BackendFailure $error) {
         check($error->retryable && $error->kind === ThinkThen\ErrorKind::Backend && $error->facts() instanceof ThinkThen\Results\FailureFacts, 'constructor error view not copied');
         check($error->facts()->records === 7 && $error->facts()->requests_sent === 3 && !$error->facts()->has('call_id'), 'constructor facts changed');
@@ -196,7 +197,7 @@ if ($mode === 'usage-written' || $mode === 'usage-failed') {
         check(!$error->retryable && $error->facts() === null, 'immediate admission facts lost');
     }
 
-    try { new Client([], getenv('HOME').'/missing-library.so'); throw new RuntimeException('missing library loaded'); }
+    try { new Client(new Settings(), getenv('HOME').'/missing-library.so'); throw new RuntimeException('missing library loaded'); }
     catch (ThinkThen\LocalFailure) {}
     try { $client->decide('', 'invalid'); throw new RuntimeException('empty admitted'); }
     catch (ThinkThen\UsageFailure) {}
@@ -243,10 +244,10 @@ if ($mode === 'usage-written' || $mode === 'usage-failed') {
     $operation->poll();
     $operation->close();
     check($weak->get() === null, 'closed operation retained client');
-    $temporary = (new Client(['cache' => false]))->start('decide', 'Is it?', 'temporary-client');
+    $temporary = (new Client(new Settings(cache: false)))->start('decide', 'Is it?', 'temporary-client');
     check($temporary->result()->results[0]->value === true, 'temporary client closed operation');
     check(!file_exists(getenv('TT_BARRIER').'/release-hold-php'), 'cleanup needed provider release');
-    $other = new Client(['cache' => false]);
+    $other = new Client(new Settings(cache: false));
     check($other->decide('Is it?', 'independent')->results[0]->value === true, 'cleanup stalled unrelated engine');
 } else { throw new RuntimeException('unknown fixture mode'); }
 echo "PHP_SESSION_PASS ".$mode."\n";
