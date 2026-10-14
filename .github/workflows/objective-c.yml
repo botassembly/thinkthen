@@ -1,8 +1,5 @@
 name: Check Objective-C Foundation
 on:
-  push:
-    branches: [ticket/0576-objective-c]
-    paths: [libraries/objective-c/**, sdlc/generators/results/templates/objc.py, .github/workflows/objective-c.yml]
   workflow_dispatch:
 permissions: {}
 jobs:
@@ -16,10 +13,11 @@ jobs:
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
         with:
+          ref: ${{ github.sha }}
           persist-credentials: false
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
         with:
-          ref: b38f96f7ee01ea134e8e31aa81debc3c43819f41
+          ref: ${{ github.sha }}
           path: native-source
           persist-credentials: false
       - name: Build matching native test dependency
