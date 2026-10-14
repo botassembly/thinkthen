@@ -46,7 +46,7 @@ int main(int argc, const char *argv[]) {
         require(retained.facts.state == TTPresenceValue);
         require([retained decideAnswer:&error].state == TTPresenceValue && error == nil);
         require([retained filterAnswer:&error] == nil);
-        require([error.domain isEqual:TTAnswerErrorDomain] && error.code == 1);
+        require([error.domain isEqual:@"io.github.botassembly.thinkthen.answer"] && error.code == 1);
         require([error.localizedDescription isEqual:@"Expected exactly one successful answer"]);
         require([error.userInfo[@"ThinkThenFunction"] isEqual:@"filter"]);
         require([error.userInfo[@"ThinkThenAnswerCount"] unsignedIntegerValue] == 0);
@@ -72,6 +72,26 @@ int main(int argc, const char *argv[]) {
             if ([answer[0] doubleValue] != number.doubleValue) fprintf(stderr, "Filtered number %.17g became %.17g\n", number.doubleValue, [answer[0] doubleValue]);
             require([answer[0] doubleValue] == number.doubleValue);
             require(numericCall.facts.value.requestsSent.value.unsignedIntegerValue == 1);
+        }
+        TTTextQuestion *filterQuestion = [TTTextQuestion new]; filterQuestion.text = @"Select the originals?";
+        NSArray *originals = @[NSNull.null, @NO, @(1e308), @(1e-308)];
+        TTRecordsInput *multiple = [TTRecordsInput new];
+        NSMutableArray *records = [NSMutableArray array];
+        for (id original in originals) { TTItem *item = [TTItem new]; item.original = original; [records addObject:item]; }
+        multiple.items = records;
+        TTTextInput *unselected = [TTTextInput new]; unselected.text = @"no";
+        for (TTInput *filterInput in @[unselected, multiple, empty]) {
+            __block TTCall *filterCall = nil;
+            task = [client filter:filterQuestion input:filterInput options:nil feed:nil completion:^(TTCall *call, NSError *failure) {
+                require(call != nil && failure == nil); filterCall = call; dispatch_semaphore_signal(completed);
+            } error:&error];
+            require(task != nil && error == nil);
+            require(dispatch_semaphore_wait(completed, dispatch_time(DISPATCH_TIME_NOW, 4 * NSEC_PER_SEC)) == 0);
+            task = nil;
+            NSArray *answer = [filterCall filterAnswer:&error];
+            require(answer != nil && error == nil);
+            require([answer isEqual:filterInput == multiple ? originals : @[]]);
+            require(filterCall.facts.value.requestsSent.value.unsignedIntegerValue == (filterInput == multiple ? 4 : filterInput == empty ? 0 : 1));
         }
         client = nil;
         // A new client and unrelated host work progress while a provider is held.
