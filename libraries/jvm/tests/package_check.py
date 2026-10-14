@@ -38,6 +38,12 @@ def inspect(name, source):
     assert manifest is None or manifest.startswith(b"Manifest-Version: 1.0"), "bad JAR manifest"
     if "META-INF/thinkthen/product-inventory.json" in members:
         assert json.loads(members.pop("META-INF/thinkthen/product-inventory.json")) == inventory.jvm_inventory(), "stale embedded JVM inventory"
+    bootstrap = members.get("META-INF/thinkthen/native-bootstrap.properties")
+    assert bootstrap is not None, "native bootstrap resource missing"
+    actual = dict(line.split("=", 1) for line in bootstrap.decode('ascii').splitlines())
+    canonical = {key: ','.join(asset['files']) for key, asset in inventory.jvm_inventory()['native'].items()}
+    assert actual == canonical, "bootstrap selection differs from packaged inventory"
+    assert not any("Json$Reader" in key or "FixtureJson" in key for key in members), "JSON reader escaped into product JAR"
     assert members == expected, f"stale or extra {name} JAR member"
     assert not any("ProbeDoor" in member or "TypeCase" in member for member in members), "diagnostic class escaped product JAR"
     assert not any(token in data for member, content in members.items() for data in (member.encode(), content) for token in BAD), "private byte in JAR"

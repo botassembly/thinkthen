@@ -121,15 +121,14 @@ public final class OwnedSession implements AutoCloseable {
         try (Arena outputs = Arena.ofConfined()) {
             var ready = outputs.allocate(ValueLayout.JAVA_INT);
             if (!input) NativeSession.check(NativeWait.waitReady(retained, NativeWait.SETTLEMENT_ARM, 0, ready));
-            while (true) {
-                synchronized (this) {
-                    var pending = input ? inputWait : resultWait;
-                    if (closed || pending == null || pending.isCancelled()) return;
-                }
-                NativeSession.check(NativeWait.waitReady(retained,
-                    input ? NativeWait.INPUT : NativeWait.INTERRUPTIBLE_SETTLEMENT, 50, ready));
-                if (ready.get(ValueLayout.JAVA_INT, 0) != NativeWait.READY_TIMEOUT) return;
+            synchronized (this) {
+                var pending = input ? inputWait : resultWait;
+                if (closed || pending == null || pending.isCancelled()) return;
             }
+            NativeSession.check(NativeWait.waitReady(retained,
+                input ? NativeWait.INPUT : NativeWait.INTERRUPTIBLE_SETTLEMENT, -1, ready));
+            if (ready.get(ValueLayout.JAVA_INT, 0) == NativeWait.READY_TIMEOUT)
+                throw new IllegalStateException("Native readiness wait expired");
         } finally { completedWait(); }
     }
     private void release() {

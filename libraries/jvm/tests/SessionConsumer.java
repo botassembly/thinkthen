@@ -39,6 +39,7 @@ public final class SessionConsumer {
             var threads = java.lang.management.ManagementFactory.getThreadMXBean();
             long before = threads.getTotalStartedThreadCount();
             var waiting = session.waitReady(false);
+            idleWaitDoesNotPoll();
             check(session.waitReady(false) == waiting, "pending wait was replaced");
             CompletableFuture.runAsync(() -> check(!waiting.isDone(), "native wait blocked the host scheduler"), scheduler).get(1, TimeUnit.SECONDS);
             check(session.tryRead().packet() == null, "wait consumed or invented a result");
@@ -48,7 +49,38 @@ public final class SessionConsumer {
                 check(cancelled.cancel(false), "pending wait did not cancel");
                 check(session.waitReady(false) == cancelled, "cancelled wait was replaced before its native worker returned");
             }
+            Thread.sleep(100);
+            check(session.waitReady(false) != waiting, "cancel did not wake the native readiness worker");
+            session.finish();
+            session.waitReady(false).get(2, TimeUnit.SECONDS);
+            check(threads.getTotalStartedThreadCount() - before <= 2, "cancel wake grew worker count");
         }
+        try (var session = engine.startSession(request)) {
+            var ready = session.waitReady(false);
+            session.finish();
+            ready.get(2, TimeUnit.SECONDS);
+            check(session.tryRead().packet() != null, "readiness did not wake for a result");
+        }
+    }
+    static long workerSwitches() throws Exception {
+        long total = 0;
+        try (var tasks = Files.list(Path.of("/proc/self/task"))) {
+            for (var task : tasks.toList()) {
+                if (!Files.readString(task.resolve("comm")).startsWith("thinkthen-sessi")) continue;
+                for (String line : Files.readAllLines(task.resolve("status"))) {
+                    if (line.startsWith("voluntary_ctxt_switches:") || line.startsWith("nonvoluntary_ctxt_switches:"))
+                        total += Long.parseLong(line.substring(line.indexOf(':') + 1).trim());
+                }
+            }
+        }
+        return total;
+    }
+    static void idleWaitDoesNotPoll() throws Exception {
+        if (!Files.isDirectory(Path.of("/proc/self/task"))) return;
+        Thread.sleep(100);
+        long before = workerSwitches();
+        Thread.sleep(600);
+        check(workerSwitches() - before <= 3, "idle readiness worker wakes on a timer");
     }
     static void planFunctions(Engine engine) {
         var functions = Inputs.RequestFunction.values();
@@ -118,8 +150,8 @@ public final class SessionConsumer {
             check(done(engine.filter(authored(new Inputs.RequestDefinitionAuthoredDecide().decide(wording("Is it?")).threshold(new Inputs.AuthoredThreshold(0.5))),records("session-filter"),options())).filter().equals(List.of("session-filter")),"filter returns original inputs");
             check(done(engine.rank(authored(new Inputs.RequestDefinitionAuthoredDecide().decide(wording("Is it?"))),records("session-rank"),options())).rank().equals(List.of(java.math.BigInteger.ZERO)),"rank returns original zero-based indexes");
             check(done(engine.find(authored(new Inputs.RequestDefinitionAuthoredFind().find(wording("Which?"))),records("session-find","session-find-two"),options())).packets().stream().anyMatch(Results.SessionPacketFindAggregate.class::isInstance),"find aggregate");
-            check(done(engine.annotate(authored(new Inputs.RequestDefinitionAnnotateDefinition().questions(Map.of("check",new Inputs.AnnotateQuestionDecide().decide(wording("Is it?"))))),records("session-annotate"),options())).packets().stream().anyMatch(Results.SessionPacketAnnotateRow.class::isInstance),"annotate row");
-            check(done(engine.recognize(authored(new Inputs.RequestDefinitionRecognizeDefinition().recognize(new Inputs.RecognizeQuestion().kinds(Map.of("person",new Inputs.AuthoredDescription("A person's name."))))),records("Maria Chen"),options())).packets().stream().anyMatch(Results.SessionPacketRecognizeAggregate.class::isInstance),"recognize aggregate");
+            check(done(engine.annotate(authored(new Inputs.RequestDefinitionAnnotateDefinition().questions(new Inputs.Ordered<Inputs.AnnotateQuestion>().entry("check",new Inputs.AnnotateQuestionDecide().decide(wording("Is it?"))))),records("session-annotate"),options())).packets().stream().anyMatch(Results.SessionPacketAnnotateRow.class::isInstance),"annotate row");
+            check(done(engine.recognize(authored(new Inputs.RequestDefinitionRecognizeDefinition().recognize(new Inputs.RecognizeQuestion().kinds(new Inputs.Ordered<Inputs.AuthoredDescription>().entry("person",new Inputs.AuthoredDescription("A person's name."))))),records("Maria Chen"),options())).packets().stream().anyMatch(Results.SessionPacketRecognizeAggregate.class::isInstance),"recognize aggregate");
             var entities = new Inputs.RequestInputEntities().items(List.of(new Inputs.RequestItem().original(new Inputs.RequestOriginalJson().value(Map.of("name","First","kind","alert"))),new Inputs.RequestItem().original(new Inputs.RequestOriginalJson().value(Map.of("name","Second","kind","alert")))));
             check(done(engine.relate(authored(new Inputs.RequestDefinitionAuthoredRelate().relate(new Inputs.RelateQuestion().relations(List.of(new Inputs.AuthoredRelation().name("caused_by").source("alert").target("alert"))))),entities,options())).packets().stream().anyMatch(Results.SessionPacketRelateAggregate.class::isInstance),"relate aggregate");
             var request = new Inputs.Request().call(new Inputs.RequestCall().function(Inputs.RequestFunction.DECIDE).question(question).input(records("preview")));
@@ -155,6 +187,7 @@ public final class SessionConsumer {
             try { engine.decide(question,records("status-401"),options()).join(); throw new AssertionError("provider failure succeeded"); }
             catch (CompletionException error) { retainedFailure = (Engine.SessionFailure)error.getCause(); }
             planFunctions(engine);
+            thinkthen.AuthoredOrderCases.javaCaller();
             waitScheduler(engine, question);
             var held = engine.decide(question,records("hold-jvm-java"),options());
             arrived("hold-jvm-java");

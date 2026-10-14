@@ -70,6 +70,9 @@ def main():
         subprocess.run(command, check=True, env=env)
         if kind != "session":
             shutil.copytree(out / "classes" / "session", classes, dirs_exist_ok=True)
+        bootstrap = classes / 'META-INF/thinkthen/native-bootstrap.properties'
+        bootstrap.parent.mkdir(parents=True, exist_ok=True)
+        bootstrap.write_text(''.join(name + '=' + ','.join(asset['files']) + '\n' for name, asset in inventory['native'].items()), encoding='ascii')
         with zipfile.ZipFile(jars / filename, 'w', zipfile.ZIP_DEFLATED) as jar:
             for file in sorted(classes.rglob('*')):
                 if file.is_file(): jar.write(file, file.relative_to(classes))

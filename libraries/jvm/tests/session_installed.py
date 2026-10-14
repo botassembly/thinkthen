@@ -55,7 +55,7 @@ def run(jars, out, *, maven=False, language=None, profiles=None):
     shutil.copyfile(source,work / source.name)
     shutil.copyfile(ROOT / "libraries/jvm/tests/JsonTest.java", work / "JsonTest.java")
     shutil.copyfile(ROOT / "libraries/jvm/tests/PublicResultsCases.java", work / "PublicResultsCases.java")
-    for helper in ("SessionCases.java", "CaseBatch.java"):
+    for helper in ("SessionCases.java", "CaseBatch.java", "FixtureJson.java", "AuthoredOrderCases.java"):
         shutil.copyfile(ROOT / "libraries/jvm/tests" / helper, work / helper)
     examples = jars / 'examples'
     if not examples.is_dir(): examples = jars.parent / 'examples'
@@ -64,9 +64,9 @@ def run(jars, out, *, maven=False, language=None, profiles=None):
     jdk = Path(os.environ['THINKTHEN_JDK_HOME'])
     env = child_env(keep=('LANG','LC_ALL'),home=work / 'home', JAVA_HOME=str(jdk), JAVACMD=str(jdk / 'bin/java'))
     if 'java' in languages:
-        subprocess.run([str(jdk / 'bin/javac'),'--release',str(JDK_FLOOR),'-cp',str(feed / 'thinkthen-session.jar'),'-d',str(work / 'app'),str(work / source.name),str(work / "JsonTest.java"),str(work / "PublicResultsCases.java"),str(work / "SampleInputs.java"),str(work / "JavaExamples.java"),str(work / "SessionCases.java"),str(work / "CaseBatch.java")],check=True,env=env)
+        subprocess.run([str(jdk / 'bin/javac'),'--release',str(JDK_FLOOR),'-cp',str(feed / 'thinkthen-session.jar'),'-d',str(work / 'app'),str(work / source.name),str(work / "JsonTest.java"),str(work / "PublicResultsCases.java"),str(work / "SampleInputs.java"),str(work / "JavaExamples.java"),str(work / "SessionCases.java"),str(work / "CaseBatch.java"),str(work / "FixtureJson.java"),str(work / "AuthoredOrderCases.java")],check=True,env=env)
     if 'java' not in languages:
-        subprocess.run([str(jdk / 'bin/javac'),'--release',str(JDK_FLOOR),'-cp',str(feed / 'thinkthen-session.jar'),'-d',str(work / 'app'),str(work / 'SampleInputs.java')],check=True,env=env)
+        subprocess.run([str(jdk / 'bin/javac'),'--release',str(JDK_FLOOR),'-cp',str(feed / 'thinkthen-session.jar'),'-d',str(work / 'app'),str(work / 'SampleInputs.java'),str(work / 'AuthoredOrderCases.java')],check=True,env=env)
     kotlin = Path(os.environ['THINKTHEN_KOTLIN_HOME'])
     scala = Path(os.environ['THINKTHEN_SCALA_HOME'])
     for filename in ('SessionKotlin.kt','SessionScala.scala'):

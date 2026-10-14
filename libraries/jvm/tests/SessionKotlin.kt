@@ -9,6 +9,9 @@ import java.nio.file.Files
 import java.nio.file.Path
 
 fun main() = runBlocking {
+    val authored = listOf("zebra", "mango", "apple", "tango", "berry").fold(Inputs.Ordered<Inputs.AuthoredDescription>()) { values, name -> values.entry(name, Inputs.AuthoredDescription(name)) }
+    thinkthen.AuthoredOrderCases.check(Inputs.RequestQuestionDefinition().value(Inputs.RequestDefinitionAuthoredChoose().choose(Inputs.AuthoredQuestionText("Which?")).options(Inputs.AuthoredOptions(authored))), "options")
+    thinkthen.AuthoredOrderCases.check(Inputs.RequestQuestionDefinition().value(Inputs.RequestDefinitionRecognizeDefinition().recognize(Inputs.RecognizeQuestion().kinds(authored))), "kinds")
     lateinit var retained: OwnedCall
     lateinit var failure: SessionFailure
     KotlinEngine(Inputs.EngineSettings().cache(Inputs.CacheDocument(false)).maxRetries(0)).use { engine ->

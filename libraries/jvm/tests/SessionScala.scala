@@ -10,6 +10,9 @@ import java.nio.file.{Files, Path}
 
 object SessionScala {
   def main(args: Array[String]): Unit = {
+    val authoredNames = List("zebra", "mango", "apple", "tango", "berry").foldLeft(new Inputs.Ordered[Inputs.AuthoredDescription]())((values, name) => values.entry(name, new Inputs.AuthoredDescription(name)))
+    thinkthen.AuthoredOrderCases.check(new Inputs.RequestQuestionDefinition().value(new Inputs.RequestDefinitionAuthoredChoose().choose(new Inputs.AuthoredQuestionText("Which?")).options(new Inputs.AuthoredOptions(authoredNames))), "options")
+    thinkthen.AuthoredOrderCases.check(new Inputs.RequestQuestionDefinition().value(new Inputs.RequestDefinitionRecognizeDefinition().recognize(new Inputs.RecognizeQuestion().kinds(authoredNames))), "kinds")
     val engine = new ScalaEngine(new Inputs.EngineSettings().cache(new Inputs.CacheDocument(false)).maxRetries(0))
     var retainedCall: OwnedCall = null
     var failure: SessionFailure = null
