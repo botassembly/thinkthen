@@ -801,8 +801,8 @@ typedef struct thinkthen_request_unsigned_v1 {
 } thinkthen_request_unsigned_v1;
 
 typedef union thinkthen_request_batch_data_v1 {
-  const struct thinkthen_request_unsigned_v1 *arm_1;
-  const struct thinkthen_request_text_v1 *arm_2;
+  const struct thinkthen_request_unsigned_v1 *unsigned_value;
+  const struct thinkthen_request_text_v1 *text;
 } thinkthen_request_batch_data_v1;
 
 typedef struct thinkthen_request_batch_v1 {
@@ -815,8 +815,8 @@ typedef struct thinkthen_request_disabled_cache_v1 {
 } thinkthen_request_disabled_cache_v1;
 
 typedef union thinkthen_request_cache_document_data_v1 {
-  const struct thinkthen_request_text_v1 *arm_1;
-  const struct thinkthen_request_disabled_cache_v1 *arm_2;
+  const struct thinkthen_request_text_v1 *text;
+  const struct thinkthen_request_disabled_cache_v1 *disabled_cache;
 } thinkthen_request_cache_document_data_v1;
 
 typedef struct thinkthen_request_cache_document_v1 {
@@ -829,8 +829,8 @@ typedef struct thinkthen_request_null_v1 {
 } thinkthen_request_null_v1;
 
 typedef union thinkthen_request_engine_settings_max_estimated_input_tokens_total_data_v1 {
-  const struct thinkthen_request_unsigned_v1 *arm_1;
-  const struct thinkthen_request_null_v1 *arm_2;
+  const struct thinkthen_request_unsigned_v1 *unsigned_value;
+  const struct thinkthen_request_null_v1 *null;
 } thinkthen_request_engine_settings_max_estimated_input_tokens_total_data_v1;
 
 typedef struct thinkthen_request_engine_settings_max_estimated_input_tokens_total_v1 {
@@ -839,8 +839,8 @@ typedef struct thinkthen_request_engine_settings_max_estimated_input_tokens_tota
 } thinkthen_request_engine_settings_max_estimated_input_tokens_total_v1;
 
 typedef union thinkthen_request_engine_settings_max_requests_data_v1 {
-  const struct thinkthen_request_unsigned_v1 *arm_1;
-  const struct thinkthen_request_null_v1 *arm_2;
+  const struct thinkthen_request_unsigned_v1 *unsigned_value;
+  const struct thinkthen_request_null_v1 *null;
 } thinkthen_request_engine_settings_max_requests_data_v1;
 
 typedef struct thinkthen_request_engine_settings_max_requests_v1 {
@@ -1255,8 +1255,8 @@ typedef struct thinkthen_request_literal_image_png_v1 {
 } thinkthen_request_literal_image_png_v1;
 
 typedef union thinkthen_request_image_media_data_v1 {
-  const struct thinkthen_request_literal_image_jpeg_v1 *arm_1;
-  const struct thinkthen_request_literal_image_png_v1 *arm_2;
+  const struct thinkthen_request_literal_image_jpeg_v1 *literal_image_jpeg;
+  const struct thinkthen_request_literal_image_png_v1 *literal_image_png;
 } thinkthen_request_image_media_data_v1;
 
 typedef struct thinkthen_request_image_media_v1 {
@@ -1275,8 +1275,8 @@ typedef struct thinkthen_request_image_bytes_v1 {
 } thinkthen_request_image_bytes_v1;
 
 typedef union thinkthen_request_image_data_v1 {
-  const struct thinkthen_request_image_file_v1 *arm_1;
-  const struct thinkthen_request_image_bytes_v1 *arm_2;
+  const struct thinkthen_request_image_file_v1 *file;
+  const struct thinkthen_request_image_bytes_v1 *bytes;
 } thinkthen_request_image_data_v1;
 
 typedef struct thinkthen_request_image_v1 {
@@ -1314,8 +1314,8 @@ typedef struct thinkthen_request_json_value_map_v1 {
 } thinkthen_request_json_value_map_v1;
 
 typedef union thinkthen_request_context_schema_data_v1 {
-  const struct thinkthen_request_text_v1 *arm_1;
-  const struct thinkthen_request_json_value_map_v1 *arm_2;
+  const struct thinkthen_request_text_v1 *text;
+  const struct thinkthen_request_json_value_map_v1 *json_value_map;
 } thinkthen_request_context_schema_data_v1;
 
 typedef struct thinkthen_request_context_schema_v1 {
@@ -1346,8 +1346,8 @@ typedef struct thinkthen_request_recognition_example_text_v1 {
 } thinkthen_request_recognition_example_text_v1;
 
 typedef union thinkthen_request_recognition_example_data_v1 {
-  const struct thinkthen_request_text_v1 *arm_1;
-  const struct thinkthen_request_recognition_example_text_v1 *arm_2;
+  const struct thinkthen_request_text_v1 *text;
+  const struct thinkthen_request_recognition_example_text_v1 *recognition_example_text;
 } thinkthen_request_recognition_example_data_v1;
 
 typedef struct thinkthen_request_recognition_example_v1 {
@@ -1383,8 +1383,8 @@ typedef struct thinkthen_request_original_json_v1 {
 } thinkthen_request_original_json_v1;
 
 typedef union thinkthen_request_original_data_v1 {
-  const struct thinkthen_request_original_text_v1 *arm_1;
-  const struct thinkthen_request_original_json_v1 *arm_2;
+  const struct thinkthen_request_original_text_v1 *text;
+  const struct thinkthen_request_original_json_v1 *json;
 } thinkthen_request_original_data_v1;
 
 typedef struct thinkthen_request_original_v1 {
@@ -1450,11 +1450,11 @@ typedef struct thinkthen_request_literal_tsv_v1 {
 } thinkthen_request_literal_tsv_v1;
 
 typedef union thinkthen_request_framing_data_v1 {
-  const struct thinkthen_request_literal_document_v1 *arm_1;
-  const struct thinkthen_request_literal_lines_v1 *arm_2;
-  const struct thinkthen_request_literal_jsonl_v1 *arm_3;
-  const struct thinkthen_request_literal_csv_v1 *arm_4;
-  const struct thinkthen_request_literal_tsv_v1 *arm_5;
+  const struct thinkthen_request_literal_document_v1 *literal_document;
+  const struct thinkthen_request_literal_lines_v1 *literal_lines;
+  const struct thinkthen_request_literal_jsonl_v1 *literal_jsonl;
+  const struct thinkthen_request_literal_csv_v1 *literal_csv;
+  const struct thinkthen_request_literal_tsv_v1 *literal_tsv;
 } thinkthen_request_framing_data_v1;
 
 typedef struct thinkthen_request_framing_v1 {
@@ -1471,8 +1471,8 @@ typedef struct thinkthen_request_literal_image_v1 {
 } thinkthen_request_literal_image_v1;
 
 typedef union thinkthen_request_reader_media_data_v1 {
-  const struct thinkthen_request_literal_text_v1 *arm_1;
-  const struct thinkthen_request_literal_image_v1 *arm_2;
+  const struct thinkthen_request_literal_text_v1 *literal_text;
+  const struct thinkthen_request_literal_image_v1 *literal_image;
 } thinkthen_request_reader_media_data_v1;
 
 typedef struct thinkthen_request_reader_media_v1 {
@@ -1493,9 +1493,9 @@ typedef struct thinkthen_request_literal_file_v1 {
 } thinkthen_request_literal_file_v1;
 
 typedef union thinkthen_request_source_unit_data_v1 {
-  const struct thinkthen_request_literal_line_v1 *arm_1;
-  const struct thinkthen_request_literal_window_v1 *arm_2;
-  const struct thinkthen_request_literal_file_v1 *arm_3;
+  const struct thinkthen_request_literal_line_v1 *literal_line;
+  const struct thinkthen_request_literal_window_v1 *literal_window;
+  const struct thinkthen_request_literal_file_v1 *literal_file;
 } thinkthen_request_source_unit_data_v1;
 
 typedef struct thinkthen_request_source_unit_v1 {
@@ -1527,13 +1527,13 @@ typedef struct thinkthen_request_input_feed_v1 {
 } thinkthen_request_input_feed_v1;
 
 typedef union thinkthen_request_input_data_v1 {
-  const struct thinkthen_request_input_text_v1 *arm_1;
-  const struct thinkthen_request_input_json_v1 *arm_2;
-  const struct thinkthen_request_input_records_v1 *arm_3;
-  const struct thinkthen_request_input_units_v1 *arm_4;
-  const struct thinkthen_request_input_entities_v1 *arm_5;
-  const struct thinkthen_request_input_source_v1 *arm_6;
-  const struct thinkthen_request_input_feed_v1 *arm_7;
+  const struct thinkthen_request_input_text_v1 *text;
+  const struct thinkthen_request_input_json_v1 *json;
+  const struct thinkthen_request_input_records_v1 *records;
+  const struct thinkthen_request_input_units_v1 *units;
+  const struct thinkthen_request_input_entities_v1 *entities;
+  const struct thinkthen_request_input_source_v1 *source;
+  const struct thinkthen_request_input_feed_v1 *feed;
 } thinkthen_request_input_data_v1;
 
 typedef struct thinkthen_request_input_v1 {
@@ -1554,8 +1554,8 @@ typedef struct thinkthen_request_literal_boundary_only_v1 {
 } thinkthen_request_literal_boundary_only_v1;
 
 typedef union thinkthen_request_recognition_mode_data_v1 {
-  const struct thinkthen_request_literal_whole_v1 *arm_1;
-  const struct thinkthen_request_literal_boundary_only_v1 *arm_2;
+  const struct thinkthen_request_literal_whole_v1 *literal_whole;
+  const struct thinkthen_request_literal_boundary_only_v1 *literal_boundary_only;
 } thinkthen_request_recognition_mode_data_v1;
 
 typedef struct thinkthen_request_recognition_mode_v1 {
@@ -1568,8 +1568,8 @@ typedef struct thinkthen_request_number_v1 {
 } thinkthen_request_number_v1;
 
 typedef union thinkthen_request_call_threshold_data_v1 {
-  const struct thinkthen_request_number_v1 *arm_1;
-  const struct thinkthen_request_text_v1 *arm_2;
+  const struct thinkthen_request_number_v1 *number;
+  const struct thinkthen_request_text_v1 *text;
 } thinkthen_request_call_threshold_data_v1;
 
 typedef struct thinkthen_request_call_threshold_v1 {
@@ -1617,8 +1617,8 @@ typedef struct thinkthen_request_literal_max_v1 {
 } thinkthen_request_literal_max_v1;
 
 typedef union thinkthen_request_question_batch_data_v1 {
-  const struct thinkthen_request_literal_max_v1 *arm_1;
-  const struct thinkthen_request_integer_v1 *arm_2;
+  const struct thinkthen_request_literal_max_v1 *literal_max;
+  const struct thinkthen_request_integer_v1 *integer;
 } thinkthen_request_question_batch_data_v1;
 
 typedef struct thinkthen_request_question_batch_v1 {
@@ -1651,10 +1651,10 @@ typedef struct thinkthen_request_input_property_array_v1 {
 } thinkthen_request_input_property_array_v1;
 
 typedef union thinkthen_request_input_property_data_v1 {
-  const struct thinkthen_request_input_property_string_v1 *arm_1;
-  const struct thinkthen_request_input_property_number_v1 *arm_2;
-  const struct thinkthen_request_input_property_boolean_v1 *arm_3;
-  const struct thinkthen_request_input_property_array_v1 *arm_4;
+  const struct thinkthen_request_input_property_string_v1 *string;
+  const struct thinkthen_request_input_property_number_v1 *number;
+  const struct thinkthen_request_input_property_boolean_v1 *boolean;
+  const struct thinkthen_request_input_property_array_v1 *array;
 } thinkthen_request_input_property_data_v1;
 
 typedef struct thinkthen_request_input_property_v1 {
@@ -1678,8 +1678,8 @@ typedef struct thinkthen_request_input_declaration_object_v1 {
 } thinkthen_request_input_declaration_object_v1;
 
 typedef union thinkthen_request_input_declaration_data_v1 {
-  const struct thinkthen_request_input_declaration_string_v1 *arm_1;
-  const struct thinkthen_request_input_declaration_object_v1 *arm_2;
+  const struct thinkthen_request_input_declaration_string_v1 *string;
+  const struct thinkthen_request_input_declaration_object_v1 *object;
 } thinkthen_request_input_declaration_data_v1;
 
 typedef struct thinkthen_request_input_declaration_v1 {
@@ -1693,9 +1693,9 @@ typedef struct thinkthen_request_json_value_list_v1 {
 } thinkthen_request_json_value_list_v1;
 
 typedef union thinkthen_request_question_text_data_v1 {
-  const struct thinkthen_request_text_v1 *arm_1;
-  const struct thinkthen_request_json_value_map_v1 *arm_2;
-  const struct thinkthen_request_json_value_list_v1 *arm_3;
+  const struct thinkthen_request_text_v1 *text;
+  const struct thinkthen_request_json_value_map_v1 *json_value_map;
+  const struct thinkthen_request_json_value_list_v1 *json_value_list;
 } thinkthen_request_question_text_data_v1;
 
 typedef struct thinkthen_request_question_text_v1 {
@@ -1704,10 +1704,10 @@ typedef struct thinkthen_request_question_text_v1 {
 } thinkthen_request_question_text_v1;
 
 typedef union thinkthen_request_criterion_data_v1 {
-  const struct thinkthen_request_text_v1 *arm_1;
-  const struct thinkthen_request_json_value_map_v1 *arm_2;
-  const struct thinkthen_request_json_value_list_v1 *arm_3;
-  const struct thinkthen_request_null_v1 *arm_4;
+  const struct thinkthen_request_text_v1 *text;
+  const struct thinkthen_request_json_value_map_v1 *json_value_map;
+  const struct thinkthen_request_json_value_list_v1 *json_value_list;
+  const struct thinkthen_request_null_v1 *null;
 } thinkthen_request_criterion_data_v1;
 
 typedef struct thinkthen_request_criterion_v1 {
@@ -1720,8 +1720,8 @@ typedef struct thinkthen_request_name_v1 {
 } thinkthen_request_name_v1;
 
 typedef union thinkthen_request_pointers_data_v1 {
-  const struct thinkthen_request_text_v1 *arm_1;
-  const struct thinkthen_request_text_list_v1 *arm_2;
+  const struct thinkthen_request_text_v1 *text;
+  const struct thinkthen_request_text_list_v1 *text_list;
 } thinkthen_request_pointers_data_v1;
 
 typedef struct thinkthen_request_pointers_v1 {
@@ -1734,8 +1734,8 @@ typedef struct thinkthen_request_profile_v1 {
 } thinkthen_request_profile_v1;
 
 typedef union thinkthen_request_threshold_data_v1 {
-  const struct thinkthen_request_number_v1 *arm_1;
-  const struct thinkthen_request_text_v1 *arm_2;
+  const struct thinkthen_request_number_v1 *number;
+  const struct thinkthen_request_text_v1 *text;
 } thinkthen_request_threshold_data_v1;
 
 typedef struct thinkthen_request_threshold_v1 {
@@ -1764,10 +1764,10 @@ typedef struct thinkthen_request_name_list_v1 {
 } thinkthen_request_name_list_v1;
 
 typedef union thinkthen_request_description_data_v1 {
-  const struct thinkthen_request_text_v1 *arm_1;
-  const struct thinkthen_request_json_value_map_v1 *arm_2;
-  const struct thinkthen_request_json_value_list_v1 *arm_3;
-  const struct thinkthen_request_null_v1 *arm_4;
+  const struct thinkthen_request_text_v1 *text;
+  const struct thinkthen_request_json_value_map_v1 *json_value_map;
+  const struct thinkthen_request_json_value_list_v1 *json_value_list;
+  const struct thinkthen_request_null_v1 *null;
 } thinkthen_request_description_data_v1;
 
 typedef struct thinkthen_request_description_v1 {
@@ -1786,8 +1786,8 @@ typedef struct thinkthen_request_description_map_v1 {
 } thinkthen_request_description_map_v1;
 
 typedef union thinkthen_request_options_data_v1 {
-  const struct thinkthen_request_name_list_v1 *arm_1;
-  const struct thinkthen_request_description_map_v1 *arm_2;
+  const struct thinkthen_request_name_list_v1 *name_list;
+  const struct thinkthen_request_description_map_v1 *description_map;
 } thinkthen_request_options_data_v1;
 
 typedef struct thinkthen_request_options_v1 {
@@ -1796,8 +1796,8 @@ typedef struct thinkthen_request_options_v1 {
 } thinkthen_request_options_v1;
 
 typedef union thinkthen_request_cut_data_v1 {
-  const struct thinkthen_request_number_v1 *arm_1;
-  const struct thinkthen_request_text_v1 *arm_2;
+  const struct thinkthen_request_number_v1 *number;
+  const struct thinkthen_request_text_v1 *text;
 } thinkthen_request_cut_data_v1;
 
 typedef struct thinkthen_request_cut_v1 {
@@ -1820,8 +1820,8 @@ typedef struct thinkthen_request_definition_authored_choose_v1 {
 } thinkthen_request_definition_authored_choose_v1;
 
 typedef union thinkthen_request_labels_data_v1 {
-  const struct thinkthen_request_name_list_v1 *arm_1;
-  const struct thinkthen_request_description_map_v1 *arm_2;
+  const struct thinkthen_request_name_list_v1 *name_list;
+  const struct thinkthen_request_description_map_v1 *description_map;
 } thinkthen_request_labels_data_v1;
 
 typedef struct thinkthen_request_labels_v1 {
@@ -1854,8 +1854,8 @@ typedef struct thinkthen_request_criterion_map_v1 {
 } thinkthen_request_criterion_map_v1;
 
 typedef union thinkthen_request_levels_data_v1 {
-  const struct thinkthen_request_name_list_v1 *arm_1;
-  const struct thinkthen_request_criterion_map_v1 *arm_2;
+  const struct thinkthen_request_name_list_v1 *name_list;
+  const struct thinkthen_request_criterion_map_v1 *criterion_map;
 } thinkthen_request_levels_data_v1;
 
 typedef struct thinkthen_request_levels_v1 {
@@ -1990,10 +1990,10 @@ typedef struct thinkthen_request_annotate_question_score_v1 {
 } thinkthen_request_annotate_question_score_v1;
 
 typedef union thinkthen_request_annotate_question_data_v1 {
-  const struct thinkthen_request_annotate_question_decide_v1 *arm_1;
-  const struct thinkthen_request_annotate_question_choose_v1 *arm_2;
-  const struct thinkthen_request_annotate_question_tag_v1 *arm_3;
-  const struct thinkthen_request_annotate_question_score_v1 *arm_4;
+  const struct thinkthen_request_annotate_question_decide_v1 *decide;
+  const struct thinkthen_request_annotate_question_choose_v1 *choose;
+  const struct thinkthen_request_annotate_question_tag_v1 *tag;
+  const struct thinkthen_request_annotate_question_score_v1 *score;
 } thinkthen_request_annotate_question_data_v1;
 
 typedef struct thinkthen_request_annotate_question_v1 {
@@ -2019,14 +2019,14 @@ typedef struct thinkthen_request_definition_annotate_definition_v1 {
 } thinkthen_request_definition_annotate_definition_v1;
 
 typedef union thinkthen_request_definition_data_v1 {
-  const struct thinkthen_request_definition_authored_decide_v1 *arm_1;
-  const struct thinkthen_request_definition_authored_choose_v1 *arm_2;
-  const struct thinkthen_request_definition_authored_tag_v1 *arm_3;
-  const struct thinkthen_request_definition_authored_score_v1 *arm_4;
-  const struct thinkthen_request_definition_authored_relate_v1 *arm_5;
-  const struct thinkthen_request_definition_authored_find_v1 *arm_6;
-  const struct thinkthen_request_definition_recognize_definition_v1 *arm_7;
-  const struct thinkthen_request_definition_annotate_definition_v1 *arm_8;
+  const struct thinkthen_request_definition_authored_decide_v1 *authored_decide;
+  const struct thinkthen_request_definition_authored_choose_v1 *authored_choose;
+  const struct thinkthen_request_definition_authored_tag_v1 *authored_tag;
+  const struct thinkthen_request_definition_authored_score_v1 *authored_score;
+  const struct thinkthen_request_definition_authored_relate_v1 *authored_relate;
+  const struct thinkthen_request_definition_authored_find_v1 *authored_find;
+  const struct thinkthen_request_definition_recognize_definition_v1 *recognize_definition;
+  const struct thinkthen_request_definition_annotate_definition_v1 *annotate_definition;
 } thinkthen_request_definition_data_v1;
 
 typedef struct thinkthen_request_definition_v1 {
@@ -2051,11 +2051,11 @@ typedef struct thinkthen_request_question_selector_reference_v1 {
 } thinkthen_request_question_selector_reference_v1;
 
 typedef union thinkthen_request_question_selector_data_v1 {
-  const struct thinkthen_request_question_selector_text_v1 *arm_1;
-  const struct thinkthen_request_question_selector_definition_v1 *arm_2;
-  const struct thinkthen_request_question_selector_file_v1 *arm_3;
-  const struct thinkthen_request_question_selector_name_v1 *arm_4;
-  const struct thinkthen_request_question_selector_reference_v1 *arm_5;
+  const struct thinkthen_request_question_selector_text_v1 *text;
+  const struct thinkthen_request_question_selector_definition_v1 *definition;
+  const struct thinkthen_request_question_selector_file_v1 *file;
+  const struct thinkthen_request_question_selector_name_v1 *name;
+  const struct thinkthen_request_question_selector_reference_v1 *reference;
 } thinkthen_request_question_selector_data_v1;
 
 typedef struct thinkthen_request_question_selector_v1 {
@@ -2092,10 +2092,10 @@ typedef struct thinkthen_request_reader_failure_invalid_input_v1 {
 } thinkthen_request_reader_failure_invalid_input_v1;
 
 typedef union thinkthen_request_reader_failure_data_v1 {
-  const struct thinkthen_request_reader_failure_producer_v1 *arm_1;
-  const struct thinkthen_request_reader_failure_io_v1 *arm_2;
-  const struct thinkthen_request_reader_failure_utf_8_v1 *arm_3;
-  const struct thinkthen_request_reader_failure_invalid_input_v1 *arm_4;
+  const struct thinkthen_request_reader_failure_producer_v1 *producer;
+  const struct thinkthen_request_reader_failure_io_v1 *io;
+  const struct thinkthen_request_reader_failure_utf_8_v1 *utf_8;
+  const struct thinkthen_request_reader_failure_invalid_input_v1 *invalid_input;
 } thinkthen_request_reader_failure_data_v1;
 
 typedef struct thinkthen_request_reader_failure_v1 {
