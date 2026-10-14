@@ -520,3 +520,6 @@ fn declared_file_source_yields_located_prefix_before_reading_invalid_utf8_suffix
     assert_eq!(error.facts().unwrap().requests_sent(), 1);
     assert_eq!(listener.count(), 1);
 }
+
+#[path = "recovering_stream/terminal.rs"]
+mod terminal;
