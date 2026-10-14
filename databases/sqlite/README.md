@@ -61,6 +61,38 @@ The keyed input is a JSON object of original row keys to nonblank text; repeated
 
 Each SQL call still needs the caller's judgment about whether to spend. Correlated scalar calls can send once per source row. For a large join, aggregate its keyed JSON once, then join the table result. `tests/slide.sql` is a runnable small example of that shape.
 
+## Name keyed call parameters
+
+The keyed judgment and rank tables also accept optional arguments by hidden-column name:
+
+```sql
+SELECT key, value, probability
+FROM thinkthen_decide_many('Is it red?', '{"7":"A red door."}')
+WHERE model = 'judge-model' AND context = 'Describe the visible color.'
+  AND batch = 2 AND threshold = '0.3:0.7';
+
+SELECT key, value, probability
+FROM thinkthen_choose_many('Which team?', '{"7":"Please track my parcel."}')
+WHERE options = '{"shipping":"Parcel questions","billing":"Money questions"}';
+```
+
+Named `model`, `context`, `threshold`, `true_reading` and `false_reading` take SQL text. `batch` and `deadline_ms` take SQL integers. `options`, `levels` and `labels` take ordered JSON label arrays or description maps as SQL text; their entries retain the native member grammar and authored order. `none` takes the SQL integers 0 and 1. Each function still applies its own allowed settings grammar. Named NULL values omit that setting. Supplying the same field by name and in the settings object raises usage before sending. Required NULL inputs still return no rows before inspecting these parameters.
+
+Names and positions appear in `pragma_table_xinfo('thinkthen_decide_many')` and the discovery catalog reports the expanded argument range. Named parameters merge into the same native settings object before the connection cache lookup. The effective settings participate in cache identity, so changing context cannot reuse a previous context's rows. Existing positional settings retain their original bytes and behavior.
+
+## Filter file evidence into typed rows
+
+```sql
+SELECT file, first_line, last_line, ordinal, value, probability,
+       call_id, requests_sent, cache_answers
+FROM thinkthen_filter('Is this a contract?', '["contract.txt"]')
+WHERE unit = 'file' AND files_only = 1 AND batch = 16;
+```
+
+`thinkthen_filter(question, paths)` takes an ordered JSON array of file paths and returns selected rows with SQL text, integer and real columns. `files_only = 1` keeps the first passing occurrence for each file in input order. Omission returns every passing occurrence. Repeated paths retain their native occurrence ordinals and contribute to the owning call's record count. `value` is 1 for a selected row; `probability` retains its actual yes probability. The answer and call identities, request and cache counts, optional reported tokens and elapsed seconds come from the same native evaluation.
+
+Named `unit`, `window`, `media` and `format` select the existing native reader. `format` admits `jsonl`, `csv` and `tsv`. `fields` takes an ordered JSON array of evidence pointers; `context_field` selects separate per-record context. The keyed-call settings above also apply through named parameters or `settings`. These calls use the existing Source reader and native admission, including physical row coordinates, file rules and image refusals. An empty path list raises the native Source usage error. A required NULL question or paths value returns no rows before inspecting other parameters. Source failures raise ordinary SQL errors. The existing completion calls retain eager/incremental Feed behavior and full observations while their wider migration continues.
+
 ## Rank a table once
 
 ```sql
@@ -105,7 +137,7 @@ The old `thinkthen_warm`, `thinkthen_probability`, `thinkthen_recognize_document
 
 `thinkthen_find` accepts an ordered JSON array of 2–255 nonblank text units, or 2–254 with `{"none":true}`. Duplicates retain separate zero-based positions. Empty input and SQL NULL return SQL NULL. `thinkthen_recognize` keeps the `text, start, end, length, kind, strength` row shape, with character offsets matching SQLite `substr`. `thinkthen_relations` accepts a full or bare recognize spec or an `@file`.
 
-For `thinkthen_recognize`, pass one kind as `'person'`, or comma-separated names as `'person,organisation'`. To supply descriptions, pass a recognize JSON object such as `'{"kinds":{"person":"A human name."}}'`, a full versioned recognize spec, or an `@file` containing that spec. A bare JSON array string such as `'["person"]'` currently names one literal kind, `["person"]`. Use `'person'` to request the person kind.
+For `thinkthen_recognize`, pass one kind as `'person'`, or comma-separated names as `'person,organisation'`. To supply descriptions, pass a recognize JSON object such as `'{"kinds":{"person":"A human name."}}'`, a full versioned recognize spec, or an `@file` containing that spec. A bare JSON array string such as `'["person"]'` raises a usage error before any request. Use `'person'` to request the person kind.
 
 ```sql
 SELECT text, kind FROM thinkthen_recognize('Maria Chen called.', 'person') AS recognized_names;

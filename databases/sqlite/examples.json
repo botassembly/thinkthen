@@ -62,6 +62,18 @@
     "choose_many": {
       "sql": "SELECT key, value, probability FROM thinkthen_choose_many('Which team?', '{\"7\":\"refund now\"}', '{\"options\":[\"billing\",\"shipping\"]}')",
       "expected": "7|billing|0.9"
+    },
+    "named_decide": {
+      "sql": "SELECT key, value, probability FROM thinkthen_decide_many('Is it red?', '{\"7\":\"A red door.\"}') WHERE model = 'judge-model' AND context = 'Describe the visible color.' AND batch = 2 AND threshold = '0.3:0.7';",
+      "expected": "7|1|0.9"
+    },
+    "named_choose": {
+      "sql": "SELECT key, value, probability FROM thinkthen_choose_many('Which team?', '{\"7\":\"Please track my parcel.\"}') WHERE options = '{\"shipping\":\"Parcel questions\",\"billing\":\"Money questions\"}';",
+      "expected": "7|shipping|0.9"
+    },
+    "filter_source": {
+      "sql": "SELECT first_line, last_line, value, probability FROM thinkthen_filter('Is this a contract?', '[\"../../specification/fixtures/files/documents/02-contract.txt\"]') WHERE unit = 'file' AND files_only = 1 AND batch = 16;",
+      "expected": "1|4|1|0.9"
     }
   }
 }

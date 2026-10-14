@@ -6,7 +6,7 @@ use thinkthen::{Error, ErrorKind, Surface};
 use thinkthen_host::sql_request as request;
 mod selector;
 
-fn prepare(
+pub(crate) fn prepare(
     verb: &str,
     source: &str,
     settings: &thinkthen::Settings,
