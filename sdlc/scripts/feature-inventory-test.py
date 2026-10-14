@@ -44,6 +44,9 @@ class FeatureInventory(unittest.TestCase):
             result = invoke()
             self.assertEqual(result.returncode, 1)
             self.assertIn('columns.rs', result.stderr)
+            for comment in ('// mod columns;', '/*\nmod columns;\n*/'):
+                (surface / 'consumer/src/main.rs').write_text(comment)
+                self.assertIn('columns.rs', invoke().stderr)
             (surface / 'consumer/src/main.rs').write_text('mod columns;')
             (surface / 'check.sh').unlink()
             self.assertIn('check.sh', invoke().stderr)

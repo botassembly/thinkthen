@@ -24,9 +24,9 @@ def inventory(root, surface):
         source = pending.pop().resolve()
         if source in files:
             continue
-        text = source.read_text()
+        text = re.sub(r'//[^\n]*|/\*[\s\S]*?\*/', '', source.read_text())
         files.add(source)
-        for match in re.finditer(r'(?:#\[path\s*=\s*"([^"]+)"\]\s*)?\bmod\s+(\w+)\s*;', text):
+        for match in re.finditer(r'(?m)^[ \t]*(?:#\[path\s*=\s*"([^"]+)"\]\s*)?(?:pub(?:\([^)]*\))?\s+)?mod\s+(\w+)\s*;', text):
             if match[1]:
                 module = source.parent / match[1]
             else:
