@@ -31,12 +31,26 @@ def check(run):
             restored = carrier(receipt, verb, json_text=True)
             expect(len(restored['observations']), len(events), verb + ' native observation count survives recomposition')
             if verb == 'rank':
+                expect([(event['kind'], event['index']) for event in events],
+                       [(kind, index) for index in range(3) for kind in ('question', 'row')], 'rank retains every native question and row event')
+                expect([event['inputs'][0]['input'] for event in events if event['kind'] == 'question'],
+                       ['\"alpha\"', '\"beta\"', '\"gamma\"'], 'rank observations retain all original inputs')
                 expect([row['value'] for row in ordered], [1, 2, 3], 'rank preserves positions')
                 expect([row['result']['index'] for row in ordered], [0, 1, 2], 'rank preserves original indices')
             else:
+                expect([(event['kind'], event['index']) for event in events],
+                       [('question', 0)] * count + [('row', 0)], 'relate retains all native question and row events')
+                expect([event['position'] for event in events if event['kind'] == 'question'], list(range(count)), 'relate retains every question position')
+                expect([len(event['inputs']) for event in events if event['kind'] == 'question'], [4] * count, 'relate observations retain the complete input set')
                 expect([len(row['result']['value']) for row in ordered], [1] * count, 'relate results contain only their own edge')
-                expect([row['result']['value'][0] for row in ordered], [row['value'] for row in ordered], 'relate preserves edge values and order')
+                pairs = [(str(a), str(b)) for a in range(1, 5) for b in range(1, 5) if a != b]
+                expect([(row['value']['source']['name'], row['value']['target']['name']) for row in ordered], pairs, 'relate keeps SQL edge identifiers in order')
+                expect([(row['result']['value'][0]['source']['name'], row['result']['value'][0]['target']['name']) for row in ordered],
+                       [('Person ' + a, 'Person ' + b) for a, b in pairs], 'relate keeps canonical entity names in order')
+                expect([(row['result']['value'][0]['relation'], row['result']['value'][0]['probability']) for row in ordered],
+                       [('near', 0.9)] * count, 'relate keeps canonical relation probabilities')
                 expect(len(restored['native']['value']['value']), count, 'relate recomposes the full native edge set')
+                expect(len(restored['native']['value']['input']), 4, 'relate preserves all original entities')
                 expect(len({row['result']['answer_id'] for row in ordered}), 1, 'relate preserves native answer identity')
                 for key in ('question', 'input', 'meta'):
                     expect([row['result'][key] for row in ordered], [first['result'][key]] * count, 'relate preserves original ' + key)
