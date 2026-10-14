@@ -43,13 +43,12 @@ def preview(engine: tt.Engine) -> None:
 
 
 def answers(engine: tt.Engine) -> None:
-    from thinkthen._native_results import NativeAtomicDouble, NativeRecognize, NativeRecognition
+    from thinkthen._native_results import NativeRecognize
     assert_type(engine.score("Urgency?", "note", levels=["low", "high"]).value,
-                float | list[float] | NativeAtomicDouble | list[NativeAtomicDouble])
+                float | list[float])
     assert_type(engine.recognize("Ada", kinds=["person"]).value,
-                NativeRecognize | list[NativeRecognize] | NativeRecognition | list[NativeRecognition])
+                NativeRecognize | list[NativeRecognize])
 
 async def async_answers(engine: tt.Engine) -> None:
-    from thinkthen._native_results import NativeAtomicDouble
     score = await engine.asyncio.score("Urgency?", "note", levels=["low", "high"])
-    assert_type(score.value, float | list[float] | NativeAtomicDouble | list[NativeAtomicDouble])
+    assert_type(score.value, float | list[float])

@@ -37,16 +37,6 @@ def test_named_calls_use_owned_typed_results_for_the_ten_functions(backend, tmp_
                 assert pickle.loads(pickle.dumps(done))._to_dict() == done._to_dict(), verb
                 assert 'one name' not in repr(done)
                 print(verb)
-            named = engine.recognize('Ada Ada', kinds=['person'],
-                                     seed_spans=[{'start': 0, 'end': 3}, {'start': 4, 'end': 7}])
-            entities = named.value.entities
-            assert [(entity.text, entity.start, entity.end) for entity in entities] == [('Ada', 0, 3), ('Ada', 4, 7)]
-            kept = [proposal for proposal in named.results[0].answer.proposals if proposal.kept]
-            assert len(kept) == len(named.probability) == 2
-            assert named.probability == [proposal.span_probability for proposal in kept]
-            assert all(chance != entity.strength for chance, entity in zip(named.probability, entities))
-            boundary = engine.recognize('Ada Ada', mode='boundary_only')
-            assert boundary.probability == [proposal.probability for proposal in boundary.value.proposals]
             pairs = [('A', 'person'), ('B', 'person')]
             relations = {'knows': ('person', 'person')}
             related = engine.relate(pairs, relations=relations)
@@ -319,3 +309,41 @@ def test_shipped_function_examples_replay_installed_answers_without_sending(back
         replayed = run(code.replace('SETTINGS', repr({'replay': str(folder / 'recording')})), env)
         assert replayed == recorded
         assert backend.count() == count, function
+
+
+def test_recognition_probabilities_follow_kept_spans_with_duplicate_names(backend, tmp_path):
+    output = run('''
+        import json, threading, thinkthen as tt
+        from http.server import BaseHTTPRequestHandler, HTTPServer
+        class Reply(BaseHTTPRequestHandler):
+            def log_message(self, *args): pass
+            def do_POST(self):
+                body = json.loads(self.rfile.read(int(self.headers['Content-Length'])))
+                answers = {}
+                for at, (name, question) in enumerate(sorted(body['questions'].items())):
+                    criteria = question['criteria']
+                    picked = 'SINGLE' if 'SINGLE' in criteria else 'person'
+                    probability = [.9, .7][at] if picked == 'SINGLE' else .6
+                    odds = {key: probability if key == picked else (1-probability)/(len(criteria)-1)
+                            for key in criteria}
+                    answers[name] = {'type': 'choice', 'probabilities': odds}
+                response = json.dumps({'model': 'jev-latest', 'answers': answers}).encode()
+                self.send_response(200); self.send_header('Content-Length', str(len(response)))
+                self.end_headers(); self.wfile.write(response)
+        server = HTTPServer(('127.0.0.1', 0), Reply)
+        threading.Thread(target=server.serve_forever, daemon=True).start()
+        with tt.Engine(cache=False, base_url=f'http://127.0.0.1:{server.server_port}/v1') as engine:
+            call = engine.recognize('Ada Ada', kinds=['person'], threshold=.1)
+            entities = call.value.entities
+            assert [(entity.text, entity.start, entity.end) for entity in entities] == [('Ada', 0, 3), ('Ada', 4, 7)]
+            proposals = [proposal for proposal in call.results[0].answer.proposals if proposal.kept]
+            assert call.probability == [proposal.span_probability for proposal in proposals]
+            assert call.probability[0] != call.probability[1]
+            assert all(chance != entity.strength for chance, entity in zip(call.probability, entities))
+            boundary = engine.recognize('Ada Ada', mode='boundary_only', threshold=.1)
+            assert boundary.probability == [proposal.probability for proposal in boundary.value.proposals]
+            assert [(proposal.text, proposal.start, proposal.end) for proposal in boundary.value.proposals] == [('Ada', 0, 3), ('Ada', 4, 7)]
+        server.shutdown(); server.server_close()
+        print('span probabilities')
+    ''', child_env(backend, tmp_path))
+    assert output.splitlines() == ['span probabilities']
