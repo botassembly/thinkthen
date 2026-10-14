@@ -473,7 +473,7 @@ class PublicAssertions(unittest.TestCase):
             backend.chmod(0o755)
             empty = root / 'empty'
             empty.write_text('# no selected cases\n')
-            env = parity.consumer_environment(root / 'home', '12345')
+            env = parity.consumer_environment(root, '12345')
             env.update(THINKTHEN_BACKEND_BIN=str(backend), THINKTHEN_TEST_PROFILE='routine')
             cases = (
                 ('unknown', 'not-a-canonical-case', [], 'unknown SQL case selector'),
