@@ -1,5 +1,6 @@
 //! Explicit immutable inputs shared by native and foreign image interfaces.
 
+#[cfg(test)]
 mod calls;
 use serde::Serialize;
 use std::sync::Arc;

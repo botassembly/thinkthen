@@ -231,3 +231,37 @@ pub(super) fn probabilities(answer: &core::Answer) -> Probabilities {
         ),
     }
 }
+
+impl CompleteDecision {
+    /// The yes probability, independent of the final yes, no or unsure reading.
+    #[must_use]
+    pub fn probability(&self) -> Option<f64> {
+        self.canonical.answer().yes()
+    }
+}
+impl CompleteFilter {
+    /// The yes probability used to select this input.
+    #[must_use]
+    pub fn probability(&self) -> Option<f64> {
+        self.canonical.answer().yes()
+    }
+}
+impl CompleteChoice {
+    /// The selected label's probability; an unresolved choice has none.
+    #[must_use]
+    pub fn probability(&self) -> Option<f64> {
+        let pick = self.value()?;
+        self.canonical
+            .answer()
+            .named()?
+            .into_iter()
+            .find_map(|(label, probability)| (label == pick).then_some(probability))
+    }
+}
+impl CompleteRank {
+    /// The yes probability of this ranked input, absent for a score reading.
+    #[must_use]
+    pub fn probability(&self) -> Option<f64> {
+        self.canonical.answer().yes()
+    }
+}

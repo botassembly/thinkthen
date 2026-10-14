@@ -23,14 +23,6 @@ impl<T> fmt::Debug for SetRanked<T> {
 }
 
 impl<T> SetRanked<T> {
-    pub(crate) fn new(index: usize, input: T, probability: f64, question_name: String) -> Self {
-        Self {
-            index,
-            input,
-            probability,
-            question_name,
-        }
-    }
     /// Zero-based original input position.
     #[must_use]
     pub fn index(&self) -> usize {

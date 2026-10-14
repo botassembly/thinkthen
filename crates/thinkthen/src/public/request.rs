@@ -302,7 +302,6 @@ impl RequestFunction {
             "none" => self == Self::Find,
             "top" => self == Self::Rank,
             "files_only" => self == Self::Filter,
-            "details" => matches!(self, Self::Decide | Self::Choose | Self::Tag | Self::Score),
             _ => true,
         }
     }
