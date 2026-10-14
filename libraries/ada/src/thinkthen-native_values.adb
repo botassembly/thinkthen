@@ -1,11 +1,12 @@
 -- Generated canonical value copy adapter. Do not edit.
 with Ada.Unchecked_Conversion;
 with Interfaces;
+with Thinkthen.Native_Sessions; use Thinkthen.Native_Sessions;
 with Thinkthen.Sessions; use Thinkthen.Sessions;
 with System;
 package body Thinkthen.Native_Values is
    use Thinkthen.Values;
-   use Thinkthen_Session_C;
+   use Thinkthen.Session_C;
    use type Interfaces.Unsigned_32;
 function Read (P : access constant thinkthen_complete_json_v1) return Value is
 begin

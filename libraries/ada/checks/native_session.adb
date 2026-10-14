@@ -12,23 +12,21 @@ with Interfaces.C.Strings;
 with Thinkthen.Requests; use Thinkthen.Requests;
 with Thinkthen.Sessions; use Thinkthen.Sessions;
 with Thinkthen.Sessions.Calls;
-with Thinkthen_Session_C; use Thinkthen_Session_C;
+with Thinkthen.Session_C; use Thinkthen.Session_C;
 procedure Native_Session is
    Client : Thinkthen.Engine;
    use type Thinkthen.Error_Kind;
-   procedure Select_Settings (Route, Settings : String) is
+   procedure Select_Settings (Route : String; Settings : Thinkthen.Inputs.Engine_Settings) is
       Error : Thinkthen.Failure;
    begin
-      Thinkthen.Configure (Client, "{""base_url"":""" &
-        Ada.Environment_Variables.Value ("TT_BACKEND_ROOT") & Route & """," & Settings & "}", Error);
+      Thinkthen.Inputs.Calls.Configure (Client, Thinkthen.Inputs.With_Base_Url (Settings,
+        Ada.Environment_Variables.Value ("TT_BACKEND_ROOT") & Route), Error);
       if Error.Kind /= Thinkthen.None then raise Program_Error with Thinkthen.Message (Error); end if;
    end Select_Settings;
    procedure Select_Route (Route : String) is
-      Error : Thinkthen.Failure;
    begin
-      Thinkthen.Configure (Client, "{""cache"":false,""base_url"":""" &
-        Ada.Environment_Variables.Value ("TT_BACKEND_ROOT") & Route & """}", Error);
-      if Error.Kind /= Thinkthen.None then raise Program_Error with Thinkthen.Message (Error); end if;
+      Select_Settings (Route, Thinkthen.Inputs.With_Cache (Thinkthen.Inputs.Make_Engine_Settings,
+        Thinkthen.Inputs.Cache_Document_From_False));
    end Select_Route;
    Owner : Session;
    Value : Packet;
@@ -66,7 +64,7 @@ procedure Native_Session is
                   if P.kind = K_THINKTHEN_COMPLETE_SESSION_PACKET_TERMINAL_V1 then
                      Terminal := True;
                      Close (Owner);
-                     if Status (Value) /= Failure then raise Program_Error with "wrong terminal failure"; end if;
+                     if Thinkthen.Sessions.Status (Value) /= Failure then raise Program_Error with "wrong terminal failure"; end if;
                      if Failure = Success and then State (P.data.terminal.facts.presence) /= Present then raise Program_Error with "missing facts"; end if;
                      if State (P.data.terminal.facts.presence) = Present and then Text (P.data.terminal.facts.value.call_id.value)'Length = 0 then raise Program_Error with "missing call identity"; end if;
                      if Failure = Success then
@@ -204,7 +202,7 @@ begin
    if Ada.Command_Line.Argument_Count = 0 then
       -- CALLS
    else
-      Thinkthen.Sessions.Calls.Decide (Owner, Failed); Finish (Owner); Drain (Backend);
+      Thinkthen.Native_Sessions.Start (Owner, Failed, "decide"); Finish (Owner); Drain (Backend);
    end if;
    declare
       Overflowed : Boolean := False;

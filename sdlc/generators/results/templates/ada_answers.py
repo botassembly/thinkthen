@@ -271,12 +271,13 @@ with Ada.Unchecked_Conversion;
 with Ada.Strings.Fixed;
 with System;
 with Interfaces.C;
-with Thinkthen_Session_C;
+with Thinkthen.Native_Sessions; use Thinkthen.Native_Sessions;
+with Thinkthen.Session_C;
 package body Thinkthen.Answers is
    use Ada.Strings.Unbounded;
    use Thinkthen.Values;
    use Thinkthen.Sessions;
-   use Thinkthen_Session_C;
+   use Thinkthen.Session_C;
    use Interfaces.C;
    use type Interfaces.Unsigned_32;
    package Packet_Lists is new Ada.Containers.Vectors (Positive, Value);
@@ -288,7 +289,7 @@ package body Thinkthen.Answers is
       Result : Completion;
    begin
       loop
-         Next_Packet (Owner, Packet, Read);
+         Thinkthen.Sessions.Next_Packet (Owner, Packet, Read);
          exit when Read = Finished;
          if Read /= Thinkthen.Sessions.Result then
             Result.Valid := False;

@@ -9,7 +9,7 @@ from children import child_env
 
 ROOT = Path(__file__).resolve().parents[3]
 HEADER = Path(sys.argv[1]) if len(sys.argv) > 1 else ROOT / 'libraries/c/include/thinkthen.h'
-ADA = Path(sys.argv[2]) if len(sys.argv) > 2 else ROOT / 'libraries/ada/src/thinkthen_session_c.ads'
+ADA = Path(sys.argv[2]) if len(sys.argv) > 2 else ROOT / 'libraries/ada/src/thinkthen-session_c.ads'
 sys.path.insert(0, str(ROOT / 'sdlc/generators/results'))
 from native import selected_header
 source = re.sub(r'/\*.*?\*/', '', selected_header(HEADER.read_text(), 'ada'), flags=re.S)
@@ -22,7 +22,7 @@ constants = re.findall(r'#define\s+(THINKTHEN_\w+)\s+([0-9]+)\b', source)
 with tempfile.TemporaryDirectory(prefix='thinkthen-ada-layout-') as temporary:
     work = Path(temporary)
     c = ['#include "thinkthen.h"', '#include <stdio.h>', '#include <stddef.h>', 'int main(void) {']
-    ada = ['with Ada.Text_IO; use Ada.Text_IO;', 'with Thinkthen_Session_C; use Thinkthen_Session_C;', 'procedure Layout is']
+    ada = ['with Ada.Text_IO; use Ada.Text_IO;', 'with Thinkthen.Session_C; use Thinkthen.Session_C;', 'procedure Thinkthen.Layout is']
     reads = []
     for kind, typ, body in layouts:
         ada.append(f'V_{typ} : {typ};')
@@ -45,8 +45,9 @@ with tempfile.TemporaryDirectory(prefix='thinkthen-ada-layout-') as temporary:
     subprocess.run(['gcc', '-std=c11', '-I' + str(HEADER.parent), str(work / 'layout.c'), '-o', str(work / 'c-layout')], env=child_env(), check=True, capture_output=True)
     output = subprocess.run([str(work / 'c-layout')], env=child_env(), check=True, text=True, capture_output=True).stdout
     measured = {' '.join(row.split()[:-1]): int(row.split()[-1]) for row in output.splitlines()}
-    ada += ['begin', *(f'pragma Compile_Time_Error ({expression} /= {measured[key]}, "C/Ada layout differs: {key}");' for key, expression in reads), 'end Layout;']
-    (work / 'layout.adb').write_text('\n'.join(ada))
-    build = subprocess.run(['gnatmake', '-q', '-gnat2022', '-gnatc', '-I' + str(ADA.parent), 'layout.adb'], cwd=work, env=child_env(), text=True, capture_output=True)
+    ada += ['begin', *(f'pragma Compile_Time_Error ({expression} /= {measured[key]}, "C/Ada layout differs: {key}");' for key, expression in reads), 'end Thinkthen.Layout;']
+    (work / 'thinkthen-layout.ads').write_text('procedure Thinkthen.Layout;\n')
+    (work / 'thinkthen-layout.adb').write_text('\n'.join(ada))
+    build = subprocess.run(['gnatmake', '-q', '-gnat2022', '-gnatc', '-I' + str(ADA.parent), 'thinkthen-layout.adb'], cwd=work, env=child_env(), text=True, capture_output=True)
     assert build.returncode == 0, build.stdout + build.stderr
     print(f'Ada selected ABI: {len(imports)} imports, {len(layouts)} layouts, {len(constants)} constants, {len(measured)} compiler measurements')

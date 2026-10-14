@@ -6,6 +6,7 @@ package Thinkthen.Requests.Native is
 function Convert (Value : T_RequestCall; Storage : in out Arena) return System.Address;
 function Convert (Value : T_RequestSessionDescriptor; Storage : in out Arena) return System.Address;
 function Convert (Value : T_RequestReaderFailure; Storage : in out Arena) return System.Address;
+function Convert (Value : T_EngineSettings; Storage : in out Arena) return System.Address;
 private
    type Allocation;
    type Allocation_Access is access Allocation;

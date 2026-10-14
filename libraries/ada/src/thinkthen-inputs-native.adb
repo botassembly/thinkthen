@@ -98,8 +98,18 @@ function Unwrap (Item : Thinkthen.Inputs.tag_batch) return Requests.T_Authored_t
 function Wrap (Item : Requests.T_Authored_tag_field_batch) return Thinkthen.Inputs.tag_batch is ((Data => Item));
 function Unwrap (Item : Thinkthen.Inputs.Probability_Band) return Requests.T_Authored_threshold is (Item.Data);
 function Wrap (Item : Requests.T_Authored_threshold) return Thinkthen.Inputs.Probability_Band is ((Data => Item));
+function Unwrap (Item : Thinkthen.Inputs.Cache_Document) return Requests.T_CacheDocument is (Item.Data);
+function Wrap (Item : Requests.T_CacheDocument) return Thinkthen.Inputs.Cache_Document is ((Data => Item));
 function Unwrap (Item : Thinkthen.Inputs.Context_Schema) return Requests.T_ContextSchema is (Item.Data);
 function Wrap (Item : Requests.T_ContextSchema) return Thinkthen.Inputs.Context_Schema is ((Data => Item));
+function Unwrap (Item : Thinkthen.Inputs.Engine_Settings) return Requests.T_EngineSettings is (Item.Data);
+function Wrap (Item : Requests.T_EngineSettings) return Thinkthen.Inputs.Engine_Settings is ((Data => Item));
+function Unwrap (Item : Thinkthen.Inputs.Input_Token_Limit) return Requests.T_EngineSettings_field_max_estimated_input_tokens_total is (Item.Data);
+function Wrap (Item : Requests.T_EngineSettings_field_max_estimated_input_tokens_total) return Thinkthen.Inputs.Input_Token_Limit is ((Data => Item));
+function Unwrap (Item : Thinkthen.Inputs.Request_Limit) return Requests.T_EngineSettings_field_max_requests is (Item.Data);
+function Wrap (Item : Requests.T_EngineSettings_field_max_requests) return Thinkthen.Inputs.Request_Limit is ((Data => Item));
+function Unwrap (Item : Thinkthen.Inputs.Total_Request_Limit) return Requests.T_EngineSettings_field_max_requests_total is (Item.Data);
+function Wrap (Item : Requests.T_EngineSettings_field_max_requests_total) return Thinkthen.Inputs.Total_Request_Limit is ((Data => Item));
 function Unwrap (Item : Thinkthen.Inputs.Option_Schema) return Requests.T_OptionSchema is (Item.Data);
 function Wrap (Item : Requests.T_OptionSchema) return Thinkthen.Inputs.Option_Schema is ((Data => Item));
 function Unwrap (Item : Thinkthen.Inputs.Recognition_Example) return Requests.T_RecognitionExample is (Item.Data);

@@ -1,11 +1,12 @@
 -- Generated from the canonical C header by GNAT. Do not edit.
+with Ada.Unchecked_Conversion;
 with Interfaces;
 pragma Style_Checks (Off);
 pragma Warnings (Off, "-gnatwu");
 with Interfaces.C; use Interfaces.C;
 with Interfaces.C.Strings;
 with System;
-package Thinkthen_Session_C is
+private package Thinkthen.Session_C is
    K_THINKTHEN_COBOL_OVERFLOW : constant := 1002;
    K_THINKTHEN_COMPLETE_ANNOTATED_FIELD_ARRAY_V1 : constant := 4;
    K_THINKTHEN_COMPLETE_ANNOTATED_FIELD_BOOLEAN_V1 : constant := 1;
@@ -3855,6 +3856,15 @@ package Thinkthen_Session_C is
    with Import => True,
         Convention => C,
         External_Name => "thinkthen_value_view";
-end Thinkthen_Session_C;
+type Engine_Access is access all thinkthen_engine;
+function Engine_Pointer is new Ada.Unchecked_Conversion (System.Address, Engine_Access);
+function Engine_Address is new Ada.Unchecked_Conversion (Engine_Access, System.Address);
+type Session_Access is access all thinkthen_session;
+function Session_Pointer is new Ada.Unchecked_Conversion (System.Address, Session_Access);
+function Session_Address is new Ada.Unchecked_Conversion (Session_Access, System.Address);
+type Packet_Access is access all thinkthen_session_result;
+function Packet_Pointer is new Ada.Unchecked_Conversion (System.Address, Packet_Access);
+function Packet_Address is new Ada.Unchecked_Conversion (Packet_Access, System.Address);
+end Thinkthen.Session_C;
 pragma Style_Checks (On);
 pragma Warnings (On, "-gnatwu");
