@@ -57,7 +57,7 @@ class PublicSurface(unittest.TestCase):
             self.assertEqual(set(errors) - set(baseline), {
                 'unlisted public type/export: .Other', 'unlisted public call/export: Other.extraPublicExport'})
             # Native category adapters accept only their documented members.
-            for filename, owner in [('json.hpp', 'Json'), ('result_value.hpp', 'Node')]:
+            for filename, owner in [('value.hpp', 'Data'), ('result_value.hpp', 'Node')]:
                 path = client.with_name(filename)
                 path.write_text(path.read_text().replace('class ' + owner + ' {',
                     'class ' + owner + ' { public: void extraPublicExport(); private:', 1))
@@ -65,7 +65,7 @@ class PublicSurface(unittest.TestCase):
             extra = extra.replace('class AnswerCall : public Call {',
                                   'class AnswerCall : public Call { public: void extraPublicExport(); private:', 1)
             errors = invoke(extra)
-            for owner in ['Json', 'Node', 'Call', 'AnswerCall']:
+            for owner in ['Data', 'Node', 'Call', 'AnswerCall']:
                 self.assertIn('unlisted public call/export: ' + owner + '.extraPublicExport', errors)
 
     def test_scoped_options_helpers_settings_generated_members_and_extra_exports(self):
@@ -281,7 +281,7 @@ class PublicSurface(unittest.TestCase):
         manifest = json.loads((ROOT / 'conformance/library-surface.json').read_text())
         with tempfile.TemporaryDirectory(prefix='library-surface-records-') as folder:
             root = Path(folder)
-            for name in ['sdlc', 'specification']:
+            for name in ['sdlc', 'specification', 'crates']:
                 (root / name).symlink_to(ROOT / name, target_is_directory=True)
             paths = [ROOT / 'libraries/c/include/thinkthen.h']
             for pattern in manifest['libraries']['jvm']['declarations']:
