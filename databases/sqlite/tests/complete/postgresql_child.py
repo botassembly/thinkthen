@@ -36,4 +36,6 @@ if running.returncode:
     print(json.dumps({'host_error':stderr,'host_cancelled':'57014:' in stderr}),flush=True)
 else:
     rows=[json.loads(line) for line in stdout.splitlines()]
-    print(json.dumps(native(rows,payload['verb']),ensure_ascii=False,separators=(',',':')),flush=True)
+    carrier=native(rows,payload['verb'])
+    carrier['details_rows']=rows
+    print(json.dumps(carrier,ensure_ascii=False,separators=(',',':')),flush=True)

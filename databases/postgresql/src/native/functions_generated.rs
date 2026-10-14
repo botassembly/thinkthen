@@ -330,8 +330,8 @@ crate::descriptions::describe! {
 fn rank_records(
     question: Option<&str>, records: Option<Array<'_, pgrx::composite_type!("thinkthen_record")>>,
                     reading: default!(Option<pgrx::composite_type!("thinkthen_reading")>, "NULL"),
-) -> TableIterator<'static, (name!(ordinal, Option<i64>), name!(value, Option<Vec<i64>>),
-            name!(probability, Option<Vec<f64>>),
+) -> TableIterator<'static, (name!(ordinal, Option<i64>), name!(value, Option<i64>),
+            name!(probability, Option<f64>),
             name!(result, Option<pgrx::composite_type!('static, "thinkthen_ranked")>),
             name!(failure, Option<pgrx::composite_type!('static, "thinkthen_error")>),
             name!(facts, Option<pgrx::composite_type!('static, "thinkthen_facts")>),
@@ -343,7 +343,7 @@ fn rank_records(
         let rows = super::row_values(super::execute("rank", question, records, reading));
         TableIterator::new(rows.into_iter().map(|row| {
             let value = row.get("value");
-            (row.get("ordinal").and_then(Value::as_i64), output::indexes(value), output::numbers(row.get("probability")),
+            (row.get("ordinal").and_then(Value::as_i64), value.and_then(Value::as_i64), row.get("probability").and_then(Value::as_f64),
                 output::optional_reading("thinkthen_ranked", row.get("result")),
                 output::optional_reading("thinkthen_error", row.get("failure")),
                 output::optional_reading("thinkthen_facts", row.get("facts")),
@@ -359,8 +359,8 @@ crate::descriptions::describe! {
 #[allow(clippy::type_complexity, clippy::too_many_arguments, reason = "pgrx reads named SQL arguments and columns from the signature")]
 fn rank_plain(
     question: Option<&str>, input: Option<JsonB>, settings: default!(Option<crate::ffi::RawJson>, "NULL"),
-) -> TableIterator<'static, (name!(ordinal, Option<i64>), name!(value, Option<Vec<i64>>),
-            name!(probability, Option<Vec<f64>>),
+) -> TableIterator<'static, (name!(ordinal, Option<i64>), name!(value, Option<i64>),
+            name!(probability, Option<f64>),
             name!(result, Option<pgrx::composite_type!('static, "thinkthen_ranked")>),
             name!(failure, Option<pgrx::composite_type!('static, "thinkthen_error")>),
             name!(facts, Option<pgrx::composite_type!('static, "thinkthen_facts")>),
@@ -372,7 +372,7 @@ fn rank_plain(
         let rows = super::row_values(super::plain::keyed("rank", question, input, settings));
         TableIterator::new(rows.into_iter().map(|row| {
             let value = row.get("value");
-            (row.get("ordinal").and_then(Value::as_i64), output::indexes(value), output::numbers(row.get("probability")),
+            (row.get("ordinal").and_then(Value::as_i64), value.and_then(Value::as_i64), row.get("probability").and_then(Value::as_f64),
                 output::optional_reading("thinkthen_ranked", row.get("result")),
                 output::optional_reading("thinkthen_error", row.get("failure")),
                 output::optional_reading("thinkthen_facts", row.get("facts")),
@@ -417,7 +417,7 @@ crate::descriptions::describe! {
 [name = "thinkthen_annotate_details", parallel_restricted, requires = ["native_record_types", "native_reading_type", "native_result_types", "native_generated_types"]];
 #[allow(clippy::type_complexity, clippy::too_many_arguments, reason = "pgrx reads named SQL arguments and columns from the signature")]
 fn annotate_plain(
-    question: Option<&str>, input: Option<&str>,
+    set: Option<&str>, input: Option<&str>,
                     settings: default!(Option<crate::ffi::RawJson>, "NULL"),
                     threshold: default!(Option<&str>, "NULL"),
                     context: default!(Option<&str>, "NULL"),
@@ -431,7 +431,7 @@ fn annotate_plain(
             name!(facts, Option<pgrx::composite_type!('static, "thinkthen_facts")>),
             name!(observations, crate::ffi::EventArray))> {
     call::guarded(|| {
-        let (Some(question), Some(input)) = (question, input) else {
+        let (Some(question), Some(input)) = (set, input) else {
             return TableIterator::new(Vec::new());
         };
         let rows = super::row_values(super::execute_plain("annotate", question, input, None, settings, crate::forms::Named::new(threshold, context, model, batch, deadline_ms)));
@@ -455,7 +455,7 @@ fn recognize_records(
     question: Option<&str>, records: Option<Array<'_, pgrx::composite_type!("thinkthen_record")>>,
                     reading: default!(Option<pgrx::composite_type!("thinkthen_reading")>, "NULL"),
 ) -> TableIterator<'static, (name!(ordinal, Option<i64>), name!(value, Option<crate::ffi::NameArray>),
-            name!(probability, Option<Vec<f64>>),
+            name!(probability, Option<Vec<Option<f64>>>),
             name!(result, Option<pgrx::composite_type!('static, "thinkthen_recognized")>),
             name!(failure, Option<pgrx::composite_type!('static, "thinkthen_error")>),
             name!(facts, Option<pgrx::composite_type!('static, "thinkthen_facts")>),
@@ -482,15 +482,15 @@ crate::descriptions::describe! {
 [name = "thinkthen_recognize_details", parallel_restricted, requires = ["native_record_types", "native_reading_type", "native_result_types", "native_generated_types"]];
 #[allow(clippy::type_complexity, clippy::too_many_arguments, reason = "pgrx reads named SQL arguments and columns from the signature")]
 fn recognize_plain(
-    question: Option<&str>, input: Option<&str>,
+    body: Option<&str>, spec: Option<&str>,
 ) -> TableIterator<'static, (name!(ordinal, Option<i64>), name!(value, Option<crate::ffi::NameArray>),
-            name!(probability, Option<Vec<f64>>),
+            name!(probability, Option<Vec<Option<f64>>>),
             name!(result, Option<pgrx::composite_type!('static, "thinkthen_recognized")>),
             name!(failure, Option<pgrx::composite_type!('static, "thinkthen_error")>),
             name!(facts, Option<pgrx::composite_type!('static, "thinkthen_facts")>),
             name!(observations, crate::ffi::EventArray))> {
     call::guarded(|| {
-        let (Some(question), Some(input)) = (question, input) else {
+        let (Some(question), Some(input)) = (body, spec) else {
             return TableIterator::new(Vec::new());
         };
         let rows = super::row_values(super::execute_plain("recognize", input, question, None, None, Default::default()));
@@ -511,15 +511,15 @@ crate::descriptions::describe! {
 [name = "thinkthen_recognize_details", parallel_restricted, requires = ["native_record_types", "native_reading_type", "native_result_types", "native_generated_types"]];
 #[allow(clippy::type_complexity, clippy::too_many_arguments, reason = "pgrx reads named SQL arguments and columns from the signature")]
 fn recognize_kinds(
-    question: Option<&str>, input: Option<Array<'_, &str>>,
+    body: Option<&str>, kinds: Option<Array<'_, &str>>,
 ) -> TableIterator<'static, (name!(ordinal, Option<i64>), name!(value, Option<crate::ffi::NameArray>),
-            name!(probability, Option<Vec<f64>>),
+            name!(probability, Option<Vec<Option<f64>>>),
             name!(result, Option<pgrx::composite_type!('static, "thinkthen_recognized")>),
             name!(failure, Option<pgrx::composite_type!('static, "thinkthen_error")>),
             name!(facts, Option<pgrx::composite_type!('static, "thinkthen_facts")>),
             name!(observations, crate::ffi::EventArray))> {
     call::guarded(|| {
-        let (Some(question), Some(input)) = (question, input) else {
+        let (Some(question), Some(input)) = (body, kinds) else {
             return TableIterator::new(Vec::new());
         };
         let rows = super::row_values(super::plain::recognize(question, input));
@@ -570,7 +570,7 @@ crate::descriptions::describe! {
 [name = "thinkthen_find_details", parallel_restricted, requires = ["native_record_types", "native_reading_type", "native_result_types", "native_generated_types"]];
 #[allow(clippy::type_complexity, clippy::too_many_arguments, reason = "pgrx reads named SQL arguments and columns from the signature")]
 fn find_plain(
-    question: Option<&str>, input: Option<Array<'_, &str>>, settings: default!(Option<crate::ffi::RawJson>, "NULL"),
+    question: Option<&str>, units: Option<Array<'_, &str>>, settings: default!(Option<crate::ffi::RawJson>, "NULL"),
 ) -> TableIterator<'static, (name!(ordinal, Option<i64>), name!(value, Option<JsonB>),
             name!(probability, Option<f64>),
             name!(result, Option<pgrx::composite_type!('static, "thinkthen_found")>),
@@ -578,7 +578,7 @@ fn find_plain(
             name!(facts, Option<pgrx::composite_type!('static, "thinkthen_facts")>),
             name!(observations, crate::ffi::EventArray))> {
     call::guarded(|| {
-        let (Some(question), Some(input)) = (question, input) else {
+        let (Some(question), Some(input)) = (question, units) else {
             return TableIterator::new(Vec::new());
         };
         let rows = super::row_values(super::plain::find(question, input, settings));
@@ -601,8 +601,8 @@ crate::descriptions::describe! {
 fn relate_records(
     question: Option<&str>, records: Option<Array<'_, pgrx::composite_type!("thinkthen_record")>>,
                     reading: default!(Option<pgrx::composite_type!("thinkthen_reading")>, "NULL"),
-) -> TableIterator<'static, (name!(ordinal, Option<i64>), name!(value, Option<crate::ffi::EdgeArray>),
-            name!(probability, Option<Vec<f64>>),
+) -> TableIterator<'static, (name!(ordinal, Option<i64>), name!(value, Option<pgrx::composite_type!('static, "thinkthen_edge")>),
+            name!(probability, Option<f64>),
             name!(result, Option<pgrx::composite_type!('static, "thinkthen_related")>),
             name!(failure, Option<pgrx::composite_type!('static, "thinkthen_error")>),
             name!(facts, Option<pgrx::composite_type!('static, "thinkthen_facts")>),
@@ -614,7 +614,7 @@ fn relate_records(
         let rows = super::row_values(super::execute("relate", question, records, reading));
         TableIterator::new(rows.into_iter().map(|row| {
             let value = row.get("value");
-            (row.get("ordinal").and_then(Value::as_i64), value.map(output::edge_values), output::numbers(row.get("probability")),
+            (row.get("ordinal").and_then(Value::as_i64), value.filter(|v| !v.is_null()).map(output::edge_value), row.get("probability").and_then(Value::as_f64),
                 output::optional_reading("thinkthen_related", row.get("result")),
                 output::optional_reading("thinkthen_error", row.get("failure")),
                 output::optional_reading("thinkthen_facts", row.get("facts")),
@@ -629,21 +629,21 @@ crate::descriptions::describe! {
 [name = "thinkthen_relate_details", parallel_restricted, requires = ["native_record_types", "native_reading_type", "native_result_types", "native_generated_types"]];
 #[allow(clippy::type_complexity, clippy::too_many_arguments, reason = "pgrx reads named SQL arguments and columns from the signature")]
 fn relate_plain(
-    question: Option<&str>, input: Option<&str>,
-) -> TableIterator<'static, (name!(ordinal, Option<i64>), name!(value, Option<crate::ffi::EdgeArray>),
-            name!(probability, Option<Vec<f64>>),
+    query: Option<&str>, rules: Option<&str>,
+) -> TableIterator<'static, (name!(ordinal, Option<i64>), name!(value, Option<pgrx::composite_type!('static, "thinkthen_edge")>),
+            name!(probability, Option<f64>),
             name!(result, Option<pgrx::composite_type!('static, "thinkthen_related")>),
             name!(failure, Option<pgrx::composite_type!('static, "thinkthen_error")>),
             name!(facts, Option<pgrx::composite_type!('static, "thinkthen_facts")>),
             name!(observations, crate::ffi::EventArray))> {
     call::guarded(|| {
-        let (Some(question), Some(input)) = (question, input) else {
+        let (Some(question), Some(input)) = (query, rules) else {
             return TableIterator::new(Vec::new());
         };
         let rows = super::row_values(super::plain::relate_spec(question, input));
         TableIterator::new(rows.into_iter().map(|row| {
             let value = row.get("value");
-            (row.get("ordinal").and_then(Value::as_i64), value.map(output::edge_values), output::numbers(row.get("probability")),
+            (row.get("ordinal").and_then(Value::as_i64), value.filter(|v| !v.is_null()).map(output::edge_value), row.get("probability").and_then(Value::as_f64),
                 output::optional_reading("thinkthen_related", row.get("result")),
                 output::optional_reading("thinkthen_error", row.get("failure")),
                 output::optional_reading("thinkthen_facts", row.get("facts")),
@@ -658,21 +658,21 @@ crate::descriptions::describe! {
 [name = "thinkthen_relate_details", parallel_restricted, requires = ["native_record_types", "native_reading_type", "native_result_types", "native_generated_types"]];
 #[allow(clippy::type_complexity, clippy::too_many_arguments, reason = "pgrx reads named SQL arguments and columns from the signature")]
 fn relate_rules(
-    question: Option<&str>, input: Option<Array<'_, &str>>,
-) -> TableIterator<'static, (name!(ordinal, Option<i64>), name!(value, Option<crate::ffi::EdgeArray>),
-            name!(probability, Option<Vec<f64>>),
+    query: Option<&str>, rules: Option<Array<'_, &str>>,
+) -> TableIterator<'static, (name!(ordinal, Option<i64>), name!(value, Option<pgrx::composite_type!('static, "thinkthen_edge")>),
+            name!(probability, Option<f64>),
             name!(result, Option<pgrx::composite_type!('static, "thinkthen_related")>),
             name!(failure, Option<pgrx::composite_type!('static, "thinkthen_error")>),
             name!(facts, Option<pgrx::composite_type!('static, "thinkthen_facts")>),
             name!(observations, crate::ffi::EventArray))> {
     call::guarded(|| {
-        let (Some(question), Some(input)) = (question, input) else {
+        let (Some(question), Some(input)) = (query, rules) else {
             return TableIterator::new(Vec::new());
         };
         let rows = super::row_values(super::plain::relate(question, input));
         TableIterator::new(rows.into_iter().map(|row| {
             let value = row.get("value");
-            (row.get("ordinal").and_then(Value::as_i64), value.map(output::edge_values), output::numbers(row.get("probability")),
+            (row.get("ordinal").and_then(Value::as_i64), value.filter(|v| !v.is_null()).map(output::edge_value), row.get("probability").and_then(Value::as_f64),
                 output::optional_reading("thinkthen_related", row.get("result")),
                 output::optional_reading("thinkthen_error", row.get("failure")),
                 output::optional_reading("thinkthen_facts", row.get("facts")),

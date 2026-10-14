@@ -20,9 +20,17 @@ fn request(
     options: thinkthen::RequestOptions,
     settings: &thinkthen::Settings,
 ) -> Result<thinkthen::AdmittedRequest, Error> {
-    let function = verb.parse()?;
     let prepared = prepared(verb, question, settings)?;
-    let definition = thinkthen_host::sql_request::definition(&prepared);
+    request_prepared(verb, &prepared, options)
+}
+
+fn request_prepared(
+    verb: &str,
+    prepared: &complete_native::Prepared,
+    options: thinkthen::RequestOptions,
+) -> Result<thinkthen::AdmittedRequest, Error> {
+    let function = verb.parse()?;
+    let definition = thinkthen_host::sql_request::definition(prepared);
     Request::for_function(
         function,
         RequestArguments {
@@ -41,14 +49,20 @@ fn request(
 
 pub(super) struct Execution {
     pub(super) value: serde_json::Value,
-    pub(super) observations: Vec<serde_json::Value>,
 }
 
 impl std::fmt::Debug for Execution {
     fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         formatter
             .debug_struct("Execution")
-            .field("observations", &self.observations.len())
+            .field(
+                "rows",
+                &self
+                    .value
+                    .get("rows")
+                    .and_then(serde_json::Value::as_array)
+                    .map(Vec::len),
+            )
             .finish_non_exhaustive()
     }
 }
@@ -67,15 +81,14 @@ pub(super) fn execute(
         .unwrap_or(false);
     let context_schema = context_schema::read(reading.as_ref())?;
     let settings = question_settings::read(reading.as_ref())?;
-    let request = request(verb, question, options::read(reading)?, &settings)?;
+    let prepared = prepared(verb, question, &settings)?;
+    let request = request_prepared(verb, &prepared, options::read(reading)?)?;
     let mut projection = request.record_reading()?;
     if let Some(schema) = context_schema {
         projection = projection.with_context_schema(schema);
     }
     let request = composed_request(&request)?;
-    let function = request.request().call.function();
     let records = input::deferred(records);
-    let prepared = prepared(verb, question, &settings)?;
     call::run_result(call::read_result()?, move |engine, controls| {
         let records = records
             .into_iter()
@@ -89,33 +102,15 @@ pub(super) fn execute(
         } else {
             controls
         };
-        let events = std::sync::Mutex::new(Vec::new());
-        let observer = |event: thinkthen::RecordObservation<'_>| {
-            let value = observation(function, event);
-            events
-                .lock()
-                .unwrap_or_else(std::sync::PoisonError::into_inner)
-                .push(value);
-        };
         let value = thinkthen_host::sql_request::run_records_recovering(
             engine,
             &prepared,
             &request,
             records,
-            controls
-                .surface(thinkthen::Surface::Postgresql)
-                .observe(&observer),
+            controls.surface(thinkthen::Surface::Postgresql),
             thinkthen::Surface::Postgresql,
         )?;
-        let observations = events
-            .into_inner()
-            .unwrap_or_else(std::sync::PoisonError::into_inner)
-            .into_iter()
-            .collect::<Result<Vec<_>, _>>()?;
-        Ok(Execution {
-            value,
-            observations,
-        })
+        Ok(Execution { value })
     })
 }
 
@@ -269,9 +264,6 @@ pub(super) fn execute_plain(
             controls,
             thinkthen::Surface::Postgresql,
         )?;
-        Ok(Execution {
-            value,
-            observations: Vec::new(),
-        })
+        Ok(Execution { value })
     })
 }

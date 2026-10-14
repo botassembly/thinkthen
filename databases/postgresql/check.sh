@@ -553,7 +553,7 @@ check rank_set_backend_failure_preserves_error_and_secrecy
 find_settings_choose_the_model() {
 	fresh arm/full/capture
 	local out
-	out=$(q -c "SELECT thinkthen_find('Which unit?', ARRAY['first','second'], '{\"model\":\"judge-b\"}'::json)->>'value'")
+	out=$(q -c "SELECT thinkthen_find('Which unit?', ARRAY['first','second'], '{\"model\":\"judge-b\"}'::json)")
 	hasnt "$out" ERROR
 	same "$(bcount)" 1
 	bcapture | python3 -c 'import json,sys
@@ -792,7 +792,7 @@ complete_question_resolution_keeps_privilege_and_content_boundaries() {
 	fresh generic
 	q -c 'CREATE ROLE tt_complete LOGIN' -c 'GRANT EXECUTE ON FUNCTION thinkthen_decide_details(text,thinkthen_record[],thinkthen_reading) TO tt_complete' >/dev/null
 	q -c "$(q -c "SELECT 'GRANT EXECUTE ON FUNCTION ' || oid::regprocedure || ' TO tt_complete' FROM pg_proc WHERE proname = 'thinkthen_reading'")" >/dev/null
-	same "$(q -c "SELECT count(*) FROM pg_proc WHERE proname ~ '^thinkthen_(decide|choose|tag|score|filter|rank|find|annotate|recognize|relate)$' AND proargtypes[1] = 'thinkthen_record[]'::regtype AND pronargdefaults = 1 AND proparallel = 'r' AND NOT has_function_privilege('public', oid, 'EXECUTE')")" 10
+	same "$(q -c "SELECT count(*) FROM pg_proc WHERE proname ~ '^thinkthen_(decide|choose|tag|score|filter|rank|find|annotate|recognize|relate)_details$' AND proargtypes[1] = 'thinkthen_record[]'::regtype AND pronargdefaults = 1 AND proparallel = 'r' AND NOT has_function_privilege('public', oid, 'EXECUTE')")" 10
 	# Metadata selection cannot disclose a missing/invalid catalog to an unauthorized role.
 	for name in '@@bad/name' '@@absent' '@missing.json'; do
 		has "$(PGUSER_AS=tt_complete q -c "SELECT (failure).message FROM thinkthen_decide_details('$name',ARRAY[]::thinkthen_record[])")" "a named file needs pg_read_server_files"

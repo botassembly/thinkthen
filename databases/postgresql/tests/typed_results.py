@@ -83,10 +83,13 @@ def native(rows, verb):
              'score': 'completeScore', 'filter': 'completeFilter', 'rank': 'completeRank',
              'annotate': 'completeAnnotation', 'recognize': 'completeRecognition',
              'find': 'completeFind', 'relate': 'completeRelation'}
-    values = [decode(row['result'], DEFINITIONS[roots[verb]]) for row in rows if row['result'] is not None]
+    completed = [row for row in rows if row['result'] is not None]
+    if verb == 'relate':
+        completed = list({json.dumps(row['result'], sort_keys=True): row for row in completed}.values())
+    values = [decode(row['result'], DEFINITIONS[roots[verb]]) for row in completed]
     facts = next((decode(row['facts'], DEFINITIONS['completeFacts']) for row in rows if row['facts'] is not None), None)
     failure = next((decode(row['failure'], DEFINITIONS['completeError']) for row in rows if row['failure'] is not None), None)
-    raw_events = rows[0].get('observations', []) if rows else []
+    raw_events = list({json.dumps(event, sort_keys=True): event for row in rows for event in row.get('observations', [])}.values())
     events = [decode(event, DEFINITIONS['completesessionObservation']) for event in raw_events]
     observations = []
     for raw_event, event in zip(raw_events, events):
@@ -118,8 +121,8 @@ def native(rows, verb):
     else:
         result['native']['value'] = values[0] if verb in ('find', 'relate') else values
     if verb == 'find' and rows and failure is None:
-        result['selection'] = rows[0]['index']
+        result['selection'] = values[0].get('answer', {}).get('selected')
     elif verb != 'relate':
-        result['ordinals'] = [row['ordinal'] for row in rows if row.get('ordinal') is not None]
+        result['ordinals'] = [row['ordinal'] for row in completed if row.get('ordinal') is not None]
     Draft202012Validator(SCHEMA).validate(result['native'])
     return result

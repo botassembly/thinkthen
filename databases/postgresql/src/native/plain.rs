@@ -16,12 +16,29 @@ pub(super) fn run(
         function,
         RequestArguments {
             question: RequestQuestion::Definition { value: definition },
-            input: RequestInput::Records { items },
+            input: RequestInput::Feed {
+                name: "postgresql".to_owned(),
+                framing: Default::default(),
+                reading: Default::default(),
+                images: Vec::new(),
+            },
             options: Default::default(),
         },
     )
     .admit()?;
+    let reading = request.record_reading()?;
+    let records = items
+        .into_iter()
+        .map(|item| item.compose_record(&reading))
+        .collect::<Result<Vec<_>, _>>()?;
     call::run_result(controls, move |engine, controls| {
+        let feed =
+            thinkthen::RequestFeed::from_records("postgresql", records.into_iter().map(Ok)).eager();
+        let feed = if function == RequestFunction::Filter {
+            feed.with_all_filter_results()
+        } else {
+            feed
+        };
         let events = std::sync::Mutex::new(Vec::new());
         let observer = |event: thinkthen::RecordObservation<'_>| {
             events
@@ -35,7 +52,7 @@ pub(super) fn run(
                 controls: controls
                     .surface(thinkthen::Surface::Postgresql)
                     .observe(&observer),
-                feed: None,
+                feed: Some(feed),
             },
         )?;
         let observations = events
@@ -46,7 +63,6 @@ pub(super) fn run(
         let rows = thinkthen_host::sql_request::project_outcome(function, outcome, observations)?;
         Ok(super::Execution {
             value: serde_json::json!({"rows": rows}),
-            observations: Vec::new(),
         })
     })
 }
@@ -56,7 +72,10 @@ pub(super) fn find(
     units: Array<'_, &str>,
     raw: Option<crate::ffi::RawJson>,
 ) -> Result<super::Execution, Error> {
-    let (settings, controls) = crate::forms::controls_result(raw.as_ref(), Default::default())?;
+    let (settings, mut controls) = crate::forms::controls_result(raw.as_ref(), Default::default())?;
+    if let Some(model) = settings.model() {
+        controls = controls.with_model(model);
+    }
     settings
         .check(thinkthen::For::Find)
         .map_err(|e| call::usage(e.to_string()))?;

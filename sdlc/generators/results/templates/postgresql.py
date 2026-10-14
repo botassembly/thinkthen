@@ -267,7 +267,7 @@ def render_functions():
         ('filter', 'JsonB', 'filtered', 'f64', 'value.filter(|v| !v.is_null()).cloned().map(JsonB)'),
         ('rank', 'i64', 'ranked', 'f64', 'value.and_then(Value::as_i64)'),
         ('annotate', 'JsonB', 'annotation', 'f64', 'value.filter(|v| !v.is_null()).cloned().map(JsonB)'),
-        ('recognize', 'crate::ffi::NameArray', 'recognized', 'Vec<f64>', 'value.map(output::name_values)'),
+        ('recognize', 'crate::ffi::NameArray', 'recognized', 'Vec<Option<f64>>', 'value.map(output::name_values)'),
         ('find', 'JsonB', 'found', 'f64', 'value.filter(|v| !v.is_null()).cloned().map(JsonB)'),
         ('relate', '''pgrx::composite_type!('static, "thinkthen_edge")''', 'related', 'f64', 'value.filter(|v| !v.is_null()).map(output::edge_value)'),
     )
@@ -276,7 +276,7 @@ def render_functions():
               "use pgrx::prelude::*;", "use pgrx::datum::JsonB;",
               "use serde_json::Value;"]
     for verb, kind, reading, probability_type, expression in calls:
-        probability = 'output::numbers(row.get("probability"))' if probability_type == 'Vec<f64>' else 'row.get("probability").and_then(Value::as_f64)'
+        probability = 'output::numbers(row.get("probability"))' if probability_type.startswith('Vec<') else 'row.get("probability").and_then(Value::as_f64)'
         columns = f'''name!(ordinal, Option<i64>), name!(value, Option<{kind}>),
             name!(probability, Option<{probability_type}>),
             name!(result, Option<pgrx::composite_type!('static, "thinkthen_{reading}")>),
@@ -319,15 +319,22 @@ def render_functions():
             elif verb == 'relate' and form == 'plain':
                 parameters = 'input: Option<&str>,'
                 execute = 'super::plain::relate_spec(question, input)'
+            first_name, second_name = 'question', operand
+            if form != 'records':
+                if verb == 'annotate': first_name = 'set'
+                elif verb == 'find': second_name = 'units'
+                elif verb == 'recognize': first_name, second_name = 'body', ('kinds' if form == 'kinds' else 'spec')
+                elif verb == 'relate': first_name, second_name = 'query', 'rules'
+                parameters = parameters.replace('input:', second_name + ':', 1)
             result.append(f'''crate::descriptions::describe! {{
 "Return full typed records with values, probabilities, failures, facts and observations. Recoverable failures retain their rows; cancellation, deadline and defects raise. Required NULL operands return no rows. Evidence files must be read by the client.";
 [name = "thinkthen_{verb}_details", parallel_restricted, requires = ["native_record_types", "native_reading_type", "native_result_types", "native_generated_types"]];
 #[allow(clippy::type_complexity, clippy::too_many_arguments, reason = "pgrx reads named SQL arguments and columns from the signature")]
 fn {verb}_{form}(
-    question: Option<&str>, {parameters}
+    {first_name}: Option<&str>, {parameters}
 ) -> TableIterator<'static, ({columns})> {{
     call::guarded(|| {{
-        let (Some(question), Some({operand})) = (question, {operand}) else {{
+        let (Some(question), Some({operand})) = ({first_name}, {second_name}) else {{
             return TableIterator::new(Vec::new());
         }};
         let rows = super::row_values({execute});

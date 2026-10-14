@@ -71,13 +71,10 @@ pub(super) fn strings(value: Option<&serde_json::Value>) -> Option<Vec<String>> 
             .collect()
     })
 }
-pub(super) fn numbers(value: Option<&serde_json::Value>) -> Option<Vec<f64>> {
-    value.and_then(serde_json::Value::as_array).map(|values| {
-        values
-            .iter()
-            .filter_map(serde_json::Value::as_f64)
-            .collect()
-    })
+pub(super) fn numbers(value: Option<&serde_json::Value>) -> Option<Vec<Option<f64>>> {
+    value
+        .and_then(serde_json::Value::as_array)
+        .map(|values| values.iter().map(serde_json::Value::as_f64).collect())
 }
 pub(super) fn name_values(value: &serde_json::Value) -> Names {
     let values = value
@@ -110,15 +107,41 @@ pub(super) fn name_values(value: &serde_json::Value) -> Names {
         .collect();
     crate::ffi::NameArray(crate::ffi::composite_array("thinkthen_name", values).or_raise())
 }
-pub(super) fn edge_value(value: &serde_json::Value) -> pgrx::composite_type!('static, "thinkthen_edge") {
+pub(super) fn edge_value(
+    value: &serde_json::Value,
+) -> pgrx::composite_type!('static, "thinkthen_edge") {
     let mut tuple = tuple("thinkthen_edge");
-    optional(&mut tuple, "relation", value.get("relation").and_then(serde_json::Value::as_str));
+    optional(
+        &mut tuple,
+        "relation",
+        value.get("relation").and_then(serde_json::Value::as_str),
+    );
     for endpoint in ["source", "target"] {
         let entity = value.get(endpoint);
-        optional(&mut tuple, &format!("{endpoint}_name"), entity.and_then(|v| v.get("name")).and_then(serde_json::Value::as_str));
-        optional(&mut tuple, &format!("{endpoint}_kind"), entity.and_then(|v| v.get("kind")).and_then(serde_json::Value::as_str));
+        optional(
+            &mut tuple,
+            &format!("{endpoint}_name"),
+            entity
+                .and_then(|v| v.get("name"))
+                .and_then(serde_json::Value::as_str),
+        );
+        optional(
+            &mut tuple,
+            &format!("{endpoint}_kind"),
+            entity
+                .and_then(|v| v.get("kind"))
+                .and_then(serde_json::Value::as_str),
+        );
     }
-    optional(&mut tuple, "probability", value.get("probability").and_then(serde_json::Value::as_f64));
-    optional(&mut tuple, "either", value.get("either").and_then(serde_json::Value::as_bool));
+    optional(
+        &mut tuple,
+        "probability",
+        value.get("probability").and_then(serde_json::Value::as_f64),
+    );
+    optional(
+        &mut tuple,
+        "either",
+        value.get("either").and_then(serde_json::Value::as_bool),
+    );
     tuple
 }

@@ -12,6 +12,8 @@ from postgresql_host import PostgresqlHost
 sys.path.insert(0, str(ROOT / 'conformance/children'))
 from children import child_env
 from find_cases import sql, quoted
+sys.path.insert(0, str(ROOT / 'databases/sqlite/tests'))
+from conditional_backend import ConditionalBackend
 
 
 def main():
@@ -75,11 +77,20 @@ def main():
                 elif function != 'relate':
                     assert row['probability'] == probability, (function, row)
 
-            got = rows("SELECT to_jsonb(r) FROM thinkthen_decide_details('Fits?',ARRAY[" + record + ",NULL," + record + "]) r", 2)
-            assert [r['ordinal'] for r in got] == [0, 1, 2], got
-            assert [r['value'] for r in got] == [True, None, True], got
-            assert got[1]['failure']['kind'] == 'usage', got
-            assert 'Alpha.' not in got[1]['failure']['message'], got
+            failed = rows("SELECT to_jsonb(r) FROM thinkthen_decide_details('Fits?',ARRAY[" + record + ",NULL," + record + "]) r")
+            assert len(failed) == 1 and failed[0]['failure']['kind'] == 'usage', failed
+            assert 'Alpha.' not in failed[0]['failure']['message'], failed
+            with ConditionalBackend(f'http://127.0.0.1:{backend.port}/arm/full/capture/v1') as proxy:
+                host.start({**env, 'THINKTHEN_BASE_URL': proxy.base})
+                failed = "thinkthen_record(text=>'private evidence')"
+                got = rows("SELECT to_jsonb(r) FROM thinkthen_decide_details('Fits?',ARRAY[" + record + "," + failed + "," + record + "]) r", 2)
+                assert proxy.count() == 3, got
+                assert [r['ordinal'] for r in got] == [0, 1, 2], got
+                assert [r['value'] for r in got] == [True, None, True], got
+                assert got[1]['failure']['kind'] == 'backend', got
+                assert 'private evidence' not in got[1]['failure']['message'], got
+                assert all(row['facts']['requests_sent'] == 3 for row in got), got
+            host.start({**env, 'THINKTHEN_BASE_URL': f'http://127.0.0.1:{backend.port}/arm/full/capture/v1'})
             got = rows("SELECT to_jsonb(r) FROM thinkthen_decide_details('Fits?',ARRAY[" + record + "],thinkthen_reading(threshold=>'0.1:0.95')) r", 1)
             assert got[0]['value'] is None and got[0]['probability'] == .9, got
             source = "ROW('caller-read.txt',1,1)::thinkthen_source"
