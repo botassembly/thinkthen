@@ -332,6 +332,8 @@ def unpack_example_package(family, packages, destination, selected=None, text_fa
                 (library.parent / alias).symlink_to(library.name)
     if family == 'r':
         return destination / 'thinkthen'
+    if family == 'crate':
+        return destination / ('thinkthen-' + version())
     pages = list(destination.rglob('README.md'))
     return pages[0].parent if len(pages) == 1 else destination
 
@@ -552,8 +554,8 @@ def run_example(family, packages, work, root=REPO, selected=None, sample_index=0
         env['PUB_CACHE'] = os.environ.get('PUB_CACHE', str(Path.home() / '.pub-cache'))
         dart = os.environ.get('TT_DART', 'dart')
         run([dart, 'pub', 'get', '--offline'], True)
-        run([dart, 'compile', 'exe', str(sample), '-o', str(work / 'sample')], True)
-        output = run([str(work / 'sample')])
+        run([dart, 'build', 'cli', '-t', str(sample), '-o', str(work / 'dart-build')], True)
+        output = run([str(work / 'dart-build/bundle/bin/sample')])
     elif family == 'r':
         (work / 'rlib').mkdir()
         env['R_LIBS_USER'] = str(work / 'rlib') + os.pathsep + os.environ.get('R_LIBS', str(Path.home() / '.cache/thinkthen-toolchains/r-library'))

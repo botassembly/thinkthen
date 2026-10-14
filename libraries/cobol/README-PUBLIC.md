@@ -2,37 +2,37 @@
 
 ThinkThen is ten functions on top of Jev, TypeSafe's decision model, or any model like it. It puts these decision models in your code, whatever model, language or database you use. Use Jev, OpenAI or a local model. Ask a typed question and get back `true`, `false`, a label or a number. Your code branches on the answer. A model can say not sure, and a failed call never looks like an answer. ThinkThen packs many records into few requests, saves each answer for reuse, and lets tests replay saved answers with no key and no network.
 
-Unpack the matching archive: `tar -xzf thinkthen-cobol-0.2.0-TARGET.tar.gz`. Replace `TARGET` with your platform. Compile this free-format example with `cobc -free`. Set your hosted backend key: `export THINKTHEN_API_KEY=...`.
+Unpack the matching archive: `tar -xzf thinkthen-cobol-0.2.0-TARGET.tar.gz`. Replace `TARGET` with your platform. Set your hosted backend key: `export THINKTHEN_API_KEY=...`.
 ```cobol
-identification division. program-id. RegistryExample. environment division. input-output section. file-control. select team-file assign to "team.json" organization line sequential.
-data division. file section. fd team-file. 01 team-line pic x(300). working-storage section. copy "tt-native-generated.cpy" replacing leading ==tt-n-cobol-== by ==t-==.
+identification division. program-id. RegistryExample.
+environment division. input-output section. file-control. select team-file assign to "team.json" organization line sequential.
+data division. file section. fd team-file. 01 team-line pic x(300).
+working-storage section. copy "tt-native-generated.cpy" replacing leading ==tt-n-cobol-== by ==t-==.
 01 engine usage pointer. 01 no-controls usage pointer value null. 01 status-code usage binary-long signed. 01 i usage binary-long. 01 evidence-length usage binary-double unsigned.
 01 evidence-table. 02 evidence pic x(80) occurs 6 times. 01 record-address. 02 first-record usage pointer.
 procedure division. allocate t-Settings. move low-values to t-Settings. call "TT_ENGINE_NEW" using by reference t-Settings engine returning status-code. free t-Settings. if status-code not = 0 move 1 to return-code goback end-if.
-allocate t-RequestQuestion t-RequestQuestionText t-RequestQuestionTextText t-RequestQuestionFile t-RequestQuestionFilePath.
-allocate t-RequestInput t-RequestInputRecords t-RequestInputRecordsItems t-RequestItem t-RequestOriginal t-RequestOriginalText t-RequestOriginalTextText.
-allocate t-AnswerDecideResult t-AnswerChooseResult t-AnswerStatus. move low-values to t-RequestInputRecords t-RequestItem t-RequestOriginalText.
+allocate t-RequestQuestion. allocate t-RequestQuestionText. allocate t-RequestQuestionTextText. allocate t-RequestQuestionFile. allocate t-RequestQuestionFilePath.
+allocate t-RequestInput. allocate t-RequestInputRecords. allocate t-RequestInputRecordsItems. allocate t-RequestItem. allocate t-RequestOriginal. allocate t-RequestOriginalText. allocate t-RequestOriginalTextText.
+allocate t-AnswerDecideResult. allocate t-AnswerChooseResult. allocate t-AnswerStatus. move low-values to t-RequestInputRecords t-RequestItem t-RequestOriginalText.
 move t-requestinputrecords-kind-k to v-kind of t-RequestInput. set v-value of t-RequestInput to address of t-RequestInputRecords.
 set first-record to address of t-RequestItem. set v-data of t-RequestInputRecordsItems to address of record-address. move 1 to v-len of t-RequestInputRecordsItems. set v-m-items of t-RequestInputRecords to address of t-RequestInputRecordsItems.
-move "Plea e refund my order. It arrived broken." to evidence(1). move "Thank  for the quick help ye terday!" to evidence(2). move "I want to  end thi  back." to evidence(3). move "Plea
-e refund the extra fee on my invoice." to evidence(4). move "My parcel went to the wrong addre ." to evidence(5). move "I cannot re et my pa word." to evidence(6).
-open output team-file. write team-line from '{"version":1,"choose":"Which team owns this?","options":{"billing":"Invoices, fees, and refunds.","shipping":"Parcels and delivery.","account":"Logins and passwords."}}'. close team-file.
+move "Please refund my order. It arrived broken." to evidence(1). move "Thanks for the quick help yesterday!" to evidence(2). move "I want to send this back." to evidence(3). move "Please refund the extra fee on my invoice." to evidence(4). move
+"My parcel went to the wrong address." to evidence(5). move "I cannot reset my password." to evidence(6).
+open output team-file. write team-line from '{"version":1,"choose":"Which team owns this?","options":{"billing":"Invoices, fees, and refunds.","shipping":"Parcels and delivery.","account":"Logins and passwords."}}' . close team-file.
 perform varying i from 1 by 1 until i > 6
-    move function length(function trim(evidence(i) trailing)) to evidence-length call "TT_TEXT_ITEM" u ing by reference t-Reque tItem t-Reque tOriginal t-Reque tOriginalText t-Reque tOriginalTextText evidence(i) by value evidence-length returning  tatu
--code
-    if i <= 3
-        call "TT_QUESTION_TEXT" using by reference t-RequestQuestion t-RequestQuestionText t-RequestQuestionTextText by reference "Does the customer ask for a refund?" by value 35 returning status-code
-        call "TT_DECIDE" using by value engine by reference t-RequestQuestion t-RequestInput by value no-controls by reference t-AnswerDecideResult t-AnswerStatus returning status-code
-        if status-code = 0 and v-first-present of t-AnswerDecideResult = 1 display v-first-value of t-AnswerDecideResult end-if
-    else
-        call "TT_QUESTION_FILE" using by reference t-RequestQuestion t-RequestQuestionFile t-RequestQuestionFilePath by reference "team.json" by value 9 returning status-code
-        call "TT_CHOOSE" using by value engine by reference t-RequestQuestion t-RequestInput by value no-controls by reference t-AnswerChooseResult t-AnswerStatus returning status-code
-        if status-code = 0 and v-first-present of t-AnswerChooseResult = 1 display v-first-value-text of t-AnswerChooseResult(1:v-first-value-length of t-AnswerChooseResult) end-if
-    end-if
-    call "TT_ANSWER_FREE" using by value v-owner of t-AnswerStatus returning omitted
-    if status-code not = 0 move 1 to return-code goback end-if
-end-perform. call "thinkthen_engine_free" u ing by value engine returning omitted. free t-Reque tQue tion t-Reque tQue tionText t-Reque tQue tionTextText t-Reque tQue tionFile t-Reque tQue tionFilePath t-Reque tInput t-Reque tInputRecord  t-Reque
-tInputRecord Item  t-Reque tItem t-Reque tOriginal t-Reque tOriginalText t-Reque tOriginalTextText t-An werDecideRe ult t-An werChoo eRe ult t-An werStatu . move 0 to return-code. goback.
+move function length(function trim(evidence(i) trailing)) to evidence-length call "TT_TEXT_ITEM" using by reference t-RequestItem t-RequestOriginal t-RequestOriginalText t-RequestOriginalTextText evidence(i) by value evidence-length returning
+status-code if i <= 3
+call "TT_QUESTION_TEXT" using by reference t-RequestQuestion t-RequestQuestionText t-RequestQuestionTextText by reference "Does the customer ask for a refund?" by value 35 returning status-code
+call "TT_DECIDE" using by value engine by reference t-RequestQuestion t-RequestInput by value no-controls by reference t-AnswerDecideResult t-AnswerStatus returning status-code
+if status-code = 0 and v-first-present of t-AnswerDecideResult = 1 display v-first-value of t-AnswerDecideResult end-if
+else
+call "TT_QUESTION_FILE" using by reference t-RequestQuestion t-RequestQuestionFile t-RequestQuestionFilePath by reference "team.json" by value 9 returning status-code
+call "TT_CHOOSE" using by value engine by reference t-RequestQuestion t-RequestInput by value no-controls by reference t-AnswerChooseResult t-AnswerStatus returning status-code
+if status-code = 0 and v-first-present of t-AnswerChooseResult = 1 display v-first-value-text of t-AnswerChooseResult(1:v-first-value-length of t-AnswerChooseResult) end-if
+end-if call "TT_ANSWER_FREE" using by value v-owner of t-AnswerStatus returning omitted
+if status-code not = 0 move 1 to return-code goback end-if
+end-perform. call "thinkthen_engine_free" using by value engine returning omitted. free t-RequestQuestion t-RequestQuestionText t-RequestQuestionTextText t-RequestQuestionFile t-RequestQuestionFilePath t-RequestInput t-RequestInputRecords
+t-RequestInputRecordsItems t-RequestItem t-RequestOriginal t-RequestOriginalText t-RequestOriginalTextText t-AnswerDecideResult t-AnswerChooseResult t-AnswerStatus. move 0 to return-code. goback.
 ```
 
 The library is free and MIT licensed. Hosted models charge per token. Local models are free to use; you supply the computer that runs them.

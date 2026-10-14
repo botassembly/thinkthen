@@ -130,7 +130,7 @@ class PackageText(unittest.TestCase):
             with self.assertRaisesRegex(readmes.Refusal, 'example-needs-two-functions: python'):
                 readmes.example('python', root)
 
-    def test_r_replay_installs_package_root_with_vendored_readmes(self):
+    def test_archive_replay_preserves_package_roots_with_vendored_readmes(self):
         with tempfile.TemporaryDirectory() as scratch:
             tree = Path(scratch); packages = tree / 'packages'; packages.mkdir()
             archive(packages / 'thinkthen_0.2.0.tar.gz', {
@@ -142,6 +142,14 @@ class PackageText(unittest.TestCase):
             self.assertTrue((installed / 'DESCRIPTION').is_file())
             self.assertTrue(os.access(installed / 'configure', os.X_OK))
             self.assertEqual(installed, tree / 'installed/thinkthen')
+            prefix = 'thinkthen-' + readmes.version()
+            archive(packages / (prefix + '.crate'), {
+                prefix + '/README.md': readmes.source('crate').read_bytes(),
+                prefix + '/src/transforms/README.md': b'Bundled transform documentation',
+                prefix + '/Cargo.toml': (readmes.REPO / 'crates/thinkthen/Cargo.toml').read_bytes()})
+            crate = readmes.unpack_example_package('crate', packages, tree / 'installed-crate')
+            self.assertEqual(crate, tree / 'installed-crate' / prefix)
+            self.assertTrue((crate / 'Cargo.toml').is_file())
 
     def test_duckdb_replay_loads_the_installed_source_member(self):
         with tempfile.TemporaryDirectory() as scratch:
@@ -327,7 +335,7 @@ class PackageText(unittest.TestCase):
                     '    else: sys.exit("compiler ran without lock")\n' +
                     'assert os.environ["CARGO_BUILD_JOBS"] == "2"\n' +
                     ('assert os.environ["PUB_CACHE"] == ' + repr(str(cache)) + '\n' if family == 'dart' else '') +
-                    'out = pathlib.Path(".build/debug/RegistryExample") if sys.argv[1] == "build" else pathlib.Path(sys.argv[-1]) if sys.argv[1] == "compile" else None\n' +
+                    'out = pathlib.Path(sys.argv[-1]) / "bundle/bin/sample" if sys.argv[1:3] == ["build", "cli"] else pathlib.Path(".build/debug/RegistryExample") if sys.argv[1] == "build" else None\n' +
                     'if out:\n' +
                     '    out.parent.mkdir(parents=True, exist_ok=True)\n' +
                     '    out.write_text(' + repr('#!' + sys.executable + '\nimport fcntl\nwith open(' + repr(str(lock)) + ', "a") as lock: fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)\nprint("fixture")\n') + ')\n' +
