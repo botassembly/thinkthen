@@ -621,9 +621,19 @@
 #define THINKTHEN_SESSION_WAIT_INPUT_V1 1
 
 /*
+ Wait for final output or cancellation requested since this reader armed.
+ */
+#define THINKTHEN_SESSION_WAIT_INTERRUPTIBLE_SETTLEMENT_V1 4
+
+/*
  Wait only for results, end or cancel; input room cannot wake this wait.
  */
 #define THINKTHEN_SESSION_WAIT_RESULT_V1 0
+
+/*
+ Arm one exclusive settlement reader and check readiness immediately; timeout must be zero.
+ */
+#define THINKTHEN_SESSION_WAIT_SETTLEMENT_ARM_V1 3
 
 /*
  Drain output after cancel without waking repeatedly for cancellation.
@@ -4248,6 +4258,7 @@ int thinkthen_request_plan_value(const struct thinkthen_engine *engine,
 
 /*
  Signal cancellation without waiting for a provider or final facts. NULL is ignored.
+ Interrupt any settlement reader armed before this call, even after prior cancel.
  # Safety
  session is NULL or live throughout the call.
  */
@@ -4493,7 +4504,11 @@ int thinkthen_session_try_read(struct thinkthen_session *session,
  Block for requested readiness without consuming a packet or joining provider
  work. timeout_ms is the maximum condition wait in milliseconds; zero checks
  readiness immediately. RESULT ignores input room; INPUT also watches intake;
- SETTLEMENT ignores cancel to drain final packets after cancellation. Output
+ SETTLEMENT ignores cancel to drain final packets after cancellation.
+ SETTLEMENT_ARM discards earlier cancel notifications and checks readiness
+ immediately; timeout_ms must be zero or Usage preserves outputs and state. One exclusive reader arms before checking
+ its cancellation/disposal state, then uses INTERRUPTIBLE_SETTLEMENT to wait
+ for output or a subsequent cancel. Other readers must not rearm its wait. Output
  readiness takes priority over cancel. Success preserves thread-local errors;
  failures preserve out_ready and set only the calling thread's diagnostic.
  # Safety

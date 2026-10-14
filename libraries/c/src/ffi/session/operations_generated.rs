@@ -24,6 +24,10 @@ pub const THINKTHEN_SESSION_WAIT_RESULT_V1: u32 = 0;
 pub const THINKTHEN_SESSION_WAIT_INPUT_V1: u32 = 1;
 /// Drain output after cancel without waking repeatedly for cancellation.
 pub const THINKTHEN_SESSION_WAIT_SETTLEMENT_V1: u32 = 2;
+/// Arm one exclusive settlement reader and check readiness immediately; timeout must be zero.
+pub const THINKTHEN_SESSION_WAIT_SETTLEMENT_ARM_V1: u32 = 3;
+/// Wait for final output or cancellation requested since this reader armed.
+pub const THINKTHEN_SESSION_WAIT_INTERRUPTIBLE_SETTLEMENT_V1: u32 = 4;
 /// A result or terminal packet is ready; no packet has been consumed.
 pub const THINKTHEN_SESSION_READY_RESULT_V1: u32 = 0;
 /// Caller-supplied input has room.
@@ -86,7 +90,11 @@ pub extern "C" fn thinkthen_session_error_view()
 /// Block for requested readiness without consuming a packet or joining provider
 /// work. timeout_ms is the maximum condition wait in milliseconds; zero checks
 /// readiness immediately. RESULT ignores input room; INPUT also watches intake;
-/// SETTLEMENT ignores cancel to drain final packets after cancellation. Output
+/// SETTLEMENT ignores cancel to drain final packets after cancellation.
+/// SETTLEMENT_ARM discards earlier cancel notifications and checks readiness
+/// immediately; timeout_ms must be zero or Usage preserves outputs and state. One exclusive reader arms before checking
+/// its cancellation/disposal state, then uses INTERRUPTIBLE_SETTLEMENT to wait
+/// for output or a subsequent cancel. Other readers must not rearm its wait. Output
 /// readiness takes priority over cancel. Success preserves thread-local errors;
 /// failures preserve out_ready and set only the calling thread's diagnostic.
 /// # Safety
@@ -500,6 +508,7 @@ pub unsafe extern "C" fn thinkthen_session_new_named_with_surface(
 }
 
 /// Signal cancellation without waiting for a provider or final facts. NULL is ignored.
+/// Interrupt any settlement reader armed before this call, even after prior cancel.
 /// # Safety
 /// session is NULL or live throughout the call.
 #[unsafe(no_mangle)]

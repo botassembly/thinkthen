@@ -147,8 +147,10 @@ RequestSessionReady::Input
 RequestSessionReady::Result
 RequestSessionReady::Timeout
 RequestSessionWaitInterest::Input
+RequestSessionWaitInterest::InterruptibleSettlement
 RequestSessionWaitInterest::Result
 RequestSessionWaitInterest::Settlement
+RequestSessionWaitInterest::SettlementArm
 SourceBudgetExceeded::Find
 SourceBudgetExceeded::Plan
 SourceBudgetExceeded::Rank

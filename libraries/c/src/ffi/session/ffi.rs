@@ -153,6 +153,8 @@ fn wait_ready(session: &SessionHandle, interest: u32, timeout_ms: u32) -> Result
         THINKTHEN_SESSION_WAIT_RESULT_V1 => Interest::Result,
         THINKTHEN_SESSION_WAIT_INPUT_V1 => Interest::Input,
         THINKTHEN_SESSION_WAIT_SETTLEMENT_V1 => Interest::Settlement,
+        THINKTHEN_SESSION_WAIT_SETTLEMENT_ARM_V1 if timeout_ms == 0 => Interest::SettlementArm,
+        THINKTHEN_SESSION_WAIT_INTERRUPTIBLE_SETTLEMENT_V1 => Interest::InterruptibleSettlement,
         _ => return Err(ErrorKind::Usage),
     };
     let ready = session.0.wait(
