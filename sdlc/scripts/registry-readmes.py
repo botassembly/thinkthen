@@ -531,9 +531,11 @@ def run_example(family, packages, work, root=REPO, selected=None, sample_index=0
         shutil.copyfile(nupkg[0], feed / nupkg[0].name)
         (work / 'example.csproj').write_text('<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net8.0</TargetFramework><ImplicitUsings>enable</ImplicitUsings></PropertyGroup><ItemGroup><PackageReference Include="Botassembly.ThinkThen" Version="' + version(root) + '" /></ItemGroup></Project>')
         env.update(DOTNET_CLI_HOME=str(home), NUGET_PACKAGES=str(work / 'nuget'),
-                   DOTNET_CLI_TELEMETRY_OPTOUT='1', DOTNET_SKIP_FIRST_TIME_EXPERIENCE='1')
+                   DOTNET_CLI_TELEMETRY_OPTOUT='1', DOTNET_SKIP_FIRST_TIME_EXPERIENCE='1',
+                   DOTNET_CLI_WORKLOAD_UPDATE_NOTIFY_DISABLE='true')
         dotnet = os.environ.get('THINKTHEN_DOTNET', 'dotnet')
-        run([dotnet, 'restore', 'example.csproj', '--source', str(feed), '-p:NuGetAudit=false'], True)
+        (work / 'NuGet.Config').write_text('<configuration><packageSources><clear/><add key="local" value="' + str(feed) + '"/></packageSources><auditSources><clear/></auditSources></configuration>')
+        run([dotnet, 'restore', 'example.csproj', '--configfile', str(work / 'NuGet.Config'), '-p:NuGetAudit=false'], True)
         run([dotnet, 'build', 'example.csproj', '--no-restore', '-o', str(work / 'bin')], True)
         output = run([dotnet, str(work / 'bin/example.dll')])
     elif family == 'dart':
