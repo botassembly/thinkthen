@@ -17,13 +17,13 @@ procedure Sample is
         "Gift cards cannot be exchanged for cash.")];
 begin
    declare
-      Result : constant Find_Result :=
+      Match_Judgment : constant Find_Result :=
         Thinkthen.Inputs.Calls.Find (
      Text_Question (
        "Which line gives the refund deadline?"),
      Records_Input (Records));
       Refund_Deadline : constant String :=
-        V.As_String (Result.Value);
+        V.As_String (Match_Judgment.Value);
    begin
       pragma Assert (Refund_Deadline =
         "Refunds are issued within 30 days of purchase.");

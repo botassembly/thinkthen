@@ -13,12 +13,12 @@ procedure Sample is
      & ASCII.LF;
 begin
    declare
-      Result : constant Score_Result :=
+      Grade_Judgment : constant Score_Result :=
         Thinkthen.Inputs.Calls.Score (
      File_Question ("levels.json"),
      Make_Input_text (Evidence));
       Urgency : constant Long_Float :=
-        Result.Value;
+        Grade_Judgment.Value;
    begin
       pragma Assert (Urgency = 2.0);
    end;

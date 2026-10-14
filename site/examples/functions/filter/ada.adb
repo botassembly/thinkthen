@@ -16,12 +16,12 @@ procedure Sample is
       Text_Item ("The strap snapped on day two.")];
 begin
    declare
-      Result : constant Filter_Result :=
+      Selection_Judgment : constant Filter_Result :=
         Thinkthen.Inputs.Calls.Filter (
      Text_Question ("Is this a complaint?"),
      Records_Input (Records));
       Complaints : constant V.Value_List :=
-        Result.Value;
+        Selection_Judgment.Value;
    begin
       pragma Assert (Complaints'Length = 2);
       pragma Assert (V.As_String (Complaints (1)) =

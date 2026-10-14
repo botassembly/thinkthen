@@ -12,13 +12,14 @@ procedure Sample is
      "My parcel went to the wrong address.";
 begin
    declare
-      Result : constant Choose_Result :=
+      Team_Judgment : constant Choose_Result :=
         Thinkthen.Inputs.Calls.Choose (
      File_Question ("teams.json"),
      Make_Input_text (Evidence));
-      Team : constant Choice := Result.Value;
+      Team : constant Choice := Team_Judgment.Value;
    begin
       pragma Assert
-        (Team.Known and then To_String (Team.Value) = "shipping");
+        (Team.Known and then
+         To_String (Team.Value) = "shipping");
    end;
 end Sample;

@@ -15,14 +15,16 @@ procedure Sample is
      & "and I was charged twice." & ASCII.LF;
 begin
    declare
-      Result : constant Tag_Result :=
+      Label_Judgment : constant Tag_Result :=
         Thinkthen.Inputs.Calls.Tag (
      File_Question ("labels.json"),
      Make_Input_text (Evidence));
-      Fitting_Labels : constant Thinkthen.Answers.Text_List := Result.Value;
+      Fitting_Labels : constant
+        Thinkthen.Answers.Text_List := Label_Judgment.Value;
    begin
       pragma Assert (Fitting_Labels =
         [To_Unbounded_String ("praise"),
-         To_Unbounded_String ("bug"), To_Unbounded_String ("billing")]);
+         To_Unbounded_String ("bug"),
+         To_Unbounded_String ("billing")]);
    end;
 end Sample;
