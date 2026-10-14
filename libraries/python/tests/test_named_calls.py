@@ -21,11 +21,13 @@ def test_named_calls_use_owned_typed_results_for_the_ten_functions(backend, tmp_
                 ('relate', {'version': 1, 'relate': {'relations': [{'name': 'knows', 'source': 'person', 'target': 'person'}]}}, [('A', 'person'), ('B', 'person')], {}),
             ]
             for verb, question, evidence, options in calls:
-                options['details'] = True
                 if verb == 'recognize': done = engine.recognize(evidence, question, **options)
                 elif verb == 'relate': done = engine.relate(evidence, question, **options)
                 else: done = getattr(engine, verb)(question, evidence, **options)
-                assert done.value == (done.results[0] if isinstance(evidence, str) else list(done.results)), verb
+                assert not hasattr(done, 'details') and not hasattr(type(done), '__bool__'), verb
+                assert '__eq__' not in tt.Result.__dict__, verb
+                assert done != done.value, verb
+                if verb in ('tag', 'score', 'annotate'): assert done.probability is None, verb
                 assert len(done.facts.call_id) == 64, verb
                 assert done.facts.requests_sent >= 0, verb
                 for row in done.results:
@@ -45,27 +47,32 @@ def test_named_calls_use_owned_typed_results_for_the_ten_functions(backend, tmp_
             empty = engine.relate([], relations=relations)
             assert empty.value == []
             assert empty.facts.requests_sent == 0
-            detailed = engine.decide({'decide': 'Late?'}, 'note', details=True)
-            assert detailed.value is detailed.results[0]
-            assert detailed.value.input == 'note'
-            assert detailed.value.index == 0
+            detailed = engine.decide({'decide': 'Late?'}, 'note')
+            assert detailed.value is True
+            assert detailed.results[0].input == 'note'
+            assert detailed.results[0].index == 0
             context = engine.decide({'decide': 'Late?'}, c.Records((c.Item(value='note', text=True, context='policy'),)))
             assert len(context.results[0].meta.context_sha256) == 64
             item = engine.decide('Late?', c.Records((c.Item(value='note', text=True, context='policy'),)))
             assert item.results[0].meta.context_sha256 == context.results[0].meta.context_sha256
             assert bool(detailed.value) is True
+            unresolved = engine.decide('Late?', ['first', 'second'], threshold='0.2:0.95')
+            assert unresolved.value == [None, None] and unresolved.probability == [.9, .9]
             assert engine.decide('Late?', 'note').value is True
+            try: engine.decide('Late?', 'note', details=True)
+            except TypeError: pass
+            else: raise AssertionError('removed details keyword admitted')
             assert engine.choose('Team?', 'note', options=['bill', 'ship']).probability == .9
             import asyncio
             assert asyncio.run(engine.asyncio.decide('Late?', 'note')).value is True
-            assert engine.rank('Late?', ['first', 'second']).value[0]['index'] == 0
+            assert engine.rank('Late?', ['first', 'second']).value[0] == 0
             source = c.Files(paths=(str(__import__('pathlib').Path(__import__('os').environ['XDG_CONFIG_HOME']) / 'source.txt'),), unit='line')
             __import__('pathlib').Path(source.paths[0]).parent.mkdir(parents=True, exist_ok=True)
             __import__('pathlib').Path(source.paths[0]).write_text('\\nfirst\\nsecond\\n')
             selection = tt.read_files(source.paths, unit='line')
             assert engine.decide('Late?', selection).value == [True, True]
-            located = engine.decide('Late?', selection, details=True)
-            assert located.value[0] is located.results[0]
+            located = engine.decide('Late?', selection)
+            assert located.value == [True, True]
             assert located.results[0].source.first_line == 2
             assert located.results[1].source.first_line == 3
             assert [row.index for row in located.results] == [0, 1]
@@ -302,3 +309,41 @@ def test_shipped_function_examples_replay_installed_answers_without_sending(back
         replayed = run(code.replace('SETTINGS', repr({'replay': str(folder / 'recording')})), env)
         assert replayed == recorded
         assert backend.count() == count, function
+
+
+def test_recognition_probabilities_follow_kept_spans_with_duplicate_names(backend, tmp_path):
+    output = run('''
+        import json, threading, thinkthen as tt
+        from http.server import BaseHTTPRequestHandler, HTTPServer
+        class Reply(BaseHTTPRequestHandler):
+            def log_message(self, *args): pass
+            def do_POST(self):
+                body = json.loads(self.rfile.read(int(self.headers['Content-Length'])))
+                answers = {}
+                for at, (name, question) in enumerate(sorted(body['questions'].items())):
+                    criteria = question['criteria']
+                    picked = 'SINGLE' if 'SINGLE' in criteria else 'person'
+                    probability = [.9, .7][at] if picked == 'SINGLE' else .6
+                    odds = {key: probability if key == picked else (1-probability)/(len(criteria)-1)
+                            for key in criteria}
+                    answers[name] = {'type': 'choice', 'probabilities': odds}
+                response = json.dumps({'model': 'jev-latest', 'answers': answers}).encode()
+                self.send_response(200); self.send_header('Content-Length', str(len(response)))
+                self.end_headers(); self.wfile.write(response)
+        server = HTTPServer(('127.0.0.1', 0), Reply)
+        threading.Thread(target=server.serve_forever, daemon=True).start()
+        with tt.Engine(cache=False, base_url=f'http://127.0.0.1:{server.server_port}/v1') as engine:
+            call = engine.recognize('Ada Ada', kinds=['person'], threshold=.1)
+            entities = call.value.entities
+            assert [(entity.text, entity.start, entity.end) for entity in entities] == [('Ada', 0, 3), ('Ada', 4, 7)]
+            proposals = [proposal for proposal in call.results[0].answer.proposals if proposal.kept]
+            assert call.probability == [proposal.span_probability for proposal in proposals]
+            assert call.probability[0] != call.probability[1]
+            assert all(chance != entity.strength for chance, entity in zip(call.probability, entities))
+            boundary = engine.recognize('Ada Ada', mode='boundary_only', threshold=.1)
+            assert boundary.probability == [proposal.probability for proposal in boundary.value.proposals]
+            assert [(proposal.text, proposal.start, proposal.end) for proposal in boundary.value.proposals] == [('Ada', 0, 3), ('Ada', 4, 7)]
+        server.shutdown(); server.server_close()
+        print('span probabilities')
+    ''', child_env(backend, tmp_path))
+    assert output.splitlines() == ['span probabilities']

@@ -89,7 +89,7 @@ if [ "$profile" = routine ]; then
 import sys
 from pathlib import Path
 root=Path(sys.argv[1]);selected=set((root/'conformance/routine-ids.txt').read_text().splitlines())
-selected.update(('complete-decide','images-decide','image-file-decide','images-choose','images-score','cache-hit-cannot-bypass-declaration','settings-replay-answers-from-the-folder-alone','settings-cache-off-sends-again','recognize-context-cache-replay'))
+selected.update(('library-call-result','complete-decide','images-decide','image-file-decide','images-choose','images-score','cache-hit-cannot-bypass-declaration','settings-replay-answers-from-the-folder-alone','settings-cache-off-sends-again','recognize-context-cache-replay'))
 Path(sys.argv[2]).write_text('\n'.join(sorted(selected)))
 PY
     THINKTHEN_CONFORMANCE_IDS=$scratch/ids

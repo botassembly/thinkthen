@@ -116,7 +116,7 @@ def test_inline_label_conversion_preserves_order_and_refuses_invalid_labels_with
         for labels in (Labels, Literal["zebra", "alpha"]):
             answer = engine.choose("Which?", "a", options=labels)
             assert answer.value == "zebra"
-            assert list(answer.details[0].question.options) == ["zebra", "alpha"]
+            assert list(answer.results[0].question.options) == ["zebra", "alpha"]
         for labels, message in ((Aliases, "Enum labels must not have aliases"),
                                 (Literal[1, "alpha"], "Literal labels are strings")):
             try: engine.choose("Which?", "a", options=labels)
@@ -135,7 +135,7 @@ def test_native_typed_controls_preview_and_null_refusals_send_nothing(backend, t
     output = run('''
         import thinkthen as tt
         engine = tt.Engine(cache=False, backend=None, model=None, max_requests_total=0)
-        plan = engine.plan('decide', 'Late?', ['note'], attempts=True, details=True,
+        plan = engine.plan('decide', 'Late?', ['note'], attempts=True,
                            batch=1, deadline_ms=-1, context='', model='local', threshold=.5)
         assert plan['records'] == plan['requests'] == 1
         assert plan['estimated_bytes'] > 0

@@ -36,26 +36,46 @@ class FileSelection:
     def __iter__(self) -> Any: ...
 def read_files(path_or_paths: Any, *, unit: str = ..., window: int | None = ...) -> FileSelection: ...
 _ReadingValue: TypeAlias = bool | int | float | str | None | list["_ReadingValue"] | dict[str, "_ReadingValue"]
-class _DecideResult(Result[_ReadingValue | NativeAtomicDecideValue | list[NativeAtomicDecideValue]]):
+class _DecideResult(Result[_ReadingValue]):
     results: tuple[NativeAtomicDecideValue, ...]
-class _ChooseResult(Result[str | None | list[str | None] | NativeAtomicNullableString | list[NativeAtomicNullableString]]):
+    @property
+    def probability(self) -> float | None | list[float | None]: ...
+class _ChooseResult(Result[str | None | list[str | None]]):
     results: tuple[NativeAtomicNullableString, ...]
-class _TagResult(Result[list[str] | list[list[str]] | NativeAtomicArrayOfString | list[NativeAtomicArrayOfString]]):
+    @property
+    def probability(self) -> float | None | list[float | None]: ...
+class _TagResult(Result[list[str] | list[list[str]]]):
     results: tuple[NativeAtomicArrayOfString, ...]
-class _ScoreResult(Result[float | list[float] | NativeAtomicDouble | list[NativeAtomicDouble]]):
+    @property
+    def probability(self) -> None: ...
+class _ScoreResult(Result[float | list[float]]):
     results: tuple[NativeAtomicDouble, ...]
-class _FilterResult(Result[list[object] | list[NativeAtomicBoolean]]):
+    @property
+    def probability(self) -> None: ...
+class _FilterResult(Result[list[object]]):
     results: tuple[NativeAtomicBoolean, ...]
-class _RankResult(Result[list[dict[str, object]] | list[NativeAtomicNonZeroUsize]]):
+    @property
+    def probability(self) -> list[float | None]: ...
+class _RankResult(Result[list[int]]):
     results: tuple[NativeAtomicNonZeroUsize, ...]
-class _FindResult(Result[dict[str, object] | None | NativeFind | list[NativeFind]]):
+    @property
+    def probability(self) -> list[float | None]: ...
+class _FindResult(Result[object | None]):
     results: tuple[NativeFind, ...]
-class _AnnotateResult(Result[NativeAnnotatedRow | list[NativeAnnotatedRow] | NativeAnnotation | list[NativeAnnotation]]):
+    @property
+    def probability(self) -> float | None: ...
+class _AnnotateResult(Result[NativeAnnotatedRow | list[NativeAnnotatedRow]]):
     results: tuple[NativeAnnotation, ...]
-class _RecognizeResult(Result[NativeRecognize | list[NativeRecognize] | NativeRecognition | list[NativeRecognition]]):
+    @property
+    def probability(self) -> None: ...
+class _RecognizeResult(Result[NativeRecognize | list[NativeRecognize]]):
     results: tuple[NativeRecognition, ...]
-class _RelateResult(Result[list[NativeRelatedEntityEdge] | NativeRelation | list[NativeRelation]]):
+    @property
+    def probability(self) -> list[float] | list[list[float]]: ...
+class _RelateResult(Result[list[NativeRelatedEntityEdge]]):
     results: tuple[NativeRelation, ...]
+    @property
+    def probability(self) -> list[float]: ...
 from ._named_generated import EngineSettings, PlanOptions, DecideOptions, ChooseOptions, TagOptions, ScoreOptions, FilterOptions, RankOptions, FindOptions, AnnotateOptions, RecognizeOptions, RelateOptions
 
 class Engine:

@@ -35,31 +35,27 @@ def _dtype(rows, schema=None):
     return pl.Series(values, strict=True).dtype
 
 
-def answer_column(name, rows, function, detailed):
+def answer_column(name, rows, function):
     import polars as pl
     rows = list(rows)
-    if not detailed:
-        try:
-            values = [_plain(value) for value in rows]
-            dtype = _dtype(rows)
-            if dtype == pl.Null:
-                dtype = dict(decide=pl.Boolean, choose=pl.String, score=pl.Float64, tag=pl.List(pl.String)).get(function, dtype)
-            column = pl.Series(name, values, dtype=dtype, strict=True)
-            if json.dumps(column.to_list(), sort_keys=True) == json.dumps(values, sort_keys=True): return column
-        except (TypeError, OverflowError, pl.exceptions.PolarsError):
-            pass
+    try:
+        values = [_plain(value) for value in rows]
+        dtype = _dtype(rows)
+        if dtype == pl.Null:
+            dtype = dict(decide=pl.Boolean, choose=pl.String, score=pl.Float64, tag=pl.List(pl.String)).get(function, dtype)
+        column = pl.Series(name, values, dtype=dtype, strict=True)
+        if json.dumps(column.to_list(), sort_keys=True) == json.dumps(values, sort_keys=True): return column
+    except (TypeError, OverflowError, pl.exceptions.PolarsError):
+        pass
     return pl.Series(name, rows, dtype=pl.Object)
 
 
 def probability_column(result, name):
     import polars as pl
-    values = Result.probability.fget(result)
-    if result.function in ('find', 'rank', 'relate'):
-        return values
-    rows = [None] * len(result.source)
-    for at, value in zip(result.positions, values, strict=True):
-        rows[at] = value
-    return pl.Series(name, rows, dtype=pl.Float64)
+    rows = result._probability_rows()
+    dtype = pl.List(pl.Float64) if result.function in ('recognize', 'relate') else pl.Float64
+    return pl.Series(name, rows, dtype=dtype)
+
 
 
 def records(source, verb):
@@ -79,12 +75,12 @@ class PolarsResult(PandasResult):
         return {**Result._to_dict(self), 'present': list(self.present), 'name': self.source.name}
 
     def _column(self, rows, positions=None):
-        return answer_column(self.source.name, rows, self.function, self.detailed)
+        return answer_column(self.source.name, rows, self.function)
 
     @property
     def value(self):
         value = super().value
-        if self.detailed or self.function not in ('rank', 'find', 'relate'): return value
+        if self.function not in ('rank', 'find', 'relate'): return value
         return self._column([value] if self.function == 'find' else value)
 
     @property
@@ -95,11 +91,11 @@ class PolarsResult(PandasResult):
         return self.source.gather(list(self.positions))
 
     def __reduce__(self):
-        return (_restore, (self.results, self.terminal, self.function, self.scalar, self.detailed,
+        return (_restore, (self.results, self.terminal, self.function, self.scalar,
                            self.source.name, self.source.to_list(), self.source.dtype, self.present))
 
 
-def _restore(results, terminal, function, scalar, detailed, name, values, dtype, present):
+def _restore(results, terminal, function, scalar, name, values, dtype, present):
     import polars as pl
-    return PolarsResult(results, terminal, function, scalar, detailed,
+    return PolarsResult(results, terminal, function, scalar,
                         pl.Series(name, values, dtype=dtype), present)

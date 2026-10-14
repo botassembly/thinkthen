@@ -178,19 +178,16 @@ def test_named_and_async_series_calls_keep_owned_rows_and_original_positions(bac
             assert [row.index for row in done.results] == [0, 1]
             if shape == "pandas": assert done.value.index.tolist() == [9, 9, 9]
             assert done.value.to_list() == [True, None, True]
-            assert done.probability.to_list() == [.9, None, .9]
+            assert [None if value is pd.NA else value for value in done.probability.to_list()] == [.9, None, .9]
             if shape == "polars":
                 assert done.value.dtype == pl.Boolean
                 assert done.probability.dtype == pl.Float64
             assert done.facts.requests_sent == 2
             assert pickle.loads(pickle.dumps(done)).value.to_list() == done.value.to_list()
-            detailed = engine.decide('Late?', source, details=True)
-            assert cell(detailed.value, 0) is detailed.results[0]
-            assert cell(detailed.value, 1) is None
             async_done = asyncio.run(engine.asyncio.decide('Late?', source))
             assert async_done.value.to_list() == done.value.to_list()
             ranked = engine.rank('Late?', source)
-            assert [row['index'] for row in ranked.value] == [0, 2]
+            assert list(ranked.value) == [0, 2]
             assert ranked.facts.requests_sent == 2
             kept = source.tt.filter('Late?', engine=engine)
             assert kept.value.to_list() == ["first", "second"]
@@ -215,7 +212,7 @@ def test_named_and_async_series_calls_keep_owned_rows_and_original_positions(bac
         print('owned series rows')
     '''.replace('SHAPE', repr(shape)), child_env(backend, tmp_path))
     assert printed.strip() == 'owned series rows'
-    assert backend.count() == 13
+    assert backend.count() == 11
 
 
 def test_priced_recognition_collection_uses_native_checked_cost(backend, tmp_path):
@@ -263,27 +260,38 @@ def test_ten_series_functions_preserve_null_duplicate_and_whole_set_identity(bac
             assert result.facts["records"] == 2
             assert list(result.positions) == [0, 2]
             print(verb, json.dumps(values))
+        def probabilities(result):
+            return [None if value is pd.NA else value for value in result.probability.to_list()]
+        assert probabilities(result) == [None, None, None]
         kept = call("filter", "Late?")
+        assert probabilities(kept) == [.9, None, .9]
         print("filter", kept.value.to_list(), kept.value.name)
         if shape == "pandas": assert kept.value.index.to_list() == [9, 2]
         ranked = call("rank", "Relevant?")
-        print("rank", [(row["index"], row["record"], row["probability"]) for row in (ranked.value.to_list() if shape == "polars" else ranked.value)])
+        print("rank", ranked.value.to_list() if shape == "polars" else ranked.value)
+        assert probabilities(ranked) == [.9, None, .9]
         found = call("find", "Which?")
-        print("find", dict(found.value[0] if shape == "polars" else found.value), [list(row.answer.probabilities.items()) for row in found.details])
+        assert probabilities(found) == [.9, None, None]
+        print("find", found.value[0] if shape == "polars" else found.value, [list(row.answer.probabilities.items()) for row in found.results])
         form = {{"version": 1, "questions": {{"late": {{"decide": "Late?"}}}}}}
         annotated = call("annotate", form)
         print("annotate", list(annotated.value.to_list()[0]), annotated.facts["records"])
         if shape == "pandas": assert annotated.value.index.to_list() == [9, 9, 2]
         recognized = (texts.tt.recognize(engine=engine, kinds=["note"]) if shape == "pandas"
                       else engine.recognize(texts, kinds=["note"]))
+        assert probabilities(annotated) == [None, None, None]
+        spans = [row.answer.proposals[0].span_probability for row in recognized.results]
+        assert spans[0] != recognized.results[0].value.entities[0].strength
+        assert probabilities(recognized) == [[spans[0]], None, [spans[1]]]
+        if shape == "polars": assert recognized.probability.dtype == pl.List(pl.Float64)
         rows = recognized.value.to_list()
         if shape == "polars":
             assert recognized.value.dtype.base_type() == pl.Struct
             assert recognized.value.dtype.to_schema()["entities"].base_type() == pl.List
             assert recognized.value.dtype.to_schema()["entities"].inner.base_type() == pl.Struct
             assert annotated.value.dtype == pl.Struct({{"late": pl.Boolean}})
-            assert ranked.value.dtype == pl.Struct({{"index": pl.Int64, "record": pl.String, "probability": pl.Float64}})
-            assert found.value.dtype == pl.Struct({{"index": pl.Int64, "unit": pl.String, "probability": pl.Float64}})
+            assert ranked.value.dtype == pl.Int64
+            assert found.value.dtype == pl.String
             assert kept.value.dtype == texts.dtype
             rows = [None] * len(texts)
             for at, row in zip(recognized.positions, recognized.results): rows[at] = row.value
@@ -314,10 +322,6 @@ def test_ten_series_functions_preserve_null_duplicate_and_whole_set_identity(bac
                 assert second.value.to_list() == first.value.to_list()
                 assert second.facts.requests_sent == 0
                 assert all(type(row) is type(original) for row, original in zip(second.results, first.results))
-                detailed = getattr(replay, verb)(*args, details=True, **controls)
-                assert detailed.facts.requests_sent == 0
-                detailed_rows = detailed.value if isinstance(detailed.value, list) else detailed.value.to_list()
-                assert detailed_rows[0] is detailed.results[0]
                 frame = pl.DataFrame({{"body": entities if verb == "relate" else texts}})
                 framed_args = [frame] if verb in ("recognize", "relate") else [args[0], frame]
                 framed = getattr(replay, verb)(*framed_args, on="body", **controls)
@@ -338,8 +342,8 @@ def test_ten_series_functions_preserve_null_duplicate_and_whole_set_identity(bac
         'decide [true, null, true]', 'choose ["billing", null, "billing"]',
         'score [0.15, null, 0.15]', 'tag [["bill", "ship"], null, ["bill", "ship"]]',
         "filter ['one note', 'one note'] body",
-        "rank [(0, 'one note', 0.9), (2, 'one note', 0.9)]",
-        "find {'index': 0, 'unit': 'one note', 'probability': 0.9} [[('u001', 0.9), ('u002', 0.1)]]",
+        "rank [0, 2]",
+        "find one note [[('u001', 0.9), ('u002', 0.1)]]",
         "annotate ['late'] 2",
         "recognize [[('one note', 0, 8, 'note')], None, [('one note', 0, 8, 'note')]]",
         "relate [('knows', 'Ada', 'Bo'), ('knows', 'Bo', 'Ada')]",
@@ -388,11 +392,13 @@ def test_series_find_reads_the_whole_candidate_set_and_keeps_original_positions(
                           index=[9, 9, 2, 2], name='body')
         call = units.tt.find('Which passage answers the question?', none=True,
                              engine=tt.Engine(cache=False))
-        print(dict(call.value))
-        print([list(row.answer.probabilities.items()) for row in call.details])
+        assert call.probability.dtype == 'Float64'
+        assert [None if __import__('pandas').isna(value) else value for value in call.probability] == [None, None, .8, None]
+        print(call.value)
+        print([list(row.answer.probabilities.items()) for row in call.results])
     """, child_env(backend, tmp_path, "case/18-find-second"))
     assert printed.splitlines() == [
-        "{'index': 2, 'unit': 'Second passage.', 'probability': 0.8}",
+        "Second passage.",
         "[[('none', 0.05), ('u001', 0.1), ('u002', 0.8), ('u003', 0.05)]]",
     ]
     assert backend.count() == 1
@@ -456,3 +462,44 @@ def test_empty_invalid_expired_and_cancelled_series_calls_send_nothing(backend, 
     """.replace("SHAPE", repr(shape)), child_env(backend, tmp_path))
     assert printed.splitlines() == ['filter deadline', 'rank cancelled', 'find deadline', 'usage']
     assert backend.count() == 0
+
+
+@pytest.mark.parametrize('shape', ['pandas', 'polars'])
+def test_relation_probabilities_repeat_whole_set_edge_order_on_original_rows(backend, tmp_path, shape):
+    printed = run(f'''
+        import json, threading, pandas as pd, polars as pl, pyarrow as pa, thinkthen as tt
+        import thinkthen.pandas, thinkthen.polars
+        from http.server import BaseHTTPRequestHandler, HTTPServer
+        class Reply(BaseHTTPRequestHandler):
+            def log_message(self, *args): pass
+            def do_POST(self):
+                body = json.loads(self.rfile.read(int(self.headers['Content-Length'])))
+                self.server.calls += 1
+                answers = {{name: {{'type': 'noul', 'noul': odds}} for name, odds in
+                           zip(sorted(body['questions']), [.9, .7], strict=True)}}
+                response = json.dumps({{'model': 'jev-latest', 'answers': answers}}).encode()
+                self.send_response(200)
+                self.send_header('Content-Length', str(len(response)))
+                self.end_headers(); self.wfile.write(response)
+        server = HTTPServer(('127.0.0.1', 0), Reply); server.calls = 0
+        threading.Thread(target=server.serve_forever, daemon=True).start()
+        source = (pd.Series([('Ada', 'person'), None, ('Bo', 'person')], index=[9, 9, 2], name='entities')
+                  if {shape!r} == 'pandas' else pl.Series('entities', [('Ada', 'person'), None, ('Bo', 'person')], dtype=pl.Object))
+        frame = pd.DataFrame({{'entities': source}}) if {shape!r} == 'pandas' else pl.DataFrame({{'entities': source}})
+        with tt.Engine(cache=False, base_url=f'http://127.0.0.1:{{server.server_port}}/v1') as engine:
+            for value, controls in ((source, {{}}), (frame, {{'on': 'entities'}})):
+                result = engine.relate(value, relations={{'knows': ('person', 'person')}}, **controls)
+                odds = result.probability
+                expected = [[.9, .7], None, [.9, .7]]
+                assert [None if item is pd.NA else item for item in odds.to_list()] == expected
+                if {shape!r} == 'pandas':
+                    assert odds.index.to_list() == [9, 9, 2]
+                    assert odds.dtype == pd.ArrowDtype(pa.list_(pa.float64()))
+                else: assert odds.dtype == pl.List(pl.Float64)
+                assert [edge.probability for edge in result.results[0].value] == [.9, .7]
+                assert result.facts.requests_sent == 1
+        assert server.calls == 2
+        server.shutdown(); server.server_close()
+        print('whole set probabilities')
+    ''', child_env(backend, tmp_path))
+    assert printed.splitlines() == ['whole set probabilities']
