@@ -230,10 +230,24 @@ const builtIns = backends().map((b) => b.name);
     </>
   )}
 
+  {!shell && surface.slug !== 'c' && !functionsAt && (
+    <>
+      <h2 id="result">Read the result</h2>
+      <p>Each named function produces one completed result. Read <code>value</code> for the plain answer, <code>probability</code> for its probability, <code>results</code> for the full records and <code>facts</code> for the call's counts. The examples show the field names in {surface.name}.</p>
+      <p>One input gives one value. A list gives values in input order. Filter returns the selected inputs. Rank returns original indexes. Find returns the selected input or null. When the answer is not sure, its probability is null. A selected input or an authored answer can itself be JSON null and still have a probability.</p>
+      <p>The completed result retains full records. A stream or packet session has its own reading, cancellation and cleanup methods. The package guide explains how to collect its full records and wait for final facts.</p>
+      {surface.slug === 'cpp' && <p>C++ starts a call immediately. Read its completed result with <code>result()</code>; <code>collect()</code> returns packets.</p>}
+      <p>Decide and filter report the yes probability. Choose and find report the picked item's probability. Rank and relate align probabilities with the returned items. Recognize reports the selected span or boundary proposal's probability; entity strength is a separate field. Score, tag and annotate leave probability null; their full records retain the distributions.</p>
+    </>
+  )}
+
   <h2>Run facts</h2>
   <p>{parts(surface.facts).map((x) => x.code ? <code>{x.part}</code> : x.part)}</p>
   {['duckdb', 'postgresql', 'sqlite'].includes(surface.slug) && (
     <>
+      <p>Plain SQL functions return the value. Use <code>thinkthen_&lt;function&gt;_details</code> with the same arguments or a record list to read typed rows. DuckDB returns structs, PostgreSQL returns composites and SQLite returns table rows. SQLite takes a record list as a JSON array.</p>
+      <p>Rank, find and relate judge the whole record list as one set. Rank returns a row per record with its rank and probability. Find returns the picked record. Relate returns a row per edge. A recoverable failed set call returns one failure row. Cancellation, deadline and defects still raise errors. Call once per set when you have several groups.</p>
+      <p>Each relate row's full <code>result</code> holds only that edge in its <code>value</code>. It retains the question, original input, metadata and answer ID. Rank and relate put call-wide <code>observations</code> on the row whose ordinal or index is zero. Later rows carry empty observation arrays. Find that row by its ordinal or index after sorting. Repeated <code>facts</code> describe the same call.</p>
       <p>SQL plans estimate input tokens before cache hits, retries and refusal splits. Output tokens, total price and future duration are unknown. Usage reports cumulative process totals, which cannot isolate concurrent calls. Packed request usage can repeat across result rows; do not sum those repeated values.</p>
       <p>Measure statement wall time in the client; it includes database and client work. Apply a known tariff to complete provider-reported usage outside SQL using decimal arithmetic, and label the price as an estimate. Missing rates or incomplete attempt usage mean unknown cost. The provider's invoice determines actual charges.</p>
     </>
