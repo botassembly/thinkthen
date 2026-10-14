@@ -21,8 +21,8 @@ class PandasResult(Result):
     source: object = None
     present: tuple = ()
 
-    def to_dict(self):
-        return {**super().to_dict(), 'present': list(self.present),
+    def _to_dict(self):
+        return {**super()._to_dict(), 'present': list(self.present),
                 'index': self.source.index.tolist(), 'name': self.source.name}
 
     def _column(self, rows, positions=None):

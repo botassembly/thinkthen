@@ -1,6 +1,6 @@
 """Installed caller controls retain native request types on every call family."""
 from pathlib import Path
-from typing import Literal
+from typing import Literal, assert_type
 import thinkthen as tt
 from thinkthen._named_generated import RecognitionSeedSpan, RecognitionExampleText, RecognitionExampleEntity, RecognitionStageContext
 
@@ -40,3 +40,16 @@ def preview(engine: tt.Engine) -> None:
     largest: int = plan.largest_request_bytes
     estimate: int = plan.estimated_input_tokens.lower
     text: str | None = plan.first_body_utf8
+
+
+def answers(engine: tt.Engine) -> None:
+    from thinkthen._native_results import NativeAtomicDouble, NativeRecognize, NativeRecognition
+    assert_type(engine.score("Urgency?", "note", levels=["low", "high"]).value,
+                float | list[float] | NativeAtomicDouble | list[NativeAtomicDouble])
+    assert_type(engine.recognize("Ada", kinds=["person"]).value,
+                NativeRecognize | list[NativeRecognize] | NativeRecognition | list[NativeRecognition])
+
+async def async_answers(engine: tt.Engine) -> None:
+    from thinkthen._native_results import NativeAtomicDouble
+    score = await engine.asyncio.score("Urgency?", "note", levels=["low", "high"])
+    assert_type(score.value, float | list[float] | NativeAtomicDouble | list[NativeAtomicDouble])

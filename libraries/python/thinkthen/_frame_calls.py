@@ -68,8 +68,8 @@ class FrameResult(PandasResult):
     on: object = None
     members: tuple = ()
 
-    def to_dict(self):
-        return {**Result.to_dict(self), 'present': list(self.present), 'columns': list(self.source.columns)}
+    def _to_dict(self):
+        return {**Result._to_dict(self), 'present': list(self.present), 'columns': list(self.source.columns)}
 
     def _column(self, rows, positions=None):
         import pandas as pd
@@ -83,7 +83,7 @@ class FrameResult(PandasResult):
             for name, value in result.value.items():
                 if hasattr(value, 'failed'):
                     if failures[at] is None: failures[at] = {}
-                    failures[at][name] = value.to_dict()
+                    failures[at][name] = value._to_dict()
                 else:
                     columns[name][at] = value
         return columns, failures
@@ -106,7 +106,7 @@ class FrameResult(PandasResult):
             return super().value
         rows = [None] * len(self.source)
         for at, result in zip(self.positions, self.results, strict=True):
-            rows[at] = [entity.to_dict() for entity in result.value.entities]
+            rows[at] = [entity._to_dict() for entity in result.value.entities]
         out = self.source.copy()
         out['names'] = self._column(rows)
         return out

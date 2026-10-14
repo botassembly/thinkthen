@@ -74,7 +74,7 @@ def main():
                     assert result.meta.origin in ('live','cache','replay','proxy','memory')
                 else:
                     assert result.meta.origin is None and getattr(result.meta, 'answered_by', None) is None
-                assert result.to_dict()['answer_id']==result.answer_id
+                assert result._to_dict()['answer_id']==result.answer_id
                 if verb=='recognize':
                     if 'entities' in result.value:
                         for entity in result.value.entities:
@@ -82,13 +82,13 @@ def main():
                     elif 'proposals' in result.value:
                         for entity in result.value.proposals:
                             assert isinstance(entity.start,int) and isinstance(entity.name,str)
-            print(json.dumps({'native':True,'results':[result.to_dict() for result in results], 'facts':facts.to_dict()},ensure_ascii=False))
+            print(json.dumps({'native':True,'results':[result._to_dict() for result in results], 'facts':facts._to_dict()},ensure_ascii=False))
     except tt.ThinkThenError as error:
         failure=getattr(error,'complete',None)
         facts=getattr(error,'facts',None)
         results=getattr(error,'results',prefix)
-        detail=failure.error.to_dict() if failure is not None else {'kind':error.kind,'message':str(error),'retryable':error.retryable}
-        encoded=facts.to_dict() if hasattr(facts,'to_dict') else facts
-        print(json.dumps({'native':True,'error':detail,'facts':encoded,'completed':{'native':True,'results':[result.to_dict() for result in results],'facts':encoded} if results and encoded else None},ensure_ascii=False))
+        detail=failure.error._to_dict() if failure is not None else {'kind':error.kind,'message':str(error),'retryable':error.retryable}
+        encoded=facts._to_dict() if hasattr(facts,'_to_dict') else facts
+        print(json.dumps({'native':True,'error':detail,'facts':encoded,'completed':{'native':True,'results':[result._to_dict() for result in results],'facts':encoded} if results and encoded else None},ensure_ascii=False))
 
 if __name__ == '__main__': main()
