@@ -22,8 +22,7 @@ use std::time::{Duration, Instant};
 
 use conformance_backend::{Backend, Canned, Listener};
 use thinkthen::{
-    Answer, BatchSetting, CallOptions, CancelToken, Engine, Entity, Error, ErrorKind, Question,
-    Relate,
+    BatchSetting, CallOptions, CancelToken, Engine, Entity, Error, ErrorKind, Question, Relate,
 };
 
 const DECIDED: &str = r#"{"model":"jev-latest","answers":{"q1":{"type":"noul","noul":0.9}},"usage":{"input_tokens":3,"output_tokens":1}}"#;
@@ -87,7 +86,7 @@ fn message<T>(result: Result<T, Error>) -> String {
 }
 
 /// One decide on a fresh listener under these options: its result and the sends.
-fn decided(options: CallOptions<'_>) -> (Result<Answer, Error>, usize) {
+fn decided(options: CallOptions<'_>) -> (Result<Option<bool>, Error>, usize) {
     let _serial = serial();
     let listener = Listener::answering(|_| Canned::ok(DECIDED)).expect("listener");
     let result = engine(listener.base())
@@ -186,7 +185,7 @@ fn deadline_options_clear_and_spend_without_extra_sends() {
     ];
     for options in live {
         let (result, sent) = decided(options.expect("options"));
-        assert_eq!((result.ok(), sent), (Some(Answer::Yes), 1));
+        assert_eq!((result.ok(), sent), (Some(Some(true)), 1));
     }
 }
 
@@ -324,7 +323,7 @@ fn a_stop_at_the_throttle_gate_sends_nothing_new_and_sent_work_finishes() {
                             .expect("holder")
                             .ok()
                             .map(thinkthen::Call::into_value),
-                        Some(Answer::Yes)
+                        Some(Some(true))
                     );
                 }
             });
@@ -498,7 +497,7 @@ fn a_panicking_check_stops_the_call_then_resumes_its_payload_after_the_join() {
                             .expect("holder")
                             .ok()
                             .map(thinkthen::Call::into_value),
-                        Some(Answer::Yes)
+                        Some(Some(true))
                     );
                 }
                 single

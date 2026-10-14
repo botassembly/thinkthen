@@ -375,7 +375,7 @@ fn same_endpoint_and_model_keep_adapter_answers_separate_and_wrong_replay_sends_
         .unwrap();
     assert_eq!(
         *first.decide(&question, "Input.").unwrap().value(),
-        Answer::Yes
+        Some(true)
     );
     let other = builder(&listener)
         .backend("perplexity")
@@ -386,11 +386,11 @@ fn same_endpoint_and_model_keep_adapter_answers_separate_and_wrong_replay_sends_
         .unwrap();
     assert_eq!(
         *other.decide(&question, "Input.").unwrap().value(),
-        Answer::No
+        Some(false)
     );
     assert_eq!(
         *first.decide(&question, "Input.").unwrap().value(),
-        Answer::Yes
+        Some(true)
     );
     assert_eq!(listener.count(), 2);
     let db = rusqlite::Connection::open(place.join("thinkthen.sqlite")).unwrap();
