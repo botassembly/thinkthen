@@ -105,8 +105,10 @@ public final class SessionConsumer {
             var shortlist = new Inputs.RequestItem().original(new Inputs.RequestOriginalText().text("shortlist-preview")).options(List.of(new Inputs.OptionSchema().name("first"),new Inputs.OptionSchema().name("second")));
             check(engine.plan(new Inputs.Request().call(new Inputs.RequestCall().function(Inputs.RequestFunction.CHOOSE).question(authored(new Inputs.RequestDefinitionAuthoredChoose().choose(wording("Which?")).options(new Inputs.AuthoredOptions(List.of("first","second"))))).input(new Inputs.RequestInputRecords().items(List.of(shortlist))))).requests().intValueExact() == 1,"typed replacement shortlist");
             var states = new Inputs.RequestOptions().contextNull();
+            check(((Map<?,?>)thinkthen.SessionCases.tree(states)).containsKey("context") && ((Map<?,?>)thinkthen.SessionCases.tree(states)).get("context") == null,"input null collapsed");
             refuse(engine.decide(question,records("null-refusal"),states));
             states.omitContext();
+            check(!((Map<?,?>)thinkthen.SessionCases.tree(states)).containsKey("context"),"input omission collapsed");
             var badDefinition = new Inputs.RequestDefinitionAuthoredDecide().decide(wording("Is it?")).extension("unknown_authored_member",false);
             refuse(engine.decide(authored(badDefinition),records("unknown-refusal"),options()));
             refuse(engine.decide(question,new Inputs.RequestInputText().text("image-refusal").images(List.of(new Inputs.RequestImageBytes().media(Inputs.ImageMedia.IMAGEPNG).bytes("iVBORw0KGgo="))),options()));
@@ -161,7 +163,7 @@ public final class SessionConsumer {
         catch (IllegalStateException expected) { }
         var nullMap = new LinkedHashMap<String,Object>(); nullMap.put("first_body_utf8",null); nullMap.put("future",false);
         var explicitNull = new Results.Plan(nullMap); nullMap.clear();
-        check(explicitNull.firstBodyUtf8().state() == Presence.State.NULL,"null ownership");
+        check(explicitNull.firstBodyUtf8().state() == Presence.State.NULL && Boolean.FALSE.equals(((Map<?,?>)thinkthen.SessionCases.tree(explicitNull)).get("future")),"null/false ownership");
         System.out.println("INSTALLED_JVM_SESSION_PASS");
     }
 }
