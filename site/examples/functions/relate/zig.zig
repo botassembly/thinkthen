@@ -28,13 +28,19 @@ pub fn main() !void {
             .value = .{ .object = fields },
         } } };
     }
-    var call = try tt.calls.relate(&engine, .{
+    var call = switch (try tt.calls.relate(&engine, .{
         .question = .{ .file = .{ .path = relations } },
-        .input = .{ .entities = .{ .items = &entities } },
-    });
+        .input = tt.inputs.RequestInputEntities{ .items = &entities },
+    })) {
+        .ok => |result| result,
+        .failed => |failure| {
+            defer tt.releaseFailure(allocator, failure);
+            return error.CallFailed;
+        },
+    };
     defer call.deinit();
 
-    const edges = try call.value();
+    const edges = call.value;
     var who_makes: std.ArrayList(u8) = .empty;
     defer who_makes.deinit(allocator);
     for (edges) |edge| {
@@ -42,7 +48,6 @@ pub fn main() !void {
             edge.source.name, edge.target.name,
         });
     }
-    std.debug.assert(std.mem.eql(u8, who_makes.items,
-        "Apple makes iPhone. " ++
+    std.debug.assert(std.mem.eql(u8, who_makes.items, "Apple makes iPhone. " ++
         "Amazon makes Kindle. "));
 }

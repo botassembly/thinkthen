@@ -116,16 +116,27 @@ pub fn Map(comptime T: type) type {
 '''
 
 
-def answer_type(function):
-    return {'decide': '?bool', 'choose': '?[]const u8', 'tag': '[]const []const u8', 'score': 'f64', 'rank': '[]const u64', 'filter': '[]const tt.results.Value', 'find': '?u64', 'annotate': '[]const tt.results.SessionAnnotation', 'recognize': 'tt.results.SessionRecognition', 'relate': '[]const tt.results.SessionRelationEdge'}[function]
-
-
 def calls(definitions):
-    fields = definitions['RequestCall']['properties']
-    lines = ['// Generated named calls from the canonical request schema; do not edit.', 'const tt = @import("thinkthen.zig");', 'const inputs = @import("request_generated.zig");', 'pub const Arguments = struct {', '    question: inputs.RequestQuestion,', '    input: inputs.RequestInput,', '    options: ?inputs.RequestOptions = null,', '};']
+    from host_answers import scalar_input_selectors
+    scalar = scalar_input_selectors(definitions)
+    lines = ['// Generated named calls from the canonical request schema; do not edit.', 'const tt = @import("thinkthen.zig");', 'const inputs = @import("request_generated.zig");', 'const values = @import("results_generated.zig");',
+             'pub fn Arguments(comptime Input: type) type {',
+             '    _ = inputTag(Input);',
+             '    return struct { question: inputs.RequestQuestion, input: Input, options: ?inputs.RequestOptions = null };', '}',
+             'pub fn inputTag(comptime Input: type) inputs.RequestInput {']
+    for child, _ in definitions['RequestInput']['variants']:
+        payload = definitions[child]
+        tag = payload['properties']['kind']['const']
+        lines += [f'    if (Input == inputs.{name(child)}) return .{{ .{tag} = undefined }};']
+    lines += ['    @compileError("use a concrete generated input payload");', '}',
+              'pub fn listInput(comptime Input: type) bool {',
+              '    _ = inputTag(Input);', '    return ' + ' and '.join('Input != inputs.' + name(child) for child in scalar) + ';', '}',
+              'pub fn nativeInput(input: anytype) inputs.RequestInput {',
+              '    return @unionInit(inputs.RequestInput, @tagName(inputTag(@TypeOf(input))), input);', '}']
     for function in definitions['RequestFunction']['oneOf']:
         value = function['const']
-        lines += [f'pub fn {value}(engine: *tt.Engine, arguments: Arguments) !tt.session.Answer({answer_type(value)}) {{', f'    return tt.session.completeNamed(engine, .{value}, arguments, {answer_type(value)});', '}']
+        lines += [f'pub fn {value}(engine: *tt.Engine, arguments: anytype) !tt.Result(values.NamedCallResult(.{value}, @TypeOf(arguments.input))) {{',
+                  f'    return tt.session.completeNamed(engine, .{value}, arguments);', '}']
     return '\n'.join(lines) + '\n'
 
 def render_results(definitions):
@@ -237,7 +248,7 @@ def render_results(definitions):
         readers.append('pub fn read' + typ + '(a: std.mem.Allocator, v: c.' + ident(key) + ') anyerror!' + typ + ' {\n' + '\n'.join(body) + '\n}')
     aliases = ['Presence', 'Map', 'Number', 'Value', *(result_name(key) for key in emitted)]
     types = '\npub const Types = struct {\n' + '\n'.join('    pub const ' + typ + ' = @import("results_generated.zig").' + typ + ';' for typ in sorted(set(aliases))) + '\n};\n'
-    return RESULT_SUPPORT + '\n\n'.join(declarations + readers) + types + answer_helpers(definitions) + call_helpers(definitions)
+    return RESULT_SUPPORT + '\n\n'.join(declarations + readers) + types + answer_helpers(definitions) + call_helpers(definitions) + public_call_types(definitions)
 
 
 RESULT_SUPPORT = '''// Generated owned values from the canonical native packet graph; do not edit.
@@ -428,7 +439,7 @@ def call_helpers(definitions):
             schema = definitions[definitions[rule['receipt_payload'].get('items', rule['receipt_payload'])['$ref'].split('/')[-1]]['properties']['answer']['$ref'].split('/')[-1]]
             if 'variants' in schema:
                 tag = 'yes_no' if mode == 'yes' or function == 'rank' else 'choice'
-                lines += [f'        if (receipt.answer != .{tag}) return error.WrongAnswer;']
+                lines += [f'        if (receipt.answer != .{tag}) return ' + ('null;' if function == 'rank' else 'error.WrongAnswer;')]
                 answer += '.' + tag
             if mode == 'picked':
                 lines += [f'        for ({answer}.probabilities.entries) |entry| {{',
@@ -442,7 +453,19 @@ def call_helpers(definitions):
         elif function == 'recognize':
             lines += RECOGNITION_CHANCES.strip().splitlines()
         lines += ['    }']
-    return '\n'.join(lines + ['    unreachable;', '}', ''])
+    lines += ['    unreachable;', '}',
+              'pub fn callRowReceipts(comptime function: anytype, packet: *const SessionPacket, a: std.mem.Allocator) !?[]const callReceiptType(function) {']
+    for child, _ in definitions['completesessionPacket']['variants']:
+        fields = definitions[child].get('properties', {})
+        function = fields.get('function', {}).get('const')
+        if fields.get('kind', {}).get('const') != 'row' or function not in rules:
+            continue
+        carrier = variant_member('completesessionPacket', child)
+        lines += [f'    if (comptime std.mem.eql(u8, @tagName(function), "{function}")) {{',
+                  f'        if (packet.* != .{carrier}) return null;',
+                  '        const result = try a.alloc(callReceiptType(function), 1);',
+                  f'        result[0] = packet.{carrier}.value;', '        return result;', '    }']
+    return '\n'.join(lines + ['    return null;', '}', ''])
 
 
 RECOGNITION_CHANCES = '''
@@ -471,3 +494,16 @@ RECOGNITION_CHANCES = '''
             },
         }
 '''
+
+
+def public_call_types(definitions):
+    from host_answers import call_results
+    lines = ['\npub fn callList(comptime function: anytype, comptime Input: type) bool {']
+    for function, rule in call_results(definitions).items():
+        expression = 'true' if rule['call_shape'] == 'collection' else 'false' if rule['call_shape'] == 'aggregate' else '@import("calls_generated.zig").listInput(Input)'
+        lines += [f'    if (comptime std.mem.eql(u8, @tagName(function), "{function}")) return {expression};']
+    lines += ['    @compileError("unknown named function");', '}',
+              'pub fn NamedCallResult(comptime function: anytype, comptime Input: type) type {',
+              '    const V = callValueType(function);', '    const P = callProbabilityType(function);',
+              '    return @import("blocking.zig").CallResult(if (callList(function, Input)) []const V else V, if (callList(function, Input)) []const P else P, callReceiptType(function));', '}']
+    return '\n'.join(lines) + '\n'

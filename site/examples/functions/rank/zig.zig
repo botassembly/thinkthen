@@ -27,13 +27,19 @@ pub fn main() !void {
             .original = .{ .text = .{ .text = text } },
         };
     }
-    var call = try tt.calls.rank(&engine, .{
+    var call = switch (try tt.calls.rank(&engine, .{
         .question = .{ .text = .{ .text = question } },
-        .input = .{ .records = .{ .items = &records } },
-    });
+        .input = tt.inputs.RequestInputRecords{ .items = &records },
+    })) {
+        .ok => |result| result,
+        .failed => |failure| {
+            defer tt.releaseFailure(allocator, failure);
+            return error.CallFailed;
+        },
+    };
     defer call.deinit();
 
-    const by_urgency = try call.value();
+    const by_urgency = call.value;
     const expected = [_]u64{ 1, 3, 2, 0 };
     std.debug.assert(
         std.mem.eql(u64, by_urgency, &expected),

@@ -47,28 +47,26 @@ pub fn main() !void {
     if (!doc.get("cancel").?.bool and !doc.get("held_cancel").?.bool and descriptor.input != .feed) {
         inline for (std.meta.fields(tt.inputs.RequestFunction)) |function| {
             if (descriptor.function == @field(tt.inputs.RequestFunction, function.name)) {
-                if (@field(tt.calls, function.name)(&engine, .{ .question = descriptor.question, .input = descriptor.input, .options = descriptor.options })) |result| {
-                    var answer = result;
-                    defer answer.deinit();
-                    engine.deinit();
-                    if (answer.failure() == null) {
-                        var rows: usize = 0;
-                        for (answer.packets) |packet| if (packet.value().* == .observation and packet.value().observation.value == .row) {
-                            rows += 1;
-                        };
-                        if (comptime !std.mem.eql(u8, function.name, "rank") and !std.mem.eql(u8, function.name, "filter")) {
-                            if (rows != 1) {
-                                if (answer.value()) |_| return error.MultipleAnswersAccepted else |err| if (err != error.Cardinality) return err;
-                            } else try compareAnswer(function.name, answer, a);
-                        } else try compareAnswer(function.name, answer, a);
-                    } else {
-                        if (answer.value()) |_| return error.FailedAnswerAccepted else |err| if (err != error.CallFailed) return err;
-                    }
-                    try writePackets(answer.packets, a);
-                    return;
-                } else |err| {
-                    try writeAdmission(err);
-                    return;
+                switch (descriptor.input) {
+                    inline else => |payload| {
+                        const contract = doc.get("call_result_contract").?.bool;
+                        if (comptime @TypeOf(payload) == tt.inputs.RequestInputRecords) {
+                            if (contract) {
+                                switch (payload.items[0].original.?) {
+                                    inline else => |original| {
+                                        if (comptime @hasField(@TypeOf(original), "text")) {
+                                            try callNamed(function.name, &engine, descriptor, tt.inputs.RequestInputText{ .text = original.text }, contract, a);
+                                        } else {
+                                            try callNamed(function.name, &engine, descriptor, tt.inputs.RequestInputJson{ .value = original.value }, contract, a);
+                                        }
+                                    },
+                                }
+                                return;
+                            }
+                        }
+                        try callNamed(function.name, &engine, descriptor, payload, contract, a);
+                        return;
+                    },
                 }
             }
         }
@@ -140,29 +138,43 @@ fn writeAdmission(err: anyerror) !void {
     try out.interface.writeAll("}}\n");
 }
 
-fn compareAnswer(comptime function: []const u8, answer: anytype, a: std.mem.Allocator) !void {
-    const actual = try answer.value();
-    if (comptime std.mem.eql(u8, function, "rank") or std.mem.eql(u8, function, "filter")) {
-        const Element = @typeInfo(@TypeOf(actual)).pointer.child;
-        var expected: std.ArrayList(Element) = .empty;
-        defer expected.deinit(a);
-        for (answer.packets) |packet| {
-            const aggregate = if (comptime std.mem.eql(u8, function, "rank")) packet.value().* == .rank_aggregate else packet.value().* == .filter_aggregate;
-            if (aggregate) {
-                expected.clearRetainingCapacity();
-                const view = packet.answers();
-                try expected.appendSlice(a, try @field(@TypeOf(view), function)(view));
-                break;
-            }
-            if (comptime std.mem.eql(u8, function, "filter")) if (packet.value().* == .filter_row) try expected.appendSlice(a, try packet.answers().filter());
-        }
-        try std.testing.expectEqualDeep(@as(@TypeOf(actual), expected.items), actual);
-    } else {
-        for (answer.packets) |packet| if (packet.value().* == .observation and packet.value().observation.value == .row) {
-            const view = packet.answers();
-            try std.testing.expectEqualDeep(try @field(@TypeOf(view), function)(view), actual);
-            return;
-        };
-        return error.MissingAnswer;
+fn writeCall(answer: anytype, a: std.mem.Allocator, contract: bool) !void {
+    _ = a;
+    var out = std.fs.File.stdout().writer(&.{});
+    try out.interface.writeAll("{\"packets\":[");
+    for (answer.packets, 0..) |packet, i| {
+        if (i > 0) try out.interface.writeAll(",");
+        var writer: std.json.Stringify = .{ .writer = &out.interface };
+        try request_fixture.writeNative(packet.value().*, &writer);
+    }
+    if (contract) {
+        try out.interface.writeAll("],\"call_result\":");
+        var writer: std.json.Stringify = .{ .writer = &out.interface };
+        try request_fixture.writeNative(.{ .value = answer.value, .probability = answer.probability, .results = answer.results, .facts = answer.facts.? }, &writer);
+        try out.interface.writeAll("}\n");
+    } else try out.interface.writeAll("]}\n");
+}
+
+fn writeFailure(failure: tt.Failure) !void {
+    var out = std.fs.File.stdout().writer(&.{});
+    try out.interface.print("{{\"admission\":{{\"code\":{d},\"message\":", .{failure.code});
+    try std.json.Stringify.value(failure.message, .{}, &out.interface);
+    if (failure.facts) |facts| try out.interface.print(",\"requests_sent\":{d}", .{facts.requests_sent});
+    try out.interface.writeAll("}}\n");
+}
+
+fn callNamed(comptime function: []const u8, engine: *tt.Engine, descriptor: tt.inputs.RequestCall, payload: anytype, contract: bool, a: std.mem.Allocator) !void {
+    const outcome = try @field(tt.calls, function)(engine, tt.calls.Arguments(@TypeOf(payload)){ .question = descriptor.question, .input = payload, .options = descriptor.options });
+    engine.deinit();
+    switch (outcome) {
+        .ok => |result| {
+            var answer = result;
+            defer answer.deinit();
+            try writeCall(answer, a, contract);
+        },
+        .failed => |failure| {
+            defer tt.releaseFailure(a, failure);
+            if (failure.terminal != null) try writePackets(failure.packets, a) else try writeFailure(failure);
+        },
     }
 }

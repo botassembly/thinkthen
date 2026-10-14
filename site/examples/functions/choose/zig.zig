@@ -33,15 +33,20 @@ pub fn main() !void {
             .options = teams,
         },
     };
-    var call = try tt.calls.choose(&engine, .{
+    var call = switch (try tt.calls.choose(&engine, .{
         .question = .{
             .definition = .{ .value = which_team },
         },
-        .input = .{ .text = .{ .text = parcel } },
-    });
+        .input = tt.inputs.RequestInputText{ .text = parcel },
+    })) {
+        .ok => |result| result,
+        .failed => |failure| {
+            defer tt.releaseFailure(allocator, failure);
+            return error.CallFailed;
+        },
+    };
     defer call.deinit();
 
-    const team = (try call.value())
-        orelse return error.NotSure;
+    const team = (call.value) orelse return error.NotSure;
     std.debug.assert(std.mem.eql(u8, team, "shipping"));
 }

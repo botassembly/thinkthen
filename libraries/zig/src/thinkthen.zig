@@ -19,9 +19,12 @@ pub const Failure = struct {
     message: []u8,
     facts: ?results.ImmediateFacts,
     arena: std.heap.ArenaAllocator,
+    packets: []const *session.Packet = &.{},
+    terminal: ?*const results.CallError = null,
 };
 pub fn releaseFailure(allocator: std.mem.Allocator, failure: Failure) void {
     allocator.free(failure.message);
+    for (failure.packets) |packet| packet.deinit();
     var arena = failure.arena;
     arena.deinit();
 }

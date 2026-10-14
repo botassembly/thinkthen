@@ -15,12 +15,18 @@ pub fn main() !void {
     const question = "Does the customer ask for a refund?";
     const broken =
         "Please refund my order. It arrived broken.";
-    var call = try tt.calls.decide(&engine, .{
+    var call = switch (try tt.calls.decide(&engine, .{
         .question = .{ .text = .{ .text = question } },
-        .input = .{ .text = .{ .text = broken } },
-    });
+        .input = tt.inputs.RequestInputText{ .text = broken },
+    })) {
+        .ok => |result| result,
+        .failed => |failure| {
+            defer tt.releaseFailure(allocator, failure);
+            return error.CallFailed;
+        },
+    };
     defer call.deinit();
 
-    const is_refund = (try call.value()) orelse false;
+    const is_refund = if (call.value) |v| v.boolean else false;
     std.debug.assert(is_refund);
 }

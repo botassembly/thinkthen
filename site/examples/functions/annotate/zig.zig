@@ -14,25 +14,35 @@ pub fn main() !void {
 
     const form = "form.json";
     const report = "Steps: click Log in. Nobody gets in.";
-    var call = try tt.calls.annotate(&engine, .{
+    var call = switch (try tt.calls.annotate(&engine, .{
         .question = .{ .file = .{ .path = form } },
-        .input = .{ .text = .{ .text = report } },
-    });
+        .input = tt.inputs.RequestInputText{ .text = report },
+    })) {
+        .ok => |result| result,
+        .failed => |failure| {
+            defer tt.releaseFailure(allocator, failure);
+            return error.CallFailed;
+        },
+    };
     defer call.deinit();
 
-    const triage = try call.value();
+    const triage = call.value;
     var steps = false;
     var area: []const u8 = "";
     var impact: f64 = 0;
-    for (triage) |field| {
-        if (std.mem.eql(u8, field.name, "steps")) {
-            steps = field.value.decision.value.optional()
-                orelse false;
-        } else if (std.mem.eql(u8, field.name, "area")) {
-            area = field.value.choice.value.optional()
-                orelse "";
-        } else if (std.mem.eql(u8, field.name, "impact")) {
-            impact = field.value.score.value;
+    for (triage.entries) |field| {
+        if (std.mem.eql(u8, field.key, "steps")) {
+            steps = switch (field.value) {
+                .boolean => |v| v,
+                else => false,
+            };
+        } else if (std.mem.eql(u8, field.key, "area")) {
+            area = switch (field.value) {
+                .string => |v| v,
+                else => "",
+            };
+        } else if (std.mem.eql(u8, field.key, "impact")) {
+            impact = field.value.number;
         }
     }
     std.debug.assert(steps);

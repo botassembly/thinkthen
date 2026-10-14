@@ -5680,7 +5680,7 @@ pub fn callProbability(comptime function: anytype, receipt: callReceiptType(func
         return receipt.answer.yes_no.probability;
     }
     if (comptime std.mem.eql(u8, @tagName(function), "rank")) {
-        if (receipt.answer != .yes_no) return error.WrongAnswer;
+        if (receipt.answer != .yes_no) return null;
         return receipt.answer.yes_no.probability;
     }
     if (comptime std.mem.eql(u8, @tagName(function), "find")) {
@@ -5725,4 +5725,62 @@ pub fn callProbability(comptime function: anytype, receipt: callReceiptType(func
         return result;
     }
     unreachable;
+}
+pub fn callRowReceipts(comptime function: anytype, packet: *const SessionPacket, a: std.mem.Allocator) !?[]const callReceiptType(function) {
+    if (comptime std.mem.eql(u8, @tagName(function), "decide")) {
+        if (packet.* != .decide_row) return null;
+        const result = try a.alloc(callReceiptType(function), 1);
+        result[0] = packet.decide_row.value;
+        return result;
+    }
+    if (comptime std.mem.eql(u8, @tagName(function), "choose")) {
+        if (packet.* != .choose_row) return null;
+        const result = try a.alloc(callReceiptType(function), 1);
+        result[0] = packet.choose_row.value;
+        return result;
+    }
+    if (comptime std.mem.eql(u8, @tagName(function), "tag")) {
+        if (packet.* != .tag_row) return null;
+        const result = try a.alloc(callReceiptType(function), 1);
+        result[0] = packet.tag_row.value;
+        return result;
+    }
+    if (comptime std.mem.eql(u8, @tagName(function), "score")) {
+        if (packet.* != .score_row) return null;
+        const result = try a.alloc(callReceiptType(function), 1);
+        result[0] = packet.score_row.value;
+        return result;
+    }
+    if (comptime std.mem.eql(u8, @tagName(function), "filter")) {
+        if (packet.* != .filter_row) return null;
+        const result = try a.alloc(callReceiptType(function), 1);
+        result[0] = packet.filter_row.value;
+        return result;
+    }
+    if (comptime std.mem.eql(u8, @tagName(function), "annotate")) {
+        if (packet.* != .annotate_row) return null;
+        const result = try a.alloc(callReceiptType(function), 1);
+        result[0] = packet.annotate_row.value;
+        return result;
+    }
+    return null;
+}
+
+pub fn callList(comptime function: anytype, comptime Input: type) bool {
+    if (comptime std.mem.eql(u8, @tagName(function), "decide")) return @import("calls_generated.zig").listInput(Input);
+    if (comptime std.mem.eql(u8, @tagName(function), "choose")) return @import("calls_generated.zig").listInput(Input);
+    if (comptime std.mem.eql(u8, @tagName(function), "tag")) return @import("calls_generated.zig").listInput(Input);
+    if (comptime std.mem.eql(u8, @tagName(function), "score")) return @import("calls_generated.zig").listInput(Input);
+    if (comptime std.mem.eql(u8, @tagName(function), "filter")) return true;
+    if (comptime std.mem.eql(u8, @tagName(function), "rank")) return true;
+    if (comptime std.mem.eql(u8, @tagName(function), "find")) return false;
+    if (comptime std.mem.eql(u8, @tagName(function), "annotate")) return @import("calls_generated.zig").listInput(Input);
+    if (comptime std.mem.eql(u8, @tagName(function), "recognize")) return @import("calls_generated.zig").listInput(Input);
+    if (comptime std.mem.eql(u8, @tagName(function), "relate")) return false;
+    @compileError("unknown named function");
+}
+pub fn NamedCallResult(comptime function: anytype, comptime Input: type) type {
+    const V = callValueType(function);
+    const P = callProbabilityType(function);
+    return @import("blocking.zig").CallResult(if (callList(function, Input)) []const V else V, if (callList(function, Input)) []const P else P, callReceiptType(function));
 }

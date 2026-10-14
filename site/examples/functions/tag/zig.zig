@@ -27,15 +27,21 @@ pub fn main() !void {
             .labels = .{ .array = &labels },
         },
     };
-    var call = try tt.calls.tag(&engine, .{
+    var call = switch (try tt.calls.tag(&engine, .{
         .question = .{
             .definition = .{ .value = which_labels },
         },
-        .input = .{ .text = .{ .text = message } },
-    });
+        .input = tt.inputs.RequestInputText{ .text = message },
+    })) {
+        .ok => |result| result,
+        .failed => |failure| {
+            defer tt.releaseFailure(allocator, failure);
+            return error.CallFailed;
+        },
+    };
     defer call.deinit();
 
-    const fitting_labels = try call.value();
+    const fitting_labels = call.value;
     std.debug.assert(fitting_labels.len == 3);
     for (labels, fitting_labels) |label, fitting| {
         std.debug.assert(std.mem.eql(u8, label, fitting));
