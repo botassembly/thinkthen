@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import fcntl
 import os
 from pathlib import Path
@@ -94,19 +95,59 @@ def cli_runner(cli, extension):
         results = []
         with tempfile.TemporaryDirectory(prefix='thinkthen-duckdb-source-') as folder:
             env = child_env(base, Path(folder))
-            for statement in statements:
-                load = "LOAD '" + str(extension).replace("'", "''") + "'; "
-                done = subprocess.run([str(cli), '-unsigned', '-json', '-c', load + statement],
-                                      env=env, capture_output=True, text=True, timeout=60, check=False)
-                if done.returncode:
-                    results.append({'error': done.stderr})
+            # Delimit both streams while DuckDB keeps one connection and its settings.
+            marker = r'^thinkthen-statement-end$'
+            boundary = ('.print thinkthen-statement-end\n.output /dev/stderr\n'
+                        '.print thinkthen-statement-end\n.output stdout\n')
+            scripts = []
+            for index, statement in enumerate(statements):
+                display = Path(folder) / f'columns-{index}'
+                query = statement.lstrip().upper().startswith(('SELECT', 'WITH'))
+                scripts.append(f'.mode duckbox\n.output {display}\n' +
+                               statement.rstrip().rstrip(';') + ';\n.output stdout\n.mode json\n' +
+                               ('.last\n' if query else '') + boundary)
+            script = ''.join(scripts)
+            load = "LOAD '" + str(extension).replace("'", "''") + "';"
+            done = subprocess.run([str(cli), '-unsigned', '-init', '/dev/null', '-batch',
+                                   '-cmd', load], input=script, env=env,
+                                  capture_output=True, text=True, timeout=60, check=False)
+            outputs = re.split(marker, done.stdout, flags=re.MULTILINE)
+            errors = re.split(marker, done.stderr, flags=re.MULTILINE)
+            if len(outputs) != len(statements) + 1 or len(errors) != len(outputs):
+                raise AssertionError(f'the CLI did not finish every statement: {done.stderr}')
+            for index, (output, error) in enumerate(zip(outputs[:-1], errors[:-1])):
+                if error.strip():
+                    results.append({'error': error.strip()})
                 else:
-                    import json
-                    rows = json.loads(done.stdout)
-                    results.append({'rows': [list(row.values()) for row in rows]})
+                    display = (Path(folder) / f'columns-{index}').read_text().splitlines()
+                    types = [item.strip() for item in display[2].split('│')[1:-1]] if display else []
+                    # JSON mode repeats column names and quotes uint64; retain SQL column types.
+                    rows = json.loads(output, object_pairs_hook=JsonPairs) if output.strip() else []
+                    results.append({'rows': [[cli_value(value, kind) for (_, value), kind
+                                              in zip(row, types)] for row in rows]})
             stored(env.get('THINKTHEN_CACHE', ''))
         return results
     return run
+
+
+class JsonPairs(list):
+    """Keep repeated SQL column names distinct in the shell's JSON output."""
+
+
+def cli_value(value, kind=''):
+    if value is None:
+        return None
+    if kind.endswith('[]'):
+        return [cli_value(item, kind[:-2]) for item in value]
+    if kind == 'json':
+        return json.dumps(cli_value(value), separators=(',', ':'), ensure_ascii=False)
+    if kind in ('uint64', 'int128', 'uint128'):
+        return int(value)
+    if isinstance(value, JsonPairs):
+        return {key: cli_value(item) for key, item in value}
+    if isinstance(value, list):
+        return [cli_value(item) for item in value]
+    return value
 
 
 def check_hosts(cache, fetch):
