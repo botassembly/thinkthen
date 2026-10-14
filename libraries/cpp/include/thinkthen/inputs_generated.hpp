@@ -1090,7 +1090,6 @@ namespace tt::inputs {
         RequestOptions& set_context(const std::string& value);
         RequestOptions& set_context_field(const std::string& value);
         RequestOptions& set_deadline_ms(const int64_t& value);
-        RequestOptions& set_details(const bool& value);
         RequestOptions& set_examples(const std::vector<RecognitionExample>& value);
         RequestOptions& set_examples_field(const std::string& value);
         RequestOptions& set_field(const std::vector<std::string>& value);
@@ -2456,10 +2455,6 @@ namespace tt::inputs {
     }
     inline RequestOptions& RequestOptions::set_deadline_ms(const int64_t& value) {
         set_member("deadline_ms",results::detail::encode(value));
-        return *this;
-    }
-    inline RequestOptions& RequestOptions::set_details(const bool& value) {
-        set_member("details",results::detail::encode(value));
         return *this;
     }
     inline RequestOptions& RequestOptions::set_examples(const std::vector<RecognitionExample>& value) {

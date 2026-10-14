@@ -2501,7 +2501,6 @@ final class Options extends _NativeValue {
       Presence<String> context = const Presence.absent(),
       Presence<String> contextField = const Presence.absent(),
       Presence<BigInt> deadlineMs = const Presence.absent(),
-      Presence<bool> details = const Presence.absent(),
       Presence<List<RecognitionExample>> examples = const Presence.absent(),
       Presence<String> examplesField = const Presence.absent(),
       Presence<List<String>> field = const Presence.absent(),
@@ -2524,7 +2523,6 @@ final class Options extends _NativeValue {
           if (context.isPresent) "context": context.value,
           if (contextField.isPresent) "context_field": contextField.value,
           if (deadlineMs.isPresent) "deadline_ms": deadlineMs.value,
-          if (details.isPresent) "details": details.value,
           if (examples.isPresent) "examples": examples.value,
           if (examplesField.isPresent) "examples_field": examplesField.value,
           if (field.isPresent) "field": field.value,
@@ -2559,9 +2557,6 @@ final class Options extends _NativeValue {
       : const Presence.absent();
   Presence<BigInt> get deadlineMs => _fields.containsKey("deadline_ms")
       ? Presence.present(_readInteger(_fields["deadline_ms"]))
-      : const Presence.absent();
-  Presence<bool> get details => _fields.containsKey("details")
-      ? Presence.present(_fields["details"] as bool)
       : const Presence.absent();
   Presence<List<RecognitionExample>> get examples => _fields
           .containsKey("examples")
@@ -2630,7 +2625,6 @@ final class Options extends _NativeValue {
             "context",
             "context_field",
             "deadline_ms",
-            "details",
             "examples",
             "examples_field",
             "field",

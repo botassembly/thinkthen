@@ -903,7 +903,6 @@ pub struct thinkthen_request_call_options_v1 {
     pub m_context: *const thinkthen_request_text_v1,
     pub m_context_field: *const thinkthen_request_text_v1,
     pub m_deadline_ms: *const thinkthen_request_integer_v1,
-    pub m_details: *const thinkthen_request_boolean_v1,
     pub m_examples: *const thinkthen_request_recognition_example_list_v1,
     pub m_examples_field: *const thinkthen_request_text_v1,
     pub m_field: *const thinkthen_request_text_list_v1,
@@ -4030,13 +4029,6 @@ pub(super) unsafe fn read_thinkthen_request_call_options_v1(
                     context,
                     &mut fields,
                     read_thinkthen_request_integer_v1,
-                )?;
-                optional(
-                    "details",
-                    input.m_details,
-                    context,
-                    &mut fields,
-                    read_thinkthen_request_boolean_v1,
                 )?;
                 optional(
                     "examples",

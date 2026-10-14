@@ -2681,7 +2681,6 @@ public final class Inputs {
             result.omit("context");
             result.omit("context_field");
             result.omit("deadline_ms");
-            result.omit("details");
             result.omit("examples");
             result.omit("examples_field");
             result.omit("field");
@@ -2748,15 +2747,6 @@ public final class Inputs {
         }
         public RequestOptions omitDeadlineMs() {
             return omit("deadline_ms");
-        }
-        public RequestOptions details(Boolean value) {
-            return put("details", value);
-        }
-        public RequestOptions detailsNull() {
-            return put("details", null);
-        }
-        public RequestOptions omitDetails() {
-            return omit("details");
         }
         public RequestOptions examples(List<? extends RecognitionExample> value) {
             return put("examples", value);

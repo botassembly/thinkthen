@@ -524,7 +524,6 @@ function Convert_RequestOptions_field_attempts_Boolean (Value : T_Boolean; Stora
 function Convert_RequestOptions_field_context_Text (Value : T_Text; Storage : in out Arena) return System.Address;
 function Convert_RequestOptions_field_context_field_Text (Value : T_Text; Storage : in out Arena) return System.Address;
 function Convert_RequestOptions_field_deadline_ms_Integer (Value : T_Integer; Storage : in out Arena) return System.Address;
-function Convert_RequestOptions_field_details_Boolean (Value : T_Boolean; Storage : in out Arena) return System.Address;
 function Convert_RequestOptions_field_examples_RecognitionExample_list (Value : T_RecognitionExample_List; Storage : in out Arena) return System.Address;
 function Convert_RequestOptions_field_examples_field_Text (Value : T_Text; Storage : in out Arena) return System.Address;
 function Convert_RequestOptions_field_field_Text_list (Value : T_Text_List; Storage : in out Arena) return System.Address;
@@ -822,7 +821,6 @@ if Value.T_batch.Present then Result.m_batch := P_thinkthen_request_batch_v1 (Co
 if Value.T_context.Present then Result.m_context := P_thinkthen_request_text_v1 (Convert_RequestOptions_field_context_Text (Value.T_context.Value, Storage)); else Result.m_context := null; end if;
 if Value.T_context_field.Present then Result.m_context_field := P_thinkthen_request_text_v1 (Convert_RequestOptions_field_context_field_Text (Value.T_context_field.Value, Storage)); else Result.m_context_field := null; end if;
 if Value.T_deadline_ms.Present then Result.m_deadline_ms := P_thinkthen_request_integer_v1 (Convert_RequestOptions_field_deadline_ms_Integer (Value.T_deadline_ms.Value, Storage)); else Result.m_deadline_ms := null; end if;
-if Value.T_details.Present then Result.m_details := P_thinkthen_request_boolean_v1 (Convert_RequestOptions_field_details_Boolean (Value.T_details.Value, Storage)); else Result.m_details := null; end if;
 if Value.T_examples.Present then Result.m_examples := P_thinkthen_request_recognition_example_list_v1 (Convert_RequestOptions_field_examples_RecognitionExample_list (Value.T_examples.Value, Storage)); else Result.m_examples := null; end if;
 if Value.T_examples_field.Present then Result.m_examples_field := P_thinkthen_request_text_v1 (Convert_RequestOptions_field_examples_field_Text (Value.T_examples_field.Value, Storage)); else Result.m_examples_field := null; end if;
 if Value.T_field.Present then Result.m_field := P_thinkthen_request_text_list_v1 (Convert_RequestOptions_field_field_Text_list (Value.T_field.Value, Storage)); else Result.m_field := null; end if;
@@ -1127,12 +1125,6 @@ begin
 Result.value := Interfaces.Integer_64 (Value);
 return Store_thinkthen_request_integer_v1 (Result, Storage);
 end Convert_RequestOptions_field_deadline_ms_Integer;
-function Convert_RequestOptions_field_details_Boolean (Value : T_Boolean; Storage : in out Arena) return System.Address is
-Result : thinkthen_request_boolean_v1;
-begin
-Result.value := (if Value then 1 else 0);
-return Store_thinkthen_request_boolean_v1 (Result, Storage);
-end Convert_RequestOptions_field_details_Boolean;
 function Convert_RequestOptions_field_examples_RecognitionExample_list (Value : T_RecognitionExample_List; Storage : in out Arena) return System.Address is
 Result : thinkthen_request_recognition_example_list_v1;
 type Items is array (size_t range <>) of aliased System.Address with Convention => C;

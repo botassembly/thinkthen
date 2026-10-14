@@ -1589,7 +1589,6 @@ typedef struct thinkthen_request_call_options_v1 {
   const struct thinkthen_request_text_v1 *m_context;
   const struct thinkthen_request_text_v1 *m_context_field;
   const struct thinkthen_request_integer_v1 *m_deadline_ms;
-  const struct thinkthen_request_boolean_v1 *m_details;
   const struct thinkthen_request_recognition_example_list_v1 *m_examples;
   const struct thinkthen_request_text_v1 *m_examples_field;
   const struct thinkthen_request_text_list_v1 *m_field;

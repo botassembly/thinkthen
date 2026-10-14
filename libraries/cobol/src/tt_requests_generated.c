@@ -303,7 +303,6 @@ static void *convert_RequestOptions_member_attempts_Boolean(arena *,const void *
 static void *convert_RequestOptions_member_context_Text(arena *,const void *);
 static void *convert_RequestOptions_member_context_field_Text(arena *,const void *);
 static void *convert_RequestOptions_member_deadline_ms_Integer(arena *,const void *);
-static void *convert_RequestOptions_member_details_Boolean(arena *,const void *);
 static void *convert_RequestOptions_member_examples_RecognitionExample_list(arena *,const void *);
 static void *convert_RequestOptions_member_examples_field_Text(arena *,const void *);
 static void *convert_RequestOptions_member_field_Text_list(arena *,const void *);
@@ -651,7 +650,6 @@ static void *convert_RequestOptions_RequestOptions(arena *a,const void *input) {
     p->m_context_field);
     if(p->m_deadline_ms) out->m_deadline_ms=convert_RequestOptions_member_deadline_ms_Integer(a,
     p->m_deadline_ms);
-    if(p->m_details) out->m_details=convert_RequestOptions_member_details_Boolean(a,p->m_details);
     if(p->m_examples) out->m_examples=convert_RequestOptions_member_examples_RecognitionExample_list(a,
     p->m_examples);
     if(p->m_examples_field) out->m_examples_field=convert_RequestOptions_member_examples_field_Text(a,
@@ -1141,18 +1139,6 @@ static void *convert_RequestOptions_member_deadline_ms_Integer(arena *a,const vo
         return out;
     }
     out->value=p->value;
-    return out;
-}
-static void *convert_RequestOptions_member_details_Boolean(arena *a,const void *input) {
-    const thinkthen_cobol_RequestOptionsDetails *p=input;
-    thinkthen_request_boolean_v1 *out=allocate(a,1,sizeof(*out));
-    if(!out) return NULL;
-    if(!p) {
-        a->code=THINKTHEN_COBOL_REPRESENTATION;
-        return out;
-    }
-    if(p->value>1) a->code=THINKTHEN_COBOL_REPRESENTATION;
-    out->value=(uint32_t)p->value;
     return out;
 }
 static void *convert_RequestOptions_member_examples_RecognitionExample_list(arena *a,const void *input) {

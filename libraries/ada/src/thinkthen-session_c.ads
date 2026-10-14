@@ -990,7 +990,6 @@ private package Thinkthen.Session_C is
       m_context : access constant thinkthen_request_text_v1;
       m_context_field : access constant thinkthen_request_text_v1;
       m_deadline_ms : access constant thinkthen_request_integer_v1;
-      m_details : access constant thinkthen_request_boolean_v1;
       m_examples : access constant thinkthen_request_recognition_example_list_v1;
       m_examples_field : access constant thinkthen_request_text_v1;
       m_field : access constant thinkthen_request_text_list_v1;
