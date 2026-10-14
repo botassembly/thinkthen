@@ -9,10 +9,13 @@ copy "tt-native-generated.cpy".
    "Please refund my order. It arrived broken.".
 01 is-refund pic x value "N".
 01 engine usage pointer.
-01 session-owner usage pointer.
-01 packet-owner usage pointer.
-01 packet-view usage pointer.
-01 read-status usage binary-long unsigned.
+01 ask usage pointer.
+01 evidence usage pointer.
+01 no-controls usage pointer value null.
+01 row-at usage pointer.
+01 row-number usage binary-long.
+01 written usage binary-double unsigned.
+01 selected-text pic x(8192).
 01 status-code usage binary-long signed.
 procedure division.
     call "thinkthen_engine_new" returning engine
@@ -50,53 +53,23 @@ procedure division.
        to address of tt-n-cobol-RequestQuestion
     set v-m-input of tt-n-cobol-RequestCall
        to address of tt-n-cobol-RequestInput
-    call "TT_SESSION_DECIDE" using by value engine
-       by reference tt-n-cobol-RequestCall
-       session-owner returning status-code
+    allocate tt-n-cobol-AnswerDecideResult
+    allocate tt-n-cobol-AnswerStatus
+    set ask to address of tt-n-cobol-RequestQuestion
+    set evidence to address of tt-n-cobol-RequestInput
+    call "TT_DECIDE" using by value
+       engine ask evidence no-controls
+       by reference tt-n-cobol-AnswerDecideResult
+       tt-n-cobol-AnswerStatus returning status-code
     if status-code not = 0 stop run returning 1 end-if
-    perform read-packet
-       until read-status = tt-n-session-end-v1-k
-    call "thinkthen_session_free"
-       using by value session-owner returning omitted
+    if v-first-present of tt-n-cobol-AnswerDecideResult = 1
+       and v-first-value of
+          tt-n-cobol-AnswerDecideResult = 1
+       move "Y" to is-refund
+    end-if
+    call "TT_ANSWER_FREE" using by value
+       v-owner of tt-n-cobol-AnswerStatus returning omitted
     call "thinkthen_engine_free"
        using by value engine returning omitted
     if is-refund not = "Y" stop run returning 1 end-if
     stop run.
-read-packet.
-    call "TT_SESSION_NEXT" using by value session-owner
-       by reference read-status packet-owner
-       returning status-code
-    if read-status not = tt-n-session-result-v1-k
-       exit paragraph
-    end-if
-    call "thinkthen_session_result_view"
-       using by value packet-owner by reference packet-view
-       returning status-code
-    set address of tt-n-complete-session-packet-v1
-       to packet-view
-    if v-kind of tt-n-complete-session-packet-v1 =
-       tt-n-complete-session-packet-decide-row-v1-k
-       perform read-decision
-    end-if
-    call "thinkthen_session_result_free"
-       using by value packet-owner returning omitted.
-read-decision.
-    set address of
-       tt-n-complete-session-packet-decide-row-v1
-       to v-data-decide-row of
-       tt-n-complete-session-packet-v1
-    set address of tt-n-complete-atomic-decide-value-v1
-       to v-value of
-       tt-n-complete-session-packet-decide-row-v1
-    if v-value-presence of
-       tt-n-complete-atomic-decide-value-v1 =
-       tt-n-complete-presence-value-v1-k
-       set address of tt-n-complete-decide-value-v1
-          to v-value-value of
-          tt-n-complete-atomic-decide-value-v1
-       set address of tt-n-complete-json-v1
-          to v-value of tt-n-complete-decide-value-v1
-       if v-data-boolean of tt-n-complete-json-v1 = 1
-          move "Y" to is-refund
-       end-if
-    end-if.

@@ -21,10 +21,13 @@ copy "tt-native-generated.cpy".
 01 refund-deadline pic x(8192) value spaces.
 01 deadline-length usage binary-double unsigned.
 01 engine usage pointer.
-01 session-owner usage pointer.
-01 packet-owner usage pointer.
-01 packet-view usage pointer.
-01 read-status usage binary-long unsigned.
+01 ask usage pointer.
+01 evidence usage pointer.
+01 no-controls usage pointer value null.
+01 row-at usage pointer.
+01 row-number usage binary-long.
+01 written usage binary-double unsigned.
+01 selected-text pic x(8192).
 01 status-code usage binary-long signed.
 procedure division.
     call "thinkthen_engine_new" returning engine
@@ -65,14 +68,22 @@ procedure division.
        to address of tt-n-cobol-RequestQuestion
     set v-m-input of tt-n-cobol-RequestCall
        to address of tt-n-cobol-RequestInput
-    call "TT_SESSION_FIND" using by value engine
-       by reference tt-n-cobol-RequestCall
-       session-owner returning status-code
+    allocate tt-n-cobol-AnswerFindResult
+    allocate tt-n-cobol-AnswerStatus
+    set ask to address of tt-n-cobol-RequestQuestion
+    set evidence to address of tt-n-cobol-RequestInput
+    call "TT_FIND" using by value
+       engine ask evidence no-controls
+       by reference tt-n-cobol-AnswerFindResult
+       tt-n-cobol-AnswerStatus returning status-code
     if status-code not = 0 stop run returning 1 end-if
-    perform read-packet
-       until read-status = tt-n-session-end-v1-k
-    call "thinkthen_session_free"
-       using by value session-owner returning omitted
+    if v-first-present of tt-n-cobol-AnswerFindResult = 1
+       compute at-line = 1 +
+          v-first-index of tt-n-cobol-AnswerFindResult
+       move policy-line(at-line) to refund-deadline
+    end-if
+    call "TT_ANSWER_FREE" using by value
+       v-owner of tt-n-cobol-AnswerStatus returning omitted
     call "thinkthen_engine_free"
        using by value engine returning omitted
     if refund-deadline not = policy-line(2)
@@ -101,40 +112,3 @@ add-line.
        to address of tt-n-cobol-RequestOriginal
     set line-address(at-line)
        to address of tt-n-cobol-RequestItem.
-read-packet.
-    call "TT_SESSION_NEXT" using by value session-owner
-       by reference read-status packet-owner
-       returning status-code
-    if read-status not = tt-n-session-result-v1-k
-       exit paragraph
-    end-if
-    call "thinkthen_session_result_view"
-       using by value packet-owner by reference packet-view
-       returning status-code
-    set address of tt-n-complete-session-packet-v1
-       to packet-view
-    if v-kind of tt-n-complete-session-packet-v1 not =
-       tt-n-complete-session-packet-terminal-v1-k
-       and v-kind of tt-n-complete-session-packet-v1 not =
-       tt-n-complete-session-packet-observation-v1-k
-       perform read-deadline
-    end-if
-    call "thinkthen_session_result_free"
-       using by value packet-owner returning omitted.
-read-deadline.
-    set address of
-       tt-n-complete-session-packet-find-aggregate-v1
-       to v-data-find-aggregate of
-       tt-n-complete-session-packet-v1
-    set address of tt-n-complete-find-v1
-       to v-value of
-       tt-n-complete-session-packet-find-aggregate-v1
-    if v-value-presence of tt-n-complete-find-v1 =
-       tt-n-complete-presence-value-v1-k
-       set address of tt-n-complete-json-v1
-          to v-value-value of tt-n-complete-find-v1
-       call "TT_SESSION_TEXT" using by reference
-          v-data-string of tt-n-complete-json-v1
-          refund-deadline deadline-length
-          returning status-code
-    end-if.

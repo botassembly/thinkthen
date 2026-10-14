@@ -1,10 +1,11 @@
+with Thinkthen.Values;
 with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
 with Interfaces; use Interfaces;
 with Thinkthen.Requests; use Thinkthen.Requests;
 with Thinkthen.Sessions; use Thinkthen.Sessions;
 with Thinkthen.Sessions.Calls;
 use Thinkthen.Sessions.Calls;
-with Thinkthen_Session_C; use Thinkthen_Session_C;
+with Thinkthen.Answers; use Thinkthen.Answers;
 
 procedure Sample is
    Question : constant String := "Is this a complaint?";
@@ -18,16 +19,9 @@ procedure Sample is
    Reviews : T_RequestItem_List;
    Request : T_RequestCall;
    Owner : Session;
-   Answer : Packet;
-   Read : Read_Status;
-   Ready : Unsigned_32;
-   Complaints : array (1 .. 4) of Boolean :=
-     [others => False];
-   Settlement : constant :=
-     K_THINKTHEN_SESSION_WAIT_SETTLEMENT_V1;
-   Filter_Row : constant :=
-     K_THINKTHEN_COMPLETE_SESSION_PACKET_FILTER_ROW_V1;
-   subtype Kept is thinkthen_complete_atomic_boolean_v1;
+   Completed : Completion;
+   package V renames Thinkthen.Values;
+
 begin
    Reviews.Append
      (Review ("Arrived a day early. Thank you!"));
@@ -45,20 +39,14 @@ begin
       (T_items => Reviews, T_kind => <>));
    Filter (Owner, Request);
    Finish (Owner);
-   loop
-      Try_Read (Owner, Answer, Read);
-      exit when Read = Finished;
-      if Read = Pending then
-         Wait (Owner, Settlement, 50, Ready);
-      elsif View (Answer).kind = Filter_Row then
-         declare
-            Row : Kept renames
-              View (Answer).data.filter_row.value.all;
-         begin
-            Complaints (Natural (Row.index.value) + 1) :=
-              Row.value = 1;
-         end;
-      end if;
-   end loop;
-   pragma Assert (Complaints = [False, True, False, True]);
+   declare
+      Complaints : constant V.Value_List :=
+        Filter_Answer (Owner, Completed);
+   begin
+      pragma Assert (Complaints'Length = 2);
+      pragma Assert (V.As_String (Complaints (1)) =
+        "The zipper broke the first time I used it.");
+      pragma Assert (V.As_String (Complaints (2)) =
+        "The strap snapped on day two.");
+   end;
 end Sample;

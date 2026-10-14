@@ -1,10 +1,12 @@
+with Thinkthen.Values;
+with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
 with Interfaces; use Interfaces;
 with Interfaces.C; use Interfaces.C;
 with Thinkthen.Requests; use Thinkthen.Requests;
 with Thinkthen.Sessions; use Thinkthen.Sessions;
 with Thinkthen.Sessions.Calls;
 use Thinkthen.Sessions.Calls;
-with Thinkthen_Session_C; use Thinkthen_Session_C;
+with Thinkthen.Answers; use Thinkthen.Answers;
 
 procedure Sample is
    Question : constant String := "How urgent is this?";
@@ -15,16 +17,11 @@ procedure Sample is
    Scale : T_RequestDefinition_Authored_score;
    Request : T_RequestCall;
    Owner : Session;
-   Answer : Packet;
-   Read : Read_Status;
-   Ready : Unsigned_32;
-   Urgency : double := -1.0;
-   Settlement : constant :=
-     K_THINKTHEN_SESSION_WAIT_SETTLEMENT_V1;
-   Score_Row : constant :=
-     K_THINKTHEN_COMPLETE_SESSION_PACKET_SCORE_ROW_V1;
+   Completed : Completion;
+   package V renames Thinkthen.Values;
    Score_Arm : constant T_RequestDefinition_Kind :=
      T_RequestDefinition_arm_Authored_score;
+
 begin
    Levels.Append
      (To_Unbounded_String ("Routine."));
@@ -44,15 +41,10 @@ begin
      To_Unbounded_String (Outage);
    Score (Owner, Request);
    Finish (Owner);
-   loop
-      Try_Read (Owner, Answer, Read);
-      exit when Read = Finished;
-      if Read = Pending then
-         Wait (Owner, Settlement, 50, Ready);
-      elsif View (Answer).kind = Score_Row then
-         Urgency :=
-           View (Answer).data.score_row.value.value;
-      end if;
-   end loop;
-   pragma Assert (Urgency = 2.0);
+   declare
+      Urgency : constant Long_Float :=
+        Score_Answer (Owner, Completed);
+   begin
+      pragma Assert (Urgency = 2.0);
+   end;
 end Sample;

@@ -24,10 +24,13 @@ copy "tt-native-generated.cpy".
 01 message-number pic 9.
 01 by-urgency pic x(4) value spaces.
 01 engine usage pointer.
-01 session-owner usage pointer.
-01 packet-owner usage pointer.
-01 packet-view usage pointer.
-01 read-status usage binary-long unsigned.
+01 ask usage pointer.
+01 evidence usage pointer.
+01 no-controls usage pointer value null.
+01 row-at usage pointer.
+01 row-number usage binary-long.
+01 written usage binary-double unsigned.
+01 selected-text pic x(8192).
 01 status-code usage binary-long signed.
 procedure division.
     call "thinkthen_engine_new" returning engine
@@ -68,14 +71,26 @@ procedure division.
        to address of tt-n-cobol-RequestQuestion
     set v-m-input of tt-n-cobol-RequestCall
        to address of tt-n-cobol-RequestInput
-    call "TT_SESSION_RANK" using by value engine
-       by reference tt-n-cobol-RequestCall
-       session-owner returning status-code
+    allocate tt-n-cobol-AnswerRankResult
+    allocate tt-n-cobol-AnswerStatus
+    set ask to address of tt-n-cobol-RequestQuestion
+    set evidence to address of tt-n-cobol-RequestInput
+    call "TT_RANK" using by value
+       engine ask evidence no-controls
+       by reference tt-n-cobol-AnswerRankResult
+       tt-n-cobol-AnswerStatus returning status-code
     if status-code not = 0 stop run returning 1 end-if
-    perform read-packet
-       until read-status = tt-n-session-end-v1-k
-    call "thinkthen_session_free"
-       using by value session-owner returning omitted
+    set row-at to v-rows of tt-n-cobol-AnswerRankResult
+    perform varying row-number from 1 by 1 until
+       row-number > v-count of tt-n-cobol-AnswerRankResult
+       set address of tt-n-cobol-AnswerRankIndex to row-at
+       compute message-number = 1 +
+          v-value of tt-n-cobol-AnswerRankIndex
+       move message-number to by-urgency(row-number:1)
+       set row-at up by length of tt-n-cobol-AnswerRankIndex
+    end-perform
+    call "TT_ANSWER_FREE" using by value
+       v-owner of tt-n-cobol-AnswerStatus returning omitted
     call "thinkthen_engine_free"
        using by value engine returning omitted
     if by-urgency not = "2431" stop run returning 1 end-if
@@ -102,42 +117,3 @@ add-message.
        to address of tt-n-cobol-RequestOriginal
     set message-address(at-message)
        to address of tt-n-cobol-RequestItem.
-read-packet.
-    call "TT_SESSION_NEXT" using by value session-owner
-       by reference read-status packet-owner
-       returning status-code
-    if read-status not = tt-n-session-result-v1-k
-       exit paragraph
-    end-if
-    call "thinkthen_session_result_view"
-       using by value packet-owner by reference packet-view
-       returning status-code
-    set address of tt-n-complete-session-packet-v1
-       to packet-view
-    if v-kind of tt-n-complete-session-packet-v1 not =
-       tt-n-complete-session-packet-terminal-v1-k
-       and v-kind of tt-n-complete-session-packet-v1 not =
-       tt-n-complete-session-packet-observation-v1-k
-       perform read-ranking
-    end-if
-    call "thinkthen_session_result_free"
-       using by value packet-owner returning omitted.
-read-ranking.
-    set address of
-       tt-n-complete-session-packet-rank-aggregate-v1
-       to v-data-rank-aggregate of
-       tt-n-complete-session-packet-v1
-    set place-at to v-value-data of
-       tt-n-complete-session-packet-rank-aggregate-v1
-    perform v-value-len of
-       tt-n-complete-session-packet-rank-aggregate-v1 times
-       set address of place-address to place-at
-       set address of tt-n-complete-atomic-non-zero-usize-v1
-          to place-address
-       move v-value of
-          tt-n-complete-atomic-non-zero-usize-v1 to place
-       compute message-number = 1 + v-index-value of
-          tt-n-complete-atomic-non-zero-usize-v1
-       move message-number to by-urgency(place:1)
-       set place-at up by length of place-at
-    end-perform.

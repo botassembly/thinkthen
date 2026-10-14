@@ -16,10 +16,13 @@ copy "tt-native-generated.cpy".
 01 labels-end usage binary-long value 1.
 01 fitting-labels pic x(60) value spaces.
 01 engine usage pointer.
-01 session-owner usage pointer.
-01 packet-owner usage pointer.
-01 packet-view usage pointer.
-01 read-status usage binary-long unsigned.
+01 ask usage pointer.
+01 evidence usage pointer.
+01 no-controls usage pointer value null.
+01 row-at usage pointer.
+01 row-number usage binary-long.
+01 written usage binary-double unsigned.
+01 selected-text pic x(8192).
 01 status-code usage binary-long signed.
 procedure division.
     call "thinkthen_engine_new" returning engine
@@ -57,55 +60,31 @@ procedure division.
        to address of tt-n-cobol-RequestQuestion
     set v-m-input of tt-n-cobol-RequestCall
        to address of tt-n-cobol-RequestInput
-    call "TT_SESSION_TAG" using by value engine
-       by reference tt-n-cobol-RequestCall
-       session-owner returning status-code
+    allocate tt-n-cobol-AnswerTagResult
+    allocate tt-n-cobol-AnswerStatus
+    set ask to address of tt-n-cobol-RequestQuestion
+    set evidence to address of tt-n-cobol-RequestInput
+    call "TT_TAG" using by value
+       engine ask evidence no-controls
+       by reference tt-n-cobol-AnswerTagResult
+       tt-n-cobol-AnswerStatus returning status-code
     if status-code not = 0 stop run returning 1 end-if
-    perform read-packet
-       until read-status = tt-n-session-end-v1-k
-    call "thinkthen_session_free"
-       using by value session-owner returning omitted
+    set row-at to v-first-rows of tt-n-cobol-AnswerTagResult
+    perform varying row-number from 1 by 1 until
+       row-number > v-first-count of
+          tt-n-cobol-AnswerTagResult
+       set address of tt-n-cobol-AnswerText to row-at
+       string v-text of tt-n-cobol-AnswerText
+          (1:v-length of tt-n-cobol-AnswerText) " "
+          into fitting-labels with pointer labels-end
+       end-string
+       set row-at up by length of tt-n-cobol-AnswerText
+    end-perform
+    call "TT_ANSWER_FREE" using by value
+       v-owner of tt-n-cobol-AnswerStatus returning omitted
     call "thinkthen_engine_free"
        using by value engine returning omitted
     if fitting-labels not = "praise bug billing"
        stop run returning 1
     end-if
     stop run.
-read-packet.
-    call "TT_SESSION_NEXT" using by value session-owner
-       by reference read-status packet-owner
-       returning status-code
-    if read-status not = tt-n-session-result-v1-k
-       exit paragraph
-    end-if
-    call "thinkthen_session_result_view"
-       using by value packet-owner by reference packet-view
-       returning status-code
-    set address of tt-n-complete-session-packet-v1
-       to packet-view
-    if v-kind of tt-n-complete-session-packet-v1 =
-       tt-n-complete-session-packet-tag-row-v1-k
-       perform read-labels
-    end-if
-    call "thinkthen_session_result_free"
-       using by value packet-owner returning omitted.
-read-labels.
-    set address of
-       tt-n-complete-session-packet-tag-row-v1
-       to v-data-tag-row of
-       tt-n-complete-session-packet-v1
-    set address of tt-n-complete-atomic-array-of-string-v1
-       to v-value of tt-n-complete-session-packet-tag-row-v1
-    set label-at to v-value-data of
-       tt-n-complete-atomic-array-of-string-v1
-    perform v-value-len of
-       tt-n-complete-atomic-array-of-string-v1 times
-       set address of tt-n-complete-utf8-v1 to label-at
-       call "TT_SESSION_TEXT" using by reference
-          tt-n-complete-utf8-v1 one-label label-length
-          returning status-code
-       string one-label(1:label-length) " "
-          delimited by size into fitting-labels
-          with pointer labels-end
-       set label-at up by length of tt-n-complete-utf8-v1
-    end-perform.

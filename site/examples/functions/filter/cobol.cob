@@ -19,10 +19,13 @@ copy "tt-native-generated.cpy".
 01 at-review usage binary-long.
 01 complaints pic x(4) value "NNNN".
 01 engine usage pointer.
-01 session-owner usage pointer.
-01 packet-owner usage pointer.
-01 packet-view usage pointer.
-01 read-status usage binary-long unsigned.
+01 ask usage pointer.
+01 evidence usage pointer.
+01 no-controls usage pointer value null.
+01 row-at usage pointer.
+01 row-number usage binary-long.
+01 written usage binary-double unsigned.
+01 selected-text pic x(8192).
 01 status-code usage binary-long signed.
 procedure division.
     call "thinkthen_engine_new" returning engine
@@ -63,14 +66,39 @@ procedure division.
        to address of tt-n-cobol-RequestQuestion
     set v-m-input of tt-n-cobol-RequestCall
        to address of tt-n-cobol-RequestInput
-    call "TT_SESSION_FILTER" using by value engine
-       by reference tt-n-cobol-RequestCall
-       session-owner returning status-code
+    allocate tt-n-cobol-AnswerFilterResult
+    allocate tt-n-cobol-AnswerStatus
+    set ask to address of tt-n-cobol-RequestQuestion
+    set evidence to address of tt-n-cobol-RequestInput
+    call "TT_FILTER" using by value
+       engine ask evidence no-controls
+       by reference tt-n-cobol-AnswerFilterResult
+       tt-n-cobol-AnswerStatus returning status-code
     if status-code not = 0 stop run returning 1 end-if
-    perform read-packet
-       until read-status = tt-n-session-end-v1-k
-    call "thinkthen_session_free"
-       using by value session-owner returning omitted
+    if v-count of tt-n-cobol-AnswerFilterResult not = 2
+       stop run returning 1
+    end-if
+    set row-at to v-rows of tt-n-cobol-AnswerFilterResult
+    perform varying row-number from 1 by 1 until
+       row-number > v-count of tt-n-cobol-AnswerFilterResult
+       set address of tt-n-cobol-AnswerFilterOriginal
+          to row-at
+       move spaces to selected-text
+       call "TT_VALUE_TEXT" using by value
+          v-original of tt-n-cobol-AnswerFilterOriginal
+          by reference selected-text written
+          returning status-code
+       if selected-text = review(2)
+          move "Y" to complaints(2:1)
+       end-if
+       if selected-text = review(4)
+          move "Y" to complaints(4:1)
+       end-if
+       set row-at up by length of
+          tt-n-cobol-AnswerFilterOriginal
+    end-perform
+    call "TT_ANSWER_FREE" using by value
+       v-owner of tt-n-cobol-AnswerStatus returning omitted
     call "thinkthen_engine_free"
        using by value engine returning omitted
     if complaints not = "NYNY" stop run returning 1 end-if
@@ -97,34 +125,3 @@ add-review.
        to address of tt-n-cobol-RequestOriginal
     set review-address(at-review)
        to address of tt-n-cobol-RequestItem.
-read-packet.
-    call "TT_SESSION_NEXT" using by value session-owner
-       by reference read-status packet-owner
-       returning status-code
-    if read-status not = tt-n-session-result-v1-k
-       exit paragraph
-    end-if
-    call "thinkthen_session_result_view"
-       using by value packet-owner by reference packet-view
-       returning status-code
-    set address of tt-n-complete-session-packet-v1
-       to packet-view
-    if v-kind of tt-n-complete-session-packet-v1 =
-       tt-n-complete-session-packet-filter-row-v1-k
-       perform read-complaint
-    end-if
-    call "thinkthen_session_result_free"
-       using by value packet-owner returning omitted.
-read-complaint.
-    set address of
-       tt-n-complete-session-packet-filter-row-v1
-       to v-data-filter-row of
-       tt-n-complete-session-packet-v1
-    set address of tt-n-complete-atomic-boolean-v1
-       to v-value of
-       tt-n-complete-session-packet-filter-row-v1
-    if v-value of tt-n-complete-atomic-boolean-v1 = 1
-       compute at-review = 1 + v-index-value of
-          tt-n-complete-atomic-boolean-v1
-       move "Y" to complaints(at-review:1)
-    end-if.

@@ -67,15 +67,13 @@ export function librarySamples(examples) {
   return found.sort();
 }
 
-// Hold the compiler lock for one build command; sample execution stays unlocked.
-// The wrapper owns the descriptor, so a child compiler cannot retain it.
+// Admit compiler commands through the shared four-build supervisor.
+// The supervisor retains the checkpoint barrier and owns child cleanup.
 export function compile(cmd, args, opts = {}) {
   const lock = '/tmp/thinkthen-heavy.lock';
-  const env = { ...process.env, ...opts.env, RUSTC_WRAPPER: '', CARGO_BUILD_JOBS: '2', THINKTHEN_HEAVY_LOCK_HELD: lock };
-  const flock = spawnSync('sh', ['-c', 'command -v flock'], { encoding: 'utf8' });
-  if (flock.status === 0) {
-    return spawnSync('flock', ['-o', lock, cmd, ...args], { encoding: 'utf8', maxBuffer: 1 << 26, ...opts, env });
-  }
-  const wrapper = 'import fcntl,os,subprocess,sys; f=open(sys.argv[1], "a"); os.set_inheritable(f.fileno(),False); fcntl.flock(f,fcntl.LOCK_EX); sys.exit(subprocess.call(sys.argv[2:]))';
-  return spawnSync('python3', ['-c', wrapper, lock, cmd, ...args], { encoding: 'utf8', maxBuffer: 1 << 26, ...opts, env });
+  const helper = path.resolve(path.dirname(new URL(import.meta.url).pathname), '../../sdlc/scripts/build-admission.py');
+  const env = { ...process.env, ...opts.env, RUSTC_WRAPPER: '', CARGO_BUILD_JOBS: '2' };
+  return spawnSync('python3', [helper, '--lock', lock, '--', cmd, ...args], {
+    encoding: 'utf8', maxBuffer: 1 << 26, ...opts, env,
+  });
 }

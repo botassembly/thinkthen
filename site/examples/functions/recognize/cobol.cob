@@ -17,10 +17,13 @@ copy "tt-native-generated.cpy".
 01 names-end usage binary-long value 1.
 01 entity-names pic x(80) value spaces.
 01 engine usage pointer.
-01 session-owner usage pointer.
-01 packet-owner usage pointer.
-01 packet-view usage pointer.
-01 read-status usage binary-long unsigned.
+01 ask usage pointer.
+01 evidence usage pointer.
+01 no-controls usage pointer value null.
+01 row-at usage pointer.
+01 row-number usage binary-long.
+01 written usage binary-double unsigned.
+01 selected-text pic x(8192).
 01 status-code usage binary-long signed.
 procedure division.
     call "thinkthen_engine_new" returning engine
@@ -58,14 +61,32 @@ procedure division.
        to address of tt-n-cobol-RequestQuestion
     set v-m-input of tt-n-cobol-RequestCall
        to address of tt-n-cobol-RequestInput
-    call "TT_SESSION_RECOGNIZE" using by value engine
-       by reference tt-n-cobol-RequestCall
-       session-owner returning status-code
+    allocate tt-n-cobol-AnswerRecognizeResult
+    allocate tt-n-cobol-AnswerStatus
+    set ask to address of tt-n-cobol-RequestQuestion
+    set evidence to address of tt-n-cobol-RequestInput
+    call "TT_RECOGNIZE" using by value
+       engine ask evidence no-controls
+       by reference tt-n-cobol-AnswerRecognizeResult
+       tt-n-cobol-AnswerStatus returning status-code
     if status-code not = 0 stop run returning 1 end-if
-    perform read-packet
-       until read-status = tt-n-session-end-v1-k
-    call "thinkthen_session_free"
-       using by value session-owner returning omitted
+    set row-at to v-rows of tt-n-cobol-AnswerRecognizeResult
+    perform varying row-number from 1 by 1 until
+       row-number > v-count of
+          tt-n-cobol-AnswerRecognizeResult
+       set address of tt-n-cobol-AnswerRecognition
+          to row-at
+       string function trim(v-text-text of
+          tt-n-cobol-AnswerRecognition trailing)
+          "/" function trim(v-kind-text of
+          tt-n-cobol-AnswerRecognition trailing) " "
+          into entity-names with pointer names-end
+       end-string
+       set row-at up by length of
+          tt-n-cobol-AnswerRecognition
+    end-perform
+    call "TT_ANSWER_FREE" using by value
+       v-owner of tt-n-cobol-AnswerStatus returning omitted
     call "thinkthen_engine_free"
        using by value engine returning omitted
     if entity-names not = "Sam Patel/person "
@@ -73,62 +94,3 @@ procedure division.
        stop run returning 1
     end-if
     stop run.
-read-packet.
-    call "TT_SESSION_NEXT" using by value session-owner
-       by reference read-status packet-owner
-       returning status-code
-    if read-status not = tt-n-session-result-v1-k
-       exit paragraph
-    end-if
-    call "thinkthen_session_result_view"
-       using by value packet-owner by reference packet-view
-       returning status-code
-    set address of tt-n-complete-session-packet-v1
-       to packet-view
-    if v-kind of tt-n-complete-session-packet-v1 not =
-       tt-n-complete-session-packet-terminal-v1-k
-       and v-kind of tt-n-complete-session-packet-v1 not =
-       tt-n-complete-session-packet-observation-v1-k
-       perform read-names
-    end-if
-    call "thinkthen_session_result_free"
-       using by value packet-owner returning omitted.
-read-names.
-    set address of
-       tt-n-complete-session-packet-recognize-aggregate-v1
-       to v-data-recognize-aggregate of
-       tt-n-complete-session-packet-v1
-    if v-value-len of
-       tt-n-complete-session-packet-recognize-aggregate-v1
-       = 0
-       exit paragraph
-    end-if
-    set address of row-address to v-value-data of
-       tt-n-complete-session-packet-recognize-aggregate-v1
-    set address of tt-n-complete-recognition-v1
-       to row-address
-    set address of tt-n-complete-recognize-v1
-       to v-value of tt-n-complete-recognition-v1
-    set address of
-       tt-n-complete-recognize-entities-v1
-       to v-data-entities of
-       tt-n-complete-recognize-v1
-    set entity-at to v-entities-data of
-       tt-n-complete-recognize-entities-v1
-    perform read-entity v-entities-len of
-       tt-n-complete-recognize-entities-v1 times.
-read-entity.
-    set address of entity-address to entity-at
-    set address of tt-n-complete-entity-v1
-       to entity-address
-    call "TT_SESSION_TEXT" using by reference
-       v-text of tt-n-complete-entity-v1
-       one-text text-length returning status-code
-    call "TT_SESSION_TEXT" using by reference
-       v-kind of tt-n-complete-entity-v1
-       one-kind kind-length returning status-code
-    string one-text(1:text-length) "/"
-       one-kind(1:kind-length) " "
-       delimited by size into entity-names
-       with pointer names-end
-    set entity-at up by length of entity-at.

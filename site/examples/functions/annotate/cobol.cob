@@ -14,10 +14,13 @@ copy "tt-native-generated.cpy".
 01 app-area pic x(8192) value spaces.
 01 impact pic 9v99 value 0.
 01 engine usage pointer.
-01 session-owner usage pointer.
-01 packet-owner usage pointer.
-01 packet-view usage pointer.
-01 read-status usage binary-long unsigned.
+01 ask usage pointer.
+01 evidence usage pointer.
+01 no-controls usage pointer value null.
+01 row-at usage pointer.
+01 row-number usage binary-long.
+01 written usage binary-double unsigned.
+01 selected-text pic x(8192).
 01 status-code usage binary-long signed.
 procedure division.
     call "thinkthen_engine_new" returning engine
@@ -55,14 +58,40 @@ procedure division.
        to address of tt-n-cobol-RequestQuestion
     set v-m-input of tt-n-cobol-RequestCall
        to address of tt-n-cobol-RequestInput
-    call "TT_SESSION_ANNOTATE" using by value engine
-       by reference tt-n-cobol-RequestCall
-       session-owner returning status-code
+    allocate tt-n-cobol-AnswerAnnotateResult
+    allocate tt-n-cobol-AnswerStatus
+    set ask to address of tt-n-cobol-RequestQuestion
+    set evidence to address of tt-n-cobol-RequestInput
+    call "TT_ANNOTATE" using by value
+       engine ask evidence no-controls
+       by reference tt-n-cobol-AnswerAnnotateResult
+       tt-n-cobol-AnswerStatus returning status-code
     if status-code not = 0 stop run returning 1 end-if
-    perform read-packet
-       until read-status = tt-n-session-end-v1-k
-    call "thinkthen_session_free"
-       using by value session-owner returning omitted
+    set row-at to v-rows of tt-n-cobol-AnswerAnnotateResult
+    perform varying row-number from 1 by 1 until
+       row-number > v-count of
+          tt-n-cobol-AnswerAnnotateResult
+       set address of tt-n-cobol-AnswerAnnotationField
+          to row-at
+       evaluate v-name-text of
+          tt-n-cobol-AnswerAnnotationField
+       when "steps"
+          if v-boolean of
+             tt-n-cobol-AnswerAnnotationField = 1
+             move "Y" to steps
+          end-if
+       when "area"
+          move v-text-text of
+             tt-n-cobol-AnswerAnnotationField to app-area
+       when "impact"
+          move v-number of
+             tt-n-cobol-AnswerAnnotationField to impact
+       end-evaluate
+       set row-at up by length of
+          tt-n-cobol-AnswerAnnotationField
+    end-perform
+    call "TT_ANSWER_FREE" using by value
+       v-owner of tt-n-cobol-AnswerStatus returning omitted
     call "thinkthen_engine_free"
        using by value engine returning omitted
     if steps not = "Y" or app-area not = "login"
@@ -70,62 +99,3 @@ procedure division.
        stop run returning 1
     end-if
     stop run.
-read-packet.
-    call "TT_SESSION_NEXT" using by value session-owner
-       by reference read-status packet-owner
-       returning status-code
-    if read-status not = tt-n-session-result-v1-k
-       exit paragraph
-    end-if
-    call "thinkthen_session_result_view"
-       using by value packet-owner by reference packet-view
-       returning status-code
-    set address of tt-n-complete-session-packet-v1
-       to packet-view
-    if v-kind of tt-n-complete-session-packet-v1 =
-       tt-n-complete-session-packet-annotate-row-v1-k
-       perform read-triage
-    end-if
-    call "thinkthen_session_result_free"
-       using by value packet-owner returning omitted.
-read-triage.
-    set address of
-       tt-n-complete-session-packet-annotate-row-v1
-       to v-data-annotate-row of
-       tt-n-complete-session-packet-v1
-    set address of tt-n-complete-annotation-v1
-       to v-value of
-       tt-n-complete-session-packet-annotate-row-v1
-    set address of tt-n-complete-annotated-row-v1
-       to v-value of tt-n-complete-annotation-v1
-    set field-at to v-value-data of
-       tt-n-complete-annotated-row-v1
-    perform read-field v-value-len of
-       tt-n-complete-annotated-row-v1 times.
-read-field.
-    set address of
-       tt-n-complete-annotated-field-map-entry-v1
-       to field-at
-    call "TT_SESSION_TEXT" using by reference
-       v-name of tt-n-complete-annotated-field-map-entry-v1
-       field-name name-length returning status-code
-    set address of tt-n-complete-annotated-field-v1
-       to v-value of
-       tt-n-complete-annotated-field-map-entry-v1
-    evaluate field-name
-       when "steps"
-          if v-data-boolean of
-             tt-n-complete-annotated-field-v1 = 1
-             move "Y" to steps
-          end-if
-       when "area"
-          call "TT_SESSION_TEXT" using by reference
-             v-data-string of
-             tt-n-complete-annotated-field-v1
-             app-area area-length returning status-code
-       when "impact"
-          compute impact rounded = v-data-number of
-             tt-n-complete-annotated-field-v1
-    end-evaluate
-    set field-at up by length of
-       tt-n-complete-annotated-field-map-entry-v1.
