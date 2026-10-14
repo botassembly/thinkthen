@@ -8555,13 +8555,12 @@ namespace tt::results::detail {
                         }) return Data(number);
                     } throw std::invalid_argument("native integer is outside the C++ range");
                 }
+                std::istringstream stream(text);
+                stream.imbue(std::locale::classic());
                 double number{
                 };
-                auto parsed=std::from_chars(text.data(),text.data()+text.size(),number);
-                auto exponent=text.find_first_of("eE");
-                if(parsed.ec==std::errc::result_out_of_range && exponent!=std::string::npos && exponent+1<text.size() && text[exponent+1]=="-"[0]) return Data(text[0]=="-"[0] ? -0.0 : 0.0);
-                if(parsed.ec!=std::errc{
-                }) throw std::invalid_argument("invalid native number");
+                stream >> number;
+                if(stream.fail() || !stream.eof() || !std::isfinite(number)) throw std::invalid_argument("invalid native number");
                 return Data(number);
             }
             case THINKTHEN_COMPLETE_JSON_ARRAY_V1: {

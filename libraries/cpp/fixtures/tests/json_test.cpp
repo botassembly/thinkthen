@@ -2,11 +2,12 @@
 #include <iostream>
 #include <stdexcept>
 #include <string>
+#include <vector>
 using tt::Data;
 int main() {
-    for (const auto& text : {"\"\\uD800\"", "\"\\uDC00\"", "\"\\uD800\\u0061\"",
+    for (const auto& text : std::vector<std::string>{"\"\\uD800\"", "\"\\uDC00\"", "\"\\uD800\\u0061\"",
                              "\"\\q\"", "\"\\uXYZ1\"", "[1,]", "{\"a\":1,\"a\":2}", "01", "1e9999", "-1e9999",
-                             "18446744073709551616", "-9223372036854775809"}) {
+                             "18446744073709551616", "-9223372036854775809", std::string(400,'9')+"e-1"}) {
         try { (void)::tt::detail::parse_original(text); std::cerr << "JSON_NEGATIVE_ACCEPTED " << text << '\n'; return 1; }
         catch (const std::invalid_argument&) { std::cout << "JSON_PARSER_NEGATIVE_PASS " << text << '\n'; }
     }
