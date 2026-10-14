@@ -85,7 +85,8 @@ procedure division.
              tt-n-cobol-AnswerAnnotationField to app-area
        when "impact"
           move v-number of
-             tt-n-cobol-AnswerAnnotationField to impact
+             tt-n-cobol-AnswerAnnotationField
+             to impact rounded
        end-evaluate
        set row-at up by length of
           tt-n-cobol-AnswerAnnotationField
