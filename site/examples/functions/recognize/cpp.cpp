@@ -15,7 +15,8 @@ int main() {
     auto call = client.recognize(kinds, text);
     auto found = call.result().value;
     std::vector<std::string> names;
-    for (const auto& one : std::get<std::vector<tt::results::Entity>>(found)) {
+    for (const auto& one :
+        std::get<std::vector<tt::results::Entity>>(found)) {
         names.push_back(*one.text().value + " (" +
             *one.kind().value + ")");
     }

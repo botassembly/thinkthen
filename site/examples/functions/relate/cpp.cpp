@@ -27,7 +27,8 @@ int main() {
     std::vector<std::string> who_makes;
     for (const auto& edge : found) {
         who_makes.push_back(
-            edge.source_name() + " makes " + edge.target_name());
+            edge.source_name() + " makes " +
+            edge.target_name());
     }
     std::vector<std::string> expected{
         "Apple makes iPhone",
