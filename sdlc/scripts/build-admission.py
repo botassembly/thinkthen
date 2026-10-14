@@ -73,6 +73,13 @@ def high_waiters(directory):
     return False
 
 
+def load_allows_build():
+    # GitHub supplies both markers; self-hosted jobs retain local admission.
+    hosted = (os.environ.get('GITHUB_ACTIONS') == 'true' and
+              os.environ.get('RUNNER_ENVIRONMENT') == 'github-hosted')
+    return hosted or os.getloadavg()[0] <= (os.cpu_count() or 1)
+
+
 def admit(fd, resources, priority, directory, deadline):
     while True:
         if deadline is not None and time.monotonic() >= deadline:
@@ -83,12 +90,12 @@ def admit(fd, resources, priority, directory, deadline):
             # Shared flock prevents overlap with an old exclusive supervisor.
             shared = available(fd, lambda f: fcntl.flock(f, fcntl.LOCK_SH | fcntl.LOCK_NB))
             if shared and resources.acquire(PERMITS):
-                if os.getloadavg()[0] <= (os.cpu_count() or 1):
+                if load_allows_build():
                     if priority == 'high' or not high_waiters(directory):
                         for slot in range(PERMITS):
                             if resources.acquire(slot):
                                 # Never sleep while holding a permit.
-                                if os.getloadavg()[0] <= (os.cpu_count() or 1):
+                                if load_allows_build():
                                     admitted = True
                                     return
                                 break

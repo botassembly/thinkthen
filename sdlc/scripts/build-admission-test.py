@@ -59,13 +59,16 @@ class Admission(unittest.TestCase):
             'runpy.run_path(' + repr(str(HELPER)) + ',run_name="__main__")\n')
         return scripts
 
-    def launch(self, name, priority='normal', command=None, timeout=None, lock=None):
+    def launch(self, name, priority='normal', command=None, timeout=None, lock=None, hosted=False, context=None):
         release = self.root / name
         args = [sys.executable, '-c', LAUNCH, str(self.load), str(HELPER), '--lock', str(lock or self.lock), '--priority', priority]
         if timeout:
             args += ['--timeout', str(timeout)]
         args += ['--', *(command or [sys.executable, '-c', COMPILER, str(release)])]
-        child = subprocess.Popen(args, env={'PATH': os.environ['PATH']}, stderr=subprocess.DEVNULL)
+        env = {'PATH': os.environ['PATH']} | (context or {})
+        if hosted:
+            env.update(GITHUB_ACTIONS='true', RUNNER_ENVIRONMENT='github-hosted')
+        child = subprocess.Popen(args, env=env, stderr=subprocess.DEVNULL)
         self.children.append(child)
         return child
 
@@ -217,6 +220,50 @@ class Admission(unittest.TestCase):
             time.sleep(.1)
             self.assertFalse(self.started('waiting'))
         self.wait_for(lambda: self.started('waiting'))
+
+    def test_hosted_high_load_keeps_four_permits_and_exclusive_barrier(self):
+        self.load.write_text(str((os.cpu_count() or 1) + 1))
+        with self.lock.open('a+b') as checkpoint:
+            fcntl.flock(checkpoint, fcntl.LOCK_EX)
+            for index in range(4):
+                self.launch('hosted-' + str(index), hosted=True)
+            time.sleep(.1)
+            self.assertFalse(any(self.started('hosted-' + str(i)) for i in range(4)))
+        self.wait_for(lambda: all(self.started('hosted-' + str(i)) for i in range(4)))
+        self.launch('hosted-fifth', hosted=True)
+        time.sleep(.1)
+        self.assertFalse(self.started('hosted-fifth'))
+        self.release('hosted-0')
+        self.wait_for(lambda: self.started('hosted-fifth'))
+
+    def test_incomplete_and_self_hosted_context_retains_load_cap(self):
+        self.load.write_text(str((os.cpu_count() or 1) + 1))
+        contexts = ({'GITHUB_ACTIONS': 'true'},
+                    {'RUNNER_ENVIRONMENT': 'github-hosted'},
+                    {'GITHUB_ACTIONS': 'true', 'RUNNER_ENVIRONMENT': 'self-hosted'})
+        for index, context in enumerate(contexts):
+            with self.subTest(context=context):
+                name = 'local-' + str(index)
+                child = self.launch(name, timeout=.2, context=context)
+                self.assertEqual(child.wait(timeout=2), 124)
+                self.assertFalse(self.started(name))
+                self.assert_resources_available()
+
+    def test_hosted_context_survives_rung_environment_isolation(self):
+        self.load.write_text(str((os.cpu_count() or 1) + 1))
+        scripts = self.entry_scripts()
+        rung = scripts / 'rung'
+        rung.write_text('set -eu\n. "$(dirname -- "$0")/heavy-lock"\n'
+                        'test "$GITHUB_ACTIONS" = true\n'
+                        'test "$RUNNER_ENVIRONMENT" = github-hosted\n'
+                        'test "${PRIVATE_SERVICE_KEY+x}" != x\n')
+        env = {'PATH': os.environ['PATH'], 'THINKTHEN_HEAVY_LOCK': str(self.lock),
+               'GITHUB_ACTIONS': 'true', 'RUNNER_ENVIRONMENT': 'github-hosted',
+               'PRIVATE_SERVICE_KEY': 'fake-rung-boundary'}
+        child = subprocess.Popen(['/bin/sh', str(rung)], env=env, start_new_session=True)
+        self.children.append(child)
+        self.assertEqual(self.wait_entry(child), 0)
+        self.assert_resources_available()
 
     def test_exit_timeout_and_termination_reap_children_and_release_permits(self):
         for mode in ('exit', 'timeout', 'terminate', 'interrupt', 'hangup'):
