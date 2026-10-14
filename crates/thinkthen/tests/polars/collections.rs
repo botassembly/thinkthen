@@ -909,7 +909,7 @@ fn relation_records_keep_generated_member_question_text_and_whole_set_probabilit
         .field_by_name("text")
         .expect("text");
     assert_eq!(
-        text.str().expect("String").into_iter().collect::<Vec<_>>(),
+        text.str().expect("String").iter().collect::<Vec<_>>(),
         [
             Some("Is it true that i1 knows i2?"),
             Some("Is it true that i2 knows i1?")
@@ -923,7 +923,7 @@ fn relation_records_keep_generated_member_question_text_and_whole_set_probabilit
             .expect("edge probabilities")
             .f64()
             .expect("Float64")
-            .into_iter()
+            .iter()
             .collect::<Vec<_>>(),
         [Some(0.9), Some(0.8)]
     );
