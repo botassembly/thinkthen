@@ -26,7 +26,7 @@ fn saved_annotate_batch_tiers() {
     let records = ["one", "two", "three"];
     let run = |engine: &Engine, set: &QuestionSet, options| {
         let mut batch =
-            crate::api::pull_annotations(&engine, set, crate::api::plain_records(records), options);
+            crate::api::pull_annotations(engine, set, crate::api::plain_records(records), options);
         let rows = batch.by_ref().collect::<Result<Vec<_>, _>>()?;
         assert_eq!(
             rows.iter().map(|row| *row.original()).collect::<Vec<_>>(),

@@ -29,85 +29,90 @@ fn reported_confidence_and_wire_score_do_not_replace_public_numbers() {
         ),
     ];
     for (source, reply, expected, confidence) in cases {
-        let listener = Listener::answering(move |_| Canned::ok(reply)).expect("listener");
-        let engine = engine(listener.base());
-        let thinkthen::LoadedQuestion::Question(asked) =
-            Question::from_json(source).expect("dynamic question")
-        else {
-            panic!("unbanded question");
+        assert_public_numbers(source, reply, expected, confidence);
+    }
+}
+
+#[cfg(test)]
+fn assert_public_numbers(source: &str, reply: &'static str, expected: Judgment, confidence: f64) {
+    let listener = Listener::answering(move |_| Canned::ok(reply)).expect("listener");
+    let engine = engine(listener.base());
+    let thinkthen::LoadedQuestion::Question(asked) =
+        Question::from_json(source).expect("dynamic question")
+    else {
+        panic!("unbanded question");
+    };
+    let (json, actual, supplied_confidence, probabilities, raw_level, requests_sent) =
+        match &expected {
+            Judgment::Score(_) => {
+                let call = engine.score(&asked, "fixture evidence").expect("score");
+                let result = &call.results()[0];
+                (
+                    serde_json::from_str::<serde_json::Value>(&result.to_json().expect("JSON"))
+                        .expect("JSON"),
+                    Judgment::Score(*call.value()),
+                    result.confidence(),
+                    result.probabilities(),
+                    result.raw_level().map(str::to_owned),
+                    call.facts().requests_sent(),
+                )
+            }
+            Judgment::Choice(_) => {
+                let call = crate::api::choose(
+                    &engine,
+                    &asked,
+                    crate::api::plain_records(["fixture evidence"]).map(Result::unwrap),
+                    CallOptions::new(),
+                )
+                .expect("choose");
+                let result = call.value()[0].result();
+                (
+                    serde_json::from_str::<serde_json::Value>(&result.to_json().expect("JSON"))
+                        .expect("JSON"),
+                    Judgment::Choice(result.value().map(str::to_owned)),
+                    result.confidence(),
+                    result.probabilities(),
+                    None,
+                    call.facts().requests_sent(),
+                )
+            }
+            _ => panic!("score or choice fixture"),
         };
-        let (json, actual, supplied_confidence, probabilities, raw_level, requests_sent) =
-            match &expected {
-                Judgment::Score(_) => {
-                    let call = engine.score(&asked, "fixture evidence").expect("score");
-                    let result = &call.results()[0];
-                    (
-                        serde_json::from_str::<serde_json::Value>(&result.to_json().expect("JSON"))
-                            .expect("JSON"),
-                        Judgment::Score(*call.value()),
-                        result.confidence(),
-                        result.probabilities(),
-                        result.raw_level().map(str::to_owned),
-                        call.facts().requests_sent(),
-                    )
-                }
-                Judgment::Choice(_) => {
-                    let call = crate::api::choose(
-                        &engine,
-                        &asked,
-                        crate::api::plain_records(["fixture evidence"]).map(Result::unwrap),
-                        CallOptions::new(),
-                    )
-                    .expect("choose");
-                    let result = call.value()[0].result();
-                    (
-                        serde_json::from_str::<serde_json::Value>(&result.to_json().expect("JSON"))
-                            .expect("JSON"),
-                        Judgment::Choice(result.value().map(str::to_owned)),
-                        result.confidence(),
-                        result.probabilities(),
-                        None,
-                        call.facts().requests_sent(),
-                    )
-                }
-                _ => panic!("score or choice fixture"),
-            };
-        assert_eq!(actual, expected, "0402 weighted value or choice cut");
+    assert_eq!(actual, expected, "0402 weighted value or choice cut");
+    assert_eq!(
+        supplied_confidence,
+        Some(confidence),
+        "0402 vendor confidence"
+    );
+    assert_eq!(
+        json["answer"]["confidence"], confidence,
+        "0402 serialized confidence"
+    );
+    assert_eq!(listener.count(), 1, "0402 one counted request");
+    assert_eq!(requests_sent, 1);
+    assert_eq!(json["meta"]["requests"].as_array().unwrap().len(), 1);
+    if let Judgment::Score(_) = expected {
+        assert_eq!(raw_level.as_deref(), Some("Work is blocked."));
+        let Probabilities::Named(probabilities) = probabilities else {
+            panic!("score distribution");
+        };
         assert_eq!(
-            supplied_confidence,
-            Some(confidence),
-            "0402 vendor confidence"
+            probabilities
+                .iter()
+                .map(|p| p.probability())
+                .collect::<Vec<_>>(),
+            vec![0.0, 0.13, 0.87]
         );
+        assert_eq!(json["value"], 1.87, "0402 serialized weighted value");
+    } else {
         assert_eq!(
-            json["answer"]["confidence"], confidence,
-            "0402 serialized confidence"
+            json["value"],
+            match expected {
+                Judgment::Choice(Some(label)) => serde_json::Value::String(label),
+                _ => serde_json::Value::Null,
+            }
         );
-        assert_eq!(listener.count(), 1, "0402 one counted request");
-        assert_eq!(requests_sent, 1);
-        assert_eq!(json["meta"]["requests"].as_array().unwrap().len(), 1);
-        if let Judgment::Score(_) = expected {
-            assert_eq!(raw_level.as_deref(), Some("Work is blocked."));
-            let Probabilities::Named(probabilities) = probabilities else {
-                panic!("score distribution");
-            };
-            assert_eq!(
-                probabilities
-                    .iter()
-                    .map(|p| p.probability())
-                    .collect::<Vec<_>>(),
-                vec![0.0, 0.13, 0.87]
-            );
-            assert_eq!(json["value"], 1.87, "0402 serialized weighted value");
-        } else {
-            assert_eq!(
-                json["value"],
-                match expected {
-                    Judgment::Choice(Some(label)) => serde_json::Value::String(label),
-                    _ => serde_json::Value::Null,
-                }
-            );
-            assert_eq!(json["answer"]["pick"], "first");
-        }
+        assert_eq!(json["answer"]["pick"], "first");
     }
 }
 

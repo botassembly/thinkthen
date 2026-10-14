@@ -176,7 +176,11 @@ fn atomic_document(
                 LoadedQuestion::Banded(q) => engine.decide(q, text),
             }
             .map_err(|e| e.to_string())?;
-            call.results()[0].to_json().map_err(|e| e.to_string())
+            call.results()
+                .first()
+                .ok_or("no retained result")?
+                .to_json()
+                .map_err(|e| e.to_string())
         }
         "choose" | "tag" | "score" => {
             let LoadedQuestion::Question(q) = question else {
@@ -190,9 +194,11 @@ fn atomic_document(
                     thinkthen::CallOptions::new(),
                 )
                 .map_err(|e| e.to_string())?
-                .value()[0]
-                    .result()
-                    .to_json(),
+                .value()
+                .first()
+                .ok_or("no retained result")?
+                .result()
+                .to_json(),
                 "tag" => crate::api::tag(
                     engine,
                     q,
@@ -200,14 +206,22 @@ fn atomic_document(
                     thinkthen::CallOptions::new(),
                 )
                 .map_err(|e| e.to_string())?
-                .value()[0]
-                    .result()
+                .value()
+                .first()
+                .ok_or("no retained result")?
+                .result()
+                .to_json(),
+                _ => engine
+                    .score(q, text)
+                    .map_err(|e| e.to_string())?
+                    .results()
+                    .first()
+                    .ok_or("no retained result")?
                     .to_json(),
-                _ => engine.score(q, text).map_err(|e| e.to_string())?.results()[0].to_json(),
             }
             .map_err(|e| e.to_string())
         }
-        _ => return Err("atomic function required".into()),
+        _ => Err("atomic function required".into()),
     }
 }
 
