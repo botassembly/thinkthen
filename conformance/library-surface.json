@@ -1538,7 +1538,12 @@
         "CallFailure",
         "Cancellation",
         "StreamCleanupFailure",
-        "UsagePersistenceStatus"
+        "UsagePersistenceStatus",
+        "CallResult",
+        "CallProbability",
+        "ScalarProbability",
+        "ListProbability",
+        "GroupProbability"
       ],
       "representation_calls": [
         "imageBytes"
@@ -1554,6 +1559,14 @@
         "StreamCleanupFailure": [
           "cause",
           "toString"
+        ],
+        "CallResult": [
+          "value",
+          "probability",
+          "results",
+          "facts",
+          "packets",
+          "terminal"
         ]
       }
     },

@@ -1,6 +1,7 @@
 specification/*.json text eol=lf
 databases/postgresql/src/native/functions_generated.rs linguist-generated
 databases/postgresql/src/native/results_generated.rs linguist-generated
+databases/sqlite/src/receipt_generated.rs linguist-generated
 libraries/ada/src/thinkthen-answers.adb linguist-generated
 libraries/ada/src/thinkthen-answers.ads linguist-generated
 libraries/ada/src/thinkthen-inputs-calls.adb linguist-generated
@@ -89,4 +90,3 @@ libraries/zig/src/plan_generated.zig linguist-generated
 libraries/zig/src/request_generated.zig linguist-generated
 libraries/zig/src/results_generated.zig linguist-generated
 sdlc/generators/results/csharp/CompleteFacts.g.cs linguist-generated
-databases/sqlite/src/receipt_generated.rs linguist-generated

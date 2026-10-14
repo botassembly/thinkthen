@@ -137,6 +137,7 @@ registry() {
 
 if [ "$registry_only" -eq 1 ]; then
 	registry sdlc/surfaces.txt
+	python3 sdlc/scripts/feature-inventory-test.py
 	planted=$(mktemp)
 	trap 'rm -f -- "$planted" "$planted.json" "$planted.pid" "$planted.term"' EXIT
 	{ cat sdlc/surfaces.txt; echo 'libraries/planted landed'; } >"$planted"

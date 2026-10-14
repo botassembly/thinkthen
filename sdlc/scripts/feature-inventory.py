@@ -41,7 +41,8 @@ def inventory(root, surface):
 def check(root, surface):
     expected = inventory(root, surface)
     names = subprocess.check_output(['git', 'ls-files', '-co', '--exclude-standard', '--', surface], cwd=root, text=True)
-    actual = {(root / name).resolve() for name in names.splitlines()}
+    actual = {(root / name).resolve() for name in names.splitlines()
+              if (root / name).is_file()}
     extra, missing = actual - expected, expected - actual
     # A consumer can share a fixture from another installed library.
     missing = {path for path in missing if path.is_relative_to(root / surface)}
