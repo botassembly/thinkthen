@@ -16,9 +16,9 @@ begin
         Thinkthen.Inputs.Calls.Choose (
      File_Question ("teams.json"),
      Make_Input_text (Evidence));
-      Team : constant V.Value := Result.Value;
+      Team : constant Choice := Result.Value;
    begin
       pragma Assert
-        (V.As_String (Team) = "shipping");
+        (Team.Known and then To_String (Team.Value) = "shipping");
    end;
 end Sample;

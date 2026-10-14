@@ -18,6 +18,12 @@ def outputs(definitions):
     for function, spec in specs.items():
         array = spec['receipt_payload'].get('type') == 'array'
         mode = spec['probability_mode']
+        schema = spec['aggregate_value']
+        schema = schema['items'] if array else schema
+        kind = schema.get('type') if isinstance(schema, dict) else None
+        value_kind = ('choice' if kind == ['string', 'null'] else
+                      'score' if kind == 'number' else 'rank' if kind == 'integer' else
+                      'tag' if kind == 'array' and schema.get('items', {}).get('type') == 'string' else 'json')
         for single in ([True, False] if spec['call_shape'] == 'input' else [False]):
             name = result_type(function, spec, single)
             scalar_value = single or spec['call_shape'] == 'aggregate'
@@ -26,17 +32,32 @@ def outputs(definitions):
             p_type = ('Nested_Probability_Lists.Vector' if item_odds and list_odds else
                       'Probability_Lists.Vector' if item_odds else
                       'Number_Field_List (1 .. Value_Count)' if list_odds else 'Number_Field')
-            v_type = 'Thinkthen.Values.Value' if scalar_value else 'Thinkthen.Values.Value_List (1 .. Value_Count)'
+            v_type = {'choice': ('Choice' if scalar_value else 'Choice_List (1 .. Value_Count)'),
+                      'score': ('Long_Float' if scalar_value else 'Score_List (1 .. Value_Count)'),
+                      'rank': 'Rank_List (1 .. Value_Count)',
+                      'tag': ('Text_List (1 .. Value_Count)' if scalar_value else 'Text_Lists.Vector')}.get(value_kind, 'Thinkthen.Values.Value' if scalar_value else 'Thinkthen.Values.Value_List (1 .. Value_Count)')
             discriminants = 'Record_Count : Natural' if scalar_value else 'Value_Count, Record_Count : Natural'
+            if value_kind == 'tag' and scalar_value:
+                discriminants = 'Value_Count, Record_Count : Natural'
             declarations += [f'type {name} ({discriminants}) is record', f'Value : {v_type};', f'Probability : {p_type};', 'Results : Receipt_List (1 .. Record_Count);', 'Facts : Thinkthen.Answers.Facts;', 'end record;']
             signature = f'function {function.title()} (Call : Completion) return {name}'
             declarations.append(signature + ';')
-            lines = [signature + ' is', f'Rows : constant Value_List := Receipts (Call, "{function}", {str(array)});', f'Result : {name} (' + ('Rows\'Length' if scalar_value else "Rows'Length, Rows'Length") + ');', 'begin']
+            count = "Rows'Length" if scalar_value else "Rows'Length, Rows'Length"
+            if value_kind == 'tag' and scalar_value:
+                count = 'Length (Field_Value (Rows (1), "value")), Rows\'Length'
+            lines = [signature + ' is', f'Rows : constant Value_List := Receipts (Call, "{function}", {str(array)});', f'Result : {name} (' + count + ');', 'begin']
             if scalar_value:
                 lines.append('if Rows\'Length /= 1 then raise Answer_Cardinality_Error with "expected one result"; end if;')
             lines += ['Result.Facts := Call_Facts (Call);', "for I in Rows'Range loop", 'Result.Results (I) := (Data => Rows (I));']
             projection = f'Field_Value (Rows (I), "{spec["value_projection"]}")'
-            lines.append(('Result.Value' if scalar_value else 'Result.Value (I)') + ' := ' + projection + ';')
+            conversion = {'choice': 'Read_Choice (' + projection + ')',
+                          'score': "Long_Float'Value (As_Number (" + projection + '))',
+                          'rank': "Interfaces.Unsigned_64'Value (As_Number (" + projection + '))',
+                          'tag': 'Texts (' + projection + ')'}.get(value_kind, projection)
+            if value_kind == 'tag' and not scalar_value:
+                lines.append('Result.Value.Append (' + conversion + ');')
+            else:
+                lines.append(('Result.Value' if scalar_value else 'Result.Value (I)') + ' := ' + conversion + ';')
             if item_odds:
                 expr = 'Item_Probabilities (Rows (I), ' + str(function == 'recognize') + ')'
                 lines.append('Result.Probability := ' + expr + ';' if scalar_value else 'Result.Probability.Append (' + expr + ');')
@@ -79,7 +100,18 @@ def number_expression(spec, function):
 
 
 RESOLVERS = {}
-HELPERS = '''function Receipts (Call : Completion; Function_Name : String; Is_Array : Boolean) return Value_List is
+HELPERS = '''function Read_Choice (Item : Value) return Choice is
+begin
+   if Kind (Item) = Null_Value then return (Known => False); end if;
+   return (Known => True, Value => To_Unbounded_String (As_String (Item)));
+end Read_Choice;
+function Texts (Item : Value) return Text_List is
+   Result : Text_List (1 .. Length (Item));
+begin
+   for I in Result'Range loop Result (I) := To_Unbounded_String (As_String (Element (Item, I))); end loop;
+   return Result;
+end Texts;
+function Receipts (Call : Completion; Function_Name : String; Is_Array : Boolean) return Value_List is
    Owned : Packet_Lists.Vector;
 begin
    case Status (Call) is

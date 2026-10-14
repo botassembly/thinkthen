@@ -147,6 +147,7 @@ def outputs(definitions):
 SPEC = '''-- Generated owned answers from the canonical native result graph.
 with Ada.Strings.Unbounded;
 with Ada.Containers.Vectors;
+with Ada.Containers.Indefinite_Vectors;
 with Interfaces;
 with Thinkthen.Values;
 with Thinkthen.Sessions;
@@ -187,6 +188,14 @@ package Thinkthen.Answers is
    function Source_Name (Edge : Thinkthen.Values.Value) return String;
    function Target_Name (Edge : Thinkthen.Values.Value) return String;
    function Relation_Name (Edge : Thinkthen.Values.Value) return String;
+   type Choice (Known : Boolean := False) is record
+      case Known is when True => Value : Ada.Strings.Unbounded.Unbounded_String; when False => null; end case;
+   end record;
+   type Choice_List is array (Positive range <>) of Choice;
+   type Text_List is array (Positive range <>) of Ada.Strings.Unbounded.Unbounded_String;
+   type Rank_List is array (Positive range <>) of Interfaces.Unsigned_64;
+   type Score_List is array (Positive range <>) of Long_Float;
+   package Text_Lists is new Ada.Containers.Indefinite_Vectors (Positive, Text_List);
    -- ANSWERS
 private
    -- CALL_PRIVATE

@@ -5733,6 +5733,17 @@ end loop;
 return False;
 end Resolved_Choose;
 function Record_Value (Item : Receipt) return Value is (Item.Data);
+function Read_Choice (Item : Value) return Choice is
+begin
+   if Kind (Item) = Null_Value then return (Known => False); end if;
+   return (Known => True, Value => To_Unbounded_String (As_String (Item)));
+end Read_Choice;
+function Texts (Item : Value) return Text_List is
+   Result : Text_List (1 .. Length (Item));
+begin
+   for I in Result'Range loop Result (I) := To_Unbounded_String (As_String (Element (Item, I))); end loop;
+   return Result;
+end Texts;
 function Receipts (Call : Completion; Function_Name : String; Is_Array : Boolean) return Value_List is
    Owned : Packet_Lists.Vector;
 begin
@@ -5847,7 +5858,7 @@ if Rows'Length /= 1 then raise Answer_Cardinality_Error with "expected one resul
 Result.Facts := Call_Facts (Call);
 for I in Rows'Range loop
 Result.Results (I) := (Data => Rows (I));
-Result.Value := Field_Value (Rows (I), "value");
+Result.Value := Read_Choice (Field_Value (Rows (I), "value"));
 Result.Probability := (if Resolved_Choose (Call, Rows (I), I) then Number (Field_Value (Field_Value (Field_Value (Rows (I), "answer"), "probabilities"), As_String (Field_Value (Field_Value (Rows (I), "answer"), "pick")))) else (State => Null_Field));
 end loop;
 return Result;
@@ -5859,20 +5870,20 @@ begin
 Result.Facts := Call_Facts (Call);
 for I in Rows'Range loop
 Result.Results (I) := (Data => Rows (I));
-Result.Value (I) := Field_Value (Rows (I), "value");
+Result.Value (I) := Read_Choice (Field_Value (Rows (I), "value"));
 Result.Probability (I) := (if Resolved_Choose (Call, Rows (I), I) then Number (Field_Value (Field_Value (Field_Value (Rows (I), "answer"), "probabilities"), As_String (Field_Value (Field_Value (Rows (I), "answer"), "pick")))) else (State => Null_Field));
 end loop;
 return Result;
 end Choose;
 function Tag (Call : Completion) return Tag_Result is
 Rows : constant Value_List := Receipts (Call, "tag", True);
-Result : Tag_Result (Rows'Length);
+Result : Tag_Result (Length (Field_Value (Rows (1), "value")), Rows'Length);
 begin
 if Rows'Length /= 1 then raise Answer_Cardinality_Error with "expected one result"; end if;
 Result.Facts := Call_Facts (Call);
 for I in Rows'Range loop
 Result.Results (I) := (Data => Rows (I));
-Result.Value := Field_Value (Rows (I), "value");
+Result.Value := Texts (Field_Value (Rows (I), "value"));
 Result.Probability := (State => Null_Field);
 end loop;
 return Result;
@@ -5884,7 +5895,7 @@ begin
 Result.Facts := Call_Facts (Call);
 for I in Rows'Range loop
 Result.Results (I) := (Data => Rows (I));
-Result.Value (I) := Field_Value (Rows (I), "value");
+Result.Value.Append (Texts (Field_Value (Rows (I), "value")));
 Result.Probability := (State => Null_Field);
 end loop;
 return Result;
@@ -5897,7 +5908,7 @@ if Rows'Length /= 1 then raise Answer_Cardinality_Error with "expected one resul
 Result.Facts := Call_Facts (Call);
 for I in Rows'Range loop
 Result.Results (I) := (Data => Rows (I));
-Result.Value := Field_Value (Rows (I), "value");
+Result.Value := Long_Float'Value (As_Number (Field_Value (Rows (I), "value")));
 Result.Probability := (State => Null_Field);
 end loop;
 return Result;
@@ -5909,7 +5920,7 @@ begin
 Result.Facts := Call_Facts (Call);
 for I in Rows'Range loop
 Result.Results (I) := (Data => Rows (I));
-Result.Value (I) := Field_Value (Rows (I), "value");
+Result.Value (I) := Long_Float'Value (As_Number (Field_Value (Rows (I), "value")));
 Result.Probability := (State => Null_Field);
 end loop;
 return Result;
@@ -5933,7 +5944,7 @@ begin
 Result.Facts := Call_Facts (Call);
 for I in Rows'Range loop
 Result.Results (I) := (Data => Rows (I));
-Result.Value (I) := Field_Value (Rows (I), "index");
+Result.Value (I) := Interfaces.Unsigned_64'Value (As_Number (Field_Value (Rows (I), "index")));
 Result.Probability (I) := Number (Field_Value (Field_Value (Rows (I), "answer"), "probability"));
 end loop;
 return Result;

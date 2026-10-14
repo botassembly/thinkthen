@@ -1,6 +1,7 @@
 -- Generated owned answers from the canonical native result graph.
 with Ada.Strings.Unbounded;
 with Ada.Containers.Vectors;
+with Ada.Containers.Indefinite_Vectors;
 with Interfaces;
 with Thinkthen.Values;
 with Thinkthen.Sessions;
@@ -41,6 +42,14 @@ package Thinkthen.Answers is
    function Source_Name (Edge : Thinkthen.Values.Value) return String;
    function Target_Name (Edge : Thinkthen.Values.Value) return String;
    function Relation_Name (Edge : Thinkthen.Values.Value) return String;
+   type Choice (Known : Boolean := False) is record
+      case Known is when True => Value : Ada.Strings.Unbounded.Unbounded_String; when False => null; end case;
+   end record;
+   type Choice_List is array (Positive range <>) of Choice;
+   type Text_List is array (Positive range <>) of Ada.Strings.Unbounded.Unbounded_String;
+   type Rank_List is array (Positive range <>) of Interfaces.Unsigned_64;
+   type Score_List is array (Positive range <>) of Long_Float;
+   package Text_Lists is new Ada.Containers.Indefinite_Vectors (Positive, Text_List);
    function Cache_Answers (Item : Facts) return Interfaces.Unsigned_64;
 function Call_Id (Item : Facts) return String;
 function Estimated_Cost_Usd (Item : Facts) return Text_Field;
@@ -75,42 +84,42 @@ Facts : Thinkthen.Answers.Facts;
 end record;
 function Decide (Call : Completion) return Decide_List_Result;
 type Choose_Result (Record_Count : Natural) is record
-Value : Thinkthen.Values.Value;
+Value : Choice;
 Probability : Number_Field;
 Results : Receipt_List (1 .. Record_Count);
 Facts : Thinkthen.Answers.Facts;
 end record;
 function Choose (Call : Completion) return Choose_Result;
 type Choose_List_Result (Value_Count, Record_Count : Natural) is record
-Value : Thinkthen.Values.Value_List (1 .. Value_Count);
+Value : Choice_List (1 .. Value_Count);
 Probability : Number_Field_List (1 .. Value_Count);
 Results : Receipt_List (1 .. Record_Count);
 Facts : Thinkthen.Answers.Facts;
 end record;
 function Choose (Call : Completion) return Choose_List_Result;
-type Tag_Result (Record_Count : Natural) is record
-Value : Thinkthen.Values.Value;
+type Tag_Result (Value_Count, Record_Count : Natural) is record
+Value : Text_List (1 .. Value_Count);
 Probability : Number_Field;
 Results : Receipt_List (1 .. Record_Count);
 Facts : Thinkthen.Answers.Facts;
 end record;
 function Tag (Call : Completion) return Tag_Result;
 type Tag_List_Result (Value_Count, Record_Count : Natural) is record
-Value : Thinkthen.Values.Value_List (1 .. Value_Count);
+Value : Text_Lists.Vector;
 Probability : Number_Field;
 Results : Receipt_List (1 .. Record_Count);
 Facts : Thinkthen.Answers.Facts;
 end record;
 function Tag (Call : Completion) return Tag_List_Result;
 type Score_Result (Record_Count : Natural) is record
-Value : Thinkthen.Values.Value;
+Value : Long_Float;
 Probability : Number_Field;
 Results : Receipt_List (1 .. Record_Count);
 Facts : Thinkthen.Answers.Facts;
 end record;
 function Score (Call : Completion) return Score_Result;
 type Score_List_Result (Value_Count, Record_Count : Natural) is record
-Value : Thinkthen.Values.Value_List (1 .. Value_Count);
+Value : Score_List (1 .. Value_Count);
 Probability : Number_Field;
 Results : Receipt_List (1 .. Record_Count);
 Facts : Thinkthen.Answers.Facts;
@@ -124,7 +133,7 @@ Facts : Thinkthen.Answers.Facts;
 end record;
 function Filter (Call : Completion) return Filter_Result;
 type Rank_Result (Value_Count, Record_Count : Natural) is record
-Value : Thinkthen.Values.Value_List (1 .. Value_Count);
+Value : Rank_List (1 .. Value_Count);
 Probability : Number_Field_List (1 .. Value_Count);
 Results : Receipt_List (1 .. Record_Count);
 Facts : Thinkthen.Answers.Facts;

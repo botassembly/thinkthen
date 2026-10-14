@@ -19,10 +19,10 @@ begin
         Thinkthen.Inputs.Calls.Tag (
      File_Question ("labels.json"),
      Make_Input_text (Evidence));
-      Fitting_Labels : constant V.Value := Result.Value;
+      Fitting_Labels : constant Thinkthen.Answers.Text_List := Result.Value;
    begin
       pragma Assert (Fitting_Labels =
-        V.Array_Item ([V.String_Item ("praise"),
-         V.String_Item ("bug"), V.String_Item ("billing")]));
+        [To_Unbounded_String ("praise"),
+         To_Unbounded_String ("bug"), To_Unbounded_String ("billing")]);
    end;
 end Sample;

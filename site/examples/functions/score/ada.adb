@@ -18,7 +18,7 @@ begin
      File_Question ("levels.json"),
      Make_Input_text (Evidence));
       Urgency : constant Long_Float :=
-        Long_Float'Value (V.As_Number (Result.Value));
+        Result.Value;
    begin
       pragma Assert (Urgency = 2.0);
    end;

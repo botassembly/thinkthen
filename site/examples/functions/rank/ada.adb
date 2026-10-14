@@ -25,10 +25,8 @@ begin
         Thinkthen.Inputs.Calls.Rank (
      Text_Question ("Is this urgent?"),
      Records_Input (Records));
-      By_Urgency : constant V.Value_List := Result.Value;
+      By_Urgency : constant Rank_List := Result.Value;
    begin
-      pragma Assert (V.Array_Item (By_Urgency) = V.Array_Item
-        ([V.Number_Item ("1"), V.Number_Item ("3"),
-          V.Number_Item ("2"), V.Number_Item ("0")]));
+      pragma Assert (By_Urgency = [1, 3, 2, 0]);
    end;
 end Sample;

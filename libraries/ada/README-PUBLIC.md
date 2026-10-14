@@ -30,8 +30,7 @@ begin
    for Text of Messages loop
       declare Team : constant Choose_Result := Thinkthen.Inputs.Calls.Choose
         (Team_Question, Text_Input (To_String (Text))); begin
-         Ada.Text_IO.Put_Line (if Thinkthen.Values.Kind (Team.Value) = Thinkthen.Values.Null_Value then "not sure"
-           else Thinkthen.Values.As_String (Team.Value));
+         Ada.Text_IO.Put_Line (if Team.Value.Known then To_String (Team.Value.Value) else "not sure");
       end;
    end loop; end Registry_Example;
 ```

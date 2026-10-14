@@ -53,11 +53,11 @@ with tempfile.TemporaryDirectory(prefix='thinkthen-ada-session-') as temporary:
         calls.append(f'Select_Route ("case/{case}/v1"); Thinkthen.Native_Sessions.Start (Client, Owner, R_{verb}, "{verb}"); Finish (Owner); Drain{" (Odds => 0.99)" if verb == "decide" else ""}; Put_Line ("SHARED_CASE {case}");')
     answer_checks = {
         'decide': 'Require (As_Boolean (Item.Value) and then Item.Probability.State = Present_Field and then Item.Probability.Value = 0.99 and then Item.Results\'Length = 1 and then Requests_Sent (Item.Facts) = 1, "paired refund result");',
-        'choose': 'Require (As_String (Item.Value) = "billing" and then Item.Probability.State = Present_Field and then abs (Item.Probability.Value - 0.7) < 0.00001 and then Item.Results\'Length = 1 and then Requests_Sent (Item.Facts) = 1, "paired choose result");',
-        'tag': 'Require (Length (Item.Value) = 2 and then Item.Probability.State = Null_Field, "safe tags");',
+        'choose': 'Require (Item.Value.Known and then To_String (Item.Value.Value) = "billing" and then Item.Probability.State = Present_Field and then abs (Item.Probability.Value - 0.7) < 0.00001 and then Item.Results\'Length = 1 and then Requests_Sent (Item.Facts) = 1, "paired choose result");',
+        'tag': '''Require (Item.Value'Length = 2 and then Item.Probability.State = Null_Field, "safe tags");''',
         'score': 'Require (Long_Float\'Value (As_Number (Item.Value)) > 0.0 and then Item.Probability.State = Null_Field, "safe score");',
         'filter': 'Require (Item.Value\'Length = 2 and then As_String (Item.Value (1)) = "row 0" and then As_String (Item.Value (2)) = "row 2" and then Item.Probability\'Length = 2, "plain filter originals");',
-        'rank': 'Require (Item.Value\'Length = 3 and then As_Number (Item.Value (1)) = "1" and then As_Number (Item.Value (2)) = "2" and then As_Number (Item.Value (3)) = "0" and then Item.Probability\'Length = 3, "plain original rank indexes");',
+        'rank': '''Require (Item.Value'Length = 3 and then Item.Value = Rank_List'[1, 2, 0] and then Item.Probability'Length = 3, "plain original rank indexes");''',
         'find': 'Require (Kind (Item.Value) /= Thinkthen.Values.Null_Value and then Item.Probability.State = Present_Field, "safe find");',
         'annotate': 'Require (Item.Value\'Length > 0 and then Item.Probability.State = Null_Field, "safe annotations");',
         'recognize': 'Require (Length (Field_Value (Item.Value, "entities")) > 0 and then Natural (Item.Probability.Length) > 0 and then Item.Probability (1).Value > 0.99 and then abs (Item.Probability (1).Value - 0.9877) > 0.001, "kept selected span probability");',
