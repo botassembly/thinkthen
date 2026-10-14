@@ -99,6 +99,11 @@ pub(crate) fn detailed(details: &Value, expected: &Value, base: &str) -> Checked
             same(field, &details["answer"][field], value)?;
         }
     }
+    same(
+        "confidence",
+        &details["answer"]["confidence"],
+        &answer["confidence"],
+    )?;
     for field in [
         "model",
         "question_sha256",

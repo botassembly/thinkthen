@@ -297,7 +297,7 @@ fn loaded(
 fn single(engine: &Engine, asked: &Question, text: &str, success: &Value, base: &str) -> Checked {
     let expected = &success["answers"][0];
     let (typed, details) = atomic(engine, asked, text)?;
-    same("bare", &details["answer"]["value"], &expected["bare"])?;
+    same("bare", &details["value"], &expected["bare"])?;
     detailed(&details, expected, base)?;
     same("typed", &typed, &expected["bare"])?;
     let Some(counters) = success.get("counters") else {
