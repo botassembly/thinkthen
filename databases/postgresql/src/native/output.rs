@@ -13,8 +13,8 @@ CREATE TYPE thinkthen_edge AS (relation text, source_name text, source_kind text
 
 pub(super) type FactsTuple = pgrx::composite_type!('static, "thinkthen_facts");
 pub(super) type FailureTuple = pgrx::composite_type!('static, "thinkthen_error");
-pub(super) type Names = Vec<pgrx::composite_type!('static, "thinkthen_name")>;
-pub(super) type Edges = Vec<pgrx::composite_type!('static, "thinkthen_edge")>;
+pub(super) type Names = Array<'static, pgrx::composite_type!('static, "thinkthen_name")>;
+pub(super) type Edges = Array<'static, pgrx::composite_type!('static, "thinkthen_edge")>;
 
 pub(super) fn tuple(name: &str) -> PgHeapTuple<'static, AllocatedByRust> {
     PgHeapTuple::new_composite_type(name)
@@ -114,7 +114,7 @@ pub(super) fn original(value: &thinkthen::QuestionInput) -> pgrx::datum::JsonB {
     }
 }
 pub(super) fn names(value: &thinkthen::Recognized) -> Names {
-    value
+    let values = value
         .entities()
         .iter()
         .map(|name| {
@@ -124,12 +124,13 @@ pub(super) fn names(value: &thinkthen::Recognized) -> Names {
             set(&mut value, "end", index(name.end()));
             set(&mut value, "kind", name.kind());
             set(&mut value, "strength", name.strength());
-            value
+            Some(value)
         })
-        .collect()
+        .collect();
+    crate::ffi::composite_array("thinkthen_name", values).or_raise()
 }
 pub(super) fn edges(edges: &[thinkthen::Edge]) -> Edges {
-    edges
+    let values = edges
         .iter()
         .map(|edge| {
             let mut value = tuple("thinkthen_edge");
@@ -140,19 +141,21 @@ pub(super) fn edges(edges: &[thinkthen::Edge]) -> Edges {
             set(&mut value, "target_kind", edge.target().kind());
             set(&mut value, "probability", edge.probability());
             set(&mut value, "either", edge.either());
-            value
+            Some(value)
         })
-        .collect()
+        .collect();
+    crate::ffi::composite_array("thinkthen_edge", values).or_raise()
 }
 
 pub(super) fn events(
     values: &[serde_json::Value],
-) -> Vec<pgrx::composite_type!('static, "thinkthen_event")> {
-    values
+) -> Array<'static, pgrx::composite_type!('static, "thinkthen_event")> {
+    let values = values
         .iter()
         .map(|value| {
             let value = value.get("value").unwrap_or(value);
-            super::results_generated::convert("thinkthen_event", value).or_raise()
+            Some(super::results_generated::convert("thinkthen_event", value).or_raise())
         })
-        .collect()
+        .collect();
+    crate::ffi::composite_array("thinkthen_event", values).or_raise()
 }

@@ -201,7 +201,7 @@ def render_functions():
         ('filter', 'JsonB', 'Filtered', 'filtered', 'row.result().value().then(|| output::original(row.original()))'),
         ('rank', 'i64', 'Ranked', 'ranked', 'Some(output::index(row.ordinal()))'),
         ('annotate', 'JsonB', 'Annotations', 'annotation', 'Some(crate::jsonb(&row.result().value_json().or_raise()))'),
-        ('recognize', 'Vec<pgrx::composite_type!(\'static, "thinkthen_name")>', 'Recognized', 'recognized', 'Some(output::names(row.result().value()))'),
+        ('recognize', 'Array<\'static, pgrx::composite_type!(\'static, "thinkthen_name")>', 'Recognized', 'recognized', 'Some(output::names(row.result().value()))'),
     )
     result = ["// Generated native PostgreSQL declarations; do not edit.",
               "use super::output;", "use crate::call::{self, OrRaise as _};",
@@ -229,7 +229,7 @@ fn {verb}_records(
     name!(result, Option<pgrx::composite_type!('static, "thinkthen_{reading}")>),
     name!(facts, Option<pgrx::composite_type!('static, "thinkthen_facts")>),
     name!(failure, Option<pgrx::composite_type!('static, "thinkthen_error")>),
-    name!(observations, Vec<pgrx::composite_type!('static, "thinkthen_event")>),
+    name!(observations, Array<'static, pgrx::composite_type!('static, "thinkthen_event")>),
 )> {{
     call::guarded(|| {{
         let (Some(question), Some(records)) = (question, records) else {{

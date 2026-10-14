@@ -30,8 +30,8 @@ def main(socket):
         found = [row['description'] for row in rows if row['signature'] == signature]
         assert len(found) == 1, (signature, found)
         return found[0]
-    image = description('thinkthen_decide_images_complete(text,thinkthen_image_value[],text)')
-    assert all(word in image for word in ('bytea', 'NULL', 'client', 'error envelopes')), image
+    image = description('thinkthen_decide(text,thinkthen_record[],thinkthen_reading)')
+    assert all(word in image for word in ('typed', 'NULL', 'client', 'facts', 'failures')), image
     removed = description('thinkthen_decide(text,text[])')
     assert all(word in removed for word in ('Removed', 'Usage', 'NULL', 'sends nothing')), removed
     loader = description('thinkthen_question_file(text)')

@@ -56,6 +56,21 @@ def main():
             assert row['result']['threshold']['number_value'] == 0.95, row
             assert len(row['facts']['call_id']) == 64 and row['result']['meta']['requests_sent'] == 1, row
             assert row['observations'] and row['observations'][0]['kind'] == 'question', row
+            assert query("SELECT array_append(observations,(observations)[1]) IS NOT NULL FROM thinkthen_decide('Fits?',ARRAY[" + record + "]) r", 1) == 't'
+            saved = quoted(json.dumps({'decide': 'Fits?', 'threshold': 0.95, 'context': 'Saved fallback.'}))
+            row = json.loads(query("SELECT to_jsonb(r) FROM thinkthen_decide(" + saved + ",ARRAY[" + record +
+                             "],thinkthen_reading(context=>'',threshold=>'0.5')) r", 1))
+            assert row['value'] is True and row['result']['threshold']['number_value'] == 0.5, row
+            wire = json.loads(json.loads(backend.read('capture'))['bodies'][-1])
+            assert 'Saved fallback.' not in json.dumps(wire), wire
+            assert wire['questions']['q1']['instructions'] == 'The text is Alpha.. Fits?', wire
+            saved = quoted(json.dumps({'find': 'Fits?', 'field': ['/body']}))
+            item = "thinkthen_record(value=>'{\"body\":\"Alpha.\",\"private\":\"not submitted\"}'::json)"
+            row = json.loads(query("SELECT to_jsonb(r) FROM thinkthen_find(" + saved + ",ARRAY[" + item + "]) r", 1))
+            assert row['index'] == 0, row
+            wire = json.loads(json.loads(backend.read('capture'))['bodies'][-1])
+            assert 'not submitted' not in json.dumps(wire), wire
+
             assert query("SELECT (thinkthen_record(value=>'null'::json)).value IS NULL") == 'f'
             assert query("SELECT (thinkthen_record()).value IS NULL") == 't'
             row = json.loads(query("SELECT to_jsonb(r) FROM thinkthen_decide('Fits?',ARRAY[thinkthen_record(value=>'null'::json)]) r", 1))

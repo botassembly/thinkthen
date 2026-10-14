@@ -64,6 +64,9 @@ fn record(tuple: Option<pgrx::composite_type!("thinkthen_record")>) -> Result<Re
     let failure: Option<pgrx::composite_type!("thinkthen_reader_failure")> =
         field(&tuple, "read_error")?;
     if let Some(failure) = failure {
+        if has_record_fields(&tuple)? {
+            return Err(call::usage("a terminal reader error has no record fields"));
+        }
         let kind: String =
             field(&failure, "kind")?.ok_or_else(|| call::usage("reader failure kind is NULL"))?;
         let kind = match kind.as_str() {
@@ -250,4 +253,16 @@ fn example_entity(
         )?,
         kind: field(&tuple, "kind")?.ok_or_else(|| call::usage("example kind is NULL"))?,
     })
+}
+
+fn has_record_fields(tuple: &pgrx::composite_type!("thinkthen_record")) -> Result<bool, Error> {
+    Ok(field::<String>(tuple, "text")?.is_some()
+        || field::<crate::ffi::RawJson>(tuple, "value")?.is_some()
+        || field::<String>(tuple, "context")?.is_some()
+        || field::<crate::ffi::RawJson>(tuple, "context_value")?.is_some()
+        || field::<Array<'_, pgrx::composite_type!("thinkthen_option")>>(tuple, "options")?.is_some()
+        || field::<Array<'_, pgrx::composite_type!("thinkthen_seed")>>(tuple, "seed_spans")?.is_some()
+        || field::<Array<'_, pgrx::composite_type!("thinkthen_example")>>(tuple, "examples")?.is_some()
+        || field::<Array<'_, pgrx::composite_type!("thinkthen_image_value")>>(tuple, "images")?.is_some()
+        || field::<pgrx::composite_type!("thinkthen_source")>(tuple, "source")?.is_some())
 }
