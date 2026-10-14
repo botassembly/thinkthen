@@ -45,7 +45,7 @@ Closed 2026-10-02 by the release rehearsals: 0222, 0224, 0226, 0227, 0231, 0268,
 
 ## 0.2
 
-Ian's 2026-10-08 architecture ruling requires the shared Request contract, generated header and host types, bounded binding experiment and all language migrations in 0.2. The [waves ruling](../decisions/2026-10-12-build-in-waves-test-once.md) sets the remaining order. The request contract and binding experiment run alongside the final per-record context checks. The PM cleared tagged examples in 0490: render only answered step-1 questions, before the recognition controls and language migrations. Stage context 0478, boundary-only 0479, MCP protocol 0488 and Windows Node/C#/JVM packaging 0383–0385 are also 0.2. These rulings supersede earlier SDK deferrals; 0.3 is the proxy. All languages stay, and release management remains held.
+Ian's 2026-10-08 architecture ruling requires the shared Request contract, generated header and host types, bounded binding experiment and all language migrations in 0.2. The [waves ruling](../decisions/2026-10-12-build-in-waves-test-once.md) sets the remaining order. The request contract and binding experiment run alongside the final per-record context checks. The PM cleared tagged examples in 0490: render only answered step-1 questions, before the recognition controls and language migrations. Stage context 0478, boundary-only 0479, MCP protocol 0488 and Windows Node/C#/JVM packaging 0383–0385 are also 0.2. These rulings supersede earlier SDK deferrals; the proxy moved to 0.5 under the 2026-10-14 ruling. All languages stay, and release management remains held.
 
 Ian lifted the 2026-10-08 release hold on 2026-10-10 except for publication. [0462](../tickets/0462-after-sprint-review.md) owns the complete after-sprint code review and bug sweep. The PM’s later addendum promotes 0461 into 0.2; its help/shared-case correction precedes landing. [0462’s findings](../records/0462-after-sprint-review.md) have fix owners 0463–0472; these remain 0.2 work. 0473 fixes the reported old configuration upgrade refusal.
 
@@ -130,7 +130,7 @@ Support work: [0453: Extend authorized live token admission](../tickets/0453-ext
 
 Read ticket and check status through pm. Existing installed-package campaigns and candidate lessons remain in their owning records; they do not qualify later contract and binding changes. The after-sprint review assigns confirmed fixes to their tickets.
 
-The 0456 amendment defines implementation scope. [0425 completion criteria](../tickets/0425-sdk-consistency-0-2-plan.md) require final installed parity including MCP, image inputs, 0.1 file/cache compatibility and complete public documentation. Run every local check before requesting a candidate. Windows and hosted macOS checks run once, at the 0543 candidate. Publication needs Ian's go. M5 may run experiments and Mac-specific checks; Yellow remains excluded. Main targets 0.2.0 and release/0.1 stays frozen. Public installation text stays 0.1.2 until 0.2 ships. No grep alias or new semantic function. Vision belongs to 0.2; unsupported routes refuse explicitly. Each engine keeps one endpoint, key and API type. Proxy execution belongs to 0.3 under an admitted protocol. PostgreSQL file inputs retain the reviewed client-reader workaround in 0434.
+The 0456 amendment defines implementation scope. [0425 completion criteria](../tickets/0425-sdk-consistency-0-2-plan.md) require final installed parity including MCP, image inputs, 0.1 file/cache compatibility and complete public documentation. Run every local check before requesting a candidate. Windows and hosted macOS checks run once, at the 0543 candidate. Publication needs Ian's go. M5 may run experiments and Mac-specific checks; Yellow remains excluded. Main targets 0.2.0 and release/0.1 stays frozen. Public installation text stays 0.1.2 until 0.2 ships. No grep alias or new semantic function. Vision belongs to 0.2; unsupported routes refuse explicitly. Each engine keeps one endpoint, key and API type. Proxy execution belongs to 0.5 under an admitted protocol. PostgreSQL file inputs retain the reviewed client-reader workaround in 0434.
 
 [0460](../tickets/0460-conservative-repeated-input-request-plan.md) requires conservative initial-send plans while retaining runtime coalescing, caches and the C header. Byte/token previews describe uninterrupted packing. Final installed parity must cover the settled request contract and all binding migrations.
 
@@ -140,19 +140,15 @@ Outcome: the docs and site sell one idea after 0.2 ships: put Jev-class decision
 
 ## 0.3
 
-Outcome: build the proxy and its business policy. All SDK architecture and Windows binding packages belong to 0.2 under Ian's later ruling.
+Outcome: ThinkThen owns your answers. One answer database, designed from the start with the full schema that 0.4's curation and evals need. A toolbox and a `run` command. MCP as one tool. Publishing. Spreadsheets join only if the writer prototype passes. Libraries gain only the ten functions and `run`; the toolbox, answers and admin stay in Rust and the command line. Ruling: [three releases after 0.2](../decisions/2026-10-14-three-releases-after-0-2.md).
 
-Future outcomes: support additional decision-provider endpoints and API versions, then other modalities when their contracts are known; admitted image questions are already required in 0.2. These are outcomes only.
+## 0.4
 
-Open items:
-
-- [0383: Windows stage 1: the Node addon ships for Windows x86-64](../tickets/0383-windows-node-addon.md)
-- [0384: Windows stage 1: the C# package loads the Windows DLL](../tickets/0384-windows-csharp.md)
-- [0385: Windows stage 1: the JVM binding loads the Windows DLL](../tickets/0385-windows-jvm.md)
+Outcome: ThinkThen grades and improves your answers. Curation fixes data: with labels, it finds where models and labels disagree; without labels, it queues likely-wrong first answers, lowest confidence first, then disagreement between models. Evals and the ranking setting run over the 0.3 answer database. Agents and notebooks curate through the command line; a web UI comes later.
 
 ## later
 
-Outcome: no release is promised. Each item waits on its own trigger, such as a user's request, an upstream fix or Ian's ruling.
+Outcome: no release is promised. The proxy and document structure wait here for 0.5 under the [three-release ruling](../decisions/2026-10-14-three-releases-after-0-2.md). Each item waits on its own trigger, such as a user's request, an upstream fix or Ian's ruling.
 
 Exit criteria: none. An item moves to a numbered milestone when its trigger fires or Ian places it.
 
