@@ -50,9 +50,11 @@ func main() {
 		edge := one.(map[string]any)
 		source := edge["source"].(map[string]any)
 		target := edge["target"].(map[string]any)
-		pairs = append(pairs, [2]string{source["name"].(string), target["name"].(string)})
+		pairs = append(pairs, [2]string{source["name"].(string),
+			target["name"].(string)})
 	}
-	want := [][2]string{{"Apple", "iPhone"}, {"Amazon", "Kindle"}}
+	want := [][2]string{{"Apple", "iPhone"},
+		{"Amazon", "Kindle"}}
 	if !slices.Equal(pairs, want) {
 		log.Fatal("expected two companies")
 	}
@@ -62,7 +64,8 @@ func main() {
 		log.Fatal("expected aligned probabilities")
 	}
 	for i, probability := range probabilities {
-		if probability == nil || *probability != wantProbabilities[i] {
+		if probability == nil ||
+			*probability != wantProbabilities[i] {
 			log.Fatal("unexpected recorded probability")
 		}
 	}

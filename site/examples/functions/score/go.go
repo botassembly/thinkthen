@@ -37,7 +37,8 @@ func main() {
 		log.Fatal(err)
 	}
 	urgency := call.Value.(json.Number)
-	if urgency != json.Number("2.0") || call.Probability != nil {
+	if urgency != json.Number("2.0") ||
+		call.Probability != nil {
 		log.Fatal("expected 2.0 with no scalar probability")
 	}
 }

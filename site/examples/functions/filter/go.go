@@ -45,7 +45,8 @@ func main() {
 		log.Fatal("expected aligned probabilities")
 	}
 	for i, probability := range probabilities {
-		if probability == nil || *probability != wantProbabilities[i] {
+		if probability == nil ||
+			*probability != wantProbabilities[i] {
 			log.Fatal("unexpected recorded probability")
 		}
 	}
