@@ -47,7 +47,7 @@ tt_request_native <- function(request, deadline, completion) .Call(wrap__tt_requ
 
 tt_request_plan <- function(request) .Call(wrap__tt_request_plan, request)
 
-tt_request_batch_start <- function(request) .Call(wrap__tt_request_batch_start, request)
+tt_request_batch_start <- function(request, collect) .Call(wrap__tt_request_batch_start, request, collect)
 
 tt_request_batch_poll <- function(batch) .Call(wrap__tt_request_batch_poll, batch)
 
@@ -58,5 +58,7 @@ tt_request_batch_cancel <- function(batch) .Call(wrap__tt_request_batch_cancel, 
 tt_request_batch_push <- function(batch, descriptor) .Call(wrap__tt_request_batch_push, batch, descriptor)
 
 tt_request_batch_finish <- function(batch, failure) .Call(wrap__tt_request_batch_finish, batch, failure)
+
+tt_request_batch_result <- function(batch) .Call(wrap__tt_request_batch_result, batch)
 
 # nolint end

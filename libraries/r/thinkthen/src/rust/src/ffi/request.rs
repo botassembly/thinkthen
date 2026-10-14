@@ -33,6 +33,8 @@ struct NativeRequest {
 
 struct NativeSession {
     session: RequestSession,
+    completion: Option<calls::Completion>,
+    function: thinkthen::RequestFunction,
     column: Option<thinkthen::RequestColumn>,
 }
 
@@ -79,7 +81,11 @@ fn tt_request_native(request: Robj, deadline: Robj, completion: Robj) -> Crossed
         }
         handle.wait();
     }
-    let value = handle.result(function, request.column.as_ref())?;
+    let scalar = matches!(
+        request.admitted.request().call.arguments().input,
+        thinkthen::RequestInput::Text { .. } | thinkthen::RequestInput::Json { .. }
+    );
+    let value = handle.result(function, request.column.as_ref(), scalar)?;
     match &request.column {
         Some(column) => crate::request::attach(column, value),
         None => Ok(value),
@@ -108,7 +114,7 @@ fn tt_request_plan(request: Robj) -> Crossed<Robj> {
 }
 
 #[extendr]
-fn tt_request_batch_start(request: Robj) -> Crossed<Robj> {
+fn tt_request_batch_start(request: Robj, collect: bool) -> Crossed<Robj> {
     let built = ExternalPtr::<NativeRequest>::try_from(request)
         .map_err(|_| crate::usage("a native request is required"))?;
     let column = built.column.clone();
@@ -116,7 +122,13 @@ fn tt_request_batch_start(request: Robj) -> Crossed<Robj> {
     let session = crate::engine()?
         .request_session_with_surface(request, thinkthen::Surface::R)
         .map_err(|error| crate::carry(&error))?;
-    let mut pointer: Robj = ExternalPtr::new(NativeSession { session, column }).into();
+    let mut pointer: Robj = ExternalPtr::new(NativeSession {
+        session,
+        column,
+        completion: collect.then(calls::Completion::new),
+        function: built.admitted.request().call.function(),
+    })
+    .into();
     let native = ExternalPtr::<NativeSession>::try_from(pointer.clone())
         .map_err(|_| crate::defect("native session pointer could not be retained"))?;
     if let Some(column) = &native.column {
@@ -146,11 +158,27 @@ fn tt_request_batch_poll(batch: Robj) -> Crossed<Robj> {
     match session.session.try_read() {
         thinkthen::RequestSessionRead::Result(packet) => {
             let text = packet.to_json().map_err(|error| crate::carry(&error))?;
+            if let Some(completion) = &session.completion {
+                let document = serde_json::from_str(&text)
+                    .map_err(|_| crate::defect("session packet could not be decoded"))?;
+                completion.accept(packet, document)?;
+            }
             crate::native_results::request_event(&text)
         }
         thinkthen::RequestSessionRead::Pending => Ok(().into()),
         thinkthen::RequestSessionRead::End => Ok(list!(kind = "end").into()),
     }
+}
+
+#[extendr]
+fn tt_request_batch_result(batch: Robj) -> Crossed<Robj> {
+    let session = ExternalPtr::<NativeSession>::try_from(batch)
+        .map_err(|_| crate::usage("a native request session is required"))?;
+    session
+        .completion
+        .as_ref()
+        .ok_or_else(|| crate::usage("this batch does not collect a call result"))?
+        .result(session.function, None, false)
 }
 
 #[extendr]
@@ -270,6 +298,7 @@ extendr_module! {
     fn tt_request_batch_start;
     fn tt_request_batch_poll;
     fn tt_request_batch_wait;
+    fn tt_request_batch_result;
     fn tt_request_batch_cancel;
     fn tt_request_batch_push;
     fn tt_request_batch_finish;

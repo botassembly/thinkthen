@@ -10,5 +10,5 @@ parcel <- "My parcel went to the wrong address."
 team <- tt_choose(
   list(choose = question, options = teams),
   parcel
-)$answer
+)$value
 stopifnot(identical(team, "shipping"))

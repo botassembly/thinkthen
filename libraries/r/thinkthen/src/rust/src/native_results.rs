@@ -135,7 +135,12 @@ fn function_kind(function: thinkthen::RequestFunction) -> Crossed<&'static str> 
     )
 }
 
-pub(crate) fn request_packet(text: &str, function: thinkthen::RequestFunction) -> Crossed<Robj> {
+pub(crate) fn request_packet(
+    text: &str,
+    function: thinkthen::RequestFunction,
+    observations: &[Value],
+    scalar: bool,
+) -> Crossed<Robj> {
     let value = decoded(text)?;
     let kind = function_kind(function)?;
     let rows = value
@@ -148,13 +153,16 @@ pub(crate) fn request_packet(text: &str, function: thinkthen::RequestFunction) -
     };
     let function = serde_json::to_value(function)
         .map_err(|_| crate::defect("native function could not be written"))?;
-    let answer = crate::results_generated::request_answer(
-        function
-            .as_str()
-            .ok_or_else(|| crate::defect("native function has no name"))?,
-        rows,
-    )?;
-    let mut fields = vec![("results", results), ("answer", answer)];
+    let name = function
+        .as_str()
+        .ok_or_else(|| crate::defect("native function has no name"))?;
+    let answer = crate::results_generated::call_value(name, rows, scalar)?;
+    let probability = crate::results_generated::call_probability(name, rows, observations, scalar)?;
+    let mut fields = vec![
+        ("value", answer),
+        ("probability", probability),
+        ("results", results),
+    ];
     if let Some(facts) = value.get("facts") {
         fields.push(("facts", convert("completeFacts", facts)?));
     }

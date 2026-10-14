@@ -106,7 +106,7 @@ def inputs(schema):
     definitions = schema['$defs']
     lines = ['# Generated from the canonical request schema; do not edit.']
     for name, key in [('tt_options', 'RequestOptions'), ('.tt_engine_settings', 'EngineSettings')]:
-        fields = list(definitions[key]['properties'])
+        fields = [field for field in definitions[key]['properties'] if field != 'details']
         lines += [name + ' <- function(' + ', '.join(field + ' = NULL' for field in fields) + ') {',
                   '  values <- list(' + ', '.join(field + ' = ' + field for field in fields) + ')',
                   ('  values[c(' + ', '.join('!' + 'missing(' + field + ')' for field in fields) + ')]' if name == 'tt_options' else '  values[!vapply(values, is.null, TRUE)]'), '}']
@@ -133,27 +133,97 @@ def inputs(schema):
 
 
 def answer_helpers(definitions):
-    import importlib.util
-    from pathlib import Path
-    spec = importlib.util.spec_from_file_location('host_answers', Path(__file__).with_name('host_answers.py'))
-    target = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(target)
-    aggregate_answers = target.aggregate_answers
-    lines = ['pub(crate) fn request_answer(function: &str, rows: &Value) -> Crossed<Robj> {', 'match function {']
-    for function, _, payload in aggregate_answers(definitions):
+    from host_answers import call_results
+    def at(path, value='row'):
+        return 'member(' + value + ', &[' + ', '.join(json.dumps(x) for x in path) + '])'
+    lines = [
+        "fn member<'a>(mut value: &'a Value, path: &[&str]) -> Option<&'a Value> {",
+        'for key in path { value = value.get(*key)?; } Some(value)', '}',
+        '#[expect(clippy::too_many_lines, reason = "mechanical projection generated from the shared result graph")]',
+        'pub(crate) fn call_value(function: &str, rows: &Value, scalar: bool) -> Crossed<Robj> {',
+        'match function {']
+    contracts = call_results(definitions)
+    helpers = []
+    for function, contract in contracts.items():
+        payload = contract['receipt_payload']
+        key = payload.get('items', payload)['$ref'].split('/')[-1]
+        projection = contract['value_projection']
+        read = expression(definitions[key]['properties'][projection],
+                          'row.get(' + json.dumps(projection) + ').ok_or_else(|| crate::defect("native result has no projected value"))?')
         if payload.get('type') == 'array':
-            item = payload['items']
-            key = item['$ref'].split('/')[-1]
-            source = definitions[key]
-            if function in ('filter', 'rank'):
-                field = 'input' if function == 'filter' else 'index'
-                read = f'plain(row.get("{field}").ok_or_else(|| crate::defect("native answer has no {field}"))?)'
-            else:
-                read = expression(source['properties']['value'], 'row.get("value").ok_or_else(|| crate::defect("native answer has no value"))?')
             body = 'array(rows, |row| ' + read + ')'
+            if contract['call_shape'] == 'input':
+                body = 'if scalar { match rows.as_array().and_then(|rows| rows.first()) { Some(row) => ' + read + ', None => plain(&Value::Null) } } else { ' + body + ' }'
         else:
-            key = payload['$ref'].split('/')[-1]
-            body = expression(payload, 'rows') if function == 'find' else expression(definitions[key]['properties']['value'], 'rows.get("value").ok_or_else(|| crate::defect("native answer has no value"))?')
+            body = '{ let row = rows; ' + read + ' }'
         lines.append(json.dumps(function) + ' => ' + body + ',')
-    lines += ['_ => Err(crate::defect("native result has no named answer")),', '}', '}']
-    return '\n'.join(lines) + '\n'
+    lines += ['_ => Err(crate::defect("native result has no named value")),', '}', '}',
+              'pub(crate) fn call_probability(function: &str, rows: &Value, observations: &[Value], scalar: bool) -> Crossed<Robj> {', 'match function {']
+    for function, contract in contracts.items():
+        mode = contract['probability_mode']
+        if mode == 'items':
+            read = 'probability_' + function + '(row)'
+            if function == 'relate':
+                body = '{ let row = rows; ' + read + ' }'
+            else:
+                body = 'array(rows, |row| ' + read + ')'
+                if contract['call_shape'] == 'input':
+                    body = 'if scalar { match rows.as_array().and_then(|rows| rows.first()) { Some(row) => ' + read + ', None => plain(&Value::Null) } } else { ' + body + ' }'
+        elif mode == 'null':
+            body = 'plain(&Value::Null)'
+        else:
+            odds = at(contract['probability_path'])
+            if mode == 'picked':
+                odds += '.and_then(|values| ' + at(contract['pick_path']) + '.and_then(Value::as_str).and_then(|pick| values.get(pick)))'
+            odds += '.filter(|value| !value.is_null())'
+            resolution = contract.get('resolution')
+            if resolution:
+                guards = ' && '.join(at(path, 'observation') + '.and_then(Value::as_str) == Some(' + json.dumps(literal) + ')' for path, literal in resolution['guards'])
+                guards += ' && ' + at(resolution['index_path'], 'observation') + '.and_then(Value::as_u64) == row.get("index").and_then(Value::as_u64)'
+                guards += ' && ' + at(resolution['path'], 'observation') + '.is_some_and(|value| !value.is_null())'
+                odds = 'if observations.iter().any(|observation| ' + guards + ') { ' + odds + ' } else { None }'
+            elif contract.get('selection_path'):
+                odds = 'if ' + at(contract['selection_path']) + '.is_some_and(|value| !value.is_null()) { ' + odds + ' } else { None }'
+            read = 'probability_' + function + '(row, observations)'
+            helper = ['fn probability_' + function + '(row: &Value, ' + ('observations' if resolution else '_observations') + ': &[Value]) -> Crossed<Robj> {',
+                      'plain((' + odds + ').unwrap_or(&Value::Null))', '}']
+            helpers.extend(helper)
+            if contract['receipt_payload'].get('type') == 'array':
+                body = 'array(rows, |row| ' + read + ')'
+                if contract['call_shape'] == 'input':
+                    body = 'if scalar { match rows.as_array().and_then(|rows| rows.first()) { Some(row) => ' + read + ', None => plain(&Value::Null) } } else { ' + body + ' }'
+            else:
+                body = '{ let row = rows; ' + read + ' }'
+        lines.append(json.dumps(function) + ' => ' + body + ',')
+    lines += ['_ => Err(crate::defect("native result has no named probability")),', '}', '}']
+    return '\n'.join(lines + helpers) + ITEM_PROBABILITIES + '\n'
+
+
+ITEM_PROBABILITIES = r"""
+fn probability_rank(row: &Value) -> Crossed<Robj> {
+    plain(member(row, &["answer", "probability"]).unwrap_or(&Value::Null))
+}
+fn probability_relate(row: &Value) -> Crossed<Robj> {
+    array(member(row, &["value"]).ok_or_else(|| crate::defect("native relation has no edges"))?,
+          |edge| plain(member(edge, &["probability"]).unwrap_or(&Value::Null)))
+}
+fn probability_recognize(row: &Value) -> Crossed<Robj> {
+    if let Some(entities) = member(row, &["value", "entities"]) {
+        return array(entities, |entity| {
+            let proposal = member(row, &["answer", "proposals"])
+                .and_then(Value::as_array)
+                .and_then(|proposals| proposals.iter().find(|proposal| {
+                    proposal.get("kept").and_then(Value::as_bool) == Some(true)
+                    && member(proposal, &["selected", "start"]) == entity.get("start")
+                    && member(proposal, &["selected", "end"]) == entity.get("end")
+                    && proposal.get("kind") == entity.get("kind")
+                }))
+                .ok_or_else(|| crate::defect("native entity has no kept proposal"))?;
+            plain(member(proposal, &["span_probability"]).unwrap_or(&Value::Null))
+        });
+    }
+    array(member(row, &["value", "proposals"])
+          .ok_or_else(|| crate::defect("native recognition has no proposals"))?,
+          |proposal| plain(member(proposal, &["probability"]).unwrap_or(&Value::Null)))
+}
+"""

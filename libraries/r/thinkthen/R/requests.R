@@ -69,8 +69,10 @@ tt_plan <- function(question, input, function_name = "decide", options = list())
   .tt_call(tt_request_plan(request))
 }
 
-tt_batch <- function(function_name, question, input, options = list()) {
-  native <- .tt_call(tt_request_batch_start(.tt_request(function_name, question, input, options)))
+tt_batch <- function(function_name, question, input, options = list()) .tt_batch(function_name, question, input, options, FALSE)
+
+.tt_batch <- function(function_name, question, input, options, collect) {
+  native <- .tt_call(tt_request_batch_start(.tt_request(function_name, question, input, options), collect))
   state <- new.env(parent = emptyenv())
   state$facts <- NULL
   state$ended <- FALSE
@@ -141,9 +143,11 @@ tt_batch <- function(function_name, question, input, options = list()) {
     }, interrupt = function(e) { cancel(); stop(e) })
   }
   close <- function() { cancel(); state$ended <- TRUE; invisible(NULL) }
-  structure(list(next_result = pull, poll = poll, push = push, finish = finish,
+  methods <- list(next_result = pull, poll = poll, push = push, finish = finish,
                  cancel = cancel, close = close, facts = function() state$facts,
-                 positions = attr(native, "positions"), length = attr(native, "length")), class = "thinkthen_batch")
+                 positions = attr(native, "positions"), length = attr(native, "length"))
+  if (collect) methods$result <- function() .tt_call(tt_request_batch_result(native))
+  structure(methods, class = "thinkthen_batch")
 }
 print.thinkthen_question <- function(x, ...) { cat("<question: content withheld>\n"); invisible(x) }
 print.thinkthen_input <- function(x, ...) { cat("<input: content withheld>\n"); invisible(x) }

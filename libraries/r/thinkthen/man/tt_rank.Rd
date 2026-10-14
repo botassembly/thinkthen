@@ -50,7 +50,7 @@ are \code{thinkthen_absent} when missing and \code{NULL} when explicitly null.
 \dontrun{
 prioritized <- tt_rank("Which message most clearly asks for a refund?",
                        c("Please refund my order.", "When will it arrive?"))
-prioritized$answer[[1]]
+prioritized$value[[1]]
 }
 }
 \seealso{

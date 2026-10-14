@@ -50,7 +50,7 @@ are \code{thinkthen_absent} when missing and \code{NULL} when explicitly null.
 \examples{
 \dontrun{
 picked <- tt_find("Which line?", c("first", "second"))
-picked$answer$value
+picked$value
 }
 }
 \seealso{

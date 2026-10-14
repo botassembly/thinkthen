@@ -53,7 +53,7 @@ are \code{thinkthen_absent} when missing and \code{NULL} when explicitly null.
 \dontrun{
 urgency <- tt_score(list(score = "How urgent?", levels = c("low", "soon", "high")),
                     "Later")
-urgency$answer
+urgency$value
 }
 }
 \seealso{

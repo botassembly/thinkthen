@@ -14,6 +14,7 @@ struct State {
     session: Option<RequestSession>,
     positions: Option<Vec<usize>>,
     details: Vec<Value>,
+    observations: Vec<Value>,
     packet: Value,
     value: Option<RequestValue>,
     error: Option<thinkthen::Error>,
@@ -31,6 +32,7 @@ impl Completion {
             session: None,
             positions: None,
             details: Vec::new(),
+            observations: Vec::new(),
             packet: json!({"results": []}),
             value: None,
             error: None,
@@ -92,6 +94,10 @@ impl Completion {
             }
         }
     }
+    pub(crate) fn accept(&self, packet: RequestSessionResult, document: Value) -> Crossed<()> {
+        self.state().accept(packet, document)?;
+        Ok(())
+    }
     pub(crate) fn read(&self) -> Crossed<extendr_api::Robj> {
         self.drain()?;
         let state = self.state();
@@ -117,6 +123,7 @@ impl Completion {
         &self,
         function: thinkthen::RequestFunction,
         column: Option<&thinkthen::RequestColumn>,
+        scalar: bool,
     ) -> Crossed<extendr_api::Robj> {
         let state = self.state();
         if state.value.is_none()
@@ -124,7 +131,12 @@ impl Completion {
         {
             return Err(carry(error));
         }
-        let value = crate::native_results::request_packet(&state.packet.to_string(), function)?;
+        let value = crate::native_results::request_packet(
+            &state.packet.to_string(),
+            function,
+            &state.observations,
+            scalar,
+        )?;
         let empty = match function {
             thinkthen::RequestFunction::Decide => Some(RequestValue::Decisions(Vec::new())),
             thinkthen::RequestFunction::Choose => Some(RequestValue::Choices(Vec::new())),
@@ -137,7 +149,7 @@ impl Completion {
             .map(|(column, value)| column.view(value).map_err(|e| carry(&e)))
             .transpose()?
             .flatten();
-        crate::request::view(value, view)
+        crate::request::view(value, view, column, scalar)
     }
 }
 impl State {
@@ -168,6 +180,7 @@ impl State {
                 self.value = Some(value);
             }
             RequestSessionResult::Observation { .. } => {
+                self.observations.push(document.clone());
                 let mut detail = document
                     .get("value")
                     .ok_or_else(|| defect("session packet has no payload"))?

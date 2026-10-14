@@ -20,7 +20,7 @@ tt_reader_failure <- function(kind, location = NULL) {
 }
 .tt_feed_call <- function(function_name, question, input, options, deadline_ms) {
   if (!is.null(deadline_ms)) options$deadline_ms <- deadline_ms
-  stream <- tt_batch(function_name, question, input, options)
+  stream <- .tt_batch(function_name, question, input, options, TRUE)
   on.exit(stream$close())
   chunks <- new.env(parent = emptyenv())
   count <- 0L
@@ -34,7 +34,7 @@ tt_reader_failure <- function(kind, location = NULL) {
     e$completed <- results()
     stop(e)
   })
-  structure(list(results = results(), facts = stream$facts()), class = c("thinkthen_Call", "thinkthen_complete"))
+  stream$result()
 }
 print.thinkthen_feed <- function(x, ...) { cat("<feed: content withheld>\n"); invisible(x) }
 print.thinkthen_record <- function(x, ...) { cat("<record: content withheld>\n"); invisible(x) }

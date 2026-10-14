@@ -2525,66 +2525,316 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
         _ => Err(crate::defect("unknown generated R result type")),
     }
 }
-pub(crate) fn request_answer(function: &str, rows: &Value) -> Crossed<Robj> {
+fn member<'a>(mut value: &'a Value, path: &[&str]) -> Option<&'a Value> {
+    for key in path {
+        value = value.get(*key)?;
+    }
+    Some(value)
+}
+#[expect(
+    clippy::too_many_lines,
+    reason = "mechanical projection generated from the shared result graph"
+)]
+pub(crate) fn call_value(function: &str, rows: &Value, scalar: bool) -> Crossed<Robj> {
     match function {
-        "decide" => array(rows, |row| {
-            convert(
-                "completeDecideValue",
-                row.get("value")
-                    .ok_or_else(|| crate::defect("native answer has no value"))?,
-            )
-        }),
-        "choose" => array(rows, |row| {
-            plain(
-                row.get("value")
-                    .ok_or_else(|| crate::defect("native answer has no value"))?,
-            )
-        }),
-        "tag" => array(rows, |row| {
-            array(
-                row.get("value")
-                    .ok_or_else(|| crate::defect("native answer has no value"))?,
-                plain,
-            )
-        }),
-        "score" => array(rows, |row| {
-            plain(
-                row.get("value")
-                    .ok_or_else(|| crate::defect("native answer has no value"))?,
-            )
-        }),
+        "decide" => {
+            if scalar {
+                match rows.as_array().and_then(|rows| rows.first()) {
+                    Some(row) => convert(
+                        "completeDecideValue",
+                        row.get("value")
+                            .ok_or_else(|| crate::defect("native result has no projected value"))?,
+                    ),
+                    None => plain(&Value::Null),
+                }
+            } else {
+                array(rows, |row| {
+                    convert(
+                        "completeDecideValue",
+                        row.get("value")
+                            .ok_or_else(|| crate::defect("native result has no projected value"))?,
+                    )
+                })
+            }
+        }
+        "choose" => {
+            if scalar {
+                match rows.as_array().and_then(|rows| rows.first()) {
+                    Some(row) => plain(
+                        row.get("value")
+                            .ok_or_else(|| crate::defect("native result has no projected value"))?,
+                    ),
+                    None => plain(&Value::Null),
+                }
+            } else {
+                array(rows, |row| {
+                    plain(
+                        row.get("value")
+                            .ok_or_else(|| crate::defect("native result has no projected value"))?,
+                    )
+                })
+            }
+        }
+        "tag" => {
+            if scalar {
+                match rows.as_array().and_then(|rows| rows.first()) {
+                    Some(row) => array(
+                        row.get("value")
+                            .ok_or_else(|| crate::defect("native result has no projected value"))?,
+                        plain,
+                    ),
+                    None => plain(&Value::Null),
+                }
+            } else {
+                array(rows, |row| {
+                    array(
+                        row.get("value")
+                            .ok_or_else(|| crate::defect("native result has no projected value"))?,
+                        plain,
+                    )
+                })
+            }
+        }
+        "score" => {
+            if scalar {
+                match rows.as_array().and_then(|rows| rows.first()) {
+                    Some(row) => plain(
+                        row.get("value")
+                            .ok_or_else(|| crate::defect("native result has no projected value"))?,
+                    ),
+                    None => plain(&Value::Null),
+                }
+            } else {
+                array(rows, |row| {
+                    plain(
+                        row.get("value")
+                            .ok_or_else(|| crate::defect("native result has no projected value"))?,
+                    )
+                })
+            }
+        }
         "filter" => array(rows, |row| {
             plain(
                 row.get("input")
-                    .ok_or_else(|| crate::defect("native answer has no input"))?,
+                    .ok_or_else(|| crate::defect("native result has no projected value"))?,
             )
         }),
         "rank" => array(rows, |row| {
             plain(
                 row.get("index")
-                    .ok_or_else(|| crate::defect("native answer has no index"))?,
+                    .ok_or_else(|| crate::defect("native result has no projected value"))?,
             )
         }),
-        "find" => convert("completeFind", rows),
-        "annotate" => array(rows, |row| {
-            convert(
-                "completeannotatedRow",
+        "find" => {
+            let row = rows;
+            plain(
                 row.get("value")
-                    .ok_or_else(|| crate::defect("native answer has no value"))?,
+                    .ok_or_else(|| crate::defect("native result has no projected value"))?,
             )
-        }),
-        "recognize" => array(rows, |row| {
-            convert(
-                "completerecognize",
+        }
+        "annotate" => {
+            if scalar {
+                match rows.as_array().and_then(|rows| rows.first()) {
+                    Some(row) => convert(
+                        "completeannotatedRow",
+                        row.get("value")
+                            .ok_or_else(|| crate::defect("native result has no projected value"))?,
+                    ),
+                    None => plain(&Value::Null),
+                }
+            } else {
+                array(rows, |row| {
+                    convert(
+                        "completeannotatedRow",
+                        row.get("value")
+                            .ok_or_else(|| crate::defect("native result has no projected value"))?,
+                    )
+                })
+            }
+        }
+        "recognize" => {
+            if scalar {
+                match rows.as_array().and_then(|rows| rows.first()) {
+                    Some(row) => convert(
+                        "completerecognize",
+                        row.get("value")
+                            .ok_or_else(|| crate::defect("native result has no projected value"))?,
+                    ),
+                    None => plain(&Value::Null),
+                }
+            } else {
+                array(rows, |row| {
+                    convert(
+                        "completerecognize",
+                        row.get("value")
+                            .ok_or_else(|| crate::defect("native result has no projected value"))?,
+                    )
+                })
+            }
+        }
+        "relate" => {
+            let row = rows;
+            array(
                 row.get("value")
-                    .ok_or_else(|| crate::defect("native answer has no value"))?,
+                    .ok_or_else(|| crate::defect("native result has no projected value"))?,
+                |value| convert("completerelatedEntityEdge", value),
             )
-        }),
-        "relate" => array(
-            rows.get("value")
-                .ok_or_else(|| crate::defect("native answer has no value"))?,
-            |value| convert("completerelatedEntityEdge", value),
-        ),
-        _ => Err(crate::defect("native result has no named answer")),
+        }
+        _ => Err(crate::defect("native result has no named value")),
     }
+}
+pub(crate) fn call_probability(
+    function: &str,
+    rows: &Value,
+    observations: &[Value],
+    scalar: bool,
+) -> Crossed<Robj> {
+    match function {
+        "decide" => {
+            if scalar {
+                match rows.as_array().and_then(|rows| rows.first()) {
+                    Some(row) => probability_decide(row, observations),
+                    None => plain(&Value::Null),
+                }
+            } else {
+                array(rows, |row| probability_decide(row, observations))
+            }
+        }
+        "choose" => {
+            if scalar {
+                match rows.as_array().and_then(|rows| rows.first()) {
+                    Some(row) => probability_choose(row, observations),
+                    None => plain(&Value::Null),
+                }
+            } else {
+                array(rows, |row| probability_choose(row, observations))
+            }
+        }
+        "tag" => plain(&Value::Null),
+        "score" => plain(&Value::Null),
+        "filter" => array(rows, |row| probability_filter(row, observations)),
+        "rank" => array(rows, |row| probability_rank(row)),
+        "find" => {
+            let row = rows;
+            probability_find(row, observations)
+        }
+        "annotate" => plain(&Value::Null),
+        "recognize" => {
+            if scalar {
+                match rows.as_array().and_then(|rows| rows.first()) {
+                    Some(row) => probability_recognize(row),
+                    None => plain(&Value::Null),
+                }
+            } else {
+                array(rows, |row| probability_recognize(row))
+            }
+        }
+        "relate" => {
+            let row = rows;
+            probability_relate(row)
+        }
+        _ => Err(crate::defect("native result has no named probability")),
+    }
+}
+fn probability_decide(row: &Value, observations: &[Value]) -> Crossed<Robj> {
+    plain(
+        (if observations.iter().any(|observation| {
+            member(observation, &["kind"]).and_then(Value::as_str) == Some("observation")
+                && member(observation, &["value", "kind"]).and_then(Value::as_str) == Some("row")
+                && member(observation, &["value", "value", "kind"]).and_then(Value::as_str)
+                    == Some("judgment")
+                && member(observation, &["value", "value", "value", "kind"]).and_then(Value::as_str)
+                    == Some("decision")
+                && member(observation, &["value", "index"]).and_then(Value::as_u64)
+                    == row.get("index").and_then(Value::as_u64)
+                && member(observation, &["value", "value", "value", "value"])
+                    .is_some_and(|value| !value.is_null())
+        }) {
+            member(row, &["answer", "probability"]).filter(|value| !value.is_null())
+        } else {
+            None
+        })
+        .unwrap_or(&Value::Null),
+    )
+}
+fn probability_choose(row: &Value, observations: &[Value]) -> Crossed<Robj> {
+    plain(
+        (if observations.iter().any(|observation| {
+            member(observation, &["kind"]).and_then(Value::as_str) == Some("observation")
+                && member(observation, &["value", "kind"]).and_then(Value::as_str) == Some("row")
+                && member(observation, &["value", "value", "kind"]).and_then(Value::as_str)
+                    == Some("judgment")
+                && member(observation, &["value", "value", "value", "kind"]).and_then(Value::as_str)
+                    == Some("choice")
+                && member(observation, &["value", "index"]).and_then(Value::as_u64)
+                    == row.get("index").and_then(Value::as_u64)
+                && member(observation, &["value", "value", "value", "value"])
+                    .is_some_and(|value| !value.is_null())
+        }) {
+            member(row, &["answer", "probabilities"])
+                .and_then(|values| {
+                    member(row, &["answer", "pick"])
+                        .and_then(Value::as_str)
+                        .and_then(|pick| values.get(pick))
+                })
+                .filter(|value| !value.is_null())
+        } else {
+            None
+        })
+        .unwrap_or(&Value::Null),
+    )
+}
+fn probability_filter(row: &Value, _observations: &[Value]) -> Crossed<Robj> {
+    plain(
+        (member(row, &["answer", "probability"]).filter(|value| !value.is_null()))
+            .unwrap_or(&Value::Null),
+    )
+}
+fn probability_find(row: &Value, _observations: &[Value]) -> Crossed<Robj> {
+    plain(
+        (if member(row, &["index"]).is_some_and(|value| !value.is_null()) {
+            member(row, &["answer", "probabilities"])
+                .and_then(|values| {
+                    member(row, &["answer", "pick"])
+                        .and_then(Value::as_str)
+                        .and_then(|pick| values.get(pick))
+                })
+                .filter(|value| !value.is_null())
+        } else {
+            None
+        })
+        .unwrap_or(&Value::Null),
+    )
+}
+fn probability_rank(row: &Value) -> Crossed<Robj> {
+    plain(member(row, &["answer", "probability"]).unwrap_or(&Value::Null))
+}
+fn probability_relate(row: &Value) -> Crossed<Robj> {
+    array(
+        member(row, &["value"]).ok_or_else(|| crate::defect("native relation has no edges"))?,
+        |edge| plain(member(edge, &["probability"]).unwrap_or(&Value::Null)),
+    )
+}
+fn probability_recognize(row: &Value) -> Crossed<Robj> {
+    if let Some(entities) = member(row, &["value", "entities"]) {
+        return array(entities, |entity| {
+            let proposal = member(row, &["answer", "proposals"])
+                .and_then(Value::as_array)
+                .and_then(|proposals| {
+                    proposals.iter().find(|proposal| {
+                        proposal.get("kept").and_then(Value::as_bool) == Some(true)
+                            && member(proposal, &["selected", "start"]) == entity.get("start")
+                            && member(proposal, &["selected", "end"]) == entity.get("end")
+                            && proposal.get("kind") == entity.get("kind")
+                    })
+                })
+                .ok_or_else(|| crate::defect("native entity has no kept proposal"))?;
+            plain(member(proposal, &["span_probability"]).unwrap_or(&Value::Null))
+        });
+    }
+    array(
+        member(row, &["value", "proposals"])
+            .ok_or_else(|| crate::defect("native recognition has no proposals"))?,
+        |proposal| plain(member(proposal, &["probability"]).unwrap_or(&Value::Null)),
+    )
 }

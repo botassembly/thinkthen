@@ -56,7 +56,7 @@ are \code{thinkthen_absent} when missing and \code{NULL} when explicitly null.
 approved <- tt_annotate(list(version = 1L,
                               questions = list(approved = list(decide = "Approved?"))),
                         "Yes")
-approved$answer[[1]]$approved
+approved$value[[1]]$approved
 }
 }
 \seealso{

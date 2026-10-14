@@ -57,7 +57,7 @@ are \code{thinkthen_absent} when missing and \code{NULL} when explicitly null.
 \dontrun{
 tags <- tt_tag(list(tag = "Which labels?", labels = c("refund", "shipping")),
                "Refund shipping")
-tags$answer[[1]]
+tags$value[[1]]
 }
 }
 \seealso{

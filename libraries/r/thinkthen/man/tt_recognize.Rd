@@ -63,7 +63,7 @@ explicitly null.
 \dontrun{
 recognition <- tt_recognize_question(kinds = list(person = NULL, organization = NULL))
 names <- tt_recognize(recognition, "Maria Chen joined Northwind Freight.")
-names$answer[[1]]$entities[[1]]$text
+names$value$entities[[1]]$text
 }
 }
 \seealso{
