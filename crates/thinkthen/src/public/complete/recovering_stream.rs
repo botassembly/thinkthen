@@ -25,21 +25,64 @@ impl Engine {
     {
         let setting = crate::public::bulk::selected_batch(&question, &options, self.batch)?;
         let engine = self.asking(&question)?;
-        let stop = Stop::begin(options)?.with_prices(self.prices);
-        let mut packing = pull::packing(setting, false, true);
-        packing.detailed = stop.facts().attempts().is_some();
-        let preparing = Records(Arc::clone(&engine), true);
         let records = records.into_iter().enumerate().map(move |(at, record)| {
             let (held, prepared) = record
                 .and_then(|record| {
                     prepare_record(function, &question, record, context.as_deref(), at)
                 })
                 .map_err(|error| error.at_record(at))?;
-            preparing
-                .asks(&prepared)
-                .map_err(super::records::pipeline_failure)
+            Ok(Original { held, prepared })
+        });
+        self.recover_prepared_stream(engine, setting, function, records, options)
+    }
+    pub(in crate::public) fn recover_dynamic_choose_stream<'a, I>(
+        &self,
+        question: crate::RecordChooseQuestion,
+        records: I,
+        options: CallOptions<'a>,
+        context: Option<String>,
+    ) -> Result<Batch<'a, RequestRecoveredRow>, Error>
+    where
+        I: IntoIterator<Item = Result<RecordInput<QuestionInput>, Error>> + 'a,
+    {
+        let setting = crate::public::bulk::selected_batch_file(
+            question.batch.as_ref(),
+            &options,
+            self.batch,
+        )?;
+        let engine = self.for_model(question.model.as_ref())?;
+        let records = records.into_iter().enumerate().map(move |(at, record)| {
+            let (held, prepared) = record
+                .and_then(|record| {
+                    super::dynamic_choose::prepare_parts(&question, record, context.as_deref(), at)
+                })
                 .map_err(|error| error.at_record(at))?;
             Ok(Original { held, prepared })
+        });
+        self.recover_prepared_stream(engine, setting, InputFunction::Choose, records, options)
+    }
+    fn recover_prepared_stream<'a, I>(
+        &self,
+        engine: Arc<crate::engine::facade::Engine>,
+        setting: crate::core::Setting,
+        function: InputFunction,
+        records: I,
+        options: CallOptions<'a>,
+    ) -> Result<Batch<'a, RequestRecoveredRow>, Error>
+    where
+        I: Iterator<Item = Result<Original, Error>> + 'a,
+    {
+        let stop = Stop::begin(options)?.with_prices(self.prices);
+        let mut packing = pull::packing(setting, false, true);
+        packing.detailed = stop.facts().attempts().is_some();
+        let preparing = Records(Arc::clone(&engine), true);
+        let records = records.enumerate().map(move |(at, original)| {
+            let original = original?;
+            preparing
+                .asks(&original.prepared)
+                .map_err(super::records::pipeline_failure)
+                .map_err(|error| error.at_record(at))?;
+            Ok(original)
         });
         let records = self.admit_prepared_stream(records, &options)?;
         let asker = Records(Arc::clone(&engine), true);

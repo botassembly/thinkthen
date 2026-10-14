@@ -55,6 +55,61 @@ impl Engine {
     }
 }
 
+impl Engine {
+    pub(in crate::public) fn recover_dynamic_choose(
+        &self,
+        question: &crate::RecordChooseQuestion,
+        records: Vec<Result<RecordInput<QuestionInput>, Error>>,
+        options: CallOptions<'_>,
+    ) -> Result<Call<Vec<RequestRecoveredRow>>, Error> {
+        let setting = crate::public::bulk::selected_batch_file(
+            question.batch.as_ref(),
+            &options,
+            self.batch,
+        )?;
+        let engine = self.for_model(question.model.as_ref())?;
+        let asker = Records(Arc::clone(&engine), true);
+        let stop = Stop::begin(options)?.with_prices(self.prices);
+        let (admitted, rejected) = prepare(records, |at, record| {
+            let (held, prepared) =
+                super::dynamic_choose::prepare_parts(question, record, options.context_text(), at)?;
+            asker
+                .asks(&prepared)
+                .map_err(super::records::pipeline_failure)?;
+            Ok((held, prepared))
+        })?;
+        let mut packing = pull::packing(setting, false, true);
+        packing.detailed = stop.facts().attempts().is_some();
+        run(
+            (&engine, packing),
+            &asker,
+            &stop,
+            admitted,
+            rejected,
+            |at, held, row| {
+                let cause = super::records::recovery_cause(&row);
+                let outcome = complete_row(
+                    (
+                        &engine,
+                        self.profile.as_ref(),
+                        setting,
+                        false,
+                        InputFunction::Choose,
+                    ),
+                    &stop,
+                    &held,
+                    at,
+                    row,
+                )
+                .and_then(|canonical| {
+                    atomic_value(InputFunction::Choose, held.original, at, canonical)
+                });
+                crate::public::request::recovery_row(at, outcome).map(|row| row.with_cause(cause))
+            },
+        )
+    }
+}
+
 pub(super) fn atomic_value(
     function: InputFunction,
     original: QuestionInput,

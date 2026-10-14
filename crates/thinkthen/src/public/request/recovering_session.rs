@@ -178,6 +178,46 @@ impl RequestRecoveringSession {
                 .unwrap_or_else(|error| error.into_inner());
         }
     }
+    /// Wait for recovered output, descriptor room, or caller cancellation.
+    /// Readiness transfers no descriptor and consumes no recovered output.
+    #[must_use]
+    pub fn wait(
+        &self,
+        interest: RequestSessionWaitInterest,
+        timeout: std::time::Duration,
+    ) -> super::RequestSessionReady {
+        use super::RequestSessionReady as Ready;
+        let started = std::time::Instant::now();
+        let mut state = self.output.lock();
+        loop {
+            if state.packet.is_some() || state.terminal.is_some() {
+                return Ready::Result;
+            }
+            if state.settled || state.closed {
+                return Ready::End;
+            }
+            let readiness =
+                self.input
+                    .queue
+                    .ready(interest, std::time::Duration::ZERO, self.input.feed);
+            if readiness != Ready::Timeout || interest == RequestSessionWaitInterest::SettlementArm
+            {
+                return readiness;
+            }
+            let Some(remaining) = timeout.checked_sub(started.elapsed()) else {
+                return Ready::Timeout;
+            };
+            if remaining.is_zero() {
+                return Ready::Timeout;
+            }
+            state = self
+                .output
+                .wake
+                .wait_timeout(state, remaining.min(std::time::Duration::from_millis(50)))
+                .unwrap_or_else(|error| error.into_inner())
+                .0;
+        }
+    }
     /// Stop descriptor intake while retaining final output.
     pub fn cancel(&self) {
         self.input.cancel();
@@ -323,14 +363,26 @@ impl Engine {
                 )
             },
             |prepared, records| {
-                let batch = match function {
-                    RequestFunction::Annotate => prepared.engine.recover_annotations_stream(
+                let dynamic = match &prepared.definition {
+                    super::RequestDefinition::DynamicChoose(question) => Some(question.clone()),
+                    _ => None,
+                };
+                let batch = match (function, dynamic) {
+                    (RequestFunction::Choose, Some(question)) => {
+                        prepared.engine.recover_dynamic_choose_stream(
+                            question,
+                            records,
+                            prepared.controls,
+                            prepared.context,
+                        )?
+                    }
+                    (RequestFunction::Annotate, _) => prepared.engine.recover_annotations_stream(
                         prepared.definition.annotation()?,
                         records,
                         prepared.controls,
                         prepared.context,
                     )?,
-                    RequestFunction::Recognize => {
+                    (RequestFunction::Recognize, _) => {
                         let ask = prepared.definition.recognition()?;
                         let controls = match &prepared.context {
                             Some(context) => prepared.controls.context(context),
