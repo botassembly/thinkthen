@@ -113,6 +113,8 @@ try:
                 assert probability == proposal['span_probability'], (probability, proposal)
         elif verb == 'annotate':
             assert isinstance(sampled_value, dict), sampled_value
+        elif verb == 'relate':
+            assert sampled_result['probability'] == [edge['probability'] for edge in sampled_value], sampled_result
         print('CPP_INSTALLED_EXAMPLE_PASS', verb)
 
     captured = next(case for case in cases if case['id'] == '01-decide-yes-captured')
@@ -188,6 +190,29 @@ try:
         assert len(value['results'])==(len(original) if isinstance(original,list) else 1), value
         assert value['facts']['requests_sent']>=0, value
     print('CPP_INSTALLED_AUTHORED_RESULT_PASS null false object list wide_integer input_order ownership')
+    for definition in ({'questions': {'one': {'decide': 'Is it?'}, 'two': {'decide': 'Is it still?'}}},
+                       {'score':'How is it?', 'levels':['low','high']}):
+        qpath=scratch / 'whole-set-question.json'; ipath=scratch / 'whole-set-input.json'
+        qpath.write_text(json.dumps(definition)); ipath.write_text(json.dumps(['first','second','unsure']))
+        result=subprocess.run([binary,'result-rank',qpath,ipath],env=env,capture_output=True,text=True,timeout=5)
+        assert result.returncode==0, (result.stdout,result.stderr)
+        ranked=json.loads(result.stdout)
+        assert sorted(ranked['value'])==[0,1,2] and len(ranked['results'])==3, ranked
+        assert ranked['value']==[row['index'] for row in ranked['results']], ranked
+        assert ranked['probability']==[row['answer'].get('probability') for row in ranked['results']], ranked
+    print('CPP_INSTALLED_WHOLE_SET_RANK_PASS question_set score nullable_probabilities')
+    qpath.write_text(json.dumps({'find':'Which one?'})); ipath.write_text(json.dumps([None,'second']))
+    result=subprocess.run([binary,'result-find',qpath,ipath],env=env,capture_output=True,text=True,timeout=5)
+    assert result.returncode==0, (result.stdout,result.stderr)
+    found=json.loads(result.stdout)
+    assert found['value'] is None and found['results'][0]['index']==0 and found['probability']==0.9, found
+    print('CPP_INSTALLED_NULL_FIND_PASS selected_null_retains_probability')
+    qpath.write_text(json.dumps({'recognize': {'mode':'boundary_only'}})); ipath.write_text(json.dumps('Ada arrived.'))
+    result=subprocess.run([binary,'result-recognize',qpath,ipath],env=env,capture_output=True,text=True,timeout=5)
+    assert result.returncode==0, (result.stdout,result.stderr)
+    boundaries=json.loads(result.stdout)
+    assert boundaries['probability']==[item['probability'] for item in boundaries['value']], boundaries
+    print('CPP_INSTALLED_BOUNDARY_RESULT_PASS proposal_probability')
     source = scratch / 'physical.txt'
     source.write_text('yes\n\nno\n')
     result = subprocess.run([binary,'files',scratch / 'decide-question.json',source],env=env,capture_output=True,text=True,timeout=5)

@@ -205,6 +205,20 @@ int main(int argc,char** argv) {
             if(std::locale()!=originalLocale || originalNumeric!=std::setlocale(LC_NUMERIC,nullptr)) return 44;
             return answered && packets.back().as_SessionPacketTerminal() ? 0:43;
         }
+        if(verb=="result-rank" || verb=="result-find" || verb=="result-recognize") {
+            auto original=read(argv[3]); auto question=RequestQuestionFile().set_path(argv[2]);
+            auto emit=[&](auto call) {
+                client.close(); auto result=call.result(); call.close();
+                std::cout<<::tt::detail::serialize(Data{{"value",::tt::results::detail::encode(result.value)},{"probability",::tt::results::detail::encode(result.probability)},{"results",::tt::results::detail::encode(result.results)},{"facts",::tt::results::detail::encode(result.facts)}})<<'\n';
+            };
+            if(verb=="result-recognize") emit(client.recognize(question,RequestInputText().set_text(original.get<std::string>())));
+            else {
+                std::vector<RequestItem> items; for(const auto& value:original) items.push_back(item(value));
+                if(verb=="result-rank") emit(client.rank(question,RequestInputRecords().set_items(items)));
+                else emit(client.find(question,RequestInputUnits().set_items(items)));
+            }
+            return 0;
+        }
         if(verb=="result-decide") {
             auto original=read(argv[3]);
             std::vector<RequestItem> items;

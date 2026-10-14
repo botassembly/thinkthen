@@ -8928,7 +8928,7 @@ namespace tt::results {
                 values.push_back(detail::decode<uint64_t>(row.at("index")));
                 bool resolved=true;
                 std::optional<double> odds;
-                if(resolved) odds=row.at("answer").at("probability").get<double>();
+                if(resolved && row.at("answer").contains("probability")) odds=row.at("answer").at("probability").get<double>();
                 probabilities.push_back({
                     odds
                 });

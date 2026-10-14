@@ -103,7 +103,8 @@ def render(definitions, typ, name):
             else:
                 path = path or ('answer','probability')
                 expression = 'row' + ''.join('.at('+json.dumps(p)+')' for p in path) + '.get<double>()'
-            lines += [f'std::optional<double> odds; if(resolved) odds={expression};']
+            guard = 'resolved' + (' && row.at("answer").contains("probability")' if mode == 'items' else '')
+            lines += [f'std::optional<double> odds; if({guard}) odds={expression};']
             if mode == 'items':
                 lines += ['probabilities.push_back({odds});']
             else:
