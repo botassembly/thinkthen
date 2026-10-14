@@ -34,6 +34,25 @@ class NativeFixtureEnvironment(unittest.TestCase):
 
 
 class BindingCaseTiers(unittest.TestCase):
+    def test_scalar_input_selectors_follow_canonical_payloads_and_ignore_feed_names(self):
+        from sdlc.generators.results.templates.host_answers import scalar_input_selectors
+        definitions = {
+            'RequestInput': {'variants': [('Text', None), ('Json', None), ('Feed', None)]},
+            'Text': {'properties': {'kind': {'const': 'text'}, 'text': {'type': 'string'}}, 'required': ['kind', 'text']},
+            'Json': {'properties': {'kind': {'const': 'json'}, 'value': {}}, 'required': ['kind', 'value']},
+            'Feed': {'properties': {'kind': {'const': 'feed'}, 'name': {'type': 'string'}}, 'required': ['kind', 'name']},
+        }
+        self.assertEqual(scalar_input_selectors(definitions), ['Text', 'Json'])
+        for defect in ('missing', 'duplicate', 'optional', 'text-number', 'json-array'):
+            changed = copy.deepcopy(definitions)
+            if defect == 'missing': changed['RequestInput']['variants'].pop(0)
+            elif defect == 'duplicate': changed['RequestInput']['variants'].append(('Text', None))
+            elif defect == 'optional': changed['Json']['required'].remove('value')
+            elif defect == 'text-number': changed['Text']['properties']['text'] = {'type': 'number'}
+            else: changed['Json']['properties']['value'] = {'type': 'array'}
+            with self.subTest(defect=defect), self.assertRaises(ValueError):
+                scalar_input_selectors(changed)
+
     def test_paired_scalar_fixture_reaches_both_calls_and_requires_public_result_fields(self):
         from conformance import c_parity
         import native_fixture
