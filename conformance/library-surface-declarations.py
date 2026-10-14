@@ -256,6 +256,17 @@ def cstyle(source, language):
                         result.add(Declaration(name, accessor[1], 'call'))
         if not match[0].startswith('extension'):
             result.add(Declaration('', name, 'type'))
+    if language == 'zig':
+        # A public type factory exposes the members of its returned anonymous type.
+        for match in re.finditer(r'\bpub\s+fn\s+(\w+)\s*\([^{};]*\)\s+type\s*\{', text):
+            body = text.rfind('{', match.start(), match.end())
+            if body not in pairs:
+                continue
+            for returned in re.finditer(r'\breturn\s+(?:struct|union|enum)(?:\s*\([^{}]*\))?\s*\{', text[body:pairs[body]]):
+                start = body + returned.end() - 1
+                if start in pairs and depths[body + returned.start()] == depths[body] + 1:
+                    scopes.append((start, pairs[start], match[1]))
+                    result.add(Declaration('', match[1], 'type'))
     if language == 'go':
         for match in re.finditer(r'\btype\s+([A-Z]\w*)\s+(?:struct|interface)\s*\{', text):
             start = text.rfind('{', match.start(), match.end())

@@ -146,6 +146,9 @@ def check(root, manifest, name):
             source_files[relative] = path
             try:
                 found = READ.declarations(path.read_text(), language(path, config['language']))
+                selected = config.get('exported_declarations', {}).get(relative)
+                if selected is not None:
+                    found = {d for d in found if (d.name in selected and not d.owner) or d.owner in selected}
                 if config['language'] == 'r' and path.name != 'NAMESPACE':
                     found = {d for d in found if d.kind != 'export'}
                 declared.update(exported(found, exports[path.resolve()]) if exports is not None else found)
@@ -173,6 +176,11 @@ def check(root, manifest, name):
                 errors.append(f'missing {kind}: {field} in {", ".join(containers)}')
     helper_names = config.get('helper_names', {})
     errors.extend(helper_errors(declared, manifest, config))
+    for owner, fields in config.get('result_members', {}).items():
+        actual = {d.name for d in declared if d.owner == owner and d.kind == 'field'}
+        errors.extend('missing result field: ' + owner + '.' + field for field in fields if field not in actual)
+        ownership = set(config.get('wrapper_members', {}).get(owner, []))
+        errors.extend('unlisted public field: ' + owner + '.' + field for field in actual - set(fields) - ownership)
     expected = set()
     try:
         sources = SCHEMA.generated_sources(root, name, request, result)
@@ -262,6 +270,8 @@ def check(root, manifest, name):
                 types = adapter['type'] if isinstance(adapter['type'], list) else [adapter['type']]
                 if any(field in SCHEMA.properties(contract, key, adapter.get('path', ())) for key in types):
                     continue
+            if item.name in config.get('result_members', {}).get(item.owner, []):
+                continue
             if item.name in config.get('wrapper_members', {}).get(item.owner, []):
                 continue
             if canonical(item.name) not in {canonical(n) for n in categories.get('lifecycle_fields', [])}:
