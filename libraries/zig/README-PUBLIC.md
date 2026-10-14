@@ -8,27 +8,29 @@ tar -xzf thinkthen-zig-0.2.0-TARGET.tar.gz
 
 Replace `TARGET` with your platform. Set your hosted backend key: `export THINKTHEN_API_KEY=...`.
 
-The [complete example](https://github.com/botassembly/thinkthen/blob/main/libraries/zig/examples/decide.zig) handles engine setup and cleanup. Each call below waits and returns an owned typed answer.
-
 ```zig
-var decision = try tt.calls.decide(&engine, .{
-    .question = .{ .text = .{ .text = "Does this ask for a refund?" } },
-    .input = .{ .text = .{ .text = "Please refund my order." } },
-});
-defer decision.deinit();
-const yes = try decision.value();
-var selected = try tt.calls.filter(&engine, .{
-    .options = .{ .batch = .{ .integer = 1 } },
-    .question = .{ .text = .{ .text = "Does this ask for a refund?" } },
-    .input = .{ .records = .{ .items = &.{
-        .{ .original = .{ .text = .{ .text = "Please refund my order." } } },
-        .{ .original = .{ .text = .{ .text = "The package arrived." } } },
-        .{ .original = .{ .text = .{ .text = "Cancel and refund this order." } } },
-    } } },
-});
-defer selected.deinit();
-const records = try selected.value();
-std.debug.print("refund={any} records={d}\n", .{ yes, records.len });
+const std = @import("std"); const tt = @import("thinkthen");
+pub fn main() !void {
+    const allocator = std.heap.page_allocator;
+    var engine = switch (try tt.Engine.init(allocator)) {
+        .ok => |value| value,
+        .failed => |failure| { defer tt.releaseFailure(allocator, failure); return error.EngineBuild; },
+    };
+    defer engine.deinit();
+    const teams = tt.inputs.AuthoredOptions{ .object = .{ .entries = &.{
+        .{ .key = "billing", .value = .{ .string = "Invoices, fees, and refunds." } },
+        .{ .key = "shipping", .value = .{ .string = "Parcels and delivery." } },
+        .{ .key = "account", .value = .{ .string = "Logins and passwords." } },
+    } } };
+    for ([_][]const u8{ "Please refund my order. It arrived broken.", "Thanks for the quick help yesterday!", "I want to send this back." }) |text| {
+        var call = try tt.calls.decide(&engine, .{ .question = .{ .text = .{ .text = "Does the customer ask for a refund?" } }, .input = .{ .text = .{ .text = text } } }); defer call.deinit();
+        const refund = try call.value(); std.debug.print("{any}\n", .{refund});
+    }
+    for ([_][]const u8{ "Please refund the extra fee on my invoice.", "My parcel went to the wrong address.", "I cannot reset my password." }) |text| {
+        var call = try tt.calls.choose(&engine, .{ .question = .{ .definition = .{ .value = .{ .Authored_choose = .{ .choose = .{ .string = "Which team owns this?" }, .options = teams } } } }, .input = .{ .text = .{ .text = text } } }); defer call.deinit();
+        const team = try call.value(); std.debug.print("{s}\n", .{team orelse "not sure"});
+    }
+}
 ```
 
 The library is free and MIT licensed. Hosted models charge per token. Local models are free to use; you supply the computer that runs them.

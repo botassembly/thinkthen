@@ -130,7 +130,7 @@ class PackageText(unittest.TestCase):
             with self.assertRaisesRegex(readmes.Refusal, 'example-needs-two-functions: python'):
                 readmes.example('python', root)
 
-    def test_r_replay_installs_package_root_with_vendored_readmes(self):
+    def test_archive_replay_preserves_package_roots_with_vendored_readmes(self):
         with tempfile.TemporaryDirectory() as scratch:
             tree = Path(scratch); packages = tree / 'packages'; packages.mkdir()
             archive(packages / 'thinkthen_0.2.0.tar.gz', {
@@ -142,6 +142,14 @@ class PackageText(unittest.TestCase):
             self.assertTrue((installed / 'DESCRIPTION').is_file())
             self.assertTrue(os.access(installed / 'configure', os.X_OK))
             self.assertEqual(installed, tree / 'installed/thinkthen')
+            prefix = 'thinkthen-' + readmes.version()
+            archive(packages / (prefix + '.crate'), {
+                prefix + '/README.md': readmes.source('crate').read_bytes(),
+                prefix + '/src/transforms/README.md': b'Bundled transform documentation',
+                prefix + '/Cargo.toml': (readmes.REPO / 'crates/thinkthen/Cargo.toml').read_bytes()})
+            crate = readmes.unpack_example_package('crate', packages, tree / 'installed-crate')
+            self.assertEqual(crate, tree / 'installed-crate' / prefix)
+            self.assertTrue((crate / 'Cargo.toml').is_file())
 
     def test_duckdb_replay_loads_the_installed_source_member(self):
         with tempfile.TemporaryDirectory() as scratch:
@@ -174,21 +182,25 @@ class PackageText(unittest.TestCase):
             self.assertIn('tt_decide(', samples[0][1])
             self.assertIn('tt_choose(', samples[1][1])
 
-    def test_replay_refuses_a_broken_earlier_usage_block(self):
+    def test_replay_collects_every_broken_usage_block(self):
         with tempfile.TemporaryDirectory() as scratch:
             tree = Path(scratch)
             root = tree / 'root'; (root / 'site/recordings').mkdir(parents=True)
             shutil.copyfile(readmes.REPO / 'rust-toolchain.toml', root / 'rust-toolchain.toml')
             shutil.copyfile(readmes.REPO / 'site/recordings/thinkthen.jsonl', root / 'site/recordings/thinkthen.jsonl')
             (root / 'README.md').write_text('```sh\nthinkthen decide fail\n```\n'
-                                          '```sh\nthinkthen choose pass\n```\n')
+                                          '```sh\nthinkthen choose fail\n```\n')
             packages = tree / 'packages'; packages.mkdir()
             package = packages / ('thinkthen-' + readmes.version() + '-x86_64-unknown-linux-musl.tar.gz')
-            archive(package, {'README.md': readmes.source('command').read_bytes(),
+            archive(package, {'README.md': b'Wrong public opening',
                               'thinkthen': b'#!/bin/sh\n[ "$2" != fail ] || exit 77\nprintf "fixture\\n"\n'})
-            with patch.object(readmes, 'published_families', return_value=('command',)):
-                with self.assertRaisesRegex(readmes.Refusal, 'example-did-not-run: command'):
+            with patch.object(readmes, 'PUBLIC_FAMILIES', ('command',)):
+                with self.assertRaisesRegex(readmes.Refusal, 'example-did-not-run: command') as rejected:
                     readmes.check_examples(packages, root)
+                self.assertEqual(str(rejected.exception).count('example-did-not-run: command'), 2)
+                self.assertEqual(str(rejected.exception).count('command packed text: shared-opening'), 2)
+                self.assertIn('command block 1:', str(rejected.exception))
+                self.assertIn('command block 2:', str(rejected.exception))
 
     def test_preserved_root_checks_only_opening_and_versions(self):
         for family in ('command', 'packagist'):
@@ -267,7 +279,10 @@ class PackageText(unittest.TestCase):
         script = (readmes.REPO / 'sdlc/scripts/release-workflow').read_text()
         routing = script.split('\npublic-examples)\n')[1].split('\ncrate-smoke)')[0]
         families = set(readmes.re.findall(r'--family ([a-z-]+)', routing))
-        self.assertEqual(families, set(readmes.published_families()))
+        self.assertEqual(families, set(readmes.PUBLIC_FAMILIES))
+        self.assertIn('flutter', families)
+        linux = routing.split('*-apple-darwin)')[0]
+        self.assertEqual(readmes.re.findall(r'--family ([a-z-]+)', linux)[-1], 'postgresql')
         self.assertNotIn('registry-readmes.py examples', script.split('\ndraft)\n')[1].split('\n\t;;')[0])
         self.assertIn('smoke', jobs['draft']['needs'])
         for name, path in [('r-package', 'r-dist'), ('crate-package', 'crate-dist')]:
@@ -306,6 +321,13 @@ class PackageText(unittest.TestCase):
                 files = {'README.md': readmes.source(family).read_bytes()}
                 if family == 'dart':
                     files['pubspec.yaml'] = (readmes.REPO / 'libraries/dart/pubspec.yaml').read_bytes()
+                    native = b'fixture native library'
+                    target = {'x86_64': 'x86_64', 'arm64': 'aarch64'}.get(os.uname().machine, os.uname().machine) + '-unknown-linux-gnu'
+                    files['native-assets.json'] = json.dumps({'assets': {'fixture': {
+                        'target': target, 'file': 'libthinkthen.so',
+                        'sha256': readmes.hashlib.sha256(native).hexdigest()}}}).encode()
+                    archive(packages / ('thinkthen-c-' + readmes.version() + '-x86_64-unknown-linux-gnu.tar.gz'), {
+                        'README.md': readmes.source('c').read_bytes(), 'lib/libthinkthen.so': native})
                 archive(packages / ('thinkthen-' + family + '-' + readmes.version() + '-x86_64-unknown-linux-gnu.tar.gz'), files)
                 tool = tools / compiler
                 tool.write_text('#!' + sys.executable + '\n' +
@@ -316,7 +338,7 @@ class PackageText(unittest.TestCase):
                     '    else: sys.exit("compiler ran without lock")\n' +
                     'assert os.environ["CARGO_BUILD_JOBS"] == "2"\n' +
                     ('assert os.environ["PUB_CACHE"] == ' + repr(str(cache)) + '\n' if family == 'dart' else '') +
-                    'out = pathlib.Path(".build/debug/RegistryExample") if sys.argv[1] == "build" else pathlib.Path(sys.argv[-1]) if sys.argv[1] == "compile" else None\n' +
+                    'out = pathlib.Path(sys.argv[-1]) / "bundle/bin/sample" if sys.argv[1:3] == ["build", "cli"] else pathlib.Path(".build/debug/RegistryExample") if sys.argv[1] == "build" else None\n' +
                     'if out:\n' +
                     '    out.parent.mkdir(parents=True, exist_ok=True)\n' +
                     '    out.write_text(' + repr('#!' + sys.executable + '\nimport fcntl\nwith open(' + repr(str(lock)) + ', "a") as lock: fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)\nprint("fixture")\n') + ')\n' +
@@ -326,12 +348,55 @@ class PackageText(unittest.TestCase):
                 with self.subTest(family=family), patch.dict(os.environ, {'PATH': str(tools), 'PUB_CACHE': str(cache), 'THINKTHEN_HEAVY_LOCK': str(lock)}, clear=True):
                     readmes.run_example(family, packages, work, root)
 
+    def test_flutter_replay_uses_installed_wrapper_and_core_and_collects_failures(self):
+        with tempfile.TemporaryDirectory() as scratch:
+            tree = Path(scratch); packages = tree / 'packages'; packages.mkdir()
+            root = tree / 'root'; (root / 'site/recordings').mkdir(parents=True)
+            for name in ('rust-toolchain.toml', 'site/recordings/thinkthen.jsonl'):
+                shutil.copyfile(readmes.REPO / name, root / name)
+            page = readmes.source('flutter', root); page.parent.mkdir(parents=True)
+            page.write_text('```dart\ndecide(); choose(); broken();\n```\n')
+            native = b'fixture native library'
+            target = {'arm64': 'aarch64'}.get(os.uname().machine, os.uname().machine) + '-unknown-linux-gnu'
+            archive(packages / ('thinkthen-flutter-' + readmes.version() + '-x86_64-unknown-linux-gnu.tar.gz'), {
+                'flutter/README.md': readmes.source('flutter').read_bytes(),
+                'flutter/pubspec.yaml': (readmes.REPO / 'libraries/dart/flutter/pubspec.yaml').read_bytes(),
+                'flutter/lib/thinkthen_flutter.dart': b'installed wrapper',
+                'flutter/example/README.md': b'Bundled application example'})
+            archive(packages / ('thinkthen-dart-' + readmes.version() + '-x86_64-unknown-linux-gnu.tar.gz'), {
+                'README.md': readmes.source('dart').read_bytes(),
+                'pubspec.yaml': (readmes.REPO / 'libraries/dart/pubspec.yaml').read_bytes(),
+                'native-assets.json': json.dumps({'assets': {'fixture': {
+                    'target': target, 'file': 'libthinkthen.so',
+                    'sha256': readmes.hashlib.sha256(native).hexdigest()}}}).encode()})
+            archive(packages / ('thinkthen-c-' + readmes.version() + '-x86_64-unknown-linux-gnu.tar.gz'), {
+                'README.md': readmes.source('c').read_bytes(), 'lib/libthinkthen.so': native})
+            calls = []
+            def build(command, work, env, input):
+                calls.append(command)
+                spec = yaml.safe_load((work / 'pubspec.yaml').read_text())
+                wrapper = Path(spec['dependencies']['thinkthen_flutter']['path'])
+                core = Path(spec['dependency_overrides']['thinkthen_dart']['path'])
+                self.assertEqual((wrapper / 'lib/thinkthen_flutter.dart').read_bytes(), b'installed wrapper')
+                self.assertTrue((core / 'native-assets.json').is_file())
+                self.assertEqual(yaml.safe_load((wrapper / 'pubspec.yaml').read_text())['publish_to'], 'none')
+                self.assertTrue(spec['hooks']['user_defines']['thinkthen_dart']['offline'])
+                return subprocess.CompletedProcess(command, 77 if command[1] == 'build' else 0, '', 'broken Flutter example')
+            with patch.object(readmes, 'run_build', side_effect=build):
+                with self.assertRaisesRegex(readmes.Refusal, 'broken Flutter example') as error:
+                    readmes.check_examples(packages, root, families=('flutter', 'python'))
+            self.assertEqual(calls[0][1:], ['pub', 'get', '--offline'])
+            self.assertEqual(calls[1][1:3], ['build', 'cli'])
+            self.assertIn('flutter block 1: example-did-not-run: flutter', str(error.exception))
+            self.assertIn('python', str(error.exception))
+
     def test_release_refuses_when_examples_cannot_run(self):
         with tempfile.TemporaryDirectory() as scratch:
             with self.assertRaisesRegex(readmes.Refusal, 'missing-or-ambiguous-example-package: command') as error:
                 readmes.check_examples(Path(scratch))
             self.assertIn('missing-or-ambiguous-example-package: typescript', str(error.exception))
             self.assertIn('missing-or-ambiguous-example-package: duckdb', str(error.exception))
+            self.assertIn('missing-or-ambiguous-example-package: flutter', str(error.exception))
 
     @unittest.skipUnless(sys.platform in ('linux', 'darwin'), 'compiler replay requires POSIX process groups')
     def test_timed_out_compiler_and_worker_exit_before_replay_releases_build(self):
@@ -444,7 +509,8 @@ class PackageText(unittest.TestCase):
                         patch.object(popen, 'communicate', bounded_communicate):
                     try:
                         done = readmes.run_build([sys.executable, str(compiler), '35', str(marker)],
-                                                tree, {'PATH': '/usr/bin:/bin'}, None)
+                                                tree, {'PATH': '/usr/bin:/bin', 'GITHUB_ACTIONS': 'true',
+                                                       'RUNNER_ENVIRONMENT': 'github-hosted'}, None)
                     except subprocess.TimeoutExpired:
                         done = None
                 pids = [int(pid) for pid in marker.read_text().splitlines()]

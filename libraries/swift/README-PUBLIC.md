@@ -16,12 +16,12 @@ import ThinkThen
     static func main() async throws {
         let client = try Client()
         defer { client.close() }
-        let teams = InputOrderedMap<InputAuthoredDescription>([
-            .init("billing", .alternative0("Invoices, fees, and refunds.")),
-            .init("shipping", .alternative0("Parcels and delivery.")),
-            .init("account", .alternative0("Logins and passwords."))])
-        let teamQuestion = InputRequestQuestion.definition(InputRequestQuestionDefinition(value:
-            .alternative1(InputRequestDefinitionAuthoredChoose(choose: .alternative0("Which team owns this?"), options: .value(.alternative1(teams))))))
+        let teams = OrderedMap<AuthoredDescription>([
+            .init("billing", .string("Invoices, fees, and refunds.")),
+            .init("shipping", .string("Parcels and delivery.")),
+            .init("account", .string("Logins and passwords."))])
+        let teamQuestion = Question.definition(QuestionDefinition(value:
+            .choose(AuthoredChoose(choose: .string("Which team owns this?"), options: .value(.object(teams))))))
         for text in ["Please refund my order. It arrived broken.", "Thanks for the quick help yesterday!", "I want to send this back."] {
             let refund = try await client.decideAnswer(.text("Does the customer ask for a refund?"), input: .text(text))
             print(refund.map { $0 ? "true" : "false" } ?? "not sure")

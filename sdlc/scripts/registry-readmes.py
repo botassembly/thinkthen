@@ -3,6 +3,7 @@
 import argparse
 import email
 import gzip
+import hashlib
 import io
 import json
 import os
@@ -217,17 +218,22 @@ PUBLIC_FAMILIES = ('command', 'crate', 'python', 'typescript', 'ruby', 'go', 'cp
 
 
 def check_sources(root=REPO):
+    failures = []
     for family in PUBLIC_FAMILIES:
-        check_readme(family, source(family, root).read_bytes(), root)
-        text = description(family, root)
-        if text is not None:
-            check_description(family, text, root)
+        for check in (lambda: check_readme(family, source(family, root).read_bytes(), root),
+                      lambda: check_description(family, text, root) if (text := description(family, root)) is not None else None):
+            try:
+                check()
+            except (Refusal, OSError, KeyError, AttributeError) as error:
+                failures.append(family + ': ' + str(error))
     descriptor = (root / 'sdlc/records/0577-description-draft.yml').read_text()
     descriptor_opening = re.search(r'  extended_description: \|\n    (.*)', descriptor)
     pr_opening = (root / 'sdlc/records/0577-pr-description-draft.md').read_text().split('\n\n')[1:2]
     expected = opening((root / 'README.md').read_text())
     if descriptor_opening is None or descriptor_opening.group(1) != expected or pr_opening != [expected]:
-        raise Refusal('shared-opening: duckdb-submission')
+        failures.append('shared-opening: duckdb-submission')
+    if failures:
+        raise Refusal('\n'.join(failures))
 
 
 SAMPLES = {
@@ -276,7 +282,7 @@ def example(family, root=REPO):
     return examples(family, root)[0]
 
 
-def unpack_example_package(family, packages, destination, selected=None):
+def unpack_example_package(family, packages, destination, selected=None, text_failures=None):
     family = 'php' if family == 'packagist' else family
     candidates = []
     for path in packages.iterdir():
@@ -297,7 +303,12 @@ def unpack_example_package(family, packages, destination, selected=None):
     if len(candidates) != 1:
         raise Refusal('missing-or-ambiguous-example-package: ' + family)
     package = candidates[0]
-    check_package(family, package)
+    try:
+        check_package(family, package)
+    except Refusal as error:
+        if text_failures is None:
+            raise
+        text_failures.append(family + ' packed text: ' + str(error))
     files = members(package.read_bytes(), package.suffix in ('.whl', '.nupkg', '.zip'))
     executable = set()
     if package.suffix not in ('.whl', '.nupkg', '.zip') and family != 'ruby':
@@ -319,8 +330,12 @@ def unpack_example_package(family, packages, destination, selected=None):
             library = destination / 'lib' / filename
             if library.is_file() and not (library.parent / alias).exists():
                 (library.parent / alias).symlink_to(library.name)
+    if family == 'flutter':
+        return destination / 'flutter'
     if family == 'r':
         return destination / 'thinkthen'
+    if family == 'crate':
+        return destination / ('thinkthen-' + version())
     pages = list(destination.rglob('README.md'))
     return pages[0].parent if len(pages) == 1 else destination
 
@@ -389,11 +404,11 @@ def run_build(command, work, env, input):
         return run_process(command, work, env, input, 300)
 
 
-def run_example(family, packages, work, root=REPO, selected=None, sample_index=0):
+def run_example(family, packages, work, root=REPO, selected=None, sample_index=0, text_failures=None):
     filename, code, expected = examples(family, root)[sample_index]
     if family == 'packagist':
         family = 'command'
-    package = unpack_example_package(family, packages, work / 'package', selected)
+    package = unpack_example_package(family, packages, work / 'package', selected, text_failures)
     home = work / 'home'; home.mkdir()
     cache = work / 'cache'; cache.mkdir(mode=0o700)
     # The site uses this same recording as a fresh cache, without shell settings or a key.
@@ -415,7 +430,7 @@ def run_example(family, packages, work, root=REPO, selected=None, sample_index=0
     def run(command, build=False, input=None):
         done = run_build(command, work, env, input) if build else run_process(command, work, env, input, 30)
         if done.returncode:
-            raise Refusal('example-did-not-run: ' + family + '\n' + (done.stdout + done.stderr)[-4000:])
+            raise Refusal('example-did-not-run: ' + family + '\n' + done.stdout + done.stderr)
         return done.stdout
 
     if family == 'command':
@@ -466,12 +481,30 @@ def run_example(family, packages, work, root=REPO, selected=None, sample_index=0
         run(['javac', '--release', '22', '-cp', classpath, str(sample)], True)
         output = run(['java', '--enable-native-access=ALL-UNNAMED', '-cp', str(work) + os.pathsep + classpath, 'RegistryExample'])
     elif family in ('c', 'cpp', 'ada', 'cobol', 'zig'):
-        native_package = unpack_example_package('c', packages, work / 'native')
+        native_package = unpack_example_package('c', packages, work / 'native', text_failures=text_failures)
         library = native_package / 'lib'
         if family == 'cpp':
-            (work / 'include/thinkthen').mkdir(parents=True)
-            shutil.copyfile(native_package / 'include/thinkthen.h', work / 'include/thinkthen/thinkthen.h')
-            command = ['c++', '-std=c++17', '-Wall', '-Wextra', '-Werror', '-I' + str(package / 'include'), '-I' + str(work / 'include'), str(sample), '-L' + str(library), '-lthinkthen', '-Wl,-rpath,' + str(library), '-o', str(work / 'sample')]
+            installed = package
+            if not (installed / 'lib/cmake/thinkthen-cpp').is_dir():
+                installed = work / 'installed'
+                run(['cmake', '-S', str(package), '-B', str(work / 'wrapper-build'),
+                     '-DCMAKE_INSTALL_PREFIX=' + str(installed),
+                     '-DTHINKTHEN_NATIVE_SHARED=' + str(library / 'libthinkthen.so'),
+                     '-DTHINKTHEN_NATIVE_STATIC=' + str(library / 'libthinkthen.a'),
+                     '-DTHINKTHEN_C_HEADER=' + str(native_package / 'include/thinkthen.h')], True)
+                run(['cmake', '--build', str(work / 'wrapper-build'), '--target', 'install', '-j2'], True)
+            (work / 'CMakeLists.txt').write_text('cmake_minimum_required(VERSION 3.18)\n'
+                'project(RegistryExample LANGUAGES CXX)\n'
+                'find_package(thinkthen-cpp CONFIG REQUIRED)\n'
+                'add_executable(sample sample.cpp)\n'
+                'target_link_libraries(sample PRIVATE thinkthen::thinkthen_cpp_shared)\n')
+            run(['cmake', '-S', str(work), '-B', str(work / 'consumer-build'),
+                 '-DCMAKE_PREFIX_PATH=' + str(installed)], True)
+            run(['cmake', '--build', str(work / 'consumer-build'), '-j2'], True)
+            output = run([str(work / 'consumer-build/sample')])
+            if expected is not None and output != expected:
+                raise Refusal('example-output-mismatch: ' + family)
+            return
         elif family == 'ada':
             command = ['gnatmake', '-q', '-gnat2022', '-I' + str(package / 'src'), str(sample), '-o', str(work / 'sample'), '-largs', '-L' + str(library), '-lthinkthen', '-Wl,-rpath,' + str(library)]
         elif family == 'c':
@@ -500,18 +533,40 @@ def run_example(family, packages, work, root=REPO, selected=None, sample_index=0
         shutil.copyfile(nupkg[0], feed / nupkg[0].name)
         (work / 'example.csproj').write_text('<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net8.0</TargetFramework><ImplicitUsings>enable</ImplicitUsings></PropertyGroup><ItemGroup><PackageReference Include="Botassembly.ThinkThen" Version="' + version(root) + '" /></ItemGroup></Project>')
         env.update(DOTNET_CLI_HOME=str(home), NUGET_PACKAGES=str(work / 'nuget'),
-                   DOTNET_CLI_TELEMETRY_OPTOUT='1', DOTNET_SKIP_FIRST_TIME_EXPERIENCE='1')
+                   DOTNET_CLI_TELEMETRY_OPTOUT='1', DOTNET_SKIP_FIRST_TIME_EXPERIENCE='1',
+                   DOTNET_CLI_WORKLOAD_UPDATE_NOTIFY_DISABLE='true')
         dotnet = os.environ.get('THINKTHEN_DOTNET', 'dotnet')
-        run([dotnet, 'restore', 'example.csproj', '--source', str(feed)], True)
+        (work / 'NuGet.Config').write_text('<configuration><packageSources><clear/><add key="local" value="' + str(feed) + '"/></packageSources><auditSources><clear/></auditSources></configuration>')
+        run([dotnet, 'restore', 'example.csproj', '--configfile', str(work / 'NuGet.Config'), '-p:NuGetAudit=false'], True)
         run([dotnet, 'build', 'example.csproj', '--no-restore', '-o', str(work / 'bin')], True)
         output = run([dotnet, str(work / 'bin/example.dll')])
-    elif family == 'dart':
-        (work / 'pubspec.yaml').write_text('name: registry_example\nenvironment:\n  sdk: ">=3.0.0 <4.0.0"\ndependencies:\n  thinkthen_dart:\n    path: ' + json.dumps(str(package)) + '\n')
+    elif family in ('dart', 'flutter'):
+        core = unpack_example_package('dart', packages, work / 'dart', text_failures=text_failures) if family == 'flutter' else package
+        native = unpack_example_package('c', packages, work / 'native', text_failures=text_failures)
+        manifest = json.loads((core / 'native-assets.json').read_text())
+        target = {'x86_64': 'x86_64', 'arm64': 'aarch64'}.get(os.uname().machine, os.uname().machine) + '-unknown-linux-gnu'
+        assets = [asset for asset in manifest['assets'].values() if asset['target'] == target]
+        if len(assets) != 1:
+            raise Refusal('dart-example-native-target-mismatch')
+        asset = assets[0]
+        binary = packages / ('libthinkthen-dart.so' if asset['file'] == 'libthinkthen.so' else asset['file'])
+        if not binary.is_file():
+            binary = native / 'lib' / asset['file']
+        if hashlib.sha256(binary.read_bytes()).hexdigest() != asset['sha256']:
+            raise Refusal('dart-example-native-asset-mismatch')
+        assets_cache = work / 'assets'; assets_cache.mkdir()
+        (assets_cache / asset['sha256']).mkdir()
+        shutil.copyfile(binary, assets_cache / asset['sha256'] / asset['file'])
+        dependency = 'thinkthen_flutter' if family == 'flutter' else 'thinkthen_dart'
+        override = '\ndependency_overrides:\n  thinkthen_dart:\n    path: ' + json.dumps(str(core)) if family == 'flutter' else ''
+        (work / 'pubspec.yaml').write_text('name: registry_example\nenvironment:\n  sdk: ">=3.10.0 <4.0.0"\ndependencies:\n  ' + dependency + ':\n    path: ' + json.dumps(str(package)) + override + '\nhooks:\n  user_defines:\n    thinkthen_dart:\n      offline: true\n      asset_cache: ' + json.dumps(str(assets_cache) + '/') + '\n')
         env['PUB_CACHE'] = os.environ.get('PUB_CACHE', str(Path.home() / '.pub-cache'))
         dart = os.environ.get('TT_DART', 'dart')
-        run([dart, 'pub', 'get', '--offline'], True)
-        run([dart, 'compile', 'exe', str(sample), '-o', str(work / 'sample')], True)
-        output = run([str(work / 'sample')])
+        env['FLUTTER_SUPPRESS_ANALYTICS'] = 'true'
+        pub = os.environ.get('TT_FLUTTER', 'flutter') if family == 'flutter' else dart
+        run([pub, 'pub', 'get', '--offline'], True)
+        run([dart, 'build', 'cli', '-t', str(sample), '-o', str(work / 'dart-build')], True)
+        output = run([str(work / 'dart-build/bundle/bin/sample')])
     elif family == 'r':
         (work / 'rlib').mkdir()
         env['R_LIBS_USER'] = str(work / 'rlib') + os.pathsep + os.environ.get('R_LIBS', str(Path.home() / '.cache/thinkthen-toolchains/r-library'))
@@ -536,8 +591,9 @@ def run_example(family, packages, work, root=REPO, selected=None, sample_index=0
         pin = re.search(r'(?m)^VERSION=(.*)$', (root / 'databases/postgresql/runtime.sh').read_text()).group(1)
         tree = work / 'server'
         shutil.copytree(Path(os.environ.get('THINKTHEN_TOOLCHAINS', str(Path.home() / '.cache/thinkthen-toolchains'))) / 'postgresql' / pin, tree, symlinks=True)
-        for suffix in ('usr/lib/postgresql/16/lib', 'usr/share/postgresql/16/extension'):
-            shutil.copytree(package / suffix, tree / suffix, dirs_exist_ok=True)
+        for member, suffix in (('lib', 'usr/lib/postgresql/16/lib'),
+                               ('extension', 'usr/share/postgresql/16/extension')):
+            shutil.copytree(package / member, tree / suffix, dirs_exist_ok=True)
         binaries = tree / 'usr/lib/postgresql/16/bin'
         data = work / 'data'; socket = work / 'socket'; socket.mkdir()
         run([str(binaries / 'initdb'), '-D', str(data), '--auth=trust', '-U', 'postgres'])
@@ -555,32 +611,15 @@ def run_example(family, packages, work, root=REPO, selected=None, sample_index=0
         raise Refusal('example-output-mismatch: ' + family)
 
 
-def published_families(root=REPO):
-    workflow = (root / '.github/workflows/release.yml').read_text()
-    inventory = (root / 'sdlc/scripts/package-inventory.py').read_text()
-    declarations = []
-    for name in ('release-pack', 'release-smoke', 'release-container'):
-        text = (root / 'sdlc/scripts' / name).read_text()
-        declarations += re.findall(r'(?:for family in|set --) ([\w -]+)(?:;|$)', text, re.M)
-        declarations += re.findall(r'release-pack[^\n]+', text) if name == 'release-container' else []
-    declarations += re.findall(r'release-pack[^\n]+', workflow)
-    declared = set(re.findall(r'[a-z][a-z-]*', ' '.join(declarations)))
-    declared.update(re.findall(r"choices=\['npm', '([^']+)', '([^']+)'\]", inventory)[0])
-    if 'sdlc/scripts/package' in workflow:
-        declared.add('crate')
-    if (root / 'composer.json').is_file():
-        declared.add('packagist')
-    return tuple(family for family in PUBLIC_FAMILIES if family in declared)
-
-
 def check_examples(packages, root=REPO, families=None):
     failures = []
     with tempfile.TemporaryDirectory(prefix='thinkthen-registry-examples-') as folder:
         scratch = Path(folder)
         (scratch / 'OWNER').write_text('ThinkThen public package README replay\n')
-        roster = published_families(root)
+        # Source-wrapper pages ship even when their registry publication is disabled.
+        roster = PUBLIC_FAMILIES
         if families is not None and not set(families) <= set(roster):
-            raise Refusal('unpublished-example-family')
+            raise Refusal('unknown-public-example-family')
         for family in families if families is not None else roster:
             selected = [None]
             if family == 'duckdb':
@@ -590,12 +629,18 @@ def check_examples(packages, root=REPO, families=None):
             for index, package in enumerate(selected):
                 work = scratch / (family + '-' + str(index)); work.mkdir()
                 try:
-                    for sample_index in range(len(examples(family, root))):
-                        sample_work = work / str(sample_index); sample_work.mkdir()
-                        run_example(family, packages, sample_work, root, package, sample_index)
+                    samples = examples(family, root)
+                except (Refusal, OSError) as error:
+                    failures.append(family + ': ' + str(error))
+                    continue
+                for sample_index in range(len(samples)):
+                    sample_work = work / str(sample_index); sample_work.mkdir()
+                    try:
+                        run_example(family, packages, sample_work, root, package, sample_index, failures)
                         print('registry-readmes: replayed ' + family + ' block ' + str(sample_index + 1) + (' ' + package.name if package else ''))
-                except (Refusal, OSError, StopIteration, subprocess.SubprocessError) as error:
-                    failures.append(str(error) or ('example-did-not-run: ' + family))
+                    except (Refusal, OSError, StopIteration, subprocess.SubprocessError) as error:
+                        failures.append(family + ' block ' + str(sample_index + 1) + ': ' +
+                                        (str(error) or 'example-did-not-run'))
     if failures:
         raise Refusal('\n'.join(failures))
 
