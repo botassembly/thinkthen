@@ -33,7 +33,7 @@ fn empty_usage_stays_absent_and_explicit_zero_stays_reported_through_cache_and_r
                 result.answer_id(),
                 crate::api::decision(&live).unwrap().answer_id()
             );
-            documents.push(serde_json::to_value(&call).unwrap());
+            documents.push(serde_json::to_value(call).unwrap());
         }
         assert_eq!(
             live.facts().input_tokens(),
