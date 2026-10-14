@@ -163,29 +163,26 @@ fn flagged(flags: impl Iterator<Item = bool>, json: &str) -> Result<(), String> 
     }
 }
 
-/// Compare every judgment byte after checking the CLI-only input position.
-fn details(
+fn atomic_document(
     engine: &Engine,
     question: &LoadedQuestion,
-    case: &Case,
-    path: &Path,
-    base: &str,
+    verb: &str,
     text: &str,
-) -> Compared {
-    let document = match case.verb.as_str() {
+) -> Result<String, String> {
+    match verb {
         "decide" => {
             let call = match question {
                 LoadedQuestion::Question(q) => engine.decide(q, text),
                 LoadedQuestion::Banded(q) => engine.decide(q, text),
             }
             .map_err(|e| e.to_string())?;
-            call.results()[0].to_json().map_err(|e| e.to_string())?
+            call.results()[0].to_json().map_err(|e| e.to_string())
         }
         "choose" | "tag" | "score" => {
             let LoadedQuestion::Question(q) = question else {
                 return Err("unbanded question required".into());
             };
-            match case.verb.as_str() {
+            match verb {
                 "choose" => crate::api::choose(
                     engine,
                     q,
@@ -208,10 +205,22 @@ fn details(
                     .to_json(),
                 _ => engine.score(q, text).map_err(|e| e.to_string())?.results()[0].to_json(),
             }
-            .map_err(|e| e.to_string())?
+            .map_err(|e| e.to_string())
         }
         _ => return Err("atomic function required".into()),
-    };
+    }
+}
+
+/// Compare every judgment byte after checking the CLI-only input position.
+fn details(
+    engine: &Engine,
+    question: &LoadedQuestion,
+    case: &Case,
+    path: &Path,
+    base: &str,
+    text: &str,
+) -> Compared {
+    let document = atomic_document(engine, question, &case.verb, text)?;
     let library: serde_json::Value = serde_json::from_str(&document).map_err(|e| e.to_string())?;
     let printed = command(case, path, base, text, true)?;
     let complete: serde_json::Value =
@@ -236,22 +245,29 @@ fn details(
         return Err("the complete command has no matching original position".into());
     }
     // Correlation IDs identify distinct live observations. Compare the retained
-    // legacy judgment fields, not the independent answers' transient identities.
+    // judgment fields while each live observation keeps its own identity.
     versioned_values(case, text, &library, &complete)?;
     for key in ["question", "answer", "threshold"] {
         if library.get(key) != complete.get(key) {
             return Err(format!("the retained {key} differs"));
         }
     }
-    let legacy_meta = library
+    let library_meta = library
         .get("meta")
         .and_then(serde_json::Value::as_object)
-        .ok_or("no legacy meta")?;
+        .ok_or("no library meta")?;
     let complete_meta = complete
         .get("meta")
         .and_then(serde_json::Value::as_object)
         .ok_or("no complete meta")?;
-    for (key, value) in legacy_meta {
+    for (key, value) in library_meta {
+        if key == "observations" {
+            assert_eq!(
+                value.as_array().map(Vec::len),
+                complete_meta[key].as_array().map(Vec::len)
+            );
+            continue;
+        }
         if complete_meta.get(key) != Some(value) {
             return Err(format!("the retained meta.{key} differs"));
         }
@@ -276,11 +292,11 @@ fn details(
     Ok(1)
 }
 
-/// Pin released boolean values and complete authored values independently.
+/// Pin both canonical documents to independently expected authored values.
 fn versioned_values(
     case: &Case,
     text: &str,
-    legacy: &serde_json::Value,
+    library: &serde_json::Value,
     complete: &serde_json::Value,
 ) -> Result<(), String> {
     let exchange = case
@@ -309,7 +325,7 @@ fn versioned_values(
     } else {
         bare
     };
-    if &complete["value"] != expected || &legacy["value"] != expected {
+    if &complete["value"] != expected || &library["value"] != expected {
         return Err(
             "the complete value differs from the independently expected authored answer".into(),
         );

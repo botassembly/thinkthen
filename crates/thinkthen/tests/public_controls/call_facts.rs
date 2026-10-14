@@ -411,7 +411,7 @@ fn observer_panic_waits_for_a_held_later_batch_worker() {
             .decide(&question(), "gamma")
             .expect("next call")
             .value(),
-        Answer::Yes
+        Some(true)
     );
 }
 

@@ -4,7 +4,7 @@
 use std::thread;
 
 use conformance_backend::Backend;
-use thinkthen::{Answer, BatchSetting, CallOptions, Engine, ErrorKind};
+use thinkthen::{BatchSetting, CallOptions, Engine, ErrorKind};
 
 use super::{Runs, engine, kind, question, serial};
 
@@ -79,7 +79,7 @@ fn a_stop_during_a_batch_or_before_a_cache_miss_sends_nothing_new() {
                 .expect("owner")
                 .ok()
                 .map(thinkthen::Call::into_value),
-            Some(Answer::Yes)
+            Some(Some(true))
         );
     });
     assert_eq!(held.count(), 1, "the stopped engine sent nothing");
