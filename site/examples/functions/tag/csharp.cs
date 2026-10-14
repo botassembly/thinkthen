@@ -14,6 +14,6 @@ var message = "Love the new dashboard, "
 var call = await engine.TagAsync(
     labelQuestion,
     new RequestInputText { Text = message });
-var fittingLabels = call.Tags();
+var fittingLabels = call.Value;
 Trace.Assert(fittingLabels.SequenceEqual(
     ["praise", "bug", "billing"]));

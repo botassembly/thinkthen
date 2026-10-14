@@ -13,5 +13,5 @@ var outage = "Our checkout page is down "
 var call = await engine.ScoreAsync(
     scale,
     new RequestInputText { Text = outage });
-var urgency = call.Score();
+var urgency = call.Value;
 Trace.Assert(urgency == 2.0);

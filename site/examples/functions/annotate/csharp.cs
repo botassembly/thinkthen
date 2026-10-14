@@ -21,7 +21,7 @@ var records = new RequestInputRecords
 var call = await engine.AnnotateAsync(
     new RequestQuestionFile { Path = "form.json" },
     records);
-var triage = call.Annotate()[0].Value;
+var triage = call.Value[0];
 Trace.Assert(triage["steps"] is AnnotatedFieldBoolean
 {
     Value: true,
