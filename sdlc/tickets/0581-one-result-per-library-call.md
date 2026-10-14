@@ -68,3 +68,5 @@ PM amendment, 2026-10-14. A recognize item's probability is its kept proposal's 
 PM amendment, 2026-10-14. In C#, a function whose authored values may be any JSON types `Result.Value` and its list variants with the existing generated `JsonElement` authored-value leaf. The result envelope JSON stays private. No new recursive union type.
 
 PM amendment, 2026-10-14. Probability belongs to the settled value. When a call leaves its value unresolved (null), its probability is null in every host, as Rust reports today.
+
+PM amendment, 2026-10-14. The JVM result is a generated `CallResult<V, P, R>`, matching C#: typed scalar or list probability (`Double` or `List<Double>`, null when unresolved or not given), the existing `Object` authored-value leaf, and idiomatic Kotlin and Scala wrappers over it. Probability is never typed as `Object`.
