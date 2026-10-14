@@ -3,6 +3,20 @@ declare(strict_types=1);
 require (getenv('THINKTHEN_PHP_PACKAGE') ?: dirname(__DIR__)).'/autoload.php';
 use ThinkThen\{Client, CallFailure, Cancellation};
 
+/** Test adapter serialization is not a public library operation. */
+function fixtureValue(mixed $value): mixed
+{
+    if ($value instanceof ThinkThen\Results\Node) {
+        $value = (object)(new ReflectionProperty(ThinkThen\Results\Node::class, 'values'))->getValue($value);
+    }
+    if ($value instanceof stdClass) {
+        $result = new stdClass();
+        foreach ($value as $name => $field) $result->$name = fixtureValue($field);
+        return $result;
+    }
+    return is_array($value) ? array_map(fixtureValue(...), $value) : $value;
+}
+
 function consume(stdClass $fixture, Client $client): array
 {
     $verb = $fixture->verb;
@@ -69,7 +83,7 @@ function consume(stdClass $fixture, Client $client): array
         if (!$error->packets) throw $error;
         $packets = $error->packets;
     }
-    return ['packets' => array_map(fn($p) => $p->toObject(), $packets)];
+    return ['packets' => array_map(fn($p) => fixtureValue($p), $packets)];
 }
 $client = null;
 try {

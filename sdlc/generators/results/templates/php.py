@@ -3,9 +3,9 @@ import json
 import re
 from native import selected_header
 from c import normalized, nullable, variant_member, container_key
-from host_answers import scalar_answers, aggregate_answers, judgment_route, named_object_fields
+from host_answers import scalar_answers, aggregate_answers, aggregate_projection, judgment_route, named_object_fields
 
-ROOTS = ('completesessionPacket', 'completeImmediateFacts')
+ROOTS = ('completesessionPacket', 'completeImmediateFacts', 'completeplan')
 
 
 def name(key):
@@ -86,7 +86,7 @@ def inputs(definitions):
     selected = set(INPUT_ROOTS)
     # The adapter accepts common records and preserves selector descriptors.
     # Emit only the tagged constructors it instantiates.
-    selected.update(('RecognizeQuestion', 'RelateQuestion', 'Authored_relation', 'RecognizeDefinition', 'RequestDefinition_RecognizeDefinition', 'RequestDefinition_Authored_relate', 'RequestInput_records', 'RequestInput_units', 'RequestInput_entities', 'RequestInput_source', 'RequestInput_feed',
+    selected.update(('RecognizeQuestion', 'RelateQuestion', 'Authored_relation', 'RequestDefinition_RecognizeDefinition', 'RequestDefinition_Authored_relate', 'RequestInput_records', 'RequestInput_units', 'RequestInput_entities', 'RequestInput_source', 'RequestInput_feed',
                      'RequestQuestion_text', 'RequestQuestion_definition', 'RequestQuestion_file', 'RequestQuestion_name', 'RequestQuestion_reference',
                      'RequestReaderFailure_producer'))
     lines = ['<?php', '// Generated from the shared Rust request graph; do not edit.',
@@ -95,8 +95,6 @@ def inputs(definitions):
         if key not in selected:
             continue
         if 'properties' not in source:
-            if key == 'RequestQuestion':
-                lines += ['namespace ThinkThen\\Internal\\Requests;', 'final class Question extends \\ThinkThen\\Inputs\\Document', '{', '}']
             continue
         fields = source['properties']
         defaults = {member: field['const'] for member, field in fields.items() if isinstance(field, dict) and 'const' in field}
@@ -142,7 +140,7 @@ def inputs(definitions):
 
 def native_readers(definitions):
     "Copy the Rust decoded graph into owned idiomatic PHP values."
-    nodes = dict(definitions)
+    nodes = {key: value for key, value in definitions.items() if key not in plan_types(definitions)}
     def expression(source, value, path):
         source = normalized(source)
         if '$ref' in source:
@@ -169,6 +167,7 @@ def native_readers(definitions):
             return f'self::mapping({value}, fn($v) => ' + expression(source['additionalProperties'], '$v', container_key(source, path) + '_entry_value') + ')'
         raise ValueError(source)
     lines = ['namespace ThinkThen\\Internal;', 'final class Decoder', '{', NATIVE_SUPPORT]
+    lines += plan_readers(definitions)
     emitted = set()
     while len(emitted) < len(nodes):
         key = next(k for k in nodes if k not in emitted)
@@ -185,7 +184,7 @@ def native_readers(definitions):
                 if presence:
                     read = f'{native}->presence === 1 ? null : ({read})'
                 lines += [f'        ' + (f'if ({native}->presence !== 0) ' if presence else '') + f'$values[{member!r}] = {read};']
-            lines += [f'        return new \\ThinkThen\\Results\\{name(key)}((object)$values, $values);']
+            lines += [f'        return new \\ThinkThen\\Results\\{name(key)}($values);']
         elif 'variants' in source:
             lines += ['        return match ($native->kind) {']
             for index, (child, _) in enumerate(source['variants'], 1):
@@ -205,7 +204,11 @@ def native_readers(definitions):
     return lines + ['}']
 
 
-NATIVE_SUPPORT = r'''    public static function failureFacts(\FFI\CData $view): \ThinkThen\Results\FailureFacts
+NATIVE_SUPPORT = r'''    public static function plan(\FFI\CData $view): \ThinkThen\Results\Plan
+    {
+        return self::planPlan(self::jsonValue($view[0]));
+    }
+    public static function failureFacts(\FFI\CData $view): \ThinkThen\Results\FailureFacts
     {
         return self::readFailureFacts($view[0]);
     }
@@ -238,7 +241,10 @@ NATIVE_SUPPORT = r'''    public static function failureFacts(\FFI\CData $view): 
     }
     private static function number(string $value): int|float|string
     {
-        if (strpbrk($value, '.eE') !== false) return (float)$value;
+        if (strpbrk($value, '.eE') !== false) {
+            $number = (float)$value;
+            return is_finite($number) && json_encode($number, JSON_PRESERVE_ZERO_FRACTION) === $value ? $number : $value;
+        }
         $integer = filter_var($value, FILTER_VALIDATE_INT);
         return $integer === false ? $value : $integer;
     }
@@ -266,20 +272,44 @@ def answer_helpers(definitions):
         lines += [f'    /** @return {typ} */ public function {function}Answer(): ' + ('array' if typ.startswith('list<') else typ), '    {', '        $this->requireSuccess();', '        $answers = [];', '        foreach ($this->packets as $packet) {', f'            if ({checks} && {access}->kind === {kind!r}) $answers[] = {access}->value;', '        }', r"        if (count($answers) !== 1) throw new \ThinkThen\UsageFailure('expected one answer');", '        return $answers[0];', '    }']
     for function, packet, schema in aggregate_answers(definitions):
         if function in {f for f, _, _ in scalar_answers(definitions)}: continue
-        lines += [f'    /** @return {hint(schema, definitions)} */ public function {function}Answer(): mixed', '    {', '        $this->requireSuccess();']
+        projected, member = aggregate_projection(function, schema, definitions)
+        typ = hint(projected, definitions)
+        lines += [f'    /** @return {typ} */ public function {function}Answer(): ' + ('array' if typ.startswith('list<') else typ), '    {', '        $this->requireSuccess();']
         if schema.get('type') == 'array':
-            lines += ['        $answer = [];', '        foreach ($this->packets as $packet) {', f'            if ($packet instanceof {name(packet)}) array_push($answer, ...$packet->value);']
+            lines += ['        $answer = []; $matched = false;', '        foreach ($this->packets as $packet) {', f'            if ($packet instanceof {name(packet)}) {{ $matched = true; array_push($answer, ...$packet->value); }}']
             for child, _ in definitions['completesessionPacket']['variants']:
                 fields = definitions[child].get('properties', {})
                 if fields.get('kind', {}).get('const') == 'row' and fields.get('function', {}).get('const') == function and fields.get('value') == schema['items']:
-                    lines += [f'            elseif ($packet instanceof {name(child)}) $answer[] = $packet->value;']
-            lines += ['        }']
+                    lines += [f'            elseif ($packet instanceof {name(child)}) {{ $matched = true; $answer[] = $packet->value; }}']
+            lines += ['        }', r"        if (!$matched) throw new \ThinkThen\UsageFailure('expected an answer for this function');"]
         else:
             lines += [f'        $values = array_values(array_filter($this->packets, fn($p) => $p instanceof {name(packet)}));', r"        if (count($values) !== 1) throw new \ThinkThen\UsageFailure('expected one answer');", '        $answer = $values[0]->value;']
-        if function == 'filter':
-            lines += ['        return array_values(array_map(fn($row) => $row->input, array_filter($answer, fn($row) => $row->value === true)));']
-        elif function == 'rank':
-            lines += ['        $answer = array_values(array_filter($answer, fn($row) => $row->value !== null));', '        usort($answer, fn($a, $b) => $a->value <=> $b->value);', '        return array_map(fn($row) => $row->input, $answer);']
+        if member:
+            lines += [f'        return array_map(fn($row) => $row->{member}, $answer);']
         else: lines += ['        return $answer;']
         lines += ['    }']
     return lines + ['}']
+
+
+def plan_readers(definitions):
+    """Decode the native canonical value with the public plan schema."""
+    lines = []
+    for key in sorted(plan_types(definitions)):
+        lines += [f'    private static function plan{name(key)}(\\stdClass $value): \\ThinkThen\\Results\\{name(key)}', '    {', '        $values = (array)$value;']
+        for member, field in definitions[key]['properties'].items():
+            if '$ref' in field:
+                child = field['$ref'].split('/')[-1]
+                lines += [f'        $values[{member!r}] = self::plan{name(child)}($value->{member});']
+        lines += [f'        return new \\ThinkThen\\Results\\{name(key)}($values);', '    }']
+    return lines
+
+
+def plan_types(definitions):
+    """Find plan object types read from canonical native values."""
+    pending, seen = ['completeplan'], set()
+    while pending:
+        key = pending.pop()
+        if key in seen: continue
+        seen.add(key)
+        pending.extend(field['$ref'].split('/')[-1] for field in definitions[key]['properties'].values() if '$ref' in field)
+    return seen

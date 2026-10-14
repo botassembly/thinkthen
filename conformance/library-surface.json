@@ -992,7 +992,8 @@
         "item": "Client.item",
         "files": "Client.files",
         "usage_persistence": "usagePersistence",
-        "finish_usage_status": "finishUsageStatus"
+        "finish_usage_status": "finishUsageStatus",
+        "plan": "Client.plan"
       },
       "function_containers": [
         "Client"
@@ -1022,8 +1023,7 @@
         ],
         "Node": [
           "field",
-          "has",
-          "toObject"
+          "has"
         ],
         "Operation": [
           "poll"

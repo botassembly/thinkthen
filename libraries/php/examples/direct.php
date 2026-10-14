@@ -18,6 +18,6 @@ try {
         'recognize' => $client->recognize(new RecognizeQuestion(new RecognitionSpec(kinds: ['person' => null])), 'Maria Chen')->recognizeAnswer(),
         'relate' => $client->relate(new RelateQuestion(new RelationSpec([new RelationRule(name: 'knows', source: 'person', target: 'person')])), [['name' => 'Ana', 'kind' => 'person'], ['name' => 'Bob', 'kind' => 'person']])->relateAnswer(),
     ];
-    foreach ($answers as $function => $answer) echo $function, ': ', json_encode($answer instanceof ThinkThen\Results\Node ? $answer->toObject() : $answer, JSON_THROW_ON_ERROR), "\n";
+    foreach ($answers as $function => $answer) echo $function, ': ', is_array($answer) ? count($answer).' results' : ($answer instanceof ThinkThen\Results\Node ? 'answered' : json_encode($answer, JSON_THROW_ON_ERROR)), "\n";
     foreach ($answers['relate']->value as $edge) echo $edge->sourceName(), ' -> ', $edge->targetName(), "\n";
 } finally { $client->close(); }

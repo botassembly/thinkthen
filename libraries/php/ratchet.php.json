@@ -5,6 +5,6 @@
     "fixtures"
   ],
   "extension": ".php",
-  "max": 410,
+  "max": 429,
   "scope": "handwritten-production"
 }

@@ -19,39 +19,13 @@ final class Operation
         string $function, string|array|\stdClass|\ThinkThen\Inputs\Document|\ThinkThen\Inputs\QuestionSource $question, mixed $input,
         array|\ThinkThen\Inputs\Options $options, private readonly ?Cancellation $token)
     {
-        if ($input instanceof Files) {
-            $source = new Input\InputSource(new Input\Source($input->paths,
-                ['reading' => new Input\Reader($input->reading), ...($input->framing === null ? [] : ['framing' => $input->framing]), ...($input->media === null ? [] : ['media' => $input->media])]));
-        } elseif ($input instanceof \Traversable) {
-            $this->producer = $input instanceof \Iterator ? $input : $input->getIterator();
-            $source = new Input\InputFeed('php');
-        } else {
-            $records = is_array($input) && array_is_list($input) ? $input : [$input];
-            $source = new Input\InputRecords(array_map(fn($item) => new Input\Item(\ThinkThen\Internal\descriptor($item)), $records));
-        }
-        $question = $question instanceof \ThinkThen\Inputs\QuestionSource
-            ? $question
-            : (is_string($question) ? new Input\QuestionText($question) : new Input\QuestionDefinition($question));
+        if ($input instanceof \Traversable) $this->producer = $input instanceof \Iterator ? $input : $input->getIterator();
+        $request = new \ThinkThen\Internal\Request($ffi, $function, $question, $input, $options);
         $buffers = [];
-        $request = $ffi->new('struct thinkthen_named_request_v1');
-        foreach (['function' => $function, 'question_json' => \ThinkThen\Internal\Encoder::encode($question),
-            'input_json' => \ThinkThen\Internal\Encoder::encode($source), 'options_json' => \ThinkThen\Internal\Encoder::encode(($options instanceof \ThinkThen\Inputs\Options ? $options : (object)$options))] as $field => $text) {
-            $request->$field = $this->utf8($text, $buffers);
-        }
-        $surface = $this->utf8('php', $buffers);
+        $surface = $request->utf8('php', $buffers);
         $owner = $ffi->new('struct thinkthen_session *');
-        $this->check($ffi->thinkthen_session_new_named_with_surface($engine, \FFI::addr($request), $surface, \FFI::addr($owner)));
+        $this->check($ffi->thinkthen_session_new_named_with_surface($engine, \FFI::addr($request->value), $surface, \FFI::addr($owner)));
         $this->session = $owner;
-    }
-    private function utf8(string $text, array &$buffers): \FFI\CData
-    {
-        $bytes = $this->ffi->new('char['.(strlen($text) + 1).']');
-        \FFI::memcpy($bytes, $text, strlen($text));
-        $buffers[] = $bytes;
-        $view = $this->ffi->new('struct thinkthen_complete_utf8_v1');
-        $view->data = \FFI::addr($bytes[0]);
-        $view->len = strlen($text);
-        return $view;
     }
     private function check(int $code): void
     {
