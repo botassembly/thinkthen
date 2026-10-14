@@ -17,6 +17,22 @@ ROOT = Path(__file__).resolve().parents[1]
 REPO = ROOT.parent.parent
 
 
+def tool_environment():
+    names = ('PATH', 'HOME', 'LANG', 'LC_ALL', 'TMPDIR', 'TEMP', 'CARGO_HOME', 'RUSTUP_HOME',
+             'CARGO_TARGET_DIR', 'CARGO_BUILD_JOBS', 'CARGO_NET_OFFLINE', 'RUSTFLAGS',
+             'CARGO_ENCODED_RUSTFLAGS', 'RUSTC_WRAPPER', 'RUSTUP_TOOLCHAIN', 'CC', 'CXX', 'AR',
+             'CFLAGS', 'CXXFLAGS', 'LDFLAGS', 'VCPKG_BINARY_SOURCES', 'VCPKG_ROOT',
+             'VCPKG_TOOLCHAIN_PATH', 'VCPKG_TARGET_TRIPLET', 'VCPKG_HOST_TRIPLET',
+             'OPENSSL_ROOT_DIR', 'OPENSSL_DIR', 'OPENSSL_USE_STATIC_LIBS',
+             'MACOSX_DEPLOYMENT_TARGET', 'SDKROOT', 'THINKTHEN_TOOLCHAINS',
+             'THINKTHEN_DUCKDB_VERSION', 'THINKTHEN_DUCKDB_CACHE_LOCK_HELD',
+             'THINKTHEN_HEAVY_LOCK', 'THINKTHEN_HEAVY_LOCK_HELD')
+    env = {name: os.environ.get(name) for name in names if os.environ.get(name) is not None}
+    env.update(GIT_CONFIG_NOSYSTEM='1', GIT_CONFIG_GLOBAL='/dev/null', GIT_NO_REPLACE_OBJECTS='1',
+               PYTHONDONTWRITEBYTECODE='1')
+    return env
+
+
 def hosts():
     pins = authority()
     for kind in ('RELEASE', 'PREVIEW'):
@@ -28,17 +44,18 @@ def hosts():
 
 
 def prepare(folder, commit, repository, fetch, release=None):
+    env = tool_environment()
     if fetch:
         folder.mkdir(parents=True, exist_ok=True)
         if not (folder / '.git').exists():
-            subprocess.run(['git', 'init', '--quiet', str(folder)], check=True)
-        subprocess.run(['git', '-C', str(folder), 'fetch', '--no-tags', '--depth', '1', repository, commit], check=True)
+            subprocess.run(['git', 'init', '--quiet', str(folder)], env=env, check=True)
+        subprocess.run(['git', '-C', str(folder), 'fetch', '--no-tags', '--depth', '1', repository, commit], env=env, check=True)
         if release:
             tag = 'refs/tags/' + release
-            subprocess.run(['git', '-C', str(folder), 'fetch', '--no-tags', '--depth', '1', repository, tag + ':' + tag], check=True)
-        subprocess.run(['git', '-C', str(folder), 'checkout', '--quiet', '--detach', commit], check=True)
+            subprocess.run(['git', '-C', str(folder), 'fetch', '--no-tags', '--depth', '1', repository, tag + ':' + tag], env=env, check=True)
+        subprocess.run(['git', '-C', str(folder), 'checkout', '--quiet', '--detach', commit], env=env, check=True)
     if release:
-        observed = subprocess.check_output(['git', '-C', str(folder), 'rev-parse', release + '^{commit}'], text=True).strip()
+        observed = subprocess.check_output(['git', '-C', str(folder), 'rev-parse', release + '^{commit}'], env=env, text=True).strip()
         if observed != commit:
             raise ValueError('the released DuckDB tag differs from the approved source')
     from validate_inputs import archive_tree
@@ -73,7 +90,7 @@ def main():
     lock = cache.parent.parent / '.duckdb-cache-mutation.lock'
     if args.fetch and os.environ.get('THINKTHEN_DUCKDB_CACHE_LOCK_HELD') != str(lock):
         return subprocess.call([sys.executable, str(ROOT / 'tools/cache_lock.py'), str(lock),
-                                sys.executable, str(Path(__file__).resolve()), '--fetch'])
+                                sys.executable, str(Path(__file__).resolve()), '--fetch'], env=tool_environment())
     lock.parent.mkdir(parents=True, exist_ok=True)
     with lock.open('a') as lease:
         if not args.fetch:
@@ -100,7 +117,7 @@ def check_hosts(cache, fetch):
                    'GEN=ninja', 'BUILD_EXTENSION_TEST_DEPS=none', 'DISABLE_SANITIZER=1',
                    'EXT_RELEASE_FLAGS=-DBUILD_UNITTESTS=ON',
                    'TESTS_BASE_DIRECTORY=' + str(ROOT / 'community/test/sql') + '/']
-        env = os.environ.copy()
+        env = tool_environment()
         env['CMAKE_BUILD_PARALLEL_LEVEL'] = '2'
         subprocess.run(command + ['release'], cwd=build, env=env, check=True)
         with tempfile.TemporaryDirectory(prefix='thinkthen-duckdb-sql-') as folder:

@@ -3,12 +3,16 @@ import json
 import os
 from pathlib import Path
 import subprocess
+import sys
+import tempfile
 
 class AdmissionError(Exception):
     def __init__(self, error):
         self.error = error
 
 ROOT = Path(__file__).resolve().parents[3]
+sys.path.insert(0, str(ROOT / "conformance/children"))
+from children import child_env
 
 def literal(value):
     if value is None:
@@ -80,7 +84,10 @@ def record(value):
 def query(payload):
     target = Path(os.environ.get('CARGO_TARGET_DIR', ROOT / 'target'))
     profile = 'release' if os.environ.get('THINKTHEN_TEST_PROFILE') == 'full' else 'debug'
-    reader = subprocess.run([str(target / profile / 'thinkthen_read_inputs')], input=json.dumps(payload['inputs']), text=True, capture_output=True, check=True)
+    with tempfile.TemporaryDirectory(prefix='thinkthen-postgresql-inputs-') as home:
+        reader = subprocess.run([str(target / profile / 'thinkthen_read_inputs')],
+                                input=json.dumps(payload['inputs']), text=True,
+                                capture_output=True, check=True, env=child_env(home=home))
     inputs = json.loads(reader.stdout)
     if 'admission_error' in inputs:
         raise AdmissionError(inputs['admission_error']['error'])

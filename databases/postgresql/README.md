@@ -240,18 +240,18 @@ PUBLIC execution is revoked by the extension default.
 Each function accepts an ordered `thinkthen_record[]` and an optional `thinkthen_reading` alongside its question. Construct both with named SQL arguments. The returned `value` has the function's ordinary SQL type. The `result`, `facts`, `failure` and `observations` columns carry typed complete readings and final call facts. Observations retain the actual input image and source metadata separately from the generic original-value serialization.
 
 ```sql
-SELECT value, (facts).requests_sent, (result).answer_id
+SELECT attention.value AS needs_attention, (attention.facts).requests_sent, (attention.result).answer_id
 FROM thinkthen_decide(
   'Does this need attention?',
   ARRAY[thinkthen_record(text => 'A short note.')],
   thinkthen_reading(threshold => '0.9', context => 'Use this policy note.')
-);
+) AS attention;
 ```
 
 Read a named choice from `value` and its confidence from the same typed receipt:
 
 ```sql
-SELECT value AS team, ((result).answer).confidence AS confidence
+SELECT ownership.value AS team, ((ownership.result).answer).confidence AS confidence
 FROM thinkthen_choose(
   'Which team owns this?',
   ARRAY[thinkthen_record(text => 'Please refund the duplicate charge.')],
@@ -259,7 +259,7 @@ FROM thinkthen_choose(
     ROW('billing', NULL)::thinkthen_option,
     ROW('shipping', NULL)::thinkthen_option
   ])
-);
+) AS ownership;
 ```
 
 `team` is the selected option name. SQL `NULL` represents an unresolved choice. The receipt retains the resolved question, option order, answer identity, confidence and named probability distribution.

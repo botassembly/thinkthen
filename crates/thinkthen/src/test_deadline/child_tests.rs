@@ -25,3 +25,20 @@ fn a_thinkthen_name_is_never_kept() {
 fn a_secret_shaped_name_is_never_kept_in_any_case() {
     let _ = command("sh", &["db_password"]);
 }
+
+#[test]
+fn cargo_children_preserve_compiler_flags_without_other_parent_names() {
+    let child = command(env!("CARGO"), super::child::CARGO);
+    let environment: std::collections::BTreeMap<_, _> = child
+        .get_envs()
+        .filter_map(|(name, value)| value.map(|value| (name, value)))
+        .collect();
+    for name in ["RUSTFLAGS", "CARGO_ENCODED_RUSTFLAGS", "CFLAGS", "CXXFLAGS"] {
+        assert_eq!(
+            environment.get(std::ffi::OsStr::new(name)).copied(),
+            std::env::var_os(name).as_deref(),
+            "Cargo must retain the caller's compiler flags and encoded precedence"
+        );
+    }
+    assert!(!environment.contains_key(std::ffi::OsStr::new("CARGO_PKG_NAME")));
+}

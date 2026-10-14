@@ -113,8 +113,9 @@ PASSES = {
     "Ruby": lambda call: re.search(r"unsetenv_others:\s*true", call),
     "R": lambda call: "clean_env(" in call,
 }
+# os.execve requires an explicit environment; os.execv inherits the parent.
 OUTRIGHT = {
-    "Python": re.compile(r"\bos\.(?:system|popen|exec\w*|spawn\w*)\s*\("),
+    "Python": re.compile(r"\bos\.(?:system|popen|exec(?!ve\b)\w*|spawn\w*)\s*\("),
     "Ruby": re.compile(r"`[^`\n]*`|%x[({\[]"),
 }
 WHOLE = {
@@ -337,6 +338,9 @@ CASES = [
     ("a.py", 'subprocess.run(["x"], env=None)\n', [f"children: a.py:1: {INHERITS.format('Python')}"]),
     ("a.py", 'subprocess.run(["x"],\n               env=child_env())\n', []),
     ("a.py", 'os.system("ls")\n', [f"children: a.py:1: {INHERITS.format('Python')}"]),
+    ("a.py", 'os.execve(binary, argv, child_env(home=folder))\n', []),
+    ("a.py", 'os.execv(binary, argv)\n', [f"children: a.py:1: {INHERITS.format('Python')}"]),
+    ("tests/a.py", 'os.execve(binary, argv, os.environ)\n', [f"children: tests/a.py:1: {READS}"]),
     ("tests/a.py", "env = dict(os.environ)\n", [f"children: tests/a.py:1: {READS}"]),
     ("tests/a.py", "names = os.environ.items()\n", [f"children: tests/a.py:1: {READS}"]),
     ("tests/a.py", "for name in os.environ:\n    pass\n", [f"children: tests/a.py:1: {READS}"]),
