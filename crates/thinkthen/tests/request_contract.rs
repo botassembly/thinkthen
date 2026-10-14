@@ -3,6 +3,8 @@ use conformance_backend::{Canned, Listener};
 use serde_json::{Value, json};
 use thinkthen::RequestFunction;
 use thinkthen::*;
+#[path = "request_contract/located_filter.rs"]
+mod located_filter;
 #[path = "request_contract/native_feed.rs"]
 mod native_feed;
 #[path = "request_contract/preview.rs"]
