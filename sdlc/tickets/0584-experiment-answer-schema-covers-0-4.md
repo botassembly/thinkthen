@@ -1,8 +1,12 @@
 # 0584: Experiment: the answer schema covers every 0.4 use
 
-Status: OPEN.
+Status: COMPLETE.
 
 Milestone: 0.3
+
+Reviews: revision 0e46dc2, reject
+Reviews: revision a37ca83, reject
+Reviews: revision a37ca83, accept
 
 ## Outcome
 
@@ -19,3 +23,7 @@ Learn whether PRD 01's tables and published views answer every curation, eval an
 - Decision it changes: the 0.3 database schema, under Ian's ruling that it is designed for curation from the start.
 - Machine: the Beelink.
 - Defers: the lasting CI test and the schema files move into the 0.3 database ticket.
+
+## Progress
+
+- 2026-10-14 started
