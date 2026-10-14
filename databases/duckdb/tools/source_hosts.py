@@ -113,6 +113,8 @@ def check_hosts(cache, fetch):
                    'TESTS_BASE_DIRECTORY=' + str(ROOT / 'community/test/sql') + '/']
         env = tool_environment()
         env['CMAKE_BUILD_PARALLEL_LEVEL'] = '2'
+        if (inputs / 'venv/bin/cmake').exists():
+            env['PATH'] = str(inputs / 'venv/bin') + os.pathsep + env.get('PATH', '')
         admission = []
         lock = env.get('THINKTHEN_HEAVY_LOCK', '/tmp/thinkthen-heavy.lock')
         if env.get('THINKTHEN_HEAVY_LOCK_HELD') != lock:

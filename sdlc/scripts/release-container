@@ -107,16 +107,10 @@ docker run "$@" "$IMAGE" sh -euc '
 	mkdir -p /work/home/.pgrx && printf "[configs]\npg16 = \"%s\"\n" "$PG_CONFIG" >/work/home/.pgrx/config.toml
 	export PATH LIBCLANG_PATH BINDGEN_EXTRA_CLANG_ARGS PG_CONFIG
 	INPUTS_HERE=/work/src/databases/duckdb/tools
-	. "$INPUTS_HERE/inputs.sh"
-	. /work/src/sdlc/scripts/scratch.sh
-	. "$INPUTS_HERE/prepare_inputs.sh"
 	THINKTHEN_TOOLCHAINS=/work/cache/toolchains/$TARGET
 	export THINKTHEN_TOOLCHAINS
-	DUCKDB_VERSIONS=$(input_versions)
-	for version in $DUCKDB_VERSIONS; do
-		input_select "$version" "$TARGET"
-		input_prepare_source_static
-	done
+	python3 "$INPUTS_HERE/source_hosts.py" --fetch
+	python3 /work/src/databases/duckdb/community/prepare.py
 	# The image carries OpenSSL 1.1.1k runtime libraries but no headers. Its
 	# matching AlmaLinux development RPM supplies the build-only headers and
 	# linker names without changing the pinned image or installed runtime.
