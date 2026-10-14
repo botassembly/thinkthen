@@ -261,21 +261,43 @@ FUNCTION = r'(?<![\w])(?:thinkthen_|tt_)?' + FUNCTION_NAMES
 def host_functions(code, family):
     # Canonical C requests and COBOL CALL operands carry function names in strings.
     # Shell commands use words rather than host invocation syntax.
-    if family in ('c', 'cobol', 'command', 'packagist'):
+    if family in ('command', 'packagist'):
         return {name.lower() for name in re.findall(FUNCTION + r'(?![\w])', code, re.I)}
     comments = r'//[^\n]*|/\*[\s\S]*?\*/'
     if family in ('python', 'ruby', 'r', 'php'):
         comments += r'|\#[^\n]*'
     if family == 'ada':
         comments = r'--[^\n]*'
+    if family == 'cobol':
+        comments = r'\*>[^\n]*'
     # Mask literals before seeking calls, including triple and verbatim strings.
     literals = r'"""[\s\S]*?"""|\'\'\'[\s\S]*?\'\'\'|@"(?:""|[^"])*"|"(?:\\.|[^"\\])*"|\'(?:\\.|[^\'\\])*\'|`[^`]*`'
-    code = re.sub(literals + '|' + comments, ' ', code)
+    functions = set()
+    if family == 'cobol':
+        # Match CALL operands before masking other literals, including DISPLAY text.
+        operands = r'\bCALL\s+["\'](?:thinkthen_|tt_)' + FUNCTION_NAMES + r'["\'](?=\s+USING\b)'
+        def mask_cobol(token):
+            if token.lastindex:
+                functions.add(token[1].lower())
+            return ' '
+        re.sub(operands + '|' + comments + '|' + literals, mask_cobol, code, flags=re.I)
+        return functions
+    def mask(token):
+        if family == 'c' and token[0].startswith('"'):
+            try:
+                request = json.loads(json.loads(token[0]))
+                function = request['call']['function']
+                if re.fullmatch(FUNCTION_NAMES, function):
+                    functions.add(function)
+            except (ValueError, TypeError, KeyError):
+                pass
+        return ' '
+    code = re.sub(literals + '|' + comments, mask, code)
     suffix = 'Async' if family == 'csharp' else ''
     # Rust turbofish and typed host arguments remain part of the same named call.
     generic = r'(?:\s*(?:::)?\s*<[\w\s.:,<>\[\]&?]+>)?' if family in ('crate', 'cpp', 'typescript', 'csharp') else ''
     invocation = r'\s*:' if family == 'objective-c' else generic + r'\s*\('
-    return {name.lower() for name in re.findall(FUNCTION + suffix + invocation, code, re.I)}
+    return functions | {name.lower() for name in re.findall(FUNCTION + suffix + invocation, code, re.I)}
 
 
 def database_functions(code, family):

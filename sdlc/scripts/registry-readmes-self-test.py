@@ -225,6 +225,23 @@ class PackageText(unittest.TestCase):
                          'engine.decide(q, input); "engine.choose(q, input)"'):
                 cases.append(('python', code, False))
             cases.append(('go', 'client.Decide(q, input); client.ChooseAsync(q, input);', False))
+            for function in functions:
+                other = 'choose' if function == 'decide' else 'decide'
+                cases.append(('csharp', 'engine.' + function.title() + 'Async<Input<Record>>(q, input); '
+                              + 'engine.' + other.title() + 'Async(q, input);', True))
+            for false_call in ('engine.ChooseAsyncUnknown<Input>(q, input);',
+                               'engine.ChooseAnswerAsync<Input>(q, input);',
+                               '@"engine.ChooseAsync<Input>(q, input)"',
+                               '"""engine.ChooseAsync<Input>(q, input)"""'):
+                cases.append(('csharp', 'engine.DecideAsync(q, input); ' + false_call, False))
+            for family, current, decoy in (
+                    ('c', 'thinkthen_decide(q, input);', 'thinkthen_choose(q, input)'),
+                    ('cobol', 'CALL "TT_DECIDE" USING q input.', 'CALL "TT_CHOOSE" USING q input.')):
+                cases.append((family, readmes.source(family).read_text(), True))
+                for prose in ('/* ' + decoy + ' */', '// ' + decoy,
+                              '"' + decoy.replace('"', '\\"') + '"') if family == 'c' else (
+                                  '*> ' + decoy, 'DISPLAY \'CALL "TT_CHOOSE" USING q input.\'.'):
+                    cases.append((family, current + '\n' + prose, False))
             for family, code, admitted in cases:
                 with self.subTest(family=family, code=code):
                     page = readmes.source(family, root); page.parent.mkdir(parents=True, exist_ok=True)
