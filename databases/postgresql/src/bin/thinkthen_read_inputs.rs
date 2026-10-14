@@ -81,7 +81,9 @@ fn checked_records(
         Ok(inputs) => inputs,
         Err(error) => return Ok(serde_json::json!({"records":[{"read_error":error.complete()}]})),
     };
-    let records = value.get_mut("records").and_then(serde_json::Value::as_array_mut)
+    let records = value
+        .get_mut("records")
+        .and_then(serde_json::Value::as_array_mut)
         .ok_or("records is an ordered array")?;
     for (index, record) in inputs.deferred_records(None).enumerate() {
         let Err(error) = record else { continue };

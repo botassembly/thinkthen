@@ -6,7 +6,11 @@ use thinkthen::{Error, RequestBatch, RequestOptions, RequestThreshold};
 
 extension_sql!(
     r#"
+CREATE TYPE thinkthen_context_property AS (name text, kind text);
+CREATE TYPE thinkthen_context_schema AS (kind text, properties thinkthen_context_property[], required text[]);
 CREATE TYPE thinkthen_reading AS (
+    context_schema thinkthen_context_schema,
+    options thinkthen_option[], levels thinkthen_option[], labels thinkthen_option[],
     model text, mode text, snippet_pieces bigint, relation_threshold text,
     threshold text, context text, boundary_context text, kind_edge_context text,
     relation_context text, field text[], context_field text, options_field text,

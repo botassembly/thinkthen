@@ -4,8 +4,8 @@ import re
 
 ROOTS = ('completeDecide', 'completeChoose', 'completeTag', 'completeScore',
          'completeFilter', 'completeRank', 'completeAnnotation', 'completeRecognition',
-         'completeFind', 'completeRelation', 'completeFacts', 'completeError', 'completesessionObservation')
-NAMES = {'completesessionObservation': 'event',
+         'completeFind', 'completeRelation', 'completeFacts', 'completeplan', 'completeError', 'completesessionObservation')
+NAMES = {'completeplan': 'plan', 'completesessionObservation': 'event',
          'completesessionQuestionDetail': 'question_detail',
          'completesessionObservedRow': 'observed_row',
          'completeDecide': 'decision', 'completeChoose': 'choice',

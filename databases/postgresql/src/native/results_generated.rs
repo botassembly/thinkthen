@@ -113,6 +113,8 @@ CREATE TYPE thinkthen_related_entity_edge AS ("either" boolean, "probability" do
 CREATE TYPE thinkthen_related AS ("answer" thinkthen_answers, "answer_id" text, "file" text, "first_line" numeric, "index" numeric, "input" jsonb, "input_present" boolean, "input_sources" thinkthen_session_input_source[], "last_line" numeric, "meta" thinkthen_metadata, "position" thinkthen_position, "question" thinkthen_relate_question_document, "schema" text, "value" thinkthen_related_entity_edge[]);
 CREATE TYPE thinkthen_facts_usage_persistence AS ("advice" text, "observed_at" text, "state" text);
 CREATE TYPE thinkthen_facts AS ("attempts" thinkthen_attempt[], "cache_answers" numeric, "call_id" text, "estimated_cost_usd" text, "held_model_mismatch" boolean, "input_tokens" numeric, "largest_request_bytes" numeric, "largest_request_estimated_input_tokens" numeric, "model" text, "output_tokens" numeric, "records" numeric, "requests_sent" numeric, "seconds" double precision, "token_estimate_method" text, "usage_persistence" thinkthen_facts_usage_persistence);
+CREATE TYPE thinkthen_token_band AS ("lower" numeric, "upper" numeric);
+CREATE TYPE thinkthen_plan AS ("estimated_bytes" numeric, "estimated_input_tokens" thinkthen_token_band, "first_body_utf8" text, "largest_request_bytes" numeric, "largest_request_estimated_input_tokens" numeric, "records" numeric, "requests" numeric, "token_estimate_method" text, "upper_bound" boolean);
 CREATE TYPE thinkthen_error_estimated_input_denial AS ("kind" text, "last_status" bigint, "limit" numeric);
 CREATE TYPE thinkthen_error_send_budget_denial AS ("kind" text, "last_status" bigint);
 CREATE TYPE thinkthen_stopped AS ("at" numeric, "cause" text, "retryable" boolean, "status" bigint);
@@ -5911,6 +5913,101 @@ pub(super) fn convert(
             if let Some(converted) = converted {
                 tuple
                     .set_by_name("usage_persistence", converted)
+                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
+            }
+            Ok(tuple)
+        }
+        "thinkthen_token_band" => {
+            let mut tuple = super::output::tuple(kind);
+            let held = value.get("lower");
+            let converted: Option<pgrx::AnyNumeric> =
+                held.and_then(Value::as_u64).map(pgrx::AnyNumeric::from);
+            if let Some(converted) = converted {
+                tuple
+                    .set_by_name("lower", converted)
+                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
+            }
+            let held = value.get("upper");
+            let converted: Option<pgrx::AnyNumeric> =
+                held.and_then(Value::as_u64).map(pgrx::AnyNumeric::from);
+            if let Some(converted) = converted {
+                tuple
+                    .set_by_name("upper", converted)
+                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
+            }
+            Ok(tuple)
+        }
+        "thinkthen_plan" => {
+            let mut tuple = super::output::tuple(kind);
+            let held = value.get("estimated_bytes");
+            let converted: Option<pgrx::AnyNumeric> =
+                held.and_then(Value::as_u64).map(pgrx::AnyNumeric::from);
+            if let Some(converted) = converted {
+                tuple
+                    .set_by_name("estimated_bytes", converted)
+                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
+            }
+            let held = value.get("estimated_input_tokens");
+            let converted: Option<PgHeapTuple<'static, AllocatedByRust>> = held
+                .filter(|value| !value.is_null())
+                .map(|value| convert("thinkthen_token_band", value))
+                .transpose()?;
+            if let Some(converted) = converted {
+                tuple
+                    .set_by_name("estimated_input_tokens", converted)
+                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
+            }
+            let held = value.get("first_body_utf8");
+            let converted: Option<String> = held.and_then(Value::as_str).map(str::to_owned);
+            if let Some(converted) = converted {
+                tuple
+                    .set_by_name("first_body_utf8", converted)
+                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
+            }
+            let held = value.get("largest_request_bytes");
+            let converted: Option<pgrx::AnyNumeric> =
+                held.and_then(Value::as_u64).map(pgrx::AnyNumeric::from);
+            if let Some(converted) = converted {
+                tuple
+                    .set_by_name("largest_request_bytes", converted)
+                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
+            }
+            let held = value.get("largest_request_estimated_input_tokens");
+            let converted: Option<pgrx::AnyNumeric> =
+                held.and_then(Value::as_u64).map(pgrx::AnyNumeric::from);
+            if let Some(converted) = converted {
+                tuple
+                    .set_by_name("largest_request_estimated_input_tokens", converted)
+                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
+            }
+            let held = value.get("records");
+            let converted: Option<pgrx::AnyNumeric> =
+                held.and_then(Value::as_u64).map(pgrx::AnyNumeric::from);
+            if let Some(converted) = converted {
+                tuple
+                    .set_by_name("records", converted)
+                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
+            }
+            let held = value.get("requests");
+            let converted: Option<pgrx::AnyNumeric> =
+                held.and_then(Value::as_u64).map(pgrx::AnyNumeric::from);
+            if let Some(converted) = converted {
+                tuple
+                    .set_by_name("requests", converted)
+                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
+            }
+            let held = value.get("token_estimate_method");
+            let converted: Option<String> = held.and_then(Value::as_str).map(str::to_owned);
+            if let Some(converted) = converted {
+                tuple
+                    .set_by_name("token_estimate_method", converted)
+                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
+            }
+            let held = value.get("upper_bound");
+            let converted: Option<bool> = held.and_then(Value::as_bool);
+            if let Some(converted) = converted {
+                tuple
+                    .set_by_name("upper_bound", converted)
                     .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
             }
             Ok(tuple)

@@ -59,14 +59,6 @@ pub(super) fn deferred(
 ) -> Vec<Result<Record, Error>> {
     records.iter().map(record).collect()
 }
-pub(super) fn records(
-    records: Array<'_, pgrx::composite_type!("thinkthen_record")>,
-) -> Result<Vec<RequestItem>, Error> {
-    deferred(records)
-        .into_iter()
-        .map(|record| record.map(|record| record.item))
-        .collect()
-}
 fn record(tuple: Option<pgrx::composite_type!("thinkthen_record")>) -> Result<Record, Error> {
     let tuple = tuple.ok_or_else(|| call::usage("record list contains NULL"))?;
     let failure: Option<pgrx::composite_type!("thinkthen_reader_failure")> =

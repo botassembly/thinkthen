@@ -36,7 +36,10 @@ def decode(value, schema):
             choice = resolve(choice)
             if common and isinstance(choice, dict):
                 choice = {**choice, 'properties': {**common, **choice.get('properties', {})}}
-            decoded = decode(value, choice)
+            try:
+                decoded = decode(value, choice)
+            except (AssertionError, TypeError, AttributeError, KeyError):
+                continue
             if valid(decoded, choice):
                 return decoded
         raise AssertionError(('no canonical SQL alternative', value, schema))
@@ -70,7 +73,7 @@ def decode(value, schema):
         if isinstance(value, list):
             return {entry['name']: decode(entry['value'], schema['additionalProperties']) for entry in value}
         return {name: decode(child, schema['additionalProperties']) for name, child in value.items()}
-    if 'array' in kinds:
+    if 'array' in kinds and isinstance(value, list):
         return [decode(child, schema.get('items', {})) for child in value]
     return value
 

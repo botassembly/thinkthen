@@ -12,6 +12,8 @@ mod input;
 mod options;
 mod output;
 mod plan;
+mod question_settings;
+mod context_schema;
 mod reading;
 mod results_generated;
 
@@ -19,15 +21,15 @@ fn request(
     verb: &'static str,
     question: &str,
     options: thinkthen::RequestOptions,
+    settings: &thinkthen::Settings,
 ) -> Result<thinkthen::AdmittedRequest, Error> {
-    let settings = thinkthen::Settings::default();
     let prepared = if question.starts_with('@') {
         let (reference, source) =
             files::read_resolved_question(question, call::file_directory().as_deref())?;
         let parsed = complete_native::settings::parse_file(verb, &source, &reference)?;
-        complete_native::settings::prepare_file(verb, &source, &settings, parsed)?
+        complete_native::settings::prepare_file(verb, &source, settings, parsed)?
     } else {
-        complete_native::prepare(verb, question, &settings)?
+        complete_native::prepare(verb, question, settings)?
     };
     let definition = thinkthen_host::sql_request::definition(&prepared);
     Request::named(
@@ -78,16 +80,14 @@ pub(super) fn execute(
         .transpose()?
         .flatten()
         .unwrap_or(false);
-    let request = request(verb, question, options::read(reading)?)?;
-    let projection = request.record_reading()?;
-    let mut args = request.request().call.arguments().clone();
-    // Composed feeds own projection; transfer it after canonical header admission.
-    args.options.field = None;
-    args.options.context_field = None;
-    args.options.options_field = None;
-    args.options.seed_spans_field = None;
-    args.options.examples_field = None;
-    let request = Request::named(verb, args)?.admit()?;
+    let context_schema = context_schema::read(reading.as_ref())?;
+    let settings = question_settings::read(reading.as_ref())?;
+    let request = request(verb, question, options::read(reading)?, &settings)?;
+    let mut projection = request.record_reading()?;
+    if let Some(schema) = context_schema {
+        projection = projection.with_context_schema(schema);
+    }
+    let request = composed_request(verb, &request)?;
     let function = verb.parse()?;
     let records = input::deferred(records);
     let images = records.iter().any(|record| {
@@ -168,4 +168,14 @@ pub(super) fn field<
 
 pub(super) fn number(value: i64) -> Result<usize, Error> {
     usize::try_from(value).map_err(|_| call::usage("reading counts cannot be negative"))
+}
+
+fn composed_request(verb: &str, request: &thinkthen::AdmittedRequest) -> Result<thinkthen::AdmittedRequest, Error> {
+    let mut args = request.request().call.arguments().clone();
+    args.options.field = None;
+    args.options.context_field = None;
+    args.options.options_field = None;
+    args.options.seed_spans_field = None;
+    args.options.examples_field = None;
+    Request::named(verb, args)?.admit()
 }
