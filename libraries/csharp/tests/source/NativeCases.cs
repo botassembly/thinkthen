@@ -12,95 +12,95 @@ static class AsyncFixtureCases
     static JsonElement Get(JsonElement value, string key) => value.ValueKind == JsonValueKind.Object && value.TryGetProperty(key, out var found) ? found : default;
     static string Text(JsonElement value, string key) => Get(value, key).ValueKind == JsonValueKind.String ? Get(value, key).GetString()! : "";
     static bool Yes(JsonElement value, string key) => Get(value, key).ValueKind == JsonValueKind.True;
-    static ThinkThen.Inputs.InputPresence<string> String(JsonElement value, string key) => Get(value, key).ValueKind == JsonValueKind.Undefined ? default(ThinkThen.Inputs.InputPresence<string>) : Text(value, key);
-    static ThinkThen.Inputs.InputPresence<ulong> Unsigned(JsonElement value, string key) => Get(value, key).ValueKind == JsonValueKind.Number ? Get(value, key).GetUInt64() : default(ThinkThen.Inputs.InputPresence<ulong>);
-    static ThinkThen.Inputs.InputRequestBatch Batch(JsonElement value) => value.ValueKind == JsonValueKind.Number ? new ThinkThen.Inputs.InputRequestBatchInteger { Value = value.GetUInt64() } : new ThinkThen.Inputs.InputRequestBatchString { Value = value.GetString()! };
-    static ThinkThen.Inputs.InputEngineSettings Settings(JsonElement value) => new() {
-        Proxy = Get(value,"proxy").ValueKind==JsonValueKind.Undefined ? default(ThinkThen.Inputs.InputPresence<JsonElement>) : Get(value,"proxy").Clone(),
+    static ThinkThen.Inputs.AuthoredPresence<string> String(JsonElement value, string key) => Get(value, key).ValueKind == JsonValueKind.Undefined ? default(ThinkThen.Inputs.AuthoredPresence<string>) : Text(value, key);
+    static ThinkThen.Inputs.AuthoredPresence<ulong> Unsigned(JsonElement value, string key) => Get(value, key).ValueKind == JsonValueKind.Number ? Get(value, key).GetUInt64() : default(ThinkThen.Inputs.AuthoredPresence<ulong>);
+    static ThinkThen.Inputs.RequestBatch Batch(JsonElement value) => value.ValueKind == JsonValueKind.Number ? new ThinkThen.Inputs.RequestBatchInteger { Value = value.GetUInt64() } : new ThinkThen.Inputs.RequestBatchString { Value = value.GetString()! };
+    static ThinkThen.Inputs.EngineSettings Settings(JsonElement value) => new() {
+        Proxy = Get(value,"proxy").ValueKind==JsonValueKind.Undefined ? default(ThinkThen.Inputs.AuthoredPresence<JsonElement>) : Get(value,"proxy").Clone(),
         BaseUrl = String(value,"base_url"), Model = String(value,"model"), Backend = String(value,"backend"), Profile = String(value,"profile"),
         Record = String(value,"record"), Replay = String(value,"replay"), UsdPerMillionInput = String(value,"usd_per_million_input"), UsdPerMillionOutput = String(value,"usd_per_million_output"),
-        Cache = Get(value,"cache").ValueKind == JsonValueKind.Undefined ? default : Get(value,"cache").ValueKind == JsonValueKind.String ? (ThinkThen.Inputs.InputPresence<ThinkThen.Inputs.InputCacheDocument>)new ThinkThen.Inputs.InputCacheDocumentString { Value = Text(value,"cache") } : new ThinkThen.Inputs.InputCacheDocumentDisabledCache { Value = new ThinkThen.Inputs.InputDisabledCache() },
-        Batch = Get(value,"batch").ValueKind == JsonValueKind.Undefined ? default(ThinkThen.Inputs.InputPresence<ThinkThen.Inputs.InputRequestBatch>) : Batch(Get(value,"batch")),
-        MaxRequests = Get(value,"max_requests").ValueKind == JsonValueKind.Undefined ? default(ThinkThen.Inputs.InputPresence<ThinkThen.Inputs.InputEngineSettingsMaxRequests>) : Get(value,"max_requests").ValueKind == JsonValueKind.Null ? (ThinkThen.Inputs.InputPresence<ThinkThen.Inputs.InputEngineSettingsMaxRequests>)new ThinkThen.Inputs.InputEngineSettingsMaxRequestsNull() : new ThinkThen.Inputs.InputEngineSettingsMaxRequestsInteger { Value = Get(value,"max_requests").GetUInt64() },
-        MaxRequestsTotal = Get(value,"max_requests_total").ValueKind == JsonValueKind.Undefined ? default(ThinkThen.Inputs.InputPresence<ThinkThen.Inputs.InputEngineSettingsMaxRequestsTotal>) : Get(value,"max_requests_total").ValueKind == JsonValueKind.Null ? (ThinkThen.Inputs.InputPresence<ThinkThen.Inputs.InputEngineSettingsMaxRequestsTotal>)new ThinkThen.Inputs.InputEngineSettingsMaxRequestsTotalNull() : new ThinkThen.Inputs.InputEngineSettingsMaxRequestsTotalInteger { Value = Get(value,"max_requests_total").GetUInt64() },
-        MaxEstimatedInputTokensTotal = Get(value,"max_estimated_input_tokens_total").ValueKind == JsonValueKind.Undefined ? default(ThinkThen.Inputs.InputPresence<ThinkThen.Inputs.InputEngineSettingsMaxEstimatedInputTokensTotal>) : Get(value,"max_estimated_input_tokens_total").ValueKind == JsonValueKind.Null ? (ThinkThen.Inputs.InputPresence<ThinkThen.Inputs.InputEngineSettingsMaxEstimatedInputTokensTotal>)new ThinkThen.Inputs.InputEngineSettingsMaxEstimatedInputTokensTotalNull() : new ThinkThen.Inputs.InputEngineSettingsMaxEstimatedInputTokensTotalInteger { Value = Get(value,"max_estimated_input_tokens_total").GetUInt64() },
-        MaxRetries = Get(value,"max_retries").ValueKind == JsonValueKind.Number ? Get(value,"max_retries").GetUInt32() : default(ThinkThen.Inputs.InputPresence<uint>),
+        Cache = Get(value,"cache").ValueKind == JsonValueKind.Undefined ? default : Get(value,"cache").ValueKind == JsonValueKind.String ? (ThinkThen.Inputs.AuthoredPresence<ThinkThen.Inputs.CacheDocument>)new ThinkThen.Inputs.CacheDocumentString { Value = Text(value,"cache") } : new ThinkThen.Inputs.CacheDocumentDisabledCache { Value = new ThinkThen.Inputs.DisabledCache() },
+        Batch = Get(value,"batch").ValueKind == JsonValueKind.Undefined ? default(ThinkThen.Inputs.AuthoredPresence<ThinkThen.Inputs.RequestBatch>) : Batch(Get(value,"batch")),
+        MaxRequests = Get(value,"max_requests").ValueKind == JsonValueKind.Undefined ? default(ThinkThen.Inputs.AuthoredPresence<ThinkThen.Inputs.EngineSettingsMaxRequests>) : Get(value,"max_requests").ValueKind == JsonValueKind.Null ? (ThinkThen.Inputs.AuthoredPresence<ThinkThen.Inputs.EngineSettingsMaxRequests>)new ThinkThen.Inputs.EngineSettingsMaxRequestsNull() : new ThinkThen.Inputs.EngineSettingsMaxRequestsInteger { Value = Get(value,"max_requests").GetUInt64() },
+        MaxRequestsTotal = Get(value,"max_requests_total").ValueKind == JsonValueKind.Undefined ? default(ThinkThen.Inputs.AuthoredPresence<ThinkThen.Inputs.EngineSettingsMaxRequestsTotal>) : Get(value,"max_requests_total").ValueKind == JsonValueKind.Null ? (ThinkThen.Inputs.AuthoredPresence<ThinkThen.Inputs.EngineSettingsMaxRequestsTotal>)new ThinkThen.Inputs.EngineSettingsMaxRequestsTotalNull() : new ThinkThen.Inputs.EngineSettingsMaxRequestsTotalInteger { Value = Get(value,"max_requests_total").GetUInt64() },
+        MaxEstimatedInputTokensTotal = Get(value,"max_estimated_input_tokens_total").ValueKind == JsonValueKind.Undefined ? default(ThinkThen.Inputs.AuthoredPresence<ThinkThen.Inputs.EngineSettingsMaxEstimatedInputTokensTotal>) : Get(value,"max_estimated_input_tokens_total").ValueKind == JsonValueKind.Null ? (ThinkThen.Inputs.AuthoredPresence<ThinkThen.Inputs.EngineSettingsMaxEstimatedInputTokensTotal>)new ThinkThen.Inputs.EngineSettingsMaxEstimatedInputTokensTotalNull() : new ThinkThen.Inputs.EngineSettingsMaxEstimatedInputTokensTotalInteger { Value = Get(value,"max_estimated_input_tokens_total").GetUInt64() },
+        MaxRetries = Get(value,"max_retries").ValueKind == JsonValueKind.Number ? Get(value,"max_retries").GetUInt32() : default(ThinkThen.Inputs.AuthoredPresence<uint>),
         MaxRequestBytes = Unsigned(value,"max_request_bytes"), Timeout = Unsigned(value,"timeout"),
-        Throttle = Get(value,"throttle").ValueKind == JsonValueKind.Number ? Get(value,"throttle").GetInt64() : default(ThinkThen.Inputs.InputPresence<long>),
-        RefreshCache = Get(value,"refresh_cache").ValueKind == JsonValueKind.Undefined ? default(ThinkThen.Inputs.InputPresence<bool>) : Yes(value,"refresh_cache")
+        Throttle = Get(value,"throttle").ValueKind == JsonValueKind.Number ? Get(value,"throttle").GetInt64() : default(ThinkThen.Inputs.AuthoredPresence<long>),
+        RefreshCache = Get(value,"refresh_cache").ValueKind == JsonValueKind.Undefined ? default(ThinkThen.Inputs.AuthoredPresence<bool>) : Yes(value,"refresh_cache")
     };
-    static ThinkThen.Inputs.InputRequestQuestion Question(Engine engine,JsonElement data)
+    static ThinkThen.Inputs.RequestQuestion Question(Engine engine,JsonElement data)
     {
         string reference = Text(data,"reference");
         switch(Text(data,"loader")) {
-            case "load_named": case "named": return new ThinkThen.Inputs.InputRequestQuestionName { Name = reference };
-            case "load_reference": case "reference": return new ThinkThen.Inputs.InputRequestQuestionReference { Reference = reference };
-            case "load": case "file": return new ThinkThen.Inputs.InputRequestQuestionFile { Path = reference };
+            case "load_named": case "named": return new ThinkThen.Inputs.RequestQuestionName { Name = reference };
+            case "load_reference": case "reference": return new ThinkThen.Inputs.RequestQuestionReference { Reference = reference };
+            case "load": case "file": return new ThinkThen.Inputs.RequestQuestionFile { Path = reference };
         }
-        if (Text(data,"question_form") == "file") return new ThinkThen.Inputs.InputRequestQuestionFile { Path = "fixture-question.json" };
+        if (Text(data,"question_form") == "file") return new ThinkThen.Inputs.RequestQuestionFile { Path = "fixture-question.json" };
         var q = Get(data,"question");
-        if (Text(data,"question_form") == "text") return new ThinkThen.Inputs.InputRequestQuestionDefinition { Value = new ThinkThen.Inputs.InputRequestDefinitionAuthoredDecide {
-            Decide = new ThinkThen.Inputs.InputAuthoredQuestionTextString { Value = Text(q,"decide") },
-            Threshold = Get(q,"threshold").ValueKind == JsonValueKind.Number ? new ThinkThen.Inputs.InputAuthoredThresholdNumber { Value = Get(q,"threshold").GetDouble() } : default(ThinkThen.Inputs.InputPresence<ThinkThen.Inputs.InputAuthoredThreshold>)
+        if (Text(data,"question_form") == "text") return new ThinkThen.Inputs.RequestQuestionDefinition { Value = new ThinkThen.Inputs.RequestDefinitionAuthoredDecide {
+            Decide = new ThinkThen.Inputs.AuthoredQuestionTextString { Value = Text(q,"decide") },
+            Threshold = Get(q,"threshold").ValueKind == JsonValueKind.Number ? new ThinkThen.Inputs.AuthoredThresholdNumber { Value = Get(q,"threshold").GetDouble() } : default(ThinkThen.Inputs.AuthoredPresence<ThinkThen.Inputs.AuthoredThreshold>)
         }  };
-        if (Text(data,"verb") == "find" && Yes(q,"none")) return new ThinkThen.Inputs.InputRequestQuestionDefinition { Value = new ThinkThen.Inputs.InputRequestDefinitionAuthoredFind {
-            Find = Get(q,"find").ValueKind == JsonValueKind.String ? new ThinkThen.Inputs.InputAuthoredQuestionTextString { Value = Text(q,"find") } : new ThinkThen.Inputs.InputAuthoredQuestionTextObject { Value = Get(q,"find").Clone() },
-            Name = String(q,"name"), WordingVersion = Get(q,"wording_version").ValueKind == JsonValueKind.Number ? Get(q,"wording_version").GetInt64() : default(ThinkThen.Inputs.InputPresence<long>)
+        if (Text(data,"verb") == "find" && Yes(q,"none")) return new ThinkThen.Inputs.RequestQuestionDefinition { Value = new ThinkThen.Inputs.RequestDefinitionAuthoredFind {
+            Find = Get(q,"find").ValueKind == JsonValueKind.String ? new ThinkThen.Inputs.AuthoredQuestionTextString { Value = Text(q,"find") } : new ThinkThen.Inputs.AuthoredQuestionTextObject { Value = Get(q,"find").Clone() },
+            Name = String(q,"name"), WordingVersion = Get(q,"wording_version").ValueKind == JsonValueKind.Number ? Get(q,"wording_version").GetInt64() : default(ThinkThen.Inputs.AuthoredPresence<long>)
         }  };
         var kind = Text(data,"verb") switch {
             "annotate" => AuthoredQuestionKind.Set, "rank" => Get(q,"questions").ValueKind!=JsonValueKind.Undefined ? AuthoredQuestionKind.RankSet : AuthoredQuestionKind.Rank,
             "choose" => Get(q,"options").ValueKind==JsonValueKind.Undefined ? AuthoredQuestionKind.DynamicChoose : AuthoredQuestionKind.Atomic,
             "find" => AuthoredQuestionKind.Find, "recognize" => AuthoredQuestionKind.Recognize, "relate" => AuthoredQuestionKind.Relate, _ => AuthoredQuestionKind.Atomic
         };
-        return engine.ParseQuestion(kind,Get(data,"raw").ValueKind==JsonValueKind.String ? Text(data,"raw") : q.GetRawText());
+        return FixtureQuestions.Parse(kind,Get(data,"raw").ValueKind==JsonValueKind.String ? Text(data,"raw") : q.GetRawText());
     }
-    static ThinkThen.Inputs.InputRequestInput Source(JsonElement data)
+    static ThinkThen.Inputs.RequestInput Source(JsonElement data)
     {
         var paths = Get(data,"paths");
         if (paths.ValueKind == JsonValueKind.Array && paths.GetArrayLength() > 0) {
             int unit = Get(data,"source_unit").GetInt32();
-            ThinkThen.Inputs.InputSourceUnit reading = unit == 1 ? new ThinkThen.Inputs.InputSourceUnitLine() : unit == 2 ? new ThinkThen.Inputs.InputSourceUnitWindow() : new ThinkThen.Inputs.InputSourceUnitFile();
-            return new ThinkThen.Inputs.InputRequestInputSource { Source = new ThinkThen.Inputs.InputRequestSource {
+            ThinkThen.Inputs.SourceUnit reading = unit == 1 ? new ThinkThen.Inputs.SourceUnitLine() : unit == 2 ? new ThinkThen.Inputs.SourceUnitWindow() : new ThinkThen.Inputs.SourceUnitFile();
+            return new ThinkThen.Inputs.RequestInputSource { Source = new ThinkThen.Inputs.RequestSource {
                 Paths = paths.EnumerateArray().Select(p => p.GetString()!).ToArray(),
-                Reading = new ThinkThen.Inputs.InputRequestReader { Unit = reading, Window = Unsigned(data,"window") },
-                Media = unit == 4 || Yes(data,"image_reader") ? (ThinkThen.Inputs.InputPresence<ThinkThen.Inputs.InputReaderMedia>)new ThinkThen.Inputs.InputReaderMediaImage() : default
+                Reading = new ThinkThen.Inputs.RequestReader { Unit = reading, Window = Unsigned(data,"window") },
+                Media = unit == 4 || Yes(data,"image_reader") ? (ThinkThen.Inputs.AuthoredPresence<ThinkThen.Inputs.ReaderMedia>)new ThinkThen.Inputs.ReaderMediaImage() : default
             } };
         }
-        if (Text(data,"verb")=="annotate" && Yes(data,"text") && Get(data,"items").GetArrayLength()==1 && Get(data,"items")[0].ValueKind==JsonValueKind.String && !Yes(data,"context_present") && !(Get(data,"image_paths").ValueKind==JsonValueKind.Array && Get(data,"image_paths").GetArrayLength()>0)) return new ThinkThen.Inputs.InputRequestInputText { Text = Get(data,"items")[0].GetString()! };
-        var images = new List<ThinkThen.Inputs.InputRequestImage>();
+        if (Text(data,"verb")=="annotate" && Yes(data,"text") && Get(data,"items").GetArrayLength()==1 && Get(data,"items")[0].ValueKind==JsonValueKind.String && !Yes(data,"context_present") && !(Get(data,"image_paths").ValueKind==JsonValueKind.Array && Get(data,"image_paths").GetArrayLength()>0)) return new ThinkThen.Inputs.RequestInputText { Text = Get(data,"items")[0].GetString()! };
+        var images = new List<ThinkThen.Inputs.RequestImage>();
         var imagePaths = Get(data,"image_paths");
-        if (imagePaths.ValueKind == JsonValueKind.Array) foreach(var path in imagePaths.EnumerateArray()) images.Add(new ThinkThen.Inputs.InputRequestImageBytes {
+        if (imagePaths.ValueKind == JsonValueKind.Array) foreach(var path in imagePaths.EnumerateArray()) images.Add(new ThinkThen.Inputs.RequestImageBytes {
             Bytes = Convert.ToBase64String(File.ReadAllBytes(path.GetString()!)),
-            Media = Text(data,"media") == "image/jpeg" ? new ThinkThen.Inputs.InputImageMediaImageJpeg() : new ThinkThen.Inputs.InputImageMediaImagePng()
+            Media = Text(data,"media") == "image/jpeg" ? new ThinkThen.Inputs.ImageMediaImageJpeg() : new ThinkThen.Inputs.ImageMediaImagePng()
         });
-        var records = new List<ThinkThen.Inputs.InputRequestItem>(); int at = 0;
+        var records = new List<ThinkThen.Inputs.RequestItem>(); int at = 0;
         foreach (var value in Get(data,"items").EnumerateArray()) {
             var context = Get(data,"contexts").ValueKind == JsonValueKind.Array ? Get(data,"contexts")[at] : Get(data,"context");
             var orders = Get(data,"candidate_orders");
-            var item = new ThinkThen.Inputs.InputRequestItem {
-                Original = Yes(data,"image_only") ? default : Yes(data,"caption_files") ? (ThinkThen.Inputs.InputPresence<ThinkThen.Inputs.InputRequestOriginal>)new ThinkThen.Inputs.InputRequestOriginalText { Text = File.ReadAllText($"caption-{at}.txt") } : Yes(data,"text") && value.ValueKind == JsonValueKind.String ? new ThinkThen.Inputs.InputRequestOriginalText { Text = value.GetString()! } : new ThinkThen.Inputs.InputRequestOriginalJson { Value = value.Clone() },
-                Context = !Yes(data,"context_present") && Get(data,"contexts").ValueKind != JsonValueKind.Array ? default(ThinkThen.Inputs.InputPresence<ThinkThen.Inputs.InputContextSchema>) : context.ValueKind == JsonValueKind.String ? (ThinkThen.Inputs.InputPresence<ThinkThen.Inputs.InputContextSchema>)new ThinkThen.Inputs.InputContextSchemaString { Value = context.GetString()! } : new ThinkThen.Inputs.InputContextSchemaObject { Value = context.Clone() },
-                Options = orders.ValueKind == JsonValueKind.Array ? orders[at].EnumerateArray().Select(v => new ThinkThen.Inputs.InputOptionSchema { Name = v.GetString()! }).ToArray() : default(ThinkThen.Inputs.InputPresence<IReadOnlyList<ThinkThen.Inputs.InputOptionSchema>>),
-                Images = images.Count > 0 ? images.AsReadOnly() : default(ThinkThen.Inputs.InputPresence<IReadOnlyList<ThinkThen.Inputs.InputRequestImage>>)
+            var item = new ThinkThen.Inputs.RequestItem {
+                Original = Yes(data,"image_only") ? default : Yes(data,"caption_files") ? (ThinkThen.Inputs.AuthoredPresence<ThinkThen.Inputs.RequestOriginal>)new ThinkThen.Inputs.RequestOriginalText { Text = File.ReadAllText($"caption-{at}.txt") } : Yes(data,"text") && value.ValueKind == JsonValueKind.String ? new ThinkThen.Inputs.RequestOriginalText { Text = value.GetString()! } : new ThinkThen.Inputs.RequestOriginalJson { Value = value.Clone() },
+                Context = !Yes(data,"context_present") && Get(data,"contexts").ValueKind != JsonValueKind.Array ? default(ThinkThen.Inputs.AuthoredPresence<ThinkThen.Inputs.ContextSchema>) : context.ValueKind == JsonValueKind.String ? (ThinkThen.Inputs.AuthoredPresence<ThinkThen.Inputs.ContextSchema>)new ThinkThen.Inputs.ContextSchemaString { Value = context.GetString()! } : new ThinkThen.Inputs.ContextSchemaObject { Value = context.Clone() },
+                Options = orders.ValueKind == JsonValueKind.Array ? orders[at].EnumerateArray().Select(v => new ThinkThen.Inputs.OptionSchema { Name = v.GetString()! }).ToArray() : default(ThinkThen.Inputs.AuthoredPresence<IReadOnlyList<ThinkThen.Inputs.OptionSchema>>),
+                Images = images.Count > 0 ? images.AsReadOnly() : default(ThinkThen.Inputs.AuthoredPresence<IReadOnlyList<ThinkThen.Inputs.RequestImage>>)
             };
             at++; records.Add(item);
         }
-        return new ThinkThen.Inputs.InputRequestInputRecords { Items = records };
+        return new ThinkThen.Inputs.RequestInputRecords { Items = records };
     }
-    static async IAsyncEnumerable<ThinkThen.Inputs.InputRequestSessionDescriptor> Feed(JsonElement data, ThinkThen.Inputs.InputRequestInput? input)
+    static async IAsyncEnumerable<ThinkThen.Inputs.RequestSessionDescriptor> Feed(JsonElement data, ThinkThen.Inputs.RequestInput? input)
     {
         if (Yes(data,"owned_jsonl")) {
             string path = Get(data,"paths")[0].GetString()!; ulong line = 0;
             foreach (string raw in File.ReadLines(path, new System.Text.UTF8Encoding(false,true))) {
                 line++; using var record = JsonDocument.Parse(raw);
-                yield return new ThinkThen.Inputs.InputRequestSessionDescriptor {
-                    Item = new ThinkThen.Inputs.InputRequestItem { Original = new ThinkThen.Inputs.InputRequestOriginalJson { Value = record.RootElement.Clone() } },
-                    Location = new ThinkThen.Inputs.InputSessionSourceLocation { File = path, FirstLine = line, LastLine = line }
+                yield return new ThinkThen.Inputs.RequestSessionDescriptor {
+                    Item = new ThinkThen.Inputs.RequestItem { Original = new ThinkThen.Inputs.RequestOriginalJson { Value = record.RootElement.Clone() } },
+                    Location = new ThinkThen.Inputs.SessionSourceLocation { File = path, FirstLine = line, LastLine = line }
                 };
                 await System.Threading.Tasks.Task.Yield();
             }
-        } else if (input is ThinkThen.Inputs.InputRequestInputRecords records) {
-            foreach (var item in records.Items) { yield return new ThinkThen.Inputs.InputRequestSessionDescriptor { Item = item }; await System.Threading.Tasks.Task.Yield(); }
+        } else if (input is ThinkThen.Inputs.RequestInputRecords records) {
+            foreach (var item in records.Items) { yield return new ThinkThen.Inputs.RequestSessionDescriptor { Item = item }; await System.Threading.Tasks.Task.Yield(); }
         } else throw new InvalidOperationException("fixture feed requires records");
     }
     public static string Run(string raw) => RunAsync(raw).GetAwaiter().GetResult();
@@ -113,11 +113,11 @@ static class AsyncFixtureCases
             string injection = Text(Get(data,"operation"),"injection"); if (injection == "cancel_token") cancel.Cancel();
             if (Yes(data,"held_cancel")) { signal = new Thread(() => { if (Console.Read() != '!') throw new Exception("missing cancellation signal"); cancel.Cancel(); Console.WriteLine("cancel-fired"); Console.Out.Flush(); }); signal.Start(); }
             bool nullContext = Yes(data,"context_present") && Get(data,"context").ValueKind==JsonValueKind.Null;
-            if (nullContext) input = new ThinkThen.Inputs.InputRequestInputJson { Value = JsonSerializer.SerializeToElement(new Dictionary<string,object?> { ["item"] = Get(data,"items")[0].Clone(), ["context"] = null }) };
-            var context = Get(data,"shared_context"); var options = new ThinkThen.Inputs.InputRequestOptions {
-                Field = nullContext ? new[] { "/item" } : default(ThinkThen.Inputs.InputPresence<IReadOnlyList<string>>), ContextField = nullContext ? "/context" : default(ThinkThen.Inputs.InputPresence<string>),
-                Attempts = true, None = Text(data,"verb") == "find" ? Yes(Get(data,"question"),"none") : default(ThinkThen.Inputs.InputPresence<bool>), Context = context.ValueKind == JsonValueKind.String ? context.GetString()! : default(ThinkThen.Inputs.InputPresence<string>),
-                DeadlineMs = injection == "expired_deadline" ? 0L : default(ThinkThen.Inputs.InputPresence<long>)
+            if (nullContext) input = new ThinkThen.Inputs.RequestInputJson { Value = JsonSerializer.SerializeToElement(new Dictionary<string,object?> { ["item"] = Get(data,"items")[0].Clone(), ["context"] = null }) };
+            var context = Get(data,"shared_context"); var options = new ThinkThen.Inputs.RequestOptions {
+                Field = nullContext ? new[] { "/item" } : default(ThinkThen.Inputs.AuthoredPresence<IReadOnlyList<string>>), ContextField = nullContext ? "/context" : default(ThinkThen.Inputs.AuthoredPresence<string>),
+                Attempts = true, None = Text(data,"verb") == "find" ? Yes(Get(data,"question"),"none") : default(ThinkThen.Inputs.AuthoredPresence<bool>), Context = context.ValueKind == JsonValueKind.String ? context.GetString()! : default(ThinkThen.Inputs.AuthoredPresence<string>),
+                DeadlineMs = injection == "expired_deadline" ? 0L : default(ThinkThen.Inputs.AuthoredPresence<long>)
             };
             try {
                 OwnedCall call = await (Yes(data,"incremental") ? Text(data,"verb") switch {
@@ -138,6 +138,7 @@ static class AsyncFixtureCases
                 return JsonSerializer.Serialize(Normalize(call, Text(data,"verb"),Yes(data,"incremental"),Get(data,"image_paths").ValueKind==JsonValueKind.Array && Get(data,"image_paths").GetArrayLength()>0 || Get(data,"source_unit").ValueKind==JsonValueKind.Number && Get(data,"source_unit").GetInt32()==4));
             } catch(SessionFailure failure) { return JsonSerializer.Serialize(Normalize(failure.Call,Text(data,"verb"),Yes(data,"incremental"),Get(data,"image_paths").ValueKind==JsonValueKind.Array && Get(data,"image_paths").GetArrayLength()>0 || Get(data,"source_unit").ValueKind==JsonValueKind.Number && Get(data,"source_unit").GetInt32()==4)); }
         } catch(Failure failure) { return JsonSerializer.Serialize(new { code = failure.Code, message = failure.Message }); }
+        catch(JsonException failure) { return JsonSerializer.Serialize(new { code = 1, message = failure.Message }); }
         catch(OperationCanceledException) { return JsonSerializer.Serialize(new { code = 5, message = "Operation cancelled." }); }
         finally { signal?.Join(); }
     }
@@ -182,7 +183,7 @@ static class AsyncFixtureCases
                     ["answered_by"]=source?.AnsweredBy,["observations"]=detail.Observations.Count,["sources"]=detail.QuestionSources.Count,["input"]=Optional(detail.Input),
                     ["observation_ids"]=detail.Observations.OfType<ThinkThen.Results.ObservationObservationId>().Select(v=>v.ObservationId).ToArray(),["detail_inputs"]=Array.Empty<object>(),["answer_kind"]="YesNo"
                 };
-                Location(row,Optional(detail.InputSource));
+                Location(row,Optional(detail.Source));
                 if(detail.Probabilities.State==ThinkThen.Results.PresenceState.Value && detail.Probabilities.Value is ThinkThen.Results.SessionProbabilitiesYesNo odds)row["probability"]=odds.Value;
                 foreach(var author in Author(detail.Question))row[author.Key]=author.Value;
                 all.Add(row);

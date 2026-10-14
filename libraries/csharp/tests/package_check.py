@@ -116,7 +116,7 @@ def abi_check(header, package):
     assert required_imports <= native['functions'].keys(), 'owned SDK imports absent from C header'
     carriers = {'thinkthen_string_v1', 'thinkthen_complete_usage_persistence_v1', 'thinkthen_complete_utf8_v1', 'thinkthen_named_request_v1'}
     assert set(actual['records']) == carriers, 'unused native layouts retained'
-    constant_names = {name for name in native['constants'] if name.startswith(('THINKTHEN_LOAD_', 'THINKTHEN_COMPLETE_USAGE_PERSISTENCE_')) or name.startswith('THINKTHEN_E') and not name.endswith('_V1')}
+    constant_names = {name for name in native['constants'] if name.startswith(('THINKTHEN_COMPLETE_USAGE_PERSISTENCE_',)) or name.startswith('THINKTHEN_E') and not name.endswith('_V1')}
     expected = abi.represented_abi(native, carriers, required_imports, constant_names)
     for name, prototype in actual['functions'].items():
         pointees = prototype.pop('argument_pointees')
@@ -146,7 +146,7 @@ def abi_plants(header):
         env = child_env(DOTNET_CLI_HOME=str(scratch / 'home'), NUGET_PACKAGES=str(scratch / 'nuget'),
                         DOTNET_CLI_TELEMETRY_OPTOUT='1', DOTNET_SKIP_FIRST_TIME_EXPERIENCE='1', DOTNET_NOLOGO='1')
         plants = [('field order', 'NativeBridge.g.cs', 'public IntPtr data;\n    public nuint len;', 'public nuint len;\n    public IntPtr data;'),
-                  ('enum', 'NativeBridge.g.cs', 'Atomic = 1', 'Atomic = 19'),
+                  ('enum', 'NativeBridge.g.cs', 'Backend = 2', 'Backend = 19'),
                   ('return', 'NativeSession.cs', 'extern void thinkthen_session_cancel(', 'extern long thinkthen_session_cancel(')]
         for name, file, before, after in plants:
             copied = source / file
@@ -220,8 +220,6 @@ class Probe {
    }
   }
   var constants=new Dictionary<string,int>();
-  var authored=assembly.GetType("ThinkThen.AuthoredQuestionKind",true)!;
-  foreach(var value in Enum.GetValues(authored))constants.Add("THINKTHEN_LOAD_"+Regex.Replace(Enum.GetName(authored,value)!,"(?<!^)(?=[A-Z])","_").ToUpperInvariant()+"_V1",Convert.ToInt32(value));
   var failure=assembly.GetType("ThinkThen.FailureKind",true)!;
   foreach(var value in Enum.GetValues(failure))constants.Add("THINKTHEN_E"+Enum.GetName(failure,value)!.ToUpperInvariant(),Convert.ToInt32(value));
   var persistence=assembly.GetType("ThinkThen.UsagePersistenceState",true)!;

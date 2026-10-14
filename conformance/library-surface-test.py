@@ -305,24 +305,24 @@ extraPublicExport <- function(context = NULL, enabled = FALSE,
             extra.write_text('public class Other {\n'
                              + ''.join('public void ' + method + '() {}\n' for method in methods)
                              + 'public string FactsJson {get;} public string Failure {get;} }\n'
-                             + 'public class InputRequestOptions { public string SurpriseOption {get;} }\n'
-                             + 'public class InputEngineSettings { public string SurpriseSetting {get;} }\n')
+                             + 'public class RequestOptions { public string SurpriseOption {get;} }\n'
+                             + 'public class EngineSettings { public string SurpriseSetting {get;} }\n')
             unexpected = invoke(original)
             for method in methods:
                 self.assertIn('unlisted public call/export: Other.' + method, unexpected)
             for owner, field in [('Other', 'FactsJson'), ('Other', 'Failure'),
-                                 ('InputRequestOptions', 'SurpriseOption'), ('InputEngineSettings', 'SurpriseSetting')]:
+                                 ('RequestOptions', 'SurpriseOption'), ('EngineSettings', 'SurpriseSetting')]:
                 self.assertIn('unlisted public field: ' + owner + '.' + field, unexpected)
             extra.unlink()
             inputs = root / 'libraries/csharp/src/RequestInputs.g.cs'
             input_source = inputs.read_text()
-            inputs.write_text(input_source.replace('InputPresence<string> Context {', 'InputPresence<string> SurpriseOption {')
-                              .replace('InputPresence<string> Backend {', 'InputPresence<string> SurpriseSetting {'))
+            inputs.write_text(input_source.replace('AuthoredPresence<string> Context {', 'AuthoredPresence<string> SurpriseOption {')
+                              .replace('AuthoredPresence<string> Backend {', 'AuthoredPresence<string> SurpriseSetting {'))
             drift = invoke(original)
             for kind, field in [('option', 'context'), ('setting', 'backend')]:
                 self.assertTrue(any(error.startswith('missing ' + kind + ': ' + field) for error in drift))
-            for owner, before, after in [('InputRequestOptions', 'Context', 'SurpriseOption'),
-                                         ('InputEngineSettings', 'Backend', 'SurpriseSetting')]:
+            for owner, before, after in [('RequestOptions', 'Context', 'SurpriseOption'),
+                                         ('EngineSettings', 'Backend', 'SurpriseSetting')]:
                 self.assertIn('missing generated declaration: RequestInputs.g.cs:' + owner + '.' + before, drift)
                 self.assertIn('unlisted generated declaration: RequestInputs.g.cs:' + owner + '.' + after, drift)
             inputs.write_text(input_source)

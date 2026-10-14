@@ -3,6 +3,6 @@ using ThinkThen;
 using ThinkThen.Inputs;
 using var engine = Engine.Open();
 var result = await engine.DecideAsync(
-    new InputRequestQuestionText { Text = "Is it?" },
-    new InputRequestInputText { Text = "example" });
+    new RequestQuestionText { Text = "Is it?" },
+    new RequestInputText { Text = "example" });
 Console.WriteLine(result.Decision());

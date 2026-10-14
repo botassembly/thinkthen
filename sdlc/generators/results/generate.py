@@ -362,7 +362,7 @@ def bridge():
         lines += [' public ' + types[field['type']] + ' ' + name + ';'
                   for name, field in native['records'][carrier]['fields'].items()]
         lines += ['}']
-    for enum, prefix, suffix, underlying in [('AuthoredQuestionKind', 'THINKTHEN_LOAD_', '_V1', 'uint'), ('FailureKind', 'THINKTHEN_E', '', 'int'), ('UsagePersistenceState', 'THINKTHEN_COMPLETE_USAGE_PERSISTENCE_', '_V1', 'uint')]:
+    for enum, prefix, suffix, underlying in [('FailureKind', 'THINKTHEN_E', '', 'int'), ('UsagePersistenceState', 'THINKTHEN_COMPLETE_USAGE_PERSISTENCE_', '_V1', 'uint')]:
         members = [(name.removeprefix(prefix).removesuffix(suffix), value) for name, value in native['constants'].items()
                    if name.startswith(prefix) and (name.endswith(suffix) if suffix else not name.endswith('_V1'))]
         lines += ['public enum ' + enum + ' : ' + underlying + ' { ' + ', '.join(''.join(word.title() for word in name.split('_')) + ' = ' + str(value) for name, value in members) + ' }']

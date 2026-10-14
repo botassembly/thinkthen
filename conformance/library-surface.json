@@ -827,11 +827,11 @@
         "Engine"
       ],
       "helper_names": {
-        "question_file": "InputRequestQuestionFile",
-        "question_name": "InputRequestQuestionName",
-        "question_reference": "InputRequestQuestionReference",
-        "item": "InputRequestItem",
-        "files": "InputRequestSource"
+        "question_file": "RequestQuestionFile",
+        "question_name": "RequestQuestionName",
+        "question_reference": "RequestQuestionReference",
+        "item": "RequestItem",
+        "files": "RequestSource"
       },
       "lifecycle_owners": [
         "Engine",
@@ -841,7 +841,6 @@
       "lifecycle_members": {
         "Engine": [
           "open",
-          "parse_question",
           "start_session",
           "execute"
         ]
@@ -850,9 +849,7 @@
         "Failure": {
           "contract": "result",
           "type": "completeCallError",
-          "aliases": {
-            "FactsJson": "facts"
-          }
+          "aliases": {}
         },
         "SessionFailure": {
           "contract": "result",

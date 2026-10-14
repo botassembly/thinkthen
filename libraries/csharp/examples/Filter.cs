@@ -2,9 +2,9 @@ using ThinkThen;
 using ThinkThen.Inputs;
 using var engine = Engine.Open();
 var answer = (await engine.FilterAsync(
-    new InputRequestQuestionText { Text = "Is it?" },
-    new InputRequestInputRecords { Items = new InputRequestItem[] {
-        new() { Original = new InputRequestOriginalText { Text = "first" } },
-        new() { Original = new InputRequestOriginalText { Text = "second" } }
+    new RequestQuestionText { Text = "Is it?" },
+    new RequestInputRecords { Items = new RequestItem[] {
+        new() { Original = new RequestOriginalText { Text = "first" } },
+        new() { Original = new RequestOriginalText { Text = "second" } }
     } })).Filter();
-Console.WriteLine($"{answer.Count}:{answer[0].Value}");
+Console.WriteLine($"{answer.Count}:{answer[0].GetString()}");

@@ -1,8 +1,8 @@
 using ThinkThen;
 using ThinkThen.Inputs;
 using var engine = Engine.Open();
-var question = new InputRequestQuestionDefinition { Value = new InputRequestDefinitionAuthoredChoose {
-    Choose = new InputAuthoredQuestionTextString { Value = "Which?" },
-    Options = new InputAuthoredOptionsList { Value = new InputAuthoredName[] { new() { Value = "first" }, new() { Value = "second" } } }
+var question = new RequestQuestionDefinition { Value = new RequestDefinitionAuthoredChoose {
+    Choose = new AuthoredQuestionTextString { Value = "Which?" },
+    Options = new AuthoredOptionsList { Value = new AuthoredName[] { new() { Value = "first" }, new() { Value = "second" } } }
 } };
-Console.WriteLine(await engine.ChooseValueAsync(question, new InputRequestInputText { Text = "example" }));
+Console.WriteLine(await engine.ChooseValueAsync(question, new RequestInputText { Text = "example" }));
