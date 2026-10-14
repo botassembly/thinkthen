@@ -1484,5 +1484,4 @@ typedef NS_ENUM(uint32_t, TTUsagePersistenceState) {
     TTUsagePersistencePending = 2,
     TTUsagePersistenceWritten = 3,
 };
-#define TT_GENERATED_USAGE_DECLARATIONS - (nullable TTUsagePersistenceStatus *)finishUsageStatus:(NSError * _Nullable * _Nullable)error; - (nullable TTUsagePersistenceStatus *)usagePersistence:(NSError * _Nullable * _Nullable)error;
 NS_ASSUME_NONNULL_END

@@ -3,7 +3,7 @@
 #import <dispatch/dispatch.h>
 #include <stdio.h>
 static void require(BOOL condition) { if (!condition) abort(); }
-static id read(NSData *data) { return [NSJSONSerialization JSONObjectWithData:data options:NSJSONReadingFragmentsAllowed error:NULL]; }
+static id readFixture(NSData *data) { return [NSJSONSerialization JSONObjectWithData:data options:NSJSONReadingFragmentsAllowed error:NULL]; }
 static void typed(NSArray<TTSessionPacket *> *packets, TTSessionPacketTerminal *terminal) {
     require(terminal.kind.state == TTPresenceValue);
     if (terminal.facts.state == TTPresenceValue) {
@@ -34,8 +34,8 @@ static void typed(NSArray<TTSessionPacket *> *packets, TTSessionPacketTerminal *
 int main(int argc, const char *argv[]) {
     @autoreleasepool {
         require(argc == 3);
-        NSDictionary *fixture = read([NSData dataWithContentsOfFile:[NSString stringWithUTF8String:argv[1]]]);
-        NSDictionary *settings = read([[NSString stringWithUTF8String:argv[2]] dataUsingEncoding:NSUTF8StringEncoding]);
+        NSDictionary *fixture = readFixture([NSData dataWithContentsOfFile:[NSString stringWithUTF8String:argv[1]]]);
+        NSDictionary *settings = readFixture([[NSString stringWithUTF8String:argv[2]] dataUsingEncoding:NSUTF8StringEncoding]);
         NSError *error = nil;
         TTFoundationClient *client = [[TTFoundationClient alloc] initWithSettings:[[TTSettings alloc] initWithFields:settings] error:&error];
         __block TTCall *retained = nil;

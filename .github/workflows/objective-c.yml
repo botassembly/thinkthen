@@ -10,6 +10,8 @@ jobs:
     runs-on: macos-15
     permissions:
       contents: read
+    env:
+      MACOSX_DEPLOYMENT_TARGET: "15.0"
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
         with:

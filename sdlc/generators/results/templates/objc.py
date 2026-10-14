@@ -2,7 +2,7 @@
 import json
 import re
 from csharp import shape, enum_values
-from host_answers import aggregate_answers, named_object_fields, usage_operations
+from host_answers import aggregate_answers, named_object_fields
 
 ROOTS = ('completesessionPacket', 'completeplan')
 
@@ -170,15 +170,6 @@ def outputs(definitions, version, input_definitions=None, abi=None):
     header += ['TTUsagePersistence' + word.removeprefix('THINKTHEN_COMPLETE_USAGE_PERSISTENCE_').removesuffix('_V1').title() + ' = ' + str(value) + ','
                for word, value in abi['constants'].items() if word.startswith('THINKTHEN_COMPLETE_USAGE_PERSISTENCE_') and word.endswith('_V1')]
     header += ['};']
-    declarations, bodies = [], []
-    for _, public in usage_operations(abi['functions']):
-        method = member(public)
-        finish = 'YES' if public.startswith('finish_') else 'NO'
-        signature = f'- (nullable TTUsagePersistenceStatus *){method}:(NSError **)error'
-        declarations += [signature + ';']
-        bodies += [signature + f' {{ return [self usageStatus:{finish} error:error]; }}']
-    header += ['#define TT_GENERATED_USAGE_DECLARATIONS ' + ' '.join(declarations)]
-    header += ['#define TT_GENERATED_USAGE_IMPLEMENTATIONS ' + ' '.join(bodies)]
     private_macros = [line for line in header if line.startswith('#define') and 'IMPLEMENTATIONS' in line.split()[1]]
     header = [line for line in header if line not in private_macros]
     implementation[3:3] = ['#import \"ThinkThenFoundation.h\"'] + private_macros
@@ -335,7 +326,7 @@ def answer_helpers(definitions):
                       'return values[0];', '}']
     answers = {function: (payload, '') for function, _, payload in aggregate_answers(definitions)}
     answers.update({function: (payload, kind) for function, kind, payload in scalar_answers(definitions)})
-    declarations, bodies, client_declarations, client_bodies = [], [], [], []
+    declarations, bodies = [], []
     for function, (payload, kind) in answers.items():
         target, decode = conversion(payload, definitions)
         if function == 'rank': target, decode = 'NSArray<NSNumber *> *', 'TTArray(value, ^id(id item) { return TTInteger(TTObject(item)[@"index"]); })'
@@ -347,9 +338,6 @@ def answer_helpers(definitions):
         declarations += [signature + ';']
         returned = decode.replace('TTArray(value,', 'TTArray(payload,') if collection else 'TTAnswerPresence(payload, ^id(id value) { return ' + decode + '; })'
         bodies += [signature + ' { id payload = TTAnswerPayload(self.packets, self.terminal, ' + literal(function) + ', ' + literal(kind) + ', self, error); if (!payload) return nil; return ' + returned + '; }']
-        signature = f'- (nullable TTPresence<{target}> *){method}:(NSDictionary *)question input:(NSDictionary *)input options:(nullable NSDictionary *)options error:(NSError **)error'
-        client_declarations += [signature + ';']
-        client_bodies += [signature + ' { __block TTCall *result; __block NSError *failure = nil; dispatch_semaphore_t settled = dispatch_semaphore_create(0); TTTask *task = [self ' + function + ':question input:input options:options feed:nil completion:^(TTCall *call, NSError *problem) { result = call; failure = problem; dispatch_semaphore_signal(settled); } error:&failure]; if (!task) { if (error) *error = failure; return nil; } dispatch_semaphore_wait(settled, DISPATCH_TIME_FOREVER); if (failure) { if (error) *error = failure; return nil; } return [result ' + method + ':error]; }']
     for macro, lines in [('TT_GENERATED_ANSWER_DECLARATIONS', declarations), ('TT_GENERATED_ANSWER_IMPLEMENTATIONS', bodies)]:
         header += ['#define ' + macro + ' ' + ' '.join(lines)]
     return header, implementation
