@@ -166,7 +166,9 @@ fn projectReceipt(receipt: anytype, observation: *tt.session.Packet, a: std.mem.
     } else if (T == tt.results.AtomicArrayOfString) {
         receipt.value = try answers.tag();
     } else if (T == tt.results.Find) {
-        receipt.value = if (try answers.find()) |v| .{ .value = .{ .number = .{ .unsigned = v } } } else .null_value;
+        const index = try answers.find();
+        if (index != receipt.index.optional()) return error.FindIndexMismatch;
+        receipt.value = if (index) |v| .{ .value = .{ .number = .{ .unsigned = v } } } else .null_value;
     } else if (T == tt.results.Annotation) {
         const annotations = try answers.annotate();
         const entries = try a.alloc(@typeInfo(@TypeOf(receipt.value.entries)).pointer.child, annotations.len);
