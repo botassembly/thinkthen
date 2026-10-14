@@ -287,7 +287,12 @@ def duckdb(check):
                      input="SELECT to_json({'version':library_version,'source_id':source_id}) FROM pragma_version(); PRAGMA platform;").splitlines()
     if len(host) != 2:
         raise Failure('DuckDB host must report one supported version and platform')
-    reported = json.loads(host[0])
+    try:
+        reported = json.loads(host[0])
+    except json.JSONDecodeError as error:
+        raise Failure('DuckDB host must report one supported version and platform') from error
+    if not isinstance(reported, dict) or not isinstance(reported.get('version'), str) or not reported['version']:
+        raise Failure('DuckDB host must report one supported version and platform')
     identities = [selected(version, TARGET) for version in versions()]
     matching = [item for item in identities if reported.get('source_id') == item['source_commit'][:10]
                 and (item['metadata_version'] != item['version'] or reported.get('version') == item['version'])]
