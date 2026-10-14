@@ -70,6 +70,7 @@ for example in decide smoke; do
     if [ "${THINKTHEN_TEST_PROFILE:-}" = smoke ] && [ "$example" = smoke ]; then "$caller/example"; exit; fi
 done
 compile cargo build --locked --offline --manifest-path "$repo/Cargo.toml" --package conformance-backend -j2
+"$python_bin" fixtures/owned_installed.py "$module" encoding
 "$python_bin" fixtures/owned_installed.py "$module" plan
 "$python_bin" fixtures/owned_installed.py "$module"
 "$python_bin" fixtures/owned_installed.py "$module" feed
