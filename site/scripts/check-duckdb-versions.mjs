@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 export function omissions(authority, catalog, readme) {
   // Deliberately read the list without requiring build pins: an omitted public
   // declaration must fail even when a new version is still being prepared.
-  const match = /^DUCKDB_VERSIONS="(v[0-9.]+(?: v[0-9.]+)*)"$/m.exec(authority);
+  const match = /^DUCKDB_VERSIONS="(v[0-9.A-Za-z-]+(?: v[0-9.A-Za-z-]+)*)"$/m.exec(authority);
   if (!match) throw new Error('malformed DuckDB version list');
   const declaration = /supportedVersions: \[([^\]]+)\]/.exec(catalog)?.[1] ?? '';
   return match[1].split(' ').flatMap((version) => [

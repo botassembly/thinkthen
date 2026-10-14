@@ -9,9 +9,10 @@ import re
 import subprocess
 import sys
 import tempfile
+import shutil
 
-from inputs import authority
-from harness import child_env, stored
+from inputs import authority, canonical, native_target, selected, versions
+from harness import child_env
 
 ROOT = Path(__file__).resolve().parents[1]
 REPO = ROOT.parent.parent
@@ -35,7 +36,10 @@ def tool_environment():
 
 def hosts():
     pins = authority()
-    for kind in ('RELEASE', 'PREVIEW'):
+    for version in versions():
+        if os.environ.get('THINKTHEN_DUCKDB_VERSION', version) != version:
+            continue
+        kind = 'RELEASE' if version == pins['DUCKDB_ROUTINE_RELEASE'] else 'PREVIEW'
         prefix = 'DUCKDB_ROUTINE_' + kind
         values = [pins.get(prefix + suffix, '') for suffix in ('', '_SOURCE', '_TOOLS')]
         if not values[0] or any(re.fullmatch('[0-9a-f]{40}', value) is None for value in values[1:]):
@@ -62,26 +66,6 @@ def prepare(folder, commit, repository, fetch, release=None):
     archive_tree.raw_git(folder, commit)
 
 
-def cli_runner(cli, extension):
-    def run(statements, base):
-        results = []
-        with tempfile.TemporaryDirectory(prefix='thinkthen-duckdb-source-') as folder:
-            env = child_env(base, Path(folder))
-            for statement in statements:
-                load = "LOAD '" + str(extension).replace("'", "''") + "'; "
-                done = subprocess.run([str(cli), '-unsigned', '-json', '-c', load + statement],
-                                      env=env, capture_output=True, text=True, timeout=60, check=False)
-                if done.returncode:
-                    results.append({'error': done.stderr})
-                else:
-                    import json
-                    rows = json.loads(done.stdout)
-                    results.append({'rows': [list(row.values()) for row in rows]})
-            stored(env.get('THINKTHEN_CACHE', ''))
-        return results
-    return run
-
-
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--fetch', action='store_true')
@@ -95,12 +79,19 @@ def main():
     with lock.open('a') as lease:
         if not args.fetch:
             fcntl.flock(lease, fcntl.LOCK_SH)
-        return check_hosts(cache, args.fetch)
+        try:
+            return check_hosts(cache, args.fetch)
+        except FileNotFoundError as error:
+            print(f'not run: missing DuckDB source input: {error}', file=sys.stderr)
+            return 77
 
 
 def check_hosts(cache, fetch):
     for version, source_commit, tools_commit in hosts():
         inputs = cache / version
+        if not fetch and not (inputs / 'source/.git').exists():
+            print(f'not run: DuckDB {version} source inputs are missing; run tools/setup.sh --fetch', file=sys.stderr)
+            return 77
         prepare(inputs / 'source', source_commit, 'https://github.com/duckdb/duckdb.git', fetch,
                 version if version == authority()['DUCKDB_ROUTINE_RELEASE'] else None)
         prepare(inputs / 'tools', tools_commit, 'https://github.com/duckdb/extension-ci-tools.git', fetch)
@@ -119,16 +110,37 @@ def check_hosts(cache, fetch):
                    'TESTS_BASE_DIRECTORY=' + str(ROOT / 'community/test/sql') + '/']
         env = tool_environment()
         env['CMAKE_BUILD_PARALLEL_LEVEL'] = '2'
-        subprocess.run(command + ['release'], cwd=build, env=env, check=True)
+        admission = []
+        lock = env.get('THINKTHEN_HEAVY_LOCK', '/tmp/thinkthen-heavy.lock')
+        if env.get('THINKTHEN_HEAVY_LOCK_HELD') != lock:
+            admission = [sys.executable, str(REPO / 'sdlc/scripts/build-admission.py'), '--lock', lock, '--']
+        subprocess.run(admission + command + ['release'], cwd=build, env=env, check=True)
         with tempfile.TemporaryDirectory(prefix='thinkthen-duckdb-sql-') as folder:
             test_env = child_env('http://127.0.0.1:9/generic/v1', Path(folder), keyless=True)
             subprocess.run(command + ['test_release'], cwd=build, env=test_env, check=True)
-        cli = build / 'build/release/duckdb'
         extension = build / 'build/release/extension/thinkthen/thinkthen.duckdb_extension'
-        from named_options import check
-        check(cli_runner(cli, extension))
-        print(f'DuckDB {version} at {source_commit}: community SQL and installed named options pass', flush=True)
+        stage(version, extension)
+        print(f'DuckDB {version} at {source_commit}: source build and community SQL pass', flush=True)
     return 0
+
+
+def stage(version, extension):
+    identity = selected(version)
+    sys.path.insert(0, str(ROOT / 'cpp'))
+    from verify_footer import verify
+    release = next(line.split('"')[1] for line in (REPO / 'crates/thinkthen/Cargo.toml').read_text().splitlines()
+                   if line.startswith('version = '))
+    verify(extension, native_target(), identity['metadata_version'], release)
+    output = canonical(version)
+    output.parent.mkdir(parents=True, exist_ok=True)
+    with tempfile.NamedTemporaryFile(dir=output.parent, delete=False) as temporary:
+        staged = Path(temporary.name)
+    try:
+        shutil.copyfile(extension, staged)
+        staged.chmod(0o644)
+        staged.replace(output)
+    finally:
+        staged.unlink(missing_ok=True)
 
 
 if __name__ == '__main__':

@@ -5,14 +5,11 @@ import os from 'node:os';
 const PLATFORMS = ['linux_amd64', 'linux_arm64', 'osx_arm64', 'osx_amd64'];
 
 function requirePins(pins, version, platform) {
-  const prefix = `DUCKDB_${version.toUpperCase().replaceAll('.', '_')}`;
-  const fields = [
-    [`${prefix}_CPP_SOURCE_COMMIT`, /^[0-9a-f]{40}$/, 'source_commit'],
-    [`${prefix}_REQUIREMENTS`, /^requirements(?:-v[0-9.]+)?\.txt$/, 'requirements'],
-    ...['CLI_ZIP_SHA256', 'CLI_SHA256', 'STATIC_ZIP_SHA256'].map((name) =>
-      [`${prefix}_${platform.toUpperCase()}_${name}`, /^[0-9a-f]{64}$/, name.toLowerCase()]),
-    [`${prefix}_${platform.toUpperCase()}_MANIFEST`, /^archive-sha256(?:-[A-Za-z0-9.-]+)?\.txt$/, 'manifest'],
-  ];
+  const kind = version === pins.get('DUCKDB_ROUTINE_RELEASE') ? 'RELEASE' : 'PREVIEW';
+  const prefix = `DUCKDB_ROUTINE_${kind}`;
+  if (version !== pins.get(prefix)) throw new Error('unsupported DuckDB source host');
+  const fields = ['SOURCE', 'TOOLS', 'PYTHON'].map((name) =>
+    [`${prefix}_${name}`, /^[0-9a-f]{40}$/, name.toLowerCase()]);
   for (const [key, pattern, field] of fields) {
     if (!pattern.test(pins.get(key) ?? '')) {
       throw new Error(`missing or malformed DuckDB ${field} for ${version}/${platform}`);
@@ -32,7 +29,7 @@ export function readDuckDBVersions(file) {
   }
   const versions = (pins.get('DUCKDB_VERSIONS') ?? '').split(' ');
   if (versions.length < 1 || versions.length > 8 || new Set(versions).size !== versions.length ||
-      versions.some((v) => !/^v[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$/.test(v))) {
+      versions.some((v) => !/^(?:v[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}|v2\.0-cyanoptera)$/.test(v))) {
     throw new Error('unknown, malformed or duplicate DuckDB supported versions');
   }
   for (const version of versions) for (const platform of PLATFORMS) requirePins(pins, version, platform);

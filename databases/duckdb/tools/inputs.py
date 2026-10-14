@@ -23,16 +23,16 @@ HOSTS = {
 
 
 def pin_fields(pins: dict[str, str], version: str, platform: str) -> dict[str, str]:
-    prefix = 'DUCKDB_' + version.upper().replace('.', '_')
-    fields = {'source_commit': prefix + '_CPP_SOURCE_COMMIT', 'requirements': prefix + '_REQUIREMENTS'}
-    fields.update({name: prefix + '_' + platform.upper() + '_' + name.upper()
-                   for name in ('cli_zip_sha256', 'cli_sha256', 'static_zip_sha256', 'manifest')})
-    result = {name: pins.get(key, '') for name, key in fields.items()}
-    for name, value in result.items():
-        pattern = r'requirements(?:-v[0-9.]+)?\.txt' if name == 'requirements' else r'archive-sha256(?:-[A-Za-z0-9.-]+)?\.txt' if name == 'manifest' else (
-            r'[0-9a-f]{40}' if name == 'source_commit' else r'[0-9a-f]{64}')
-        if re.fullmatch(pattern, value) is None:
-            raise ValueError(f'missing or malformed DuckDB {name} for {version}/{platform}')
+    kind = 'RELEASE' if version == pins.get('DUCKDB_ROUTINE_RELEASE') else 'PREVIEW'
+    prefix = 'DUCKDB_ROUTINE_' + kind
+    if version != pins.get(prefix):
+        raise ValueError(f'unsupported DuckDB source host: {version}')
+    result = {name: pins.get(prefix + suffix, '') for name, suffix in
+              [('source_commit', '_SOURCE'), ('tools_commit', '_TOOLS'), ('python_commit', '_PYTHON')]}
+    if any(re.fullmatch(r'[0-9a-f]{40}', value) is None for value in result.values()):
+        raise ValueError(f'missing or malformed DuckDB source pins for {version}/{platform}')
+    result['metadata_version'] = version if kind == 'RELEASE' else result['source_commit'][:10]
+    result['requirements'] = 'requirements.txt'
     return result
 
 
@@ -50,7 +50,7 @@ def authority(path: Path = HERE / 'version.env') -> dict[str, str]:
         pins[match[1]] = match[2] if match[2] is not None else match[3]
     versions = pins.get('DUCKDB_VERSIONS', '').split(' ')
     if not 1 <= len(versions) <= 8 or len(set(versions)) != len(versions) or any(
-        re.fullmatch(r'v[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}', v) is None for v in versions
+        re.fullmatch(r'v[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}|v2\.0-cyanoptera', v) is None for v in versions
     ):
         raise ValueError('unknown, malformed or duplicate DuckDB supported versions')
     # Every declared entry needs a complete pin set before any selector resolves paths.
@@ -83,9 +83,7 @@ def selected(version: str | None = None, target: str | None = None,
         raise ValueError(f'unsupported DuckDB target: {target}')
     platform = PLATFORMS[target]
     result = pin_fields(pins, version, platform)
-    asset_platform = platform.replace('_', '-')
-    result.update(version=version, target=target, platform=platform,
-                  cli_asset=f'duckdb_cli-{asset_platform}.zip', static_asset=f'static-libs-{asset_platform}.zip')
+    result.update(version=version, target=target, platform=platform)
     return result
 
 
@@ -101,8 +99,7 @@ if __name__ == '__main__':
             print(' '.join(versions()))
         elif action == 'select' and len(sys.argv) == 4:
             item = selected(sys.argv[2] or None, sys.argv[3])
-            print(' '.join(item[name] for name in ('version', 'target', 'platform', 'cli_asset', 'cli_zip_sha256',
-                  'cli_sha256', 'static_asset', 'static_zip_sha256', 'source_commit', 'manifest', 'requirements')))
+            print(' '.join(item[name] for name in ('version', 'target', 'platform', 'source_commit', 'tools_commit', 'python_commit', 'metadata_version', 'requirements')))
         else:
             raise ValueError('usage: inputs.py versions | select VERSION TARGET')
     except LookupError as error:

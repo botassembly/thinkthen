@@ -71,7 +71,7 @@ def published_consumer(archive: Path, target: str, release: str, root: Path, too
             shutil.copytree(sample / 'recording', check.sample / 'recording')
             shutil.copyfile(sample / 'report.txt', check.sample / 'report.txt')
             (check.sample / 'question.txt').write_text(QUESTION)
-            tools = toolchains / 'duckdb' / versions()[0]
+            tools = REPO / 'databases/duckdb/build/community' / versions()[0] / 'build/release'
             check.env['PATH'] = str(tools) + os.pathsep + check.env['PATH']
             check.env.update(THINKTHEN_BASE_URL=backend.base(), THINKTHEN_API_KEY='sk-loopback-package-consumer')
             recording = check.sample / 'recording/thinkthen.jsonl'
