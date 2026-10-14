@@ -12,7 +12,7 @@ module ThinkThen
 
   module Results
     # One plain answer value; the kind follows the call:
-    # filter returns the original inputs, rank the typed rows, a scalar call
+    # filter returns the original inputs, rank the integer positions, a scalar call
     # one answer value, and a list call a frozen Array of them.
     type answer = bool | String | Integer | Float | nil | Array[untyped] | Native::Result | Hash[String, untyped]
 

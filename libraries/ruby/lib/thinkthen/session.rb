@@ -20,7 +20,6 @@ module ThinkThen
       def facts = terminal.facts
       def value
         return results.map(&:input).freeze if @verb == "filter"
-        return results if @verb == "rank"
         values = results.map { |row| row.key?("value") ? row.value : row }
         @scalar && values.size == 1 ? values.first : values.freeze
       end

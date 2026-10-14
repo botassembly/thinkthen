@@ -62,6 +62,7 @@ class TestOwnedSession < Minitest::Test
       say retained.first.last.value
       say retained[1].last.value
       say retained[3].last.value
+      say retained[5].last.value
       say retained[6].last.value
       say retained[9].last.value.map(&:relation)
     RUBY
@@ -72,6 +73,7 @@ class TestOwnedSession < Minitest::Test
       assert_equal true, child.hear
       assert_equal "billing", child.hear
       assert_equal 0.15, child.hear
+      assert_equal [1, 2], child.hear
       assert_equal "first", child.hear
       assert_equal %w[knows knows], child.hear
       status, errors = child.finish
