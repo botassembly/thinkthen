@@ -9,6 +9,7 @@ heavy_scripts=$HERE/../../../sdlc/scripts
 DUCKDB_VERSIONS=$(input_versions)
 host_target=$(input_target)
 input_select "${THINKTHEN_DUCKDB_VERSION:-}" "$host_target"
+if [ -n "${THINKTHEN_DUCKDB_VERSION:-}" ]; then DUCKDB_VERSIONS=$DUCKDB_VERSION; fi
 case ${1:-} in
 --target) echo "$target"; exit 0 ;;
 --inputs) printf '%s %s %s %s %s\n' "$target" "$platform" "$duckdb_source_commit" "$duckdb_tools_commit" "$duckdb_python_commit"; exit 0 ;;
@@ -73,7 +74,7 @@ PY
 			python3 "$HERE/validate_inputs.py" --source "$TOOLS/source" --commit "$duckdb_source_commit" \
 				--python "$TOOLS/python-build/source" --python-commit "$duckdb_python_commit"
 			"$TOOLS/venv/bin/python" -m pip install 'scikit-build-core==0.11.6' 'nanobind==3.0.1'
-			heavy_compile env CMAKE_ARGS="-DDUCKDB_SOURCE_PATH=$TOOLS/source -DBUILD_EXTENSIONS=core_functions -DNATIVE_ARCH=OFF" \
+			heavy_compile env CMAKE_ARGS="-DDUCKDB_SOURCE_PATH=$TOOLS/source -DBUILD_EXTENSIONS=core_functions;json -DNATIVE_ARCH=OFF" \
 			CMAKE_BUILD_PARALLEL_LEVEL=2 RUSTC_WRAPPER= PYTHONDONTWRITEBYTECODE=1 \
 			SKBUILD_BUILD_DIR="$TOOLS/python-build/cmake" \
 			CXXFLAGS="${CXXFLAGS:-} -ffile-prefix-map=$HOME=/build" \
@@ -81,7 +82,21 @@ PY
 		;; esac
 	fi
 	[ -x "$TOOLS/venv/bin/python" ] || { echo "not run: DuckDB $version Python host is missing; run tools/setup.sh --fetch" >&2; exit 77; }
-	observed=$("$TOOLS/venv/bin/python" -c 'import duckdb; print(duckdb.sql("PRAGMA version").fetchall()[0][1])')
+	observed=$(python3 - "$TOOLS/venv/bin/python" "$HERE" <<'PY'
+import subprocess
+import sys
+import tempfile
+from pathlib import Path
+sys.path.insert(0, sys.argv[2])
+from harness import child_env
+code = "import duckdb; con=duckdb.connect(config={'autoinstall_known_extensions':'false'}); "
+code += "assert con.execute(\"SELECT CAST('{}' AS JSON)::VARCHAR\").fetchone()[0] == '{}'; "
+code += "print(con.execute('PRAGMA version').fetchone()[1])"
+with tempfile.TemporaryDirectory(prefix='thinkthen-duckdb-python-host-') as folder:
+    print(subprocess.check_output([sys.argv[1], '-c', code], text=True,
+                                  env=child_env('http://127.0.0.1:9/v1', Path(folder), keyless=True)).strip())
+PY
+)
 	[ "$observed" = "$(printf '%.10s' "$duckdb_source_commit")" ] || {
 		echo 'setup: the Python DuckDB source differs from its pin' >&2; exit 1;
 	}
