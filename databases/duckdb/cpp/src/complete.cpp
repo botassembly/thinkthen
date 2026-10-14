@@ -8,6 +8,7 @@
 #include "duckdb/common/error_data.hpp"
 #include "portable.hpp"
 #include "receipt.hpp"
+#include "native_input.hpp"
 #include "scalar_owner.hpp"
 #include "scalar_settings.hpp"
 #include "duckdb/common/weak_ptr_ipp.hpp"
@@ -22,6 +23,8 @@ ThinkThenReply thinkthen_cpp_complete_images(ThinkThenText, const ThinkThenImage
                                             const void *, int64_t, ThinkThenSettings, ThinkThenStop);
 ThinkThenReply thinkthen_cpp_complete_question_resolve(ThinkThenText, void **);
 void thinkthen_cpp_complete_question_free(void *);
+ThinkThenReply thinkthen_cpp_native_records(ThinkThenText, ThinkThenText, ThinkThenText, ThinkThenText,
+    ThinkThenText, const void *, bool, int64_t, ThinkThenSettings, ThinkThenStop);
 }
 namespace duckdb {
 namespace {
@@ -90,6 +93,43 @@ void Complete(DataChunk &args, ExpressionState &state, Vector &result) {
         }
     }
 }
+void NativeRecords(DataChunk &args, ExpressionState &state, Vector &result) {
+    auto &expression = state.expr.Cast<BoundFunctionExpression>();
+    auto context = ThinkThenBindData(expression).Cast<Bind>().context.lock();
+    if (!context) { throw OrdinaryError("thinkthen defect: the caller session ended"); }
+    const auto verb = ThinkThenFunctionName(expression).substr(string("thinkthen_native_records_").size());
+    auto owner = context->registered_state->GetOrCreate<StatementOwner>(OWNER_KEY);
+    std::optional<SessionSettings> session;
+    for (idx_t row = 0; row < args.size(); ++row) {
+        auto question = args.data[0].GetValue(row), records = args.data[1].GetValue(row);
+        if (question.IsNull() || records.IsNull()) { result.SetValue(row, Value(ReceiptType(verb))); continue; }
+        try {
+            const auto authored = question.type().id() == LogicalTypeId::VARCHAR ? question.GetValue<string>() : NativeInputJSON(question);
+            QuestionSelection selection;
+            string content = authored;
+            if (!authored.empty() && authored[0] == '@') {
+                RustReply resolved(thinkthen_cpp_complete_question_resolve(View(authored), &selection.value));
+                if (resolved.value.status != 0) { result.SetValue(row, DecodeReceipt(FailureEnvelope(ReplyText(resolved.value)), verb)); continue; }
+                const auto path = ReplyText(resolved.value);
+                AuthorizeLocalSource(FileSystem::GetFileSystem(*context), path);
+                content = ReadQuestion(*context, path, "question", true);
+            }
+            auto reading = args.data[2].GetValue(row), settings = args.data[3].GetValue(row);
+            const auto options = reading.IsNull() ? string("{}") : NativeInputJSON(reading);
+            const auto controls = settings.IsNull() ? string("{}") : settings.type().id() == LogicalTypeId::VARCHAR ? settings.GetValue<string>() : NativeInputJSON(settings);
+            const auto inputs = NativeInputJSON(records, true);
+            const auto incremental = args.data[4].GetValue(row);
+            if (!session) { session.emplace(Settings(*context)); }
+            RustReply reply(thinkthen_cpp_native_records(View(verb), View(content), View(inputs), View(options), View(controls),
+                selection.value, !incremental.IsNull() && incremental.GetValue<bool>(), owner->Remaining(*context), session->Bridge(), StopFor(*context)));
+            Checked(reply.value);
+            result.SetValue(row, DecodeReceipt(ReplyText(reply.value), verb));
+        } catch (const Exception &error) {
+            if (ErrorData(error).Type() == ExceptionType::INTERRUPT || QueryInterrupted(*context)) { throw; }
+            result.SetValue(row, DecodeReceipt(FailureEnvelope(CompleteAdmissionError(error)), verb));
+        }
+    }
+}
 }
 void RegisterComplete(ExtensionLoader &loader) {
     for (auto verb : {"decide","choose","tag","score","filter","rank","find","annotate","recognize","relate"}) {
@@ -104,6 +144,22 @@ void RegisterComplete(ExtensionLoader &loader) {
             RegisterDescribedScalar(loader, function, purpose);
         }
         RegisterPortableMacro(loader,string("CREATE MACRO thinkthen_")+verb+"_complete(question, inputs, settings := NULL) AS "+name+"(question, inputs, settings)", purpose);
+    }
+    for (auto verb : {"decide", "choose", "tag", "score", "filter", "find", "annotate", "recognize"}) {
+        const auto name = string("thinkthen_native_records_") + verb;
+        const string purpose = "Read ordered native SQL records and return typed readings, final facts, failures and observations.";
+        ScalarFunction function(ThinkThenIdentifier(name), {LogicalType::ANY, LogicalType::ANY, LogicalType::ANY, LogicalType::ANY, LogicalType::ANY},
+            ReceiptType(verb), NativeRecords, ThinkThenBindScalar<BindComplete>);
+        ThinkThenSpecialNulls(function);
+        function.SetStability(FunctionStability::VOLATILE);
+        RegisterDescribedScalar(loader, function, purpose);
+        RegisterPortableMacro(loader, string("CREATE MACRO thinkthen_") + verb +
+            "(question, records, reading := NULL, settings := NULL, incremental := false) AS TABLE "
+            "WITH call AS MATERIALIZED (SELECT " + name + "(question, records, reading, settings, incremental) AS receipt) "
+            "SELECT list_extract(receipt.ordinals, position) AS ordinal, result, receipt.facts AS facts, "
+            "receipt.failure AS failure, receipt.observations AS observations, receipt.selection AS selection "
+            "FROM call, UNNEST(CASE WHEN len(receipt.results) = 0 THEN [NULL] ELSE receipt.results END) WITH ORDINALITY AS rows(result, position) "
+            "WHERE receipt IS NOT NULL", purpose);
     }
 }
 }
