@@ -71,56 +71,109 @@ def constant_privacy(node, owner, directives)
   end
 end
 
-def method_privacy(node, owner, visibility)
-  if node[0] == :vcall && %w[private public].include?(node[1][1])
-    visibility[node[1][2][0]] = [owner, node[1][1], []]
-  elsif node[0] == :command && node[1][1] == 'private_class_method'
-    symbols = node[2][1].filter_map do |argument|
-      argument[1][1][1] if argument[0] == :symbol_literal && argument[1][0] == :symbol
-    end
-    visibility[node[1][2][0]] = [owner, 'private_class_method', symbols]
+# Method identity includes its Ruby lookup domain. Defaults belong to a body,
+# while named visibility changes follow the owner across reopened bodies.
+def method_symbols(arguments)
+  return [] unless arguments.is_a?(Array) && arguments[0] == :args_add_block
+  arguments[1].filter_map do |argument|
+    argument[1][1][1] if argument[0] == :symbol_literal && argument[1][0] == :symbol
   end
 end
 
-def lexical_owners(node, owner, owners, directives, visibility, executed = true)
+def keyword_names(node)
+  return [] unless node.is_a?(Array)
+  return [node[1].delete_suffix(':')] if node[0] == :@label
+  node.flat_map { |child| child.is_a?(Array) ? keyword_names(child) : [] }
+end
+
+def source_origin(node)
+  return nil unless node.is_a?(Array)
+  return node[2] if node[0].to_s.start_with?('@')
+  node.each do |child|
+    origin = source_origin(child)
+    return origin if origin
+  end
+  nil
+end
+
+def singleton_domain(domain)
+  domain == 'instance' ? 'singleton' : domain + '_singleton'
+end
+
+def method_inventory(node, owner, domain, body, methods, owners, directives, executed = true, lexical = owner)
   return unless node.is_a?(Array)
   return if %i[string_literal xstring_literal regexp_literal dyna_symbol].include?(node[0])
-  # Only statement lists and supported declaration bodies grant visibility.
-  # Expressions and unsupported control flow still supply lexical owners.
-  constant_privacy(node, owner, directives) if executed
-  method_privacy(node, owner, visibility) if executed
+  constant_privacy(node, lexical, directives) if executed
   if node[0].to_s.start_with?('@')
-    owners[node[2][0]] = owner
+    owners[node[2][0]] = lexical
   elsif node[0].is_a?(Array) || node[0] == :program
-    node.each { |child| lexical_owners(child, owner, owners, directives, visibility, executed) if child.is_a?(Array) }
+    node.each do |child|
+      method_inventory(child, owner, domain, body, methods, owners, directives, executed, lexical) if child.is_a?(Array)
+    end
   elsif node[0] == :bodystmt
-    lexical_owners(node[1], owner, owners, directives, visibility, executed)
-    node.drop(2).each { |child| lexical_owners(child, owner, owners, directives, visibility, false) }
-  elsif %i[do_block brace_block].include?(node[0])
-    lexical_owners(node[1], owner, owners, directives, visibility, false)
-    lexical_owners(node[2], owner, owners, directives, visibility, executed)
+    method_inventory(node[1], owner, domain, body, methods, owners, directives, executed, lexical)
+    node.drop(2).each { |child| method_inventory(child, owner, domain, body, methods, owners, directives, false, lexical) }
+  elsif %i[class module].include?(node[0])
+    name = constant_path(node[1])
+    method_inventory(node[1], owner, domain, body, methods, owners, directives, false, lexical)
+    nested = name.start_with?('::') ? name.delete_prefix('::') : [lexical, name].reject(&:empty?).join('::')
+    method_inventory(node[-1], nested, 'instance', { visibility: 'public', origin: source_origin(node[1]) }, methods, owners, directives, executed)
+  elsif node[0] == :sclass
+    self_receiver = node[1][0] == :var_ref && node[1][1][0..1] == [:@kw, 'self']
+    nested_domain = singleton_domain(domain)
+    method_inventory(node[2], owner, nested_domain, { visibility: 'public', origin: source_origin(node[1]) }, methods, owners, directives,
+                     executed && self_receiver, lexical + '::<singleton>')
   elsif node[0] == :assign && node[2].is_a?(Array) && node[2][0] == :method_add_block &&
         constant_path(node[1]) && builder_block?(node[2])
-    lexical_owners(node[1], owner, owners, directives, visibility, executed)
-    lexical_owners(node[2][1], owner, owners, directives, visibility, false)
-    nested = [owner, constant_path(node[1])].reject(&:empty?).join('::')
-    lexical_owners(node[2][2], nested, owners, directives, visibility, executed)
-  elsif %i[class module].include?(node[0])
-    lexical_owners(node[1], owner, owners, directives, visibility, executed)
-    name = constant_path(node[1])
-    nested = name.start_with?('::') ? name.delete_prefix('::') : [owner, name].reject(&:empty?).join('::')
-    lexical_owners(node[2], owner, owners, directives, visibility, false) if node[0] == :class
-    lexical_owners(node[-1], nested, owners, directives, visibility, executed)
-  elsif node[0] == :sclass
-    lexical_owners(node[1], owner, owners, directives, visibility, executed)
-    lexical_owners(node[2], owner + '::<singleton>', owners, directives, visibility, executed)
-  elsif node[0] == :method_add_block
-    lexical_owners(node[1], owner, owners, directives, visibility, false)
-    lexical_owners(node[2], owner, owners, directives, visibility, false)
+    method_inventory(node[1], owner, domain, body, methods, owners, directives, false, lexical)
+    nested = [lexical, constant_path(node[1])].reject(&:empty?).join('::')
+    method_inventory(node[2][2], nested, 'instance', { visibility: 'public', origin: source_origin(node[1]) }, methods, owners, directives, executed)
+  elsif %i[def defs].include?(node[0])
+    singleton = node[0] == :defs
+    token, params = singleton ? [node[3], node[4]] : [node[1], node[2]]
+    target_domain = singleton ? (singleton_domain(domain)) : domain
+    mode = executed && !singleton ? body[:visibility] : 'public'
+    owners[token[2][0]] = lexical
+    identity = [owner, target_domain, token[1]]
+    methods[identity] = { owner: owner, domain: target_domain, body: body[:origin],
+                          name: token[1], kind: 'call', visibility: mode, keywords: keyword_names(params) }
+    method_inventory(node[-1], owner, domain, body, methods, owners, directives, false, lexical)
+  elsif node[0] == :vcall && %w[private protected public].include?(node[1][1])
+    owners[node[1][2][0]] = lexical
+    body[:visibility] = node[1][1] if executed
+  elsif node[0] == :command && %w[private protected public private_class_method public_class_method].include?(node[1][1])
+    owners[node[1][2][0]] = lexical
+    mode = node[1][1]
+    arguments = node[2][0] == :args_add_block ? node[2][1] : node[2]
+    method_inventory(arguments, owner, domain, body, methods, owners, directives, executed, lexical)
+    if executed
+      target_domain = mode.end_with?('_class_method') ? singleton_domain(domain) : domain
+      names = method_symbols(node[2])
+      arguments.each do |argument|
+        names << argument[argument[0] == :defs ? 3 : 1][1] if %i[def defs].include?(argument[0])
+        names.concat(method_symbols(argument[2])) if argument[0] == :command && argument[1][1] == 'attr_reader'
+      end
+      names.each do |name|
+        entry = methods[[owner, target_domain, name]]
+        entry[:visibility] = mode.start_with?('public') ? 'public' : 'private' if entry
+      end
+    end
+  elsif node[0] == :command && node[1][1] == 'attr_reader'
+    owners[node[1][2][0]] = lexical
+    method_symbols(node[2]).each do |name|
+      methods[[owner, domain, name]] = { owner: owner, domain: domain, body: body[:origin],
+                                       name: name, kind: 'field', visibility: executed ? body[:visibility] : 'public',
+                                       keywords: [] }
+    end
+  elsif %i[do_block brace_block].include?(node[0])
+    method_inventory(node[2], owner, domain, body, methods, owners, directives, executed, lexical)
   else
-    node.each { |child| lexical_owners(child, owner, owners, directives, visibility, false) if child.is_a?(Array) }
+    node.each do |child|
+      method_inventory(child, owner, domain, body, methods, owners, directives, false, lexical) if child.is_a?(Array)
+    end
   end
 end
-owners, directives, visibility = {}, [], {}
-lexical_owners(Ripper.sexp(source), '', owners, directives, visibility)
-STDOUT.write(JSON.generate(masked: output.join, owners: owners, private_constants: directives, visibility: visibility))
+
+owners, directives, methods = {}, [], {}
+method_inventory(Ripper.sexp(source), '', 'instance', { visibility: 'public', origin: [1, 0] }, methods, owners, directives)
+STDOUT.write(JSON.generate(masked: output.join, owners: owners, private_constants: directives, methods: methods.values))

@@ -259,6 +259,48 @@ class PublicSurface(unittest.TestCase):
             runtime.write_text(hidden.replace('private_class_method :dump', ''))
             self.assertIn('unlisted public call/export: Client.dump', invoke())
 
+    def test_ruby_method_visibility_domains_and_reopened_bodies(self):
+        cases = [
+            ('private\ndef self.extra_public_api; end', True),
+            ('def self.extra_public_api; end\nprivate_class_method :extra_public_api', False),
+            ('def extra_public_api; end\ndef self.extra_public_api; end\nprivate_class_method :extra_public_api', True),
+            ('def extra_public_api; end\ndef self.extra_public_api; end\nprivate :extra_public_api\nprivate_class_method :extra_public_api', False),
+            ('private\nend\nclass Client\ndef extra_public_api; end', True),
+            ('private\nend\nclass Client\nprivate\ndef extra_public_api; end', False),
+            ('class << self\nprivate\nend\nclass << self\ndef extra_public_api; end\nend', True),
+            ('class << self\nprivate\nend\nclass << self\nprivate\ndef extra_public_api; end\nend', False),
+            ('def self.extra_public_api; end\nclass << self\nprivate :extra_public_api\nend\ndef extra_public_api; end', True),
+            ('def self.extra_public_api; end\nclass << self\nprivate :extra_public_api\nend\nprivate def extra_public_api; end', False),
+            ('private def extra_public_api; end\ndef self.extra_public_api; end', True),
+            ('private def extra_public_api; end\nprivate_class_method def self.extra_public_api; end', False),
+            ('def self.extra_public_api; end\nprivate_class_method :extra_public_api\npublic_class_method :extra_public_api', True),
+            ('class << self\nprivate\ndef extra_public_api; end\nend', False),
+            ('class << self\ndef self.extra_public_api; end\nprivate_class_method :extra_public_api\nend', False),
+            ('class << self\ndef extra_public_api; end\ndef self.extra_public_api; end\nprivate_class_method :extra_public_api\nend', True),
+            ('private\npublic\ndef extra_public_api; end', True),
+            ('def extra_public_api; end\nend\nclass Client\nprivate :extra_public_api', False),
+        ]
+        with tempfile.TemporaryDirectory(prefix='library-surface-ruby-domains-') as folder:
+            root = Path(folder)
+            for name in ('sdlc', 'specification', 'conformance'):
+                (root / name).symlink_to(ROOT / name, target_is_directory=True)
+            shutil.copytree(ROOT / 'libraries/ruby/lib', root / 'libraries/ruby/lib')
+            shutil.copytree(ROOT / 'libraries/ruby/sig', root / 'libraries/ruby/sig')
+            header = root / 'libraries/c/include/thinkthen.h'
+            header.parent.mkdir(parents=True)
+            shutil.copyfile(ROOT / 'libraries/c/include/thinkthen.h', header)
+            runtime = root / 'libraries/ruby/lib/thinkthen/session.rb'
+            original = runtime.read_text()
+            for body, public in cases:
+                with self.subTest(body=body, public=public):
+                    runtime.write_text(original + '\nmodule ThinkThen\nclass Client\n' + body + '\nend\nend\n')
+                    run = subprocess.run([sys.executable, str(CHECK), '--root', str(root), '--library', 'ruby', '--json'],
+                                         capture_output=True, text=True, env=child_env(home=folder))
+                    self.assertIn(run.returncode, (0, 1), run.stderr)
+                    errors = json.loads(run.stdout)['libraries']['ruby']
+                    expected = ['unlisted public call/export: Client.extra_public_api'] if public else []
+                    self.assertEqual(errors, expected)
+
     def test_ada_generated_builders_types_and_private_visibility(self):
         with tempfile.TemporaryDirectory(prefix='library-surface-ada-') as folder:
             root = Path(folder)

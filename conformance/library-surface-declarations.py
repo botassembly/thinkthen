@@ -95,8 +95,7 @@ def ruby_masked(source):
     if len(text) != len(source) or text.count('\n') != source.count('\n'):
         raise ValueError('Ruby source lexer failed: invalid masked source')
     owners = {int(line): owner for line, owner in parsed['owners'].items()}
-    visibility = {int(line): event for line, event in parsed['visibility'].items()}
-    return text, owners, parsed['private_constants'], visibility
+    return text, owners, parsed['private_constants'], parsed['methods']
 
 
 def normalized_annotation(source):
@@ -472,9 +471,8 @@ def other(source, language):
                 if depth == 0:
                     break
     elif language == 'ruby':
-        private = set()
         constants = {}
-        text, owners, directives, visibility = ruby_masked(source)
+        text, owners, directives, methods = ruby_masked(source)
         # Keep full origins when the inventory combines declarations with short owner names.
         origins, hidden_types = {}, set()
         for number, (raw, line) in enumerate(zip(source.splitlines(), text.splitlines()), 1):
@@ -486,11 +484,6 @@ def other(source, language):
                 name = match[1] or match[2]
                 result.add(Declaration('', name, 'type'))
             container = lexical.split('::')[-1]
-            visible_owner, mode, method_names = visibility.get(number, (lexical, '', ()))
-            if mode == 'private':
-                private.add(visible_owner)
-            elif mode == 'public':
-                private.discard(visible_owner)
             match = re.match(r'\s*(\w+)\s*=\s*%w\[([^]]*)\]', raw) if re.match(r'\s*\w+\s*=', line) else None
             if match:
                 constants[(lexical, match[1])] = match[2].split()
@@ -508,19 +501,6 @@ def other(source, language):
                 dynamic = re.match(r'\s*define_method\((\w+)\)', line)[1]
                 if 'method_loop' in locals() and method_loop[:2] == (lexical, dynamic):
                     result.update(Declaration(container, name, 'call') for name in method_loop[2])
-            match = re.match(r'\s*def\s+(?:self\.)?(\w+)\s*(?:\(([^)]*)\))?', line)
-            if match and lexical not in private and not match[1].startswith('_'):
-                result.add(Declaration(container, match[1], 'call'))
-                for name in re.findall(r'\b(\w+)\s*:', match[2] or ''):
-                    result.add(Declaration(container + '.' + match[1], name, 'field'))
-            if lexical not in private and re.match(r'\s*attr_reader\b', line):
-                for name in re.findall(r':(\w+)', line):
-                    result.add(Declaration(container, name, 'field'))
-            for name in method_names:
-                declaration = Declaration(container, name, 'call')
-                origins.get(declaration, set()).discard(visible_owner)
-                if not origins.get(declaration):
-                    declarations.discard(declaration)
             match = re.match(r'\s*define_method\([\'\"](\w+)[\'\"]\)', raw) if re.match(r'\s*define_method\(', line) else None
             if match:
                 result.add(Declaration(container, match[1], 'field'))
@@ -528,6 +508,18 @@ def other(source, language):
                 path = '::'.join(filter(None, (lexical, declaration.name))) if declaration.kind == 'type' else lexical
                 origins.setdefault(declaration, set()).add(path)
             result.update(declarations)
+        for method in methods:
+            if method['visibility'] != 'public' or method['name'].startswith('_'):
+                continue
+            lexical = method['owner']
+            container = lexical.split('::')[-1]
+            declaration = Declaration(container, method['name'], method['kind'])
+            result.add(declaration)
+            origins.setdefault(declaration, set()).add(lexical)
+            for name in method['keywords']:
+                field = Declaration(container + '.' + method['name'], name, 'field')
+                result.add(field)
+                origins.setdefault(field, set()).add(lexical)
         for lexical, receiver, name in directives:
             if receiver in (None, 'self'):
                 target = lexical
