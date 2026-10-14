@@ -45,26 +45,73 @@ def constant_path(node)
   end
 end
 
-def lexical_owners(node, owner, owners)
-  return unless node.is_a?(Array)
-  return if %i[string_literal xstring_literal regexp_literal dyna_symbol].include?(node[0])
-  if node[0].to_s.start_with?('@')
-    owners[node[2][0]] = owner
-  elsif node[0] == :assign && node[2].is_a?(Array) && node[2][0] == :method_add_block && constant_path(node[1])
-    lexical_owners(node[1], owner, owners)
-    lexical_owners(node[2][1], owner, owners)
-    nested = [owner, constant_path(node[1])].reject(&:empty?).join('::')
-    lexical_owners(node[2][2], nested, owners)
-  elsif %i[class module].include?(node[0])
-    lexical_owners(node[1], owner, owners)
-    name = constant_path(node[1])
-    nested = name.start_with?('::') ? name.delete_prefix('::') : [owner, name].reject(&:empty?).join('::')
-    lexical_owners(node[2], owner, owners) if node[0] == :class
-    lexical_owners(node[-1], nested, owners)
+# Only declarative class builders run their block with the assigned constant as self.
+def builder_block?(node)
+  call = node[1]
+  call = call[1] if call[0] == :method_add_arg
+  call[0] == :call && %w[Class Module Struct].include?(constant_path(call[1])) && call[3][1] == 'new'
+end
+
+def constant_privacy(node, owner, directives)
+  if node[0] == :command && node[1][1] == 'private_constant'
+    receiver, arguments = nil, node[2]
+  elsif node[0] == :command_call && node[3][1] == 'private_constant'
+    receiver = constant_path(node[1])
+    receiver = 'self' if node[1][0] == :var_ref && node[1][1][0..1] == [:@kw, 'self']
+    return unless receiver
+    arguments = node[4]
   else
-    node.each { |child| lexical_owners(child, owner, owners) if child.is_a?(Array) }
+    return
+  end
+  return unless arguments[0] == :args_add_block
+  arguments[1].each do |argument|
+    next unless argument[0] == :symbol_literal && argument[1][0] == :symbol
+    symbol = argument[1][1]
+    directives << [owner, receiver, symbol[1]] if %i[@const @ident].include?(symbol[0])
   end
 end
-owners = {}
-lexical_owners(Ripper.sexp(source), '', owners)
-STDOUT.write(JSON.generate(masked: output.join, owners: owners))
+
+def method_privacy(node, owner, visibility)
+  if node[0] == :vcall && %w[private public].include?(node[1][1])
+    visibility[node[1][2][0]] = [owner, node[1][1], []]
+  elsif node[0] == :command && node[1][1] == 'private_class_method'
+    symbols = node[2][1].filter_map do |argument|
+      argument[1][1][1] if argument[0] == :symbol_literal && argument[1][0] == :symbol
+    end
+    visibility[node[1][2][0]] = [owner, 'private_class_method', symbols]
+  end
+end
+
+def lexical_owners(node, owner, owners, directives, visibility, executed = true)
+  return unless node.is_a?(Array)
+  return if %i[string_literal xstring_literal regexp_literal dyna_symbol].include?(node[0])
+  constant_privacy(node, owner, directives) if executed
+  method_privacy(node, owner, visibility) if executed
+  if node[0].to_s.start_with?('@')
+    owners[node[2][0]] = owner
+  elsif node[0] == :assign && node[2].is_a?(Array) && node[2][0] == :method_add_block &&
+        constant_path(node[1]) && builder_block?(node[2])
+    lexical_owners(node[1], owner, owners, directives, visibility, executed)
+    lexical_owners(node[2][1], owner, owners, directives, visibility, executed)
+    nested = [owner, constant_path(node[1])].reject(&:empty?).join('::')
+    lexical_owners(node[2][2], nested, owners, directives, visibility, executed)
+  elsif %i[class module].include?(node[0])
+    lexical_owners(node[1], owner, owners, directives, visibility, executed)
+    name = constant_path(node[1])
+    nested = name.start_with?('::') ? name.delete_prefix('::') : [owner, name].reject(&:empty?).join('::')
+    lexical_owners(node[2], owner, owners, directives, visibility, executed) if node[0] == :class
+    lexical_owners(node[-1], nested, owners, directives, visibility, executed)
+  elsif node[0] == :sclass
+    lexical_owners(node[1], owner, owners, directives, visibility, executed)
+    lexical_owners(node[2], owner + '::<singleton>', owners, directives, visibility, executed)
+  elsif node[0] == :method_add_block
+    lexical_owners(node[1], owner, owners, directives, visibility, executed)
+    lexical_owners(node[2], owner, owners, directives, visibility, false)
+  else
+    executed = false if %i[def defs lambda].include?(node[0])
+    node.each { |child| lexical_owners(child, owner, owners, directives, visibility, executed) if child.is_a?(Array) }
+  end
+end
+owners, directives, visibility = {}, [], {}
+lexical_owners(Ripper.sexp(source), '', owners, directives, visibility)
+STDOUT.write(JSON.generate(masked: output.join, owners: owners, private_constants: directives, visibility: visibility))

@@ -22,7 +22,14 @@ class PublicSurface(unittest.TestCase):
                   ('include/thinkthen.h', '} thinkthen_request_item_v1;', '} missing_item_v1;', 'missing helper: item')],
             'ruby': [('lib/thinkthen/session.rb', 'define_singleton_method("question_#{kind}")', 'define_singleton_method("absent_#{kind}")', 'missing helper: question_file')] + [
                      ('lib/thinkthen/session.rb', 'private_constant :Carrier', literal, 'unlisted public type/export: .Carrier')
-                     for literal in ('Object.const_set(:Carrier, Class.new)\n    Object.private_constant :Carrier',
+                     for literal in ('class << self\n      Carrier = Class.new\n      private_constant :Carrier\n    end',
+                                     'private_class_method def self.hide_carrier\n      private_constant :Carrier\n    end',
+                                     'def _hide_carrier\n      private\n      private_constant :Carrier\n    end',
+                                     'def self._hide_carrier\n      ThinkThen::Client.private_constant :Carrier\n    end',
+                                     'deferred = -> {\n      private_constant :Carrier\n    }',
+                                     'deferred = lambda do\n      private_class_method :open\n      self.private_constant :Carrier\n    end',
+                                     'Deferred = proc do\n      Client.private_constant :Carrier\n    end',
+                                     'Object.const_set(:Carrier, Class.new)\n    Object.private_constant :Carrier',
                                      'module Other\n      class Carrier; end\n      private_constant :Carrier\n    end\n    private_constant :Other',
                                      'Object.const_set(:Other, Module.new)\n    Object::Other.const_set(:Carrier, Class.new)\n    Object::Other.private_constant :Carrier',
                                      'Object.const_set(:Other, Module.new)\n    Other.const_set(:Carrier, Class.new)\n    Other.private_constant :Carrier',

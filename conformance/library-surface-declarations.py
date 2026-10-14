@@ -94,7 +94,9 @@ def ruby_masked(source):
     text = parsed['masked']
     if len(text) != len(source) or text.count('\n') != source.count('\n'):
         raise ValueError('Ruby source lexer failed: invalid masked source')
-    return text, {int(line): owner for line, owner in parsed['owners'].items()}
+    owners = {int(line): owner for line, owner in parsed['owners'].items()}
+    visibility = {int(line): event for line, event in parsed['visibility'].items()}
+    return text, owners, parsed['private_constants'], visibility
 
 
 def normalized_annotation(source):
@@ -472,7 +474,7 @@ def other(source, language):
     elif language == 'ruby':
         private = set()
         constants = {}
-        text, owners = ruby_masked(source)
+        text, owners, directives, visibility = ruby_masked(source)
         # Keep full origins when the inventory combines declarations with short owner names.
         origins, hidden_types = {}, set()
         for number, (raw, line) in enumerate(zip(source.splitlines(), text.splitlines()), 1):
@@ -480,14 +482,15 @@ def other(source, language):
             result = set()
             lexical = owners.get(number, '')
             match = re.match(r'\s*(?:class|module)\s+(\w+)|\s*(\w+)\s*=\s*Struct\.new', line)
-            if match:
+            if match and '<singleton>' not in lexical:
                 name = match[1] or match[2]
                 result.add(Declaration('', name, 'type'))
             container = lexical.split('::')[-1]
-            if line.strip() == 'private':
-                private.add(lexical)
-            elif line.strip() == 'public':
-                private.discard(lexical)
+            visible_owner, mode, method_names = visibility.get(number, (lexical, '', ()))
+            if mode == 'private':
+                private.add(visible_owner)
+            elif mode == 'public':
+                private.discard(visible_owner)
             match = re.match(r'\s*(\w+)\s*=\s*%w\[([^]]*)\]', raw) if re.match(r'\s*\w+\s*=', line) else None
             if match:
                 constants[(lexical, match[1])] = match[2].split()
@@ -513,31 +516,29 @@ def other(source, language):
             if lexical not in private and re.match(r'\s*attr_reader\b', line):
                 for name in re.findall(r':(\w+)', line):
                     result.add(Declaration(container, name, 'field'))
-            for name in re.findall(r':(\w+)', line) if re.match(r'\s*private_class_method\b', line) else ():
+            for name in method_names:
                 declaration = Declaration(container, name, 'call')
-                origins.get(declaration, set()).discard(lexical)
+                origins.get(declaration, set()).discard(visible_owner)
                 if not origins.get(declaration):
                     declarations.discard(declaration)
             match = re.match(r'\s*define_method\([\'\"](\w+)[\'\"]\)', raw) if re.match(r'\s*define_method\(', line) else None
             if match:
                 result.add(Declaration(container, match[1], 'field'))
-            directive = re.match(r'\s*(?:(self|(?:::)?[A-Z]\w*(?:::[A-Z]\w*)*)\.)?private_constant\s+:(\w+)', line)
-            if directive:
-                receiver, name = directive.groups()
-                if receiver in (None, 'self'):
-                    target = lexical
-                elif receiver.startswith('::') or receiver.split('::')[0] == 'Object':
-                    target = receiver.removeprefix('::').removeprefix('Object::')
-                    target = '' if target == 'Object' else target
-                else:
-                    parts = lexical.split('::')
-                    candidates = ['::'.join(parts[:end] + [receiver]) for end in range(len(parts), 0, -1)] + [receiver]
-                    target = next((candidate for candidate in candidates if candidate in owners.values()), receiver)
-                hidden_types.add('::'.join(filter(None, (target, name))))
             for declaration in result:
                 path = '::'.join(filter(None, (lexical, declaration.name))) if declaration.kind == 'type' else lexical
                 origins.setdefault(declaration, set()).add(path)
             result.update(declarations)
+        for lexical, receiver, name in directives:
+            if receiver in (None, 'self'):
+                target = lexical
+            elif receiver.startswith('::') or receiver.split('::')[0] == 'Object':
+                target = receiver.removeprefix('::').removeprefix('Object::')
+                target = '' if target == 'Object' else target
+            else:
+                parts = lexical.split('::')
+                candidates = ['::'.join(parts[:end] + [receiver]) for end in range(len(parts), 0, -1)] + [receiver]
+                target = next((candidate for candidate in candidates if candidate in owners.values()), receiver)
+            hidden_types.add('::'.join(filter(None, (target, name))))
         result = {d for d in result if any(not any(path == hidden or path.startswith(hidden + '::')
                                                   for hidden in hidden_types) for path in origins[d])}
     elif language == 'ada':
