@@ -9,10 +9,9 @@ TTTextQuestion *question = [TTTextQuestion new];
 question.text = @"Does this mention a refund?";
 TTTextInput *input = [TTTextInput new];
 input.text = @"Please refund my order.";
-TTCall *call = nil;
-TTPresence<NSNumber *> *answer = [client decideAnswer:question input:input options:nil feed:nil call:&call error:&error];
+TTCall *call = [client decide:question input:input options:nil feed:nil error:&error];
 if (error) { NSLog(@"%@", error.localizedDescription); return; }
-NSLog(@"%@", answer.value);
+NSLog(@"%@", call.value.scalar);
 ```
 
 `decide`, `choose`, `tag`, `score`, `filter`, `rank`, `find`, `annotate`, `recognize` and `relate` each offer a typed blocking `decideAnswer:input:options:feed:call:error:` helper and a named asynchronous call. The optional `call` output retains facts and packet readers. Blocking helpers run the bounded native wait on the calling thread and run feed blocks there. Each completed call has the matching `decideAnswer:` or other answer accessor and typed `facts`. Answer accessors refuse a failed call or the wrong function. Accessors other than filter require exactly one answer. Rank returns Foundation numbers for the native indices. Filter returns zero or more original Foundation values in source order, including `NSNull` and false. Recognize and relate answers use generated entity and relation classes. Relation endpoints expose `sourceName` and `targetName`.

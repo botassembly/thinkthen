@@ -21,8 +21,7 @@ FOUNDATION_EXPORT NSDictionary *TTMap(id value, id (^convert)(id));
 @property(nonatomic, readonly) NSMutableDictionary<NSString *, id> *requestFields;
 @end
 FOUNDATION_EXPORT NSData * _Nullable TTRequestJSONData(id value, NSError * _Nullable * _Nullable error);
-FOUNDATION_EXPORT id _Nullable TTAnswerPayload(NSArray *packets, id terminal, NSString *function, NSString *judgment, id call, NSError * _Nullable * _Nullable error);
-FOUNDATION_EXPORT TTPresence *TTAnswerPresence(id payload, id (^convert)(id));
+FOUNDATION_EXPORT BOOL TTCallSingleInput(TTInput *input);
 
 @interface TTFoundationClient (Scheduling)
 - (nullable TTCall *)complete:(NSString *)verb question:(TTQuestion *)question input:(TTInput *)input options:(TTControls *)options feed:(TTFeed)feed error:(NSError * _Nullable * _Nullable)error;
@@ -31,6 +30,7 @@ FOUNDATION_EXPORT TTPresence *TTAnswerPresence(id payload, id (^convert)(id));
 
 @interface TTCall (Transport)
 @property(nonatomic, copy, readonly) NSString *function;
+@property(nonatomic, readonly) BOOL singleInput;
 @property(nonatomic, copy, readonly) NSArray<TTSessionPacket *> *packets;
 @property(nonatomic, strong, readonly) TTSessionPacketTerminal *terminal;
 @end

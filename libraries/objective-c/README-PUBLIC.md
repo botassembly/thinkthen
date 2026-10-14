@@ -19,15 +19,15 @@ int main(void) { @autoreleasepool {
     TTQuestionDefinition *teamQuestion = [TTQuestionDefinition new]; teamQuestion.value = teams;
     for (NSString *text in refunds) {
         TTTextInput *input = [TTTextInput new]; input.text = text;
-        TTPresence<NSNumber *> *refund = [client decideAnswer:refundQuestion input:input options:nil feed:nil call:NULL error:&error];
+        TTCall *refund = [client decide:refundQuestion input:input options:nil feed:nil error:&error];
         if (!refund || error) return 1;
-        puts(refund.value ? (refund.value.boolValue ? "true" : "false") : "not sure");
+        puts(refund.value.scalar ? ([refund.value.scalar boolValue] ? "true" : "false") : "not sure");
     }
     for (NSString *text in messages) {
         TTTextInput *input = [TTTextInput new]; input.text = text;
-        TTPresence<NSString *> *team = [client chooseAnswer:teamQuestion input:input options:nil feed:nil call:NULL error:&error];
+        TTCall *team = [client choose:teamQuestion input:input options:nil feed:nil error:&error];
         if (!team || error) return 1;
-        puts(team.value ? team.value.UTF8String : "not sure");
+        puts(team.value.scalar ? [team.value.scalar UTF8String] : "not sure");
     }
     return 0;
 } }

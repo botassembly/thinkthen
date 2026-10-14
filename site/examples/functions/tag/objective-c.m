@@ -21,12 +21,12 @@ int main(void) { @autoreleasepool {
             @"but export crashes the app,\n"
             @"and I was charged twice.\n";
     NSArray<NSString *> *fittingLabels = nil;
-    TTPresence<NSArray<NSString *> *> *judgment =
-        [client tagAnswer:whichLabels
+    TTCall *judgment =
+        [client tag:whichLabels
         input:message
-        options:nil feed:nil call:NULL error:&error];
+        options:nil feed:nil error:&error];
     assert(judgment && !error);
-    fittingLabels = judgment.value;
+    fittingLabels = judgment.value.scalar;
     assert([fittingLabels isEqualToArray:labels]);
     return 0;
 } }

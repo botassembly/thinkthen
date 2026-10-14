@@ -13,12 +13,12 @@ int main(void) { @autoreleasepool {
     broken.text = @"Please refund my order. "
             @"It arrived broken.";
     BOOL isRefund = NO;
-    TTPresence<NSNumber *> *judgment =
-        [client decideAnswer:question
+    TTCall *judgment =
+        [client decide:question
         input:broken
-        options:nil feed:nil call:NULL error:&error];
+        options:nil feed:nil error:&error];
     assert(judgment && !error);
-    isRefund = judgment.value.boolValue;
+    isRefund = [judgment.value.scalar boolValue];
     assert(isRefund);
     return 0;
 } }

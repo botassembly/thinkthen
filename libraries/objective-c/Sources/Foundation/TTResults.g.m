@@ -2,8 +2,7 @@
 #import "TTResults.g.h"
 #import "TTResultPrivate.h"
 #import "ThinkThenFoundation.h"
-#define TT_GENERATED_NAMED_IMPLEMENTATIONS - (nullable TTTask *)decide:(TTQuestion *)question input:(TTInput *)input options:(nullable TTControls *)options feed:(nullable TTFeed)feed completion:(TTCompletion)completion error:(NSError * _Nullable * _Nullable)error { return [self start:@"decide" question:question input:input options:options feed:feed completion:completion error:error]; } - (nullable TTPresence<NSNumber *> *)decideAnswer:(TTQuestion *)question input:(TTInput *)input options:(nullable TTControls *)options feed:(nullable TTFeed)feed call:(TTCall * _Nullable * _Nullable)call error:(NSError * _Nullable * _Nullable)error { TTCall *completed = [self complete:@"decide" question:question input:input options:options feed:feed error:error]; if (call) *call = completed; return completed ? [completed decideAnswer:error] : nil; } - (nullable TTTask *)choose:(TTQuestion *)question input:(TTInput *)input options:(nullable TTControls *)options feed:(nullable TTFeed)feed completion:(TTCompletion)completion error:(NSError * _Nullable * _Nullable)error { return [self start:@"choose" question:question input:input options:options feed:feed completion:completion error:error]; } - (nullable TTPresence<NSString *> *)chooseAnswer:(TTQuestion *)question input:(TTInput *)input options:(nullable TTControls *)options feed:(nullable TTFeed)feed call:(TTCall * _Nullable * _Nullable)call error:(NSError * _Nullable * _Nullable)error { TTCall *completed = [self complete:@"choose" question:question input:input options:options feed:feed error:error]; if (call) *call = completed; return completed ? [completed chooseAnswer:error] : nil; } - (nullable TTTask *)tag:(TTQuestion *)question input:(TTInput *)input options:(nullable TTControls *)options feed:(nullable TTFeed)feed completion:(TTCompletion)completion error:(NSError * _Nullable * _Nullable)error { return [self start:@"tag" question:question input:input options:options feed:feed completion:completion error:error]; } - (nullable TTPresence<NSArray<NSString *> *> *)tagAnswer:(TTQuestion *)question input:(TTInput *)input options:(nullable TTControls *)options feed:(nullable TTFeed)feed call:(TTCall * _Nullable * _Nullable)call error:(NSError * _Nullable * _Nullable)error { TTCall *completed = [self complete:@"tag" question:question input:input options:options feed:feed error:error]; if (call) *call = completed; return completed ? [completed tagAnswer:error] : nil; } - (nullable TTTask *)score:(TTQuestion *)question input:(TTInput *)input options:(nullable TTControls *)options feed:(nullable TTFeed)feed completion:(TTCompletion)completion error:(NSError * _Nullable * _Nullable)error { return [self start:@"score" question:question input:input options:options feed:feed completion:completion error:error]; } - (nullable TTPresence<NSNumber *> *)scoreAnswer:(TTQuestion *)question input:(TTInput *)input options:(nullable TTControls *)options feed:(nullable TTFeed)feed call:(TTCall * _Nullable * _Nullable)call error:(NSError * _Nullable * _Nullable)error { TTCall *completed = [self complete:@"score" question:question input:input options:options feed:feed error:error]; if (call) *call = completed; return completed ? [completed scoreAnswer:error] : nil; } - (nullable TTTask *)filter:(TTQuestion *)question input:(TTInput *)input options:(nullable TTControls *)options feed:(nullable TTFeed)feed completion:(TTCompletion)completion error:(NSError * _Nullable * _Nullable)error { return [self start:@"filter" question:question input:input options:options feed:feed completion:completion error:error]; } - (nullable NSArray *)filterAnswer:(TTQuestion *)question input:(TTInput *)input options:(nullable TTControls *)options feed:(nullable TTFeed)feed call:(TTCall * _Nullable * _Nullable)call error:(NSError * _Nullable * _Nullable)error { TTCall *completed = [self complete:@"filter" question:question input:input options:options feed:feed error:error]; if (call) *call = completed; return completed ? [completed filterAnswer:error] : nil; } - (nullable TTTask *)rank:(TTQuestion *)question input:(TTInput *)input options:(nullable TTControls *)options feed:(nullable TTFeed)feed completion:(TTCompletion)completion error:(NSError * _Nullable * _Nullable)error { return [self start:@"rank" question:question input:input options:options feed:feed completion:completion error:error]; } - (nullable NSArray<NSNumber *> *)rankAnswer:(TTQuestion *)question input:(TTInput *)input options:(nullable TTControls *)options feed:(nullable TTFeed)feed call:(TTCall * _Nullable * _Nullable)call error:(NSError * _Nullable * _Nullable)error { TTCall *completed = [self complete:@"rank" question:question input:input options:options feed:feed error:error]; if (call) *call = completed; return completed ? [completed rankAnswer:error] : nil; } - (nullable TTTask *)find:(TTQuestion *)question input:(TTInput *)input options:(nullable TTControls *)options feed:(nullable TTFeed)feed completion:(TTCompletion)completion error:(NSError * _Nullable * _Nullable)error { return [self start:@"find" question:question input:input options:options feed:feed completion:completion error:error]; } - (nullable TTPresence<TTFind *> *)findAnswer:(TTQuestion *)question input:(TTInput *)input options:(nullable TTControls *)options feed:(nullable TTFeed)feed call:(TTCall * _Nullable * _Nullable)call error:(NSError * _Nullable * _Nullable)error { TTCall *completed = [self complete:@"find" question:question input:input options:options feed:feed error:error]; if (call) *call = completed; return completed ? [completed findAnswer:error] : nil; } - (nullable TTTask *)annotate:(TTQuestion *)question input:(TTInput *)input options:(nullable TTControls *)options feed:(nullable TTFeed)feed completion:(TTCompletion)completion error:(NSError * _Nullable * _Nullable)error { return [self start:@"annotate" question:question input:input options:options feed:feed completion:completion error:error]; } - (nullable TTPresence<NSArray<TTAnnotation *> *> *)annotateAnswer:(TTQuestion *)question input:(TTInput *)input options:(nullable TTControls *)options feed:(nullable TTFeed)feed call:(TTCall * _Nullable * _Nullable)call error:(NSError * _Nullable * _Nullable)error { TTCall *completed = [self complete:@"annotate" question:question input:input options:options feed:feed error:error]; if (call) *call = completed; return completed ? [completed annotateAnswer:error] : nil; } - (nullable TTTask *)recognize:(TTQuestion *)question input:(TTInput *)input options:(nullable TTControls *)options feed:(nullable TTFeed)feed completion:(TTCompletion)completion error:(NSError * _Nullable * _Nullable)error { return [self start:@"recognize" question:question input:input options:options feed:feed completion:completion error:error]; } - (nullable TTPresence<NSArray<TTRecognition *> *> *)recognizeAnswer:(TTQuestion *)question input:(TTInput *)input options:(nullable TTControls *)options feed:(nullable TTFeed)feed call:(TTCall * _Nullable * _Nullable)call error:(NSError * _Nullable * _Nullable)error { TTCall *completed = [self complete:@"recognize" question:question input:input options:options feed:feed error:error]; if (call) *call = completed; return completed ? [completed recognizeAnswer:error] : nil; } - (nullable TTTask *)relate:(TTQuestion *)question input:(TTInput *)input options:(nullable TTControls *)options feed:(nullable TTFeed)feed completion:(TTCompletion)completion error:(NSError * _Nullable * _Nullable)error { return [self start:@"relate" question:question input:input options:options feed:feed completion:completion error:error]; } - (nullable TTPresence<TTRelation *> *)relateAnswer:(TTQuestion *)question input:(TTInput *)input options:(nullable TTControls *)options feed:(nullable TTFeed)feed call:(TTCall * _Nullable * _Nullable)call error:(NSError * _Nullable * _Nullable)error { TTCall *completed = [self complete:@"relate" question:question input:input options:options feed:feed error:error]; if (call) *call = completed; return completed ? [completed relateAnswer:error] : nil; }
-#define TT_GENERATED_ANSWER_IMPLEMENTATIONS - (nullable TTPresence<NSNumber *> *)decideAnswer:(NSError * _Nullable * _Nullable)error { id payload = TTAnswerPayload(self.packets, self.terminal, @"decide", @"decision", self, error); if (!payload) return nil; return TTAnswerPresence(payload, ^id(id value) { return TTBoolean(value); }); } - (nullable TTPresence<NSString *> *)chooseAnswer:(NSError * _Nullable * _Nullable)error { id payload = TTAnswerPayload(self.packets, self.terminal, @"choose", @"choice", self, error); if (!payload) return nil; return TTAnswerPresence(payload, ^id(id value) { return TTString(value); }); } - (nullable TTPresence<NSArray<NSString *> *> *)tagAnswer:(NSError * _Nullable * _Nullable)error { id payload = TTAnswerPayload(self.packets, self.terminal, @"tag", @"tags", self, error); if (!payload) return nil; return TTAnswerPresence(payload, ^id(id value) { return TTArray(value, ^id(id item) { return TTString(item); }); }); } - (nullable TTPresence<NSNumber *> *)scoreAnswer:(NSError * _Nullable * _Nullable)error { id payload = TTAnswerPayload(self.packets, self.terminal, @"score", @"score", self, error); if (!payload) return nil; return TTAnswerPresence(payload, ^id(id value) { return TTNumber(value); }); } - (nullable NSArray *)filterAnswer:(NSError * _Nullable * _Nullable)error { id payload = TTAnswerPayload(self.packets, self.terminal, @"filter", @"", self, error); if (!payload) return nil; return TTArray(payload, ^id(id item) { id original = TTObject(item)[@"input"]; if (!original) TTInvalidResult(); return original; }); } - (nullable NSArray<NSNumber *> *)rankAnswer:(NSError * _Nullable * _Nullable)error { id payload = TTAnswerPayload(self.packets, self.terminal, @"rank", @"", self, error); if (!payload) return nil; return TTArray(payload, ^id(id item) { return TTInteger(TTObject(item)[@"index"]); }); } - (nullable TTPresence<TTFind *> *)findAnswer:(NSError * _Nullable * _Nullable)error { id payload = TTAnswerPayload(self.packets, self.terminal, @"find", @"", self, error); if (!payload) return nil; return TTAnswerPresence(payload, ^id(id value) { return [TTFind read:value]; }); } - (nullable TTPresence<NSArray<TTAnnotation *> *> *)annotateAnswer:(NSError * _Nullable * _Nullable)error { id payload = TTAnswerPayload(self.packets, self.terminal, @"annotate", @"", self, error); if (!payload) return nil; return TTAnswerPresence(payload, ^id(id value) { return TTArray(value, ^id(id item) { return [TTAnnotation read:item]; }); }); } - (nullable TTPresence<NSArray<TTRecognition *> *> *)recognizeAnswer:(NSError * _Nullable * _Nullable)error { id payload = TTAnswerPayload(self.packets, self.terminal, @"recognize", @"", self, error); if (!payload) return nil; return TTAnswerPresence(payload, ^id(id value) { return TTArray(value, ^id(id item) { return [TTRecognition read:item]; }); }); } - (nullable TTPresence<TTRelation *> *)relateAnswer:(NSError * _Nullable * _Nullable)error { id payload = TTAnswerPayload(self.packets, self.terminal, @"relate", @"", self, error); if (!payload) return nil; return TTAnswerPresence(payload, ^id(id value) { return [TTRelation read:value]; }); }
+#define TT_GENERATED_NAMED_IMPLEMENTATIONS - (nullable TTTask *)decide:(TTQuestion *)question input:(TTInput *)input options:(nullable TTControls *)options feed:(nullable TTFeed)feed completion:(TTCompletion)completion error:(NSError * _Nullable * _Nullable)error { return [self start:@"decide" question:question input:input options:options feed:feed completion:completion error:error]; } - (nullable TTCall *)decide:(TTQuestion *)question input:(TTInput *)input options:(nullable TTControls *)options feed:(nullable TTFeed)feed error:(NSError * _Nullable * _Nullable)error { return [self complete:@"decide" question:question input:input options:options feed:feed error:error]; } - (nullable TTTask *)choose:(TTQuestion *)question input:(TTInput *)input options:(nullable TTControls *)options feed:(nullable TTFeed)feed completion:(TTCompletion)completion error:(NSError * _Nullable * _Nullable)error { return [self start:@"choose" question:question input:input options:options feed:feed completion:completion error:error]; } - (nullable TTCall *)choose:(TTQuestion *)question input:(TTInput *)input options:(nullable TTControls *)options feed:(nullable TTFeed)feed error:(NSError * _Nullable * _Nullable)error { return [self complete:@"choose" question:question input:input options:options feed:feed error:error]; } - (nullable TTTask *)tag:(TTQuestion *)question input:(TTInput *)input options:(nullable TTControls *)options feed:(nullable TTFeed)feed completion:(TTCompletion)completion error:(NSError * _Nullable * _Nullable)error { return [self start:@"tag" question:question input:input options:options feed:feed completion:completion error:error]; } - (nullable TTCall *)tag:(TTQuestion *)question input:(TTInput *)input options:(nullable TTControls *)options feed:(nullable TTFeed)feed error:(NSError * _Nullable * _Nullable)error { return [self complete:@"tag" question:question input:input options:options feed:feed error:error]; } - (nullable TTTask *)score:(TTQuestion *)question input:(TTInput *)input options:(nullable TTControls *)options feed:(nullable TTFeed)feed completion:(TTCompletion)completion error:(NSError * _Nullable * _Nullable)error { return [self start:@"score" question:question input:input options:options feed:feed completion:completion error:error]; } - (nullable TTCall *)score:(TTQuestion *)question input:(TTInput *)input options:(nullable TTControls *)options feed:(nullable TTFeed)feed error:(NSError * _Nullable * _Nullable)error { return [self complete:@"score" question:question input:input options:options feed:feed error:error]; } - (nullable TTTask *)filter:(TTQuestion *)question input:(TTInput *)input options:(nullable TTControls *)options feed:(nullable TTFeed)feed completion:(TTCompletion)completion error:(NSError * _Nullable * _Nullable)error { return [self start:@"filter" question:question input:input options:options feed:feed completion:completion error:error]; } - (nullable TTCall *)filter:(TTQuestion *)question input:(TTInput *)input options:(nullable TTControls *)options feed:(nullable TTFeed)feed error:(NSError * _Nullable * _Nullable)error { return [self complete:@"filter" question:question input:input options:options feed:feed error:error]; } - (nullable TTTask *)rank:(TTQuestion *)question input:(TTInput *)input options:(nullable TTControls *)options feed:(nullable TTFeed)feed completion:(TTCompletion)completion error:(NSError * _Nullable * _Nullable)error { return [self start:@"rank" question:question input:input options:options feed:feed completion:completion error:error]; } - (nullable TTCall *)rank:(TTQuestion *)question input:(TTInput *)input options:(nullable TTControls *)options feed:(nullable TTFeed)feed error:(NSError * _Nullable * _Nullable)error { return [self complete:@"rank" question:question input:input options:options feed:feed error:error]; } - (nullable TTTask *)find:(TTQuestion *)question input:(TTInput *)input options:(nullable TTControls *)options feed:(nullable TTFeed)feed completion:(TTCompletion)completion error:(NSError * _Nullable * _Nullable)error { return [self start:@"find" question:question input:input options:options feed:feed completion:completion error:error]; } - (nullable TTCall *)find:(TTQuestion *)question input:(TTInput *)input options:(nullable TTControls *)options feed:(nullable TTFeed)feed error:(NSError * _Nullable * _Nullable)error { return [self complete:@"find" question:question input:input options:options feed:feed error:error]; } - (nullable TTTask *)annotate:(TTQuestion *)question input:(TTInput *)input options:(nullable TTControls *)options feed:(nullable TTFeed)feed completion:(TTCompletion)completion error:(NSError * _Nullable * _Nullable)error { return [self start:@"annotate" question:question input:input options:options feed:feed completion:completion error:error]; } - (nullable TTCall *)annotate:(TTQuestion *)question input:(TTInput *)input options:(nullable TTControls *)options feed:(nullable TTFeed)feed error:(NSError * _Nullable * _Nullable)error { return [self complete:@"annotate" question:question input:input options:options feed:feed error:error]; } - (nullable TTTask *)recognize:(TTQuestion *)question input:(TTInput *)input options:(nullable TTControls *)options feed:(nullable TTFeed)feed completion:(TTCompletion)completion error:(NSError * _Nullable * _Nullable)error { return [self start:@"recognize" question:question input:input options:options feed:feed completion:completion error:error]; } - (nullable TTCall *)recognize:(TTQuestion *)question input:(TTInput *)input options:(nullable TTControls *)options feed:(nullable TTFeed)feed error:(NSError * _Nullable * _Nullable)error { return [self complete:@"recognize" question:question input:input options:options feed:feed error:error]; } - (nullable TTTask *)relate:(TTQuestion *)question input:(TTInput *)input options:(nullable TTControls *)options feed:(nullable TTFeed)feed completion:(TTCompletion)completion error:(NSError * _Nullable * _Nullable)error { return [self start:@"relate" question:question input:input options:options feed:feed completion:completion error:error]; } - (nullable TTCall *)relate:(TTQuestion *)question input:(TTInput *)input options:(nullable TTControls *)options feed:(nullable TTFeed)feed error:(NSError * _Nullable * _Nullable)error { return [self complete:@"relate" question:question input:input options:options feed:feed error:error]; }
 NSString * const TTRequestVersion = @"thinkthen.request/1";
 @implementation TTAnnotation
 + (instancetype)read:(id)value {
@@ -6506,53 +6505,335 @@ TTSourceUnit const TTSourceUnitFile = @"file";
     else [self.requestFields removeObjectForKey:@"last_line"];
 }
 @end
-NSErrorDomain const TTAnswerErrorDomain = @"io.github.botassembly.thinkthen.answer";
-extern NSErrorDomain const TTErrorDomain;
-extern NSString * const TTFailureDetailsKey;
-TTPresence *TTAnswerPresence(id payload, id (^convert)(id)) {
-    TTResultNode *node = [[TTResultNode alloc] initWithFields:@{
-        @"value":payload
-    }];
-    return [node presence:@"value" required:YES convert:convert];
+@interface TTCallValue ()
+- (instancetype)initWithScalar:(id)scalar items:(NSArray *)items;
+@end
+@implementation TTCallValue
+- (instancetype)initWithScalar:(id)scalar items:(NSArray *)items {
+    if ((self = [super init])) {
+        _scalar = scalar;
+        _items = [items copy];
+    } return self;
 }
-id TTAnswerPayload(NSArray<TTSessionPacket *> *packets, TTSessionPacketTerminal *terminal, NSString *function,
-NSString *judgment, id call, NSError **error) {
-    if (terminal.failure.state == TTPresenceValue) {
-        if (error) *error = TTFailureForCall(terminal.failure.value, call);
-        return nil;
-    }
-    NSMutableArray *values = [NSMutableArray array];
-    if (terminal) for (TTSessionPacket *packet in packets) {
-        NSDictionary *fields = packet.rawFields;
-        if (![fields[@"function"] isEqual:function]) continue;
-        id value;
-        BOOL rowAnswer = [function isEqual:@"filter"] || [function isEqual:@"annotate"];
-        if (rowAnswer) {
-            if ([fields[@"kind"] isEqual:@"row"]) [values addObject:fields[@"value"]];
-            continue;
+@end
+@interface TTCallProbability ()
+- (instancetype)initWithScalar:(NSNumber *)scalar items:(NSArray<TTCallProbability *> *)items;
+@end
+@implementation TTCallProbability
+- (instancetype)initWithScalar:(NSNumber *)scalar items:(NSArray<TTCallProbability *> *)items {
+    if ((self = [super init])) {
+        _scalar = scalar;
+        _items = [items copy];
+    } return self;
+}
+@end
+static TTCallProbability *TTProbability(id value) {
+    if (!value || value == NSNull.null) return nil;
+    if ([value isKindOfClass:NSArray.class]) return [[TTCallProbability alloc] initWithScalar:nil items:TTArray(value,
+    ^id(id item) {
+        return TTProbability(item) ?: [[TTCallProbability alloc] initWithScalar:nil items:nil];
+    })];
+    return [[TTCallProbability alloc] initWithScalar:TTNumber(value) items:nil];
+}
+static id TTPickedProbability(NSDictionary *row) {
+    NSDictionary *answer = TTObject(row[@"answer"]);
+    if ([answer[@"kind"] isEqual:@"yes_no"]) return answer[@"probability"] ?: NSNull.null;
+    if ([answer[@"kind"] isEqual:@"choice"]) return TTObject(answer[@"probabilities"])[answer[@"pick"]] ?: NSNull.null;
+    return NSNull.null;
+}
+static NSArray *TTRecognitionProbabilities(NSDictionary *row) {
+    NSDictionary *value = TTObject(row[@"value"]);
+    if (value[@"proposals"]) return TTArray(value[@"proposals"], ^id(id item) {
+        return TTObject(item)[@"probability"];
+    });
+    NSArray *proposals = TTObject(row[@"answer"])[@"proposals"];
+    return TTArray(value[@"entities"], ^id(id item) {
+        NSDictionary *entity = TTObject(item);
+        for (NSDictionary *proposal in proposals) {
+            NSDictionary *bounds = proposal[@"selected"] ?: proposal;
+            if ([proposal[@"kept"] boolValue] && [bounds[@"start"] isEqual:entity[@"start"]] &&
+            [bounds[@"end"] isEqual:entity[@"end"]] && [proposal[@"kind"] isEqual:entity[@"kind"]])
+            return proposal[@"span_probability"];
         }
-        if (!judgment.length) {
-            if (![fields[@"kind"] isEqual:@"aggregate"]) continue;
-            value = fields[@"value"];
-        } else {
-            if (!([fields[@"kind"] isEqual:@"observation"] && [fields[@"value"][@"kind"] isEqual:@"row"] && [fields[@"value"][@"value"][@"kind"] isEqual:@"judgment"])) continue;
-            NSDictionary *carrier = fields[@"value"][@"value"][@"value"];
-            if (![carrier[@"kind"] isEqual:judgment]) continue;
-            value = carrier[@"value"];
-        } if (value) [values addObject:value];
-    }
-    if (([function isEqual:@"filter"] || [function isEqual:@"annotate"]) && [((TTCall *)call).function isEqual:function]) return [values copy];
-    if (values.count != 1) {
-        if (error) *error = [NSError errorWithDomain:TTAnswerErrorDomain code:1 userInfo:@{
-            NSLocalizedDescriptionKey:@"Expected exactly one successful answer", @"ThinkThenFunction":function,
-            @"ThinkThenAnswerCount":@(values.count), @"ThinkThenCall":call
-        }];
-        return nil;
-    }
-    return values[0];
+        TTInvalidResult();
+    });
 }
-@implementation TTCall (Answers)
-TT_GENERATED_ANSWER_IMPLEMENTATIONS
+BOOL TTCallSingleInput(TTInput *input) {
+    return [input.requestFields[@"kind"] isEqual:@"text"] || [input.requestFields[@"kind"] isEqual:@"json"];
+}
+static NSDictionary *TTCallProjection(TTCall *call) {
+    NSMutableArray *rows = [NSMutableArray array];
+    NSMutableDictionary<NSNumber *, NSNumber *> *resolved = [NSMutableDictionary dictionary];
+    id aggregate = nil;
+    for (TTSessionPacket *packet in call.packets) {
+        NSDictionary *fields = packet.rawFields;
+        if (![fields[@"function"] isEqual:call.function]) continue;
+        if ([fields[@"kind"] isEqual:@"row"]) [rows addObject:fields[@"value"]];
+        if ([fields[@"kind"] isEqual:@"aggregate"]) aggregate = fields[@"value"];
+        if ([call.function isEqual:@"decide"] && [fields[@"kind"] isEqual:@"observation"] && [fields[@"value"][@"kind"] isEqual:@"row"] && [fields[@"value"][@"value"][@"kind"] isEqual:@"judgment"] && [fields[@"value"][@"value"][@"value"][@"kind"] isEqual:@"decision"]) resolved[fields[@"value"][@"index"]] = @(fields[@"value"][@"value"][@"value"][@"value"] != NSNull.null);
+        if ([call.function isEqual:@"choose"] && [fields[@"kind"] isEqual:@"observation"] && [fields[@"value"][@"kind"] isEqual:@"row"] && [fields[@"value"][@"value"][@"kind"] isEqual:@"judgment"] && [fields[@"value"][@"value"][@"value"][@"kind"] isEqual:@"choice"]) resolved[fields[@"value"][@"index"]] = @(fields[@"value"][@"value"][@"value"][@"value"] != NSNull.null);
+    }
+    id value = nil, probability = nil;
+    NSArray<TTResultNode *> *results = nil;
+    if ([call.function isEqual:@"decide"]) {
+        if (aggregate) rows = [aggregate mutableCopy];
+        results = TTArray(rows, ^id(id item) {
+            return [TTDecisionRecord read:item];
+        });
+        if (!rows.count && call.terminal.failure.state == TTPresenceValue) return @{
+            @"value":[[TTCallValue alloc] initWithScalar:nil items:nil], @"probability":NSNull.null, @"results":results
+        };
+        NSMutableArray *values = [NSMutableArray array], *odds = [NSMutableArray array];
+        for (NSDictionary *row in rows) {
+            id raw = row[@"value"];
+            if (!raw) TTInvalidResult();
+            BOOL settled = raw != NSNull.null;
+            settled = [resolved[row[@"index"] ?: @0] boolValue];
+            [values addObject:raw == NSNull.null ? NSNull.null : raw];
+            [odds addObject:settled ? (row[@"answer"][@"probability"] ?: NSNull.null) : NSNull.null];
+        }
+        if (call.singleInput) {
+            if (values.count != 1) TTInvalidResult();
+            id raw = values[0];
+            BOOL settled = raw != NSNull.null;
+            settled = [resolved[rows[0][@"index"] ?: @0] boolValue];
+            value = [[TTCallValue alloc] initWithScalar:settled ? raw : nil items:nil];
+            probability = TTProbability(odds[0]);
+        } else {
+            value = [[TTCallValue alloc] initWithScalar:nil items:values];
+            probability = TTProbability(odds);
+        }
+    }
+    if ([call.function isEqual:@"choose"]) {
+        if (aggregate) rows = [aggregate mutableCopy];
+        results = TTArray(rows, ^id(id item) {
+            return [TTChoiceRecord read:item];
+        });
+        if (!rows.count && call.terminal.failure.state == TTPresenceValue) return @{
+            @"value":[[TTCallValue alloc] initWithScalar:nil items:nil], @"probability":NSNull.null, @"results":results
+        };
+        NSMutableArray *values = [NSMutableArray array], *odds = [NSMutableArray array];
+        for (NSDictionary *row in rows) {
+            id raw = row[@"value"];
+            if (!raw) TTInvalidResult();
+            BOOL settled = raw != NSNull.null;
+            settled = [resolved[row[@"index"] ?: @0] boolValue];
+            [values addObject:raw == NSNull.null ? NSNull.null : TTString(raw)];
+            [odds addObject:settled ? (row[@"answer"][@"probabilities"][row[@"answer"][@"pick"]] ?: NSNull.null) : NSNull.null];
+        }
+        if (call.singleInput) {
+            if (values.count != 1) TTInvalidResult();
+            id raw = values[0];
+            BOOL settled = raw != NSNull.null;
+            settled = [resolved[rows[0][@"index"] ?: @0] boolValue];
+            value = [[TTCallValue alloc] initWithScalar:settled ? raw : nil items:nil];
+            probability = TTProbability(odds[0]);
+        } else {
+            value = [[TTCallValue alloc] initWithScalar:nil items:values];
+            probability = TTProbability(odds);
+        }
+    }
+    if ([call.function isEqual:@"tag"]) {
+        if (aggregate) rows = [aggregate mutableCopy];
+        results = TTArray(rows, ^id(id item) {
+            return [TTTagRecord read:item];
+        });
+        if (!rows.count && call.terminal.failure.state == TTPresenceValue) return @{
+            @"value":[[TTCallValue alloc] initWithScalar:nil items:nil], @"probability":NSNull.null, @"results":results
+        };
+        NSMutableArray *values = [NSMutableArray array];
+        for (NSDictionary *row in rows) {
+            id raw = row[@"value"];
+            if (!raw) TTInvalidResult();
+            [values addObject:raw == NSNull.null ? NSNull.null : TTArray(raw, ^id(id item) {
+                return TTString(item);
+            })];
+        }
+        if (call.singleInput) {
+            if (values.count != 1) TTInvalidResult();
+            id raw = values[0];
+            BOOL settled = raw != NSNull.null;
+            value = [[TTCallValue alloc] initWithScalar:settled ? raw : nil items:nil];
+        } else {
+            value = [[TTCallValue alloc] initWithScalar:nil items:values];
+        }
+    }
+    if ([call.function isEqual:@"score"]) {
+        if (aggregate) rows = [aggregate mutableCopy];
+        results = TTArray(rows, ^id(id item) {
+            return [TTScoreRecord read:item];
+        });
+        if (!rows.count && call.terminal.failure.state == TTPresenceValue) return @{
+            @"value":[[TTCallValue alloc] initWithScalar:nil items:nil], @"probability":NSNull.null, @"results":results
+        };
+        NSMutableArray *values = [NSMutableArray array];
+        for (NSDictionary *row in rows) {
+            id raw = row[@"value"];
+            if (!raw) TTInvalidResult();
+            [values addObject:raw == NSNull.null ? NSNull.null : TTNumber(raw)];
+        }
+        if (call.singleInput) {
+            if (values.count != 1) TTInvalidResult();
+            id raw = values[0];
+            BOOL settled = raw != NSNull.null;
+            value = [[TTCallValue alloc] initWithScalar:settled ? raw : nil items:nil];
+        } else {
+            value = [[TTCallValue alloc] initWithScalar:nil items:values];
+        }
+    }
+    if ([call.function isEqual:@"filter"]) {
+        if (aggregate) rows = [aggregate mutableCopy];
+        rows = [[rows filteredArrayUsingPredicate:[NSPredicate predicateWithBlock:^BOOL(id item, NSDictionary *bindings) {
+            (void)bindings;
+            return [TTObject(item)[@"value"] boolValue];
+        }]] mutableCopy];
+        results = TTArray(rows, ^id(id item) {
+            return [TTFilteredRecord read:item];
+        });
+        if (!rows.count && call.terminal.failure.state == TTPresenceValue) return @{
+            @"value":[[TTCallValue alloc] initWithScalar:nil items:nil], @"probability":NSNull.null, @"results":results
+        };
+        NSMutableArray *values = [NSMutableArray array], *odds = [NSMutableArray array];
+        for (NSDictionary *row in rows) {
+            id raw = row[@"input"];
+            if (!raw) TTInvalidResult();
+            BOOL settled = raw != NSNull.null;
+            settled = [row[@"value"] boolValue];
+            [values addObject:raw == NSNull.null ? NSNull.null : raw];
+            [odds addObject:settled ? (row[@"answer"][@"probability"] ?: NSNull.null) : NSNull.null];
+        }
+        value = [[TTCallValue alloc] initWithScalar:nil items:values];
+        probability = TTProbability(odds);
+    }
+    if ([call.function isEqual:@"rank"]) {
+        if (aggregate) rows = [aggregate mutableCopy];
+        results = TTArray(rows, ^id(id item) {
+            return [TTRankedRecord read:item];
+        });
+        if (!rows.count && call.terminal.failure.state == TTPresenceValue) return @{
+            @"value":[[TTCallValue alloc] initWithScalar:nil items:nil], @"probability":NSNull.null, @"results":results
+        };
+        NSMutableArray *values = [NSMutableArray array], *odds = [NSMutableArray array];
+        for (NSDictionary *row in rows) {
+            id raw = row[@"index"];
+            if (!raw) TTInvalidResult();
+            [values addObject:raw == NSNull.null ? NSNull.null : TTInteger(raw)];
+            [odds addObject:TTPickedProbability(row)];
+        }
+        value = [[TTCallValue alloc] initWithScalar:nil items:values];
+        probability = TTProbability(odds);
+    }
+    if ([call.function isEqual:@"find"]) {
+        if (aggregate) [rows addObject:aggregate];
+        results = TTArray(rows, ^id(id item) {
+            return [TTFind read:item];
+        });
+        if (!rows.count && call.terminal.failure.state == TTPresenceValue) return @{
+            @"value":[[TTCallValue alloc] initWithScalar:nil items:nil], @"probability":NSNull.null, @"results":results
+        };
+        NSMutableArray *values = [NSMutableArray array], *odds = [NSMutableArray array];
+        for (NSDictionary *row in rows) {
+            id raw = row[@"value"];
+            if (!raw) TTInvalidResult();
+            BOOL settled = raw != NSNull.null;
+            settled = row[@"index"] != NSNull.null;
+            [values addObject:raw == NSNull.null ? NSNull.null : raw];
+            [odds addObject:settled ? (row[@"answer"][@"probabilities"][row[@"answer"][@"pick"]] ?: NSNull.null) : NSNull.null];
+        }
+        if (values.count != 1) TTInvalidResult();
+        value = [[TTCallValue alloc] initWithScalar:TTObject(rows[0])[@"index"] == NSNull.null ? nil : values[0] items:nil];
+        probability = TTProbability(odds[0]);
+    }
+    if ([call.function isEqual:@"annotate"]) {
+        if (aggregate) rows = [aggregate mutableCopy];
+        results = TTArray(rows, ^id(id item) {
+            return [TTAnnotation read:item];
+        });
+        if (!rows.count && call.terminal.failure.state == TTPresenceValue) return @{
+            @"value":[[TTCallValue alloc] initWithScalar:nil items:nil], @"probability":NSNull.null, @"results":results
+        };
+        NSMutableArray *values = [NSMutableArray array];
+        for (NSDictionary *row in rows) {
+            id raw = row[@"value"];
+            if (!raw) TTInvalidResult();
+            [values addObject:raw == NSNull.null ? NSNull.null : TTMap(raw, ^id(id item) {
+                return item;
+            })];
+        }
+        if (call.singleInput) {
+            if (values.count != 1) TTInvalidResult();
+            id raw = values[0];
+            BOOL settled = raw != NSNull.null;
+            value = [[TTCallValue alloc] initWithScalar:settled ? raw : nil items:nil];
+        } else {
+            value = [[TTCallValue alloc] initWithScalar:nil items:values];
+        }
+    }
+    if ([call.function isEqual:@"recognize"]) {
+        if (aggregate) rows = [aggregate mutableCopy];
+        results = TTArray(rows, ^id(id item) {
+            return [TTRecognition read:item];
+        });
+        if (!rows.count && call.terminal.failure.state == TTPresenceValue) return @{
+            @"value":[[TTCallValue alloc] initWithScalar:nil items:nil], @"probability":NSNull.null, @"results":results
+        };
+        NSMutableArray *values = [NSMutableArray array], *odds = [NSMutableArray array];
+        for (NSDictionary *row in rows) {
+            id raw = row[@"value"];
+            if (!raw) TTInvalidResult();
+            [values addObject:raw == NSNull.null ? NSNull.null : [TTRecognize read:raw]];
+            [odds addObject:TTRecognitionProbabilities(row)];
+        }
+        if (call.singleInput) {
+            if (values.count != 1) TTInvalidResult();
+            id raw = values[0];
+            BOOL settled = raw != NSNull.null;
+            value = [[TTCallValue alloc] initWithScalar:settled ? raw : nil items:nil];
+            probability = TTProbability(odds[0]);
+        } else {
+            value = [[TTCallValue alloc] initWithScalar:nil items:values];
+            probability = TTProbability(odds);
+        }
+    }
+    if ([call.function isEqual:@"relate"]) {
+        if (aggregate) [rows addObject:aggregate];
+        results = TTArray(rows, ^id(id item) {
+            return [TTRelation read:item];
+        });
+        if (!rows.count && call.terminal.failure.state == TTPresenceValue) return @{
+            @"value":[[TTCallValue alloc] initWithScalar:nil items:nil], @"probability":NSNull.null, @"results":results
+        };
+        NSMutableArray *values = [NSMutableArray array], *odds = [NSMutableArray array];
+        for (NSDictionary *row in rows) {
+            id raw = row[@"value"];
+            if (!raw) TTInvalidResult();
+            [values addObject:raw == NSNull.null ? NSNull.null : TTArray(raw, ^id(id item) {
+                return [TTRelatedEntityEdge read:item];
+            })];
+            [odds addObject:TTArray(raw, ^id(id item) {
+                return TTObject(item)[@"probability"];
+            })];
+        }
+        if (values.count != 1) TTInvalidResult();
+        value = [[TTCallValue alloc] initWithScalar:nil items:values[0]];
+        probability = TTProbability(odds[0]);
+    }
+    if (!value || !results) TTInvalidResult();
+    return @{
+        @"value":value, @"probability":probability ?: NSNull.null, @"results":results
+    };
+}
+@implementation TTCall (Values)
+- (TTCallValue *)value {
+    return TTCallProjection(self)[@"value"];
+}
+- (TTCallProbability *)probability {
+    id result = TTCallProjection(self)[@"probability"];
+    return result == NSNull.null ? nil : result;
+}
+- (NSArray<TTResultNode *> *)results {
+    return TTCallProjection(self)[@"results"];
+}
 @end
 @implementation TTFoundationClient (NamedCalls)
 TT_GENERATED_NAMED_IMPLEMENTATIONS

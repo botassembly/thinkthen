@@ -28,7 +28,7 @@ int main(int argc, const char *argv[]) {
         require(refused == nil && [error isKindOfClass:TTFailureError.class] && !((TTFailureError *)error).retryable);
         error = nil;
         TTCall *refusedCall = nil;
-        require([client decideAnswer:[TTTextQuestion new] input:input options:nil feed:nil call:&refusedCall error:&error] == nil);
+        require((refusedCall = [client decide:[TTTextQuestion new] input:input options:nil feed:nil error:&error]) == nil);
         require(refusedCall == nil && [error isKindOfClass:TTFailureError.class] && ((TTFailureError *)error).kind == TTErrorUsage);
         TTFailureError *savedRefusal = (id)error;
         error = nil;
@@ -50,13 +50,10 @@ int main(int argc, const char *argv[]) {
         require(usage.state == TTUsagePersistenceWritten && usage.advice == nil);
         require(retained.facts.state == TTPresenceValue);
         require(savedRefusal.kind == TTErrorUsage && !savedRefusal.retryable);
-        require([retained decideAnswer:&error].state == TTPresenceValue && error == nil);
-        require([retained filterAnswer:&error] == nil);
-        require([error.domain isEqual:@"io.github.botassembly.thinkthen.answer"] && error.code == 1);
-        require([error.localizedDescription isEqual:@"Expected exactly one successful answer"]);
-        require([error.userInfo[@"ThinkThenFunction"] isEqual:@"filter"]);
-        require([error.userInfo[@"ThinkThenAnswerCount"] unsignedIntegerValue] == 0);
-        require(error.userInfo[@"ThinkThenCall"] == retained);
+        require([retained.value.scalar isEqual:@YES]);
+        require(retained.value.items == nil && retained.results.count == 1);
+        require(retained.probability.scalar.doubleValue > 0 && retained.probability.scalar.doubleValue <= 1);
+        require(retained.facts.value.requestsSent.value.unsignedIntegerValue == 1);
         error = nil;
         // Authored finite numbers survive native copying beyond decimal's exponent range.
         client = [[TTFoundationClient alloc] initWithSettings:nil error:&error];
@@ -67,7 +64,8 @@ int main(int argc, const char *argv[]) {
             require(numericPlan != nil && error == nil && numericPlan.records.value.unsignedIntegerValue == 1);
             require(numericPlan.requests.value.unsignedIntegerValue == 1 && numericPlan.firstBodyUtf8.state == TTPresenceValue);
             TTCall *numericCall = nil;
-            NSArray *answer = [client filterAnswer:question input:numericInput options:nil feed:nil call:&numericCall error:&error];
+            numericCall = [client filter:question input:numericInput options:nil feed:nil error:&error];
+            NSArray *answer = numericCall.value.items;
             require(error == nil && answer.count == 1);
             if ([answer[0] doubleValue] != number.doubleValue) fprintf(stderr, "Filtered number %.17g became %.17g\n", number.doubleValue, [answer[0] doubleValue]);
             require([answer[0] doubleValue] == number.doubleValue);
@@ -83,12 +81,48 @@ int main(int argc, const char *argv[]) {
         TTTextInput *unselected = [TTTextInput new]; unselected.text = @"no";
         for (TTInput *filterInput in @[unselected, multiple, empty]) {
             TTCall *filterCall = nil;
-            NSArray *answer = [client filterAnswer:filterQuestion input:filterInput options:filterInput == multiple ? filterOptions : nil feed:nil call:&filterCall error:&error];
+            filterCall = [client filter:filterQuestion input:filterInput options:filterInput == multiple ? filterOptions : nil feed:nil error:&error];
+            NSArray *answer = filterCall.value.items;
             require(answer != nil && error == nil);
             require([answer isEqual:filterInput == multiple ? originals : @[]]);
+            require(filterCall.probability.items.count == answer.count);
+            for (TTCallProbability *odds in filterCall.probability.items) require(odds.scalar.doubleValue > 0 && odds.scalar.doubleValue <= 1);
             require(filterCall.facts.value.requestsSent.value.unsignedIntegerValue == (filterInput == multiple ? 4 : filterInput == empty ? 0 : 1));
         }
+        TTTextInput *decisionInput = [TTTextInput new];
+        TTControls *decisionControls = [TTControls new]; decisionControls.threshold = @"0.2:0.8";
+        for (NSString *text in @[@"no", @"unsure"]) {
+            decisionInput.text = text;
+            TTCall *decision = [client decide:question input:decisionInput options:decisionControls feed:nil error:&error];
+            require(decision && !error && decision.value.items == nil);
+            if ([text isEqual:@"no"]) {
+                require([decision.value.scalar isEqual:@NO] && decision.probability.scalar.doubleValue == .1);
+            } else require(decision.value.scalar == nil && decision.probability == nil);
+        }
+        TTAuthoredDecideBuilder *invalidMeaning = [TTAuthoredDecideBuilder new];
+        invalidMeaning.decide = @"Is it?"; invalidMeaning.trueValue = @NO;
+        TTQuestionDefinition *invalidQuestion = [TTQuestionDefinition new]; invalidQuestion.value = invalidMeaning;
+        decisionInput.text = @"authored-bool-objc";
+        require([client decide:invalidQuestion input:decisionInput options:nil feed:nil error:&error] == nil);
+        require([error isKindOfClass:TTFailureError.class] && ((TTFailureError *)error).kind == TTErrorUsage);
+        error = nil;
+        NSArray *authored = @[NSNull.null, @{@"value":NSNull.null, @"ok":@NO}, @[NSNull.null, @NO, @"leaf"]];
+        NSMutableArray<TTCall *> *authoredCalls = [NSMutableArray array];
+        for (NSUInteger index = 0; index < authored.count; index++) {
+            TTAuthoredDecideBuilder *definition = [TTAuthoredDecideBuilder new];
+            definition.decide = @"Is it?"; definition.trueValue = authored[index];
+            TTQuestionDefinition *authoredQuestion = [TTQuestionDefinition new]; authoredQuestion.value = definition;
+            decisionInput.text = [NSString stringWithFormat:@"authored-objc-%lu", (unsigned long)index];
+            TTCall *decision = [client decide:authoredQuestion input:decisionInput options:nil feed:nil error:&error];
+            require(decision && !error && decision.value.items == nil);
+            [authoredCalls addObject:decision];
+        }
         client = nil;
+        for (NSUInteger index = 0; index < authoredCalls.count; index++) {
+            require([authoredCalls[index].value.scalar isEqual:authored[index]]);
+            require(authoredCalls[index].probability.scalar.doubleValue == .9);
+            require(authoredCalls[index].results.count == 1);
+        }
         // A new client and unrelated host work progress while a provider is held.
         client = [[TTFoundationClient alloc] initWithSettings:nil error:&error];
         dispatch_semaphore_t cancelled = dispatch_semaphore_create(0);

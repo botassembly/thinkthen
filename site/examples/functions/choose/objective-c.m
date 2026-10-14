@@ -12,12 +12,12 @@ int main(void) { @autoreleasepool {
     TTTextInput *parcel = [TTTextInput new];
     parcel.text = @"My parcel went to the wrong address.";
     NSString *team = nil;
-    TTPresence<NSString *> *judgment =
-        [client chooseAnswer:whichTeam
+    TTCall *judgment =
+        [client choose:whichTeam
         input:parcel
-        options:nil feed:nil call:NULL error:&error];
+        options:nil feed:nil error:&error];
     assert(judgment && !error);
-    team = judgment.value;
+    team = judgment.value.scalar;
     assert([team isEqualToString:@"shipping"]);
     return 0;
 } }

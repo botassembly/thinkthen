@@ -29,12 +29,12 @@ int main(void) { @autoreleasepool {
     input.items = records;
     NSMutableArray *byUrgency =
         [@[@0, @0, @0, @0] mutableCopy];
-    NSArray<NSNumber *> *judgment =
-        [client rankAnswer:question
+    TTCall *judgment =
+        [client rank:question
         input:input
-        options:nil feed:nil call:NULL error:&error];
+        options:nil feed:nil error:&error];
     assert(judgment && !error);
-    byUrgency = [judgment mutableCopy];
+    byUrgency = [judgment.value.items mutableCopy];
     NSArray *expected = @[@1, @3, @2, @0];
     assert([byUrgency isEqualToArray:expected]);
     return 0;

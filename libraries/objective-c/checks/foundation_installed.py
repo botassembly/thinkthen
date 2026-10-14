@@ -71,6 +71,30 @@ with contextlib.ExitStack() as installed:
      linkerSettings: [.linkedFramework("Foundation")])])
     ''')
         env = child_env(keep=("LLVM_PROFILE_FILE", "CARGO_TARGET_DIR"), home=work)
+        # Compile the removed selectors against the installed public header.
+        # Restoring their declarations must make the same consumer compile.
+        verbs = ("decide", "choose", "tag", "score", "filter", "rank", "find", "annotate", "recognize", "relate")
+        old_api = work / "old-api.m"
+        imports = '#import "ThinkThenFoundation.h"\n'
+        declarations = "@interface TTCall (OldAnswers)\n" + "".join(
+            f"- (id){verb}Answer:(NSError **)error;\n" for verb in verbs) + "@end\n"
+        declarations += "@interface TTFoundationClient (OldAnswers)\n" + "".join(
+            f"- (id){verb}Answer:(TTQuestion *)question input:(TTInput *)input options:(TTControls *)options feed:(TTFeed)feed call:(TTCall **)call error:(NSError **)error;\n"
+            for verb in verbs) + "@end\n"
+        consumer = "void oldAnswers(TTCall *call, TTFoundationClient *client) {\n" + "".join(
+            f"(void)[call {verb}Answer:NULL];\n(void)[client {verb}Answer:nil input:nil options:nil feed:nil call:NULL error:NULL];\n"
+            for verb in verbs) + "}\n"
+        compiler = ["xcrun", "clang", "-fsyntax-only", "-fobjc-arc", "-fblocks", "-Werror",
+                    "-Wno-nonnull", "-ferror-limit=0", "-I", str(work / "package/Sources/Foundation"), str(old_api)]
+        old_api.write_text(imports + declarations + consumer)
+        subprocess.run(compiler, env=env, check=True, capture_output=True, timeout=30)
+        old_api.write_text(imports + consumer)
+        removed = subprocess.run(compiler, env=env, text=True, capture_output=True, timeout=30)
+        assert removed.returncode != 0, "removed Foundation answer selectors still compile"
+        for verb in verbs:
+            for selector in (f"{verb}Answer:", f"{verb}Answer:input:options:feed:call:error:"):
+                assert f"declares the selector '{selector}'" in removed.stderr, removed.stderr
+        print("Foundation removed answer selectors rejected by installed-header compiler; restored-declaration control passed")
         profile_link = []
         if os.environ.get("THINKTHEN_COVERAGE_INITIALIZER"):
             profile_link = ["-Xlinker", os.environ["THINKTHEN_COVERAGE_INITIALIZER"],
@@ -96,7 +120,7 @@ with contextlib.ExitStack() as installed:
             result = subprocess.run([str(work / ".build/debug/Consumer"), str(barrier)],
                                     cwd=work, env=env, text=True, capture_output=True, timeout=8)
             assert result.returncode == 0 and "FOUNDATION_INSTALLED_PASS" in result.stdout, (result.returncode, result.stdout, result.stderr)
-            assert collections.Counter(server.arrivals) == collections.Counter(["consumer-objc", 1e308, 1e-308, "no", None, False, 1e308, 1e-308, "hold-foundation"]), server.arrivals
+            assert collections.Counter(server.arrivals) == collections.Counter(["consumer-objc", 1e308, 1e-308, "no", None, False, 1e308, 1e-308, "no", "unsure", "authored-objc-0", "authored-objc-1", "authored-objc-2", "hold-foundation"]), server.arrivals
             print("Foundation installed consumer passed ownership and held-provider cancellation")
         finally:
             (barrier / "release-hold-foundation").touch()
@@ -135,6 +159,19 @@ for name in ("THINKTHEN_API_KEY", "LIQUIDAI_API_KEY", "OPENROUTER_API_KEY", "PER
 os.execve(str(binary), [str(binary), *sys.argv[1:], *[]], env)
 ''')
         adapter.chmod(0o700)
-        native_cases(adapter, consumer="objective-c")
+        def installed_cases():
+            native_cases(adapter, consumer="objective-c")
+            # The paired public envelope is required even outside candidate parity.
+            selector = "THINKTHEN_OBJECTIVE-C_CASES"
+            previous = os.environ.get(selector)
+            os.environ[selector] = "library-call-result"
+            try:
+                native_cases(adapter, consumer="objective-c")
+            finally:
+                if previous is None:
+                    os.environ.pop(selector)
+                else:
+                    os.environ[selector] = previous
+        installed_cases()
         adapter.write_text(adapter.read_text().replace("*[]", '*["blocking"]'))
-        native_cases(adapter, consumer="objective-c")
+        installed_cases()

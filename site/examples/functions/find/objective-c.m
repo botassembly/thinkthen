@@ -27,12 +27,12 @@ int main(void) { @autoreleasepool {
     TTRecordsInput *input = [TTRecordsInput new];
     input.items = records;
     NSString *refundDeadline = nil;
-    TTPresence<TTFind *> *judgment =
-        [client findAnswer:question
+    TTCall *judgment =
+        [client find:question
         input:input
-        options:nil feed:nil call:NULL error:&error];
+        options:nil feed:nil error:&error];
     assert(judgment && !error);
-    refundDeadline = judgment.value.value.value;
+    refundDeadline = judgment.value.scalar;
     assert([refundDeadline isEqualToString:policy[1]]);
     return 0;
 } }
