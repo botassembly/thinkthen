@@ -62,6 +62,8 @@ With Rust installed, `cargo install thinkthen` builds the command from crates.io
 
 A live run needs a backend. A hosted backend needs a key. [Models](https://thinkthen.dev/models/) shows how to point ThinkThen at TypeSafe or another server, such as Ollama on your own machine. By default ThinkThen sends your question and text to TypeSafe. Read the terms that page links before you send sensitive text.
 
+ThinkThen is free and MIT licensed. Hosted models charge per token; local models are free.
+
 ### Try it with no key
 
 Download the release's sample, then replay its recorded answer with no key and no network:
