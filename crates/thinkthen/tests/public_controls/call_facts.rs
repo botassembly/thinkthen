@@ -188,9 +188,13 @@ fn complete_batch_replies_with_overflowed_tokens_omit_call_cost_and_next_call_re
         .expect("engine");
     let rows = vec!["First.".to_owned(), "Second.".to_owned()];
     let setting = BatchSetting::Records(std::num::NonZeroUsize::new(1).expect("one"));
-    let call = engine
-        .details_many_recoverable_with(&question(), &rows, CallOptions::new().batch(setting))
-        .expect("two complete replies");
+    let call = crate::api::recover_decisions(
+        &engine,
+        &question(),
+        &rows,
+        CallOptions::new().batch(setting),
+    )
+    .expect("two complete replies");
     assert_eq!(call.facts().requests_sent(), 2);
     assert_eq!(call.facts().input_tokens(), None);
     assert_eq!(call.facts().estimated_cost_usd(), None);
