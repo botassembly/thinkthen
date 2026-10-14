@@ -2,6 +2,15 @@
 import ast
 from dataclasses import dataclass
 import re
+import os
+from pathlib import Path
+import shutil
+import subprocess
+import sys
+import tempfile
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from conformance.children.children import child_env
 
 
 @dataclass(frozen=True, order=True)
@@ -68,46 +77,21 @@ def masked(source, comments=r'//[^\n]*|/\*[\s\S]*?\*/'):
 
 
 def ruby_masked(source):
-    """Mask Ruby literal bodies without interpreting or executing their contents."""
-    tokens = re.compile(r'(?m:(?:^|(?<=[=(,:;!~\n]))[ \t]*/'
-                        r'(?:\\.|\[(?:\\.|[^\]\\])*\]|[^/\\])+/[imoxnesu]*)|'
-                        r'#[^\n]*|' + QUOTED + r'|`(?:\\.|[^`\\])*`'
-                        r'|(?P<percent>%(?!=)[qQwWiIrxs]?(?P<delimiter>[^\w\s]))'
-                        r'|<<(?P<indent>[-~]?)(?:(?P<quote>[\'"`])(?P<quoted>[^\r\n]+?)(?P=quote)|(?P<bare>[A-Za-z_]\w*))'
-                        r'|(?P<newline>\n)|(?m:^=begin\b[\s\S]*?^=end\b[^\n]*)')
-    output, pending, pos = list(source), [], 0
-    def erase(start, end):
-        output[start:end] = ['\n' if char == '\n' else ' ' for char in source[start:end]]
-    while match := tokens.search(source, pos):
-        pos = match.end()
-        if match['newline']:
-            for marker, indented in pending:
-                closing = re.search(r'(?m)^' + (r'[ \t]*' if indented else '')
-                                    + re.escape(marker) + r'\r?$', source[pos:])
-                end = pos + closing.end() if closing else len(source)
-                erase(pos, end)
-                pos = end + (end < len(source) and source[end] == '\n')
-            pending.clear()
-        elif match['percent']:
-            opening = match['delimiter']
-            closing = {'(': ')', '[': ']', '{': '}', '<': '>'}.get(opening, opening)
-            depth = 1
-            while pos < len(source) and depth:
-                char = source[pos]
-                if char == '\\':
-                    pos += 2
-                    continue
-                if char == closing:
-                    depth -= 1
-                elif opening != closing and char == opening:
-                    depth += 1
-                pos += 1
-            erase(match.start(), min(pos, len(source)))
-        else:
-            if match['quoted'] or match['bare']:
-                pending.append((match['quoted'] or match['bare'], bool(match['indent'])))
-            erase(match.start(), pos)
-    return ''.join(output)
+    """Use Ruby's source lexer; never evaluate or load the inspected library."""
+    requested = os.environ.get('RUBY', 'ruby')
+    executable = shutil.which(requested)
+    if executable is None:
+        raise OSError('Ruby source lexer unavailable: RUBY or PATH must name Ruby with Ripper')
+    lexer = Path(__file__).with_name('library-surface-ruby.rb')
+    with tempfile.TemporaryDirectory(prefix='library-surface-lexer-') as home:
+        run = subprocess.run([executable, '--disable-gems', str(lexer)], input=source,
+                             capture_output=True, text=True, encoding='utf-8',
+                             env=child_env(home=home, LANG='C.UTF-8', LC_ALL='C.UTF-8'))
+    if run.returncode:
+        raise ValueError('Ruby source lexer failed: ' + run.stderr.strip())
+    if len(run.stdout) != len(source) or run.stdout.count('\n') != source.count('\n'):
+        raise ValueError('Ruby source lexer failed: invalid masked source')
+    return run.stdout
 
 
 def normalized_annotation(source):

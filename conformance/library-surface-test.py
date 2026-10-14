@@ -36,6 +36,12 @@ class PublicSurface(unittest.TestCase):
                                      '%x{private_constant :Carrier}', '%s{private_constant :Carrier}',
                                      '`private_constant :Carrier`', '/private_constant :Carrier/',
                                      'literal = /private_constant :Carrier/',
+                                     'puts /private_constant :Carrier/',
+                                     'x = true ? /private_constant :Carrier/ : /other/',
+                                     'x = -> { return /private_constant :Carrier/ }',
+                                     'x = /a/ && /private_constant :Carrier/',
+                                     'x = "#{"private_constant :Carrier"}"',
+                                     'x = %Q{#{"}"} private_constant :Carrier}',
                                      r'/[\/] private_constant :Carrier/',
                                      '<<TEXT\nprivate_constant :Carrier\nTEXT',
                                      '<<-TEXT\nprivate_constant :Carrier\n  TEXT',
@@ -76,10 +82,12 @@ class PublicSurface(unittest.TestCase):
                     self.assertIn(run.returncode, (0, 1), run.stderr)
                     return json.loads(run.stdout)['libraries'][library]
                 self.assertEqual(invoke(), [])
+                originals = {filename: (root / 'libraries' / library / filename).read_text()
+                             for filename, *_ in cases}
                 for filename, before, after, diagnostic in cases:
                     with self.subTest(filename=filename, after=after, diagnostic=diagnostic):
                         path = root / 'libraries' / library / filename
-                        original = path.read_text()
+                        original = originals[filename]
                         self.assertIn(before, original)
                         path.write_text(original.replace(before, after, 1))
                         self.assertIn(diagnostic, invoke())
@@ -173,12 +181,34 @@ class PublicSurface(unittest.TestCase):
             header = root / 'libraries/c/include/thinkthen.h'
             header.parent.mkdir(parents=True)
             shutil.copyfile(ROOT / 'libraries/c/include/thinkthen.h', header)
-            def invoke():
+            def invoke(**values):
                 run = subprocess.run(['python3', str(CHECK), '--root', str(root), '--library', 'ruby', '--json'],
-                                     capture_output=True, text=True, env=child_env(home=folder))
+                                     capture_output=True, text=True, env=child_env(home=folder, **values))
                 self.assertIn(run.returncode, (0, 1), run.stderr)
                 return set(json.loads(run.stdout)['libraries']['ruby'])
             baseline = invoke()
+            runtime = root / 'libraries/ruby/lib/thinkthen/session.rb'
+            original_runtime = runtime.read_text()
+            marker = root / 'source-was-executed'
+            runtime.write_text(original_runtime + f'\nFile.write({str(marker)!r}, "loaded")\n')
+            ruby = shutil.which('ruby')
+            self.assertIsNotNone(ruby)
+            wrapper = root / 'ruby-lexer'
+            wrapper.write_text('#!/bin/sh\n'
+                               '[ -z "${RUBYOPT+x}" ] && [ -z "${RUBYLIB+x}" ] && '
+                               '[ -z "${TEST_CREDENTIAL+x}" ] || exit 19\n'
+                               'exec "' + ruby + '" "$@"\n')
+            wrapper.chmod(0o755)
+            self.assertEqual(invoke(RUBY=str(wrapper), RUBYOPT='-rmissing_ambient_config',
+                                    RUBYLIB=str(root), TEST_CREDENTIAL='fake'), baseline)
+            self.assertFalse(marker.exists())
+            runtime.write_text(original_runtime)
+            unavailable = subprocess.run(
+                [sys.executable, str(CHECK), '--root', str(root), '--library', 'ruby', '--json'],
+                capture_output=True, text=True,
+                env=child_env(home=folder, RUBY=str(root / 'missing-ruby')))
+            self.assertEqual(unavailable.returncode, 2)
+            self.assertIn('Ruby source lexer unavailable', unavailable.stderr)
             generated = root / 'libraries/ruby/sig/thinkthen/results_generated.rbs'
             original = generated.read_text()
             for before, after in [('?attempts: bool', '?extra_keyword: bool'),

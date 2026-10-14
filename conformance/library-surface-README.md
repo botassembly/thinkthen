@@ -8,6 +8,8 @@ C keeps the approved shared native layer: its typed session constructor dispatch
 
 Run `python3 conformance/library-surface-test.py` for the focused contract fixtures. The CLI fixture proves missing controls, missing settings, missing helpers, missing generated result members and extra exports refuse. The declaration syntax table covers each host form and excludes private fields. `python3 conformance/library-surface-size-test.py` covers the size CLI against an isolated Git history.
 
+Ruby source declarations use the standard Ripper lexer through `RUBY` when set, otherwise `ruby` on `PATH`. The child receives an isolated environment and never evaluates the source or loads the native library. A missing Ruby executable refuses with exit 2; a lexer failure reports a declaration error. No gem or parser package is required.
+
 The checker is a source contract check. Language owners must settle reported naming and representation differences and finish missing surfaces before a coordinator connects it to a global gate. Adding a schema field automatically adds a requirement. A new native alias belongs in the native adapter, while shared semantic logic and generated declaration changes belong to Rust and the generator.
 
 Run `sdlc/scripts/library-size --json` to report committed handwritten production, generated and test lines with median ratios, JVM language counts and handwritten additions in each commit since the latest final release. `--since REVISION` selects another release baseline. Merge rows count only combined additions absent from every parent. Counts use the committed registry and conventions. They do not depend on working-tree edits. Generated side outputs derive their host ownership from the registry.
