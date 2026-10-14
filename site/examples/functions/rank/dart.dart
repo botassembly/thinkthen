@@ -23,7 +23,10 @@ Future<void> main() async {
     ]),
   );
   final byUrgency = call.rankAnswer();
-  final expected = [inbox[1], inbox[3], inbox[2], inbox[0]];
+  final expected = [
+    BigInt.from(1), BigInt.from(3),
+    BigInt.from(2), BigInt.from(0),
+  ];
   assert(const ListEquality<Object?>()
       .equals(byUrgency, expected));
   engine.close();
