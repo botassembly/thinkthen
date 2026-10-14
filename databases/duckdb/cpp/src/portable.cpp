@@ -80,7 +80,7 @@ void Decide(DataChunk &args, ExpressionState &state, Vector &result) {
 		}
 		if (!session) { session.emplace(Settings(*context)); }
 		const auto settings_type = args.data[4].GetValue(row).GetValue<string>();
-		if (settings_type != "\"NULL\"" && settings_type != "VARCHAR") {
+		if (!PortableSettingsType(settings_type)) {
 			throw InvalidInputException("thinkthen usage: the deadline and context moved into the settings object; pass '{\"deadline_ms\": …, \"context\": …}'");
 		}
 		const auto raw = question.GetValue<string>();
@@ -206,13 +206,13 @@ void Listed(DataChunk &args, ExpressionState &state, Vector &result) {
 		if (!session) { session.emplace(Settings(*context)); }
 		const auto members_type = args.data[5].GetValue(row).GetValue<string>();
 		const auto settings_type = args.data[6].GetValue(row).GetValue<string>();
-		if ((members_type != "\"NULL\"" && members_type != "VARCHAR" && members_type != "VARCHAR[]") ||
-		    (settings_type != "\"NULL\"" && settings_type != "VARCHAR")) {
+		if ((!PortableSettingsType(members_type) && members_type != "VARCHAR[]") ||
+		    (!PortableSettingsType(settings_type))) {
 			throw InvalidInputException("thinkthen usage: the deadline and context moved into the settings object; pass '{\"deadline_ms\": …, \"context\": …}'");
 		}
 		auto member = args.data[2].GetValue(row);
 		auto setting = args.data[3].GetValue(row);
-		if (members_type == "VARCHAR" && settings_type == "VARCHAR" && !setting.IsNull()) {
+		if (members_type == "VARCHAR" && settings_type != "\"NULL\"" && !setting.IsNull()) {
 			throw OrdinaryError("thinkthen usage: a settings object follows members, not another settings object");
 		}
 		const auto members = member.IsNull() ? std::nullopt : std::optional<string>(member.GetValue<string>());
@@ -286,7 +286,7 @@ void Scalar(DataChunk &args, ExpressionState &state, Vector &result) {
 		if (question.IsNull() || input.IsNull()) { continue; }
 		if (!session) { session.emplace(Settings(*context)); }
 		const auto type = args.data[4].GetValue(row).GetValue<string>();
-		if (type != "\"NULL\"" && type != "VARCHAR") {
+		if (!PortableSettingsType(type)) {
 			throw InvalidInputException("thinkthen usage: the deadline and context moved into the settings object; pass '{\"deadline_ms\": …, \"context\": …}'");
 		}
 		const auto raw = question.GetValue<string>();
@@ -368,6 +368,17 @@ void Scalar(DataChunk &args, ExpressionState &state, Vector &result) {
 	}
 }
 
+void OriginalSettings(DataChunk &args, ExpressionState &, Vector &result) {
+	for (idx_t row = 0; row < args.size(); ++row) {
+		auto value = args.data[0].GetValue(row);
+		if (value.IsNull()) { result.SetValue(row, Value(LogicalType::VARCHAR)); continue; }
+		const auto raw = value.GetValue<string>();
+		RustReply reply(thinkthen_cpp_portable_settings({reinterpret_cast<const uint8_t *>(raw.data()), raw.size()}));
+		Checked(reply.value);
+		result.SetValue(row, value);
+	}
+}
+
 void RegisterMacro(ExtensionLoader &loader, const string &sql, const string &purpose) {
 	auto parser = ThinkThenMacroParser();
 	parser.ParseQuery(sql);
@@ -392,12 +403,33 @@ string PortableOptionParameters() {
 	       "true_reading := NULL, false_reading := NULL";
 }
 
-string PortableOptions(const string &settings) {
-	return "thinkthen_native_options(CAST(" + settings + " AS VARCHAR), context, model, batch, deadline_ms, "
-	       "allow_none, true_reading, false_reading)";
+bool PortableSettingsType(const string &type) {
+	return type == "\"NULL\"" || type == "VARCHAR" || type == "JSON" ||
+	       type.rfind("STRUCT(", 0) == 0 || type.rfind("MAP(", 0) == 0;
+}
+
+string PortableJSONArgument(const string &argument) {
+	return "CASE WHEN typeof(" + argument + ") IN ('VARCHAR', 'JSON') THEN CAST(" + argument +
+	       " AS VARCHAR) ELSE CAST(to_json(" + argument + ") AS VARCHAR) END";
+}
+
+string PortableOptions(const string &settings, const string &nulls, bool legacy_type) {
+	const auto guard = nulls + (legacy_type ? " OR (typeof(settings) NOT IN ('VARCHAR', 'JSON', '\"NULL\"') AND "
+	    "NOT starts_with(typeof(settings), 'STRUCT(') AND NOT starts_with(typeof(settings), 'MAP('))" : "");
+	string call = "thinkthen_native_options(" + PortableJSONArgument(settings);
+	// Mask operands before their casts: the preview optimizer folds inner casts
+	// even when an enclosing constant CASE already selects its NULL branch.
+	for (auto parameter : {"context", "model", "batch", "deadline_ms", "allow_none", "true_reading", "false_reading"}) {
+		call += ", CASE WHEN " + nulls + " THEN NULL ELSE " + parameter + " END";
+	}
+	return "CASE WHEN " + guard + " THEN NULL ELSE " + call + ") END";
 }
 
 void RegisterPortableDecide(ExtensionLoader &loader) {
+	ScalarFunction checked("thinkthen_native_settings", {LogicalType::VARCHAR}, LogicalType::VARCHAR, OriginalSettings);
+	ThinkThenSpecialNulls(checked);
+	checked.SetStability(FunctionStability::VOLATILE);
+	RegisterDescribedScalar(loader, checked, "Validate original settings through the shared native parser.");
 	// Keep option serialization at the SQL edge. Null named values mean omission;
 	// false, zero and ordered SQL collections retain their native values. Concatenate
 	// the two objects so the shared parser still refuses duplicate settings keys.
@@ -412,9 +444,9 @@ void RegisterPortableDecide(ExtensionLoader &loader) {
 	}
 	encoded += "), '}')";
 	RegisterMacro(loader, "CREATE MACRO thinkthen_native_options(settings, context, model, batch, deadline_ms, "
-	                      "allow_none, true_reading, false_reading) AS CASE WHEN " + encoded + " = '{}' THEN settings ELSE "
-	                      "concat(substr(trim(coalesce(settings, '{}')), 1, length(trim(coalesce(settings, '{}'))) - 1), "
-	                      "CASE WHEN regexp_full_match(coalesce(settings, '{}'), '[[:space:]]*[{][[:space:]]*[}][[:space:]]*') THEN '' ELSE ',' END, "
+	                      "allow_none, true_reading, false_reading) AS CASE WHEN " + encoded + " = '{}' THEN thinkthen_native_settings(settings) ELSE "
+	                      "concat(substr(trim(coalesce(thinkthen_native_settings(settings), '{}')), 1, length(trim(coalesce(thinkthen_native_settings(settings), '{}'))) - 1), "
+	                      "CASE WHEN regexp_full_match(coalesce(thinkthen_native_settings(settings), '{}'), '[[:space:]]*[{][[:space:]]*[}][[:space:]]*') THEN '' ELSE ',' END, "
 	                      "substr(" + encoded + ", 2)) END", "Encode named SQL controls for native admission.");
 	const string purpose = "Judge whether text answers a yes-or-no question.";
 	ScalarFunction native("thinkthen_native_decide",
@@ -427,7 +459,7 @@ void RegisterPortableDecide(ExtensionLoader &loader) {
 	// A scalar := argument is positional in DuckDB 1.5.5. This catalog macro
 	// binds names before calling the native vector function.
 	RegisterMacro(loader, "CREATE MACRO thinkthen_decide(question, input, settings := NULL, threshold := NULL" + PortableOptionParameters() + ") "
-	                      "AS thinkthen_native_decide(question, input, " + PortableOptions() + ", "
+	                      "AS thinkthen_native_decide(" + PortableJSONArgument("question") + ", input, " + PortableOptions() + ", "
 	                      "CAST(threshold AS VARCHAR), typeof(settings))", purpose);
 	ScalarFunction many("thinkthen_native_many",
 	                    {LogicalType::VARCHAR, LogicalType::VARCHAR, LogicalType::VARCHAR, LogicalType::INTEGER},
@@ -446,7 +478,7 @@ void RegisterPortableDecide(ExtensionLoader &loader) {
 			projection += ", CAST(json_extract(item.value, '$.probability') AS DOUBLE) AS probability";
 		}
 		RegisterMacro(loader, "CREATE MACRO thinkthen_" + name + "_many(question, keyed_json, settings := NULL" + PortableOptionParameters() + ") "
-		                      "AS TABLE SELECT " + projection + " FROM json_each(thinkthen_native_many(question, keyed_json, " + PortableOptions() + ", "
+		                      "AS TABLE SELECT " + projection + " FROM json_each(thinkthen_native_many(" + PortableJSONArgument("question") + ", " + PortableJSONArgument("keyed_json") + ", " + PortableOptions("settings", "question IS NULL OR keyed_json IS NULL", false) + ", "
 		                      + std::to_string(kind) + ")) item", "Judge keyed text records with " + name + " and return one row per record.");
 	}
 	for (auto kind : {4, 5, 6}) {
@@ -462,16 +494,16 @@ void RegisterPortableDecide(ExtensionLoader &loader) {
 		native.SetStability(FunctionStability::VOLATILE);
 		RegisterDescribedScalar(loader, native, purpose);
 		RegisterMacro(loader, "CREATE MACRO thinkthen_" + name + "(question, input, members := NULL, settings := NULL" + PortableOptionParameters() + ") AS "
-		                      "thinkthen_native_" + name + "(question, input, "
-		                      "CASE WHEN typeof(members) = 'VARCHAR[]' THEN CAST(to_json(members) AS VARCHAR) ELSE NULL END, "
-		                      + PortableOptions("CASE WHEN members IS NOT NULL AND typeof(members) = 'VARCHAR' THEN CAST(members AS VARCHAR) ELSE CAST(settings AS VARCHAR) END") + ", "
+		                      "thinkthen_native_" + name + "(" + PortableJSONArgument("question") + ", input, "
+		                      "CASE WHEN typeof(members) != 'VARCHAR' THEN CAST(to_json(members) AS VARCHAR) ELSE NULL END, "
+		                      + PortableOptions("CASE WHEN members IS NOT NULL AND typeof(members) = 'VARCHAR' THEN CAST(members AS VARCHAR) ELSE " + PortableJSONArgument("settings") + " END") + ", "
 		                      + std::to_string(kind) + ", CASE WHEN members IS NULL THEN '\"NULL\"' ELSE typeof(members) END, typeof(settings))", purpose);
 	}
 	RegisterMacro(loader, "CREATE MACRO thinkthen_rank(question, keyed_json, settings := NULL" + PortableOptionParameters() + ") "
 	                      "AS TABLE SELECT json_extract_string(item.value, '$.key') AS key, "
 	                      "CAST(json_extract(item.value, '$.rank') AS BIGINT) AS rank, "
 	                      "CAST(json_extract(item.value, '$.probability') AS DOUBLE) AS probability "
-	                      "FROM json_each(thinkthen_native_many(question, keyed_json, " + PortableOptions() + ", "
+	                      "FROM json_each(thinkthen_native_many(" + PortableJSONArgument("question") + ", " + PortableJSONArgument("keyed_json") + ", " + PortableOptions("settings", "question IS NULL OR keyed_json IS NULL", false) + ", "
 	                      + std::to_string(RANK_KIND) + ")) item ORDER BY rank", "Rank keyed text records by their probability of yes.");
 	RegisterMacro(loader, "CREATE MACRO thinkthen_rank_set(questions, keyed_json, settings := NULL" + PortableOptionParameters() + ") "
 	                      "AS TABLE SELECT json_extract_string(item.value, '$.key') AS key, "
@@ -479,7 +511,7 @@ void RegisterPortableDecide(ExtensionLoader &loader) {
 	                      "CAST(json_extract(item.value, '$.probability') AS DOUBLE) AS probability, "
 	                      "json_extract_string(item.value, '$.question_name') AS question_name, "
 	                      "json_extract(item.value, '$.facts') AS facts "
-	                      "FROM json_each(thinkthen_native_many(questions, keyed_json, " + PortableOptions() + ", 9)) item ORDER BY rank", "Rank keyed text records for each named question and include request facts.");
+	                      "FROM json_each(thinkthen_native_many(" + PortableJSONArgument("questions") + ", " + PortableJSONArgument("keyed_json") + ", " + PortableOptions("settings", "questions IS NULL OR keyed_json IS NULL", false) + ", 9)) item ORDER BY rank", "Rank keyed text records for each named question and include request facts.");
 	for (auto kind : {2, 3, 7}) {
 		const string name = kind == 2 ? "details" : kind == 3 ? "try_details" : "annotate";
 		const string purpose = kind == 2 ? "Return judgment details as JSON." : kind == 3 ? "Return judgment details or a safe recoverable failure as JSON." : "Annotate text with a question set and return its values as JSON.";
@@ -491,7 +523,7 @@ void RegisterPortableDecide(ExtensionLoader &loader) {
 		native.SetStability(FunctionStability::VOLATILE);
 		RegisterDescribedScalar(loader, native, purpose);
 		RegisterMacro(loader, "CREATE MACRO thinkthen_" + name + "(question, input, settings := NULL" + PortableOptionParameters() + ") AS "
-		                      "thinkthen_native_" + name + "(question, input, " + PortableOptions() + ", "
+		                      "thinkthen_native_" + name + "(" + PortableJSONArgument("question") + ", input, " + PortableOptions() + ", "
 		                      + std::to_string(kind) + ", typeof(settings))", purpose);
 	}
 }

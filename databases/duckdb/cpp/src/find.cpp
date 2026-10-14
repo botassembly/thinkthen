@@ -71,7 +71,7 @@ Request Read(DataChunk &args, idx_t row) {
 	}
 	const auto type = args.data[3].GetValue(row).GetValue<string>();
 	const auto legacy = args.data[4].GetValue(row).GetValue<string>();
-	if ((type != "\"NULL\"" && type != "VARCHAR") || legacy != "\"NULL\"") {
+	if ((!PortableSettingsType(type)) || legacy != "\"NULL\"") {
 		throw InvalidInputException("thinkthen usage: find's none and deadline moved into the settings object");
 	}
 	auto settings = args.data[2].GetValue(row);
@@ -171,7 +171,7 @@ void RegisterFind(ExtensionLoader &loader) {
 	function.SetStability(FunctionStability::VOLATILE);
 	RegisterDescribedScalar(loader, function, purpose);
 	RegisterPortableMacro(loader, "CREATE MACRO thinkthen_find(question, units, settings := NULL, legacy_deadline := NULL" + PortableOptionParameters() + ") AS "
-	                              "thinkthen_native_find(question, units, " + PortableOptions() + ", "
+	                              "thinkthen_native_find(" + PortableJSONArgument("question") + ", units, " + PortableOptions("settings", "question IS NULL OR units IS NULL") + ", "
 	                              "typeof(settings), typeof(legacy_deadline))", purpose);
 }
 

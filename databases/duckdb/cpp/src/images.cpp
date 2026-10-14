@@ -177,7 +177,7 @@ void RegisterImages(ExtensionLoader &loader) {
 		const string purpose = string(verb) == "decide" ? "Judge a yes-or-no question using image evidence and optional text." : string(verb) == "choose" ? "Choose an option using image evidence and optional text." : string(verb) == "score" ? "Score image evidence and optional text against ordered levels." : "Return judgment details for image evidence and optional text as JSON.";
 		Register(loader, name, {LogicalType::VARCHAR, LogicalType::LIST(ImageType()), LogicalType::VARCHAR, LogicalType::VARCHAR},
 		         string(verb) == "decide" ? LogicalType::BOOLEAN : string(verb) == "score" ? LogicalType::DOUBLE : string(verb) == "details" ? LogicalType::JSON() : LogicalType::VARCHAR, Judge, true, purpose);
-		RegisterPortableMacro(loader, string("CREATE MACRO thinkthen_") + verb + "_images(question, images, text := NULL, settings := NULL" + PortableOptionParameters() + ") AS " + name + "(question, images, text, " + PortableOptions() + ")", purpose);
+		RegisterPortableMacro(loader, string("CREATE MACRO thinkthen_") + verb + "_images(question, images, text := NULL, settings := NULL" + PortableOptionParameters() + ") AS " + name + "(question, images, text, " + PortableOptions("settings", "question IS NULL OR images IS NULL", false) + ")", purpose);
 	}
 }
 } // namespace duckdb
