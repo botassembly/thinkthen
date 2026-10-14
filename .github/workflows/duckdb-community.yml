@@ -41,7 +41,7 @@ jobs:
       reduced_ci_mode: disabled
       save_cache: false
   preview:
-    needs: inputs
+    needs: [inputs, release]
     uses: duckdb/extension-ci-tools/.github/workflows/_extension_distribution.yml@a68570fde10384547868301a12327d5c67909527
     with:
       extension_name: thinkthen
