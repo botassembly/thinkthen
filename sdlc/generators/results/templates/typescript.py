@@ -1,6 +1,6 @@
 """Owned JavaScript values and declarations from the shared Rust graph."""
 import json
-from host_answers import aggregate_answers, aggregate_projection, scalar_answers, judgment_route
+from host_answers import call_results
 ROOTS = ('completesessionPacket', 'completeplan')
 INPUT_ROOTS = ('RequestOptions', 'EngineSettings', 'RequestDefinition')
 
@@ -31,7 +31,7 @@ def typ(source, inputs=False):
     return {'string':'string','integer':numeric,'number':numeric,'boolean':'boolean','null':'null'}.get(kind,'JsonValue')
 
 def declarations(definitions, input_definitions=None):
-    lines=['// Generated from the shared Rust result graph; do not edit.', "import type {Question, Input, Controls, Completed} from './native.js';", 'export type JsonValue = null | boolean | number | NativeNumber | string | readonly JsonValue[] | { readonly [key: string]: JsonValue };']
+    lines=['// Generated from the shared Rust result graph; do not edit.', "import type {Question, Input, Controls, Result} from './native.js';", 'export type JsonValue = null | boolean | number | NativeNumber | string | readonly JsonValue[] | { readonly [key: string]: JsonValue };']
     lines += ['export class NativeNumber { readonly raw: string; private constructor(); }']
     for key,source in definitions.items():
         if 'properties' in source:
@@ -50,14 +50,25 @@ def declarations(definitions, input_definitions=None):
                 if value.get('type')=='array': value=value['items']
                 values.append(typ(value))
         lines += ['export type Native'+verb.title()+'Result = '+' | '.join(dict.fromkeys(values))+';']
-    lines += ['export interface AnswerReaders {']
-    for function, payload, _, _ in answers(definitions):
-        lines += [f' {function}Answer(): {typ(payload)};']
-    lines += ['}']
     lines += ['export interface NamedCalls {']
-    for function, payload, _, _ in answers(definitions):
-        lines += [f' {function}(q:Question,i:Input,c?:Controls):Promise<Completed<Native{function.title()}Result>>;',
-                  f' {function}Answer(q:Question,i:Input,c?:Controls):Promise<{typ(payload)}>;']
+    for function, rule in call_results(definitions).items():
+        value = typ(rule['aggregate_value'])
+        scalar = typ(rule['aggregate_value']['items']) if function not in ('filter', 'rank', 'find', 'relate') else None
+        if function == 'find': value += ' | null'
+        mode = rule['probability_mode']
+        probability = ('null' if mode == 'null' else
+                       'readonly (number | null)[]' if function == 'rank' else
+                       'readonly number[]' if function == 'relate' else
+                       'readonly (readonly number[])[] | readonly number[]' if function == 'recognize' else
+                       'number | null' if function == 'find' else
+                       'readonly (number | null)[] | number | null')
+        if scalar:
+            scalar_probability = 'null' if mode == 'null' else 'readonly number[]' if function == 'recognize' else 'number | null'
+            list_probability = 'null' if mode == 'null' else 'readonly (readonly number[])[]' if function == 'recognize' else 'readonly (number | null)[]'
+            lines += [f' {function}(q:Question,i:readonly (JsonValue | import("./native.js").Item)[],c?:Controls):Promise<Result<Native{function.title()}Result, {value}, {list_probability}>>;',
+                      f' {function}(q:Question,i:Exclude<JsonValue, readonly JsonValue[]> | import("./native.js").Item,c?:Controls):Promise<Result<Native{function.title()}Result, {scalar}, {scalar_probability}>>;']
+            value += ' | ' + scalar
+        lines += [f' {function}(q:Question,i:Input,c?:Controls):Promise<Result<Native{function.title()}Result, {value}, {probability}>>;']
     lines += ['}']
     lines += ['export const REQUEST_VERSION: string;']
     lines += input_declarations(input_definitions or {})
@@ -73,6 +84,7 @@ def input_declarations(definitions):
             continue
         lines += [f'export interface {input_name(key)} {{']
         for member, field in source['properties'].items():
+            if key == 'RequestOptions' and member == 'details': continue
             optional = '' if member in source.get('required', []) else '?'
             lines += [f' readonly {json.dumps(member)}{optional}: {typ(field, True)};']
         lines += [f' readonly {json.dumps(member)}?: never;' for member in excluded.get(key, [])]
@@ -142,49 +154,32 @@ function convert(schema,value,key) {
 }
 function plan(value) { return convert(graph.completeplan,value,'completeplan'); }
 function packet(value) { return convert(graph.completesessionPacket,value,'completesessionPacket'); }
-''', answer_runtime(definitions), 'module.exports = { answer, plan, packet, parse, NativeNumber, REQUEST_VERSION: '+json.dumps(version)+', '+', '.join(name(k) for k,s in definitions.items() if 'properties' in s)+' };']
+''', result_runtime(definitions), 'module.exports = { callResult, plan, packet, parse, NativeNumber, REQUEST_VERSION: '+json.dumps(version)+', '+', '.join(name(k) for k,s in definitions.items() if 'properties' in s)+' };']
     return '\n'.join(lines)+'\n'
 
 
-def answers(definitions):
-    values = []
-    for function, _, payload in aggregate_answers(definitions):
-        projected, member = aggregate_projection(function, payload, definitions)
-        values.append((function, projected, None, member))
-    values = {function: (function, payload, kind, member) for function, payload, kind, member in values}
-    values.update({function: (function, payload, kind, None) for function, kind, payload in scalar_answers(definitions)})
-    return list(values.values())
-
-
-def answer_runtime(definitions):
-    route, guards = judgment_route(definitions)
-    rules = {function: {'path': route if kind else ['value'], 'guards': guards if kind else [],
-                        'kind': kind, 'member': member, 'collection': not kind and payload.get('type') == 'array'}
-             for function, payload, kind, member in answers(definitions)}
-    return 'const answerRules = '+json.dumps(rules)+';'+r'''
-function answer(packets,functionName) {
-  const rule=answerRules[functionName],values=[];
-  for(const packet of packets) {
-    if(packet.function!==functionName) continue;
-    let value;
-    if(rule.kind) {
-      if(!rule.guards.every(([path,expected])=>path.reduce((v,key)=>v?.[key],packet)===expected)) continue;
-      const carrier=rule.path.reduce((v,key)=>v?.[key],packet);
-      if(carrier?.kind!==rule.kind) continue;
-      value=carrier.value;
-    } else {
-      if(packet.kind==='aggregate') value=packet.value;
-      else if(rule.collection && packet.kind==='row') value=[packet.value];
-      else continue;
+def result_runtime(definitions):
+    rules = {function: {key: value for key, value in rule.items()
+                       if key in ('value_projection', 'probability_mode', 'probability_path', 'pick_path')}
+             for function, rule in call_results(definitions).items()}
+    return 'const callRules = '+json.dumps(rules)+';'+r'''
+function callResult(rows,functionName,scalar) {
+  const rule=callRules[functionName],project=rule.value_projection;
+  const values=rows.map(row=>row[project]);
+  const single=functionName==='find' || functionName==='relate';
+  const value=project!=='value' ? values : single ? values[0] ?? (functionName==='find'?null:[]) : scalar && values.length ? values[0] : values;
+  if(rule.probability_mode==='null') return frozen({value,probability:null});
+  const chances=rows.map(row=>{
+    if(rule.probability_mode==='picked') return row.answer.probabilities[row.answer.pick] ?? null;
+    if(functionName==='recognize') {
+      if(!Object.hasOwn(row.value,'entities')) return row.value.proposals.map(p=>p.probability);
+      const kept=new Map(row.answer.proposals.filter(p=>p.kept).map(p=>[JSON.stringify([p.selected.start,p.selected.end,p.kind]),p.span_probability]));
+      return row.value.entities.map(e=>kept.get(JSON.stringify([e.start,e.end,e.kind])) ?? null);
     }
-    if(rule.collection) values.push(...value);
-    else values.push(value);
-  }
-  if(rule.collection) return Object.freeze(rule.member ? values.map(value=>{
-    if(!Object.hasOwn(value,rule.member)) throw new TypeError('Native answer is missing its projected member');
-    return value[rule.member];
-  }) : values);
-  if(values.length!==1) throw new RangeError('Expected exactly one successful answer');
-  return values[0];
+    if(functionName==='relate') return row.value.map(edge=>edge.probability);
+    return rule.probability_path ? rule.probability_path.reduce((value,key)=>value?.[key],row) ?? null : row.answer?.probability ?? null;
+  });
+  const probability=single ? chances[0] ?? (functionName==='find'?null:[]) : functionName==='rank' ? chances : scalar && chances.length ? chances[0] : chances;
+  return frozen({value,probability});
 }
 '''

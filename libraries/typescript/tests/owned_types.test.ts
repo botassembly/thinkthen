@@ -1,4 +1,4 @@
-import {Client,ClientError,Results,type UsageStatus, type Completed, type Question, type Input} from 'thinkthen';
+import {Client,ClientError,Results,type UsageStatus, type Result, type Question, type Input} from 'thinkthen';
 function usage(owner:Client) {
  const status:UsageStatus=owner.usagePersistence();
  const state:Results.NativeUsagePersistence=owner.finishUsageStatus().state;
@@ -25,28 +25,35 @@ const image=Client.item(undefined,{images:[{kind:"bytes",bytes:new Uint8Array([1
 void image;
 
 async function allNamed(client:Client,question:Question,input:Input) {
- const decide:Completed<Results.NativeDecideResult>=await client.decide(question,input);
- const choose:Completed<Results.NativeChooseResult>=await client.choose(question,input);
- const tag:Completed<Results.NativeTagResult>=await client.tag(question,input);
- const score:Completed<Results.NativeScoreResult>=await client.score(question,input);
- const filter:Completed<Results.NativeFilterResult>=await client.filter(question,input);
- const rank:Completed<Results.NativeRankResult>=await client.rank(question,input);
- const find:Completed<Results.NativeFindResult>=await client.find(question,input);
- const annotate:Completed<Results.NativeAnnotateResult>=await client.annotate(question,input);
- const recognize:Completed<Results.NativeRecognizeResult>=await client.recognize(question,input);
- const relate:Completed<Results.NativeRelateResult>=await client.relate(question,input);
+ const decide:Result<Results.NativeDecideResult>=await client.decide(question,input);
+ const choose:Result<Results.NativeChooseResult>=await client.choose(question,input);
+ const tag:Result<Results.NativeTagResult>=await client.tag(question,input);
+ const score:Result<Results.NativeScoreResult>=await client.score(question,input);
+ const filter:Result<Results.NativeFilterResult>=await client.filter(question,input);
+ const rank:Result<Results.NativeRankResult>=await client.rank(question,input);
+ const find:Result<Results.NativeFindResult>=await client.find(question,input);
+ const annotate:Result<Results.NativeAnnotateResult>=await client.annotate(question,input);
+ const recognize:Result<Results.NativeRecognizeResult>=await client.recognize(question,input);
+ const relate:Result<Results.NativeRelateResult>=await client.relate(question,input);
  void [decide,choose,tag,score,filter,rank,find,annotate,recognize,relate];
 }
 void allNamed;
 
 async function oneLine(client:Client) {
- const decide:boolean|null=await client.decideAnswer('Question?','text');
- const choose:string|null=await client.chooseAnswer({choose:'Which?',options:['yes','no']},'text');
- const tag:readonly string[]=(await client.tag({tag:'Which?',labels:['yes']},'text')).tagAnswer();
- const score:number|Results.NativeNumber|null=await client.scoreAnswer({score:'How?',levels:['low','high']},'text');
- const rank:readonly (number|Results.NativeNumber)[]=await client.rankAnswer('Question?',['first','second']);
- const filter:readonly Results.JsonValue[]=await client.filterAnswer('Question?',['first',null]);
- void [decide,choose,tag,score,rank,filter];
+ const decide:Results.JsonValue=(await client.decide('Question?','text')).value;
+ const probability:number|null=(await client.decide('Question?','text')).probability;
+ const list:readonly Results.NativeDecideValue[]=(await client.decide('Question?',['text'])).value;
+ const choices:readonly (number|null)[]=(await client.choose({choose:'Which?',options:['yes','no']},['text'])).probability;
+ const tag:Results.JsonValue=(await client.tag({tag:'Which?',labels:['yes']},'text')).value;
+ const rank:readonly (number|Results.NativeNumber)[]=(await client.rank('Question?',['first','second'])).value;
+ const filter:readonly Results.JsonValue[]=(await client.filter('Question?',['first',null])).value;
+ // @ts-expect-error answer readers have been removed
+ client.decideAnswer('Question?','text');
+ // @ts-expect-error the details switch has been removed
+ void client.decide('Question?','text',{details:true});
+ // @ts-expect-error result values are immutable
+ (await client.decide('Question?','text')).value=false;
+ void [decide,probability,list,choices,tag,rank,filter];
 }
 void oneLine;
 

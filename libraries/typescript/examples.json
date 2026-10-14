@@ -4,52 +4,52 @@
   "examples": {
     "decide": {
       "arm": "generic",
-      "ts": "tt.decideAnswer(\"Is this a complaint?\", \"I demand a refund today\")",
+      "ts": "tt.decide(\"Is this a complaint?\", \"I demand a refund today\").then(call => call.value)",
       "expected": "true"
     },
     "choose": {
       "arm": "generic",
-      "ts": "tt.chooseAnswer({choose: \"Which team owns this?\", options: [\"billing\", \"shipping\"]}, \"please route this ticket\")",
+      "ts": "tt.choose({choose: \"Which team owns this?\", options: [\"billing\", \"shipping\"]}, \"please route this ticket\").then(call => call.value)",
       "expected": "\"billing\""
     },
     "tag": {
       "arm": "generic",
-      "ts": "tt.tagAnswer({tag: \"Which topics apply?\", labels: [\"refund\", \"shipping\"]}, \"the refund and the shipping\")",
+      "ts": "tt.tag({tag: \"Which topics apply?\", labels: [\"refund\", \"shipping\"]}, \"the refund and the shipping\").then(call => call.value)",
       "expected": "[\"refund\",\"shipping\"]"
     },
     "score": {
       "arm": "generic",
-      "ts": "tt.scoreAnswer({score: \"How urgent is this?\", levels: [\"Routine.\", \"Soon.\", \"Immediate.\"]}, \"maybe later\")",
+      "ts": "tt.score({score: \"How urgent is this?\", levels: [\"Routine.\", \"Soon.\", \"Immediate.\"]}, \"maybe later\").then(call => call.value)",
       "expected": "0.15"
     },
     "filter": {
       "arm": "generic",
-      "ts": "tt.filterAnswer(\"Is this a complaint?\", [\"good morning\", \"I demand a refund today\"])",
+      "ts": "tt.filter(\"Is this a complaint?\", [\"good morning\", \"I demand a refund today\"]).then(call => call.value)",
       "expected": "[\"good morning\",\"I demand a refund today\"]"
     },
     "rank": {
       "arm": "generic",
-      "ts": "tt.rankAnswer(\"Is this a complaint?\", [\"good morning\", \"I demand a refund today\"], { top: 1 })",
+      "ts": "tt.rank(\"Is this a complaint?\", [\"good morning\", \"I demand a refund today\"], { top: 1 }).then(call => call.value)",
       "expected": "[0]"
     },
     "find": {
       "arm": "generic",
-      "ts": "tt.findAnswer(\"Which line asks for money back?\", [\"I want a refund\", \"good morning\"]).then(answer => answer.value)",
+      "ts": "tt.find(\"Which line asks for money back?\", [\"I want a refund\", \"good morning\"]).then(answer => answer.value)",
       "expected": "\"I want a refund\""
     },
     "annotate": {
       "arm": "generic",
-      "ts": "tt.annotateAnswer({ version: 1, questions: { wants_refund: { decide: \"Does the customer ask for a refund?\" }, urgency: { score: \"How urgent is this?\", levels: [\"Routine.\", \"Soon.\", \"Immediate.\"] } } }, [\"maybe later\"]).then(rows => rows.map(row => row.value))",
+      "ts": "tt.annotate({ version: 1, questions: { wants_refund: { decide: \"Does the customer ask for a refund?\" }, urgency: { score: \"How urgent is this?\", levels: [\"Routine.\", \"Soon.\", \"Immediate.\"] } } }, [\"maybe later\"]).then(call => call.value)",
       "expected": "[{\"wants_refund\":true,\"urgency\":0.15}]"
     },
     "recognize": {
       "arm": "case/41-offsets-past-an-accent-and-an-emoji",
-      "ts": "tt.recognizeAnswer(Client.recognizeQuestion({person:\"A person's name.\"}), \"Le caf\u00e9 \ud83d\ude00 Maria Chen arrived.\").then(rows => rows[0].value.entities.map(entity => entity.text))",
+      "ts": "tt.recognize(Client.recognizeQuestion({person:\"A person's name.\"}), \"Le caf\u00e9 \ud83d\ude00 Maria Chen arrived.\").then(call => call.value.entities.map(entity => entity.text))",
       "expected": "[\"Maria Chen\"]"
     },
     "relate": {
       "arm": "case/52-cross-kind-staff",
-      "ts": "tt.relateAnswer(Client.relateQuestion([{name:\"works_for\",source:\"person\",target:\"organization\",either:false}]), [{\"name\": \"Iris Vangelis works for Kestrel Logistics, handling regional accounts.\", \"kind\": \"person\"}, {\"name\": \"Noor Haddad works for Brookline Freight, handling regional accounts.\", \"kind\": \"person\"}, {\"name\": \"Petr Novak works for Grayline Foundation, handling regional accounts.\", \"kind\": \"person\"}, {\"name\": \"Rosa Iglesias works for Fenwick Press, handling regional accounts.\", \"kind\": \"person\"}, {\"name\": \"Tariq Mensah works for Hull Analytics, handling regional accounts.\", \"kind\": \"person\"}, {\"name\": \"Kestrel Logistics, a freight and logistics firm.\", \"kind\": \"organization\"}, {\"name\": \"Brookline Freight, a freight and logistics firm.\", \"kind\": \"organization\"}, {\"name\": \"Grayline Foundation, a freight and logistics firm.\", \"kind\": \"organization\"}, {\"name\": \"Fenwick Press, a freight and logistics firm.\", \"kind\": \"organization\"}, {\"name\": \"Hull Analytics, a freight and logistics firm.\", \"kind\": \"organization\"}]).then(answer => answer.value.length)",
+      "ts": "tt.relate(Client.relateQuestion([{name:\"works_for\",source:\"person\",target:\"organization\",either:false}]), [{\"name\": \"Iris Vangelis works for Kestrel Logistics, handling regional accounts.\", \"kind\": \"person\"}, {\"name\": \"Noor Haddad works for Brookline Freight, handling regional accounts.\", \"kind\": \"person\"}, {\"name\": \"Petr Novak works for Grayline Foundation, handling regional accounts.\", \"kind\": \"person\"}, {\"name\": \"Rosa Iglesias works for Fenwick Press, handling regional accounts.\", \"kind\": \"person\"}, {\"name\": \"Tariq Mensah works for Hull Analytics, handling regional accounts.\", \"kind\": \"person\"}, {\"name\": \"Kestrel Logistics, a freight and logistics firm.\", \"kind\": \"organization\"}, {\"name\": \"Brookline Freight, a freight and logistics firm.\", \"kind\": \"organization\"}, {\"name\": \"Grayline Foundation, a freight and logistics firm.\", \"kind\": \"organization\"}, {\"name\": \"Fenwick Press, a freight and logistics firm.\", \"kind\": \"organization\"}, {\"name\": \"Hull Analytics, a freight and logistics firm.\", \"kind\": \"organization\"}]).then(answer => answer.value.length)",
       "expected": "5"
     }
   }
