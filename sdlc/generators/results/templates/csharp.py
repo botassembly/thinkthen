@@ -617,10 +617,11 @@ def answer_helpers(definitions):
             result_type = 'CallResult<' + ', '.join((value_type, odds_type, results_type)) + '>'
             feed = input_type.startswith('IAsyncEnumerable')
             suffix = 'Scalar' if single else ''
-            lines += ['public async Task<' + result_type + '> ' + function.title() + 'Async(RequestQuestion question, ' + input_type + ' input,',
+            argument = 'feed' if feed else 'input'
+            lines += ['public async Task<' + result_type + '> ' + function.title() + 'Async(RequestQuestion question, ' + input_type + ' ' + argument + ',',
                       'RequestOptions? options = null, CancellationToken cancellation = default) {',
-                      'ArgumentNullException.ThrowIfNull(input);',
-                      'var call = await ExecuteSessionAsync(() => StartNamedSession(' + quote(function) + ', question, ' + ('FeedInput' if feed else 'input') + ', options), ' + ('input' if feed else 'null') + ', cancellation).ConfigureAwait(false);',
+                      'ArgumentNullException.ThrowIfNull(' + argument + ');',
+                      'var call = await ExecuteSessionAsync(() => StartNamedSession(' + quote(function) + ', question, ' + ('FeedInput' if feed else 'input') + ', options), ' + ('feed' if feed else 'null') + ', cancellation).ConfigureAwait(false);',
                       'return Project' + function.title() + suffix + '(call);', '}']
         values_expr = 'row.' + projection
         receipt_schema = definitions[(payload['items'] if array else payload)['$ref'].split('/')[-1]]

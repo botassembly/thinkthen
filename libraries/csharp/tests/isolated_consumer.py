@@ -86,7 +86,7 @@ try:
  elif mode.startswith('example'):
   function='decide' if mode in ('example','example-public') else mode.removeprefix('example-')
   outputs={'decide':'True','choose':'first','score':'0.1','tag':'first,second','filter':'1:first',
-           'rank':'0,1','find':'0','annotate':'True','recognize':'John Smith','relate':'A -> B'}
+           'rank':'0,1','find':'first','annotate':'True','recognize':'John Smith','relate':'A -> B'}
   sends=2 if function=='recognize' else 1
   assert result.stdout.strip()==outputs[function].encode(),result.stdout
   assert len(bodies)==sends and server.attempts==server.connections==sends,counted

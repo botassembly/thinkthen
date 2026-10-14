@@ -83,11 +83,11 @@ public sealed partial class Engine {
         return ProjectDecide(call);
     }
     public async Task<CallResult<IReadOnlyList<bool?>, IReadOnlyList<double?>, IReadOnlyList<AtomicDecideValue>>> DecideAsync(RequestQuestion question,
-    IAsyncEnumerable<RequestSessionDescriptor> input,
+    IAsyncEnumerable<RequestSessionDescriptor> feed,
     RequestOptions? options = null, CancellationToken cancellation = default) {
-        ArgumentNullException.ThrowIfNull(input);
+        ArgumentNullException.ThrowIfNull(feed);
         var call = await ExecuteSessionAsync(() => StartNamedSession("decide", question, FeedInput,
-        options), input, cancellation).ConfigureAwait(false);
+        options), feed, cancellation).ConfigureAwait(false);
         return ProjectDecide(call);
     }
     private static CallResult<IReadOnlyList<bool?>, IReadOnlyList<double?>, IReadOnlyList<AtomicDecideValue>> ProjectDecide(OwnedCall call) {
@@ -169,11 +169,11 @@ public sealed partial class Engine {
         return ProjectChoose(call);
     }
     public async Task<CallResult<IReadOnlyList<string?>, IReadOnlyList<double?>, IReadOnlyList<AtomicNullableString>>> ChooseAsync(RequestQuestion question,
-    IAsyncEnumerable<RequestSessionDescriptor> input,
+    IAsyncEnumerable<RequestSessionDescriptor> feed,
     RequestOptions? options = null, CancellationToken cancellation = default) {
-        ArgumentNullException.ThrowIfNull(input);
+        ArgumentNullException.ThrowIfNull(feed);
         var call = await ExecuteSessionAsync(() => StartNamedSession("choose", question, FeedInput,
-        options), input, cancellation).ConfigureAwait(false);
+        options), feed, cancellation).ConfigureAwait(false);
         return ProjectChoose(call);
     }
     private static CallResult<IReadOnlyList<string?>, IReadOnlyList<double?>, IReadOnlyList<AtomicNullableString>> ProjectChoose(OwnedCall call) {
@@ -255,11 +255,11 @@ public sealed partial class Engine {
         return ProjectTag(call);
     }
     public async Task<CallResult<IReadOnlyList<IReadOnlyList<string>>, double?, IReadOnlyList<AtomicArrayOfString>>> TagAsync(RequestQuestion question,
-    IAsyncEnumerable<RequestSessionDescriptor> input,
+    IAsyncEnumerable<RequestSessionDescriptor> feed,
     RequestOptions? options = null, CancellationToken cancellation = default) {
-        ArgumentNullException.ThrowIfNull(input);
+        ArgumentNullException.ThrowIfNull(feed);
         var call = await ExecuteSessionAsync(() => StartNamedSession("tag", question, FeedInput, options),
-        input, cancellation).ConfigureAwait(false);
+        feed, cancellation).ConfigureAwait(false);
         return ProjectTag(call);
     }
     private static CallResult<IReadOnlyList<IReadOnlyList<string>>, double?, IReadOnlyList<AtomicArrayOfString>> ProjectTag(OwnedCall call) {
@@ -340,11 +340,11 @@ public sealed partial class Engine {
         return ProjectScore(call);
     }
     public async Task<CallResult<IReadOnlyList<double>, double?, IReadOnlyList<AtomicDouble>>> ScoreAsync(RequestQuestion question,
-    IAsyncEnumerable<RequestSessionDescriptor> input,
+    IAsyncEnumerable<RequestSessionDescriptor> feed,
     RequestOptions? options = null, CancellationToken cancellation = default) {
-        ArgumentNullException.ThrowIfNull(input);
+        ArgumentNullException.ThrowIfNull(feed);
         var call = await ExecuteSessionAsync(() => StartNamedSession("score", question, FeedInput, options),
-        input, cancellation).ConfigureAwait(false);
+        feed, cancellation).ConfigureAwait(false);
         return ProjectScore(call);
     }
     private static CallResult<IReadOnlyList<double>, double?, IReadOnlyList<AtomicDouble>> ProjectScore(OwnedCall call) {
@@ -425,11 +425,11 @@ public sealed partial class Engine {
         return ProjectFilter(call);
     }
     public async Task<CallResult<IReadOnlyList<JsonElement>, IReadOnlyList<double?>, IReadOnlyList<AtomicBoolean>>> FilterAsync(RequestQuestion question,
-    IAsyncEnumerable<RequestSessionDescriptor> input,
+    IAsyncEnumerable<RequestSessionDescriptor> feed,
     RequestOptions? options = null, CancellationToken cancellation = default) {
-        ArgumentNullException.ThrowIfNull(input);
+        ArgumentNullException.ThrowIfNull(feed);
         var call = await ExecuteSessionAsync(() => StartNamedSession("filter", question, FeedInput,
-        options), input, cancellation).ConfigureAwait(false);
+        options), feed, cancellation).ConfigureAwait(false);
         return ProjectFilter(call);
     }
     private static CallResult<IReadOnlyList<JsonElement>, IReadOnlyList<double?>, IReadOnlyList<AtomicBoolean>> ProjectFilter(OwnedCall call) {
@@ -500,11 +500,11 @@ public sealed partial class Engine {
         return ProjectRank(call);
     }
     public async Task<CallResult<IReadOnlyList<ulong>, IReadOnlyList<double?>, IReadOnlyList<AtomicNonZeroUsize>>> RankAsync(RequestQuestion question,
-    IAsyncEnumerable<RequestSessionDescriptor> input,
+    IAsyncEnumerable<RequestSessionDescriptor> feed,
     RequestOptions? options = null, CancellationToken cancellation = default) {
-        ArgumentNullException.ThrowIfNull(input);
+        ArgumentNullException.ThrowIfNull(feed);
         var call = await ExecuteSessionAsync(() => StartNamedSession("rank", question, FeedInput, options),
-        input, cancellation).ConfigureAwait(false);
+        feed, cancellation).ConfigureAwait(false);
         return ProjectRank(call);
     }
     private static CallResult<IReadOnlyList<ulong>, IReadOnlyList<double?>, IReadOnlyList<AtomicNonZeroUsize>> ProjectRank(OwnedCall call) {
@@ -574,11 +574,11 @@ public sealed partial class Engine {
         return ProjectFind(call);
     }
     public async Task<CallResult<JsonElement?, double?, IReadOnlyList<Find>>> FindAsync(RequestQuestion question,
-    IAsyncEnumerable<RequestSessionDescriptor> input,
+    IAsyncEnumerable<RequestSessionDescriptor> feed,
     RequestOptions? options = null, CancellationToken cancellation = default) {
-        ArgumentNullException.ThrowIfNull(input);
+        ArgumentNullException.ThrowIfNull(feed);
         var call = await ExecuteSessionAsync(() => StartNamedSession("find", question, FeedInput, options),
-        input, cancellation).ConfigureAwait(false);
+        feed, cancellation).ConfigureAwait(false);
         return ProjectFind(call);
     }
     private static CallResult<JsonElement?, double?, IReadOnlyList<Find>> ProjectFind(OwnedCall call) {
@@ -649,11 +649,11 @@ public sealed partial class Engine {
         return ProjectAnnotate(call);
     }
     public async Task<CallResult<IReadOnlyList<IReadOnlyDictionary<string, AnnotatedField>>, double?,
-    IReadOnlyList<Annotation>>> AnnotateAsync(RequestQuestion question, IAsyncEnumerable<RequestSessionDescriptor> input,
+    IReadOnlyList<Annotation>>> AnnotateAsync(RequestQuestion question, IAsyncEnumerable<RequestSessionDescriptor> feed,
     RequestOptions? options = null, CancellationToken cancellation = default) {
-        ArgumentNullException.ThrowIfNull(input);
+        ArgumentNullException.ThrowIfNull(feed);
         var call = await ExecuteSessionAsync(() => StartNamedSession("annotate", question, FeedInput,
-        options), input, cancellation).ConfigureAwait(false);
+        options), feed, cancellation).ConfigureAwait(false);
         return ProjectAnnotate(call);
     }
     private static CallResult<IReadOnlyList<IReadOnlyDictionary<string, AnnotatedField>>, double?,
@@ -728,11 +728,11 @@ public sealed partial class Engine {
         return ProjectRecognize(call);
     }
     public async Task<CallResult<IReadOnlyList<Recognize>, IReadOnlyList<IReadOnlyList<double>>,
-    IReadOnlyList<Recognition>>> RecognizeAsync(RequestQuestion question, IAsyncEnumerable<RequestSessionDescriptor> input,
+    IReadOnlyList<Recognition>>> RecognizeAsync(RequestQuestion question, IAsyncEnumerable<RequestSessionDescriptor> feed,
     RequestOptions? options = null, CancellationToken cancellation = default) {
-        ArgumentNullException.ThrowIfNull(input);
+        ArgumentNullException.ThrowIfNull(feed);
         var call = await ExecuteSessionAsync(() => StartNamedSession("recognize", question, FeedInput,
-        options), input, cancellation).ConfigureAwait(false);
+        options), feed, cancellation).ConfigureAwait(false);
         return ProjectRecognize(call);
     }
     private static CallResult<IReadOnlyList<Recognize>, IReadOnlyList<IReadOnlyList<double>>, IReadOnlyList<Recognition>> ProjectRecognize(OwnedCall call) {
@@ -806,11 +806,11 @@ public sealed partial class Engine {
         return ProjectRelate(call);
     }
     public async Task<CallResult<IReadOnlyList<RelatedEntityEdge>, IReadOnlyList<double>, IReadOnlyList<Relation>>> RelateAsync(RequestQuestion question,
-    IAsyncEnumerable<RequestSessionDescriptor> input,
+    IAsyncEnumerable<RequestSessionDescriptor> feed,
     RequestOptions? options = null, CancellationToken cancellation = default) {
-        ArgumentNullException.ThrowIfNull(input);
+        ArgumentNullException.ThrowIfNull(feed);
         var call = await ExecuteSessionAsync(() => StartNamedSession("relate", question, FeedInput,
-        options), input, cancellation).ConfigureAwait(false);
+        options), feed, cancellation).ConfigureAwait(false);
         return ProjectRelate(call);
     }
     private static CallResult<IReadOnlyList<RelatedEntityEdge>, IReadOnlyList<double>, IReadOnlyList<Relation>> ProjectRelate(OwnedCall call) {
