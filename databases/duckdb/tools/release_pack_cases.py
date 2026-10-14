@@ -25,7 +25,7 @@ WRONG_PLATFORM = {
 
 
 def copy_packer(destination: Path) -> None:
-    names = ['Cargo.toml', 'Cargo.lock', 'sdlc/scripts/release-pack', 'sdlc/scripts/scratch.sh', 'sdlc/scripts/release-archive-tree.py',
+    names = ['README.md', 'Cargo.toml', 'Cargo.lock', 'sdlc/scripts/release-pack', 'sdlc/scripts/scratch.sh', 'sdlc/scripts/release-archive-tree.py',
              'sdlc/scripts/registry-readmes.py', 'crates/thinkthen/Cargo.toml', 'LICENSE',
              'databases/duckdb/README-PUBLIC.md',
              'conformance/children/children.py']

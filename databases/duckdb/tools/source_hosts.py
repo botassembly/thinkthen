@@ -88,6 +88,27 @@ def main():
             return 77
 
 
+def cli_runner(cli, extension):
+    from harness import child_env, stored
+    def run(statements, base):
+        results = []
+        with tempfile.TemporaryDirectory(prefix='thinkthen-duckdb-source-') as folder:
+            env = child_env(base, Path(folder))
+            for statement in statements:
+                load = "LOAD '" + str(extension).replace("'", "''") + "'; "
+                done = subprocess.run([str(cli), '-unsigned', '-json', '-c', load + statement],
+                                      env=env, capture_output=True, text=True, timeout=60, check=False)
+                if done.returncode:
+                    results.append({'error': done.stderr})
+                else:
+                    import json
+                    rows = json.loads(done.stdout)
+                    results.append({'rows': [list(row.values()) for row in rows]})
+            stored(env.get('THINKTHEN_CACHE', ''))
+        return results
+    return run
+
+
 def check_hosts(cache, fetch):
     for version, source_commit, tools_commit in hosts():
         inputs = cache / version
@@ -125,8 +146,13 @@ def check_hosts(cache, fetch):
             test_env = child_env('http://127.0.0.1:9/generic/v1', Path(folder), keyless=True)
             subprocess.run(command + ['test_release'], cwd=build, env=test_env, check=True)
         extension = build / 'build/release/extension/thinkthen/thinkthen.duckdb_extension'
+        from named_options import check as named_check
+        from native_records import check as records_check
+        run = cli_runner(build / 'build/release/duckdb', extension)
+        named_check(run)
+        records_check(run)
         stage(version, extension)
-        print(f'DuckDB {version} at {source_commit}: source build and community SQL pass', flush=True)
+        print(f'DuckDB {version} at {source_commit}: community SQL, named options and native records pass', flush=True)
     return 0
 
 

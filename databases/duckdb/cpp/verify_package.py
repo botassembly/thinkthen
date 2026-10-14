@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import shutil
 import subprocess
 import sys
@@ -12,6 +13,18 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'tools'))
 from harness import child_env  # noqa: E402
 from inputs import selected, versions  # noqa: E402
 from verify_footer import verify  # noqa: E402
+
+
+def source_host_sha256(identity: dict[str, str]) -> str:
+    """Hash the raw-validated source build, independently of the supplied host."""
+    from source_hosts import prepare
+    build = Path(__file__).resolve().parents[1] / 'build/community' / identity['version']
+    inputs = (build / 'extension-ci-tools').resolve(strict=True).parent
+    prepare(inputs / 'source', identity['source_commit'], 'https://github.com/duckdb/duckdb.git', False,
+            identity['version'] if identity['version'] == versions()[0] else None)
+    prepare(inputs / 'tools', identity['tools_commit'], 'https://github.com/duckdb/extension-ci-tools.git', False)
+    control = build / 'build/release/duckdb'
+    return hashlib.sha256(control.read_bytes()).hexdigest()
 
 
 def python_load(path: Path, folder: Path, version: str, repository: bool = False) -> subprocess.CompletedProcess[str]:
@@ -57,6 +70,8 @@ def main() -> None:
     other = selected(args.different_version, args.target)
     assert args.version != args.different_version, 'refusal needs a different supported host'
     source = args.extension.resolve(strict=True)
+    for cli, item in ((args.matching_host, identity), (args.different_host, other)):
+        assert hashlib.sha256(cli.read_bytes()).hexdigest() == source_host_sha256(item), 'the stock host differs from its pin'
     with tempfile.TemporaryDirectory(prefix='thinkthen-duckdb-host-pin-') as scratch:
         for cli, item in ((args.matching_host, identity), (args.different_host, other)):
             observed = subprocess.check_output([str(cli), '-noheader', '-list', '-c',

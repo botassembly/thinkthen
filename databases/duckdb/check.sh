@@ -90,6 +90,8 @@ db.execute(f"LOAD \x27{sys.argv[1]}\x27")
 print("smoke:", {True: "true", False: "false", None: "null"}[value])' "$installed/thinkthen.duckdb_extension"
 	exit
 fi
+python3 tools/receipt_types.py --check
+python3 tools/request_helpers.py --check
 stock_cli() {
 	echo "== the stock CLI loads the extension"
 	scratch_dir home && scratch_dir cache && scratch_dir config
@@ -111,6 +113,9 @@ verify_selected_package() {
 			"$PY" cpp/verify_package.py --extension "$THINKTHEN_DUCKDB_EXTENSION" --version "$DUCKDB_VERSION" --target "$host_target" --matching-host "$CLI" --different-host "$other_tools/duckdb" --different-version "$other" --repository-extension "$HERE/build/artifacts/cpp/$other/$host_target/thinkthen.duckdb_extension"
 		fi
 	done
+}
+native_records() {
+	(cd tools && "$PY" -c 'from harness import run; from native_records import check; check(run)')
 }
 older_suites() {
     for verb in decide choose tag score filter rank find annotate recognize relate; do
@@ -139,6 +144,7 @@ if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
 		own_panic_hook "$THINKTHEN_DUCKDB_EXTENSION"
 		stock_cli
 		verify_selected_package installed
+		native_records
 		[ "$profile" = full ] || [ "$version" = "$DEFAULT_VERSION" ] || older_suites
 	done
 	select_host "$DEFAULT_VERSION"
