@@ -219,7 +219,10 @@ namespace tt::results {
     class TokenUsage;
     class Value;
     class Annotation : public Node {
-        public: using Node::Node;
+        Annotation(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const Presence<AnswerId>>> cached_answer_id_ = std::make_shared<std::shared_ptr<const Presence<AnswerId>>>();
         public: const Presence<AnswerId>& answer_id() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<std::vector<std::pair<std::string, AnnotationMember>>>>> cached_answers_ = std::make_shared<std::shared_ptr<const Presence<std::vector<std::pair<std::string,
@@ -247,12 +250,18 @@ namespace tt::results {
         public: const Presence<AnnotatedRow>& value() const;
     };
     class AnnotationMember : public Node {
-        public: using Node::Node;
+        AnnotationMember(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         std::optional<AnnotationMemberAnswerId> as_AnnotationMemberAnswerId() const;
         std::optional<AnnotationMemberFailureId> as_AnnotationMemberFailureId() const;
     };
     class AnnotationMemberAnswerId : public Node {
-        public: using Node::Node;
+        AnnotationMemberAnswerId(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const Presence<Answer>>> cached_answer_ = std::make_shared<std::shared_ptr<const Presence<Answer>>>();
         public: const Presence<Answer>& answer() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<AnswerId>>> cached_answer_id_ = std::make_shared<std::shared_ptr<const Presence<AnswerId>>>();
@@ -273,7 +282,10 @@ namespace tt::results {
         public: const Presence<Value>& value() const;
     };
     class AnnotationMemberFailureId : public Node {
-        public: using Node::Node;
+        AnnotationMemberFailureId(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const Presence<Failure>>> cached_failure_ = std::make_shared<std::shared_ptr<const Presence<Failure>>>();
         public: const Presence<Failure>& failure() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<FailureId>>> cached_failure_id_ = std::make_shared<std::shared_ptr<const Presence<FailureId>>>();
@@ -292,7 +304,10 @@ namespace tt::results {
         public: const Presence<Usage>& usage() const;
     };
     class AnnotationValue : public Node {
-        public: using Node::Node;
+        AnnotationValue(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         std::optional<AnnotationValueDecision> as_AnnotationValueDecision() const;
         std::optional<AnnotationValueChoice> as_AnnotationValueChoice() const;
         std::optional<AnnotationValueScore> as_AnnotationValueScore() const;
@@ -300,52 +315,76 @@ namespace tt::results {
         std::optional<AnnotationValueFailed> as_AnnotationValueFailed() const;
     };
     class AnnotationValueChoice : public Node {
-        public: using Node::Node;
+        AnnotationValueChoice(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_kind_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
         public: const Presence<std::string>& kind() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_value_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
         public: const Presence<std::string>& value() const;
     };
     class AnnotationValueDecision : public Node {
-        public: using Node::Node;
+        AnnotationValueDecision(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_kind_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
         public: const Presence<std::string>& kind() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<bool>>> cached_value_ = std::make_shared<std::shared_ptr<const Presence<bool>>>();
         public: const Presence<bool>& value() const;
     };
     class AnnotationValueFailed : public Node {
-        public: using Node::Node;
+        AnnotationValueFailed(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_kind_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
         public: const Presence<std::string>& kind() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<Failure>>> cached_value_ = std::make_shared<std::shared_ptr<const Presence<Failure>>>();
         public: const Presence<Failure>& value() const;
     };
     class AnnotationValueScore : public Node {
-        public: using Node::Node;
+        AnnotationValueScore(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_kind_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
         public: const Presence<std::string>& kind() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<double>>> cached_value_ = std::make_shared<std::shared_ptr<const Presence<double>>>();
         public: const Presence<double>& value() const;
     };
     class AnnotationValueTags : public Node {
-        public: using Node::Node;
+        AnnotationValueTags(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_kind_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
         public: const Presence<std::string>& kind() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<std::vector<std::string>>>> cached_value_ = std::make_shared<std::shared_ptr<const Presence<std::vector<std::string>>>>();
         public: const Presence<std::vector<std::string>>& value() const;
     };
     class AnswerId : public Node {
-        public: using Node::Node;
+        AnswerId(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const std::string>> cached_value_ = std::make_shared<std::shared_ptr<const std::string>>();
         public: const std::string& value() const;
     };
     class Answers : public Node {
-        public: using Node::Node;
+        Answers(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const Presence<std::vector<RelationMember>>>> cached_questions_ = std::make_shared<std::shared_ptr<const Presence<std::vector<RelationMember>>>>();
         public: const Presence<std::vector<RelationMember>>& questions() const;
     };
     class AtomicArrayOfString : public Node {
-        public: using Node::Node;
+        AtomicArrayOfString(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const Presence<Answer>>> cached_answer_ = std::make_shared<std::shared_ptr<const Presence<Answer>>>();
         public: const Presence<Answer>& answer() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<AnswerId>>> cached_answer_id_ = std::make_shared<std::shared_ptr<const Presence<AnswerId>>>();
@@ -374,7 +413,10 @@ namespace tt::results {
         public: const Presence<std::vector<std::string>>& value() const;
     };
     class AtomicDecideValue : public Node {
-        public: using Node::Node;
+        AtomicDecideValue(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const Presence<Answer>>> cached_answer_ = std::make_shared<std::shared_ptr<const Presence<Answer>>>();
         public: const Presence<Answer>& answer() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<AnswerId>>> cached_answer_id_ = std::make_shared<std::shared_ptr<const Presence<AnswerId>>>();
@@ -403,7 +445,10 @@ namespace tt::results {
         public: const Presence<DecideValue>& value() const;
     };
     class AtomicNonZeroUsize : public Node {
-        public: using Node::Node;
+        AtomicNonZeroUsize(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const Presence<Answer>>> cached_answer_ = std::make_shared<std::shared_ptr<const Presence<Answer>>>();
         public: const Presence<Answer>& answer() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<AnswerId>>> cached_answer_id_ = std::make_shared<std::shared_ptr<const Presence<AnswerId>>>();
@@ -432,7 +477,10 @@ namespace tt::results {
         public: const Presence<uint64_t>& value() const;
     };
     class AtomicNullableString : public Node {
-        public: using Node::Node;
+        AtomicNullableString(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const Presence<Answer>>> cached_answer_ = std::make_shared<std::shared_ptr<const Presence<Answer>>>();
         public: const Presence<Answer>& answer() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<AnswerId>>> cached_answer_id_ = std::make_shared<std::shared_ptr<const Presence<AnswerId>>>();
@@ -461,7 +509,10 @@ namespace tt::results {
         public: const Presence<std::string>& value() const;
     };
     class AtomicBoolean : public Node {
-        public: using Node::Node;
+        AtomicBoolean(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const Presence<Answer>>> cached_answer_ = std::make_shared<std::shared_ptr<const Presence<Answer>>>();
         public: const Presence<Answer>& answer() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<AnswerId>>> cached_answer_id_ = std::make_shared<std::shared_ptr<const Presence<AnswerId>>>();
@@ -490,7 +541,10 @@ namespace tt::results {
         public: const Presence<bool>& value() const;
     };
     class AtomicDouble : public Node {
-        public: using Node::Node;
+        AtomicDouble(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const Presence<Answer>>> cached_answer_ = std::make_shared<std::shared_ptr<const Presence<Answer>>>();
         public: const Presence<Answer>& answer() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<AnswerId>>> cached_answer_id_ = std::make_shared<std::shared_ptr<const Presence<AnswerId>>>();
@@ -519,7 +573,10 @@ namespace tt::results {
         public: const Presence<double>& value() const;
     };
     class Attempt : public Node {
-        public: using Node::Node;
+        Attempt(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const Presence<uint64_t>>> cached_ordinal_ = std::make_shared<std::shared_ptr<const Presence<uint64_t>>>();
         public: const Presence<uint64_t>& ordinal() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<AttemptOutcome>>> cached_outcome_ = std::make_shared<std::shared_ptr<const Presence<AttemptOutcome>>>();
@@ -538,25 +595,37 @@ namespace tt::results {
         public: const Presence<uint64_t>& wall_ms() const;
     };
     class Batch : public Node {
-        public: using Node::Node;
+        Batch(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const std::variant<uint64_t, std::string>>> cached_value_ = std::make_shared<std::shared_ptr<const std::variant<uint64_t,
         std::string>>>();
         public: const std::variant<uint64_t, std::string>& value() const;
     };
     class BoundaryMode : public Node {
-        public: using Node::Node;
+        BoundaryMode(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const std::string>> cached_value_ = std::make_shared<std::shared_ptr<const std::string>>();
         public: const std::string& value() const;
     };
     class BoundaryOdds : public Node {
-        public: using Node::Node;
+        BoundaryOdds(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const Presence<std::vector<PieceOdds>>>> cached_pieces_ = std::make_shared<std::shared_ptr<const Presence<std::vector<PieceOdds>>>>();
         public: const Presence<std::vector<PieceOdds>>& pieces() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<std::vector<BoundaryProposal>>>> cached_proposals_ = std::make_shared<std::shared_ptr<const Presence<std::vector<BoundaryProposal>>>>();
         public: const Presence<std::vector<BoundaryProposal>>& proposals() const;
     };
     class BoundaryProposal : public Node {
-        public: using Node::Node;
+        BoundaryProposal(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const Presence<uint64_t>>> cached_end_ = std::make_shared<std::shared_ptr<const Presence<uint64_t>>>();
         public: const Presence<uint64_t>& end() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<uint64_t>>> cached_length_ = std::make_shared<std::shared_ptr<const Presence<uint64_t>>>();
@@ -569,31 +638,46 @@ namespace tt::results {
         public: const Presence<std::string>& text() const;
     };
     class CallError : public Node {
-        public: using Node::Node;
+        CallError(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const Presence<Error>>> cached_error_ = std::make_shared<std::shared_ptr<const Presence<Error>>>();
         public: const Presence<Error>& error() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<Facts>>> cached_facts_ = std::make_shared<std::shared_ptr<const Presence<Facts>>>();
         public: const Presence<Facts>& facts() const;
     };
     class CallId : public Node {
-        public: using Node::Node;
+        CallId(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const std::string>> cached_value_ = std::make_shared<std::shared_ptr<const std::string>>();
         public: const std::string& value() const;
     };
     class DecideValue : public Node {
-        public: using Node::Node;
+        DecideValue(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const Data>> cached_value_ = std::make_shared<std::shared_ptr<const Data>>();
         public: const Data& value() const;
     };
     class EntityDocument : public Node {
-        public: using Node::Node;
+        EntityDocument(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_kind_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
         public: const Presence<std::string>& kind() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_name_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
         public: const Presence<std::string>& name() const;
     };
     class Error : public Node {
-        public: using Node::Node;
+        Error(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const Presence<EstimatedInputDenial>>> cached_estimated_input_denial_ = std::make_shared<std::shared_ptr<const Presence<EstimatedInputDenial>>>();
         public: const Presence<EstimatedInputDenial>& estimated_input_denial() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<FailureKind>>> cached_kind_ = std::make_shared<std::shared_ptr<const Presence<FailureKind>>>();
@@ -608,27 +692,39 @@ namespace tt::results {
         public: const Presence<Stopped>& stopped() const;
     };
     class EstimatedInputDenial : public Node {
-        public: using Node::Node;
+        EstimatedInputDenial(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         std::optional<EstimatedInputDenialInitialRequest> as_EstimatedInputDenialInitialRequest() const;
         std::optional<EstimatedInputDenialAdditionalRequest> as_EstimatedInputDenialAdditionalRequest() const;
         std::optional<EstimatedInputDenialRetry> as_EstimatedInputDenialRetry() const;
     };
     class EstimatedInputDenialAdditionalRequest : public Node {
-        public: using Node::Node;
+        EstimatedInputDenialAdditionalRequest(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_kind_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
         public: const Presence<std::string>& kind() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<uint64_t>>> cached_limit_ = std::make_shared<std::shared_ptr<const Presence<uint64_t>>>();
         public: const Presence<uint64_t>& limit() const;
     };
     class EstimatedInputDenialInitialRequest : public Node {
-        public: using Node::Node;
+        EstimatedInputDenialInitialRequest(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_kind_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
         public: const Presence<std::string>& kind() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<uint64_t>>> cached_limit_ = std::make_shared<std::shared_ptr<const Presence<uint64_t>>>();
         public: const Presence<uint64_t>& limit() const;
     };
     class EstimatedInputDenialRetry : public Node {
-        public: using Node::Node;
+        EstimatedInputDenialRetry(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_kind_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
         public: const Presence<std::string>& kind() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<uint64_t>>> cached_last_status_ = std::make_shared<std::shared_ptr<const Presence<uint64_t>>>();
@@ -637,7 +733,10 @@ namespace tt::results {
         public: const Presence<uint64_t>& limit() const;
     };
     class Facts : public Node {
-        public: using Node::Node;
+        Facts(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const Presence<std::vector<Attempt>>>> cached_attempts_ = std::make_shared<std::shared_ptr<const Presence<std::vector<Attempt>>>>();
         public: const Presence<std::vector<Attempt>>& attempts() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<uint64_t>>> cached_cache_answers_ = std::make_shared<std::shared_ptr<const Presence<uint64_t>>>();
@@ -670,12 +769,18 @@ namespace tt::results {
         public: const Presence<PersistenceObservation>& usage_persistence() const;
     };
     class FailureId : public Node {
-        public: using Node::Node;
+        FailureId(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const std::string>> cached_value_ = std::make_shared<std::shared_ptr<const std::string>>();
         public: const std::string& value() const;
     };
     class Find : public Node {
-        public: using Node::Node;
+        Find(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const Presence<FindAnswer>>> cached_answer_ = std::make_shared<std::shared_ptr<const Presence<FindAnswer>>>();
         public: const Presence<FindAnswer>& answer() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<AnswerId>>> cached_answer_id_ = std::make_shared<std::shared_ptr<const Presence<AnswerId>>>();
@@ -704,7 +809,10 @@ namespace tt::results {
         public: const Presence<Data>& value() const;
     };
     class FindCandidate : public Node {
-        public: using Node::Node;
+        FindCandidate(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const Presence<uint64_t>>> cached_index_ = std::make_shared<std::shared_ptr<const Presence<uint64_t>>>();
         public: const Presence<uint64_t>& index() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<Data>>> cached_input_ = std::make_shared<std::shared_ptr<const Presence<Data>>>();
@@ -715,7 +823,10 @@ namespace tt::results {
         public: const Presence<PhysicalSource>& source() const;
     };
     class Image : public Node {
-        public: using Node::Node;
+        Image(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_base64_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
         public: const Presence<std::string>& base64() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<uint32_t>>> cached_height_ = std::make_shared<std::shared_ptr<const Presence<uint32_t>>>();
@@ -726,12 +837,18 @@ namespace tt::results {
         public: const Presence<uint32_t>& width() const;
     };
     class ImageMedia : public Node {
-        public: using Node::Node;
+        ImageMedia(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const std::string>> cached_value_ = std::make_shared<std::shared_ptr<const std::string>>();
         public: const std::string& value() const;
     };
     class ImmediateFacts : public Node {
-        public: using Node::Node;
+        ImmediateFacts(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const Presence<std::vector<Attempt>>>> cached_attempts_ = std::make_shared<std::shared_ptr<const Presence<std::vector<Attempt>>>>();
         public: const Presence<std::vector<Attempt>>& attempts() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<uint64_t>>> cached_cache_answers_ = std::make_shared<std::shared_ptr<const Presence<uint64_t>>>();
@@ -764,12 +881,18 @@ namespace tt::results {
         public: const Presence<PersistenceObservation>& usage_persistence() const;
     };
     class InputDeclaration : public Node {
-        public: using Node::Node;
+        InputDeclaration(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         std::optional<InputDeclarationStringRoot> as_InputDeclarationStringRoot() const;
         std::optional<InputDeclarationObjectRoot> as_InputDeclarationObjectRoot() const;
     };
     class InputDeclarationObjectRoot : public Node {
-        public: using Node::Node;
+        InputDeclarationObjectRoot(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const Presence<std::vector<std::pair<std::string, InputPropertyType>>>>> cached_properties_ = std::make_shared<std::shared_ptr<const Presence<std::vector<std::pair<std::string,
         InputPropertyType>>>>>();
         public: const Presence<std::vector<std::pair<std::string, InputPropertyType>>>& properties() const;
@@ -779,48 +902,72 @@ namespace tt::results {
         public: const Presence<ObjectType>& type() const;
     };
     class InputDeclarationStringRoot : public Node {
-        public: using Node::Node;
+        InputDeclarationStringRoot(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const Presence<StringType>>> cached_type_ = std::make_shared<std::shared_ptr<const Presence<StringType>>>();
         public: const Presence<StringType>& type() const;
     };
     class InputPropertyType : public Node {
-        public: using Node::Node;
+        InputPropertyType(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         std::optional<InputPropertyTypeString> as_InputPropertyTypeString() const;
         std::optional<InputPropertyTypeNumber> as_InputPropertyTypeNumber() const;
         std::optional<InputPropertyTypeBoolean> as_InputPropertyTypeBoolean() const;
         std::optional<InputPropertyTypeArray> as_InputPropertyTypeArray() const;
     };
     class InputPropertyTypeArray : public Node {
-        public: using Node::Node;
+        InputPropertyTypeArray(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const Presence<StringRoot>>> cached_items_ = std::make_shared<std::shared_ptr<const Presence<StringRoot>>>();
         public: const Presence<StringRoot>& items() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_type_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
         public: const Presence<std::string>& type() const;
     };
     class InputPropertyTypeBoolean : public Node {
-        public: using Node::Node;
+        InputPropertyTypeBoolean(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_type_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
         public: const Presence<std::string>& type() const;
     };
     class InputPropertyTypeNumber : public Node {
-        public: using Node::Node;
+        InputPropertyTypeNumber(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_type_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
         public: const Presence<std::string>& type() const;
     };
     class InputPropertyTypeString : public Node {
-        public: using Node::Node;
+        InputPropertyTypeString(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_type_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
         public: const Presence<std::string>& type() const;
     };
     class Label : public Node {
-        public: using Node::Node;
+        Label(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const Presence<Data>>> cached_description_ = std::make_shared<std::shared_ptr<const Presence<Data>>>();
         public: const Presence<Data>& description() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_name_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
         public: const Presence<std::string>& name() const;
     };
     class Meta : public Node {
-        public: using Node::Node;
+        Meta(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_answered_by_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
         public: const Presence<std::string>& answered_by() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<std::vector<Attempt>>>> cached_attempts_ = std::make_shared<std::shared_ptr<const Presence<std::vector<Attempt>>>>();
@@ -861,7 +1008,10 @@ namespace tt::results {
         public: const Presence<Usage>& usage() const;
     };
     class ObjectRoot : public Node {
-        public: using Node::Node;
+        ObjectRoot(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const Presence<std::vector<std::pair<std::string, InputPropertyType>>>>> cached_properties_ = std::make_shared<std::shared_ptr<const Presence<std::vector<std::pair<std::string,
         InputPropertyType>>>>>();
         public: const Presence<std::vector<std::pair<std::string, InputPropertyType>>>& properties() const;
@@ -871,37 +1021,58 @@ namespace tt::results {
         public: const Presence<ObjectType>& type() const;
     };
     class ObjectType : public Node {
-        public: using Node::Node;
+        ObjectType(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const std::string>> cached_value_ = std::make_shared<std::shared_ptr<const std::string>>();
         public: const std::string& value() const;
     };
     class Observation : public Node {
-        public: using Node::Node;
+        Observation(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         std::optional<ObservationObservationId> as_ObservationObservationId() const;
         std::optional<ObservationFailureId> as_ObservationFailureId() const;
     };
     class ObservationId : public Node {
-        public: using Node::Node;
+        ObservationId(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const std::string>> cached_value_ = std::make_shared<std::shared_ptr<const std::string>>();
         public: const std::string& value() const;
     };
     class ObservationFailureId : public Node {
-        public: using Node::Node;
+        ObservationFailureId(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const Presence<FailureId>>> cached_failure_id_ = std::make_shared<std::shared_ptr<const Presence<FailureId>>>();
         public: const Presence<FailureId>& failure_id() const;
     };
     class ObservationObservationId : public Node {
-        public: using Node::Node;
+        ObservationObservationId(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const Presence<ObservationId>>> cached_observation_id_ = std::make_shared<std::shared_ptr<const Presence<ObservationId>>>();
         public: const Presence<ObservationId>& observation_id() const;
     };
     class Origin : public Node {
-        public: using Node::Node;
+        Origin(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const std::string>> cached_value_ = std::make_shared<std::shared_ptr<const std::string>>();
         public: const std::string& value() const;
     };
     class PersistenceObservation : public Node {
-        public: using Node::Node;
+        PersistenceObservation(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_advice_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
         public: const Presence<std::string>& advice() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_observed_at_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
@@ -910,7 +1081,10 @@ namespace tt::results {
         public: const Presence<UsagePersistence>& state() const;
     };
     class PhysicalSource : public Node {
-        public: using Node::Node;
+        PhysicalSource(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_file_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
         public: const Presence<std::string>& file() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<uint64_t>>> cached_first_line_ = std::make_shared<std::shared_ptr<const Presence<uint64_t>>>();
@@ -919,7 +1093,10 @@ namespace tt::results {
         public: const Presence<uint64_t>& last_line() const;
     };
     class Position : public Node {
-        public: using Node::Node;
+        Position(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_file_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
         public: const Presence<std::string>& file() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<uint64_t>>> cached_first_ = std::make_shared<std::shared_ptr<const Presence<uint64_t>>>();
@@ -930,12 +1107,18 @@ namespace tt::results {
         public: const Presence<uint64_t>& last() const;
     };
     class QuestionName : public Node {
-        public: using Node::Node;
+        QuestionName(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const std::string>> cached_value_ = std::make_shared<std::shared_ptr<const std::string>>();
         public: const std::string& value() const;
     };
     class QuestionSource : public Node {
-        public: using Node::Node;
+        QuestionSource(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_answered_by_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
         public: const Presence<std::string>& answered_by() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<uint32_t>>> cached_batch_size_ = std::make_shared<std::shared_ptr<const Presence<uint32_t>>>();
@@ -944,14 +1127,20 @@ namespace tt::results {
         public: const Presence<Origin>& origin() const;
     };
     class RankMember : public Node {
-        public: using Node::Node;
+        RankMember(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_name_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
         public: const Presence<std::string>& name() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<RankMemberResult>>> cached_result_ = std::make_shared<std::shared_ptr<const Presence<RankMemberResult>>>();
         public: const Presence<RankMemberResult>& result() const;
     };
     class RankMemberResult : public Node {
-        public: using Node::Node;
+        RankMemberResult(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const Presence<Answer>>> cached_answer_ = std::make_shared<std::shared_ptr<const Presence<Answer>>>();
         public: const Presence<Answer>& answer() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<AnswerId>>> cached_answer_id_ = std::make_shared<std::shared_ptr<const Presence<AnswerId>>>();
@@ -972,7 +1161,10 @@ namespace tt::results {
         public: const Presence<uint64_t>& value() const;
     };
     class Recognition : public Node {
-        public: using Node::Node;
+        Recognition(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const Presence<RecognitionOdds>>> cached_answer_ = std::make_shared<std::shared_ptr<const Presence<RecognitionOdds>>>();
         public: const Presence<RecognitionOdds>& answer() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<AnswerId>>> cached_answer_id_ = std::make_shared<std::shared_ptr<const Presence<AnswerId>>>();
@@ -1001,7 +1193,10 @@ namespace tt::results {
         public: const Presence<Recognize>& value() const;
     };
     class RecognitionEdgeDocument : public Node {
-        public: using Node::Node;
+        RecognitionEdgeDocument(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const Presence<bool>>> cached_either_ = std::make_shared<std::shared_ptr<const Presence<bool>>>();
         public: const Presence<bool>& either() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<double>>> cached_probability_ = std::make_shared<std::shared_ptr<const Presence<double>>>();
@@ -1014,24 +1209,36 @@ namespace tt::results {
         public: const Presence<Entity>& target() const;
     };
     class RecognitionMode : public Node {
-        public: using Node::Node;
+        RecognitionMode(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const std::string>> cached_value_ = std::make_shared<std::shared_ptr<const std::string>>();
         public: const std::string& value() const;
     };
     class RecognitionOdds : public Node {
-        public: using Node::Node;
+        RecognitionOdds(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         std::optional<RecognitionOddsRecognizeAnswer> as_RecognitionOddsRecognizeAnswer() const;
         std::optional<RecognitionOddsBoundaryOdds> as_RecognitionOddsBoundaryOdds() const;
     };
     class RecognitionOddsBoundaryOdds : public Node {
-        public: using Node::Node;
+        RecognitionOddsBoundaryOdds(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const Presence<std::vector<PieceOdds>>>> cached_pieces_ = std::make_shared<std::shared_ptr<const Presence<std::vector<PieceOdds>>>>();
         public: const Presence<std::vector<PieceOdds>>& pieces() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<std::vector<BoundaryProposal>>>> cached_proposals_ = std::make_shared<std::shared_ptr<const Presence<std::vector<BoundaryProposal>>>>();
         public: const Presence<std::vector<BoundaryProposal>>& proposals() const;
     };
     class RecognitionOddsRecognizeAnswer : public Node {
-        public: using Node::Node;
+        RecognitionOddsRecognizeAnswer(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const Presence<std::vector<NameOdds>>>> cached_names_ = std::make_shared<std::shared_ptr<const Presence<std::vector<NameOdds>>>>();
         public: const Presence<std::vector<NameOdds>>& names() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<std::vector<PairOdds>>>> cached_pairs_ = std::make_shared<std::shared_ptr<const Presence<std::vector<PairOdds>>>>();
@@ -1042,7 +1249,10 @@ namespace tt::results {
         public: const Presence<std::vector<RecognitionProposal>>& proposals() const;
     };
     class RecognitionProposal : public Node {
-        public: using Node::Node;
+        RecognitionProposal(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const Presence<uint64_t>>> cached_end_ = std::make_shared<std::shared_ptr<const Presence<uint64_t>>>();
         public: const Presence<uint64_t>& end() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<bool>>> cached_kept_ = std::make_shared<std::shared_ptr<const Presence<bool>>>();
@@ -1059,7 +1269,10 @@ namespace tt::results {
         public: const Presence<double>& strength() const;
     };
     class RecognitionStageContext : public Node {
-        public: using Node::Node;
+        RecognitionStageContext(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_boundary_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
         public: const Presence<std::string>& boundary() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_kind_edge_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
@@ -1068,7 +1281,10 @@ namespace tt::results {
         public: const Presence<std::string>& relation() const;
     };
     class Relation : public Node {
-        public: using Node::Node;
+        Relation(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const Presence<Answers>>> cached_answer_ = std::make_shared<std::shared_ptr<const Presence<Answers>>>();
         public: const Presence<Answers>& answer() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<AnswerId>>> cached_answer_id_ = std::make_shared<std::shared_ptr<const Presence<AnswerId>>>();
@@ -1097,24 +1313,36 @@ namespace tt::results {
         public: const Presence<std::vector<RelatedEntityEdge>>& value() const;
     };
     class RelationDirection : public Node {
-        public: using Node::Node;
+        RelationDirection(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const std::string>> cached_value_ = std::make_shared<std::shared_ptr<const std::string>>();
         public: const std::string& value() const;
     };
     class RelationEndpoint : public Node {
-        public: using Node::Node;
+        RelationEndpoint(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         std::optional<RelationEndpointRelatedEntity> as_RelationEndpointRelatedEntity() const;
         std::optional<RelationEndpointSource> as_RelationEndpointSource() const;
     };
     class RelationEndpointRelatedEntity : public Node {
-        public: using Node::Node;
+        RelationEndpointRelatedEntity(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_kind_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
         public: const Presence<std::string>& kind() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_name_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
         public: const Presence<std::string>& name() const;
     };
     class RelationEndpointSource : public Node {
-        public: using Node::Node;
+        RelationEndpointSource(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_file_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
         public: const Presence<std::string>& file() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<uint64_t>>> cached_first_line_ = std::make_shared<std::shared_ptr<const Presence<uint64_t>>>();
@@ -1131,12 +1359,18 @@ namespace tt::results {
         public: const Presence<Data>& record() const;
     };
     class RelationMember : public Node {
-        public: using Node::Node;
+        RelationMember(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         std::optional<RelationMemberAnswerId> as_RelationMemberAnswerId() const;
         std::optional<RelationMemberFailureId> as_RelationMemberFailureId() const;
     };
     class RelationMemberAnswerId : public Node {
-        public: using Node::Node;
+        RelationMemberAnswerId(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const Presence<RelationDirection>>> cached_direction_ = std::make_shared<std::shared_ptr<const Presence<RelationDirection>>>();
         public: const Presence<RelationDirection>& direction() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<RelationMethod>>> cached_method_ = std::make_shared<std::shared_ptr<const Presence<RelationMethod>>>();
@@ -1172,7 +1406,10 @@ namespace tt::results {
         std::string source_name() const;
     };
     class RelationMemberFailureId : public Node {
-        public: using Node::Node;
+        RelationMemberFailureId(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const Presence<RelationDirection>>> cached_direction_ = std::make_shared<std::shared_ptr<const Presence<RelationDirection>>>();
         public: const Presence<RelationDirection>& direction() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<RelationMethod>>> cached_method_ = std::make_shared<std::shared_ptr<const Presence<RelationMethod>>>();
@@ -1204,50 +1441,77 @@ namespace tt::results {
         std::string source_name() const;
     };
     class RelationMethod : public Node {
-        public: using Node::Node;
+        RelationMethod(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const std::string>> cached_value_ = std::make_shared<std::shared_ptr<const std::string>>();
         public: const std::string& value() const;
     };
     class RequestFunction : public Node {
-        public: using Node::Node;
+        RequestFunction(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const std::string>> cached_value_ = std::make_shared<std::shared_ptr<const std::string>>();
         public: const std::string& value() const;
     };
     class SdkRequestId : public Node {
-        public: using Node::Node;
+        SdkRequestId(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const std::string>> cached_value_ = std::make_shared<std::shared_ptr<const std::string>>();
         public: const std::string& value() const;
     };
     class SendBudgetDenial : public Node {
-        public: using Node::Node;
+        SendBudgetDenial(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         std::optional<SendBudgetDenialBeforeFirstSend> as_SendBudgetDenialBeforeFirstSend() const;
         std::optional<SendBudgetDenialBeforeAdditionalSend> as_SendBudgetDenialBeforeAdditionalSend() const;
         std::optional<SendBudgetDenialBeforeRetry> as_SendBudgetDenialBeforeRetry() const;
     };
     class SendBudgetDenialBeforeAdditionalSend : public Node {
-        public: using Node::Node;
+        SendBudgetDenialBeforeAdditionalSend(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_kind_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
         public: const Presence<std::string>& kind() const;
     };
     class SendBudgetDenialBeforeFirstSend : public Node {
-        public: using Node::Node;
+        SendBudgetDenialBeforeFirstSend(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_kind_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
         public: const Presence<std::string>& kind() const;
     };
     class SendBudgetDenialBeforeRetry : public Node {
-        public: using Node::Node;
+        SendBudgetDenialBeforeRetry(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_kind_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
         public: const Presence<std::string>& kind() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<uint64_t>>> cached_last_status_ = std::make_shared<std::shared_ptr<const Presence<uint64_t>>>();
         public: const Presence<uint64_t>& last_status() const;
     };
     class StopCause : public Node {
-        public: using Node::Node;
+        StopCause(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const std::string>> cached_value_ = std::make_shared<std::shared_ptr<const std::string>>();
         public: const std::string& value() const;
     };
     class Stopped : public Node {
-        public: using Node::Node;
+        Stopped(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const Presence<uint64_t>>> cached_at_ = std::make_shared<std::shared_ptr<const Presence<uint64_t>>>();
         public: const Presence<uint64_t>& at() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<StopCause>>> cached_cause_ = std::make_shared<std::shared_ptr<const Presence<StopCause>>>();
@@ -1258,44 +1522,68 @@ namespace tt::results {
         public: const Presence<uint64_t>& status() const;
     };
     class StringRoot : public Node {
-        public: using Node::Node;
+        StringRoot(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const Presence<StringType>>> cached_type_ = std::make_shared<std::shared_ptr<const Presence<StringType>>>();
         public: const Presence<StringType>& type() const;
     };
     class StringType : public Node {
-        public: using Node::Node;
+        StringType(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const std::string>> cached_value_ = std::make_shared<std::shared_ptr<const std::string>>();
         public: const std::string& value() const;
     };
     class Usage : public Node {
-        public: using Node::Node;
+        Usage(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const Presence<uint64_t>>> cached_input_tokens_ = std::make_shared<std::shared_ptr<const Presence<uint64_t>>>();
         public: const Presence<uint64_t>& input_tokens() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<uint64_t>>> cached_output_tokens_ = std::make_shared<std::shared_ptr<const Presence<uint64_t>>>();
         public: const Presence<uint64_t>& output_tokens() const;
     };
     class UsagePersistence : public Node {
-        public: using Node::Node;
+        UsagePersistence(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const std::string>> cached_value_ = std::make_shared<std::shared_ptr<const std::string>>();
         public: const std::string& value() const;
     };
     class Verb : public Node {
-        public: using Node::Node;
+        Verb(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const std::string>> cached_value_ = std::make_shared<std::shared_ptr<const std::string>>();
         public: const std::string& value() const;
     };
     class Version : public Node {
-        public: using Node::Node;
+        Version(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const std::string>> cached_value_ = std::make_shared<std::shared_ptr<const std::string>>();
         public: const std::string& value() const;
     };
     class WordingVersion : public Node {
-        public: using Node::Node;
+        WordingVersion(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const uint32_t>> cached_value_ = std::make_shared<std::shared_ptr<const uint32_t>>();
         public: const uint32_t& value() const;
     };
     class AnnotatedField : public Node {
-        public: using Node::Node;
+        AnnotatedField(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const std::variant<bool, std::nullptr_t, std::string,
         std::vector<std::string>, double, Failed>>> cached_value_ = std::make_shared<std::shared_ptr<const std::variant<bool,
         std::nullptr_t, std::string, std::vector<std::string>, double, Failed>>>();
@@ -1303,20 +1591,29 @@ namespace tt::results {
         Failed>& value() const;
     };
     class AnnotatedRow : public Node {
-        public: using Node::Node;
+        AnnotatedRow(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const std::vector<std::pair<std::string, AnnotatedField>>>> cached_value_ = std::make_shared<std::shared_ptr<const std::vector<std::pair<std::string,
         AnnotatedField>>>>();
         public: const std::vector<std::pair<std::string, AnnotatedField>>& value() const;
     };
     class Answer : public Node {
-        public: using Node::Node;
+        Answer(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         std::optional<AnswerYesNo> as_AnswerYesNo() const;
         std::optional<AnswerChoice> as_AnswerChoice() const;
         std::optional<AnswerTag> as_AnswerTag() const;
         std::optional<AnswerScore> as_AnswerScore() const;
     };
     class AnswerChoice : public Node {
-        public: using Node::Node;
+        AnswerChoice(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const Presence<double>>> cached_confidence_ = std::make_shared<std::shared_ptr<const Presence<double>>>();
         public: const Presence<double>& confidence() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_kind_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
@@ -1328,7 +1625,10 @@ namespace tt::results {
         public: const Presence<std::vector<std::pair<std::string, double>>>& probabilities() const;
     };
     class AnswerScore : public Node {
-        public: using Node::Node;
+        AnswerScore(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const Presence<double>>> cached_confidence_ = std::make_shared<std::shared_ptr<const Presence<double>>>();
         public: const Presence<double>& confidence() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_kind_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
@@ -1340,7 +1640,10 @@ namespace tt::results {
         public: const Presence<std::vector<std::pair<std::string, double>>>& probabilities() const;
     };
     class AnswerTag : public Node {
-        public: using Node::Node;
+        AnswerTag(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_kind_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
         public: const Presence<std::string>& kind() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<std::vector<std::pair<std::string, double>>>>> cached_probabilities_ = std::make_shared<std::shared_ptr<const Presence<std::vector<std::pair<std::string,
@@ -1348,32 +1651,47 @@ namespace tt::results {
         public: const Presence<std::vector<std::pair<std::string, double>>>& probabilities() const;
     };
     class AnswerYesNo : public Node {
-        public: using Node::Node;
+        AnswerYesNo(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_kind_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
         public: const Presence<std::string>& kind() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<double>>> cached_probability_ = std::make_shared<std::shared_ptr<const Presence<double>>>();
         public: const Presence<double>& probability() const;
     };
     class AttemptOutcome : public Node {
-        public: using Node::Node;
+        AttemptOutcome(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const std::string>> cached_value_ = std::make_shared<std::shared_ptr<const std::string>>();
         public: const std::string& value() const;
     };
     class BatchSetting : public Node {
-        public: using Node::Node;
+        BatchSetting(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const std::variant<uint64_t, std::string>>> cached_value_ = std::make_shared<std::shared_ptr<const std::variant<uint64_t,
         std::string>>>();
         public: const std::variant<uint64_t, std::string>& value() const;
     };
     class BatchWarning : public Node {
-        public: using Node::Node;
+        BatchWarning(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const Presence<BatchSetting>>> cached_running_ = std::make_shared<std::shared_ptr<const Presence<BatchSetting>>>();
         public: const Presence<BatchSetting>& running() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<BatchSetting>>> cached_tuned_for_ = std::make_shared<std::shared_ptr<const Presence<BatchSetting>>>();
         public: const Presence<BatchSetting>& tuned_for() const;
     };
     class Entity : public Node {
-        public: using Node::Node;
+        Entity(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const Presence<uint64_t>>> cached_end_ = std::make_shared<std::shared_ptr<const Presence<uint64_t>>>();
         public: const Presence<uint64_t>& end() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_file_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
@@ -1394,7 +1712,10 @@ namespace tt::results {
         public: const Presence<std::string>& text() const;
     };
     class EntityEdge : public Node {
-        public: using Node::Node;
+        EntityEdge(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const Presence<bool>>> cached_either_ = std::make_shared<std::shared_ptr<const Presence<bool>>>();
         public: const Presence<bool>& either() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<double>>> cached_probability_ = std::make_shared<std::shared_ptr<const Presence<double>>>();
@@ -1407,29 +1728,44 @@ namespace tt::results {
         public: const Presence<Entity>& target() const;
     };
     class Failed : public Node {
-        public: using Node::Node;
+        Failed(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const Presence<Failure>>> cached_failed_ = std::make_shared<std::shared_ptr<const Presence<Failure>>>();
         public: const Presence<Failure>& failed() const;
     };
     class Failure : public Node {
-        public: using Node::Node;
+        Failure(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const Presence<FailureCause>>> cached_cause_ = std::make_shared<std::shared_ptr<const Presence<FailureCause>>>();
         public: const Presence<FailureCause>& cause() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_kind_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
         public: const Presence<std::string>& kind() const;
     };
     class FailureCause : public Node {
-        public: using Node::Node;
+        FailureCause(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const std::string>> cached_value_ = std::make_shared<std::shared_ptr<const std::string>>();
         public: const std::string& value() const;
     };
     class FailureKind : public Node {
-        public: using Node::Node;
+        FailureKind(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const std::string>> cached_value_ = std::make_shared<std::shared_ptr<const std::string>>();
         public: const std::string& value() const;
     };
     class FindAnswer : public Node {
-        public: using Node::Node;
+        FindAnswer(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const Presence<double>>> cached_confidence_ = std::make_shared<std::shared_ptr<const Presence<double>>>();
         public: const Presence<double>& confidence() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_kind_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
@@ -1441,7 +1777,10 @@ namespace tt::results {
         public: const Presence<std::vector<std::pair<std::string, double>>>& probabilities() const;
     };
     class FindQuestionDocument : public Node {
-        public: using Node::Node;
+        FindQuestionDocument(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const Presence<Batch>>> cached_batch_ = std::make_shared<std::shared_ptr<const Presence<Batch>>>();
         public: const Presence<Batch>& batch() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<InputDeclaration>>> cached_context_schema_ = std::make_shared<std::shared_ptr<const Presence<InputDeclaration>>>();
@@ -1468,7 +1807,10 @@ namespace tt::results {
         public: const Presence<WordingVersion>& wording_version() const;
     };
     class NameOdds : public Node {
-        public: using Node::Node;
+        NameOdds(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const Presence<std::vector<std::pair<std::string, double>>>>> cached_edges_ = std::make_shared<std::shared_ptr<const Presence<std::vector<std::pair<std::string,
         double>>>>>();
         public: const Presence<std::vector<std::pair<std::string, double>>>& edges() const;
@@ -1481,7 +1823,10 @@ namespace tt::results {
         public: const Presence<uint64_t>& start() const;
     };
     class PairOdds : public Node {
-        public: using Node::Node;
+        PairOdds(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const Presence<double>>> cached_probability_ = std::make_shared<std::shared_ptr<const Presence<double>>>();
         public: const Presence<double>& probability() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_relation_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
@@ -1492,7 +1837,10 @@ namespace tt::results {
         public: const Presence<Place>& target() const;
     };
     class PieceOdds : public Node {
-        public: using Node::Node;
+        PieceOdds(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const Presence<uint64_t>>> cached_end_ = std::make_shared<std::shared_ptr<const Presence<uint64_t>>>();
         public: const Presence<uint64_t>& end() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<uint64_t>>> cached_start_ = std::make_shared<std::shared_ptr<const Presence<uint64_t>>>();
@@ -1502,14 +1850,20 @@ namespace tt::results {
         public: const Presence<std::vector<std::pair<std::string, double>>>& tags() const;
     };
     class Place : public Node {
-        public: using Node::Node;
+        Place(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const Presence<uint64_t>>> cached_end_ = std::make_shared<std::shared_ptr<const Presence<uint64_t>>>();
         public: const Presence<uint64_t>& end() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<uint64_t>>> cached_start_ = std::make_shared<std::shared_ptr<const Presence<uint64_t>>>();
         public: const Presence<uint64_t>& start() const;
     };
     class Plan : public Node {
-        public: using Node::Node;
+        Plan(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const Presence<uint64_t>>> cached_estimated_bytes_ = std::make_shared<std::shared_ptr<const Presence<uint64_t>>>();
         public: const Presence<uint64_t>& estimated_bytes() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<TokenBand>>> cached_estimated_input_tokens_ = std::make_shared<std::shared_ptr<const Presence<TokenBand>>>();
@@ -1530,21 +1884,30 @@ namespace tt::results {
         public: const Presence<bool>& upper_bound() const;
     };
     class ProfileWarning : public Node {
-        public: using Node::Node;
+        ProfileWarning(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_running_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
         public: const Presence<std::string>& running() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_tuned_for_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
         public: const Presence<std::string>& tuned_for() const;
     };
     class QuestionDocument : public Node {
-        public: using Node::Node;
+        QuestionDocument(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         std::optional<QuestionDocumentDecide> as_QuestionDocumentDecide() const;
         std::optional<QuestionDocumentChoose> as_QuestionDocumentChoose() const;
         std::optional<QuestionDocumentTag> as_QuestionDocumentTag() const;
         std::optional<QuestionDocumentScore> as_QuestionDocumentScore() const;
     };
     class QuestionDocumentChoose : public Node {
-        public: using Node::Node;
+        QuestionDocumentChoose(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const Presence<Batch>>> cached_batch_ = std::make_shared<std::shared_ptr<const Presence<Batch>>>();
         public: const Presence<Batch>& batch() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<InputDeclaration>>> cached_context_schema_ = std::make_shared<std::shared_ptr<const Presence<InputDeclaration>>>();
@@ -1571,7 +1934,10 @@ namespace tt::results {
         public: const Presence<std::string>& verb() const;
     };
     class QuestionDocumentDecide : public Node {
-        public: using Node::Node;
+        QuestionDocumentDecide(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const Presence<Batch>>> cached_batch_ = std::make_shared<std::shared_ptr<const Presence<Batch>>>();
         public: const Presence<Batch>& batch() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<InputDeclaration>>> cached_context_schema_ = std::make_shared<std::shared_ptr<const Presence<InputDeclaration>>>();
@@ -1600,7 +1966,10 @@ namespace tt::results {
         public: const Presence<std::string>& verb() const;
     };
     class QuestionDocumentScore : public Node {
-        public: using Node::Node;
+        QuestionDocumentScore(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const Presence<Batch>>> cached_batch_ = std::make_shared<std::shared_ptr<const Presence<Batch>>>();
         public: const Presence<Batch>& batch() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<InputDeclaration>>> cached_context_schema_ = std::make_shared<std::shared_ptr<const Presence<InputDeclaration>>>();
@@ -1627,7 +1996,10 @@ namespace tt::results {
         public: const Presence<std::string>& verb() const;
     };
     class QuestionDocumentTag : public Node {
-        public: using Node::Node;
+        QuestionDocumentTag(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const Presence<Batch>>> cached_batch_ = std::make_shared<std::shared_ptr<const Presence<Batch>>>();
         public: const Presence<Batch>& batch() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<InputDeclaration>>> cached_context_schema_ = std::make_shared<std::shared_ptr<const Presence<InputDeclaration>>>();
@@ -1654,12 +2026,18 @@ namespace tt::results {
         public: const Presence<std::string>& verb() const;
     };
     class Recognize : public Node {
-        public: using Node::Node;
+        Recognize(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         std::optional<RecognizeEntities> as_RecognizeEntities() const;
         std::optional<RecognizeModeProposals> as_RecognizeModeProposals() const;
     };
     class RecognizeAnswer : public Node {
-        public: using Node::Node;
+        RecognizeAnswer(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const Presence<std::vector<NameOdds>>>> cached_names_ = std::make_shared<std::shared_ptr<const Presence<std::vector<NameOdds>>>>();
         public: const Presence<std::vector<NameOdds>>& names() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<std::vector<PairOdds>>>> cached_pairs_ = std::make_shared<std::shared_ptr<const Presence<std::vector<PairOdds>>>>();
@@ -1670,7 +2048,10 @@ namespace tt::results {
         public: const Presence<std::vector<RecognitionProposal>>& proposals() const;
     };
     class RecognizeQuestionDocument : public Node {
-        public: using Node::Node;
+        RecognizeQuestionDocument(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const Presence<Batch>>> cached_batch_ = std::make_shared<std::shared_ptr<const Presence<Batch>>>();
         public: const Presence<Batch>& batch() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<InputDeclaration>>> cached_context_schema_ = std::make_shared<std::shared_ptr<const Presence<InputDeclaration>>>();
@@ -1712,28 +2093,40 @@ namespace tt::results {
         public: const Presence<WordingVersion>& wording_version() const;
     };
     class RecognizeEntities : public Node {
-        public: using Node::Node;
+        RecognizeEntities(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const Presence<std::vector<Entity>>>> cached_entities_ = std::make_shared<std::shared_ptr<const Presence<std::vector<Entity>>>>();
         public: const Presence<std::vector<Entity>>& entities() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<std::vector<EntityEdge>>>> cached_relations_ = std::make_shared<std::shared_ptr<const Presence<std::vector<EntityEdge>>>>();
         public: const Presence<std::vector<EntityEdge>>& relations() const;
     };
     class RecognizeModeProposals : public Node {
-        public: using Node::Node;
+        RecognizeModeProposals(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const Presence<BoundaryMode>>> cached_mode_ = std::make_shared<std::shared_ptr<const Presence<BoundaryMode>>>();
         public: const Presence<BoundaryMode>& mode() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<std::vector<BoundaryProposal>>>> cached_proposals_ = std::make_shared<std::shared_ptr<const Presence<std::vector<BoundaryProposal>>>>();
         public: const Presence<std::vector<BoundaryProposal>>& proposals() const;
     };
     class RelateFields : public Node {
-        public: using Node::Node;
+        RelateFields(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_kind_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
         public: const Presence<std::string>& kind() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_name_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
         public: const Presence<std::string>& name() const;
     };
     class RelateQuestionDocument : public Node {
-        public: using Node::Node;
+        RelateQuestionDocument(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const Presence<Batch>>> cached_batch_ = std::make_shared<std::shared_ptr<const Presence<Batch>>>();
         public: const Presence<Batch>& batch() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<InputDeclaration>>> cached_context_schema_ = std::make_shared<std::shared_ptr<const Presence<InputDeclaration>>>();
@@ -1762,14 +2155,20 @@ namespace tt::results {
         public: const Presence<WordingVersion>& wording_version() const;
     };
     class RelatedEntity : public Node {
-        public: using Node::Node;
+        RelatedEntity(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_kind_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
         public: const Presence<std::string>& kind() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_name_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
         public: const Presence<std::string>& name() const;
     };
     class RelatedEntityEdge : public Node {
-        public: using Node::Node;
+        RelatedEntityEdge(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const Presence<bool>>> cached_either_ = std::make_shared<std::shared_ptr<const Presence<bool>>>();
         public: const Presence<bool>& either() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<double>>> cached_probability_ = std::make_shared<std::shared_ptr<const Presence<double>>>();
@@ -1784,7 +2183,10 @@ namespace tt::results {
         std::string target_name() const;
     };
     class RelationRule : public Node {
-        public: using Node::Node;
+        RelationRule(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const Presence<bool>>> cached_either_ = std::make_shared<std::shared_ptr<const Presence<bool>>>();
         public: const Presence<bool>& either() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_name_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
@@ -1799,68 +2201,98 @@ namespace tt::results {
         public: const Presence<std::string>& target() const;
     };
     class SessionAnnotation : public Node {
-        public: using Node::Node;
+        SessionAnnotation(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_name_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
         public: const Presence<std::string>& name() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<AnnotationValue>>> cached_value_ = std::make_shared<std::shared_ptr<const Presence<AnnotationValue>>>();
         public: const Presence<AnnotationValue>& value() const;
     };
     class SessionInputSource : public Node {
-        public: using Node::Node;
+        SessionInputSource(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const Presence<uint64_t>>> cached_index_ = std::make_shared<std::shared_ptr<const Presence<uint64_t>>>();
         public: const Presence<uint64_t>& index() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<PhysicalSource>>> cached_source_ = std::make_shared<std::shared_ptr<const Presence<PhysicalSource>>>();
         public: const Presence<PhysicalSource>& source() const;
     };
     class SessionJudgment : public Node {
-        public: using Node::Node;
+        SessionJudgment(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         std::optional<SessionJudgmentDecision> as_SessionJudgmentDecision() const;
         std::optional<SessionJudgmentChoice> as_SessionJudgmentChoice() const;
         std::optional<SessionJudgmentScore> as_SessionJudgmentScore() const;
         std::optional<SessionJudgmentTags> as_SessionJudgmentTags() const;
     };
     class SessionJudgmentChoice : public Node {
-        public: using Node::Node;
+        SessionJudgmentChoice(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_kind_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
         public: const Presence<std::string>& kind() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_value_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
         public: const Presence<std::string>& value() const;
     };
     class SessionJudgmentDecision : public Node {
-        public: using Node::Node;
+        SessionJudgmentDecision(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_kind_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
         public: const Presence<std::string>& kind() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<bool>>> cached_value_ = std::make_shared<std::shared_ptr<const Presence<bool>>>();
         public: const Presence<bool>& value() const;
     };
     class SessionJudgmentScore : public Node {
-        public: using Node::Node;
+        SessionJudgmentScore(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_kind_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
         public: const Presence<std::string>& kind() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<double>>> cached_value_ = std::make_shared<std::shared_ptr<const Presence<double>>>();
         public: const Presence<double>& value() const;
     };
     class SessionJudgmentTags : public Node {
-        public: using Node::Node;
+        SessionJudgmentTags(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_kind_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
         public: const Presence<std::string>& kind() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<std::vector<std::string>>>> cached_value_ = std::make_shared<std::shared_ptr<const Presence<std::vector<std::string>>>>();
         public: const Presence<std::vector<std::string>>& value() const;
     };
     class SessionNamedProbability : public Node {
-        public: using Node::Node;
+        SessionNamedProbability(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_name_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
         public: const Presence<std::string>& name() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<double>>> cached_probability_ = std::make_shared<std::shared_ptr<const Presence<double>>>();
         public: const Presence<double>& probability() const;
     };
     class SessionObservation : public Node {
-        public: using Node::Node;
+        SessionObservation(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         std::optional<SessionObservationQuestion> as_SessionObservationQuestion() const;
         std::optional<SessionObservationRow> as_SessionObservationRow() const;
     };
     class SessionObservationQuestion : public Node {
-        public: using Node::Node;
+        SessionObservationQuestion(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const Presence<SessionQuestionDetail>>> cached_detail_ = std::make_shared<std::shared_ptr<const Presence<SessionQuestionDetail>>>();
         public: const Presence<SessionQuestionDetail>& detail() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<uint64_t>>> cached_index_ = std::make_shared<std::shared_ptr<const Presence<uint64_t>>>();
@@ -1875,7 +2307,10 @@ namespace tt::results {
         public: const Presence<std::string>& stage() const;
     };
     class SessionObservationRow : public Node {
-        public: using Node::Node;
+        SessionObservationRow(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const Presence<uint64_t>>> cached_index_ = std::make_shared<std::shared_ptr<const Presence<uint64_t>>>();
         public: const Presence<uint64_t>& index() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_kind_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
@@ -1884,7 +2319,10 @@ namespace tt::results {
         public: const Presence<SessionObservedRow>& value() const;
     };
     class SessionObservedRow : public Node {
-        public: using Node::Node;
+        SessionObservedRow(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         std::optional<SessionObservedRowJudgment> as_SessionObservedRowJudgment() const;
         std::optional<SessionObservedRowAnnotated> as_SessionObservedRowAnnotated() const;
         std::optional<SessionObservedRowRecognized> as_SessionObservedRowRecognized() const;
@@ -1892,42 +2330,60 @@ namespace tt::results {
         std::optional<SessionObservedRowRelations> as_SessionObservedRowRelations() const;
     };
     class SessionObservedRowAnnotated : public Node {
-        public: using Node::Node;
+        SessionObservedRowAnnotated(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_kind_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
         public: const Presence<std::string>& kind() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<std::vector<SessionAnnotation>>>> cached_value_ = std::make_shared<std::shared_ptr<const Presence<std::vector<SessionAnnotation>>>>();
         public: const Presence<std::vector<SessionAnnotation>>& value() const;
     };
     class SessionObservedRowFind : public Node {
-        public: using Node::Node;
+        SessionObservedRowFind(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_kind_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
         public: const Presence<std::string>& kind() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<uint64_t>>> cached_value_ = std::make_shared<std::shared_ptr<const Presence<uint64_t>>>();
         public: const Presence<uint64_t>& value() const;
     };
     class SessionObservedRowJudgment : public Node {
-        public: using Node::Node;
+        SessionObservedRowJudgment(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_kind_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
         public: const Presence<std::string>& kind() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<SessionJudgment>>> cached_value_ = std::make_shared<std::shared_ptr<const Presence<SessionJudgment>>>();
         public: const Presence<SessionJudgment>& value() const;
     };
     class SessionObservedRowRecognized : public Node {
-        public: using Node::Node;
+        SessionObservedRowRecognized(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_kind_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
         public: const Presence<std::string>& kind() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<SessionRecognition>>> cached_value_ = std::make_shared<std::shared_ptr<const Presence<SessionRecognition>>>();
         public: const Presence<SessionRecognition>& value() const;
     };
     class SessionObservedRowRelations : public Node {
-        public: using Node::Node;
+        SessionObservedRowRelations(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_kind_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
         public: const Presence<std::string>& kind() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<std::vector<SessionRelationEdge>>>> cached_value_ = std::make_shared<std::shared_ptr<const Presence<std::vector<SessionRelationEdge>>>>();
         public: const Presence<std::vector<SessionRelationEdge>>& value() const;
     };
     class SessionPacket : public Node {
-        public: using Node::Node;
+        SessionPacket(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         std::optional<SessionPacketDecideRow> as_SessionPacketDecideRow() const;
         std::optional<SessionPacketChooseRow> as_SessionPacketChooseRow() const;
         std::optional<SessionPacketTagRow> as_SessionPacketTagRow() const;
@@ -1948,7 +2404,10 @@ namespace tt::results {
         std::optional<SessionPacketTerminal> as_SessionPacketTerminal() const;
     };
     class SessionPacketAnnotateAggregate : public Node {
-        public: using Node::Node;
+        SessionPacketAnnotateAggregate(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_function_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
         public: const Presence<std::string>& function() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_kind_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
@@ -1957,7 +2416,10 @@ namespace tt::results {
         public: const Presence<std::vector<Annotation>>& value() const;
     };
     class SessionPacketAnnotateRow : public Node {
-        public: using Node::Node;
+        SessionPacketAnnotateRow(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_function_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
         public: const Presence<std::string>& function() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_kind_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
@@ -1966,7 +2428,10 @@ namespace tt::results {
         public: const Presence<Annotation>& value() const;
     };
     class SessionPacketChooseAggregate : public Node {
-        public: using Node::Node;
+        SessionPacketChooseAggregate(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_function_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
         public: const Presence<std::string>& function() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_kind_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
@@ -1975,7 +2440,10 @@ namespace tt::results {
         public: const Presence<std::vector<AtomicNullableString>>& value() const;
     };
     class SessionPacketChooseRow : public Node {
-        public: using Node::Node;
+        SessionPacketChooseRow(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_function_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
         public: const Presence<std::string>& function() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_kind_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
@@ -1984,7 +2452,10 @@ namespace tt::results {
         public: const Presence<AtomicNullableString>& value() const;
     };
     class SessionPacketDecideAggregate : public Node {
-        public: using Node::Node;
+        SessionPacketDecideAggregate(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_function_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
         public: const Presence<std::string>& function() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_kind_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
@@ -1993,7 +2464,10 @@ namespace tt::results {
         public: const Presence<std::vector<AtomicDecideValue>>& value() const;
     };
     class SessionPacketDecideRow : public Node {
-        public: using Node::Node;
+        SessionPacketDecideRow(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_function_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
         public: const Presence<std::string>& function() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_kind_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
@@ -2002,7 +2476,10 @@ namespace tt::results {
         public: const Presence<AtomicDecideValue>& value() const;
     };
     class SessionPacketFilterAggregate : public Node {
-        public: using Node::Node;
+        SessionPacketFilterAggregate(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_function_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
         public: const Presence<std::string>& function() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_kind_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
@@ -2011,7 +2488,10 @@ namespace tt::results {
         public: const Presence<std::vector<AtomicBoolean>>& value() const;
     };
     class SessionPacketFilterRow : public Node {
-        public: using Node::Node;
+        SessionPacketFilterRow(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_function_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
         public: const Presence<std::string>& function() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_kind_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
@@ -2020,7 +2500,10 @@ namespace tt::results {
         public: const Presence<AtomicBoolean>& value() const;
     };
     class SessionPacketFindAggregate : public Node {
-        public: using Node::Node;
+        SessionPacketFindAggregate(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_function_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
         public: const Presence<std::string>& function() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_kind_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
@@ -2029,7 +2512,10 @@ namespace tt::results {
         public: const Presence<Find>& value() const;
     };
     class SessionPacketObservation : public Node {
-        public: using Node::Node;
+        SessionPacketObservation(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const Presence<RequestFunction>>> cached_function_ = std::make_shared<std::shared_ptr<const Presence<RequestFunction>>>();
         public: const Presence<RequestFunction>& function() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_kind_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
@@ -2038,7 +2524,10 @@ namespace tt::results {
         public: const Presence<SessionObservation>& value() const;
     };
     class SessionPacketRankAggregate : public Node {
-        public: using Node::Node;
+        SessionPacketRankAggregate(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_function_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
         public: const Presence<std::string>& function() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_kind_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
@@ -2047,7 +2536,10 @@ namespace tt::results {
         public: const Presence<std::vector<AtomicNonZeroUsize>>& value() const;
     };
     class SessionPacketRecognizeAggregate : public Node {
-        public: using Node::Node;
+        SessionPacketRecognizeAggregate(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_function_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
         public: const Presence<std::string>& function() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_kind_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
@@ -2056,7 +2548,10 @@ namespace tt::results {
         public: const Presence<std::vector<Recognition>>& value() const;
     };
     class SessionPacketRelateAggregate : public Node {
-        public: using Node::Node;
+        SessionPacketRelateAggregate(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_function_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
         public: const Presence<std::string>& function() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_kind_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
@@ -2065,7 +2560,10 @@ namespace tt::results {
         public: const Presence<Relation>& value() const;
     };
     class SessionPacketScoreAggregate : public Node {
-        public: using Node::Node;
+        SessionPacketScoreAggregate(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_function_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
         public: const Presence<std::string>& function() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_kind_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
@@ -2074,7 +2572,10 @@ namespace tt::results {
         public: const Presence<std::vector<AtomicDouble>>& value() const;
     };
     class SessionPacketScoreRow : public Node {
-        public: using Node::Node;
+        SessionPacketScoreRow(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_function_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
         public: const Presence<std::string>& function() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_kind_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
@@ -2083,7 +2584,10 @@ namespace tt::results {
         public: const Presence<AtomicDouble>& value() const;
     };
     class SessionPacketTagAggregate : public Node {
-        public: using Node::Node;
+        SessionPacketTagAggregate(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_function_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
         public: const Presence<std::string>& function() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_kind_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
@@ -2092,7 +2596,10 @@ namespace tt::results {
         public: const Presence<std::vector<AtomicArrayOfString>>& value() const;
     };
     class SessionPacketTagRow : public Node {
-        public: using Node::Node;
+        SessionPacketTagRow(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_function_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
         public: const Presence<std::string>& function() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_kind_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
@@ -2101,7 +2608,10 @@ namespace tt::results {
         public: const Presence<AtomicArrayOfString>& value() const;
     };
     class SessionPacketTerminal : public Node {
-        public: using Node::Node;
+        SessionPacketTerminal(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const Presence<Facts>>> cached_facts_ = std::make_shared<std::shared_ptr<const Presence<Facts>>>();
         public: const Presence<Facts>& facts() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<CallError>>> cached_failure_ = std::make_shared<std::shared_ptr<const Presence<CallError>>>();
@@ -2110,26 +2620,38 @@ namespace tt::results {
         public: const Presence<std::string>& kind() const;
     };
     class SessionProbabilities : public Node {
-        public: using Node::Node;
+        SessionProbabilities(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         std::optional<SessionProbabilitiesYesNo> as_SessionProbabilitiesYesNo() const;
         std::optional<SessionProbabilitiesNamed> as_SessionProbabilitiesNamed() const;
     };
     class SessionProbabilitiesNamed : public Node {
-        public: using Node::Node;
+        SessionProbabilitiesNamed(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_kind_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
         public: const Presence<std::string>& kind() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<std::vector<SessionNamedProbability>>>> cached_value_ = std::make_shared<std::shared_ptr<const Presence<std::vector<SessionNamedProbability>>>>();
         public: const Presence<std::vector<SessionNamedProbability>>& value() const;
     };
     class SessionProbabilitiesYesNo : public Node {
-        public: using Node::Node;
+        SessionProbabilitiesYesNo(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_kind_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
         public: const Presence<std::string>& kind() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<double>>> cached_value_ = std::make_shared<std::shared_ptr<const Presence<double>>>();
         public: const Presence<double>& value() const;
     };
     class SessionQuestionDetail : public Node {
-        public: using Node::Node;
+        SessionQuestionDetail(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const Presence<AnswerId>>> cached_answer_id_ = std::make_shared<std::shared_ptr<const Presence<AnswerId>>>();
         public: const Presence<AnswerId>& answer_id() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<bool>>> cached_cached_ = std::make_shared<std::shared_ptr<const Presence<bool>>>();
@@ -2180,7 +2702,10 @@ namespace tt::results {
         public: const Presence<Value>& value() const;
     };
     class SessionRecognition : public Node {
-        public: using Node::Node;
+        SessionRecognition(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const Presence<std::vector<Entity>>>> cached_entities_ = std::make_shared<std::shared_ptr<const Presence<std::vector<Entity>>>>();
         public: const Presence<std::vector<Entity>>& entities() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<RecognitionMode>>> cached_mode_ = std::make_shared<std::shared_ptr<const Presence<RecognitionMode>>>();
@@ -2191,7 +2716,10 @@ namespace tt::results {
         public: const Presence<std::vector<RecognitionEdgeDocument>>& relations() const;
     };
     class SessionRelationEdge : public Node {
-        public: using Node::Node;
+        SessionRelationEdge(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const Presence<bool>>> cached_either_ = std::make_shared<std::shared_ptr<const Presence<bool>>>();
         public: const Presence<bool>& either() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<double>>> cached_probability_ = std::make_shared<std::shared_ptr<const Presence<double>>>();
@@ -2206,7 +2734,10 @@ namespace tt::results {
         std::string target_name() const;
     };
     class SourceRelationEndpoint : public Node {
-        public: using Node::Node;
+        SourceRelationEndpoint(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_file_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
         public: const Presence<std::string>& file() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<uint64_t>>> cached_first_line_ = std::make_shared<std::shared_ptr<const Presence<uint64_t>>>();
@@ -2223,27 +2754,39 @@ namespace tt::results {
         public: const Presence<Data>& record() const;
     };
     class Threshold : public Node {
-        public: using Node::Node;
+        Threshold(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const std::variant<double, std::string>>> cached_value_ = std::make_shared<std::shared_ptr<const std::variant<double,
         std::string>>>();
         public: const std::variant<double, std::string>& value() const;
     };
     class TokenBand : public Node {
-        public: using Node::Node;
+        TokenBand(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const Presence<uint64_t>>> cached_lower_ = std::make_shared<std::shared_ptr<const Presence<uint64_t>>>();
         public: const Presence<uint64_t>& lower() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<uint64_t>>> cached_upper_ = std::make_shared<std::shared_ptr<const Presence<uint64_t>>>();
         public: const Presence<uint64_t>& upper() const;
     };
     class TokenUsage : public Node {
-        public: using Node::Node;
+        TokenUsage(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const Presence<uint64_t>>> cached_input_tokens_ = std::make_shared<std::shared_ptr<const Presence<uint64_t>>>();
         public: const Presence<uint64_t>& input_tokens() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<uint64_t>>> cached_output_tokens_ = std::make_shared<std::shared_ptr<const Presence<uint64_t>>>();
         public: const Presence<uint64_t>& output_tokens() const;
     };
     class Value : public Node {
-        public: using Node::Node;
+        Value(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
         private: std::shared_ptr<std::shared_ptr<const std::variant<bool, std::nullptr_t, std::string,
         std::vector<std::string>, double>>> cached_value_ = std::make_shared<std::shared_ptr<const std::variant<bool,
         std::nullptr_t, std::string, std::vector<std::string>, double>>>();
@@ -2346,11 +2889,11 @@ namespace tt::results {
         } return *stored;
     }
     inline std::optional<AnnotationMemberAnswerId> AnnotationMember::as_AnnotationMemberAnswerId() const {
-        if (value_.contains("answer_id")) return AnnotationMemberAnswerId(value_);
+        if (value_.contains("answer_id")) return detail::Loader::input<AnnotationMemberAnswerId>(value_);
         return std::nullopt;
     }
     inline std::optional<AnnotationMemberFailureId> AnnotationMember::as_AnnotationMemberFailureId() const {
-        if (value_.contains("failure_id")) return AnnotationMemberFailureId(value_);
+        if (value_.contains("failure_id")) return detail::Loader::input<AnnotationMemberFailureId>(value_);
         return std::nullopt;
     }
     inline const Presence<Answer>& AnnotationMemberAnswerId::answer() const {
@@ -2490,23 +3033,23 @@ namespace tt::results {
         } return *stored;
     }
     inline std::optional<AnnotationValueDecision> AnnotationValue::as_AnnotationValueDecision() const {
-        if (detail::literal(value_, "kind", "decision")) return AnnotationValueDecision(value_);
+        if (detail::literal(value_, "kind", "decision")) return detail::Loader::input<AnnotationValueDecision>(value_);
         return std::nullopt;
     }
     inline std::optional<AnnotationValueChoice> AnnotationValue::as_AnnotationValueChoice() const {
-        if (detail::literal(value_, "kind", "choice")) return AnnotationValueChoice(value_);
+        if (detail::literal(value_, "kind", "choice")) return detail::Loader::input<AnnotationValueChoice>(value_);
         return std::nullopt;
     }
     inline std::optional<AnnotationValueScore> AnnotationValue::as_AnnotationValueScore() const {
-        if (detail::literal(value_, "kind", "score")) return AnnotationValueScore(value_);
+        if (detail::literal(value_, "kind", "score")) return detail::Loader::input<AnnotationValueScore>(value_);
         return std::nullopt;
     }
     inline std::optional<AnnotationValueTags> AnnotationValue::as_AnnotationValueTags() const {
-        if (detail::literal(value_, "kind", "tags")) return AnnotationValueTags(value_);
+        if (detail::literal(value_, "kind", "tags")) return detail::Loader::input<AnnotationValueTags>(value_);
         return std::nullopt;
     }
     inline std::optional<AnnotationValueFailed> AnnotationValue::as_AnnotationValueFailed() const {
-        if (detail::literal(value_, "kind", "failed")) return AnnotationValueFailed(value_);
+        if (detail::literal(value_, "kind", "failed")) return detail::Loader::input<AnnotationValueFailed>(value_);
         return std::nullopt;
     }
     inline const Presence<std::string>& AnnotationValueChoice::kind() const {
@@ -3458,15 +4001,15 @@ namespace tt::results {
         } return *stored;
     }
     inline std::optional<EstimatedInputDenialInitialRequest> EstimatedInputDenial::as_EstimatedInputDenialInitialRequest() const {
-        if (detail::literal(value_, "kind", "initial_request")) return EstimatedInputDenialInitialRequest(value_);
+        if (detail::literal(value_, "kind", "initial_request")) return detail::Loader::input<EstimatedInputDenialInitialRequest>(value_);
         return std::nullopt;
     }
     inline std::optional<EstimatedInputDenialAdditionalRequest> EstimatedInputDenial::as_EstimatedInputDenialAdditionalRequest() const {
-        if (detail::literal(value_, "kind", "additional_request")) return EstimatedInputDenialAdditionalRequest(value_);
+        if (detail::literal(value_, "kind", "additional_request")) return detail::Loader::input<EstimatedInputDenialAdditionalRequest>(value_);
         return std::nullopt;
     }
     inline std::optional<EstimatedInputDenialRetry> EstimatedInputDenial::as_EstimatedInputDenialRetry() const {
-        if (detail::literal(value_, "kind", "retry")) return EstimatedInputDenialRetry(value_);
+        if (detail::literal(value_, "kind", "retry")) return detail::Loader::input<EstimatedInputDenialRetry>(value_);
         return std::nullopt;
     }
     inline const Presence<std::string>& EstimatedInputDenialAdditionalRequest::kind() const {
@@ -3950,11 +4493,11 @@ namespace tt::results {
         } return *stored;
     }
     inline std::optional<InputDeclarationStringRoot> InputDeclaration::as_InputDeclarationStringRoot() const {
-        if (detail::literal(value_, "type", "string")) return InputDeclarationStringRoot(value_);
+        if (detail::literal(value_, "type", "string")) return detail::Loader::input<InputDeclarationStringRoot>(value_);
         return std::nullopt;
     }
     inline std::optional<InputDeclarationObjectRoot> InputDeclaration::as_InputDeclarationObjectRoot() const {
-        if (detail::literal(value_, "type", "object")) return InputDeclarationObjectRoot(value_);
+        if (detail::literal(value_, "type", "object")) return detail::Loader::input<InputDeclarationObjectRoot>(value_);
         return std::nullopt;
     }
     inline const Presence<std::vector<std::pair<std::string, InputPropertyType>>>& InputDeclarationObjectRoot::properties() const {
@@ -3990,19 +4533,19 @@ namespace tt::results {
         } return *stored;
     }
     inline std::optional<InputPropertyTypeString> InputPropertyType::as_InputPropertyTypeString() const {
-        if (detail::literal(value_, "type", "string")) return InputPropertyTypeString(value_);
+        if (detail::literal(value_, "type", "string")) return detail::Loader::input<InputPropertyTypeString>(value_);
         return std::nullopt;
     }
     inline std::optional<InputPropertyTypeNumber> InputPropertyType::as_InputPropertyTypeNumber() const {
-        if (detail::literal(value_, "type", "number")) return InputPropertyTypeNumber(value_);
+        if (detail::literal(value_, "type", "number")) return detail::Loader::input<InputPropertyTypeNumber>(value_);
         return std::nullopt;
     }
     inline std::optional<InputPropertyTypeBoolean> InputPropertyType::as_InputPropertyTypeBoolean() const {
-        if (detail::literal(value_, "type", "boolean")) return InputPropertyTypeBoolean(value_);
+        if (detail::literal(value_, "type", "boolean")) return detail::Loader::input<InputPropertyTypeBoolean>(value_);
         return std::nullopt;
     }
     inline std::optional<InputPropertyTypeArray> InputPropertyType::as_InputPropertyTypeArray() const {
-        if (detail::literal(value_, "type", "array")) return InputPropertyTypeArray(value_);
+        if (detail::literal(value_, "type", "array")) return detail::Loader::input<InputPropertyTypeArray>(value_);
         return std::nullopt;
     }
     inline const Presence<StringRoot>& InputPropertyTypeArray::items() const {
@@ -4245,11 +4788,11 @@ namespace tt::results {
         } return *stored;
     }
     inline std::optional<ObservationObservationId> Observation::as_ObservationObservationId() const {
-        if (value_.contains("observation_id")) return ObservationObservationId(value_);
+        if (value_.contains("observation_id")) return detail::Loader::input<ObservationObservationId>(value_);
         return std::nullopt;
     }
     inline std::optional<ObservationFailureId> Observation::as_ObservationFailureId() const {
-        if (value_.contains("failure_id")) return ObservationFailureId(value_);
+        if (value_.contains("failure_id")) return detail::Loader::input<ObservationFailureId>(value_);
         return std::nullopt;
     }
     inline const std::string& ObservationId::value() const {
@@ -4633,11 +5176,11 @@ namespace tt::results {
         } return *stored;
     }
     inline std::optional<RecognitionOddsRecognizeAnswer> RecognitionOdds::as_RecognitionOddsRecognizeAnswer() const {
-        if (value_.contains("names") && value_.contains("pairs") && value_.contains("pieces") && value_.contains("proposals")) return RecognitionOddsRecognizeAnswer(value_);
+        if (value_.contains("names") && value_.contains("pairs") && value_.contains("pieces") && value_.contains("proposals")) return detail::Loader::input<RecognitionOddsRecognizeAnswer>(value_);
         return std::nullopt;
     }
     inline std::optional<RecognitionOddsBoundaryOdds> RecognitionOdds::as_RecognitionOddsBoundaryOdds() const {
-        if (value_.contains("pieces") && value_.contains("proposals") && !value_.contains("names") && !value_.contains("pairs")) return RecognitionOddsBoundaryOdds(value_);
+        if (value_.contains("pieces") && value_.contains("proposals") && !value_.contains("names") && !value_.contains("pairs")) return detail::Loader::input<RecognitionOddsBoundaryOdds>(value_);
         return std::nullopt;
     }
     inline const Presence<std::vector<PieceOdds>>& RecognitionOddsBoundaryOdds::pieces() const {
@@ -4880,11 +5423,11 @@ namespace tt::results {
         } return *stored;
     }
     inline std::optional<RelationEndpointRelatedEntity> RelationEndpoint::as_RelationEndpointRelatedEntity() const {
-        if (value_.contains("kind") && value_.contains("name") && !value_.contains("file") && !value_.contains("ordinal") && !value_.contains("record")) return RelationEndpointRelatedEntity(value_);
+        if (value_.contains("kind") && value_.contains("name") && !value_.contains("file") && !value_.contains("ordinal") && !value_.contains("record")) return detail::Loader::input<RelationEndpointRelatedEntity>(value_);
         return std::nullopt;
     }
     inline std::optional<RelationEndpointSource> RelationEndpoint::as_RelationEndpointSource() const {
-        if (value_.contains("file") && value_.contains("kind") && value_.contains("name") && value_.contains("ordinal") && value_.contains("record")) return RelationEndpointSource(value_);
+        if (value_.contains("file") && value_.contains("kind") && value_.contains("name") && value_.contains("ordinal") && value_.contains("record")) return detail::Loader::input<RelationEndpointSource>(value_);
         return std::nullopt;
     }
     inline const Presence<std::string>& RelationEndpointRelatedEntity::kind() const {
@@ -4960,11 +5503,11 @@ namespace tt::results {
         } return *stored;
     }
     inline std::optional<RelationMemberAnswerId> RelationMember::as_RelationMemberAnswerId() const {
-        if (value_.contains("answer_id")) return RelationMemberAnswerId(value_);
+        if (value_.contains("answer_id")) return detail::Loader::input<RelationMemberAnswerId>(value_);
         return std::nullopt;
     }
     inline std::optional<RelationMemberFailureId> RelationMember::as_RelationMemberFailureId() const {
-        if (value_.contains("failure_id")) return RelationMemberFailureId(value_);
+        if (value_.contains("failure_id")) return detail::Loader::input<RelationMemberFailureId>(value_);
         return std::nullopt;
     }
     inline const Presence<RelationDirection>& RelationMemberAnswerId::direction() const {
@@ -5235,15 +5778,15 @@ namespace tt::results {
         } return *stored;
     }
     inline std::optional<SendBudgetDenialBeforeFirstSend> SendBudgetDenial::as_SendBudgetDenialBeforeFirstSend() const {
-        if (detail::literal(value_, "kind", "before_first_send")) return SendBudgetDenialBeforeFirstSend(value_);
+        if (detail::literal(value_, "kind", "before_first_send")) return detail::Loader::input<SendBudgetDenialBeforeFirstSend>(value_);
         return std::nullopt;
     }
     inline std::optional<SendBudgetDenialBeforeAdditionalSend> SendBudgetDenial::as_SendBudgetDenialBeforeAdditionalSend() const {
-        if (detail::literal(value_, "kind", "before_additional_send")) return SendBudgetDenialBeforeAdditionalSend(value_);
+        if (detail::literal(value_, "kind", "before_additional_send")) return detail::Loader::input<SendBudgetDenialBeforeAdditionalSend>(value_);
         return std::nullopt;
     }
     inline std::optional<SendBudgetDenialBeforeRetry> SendBudgetDenial::as_SendBudgetDenialBeforeRetry() const {
-        if (detail::literal(value_, "kind", "before_retry")) return SendBudgetDenialBeforeRetry(value_);
+        if (detail::literal(value_, "kind", "before_retry")) return detail::Loader::input<SendBudgetDenialBeforeRetry>(value_);
         return std::nullopt;
     }
     inline const Presence<std::string>& SendBudgetDenialBeforeAdditionalSend::kind() const {
@@ -5395,19 +5938,19 @@ namespace tt::results {
         } return *stored;
     }
     inline std::optional<AnswerYesNo> Answer::as_AnswerYesNo() const {
-        if (detail::literal(value_, "kind", "yes_no")) return AnswerYesNo(value_);
+        if (detail::literal(value_, "kind", "yes_no")) return detail::Loader::input<AnswerYesNo>(value_);
         return std::nullopt;
     }
     inline std::optional<AnswerChoice> Answer::as_AnswerChoice() const {
-        if (detail::literal(value_, "kind", "choice")) return AnswerChoice(value_);
+        if (detail::literal(value_, "kind", "choice")) return detail::Loader::input<AnswerChoice>(value_);
         return std::nullopt;
     }
     inline std::optional<AnswerTag> Answer::as_AnswerTag() const {
-        if (detail::literal(value_, "kind", "tag")) return AnswerTag(value_);
+        if (detail::literal(value_, "kind", "tag")) return detail::Loader::input<AnswerTag>(value_);
         return std::nullopt;
     }
     inline std::optional<AnswerScore> Answer::as_AnswerScore() const {
-        if (detail::literal(value_, "kind", "score")) return AnswerScore(value_);
+        if (detail::literal(value_, "kind", "score")) return detail::Loader::input<AnswerScore>(value_);
         return std::nullopt;
     }
     inline const Presence<double>& AnswerChoice::confidence() const {
@@ -6009,19 +6552,19 @@ namespace tt::results {
         } return *stored;
     }
     inline std::optional<QuestionDocumentDecide> QuestionDocument::as_QuestionDocumentDecide() const {
-        if (detail::literal(value_, "verb", "decide")) return QuestionDocumentDecide(value_);
+        if (detail::literal(value_, "verb", "decide")) return detail::Loader::input<QuestionDocumentDecide>(value_);
         return std::nullopt;
     }
     inline std::optional<QuestionDocumentChoose> QuestionDocument::as_QuestionDocumentChoose() const {
-        if (detail::literal(value_, "verb", "choose")) return QuestionDocumentChoose(value_);
+        if (detail::literal(value_, "verb", "choose")) return detail::Loader::input<QuestionDocumentChoose>(value_);
         return std::nullopt;
     }
     inline std::optional<QuestionDocumentTag> QuestionDocument::as_QuestionDocumentTag() const {
-        if (detail::literal(value_, "verb", "tag")) return QuestionDocumentTag(value_);
+        if (detail::literal(value_, "verb", "tag")) return detail::Loader::input<QuestionDocumentTag>(value_);
         return std::nullopt;
     }
     inline std::optional<QuestionDocumentScore> QuestionDocument::as_QuestionDocumentScore() const {
-        if (detail::literal(value_, "verb", "score")) return QuestionDocumentScore(value_);
+        if (detail::literal(value_, "verb", "score")) return detail::Loader::input<QuestionDocumentScore>(value_);
         return std::nullopt;
     }
     inline const Presence<Batch>& QuestionDocumentChoose::batch() const {
@@ -6417,11 +6960,11 @@ namespace tt::results {
         } return *stored;
     }
     inline std::optional<RecognizeEntities> Recognize::as_RecognizeEntities() const {
-        if (value_.contains("entities") && !value_.contains("mode") && !value_.contains("proposals")) return RecognizeEntities(value_);
+        if (value_.contains("entities") && !value_.contains("mode") && !value_.contains("proposals")) return detail::Loader::input<RecognizeEntities>(value_);
         return std::nullopt;
     }
     inline std::optional<RecognizeModeProposals> Recognize::as_RecognizeModeProposals() const {
-        if (value_.contains("mode") && value_.contains("proposals") && !value_.contains("entities")) return RecognizeModeProposals(value_);
+        if (value_.contains("mode") && value_.contains("proposals") && !value_.contains("entities")) return detail::Loader::input<RecognizeModeProposals>(value_);
         return std::nullopt;
     }
     inline const Presence<std::vector<NameOdds>>& RecognizeAnswer::names() const {
@@ -6903,19 +7446,19 @@ namespace tt::results {
         } return *stored;
     }
     inline std::optional<SessionJudgmentDecision> SessionJudgment::as_SessionJudgmentDecision() const {
-        if (detail::literal(value_, "kind", "decision")) return SessionJudgmentDecision(value_);
+        if (detail::literal(value_, "kind", "decision")) return detail::Loader::input<SessionJudgmentDecision>(value_);
         return std::nullopt;
     }
     inline std::optional<SessionJudgmentChoice> SessionJudgment::as_SessionJudgmentChoice() const {
-        if (detail::literal(value_, "kind", "choice")) return SessionJudgmentChoice(value_);
+        if (detail::literal(value_, "kind", "choice")) return detail::Loader::input<SessionJudgmentChoice>(value_);
         return std::nullopt;
     }
     inline std::optional<SessionJudgmentScore> SessionJudgment::as_SessionJudgmentScore() const {
-        if (detail::literal(value_, "kind", "score")) return SessionJudgmentScore(value_);
+        if (detail::literal(value_, "kind", "score")) return detail::Loader::input<SessionJudgmentScore>(value_);
         return std::nullopt;
     }
     inline std::optional<SessionJudgmentTags> SessionJudgment::as_SessionJudgmentTags() const {
-        if (detail::literal(value_, "kind", "tags")) return SessionJudgmentTags(value_);
+        if (detail::literal(value_, "kind", "tags")) return detail::Loader::input<SessionJudgmentTags>(value_);
         return std::nullopt;
     }
     inline const Presence<std::string>& SessionJudgmentChoice::kind() const {
@@ -6999,11 +7542,11 @@ namespace tt::results {
         } return *stored;
     }
     inline std::optional<SessionObservationQuestion> SessionObservation::as_SessionObservationQuestion() const {
-        if (detail::literal(value_, "kind", "question")) return SessionObservationQuestion(value_);
+        if (detail::literal(value_, "kind", "question")) return detail::Loader::input<SessionObservationQuestion>(value_);
         return std::nullopt;
     }
     inline std::optional<SessionObservationRow> SessionObservation::as_SessionObservationRow() const {
-        if (detail::literal(value_, "kind", "row")) return SessionObservationRow(value_);
+        if (detail::literal(value_, "kind", "row")) return detail::Loader::input<SessionObservationRow>(value_);
         return std::nullopt;
     }
     inline const Presence<SessionQuestionDetail>& SessionObservationQuestion::detail() const {
@@ -7079,23 +7622,23 @@ namespace tt::results {
         } return *stored;
     }
     inline std::optional<SessionObservedRowJudgment> SessionObservedRow::as_SessionObservedRowJudgment() const {
-        if (detail::literal(value_, "kind", "judgment")) return SessionObservedRowJudgment(value_);
+        if (detail::literal(value_, "kind", "judgment")) return detail::Loader::input<SessionObservedRowJudgment>(value_);
         return std::nullopt;
     }
     inline std::optional<SessionObservedRowAnnotated> SessionObservedRow::as_SessionObservedRowAnnotated() const {
-        if (detail::literal(value_, "kind", "annotated")) return SessionObservedRowAnnotated(value_);
+        if (detail::literal(value_, "kind", "annotated")) return detail::Loader::input<SessionObservedRowAnnotated>(value_);
         return std::nullopt;
     }
     inline std::optional<SessionObservedRowRecognized> SessionObservedRow::as_SessionObservedRowRecognized() const {
-        if (detail::literal(value_, "kind", "recognized")) return SessionObservedRowRecognized(value_);
+        if (detail::literal(value_, "kind", "recognized")) return detail::Loader::input<SessionObservedRowRecognized>(value_);
         return std::nullopt;
     }
     inline std::optional<SessionObservedRowFind> SessionObservedRow::as_SessionObservedRowFind() const {
-        if (detail::literal(value_, "kind", "find")) return SessionObservedRowFind(value_);
+        if (detail::literal(value_, "kind", "find")) return detail::Loader::input<SessionObservedRowFind>(value_);
         return std::nullopt;
     }
     inline std::optional<SessionObservedRowRelations> SessionObservedRow::as_SessionObservedRowRelations() const {
-        if (detail::literal(value_, "kind", "relations")) return SessionObservedRowRelations(value_);
+        if (detail::literal(value_, "kind", "relations")) return detail::Loader::input<SessionObservedRowRelations>(value_);
         return std::nullopt;
     }
     inline const Presence<std::string>& SessionObservedRowAnnotated::kind() const {
@@ -7179,75 +7722,75 @@ namespace tt::results {
         } return *stored;
     }
     inline std::optional<SessionPacketDecideRow> SessionPacket::as_SessionPacketDecideRow() const {
-        if (detail::literal(value_, "function", "decide") && detail::literal(value_, "kind", "row")) return SessionPacketDecideRow(value_);
+        if (detail::literal(value_, "function", "decide") && detail::literal(value_, "kind", "row")) return detail::Loader::input<SessionPacketDecideRow>(value_);
         return std::nullopt;
     }
     inline std::optional<SessionPacketChooseRow> SessionPacket::as_SessionPacketChooseRow() const {
-        if (detail::literal(value_, "function", "choose") && detail::literal(value_, "kind", "row")) return SessionPacketChooseRow(value_);
+        if (detail::literal(value_, "function", "choose") && detail::literal(value_, "kind", "row")) return detail::Loader::input<SessionPacketChooseRow>(value_);
         return std::nullopt;
     }
     inline std::optional<SessionPacketTagRow> SessionPacket::as_SessionPacketTagRow() const {
-        if (detail::literal(value_, "function", "tag") && detail::literal(value_, "kind", "row")) return SessionPacketTagRow(value_);
+        if (detail::literal(value_, "function", "tag") && detail::literal(value_, "kind", "row")) return detail::Loader::input<SessionPacketTagRow>(value_);
         return std::nullopt;
     }
     inline std::optional<SessionPacketScoreRow> SessionPacket::as_SessionPacketScoreRow() const {
-        if (detail::literal(value_, "function", "score") && detail::literal(value_, "kind", "row")) return SessionPacketScoreRow(value_);
+        if (detail::literal(value_, "function", "score") && detail::literal(value_, "kind", "row")) return detail::Loader::input<SessionPacketScoreRow>(value_);
         return std::nullopt;
     }
     inline std::optional<SessionPacketFilterRow> SessionPacket::as_SessionPacketFilterRow() const {
-        if (detail::literal(value_, "function", "filter") && detail::literal(value_, "kind", "row")) return SessionPacketFilterRow(value_);
+        if (detail::literal(value_, "function", "filter") && detail::literal(value_, "kind", "row")) return detail::Loader::input<SessionPacketFilterRow>(value_);
         return std::nullopt;
     }
     inline std::optional<SessionPacketAnnotateRow> SessionPacket::as_SessionPacketAnnotateRow() const {
-        if (detail::literal(value_, "function", "annotate") && detail::literal(value_, "kind", "row")) return SessionPacketAnnotateRow(value_);
+        if (detail::literal(value_, "function", "annotate") && detail::literal(value_, "kind", "row")) return detail::Loader::input<SessionPacketAnnotateRow>(value_);
         return std::nullopt;
     }
     inline std::optional<SessionPacketDecideAggregate> SessionPacket::as_SessionPacketDecideAggregate() const {
-        if (detail::literal(value_, "function", "decide") && detail::literal(value_, "kind", "aggregate")) return SessionPacketDecideAggregate(value_);
+        if (detail::literal(value_, "function", "decide") && detail::literal(value_, "kind", "aggregate")) return detail::Loader::input<SessionPacketDecideAggregate>(value_);
         return std::nullopt;
     }
     inline std::optional<SessionPacketChooseAggregate> SessionPacket::as_SessionPacketChooseAggregate() const {
-        if (detail::literal(value_, "function", "choose") && detail::literal(value_, "kind", "aggregate")) return SessionPacketChooseAggregate(value_);
+        if (detail::literal(value_, "function", "choose") && detail::literal(value_, "kind", "aggregate")) return detail::Loader::input<SessionPacketChooseAggregate>(value_);
         return std::nullopt;
     }
     inline std::optional<SessionPacketTagAggregate> SessionPacket::as_SessionPacketTagAggregate() const {
-        if (detail::literal(value_, "function", "tag") && detail::literal(value_, "kind", "aggregate")) return SessionPacketTagAggregate(value_);
+        if (detail::literal(value_, "function", "tag") && detail::literal(value_, "kind", "aggregate")) return detail::Loader::input<SessionPacketTagAggregate>(value_);
         return std::nullopt;
     }
     inline std::optional<SessionPacketScoreAggregate> SessionPacket::as_SessionPacketScoreAggregate() const {
-        if (detail::literal(value_, "function", "score") && detail::literal(value_, "kind", "aggregate")) return SessionPacketScoreAggregate(value_);
+        if (detail::literal(value_, "function", "score") && detail::literal(value_, "kind", "aggregate")) return detail::Loader::input<SessionPacketScoreAggregate>(value_);
         return std::nullopt;
     }
     inline std::optional<SessionPacketFilterAggregate> SessionPacket::as_SessionPacketFilterAggregate() const {
-        if (detail::literal(value_, "function", "filter") && detail::literal(value_, "kind", "aggregate")) return SessionPacketFilterAggregate(value_);
+        if (detail::literal(value_, "function", "filter") && detail::literal(value_, "kind", "aggregate")) return detail::Loader::input<SessionPacketFilterAggregate>(value_);
         return std::nullopt;
     }
     inline std::optional<SessionPacketRankAggregate> SessionPacket::as_SessionPacketRankAggregate() const {
-        if (detail::literal(value_, "function", "rank") && detail::literal(value_, "kind", "aggregate")) return SessionPacketRankAggregate(value_);
+        if (detail::literal(value_, "function", "rank") && detail::literal(value_, "kind", "aggregate")) return detail::Loader::input<SessionPacketRankAggregate>(value_);
         return std::nullopt;
     }
     inline std::optional<SessionPacketFindAggregate> SessionPacket::as_SessionPacketFindAggregate() const {
-        if (detail::literal(value_, "function", "find") && detail::literal(value_, "kind", "aggregate")) return SessionPacketFindAggregate(value_);
+        if (detail::literal(value_, "function", "find") && detail::literal(value_, "kind", "aggregate")) return detail::Loader::input<SessionPacketFindAggregate>(value_);
         return std::nullopt;
     }
     inline std::optional<SessionPacketAnnotateAggregate> SessionPacket::as_SessionPacketAnnotateAggregate() const {
-        if (detail::literal(value_, "function", "annotate") && detail::literal(value_, "kind", "aggregate")) return SessionPacketAnnotateAggregate(value_);
+        if (detail::literal(value_, "function", "annotate") && detail::literal(value_, "kind", "aggregate")) return detail::Loader::input<SessionPacketAnnotateAggregate>(value_);
         return std::nullopt;
     }
     inline std::optional<SessionPacketRecognizeAggregate> SessionPacket::as_SessionPacketRecognizeAggregate() const {
-        if (detail::literal(value_, "function", "recognize") && detail::literal(value_, "kind", "aggregate")) return SessionPacketRecognizeAggregate(value_);
+        if (detail::literal(value_, "function", "recognize") && detail::literal(value_, "kind", "aggregate")) return detail::Loader::input<SessionPacketRecognizeAggregate>(value_);
         return std::nullopt;
     }
     inline std::optional<SessionPacketRelateAggregate> SessionPacket::as_SessionPacketRelateAggregate() const {
-        if (detail::literal(value_, "function", "relate") && detail::literal(value_, "kind", "aggregate")) return SessionPacketRelateAggregate(value_);
+        if (detail::literal(value_, "function", "relate") && detail::literal(value_, "kind", "aggregate")) return detail::Loader::input<SessionPacketRelateAggregate>(value_);
         return std::nullopt;
     }
     inline std::optional<SessionPacketObservation> SessionPacket::as_SessionPacketObservation() const {
-        if (detail::literal(value_, "kind", "observation")) return SessionPacketObservation(value_);
+        if (detail::literal(value_, "kind", "observation")) return detail::Loader::input<SessionPacketObservation>(value_);
         return std::nullopt;
     }
     inline std::optional<SessionPacketTerminal> SessionPacket::as_SessionPacketTerminal() const {
-        if (detail::literal(value_, "kind", "terminal")) return SessionPacketTerminal(value_);
+        if (detail::literal(value_, "kind", "terminal")) return detail::Loader::input<SessionPacketTerminal>(value_);
         return std::nullopt;
     }
     inline const Presence<std::string>& SessionPacketAnnotateAggregate::function() const {
@@ -7683,11 +8226,11 @@ namespace tt::results {
         } return *stored;
     }
     inline std::optional<SessionProbabilitiesYesNo> SessionProbabilities::as_SessionProbabilitiesYesNo() const {
-        if (detail::literal(value_, "kind", "yes_no")) return SessionProbabilitiesYesNo(value_);
+        if (detail::literal(value_, "kind", "yes_no")) return detail::Loader::input<SessionProbabilitiesYesNo>(value_);
         return std::nullopt;
     }
     inline std::optional<SessionProbabilitiesNamed> SessionProbabilities::as_SessionProbabilitiesNamed() const {
-        if (detail::literal(value_, "kind", "named")) return SessionProbabilitiesNamed(value_);
+        if (detail::literal(value_, "kind", "named")) return detail::Loader::input<SessionProbabilitiesNamed>(value_);
         return std::nullopt;
     }
     inline const Presence<std::string>& SessionProbabilitiesNamed::kind() const {

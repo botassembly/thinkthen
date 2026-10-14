@@ -17,7 +17,7 @@ namespace detail {
 Data parse_original(const std::string& text) { return Data::parse(text); }
 void fail(int code,const thinkthen_error_view_v1* view,const char* message) {
     ::tt::Failure error(code,message);
-    if(view) { error.retryable=view->retryable!=0; if(view->facts) error.facts.emplace(results::detail::native_value(view->facts)); }
+    if(view) { error.retryable=view->retryable!=0; if(view->facts) error.facts.emplace(results::detail::Loader::input<results::ImmediateFacts>(results::detail::native_value(view->facts))); }
     throw error;
 }
 void check(int code) { if(code) fail(code,thinkthen_session_error_view(),thinkthen_session_error_message()); }
@@ -65,7 +65,7 @@ Poll Call::read(bool blocking,bool settlement) {
     if(status==THINKTHEN_SESSION_END_V1) return {PollState::end,{}};
     const thinkthen_complete_session_packet_v1* view=nullptr;
     detail::check(thinkthen_session_result_view(packet.get(),&view));
-    results::SessionPacket value(results::detail::native_value(view));
+    auto value=results::detail::Loader::input<results::SessionPacket>(results::detail::native_value(view));
     if(auto terminal=value.as_SessionPacketTerminal()) if(terminal->failure().state==results::PresenceState::value) throw ::tt::Failure(std::move(*terminal));
     return {PollState::result,std::move(value)};
 }
@@ -102,7 +102,7 @@ results::Plan Client::plan_impl(const inputs::RequestCall& call) const {
     thinkthen_value* raw=nullptr; detail::check(thinkthen_request_plan_named_value(state_->live(),&request,&raw));
     std::unique_ptr<thinkthen_value,decltype(&thinkthen_value_free)> owned(raw,&thinkthen_value_free);
     const thinkthen_complete_json_v1* view=nullptr; detail::check(thinkthen_value_view(owned.get(),&view));
-    return results::Plan(results::detail::native_value(view));
+    return results::detail::Loader::input<results::Plan>(results::detail::native_value(view));
 }
 UsageStatus Client::usage_impl(bool finish) const {
     if(!state_) throw std::logic_error("C++ client is closed");

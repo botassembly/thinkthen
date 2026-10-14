@@ -74,7 +74,7 @@ def render(definitions,version):
     bodies=[]
     for key,raw in definitions.items():
         n=name(key); s=shape(raw)
-        lines += [f'class {n} : public Node {{ public: using Node::Node;']
+        lines += [f'class {n} : public Node {{', f'    {n}(const Data& value, int):Node(value) {{}}', 'friend struct detail::Loader;', 'public:']
         if 'properties' in s:
             for member,field in s['properties'].items():
                 t=typ(field, presence=True); method=member+'_' if member in ('template','class','operator','namespace','default','true','false') else member
@@ -87,7 +87,7 @@ def render(definitions,version):
         for child,tag in s.get('variants',[]):
             cn=name(child)
             lines += [f'    std::optional<{cn}> as_{cn}() const;']
-            bodies += [f'inline std::optional<{cn}> {n}::as_{cn}() const {{ if ({condition(tag)}) return {cn}(value_); return std::nullopt; }}']
+            bodies += [f'inline std::optional<{cn}> {n}::as_{cn}() const {{ if ({condition(tag)}) return detail::Loader::input<{cn}>(value_); return std::nullopt; }}']
         if 'properties' not in s and 'variants' not in s:
             t=typ(s)
             lines += [cache_field(t, 'value'), f'public: const {t}& value() const;']

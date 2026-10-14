@@ -54,6 +54,7 @@ heavy_compile "$cmake_bin" -S "$wrapper" -B "$out/package-build" -DCMAKE_BUILD_T
 heavy_compile "$cmake_bin" --build "$out/package-build" --parallel 2
 "$cmake_bin" --install "$out/package-build"
 "$python_bin" fixtures/guard.py "$out/install"
+heavy_compile "$python_bin" fixtures/result_construction.py "$out/install"
 if [ "${THINKTHEN_TEST_PROFILE:-}" = smoke ]; then
  smoke_guard
   heavy_compile "$cmake_bin" -S fixtures/owned -B "$out/owned-shared" -DCMAKE_PREFIX_PATH="$out/install"

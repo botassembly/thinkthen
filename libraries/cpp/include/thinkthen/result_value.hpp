@@ -21,12 +21,12 @@ protected:
         }
         members.emplace_back(key,std::move(value)); value_=Data(std::move(members));
     }
-public:
     explicit Node(Data value):value_(std::move(value)) {}
     // Preserve unknown extensions and caller-owned original JSON without imposing a grammar.
 };
 namespace detail {
 inline const Data& document(const Node& value) { return value.value_; }
+// Unsupported bridge for native decoding and result fixtures; callers author inputs instead.
 struct Loader { template<class T> static T input(const Data& value) { return T(value,0); } };
 inline bool literal(const Data& value, const char* key, const char* expected) {
     return value.contains(key) && value.at(key).is_string() && value.at(key).get<std::string>() == expected;
@@ -54,7 +54,7 @@ template<class T> struct Decoder {
         if constexpr(std::is_same_v<T,std::nullptr_t>) return nullptr;
         else if constexpr(std::is_same_v<T,Data>) return value;
         else if constexpr(std::is_arithmetic_v<T> || std::is_same_v<T,std::string>) return value.get<T>();
-        else return T(value);
+        else return Loader::input<T>(value);
     }
     static bool matches(const Data& value) {
         if constexpr(std::is_same_v<T,std::nullptr_t>) return value.is_null();
