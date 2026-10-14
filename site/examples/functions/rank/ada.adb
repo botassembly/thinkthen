@@ -14,7 +14,8 @@ procedure Sample is
      [Text_Item ("Newsletter: our autumn catalog is here. "
         & "No reply needed."),
       Text_Item (
-        "Our checkout page is down and customers cannot pay"),
+        "Our checkout page is down "
+        & "and customers cannot pay"),
       Text_Item (
         "Reminder: your invoice is due in 30 days"),
       Text_Item (
