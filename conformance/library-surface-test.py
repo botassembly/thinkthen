@@ -30,12 +30,12 @@ class PublicSurface(unittest.TestCase):
                                      capture_output=True, text=True, env=child_env(home=folder))
                 self.assertIn(run.returncode, (0, 1), run.stderr)
                 return json.loads(run.stdout)['libraries']['dart']
-            errors = invoke()
-            self.assertFalse(any(error.startswith(('missing function:', 'schema declaration derivation failed:',
-                                                   'missing generated declaration:', 'unlisted generated declaration:'))
-                                 for error in errors), errors)
+            self.assertEqual(invoke(), [])
             client = root / 'libraries/dart/lib/src/session/client.dart'
             original = client.read_text()
+            self.assertIn('final class Cancellation {', original)
+            client.write_text(original.replace('final class Cancellation {', 'final class Cancellation {\n  bool extraPublicField = false;', 1))
+            self.assertIn('unlisted public field: Cancellation.extraPublicField', invoke())
             self.assertIn('with NamedCalls', original)
             client.write_text(original.replace('with NamedCalls', 'with\n    NamedCalls', 1))
             self.assertNotIn('missing function: decide', invoke())
