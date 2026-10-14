@@ -88,6 +88,8 @@ def native(rows, verb):
              'annotate': 'completeAnnotation', 'recognize': 'completeRecognition',
              'find': 'completeFind', 'relate': 'completeRelation'}
     completed = [row for row in rows if row['result'] is not None]
+    if verb == 'rank':
+        completed.sort(key=lambda row: row['result']['value'])
     if verb == 'relate':
         completed = list({json.dumps(row['result'], sort_keys=True): row for row in completed}.values())
     values = [decode(row['result'], DEFINITIONS[roots[verb]]) for row in completed]

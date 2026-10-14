@@ -24,7 +24,7 @@ def main():
         backend = Backend(target / 'debug/conformance-backend', env)
         host = PostgresqlHost()
         try:
-            host.start({**env, 'THINKTHEN_BASE_URL': f'http://127.0.0.1:{backend.port}/arm/full/capture/v1'})
+            host.start({**env, 'THINKTHEN_BASE_URL': f'http://127.0.0.1:{backend.port}/arm/full/v1'})
 
             def query(statement, sends=0):
                 before = int(backend.read('count'))
@@ -83,7 +83,7 @@ def main():
             failed = rows("SELECT to_jsonb(r) FROM thinkthen_decide_details('Fits?',ARRAY[" + record + ",NULL," + record + "]) r")
             assert len(failed) == 1 and failed[0]['failure']['kind'] == 'usage', failed
             assert 'Alpha.' not in failed[0]['failure']['message'], failed
-            with ConditionalBackend(f'http://127.0.0.1:{backend.port}/arm/full/capture/v1') as proxy:
+            with ConditionalBackend(f'http://127.0.0.1:{backend.port}/arm/full/v1') as proxy:
                 host.start({**env, 'THINKTHEN_BASE_URL': proxy.base})
                 failed = "thinkthen_record(text=>'private evidence')"
                 got = rows("SELECT to_jsonb(r) FROM thinkthen_decide_details('Fits?',ARRAY[" + record + "," + failed + ",thinkthen_record(text=>'Beta.')]) r", 2)
@@ -93,7 +93,7 @@ def main():
                 assert got[1]['failure']['kind'] == 'backend', got
                 assert 'private evidence' not in got[1]['failure']['message'], got
                 assert all(row['facts']['requests_sent'] == 3 for row in got), got
-            host.start({**env, 'THINKTHEN_BASE_URL': f'http://127.0.0.1:{backend.port}/arm/full/capture/v1'})
+            host.start({**env, 'THINKTHEN_BASE_URL': f'http://127.0.0.1:{backend.port}/arm/full/v1'})
             got = rows("SELECT to_jsonb(r) FROM thinkthen_decide_details('Fits?',ARRAY[" + record + "],thinkthen_reading(threshold=>'0.1:0.95')) r", 1)
             assert got[0]['value'] is None and got[0]['probability'] == .9, got
             source = "ROW('caller-read.txt',1,1)::thinkthen_source"
@@ -101,6 +101,7 @@ def main():
             assert got[0]['result']['source']['file'] == 'caller-read.txt', got
             nullable = rows("SELECT to_jsonb(r) FROM thinkthen_decide_details('Fits?',ARRAY[thinkthen_record(value=>'null'::json)]) r", 1)
             assert nullable[0]['result']['input'] is None and nullable[0]['result']['input_present'] is True, nullable
+            host.start({**env, 'THINKTHEN_BASE_URL': f'http://127.0.0.1:{backend.port}/arm/full/capture/v1'})
             selected = "thinkthen_record(value=>'{\"body\":\"Alpha.\",\"private\":\"not submitted\"}'::json,context=>'')"
             declared = quoted(json.dumps({'decide': 'Fits?', 'item_schema': {'type': 'string'}}))
             located = rows("SELECT to_jsonb(r) FROM thinkthen_decide_details(" + declared + ",ARRAY[" + selected + "],thinkthen_reading(field=>ARRAY['/body'],context=>'Saved fallback.')) r", 1)

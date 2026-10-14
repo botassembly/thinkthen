@@ -59,10 +59,13 @@ def main():
                 for incremental in (False, True):
                     got = call('decide', {'decide': 'Fits?'}, {'records': [
                         {'text': 'Alpha.'}, invalid], 'incremental': incremental},
-                        0)
+                        int(incremental))
                     assert got['code'] == ERRORS['usage'], got
-                    assert got['completed'] == [] and 'facts' not in got, got
-                    assert 'stopped_at' not in got, got
+                    assert len(got['completed']) == int(incremental), got
+                    assert got.get('stopped_at') == 2, got
+                    if incremental:
+                        assert got['completed'][0]['index'] == 0, got
+                        assert got['completed'][0]['input'] == 'Alpha.', got
 
             question = {'version': 1, 'questions': {'body': {
                 'decide': 'Fits?', 'on': '/body', 'item_schema': {'type': 'string'}}}}
@@ -91,7 +94,7 @@ def main():
                            {'records': [], 'unknown': True}):
                 got = call('decide', {'decide': 'Fits?'}, inputs, 0)
                 assert got['code'] == ERRORS['usage'] and 'facts' not in got, got
-            assert int(backend.read('count')) == 5
+            assert int(backend.read('count')) == 8
             print('postgresql: typed declaration, projection, eager admission, false filter and file-authority cases pass')
         finally:
             host.stop()
