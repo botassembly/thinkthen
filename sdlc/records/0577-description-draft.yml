@@ -18,11 +18,20 @@ repo:
 
 docs:
   hello_world: |
-    -- Preview one request without a key or a model call.
-    SELECT (thinkthen_plan('Does the writer ask for a refund?', '{"7":"Please refund my order."}', '{}')).records;
+    WITH refunds(body) AS (VALUES
+        ('Please refund my order. It arrived broken.'),
+        ('Thanks for the quick help yesterday!'), ('I want to send this back.'))
+    SELECT body, thinkthen_decide('Does the customer ask for a refund?', body) AS refund
+    FROM refunds;
+    WITH messages(body) AS (VALUES
+        ('Please refund the extra fee on my invoice.'),
+        ('My parcel went to the wrong address.'), ('I cannot reset my password.'))
+    SELECT body, thinkthen_choose(
+        '{"choose":"Which team owns this?","options":{"billing":"Invoices, fees, and refunds.","shipping":"Parcels and delivery.","account":"Logins and passwords."}}',
+        body) AS team FROM messages;
   extended_description: |
-    ThinkThen answers questions about text in SQL. Use it to find messages that ask for a refund, label support requests or score answers against a rubric.
+    ThinkThen is ten functions on top of Jev, TypeSafe's decision model, or any model like it. It puts these decision models in your code, whatever model, language or database you use. Use Jev, OpenAI or a local model. Ask a typed question and get back `true`, `false`, a label or a number. Your code branches on the answer. A model can say not sure, and a failed call never looks like an answer. ThinkThen packs many records into few requests, saves each answer for reuse, and lets tests replay saved answers with no key and no network.
 
-    The extension is free and MIT licensed. Hosted models charge per token. Local models are free to use on your own machine.
+    The extension is free and MIT licensed. Hosted models charge per token. Local models are free to use; you supply the computer that runs them.
 
-    The example previews one request and makes no model call. To judge text, select a backend and model first. A hosted call sends the question and text to that backend. See https://thinkthen.dev/install/backends/ for setup and https://github.com/botassembly/thinkthen/tree/main/databases/duckdb for the SQL reference.
+    This submission targets DuckDB 1.5.6 and 2.0. See https://thinkthen.dev/install/duckdb/ for installation and SQL examples.
