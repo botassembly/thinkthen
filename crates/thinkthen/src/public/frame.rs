@@ -10,6 +10,8 @@ use super::{
 use crate::public::{InputReaderOptions, QuestionInput};
 use std::path::PathBuf;
 
+type FrameCall<T> = Call<T, crate::RequestValue, Series>;
+
 mod column;
 mod complete;
 mod eager;
@@ -82,7 +84,7 @@ pub trait PolarsEngine {
     /// Build a lazy score expression over a text column.
     ///
     /// # Errors
-    /// Refuses a non-score question or probability before collection.
+    /// Refuses a non-score question or invalid controls before collection.
     fn score_expr(
         &self,
         question: &Question,
@@ -93,7 +95,7 @@ pub trait PolarsEngine {
     /// Build a lazy tag expression over a text column.
     ///
     /// # Errors
-    /// Refuses a non-tag question or probability before collection.
+    /// Refuses a non-tag question or invalid controls before collection.
     fn tag_expr(
         &self,
         question: &Question,
@@ -101,9 +103,64 @@ pub trait PolarsEngine {
         options: PolarsExprOptions,
     ) -> Result<Expr, Error>;
 
+    /// Keep passing rows as typed value/probability structs.
+    /// # Errors
+    /// Refuses a non-decide question or invalid controls before collection.
+    fn filter_expr(
+        &self,
+        question: &Question,
+        input: Expr,
+        options: PolarsExprOptions,
+    ) -> Result<Expr, Error>;
+    /// Rank one whole logical collection and retain original row positions.
+    /// # Errors
+    /// Refuses a non-rank question or invalid controls before collection.
+    fn rank_expr(
+        &self,
+        question: &Question,
+        input: Expr,
+        options: PolarsExprOptions,
+    ) -> Result<Expr, Error>;
+    /// Find one original unit from a whole logical collection.
+    /// # Errors
+    /// Refuses a non-find question or invalid controls before collection.
+    fn find_expr(
+        &self,
+        question: &Question,
+        input: Expr,
+        options: PolarsExprOptions,
+    ) -> Result<Expr, Error>;
+    /// Annotate each present text with typed named values and null probability.
+    /// # Errors
+    /// Refuses invalid call controls before collection.
+    fn annotate_expr(
+        &self,
+        questions: &QuestionSet,
+        input: Expr,
+        options: PolarsExprOptions,
+    ) -> Result<Expr, Error>;
+    /// Recognize present text with typed per-item probability lists.
+    /// # Errors
+    /// Refuses invalid call controls before collection.
+    fn recognize_expr(
+        &self,
+        question: &Recognize,
+        input: Expr,
+        options: PolarsExprOptions,
+    ) -> Result<Expr, Error>;
+    /// Relate one whole logical collection of paired name/kind fields.
+    /// # Errors
+    /// Refuses invalid controls or partially null entities before sending.
+    fn relate_expr(
+        &self,
+        question: &Relate,
+        names: Expr,
+        kinds: Expr,
+        options: PolarsExprOptions,
+    ) -> Result<Expr, Error>;
+
     /// Judge a column with per-call threshold and meaning overrides. The
-    /// returned frame has `value` and, when requested, `probability` columns.
-    /// Score and tag refuse a probability request before any send.
+    /// returned frame always has typed `value` and nullable `probability` columns.
     ///
     /// # Errors
     /// Returns the same call error as the matching Series interface.
@@ -262,7 +319,7 @@ pub trait PolarsEngine {
         ask: &Recognize,
         texts: &Series,
         options: CallOptions<'_>,
-    ) -> Result<Call<Vec<Option<Recognized>>, crate::RequestValue, Series>, Error>;
+    ) -> Result<FrameCall<Vec<Option<Recognized>>>, Error>;
 
     /// Relate the complete entity collection from text name/kind columns.
     /// Paired null cells are omitted; a partly null entity is refused.

@@ -5,7 +5,7 @@
 )]
 #[path = "../../../rust/consumer/src/fixture.rs"]
 mod fixture;
-use fixture::Fixture;
+use fixture::{Fixture, Original};
 mod columns;
 use std::io::Write;
 use thinkthen::RequestDefinition as Asked;

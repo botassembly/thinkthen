@@ -4,8 +4,8 @@ use super::{
     PolarsCallOptions, PolarsEngine, PolarsExprOptions, complete, inputs, lazy, request, result,
 };
 use crate::public::{
-    Call, CallOptions, DecisionQuestion, Edge, Engine, Error, Judgment, PlanEstimate,
-    Probabilities, Question, QuestionKind, QuestionSet, Recognize, Recognized, Relate,
+    Call, CallOptions, DecisionQuestion, Edge, Engine, Error, Judgment, PlanEstimate, Question,
+    QuestionKind, QuestionSet, Recognize, Recognized, Relate,
 };
 use polars::prelude::{
     ChunkedBuilder, Column, DataFrame, Expr, Float64Type, IntoSeries, PrimitiveChunkedBuilder,
@@ -71,6 +71,56 @@ impl PolarsEngine for Engine {
         lazy::expression(self, QuestionKind::Tag, question, input, options)
     }
 
+    fn filter_expr(
+        &self,
+        question: &Question,
+        input: Expr,
+        options: PolarsExprOptions,
+    ) -> Result<Expr, Error> {
+        Engine::filter_expr(self, question, input, options)
+    }
+    fn rank_expr(
+        &self,
+        question: &Question,
+        input: Expr,
+        options: PolarsExprOptions,
+    ) -> Result<Expr, Error> {
+        Engine::rank_expr(self, question, input, options)
+    }
+    fn find_expr(
+        &self,
+        question: &Question,
+        input: Expr,
+        options: PolarsExprOptions,
+    ) -> Result<Expr, Error> {
+        Engine::find_expr(self, question, input, options)
+    }
+    fn annotate_expr(
+        &self,
+        questions: &QuestionSet,
+        input: Expr,
+        options: PolarsExprOptions,
+    ) -> Result<Expr, Error> {
+        Engine::annotate_expr(self, questions, input, options)
+    }
+    fn recognize_expr(
+        &self,
+        question: &Recognize,
+        input: Expr,
+        options: PolarsExprOptions,
+    ) -> Result<Expr, Error> {
+        Engine::recognize_expr(self, question, input, options)
+    }
+    fn relate_expr(
+        &self,
+        question: &Relate,
+        names: Expr,
+        kinds: Expr,
+        options: PolarsExprOptions,
+    ) -> Result<Expr, Error> {
+        Engine::relate_expr(self, question, names, kinds, options)
+    }
+
     fn column_with(
         &self,
         question: &Question,
@@ -96,7 +146,13 @@ impl PolarsEngine for Engine {
         texts: &Series,
         options: CallOptions<'_>,
     ) -> Result<Call<Series, crate::RequestValue, Series>, Error> {
-        scalar(self, question.question(), texts, options)
+        scalar(
+            self,
+            QuestionKind::Decide,
+            question.question(),
+            texts,
+            options,
+        )
     }
 
     fn choose_series(
@@ -105,7 +161,7 @@ impl PolarsEngine for Engine {
         texts: &Series,
         options: CallOptions<'_>,
     ) -> Result<Call<Series, crate::RequestValue, Series>, Error> {
-        scalar(self, question, texts, options)
+        scalar(self, QuestionKind::Choose, question, texts, options)
     }
 
     fn score_series(
@@ -114,7 +170,7 @@ impl PolarsEngine for Engine {
         texts: &Series,
         options: CallOptions<'_>,
     ) -> Result<Call<Series, crate::RequestValue, Series>, Error> {
-        scalar(self, question, texts, options)
+        scalar(self, QuestionKind::Score, question, texts, options)
     }
 
     fn tag_series(
@@ -123,7 +179,7 @@ impl PolarsEngine for Engine {
         texts: &Series,
         options: CallOptions<'_>,
     ) -> Result<Call<Series, crate::RequestValue, Series>, Error> {
-        scalar(self, question, texts, options)
+        scalar(self, QuestionKind::Tag, question, texts, options)
     }
 
     fn annotate_frame(
@@ -178,7 +234,7 @@ impl PolarsEngine for Engine {
                         "an annotation frame received another result kind",
                     ));
                 };
-                request::project(held.as_materialized_series(), &rows, |record| {
+                request::project(held.as_materialized_series(), rows, |record| {
                     annotated(&mut columns, &mut failures, record)
                 })?;
                 let mut columns = columns
@@ -222,7 +278,7 @@ impl PolarsEngine for Engine {
         ask: &Recognize,
         texts: &Series,
         options: CallOptions<'_>,
-    ) -> Result<Call<Vec<Option<Recognized>>, crate::RequestValue, Series>, Error> {
+    ) -> Result<super::FrameCall<Vec<Option<Recognized>>>, Error> {
         complete::recognize(self, ask, texts, options)
     }
     fn relate_frame(
@@ -239,10 +295,16 @@ impl PolarsEngine for Engine {
 
 fn scalar(
     engine: &Engine,
+    wanted: QuestionKind,
     question: &Question,
     texts: &Series,
     options: CallOptions<'_>,
 ) -> Result<Call<Series, crate::RequestValue, Series>, Error> {
+    if question.kind() != wanted {
+        return Err(Error::usage(
+            "question kind does not match the requested function",
+        ));
+    }
     atomic_frame(engine, question, texts, options)?.try_map(|frame| {
         let mut value = frame
             .column("value")

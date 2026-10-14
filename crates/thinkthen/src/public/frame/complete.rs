@@ -152,7 +152,7 @@ pub(super) fn recognize(
     ask: &Recognize,
     texts: &Series,
     options: CallOptions<'_>,
-) -> Result<Call<Vec<Option<Recognized>>, crate::RequestValue, Series>, Error> {
+) -> Result<super::FrameCall<Vec<Option<Recognized>>>, Error> {
     let call = request::execute_definition(
         engine,
         ask.clone().into(),
@@ -165,7 +165,7 @@ pub(super) fn recognize(
             return Err(Error::defect("recognition returned another result kind"));
         };
         let mut recognized = Vec::with_capacity(texts.len());
-        request::project(texts, &rows, |row| {
+        request::project(texts, rows, |row| {
             recognized.push(row.map(|row| row.value().clone()));
             Ok(())
         })?;

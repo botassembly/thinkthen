@@ -28,6 +28,7 @@ pub(super) fn types(
         _ => DataType::Boolean,
     };
     let mut schema = Schema::new(input.clone(), judgment)?;
+    schema.definition(definition)?;
     let value = match function {
         RequestFunction::Filter | RequestFunction::Find => input.clone(),
         RequestFunction::Rank => DataType::UInt64,
@@ -39,7 +40,6 @@ pub(super) fn types(
                 } => set,
                 _ => return Err(Error::usage("annotate needs a question set")),
             };
-            let mut answers = Vec::new();
             let mut values = Vec::new();
             for (name, kind) in set.members() {
                 let dtype = match kind {
@@ -49,23 +49,10 @@ pub(super) fn types(
                     crate::QuestionKind::Tag => DataType::List(Box::new(DataType::String)),
                     _ => return Err(Error::defect("an annotation has another judgment kind")),
                 };
-                let member =
-                    Schema::new(input.clone(), dtype.clone())?.named("completeAnnotationMember")?;
-                answers.push(Field::new(name.into(), member));
                 values.push(Field::new(name.into(), dtype));
             }
             let dtype = DataType::Struct(values);
             schema.override_type("completeannotatedRow", dtype.clone());
-            let mut fields = match schema.named("completeAnnotation")? {
-                DataType::Struct(fields) => fields,
-                _ => return Err(Error::defect("an annotation schema is not a struct")),
-            };
-            for field in &mut fields {
-                if field.name().as_str() == "answers" {
-                    *field = Field::new("answers".into(), DataType::Struct(answers.clone()));
-                }
-            }
-            schema.override_type("completeAnnotation", DataType::Struct(fields));
             dtype
         }
         _ => schema.property(schema::record_name(function), "value")?,
@@ -133,7 +120,12 @@ pub(super) fn value_column(
 ) -> Result<Series, Error> {
     let (_, dtype) = types(function, definition, column.dtype())?;
     let probabilities = probabilities(value)?;
-    let rows = documents(value)?;
+    let mut rows = documents(value)?;
+    if let RequestValue::Annotations(annotations) = value {
+        for (document, annotation) in rows.iter_mut().zip(annotations) {
+            document["value"] = annotation_values(annotation.result())?;
+        }
+    }
     let positions = request::positions(column)?;
     let mut values = Vec::new();
     for (row, probability) in rows.iter().zip(probabilities) {
@@ -157,36 +149,45 @@ pub(super) fn value_column(
         };
         values.push(serde_json::json!({"value":value,"probability":probability}));
     }
-    if !matches!(
-        function,
-        RequestFunction::Filter
-            | RequestFunction::Rank
-            | RequestFunction::Find
-            | RequestFunction::Relate
-    ) {
-        let mut source = values.into_iter();
-        values = column
-            .is_not_null()
-            .iter()
-            .map(|present| {
-                if present == Some(true) {
-                    source
-                        .next()
-                        .ok_or_else(|| Error::defect("a frame lost a present result"))
-                } else {
-                    Ok(Value::Null)
-                }
-            })
-            .collect::<Result<Vec<_>, Error>>()?;
-        if source.next().is_some() {
-            return Err(Error::defect("a frame added a result"));
-        }
+    if rowwise(function) {
+        values = restore(column, values)?;
     }
     let dtype = DataType::Struct(vec![
         Field::new("value".into(), dtype),
         Field::new("probability".into(), probability_type(function)),
     ]);
     schema::series(column.name().as_str(), &values, &dtype)
+}
+fn annotation_values(annotation: &crate::CompleteAnnotated) -> Result<Value, Error> {
+    let mut members = serde_json::Map::new();
+    for member in annotation.members() {
+        let value = match member.value() {
+            Some(crate::Judgment::Decision(value)) => json(&super::column::decided(value))?,
+            Some(crate::Judgment::Choice(value)) => json(&value)?,
+            Some(crate::Judgment::Score(value)) => json(&value)?,
+            Some(crate::Judgment::Tags(value)) => json(&value)?,
+            None => Value::Null,
+        };
+        members.insert(member.name().to_owned(), value);
+    }
+    Ok(Value::Object(members))
+}
+fn restore(column: &Series, rows: Vec<Value>) -> Result<Vec<Value>, Error> {
+    let mut source = rows.into_iter();
+    let mut output = Vec::with_capacity(column.len());
+    for present in column.is_not_null().iter() {
+        output.push(if present == Some(true) {
+            source
+                .next()
+                .ok_or_else(|| Error::defect("a frame lost a present result"))?
+        } else {
+            Value::Null
+        });
+    }
+    if source.next().is_some() {
+        return Err(Error::defect("a frame added a result"));
+    }
+    Ok(output)
 }
 pub(super) fn enrich<T>(
     call: Call<RequestValue>,
@@ -205,39 +206,15 @@ fn enrich_mode<T>(
 ) -> Result<Call<T, RequestValue, Series>, Error> {
     call.project(|value| {
         let mut probabilities = probabilities(&value)?;
-        if !all_filter {
-            if let RequestValue::Filtered(rows) = &value {
-                probabilities = rows
-                    .iter()
-                    .zip(probabilities)
-                    .filter_map(|(row, probability)| row.result().value().then_some(probability))
-                    .collect();
-            }
-        }
-
-        if (all_filter && function == RequestFunction::Filter)
-            || !matches!(
-                function,
-                RequestFunction::Filter
-                    | RequestFunction::Rank
-                    | RequestFunction::Find
-                    | RequestFunction::Relate
-            )
-        {
-            let mut source = probabilities.into_iter();
-            probabilities = column
-                .is_not_null()
+        if !all_filter && let RequestValue::Filtered(rows) = &value {
+            probabilities = rows
                 .iter()
-                .map(|present| {
-                    if present == Some(true) {
-                        source
-                            .next()
-                            .ok_or_else(|| Error::defect("a frame lost a row probability"))
-                    } else {
-                        Ok(Value::Null)
-                    }
-                })
-                .collect::<Result<Vec<_>, Error>>()?;
+                .zip(probabilities)
+                .filter_map(|(row, probability)| row.result().value().then_some(probability))
+                .collect();
+        }
+        if (all_filter && function == RequestFunction::Filter) || rowwise(function) {
+            probabilities = restore(column, probabilities)?;
         }
         let probability =
             schema::series("probability", &probabilities, &probability_type(function))?;
@@ -245,7 +222,86 @@ fn enrich_mode<T>(
         Ok((output, value, probability))
     })
 }
-
+fn rowwise(function: RequestFunction) -> bool {
+    !matches!(
+        function,
+        RequestFunction::Filter
+            | RequestFunction::Rank
+            | RequestFunction::Find
+            | RequestFunction::Relate
+    )
+}
+fn check_originals<T: InputEvidence + Serialize>(
+    column: &Series,
+    records: &[Option<RecordInput<T>>],
+) -> Result<(), Error> {
+    let mut originals = Vec::with_capacity(records.len());
+    for record in records {
+        let Some(record) = record else {
+            originals.push(Value::Null);
+            continue;
+        };
+        let original = json(&record.original)?;
+        if original != json(&record.original.question_input())? {
+            return Err(Error::usage(
+                "the original column differs from its admitted input",
+            ));
+        }
+        originals.push(original);
+    }
+    let checked = schema::series(column.name().as_str(), &originals, column.dtype())
+        .map_err(|_| Error::usage("the originals do not fit the supplied column type"))?;
+    if !checked.equals_missing(column) {
+        return Err(Error::usage(
+            "the original column differs from its admitted input",
+        ));
+    }
+    Ok(())
+}
+fn map_index(row: &mut Value, positions: &[usize]) -> Result<(), Error> {
+    let Some(at) = row
+        .get("index")
+        .and_then(Value::as_u64)
+        .and_then(|at| usize::try_from(at).ok())
+    else {
+        return Ok(());
+    };
+    row["index"] = json(
+        positions
+            .get(at)
+            .ok_or_else(|| Error::defect("a record lost its original position"))?,
+    )?;
+    Ok(())
+}
+fn records_frame(
+    value: &RequestValue,
+    function: RequestFunction,
+    column: &Series,
+    positions: &[usize],
+    schema: &Schema,
+) -> Result<DataFrame, Error> {
+    let mut rows = documents(value)?;
+    for row in &mut rows {
+        map_index(row, positions)?;
+        if function == RequestFunction::Find
+            && let Some(candidates) = row.get_mut("candidates").and_then(Value::as_array_mut)
+        {
+            for candidate in candidates {
+                map_index(candidate, positions)?;
+            }
+        }
+    }
+    if function == RequestFunction::Filter || rowwise(function) {
+        rows = restore(column, rows)?;
+    }
+    let records = schema.records(
+        schema::record_name(function),
+        &rows,
+        function == RequestFunction::Relate,
+    )?;
+    DataFrame::new(records.len(), vec![records.into()])
+        .map_err(|_| Error::defect("a canonical records frame could not be built"))
+}
 impl Engine {
     /// Return a canonical typed records column and the unchanged native records.
     /// Originals must equal the admitted values and the supplied column type.
@@ -259,103 +315,16 @@ impl Engine {
         records: Vec<Option<RecordInput<T>>>,
         options: CallOptions<'_>,
     ) -> Result<Call<DataFrame, RequestValue, Series>, Error> {
-        let originals = records
-            .iter()
-            .map(|record| {
-                record
-                    .as_ref()
-                    .map(|record| {
-                        let original = json(&record.original)?;
-                        if original != json(&record.original.question_input())? {
-                            return Err(Error::usage(
-                                "the original column differs from its admitted input",
-                            ));
-                        }
-                        Ok(original)
-                    })
-                    .transpose()
-                    .map(|value| value.unwrap_or(Value::Null))
-            })
-            .collect::<Result<Vec<_>, Error>>()?;
-        let checked = schema::series(column.name().as_str(), &originals, column.dtype())
-            .map_err(|_| Error::usage("the originals do not fit the supplied column type"))?;
-        if !checked.equals_missing(column) {
-            return Err(Error::usage(
-                "the original column differs from its admitted input",
-            ));
-        }
+        check_originals(column, &records)?;
         let (records, positions) = present(column, records)?;
         let (schema, _) = types(function, definition, column.dtype())?;
-        let mut dtype = schema.named(schema::record_name(function))?;
-        if function == RequestFunction::Relate {
-            if let DataType::Struct(fields) = &mut dtype {
-                for field in fields {
-                    if field.name().as_str() == "input" {
-                        *field = Field::new(
-                            "input".into(),
-                            DataType::List(Box::new(column.dtype().clone())),
-                        );
-                    }
-                }
-            }
-        }
+        schema.named(schema::record_name(function))?;
         let rows = records
             .into_iter()
             .map(|record| Ok(record.map_original(|original| original.question_input())));
         let call = request::execute_records(self, definition.clone(), function, options, rows)?;
         enrich_mode(call, function, column, true, |value| {
-            let mut rows = documents(value)?;
-            for row in &mut rows {
-                if let Some(at) = row
-                    .get("index")
-                    .and_then(Value::as_u64)
-                    .and_then(|at| usize::try_from(at).ok())
-                {
-                    row["index"] =
-                        json(positions.get(at).ok_or_else(|| {
-                            Error::defect("a record lost its original position")
-                        })?)?;
-                }
-                if function == RequestFunction::Find {
-                    if let Some(candidates) =
-                        row.get_mut("candidates").and_then(Value::as_array_mut)
-                    {
-                        for candidate in candidates {
-                            if let Some(at) = candidate
-                                .get("index")
-                                .and_then(Value::as_u64)
-                                .and_then(|at| usize::try_from(at).ok())
-                            {
-                                candidate["index"] = json(positions.get(at).ok_or_else(|| {
-                                    Error::defect("a candidate lost its original position")
-                                })?)?;
-                            }
-                        }
-                    }
-                }
-            }
-            if !matches!(
-                function,
-                RequestFunction::Rank | RequestFunction::Find | RequestFunction::Relate
-            ) {
-                let mut source = rows.into_iter();
-                rows = column
-                    .is_not_null()
-                    .iter()
-                    .map(|present| {
-                        if present == Some(true) {
-                            source
-                                .next()
-                                .ok_or_else(|| Error::defect("a frame lost a record"))
-                        } else {
-                            Ok(Value::Null)
-                        }
-                    })
-                    .collect::<Result<Vec<_>, Error>>()?;
-            }
-            let records = schema::series("records", &rows, &dtype)?;
-            DataFrame::new(records.len(), vec![records.into()])
-                .map_err(|_| Error::defect("a canonical records frame could not be built"))
+            records_frame(value, function, column, &positions, &schema)
         })
     }
 }

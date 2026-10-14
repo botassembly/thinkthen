@@ -597,3 +597,169 @@ fn relation_expression_omits_paired_nulls_and_refuses_a_partial_entity_before_se
     );
     assert_eq!(listener.count(), 1, "invalid collection sends nothing");
 }
+
+#[test]
+fn records_column_keeps_rejected_filter_observations_and_refuses_incompatible_originals() {
+    use thinkthen::{RecordInput, RequestDefinition, RequestFunction};
+    let listener = Listener::answering(|_| Canned::ok(r#"{"model":"jev-latest","answers":{"q1":{"type":"noul","noul":0.9},"q2":{"type":"noul","noul":0.2}}}"#)).expect("listener");
+    let engine = common::builder(listener.base())
+        .no_cache()
+        .build()
+        .expect("engine");
+    let question = Question::decide("Relevant?").expect("question").cut();
+    let definition = RequestDefinition::from(question.clone());
+    let column = Series::new("body".into(), [Some("strong"), None, Some("weak")]);
+    let record = |text: &str| RecordInput {
+        original: text.to_owned(),
+        context: None,
+        options: None,
+        seed_spans: None,
+        examples: None,
+    };
+    for rows in [
+        vec![Some(record("different")), None, Some(record("weak"))],
+        vec![Some(record("strong")), Some(record("extra")), None],
+    ] {
+        let error = engine
+            .records_column(
+                RequestFunction::Filter,
+                &definition,
+                &column,
+                rows,
+                CallOptions::new(),
+            )
+            .expect_err("incompatible originals");
+        assert_eq!(error.kind(), ErrorKind::Usage);
+    }
+    assert_eq!(
+        listener.count(),
+        0,
+        "input compatibility fails before sending"
+    );
+    let result = engine
+        .records_column(
+            RequestFunction::Filter,
+            &definition,
+            &column,
+            vec![Some(record("strong")), None, Some(record("weak"))],
+            CallOptions::new(),
+        )
+        .expect("records");
+    let records = result
+        .value()
+        .column("records")
+        .expect("records")
+        .struct_()
+        .expect("Struct");
+    assert_eq!(records.len(), 3);
+    assert_eq!(records.null_count(), 1);
+    assert_eq!(
+        records
+            .field_by_name("index")
+            .expect("indices")
+            .u64()
+            .expect("UInt64")
+            .iter()
+            .collect::<Vec<_>>(),
+        [Some(0), None, Some(2)]
+    );
+    assert_eq!(
+        records
+            .field_by_name("value")
+            .expect("values")
+            .bool()
+            .expect("Boolean")
+            .iter()
+            .collect::<Vec<_>>(),
+        [Some(true), None, Some(false)]
+    );
+    let thinkthen::RequestValue::Filtered(native) = result.results() else {
+        panic!("native filter records")
+    };
+    assert_eq!(
+        native.len(),
+        2,
+        "rejected observations remain canonical results"
+    );
+    assert!(!native[1].result().value());
+    assert_eq!(
+        result
+            .probability()
+            .f64()
+            .expect("Float64")
+            .iter()
+            .collect::<Vec<_>>(),
+        [Some(0.9), None, Some(0.2)]
+    );
+    assert_eq!(
+        (result.facts().records(), result.facts().requests_sent()),
+        (2, 1)
+    );
+    assert_eq!(listener.count(), 1);
+}
+
+#[test]
+fn records_column_projects_scalar_unions_without_changing_native_records() {
+    use thinkthen::{RecordInput, RequestDefinition, RequestFunction};
+    let listener = Listener::answering(|_| {
+        Canned::ok(r#"{"model":"jev-latest","answers":{"q1":{"type":"noul","noul":0.9}}}"#)
+    })
+    .expect("listener");
+    let engine = common::builder(listener.base())
+        .no_cache()
+        .build()
+        .expect("engine");
+    let column = common::column(&["strong"]);
+    for threshold in [serde_json::json!(0.5), serde_json::json!("0.2:0.8")] {
+        let authored = serde_json::json!({"decide":"Relevant?","threshold":threshold});
+        let definition =
+            RequestDefinition::from_authored_json(&authored.to_string()).expect("definition");
+        let result = engine
+            .records_column(
+                RequestFunction::Decide,
+                &definition,
+                &column,
+                vec![Some(RecordInput {
+                    original: "strong".to_owned(),
+                    context: None,
+                    options: None,
+                    seed_spans: None,
+                    examples: None,
+                })],
+                CallOptions::new(),
+            )
+            .expect("typed record");
+        let records = result
+            .value()
+            .column("records")
+            .expect("records")
+            .struct_()
+            .expect("Struct");
+        let projected = records.field_by_name("threshold").expect("threshold");
+        let branches = projected.struct_().expect("typed number/string union");
+        let number = branches.field_by_name("number").expect("number");
+        let text = branches.field_by_name("string").expect("string");
+        assert_eq!(number.f64().expect("Float64").get(0), threshold.as_f64());
+        assert_eq!(text.str().expect("String").get(0), threshold.as_str());
+        let question = records.field_by_name("question").expect("question");
+        assert_eq!(
+            question
+                .struct_()
+                .expect("question struct")
+                .field_by_name("text")
+                .expect("text")
+                .str()
+                .expect("String")
+                .get(0),
+            Some("Relevant?")
+        );
+        let native = serde_json::to_value(result.results()).expect("native records");
+        assert_eq!(native[0]["threshold"], threshold);
+        assert_eq!(native[0]["question"]["text"], "Relevant?");
+    }
+    assert_eq!(
+        listener.count(),
+        2,
+        "each record projection uses its one native call"
+    );
+}

@@ -19,28 +19,8 @@ fn expression(
     options.validate()?;
     let dtype = result::expression_type(function, &definition, &DataType::String)?;
     let engine = engine.clone();
-    let evaluate = move |column: Column| {
-        caught(|| {
-            let source = column.as_materialized_series();
-            let value = options
-                .run(|| {
-                    request::execute_definition(
-                        &engine,
-                        definition.clone(),
-                        source,
-                        function,
-                        options.call()?,
-                    )
-                })
-                .and_then(|call| {
-                    call.try_map(|value| {
-                        result::value_column(&value, function, &definition, source)
-                    })
-                })
-                .map_err(compute_error)?;
-            Ok(value.into_value().into())
-        })
-    };
+    let evaluate =
+        move |column: Column| caught(|| evaluate(&engine, function, &definition, &options, column));
     // Groupwise execution materializes the complete logical collection. It
     // prevents streaming morsels from becoming independent rank/find sets.
     Ok(input.apply_with_fmt_str(
@@ -48,6 +28,59 @@ fn expression(
         move |_, field| Ok(Field::new(field.name().clone(), dtype.clone())),
         "thinkthen",
     ))
+}
+fn evaluate(
+    engine: &Engine,
+    function: RequestFunction,
+    definition: &RequestDefinition,
+    options: &PolarsExprOptions,
+    column: Column,
+) -> Result<Column, polars::prelude::PolarsError> {
+    let source = column.as_materialized_series();
+    let call = options
+        .run(|| {
+            request::execute_definition(
+                engine,
+                definition.clone(),
+                source,
+                function,
+                options.call()?,
+            )
+        })
+        .map_err(compute_error)?;
+    let value = call
+        .try_map(|value| result::value_column(&value, function, definition, source))
+        .map_err(compute_error)?;
+    Ok(value.into_value().into())
+}
+fn related(
+    engine: &Engine,
+    question: &Relate,
+    definition: &RequestDefinition,
+    options: &PolarsExprOptions,
+    columns: &mut [Column],
+) -> Result<Column, polars::prelude::PolarsError> {
+    let first = columns
+        .first()
+        .ok_or_else(|| compute_error(Error::defect("a relation lost its names")))?;
+    let second = columns
+        .get(1)
+        .ok_or_else(|| compute_error(Error::defect("a relation lost its kinds")))?;
+    let mut first = first.clone();
+    first.rename("name".into());
+    let mut second = second.clone();
+    second.rename("kind".into());
+    let frame = DataFrame::new(first.len(), vec![first, second])?;
+    let source = frame.column("name")?.as_materialized_series();
+    let call = options
+        .run(|| {
+            super::complete::related_call(engine, question, &frame, "name", "kind", options.call()?)
+        })
+        .map_err(compute_error)?;
+    let value = call
+        .try_map(|value| result::value_column(&value, RequestFunction::Relate, definition, source))
+        .map_err(compute_error)?;
+    Ok(value.into_value().into())
 }
 impl Engine {
     /// Keep matching rows as value/probability structs in their original order.
@@ -155,45 +188,7 @@ impl Engine {
         let engine = self.clone();
         let question = question.clone();
         Ok(names.apply_many(
-            move |columns| {
-                caught(|| {
-                    let first = columns
-                        .first()
-                        .ok_or_else(|| compute_error(Error::defect("a relation lost its names")))?;
-                    let second = columns
-                        .get(1)
-                        .ok_or_else(|| compute_error(Error::defect("a relation lost its kinds")))?;
-                    let mut first = first.clone();
-                    first.rename("name".into());
-                    let mut second = second.clone();
-                    second.rename("kind".into());
-                    let frame = DataFrame::new(first.len(), vec![first, second])?;
-                    let source = frame.column("name")?.as_materialized_series();
-                    let call = options
-                        .run(|| {
-                            super::complete::related_call(
-                                &engine,
-                                &question,
-                                &frame,
-                                "name",
-                                "kind",
-                                options.call()?,
-                            )
-                        })
-                        .and_then(|call| {
-                            call.try_map(|value| {
-                                result::value_column(
-                                    &value,
-                                    RequestFunction::Relate,
-                                    &definition,
-                                    source,
-                                )
-                            })
-                        })
-                        .map_err(compute_error)?;
-                    Ok(call.into_value().into())
-                })
-            },
+            move |columns| caught(|| related(&engine, &question, &definition, &options, columns)),
             &[kinds],
             move |_, fields| {
                 let field = fields.first().ok_or_else(|| {

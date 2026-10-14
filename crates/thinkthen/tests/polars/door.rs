@@ -63,12 +63,13 @@ fn a_profiled_question_keeps_its_identity_through_a_series() {
         answered.value().bool().expect("boolean series").get(0),
         Some(true)
     );
-    let details = engine.details(&question, evidence).expect("details");
-    assert_eq!(
-        details.value().question_sha256(),
-        fixture["question_sha256"]
-    );
-    assert_eq!(details.value().profile_warning(), Some(("old", "new")));
+    let thinkthen::RequestValue::Decisions(rows) = answered.results() else {
+        panic!("native decisions")
+    };
+    let meta = rows[0].result().meta();
+    assert_eq!(meta.question_sha256(), fixture["question_sha256"].as_str());
+    let warning = meta.profile_warning().expect("profile warning");
+    assert_eq!((warning.tuned_for(), warning.running()), ("old", "new"));
     assert_eq!(backend.count(), 1);
 }
 

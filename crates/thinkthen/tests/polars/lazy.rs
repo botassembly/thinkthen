@@ -337,3 +337,103 @@ fn a_cached_lazy_frame_collected_twice_sends_nothing_the_second_time() {
         "the later slice asks only its own five new rows"
     );
 }
+
+#[test]
+fn annotation_and_recognition_expressions_keep_generated_nested_types_and_null_rows() {
+    let corpus: Value =
+        serde_json::from_str(include_str!("../../../../conformance/cases.json")).expect("corpus");
+    let cases = corpus["cases"].as_array().expect("cases");
+    for id in ["17-annotate-mixed", "42-recognize-C01-relations"] {
+        let case = cases.iter().find(|case| case["id"] == id).expect("case");
+        let responses = case["exchanges"]
+            .as_array()
+            .expect("exchanges")
+            .iter()
+            .map(|exchange| Canned::ok(&exchange["response"].to_string()))
+            .collect();
+        let listener = Listener::serving(responses).expect("saved listener");
+        let engine = engine(listener.base());
+        let text = case
+            .get("text")
+            .and_then(Value::as_str)
+            .or_else(|| case["exchanges"][0]["evidence"].as_str())
+            .expect("text");
+        let source = frame(&[Some(text), None]);
+        let expression = if id.starts_with("17") {
+            let questions =
+                thinkthen::QuestionSet::from_json(&case["question_set"].to_string()).expect("set");
+            engine
+                .annotate_expr(&questions, col("body"), PolarsExprOptions::new())
+                .expect("annotation expression")
+        } else {
+            let question = thinkthen::Recognize::from_json(&case["question"].to_string())
+                .expect("recognition");
+            engine
+                .recognize_expr(&question, col("body"), PolarsExprOptions::new())
+                .expect("recognition expression")
+        };
+        assert_eq!(listener.count(), 0, "building an expression sends nothing");
+        let projected = source
+            .lazy()
+            .select([expression])
+            .collect()
+            .expect("nested typed results");
+        let results = projected
+            .column("body")
+            .expect("result")
+            .struct_()
+            .expect("Struct");
+        assert_eq!((results.len(), results.null_count()), (2, 1));
+        let values = results.field_by_name("value").expect("value");
+        let probability = results.field_by_name("probability").expect("probability");
+        if id.starts_with("17") {
+            let values = values.struct_().expect("named typed annotation");
+            assert_eq!(
+                values.field_by_name("refund").expect("refund").dtype(),
+                &DataType::Boolean
+            );
+            assert_eq!(
+                values.field_by_name("team").expect("team").dtype(),
+                &DataType::String
+            );
+            assert_eq!(
+                values.field_by_name("severity").expect("severity").dtype(),
+                &DataType::Float64
+            );
+            assert_eq!(
+                values.field_by_name("topics").expect("topics").dtype(),
+                &DataType::List(Box::new(DataType::String))
+            );
+            assert_eq!(probability.null_count(), 2);
+        } else {
+            let entities = values
+                .struct_()
+                .expect("recognition struct")
+                .field_by_name("entities")
+                .expect("entities");
+            assert_eq!(
+                entities
+                    .list()
+                    .expect("List(Struct)")
+                    .get_as_series(0)
+                    .expect("entity list")
+                    .len(),
+                3
+            );
+            assert_eq!(
+                probability.dtype(),
+                &DataType::List(Box::new(DataType::Float64))
+            );
+            assert_eq!(
+                probability
+                    .list()
+                    .expect("List(Float64)")
+                    .get_as_series(0)
+                    .expect("span probabilities")
+                    .len(),
+                3
+            );
+            assert_eq!(probability.null_count(), 1);
+        }
+    }
+}
