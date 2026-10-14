@@ -27,7 +27,7 @@ var records = new RequestInputRecords
 var call = await engine.FilterAsync(
     new RequestQuestionText { Text = question },
     records);
-var complaints = call.Filter()
+var complaints = call.Value
     .Select(one => one.GetString());
 Trace.Assert(complaints.SequenceEqual(
     [reviews[1], reviews[3]]));

@@ -3,8 +3,6 @@ using System.Text.Json;
 using ThinkThen;
 using ThinkThen.Inputs;
 using ThinkThen.Results;
-using Named = ThinkThen.Results
-    .RelationEndpointRelatedEntity;
 
 using var engine = Engine.Open();
 var names = new[]
@@ -14,10 +12,18 @@ var names = new[]
     new { name = "iPhone", kind = "product" },
     new { name = "Kindle", kind = "product" },
 };
-var ask = new RequestQuestionFile
+var ask = QuestionBuilders.Relate(new RelateQuestion
 {
-    Path = "makes.json",
-};
+    Relations =
+    [
+        new AuthoredRelation
+        {
+            Name = new() { Value = "makes" },
+            Source = new AuthoredName { Value = "company" },
+            Target = new AuthoredName { Value = "product" },
+        },
+    ],
+});
 var entities = new RequestInputRecords
 {
     Items = names
@@ -32,10 +38,10 @@ var entities = new RequestInputRecords
         .ToList(),
 };
 var call = await engine.RelateAsync(ask, entities);
-var whoMakes = call.Relate().Value;
+var whoMakes = call.Value;
 var pairs = whoMakes.Select(edge => (
-    ((Named)edge.Source).Name,
-    ((Named)edge.Target).Name));
+    edge.SourceName,
+    edge.TargetName));
 Trace.Assert(pairs.SequenceEqual(
 [
     ("Apple", "iPhone"),

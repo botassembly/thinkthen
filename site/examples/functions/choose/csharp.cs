@@ -12,5 +12,5 @@ var parcel = "My parcel went to the wrong address.";
 var call = await engine.ChooseAsync(
     teamQuestion,
     new RequestInputText { Text = parcel });
-var team = call.Choice();
+var team = call.Value;
 Trace.Assert(team == "shipping");

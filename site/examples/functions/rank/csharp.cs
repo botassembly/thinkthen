@@ -28,5 +28,5 @@ var records = new RequestInputRecords
 var call = await engine.RankAsync(
     new RequestQuestionText { Text = question },
     records);
-var order = call.Rank();
+var order = call.Value;
 Trace.Assert(order.SequenceEqual([1UL, 3UL, 2UL, 0UL]));
