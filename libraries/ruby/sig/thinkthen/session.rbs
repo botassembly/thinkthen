@@ -40,17 +40,17 @@ module ThinkThen
     # Named calls and schema-defined keyword controls are generated in
     # results_generated.rbs from the canonical request grammar.
 
-    # Close the owner, keeping any exception already in flight.
-    def self.cleanup: (Client | Client::Operation owner) -> void
     def self.question_file: (String path) -> Client::Question
     def self.question_name: (String name) -> Client::Question
     def self.question_reference: (String reference) -> Client::Question
     # Native JSON of a value; the native extension itself reads this.
     private
     def self.dump: (untyped value) -> String
-    public
     def self.original: (untyped value) -> Hash[Symbol, untyped]
     def self.descriptor: (untyped value) -> Hash[Symbol, untyped]
+    # Close the owner, keeping any exception already in flight.
+    def self.cleanup: (Client | Client::Operation owner) -> void
+    public
 
     def close: () -> nil
     def inspect: () -> String
@@ -87,12 +87,13 @@ module ThinkThen
       attr_reader terminal: Results::NativeSessionPacketTerminal?
 
       def result: () -> Results::Completed
-      def cancelled: () -> CancelledError
-      def feed: () -> nil
       def cancel: () -> void
       def close: () -> nil
-      def close_producer: () -> nil
       def inspect: () -> String
+      private
+      def cancelled: () -> CancelledError
+      def feed: () -> nil
+      def close_producer: () -> nil
     end
   end
 end

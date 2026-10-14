@@ -48,7 +48,7 @@ module ThinkThen
         cleanup(client)
       end
     end
-    def self.cleanup(owner)
+    private_class_method def self.cleanup(owner)
       active = $!
       owner.close
     rescue Exception
@@ -84,10 +84,10 @@ module ThinkThen
       raise UsageError.new("input cannot be converted to native JSON", "usage")
     end
     private_class_method :dump
-    def self.original(value)
+    private_class_method def self.original(value)
       value.is_a?(String) ? {kind: "text", text: value} : {kind: "json", value: value}
     end
-    def self.descriptor(value)
+    private_class_method def self.descriptor(value)
       value.is_a?(Item) ? value.descriptor : {original: original(value)}
     end
     def plan(verb, question, input, **options)
@@ -100,7 +100,7 @@ module ThinkThen
         begin
           operation.result
         ensure
-          Client.cleanup(operation)
+          Client.send(:cleanup, operation)
         end
       end
     end
@@ -112,7 +112,7 @@ module ThinkThen
       begin
         yield operation
       ensure
-        Client.cleanup(operation)
+        Client.send(:cleanup, operation)
       end
     end
     def close
@@ -202,19 +202,19 @@ module ThinkThen
           end
         end
       ensure
-        Client.cleanup(self)
+        Client.send(:cleanup, self)
       end
-      def cancelled
+      private def cancelled
         error = CancelledError.new("the call was cancelled", "cancelled")
         error.instance_variable_set(:@results, @rows.dup.freeze)
         error.instance_variable_set(:@terminal, @terminal)
         error.instance_variable_set(:@facts, @terminal&.facts)
         error
       end
-      def feed
+      private def feed
         unless @pending
           begin
-            @pending = @session.item(Client.descriptor(@producer.next))
+            @pending = @session.item(Client.send(:descriptor, @producer.next))
           rescue StopIteration
             @session.finish(nil)
             close_producer
@@ -245,7 +245,7 @@ module ThinkThen
           @remove&.call(self)
         end
       end
-      def close_producer
+      private def close_producer
         owner, @owner, @producer = @owner, nil, nil
         owner.close if owner.respond_to?(:close)
       rescue StandardError

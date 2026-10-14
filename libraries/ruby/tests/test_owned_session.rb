@@ -123,7 +123,15 @@ class TestOwnedSession < Minitest::Test
       T::Client.open(cache: false) do |client|
         preview = client.plan("decide", "Question?", ["one", "two"], batch: 1)
         raise "untyped preview" unless preview.is_a?(T::Plan) && T::Plan::FIELDS.length == 9
-        raise "public transport" if T::Client.respond_to?(:dump)
+        %i[dump original descriptor cleanup].each do |method|
+          raise "public helper" if T::Client.respond_to?(method)
+          begin
+            T::Client.public_send(method, "caller input")
+            raise "public helper invoked"
+          rescue NoMethodError => error
+            raise "wrong missing method" unless error.name == method
+          end
+        end
         say [preview.records, preview.requests]
         say client.plan("decide", "Question?", {body: "one"}, batch: 1).records
         say [T.const_defined?(:Engine, false), T.const_defined?(:Complete, false), T.respond_to?(:decide)]
