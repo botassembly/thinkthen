@@ -1,4 +1,4 @@
-"""Actual named SQL consumer; extract known fields with SQL's typed JSON operations."""
+"""Actual named SQL consumer; read complete native receipts through typed projections."""
 import json,sys,sqlite3,threading
 payload=json.loads(sys.stdin.readline())
 db=sqlite3.connect(':memory:',isolation_level=None,check_same_thread=False)

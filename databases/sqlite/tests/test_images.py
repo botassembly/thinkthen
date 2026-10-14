@@ -30,14 +30,14 @@ def test_stored_order_duplicate_scalars_details_cache_and_replay():
 db.execute('SELECT thinkthen_configure(?)', (json.dumps({{"model":"d1","record":{record!r}}}),))
 answers = {{verb: run(db, 'SELECT thinkthen_' + verb + '_images(?, ?, ?)', (question, packed, 'Compare originals.'))
            for verb, question in {ASK!r}.items()}}
-detail = json.loads(run(db, 'SELECT thinkthen_details_images(?, ?, ?)', ({ASK['choose']!r}, packed, 'Compare originals.'))[0][0])
-context_detail = json.loads(run(db, 'SELECT thinkthen_details_images(?, ?, ?, ?)', ({ASK['choose']!r}, packed, 'Compare originals.', json.dumps({{"context":"Separate context."}})))[0][0])
+detail = ordinary_images(db, {ASK['choose']!r}, packed, 'Compare originals.')
+context_detail = ordinary_images(db, {ASK['choose']!r}, packed, 'Compare originals.', json.dumps({{"context":"Separate context."}}))
 say(answers=answers, details=[detail, context_detail])
 ''', env)
         expect(got['answers'], {'decide': [[1]], 'choose': [['red']], 'score': [[0.8]]}, 'three native scalar answers')
         for label, detail in zip(('ordinary', 'contextual'), got['details'], strict=True):
             expect(detail['answer']['probabilities'], {'red': 0.8, 'blue': 0.2}, label + ' complete probabilities')
-            expect('input' in detail, False, label + ' image details omit original evidence')
+            expect('input' in detail, True, label + ' typed image details retain original evidence')
         expected = [expected_body(verb) for verb in (*ASK, 'choose', 'choose')]
         expected[-1]['state'] = {'context': 'Separate context.', 'text': 'Compare originals.'}
         expect(backend.bodies, expected, 'independent ordered original bodies and one evaluation per public call while recording')
@@ -60,7 +60,7 @@ def test_complete_decide_accepts_stored_blob_and_strict_replay():
         record = str(pathlib.Path(env['SCRATCH']) / 'complete-record')
         got = child(STORED + f'''
 db.execute('SELECT thinkthen_configure(?)', (json.dumps({{"model":"d1","cache":False,"record":{record!r}}}),))
-say(value=json.loads(db.execute('SELECT thinkthen_decide_complete(?, ?)', ('Is red visible?', packed)).fetchone()[0]))
+say(value=complete(db, 'decide', 'Is red visible?', packed))
 ''', env)['value']
         expect(got['ordinals'], [0], 'one native image record')
         expect(got['native']['value'][0]['value'], True, 'complete native decision')
@@ -68,16 +68,16 @@ say(value=json.loads(db.execute('SELECT thinkthen_decide_complete(?, ?)', ('Is r
         expect(backend.bodies, [expected_body('decide', text='')], 'stored order and duplicate image bytes')
         replay = child(STORED.replace('images.sqlite', 'complete-replay.sqlite') + f'''
 db.execute('SELECT thinkthen_configure(?)', (json.dumps({{"model":"d1","cache":False,"replay":{record!r}}}),))
-say(value=json.loads(db.execute('SELECT thinkthen_decide_complete(?, ?, NULL)', ('Is red visible?', packed)).fetchone()[0]))
+say(value=complete(db, 'decide', 'Is red visible?', packed, None))
 ''', {**env, 'THINKTHEN_MAX_REQUESTS_TOTAL':'0'})['value']
         expect([(row['value'], row['answer_id'], row['input']) for row in replay['native']['value']],
                [(row['value'], row['answer_id'], row['input']) for row in got['native']['value']], 'strict complete replay values')
         expect(replay['native']['facts']['requests_sent'], 0, 'strict replay sends nothing')
         invalid = child(STORED.replace('images.sqlite', 'complete-invalid.sqlite') + '''
-say(nulls=[run(db, 'SELECT thinkthen_decide_complete(?, ?, ?)', args) for args in [(None,b'bad','bad'),('@unread-question.json',None,'bad')]],
+say(nulls=[run(db, 'SELECT value FROM thinkthen_decide(?, ?, ?)', args) for args in [(None,b'bad','bad'),('@unread-question.json',None,'bad')]],
  bad=[complete(db, 'decide', *('Is red visible?', value))['native']['error']['kind'] for value in [b'bad', packed+b'x']])
 ''', env)
-        expect(invalid['nulls'], [[[None]], [[None]]], 'NULL ignores malformed partners')
+        expect(invalid['nulls'], [[], []], 'NULL ignores malformed partners')
         expect(invalid['bad'], ['usage', 'usage'], 'bad tagged collections refuse')
         expect(backend.count(), 1, 'replay and malformed collections send nothing')
         backend.status = 503
@@ -109,7 +109,7 @@ bad = [run(db, sql, args) for sql, args in [
  ('SELECT thinkthen_images(?,?,?,?,?,?,?,?,?)', tuple(images[0] for _ in range(9))),
  ('SELECT thinkthen_decide_images(?, ?)', ('Is red visible?', b'private-image-evidence')),
  ('SELECT thinkthen_decide_images(?, ?)', ('Is red visible?', packed + b'x')),
- ('SELECT thinkthen_details_images(?, ?)', ('{"tag":"Which?","labels":["red"]}', packed)),
+ ('SELECT value FROM thinkthen_details_images(?, ?)', ('{"tag":"Which?","labels":["red"]}', packed)),
  ('SELECT thinkthen_decide_images(?, ?, NULL, ?)', ('Is red visible?', packed, '{"model":"unadmitted"}')),
  ('SELECT thinkthen_tag(?, ?)', ('{"tag":"Which?","labels":["red"]}', images[0])),
  ('SELECT thinkthen_decide(?, ?)', ('Is red visible?', images[0]))]]

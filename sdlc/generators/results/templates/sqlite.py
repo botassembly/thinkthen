@@ -66,10 +66,15 @@ def render(schema):
 
 def main():
     import subprocess
+    import tempfile
     root = Path(__file__).resolve().parents[4]
+    sys.path.insert(0, str(root / 'conformance/children'))
+    from children import CARGO, child_env
     schema = json.loads((root / 'crates/thinkthen/src/public/results/complete.schema.json').read_text())
-    source = subprocess.run(['rustfmt', '--edition', '2024'], input=render(schema),
-                            text=True, capture_output=True, check=True).stdout
+    with tempfile.TemporaryDirectory(prefix='thinkthen-sqlite-rustfmt-') as home:
+        source = subprocess.run(['rustfmt', '--edition', '2024'], input=render(schema),
+                                text=True, capture_output=True, check=True, env=child_env(
+                                    keep=(*CARGO, 'LANG', 'LC_ALL', 'TMPDIR'), home=home)).stdout
     output = root / 'databases/sqlite/src/receipt_generated.rs'
     if '--check' in sys.argv:
         if not output.exists() or output.read_text() != source:

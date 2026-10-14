@@ -23,9 +23,10 @@ for verb, question, inputs in cases:
     results.append(document['native']['error']['kind'])
     if verb=='decide': assert document['native']['error']['stopped']['at']==2, document
     assert 'secret' not in value
-for inputs in ({'records':[], 'incremental':None}, {'records':[], 'unknown':True}):
+for inputs in ({'records':[], 'incremental':None},):
     value=complete(db,'decide','@missing-saved-question.json',json.dumps(inputs))
     assert value['native']['error']['kind']=='usage', value
+assert run(db,"SELECT value FROM thinkthen_decide WHERE request_question=? AND request_records=? AND unknown=?",('@missing-saved-question.json','[]',1)) == 'no such column: unknown'
 say(results=results)
 ''', environment(backend))
     expect(got['results'], ['usage'] * 6, 'shared complete admission')

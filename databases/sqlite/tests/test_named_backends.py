@@ -113,7 +113,7 @@ def test_selected_setup_profile_survives_model_override_and_explicit_profile_win
         source = json.dumps(settings)
         got = child(f'''db = connect()
 run(db,"SELECT thinkthen_configure(?)", ({source!r},))
-say(answer=run(db,"SELECT value,question_detail_model,question_detail_url,error_message FROM thinkthen_details('attention?', 'refund')"))
+say(answer=run(db,"SELECT value,question_detail_model,question_detail_url,error_message FROM thinkthen_details('attention?', 'refund') WHERE request_records=?", ({json.dumps([{'text':'refund'}])!r},)))
 ''',env)
         if explicit:
             expect(got["answer"][0][1],"override","model overrides selected setup")

@@ -10,11 +10,11 @@ use rusqlite::ffi::sqlite3;
 use rusqlite::types::{Value, ValueRef};
 use rusqlite::vtab::{Filters, IndexConstraintOp, IndexInfo};
 use serde_json::json;
-use thinkthen::{Entity, Kind, Recognize, Relate, Settings};
+use thinkthen::{Entity, Kind, Recognize, Relate};
 
 use crate::many::Store;
-use crate::question::{call_controls, from_file, named_file, shown, text};
-use crate::{Failure, ffi, worker};
+use crate::question::{from_file, named_file, shown, text};
+use crate::{Failure, ffi};
 
 /// A scan borrows one immutable answer set, with an optional key selection.
 #[derive(Debug)]
@@ -136,17 +136,6 @@ pub(crate) fn arguments<T: Table + ?Sized>(
     Ok(values)
 }
 
-/// One argument as text, `None` for NULL or absent.
-fn argument(arguments: &[Value], at: usize, what: &str) -> Result<Option<String>, Failure> {
-    arguments
-        .get(at)
-        .map_or(Ok(None), |value| text(ValueRef::from(value), what))
-}
-
-fn controls(arguments: &[Value], at: usize) -> Result<Settings, Failure> {
-    call_controls(arguments.get(at).map_or(ValueRef::Null, ValueRef::from))
-}
-
 /// Validate a JSON argument or file while retaining its original member order.
 fn json_source(
     argument: &str,
@@ -237,55 +226,14 @@ impl Table for Recognizer {
     const SCHEMA: &'static CStr =
         c"CREATE TABLE x(text, start, end, length, kind, strength, body HIDDEN, kinds HIDDEN, settings HIDDEN)";
     const FIRST_HIDDEN: usize = 6;
-    const COLUMNS: usize = 9;
+    const COLUMNS: usize = 9 + crate::named::COUNT;
     const REQUIRED: usize = 1;
+    fn schema() -> Result<std::borrow::Cow<'static, CStr>, Failure> {
+        crate::named::schema(Self::SCHEMA)
+    }
 
-    fn rows(db: *mut sqlite3, arguments: &[Value]) -> Result<Vec<Vec<Value>>, Failure> {
-        let Some(evidence) = argument(arguments, 0, "the text")? else {
-            return Ok(Vec::new());
-        };
-        let ask = Self::ask(argument(arguments, 1, "the kinds")?.as_deref())?;
-        let settings = controls(arguments, 2)?;
-        let shared = settings.context().map(str::to_owned);
-        let found = worker::run_settings(db, settings, move |engine, options| {
-            let options = if let Some(shared) = &shared {
-                options.context(shared)
-            } else {
-                options
-            };
-            let call = crate::request::run(
-                engine,
-                thinkthen::RequestFunction::Recognize,
-                ask.into(),
-                vec![crate::request::text(evidence)],
-                options,
-            )?;
-            match call.into_value() {
-                thinkthen::RequestValue::Recognized(rows) => rows
-                    .into_iter()
-                    .next()
-                    .map(|row| row.result().value().clone())
-                    .ok_or_else(|| crate::request::wrong_result().into()),
-                _ => Err(crate::request::wrong_result().into()),
-            }
-        })?;
-        found
-            .entities()
-            .iter()
-            .map(|entity| {
-                let offset = |at: usize| {
-                    i64::try_from(at).map_err(|_| Failure::defect("an offset is too large"))
-                };
-                Ok(vec![
-                    Value::Text(entity.text().to_owned()),
-                    Value::Integer(offset(entity.start())?),
-                    Value::Integer(offset(entity.end())?),
-                    Value::Integer(offset(entity.length())?),
-                    Value::Text(entity.kind().to_owned()),
-                    Value::Real(entity.strength()),
-                ])
-            })
-            .collect()
+    fn rows(_: *mut sqlite3, _: &[Value]) -> Result<Vec<Vec<Value>>, Failure> {
+        Err(Failure::defect("a native table lost its retained receipt"))
     }
 }
 
@@ -401,71 +349,13 @@ impl Table for Relater {
     const NAME: &'static str = "thinkthen_relate";
     const SCHEMA: &'static CStr = c"CREATE TABLE x(relation, source, target, probability, either, query HIDDEN, rules HIDDEN, settings HIDDEN, legacy_4 HIDDEN, legacy_5 HIDDEN, legacy_6 HIDDEN, legacy_7 HIDDEN, legacy_8 HIDDEN, legacy_9 HIDDEN)";
     const FIRST_HIDDEN: usize = 5;
-    const COLUMNS: usize = 14;
+    const COLUMNS: usize = 14 + crate::named::COUNT;
     const REQUIRED: usize = 2;
+    fn schema() -> Result<std::borrow::Cow<'static, CStr>, Failure> {
+        crate::named::schema(Self::SCHEMA)
+    }
 
-    fn rows(db: *mut sqlite3, arguments: &[Value]) -> Result<Vec<Vec<Value>>, Failure> {
-        if arguments
-            .iter()
-            .skip(3)
-            .any(|value| !matches!(value, Value::Null))
-        {
-            return Err(Failure::plain_usage(
-                "relate takes a query and rules; pass 'SELECT id, name, kind FROM …'",
-            ));
-        }
-        let query = argument(arguments, 0, "the query")?
-            .ok_or_else(|| Failure::usage("thinkthen_relate needs a query"))?;
-        let rules = argument(arguments, 1, "the rules")?
-            .ok_or_else(|| Failure::usage("thinkthen_relate needs rules"))?;
-        let ask = Self::ask(&rules)?;
-        let settings = controls(arguments, 2)?;
-        let shared = settings.context().map(str::to_owned);
-        let (entities, ids) = Self::entities(db, &query)?;
-        let edges = worker::run_settings(db, settings, move |engine, options| {
-            let options = if let Some(shared) = &shared {
-                options.context(shared)
-            } else {
-                options
-            };
-            let items = entities
-                .into_iter()
-                .map(|entity| {
-                    crate::request::json(json!({"name":entity.name(), "kind":entity.kind()}))
-                })
-                .collect::<Result<Vec<_>, _>>()?;
-            let call = crate::request::run(
-                engine,
-                thinkthen::RequestFunction::Relate,
-                ask.into(),
-                items,
-                options,
-            )?;
-            match call.into_value() {
-                thinkthen::RequestValue::Related(row) => Ok(row.result().value().to_vec()),
-                _ => Err(crate::request::wrong_result().into()),
-            }
-        })?;
-        let mut rows = Vec::new();
-        for edge in &edges {
-            let held =
-                |entity: &Entity| ids.get(&(entity.name().to_owned(), entity.kind().to_owned()));
-            let (Some(sources), Some(targets)) = (held(edge.source()), held(edge.target())) else {
-                return Err(Failure::defect("an edge names an entity no row holds"));
-            };
-            let pairs = sources
-                .iter()
-                .flat_map(|source| targets.iter().map(move |target| (source, target)));
-            rows.extend(pairs.map(|(source, target)| {
-                vec![
-                    Value::Text(edge.relation().to_owned()),
-                    source.clone(),
-                    target.clone(),
-                    Value::Real(edge.probability()),
-                    Value::Integer(i64::from(edge.either())),
-                ]
-            }));
-        }
-        Ok(rows)
+    fn rows(_: *mut sqlite3, _: &[Value]) -> Result<Vec<Vec<Value>>, Failure> {
+        Err(Failure::defect("a native table lost its retained receipt"))
     }
 }

@@ -6,7 +6,7 @@ use rusqlite::types::ValueRef;
 pub(super) fn identity(verb: &str, args: &Arguments) -> Result<String, Failure> {
     let mut parts = vec![verb.to_owned()];
     for (name, value) in args.names.iter().zip(&args.values) {
-        if name != "projection" {
+        if !matches!(name.as_str(), "projection" | "lookup_key") {
             parts.push(format!("{name}:{value:?}"));
         }
     }
@@ -26,6 +26,21 @@ pub(super) fn identity(verb: &str, args: &Arguments) -> Result<String, Failure> 
                 metadata.modified(),
                 metadata.len()
             ));
+        }
+    }
+    for field in ["request_paths", "paths"] {
+        let Some(paths) = args.text(field)? else {
+            continue;
+        };
+        let Ok(paths) = serde_json::from_str::<Vec<String>>(&paths) else {
+            continue;
+        };
+        for path in paths {
+            path_stamp(
+                std::path::Path::new(&path),
+                &mut parts,
+                &mut std::collections::HashSet::new(),
+            );
         }
     }
     Ok(parts.join("\0"))
@@ -81,7 +96,7 @@ pub(super) fn inputs(args: &Arguments) -> Result<complete_native::Inputs, thinkt
         inputs.cancelled = args.flag("cancelled")?;
         return Ok(inputs);
     }
-    let records = args.text("records")?;
+    let records = args.text("request_records")?;
     let paths = args.text("request_paths")?.or(args.text("paths")?);
     let mut fields = Vec::new();
     if let Some(records) = records {
@@ -130,13 +145,16 @@ pub(super) fn inputs(args: &Arguments) -> Result<complete_native::Inputs, thinkt
     for (name, field) in [
         ("record_fields", "fields"),
         ("record_context_field", "context"),
+        ("record_context_schema", "context_schema"),
         ("record_options_field", "options"),
         ("record_seed_spans_field", "seed_spans"),
         ("record_examples_field", "examples"),
     ] {
-        if name == "record_fields" {
+        if matches!(name, "record_fields" | "record_context_schema") {
             if let Some(value) = args.text(name)? {
                 reading.push(format!("\"{field}\":{value}"));
+            } else if args.supplied(name) {
+                reading.push(format!("\"{field}\":null"));
             }
         } else {
             text_field(args, name, field, &mut reading)?;
@@ -159,6 +177,8 @@ fn text_field(
 ) -> Result<(), Failure> {
     if let Some(value) = args.text(name)? {
         output.push(format!("\"{field}\":{}", serde_json::json!(value)));
+    } else if args.supplied(name) && (name.starts_with("request_") || name.starts_with("record_")) {
+        output.push(format!("\"{field}\":null"));
     }
     Ok(())
 }
@@ -226,7 +246,36 @@ pub(super) fn query_arguments(args: &Arguments, entities: &[thinkthen::Entity]) 
         .map(|entity| serde_json::json!({"json":{"name":entity.name(),"kind":entity.kind()}}))
         .collect::<Vec<_>>();
     args.with_value(
-        "records",
+        "request_records",
         rusqlite::types::Value::Text(serde_json::Value::Array(records).to_string()),
     )
+}
+
+fn path_stamp(
+    path: &std::path::Path,
+    parts: &mut Vec<String>,
+    seen: &mut std::collections::HashSet<std::path::PathBuf>,
+) {
+    let Ok(metadata) = std::fs::metadata(path) else {
+        parts.push(format!("{path:?}:missing"));
+        return;
+    };
+    parts.push(format!(
+        "{path:?}:{:?}:{}",
+        metadata.modified(),
+        metadata.len()
+    ));
+    if metadata.is_dir()
+        && seen.insert(std::fs::canonicalize(path).unwrap_or_else(|_| path.to_owned()))
+        && let Ok(children) = std::fs::read_dir(path)
+    {
+        let mut children = children
+            .filter_map(Result::ok)
+            .map(|entry| entry.path())
+            .collect::<Vec<_>>();
+        children.sort();
+        for child in children {
+            path_stamp(&child, parts, seen);
+        }
+    }
 }

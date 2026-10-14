@@ -1,4 +1,4 @@
-//! Named complete SQL doors preserve native evaluation and error ownership.
+//! Authorized saved-question preparation retains native file error ownership.
 use crate::question;
 use thinkthen::Error;
 pub(crate) mod selector;

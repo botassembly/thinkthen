@@ -17,11 +17,12 @@ mod input;
 mod run;
 
 const FIELDS: &[&str] = &[
-    "records",
+    "request_records",
     "projection",
     "request_question",
     "record_fields",
     "record_context_field",
+    "record_context_schema",
     "record_options_field",
     "record_seed_spans_field",
     "record_examples_field",
@@ -179,6 +180,12 @@ impl<T: Verb> Table for Native<T> {
             }
             overlay(&mut rows, &facts, &errors);
         }
+        if selection.is_none() && !matches!(args.value("lookup_key"), ValueRef::Null) {
+            rows.retain(|row| {
+                row.get(&0)
+                    .is_some_and(|key| ValueRef::from(key) == args.value("lookup_key"))
+            });
+        }
         Ok(Scan {
             rows: Arc::new(vec![Vec::new(); rows.len()]),
             selected: None,
@@ -204,6 +211,12 @@ impl Arguments {
         }
         args
     }
+    fn supplied(&self, name: &str) -> bool {
+        self.names
+            .iter()
+            .position(|field| field == name)
+            .is_some_and(|at| self.bound & (1 << at) != 0)
+    }
     fn value(&self, name: &str) -> ValueRef<'_> {
         self.names
             .iter()
@@ -222,12 +235,8 @@ impl Arguments {
         }
     }
     fn flag(&self, name: &str) -> Result<bool, Failure> {
-        let supplied = self
-            .names
-            .iter()
-            .position(|field| field == name)
-            .is_some_and(|at| self.bound & (1 << at) != 0);
-        if supplied && matches!(self.value(name), ValueRef::Null) {
+        let supplied = self.supplied(name);
+        if supplied && name != "files_only" && matches!(self.value(name), ValueRef::Null) {
             return Err(Failure::usage(format!(
                 "{name} requires the SQL integer 0 or 1"
             )));
@@ -251,6 +260,7 @@ impl Cache {
         Some(receipt)
     }
     fn put(&mut self, identity: String, receipt: Arc<Receipt>) {
+        self.0.retain(|(key, _)| key != &identity);
         self.0.push_front((identity, receipt));
         self.0.truncate(8);
     }

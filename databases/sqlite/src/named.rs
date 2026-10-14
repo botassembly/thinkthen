@@ -7,15 +7,17 @@ use std::ffi::{CStr, CString};
 enum Kind {
     Text,
     Integer,
+    Batch,
+    Threshold,
     Boolean,
     Json,
 }
 const FIELDS: &[(&str, &str, Kind)] = &[
     ("model", "model", Kind::Text),
     ("context", "context", Kind::Text),
-    ("batch", "batch", Kind::Integer),
+    ("batch", "batch", Kind::Batch),
     ("deadline_ms", "deadline_ms", Kind::Integer),
-    ("threshold", "threshold", Kind::Text),
+    ("threshold", "threshold", Kind::Threshold),
     ("true_reading", "true", Kind::Text),
     ("false_reading", "false", Kind::Text),
     ("options", "options", Kind::Json),
@@ -75,7 +77,15 @@ pub(crate) fn settings<'a>(
                     .map_err(|_| Failure::usage(format!("{name} is UTF-8 text")))?,
             )
             .map_err(|_| Failure::defect("named text could not be encoded"))?,
-            (Kind::Integer, ValueRef::Integer(value)) => value.to_string(),
+            (Kind::Integer | Kind::Batch, ValueRef::Integer(value)) => value.to_string(),
+            (Kind::Batch, ValueRef::Text(b"max")) => "\"max\"".to_owned(),
+            (Kind::Threshold, ValueRef::Real(value)) => value.to_string(),
+            (Kind::Threshold, ValueRef::Integer(value)) => value.to_string(),
+            (Kind::Threshold, ValueRef::Text(bytes)) => serde_json::to_string(
+                std::str::from_utf8(bytes)
+                    .map_err(|_| Failure::usage(format!("{name} is UTF-8 text")))?,
+            )
+            .map_err(|_| Failure::defect("named text could not be encoded"))?,
             (Kind::Boolean, ValueRef::Integer(value @ (0 | 1))) => (*value == 1).to_string(),
             (Kind::Json, ValueRef::Text(bytes)) => {
                 let text = std::str::from_utf8(bytes)

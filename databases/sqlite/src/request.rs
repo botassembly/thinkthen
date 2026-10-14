@@ -16,14 +16,6 @@ pub(crate) fn text(text: String) -> RequestItem {
     }
 }
 
-pub(crate) fn json(value: serde_json::Value) -> Result<RequestItem, Error> {
-    let mut item = text(String::new());
-    item.original = Some(RequestOriginal::Json {
-        value: thinkthen::RawRecord::json(&value.to_string())?,
-    });
-    Ok(item)
-}
-
 pub(crate) fn document(text: String) -> Result<RequestItem, Error> {
     match thinkthen::QuestionInput::annotation_document(&text)? {
         thinkthen::QuestionInput::Record(record) => {

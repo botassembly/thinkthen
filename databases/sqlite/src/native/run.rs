@@ -132,7 +132,20 @@ pub(super) fn prepare(
     verb: &'static str,
     args: &Arguments,
 ) -> Result<Invocation, Error> {
-    let query = if args.text("records")?.is_none() {
+    if verb == "relate"
+        && (4..=9).any(|at| {
+            !matches!(
+                args.value(&format!("legacy_{at}")),
+                rusqlite::types::ValueRef::Null
+            )
+        })
+    {
+        return Err(Failure::plain_usage(
+            "relate takes a query and rules; pass 'SELECT id, name, kind FROM …'",
+        )
+        .into());
+    }
+    let query = if args.text("request_records")?.is_none() {
         args.text("query")?
     } else {
         None
@@ -144,7 +157,9 @@ pub(super) fn prepare(
     let actual = function(verb, &source)?;
     let legacy_recognize = verb == "recognize" && args.text("request_question")?.is_none();
     let legacy_relate = verb == "relate" && args.text("request_question")?.is_none();
-    if verb == "rank" && !source.starts_with(['@', '{']) {
+    if verb == "rank" && args.text("request_question")?.is_none() {
+        // The existing keyed rank question is literal text, including an @ prefix.
+        thinkthen::Question::rank(&source)?;
         source = json!({"decide":source}).to_string();
     }
     let selector = if legacy_recognize || legacy_relate {
@@ -176,14 +191,14 @@ pub(super) fn prepare(
     };
     let request = match selector {
         Some(selector) => {
-            let resolved = selector.with_resolved_definition(sql_request::definition(&prepared))?;
-            let mut arguments = resolved.request().call.arguments().clone();
+            let mut arguments = selector.request().call.arguments().clone();
             arguments.options = options;
             if let Some(source) = native_source {
                 arguments.input = thinkthen::RequestInput::Source { source };
             }
-            thinkthen::Request::for_function(resolved.request().call.function(), arguments)
+            thinkthen::Request::for_function(selector.request().call.function(), arguments)
                 .admit()?
+                .with_resolved_definition(sql_request::definition(&prepared))?
         }
         None => match native_source {
             Some(source) => sql_request::request_source(&prepared, source, options)?.admit()?,
@@ -243,6 +258,11 @@ pub(super) fn legacy_error(receipt: &Receipt) -> Result<(), Failure> {
             .get("message")
             .and_then(Json::as_str)
             .unwrap_or("the native call failed"),
+    );
+    failure.plain = matches!(
+        failure.message.as_str(),
+        "thinkthen_recognize takes no relations; relate rows with thinkthen_relate"
+            | "relate takes a query and rules; pass 'SELECT id, name, kind FROM …'"
     );
     failure.retryable = error
         .get("retryable")

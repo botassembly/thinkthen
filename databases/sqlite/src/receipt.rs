@@ -52,7 +52,11 @@ impl Projection {
 }
 
 fn field_columns(owner: &str, field: &Field) -> Vec<(String, &'static str)> {
-    let name = format!("{owner}_{}", field.name);
+    let name = if owner == "question" && field.name == "name" {
+        "question_definition_name".to_owned()
+    } else {
+        format!("{owner}_{}", field.name)
+    };
     let mut columns = vec![(format!("{name}_present"), "INTEGER")];
     match field.shape {
         Shape::Scalar(kind) => {

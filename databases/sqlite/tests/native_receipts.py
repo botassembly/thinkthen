@@ -53,12 +53,12 @@ class Read:
             inputs = {}
         for name in ('records', 'incremental', 'attempts', 'cancelled'):
             if name in inputs:
-                self.fields[name] = json.dumps(inputs[name], ensure_ascii=False, separators=(',', ':')) if name == 'records' else None if inputs[name] is None else int(inputs[name])
+                self.fields['request_records' if name == 'records' else name] = json.dumps(inputs[name], ensure_ascii=False, separators=(',', ':')) if name == 'records' else None if inputs[name] is None else int(inputs[name])
         if 'files' in inputs:
             file = inputs['files']
             self.fields['request_paths'] = json.dumps(file['paths'])
             if 'format' in file:
-                self.fields['request_format'] = file['format']
+                self.fields['request_format'] = json.dumps(file['format']) if isinstance(file['format'],(dict,list)) else file['format']
             options = file.get('options', {})
             if 'media' in options:
                 self.fields['request_media'] = options['media']
@@ -66,8 +66,8 @@ class Read:
                 self.fields['request_' + name] = value
         for name, value in inputs.get('reading', {}).items():
             key = {'fields': 'record_fields', 'context': 'record_context_field', 'options': 'record_options_field',
-                   'seed_spans': 'record_seed_spans_field', 'examples': 'record_examples_field'}[name]
-            self.fields[key] = json.dumps(value) if name == 'fields' else value
+                   'context_schema': 'record_context_schema', 'seed_spans': 'record_seed_spans_field', 'examples': 'record_examples_field'}[name]
+            self.fields[key] = json.dumps(value) if name in ('fields','context_schema') else value
         self.cache = {}
 
     def rows(self, kind):
@@ -75,7 +75,7 @@ class Read:
             return self.cache[kind]
         columns = [kind + '_receipt_index']
         for name, descriptor in TYPES[kind][0].items():
-            base = kind + '_' + name
+            base = 'question_definition_name' if kind == 'question' and name == 'name' else kind + '_' + name
             columns.append(base + '_present')
             if isinstance(descriptor, str):
                 if descriptor == 'json':
@@ -98,7 +98,7 @@ class Read:
         fields, union = TYPES[kind]
         output = {}
         for name, descriptor in fields.items():
-            base = kind + '_' + name
+            base = 'question_definition_name' if kind == 'question' and name == 'name' else kind + '_' + name
             assert row[base + '_present'] in (0, 1)
             if not row[base + '_present']:
                 continue
@@ -158,9 +158,18 @@ def call(db, verb, question, inputs, settings=None):
 
 def ordinary(db, question, text, settings=None):
     """An ordinary judgment retains its complete scalar metadata in native columns."""
-    reader = Read(db, 'details', question, {'records': [{'text': text}]}, settings)
-    reader.fields = {'question': question, 'text': text, 'settings': settings or '{}'}
-    db.execute('SELECT value FROM thinkthen_details(?,?,?)', [question, text, settings or '{}']).fetchall()
+    return ordinary_read(db, 'details', question, {'text': text}, settings)
+
+
+def ordinary_images(db, question, images, text=None, settings=None):
+    return ordinary_read(db, 'details_images', question, {'images': images, 'image_text': text}, settings)
+
+
+def ordinary_read(db, verb, question, inputs, settings):
+    reader = Read(db, verb, question, {}, settings)
+    reader.fields = {'question': question, **inputs, 'settings': settings or '{}'}
+    sql = 'SELECT value FROM thinkthen_' + verb + ' WHERE ' + ' AND '.join(key + '=?' for key in reader.fields)
+    db.execute(sql, list(reader.fields.values())).fetchall()
     details = reader.rows('question_detail')
     if not details:
         errors = reader.rows('error')
@@ -171,4 +180,8 @@ def ordinary(db, question, text, settings=None):
     question = detail['question']
     kind = ROOT_KIND.get(question.get('verb'), 'decision')
     rows = reader.rows(kind)
-    return reader.object(kind, rows[0][kind + '_receipt_index'])
+    result = reader.object(kind, rows[0][kind + '_receipt_index'])
+    observed = [reader.object('event', row['event_receipt_index']) for row in reader.rows('event')]
+    bare = next((event['value'] for event in observed if event['kind'] == 'row'), result['value'])
+    result['value'] = bare
+    return result

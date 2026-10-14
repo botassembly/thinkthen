@@ -32,8 +32,21 @@ pub(super) fn rows(verb: &str, receipt: &Receipt, rows: &mut Vec<Cells>) -> Resu
             filter_columns(row, value, receipt);
             continue;
         }
-        let answer = value.get("value").unwrap_or(&Json::Null);
-        let value = match answer {
+        let observed = receipt
+            .carrier
+            .get("observations")
+            .and_then(Json::as_array)
+            .into_iter()
+            .flatten()
+            .find(|event| {
+                event.get("kind").and_then(Json::as_str) == Some("row")
+                    && event.get("index") == value.get("index")
+            });
+        let answer = observed
+            .and_then(|event| event.get("value"))
+            .or_else(|| value.get("value"))
+            .unwrap_or(&Json::Null);
+        let cell_value = match answer {
             Json::Bool(value) => Value::Integer(i64::from(*value)),
             Json::String(value) => Value::Text(value.clone()),
             Json::Number(value) => {
@@ -46,22 +59,22 @@ pub(super) fn rows(verb: &str, receipt: &Receipt, rows: &mut Vec<Cells>) -> Resu
             Json::Null => Value::Null,
             Json::Array(_) | Json::Object(_) => Value::Text(answer.to_string()),
         };
-        row.insert(0, value.clone());
+        row.insert(0, cell_value);
         if matches!(verb, "decide" | "choose") {
-            row.insert(1, value_probability(value, &receipt.carrier));
+            row.insert(
+                1,
+                value
+                    .get("answer")
+                    .and_then(|answer| answer.get("probability"))
+                    .and_then(Json::as_f64)
+                    .map_or(Value::Null, Value::Real),
+            );
         }
         if matches!(verb, "details" | "details_images") {
             detail_columns(row, &receipt.carrier);
         }
     }
     Ok(())
-}
-
-fn value_probability(_: Value, carrier: &Json) -> Value {
-    carrier
-        .pointer("/native/value/0/answer/probability")
-        .and_then(Json::as_f64)
-        .map_or(Value::Null, Value::Real)
 }
 
 pub(super) fn detail_root(row: &Json) -> &str {

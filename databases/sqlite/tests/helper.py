@@ -37,7 +37,7 @@ LIVE: list[subprocess.Popen] = []
 PRELUDE = f"""
 import json, os, sqlite3, sys, threading, time
 sys.path.insert(0, {str(HERE)!r})
-from native_receipts import call as complete, ordinary
+from native_receipts import call as complete, ordinary, ordinary_images
 LIB = {str(LIB)!r}
 def connect(path=":memory:"):
     connection = sqlite3.connect(path, isolation_level=None, check_same_thread=False)

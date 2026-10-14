@@ -13,7 +13,7 @@ from helper import Backend, Child, child, environment, expect, main
 from conditional_backend import ConditionalBackend
 
 BANDED = json.dumps({"decide": "Is it red?", "threshold": "0.2:0.8"})
-SCALARS = ("thinkthen_decide", "thinkthen_choose", "thinkthen_score", "thinkthen_tag", "thinkthen_details", "thinkthen_annotate")
+SCALARS = ("thinkthen_decide", "thinkthen_choose", "thinkthen_score", "thinkthen_tag", "thinkthen_annotate")
 
 
 def test_the_proxy_starts_without_a_reverse_lookup() -> None:
@@ -156,9 +156,7 @@ say(results={name: run(db, 'SELECT thinkthen_find(?, ?, ?)', (q, units, settings
 
 def test_required_null_precedes_settings_and_complete_admission() -> None:
     backend = Backend()
-    names = SCALARS + ("thinkthen_try_details", "thinkthen_find", "thinkthen_plan") + tuple(
-        f"thinkthen_{verb}_complete" for verb in
-        ("decide", "choose", "tag", "score", "filter", "rank", "find", "annotate", "recognize", "relate"))
+    names = SCALARS + ("thinkthen_try_details", "thinkthen_find", "thinkthen_plan")
     held = child(f"""
 db = connect()
 say(**{{name: [run(db, f"SELECT {{name}}(?, ?, ?)", args) for args in
@@ -168,11 +166,12 @@ say(**{{name: [run(db, f"SELECT {{name}}(?, ?, ?)", args) for args in
     expect(held, {name: [[[None]]] * 3 for name in names}, "NULL bypasses malformed partners and settings")
     tables = child("""
 db = connect()
-say(recognize=run(db, 'SELECT * FROM thinkthen_recognize(NULL, 7, 7)'),
+say(details=[run(db, 'SELECT value FROM thinkthen_details(?, ?, ?)', args) for args in ((None,7,7),(7,None,7),('@unread-null-question',None,'['))],
+    recognize=run(db, 'SELECT * FROM thinkthen_recognize(NULL, 7, 7)'),
     relate=[run(db, 'SELECT * FROM thinkthen_relate(?, ?, ?)', args)
             for args in ((None, 7, 7), (7, None, 7), ('SELECT * FROM unread', None, '['))])
 """, environment(backend))
-    expect(tables, {"recognize": [], "relate": [[], [], []]}, "NULL table operands bypass partners")
+    expect(tables, {"details": [[],[],[]], "recognize": [], "relate": [[], [], []]}, "NULL table operands bypass partners")
     expect(backend.close(), 0, "required NULL sends nothing")
 
 
@@ -389,9 +388,9 @@ questions = {questions!r}
 settings = '{{"context":"shared context"}}'
 shapes = {{name: run(db, f"SELECT thinkthen_{{name}}(?, 'red door', ?)", (json.dumps(q), settings))
           for name, q in questions.items()}}
-plain = run(db, "SELECT thinkthen_details('Is it red?', 'red door')")
+plain = ordinary(db, "Is it red?", "red door")
 shapes['decide'] = run(db, "SELECT thinkthen_decide('Is it red?', 'red door', ?)", (settings,))
-shapes['details'] = run(db, "SELECT thinkthen_details('Is it red?', 'red door', ?)", (settings,))
+shapes['details'] = ordinary(db, "Is it red?", "red door", settings)
 shapes['try'] = run(db, "SELECT thinkthen_try_details('Is it red?', 'red door', ?)", (settings,))
 say(shapes=shapes, plain=plain,
     null=run(db, "SELECT thinkthen_try_details(NULL, 'bad', ?)", ('{{"context":"  "}}',)),
@@ -403,10 +402,12 @@ say(shapes=shapes, plain=plain,
     expect({name: shapes[name] for name in ("choose", "tag", "score", "decide")},
            {"choose": [["billing"]], "tag": [['["billing","urgent","security"]']],
             "score": [[0.15]], "decide": [[1]]}, "scalar values")
-    plain = json.loads(held["plain"][0][0])
-    details = json.loads(shapes["details"][0][0])
-    expect(json.loads(shapes["try"][0][0]), {"status": "answered", "details": details}, "try details")
-    expect("input" in details, False, "scalar details omit record input")
+    plain = held["plain"]
+    details = shapes["details"]
+    expect(details["input"], "red door", "typed receipt retains original input")
+    scalar_details = {key:value for key,value in details.items() if key not in ("input", "index")}
+    expect(json.loads(shapes["try"][0][0]), {"status": "answered", "details": scalar_details}, "try details")
+    expect("input" in scalar_details, False, "recovery envelope preserves scalar metadata")
     expect(details["meta"]["question_sha256"], plain["meta"]["question_sha256"], "question identity")
     expect(details["meta"]["context_sha256"], hashlib.sha256(b"shared context").hexdigest(), "context identity")
     expect(details["meta"]["requests"] != plain["meta"]["requests"], True, "context changes request")
@@ -438,7 +439,7 @@ calls = ["SELECT thinkthen_configure('{}')", "SELECT count(*) FROM thinkthen_dec
          "SELECT count(*) FROM thinkthen_rank('Is it red?', json_object('7','a red door'))",
          "SELECT thinkthen_max_requests(NULL)", "SELECT thinkthen_max_requests_total(1000)",
          "SELECT thinkthen_cache('" + os.environ["SCRATCH"] + "/cache')"]
-calls += [f"SELECT {name}('Is it red?', 'a red door'{deadline})" for name in ("thinkthen_decide", "thinkthen_details", "thinkthen_warm") for deadline in ("", ", 0")]
+calls += [f"SELECT {name}('Is it red?', 'a red door'{deadline})" for name in ("thinkthen_decide", "thinkthen_warm") for deadline in ("", ", 0")]
 calls += ["SELECT thinkthen_choose('{\\"choose\\":\\"Which?\\",\\"options\\":[\\"a\\",\\"b\\"]}', 'x')",
           "SELECT thinkthen_score('{\\"score\\":\\"How?\\",\\"levels\\":[\\"l\\",\\"h\\"]}', 'x')",
           "SELECT thinkthen_tag('{\\"tag\\":\\"Which?\\",\\"labels\\":[\\"a\\",\\"b\\"]}', 'x')",
