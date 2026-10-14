@@ -31,6 +31,10 @@ select_host() {
 	[ "$observed" = "$(printf '%.10s' "$duckdb_source_commit")" ] || { echo 'check: the Python DuckDB source differs from its pin' >&2; exit 1; }
 	observed=$("$CLI" -noheader -list -c 'SELECT source_id FROM pragma_version();')
 	[ "$observed" = "$(printf '%.10s' "$duckdb_source_commit")" ] || { echo 'check: the CLI DuckDB source differs from its pin' >&2; exit 1; }
+	observed=$("$PY" -c 'import duckdb; print(duckdb.sql("PRAGMA platform").fetchone()[0])')
+	[ "$observed" = "$platform" ] || { echo 'check: the Python DuckDB platform differs from its target' >&2; exit 1; }
+	observed=$("$CLI" -noheader -list -c 'SELECT platform FROM pragma_platform();')
+	[ "$observed" = "$platform" ] || { echo 'check: the CLI DuckDB platform differs from its target' >&2; exit 1; }
 	THINKTHEN_DUCKDB_VERSION=$DUCKDB_VERSION
 	THINKTHEN_DUCKDB_EXTENSION=$HERE/build/artifacts/cpp/$DUCKDB_VERSION/$host_target/thinkthen.duckdb_extension
 	export THINKTHEN_DUCKDB_VERSION THINKTHEN_DUCKDB_EXTENSION
