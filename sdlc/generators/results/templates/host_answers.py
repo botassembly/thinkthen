@@ -2,6 +2,51 @@
 import re
 
 
+def call_results(definitions):
+    """Describe each public call using its existing native value carriers.
+
+    Scalar values come from normalized judgments; collections come from the
+    aggregate packet. A caller's input shape chooses between them, even for a
+    one-element list. Probability describes the yes odds or the picked odds,
+    never confidence. Item probabilities stay with rank/recognize/relate items.
+    Null values remain present, including unresolved scalar judgments.
+    """
+    scalars = {function: (kind, payload)
+               for function, kind, payload in scalar_answers(definitions)}
+    result = {}
+    for function, carrier, payload in aggregate_answers(definitions):
+        value, projection = aggregate_projection(function, payload, definitions)
+        scalar = scalars.get(function)
+        mode = ('yes' if function in ('decide', 'filter') else
+                'picked' if function in ('choose', 'find') else
+                'items' if function in ('rank', 'recognize', 'relate') else 'null')
+        result[function] = {
+            'carrier': carrier,
+            'aggregate_value': value,
+            'value_projection': projection,
+            'scalar_kind': scalar[0] if scalar else None,
+            'scalar_value': scalar[1] if scalar else None,
+            'probability_mode': mode,
+        }
+        if mode in ('yes', 'picked'):
+            receipt = payload.get('items', payload)
+            receipt = definitions[receipt['$ref'].split('/')[-1]]
+            answer = receipt['properties']['answer']
+            answer = definitions[answer['$ref'].split('/')[-1]]
+            if 'variants' in answer:
+                kind = 'yes_no' if mode == 'yes' else 'choice'
+                answer = next(definitions[child] for child, _ in answer['variants']
+                              if definitions[child]['properties']['kind']['const'] == kind)
+            member = 'probability' if mode == 'yes' else 'probabilities'
+            result[function]['probability_schema'] = answer['properties'][member]
+            result[function]['probability_path'] = ('answer', member)
+            if mode == 'picked':
+                if 'pick' not in answer['required']:
+                    raise ValueError(function + ' answer requires its canonical pick')
+                result[function]['pick_path'] = ('answer', 'pick')
+    return result
+
+
 def aggregate_answers(definitions):
     packet = definitions['completesessionPacket']
     answers = []
