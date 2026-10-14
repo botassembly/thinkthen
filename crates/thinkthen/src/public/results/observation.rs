@@ -10,7 +10,7 @@ use crate::public::error::Error;
 use crate::public::recognize::Recognized;
 use crate::public::relate::Edge;
 
-use super::{Answer, Judgment, NamedProbability, Probabilities, Usage, judgment, usage};
+use super::{Answer, Judgment, Probabilities, Usage, judgment, usage};
 
 /// One completed question or input row, delivered on the caller's thread.
 /// The borrowed fields exist only during the callback.
@@ -361,23 +361,10 @@ impl ObservedQuestion {
         let (value, failure, probabilities, confidence) = match answer {
             AnswerOutcome::Answered(answer) => {
                 let (value, _) = answer.read(threshold);
-                let probabilities = match (answer.yes(), answer.named()) {
-                    (Some(yes), _) => Some(Probabilities::YesNo { yes }),
-                    (None, Some(named)) => Some(Probabilities::Named(
-                        named
-                            .into_iter()
-                            .map(|(name, probability)| NamedProbability {
-                                name: name.to_owned(),
-                                probability,
-                            })
-                            .collect(),
-                    )),
-                    (None, None) => None,
-                };
                 (
                     Some(judgment(&value)),
                     None,
-                    probabilities,
+                    Some(super::complete::probabilities(answer)),
                     answer.confidence().map(|one| one.as_f64()),
                 )
             }
