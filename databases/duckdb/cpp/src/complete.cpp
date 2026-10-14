@@ -18,10 +18,6 @@
 
 extern "C" {
 ThinkThenReply thinkthen_cpp_complete_failure_envelope(ThinkThenText);
-ThinkThenReply thinkthen_cpp_complete(ThinkThenText, ThinkThenText, ThinkThenText, ThinkThenText,
-                                     const void *,int64_t, ThinkThenSettings, ThinkThenStop);
-ThinkThenReply thinkthen_cpp_complete_images(ThinkThenText, const ThinkThenImage *, size_t, ThinkThenText,
-                                            const void *, int64_t, ThinkThenSettings, ThinkThenStop);
 ThinkThenReply thinkthen_cpp_complete_question_resolve(ThinkThenText, void **);
 void thinkthen_cpp_complete_question_free(void *);
 ThinkThenReply thinkthen_cpp_native_source_input(ThinkThenText, bool, bool);
@@ -49,51 +45,6 @@ struct Bind : FunctionData {
 unique_ptr<FunctionData> BindComplete(ClientContext &context, const string &, vector<unique_ptr<Expression>> &) {
     context.registered_state->GetOrCreate<StatementOwner>(OWNER_KEY);
     return make_uniq<Bind>(context.shared_from_this());
-}
-void Complete(DataChunk &args, ExpressionState &state, Vector &result) {
-    auto &expr = state.expr.Cast<BoundFunctionExpression>();
-    auto context = ThinkThenBindData(expr).Cast<Bind>().context.lock();
-    if (!context) { throw OrdinaryError("thinkthen defect: the caller session ended"); }
-    auto owner = context->registered_state->GetOrCreate<StatementOwner>(OWNER_KEY);
-    auto name = ThinkThenFunctionName(expr);
-    const string prefix = "thinkthen_native_", suffix = "_complete";
-    const auto verb = name.substr(prefix.size(), name.size() - prefix.size() - suffix.size());
-    std::optional<SessionSettings> session;
-    for (idx_t row = 0; row < args.size(); ++row) {
-        auto question = args.data[0].GetValue(row);
-        if (question.IsNull()) { result.SetValue(row, Value(ReceiptType(verb))); continue; }
-        auto inputs = args.data[1].GetValue(row);
-        if (inputs.IsNull()) { result.SetValue(row, Value(ReceiptType(verb))); continue; }
-        if (!session) { session.emplace(Settings(*context)); }
-        auto settings = args.data[2].GetValue(row);
-        const bool binary = inputs.type().id() == LogicalTypeId::LIST;
-        const auto source = question.GetValue<string>(), input = binary ? string() : inputs.GetValue<string>(), controls = settings.IsNull() ? "{}" : settings.GetValue<string>();
-        try {
-        QuestionSelection selection;
-        string content = source;
-        if (!source.empty() && source[0]=='@') {
-            RustReply resolved(thinkthen_cpp_complete_question_resolve(View(source), &selection.value));
-            if (resolved.value.status!=0) { result.SetValue(row, DecodeReceipt(FailureEnvelope(ReplyText(resolved.value)), verb)); continue; }
-            const auto path = ReplyText(resolved.value);
-            AuthorizeLocalSource(FileSystem::GetFileSystem(*context), path);
-            content = ReadQuestion(*context, path, "question", true);
-        }
-        string file_result;
-        if (!binary && CompleteFileCall(*context,verb,content,input,controls,selection.value,owner->Remaining(*context),session->Bridge(),file_result)) {
-            result.SetValue(row,DecodeReceipt(file_result, verb)); continue;
-        }
-        auto images = binary ? ImageMembers(inputs) : vector<std::pair<string, string>>();
-        auto views = ImageViews(images);
-        RustReply reply(binary
-            ? thinkthen_cpp_complete_images(View(content), views.data(), views.size(), View(controls), selection.value, owner->Remaining(*context), session->Bridge(), StopFor(*context))
-            : thinkthen_cpp_complete(View(verb), View(content), View(input), View(controls), selection.value, owner->Remaining(*context), session->Bridge(), StopFor(*context)));
-        Checked(reply.value);
-        result.SetValue(row, DecodeReceipt(ReplyText(reply.value), verb));
-        } catch (const Exception &error) {
-            if (ErrorData(error).Type()==ExceptionType::INTERRUPT || QueryInterrupted(*context)) { throw; }
-            result.SetValue(row,DecodeReceipt(FailureEnvelope(CompleteAdmissionError(error)), verb));
-        }
-    }
 }
 bool NativeSourceSelector(const Value &value) {
     if (value.IsNull() || value.type().id() != LogicalTypeId::STRUCT) { return false; }
@@ -178,19 +129,6 @@ string NativeRecordTableSQL(const string &verb) {
         "WHERE receipt IS NOT NULL";
 }
 void RegisterComplete(ExtensionLoader &loader) {
-    for (auto verb : {"decide","choose","tag","score","filter","rank","find","annotate","recognize","relate"}) {
-        const string purpose = string("Return complete ") + verb + " readings, final facts and failures as native SQL fields.";
-        const auto name = string("thinkthen_native_") + verb + "_complete";
-        ScalarFunction function(ThinkThenIdentifier(name),{LogicalType::VARCHAR,LogicalType::VARCHAR,LogicalType::VARCHAR},ReceiptType(verb),Complete,ThinkThenBindScalar<BindComplete>);
-        ThinkThenSpecialNulls(function);
-        function.SetStability(FunctionStability::VOLATILE);
-        RegisterDescribedScalar(loader, function, purpose);
-        if (string(verb) == "decide") {
-            ThinkThenArgument(function, 1, LogicalType::LIST(ImageType()));
-            RegisterDescribedScalar(loader, function, purpose);
-        }
-        RegisterPortableMacro(loader,string("CREATE MACRO thinkthen_")+verb+"_complete(question, inputs, settings := NULL) AS "+name+"(question, inputs, settings)", purpose);
-    }
     RegisterRequestHelpers(loader);
     for (auto verb : {"decide", "choose", "tag", "score", "filter", "rank", "find", "annotate", "recognize", "relate"}) {
         const auto name = string("thinkthen_native_records_") + verb;

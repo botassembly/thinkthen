@@ -21,7 +21,10 @@ inline duckdb_yyjson::yyjson_mut_val *NativeInputValue(duckdb_yyjson::yyjson_mut
                 if (!ListValue::GetChildren(children[index]).empty()) { ImageMembers(children[index]); }
             }
             yyjson_mut_obj_add(object, yyjson_mut_strncpy(doc, name.data(), name.size()), NativeInputValue(doc, children[index]));
-            if (record && name == "json") { yyjson_mut_obj_add_bool(doc, object, "json_present", !children[index].IsNull()); }
+            if (record && (name == "json" || name == "context" || name == "options" || name == "examples" || name == "seed_spans")) {
+                auto marker = name + "_present";
+                yyjson_mut_obj_add(object, yyjson_mut_strncpy(doc, marker.data(), marker.size()), yyjson_mut_bool(doc, !children[index].IsNull()));
+            }
         }
         return object;
     }
@@ -31,7 +34,10 @@ inline duckdb_yyjson::yyjson_mut_val *NativeInputValue(duckdb_yyjson::yyjson_mut
             auto &children = StructValue::GetChildren(entry);
             auto name = children[0].GetValue<string>();
             yyjson_mut_obj_add(object, yyjson_mut_strncpy(doc, name.data(), name.size()), NativeInputValue(doc, children[1]));
-            if (record && name == "json") { yyjson_mut_obj_add_bool(doc, object, "json_present", !children[1].IsNull()); }
+            if (record && (name == "json" || name == "context" || name == "options" || name == "examples" || name == "seed_spans")) {
+                auto marker = name + "_present";
+                yyjson_mut_obj_add(object, yyjson_mut_strncpy(doc, marker.data(), marker.size()), yyjson_mut_bool(doc, !children[1].IsNull()));
+            }
         }
         return object;
     }

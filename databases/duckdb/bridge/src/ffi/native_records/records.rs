@@ -22,11 +22,16 @@ pub(super) fn fields(raw: &str) -> Result<Fields, Error> {
 
 pub(super) fn read_record(raw: &str) -> Result<Record, Error> {
     let mut given = fields(raw)?;
-    let json_present = given
-        .remove("json_present")
-        .map(|value| value.get() == "true")
-        .unwrap_or(true);
-    given.retain(|key, value| value.get() != "null" || key == "json" && json_present);
+    let mut present = Vec::new();
+    for name in ["json", "context", "options", "examples", "seed_spans"] {
+        if given
+            .remove(&format!("{name}_present"))
+            .is_some_and(|value| value.get() == "true")
+        {
+            present.push(name);
+        }
+    }
+    given.retain(|key, value| value.get() != "null" || present.contains(&key.as_str()));
     if given.contains_key("read_error") {
         let descriptor = serde_json::to_string(&given).map_err(|_| complete_native::defect())?;
         let input =
@@ -36,6 +41,13 @@ pub(super) fn read_record(raw: &str) -> Result<Record, Error> {
             Some(Err(error)) => Err(error),
             _ => Err(complete_native::defect()),
         };
+    }
+    if let Some(context) = given.get("context") {
+        let value: Value =
+            serde_json::from_str(context.get()).map_err(|_| complete_native::defect())?;
+        if !value.is_string() && !value.is_object() {
+            thinkthen::ObjectContext::new(&thinkthen::RawRecord::json(context.get())?)?;
+        }
     }
     let source = given.remove("source");
     let mut originals = Vec::new();

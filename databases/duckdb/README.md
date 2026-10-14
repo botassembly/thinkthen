@@ -222,13 +222,11 @@ uses the existing host configuration. Per-call model, cuts, pointers and
 score members refuse before sending. One-member sets preserve the plain
 question's wire/cache identity. Recording each member individually supports
 strict set replay with zero sends. Described decide members retain their
-authored true/false meanings. The additive `thinkthen_rank_complete` route also accepts described decide and
-saved score questions through the native complete rank API.
+authored true/false meanings. The rich `thinkthen_rank` overload also accepts described decide and saved score questions. Supply its named `reading` argument, including SQL NULL when no reading controls are needed.
 
 `facts` comes directly from the same completed native call, counts original
 records and combined member requests, and repeats on every output row. It
-is the compatibility count-facts shape. Use `thinkthen_rank_complete` for full
-observations, call/answer IDs and started-failure envelopes. An empty object yields
+is the compatibility count-facts shape. Use the rich `thinkthen_rank` overload for full observations, call/answer IDs and started-failure facts. An empty object yields
 no rows. Set JSON and files use native RankSet admission, preserving member
 order and rejecting duplicates, authored thresholds/on and non-decide kinds.
 
@@ -237,29 +235,61 @@ explicit `@file` through the existing DuckDB-authorized reader. NULL questions
 or keyed input yields no rows without file IO or sends; NULL settings uses
 defaults.
 
-## Complete native calls (0.2 development)
+## Native records and full receipts
 
-All ten `thinkthen_FUNCTION_complete(question TEXT, inputs TEXT, settings TEXT :=
-NULL)` calls expose the owning native result/2 envelope and final facts, including
-started-failure facts, full probabilities, authors, call/answer/observation IDs,
-structured stops, requested attempts and optional exact caller-priced cost.
-Ordinary scalar/table signatures and cumulative usage remain compatible. See the
-[shared SQL complete API](../sqlite/README.md#complete-native-calls-02-development)
-for explicit records, context, reading, options, images, rank sets, file controls,
-error envelopes and native cache/record/replay behavior.
+The ten ordinary function names also accept native record lists and return typed table rows. A row contains `ordinal`, `value`, `result`, `facts`, `failure`, `observations` and `selection`. `result` retains the complete answer, including probabilities, provenance, original inputs, source coordinates and answer IDs. `facts` belongs to the same native call and repeats across its rows; read it once rather than summing repeated counts. Arbitrary authored values remain DuckDB JSON leaves inside these typed structures.
 
-`thinkthen_decide_complete(question, images, settings := NULL)` also accepts a native list of `thinkthen_image(blob, media)` or `thinkthen_image_file(path)` values. It evaluates the ordered collection as one image-only record, preserving duplicates and native BLOB payloads without a JSON byte array. Its text descriptor form remains available. Both forms use the same Request admission and result facts.
+```sql
+SELECT ordinal, value AS asks_refund, result.answer.probability, facts.requests_sent,
+       facts.call_id, failure.kind
+FROM thinkthen_decide('Does the writer ask for a refund?',
+                     [thinkthen_record(text := 'Please refund my order'),
+                      thinkthen_record(text := 'Thanks for your help')],
+                     reading := thinkthen_reading(batch := 2, attempts := true)) AS refund_answers
+ORDER BY ordinal;
 
-All ten complete calls admit a shared native Request before constructing the
-engine and execute through the same Request owner as SQLite and PostgreSQL.
-Generated SQL results retain the native envelope and its presence distinctions.
-Use the complete function family for complete results; the ordinary scalar and
-table function family remains supported for native SQL answers.
-DuckDB returns its native JSON type. Explicit native file inputs read DuckDB-authorized
-handles. Complete question `@reference` and `@@NAME` use native metadata
-selection, then the executing session authorizes the selected path and reads
-capped UTF-8 through DuckDB. The same retained selection parses the original
-bytes; Rust never opens that question content. Engine options add
-`thinkthen_base_url`, paired price strings and
-`thinkthen_refresh_cache` (0/1); the same native engine owns cache, replay and
-usage. No complete call creates another SQL scheduler or cumulative facts ledger.
+SELECT value AS owning_team, result.answer_id, failure.kind
+FROM thinkthen_choose({'choose':'Which team owns this?', 'options':['billing','shipping']},
+                     [thinkthen_record(text := 'Please refund my order')]) AS team_answers;
+
+SELECT ordinal, value AS refund_rank, result.answer.probability, facts.requests_sent
+FROM thinkthen_rank({'decide':'Does the writer ask for a refund?'},
+                   [thinkthen_record(text := 'Please refund my order'),
+                    thinkthen_record(text := 'Thanks for your help')],
+                   reading := NULL) AS refund_ranking
+ORDER BY value;
+```
+
+Rich `thinkthen_rank` and `thinkthen_relate` require the named `reading` argument. SQL NULL means no reading controls. Omitting this argument selects their existing keyed-rank or query-and-rules forms when those arguments match. The existing forms retain their original columns and behavior. The other eight rich calls allow omitted reading controls. Invalid supplied reading controls refuse before any send.
+
+| Ordinary rich function | Plain `value` |
+| --- | --- |
+| `thinkthen_decide` | nullable BOOLEAN, independent of authored true/false meanings in `result.value` |
+| `thinkthen_choose` | nullable VARCHAR option name |
+| `thinkthen_tag` | ordered VARCHAR list |
+| `thinkthen_score` | DOUBLE score |
+| `thinkthen_filter` | list of selected original JSON leaves; rejected rows have an empty list |
+| `thinkthen_rank` | native positive rank for that original |
+| `thinkthen_annotate` | typed annotation members retaining each named answer |
+| `thinkthen_recognize` | typed spans and relations |
+| `thinkthen_find` | typed selected original, index and candidates |
+| `thinkthen_relate` | typed native relation edges |
+
+`thinkthen_record` takes one `text`, `json` or `document` original, plus optional `context`, `options`, `examples`, `seed_spans`, `images` and `source`. Text stays literal; a document uses native document interpretation. Use a DuckDB JSON value for arbitrary authored evidence, including JSON null. SQL NULL optional fields mean absence; authored JSON null retains its presence and undergoes native validation. `thinkthen_location(file, first_line := NULL, last_line := NULL)` supplies physical provenance without adding provider evidence. `thinkthen_image` and `thinkthen_image_file` supply the existing native image structures.
+
+`thinkthen_reading` provides named fields from the shared native RequestOptions, including projection fields, context, packing, attempts, pricing, request limits and file selection. It also accepts `context_schema` for a declared object context. Native record context, shortlists and recognition controls preserve whole replacements and explicit empty values. Question members belong to the authored question or existing settings grammar. The engine admits the shared Request once; it executes eagerly unless `incremental := true` is supplied to the table call. `cancelled := true` cancels before execution. Required SQL NULL question or record collection returns zero rows before inspecting other arguments.
+
+```sql
+SELECT ordinal, value AS asks_refund, result.source.file,
+       result.source.first_line, result.source.last_line, failure.kind
+FROM thinkthen_decide('Does the writer ask for a refund?',
+                     thinkthen_source(['tickets.txt'], unit := 'line'),
+                     reading := thinkthen_reading(batch := 2)) AS refund_answers
+ORDER BY ordinal;
+```
+
+`thinkthen_source` takes explicit paths, `unit` (`line`, `window` or `file`), optional `window`, optional logical `format` (`document`, `lines`, `jsonl`, `csv` or `tsv`), and `media` (`text` or `image`). DuckDB authorizes and reads the handles; Rust never opens their paths. Native `files_only` filter selection uses the engine's file grouping and returns its selected originals. Source names and physical positions stay outside provider evidence and cache identity.
+
+Failures return a typed `failure` with native `kind`, `message`, `retryable`, optional structured `stopped` information and typed budget-denial details. The separate `facts` column retains the same native failure facts when available. Started failures retain completed result rows and actual owning facts. Refusals before execution leave facts absent. The six native kinds are usage, backend, local, cancelled, deadline and defect. Full facts include call identity, records, sends, cache answers, reported tokens, elapsed seconds, byte estimates, requested attempts and optional exact caller-priced cost. `observations` contains events from that same execution. Cache, record, replay and process limits use the existing session configuration.
+
+Question `@reference` and `@@NAME` selection retains native metadata. The executing session authorizes the selected path and reads capped UTF-8 through DuckDB. Original settings validate before added controls. The safe packed `thinkthen_try_details` envelope retains its existing recoverable-row behavior.

@@ -28,7 +28,7 @@ try:
         members = []
         for key in ('text','document','context','options','examples','seed_spans','source'):
             if key in record:
-                members.append(key + ' := ' + argument(record[key]))
+                members.append(key + ' := ' + (argument('null','::JSON') if record[key] is None and key in ('context','options','examples','seed_spans') else argument(record[key])))
         if 'json' in record or 'json_text' in record:
             original = record.get('json_text') if 'json_text' in record else json.dumps(record['json'],ensure_ascii=False,separators=(',',':'))
             members.append('json := ' + argument(original, '::JSON'))

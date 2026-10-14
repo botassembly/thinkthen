@@ -278,12 +278,12 @@ void RegisterRelate(ExtensionLoader &loader) {
 	                                               LogicalType::VARCHAR}, ScanRelate, BindRelate, InitRelate);
 	overloads.AddFunction(with_settings);
 	RegisterDescribedTable(loader, overloads, "Judge relations between ids in committed query rows using caller-supplied rules.");
-    RegisterRecordOverloads(loader,
+    RegisterLegacyTextOverloads(loader,
         "CREATE MACRO thinkthen_relate(query, rules, settings := NULL) AS TABLE "
         "(SELECT * FROM thinkthen_native_query_relate(query, rules, settings)), "
-        "(question, records, reading := NULL, settings := NULL, incremental := false, cancelled := false) AS TABLE (" +
+        "(question, records, reading, settings := NULL, incremental := false, cancelled := false) AS TABLE (" +
         NativeRecordTableSQL("relate") + ")",
-        "Judge relations from a committed query or native records with typed readings and final facts.", true);
+        "Judge relations from a committed query or native records with typed readings and final facts.");
 
 }
 

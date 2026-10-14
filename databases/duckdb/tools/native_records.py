@@ -30,6 +30,7 @@ def check(run):
         expect(backend.count(), 2, "only the two admitted calls send")
     helpers(run)
     sources(run)
+    rich_overloads(run)
 
 
 def helpers(run):
@@ -69,3 +70,24 @@ def sources(run):
                "native source readings retain physical coordinates and final facts")
         expect(rows(got[2]), [['deadline', None]], "unstarted source deadline has no invented facts")
         expect(backend.count(), 1, "spent source deadline sends nothing")
+
+
+def rich_overloads(run):
+    """Only an explicit named reading selects the two rich overloads."""
+    question = "{'version':1,'relate':{'relations':[{'name':'near','source':'person','target':'person'}]}}"
+    inputs = "[thinkthen_record(json := {'name':'Ada','kind':'person'}),thinkthen_record(json := {'name':'Bob','kind':'person'})]"
+    with Backend() as backend:
+        calls = [("rank", "{'decide':'Refund?'}", "[thinkthen_record(text := 'alpha')]"),
+                 ("relate", question, inputs)]
+        for verb, authored, records in calls:
+            got = run([
+                f"SELECT failure.kind FROM thinkthen_{verb}(question := {authored}, records := {records}, reading := NULL)",
+                f"SELECT failure.kind FROM thinkthen_{verb}(question := {authored}, records := {records}, reading := {{'deadline_ms':'bad'}})",
+                f"SELECT * FROM thinkthen_{verb}(question := {authored}, records := {records})",
+                f"SELECT count(*) FROM thinkthen_{verb}(question := NULL, records := {records}, reading := {{'deadline_ms':'bad'}})",
+            ], backend.base())
+            expect(rows(got[0]), [[None]], "explicit NULL reading executes the rich call")
+            expect(rows(got[1]), [['usage']], "invalid reading refuses")
+            expect('error' in got[2], True, "missing reading does not silently choose a rich call")
+            expect(rows(got[3]), [[0]], "required NULL masks invalid reading")
+        expect(backend.count(), 2, "only explicit NULL reading calls send")
