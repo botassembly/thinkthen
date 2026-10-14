@@ -212,7 +212,6 @@ end Thinkthen.Answers;
 
 BODY = '''-- Generated owned native answers. Do not edit.
 with Thinkthen.Native_Values;
-with Ada.Containers.Vectors;
 with Ada.Unchecked_Conversion;
 with Ada.Strings.Fixed;
 with System;

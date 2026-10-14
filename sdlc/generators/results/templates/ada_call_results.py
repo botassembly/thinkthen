@@ -44,7 +44,7 @@ def outputs(definitions):
             declarations.append(signature + ';')
             count = "Rows'Length" if scalar_value else "Rows'Length, Rows'Length"
             if value_kind == 'tag' and scalar_value:
-                count = 'Length (Field_Value (Rows (1), "value")), Rows\'Length'
+                count = 'Value_Count => (if Rows\'Length = 1 then Length (Field_Value (Rows (1), "value")) else 0), Record_Count => Rows\'Length'
             lines = [signature + ' is', f'Rows : constant Value_List := Receipts (Call, "{function}", {str(array)});', f'Result : {name} (' + count + ');', 'begin']
             if scalar_value:
                 lines.append('if Rows\'Length /= 1 then raise Answer_Cardinality_Error with "expected one result"; end if;')

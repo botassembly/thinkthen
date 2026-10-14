@@ -1,6 +1,5 @@
 -- Generated owned native answers. Do not edit.
 with Thinkthen.Native_Values;
-with Ada.Containers.Vectors;
 with Ada.Unchecked_Conversion;
 with Ada.Strings.Fixed;
 with System;
@@ -5877,7 +5876,7 @@ return Result;
 end Choose;
 function Tag (Call : Completion) return Tag_Result is
 Rows : constant Value_List := Receipts (Call, "tag", True);
-Result : Tag_Result (Length (Field_Value (Rows (1), "value")), Rows'Length);
+Result : Tag_Result (Value_Count => (if Rows'Length = 1 then Length (Field_Value (Rows (1), "value")) else 0), Record_Count => Rows'Length);
 begin
 if Rows'Length /= 1 then raise Answer_Cardinality_Error with "expected one result"; end if;
 Result.Facts := Call_Facts (Call);
