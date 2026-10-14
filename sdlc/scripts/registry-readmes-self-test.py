@@ -448,7 +448,8 @@ class PackageText(unittest.TestCase):
                         patch.object(popen, 'communicate', bounded_communicate):
                     try:
                         done = readmes.run_build([sys.executable, str(compiler), '35', str(marker)],
-                                                tree, {'PATH': '/usr/bin:/bin'}, None)
+                                                tree, {'PATH': '/usr/bin:/bin', 'GITHUB_ACTIONS': 'true',
+                                                       'RUNNER_ENVIRONMENT': 'github-hosted'}, None)
                     except subprocess.TimeoutExpired:
                         done = None
                 pids = [int(pid) for pid in marker.read_text().splitlines()]
