@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Real process regressions for shared compiler admission and ownership."""
 import ctypes
+from contextlib import ExitStack
 import fcntl
 import json
 import os
@@ -58,9 +59,9 @@ class Admission(unittest.TestCase):
             'runpy.run_path(' + repr(str(HELPER)) + ',run_name="__main__")\n')
         return scripts
 
-    def launch(self, name, priority='normal', command=None, timeout=None):
+    def launch(self, name, priority='normal', command=None, timeout=None, lock=None):
         release = self.root / name
-        args = [sys.executable, '-c', LAUNCH, str(self.load), str(HELPER), '--lock', str(self.lock), '--priority', priority]
+        args = [sys.executable, '-c', LAUNCH, str(self.load), str(HELPER), '--lock', str(lock or self.lock), '--priority', priority]
         if timeout:
             args += ['--timeout', str(timeout)]
         args += ['--', *(command or [sys.executable, '-c', COMPILER, str(release)])]
@@ -81,6 +82,48 @@ class Admission(unittest.TestCase):
     def release(self, name):
         (self.root / name).touch()
 
+    def process_alive(self, pid):
+        try:
+            os.kill(pid, 0)
+            return True
+        except ProcessLookupError:
+            return False
+
+    def wait_entry(self, child, timeout=3):
+        try:
+            return child.wait(timeout=timeout)
+        except subprocess.TimeoutExpired:
+            # The caller owns this session. Its supervisors receive TERM and
+            # finish their compiler cleanup before fixture locks disappear.
+            os.killpg(child.pid, signal.SIGTERM)
+            child.wait(timeout=2)
+            def group_finished():
+                if sys.platform == 'linux':
+                    try:
+                        while os.waitpid(-child.pid, os.WNOHANG)[0]:
+                            pass
+                    except ChildProcessError:
+                        pass
+                try:
+                    os.killpg(child.pid, 0)
+                    return False
+                except ProcessLookupError:
+                    return True
+            self.wait_for(group_finished)
+            raise
+
+    def assert_resources_available(self):
+        with ExitStack() as stack:
+            legacy = stack.enter_context(self.lock.open('a+b'))
+            fcntl.flock(legacy, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            if sys.platform == 'darwin':
+                directory = Path(str(self.lock) + '.priority')
+                for name in [*(f'permit-{slot}' for slot in range(4)), 'admission']:
+                    resource = stack.enter_context((directory / name).open('a+b'))
+                    fcntl.flock(resource, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            else:
+                fcntl.lockf(legacy, fcntl.LOCK_EX | fcntl.LOCK_NB)
+
     def test_four_compilers_fifth_waits_and_priority_takes_next_permit(self):
         for index in range(4):
             self.launch(str(index))
@@ -98,11 +141,76 @@ class Admission(unittest.TestCase):
         self.assertEqual(high.wait(timeout=2), 0)
         self.wait_for(lambda: self.started('normal'))
 
+    def test_exclusive_checkpoint_blocks_all_permits_and_waits_for_all_compilers(self):
+        with self.lock.open('a+b') as checkpoint:
+            inode = self.lock.stat().st_ino
+            fcntl.flock(checkpoint, fcntl.LOCK_EX)
+            for index in range(4):
+                self.launch(str(index))
+            time.sleep(.1)
+            self.assertFalse(any(self.started(str(i)) for i in range(4)))
+        self.wait_for(lambda: all(self.started(str(i)) for i in range(4)))
+        for index in range(4):
+            with self.lock.open('a+b') as checkpoint:
+                with self.assertRaises(BlockingIOError):
+                    fcntl.flock(checkpoint, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            self.release(str(index))
+            self.assertEqual(self.children[index].wait(timeout=2), 0)
+        self.assert_resources_available()
+        self.assertEqual(self.lock.stat().st_ino, inode)
+
+    def test_symlink_lock_aliases_share_permits_priority_and_exclusive_barrier(self):
+        self.lock.touch()
+        alias = self.root / 'lock-alias'
+        alias.symlink_to(self.lock)
+        directory = self.root / 'directory-alias'
+        directory.symlink_to(self.root, target_is_directory=True)
+        locks = (self.lock, alias, directory / 'lock', directory / 'lock-alias')
+        with self.lock.open('a+b') as checkpoint:
+            inode = self.lock.stat().st_ino
+            fcntl.flock(checkpoint, fcntl.LOCK_EX)
+            for index, lock in enumerate(locks):
+                self.launch(str(index), lock=lock)
+            time.sleep(.1)
+            self.assertFalse(any(self.started(str(i)) for i in range(4)))
+        self.wait_for(lambda: all(self.started(str(i)) for i in range(4)))
+        self.launch('alias-normal', lock=directory / 'lock')
+        high = self.launch('alias-high', 'high', lock=alias)
+        self.wait_for(lambda: bool(list(Path(str(self.lock.resolve()) + '.priority').glob('wait-*'))))
+        time.sleep(.1)
+        self.assertFalse(self.started('alias-normal'))
+        self.assertFalse(self.started('alias-high'))
+        with alias.open('a+b') as checkpoint:
+            with self.assertRaises(BlockingIOError):
+                fcntl.flock(checkpoint, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        self.release('0')
+        self.wait_for(lambda: self.started('alias-high'))
+        self.assertFalse(self.started('alias-normal'))
+        self.release('alias-high')
+        self.assertEqual(high.wait(timeout=2), 0)
+        self.wait_for(lambda: self.started('alias-normal'))
+        for name in ('1', '2', '3', 'alias-normal'):
+            self.release(name)
+        for child in self.children:
+            self.assertEqual(child.wait(timeout=2), 0)
+        self.assert_resources_available()
+        self.assertEqual(self.lock.stat().st_ino, inode)
+
     def test_load_wait_releases_every_lock_and_legacy_exclusion_remains(self):
         self.load.write_text(str((os.cpu_count() or 1) + 1))
         self.launch('waiting', 'high')
         self.wait_for(lambda: bool(list(Path(str(self.lock) + '.priority').glob('wait-*'))))
-        time.sleep(.1)
+
+        def resources_released():
+            try:
+                self.assert_resources_available()
+                return True
+            except BlockingIOError:
+                # A waiter briefly probes admission before releasing to sleep.
+                return False
+
+        self.wait_for(resources_released)
+        self.assertFalse(self.started('waiting'))
         with self.lock.open('a+b') as legacy:
             fcntl.flock(legacy, fcntl.LOCK_EX | fcntl.LOCK_NB)
             self.load.write_text('0')
@@ -111,20 +219,23 @@ class Admission(unittest.TestCase):
         self.wait_for(lambda: self.started('waiting'))
 
     def test_exit_timeout_and_termination_reap_children_and_release_permits(self):
-        for mode in ('exit', 'timeout', 'terminate'):
+        for mode in ('exit', 'timeout', 'terminate', 'interrupt', 'hangup'):
             pidfile = self.root / (mode + '.pid')
             code = ('import subprocess,sys,time,pathlib; p=subprocess.Popen([sys.executable,"-c","import time; time.sleep(30)"]); '
                     'pathlib.Path(sys.argv[1]).write_text(str(p.pid)); ' + ('sys.exit(23)' if mode == 'exit' else 'time.sleep(30)'))
             child = self.launch(mode, command=[sys.executable, '-c', code, str(pidfile)], timeout=.4 if mode == 'timeout' else None)
             self.wait_for(pidfile.exists)
-            if mode == 'terminate':
-                child.send_signal(signal.SIGTERM)
-            self.assertEqual(child.wait(timeout=2), {'exit': 23, 'timeout': 124, 'terminate': 143}[mode])
-            with self.assertRaises(ProcessLookupError):
-                os.kill(int(pidfile.read_text()), 0)
-            with self.lock.open('a+b') as legacy:
-                fcntl.flock(legacy, fcntl.LOCK_EX | fcntl.LOCK_NB)
-                fcntl.lockf(legacy, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            signum = {'terminate': signal.SIGTERM, 'interrupt': signal.SIGINT, 'hangup': signal.SIGHUP}.get(mode)
+            if signum:
+                child.send_signal(signum)
+            self.assertEqual(child.wait(timeout=2), 128 + signum if signum else {'exit': 23, 'timeout': 124}[mode])
+            self.wait_for(lambda: not self.process_alive(int(pidfile.read_text())))
+            self.assert_resources_available()
+
+    def test_command_launch_failure_releases_every_resource(self):
+        child = self.launch('missing', command=[str(self.root / 'missing-command')])
+        self.assertNotEqual(child.wait(timeout=2), 0)
+        self.assert_resources_available()
 
     @unittest.skipUnless(sys.platform == 'linux', 'Linux descendant ownership')
     def test_detached_descendants_are_reaped_before_permits_release(self):
@@ -148,9 +259,7 @@ class Admission(unittest.TestCase):
                 with self.assertRaises(ProcessLookupError):
                     os.kill(pid, 0)
                 self.assertIsNone(unrelated.poll())
-                with self.lock.open('a+b') as legacy:
-                    fcntl.flock(legacy, fcntl.LOCK_EX | fcntl.LOCK_NB)
-                    fcntl.lockf(legacy, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                self.assert_resources_available()
 
     def test_child_inherits_original_signal_mask(self):
         code = 'import signal; assert signal.pthread_sigmask(signal.SIG_BLOCK,set()) == {signal.SIGUSR1}'
@@ -164,9 +273,14 @@ class Admission(unittest.TestCase):
     def test_wait_timeout_removes_priority_and_child_inherits_no_lock_descriptor(self):
         with self.lock.open('a+b') as legacy:
             fcntl.flock(legacy, fcntl.LOCK_EX)
-            child = self.launch('waiting', 'high', timeout=.2)
-            self.assertEqual(child.wait(timeout=2), 124)
-            self.assertEqual(list(Path(str(self.lock) + '.priority').glob('wait-*')), [])
+            for signum in (None, signal.SIGTERM, signal.SIGINT, signal.SIGHUP):
+                child = self.launch('waiting', 'high', timeout=.2 if signum is None else None)
+                self.wait_for(lambda: bool(list(Path(str(self.lock) + '.priority').glob('wait-*'))))
+                if signum:
+                    child.send_signal(signum)
+                self.assertEqual(child.wait(timeout=2), 128 + signum if signum else 124)
+                self.assertEqual(list(Path(str(self.lock) + '.priority').glob('wait-*')), [])
+        self.assert_resources_available()
         if sys.platform == 'linux':
             code = ('import os,pathlib,sys; lock=os.stat(sys.argv[1]); '
                     'fds=pathlib.Path("/proc/self/fd").iterdir(); '
@@ -178,6 +292,15 @@ class Admission(unittest.TestCase):
             self.assertEqual(child.wait(timeout=2), 0)
 
     def test_library_wrapper_preserves_shell_arguments_and_owned_build_environment(self):
+        # Cold compiler/SDK setup is fixture work, outside the shell deadline.
+        # Use admission and a separate output; the timed caller still compiles.
+        warmup = self.root / 'compiler-warmup'
+        warmup.mkdir()
+        source = warmup / 'probe.c'
+        source.write_text('int main(void) { return 0; }\n')
+        compiler = self.launch('compiler-warmup', command=[
+            'cc', '-x', 'c', '-o', str(warmup / 'probe'), str(source)])
+        self.assertEqual(compiler.wait(), 0, 'compiler fixture warmup failed')
         scripts = self.entry_scripts()
         caller = self.root / 'library-check.sh'
         output = self.root / 'output'
@@ -202,7 +325,7 @@ assert 'THINKTHEN_API_KEY' not in os.environ
 assert 'THINKTHEN_HEAVY_LOCK_HELD' not in os.environ
 with open(os.environ['THINKTHEN_HEAVY_LOCK'],'a+b') as lock:
  fcntl.flock(lock,fcntl.LOCK_EX | fcntl.LOCK_NB)
- fcntl.lockf(lock,fcntl.LOCK_EX | fcntl.LOCK_NB)
+ if sys.platform != 'darwin': fcntl.lockf(lock,fcntl.LOCK_EX | fcntl.LOCK_NB)
 names = ('CARGO_TARGET_DIR','THINKTHEN_TEST_PROFILE','THINKTHEN_ARTIFACT')
 pathlib.Path(sys.argv[1]).write_text(json.dumps([sys.argv[2],*[os.environ[name] for name in names]]))
 COMPILER
@@ -213,8 +336,9 @@ exit 23
                'CARGO_TARGET_DIR': str(self.root / 'target'),
                'THINKTHEN_TEST_PROFILE': 'full', 'THINKTHEN_ARTIFACT': 'owned archive',
                'THINKTHEN_API_KEY': 'fake-library-boundary'}
-        result = subprocess.run(['/bin/bash', str(caller), str(scripts), str(output), 'two words'], env=env, timeout=3)
-        self.assertEqual(result.returncode, 23)
+        child = subprocess.Popen(['/bin/bash', str(caller), str(scripts), str(output), 'two words'], env=env, start_new_session=True)
+        self.children.append(child)
+        self.assertEqual(self.wait_entry(child), 23)
         self.assertTrue(os.access(self.root / 'target/probe', os.X_OK))
         self.assertEqual(json.loads(output.read_text()), ['two words', env['CARGO_TARGET_DIR'], 'full', 'owned archive'])
         # The existing standalone shell entry still passes through admission.
@@ -230,6 +354,24 @@ assert 'THINKTHEN_ARTIFACT' not in os.environ
 BOUNDARY
 ''')
         self.assertEqual(subprocess.run(['/bin/sh', str(rung)], env=env, timeout=3).returncode, 0)
+
+    def test_shell_caller_timeout_cleans_owned_supervisor_and_compiler(self):
+        scripts = self.entry_scripts()
+        caller = self.root / 'timeout-check.sh'
+        caller.write_text('set -eu\nheavy_scripts=$1\nshift\n. "$heavy_scripts/heavy-compile"\nheavy_compile "$@"\n')
+        release = self.root / 'blocked'
+        code = 'import os,pathlib,sys; pathlib.Path(sys.argv[1]+".pid").write_text(str(os.getpid())); ' + COMPILER
+        env = {'PATH': os.environ['PATH'], 'THINKTHEN_HEAVY_LOCK': str(self.lock)}
+        child = subprocess.Popen(['/bin/bash', str(caller), str(scripts), sys.executable, '-c', code, str(release)],
+                                 env=env, start_new_session=True)
+        self.children.append(child)
+        self.wait_for(lambda: self.started('blocked'))
+        pid = int((self.root / 'blocked.pid').read_text())
+        self.descendants.append(pid)
+        with self.assertRaises(subprocess.TimeoutExpired):
+            self.wait_entry(child, timeout=.1)
+        self.wait_for(lambda: not self.process_alive(pid))
+        self.assert_resources_available()
 
     def test_rungs_ignore_inherited_library_mode_and_script_path(self):
         scripts = self.entry_scripts()

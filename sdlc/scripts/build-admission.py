@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 """Bound shared builds without weakening exclusive source and cache locks.
 
-Keep the lock inode: shared flock conflicts with legacy exclusive flock. Byte
-locks on that same inode own permits and serialize admission. Waiters release
-both kinds before sleeping. Only the supervisor inherits the descriptors.
+Keep the lock inode: shared flock conflicts with legacy exclusive flock. Linux
+uses byte locks on that inode for admission; Darwin uses separate flock inodes.
+Waiters release every lock before sleeping. Only the supervisor owns descriptors.
 """
 import argparse
+from contextlib import ExitStack
 import ctypes
 import fcntl
 import os
@@ -36,6 +37,30 @@ def byte_lock(fd, offset):
     fcntl.lockf(fd, fcntl.LOCK_EX | fcntl.LOCK_NB, 1, offset)
 
 
+class Resources:
+    def __init__(self, fd, directory, stack):
+        self.fd = fd
+        self.files = []
+        if sys.platform == 'darwin':
+            # Darwin's flock and fcntl locks interact, with different owners:
+            # https://developer.apple.com/library/archive/documentation/System/Conceptual/ManPages_iPhoneOS/man3/lockf.3.html
+            # Keep these inodes persistent, just like the canonical barrier.
+            for name in [*(f'permit-{slot}' for slot in range(PERMITS)), 'admission']:
+                self.files.append(stack.enter_context((directory / name).open('a+b')))
+
+    def acquire(self, offset):
+        if self.files:
+            return available(self.files[offset].fileno(),
+                             lambda fd: fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB))
+        return available(self.fd, lambda fd: byte_lock(fd, offset))
+
+    def release(self, offset):
+        if self.files:
+            fcntl.flock(self.files[offset].fileno(), fcntl.LOCK_UN)
+        else:
+            fcntl.lockf(self.fd, fcntl.LOCK_UN, 1, offset)
+
+
 def high_waiters(directory):
     for path in directory.glob('wait-*'):
         try:
@@ -48,7 +73,7 @@ def high_waiters(directory):
     return False
 
 
-def admit(fd, priority, directory, deadline):
+def admit(fd, resources, priority, directory, deadline):
     while True:
         if deadline is not None and time.monotonic() >= deadline:
             raise TimeoutError('build admission timed out')
@@ -57,11 +82,11 @@ def admit(fd, priority, directory, deadline):
         try:
             # Shared flock prevents overlap with an old exclusive supervisor.
             shared = available(fd, lambda f: fcntl.flock(f, fcntl.LOCK_SH | fcntl.LOCK_NB))
-            if shared and available(fd, lambda f: byte_lock(f, PERMITS)):
+            if shared and resources.acquire(PERMITS):
                 if os.getloadavg()[0] <= (os.cpu_count() or 1):
                     if priority == 'high' or not high_waiters(directory):
                         for slot in range(PERMITS):
-                            if available(fd, lambda f: byte_lock(f, slot)):
+                            if resources.acquire(slot):
                                 # Never sleep while holding a permit.
                                 if os.getloadavg()[0] <= (os.cpu_count() or 1):
                                     admitted = True
@@ -69,9 +94,10 @@ def admit(fd, priority, directory, deadline):
                                 break
         finally:
             if admitted:
-                fcntl.lockf(fd, fcntl.LOCK_UN, 1, PERMITS)
+                resources.release(PERMITS)
             else:
-                fcntl.lockf(fd, fcntl.LOCK_UN)
+                for slot in range(PERMITS + 1):
+                    resources.release(slot)
                 if shared:
                     fcntl.flock(fd, fcntl.LOCK_UN)
         time.sleep(POLL)
@@ -162,7 +188,9 @@ def main():
     for signum in (signal.SIGTERM, signal.SIGINT, signal.SIGHUP):
         signal.signal(signum, interrupted)
     deadline = time.monotonic() + args.timeout if args.timeout is not None else None
-    directory = Path(args.lock + '.priority')
+    # Symlink filenames and directory aliases must share permits and priority.
+    # Preserve the caller's spelling below for nested shell held markers.
+    directory = Path(str(Path(args.lock).resolve()) + '.priority')
     directory.mkdir(mode=0o700, exist_ok=True)
     marker = None
     waiter = None
@@ -173,8 +201,10 @@ def main():
             visible = directory / ('wait-' + Path(marker).name[1:])
             os.rename(marker, visible)
             marker = str(visible)
-        with open(args.lock, 'a+b') as lock:
-            admit(lock.fileno(), args.priority, directory, deadline)
+        with ExitStack() as stack:
+            lock = stack.enter_context(open(args.lock, 'a+b'))
+            resources = Resources(lock.fileno(), directory, stack)
+            admit(lock.fileno(), resources, args.priority, directory, deadline)
             if marker:
                 os.unlink(marker)
                 marker = None
