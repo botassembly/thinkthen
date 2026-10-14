@@ -28,6 +28,8 @@ def check(run):
         expect('error' in got[5], True, 'deadline raises')
         expect(backend.count(), 2, 'two admitted calls send; deadline and NULLs send nothing')
     ordinary_forms(run)
+    recovering_rows(run)
+    named_forms(run)
     removed(run)
 
 
@@ -54,7 +56,7 @@ def ordinary_forms(run):
                   [[[],[],None]],[['1','2',0.9,None],['2','1',0.9,None]],
                   [['near','1','2',0.9,False],['near','2','1',0.9,False]],[['alpha']]]
         expect([rows(item) for item in got], wanted, 'ordinary typed details across the function family')
-        expect(backend.count(), 7, 'ordinary details share actual cache identity with plain calls')
+        expect(backend.count(), 8, 'ordinary details reuse annotate, relate and filter cache entries; recognition sends both passes')
 
 def removed(run):
     with Backend() as backend:
@@ -64,3 +66,33 @@ def removed(run):
         got = run([f"SELECT {name}('question','input')" for name in names], backend.base())
         expect(all('does not exist' in item.get('error','') for item in got), True, 'retired names are absent')
         expect(backend.count(), 0, 'retired functions send nothing')
+
+
+def recovering_rows(run):
+    import json
+    from verbs_budget import PackedReplies
+    statement = ("SELECT d.ordinal,d.value,d.failure.kind,d.failure.cause,d.facts.requests_sent "
+                 "FROM (SELECT UNNEST(thinkthen_decide_details('Is it a refund?',"
+                 "[{'text':'alpha'},{'text':'beta'},{'text':'gamma'}],reading := {'batch':3})) AS d)")
+    with PackedReplies() as backend:
+        got = run([statement], backend.base)
+        expect(rows(got[0]), [[0,True,None,None,1],[1,None,'backend','missing_answer',1],
+                             [2,True,None,None,1]], 'a failed member preserves successful later rows')
+        expect(len(backend.bodies), 1, 'recovery preserves the original packed send count')
+        expect(len(json.loads(backend.bodies[0])['questions']), 3, 'the batch retains all admitted siblings')
+
+
+def named_forms(run):
+    from native_queries import value
+    query = value("SELECT 1 AS id, 'Ada' AS name UNION ALL SELECT 2, 'Bob'")
+    with Backend() as backend:
+        got = run([
+            "SELECT d.value,d.probability FROM (SELECT thinkthen_decide_details('Refund?','alpha',NULL,0.95) AS d)",
+            "SELECT d.value FROM (SELECT thinkthen_find_details(question := 'Find?',units := ['alpha','beta']) AS d)",
+            "SELECT d.ordinal,d.value FROM (SELECT UNNEST(thinkthen_rank_details(question := 'Refund?',keyed_json := {'a':'alpha','b':'beta'})) AS d)",
+            "SELECT d.value,d.failure.kind FROM (SELECT thinkthen_recognize_details(input := 'Ada',kinds := ['person']) AS d)",
+            f"SELECT d.value.source.name,d.value.target.name FROM (SELECT UNNEST(thinkthen_relate_details(query := {query},rules := ['near'])) AS d)",
+        ], backend.base())
+        expect([rows(item) for item in got], [[[False,0.9]], [['"alpha"']], [[0,1],[1,2]], [[[],None]],
+                                             [['1','2'],['2','1']]], 'ordinary argument names and positional threshold')
+        expect(backend.count(), 6, 'five admitted calls include both recognition passes')

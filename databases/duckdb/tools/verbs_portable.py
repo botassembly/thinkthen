@@ -24,7 +24,7 @@ def portable_batch_identity() -> None:
                   backend.base("arm/full/capture"))
         answers = [value for value, in rows(got[2])]
         expect([answer["failure"] for answer in answers], [None] * 5, "five ordered SQL answers")
-        expect([answer["result"]["value"] for answer in answers], [True] * 5, "five decide values")
+        expect([answer["value"] for answer in answers], [True] * 5, "five decide values")
         # ADR 0111 drops the content cut, so the five texts ride one request.
         expect(backend.count(), 1, "one real Max request")
         captured = backend.capture()

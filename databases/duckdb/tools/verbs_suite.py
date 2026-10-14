@@ -195,7 +195,8 @@ def secrecy_no_key_or_credential_in_any_message():
     with Backend() as backend, tempfile.TemporaryDirectory() as folder:
         extra = {"THINKTHEN_API_KEY": sentinel}
         refused = run(CALLS, backend.base("arm/refuse"), extra=extra)
-        expect([said(result).split(":")[0] for result in refused], ["thinkthen backend"] * len(CALLS), "each refusal's kind")
+        expect([rows(result)[0][0]["failure"]["kind"] if index == 2 else said(result).split(":")[0].removeprefix("thinkthen ")
+                for index, result in enumerate(refused)], ["backend"] * len(CALLS), "each refusal's kind")
         answered = run(
             [
                 *CALLS,

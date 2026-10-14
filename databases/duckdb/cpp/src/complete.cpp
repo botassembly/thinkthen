@@ -57,7 +57,7 @@ unique_ptr<FunctionData> BindCompleteImpl(ClientContext &context, const string &
     const auto &input = arguments.at(1)->return_type;
 #endif
     const bool collection = (input.id() == LogicalTypeId::LIST &&
-        ListType::GetChildType(input).id() == LogicalTypeId::STRUCT) || verb == "rank" || verb == "relate";
+        (ListType::GetChildType(input).id() == LogicalTypeId::STRUCT || ListType::GetChildType(input).id() == LogicalTypeId::SQLNULL)) || verb == "rank" || verb == "relate";
     result = collection ? LogicalType::LIST(DetailsType(verb)) : DetailsType(verb);
     return make_uniq<Bind>(context.shared_from_this());
 }
@@ -106,7 +106,7 @@ void NativeRecords(DataChunk &args, ExpressionState &state, Vector &result) {
     const bool output_list = result.GetType().id() == LogicalTypeId::LIST;
     const auto input_type = args.data[1].GetType();
     const bool collection = input_type.id() == LogicalTypeId::LIST &&
-        ListType::GetChildType(input_type).id() == LogicalTypeId::STRUCT;
+        (ListType::GetChildType(input_type).id() == LogicalTypeId::STRUCT || ListType::GetChildType(input_type).id() == LogicalTypeId::SQLNULL);
     auto owner = context->registered_state->GetOrCreate<StatementOwner>(OWNER_KEY);
     std::optional<SessionSettings> session;
     struct Pending {
@@ -137,6 +137,15 @@ void NativeRecords(DataChunk &args, ExpressionState &state, Vector &result) {
                 } else if (settings.IsNull()) {
                     controls = reading.type().id() == LogicalTypeId::VARCHAR ? reading.GetValue<string>() : NativeInputJSON(reading);
                 } else { throw OrdinaryError("thinkthen usage: pass one settings object"); }
+            }
+            const auto threshold = args.data[6].GetValue(row);
+            if (!threshold.IsNull()) {
+                const auto end = controls.find_last_not_of(" \t\r\n");
+                if (end == string::npos || controls[end] != '}') {
+                    throw OrdinaryError("thinkthen usage: settings must be an object");
+                }
+                const auto first = controls.find_first_not_of(" \t\r\n", controls.find('{') + 1);
+                controls = controls.substr(0, end) + (first == end ? "" : ",") + "\"threshold\":" + NativeInputJSON(threshold) + "}";
             }
             RustReply validated(thinkthen_cpp_portable_settings(View(controls)));
             Checked(validated.value);
@@ -249,19 +258,30 @@ void RegisterComplete(ExtensionLoader &loader) {
         const auto name = string("thinkthen_native_") + verb + "_details";
         const string purpose = "Return typed values, probabilities, results, failures, facts and observations.";
         ScalarFunction function(ThinkThenIdentifier(name),
-            {LogicalType::ANY, LogicalType::ANY, LogicalType::ANY, LogicalType::ANY, LogicalType::ANY, LogicalType::ANY},
+            {LogicalType::ANY, LogicalType::ANY, LogicalType::ANY, LogicalType::ANY, LogicalType::ANY, LogicalType::ANY, LogicalType::ANY},
             DetailsType(verb), NativeRecords, BindComplete);
         ThinkThenSpecialNulls(function);
         function.SetStability(FunctionStability::VOLATILE);
         RegisterDescribedScalar(loader, function, purpose);
-        const string records = "(starts_with(typeof(input), 'STRUCT(') AND ends_with(typeof(input), '[]'))";
-        const string listed = string(verb) == "choose" || string(verb) == "tag" || string(verb) == "score" ? "true" : "false";
+        const string verb_name = verb;
+        const auto threshold = verb_name == "decide" || verb_name == "filter";
+        const string input = verb_name == "find" ? "coalesce(units, input)" : verb_name == "rank" ? "coalesce(keyed_json, input)" :
+            verb_name == "relate" ? "coalesce(rules, input)" : verb_name == "recognize" ? "coalesce(kinds, input)" : "input";
+        const string question = verb_name == "relate" ? "coalesce(query, question)" :
+            verb_name == "recognize" ? "CASE WHEN kinds IS NOT NULL THEN " + PortableJSONArgument("input") + " ELSE " + PortableJSONArgument("question") + " END" : "question";
+        const string records = "((starts_with(typeof(" + input + "), 'STRUCT(') OR typeof(" + input + ") = '\"NULL\"[]') AND ends_with(typeof(" + input + "), '[]'))";
+        const string listed = verb_name == "choose" || verb_name == "tag" || verb_name == "score" ? "true" : "false";
         const auto members = "(" + listed + " AND ends_with(typeof(reading), '[]'))";
-        const auto settings = "CASE WHEN " + records + " OR " + members + " THEN settings ELSE coalesce(settings, reading) END";
+        const auto settings = "CASE WHEN " + records + " OR " + members + " THEN " + PortableJSONArgument("settings") +
+            " ELSE coalesce(" + PortableJSONArgument("settings") + ", " + PortableJSONArgument("reading") + ") END";
         const auto reading = "CASE WHEN members IS NOT NULL THEN members WHEN " + records + " OR " + members + " THEN reading ELSE NULL END";
+        const auto aliases = verb_name == "find" ? ", units := NULL" : verb_name == "rank" ? ", keyed_json := NULL" :
+            verb_name == "relate" ? ", query := NULL, rules := NULL" : verb_name == "recognize" ? ", kinds := NULL" : "";
+        const string slots = threshold ? ", reading := NULL, threshold := NULL, settings := NULL" : ", reading := NULL, settings := NULL";
         RegisterPortableMacro(loader, string("CREATE MACRO thinkthen_") + verb +
-            "_details(question, input, reading := NULL, settings := NULL, incremental := false, cancelled := false, members := NULL" + PortableOptionParameters() + ") AS " +
-            name + "(question, input, " + reading + ", " + PortableOptions(settings, "question IS NULL OR input IS NULL", false, true) + ", incremental, cancelled)", purpose);
+            "_details(question := NULL, input := NULL" + slots + ", incremental := false, cancelled := false, members := NULL" + aliases + PortableOptionParameters() + ") AS " +
+            name + "(" + question + ", " + input + ", " + reading + ", " + PortableOptions(settings, question + " IS NULL OR " + input + " IS NULL", false, true) +
+            ", incremental, cancelled, " + (threshold ? "threshold" : "NULL") + ")", purpose);
     }
 }
 }

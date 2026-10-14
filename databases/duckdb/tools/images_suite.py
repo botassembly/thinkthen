@@ -55,8 +55,9 @@ def stored_images_keep_order_duplicates_native_answers_and_zero_send_replay():
 
 
 def image_call(question, records, settings='NULL'):
-    return (f'thinkthen_decide(question := {question}, records := {records}, '
-            f'settings := {settings})')
+    listed = records.startswith('[') or 'STRUCT' in records
+    call = f'thinkthen_decide_details(question := {question}, input := {records}, settings := {settings})'
+    return '(SELECT detail.* FROM (SELECT UNNEST(' + (call if listed else '[' + call + ']') + ') AS detail))'
 
 
 def image_receipt(result):
@@ -153,7 +154,11 @@ def image_null_bad_media_limits_implicit_values_and_file_permissions_never_send(
         got = run([*statements, *invalid, f"SELECT (thinkthen_image_file({literal(str(FIXTURE/'red.png'))})).file",
                    'SET enable_external_access = false', f"SELECT thinkthen_image_file({literal(str(FIXTURE/'red.png'))})"], backend.base)
         expect([rows(result) for result in got[:5]], [[[True]]] * 5, 'NULL operands')
-        for result in got[5:5+len(invalid)]:
+        for index,result in enumerate(got[5:5+len(invalid)]):
+            if index == 8:
+                expect(rows(result)[0][0][0]['failure']['kind'], 'usage', 'unsupported image verb is a typed failure')
+                expect('private-image-evidence' in json.dumps(result), False, 'typed failure withholds pixels')
+                continue
             expect('error' in result, True, 'invalid input refuses')
             # DuckDB's binder can show SQL source, so payload secrecy checks
             # target native diagnostics, whose first sentence withholds pixels.
