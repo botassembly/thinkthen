@@ -1593,9 +1593,22 @@ complete_cases() {
     complete_environment
     if [ "$profile" = routine ]; then
         python3 tests/runner.py plan >"$RUN/complete.plan"
-        while IFS=$'\t' read -r id _; do
+        python3 - "$RUN/complete.plan" >"$RUN/complete.ids" <<'PY'
+import pathlib, sys
+sys.path.insert(0, "../../conformance")
+import parity
+required = parity.required_cases(parity.inventory(), "postgresql")
+for line in pathlib.Path(sys.argv[1]).read_text().splitlines():
+    identity, arm, _ = line.split("\t")
+    if identity in required:
+        print(identity)
+    else:
+        assert arm == "-", f"routine case lacks native parity: {identity}"
+        print(f"native parity: not run {identity}: no outside defect boundary", file=sys.stderr)
+PY
+        while IFS= read -r id; do
             sh "$LIMIT" 300 python3 ../sqlite/tests/complete/parity.py postgresql "$id"
-        done <"$RUN/complete.plan"
+        done <"$RUN/complete.ids"
     else
         sh "$LIMIT" 1800 python3 ../sqlite/tests/complete/parity.py postgresql
     fi
