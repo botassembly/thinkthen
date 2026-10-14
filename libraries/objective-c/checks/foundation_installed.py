@@ -135,6 +135,19 @@ for name in ("THINKTHEN_API_KEY", "LIQUIDAI_API_KEY", "OPENROUTER_API_KEY", "PER
 os.execve(str(binary), [str(binary), *sys.argv[1:], *[]], env)
 ''')
         adapter.chmod(0o700)
-        native_cases(adapter, consumer="objective-c")
+        def installed_cases():
+            native_cases(adapter, consumer="objective-c")
+            # The paired public envelope is required even outside candidate parity.
+            selector = "THINKTHEN_OBJECTIVE-C_CASES"
+            previous = os.environ.get(selector)
+            os.environ[selector] = "library-call-result"
+            try:
+                native_cases(adapter, consumer="objective-c")
+            finally:
+                if previous is None:
+                    os.environ.pop(selector)
+                else:
+                    os.environ[selector] = previous
+        installed_cases()
         adapter.write_text(adapter.read_text().replace("*[]", '*["blocking"]'))
-        native_cases(adapter, consumer="objective-c")
+        installed_cases()
