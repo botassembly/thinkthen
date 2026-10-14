@@ -1,7 +1,7 @@
 """Swift values derived from the shared Rust schema graph."""
 import json
 import re
-from host_answers import aggregate_answers, named_object_fields, usage_operations, alternative_name, aggregate_projection
+from host_answers import aggregate_answers, named_object_fields, usage_operations, alternative_name, aggregate_projection, call_results, scalar_input_selectors
 
 ROOTS = ('completesessionPacket', 'completeplan', 'completequestionDocument')
 INPUT_ROOTS = ('Request', 'RequestSessionDescriptor', 'RequestReaderFailure', 'EngineSettings')
@@ -157,13 +157,7 @@ def render(definitions, inputs=False):
     if inputs:
         lines += [named_calls(definitions)]
     else:
-        lines += ['extension SessionPacket {']
-        variants = definitions['completesessionPacket']['variants']
-        for function, child, payload in aggregate_answers(definitions):
-            index = next(i for i, (candidate, _) in enumerate(variants) if candidate == child)
-            tag = variants[index][1]
-            lines += [f'    public func {function}Answer() throws -> {typ(payload, child + "_value")} {{', f'        if case .{case(tag, index)}(let packet) = self {{ return packet.value }}', f'        throw ValueConversionError("Expected {function} aggregate packet")', '    }']
-        lines += ['}', answer_helpers(definitions)]
+        lines += [answer_helpers(definitions)]
         from swift_native import render as native_graph
         lines += [native_graph(definitions)]
     return ('\n'.join(lines) + '\n')
@@ -249,68 +243,98 @@ extension OrderedMap: ValueRepresentable where Value: ValueRepresentable {
 }"""
 
 
+def result_types(info, single):
+    def typ(source):
+        if not isinstance(source, dict): return 'DataValue'
+        if '$ref' in source: return name(source['$ref'].split('/')[-1])
+        kind = source.get('type')
+        if isinstance(kind, list): return typ({**source, 'type': next(k for k in kind if k != 'null')}) + '?'
+        if kind == 'array': return '[' + typ(source['items']) + ']'
+        return {'string': 'String', 'boolean': 'Bool', 'number': 'Double', 'integer': 'UInt64'}.get(kind, 'DataValue')
+    value = info['aggregate_value']
+    if info['call_shape'] == 'input': value = value['items']
+    target = 'DataValue?' if 'resolution' in info and info['probability_mode'] == 'yes' else typ(value)
+    if 'selection_path' in info: target = 'DataValue?'
+    mode = info['probability_mode']
+    probability = '[Double?]' if mode == 'items' else 'Double?'
+    if mode == 'items' and info['call_shape'] != 'input': probability = '[Double?]'
+    if info['call_shape'] == 'collection': probability = '[Double?]'
+    if info['call_shape'] == 'input' and not single:
+        target = '[' + target + ']'
+        probability = '[' + probability + ']' if mode != 'null' else 'Double?'
+    return target, probability, typ(info['receipt_payload'])
+
+
 def named_calls(definitions):
+    from generate import SCHEMA, graph, prepare
+    results = call_results(prepare(graph(json.loads(SCHEMA.read_text()), ROOTS)))
+    single_inputs = set(scalar_input_selectors(definitions))
+    selectors = [(child, definitions[child]['properties']['kind']['const'])
+                 for child, _ in definitions['RequestInput']['variants']]
     lines = ['extension Client {']
-    for item in definitions['RequestFunction'].get('oneOf', []):
-        function = item['const']
-        version = literal_member(definitions['RequestVersion']['oneOf'][0]['const'])
-        lines += [f'    public func {function}(_ question: Question, input: Input, options: Presence<Options> = .absent) async throws -> Call {{',
-                  f'        try await execute(Request(call: CallRequest(function: .{literal_member(function)}, input: input, options: options, question: question), schema: .{version}))', '    }']
+    version = literal_member(definitions['RequestVersion']['oneOf'][0]['const'])
+    for function, info in results.items():
+        inputs = selectors if info['call_shape'] == 'input' else [(None, None)]
+        for child, kind in inputs:
+            single = child in single_inputs
+            target, probability, receipts = result_types(info, single)
+            argument = name(child) if child else 'Input'
+            expression = '.' + literal_member(kind) + '(input)' if child else 'input'
+            suffix = 'Scalar' if single else 'List'
+            if info['call_shape'] != 'input': suffix = ''
+            signature = f'    public func {function}(_ question: Question, input: {argument}, options: Presence<Options> = .absent'
+            feed = ', feed: AsyncThrowingStream<SessionDescriptor, any Error>' if kind == 'feed' else ''
+            passed_feed = ', feed: feed' if kind == 'feed' else ''
+            lines += [signature + feed + f') async throws -> CallResult<{target}, {probability}, {receipts}> {{',
+                      f'        let call = try await execute(Request(call: CallRequest(function: .{literal_member(function)}, input: {expression}, options: options, question: question), schema: .{version}){passed_feed})',
+                      f'        return try call.{function}Result{suffix}()', '    }']
+            if single:
+                payload = 'String' if kind == 'text' else 'DataValue'
+                member_name = 'text' if kind == 'text' else 'value'
+                lines += [f'    public func {function}(_ question: Question, input: {payload}, options: Presence<Options> = .absent) async throws -> CallResult<{target}, {probability}, {receipts}> {{',
+                          f'        try await {function}(question, input: {argument}({member_name}: input), options: options)', '    }']
     return '\n'.join(lines + ['}'])
 
 
 def answer_helpers(definitions):
-    from host_answers import scalar_answers, judgment_route
-    route, guards = judgment_route(definitions)
-    def path(value): return '[' + ', '.join(json.dumps(field) for field in value) + ']'
-    checks = ['                guard try answerPath(packet.json, ' + path(fields) + ') == .string(' + json.dumps(value) + ') else { continue }' for fields, value in guards]
-    collections = [function for function, _, payload in aggregate_answers(definitions) if payload.get('type') == 'array']
-    collection_test = ' || '.join('function == ' + json.dumps(function) for function in collections)
-    lines = ['public struct AnswerCardinalityError: Error, Sendable {',
-             '    public let function: String', '    public let count: Int', '    public let call: Call', '}',
-             'private func answerPath(_ json: DataValue, _ path: [String]) throws -> DataValue? {',
-             '    var value: DataValue? = json', '    for key in path { guard let object = value else { return nil }; value = try jsonObject(object)[key] }', '    return value', '}',
-             'private func answerProjection(_ value: DataValue, _ member: String) throws -> DataValue {',
-             '    guard case .array(let rows) = value.kind else { throw ValueConversionError("Expected answer collection") }',
-             '    return .array(try rows.map { try jsonRequired(jsonObject($0), member) })', '}',
-             'extension Call {',
-             '    private func answerJSON(_ function: String, _ judgment: String) throws -> DataValue {',
-             '        guard terminal.kind == "terminal" else { throw AnswerCardinalityError(function: function, count: 0, call: self) }',
-             '        if case .null = terminal.failure { throw ValueConversionError("Terminal failure must be an object") }',
-             '        if case .value(let failure) = terminal.failure { throw SessionFailure(failure: failure, call: self) }',
-             '        let collection = ' + collection_test, '        var values: [DataValue] = []', '        for packet in packets {',
-             '            guard try answerPath(packet.json, ["function"]) == .string(function) else { continue }',
-             '            if judgment.isEmpty {',
-             '                let kind = try answerPath(packet.json, ["kind"])',
-             '                let row = collection && kind == .string("row")',
-             '                guard row || kind == .string("aggregate"), let value = try answerPath(packet.json, ["value"]) else { continue }',
-             '                values.append(row ? .array([value]) : value)', '            } else {',
-             *checks, '                guard let carrier = try answerPath(packet.json, ' + path(route) + ') else { continue }',
-             '                guard try answerPath(carrier, ["kind"]) == .string(judgment), let value = try answerPath(carrier, ["value"]) else { continue }',
-             '                values.append(value)', '            }', '        }',
-             '        if judgment.isEmpty && collection { var combined: [DataValue] = []; for value in values { guard case .array(let items) = value.kind else { throw ValueConversionError("Expected aggregate collection") }; combined.append(contentsOf: items) }; return .array(combined) }',
-             '        guard values.count == 1 else { throw AnswerCardinalityError(function: function, count: values.count, call: self) }',
-             '        return values[0]', '    }']
-    def value_type(source):
-        if not isinstance(source, dict): return 'DataValue'
-        if '$ref' in source: return name(source['$ref'].split('/')[-1])
-        if source.get('type') == 'array': return '[' + value_type(source['items']) + ']'
-        return {'string': 'String', 'boolean': 'Bool', 'number': 'Double', 'integer': 'UInt64'}.get(source.get('type'), 'DataValue')
-    answers = {function: (value_type(aggregate_projection(function, payload, definitions)[0]), value_type(aggregate_projection(function, payload, definitions)[0]), '') for function, _, payload in aggregate_answers(definitions)}
-    projections = {function: aggregate_projection(function, payload, definitions)[1] for function, _, payload in aggregate_answers(definitions)}
-    for function, kind, payload in scalar_answers(definitions):
-        source = dict(payload); kinds = source.get('type'); nullable = isinstance(kinds, list) and 'null' in kinds
-        if isinstance(kinds, list): source['type'] = next(value for value in kinds if value != 'null')
-        target = value_type(source)
-        answers[function] = (target + '?' if nullable else target, 'Optional<' + target + '>' if nullable else target, kind)
-    for function, (target, reader, kind) in answers.items():
-        projection = projections.get(function)
-        expression = f'answerJSON({json.dumps(function)}, {json.dumps(kind)})'
-        if projection:
-            expression = f'answerProjection({expression}, {json.dumps(projection)})'
-        lines += [f'    public func {function}Answer() throws -> {target} {{ try {reader}.read({expression}) }}']
-    lines += ['}', 'extension Client {']
-    for function, (target, _, _) in answers.items():
-        lines += [f'    public func {function}Answer(_ question: Question, input: Input, options: Presence<Options> = .absent) async throws -> {target} {{',
-                  f'        let call = try await {function}(question, input: input, options: options)', f'        return try call.{function}Answer()', '    }']
+    lines = ['extension Call {']
+    def path(values): return '[' + ', '.join(json.dumps(v) for v in values) + ']'
+    for function, info in call_results(definitions).items():
+        variants = [True, False] if info['call_shape'] == 'input' else [False]
+        for single in variants:
+            target, probability, receipts = result_types(info, single)
+            suffix = ('Scalar' if single else 'List') if info['call_shape'] == 'input' else ''
+            resolution = info.get('resolution', {})
+            guards = '[' + ', '.join('(' + path(p) + ', ' + json.dumps(v) + ')' for p, v in resolution.get('guards', [])) + ']'
+            collection = str(info['receipt_payload'].get('type') == 'array').lower()
+            lines += [f'    func {function}Result{suffix}() throws -> CallResult<{target}, {probability}, {receipts}> {{',
+                      f'        let projection = try project({json.dumps(function)}, collection: {collection}, resolution: {path(resolution.get("path", []))}, guards: {guards}, indexPath: {path(resolution.get("index_path", []))})']
+            source = '.array(projection.receipts)' if collection == 'true' else 'projection.receipts[0]'
+            if single or collection == 'false': lines += ['        guard projection.receipts.count == 1 else { throw ValueConversionError("Expected one result") }']
+            lines += [f'        let results = try {receipts}.read({source})']
+            elem = target[1:-1] if target.startswith('[') and (info['call_shape'] == 'collection' or info['call_shape'] == 'input' and not single) else target
+            projected = info['value_projection']
+            read = f'projection.value(index, projection: {json.dumps(projected)}, resolved: {str(bool(resolution)).lower()})'
+            if elem != 'DataValue?': read = f'{elem}.read({read} ?? .null)'
+            lines += [f'        let values = try projection.receipts.indices.map {{ index in try {read} }}']
+            if 'selection_path' in info:
+                lines += [f'        let value: {target} = try callPath(projection.receipts[0], {path(info["selection_path"])}) == .null ? nil : values[0]']
+            elif info['call_shape'] == 'input':
+                lines += ['        let value = values[0]' if single else '        let value = values']
+            elif info['call_shape'] == 'collection': lines += ['        let value = values']
+            else: lines += ['        let value = values[0]']
+            mode = info['probability_mode']
+            if mode == 'null': lines += ['        let probability: Double? = nil']
+            elif mode in ('yes', 'picked'):
+                settled = 'values[index] != nil' if resolution else 'value != nil' if 'selection_path' in info else 'true'
+                pick = path(info['pick_path']) if 'pick_path' in info else 'nil'
+                lines += [f'        let probabilities = try projection.receipts.indices.map {{ index in try projection.probability(index, path: {path(info["probability_path"])}, pick: {pick}, settled: {settled}) }}',
+                          '        let probability = probabilities' if probability.startswith('[') else '        let probability = probabilities[0]']
+            elif info['call_shape'] == 'collection':
+                lines += ['        let probability: [Double?] = results.map { if case .yesNo(let answer) = $0.answer { return answer.probability }; return nil }']
+            elif info['call_shape'] == 'input':
+                lines += ['        let probabilities = try results.map(recognitionProbabilities)', '        let probability = probabilities[0]' if single else '        let probability = probabilities']
+            else: lines += ['        let probability: [Double?] = value.map { $0.probability }']
+            lines += ['        guard let facts = terminal.facts.value else { throw ValueConversionError("Missing result facts") }',
+                      '        return CallResult(value: value, probability: probability, results: results, facts: facts, call: self)', '    }']
     return '\n'.join(lines + ['}'])

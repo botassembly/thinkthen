@@ -116,7 +116,7 @@ import Foundation
     print("SWIFT_PLAN_PASS nine fields, six supported, four Usage refusals, empty input")
     let heldClient = try Client(settings: settings)
     let held = Task {
-      try await heldClient.decide(.text("Is it?"), input: .text("hold-owned-swift"))
+      try await heldClient.decide(.text("Is it?"), input: InputText(text: "hold-owned-swift"))
     }
     try await arrived(barrier + "/arrived-hold-owned-swift")
     let progress = await Task { "independent" }.value
@@ -133,50 +133,79 @@ import Foundation
     _ = FileManager.default.createFile(
       atPath: barrier + "/release-hold-owned-swift", contents: Data())
     let client = try Client(settings: settings)
-    let call = try await client.decide(.text("Is it?"), input: .text("owned-swift"))
-    let rows: [AtomicDecideValue] = call.packets.compactMap {
+    let call = try await client.decide(.text("Is it?"), input: InputText(text: "owned-swift"))
+    let rows: [AtomicDecideValue] = call.call.packets.compactMap {
       if case .decideRow(let row) = $0 { return row.value }
       return nil
     }
     guard let row = rows.first else { throw ValueConversionError("Missing typed decide row") }
     try expect(try row.value.json.data() == Data("true".utf8), "Typed native answer")
-    try expect(call.terminal.facts.isPresent, "Native final facts missing")
-    try expect(try call.decideAnswer() == true, "Normalized scalar answer")
-    for (items, count) in [
-      ([Item](), 0), ([.text("cardinality-one"), .text("cardinality-two")], 2),
-    ] {
-      do {
-        _ = try await client.decideAnswer(
-          .text("Is it?"), input: .records(InputRecords(items: items)))
-        throw ValueConversionError("Answer cardinality accepted")
-      } catch let failure as AnswerCardinalityError {
-        try expect(
-          failure.count == count && failure.call.terminal.facts.isPresent,
-          "Wrong answer cardinality or missing native settlement")
-      }
-    }
-    let unknown = try await client.decideAnswer(
+    try expect(call.call.terminal.facts.isPresent, "Native final facts missing")
+    try expect(call.value == .bool(true), "Settled decision value")
+    try expect(
+      call.probability == 0.9 && call.results.count == 1 && call.facts.requestsSent == 1,
+      "One result carries value, probability, records and facts")
+    let emptyResult = try await client.decide(.text("Is it?"), input: InputRecords(items: []))
+    try expect(emptyResult.value.isEmpty && emptyResult.probability.isEmpty, "Empty list shape")
+    let listResult = try await client.decide(
+      .text("Is it?"),
+      input: InputRecords(items: [.text("cardinality-one"), .text("cardinality-two")]))
+    try expect(
+      listResult.value == [.bool(true), .bool(true)] && listResult.probability == [0.9, 0.9],
+      "Ordered list shape")
+    let unknown = try await client.decide(
       .definition(
         QuestionDefinition(
           value: .decide(
             AuthoredDecide(decide: .string("Is it?"), threshold: .value(.string("0.2:0.8")))))),
-      input: .text("unsure"))
-    try expect(unknown == nil, "Nullable normalized decision")
-    let unknownChoice = try await client.chooseAnswer(
+      input: InputText(text: "unsure"))
+    try expect(
+      unknown.value == nil && unknown.probability == nil, "Unresolved decision has no probability")
+    let unknownChoice = try await client.choose(
       .definition(
         QuestionDefinition(
           value: .choose(
             AuthoredChoose(
               choose: .string("Which?"), options: .value(.list(["a", "b"])),
-              threshold: .value(.number(0.95)))))), input: .text("uncertain-choice"))
-    try expect(unknownChoice == nil, "Nullable normalized choice")
+              threshold: .value(.number(0.95)))))), input: InputText(text: "uncertain-choice"))
+    try expect(
+      unknownChoice.value == nil && unknownChoice.probability == nil,
+      "Unresolved choice has no probability")
     let authoredNull = try await client.decide(
       .definition(
         QuestionDefinition(
           value: .decide(AuthoredDecide(decide: .string("Is it?"), true: .value(.null))))),
-      input: .text("authored-null"))
+      input: InputText(text: "authored-null"))
     try expect(
-      try authoredNull.decideAnswer() == true, "Authored null replaced normalized judgment")
+      authoredNull.value == .null && authoredNull.probability == 0.9,
+      "Authored null remains settled")
+    let no = try await client.decide(.text("Is it?"), input: InputText(text: "no"))
+    try expect(no.value == .bool(false) && no.probability == 0.1, "False decision remains settled")
+    for authored in [
+      DataValue.array([.bool(false), .null]), .array([.bool(true), .null]),
+      .object(["name": .string("accepted")]),
+    ] {
+      let result = try await client.decide(
+        .definition(
+          QuestionDefinition(
+            value: .decide(
+              AuthoredDecide(
+                decide: .string("Is it?"), true: .value(try AuthoredCriterion.read(authored)))))),
+        input: InputText(text: "authored-value"))
+      try expect(
+        try result.value?.data() == authored.data() && result.probability == 0.9,
+        "Authored values stay intact")
+    }
+    let picked = try await client.choose(
+      .definition(
+        QuestionDefinition(
+          value: .choose(
+            AuthoredChoose(choose: .string("Which?"), options: .value(.list(["a", "b"])))))),
+      input: InputText(text: "picked-choice"))
+    try expect(
+      picked.value == "a" && picked.probability == 0.9 && picked.results.count == 1
+        && picked.facts.requestsSent == 1,
+      "Chosen value uses picked probability")
     let explicit = try client.start(
       Request(
         call: CallRequest(
@@ -195,9 +224,9 @@ import Foundation
     try expect(
       settled?.facts.isPresent == true && settled?.failure.isPresent == true,
       "Explicit post-cancel drain lost terminal facts")
-    let facts = try call.terminal.json.data()
+    let facts = try call.call.terminal.json.data()
     do {
-      _ = try await client.decide(.text("Is it?"), input: .text("status-401"))
+      _ = try await client.decide(.text("Is it?"), input: InputText(text: "status-401"))
       throw ValueConversionError("Backend failure answered")
     } catch let failure as SessionFailure {
       guard case .backend = failure.kind else {
@@ -214,14 +243,17 @@ import Foundation
             RecognizeDefinition(
               recognize: RecognizeQuestion(
                 kinds: .value(OrderedMap([.init("person", AuthoredDescription.null)]))))))),
-      input: .text("Ana Lima"))
-    let aggregateCount = recognition.packets.filter {
+      input: InputText(text: "Ana Lima"))
+    let aggregateCount = recognition.call.packets.filter {
       if case .recognizeAggregate = $0 { return true }
       return false
     }.count
     try expect(aggregateCount == 1, "Recognize did not emit exactly one aggregate")
+    try expect(
+      !recognition.probability.isEmpty && recognition.probability.allSatisfy { $0 != nil },
+      "Recognition span probability")
     client.close()
-    try expect(try call.terminal.json.data() == facts, "Result ownership ended with client")
+    try expect(try call.call.terminal.json.data() == facts, "Result ownership ended with client")
     print(
       "OWNED_SWIFT_PASS typed answer/failure, presence, lossless JSON, independent task, cancellation and cleanup"
     )

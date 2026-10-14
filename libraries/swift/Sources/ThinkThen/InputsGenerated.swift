@@ -3232,87 +3232,527 @@ public enum SourceUnit: ValueRepresentable {
   }
 }
 extension Client {
-  public func decide(_ question: Question, input: Input, options: Presence<Options> = .absent)
-    async throws -> Call
+  public func decide(_ question: Question, input: InputText, options: Presence<Options> = .absent)
+    async throws -> CallResult<DataValue?, Double?, [AtomicDecideValue]>
   {
-    try await execute(
+    let call = try await execute(
       Request(
-        call: CallRequest(function: .`decide`, input: input, options: options, question: question),
+        call: CallRequest(
+          function: .`decide`, input: .`text`(input), options: options, question: question),
         schema: .`thinkthenRequest_1`))
+    return try call.decideResultScalar()
   }
-  public func choose(_ question: Question, input: Input, options: Presence<Options> = .absent)
-    async throws -> Call
+  public func decide(_ question: Question, input: String, options: Presence<Options> = .absent)
+    async throws -> CallResult<DataValue?, Double?, [AtomicDecideValue]>
   {
-    try await execute(
-      Request(
-        call: CallRequest(function: .`choose`, input: input, options: options, question: question),
-        schema: .`thinkthenRequest_1`))
+    try await decide(question, input: InputText(text: input), options: options)
   }
-  public func tag(_ question: Question, input: Input, options: Presence<Options> = .absent)
-    async throws -> Call
+  public func decide(_ question: Question, input: InputJson, options: Presence<Options> = .absent)
+    async throws -> CallResult<DataValue?, Double?, [AtomicDecideValue]>
   {
-    try await execute(
+    let call = try await execute(
       Request(
-        call: CallRequest(function: .`tag`, input: input, options: options, question: question),
+        call: CallRequest(
+          function: .`decide`, input: .`json`(input), options: options, question: question),
         schema: .`thinkthenRequest_1`))
+    return try call.decideResultScalar()
   }
-  public func score(_ question: Question, input: Input, options: Presence<Options> = .absent)
-    async throws -> Call
+  public func decide(_ question: Question, input: DataValue, options: Presence<Options> = .absent)
+    async throws -> CallResult<DataValue?, Double?, [AtomicDecideValue]>
   {
-    try await execute(
+    try await decide(question, input: InputJson(value: input), options: options)
+  }
+  public func decide(
+    _ question: Question, input: InputRecords, options: Presence<Options> = .absent
+  ) async throws -> CallResult<[DataValue?], [Double?], [AtomicDecideValue]> {
+    let call = try await execute(
       Request(
-        call: CallRequest(function: .`score`, input: input, options: options, question: question),
+        call: CallRequest(
+          function: .`decide`, input: .`records`(input), options: options, question: question),
         schema: .`thinkthenRequest_1`))
+    return try call.decideResultList()
+  }
+  public func decide(_ question: Question, input: InputUnits, options: Presence<Options> = .absent)
+    async throws -> CallResult<[DataValue?], [Double?], [AtomicDecideValue]>
+  {
+    let call = try await execute(
+      Request(
+        call: CallRequest(
+          function: .`decide`, input: .`units`(input), options: options, question: question),
+        schema: .`thinkthenRequest_1`))
+    return try call.decideResultList()
+  }
+  public func decide(
+    _ question: Question, input: InputEntities, options: Presence<Options> = .absent
+  ) async throws -> CallResult<[DataValue?], [Double?], [AtomicDecideValue]> {
+    let call = try await execute(
+      Request(
+        call: CallRequest(
+          function: .`decide`, input: .`entities`(input), options: options, question: question),
+        schema: .`thinkthenRequest_1`))
+    return try call.decideResultList()
+  }
+  public func decide(_ question: Question, input: InputSource, options: Presence<Options> = .absent)
+    async throws -> CallResult<[DataValue?], [Double?], [AtomicDecideValue]>
+  {
+    let call = try await execute(
+      Request(
+        call: CallRequest(
+          function: .`decide`, input: .`source`(input), options: options, question: question),
+        schema: .`thinkthenRequest_1`))
+    return try call.decideResultList()
+  }
+  public func decide(
+    _ question: Question, input: InputFeed, options: Presence<Options> = .absent,
+    feed: AsyncThrowingStream<SessionDescriptor, any Error>
+  ) async throws -> CallResult<[DataValue?], [Double?], [AtomicDecideValue]> {
+    let call = try await execute(
+      Request(
+        call: CallRequest(
+          function: .`decide`, input: .`feed`(input), options: options, question: question),
+        schema: .`thinkthenRequest_1`), feed: feed)
+    return try call.decideResultList()
+  }
+  public func choose(_ question: Question, input: InputText, options: Presence<Options> = .absent)
+    async throws -> CallResult<String?, Double?, [AtomicNullableString]>
+  {
+    let call = try await execute(
+      Request(
+        call: CallRequest(
+          function: .`choose`, input: .`text`(input), options: options, question: question),
+        schema: .`thinkthenRequest_1`))
+    return try call.chooseResultScalar()
+  }
+  public func choose(_ question: Question, input: String, options: Presence<Options> = .absent)
+    async throws -> CallResult<String?, Double?, [AtomicNullableString]>
+  {
+    try await choose(question, input: InputText(text: input), options: options)
+  }
+  public func choose(_ question: Question, input: InputJson, options: Presence<Options> = .absent)
+    async throws -> CallResult<String?, Double?, [AtomicNullableString]>
+  {
+    let call = try await execute(
+      Request(
+        call: CallRequest(
+          function: .`choose`, input: .`json`(input), options: options, question: question),
+        schema: .`thinkthenRequest_1`))
+    return try call.chooseResultScalar()
+  }
+  public func choose(_ question: Question, input: DataValue, options: Presence<Options> = .absent)
+    async throws -> CallResult<String?, Double?, [AtomicNullableString]>
+  {
+    try await choose(question, input: InputJson(value: input), options: options)
+  }
+  public func choose(
+    _ question: Question, input: InputRecords, options: Presence<Options> = .absent
+  ) async throws -> CallResult<[String?], [Double?], [AtomicNullableString]> {
+    let call = try await execute(
+      Request(
+        call: CallRequest(
+          function: .`choose`, input: .`records`(input), options: options, question: question),
+        schema: .`thinkthenRequest_1`))
+    return try call.chooseResultList()
+  }
+  public func choose(_ question: Question, input: InputUnits, options: Presence<Options> = .absent)
+    async throws -> CallResult<[String?], [Double?], [AtomicNullableString]>
+  {
+    let call = try await execute(
+      Request(
+        call: CallRequest(
+          function: .`choose`, input: .`units`(input), options: options, question: question),
+        schema: .`thinkthenRequest_1`))
+    return try call.chooseResultList()
+  }
+  public func choose(
+    _ question: Question, input: InputEntities, options: Presence<Options> = .absent
+  ) async throws -> CallResult<[String?], [Double?], [AtomicNullableString]> {
+    let call = try await execute(
+      Request(
+        call: CallRequest(
+          function: .`choose`, input: .`entities`(input), options: options, question: question),
+        schema: .`thinkthenRequest_1`))
+    return try call.chooseResultList()
+  }
+  public func choose(_ question: Question, input: InputSource, options: Presence<Options> = .absent)
+    async throws -> CallResult<[String?], [Double?], [AtomicNullableString]>
+  {
+    let call = try await execute(
+      Request(
+        call: CallRequest(
+          function: .`choose`, input: .`source`(input), options: options, question: question),
+        schema: .`thinkthenRequest_1`))
+    return try call.chooseResultList()
+  }
+  public func choose(
+    _ question: Question, input: InputFeed, options: Presence<Options> = .absent,
+    feed: AsyncThrowingStream<SessionDescriptor, any Error>
+  ) async throws -> CallResult<[String?], [Double?], [AtomicNullableString]> {
+    let call = try await execute(
+      Request(
+        call: CallRequest(
+          function: .`choose`, input: .`feed`(input), options: options, question: question),
+        schema: .`thinkthenRequest_1`), feed: feed)
+    return try call.chooseResultList()
+  }
+  public func tag(_ question: Question, input: InputText, options: Presence<Options> = .absent)
+    async throws -> CallResult<[String], Double?, [AtomicArrayOfString]>
+  {
+    let call = try await execute(
+      Request(
+        call: CallRequest(
+          function: .`tag`, input: .`text`(input), options: options, question: question),
+        schema: .`thinkthenRequest_1`))
+    return try call.tagResultScalar()
+  }
+  public func tag(_ question: Question, input: String, options: Presence<Options> = .absent)
+    async throws -> CallResult<[String], Double?, [AtomicArrayOfString]>
+  {
+    try await tag(question, input: InputText(text: input), options: options)
+  }
+  public func tag(_ question: Question, input: InputJson, options: Presence<Options> = .absent)
+    async throws -> CallResult<[String], Double?, [AtomicArrayOfString]>
+  {
+    let call = try await execute(
+      Request(
+        call: CallRequest(
+          function: .`tag`, input: .`json`(input), options: options, question: question),
+        schema: .`thinkthenRequest_1`))
+    return try call.tagResultScalar()
+  }
+  public func tag(_ question: Question, input: DataValue, options: Presence<Options> = .absent)
+    async throws -> CallResult<[String], Double?, [AtomicArrayOfString]>
+  {
+    try await tag(question, input: InputJson(value: input), options: options)
+  }
+  public func tag(_ question: Question, input: InputRecords, options: Presence<Options> = .absent)
+    async throws -> CallResult<[[String]], Double?, [AtomicArrayOfString]>
+  {
+    let call = try await execute(
+      Request(
+        call: CallRequest(
+          function: .`tag`, input: .`records`(input), options: options, question: question),
+        schema: .`thinkthenRequest_1`))
+    return try call.tagResultList()
+  }
+  public func tag(_ question: Question, input: InputUnits, options: Presence<Options> = .absent)
+    async throws -> CallResult<[[String]], Double?, [AtomicArrayOfString]>
+  {
+    let call = try await execute(
+      Request(
+        call: CallRequest(
+          function: .`tag`, input: .`units`(input), options: options, question: question),
+        schema: .`thinkthenRequest_1`))
+    return try call.tagResultList()
+  }
+  public func tag(_ question: Question, input: InputEntities, options: Presence<Options> = .absent)
+    async throws -> CallResult<[[String]], Double?, [AtomicArrayOfString]>
+  {
+    let call = try await execute(
+      Request(
+        call: CallRequest(
+          function: .`tag`, input: .`entities`(input), options: options, question: question),
+        schema: .`thinkthenRequest_1`))
+    return try call.tagResultList()
+  }
+  public func tag(_ question: Question, input: InputSource, options: Presence<Options> = .absent)
+    async throws -> CallResult<[[String]], Double?, [AtomicArrayOfString]>
+  {
+    let call = try await execute(
+      Request(
+        call: CallRequest(
+          function: .`tag`, input: .`source`(input), options: options, question: question),
+        schema: .`thinkthenRequest_1`))
+    return try call.tagResultList()
+  }
+  public func tag(
+    _ question: Question, input: InputFeed, options: Presence<Options> = .absent,
+    feed: AsyncThrowingStream<SessionDescriptor, any Error>
+  ) async throws -> CallResult<[[String]], Double?, [AtomicArrayOfString]> {
+    let call = try await execute(
+      Request(
+        call: CallRequest(
+          function: .`tag`, input: .`feed`(input), options: options, question: question),
+        schema: .`thinkthenRequest_1`), feed: feed)
+    return try call.tagResultList()
+  }
+  public func score(_ question: Question, input: InputText, options: Presence<Options> = .absent)
+    async throws -> CallResult<Double, Double?, [AtomicDouble]>
+  {
+    let call = try await execute(
+      Request(
+        call: CallRequest(
+          function: .`score`, input: .`text`(input), options: options, question: question),
+        schema: .`thinkthenRequest_1`))
+    return try call.scoreResultScalar()
+  }
+  public func score(_ question: Question, input: String, options: Presence<Options> = .absent)
+    async throws -> CallResult<Double, Double?, [AtomicDouble]>
+  {
+    try await score(question, input: InputText(text: input), options: options)
+  }
+  public func score(_ question: Question, input: InputJson, options: Presence<Options> = .absent)
+    async throws -> CallResult<Double, Double?, [AtomicDouble]>
+  {
+    let call = try await execute(
+      Request(
+        call: CallRequest(
+          function: .`score`, input: .`json`(input), options: options, question: question),
+        schema: .`thinkthenRequest_1`))
+    return try call.scoreResultScalar()
+  }
+  public func score(_ question: Question, input: DataValue, options: Presence<Options> = .absent)
+    async throws -> CallResult<Double, Double?, [AtomicDouble]>
+  {
+    try await score(question, input: InputJson(value: input), options: options)
+  }
+  public func score(_ question: Question, input: InputRecords, options: Presence<Options> = .absent)
+    async throws -> CallResult<[Double], Double?, [AtomicDouble]>
+  {
+    let call = try await execute(
+      Request(
+        call: CallRequest(
+          function: .`score`, input: .`records`(input), options: options, question: question),
+        schema: .`thinkthenRequest_1`))
+    return try call.scoreResultList()
+  }
+  public func score(_ question: Question, input: InputUnits, options: Presence<Options> = .absent)
+    async throws -> CallResult<[Double], Double?, [AtomicDouble]>
+  {
+    let call = try await execute(
+      Request(
+        call: CallRequest(
+          function: .`score`, input: .`units`(input), options: options, question: question),
+        schema: .`thinkthenRequest_1`))
+    return try call.scoreResultList()
+  }
+  public func score(
+    _ question: Question, input: InputEntities, options: Presence<Options> = .absent
+  ) async throws -> CallResult<[Double], Double?, [AtomicDouble]> {
+    let call = try await execute(
+      Request(
+        call: CallRequest(
+          function: .`score`, input: .`entities`(input), options: options, question: question),
+        schema: .`thinkthenRequest_1`))
+    return try call.scoreResultList()
+  }
+  public func score(_ question: Question, input: InputSource, options: Presence<Options> = .absent)
+    async throws -> CallResult<[Double], Double?, [AtomicDouble]>
+  {
+    let call = try await execute(
+      Request(
+        call: CallRequest(
+          function: .`score`, input: .`source`(input), options: options, question: question),
+        schema: .`thinkthenRequest_1`))
+    return try call.scoreResultList()
+  }
+  public func score(
+    _ question: Question, input: InputFeed, options: Presence<Options> = .absent,
+    feed: AsyncThrowingStream<SessionDescriptor, any Error>
+  ) async throws -> CallResult<[Double], Double?, [AtomicDouble]> {
+    let call = try await execute(
+      Request(
+        call: CallRequest(
+          function: .`score`, input: .`feed`(input), options: options, question: question),
+        schema: .`thinkthenRequest_1`), feed: feed)
+    return try call.scoreResultList()
   }
   public func filter(_ question: Question, input: Input, options: Presence<Options> = .absent)
-    async throws -> Call
+    async throws -> CallResult<[DataValue], [Double?], [AtomicBoolean]>
   {
-    try await execute(
+    let call = try await execute(
       Request(
         call: CallRequest(function: .`filter`, input: input, options: options, question: question),
         schema: .`thinkthenRequest_1`))
+    return try call.filterResult()
   }
   public func rank(_ question: Question, input: Input, options: Presence<Options> = .absent)
-    async throws -> Call
+    async throws -> CallResult<[UInt64], [Double?], [AtomicNonZeroUsize]>
   {
-    try await execute(
+    let call = try await execute(
       Request(
         call: CallRequest(function: .`rank`, input: input, options: options, question: question),
         schema: .`thinkthenRequest_1`))
+    return try call.rankResult()
   }
   public func find(_ question: Question, input: Input, options: Presence<Options> = .absent)
-    async throws -> Call
+    async throws -> CallResult<DataValue?, Double?, Find>
   {
-    try await execute(
+    let call = try await execute(
       Request(
         call: CallRequest(function: .`find`, input: input, options: options, question: question),
         schema: .`thinkthenRequest_1`))
+    return try call.findResult()
   }
-  public func annotate(_ question: Question, input: Input, options: Presence<Options> = .absent)
-    async throws -> Call
+  public func annotate(_ question: Question, input: InputText, options: Presence<Options> = .absent)
+    async throws -> CallResult<AnnotatedRow, Double?, [Annotation]>
   {
-    try await execute(
+    let call = try await execute(
       Request(
         call: CallRequest(
-          function: .`annotate`, input: input, options: options, question: question),
+          function: .`annotate`, input: .`text`(input), options: options, question: question),
         schema: .`thinkthenRequest_1`))
+    return try call.annotateResultScalar()
   }
-  public func recognize(_ question: Question, input: Input, options: Presence<Options> = .absent)
-    async throws -> Call
+  public func annotate(_ question: Question, input: String, options: Presence<Options> = .absent)
+    async throws -> CallResult<AnnotatedRow, Double?, [Annotation]>
   {
-    try await execute(
+    try await annotate(question, input: InputText(text: input), options: options)
+  }
+  public func annotate(_ question: Question, input: InputJson, options: Presence<Options> = .absent)
+    async throws -> CallResult<AnnotatedRow, Double?, [Annotation]>
+  {
+    let call = try await execute(
       Request(
         call: CallRequest(
-          function: .`recognize`, input: input, options: options, question: question),
+          function: .`annotate`, input: .`json`(input), options: options, question: question),
         schema: .`thinkthenRequest_1`))
+    return try call.annotateResultScalar()
+  }
+  public func annotate(_ question: Question, input: DataValue, options: Presence<Options> = .absent)
+    async throws -> CallResult<AnnotatedRow, Double?, [Annotation]>
+  {
+    try await annotate(question, input: InputJson(value: input), options: options)
+  }
+  public func annotate(
+    _ question: Question, input: InputRecords, options: Presence<Options> = .absent
+  ) async throws -> CallResult<[AnnotatedRow], Double?, [Annotation]> {
+    let call = try await execute(
+      Request(
+        call: CallRequest(
+          function: .`annotate`, input: .`records`(input), options: options, question: question),
+        schema: .`thinkthenRequest_1`))
+    return try call.annotateResultList()
+  }
+  public func annotate(
+    _ question: Question, input: InputUnits, options: Presence<Options> = .absent
+  ) async throws -> CallResult<[AnnotatedRow], Double?, [Annotation]> {
+    let call = try await execute(
+      Request(
+        call: CallRequest(
+          function: .`annotate`, input: .`units`(input), options: options, question: question),
+        schema: .`thinkthenRequest_1`))
+    return try call.annotateResultList()
+  }
+  public func annotate(
+    _ question: Question, input: InputEntities, options: Presence<Options> = .absent
+  ) async throws -> CallResult<[AnnotatedRow], Double?, [Annotation]> {
+    let call = try await execute(
+      Request(
+        call: CallRequest(
+          function: .`annotate`, input: .`entities`(input), options: options, question: question),
+        schema: .`thinkthenRequest_1`))
+    return try call.annotateResultList()
+  }
+  public func annotate(
+    _ question: Question, input: InputSource, options: Presence<Options> = .absent
+  ) async throws -> CallResult<[AnnotatedRow], Double?, [Annotation]> {
+    let call = try await execute(
+      Request(
+        call: CallRequest(
+          function: .`annotate`, input: .`source`(input), options: options, question: question),
+        schema: .`thinkthenRequest_1`))
+    return try call.annotateResultList()
+  }
+  public func annotate(
+    _ question: Question, input: InputFeed, options: Presence<Options> = .absent,
+    feed: AsyncThrowingStream<SessionDescriptor, any Error>
+  ) async throws -> CallResult<[AnnotatedRow], Double?, [Annotation]> {
+    let call = try await execute(
+      Request(
+        call: CallRequest(
+          function: .`annotate`, input: .`feed`(input), options: options, question: question),
+        schema: .`thinkthenRequest_1`), feed: feed)
+    return try call.annotateResultList()
+  }
+  public func recognize(
+    _ question: Question, input: InputText, options: Presence<Options> = .absent
+  ) async throws -> CallResult<Recognize, [Double?], [Recognition]> {
+    let call = try await execute(
+      Request(
+        call: CallRequest(
+          function: .`recognize`, input: .`text`(input), options: options, question: question),
+        schema: .`thinkthenRequest_1`))
+    return try call.recognizeResultScalar()
+  }
+  public func recognize(_ question: Question, input: String, options: Presence<Options> = .absent)
+    async throws -> CallResult<Recognize, [Double?], [Recognition]>
+  {
+    try await recognize(question, input: InputText(text: input), options: options)
+  }
+  public func recognize(
+    _ question: Question, input: InputJson, options: Presence<Options> = .absent
+  ) async throws -> CallResult<Recognize, [Double?], [Recognition]> {
+    let call = try await execute(
+      Request(
+        call: CallRequest(
+          function: .`recognize`, input: .`json`(input), options: options, question: question),
+        schema: .`thinkthenRequest_1`))
+    return try call.recognizeResultScalar()
+  }
+  public func recognize(
+    _ question: Question, input: DataValue, options: Presence<Options> = .absent
+  ) async throws -> CallResult<Recognize, [Double?], [Recognition]> {
+    try await recognize(question, input: InputJson(value: input), options: options)
+  }
+  public func recognize(
+    _ question: Question, input: InputRecords, options: Presence<Options> = .absent
+  ) async throws -> CallResult<[Recognize], [[Double?]], [Recognition]> {
+    let call = try await execute(
+      Request(
+        call: CallRequest(
+          function: .`recognize`, input: .`records`(input), options: options, question: question),
+        schema: .`thinkthenRequest_1`))
+    return try call.recognizeResultList()
+  }
+  public func recognize(
+    _ question: Question, input: InputUnits, options: Presence<Options> = .absent
+  ) async throws -> CallResult<[Recognize], [[Double?]], [Recognition]> {
+    let call = try await execute(
+      Request(
+        call: CallRequest(
+          function: .`recognize`, input: .`units`(input), options: options, question: question),
+        schema: .`thinkthenRequest_1`))
+    return try call.recognizeResultList()
+  }
+  public func recognize(
+    _ question: Question, input: InputEntities, options: Presence<Options> = .absent
+  ) async throws -> CallResult<[Recognize], [[Double?]], [Recognition]> {
+    let call = try await execute(
+      Request(
+        call: CallRequest(
+          function: .`recognize`, input: .`entities`(input), options: options, question: question),
+        schema: .`thinkthenRequest_1`))
+    return try call.recognizeResultList()
+  }
+  public func recognize(
+    _ question: Question, input: InputSource, options: Presence<Options> = .absent
+  ) async throws -> CallResult<[Recognize], [[Double?]], [Recognition]> {
+    let call = try await execute(
+      Request(
+        call: CallRequest(
+          function: .`recognize`, input: .`source`(input), options: options, question: question),
+        schema: .`thinkthenRequest_1`))
+    return try call.recognizeResultList()
+  }
+  public func recognize(
+    _ question: Question, input: InputFeed, options: Presence<Options> = .absent,
+    feed: AsyncThrowingStream<SessionDescriptor, any Error>
+  ) async throws -> CallResult<[Recognize], [[Double?]], [Recognition]> {
+    let call = try await execute(
+      Request(
+        call: CallRequest(
+          function: .`recognize`, input: .`feed`(input), options: options, question: question),
+        schema: .`thinkthenRequest_1`), feed: feed)
+    return try call.recognizeResultList()
   }
   public func relate(_ question: Question, input: Input, options: Presence<Options> = .absent)
-    async throws -> Call
+    async throws -> CallResult<[RelatedEntityEdge], [Double?], Relation>
   {
-    try await execute(
+    let call = try await execute(
       Request(
         call: CallRequest(function: .`relate`, input: input, options: options, question: question),
         schema: .`thinkthenRequest_1`))
+    return try call.relateResult()
   }
 }
 public let ownedRequestVersion = "thinkthen.request/1"

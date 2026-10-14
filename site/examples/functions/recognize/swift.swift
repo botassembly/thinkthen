@@ -1,23 +1,23 @@
 import ThinkThen
 
 let client = try Client()
-let text = "Sam Patel says his Kindle arrived broken "
-    + "in Denver."
-let judgment = try await client.recognizeAnswer(
-    .file("kinds.json"),
-    input: .text(text)
+let text =
+  "Sam Patel says his Kindle arrived broken "
+  + "in Denver."
+let judgment = try await client.recognize(
+  .file("kinds.json"),
+  input: InputText(text: text)
 )
 var names: [String] = []
-for row in judgment {
-    if case .entities(let facts) = row.value {
-        names += facts.entities.map {
-            "\($0.text) (\($0.kind))"
-        }
-    }
+if case .entities(let facts) = judgment.value {
+  names += facts.entities.map {
+    "\($0.text) (\($0.kind))"
+  }
 }
-precondition(names == [
+precondition(
+  names == [
     "Sam Patel (person)",
     "Kindle (product)",
     "Denver (place)",
-])
+  ])
 client.close()
