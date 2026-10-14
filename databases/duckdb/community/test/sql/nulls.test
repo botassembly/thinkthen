@@ -16,58 +16,58 @@ SELECT thinkthen_decide(NULL, 'ignored', 4) IS NULL,
        thinkthen_tag(NULL, 'ignored', ['label'], 4) IS NULL,
        thinkthen_find(NULL, ['first', 'second'], 4) IS NULL,
        thinkthen_annotate(NULL, 'ignored', 4) IS NULL,
-       thinkthen_details(NULL, 'ignored', 4) IS NULL,
-       thinkthen_try_details(NULL, 'ignored', 4) IS NULL,
+       thinkthen_decide_details(NULL, 'ignored', 4) IS NULL,
+       thinkthen_choose_details(NULL, 'ignored', 4) IS NULL,
        thinkthen_recognize(NULL, '@missing-question.json', 4) IS NULL,
        thinkthen_relations(NULL, '@missing-question.json', 4) IS NULL;
 ----
 1	1	1	1	1	1	1	1	1	1
 
 query IIIIIIIIII
-SELECT (SELECT count(*) FROM thinkthen_decide(
-           question := NULL, records := 'not JSON', reading := NULL, settings := 'bad')),
-       (SELECT count(*) FROM thinkthen_choose(
-           question := NULL, records := 'not JSON', reading := NULL, settings := 'bad')),
-       (SELECT count(*) FROM thinkthen_tag(
-           question := NULL, records := 'not JSON', reading := NULL, settings := 'bad')),
-       (SELECT count(*) FROM thinkthen_score(
-           question := NULL, records := 'not JSON', reading := NULL, settings := 'bad')),
-       (SELECT count(*) FROM thinkthen_filter(
-           question := NULL, records := 'not JSON', reading := NULL, settings := 'bad')),
-       (SELECT count(*) FROM thinkthen_rank(
-           question := NULL, records := 'not JSON', reading := NULL, settings := 'bad')),
-       (SELECT count(*) FROM thinkthen_find(
-           question := NULL, records := 'not JSON', reading := NULL, settings := 'bad')),
-       (SELECT count(*) FROM thinkthen_annotate(
-           question := NULL, records := 'not JSON', reading := NULL, settings := 'bad')),
-       (SELECT count(*) FROM thinkthen_recognize(
-           question := NULL, records := 'not JSON', reading := NULL, settings := 'bad')),
-       (SELECT count(*) FROM thinkthen_relate(
-           question := NULL, records := 'not JSON', reading := NULL, settings := 'bad'));
+SELECT (SELECT count(*) FROM (SELECT UNNEST(thinkthen_decide_details(
+           question := NULL, input := [{'text':'ignored'}], reading := NULL, settings := 'bad')))),
+       (SELECT count(*) FROM (SELECT UNNEST(thinkthen_choose_details(
+           question := NULL, input := [{'text':'ignored'}], reading := NULL, settings := 'bad')))),
+       (SELECT count(*) FROM (SELECT UNNEST(thinkthen_tag_details(
+           question := NULL, input := [{'text':'ignored'}], reading := NULL, settings := 'bad')))),
+       (SELECT count(*) FROM (SELECT UNNEST(thinkthen_score_details(
+           question := NULL, input := [{'text':'ignored'}], reading := NULL, settings := 'bad')))),
+       (SELECT count(*) FROM (SELECT UNNEST(thinkthen_filter_details(
+           question := NULL, input := [{'text':'ignored'}], reading := NULL, settings := 'bad')))),
+       (SELECT count(*) FROM (SELECT UNNEST(thinkthen_rank_details(
+           question := NULL, input := [{'text':'ignored'}], reading := NULL, settings := 'bad')))),
+       (SELECT count(*) FROM (SELECT UNNEST(thinkthen_find_details(
+           question := NULL, input := [{'text':'ignored'}], reading := NULL, settings := 'bad')))),
+       (SELECT count(*) FROM (SELECT UNNEST(thinkthen_annotate_details(
+           question := NULL, input := [{'text':'ignored'}], reading := NULL, settings := 'bad')))),
+       (SELECT count(*) FROM (SELECT UNNEST(thinkthen_recognize_details(
+           question := NULL, input := [{'text':'ignored'}], reading := NULL, settings := 'bad')))),
+       (SELECT count(*) FROM (SELECT UNNEST(thinkthen_relate_details(
+           question := NULL, input := [{'text':'ignored'}], reading := NULL, settings := 'bad'))));
 ----
 0	0	0	0	0	0	0	0	0	0
 
 query IIIIIIIIII
-SELECT (SELECT count(*) FROM thinkthen_decide(
-           question := 'not JSON', records := NULL, reading := NULL, settings := 'bad')),
-       (SELECT count(*) FROM thinkthen_choose(
-           question := 'not JSON', records := NULL, reading := NULL, settings := 'bad')),
-       (SELECT count(*) FROM thinkthen_tag(
-           question := 'not JSON', records := NULL, reading := NULL, settings := 'bad')),
-       (SELECT count(*) FROM thinkthen_score(
-           question := 'not JSON', records := NULL, reading := NULL, settings := 'bad')),
-       (SELECT count(*) FROM thinkthen_filter(
-           question := 'not JSON', records := NULL, reading := NULL, settings := 'bad')),
-       (SELECT count(*) FROM thinkthen_rank(
-           question := 'not JSON', records := NULL, reading := NULL, settings := 'bad')),
-       (SELECT count(*) FROM thinkthen_find(
-           question := 'not JSON', records := NULL, reading := NULL, settings := 'bad')),
-       (SELECT count(*) FROM thinkthen_annotate(
-           question := 'not JSON', records := NULL, reading := NULL, settings := 'bad')),
-       (SELECT count(*) FROM thinkthen_recognize(
-           question := 'not JSON', records := NULL, reading := NULL, settings := 'bad')),
-       (SELECT count(*) FROM thinkthen_relate(
-           question := 'not JSON', records := NULL, reading := NULL, settings := 'bad'));
+SELECT (SELECT count(*) FROM (SELECT UNNEST(thinkthen_decide_details(
+           question := 'not JSON', input := NULL::STRUCT(text VARCHAR)[], reading := NULL, settings := 'bad')))),
+       (SELECT count(*) FROM (SELECT UNNEST(thinkthen_choose_details(
+           question := 'not JSON', input := NULL::STRUCT(text VARCHAR)[], reading := NULL, settings := 'bad')))),
+       (SELECT count(*) FROM (SELECT UNNEST(thinkthen_tag_details(
+           question := 'not JSON', input := NULL::STRUCT(text VARCHAR)[], reading := NULL, settings := 'bad')))),
+       (SELECT count(*) FROM (SELECT UNNEST(thinkthen_score_details(
+           question := 'not JSON', input := NULL::STRUCT(text VARCHAR)[], reading := NULL, settings := 'bad')))),
+       (SELECT count(*) FROM (SELECT UNNEST(thinkthen_filter_details(
+           question := 'not JSON', input := NULL::STRUCT(text VARCHAR)[], reading := NULL, settings := 'bad')))),
+       (SELECT count(*) FROM (SELECT UNNEST(thinkthen_rank_details(
+           question := 'not JSON', input := NULL::STRUCT(text VARCHAR)[], reading := NULL, settings := 'bad')))),
+       (SELECT count(*) FROM (SELECT UNNEST(thinkthen_find_details(
+           question := 'not JSON', input := NULL::STRUCT(text VARCHAR)[], reading := NULL, settings := 'bad')))),
+       (SELECT count(*) FROM (SELECT UNNEST(thinkthen_annotate_details(
+           question := 'not JSON', input := NULL::STRUCT(text VARCHAR)[], reading := NULL, settings := 'bad')))),
+       (SELECT count(*) FROM (SELECT UNNEST(thinkthen_recognize_details(
+           question := 'not JSON', input := NULL::STRUCT(text VARCHAR)[], reading := NULL, settings := 'bad')))),
+       (SELECT count(*) FROM (SELECT UNNEST(thinkthen_relate_details(
+           question := 'not JSON', input := NULL::STRUCT(text VARCHAR)[], reading := NULL, settings := 'bad'))));
 ----
 0	0	0	0	0	0	0	0	0	0
 

@@ -2,7 +2,7 @@
 import json,sys,threading
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[3] / 'duckdb/tools'))
-from receipt_adapter import carrier
+from receipt_adapter import carrier, row_observations
 payload=json.loads(sys.stdin.readline())
 def literal(value):return "'"+str(value).replace("'","''")+"'"
 import duckdb
@@ -60,21 +60,27 @@ try:
     settings = argument(json.dumps(payload.get('controls',{})))
     incremental = argument(inputs.get('incremental',False))
     cancelled = argument(inputs.get('cancelled',False))
-    db.execute('CREATE TEMP TABLE native_rows AS SELECT * FROM thinkthen_'+payload['verb']+
-               '(question := ?,records := '+collection+',reading := '+reading_sql+
-               ',settings := '+settings+',incremental := '+incremental+',cancelled := '+cancelled+')', bind)
+    db.execute('CREATE TEMP TABLE native_rows AS SELECT detail.* FROM (SELECT UNNEST(thinkthen_'+payload['verb']+
+               '_details(question := ?,input := '+collection+',reading := '+reading_sql+
+               ',settings := '+settings+',incremental := '+incremental+',cancelled := '+cancelled+')) AS detail)', bind)
     columns = [row[0] for row in db.execute('DESCRIBE native_rows').fetchall()]
-    actual = [dict(zip(columns,row)) for row in db.execute('SELECT * FROM native_rows ORDER BY ordinal NULLS LAST').fetchall()]
-    assert actual
+    cursor = db.execute('SELECT * FROM native_rows ORDER BY ordinal NULLS LAST')
+    actual = []
+    while (row := cursor.fetchone()) is not None:
+        actual.append(dict(zip(columns,row)))
+    if not actual:
+        print(json.dumps({"empty_sql_rows":[],"details_rows":[]}),flush=True)
+        sys.exit(0)
     if payload['verb'] == 'rank' and actual[0]['failure'] is None and actual[0]['result'] is not None:
         actual.sort(key=lambda row: row['result']['value'])
-    first = actual[0]
+    first = next((row for row in actual if row['failure'] is not None), actual[0])
+    events = row_observations(actual, payload['verb'])
     assert isinstance(first['facts'],dict) or first['facts'] is None
     assert isinstance(first['failure'],dict) or first['failure'] is None
     receipt = {'results':[row['result'] for row in actual if row['result'] is not None],
-               'facts':first['facts'],'failure':first['failure'],'observations':first['observations'],
-               'ordinals':[row['ordinal'] for row in actual if row['ordinal'] is not None],
-               'selection':first['selection']}
+               'facts':first['facts'],'failure':first['failure'],'observations':events,
+               'ordinals':[row['ordinal'] for row in actual if row['ordinal'] is not None and row['result'] is not None],
+               'selection': first['ordinal'] if payload['verb']=='find' and first['result'] is not None else None}
     call_id = first['facts']['call_id'] if first['facts'] else None
     sends = first['facts']['requests_sent'] if first['facts'] else None
     kind = first['failure']['kind'] if first['failure'] else None

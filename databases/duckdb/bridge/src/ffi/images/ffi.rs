@@ -61,39 +61,6 @@ pub(super) fn input(
         .map_err(|error| RowError::from(error).text)
 }
 
-/// Convert the existing counted image decoder into one native Request record.
-pub(super) fn complete_record(
-    images: *const BridgeImage,
-    count: usize,
-) -> Result<thinkthen::RequestItem, String> {
-    let QuestionInput::Images(input) = input(
-        images,
-        count,
-        &BridgeText {
-            bytes: std::ptr::null(),
-            len: 0,
-        },
-    )?
-    else {
-        return Err("thinkthen defect: image input held no images".into());
-    };
-    Ok(thinkthen::RequestItem {
-        original: None,
-        context: None,
-        options: None,
-        examples: None,
-        seed_spans: None,
-        images: input
-            .images()
-            .iter()
-            .map(|image| thinkthen::RequestImage::Bytes {
-                media: image.media(),
-                bytes: image.bytes().to_vec(),
-            })
-            .collect(),
-    })
-}
-
 /// Validate explicit compressed bytes without engine construction or transport.
 /// # Safety
 /// Both ranges remain readable until return.
@@ -108,12 +75,6 @@ fn prepare(
     raw: &str,
     kind: i32,
 ) -> Result<(thinkthen::LoadedQuestion, thinkthen::Settings), String> {
-    let kind = if kind == 2 {
-        super::portable_aux::asking_kind(question, from_file, "image details")
-            .map_err(|error| error.text)?
-    } else {
-        kind
-    };
     if !matches!(kind, 0 | 4 | 5) {
         return Err(RowError::usage("image judgments take decide, choose or score").text);
     }

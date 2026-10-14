@@ -4,11 +4,8 @@ use super::{
     run_detached, text,
 };
 use crate::{complete_native, engines};
-use serde_json::{Value, value::RawValue};
-use thinkthen::{
-    Error, Request, RequestArguments, RequestEnvironment, RequestFeed, RequestInput,
-    RequestOptions, RequestOutcome, RequestQuestion,
-};
+use serde_json::value::RawValue;
+use thinkthen::{Error, Request, RequestArguments, RequestInput, RequestOptions, RequestQuestion};
 
 pub(super) mod observations;
 mod records;
@@ -43,89 +40,10 @@ fn composed_request(
     Request::named(verb, args)?.admit()
 }
 
-pub(super) fn decision_value(answer: thinkthen::Answer) -> Value {
-    match answer {
-        thinkthen::Answer::Yes => Value::Bool(true),
-        thinkthen::Answer::No => Value::Bool(false),
-        thinkthen::Answer::Unsure => Value::Null,
-    }
-}
-
-pub(super) fn filter_value<T: serde::Serialize>(
-    row: &thinkthen::CompleteRecord<T, thinkthen::CompleteFilter>,
-) -> Result<Value, Error> {
-    if row.result().value() {
-        Ok(Value::Array(vec![
-            serde_json::to_value(row.original()).map_err(|_| complete_native::defect())?,
-        ]))
-    } else {
-        Ok(Value::Array(Vec::new()))
-    }
-}
-
-pub(super) fn plain_values(value: &thinkthen::RequestValue) -> Result<Value, Error> {
-    use thinkthen::RequestValue;
-    macro_rules! rows {
-        ($rows:expr) => {
-            serde_json::json!(
-                $rows
-                    .iter()
-                    .map(|row| row.result().value())
-                    .collect::<Vec<_>>()
-            )
-        };
-    }
-    Ok(match value {
-        RequestValue::Decisions(rows) => Value::Array(
-            rows.iter()
-                .map(|row| decision_value(row.result().value()))
-                .collect(),
-        ),
-        RequestValue::Choices(rows) => rows!(rows),
-        RequestValue::Tags(rows) => rows!(rows),
-        RequestValue::Scores(rows) => rows!(rows),
-        RequestValue::Filtered(rows) => Value::Array(
-            rows.iter()
-                .map(filter_value)
-                .collect::<Result<Vec<_>, _>>()?,
-        ),
-        RequestValue::Ranked(rows) => rows!(rows),
-        RequestValue::SetRanked(rows) => rows!(rows),
-        _ => Value::Null,
-    })
-}
-
-fn render(outcome: RequestOutcome, observations: Value) -> Result<Value, Error> {
-    let answers = match &outcome {
-        RequestOutcome::Complete(call) => plain_values(call.value())?,
-        RequestOutcome::Failed { completed, .. } => plain_values(completed)?,
-    };
-    let mut native = match outcome {
-        RequestOutcome::Complete(call) => {
-            let mut value = serde_json::to_value(&call).map_err(|_| complete_native::defect())?;
-            super::complete::supplement(&mut value, call.value())?;
-            value
-        }
-        RequestOutcome::Failed { completed, error } => {
-            let mut value = complete_native::failure(&error);
-            super::complete::supplement(&mut value, &completed)?;
-            complete_native::put(
-                &mut value,
-                "completed",
-                serde_json::to_value(completed).map_err(|_| complete_native::defect())?,
-            )?;
-            value
-        }
-    };
-    // The strict native envelope and its supplements come from the same call.
-    let mut carrier = complete_native::carrier(std::mem::take(&mut native), observations);
-    complete_native::put(&mut carrier, "answers", answers)?;
-    Ok(carrier)
-}
-
 #[derive(Debug)]
 struct PreparedNative {
     call: thinkthen::Settings,
+    prepared: complete_native::Prepared,
     request: thinkthen::AdmittedRequest,
     projection: thinkthen::RecordReading,
     records: Vec<Result<Record, Error>>,
@@ -181,8 +99,9 @@ fn prepare_native(
     records: &str,
     reading: &str,
     settings: &str,
-    reference: Option<&thinkthen::QuestionFileReference>,
+    selection: (Option<&thinkthen::QuestionFileReference>, bool),
 ) -> Result<PreparedNative, Error> {
+    let (reference, ordinary) = selection;
     let call =
         thinkthen::Settings::parse(settings).map_err(|e| complete_native::usage(&e.to_string()))?;
     // SAFETY: the host retains the selected question through synchronous return.
@@ -191,6 +110,25 @@ fn prepare_native(
         .transpose()?;
     let prepared = if let Some(saved) = saved {
         complete_native::settings::prepare_file(verb, question, &call, saved)?
+    } else if ordinary && verb == "rank" {
+        complete_native::Prepared::Rank(thinkthen::Question::rank(question)?)
+            .configured(verb, &call)?
+    } else if ordinary && verb == "find" && !question.trim_start().starts_with('{') {
+        complete_native::Prepared::Find(
+            thinkthen::Question::find(question)?,
+            thinkthen::RecordReading::new(&[], None, None)?,
+        )
+        .configured(verb, &call)?
+    } else if ordinary && verb == "recognize" && question.trim_start().starts_with('[') {
+        let kinds: Vec<String> = serde_json::from_str(question)
+            .map_err(|_| complete_native::usage("kinds is a text list"))?;
+        let asking = super::nested::ask(8, "", &kinds, false)
+            .map_err(|error| complete_native::usage(&error))?;
+        complete_native::Prepared::Recognize(
+            asking,
+            thinkthen::RecordReading::new(&[], None, None)?,
+        )
+        .configured(verb, &call)?
     } else {
         complete_native::prepare(verb, question, &call)?
     };
@@ -203,6 +141,7 @@ fn prepare_native(
         .collect::<Vec<_>>();
     Ok(PreparedNative {
         call,
+        prepared,
         request,
         projection,
         records,
@@ -213,70 +152,35 @@ fn execute_native(
     engine: &thinkthen::Engine,
     prepared: PreparedNative,
     controls: thinkthen::CallOptions<'_>,
-    verb: &str,
+    _verb: &str,
     incremental: bool,
 ) -> Result<Vec<u8>, String> {
-    let images = prepared.records.iter().any(|record| {
-        record
-            .as_ref()
+    let images = prepared.records.iter().any(|row| {
+        row.as_ref()
             .is_ok_and(|record| !record.item.images.is_empty())
     });
-    let events = std::sync::Mutex::new(Vec::new());
-    let function = prepared.request.request().call.function();
-    let observer = |event: thinkthen::RecordObservation<'_>| {
-        events
-            .lock()
-            .unwrap_or_else(std::sync::PoisonError::into_inner)
-            .push(observations::event(&event, function));
-    };
     let rows = prepared
         .records
         .into_iter()
         .map(|record| compose(record?, &prepared.projection));
-    let mut feed = RequestFeed::from_records("duckdb", rows);
-    if !incremental {
-        feed = feed.eager();
-    }
-    if images {
-        feed = feed.with_image_inputs();
-    }
-    if verb == "filter"
-        && !prepared
-            .request
-            .request()
-            .call
-            .arguments()
-            .options
-            .files_only
-    {
-        feed = feed.with_all_filter_results();
-    }
-    let result = engine.execute_request(
-        &prepared.request,
-        RequestEnvironment {
-            controls: controls
-                .surface(thinkthen::Surface::Duckdb)
-                .observe(&observer),
-            feed: Some(feed),
-        },
-    );
-    let observations = events
-        .into_inner()
-        .unwrap_or_else(std::sync::PoisonError::into_inner)
-        .into_iter()
-        .collect::<Result<Vec<_>, _>>()
-        .map_err(|_| "thinkthen defect: native observations could not be projected".to_owned())?;
-    let value = match result {
-        Ok(result) => render(result, Value::Array(observations)),
-        Err(error) => Ok(complete_native::carrier(
-            complete_native::failure(&error),
-            Value::Array(observations),
-        )),
+    let feed = thinkthen::RequestFeed::from_records("duckdb", rows);
+    let feed = if incremental { feed } else { feed.eager() };
+    let feed = if images {
+        feed.with_image_inputs()
+    } else {
+        feed
     };
-    Ok(value
-        .map_err(|_| "thinkthen defect: native receipt could not be projected".to_owned())?
-        .to_string()
-        .into_bytes())
+    let value = thinkthen_host::sql_request::run_feed_recovering(
+        engine,
+        &prepared.prepared,
+        &prepared.request,
+        feed,
+        controls,
+        thinkthen::Surface::Duckdb,
+    )
+    .map_err(|error| crate::errors::RowError::from(error).text)?;
+    serde_json::to_vec(&value)
+        .map_err(|_| "thinkthen defect: details could not be projected".to_owned())
 }
 
 /// Execute a native SQL collection through the canonical admitted request.
@@ -296,6 +200,7 @@ pub(crate) unsafe extern "C" fn thinkthen_cpp_native_records(
     reference: *const thinkthen::QuestionFileReference,
     incremental: bool,
     cancelled: bool,
+    ordinary: bool,
     deadline: i64,
     session: BridgeSettings,
     stop: BridgeStop,
@@ -303,24 +208,6 @@ pub(crate) unsafe extern "C" fn thinkthen_cpp_native_records(
     reply_boundary(|| {
         let verb = text(verb.bytes, verb.len)?.to_owned();
         let question = text(question.bytes, question.len)?;
-        let verb = if verb == "details" {
-            match super::portable_aux::asking_kind(
-                question,
-                question.trim_start().starts_with('{'),
-                "details",
-            )
-            .map_err(|error| error.text)?
-            {
-                0 => "decide",
-                4 => "choose",
-                5 => "score",
-                6 => "tag",
-                _ => return Err("thinkthen defect: details lost its asking kind".into()),
-            }
-            .to_owned()
-        } else {
-            verb
-        };
         // SAFETY: the host retains the selected question through synchronous return.
         let selected = unsafe { reference.as_ref() };
         let parsed = prepare_native(
@@ -329,7 +216,7 @@ pub(crate) unsafe extern "C" fn thinkthen_cpp_native_records(
             text(records.bytes, records.len)?,
             text(reading.bytes, reading.len)?,
             text(settings.bytes, settings.len)?,
-            selected,
+            (selected, ordinary),
         );
         let prepared = match parsed {
             Ok(value) => value,
@@ -353,5 +240,20 @@ pub(crate) unsafe extern "C" fn thinkthen_cpp_native_records(
             )?;
             execute_native(&engine, prepared, controls, &verb, incremental)
         })
+    })
+}
+
+/// Normalize the existing ordinary keyed input grammar through its sole parser.
+/// # Safety
+/// The caller retains the counted range until return.
+#[unsafe(no_mangle)]
+pub(crate) unsafe extern "C" fn thinkthen_cpp_details_keyed_inputs(input: BridgeText) -> Reply {
+    reply_boundary(|| {
+        let records = super::portable_many::keyed_texts(text(input.bytes, input.len)?)?
+            .into_iter()
+            .map(|text| serde_json::json!({"text":text}))
+            .collect::<Vec<_>>();
+        serde_json::to_vec(&records)
+            .map_err(|_| "thinkthen defect: keyed inputs could not be encoded".to_owned())
     })
 }

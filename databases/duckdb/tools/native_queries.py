@@ -46,9 +46,9 @@ def call(verb, question, descriptor, settings=None):
         if original in reading:
             reading[canonical] = reading.pop(original)
     reading['attempts'] = descriptor.get('attempts', False)
-    return f'thinkthen_{verb}(question := {question}, records := {records}, reading := {value(reading)}, ' + \
+    return f'(SELECT detail.* FROM (SELECT UNNEST(thinkthen_{verb}_details(question := {question}, input := {records}, reading := {value(reading)}, ' + \
         f'settings := {value(settings)}, incremental := {value(descriptor.get("incremental", False))}, ' + \
-        f'cancelled := {value(descriptor.get("cancelled", False))})'
+        f'cancelled := {value(descriptor.get("cancelled", False))})) AS detail))'
 
 
 def record(item):

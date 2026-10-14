@@ -1,6 +1,5 @@
 #include "descriptions.hpp"
 #include "portable.hpp"
-#include "receipt.hpp"
 #include "json_result.hpp"
 #include "bridge.hpp"
 #include "listed_result.hpp"
@@ -265,31 +264,6 @@ void Listed(DataChunk &args, ExpressionState &state, Vector &result) {
 	}
 }
 
-vector<Value> DetailsRows(const string &raw, idx_t count) {
-    auto receipt = DecodeReceipt(raw, "details");
-    const auto &fields = StructValue::GetChildren(receipt);
-    const auto &results = ListValue::GetChildren(fields[0]);
-    const auto &answers = fields[1].IsNull() ? vector<Value>() : ListValue::GetChildren(fields[1]);
-    const auto &ordinals = fields[5].IsNull() ? vector<Value>() : ListValue::GetChildren(fields[5]);
-    vector<Value> rows;
-    for (idx_t row = 0; row < count; ++row) {
-        auto projected = fields;
-        vector<Value> reading, answer, ordinal;
-        for (idx_t at = 0; at < ordinals.size(); ++at) {
-            if (ordinals[at].GetValue<uint64_t>() != row) { continue; }
-            reading.push_back(results.at(at));
-            if (at < answers.size()) { answer.push_back(answers.at(at)); }
-            ordinal.push_back(ordinals[at]);
-            break;
-        }
-        projected[0] = Value::LIST(ReceiptResultType("details"), std::move(reading));
-        projected[1] = Value::LIST(ReceiptAnswerType("details"), std::move(answer));
-        projected[5] = Value::LIST(LogicalType::UBIGINT, std::move(ordinal));
-        rows.push_back(Value::STRUCT(ReceiptType("details"), std::move(projected)));
-    }
-    return rows;
-}
-
 void Scalar(DataChunk &args, ExpressionState &state, Vector &result) {
 	if (args.size() == 0) { return; }
 	auto context = ThinkThenBindData(state.expr.Cast<BoundFunctionExpression>()).Cast<PortableBind>().context.lock();
@@ -321,25 +295,12 @@ void Scalar(DataChunk &args, ExpressionState &state, Vector &result) {
 		const auto kind = args.data[3].GetValue(row).GetValue<int32_t>();
 		auto [place, fresh] = known.emplace(std::make_tuple(raw, settings, kind), groups.size());
 		if (fresh) {
-			ResolvedQuestion resolved;
-			try {
-				resolved = owner->Resolve(*context, raw);
-			} catch (const InvalidInputException &) {
-				if (kind != 3) { throw; }
-				resolved = {raw, false};
-			}
-			ScalarGroup group {std::move(resolved), settings, kind, {}, {}};
-			if (kind != 3) {
-			RustReply checked(kind == 7 ? thinkthen_cpp_validate_portable_annotate(
-			    reinterpret_cast<const uint8_t *>(group.question.text.data()), group.question.text.size(),
-			    group.question.from_file ? 1 : 0,
-			    reinterpret_cast<const uint8_t *>(group.settings.data()), group.settings.size())
-			    : thinkthen_cpp_validate_portable_scalar(
-			    reinterpret_cast<const uint8_t *>(group.question.text.data()), group.question.text.size(),
-			    group.question.from_file ? 1 : 0,
-			    reinterpret_cast<const uint8_t *>(group.settings.data()), group.settings.size(), kind));
-			Checked(checked.value);
-			}
+            ScalarGroup group {owner->Resolve(*context, raw), settings, kind, {}, {}};
+            RustReply checked(thinkthen_cpp_validate_portable_annotate(
+                reinterpret_cast<const uint8_t *>(group.question.text.data()), group.question.text.size(),
+                group.question.from_file ? 1 : 0,
+                reinterpret_cast<const uint8_t *>(group.settings.data()), group.settings.size()));
+            Checked(checked.value);
 			groups.push_back(std::move(group));
 		}
 		auto &group = groups[place->second];
@@ -353,26 +314,12 @@ void Scalar(DataChunk &args, ExpressionState &state, Vector &result) {
 		for (auto &value : group.texts) {
 			texts.push_back({reinterpret_cast<const uint8_t *>(value.data()), value.size()});
 		}
-		RustReply reply(group.kind == 3 ? thinkthen_cpp_portable_try_details_group(
-		    reinterpret_cast<const uint8_t *>(group.question.text.data()), group.question.text.size(),
-		    group.question.from_file ? 1 : 0, texts.data(), texts.size(),
-		    reinterpret_cast<const uint8_t *>(group.settings.data()), group.settings.size(),
-		    owner->Remaining(*context), session->Bridge(), StopFor(*context))
-		    : group.kind == 7 ? thinkthen_cpp_portable_annotate_group(
-		    reinterpret_cast<const uint8_t *>(group.question.text.data()), group.question.text.size(),
-		    group.question.from_file ? 1 : 0, texts.data(), texts.size(),
-		    reinterpret_cast<const uint8_t *>(group.settings.data()), group.settings.size(),
-		    owner->Remaining(*context), session->Bridge(), StopFor(*context))
-		    : thinkthen_cpp_portable_scalar_group(
-		    reinterpret_cast<const uint8_t *>(group.question.text.data()), group.question.text.size(),
-		    group.question.from_file ? 1 : 0, texts.data(), texts.size(),
-		    reinterpret_cast<const uint8_t *>(group.settings.data()), group.settings.size(), group.kind,
-		    owner->Remaining(*context), session->Bridge(), StopFor(*context)));
-		Checked(reply.value);
-        if (group.kind == 2) {
-            answers.push_back(DetailsRows(ReplyText(reply.value), texts.size()));
-            continue;
-        }
+        RustReply reply(thinkthen_cpp_portable_annotate_group(
+            reinterpret_cast<const uint8_t *>(group.question.text.data()), group.question.text.size(),
+            group.question.from_file ? 1 : 0, texts.data(), texts.size(),
+            reinterpret_cast<const uint8_t *>(group.settings.data()), group.settings.size(),
+            owner->Remaining(*context), session->Bridge(), StopFor(*context)));
+        Checked(reply.value);
 		vector<Value> values;
 		if (!reply.value.bytes) { throw OrdinaryError("thinkthen defect: the bridge returned no scalar values"); }
 		size_t at = 0;
@@ -419,18 +366,13 @@ void OriginalSettings(DataChunk &args, ExpressionState &, Vector &result) {
 	}
 }
 
-void RegisterMacro(ExtensionLoader &loader, const string &sql, const string &purpose, bool legacy_text = false) {
+void RegisterMacro(ExtensionLoader &loader, const string &sql, const string &purpose) {
 	auto parser = ThinkThenMacroParser();
 	parser.ParseQuery(sql);
 	auto &statement = parser.statements.at(0)->Cast<CreateStatement>();
 	ThinkThenMacroSchema(*statement.info);
 	statement.info->internal = true;
 	auto &info = statement.info->Cast<CreateMacroInfo>();
-    if (legacy_text) {
-        auto &legacy = *info.macros.at(0);
-        legacy.types.resize(legacy.parameters.size(), LogicalType::UNKNOWN);
-        legacy.types.at(0) = LogicalType::VARCHAR;
-    }
 	FunctionDescription description;
 	description.description = purpose;
 	info.descriptions.push_back(std::move(description));
@@ -450,10 +392,6 @@ string ManyRows(const string &question, int32_t kind) {
 
 void RegisterPortableMacro(ExtensionLoader &loader, const string &sql, const string &purpose) {
 	RegisterMacro(loader, sql, purpose);
-}
-
-void RegisterLegacyTextOverloads(ExtensionLoader &loader, const string &sql, const string &purpose) {
-    RegisterMacro(loader, sql, purpose, true);
 }
 
 string PortableOptionParameters() {
@@ -519,6 +457,9 @@ void RegisterPortableDecide(ExtensionLoader &loader) {
 	RegisterMacro(loader, "CREATE MACRO thinkthen_decide(question, input, settings := NULL, threshold := NULL" + PortableOptionParameters() + ") "
 	                      "AS thinkthen_native_decide(" + PortableJSONArgument("question") + ", input, " + PortableOptions() + ", "
 	                      "CAST(threshold AS VARCHAR), typeof(settings))", purpose);
+    RegisterMacro(loader, "CREATE MACRO thinkthen_filter(question, input, settings := NULL, threshold := NULL" + PortableOptionParameters() + ") "
+        "AS CASE WHEN thinkthen_native_decide(" + PortableJSONArgument("question") + ", input, " + PortableOptions() + ", "
+        "CAST(threshold AS VARCHAR), typeof(settings)) THEN input ELSE NULL END", "Return the original input when the yes-or-no reading passes.");
 	ScalarFunction many("thinkthen_native_many",
 	                    {LogicalType::VARCHAR, LogicalType::VARCHAR, LogicalType::VARCHAR, LogicalType::INTEGER},
 	                    LogicalType::JSON(), Many, ThinkThenBindScalar<Bind>);
@@ -556,11 +497,11 @@ void RegisterPortableDecide(ExtensionLoader &loader) {
 		                      + PortableOptions("CASE WHEN members IS NOT NULL AND typeof(members) = 'VARCHAR' THEN CAST(members AS VARCHAR) ELSE " + PortableJSONArgument("settings") + " END") + ", "
 		                      + std::to_string(kind) + ", CASE WHEN members IS NULL THEN '\"NULL\"' ELSE typeof(members) END, typeof(settings))", purpose);
 	}
-	RegisterLegacyTextOverloads(loader, "CREATE MACRO thinkthen_rank(question, keyed_json, settings := NULL" + PortableOptionParameters() + ") "
+	RegisterMacro(loader, "CREATE MACRO thinkthen_rank(question, keyed_json, settings := NULL" + PortableOptionParameters() + ") "
 	                      "AS TABLE (SELECT json_extract_string(item.value, '$.key') AS key, "
 	                      "CAST(json_extract(item.value, '$.rank') AS BIGINT) AS rank, "
 	                      "CAST(json_extract(item.value, '$.probability') AS DOUBLE) AS probability "
-	                      + ManyRows("question", RANK_KIND) + " ORDER BY rank), (question, records, reading, settings := NULL, incremental := false, cancelled := false) AS TABLE (" + NativeRecordTableSQL("rank") + ")", "Rank keyed text records or native records with typed readings and final facts.");
+	                      + ManyRows("question", RANK_KIND) + " ORDER BY rank)", "Rank keyed text records.");
 	RegisterMacro(loader, "CREATE MACRO thinkthen_rank_set(questions, keyed_json, settings := NULL" + PortableOptionParameters() + ") "
 	                      "AS TABLE SELECT json_extract_string(item.value, '$.key') AS key, "
 	                      "CAST(json_extract(item.value, '$.rank') AS BIGINT) AS rank, "
@@ -568,13 +509,13 @@ void RegisterPortableDecide(ExtensionLoader &loader) {
 	                      "json_extract_string(item.value, '$.question_name') AS question_name, "
 	                      "json_extract(item.value, '$.facts') AS facts "
 	                      + ManyRows("questions", 9) + " ORDER BY rank", "Rank keyed text records for each named question and include request facts.");
-	for (auto kind : {2, 3, 7}) {
-		const string name = kind == 2 ? "details" : kind == 3 ? "try_details" : "annotate";
-		const string purpose = kind == 2 ? "Return typed native judgment receipts, owning facts, failures and observations." : kind == 3 ? "Return judgment details or a safe recoverable failure as JSON." : "Annotate text with a question set and return its values as JSON.";
+	for (auto kind : {7}) {
+		const string name = "annotate";
+		const string purpose = "Annotate text with a question set and return its values as JSON.";
 		ScalarFunction native(ThinkThenIdentifier("thinkthen_native_" + name),
 		                      {LogicalType::VARCHAR, LogicalType::VARCHAR, LogicalType::VARCHAR,
 		                       LogicalType::INTEGER, LogicalType::VARCHAR},
-		                      kind == 2 ? ReceiptType("details") : LogicalType::JSON(), Scalar, ThinkThenBindScalar<Bind>);
+		                      LogicalType::JSON(), Scalar, ThinkThenBindScalar<Bind>);
 		ThinkThenSpecialNulls(native);
 		native.SetStability(FunctionStability::VOLATILE);
 		RegisterDescribedScalar(loader, native, purpose);

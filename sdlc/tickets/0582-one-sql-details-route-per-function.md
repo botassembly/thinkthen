@@ -7,6 +7,7 @@ Milestone: 0.2
 Depends on: 0576
 
 Reviews: revision f583a17, accept
+Reviews: revision 25423e6, accept
 
 ## Outcome
 

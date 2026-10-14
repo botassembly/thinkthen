@@ -60,9 +60,17 @@ def restore(descriptor, value, json_text=False):
 
 def carrier(receipt, verb, json_text=False):
     results = [restore(('object', name(RESULTS[verb])), result, json_text) for result in receipt['results']]
+    if verb == 'relate' and results:
+        first = results[0]
+        assert all(len(row['value']) == 1 for row in results)
+        assert all({key:value for key,value in row.items() if key != 'value'} ==
+                   {key:value for key,value in first.items() if key != 'value'} for row in results)
+        results = [{**first, 'value':[row['value'][0] for row in results]}]
     native = {}
     facts = restore(('object', name('completeFacts')), receipt['facts'], json_text)
     error = restore(('object', name('completeError')), receipt['failure'], json_text)
+    if error is not None and receipt['failure'].get('cause') is not None:
+        error['cause'] = receipt['failure']['cause']
     if facts is not None:
         native['facts'] = facts
     if error is not None:
@@ -77,3 +85,21 @@ def carrier(receipt, verb, json_text=False):
     if error is not None and results:
         wrapper['completed'] = results[0] if verb in ('find', 'relate') else results
     return wrapper
+
+
+def row_observations(rows, verb):
+    """Retain native event order and refuse ownership shared between rows."""
+    if verb in ('rank', 'relate') and all(row['failure'] is None for row in rows):
+        owners = [row for row in rows if row['ordinal'] == 0]
+        assert len(owners) == 1, 'native set requires exactly one observation owner'
+        owner = owners[0]
+        assert all(row['observations'] == [] for row in rows if row['ordinal'] != 0)
+        return owner['observations']
+    events, previous = [], set()
+    for row in rows:
+        owned = row['observations'] or []
+        identities = {json.dumps(event, sort_keys=True) for event in owned}
+        assert previous.isdisjoint(identities), 'native observation belongs to multiple rows'
+        events.extend(owned)
+        previous.update(identities)
+    return events

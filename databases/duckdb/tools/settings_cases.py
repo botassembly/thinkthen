@@ -52,7 +52,7 @@ def shared_settings_corpus():
                     values = ", ".join("('" + value.replace("'", "''") + "')" for value in step["records"])
                     query = f"SELECT thinkthen_decide('Is this a refund?', body) FROM (VALUES {values}) t(body)"
                 elif "model" in step:
-                    query = f"SELECT (thinkthen_details('Is this a refund?', '{step['text']}')).results[1].decide.meta.model"
+                    query = f"SELECT (thinkthen_decide_details('Is this a refund?', '{step['text']}')).result.meta.model"
                 else:
                     query = f"SELECT thinkthen_decide('Is this a refund?', '{step['text']}')"
                 got = run([*settings, query], base)[-1]

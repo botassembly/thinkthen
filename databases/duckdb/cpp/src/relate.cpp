@@ -174,14 +174,15 @@ private:
 	size_t at = 0;
 };
 
-vector<RelateRow> Answer(const RelateBind &bound, ClientContext &context, RelateFound found) {
+struct EntityRows { vector<string> ids, names, kinds; };
+EntityRows CopyRelateRows(const RelateFound &found, bool wildcard) {
 	if (found.rows.size() > 255) {
 		throw OrdinaryError("thinkthen usage: the relate query returned more than 255 rows, and relate reads at most 255; add a WHERE or a LIMIT");
 	}
 	if (found.columns != 2 && found.columns != 3) {
 		throw OrdinaryError("thinkthen usage: the relate query returns id, name, and kind, or id and name");
 	}
-	if (found.columns == 2 && !bound.wildcard) {
+	if (found.columns == 2 && !wildcard) {
 		throw OrdinaryError("thinkthen usage: a relate query of id and name reads every kind as *, so every rule is bare or *:*");
 	}
 	vector<string> ids, names, kinds;
@@ -196,6 +197,11 @@ vector<RelateRow> Answer(const RelateBind &bound, ClientContext &context, Relate
 		ids.push_back(*values[0]); names.push_back(*values[1]);
 		kinds.push_back(found.columns == 3 ? *values[2] : "*");
 	}
+    return {std::move(ids), std::move(names), std::move(kinds)};
+}
+vector<RelateRow> Answer(const RelateBind &bound, ClientContext &context, RelateFound found) {
+    auto entities = CopyRelateRows(found, bound.wildcard);
+    auto &ids = entities.ids, &names = entities.names, &kinds = entities.kinds;
 	if (ids.empty()) { return {}; }
 	auto id_bytes = Texts(ids), name_bytes = Texts(names), kind_bytes = Texts(kinds), members = Texts(bound.rules.members);
 	RustReply reply(thinkthen_cpp_relate_rows(reinterpret_cast<const uint8_t *>(bound.rules.text.data()), bound.rules.text.size(),
@@ -267,6 +273,33 @@ void ScanRelate(ClientContext &context, TableFunctionInput &input, DataChunk &ou
 
 } // namespace
 
+string RelateDetailsCall(ClientContext &context, const string &query, const Value &rule_input,
+    const string &controls, int64_t deadline, ThinkThenSettings settings) {
+    auto rules = ReadRules(context, rule_input);
+    auto members = Texts(rules.members);
+    auto view = [](const string &text) { return ThinkThenText {reinterpret_cast<const uint8_t *>(text.data()), text.size()}; };
+    RustReply validated(thinkthen_cpp_relate_validate(view(rules.text).bytes, rules.text.size(), members.data(), members.size(),
+        rules.list, rules.from_file, view(controls).bytes, controls.size(), settings));
+    Checked(validated.value);
+    if (!validated.value.bytes || validated.value.len != 1) { throw OrdinaryError("thinkthen defect: missing relation rule kind"); }
+    const bool wildcard = validated.value.bytes[0] != 0;
+    const auto seconds = CountSetting(context, "thinkthen_relate_seconds", 60, "a relate time limit is a whole number of seconds, 0 for none");
+    const auto holding = CountSetting(context, "thinkthen_relate_holding_rows", 1000000, "a relate holding limit is a whole number of rows");
+    std::optional<string> search_path;
+    Value path;
+    if (context.TryGetCurrentSetting("search_path", path) && !path.IsNull()) { search_path = path.GetValue<string>(); }
+    auto held = HoldRelateDatabase(context);
+    auto found = ReadRelateRows(*held, context, query, seconds, holding, search_path);
+    auto copied = CopyRelateRows(found, wildcard);
+    auto ids = Texts(copied.ids), names = Texts(copied.names), kinds = Texts(copied.kinds);
+    const auto due = deadline < 0 ? found.remaining_ms : found.remaining_ms < 0 ? deadline : std::min(deadline, found.remaining_ms);
+    RustReply reply(thinkthen_cpp_relate_details_rows(view(rules.text).bytes, rules.text.size(), members.data(), members.size(),
+        rules.list, rules.from_file, ids.data(), names.data(), kinds.data(), copied.ids.size(), due,
+        view(controls).bytes, controls.size(), settings, StopFor(context)));
+    Checked(reply.value);
+    return ReplyText(reply.value);
+}
+
 void RegisterRelate(ExtensionLoader &loader) {
 	auto &config = DBConfig::GetConfig(loader.GetDatabaseInstance());
 	config.AddExtensionOption("thinkthen_relate_seconds", "Relate query time limit in seconds", LogicalType::BIGINT);
@@ -278,13 +311,9 @@ void RegisterRelate(ExtensionLoader &loader) {
 	                                               LogicalType::VARCHAR}, ScanRelate, BindRelate, InitRelate);
 	overloads.AddFunction(with_settings);
 	RegisterDescribedTable(loader, overloads, "Judge relations between ids in committed query rows using caller-supplied rules.");
-    RegisterLegacyTextOverloads(loader,
+    RegisterPortableMacro(loader,
         "CREATE MACRO thinkthen_relate(query, rules, settings := NULL) AS TABLE "
-        "(SELECT * FROM thinkthen_native_query_relate(query, rules, settings)), "
-        "(question, records, reading, settings := NULL, incremental := false, cancelled := false) AS TABLE (" +
-        NativeRecordTableSQL("relate") + ")",
-        "Judge relations from a committed query or native records with typed readings and final facts.");
-
+        "SELECT * FROM thinkthen_native_query_relate(query, rules, settings)",
+        "Judge relations from a committed query.");
 }
-
 } // namespace duckdb

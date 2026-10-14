@@ -28,7 +28,7 @@ def main():
                 value,completed,failure,observations=result[0]['rows'][0]
                 return {'value':value,'result':completed,'failure':failure,'observations':observations}
             value=call(inputs)
-            assert value['value']==[] and value['result']['value'] is False,value
+            assert value['value'] is None and value['result']['value'] is False,value
             assert value['observations'][0]['inputs'][0]['source']=={'file':str(source),'first_line':2,'last_line':3},value
             assert json.loads(value['observations'][0]['inputs'][0]['input'])=={'body':'Alpha.\nBeta.','policy':'Refund policy'},value
             for text,options in [('body'+delimiter+'body\nAlpha'+delimiter+'Beta\n',{}),

@@ -38,8 +38,6 @@ pub(crate) mod portable_aux;
 mod portable_listed;
 #[path = "ffi/portable_many/ffi.rs"]
 mod portable_many;
-#[path = "ffi/portable_scalar/ffi.rs"]
-mod portable_scalar;
 pub(crate) mod request;
 #[path = "ffi/scalar/ffi.rs"]
 mod scalar;

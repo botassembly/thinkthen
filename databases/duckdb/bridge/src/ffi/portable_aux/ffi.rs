@@ -4,7 +4,7 @@
     reason = "the retained scalar boundary copies all borrowed bytes"
 )]
 
-use thinkthen::{For, QuestionKind, Settings};
+use thinkthen::{For, Settings};
 
 use crate::errors::RowError;
 
@@ -13,35 +13,6 @@ use super::{
     probe, reply_boundary, run_detached, text,
 };
 use crate::engines;
-
-/// The portable keyed kind of an asking question, for the calls that take any of them.
-pub(super) fn asking_kind(argument: &str, from_file: bool, call: &str) -> Result<i32, RowError> {
-    Ok(match super::question_typed(argument, from_file)?.kind() {
-        QuestionKind::Decide => 0,
-        QuestionKind::Choose => 4,
-        QuestionKind::Score => 5,
-        QuestionKind::Tag => 6,
-        _ => return Err(RowError::usage(&format!("{call} needs an asking question"))),
-    })
-}
-
-fn prepare_try(argument: &str, from_file: bool, raw: &str) -> Result<(String, Settings), RowError> {
-    let kind = asking_kind(argument, from_file, "try_details")?;
-    super::portable_many::parse(argument, from_file, raw, kind)
-        .map(|(written, _, call)| (written, call))
-        .map_err(|error| RowError::usage(error.strip_prefix("thinkthen usage: ").unwrap_or(&error)))
-}
-
-fn failed_rows(error: RowError, count: usize) -> Result<Vec<u8>, String> {
-    let Some(value) = error.value() else {
-        return Err(error.text);
-    };
-    let mut bytes = Vec::new();
-    for _ in 0..count {
-        super::scalar::frame(&mut bytes, &value)?;
-    }
-    Ok(bytes)
-}
 
 pub(crate) fn call_settings(raw: &str) -> Result<(Settings, Option<String>), String> {
     let call = Settings::parse(raw)
@@ -260,74 +231,6 @@ pub(crate) unsafe extern "C" fn thinkthen_cpp_portable_annotate_group(
                     7,
                     session,
                     from_file,
-                    context.map_or(std::ptr::null(), str::as_ptr),
-                    context.map_or(0, str::len),
-                    stop,
-                )
-            })
-        })();
-        match prepared {
-            Ok(reply) => reply,
-            Err(error) => answered(Err(error)),
-        }
-    })
-    .unwrap_or(Reply {
-        status: 4,
-        bytes: std::ptr::null_mut(),
-        len: 0,
-    })
-}
-
-/// Keep try-details' recoverable row envelope while applying portable settings.
-///
-/// # Safety
-/// The caller retains byte ranges and the stop callback through this call.
-#[unsafe(no_mangle)]
-pub(crate) unsafe extern "C" fn thinkthen_cpp_portable_try_details_group(
-    argument: *const u8,
-    argument_len: usize,
-    from_file: i32,
-    texts: *const BridgeText,
-    count: usize,
-    settings: *const u8,
-    settings_len: usize,
-    query_deadline_ms: i64,
-    session: BridgeSettings,
-    stop: BridgeStop,
-) -> Reply {
-    super::panic::caught(|| {
-        let prepared = (|| -> Result<Reply, String> {
-            let argument = text(argument, argument_len)?;
-            let settings = text(settings, settings_len)?;
-            let (written, call) = match prepare_try(argument, from_file != 0, settings) {
-                Ok(value) => value,
-                Err(error) => return Ok(answered(failed_rows(error, count))),
-            };
-            let batch = if call.batch_max() {
-                Some("max".to_owned())
-            } else {
-                call.batch_records().map(|value| value.to_string())
-            };
-            let mut session = session;
-            if let Some(batch) = &batch {
-                session.batch_bytes = batch.as_ptr();
-                session.batch_len = batch.len();
-            }
-            let context = call.context();
-            let due = match call.deadline_ms() {
-                None | Some(-1) => query_deadline_ms,
-                Some(value) if query_deadline_ms < 0 => value,
-                Some(value) => query_deadline_ms.min(value),
-            };
-            Ok(unsafe {
-                super::scalar::thinkthen_cpp_try_details_group(
-                    written.as_ptr(),
-                    written.len(),
-                    texts,
-                    count,
-                    due,
-                    session,
-                    0,
                     context.map_or(std::ptr::null(), str::as_ptr),
                     context.map_or(0, str::len),
                     stop,

@@ -37,7 +37,7 @@ def complete_question_files_keep_identity():
             path.write_text(source, encoding="utf-8")
         texts = ("charged twice", "strong claim", "charged twice")
         calls = [f"SELECT thinkthen_{verb}('@{path}', '{value}')" for verb, path, value in zip(("choose", "score", "tag"), paths, texts)]
-        details = [f"SELECT thinkthen_details('@{path}', '{value}')" for path, value in zip(paths, texts)]
+        details = [f"SELECT thinkthen_{verb}_details('@{path}', '{value}')" for verb,path,value in zip(("choose","score","tag"), paths, texts)]
         got = run(["SET thinkthen_batch='max'", *calls, *details,
                    f"SELECT thinkthen_choose('{SPECS[0]}', '{texts[0]}')"], backend.base("arm/full/capture"))
         expect([rows(item)[0][0] for item in got[1:4]], ["billing", 0.1, ["billing", "shipping"]], "typed complete answers")
@@ -115,10 +115,10 @@ def native_complete_file_authorization_precedes_content_parsing():
     with Backend() as backend, tempfile.TemporaryDirectory() as folder:
         path = Path(folder) / "question.json"
         path.write_text('{"decide":"Refund?"}')
-        call = f"SELECT facts,failure,observations FROM thinkthen_decide('@{path}', [])"
+        call = f"SELECT d.facts,d.failure,d.observations FROM (SELECT UNNEST(thinkthen_decide_details('@{path}', [])) AS d)"
         got = run(["PREPARE complete AS " + call, "EXECUTE complete",
                    "SET enable_external_access=false", "EXECUTE complete"], backend.base())
-        assert rows(got[1])[0][1] is None, got[1]
+        expect(rows(got[1]), [], "authorized empty call has no result rows")
         facts, failure, observations = rows(got[3])[0]
         assert failure['kind']=='local' and facts is None and observations==[], got[3]
         path.write_text('{"decide":"PRIVATE_DENIED_COMPLETE_CONTENT"')
