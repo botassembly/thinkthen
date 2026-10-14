@@ -82,8 +82,23 @@ inline Value ReceiptResultValue(const string &verb, ReceiptJSON *value) {
     if (verb == "recognize") { return Receipt_recognizedValue(value); }
     return Receipt_relatedValue(value);
 }
+inline LogicalType ReceiptAnswerType(const string &verb) {
+    if (verb == "decide" || verb == "filter") { return LogicalType::BOOLEAN; }
+    if (verb == "choose") { return LogicalType::VARCHAR; }
+    if (verb == "tag") { return LogicalType::LIST(LogicalType::VARCHAR); }
+    if (verb == "score") { return LogicalType::DOUBLE; }
+    if (verb == "rank") { return LogicalType::UBIGINT; }
+    return LogicalType::JSON();
+}
+inline Value ReceiptAnswerValue(const string &verb, ReceiptJSON *value) {
+    if (verb == "tag") {
+        return ReceiptList(value, LogicalType::VARCHAR, [](ReceiptJSON *item) { return ReceiptLeaf(item, LogicalType::VARCHAR); });
+    }
+    return ReceiptLeaf(value, ReceiptAnswerType(verb));
+}
 inline LogicalType ReceiptType(const string &verb) {
     return LogicalType::STRUCT({{"results", LogicalType::LIST(ReceiptResultType(verb))},
+        {"answers", LogicalType::LIST(ReceiptAnswerType(verb))},
         {"facts", Receipt_factsType()}, {"failure", Receipt_errorType()},
         {"observations", LogicalType::LIST(Receipt_eventType())},
         {"ordinals", LogicalType::LIST(LogicalType::UBIGINT)}, {"selection", LogicalType::UBIGINT}});
@@ -102,7 +117,8 @@ inline Value DecodeReceipt(const string &text, const string &verb) {
         yyjson_arr_foreach(results, index, count, item) { values.push_back(ReceiptResultValue(verb, item)); }
     } else if (results) { values.push_back(ReceiptResultValue(verb, results)); }
     return Value::STRUCT(ReceiptType(verb), {
-        Value::LIST(ReceiptResultType(verb), std::move(values)), Receipt_factsValue(ReceiptMember(native, "facts")),
+        Value::LIST(ReceiptResultType(verb), std::move(values)),
+        ReceiptList(ReceiptMember(root, "answers"), ReceiptAnswerType(verb), [&](ReceiptJSON *value) { return ReceiptAnswerValue(verb, value); }), Receipt_factsValue(ReceiptMember(native, "facts")),
         Receipt_errorValue(ReceiptMember(native, "error")),
         ReceiptList(ReceiptMember(root, "observations"), Receipt_eventType(), [](ReceiptJSON *value) { return Receipt_eventValue(value); }),
         ReceiptList(ReceiptMember(root, "ordinals"), LogicalType::UBIGINT, [](ReceiptJSON *value) { return ReceiptLeaf(value, LogicalType::UBIGINT); }),

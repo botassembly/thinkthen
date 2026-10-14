@@ -156,7 +156,10 @@ void RegisterComplete(ExtensionLoader &loader) {
         RegisterPortableMacro(loader, string("CREATE MACRO thinkthen_") + verb +
             "(question, records, reading := NULL, settings := NULL, incremental := false) AS TABLE "
             "WITH call AS MATERIALIZED (SELECT " + name + "(question, records, reading, settings, incremental) AS receipt) "
-            "SELECT list_extract(receipt.ordinals, position) AS ordinal, result, receipt.facts AS facts, "
+            "SELECT list_extract(receipt.ordinals, position) AS ordinal, " +
+            ((string(verb) == "decide" || string(verb) == "choose" || string(verb) == "tag" || string(verb) == "score" || string(verb) == "filter")
+                ? "list_extract(receipt.answers, position)" : "result.value") +
+            " AS value, result, receipt.facts AS facts, "
             "receipt.failure AS failure, receipt.observations AS observations, receipt.selection AS selection "
             "FROM call, UNNEST(CASE WHEN len(receipt.results) = 0 THEN [NULL] ELSE receipt.results END) WITH ORDINALITY AS rows(result, position) "
             "WHERE receipt IS NOT NULL", purpose);

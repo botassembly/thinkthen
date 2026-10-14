@@ -190,7 +190,43 @@ fn compose(
     Ok(row)
 }
 
+fn plain_values(value: &thinkthen::RequestValue) -> Value {
+    use thinkthen::{Answer, RequestValue};
+    macro_rules! rows {
+        ($rows:expr) => {
+            serde_json::json!(
+                $rows
+                    .iter()
+                    .map(|row| row.result().value())
+                    .collect::<Vec<_>>()
+            )
+        };
+    }
+    match value {
+        RequestValue::Decisions(rows) => Value::Array(
+            rows.iter()
+                .map(|row| match row.result().value() {
+                    Answer::Yes => Value::Bool(true),
+                    Answer::No => Value::Bool(false),
+                    Answer::Unsure => Value::Null,
+                })
+                .collect(),
+        ),
+        RequestValue::Choices(rows) => rows!(rows),
+        RequestValue::Tags(rows) => rows!(rows),
+        RequestValue::Scores(rows) => rows!(rows),
+        RequestValue::Filtered(rows) => rows!(rows),
+        RequestValue::Ranked(rows) => rows!(rows),
+        RequestValue::SetRanked(rows) => rows!(rows),
+        _ => Value::Null,
+    }
+}
+
 fn render(outcome: RequestOutcome, observations: Value) -> Result<Value, Error> {
+    let answers = match &outcome {
+        RequestOutcome::Complete(call) => plain_values(call.value()),
+        RequestOutcome::Failed { completed, .. } => plain_values(completed),
+    };
     let mut native = match outcome {
         RequestOutcome::Complete(call) => {
             let mut value = serde_json::to_value(&call).map_err(|_| complete_native::defect())?;
@@ -209,10 +245,9 @@ fn render(outcome: RequestOutcome, observations: Value) -> Result<Value, Error> 
         }
     };
     // The strict native envelope and its supplements come from the same call.
-    Ok(complete_native::carrier(
-        std::mem::take(&mut native),
-        observations,
-    ))
+    let mut carrier = complete_native::carrier(std::mem::take(&mut native), observations);
+    complete_native::put(&mut carrier, "answers", answers)?;
+    Ok(carrier)
 }
 
 #[derive(Debug)]
