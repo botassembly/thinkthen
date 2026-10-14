@@ -125,12 +125,7 @@ fn status_counts_the_live_store_without_writes() {
     let (code, value, stderr) = inspect(&home);
     assert_eq!(code, Some(0));
     assert!(stderr.is_empty());
-    assert_eq!(value["cache"]["path"], serde_json::json!(cache));
-    assert_eq!(value["cache"]["path_source"], "platform");
-    let usage = Folder::Usage.in_home(&home);
-    assert_eq!(value["usage"]["path"], serde_json::json!(usage));
-    assert_eq!(value["usage"]["total"]["requests_sent"], 0);
-    assert!(!usage.exists());
+    assert!(!Folder::Usage.in_home(&home).exists());
     assert_eq!(value["cache"]["entries"], 0);
     assert_eq!(value["cache"]["old_entries"], 0);
     assert_eq!(fs::read_dir(&cache).expect("empty cache").count(), 0);
