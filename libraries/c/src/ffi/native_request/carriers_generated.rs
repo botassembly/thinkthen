@@ -816,7 +816,7 @@ pub struct thinkthen_request_relate_fields_v1 {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct thinkthen_request_definition_authored_score_v1 {
-    pub m_batch: *const thinkthen_request_definition_authored_score_batch_v1,
+    pub m_batch: *const thinkthen_request_question_batch_v1,
     pub m_context_schema: *const thinkthen_request_input_declaration_v1,
     pub m_item_schema: *const thinkthen_request_input_declaration_v1,
     pub m_levels: *const thinkthen_request_levels_v1,
@@ -827,10 +827,29 @@ pub struct thinkthen_request_definition_authored_score_v1 {
     pub m_score: *const thinkthen_request_question_text_v1,
     pub m_wording_version: *const thinkthen_request_integer_v1,
 }
+pub const THINKTHEN_REQUEST_QUESTION_BATCH_ARM_1_V1: u32 = 1;
+pub const THINKTHEN_REQUEST_QUESTION_BATCH_ARM_2_V1: u32 = 2;
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub union thinkthen_request_question_batch_data_v1 {
+    pub arm_1: *const thinkthen_request_literal_max_v1,
+    pub arm_2: *const thinkthen_request_integer_v1,
+}
+impl std::fmt::Debug for thinkthen_request_question_batch_data_v1 {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("request union payload")
+    }
+}
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct thinkthen_request_question_batch_v1 {
+    pub kind: u32,
+    pub data: thinkthen_request_question_batch_data_v1,
+}
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct thinkthen_request_definition_authored_tag_v1 {
-    pub m_batch: *const thinkthen_request_definition_authored_score_batch_v1,
+    pub m_batch: *const thinkthen_request_question_batch_v1,
     pub m_context_schema: *const thinkthen_request_input_declaration_v1,
     pub m_item_schema: *const thinkthen_request_input_declaration_v1,
     pub m_labels: *const thinkthen_request_labels_v1,
@@ -845,7 +864,7 @@ pub struct thinkthen_request_definition_authored_tag_v1 {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct thinkthen_request_definition_authored_choose_v1 {
-    pub m_batch: *const thinkthen_request_definition_authored_score_batch_v1,
+    pub m_batch: *const thinkthen_request_question_batch_v1,
     pub m_choose: *const thinkthen_request_question_text_v1,
     pub m_context_schema: *const thinkthen_request_input_declaration_v1,
     pub m_item_schema: *const thinkthen_request_input_declaration_v1,
@@ -860,7 +879,7 @@ pub struct thinkthen_request_definition_authored_choose_v1 {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct thinkthen_request_definition_authored_decide_v1 {
-    pub m_batch: *const thinkthen_request_definition_authored_score_batch_v1,
+    pub m_batch: *const thinkthen_request_question_batch_v1,
     pub m_context_schema: *const thinkthen_request_input_declaration_v1,
     pub m_decide: *const thinkthen_request_question_text_v1,
     pub m_false: *const thinkthen_request_criterion_v1,
@@ -1290,24 +1309,10 @@ pub struct thinkthen_request_literal_whole_v1 {
 pub struct thinkthen_request_literal_boundary_only_v1 {
     pub reserved: u32,
 }
-pub const THINKTHEN_REQUEST_DEFINITION_AUTHORED_SCORE_BATCH_ARM_1_V1: u32 = 1;
-pub const THINKTHEN_REQUEST_DEFINITION_AUTHORED_SCORE_BATCH_ARM_2_V1: u32 = 2;
-#[repr(C)]
-#[derive(Clone, Copy)]
-pub union thinkthen_request_definition_authored_score_batch_data_v1 {
-    pub arm_1: *const thinkthen_request_literal_max_v1,
-    pub arm_2: *const thinkthen_request_integer_v1,
-}
-impl std::fmt::Debug for thinkthen_request_definition_authored_score_batch_data_v1 {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str("request union payload")
-    }
-}
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
-pub struct thinkthen_request_definition_authored_score_batch_v1 {
-    pub kind: u32,
-    pub data: thinkthen_request_definition_authored_score_batch_data_v1,
+pub struct thinkthen_request_literal_max_v1 {
+    pub reserved: u32,
 }
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
@@ -1369,11 +1374,6 @@ pub struct thinkthen_request_item_list_v1 {
 #[derive(Clone, Copy, Debug)]
 pub struct thinkthen_request_input_json_value_v1 {
     pub value: *const thinkthen_complete_json_v1,
-}
-#[repr(C)]
-#[derive(Clone, Copy, Debug)]
-pub struct thinkthen_request_literal_max_v1 {
-    pub reserved: u32,
 }
 unsafe fn read_json_value(
     pointer: *const thinkthen_complete_json_v1,
@@ -3579,7 +3579,7 @@ pub(super) unsafe fn read_thinkthen_request_definition_authored_score_v1(
                     input.m_batch,
                     context,
                     &mut fields,
-                    read_thinkthen_request_definition_authored_score_batch_v1,
+                    read_thinkthen_request_question_batch_v1,
                 )?;
                 optional(
                     "context_schema",
@@ -3642,6 +3642,27 @@ pub(super) unsafe fn read_thinkthen_request_definition_authored_score_v1(
         }
     })
 }
+pub(super) unsafe fn read_thinkthen_request_question_batch_v1(
+    pointer: *const thinkthen_request_question_batch_v1,
+    context: &mut Context,
+) -> Result<Value, CarrierError> {
+    // SAFETY: the caller retains every referenced aligned carrier and counted extent.
+    let input = unsafe { borrow(pointer)? };
+    context.enter(|context| {
+        // SAFETY: nested pointers retain the caller's live counted carrier graph.
+        unsafe {
+            Ok(match input.kind {
+                THINKTHEN_REQUEST_QUESTION_BATCH_ARM_1_V1 => {
+                    read_thinkthen_request_literal_max_v1(input.data.arm_1, context)?
+                }
+                THINKTHEN_REQUEST_QUESTION_BATCH_ARM_2_V1 => {
+                    read_thinkthen_request_integer_v1(input.data.arm_2, context)?
+                }
+                _ => return Err(CarrierError::Invalid),
+            })
+        }
+    })
+}
 pub(super) unsafe fn read_thinkthen_request_definition_authored_tag_v1(
     pointer: *const thinkthen_request_definition_authored_tag_v1,
     context: &mut Context,
@@ -3661,7 +3682,7 @@ pub(super) unsafe fn read_thinkthen_request_definition_authored_tag_v1(
                     input.m_batch,
                     context,
                     &mut fields,
-                    read_thinkthen_request_definition_authored_score_batch_v1,
+                    read_thinkthen_request_question_batch_v1,
                 )?;
                 optional(
                     "context_schema",
@@ -3750,7 +3771,7 @@ pub(super) unsafe fn read_thinkthen_request_definition_authored_choose_v1(
                     input.m_batch,
                     context,
                     &mut fields,
-                    read_thinkthen_request_definition_authored_score_batch_v1,
+                    read_thinkthen_request_question_batch_v1,
                 )?;
                 optional(
                     "context_schema",
@@ -3839,7 +3860,7 @@ pub(super) unsafe fn read_thinkthen_request_definition_authored_decide_v1(
                     input.m_batch,
                     context,
                     &mut fields,
-                    read_thinkthen_request_definition_authored_score_batch_v1,
+                    read_thinkthen_request_question_batch_v1,
                 )?;
                 optional(
                     "context_schema",
@@ -4979,26 +5000,14 @@ pub(super) unsafe fn read_thinkthen_request_literal_boundary_only_v1(
     let _ = context;
     Value::literal("\"boundary_only\"")
 }
-pub(super) unsafe fn read_thinkthen_request_definition_authored_score_batch_v1(
-    pointer: *const thinkthen_request_definition_authored_score_batch_v1,
+pub(super) unsafe fn read_thinkthen_request_literal_max_v1(
+    pointer: *const thinkthen_request_literal_max_v1,
     context: &mut Context,
 ) -> Result<Value, CarrierError> {
     // SAFETY: the caller retains every referenced aligned carrier and counted extent.
-    let input = unsafe { borrow(pointer)? };
-    context.enter(|context| {
-        // SAFETY: nested pointers retain the caller's live counted carrier graph.
-        unsafe {
-            Ok(match input.kind {
-                THINKTHEN_REQUEST_DEFINITION_AUTHORED_SCORE_BATCH_ARM_1_V1 => {
-                    read_thinkthen_request_literal_max_v1(input.data.arm_1, context)?
-                }
-                THINKTHEN_REQUEST_DEFINITION_AUTHORED_SCORE_BATCH_ARM_2_V1 => {
-                    read_thinkthen_request_integer_v1(input.data.arm_2, context)?
-                }
-                _ => return Err(CarrierError::Invalid),
-            })
-        }
-    })
+    let _ = unsafe { borrow(pointer)? };
+    let _ = context;
+    Value::literal("\"max\"")
 }
 pub(super) unsafe fn read_thinkthen_request_literal_line_v1(
     pointer: *const thinkthen_request_literal_line_v1,
@@ -5128,13 +5137,4 @@ pub(super) unsafe fn read_thinkthen_request_input_json_value_v1(
             })
         }
     })
-}
-pub(super) unsafe fn read_thinkthen_request_literal_max_v1(
-    pointer: *const thinkthen_request_literal_max_v1,
-    context: &mut Context,
-) -> Result<Value, CarrierError> {
-    // SAFETY: the caller retains every referenced aligned carrier and counted extent.
-    let _ = unsafe { borrow(pointer)? };
-    let _ = context;
-    Value::literal("\"max\"")
 }
