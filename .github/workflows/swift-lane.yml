@@ -1,47 +1,18 @@
 name: Check Swift branch package
+run-name: Check Swift on ${{ github.ref_name }}
 on:
   workflow_dispatch:
     inputs:
-      native_run:
-        description: Run containing source-equivalent native C packages
-        required: false
-        type: string
+      language:
+        description: Installed package to check
+        required: true
+        type: choice
+        default: swift
+        options: [swift]
 permissions:
   contents: read
-  actions: read
 jobs:
-  native:
-    if: ${{ !inputs.native_run }}
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - runner: macos-15
-            target: aarch64-apple-darwin
-          - runner: macos-15-intel
-            target: x86_64-apple-darwin
-    runs-on: ${{ matrix.runner }}
-    env:
-      CARGO_BUILD_JOBS: '2'
-      MACOSX_DEPLOYMENT_TARGET: '15.0'
-    steps:
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
-        with:
-          persist-credentials: false
-      - run: rustup toolchain install 1.95.0 --profile minimal
-      - name: Build matching native C package
-        env:
-          TARGET: ${{ matrix.target }}
-        run: sdlc/scripts/release-pack "$TARGET" "$RUNNER_TEMP/native" c
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
-        with:
-          name: swift-native-${{ matrix.target }}
-          path: ${{ runner.temp }}/native/*
-          if-no-files-found: error
-          retention-days: 7
   swift:
-    if: ${{ always() && (needs.native.result == 'success' || (needs.native.result == 'skipped' && inputs.native_run)) }}
-    needs: native
     runs-on: macos-15
     env:
       CARGO_BUILD_JOBS: '2'
@@ -54,29 +25,27 @@ jobs:
         with:
           python-version: '3.13'
       - run: rustup toolchain install 1.95.0 --profile minimal
-      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
-        with:
-          pattern: swift-native-*
-          run-id: ${{ inputs.native_run || github.run_id }}
-          github-token: ${{ github.token }}
-          path: ${{ runner.temp }}/native
-          merge-multiple: true
-      - name: Assemble the existing Swift package
-        env:
-          THINKTHEN_RELEASE_EXPECTED_SHA: ${{ github.sha }}
+      - name: Build the matching native package and universal framework
         run: |
-          mkdir "$RUNNER_TEMP/x64" "$RUNNER_TEMP/arm64"
-          tar -xzf "$RUNNER_TEMP/native/thinkthen-c-0.2.0-x86_64-apple-darwin.tar.gz" -C "$RUNNER_TEMP/x64"
+          test "$(git rev-parse HEAD)" = "${{ github.sha }}"
+          rustup target add x86_64-apple-darwin aarch64-apple-darwin
+          export CARGO_TARGET_DIR="$RUNNER_TEMP/target"
+          sdlc/scripts/release-pack aarch64-apple-darwin "$RUNNER_TEMP/native" c
+          python3 sdlc/scripts/build-admission.py -- cargo build --locked --manifest-path libraries/c/Cargo.toml --target x86_64-apple-darwin --release --jobs 2
+          mkdir -p "$RUNNER_TEMP/x64/lib" "$RUNNER_TEMP/x64/include" "$RUNNER_TEMP/arm64"
           tar -xzf "$RUNNER_TEMP/native/thinkthen-c-0.2.0-aarch64-apple-darwin.tar.gz" -C "$RUNNER_TEMP/arm64"
+          sh libraries/c/localize.sh "$RUNNER_TEMP/target/x86_64-apple-darwin/release/libthinkthen_c.a" "$RUNNER_TEMP/x64/lib/libthinkthen.a"
+          cp "$RUNNER_TEMP/arm64/include/thinkthen.h" "$RUNNER_TEMP/x64/include/thinkthen.h"
           sh libraries/swift/build-xcframework.sh "$RUNNER_TEMP/x64" "$RUNNER_TEMP/arm64" "$RUNNER_TEMP/framework"
           cp -R "$RUNNER_TEMP/framework/CThinkThen.xcframework" libraries/swift/
-          sdlc/scripts/release-pack --apple-wrappers aarch64-apple-darwin "$RUNNER_TEMP/native" swift objective-c
+          sdlc/scripts/release-pack --reuse aarch64-apple-darwin "$RUNNER_TEMP/native" c swift
       - name: Check Darwin admission and exclusive barriers
         run: python3 sdlc/scripts/build-admission-test.py
       - name: Check admission and the installed Swift package on ARM macOS
         run: |
-          cargo build --locked --package conformance-backend --jobs 2
-          export THINKTHEN_BACKEND_BIN="$PWD/target/debug/conformance-backend"
+          export CARGO_TARGET_DIR="$RUNNER_TEMP/target"
+          python3 sdlc/scripts/build-admission.py -- cargo build --locked --package conformance-backend --jobs 2
+          export THINKTHEN_BACKEND_BIN="$CARGO_TARGET_DIR/debug/conformance-backend"
           export THINKTHEN_ARTIFACT="$RUNNER_TEMP/native/thinkthen-swift-0.2.0-aarch64-apple-darwin.tar.gz"
           python3 libraries/swift/Tests/fixtures/guard.py "$THINKTHEN_ARTIFACT"
           export THINKTHEN_COVERAGE_STAGE="$RUNNER_TEMP/swift-consumer"
