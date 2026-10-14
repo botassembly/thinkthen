@@ -255,7 +255,27 @@ FUNCTION_NAMES = '(' + '|'.join(variant['const'] for variant in json.loads(
     (REPO / 'specification/request.schema.json').read_text())['$defs']['RequestFunction']['oneOf']) + ')'
 DATABASE_HELPERS = {'sqlite': set(), 'postgresql': {'thinkthen_record'},
                     'duckdb': {'thinkthen_record', 'thinkthen_location'}}
-FUNCTION = r'(?<![\w])(?:thinkthen_|tt_)?' + FUNCTION_NAMES + r'(?:Answer(?:Async)?|ValueAsync|_Answer|_details)?(?![\w])'
+FUNCTION = r'(?<![\w])(?:thinkthen_|tt_)?' + FUNCTION_NAMES
+
+
+def host_functions(code, family):
+    # Canonical C requests and COBOL CALL operands carry function names in strings.
+    # Shell commands use words rather than host invocation syntax.
+    if family in ('c', 'cobol', 'command', 'packagist'):
+        return {name.lower() for name in re.findall(FUNCTION + r'(?![\w])', code, re.I)}
+    comments = r'//[^\n]*|/\*[\s\S]*?\*/'
+    if family in ('python', 'ruby', 'r', 'php'):
+        comments += r'|\#[^\n]*'
+    if family == 'ada':
+        comments = r'--[^\n]*'
+    # Mask literals before seeking calls, including triple and verbatim strings.
+    literals = r'"""[\s\S]*?"""|\'\'\'[\s\S]*?\'\'\'|@"(?:""|[^"])*"|"(?:\\.|[^"\\])*"|\'(?:\\.|[^\'\\])*\'|`[^`]*`'
+    code = re.sub(literals + '|' + comments, ' ', code)
+    suffix = 'Async' if family == 'csharp' else ''
+    # Rust turbofish and typed host arguments remain part of the same named call.
+    generic = r'(?:\s*(?:::)?\s*<[\w\s.:,<>\[\]&?]+>)?' if family in ('crate', 'cpp', 'typescript', 'csharp') else ''
+    invocation = r'\s*:' if family == 'objective-c' else generic + r'\s*\('
+    return {name.lower() for name in re.findall(FUNCTION + suffix + invocation, code, re.I)}
 
 
 def database_functions(code, family):
@@ -303,7 +323,7 @@ def examples(family, root=REPO):
     for block in blocks:
         code = block.group(1) + '\n'
         calls = (database_functions(code, family) if family in ('sqlite', 'postgresql', 'duckdb')
-                 else {name.lower() for name in re.findall(FUNCTION, code, re.I)})
+                 else host_functions(code, family))
         # Installation belongs to package assembly, not offline sample replay.
         if not calls and re.fullmatch(
                 r'(?:(?:install\.packages\([^\n]*\)|CREATE EXTENSION thinkthen;|'

@@ -199,6 +199,42 @@ class PackageText(unittest.TestCase):
                         self.assertNotEqual(done.returncode, 0)
                         self.assertIn(error, done.stderr)
 
+    def test_typed_host_calls_through_release_cli(self):
+        with tempfile.TemporaryDirectory() as scratch:
+            root = Path(scratch)
+            runner = cli_root(root)
+            packages = root / 'packages'; packages.mkdir()
+            functions = [variant['const'] for variant in json.loads(
+                (root / 'specification/request.schema.json').read_text())['$defs']['RequestFunction']['oneOf']]
+            cases = [('csharp', readmes.source('csharp').read_text(), True),
+                     ('csharp', ''.join('engine.' + name.title() + 'Async(q, input);\n'
+                                      for name in functions), True),
+                     ('crate', 'Question::decide("q"); Question::choose::<Team>("q");', True),
+                     ('crate', 'Question::decide("q"); Question::choose::<Option<Team>>("q");', True)]
+            for family, current in [('csharp', 'engine.DecideAsync(q, input);'),
+                                    ('python', 'engine.decide(q, input);')]:
+                for suffix in ('Answer', 'AnswerAsync', 'ValueAsync', 'Complete', 'Unknown', '_Answer'):
+                    cases.append((family, current + ' engine.Choose' + suffix + '(q, input);', False))
+                for false_call in ('"engine.ChooseAsync(q, input)"',
+                                   '// engine.ChooseAsync(q, input)',
+                                   '/* engine.ChooseAsync(q, input) */',
+                                   'engine.ChooseAsync;', 'engine.UnknownAsync(q, input);'):
+                    cases.append((family, current + ' ' + false_call, False))
+            for code in ('engine.decide(q, input); # engine.choose(q, input)',
+                         'engine.decide(q, input); """engine.choose(q, input)"""',
+                         'engine.decide(q, input); "engine.choose(q, input)"'):
+                cases.append(('python', code, False))
+            cases.append(('go', 'client.Decide(q, input); client.ChooseAsync(q, input);', False))
+            for family, code, admitted in cases:
+                with self.subTest(family=family, code=code):
+                    page = readmes.source(family, root); page.parent.mkdir(parents=True, exist_ok=True)
+                    page.write_text(code if code.startswith('# ThinkThen') else
+                                    '```' + readmes.SAMPLES[family][0] + '\n' + code + '\n```\n')
+                    done = cli_examples(runner, packages, family)
+                    self.assertNotEqual(done.returncode, 0)
+                    reason = ('missing-or-ambiguous-example-package' if admitted else 'example-needs-two-functions')
+                    self.assertIn(reason + ': ' + family, done.stderr)
+
     def test_python_assertions_execute_and_refuse_wrong_answers(self):
         with tempfile.TemporaryDirectory() as scratch:
             tree = Path(scratch); root = tree / 'root'; packages = tree / 'packages'
@@ -432,7 +468,8 @@ class PackageText(unittest.TestCase):
             for family, language, compiler in [('objective-c', 'objc', 'swift'), ('dart', 'dart', 'dart')]:
                 page = readmes.source(family, root)
                 page.parent.mkdir(parents=True)
-                page.write_text('```' + language + '\ndecide(); choose();\n```\n```text\nfixture\n```\n')
+                calls = '[client decide:q]; [client choose:q];' if family == 'objective-c' else 'decide(); choose();'
+                page.write_text('```' + language + '\n' + calls + '\n```\n```text\nfixture\n```\n')
                 files = {'README.md': readmes.source(family).read_bytes()}
                 if family == 'dart':
                     files['pubspec.yaml'] = (readmes.REPO / 'libraries/dart/pubspec.yaml').read_bytes()
