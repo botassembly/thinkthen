@@ -4,28 +4,28 @@ engine = tt.Engine(model="local-1")
 lines = tt.read_files("documents", unit="line")
 documents = tt.read_files("documents", unit="file")
 refunds = engine.filter(
-    "Does this line describe a refund?", lines).details
+    "Does this line describe a refund?", lines).results
 billing = engine.rank(
     "Does this document discuss a billing dispute?",
-    documents).details
+    documents).results
 policy = engine.find(
-    "Which line gives the refund policy?", lines).details
+    "Which line gives the refund policy?", lines).results
 contracts = engine.decide(
     "Does this document contain a support contract?",
-    documents).details
+    documents).results
 categories = engine.choose(
     "Which category fits this document?", documents,
-    options=["billing", "support"]).details
+    options=["billing", "support"]).results
 labels = engine.tag(
     "Which labels apply?", documents,
-    labels=["refund", "contract"]).details
+    labels=["refund", "contract"]).results
 urgency = engine.score(
     "How urgent is this document?", documents,
-    levels=["a", "b"]).details
+    levels=["a", "b"]).results
 document_answers = engine.annotate(
-    "questions.json", documents).details
+    "questions.json", documents).results
 names = engine.recognize(
-    documents, kinds=["person", "organization"]).details
+    documents, kinds=["person", "organization"]).results
 connections = engine.relate(
     documents, relations={"connected": ("*", "*")}).value
 for function, rows in [
@@ -65,7 +65,7 @@ windows = tt.read_files(
     ["documents/01-policy.txt", "documents/01-policy.txt"],
     unit="window", window=2)
 window_refunds = engine.filter(
-    "Does this line describe a refund?", windows).details
+    "Does this line describe a refund?", windows).results
 print("windows")
 for row in window_refunds:
     print(
