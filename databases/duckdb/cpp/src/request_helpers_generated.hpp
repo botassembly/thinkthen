@@ -1,0 +1,7 @@
+// Generated from canonical request controls by request_helpers.py.
+#pragma once
+namespace duckdb {
+inline void RegisterReadingHelper(ExtensionLoader &loader) {
+    RegisterPortableMacro(loader, "CREATE MACRO thinkthen_reading(\"attempts\" := NULL, \"batch\" := NULL, \"context\" := NULL, \"context_field\" := NULL, \"deadline_ms\" := NULL, \"details\" := NULL, \"examples\" := NULL, \"examples_field\" := NULL, \"field\" := NULL, \"files_only\" := NULL, \"max_requests_total\" := NULL, \"mode\" := NULL, \"model\" := NULL, \"none\" := NULL, \"options_field\" := NULL, \"relation_threshold\" := NULL, \"seed_spans\" := NULL, \"seed_spans_field\" := NULL, \"snippet_pieces\" := NULL, \"stage_context\" := NULL, \"threshold\" := NULL, \"top\" := NULL, \"context_schema\" := NULL) AS {'attempts':\"attempts\", 'batch':\"batch\", 'context':\"context\", 'context_field':\"context_field\", 'deadline_ms':\"deadline_ms\", 'details':\"details\", 'examples':\"examples\", 'examples_field':\"examples_field\", 'field':\"field\", 'files_only':\"files_only\", 'max_requests_total':\"max_requests_total\", 'mode':\"mode\", 'model':\"model\", 'none':\"none\", 'options_field':\"options_field\", 'relation_threshold':\"relation_threshold\", 'seed_spans':\"seed_spans\", 'seed_spans_field':\"seed_spans_field\", 'snippet_pieces':\"snippet_pieces\", 'stage_context':\"stage_context\", 'threshold':\"threshold\", 'top':\"top\", 'context_schema':\"context_schema\"}", "Construct named native request reading controls without executing a call.");
+}
+} // namespace duckdb

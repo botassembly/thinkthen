@@ -1,6 +1,7 @@
 #pragma once
 
 #include "bridge.hpp"
+#include "images.hpp"
 #include "duckdb/common/types/blob.hpp"
 #include "yyjson.hpp"
 
@@ -13,6 +14,12 @@ inline duckdb_yyjson::yyjson_mut_val *NativeInputValue(duckdb_yyjson::yyjson_mut
         auto &children = StructValue::GetChildren(value);
         for (idx_t index = 0; index < children.size(); ++index) {
             auto name = ThinkThenStructName(value.type(), index);
+            if (record && name == "images" && !children[index].IsNull()) {
+                if (children[index].type() != LogicalType::LIST(ImageType())) {
+                    throw OrdinaryError("thinkthen usage: record images require native image values");
+                }
+                if (!ListValue::GetChildren(children[index]).empty()) { ImageMembers(children[index]); }
+            }
             yyjson_mut_obj_add(object, yyjson_mut_strncpy(doc, name.data(), name.size()), NativeInputValue(doc, children[index]));
             if (record && name == "json") { yyjson_mut_obj_add_bool(doc, object, "json_present", !children[index].IsNull()); }
         }

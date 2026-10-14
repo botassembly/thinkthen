@@ -29,6 +29,14 @@ fn fields(raw: &str) -> Result<Fields, Error> {
 
 fn read_record(raw: &str) -> Result<Record, Error> {
     let mut given = fields(raw)?;
+    if given.contains_key("read_error") {
+        let input = complete_native::Inputs::parse_request(&format!("{{\"records\":[{raw}]}}"))?;
+        let mut records = input.records(None)?;
+        return match records.next() {
+            Some(Err(error)) => Err(error),
+            _ => Err(complete_native::defect()),
+        };
+    }
     let json_present = given
         .remove("json_present")
         .map(|value| value.get() == "true")
@@ -140,6 +148,15 @@ fn source_location(raw: &str) -> Result<thinkthen::SourceLocation, Error> {
 fn options(raw: &str) -> Result<RequestOptions, Error> {
     let mut fields = fields(raw)?;
     fields.retain(|_, value| value.get() != "null");
+    fields.remove("context_schema");
+    if let Some(stage) = fields.get_mut("stage_context") {
+        let mut members = self::fields(stage.get())?;
+        members.retain(|_, value| value.get() != "null");
+        *stage = RawValue::from_string(
+            serde_json::to_string(&members).map_err(|_| complete_native::defect())?,
+        )
+        .map_err(|_| complete_native::defect())?;
+    }
     serde_json::from_str(&serde_json::to_string(&fields).map_err(|_| complete_native::defect())?)
         .map_err(|_| complete_native::usage("reading uses named native request controls"))
 }
@@ -294,7 +311,25 @@ fn prepare_native(
         },
     )?
     .admit()?;
-    let projection = admitted.record_reading()?;
+    let mut projection = admitted.record_reading()?;
+    if let Some(schema) = fields(reading)?
+        .get("context_schema")
+        .filter(|raw| raw.get() != "null")
+    {
+        let question = thinkthen::Question::from_json(&format!(
+            "{{\"decide\":\"Context declaration\",\"context_schema\":{}}}",
+            schema.get()
+        ))?;
+        let thinkthen::LoadedQuestion::Question(question) = question else {
+            return Err(complete_native::defect());
+        };
+        projection = projection.with_context_schema(
+            question
+                .context_schema()
+                .cloned()
+                .ok_or_else(complete_native::defect)?,
+        );
+    }
     let request = composed_request(verb, &admitted)?;
     let raw: Vec<Box<RawValue>> = serde_json::from_str(records)
         .map_err(|_| complete_native::usage("records is an ordered native collection"))?;
