@@ -4,7 +4,7 @@ ThinkThen is ten functions on top of Jev, TypeSafe's decision model, or any mode
 
 Install with `pip install thinkthen`.
 
-Set your hosted backend key: `export THINKTHEN_API_KEY=...`. Backends include Jev, SystemOne, OpenAI and local models.
+Set your hosted backend key: `export THINKTHEN_API_KEY=...`. Backends include Jev, SystemOne, OpenAI and local models. Judgment calls can send your question and text to the selected backend; the default is TypeSafe.
 
 ```python
 import thinkthen as tt
@@ -34,6 +34,6 @@ with tt.Engine() as engine:
         assert team == expected
 ```
 
-The library is free and MIT licensed. Hosted models charge per token. Local models are free to use; you supply the computer that runs them.
+The library is free and MIT licensed. Hosted models charge per token. Local models are free to use; you supply the computer that runs them. These examples were checked with saved answers; live answers and probabilities can differ. See the [package guide](https://thinkthen.dev/languages/python/) for results, failures, record inputs and offline replay.
 
 [Backend setup](https://thinkthen.dev/install/backends/) · [ThinkThen documentation](https://thinkthen.dev)

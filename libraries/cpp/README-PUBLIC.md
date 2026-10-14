@@ -5,8 +5,8 @@ ThinkThen is ten functions on top of Jev, TypeSafe's decision model, or any mode
 ```sh
 tar -xzf thinkthen-cpp-0.2.0-TARGET.tar.gz
 ```
-Unpack the matching C archive. Follow the included CMake installation instructions, then link `thinkthen::thinkthen_cpp_shared`.
-Set your hosted backend key: `export THINKTHEN_API_KEY=...`. Backends include Jev, SystemOne, OpenAI and local models.
+Download the matching archive from the [release downloads](https://github.com/botassembly/thinkthen/releases). Replace `TARGET` with your platform and unpack the matching C archive. Follow the included CMake installation instructions, then link `thinkthen::thinkthen_cpp_shared`.
+Set your hosted backend key: `export THINKTHEN_API_KEY=...`. Backends include Jev, SystemOne, OpenAI and local models. Judgment calls can send your question and text to the selected backend; the default is TypeSafe.
 ```cpp
 #include <cassert>
 #include <thinkthen/client.hpp>
@@ -34,6 +34,6 @@ int main() {
 }
 ```
 Read `value`, `probability`, `results` and `facts` on the same result. A failed call raises `tt::Failure`.
-The library is free and MIT licensed. Hosted models charge per token. Local models are free to use; you supply the computer that runs them.
+The library is free and MIT licensed. Hosted models charge per token. Local models are free to use; you supply the computer that runs them. These examples were checked with saved answers; live answers and probabilities can differ. See the [package guide](https://thinkthen.dev/languages/cpp/) for results, failures, record inputs and offline replay.
 
 [Backend setup](https://thinkthen.dev/install/backends/) · [ThinkThen documentation](https://thinkthen.dev)

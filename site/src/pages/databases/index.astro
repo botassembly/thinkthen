@@ -58,7 +58,7 @@ const DIFFERS = [
       <tr><td><a href={`/databases/${db.slug}/`}>{db.name}</a></td><td><code>{loadLine(db.slug)}</code></td></tr>
     ))}
   </table>
-  <p>Each database's page gives its install steps and a first query. Every query below runs after the load line, and each one replays a saved answer. In all three databases, a not-sure answer comes back as <code>NULL</code>.</p>
+  <p>Each database's page gives its install steps and a first query. Every query below runs after the load line, and each one was checked with a saved answer. The queries use your selected backend unless you configure replay. In all three databases, a not-sure answer comes back as <code>NULL</code>.</p>
 
   <h2 id="what-differs">What differs</h2>
   <table>

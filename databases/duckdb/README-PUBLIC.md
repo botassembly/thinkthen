@@ -10,7 +10,7 @@ LOAD 'v1.5.6/linux_amd64/thinkthen.duckdb_extension';
 
 For 2.0 on Linux x86_64, load `d4355d01c5/linux_amd64/thinkthen.duckdb_extension` with its matching [source host](https://github.com/duckdb/duckdb/tree/d4355d01c59362d57036ad377735dd5340276a5b). The [1.5.6 source host](https://github.com/duckdb/duckdb/tree/069cc9f9b5be802405797faecc284961b07c70ef) matches the first member.
 
-Set your hosted backend key before starting DuckDB: `export THINKTHEN_API_KEY=...`. Backends include Jev, SystemOne, OpenAI and local models.
+Set your hosted backend key before starting DuckDB: `export THINKTHEN_API_KEY=...`. Backends include Jev, SystemOne, OpenAI and local models. Judgment calls can send your question and text to the selected backend; the default is TypeSafe.
 
 ```sql
 CREATE TABLE tickets AS FROM (VALUES
@@ -33,6 +33,7 @@ FROM (SELECT unnest(thinkthen_choose_details(
                  ORDER BY id) FROM tickets))) AS d);
 ```
 
-The extension is free and MIT licensed. Hosted models charge per token. Local models are free to use on your own machine.
+Check each details row’s `failure` before using `value` or `probability`. Recoverable failures stay in that field; cancellation, deadline and defect failures raise SQL errors. A null probability means not sure; an authored JSON null answer can have a numeric probability.
+The extension is free and MIT licensed. Hosted models charge per token. Local models are free to use on your own machine. These examples were checked with saved answers; live answers and probabilities can differ. See the [package guide](https://thinkthen.dev/databases/duckdb/) for results, failures, record inputs and offline replay.
 
 [Backend setup](https://thinkthen.dev/models/) · [SQL reference](https://thinkthen.dev/databases/duckdb/)

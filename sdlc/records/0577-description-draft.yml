@@ -25,4 +25,6 @@ docs:
 
     The extension is free and MIT licensed. Hosted models charge per token. Local models are free to use; you supply the computer that runs them.
 
-    This submission targets DuckDB 1.5.6 and 2.0. See https://thinkthen.dev/install/duckdb/ for installation and SQL examples.
+    A live judgment sends the question and text to the selected backend. The default is TypeSafe. Set `THINKTHEN_API_KEY` before starting DuckDB for a hosted call.
+
+    This submission targets DuckDB 1.5.6 and 2.0. See https://thinkthen.dev/databases/duckdb/ for installation and SQL examples.

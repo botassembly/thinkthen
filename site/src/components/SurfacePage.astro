@@ -92,6 +92,8 @@ const builtIns = backends().map((b) => b.name);
 
   {!shell && full && <p>Call Jev from TypeSafe, another SystemOne server, OpenAI Decisions or a local model from {surface.name}. <a href="/models/">Models</a> gives each backend's setup.</p>}
 
+  <p>ThinkThen is free and MIT licensed. Hosted models charge per token; local models run on your own computer. Judgment calls can send your question and text to the selected backend. The default is TypeSafe. The examples were checked with saved answers; live answers and probabilities can differ.</p>
+
   <h2>Install</h2>
   <table class="install">
     <tr><th>Channel</th>{notes && <th>Note</th>}</tr>
@@ -110,7 +112,7 @@ const builtIns = backends().map((b) => b.name);
       <p>The download needs network access; replay does not. Select replay before asking because R keeps one engine per session. <a href="https://docs.r-universe.dev/install/binaries.html">R-universe's binary documentation</a> explains the supported Linux host requirements.</p>
     </>
   )}
-  <p>{surface.slug === 'r' ? 'For live calls, set' : 'Set'} <code>{KEY_VARIABLE}</code> in the environment.</p>
+  <p>For hosted live calls, set <code>{KEY_VARIABLE}</code> in the environment before starting {surface.name}. <a href="/models/#the-key">Models</a> explains each backend's key.</p>
   {surface.windows && (
     <>
       <h3 id="windows">Windows</h3>
@@ -137,6 +139,7 @@ const builtIns = backends().map((b) => b.name);
   {surface.slug === 'duckdb' && (
     <>
       <h3 id="use-the-release-from-dbt-v1">Use the release with DuckDB</h3>
+      <p>Download the archive for your platform from the <a href="https://github.com/botassembly/thinkthen/releases">release downloads</a>. Use its matching DuckDB source host. The <a href={guide}>DuckDB package guide</a> links each host and archive member. Copy that member to <code>./thinkthen.duckdb_extension</code> before running the sample below.</p>
       <p>The current release archive supports {surface.supportedVersions.map((version, index) => <>{index ? ' and ' : ''}<code>{version}</code></>)}. Use the direct DuckDB installation above and the SQL samples below.</p>
       <p>The earlier dbt v1 setup used a DuckDB version outside this release's supported list. A dbt setup for the current archive has not been verified.</p>
     </>
@@ -199,7 +202,7 @@ const builtIns = backends().map((b) => b.name);
     <>
       <h2 id="functions">All ten functions in {surface.name}</h2>
       {anySample
-        ? <p>Each sample below replays a saved answer. Each heading links the function's page, which explains it in Bash.</p>
+        ? <p>Each sample below was checked with a saved answer. The code uses your selected backend unless you configure replay. Each heading links the function's page, which explains it in Bash.</p>
         : <p>The <a href={guide}>{surface.name} package guide</a> shows a named call for each function. Each function's page explains it in Bash.</p>}
       {anySample ? fnSamples.map((f) => (
         <>

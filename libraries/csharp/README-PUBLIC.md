@@ -6,7 +6,7 @@ ThinkThen is ten functions on top of Jev, TypeSafe's decision model, or any mode
 dotnet add package Botassembly.ThinkThen
 ```
 
-Use Jev, SystemOne, OpenAI or local models. Set your hosted backend key: `export THINKTHEN_API_KEY=...`.
+Use Jev, SystemOne, OpenAI or local models. Set your hosted backend key: `export THINKTHEN_API_KEY=...`. Judgment calls can send your question and text to the selected backend; the default is TypeSafe.
 
 ```csharp
 using ThinkThen;
@@ -28,8 +28,8 @@ foreach (var text in new[] { "Please refund the extra fee on my invoice.", "My p
 }
 ```
 
-Read `Value` for the answer, `Probability` for its odds, `Results` for complete records and `Facts` for call totals. A null decision means not sure.
+Read `Value` for the answer, `Probability` for its odds, `Results` for complete records and `Facts` for call totals. A null probability means not sure. An authored JSON null answer can have a numeric probability.
 
-The library is free and MIT licensed. Hosted models charge per token. Local models are free to use; you supply the computer that runs them.
+The library is free and MIT licensed. Hosted models charge per token. Local models are free to use; you supply the computer that runs them. These examples were checked with saved answers; live answers and probabilities can differ. See the [package guide](https://thinkthen.dev/languages/csharp/) for results, failures, record inputs and offline replay.
 
 [Backend setup](https://thinkthen.dev/install/backends/) · [ThinkThen documentation](https://thinkthen.dev)

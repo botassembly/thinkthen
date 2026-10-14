@@ -6,7 +6,7 @@ ThinkThen is ten functions on top of Jev, TypeSafe's decision model, or any mode
 tar -xzf thinkthen-swift-0.2.0-TARGET.tar.gz
 ```
 
-Replace `TARGET` with your platform. Set your hosted backend key: `export THINKTHEN_API_KEY=...`. Backends include Jev, SystemOne, OpenAI and local models.
+Download the matching archive from the [release downloads](https://github.com/botassembly/thinkthen/releases). Replace `TARGET` with your platform. Set your hosted backend key: `export THINKTHEN_API_KEY=...`. Backends include Jev, SystemOne, OpenAI and local models. Judgment calls can send your question and text to the selected backend; the default is TypeSafe.
 
 ```swift
 import ThinkThen
@@ -36,4 +36,4 @@ import ThinkThen
 }
 ```
 
-The library is free and MIT licensed. Hosted models charge per token. Local models are free to use; you supply the computer that runs them. [Backend setup](https://thinkthen.dev/install/backends/) · [ThinkThen documentation](https://thinkthen.dev)
+The library is free and MIT licensed. Hosted models charge per token. Local models are free to use; you supply the computer that runs them. [Backend setup](https://thinkthen.dev/install/backends/) · [ThinkThen documentation](https://thinkthen.dev) These examples were checked with saved answers; live answers and probabilities can differ. See the [package guide](https://thinkthen.dev/languages/swift/) for results, failures, record inputs and offline replay.
