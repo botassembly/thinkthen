@@ -4,7 +4,7 @@ Shared rules live in [README.md](README.md). That page fixes the nine functions 
 
 ## Typed details calls
 
-Each function has one details name, `thinkthen_<function>_details`. An ordinary call returns a typed struct. A record list returns a list of those structs, which SQL can expand with `UNNEST`. Every struct contains `ordinal`, `value`, `probability`, `result`, `failure`, `facts` and `observations`. The shared Request contract owns record admission and recovery. The plain functions return their plain values. The old generic details names, complete names and record-list overloads of plain names are removed.
+Each function has one details name, `thinkthen_<function>_details`. An ordinary call returns a typed struct. A record list returns a list of those structs, which SQL can expand with `UNNEST`. Every struct contains `ordinal`, `value`, `probability`, `result`, `failure`, `facts` and `observations`. Rank and relate place their call-wide observations only on the row whose `ordinal` is zero; later rows contain empty observation arrays. Use that ordinal to find the observations after reordering rows. Every observation appears once, and native output remains unchanged. Each relate result holds its own edge and retains the original question, input, metadata and answer identity. The shared Request contract owns record admission and recovery. The plain functions return their plain values. The old generic details names, complete names and record-list overloads of plain names are removed.
 
 ## What really good looks like
 

@@ -64,18 +64,27 @@ try:
                '_details(question := ?,input := '+collection+',reading := '+reading_sql+
                ',settings := '+settings+',incremental := '+incremental+',cancelled := '+cancelled+')) AS detail)', bind)
     columns = [row[0] for row in db.execute('DESCRIBE native_rows').fetchall()]
-    actual = [dict(zip(columns,row)) for row in db.execute('SELECT * FROM native_rows ORDER BY ordinal NULLS LAST').fetchall()]
+    cursor = db.execute('SELECT * FROM native_rows ORDER BY ordinal NULLS LAST')
+    actual = []
+    while (row := cursor.fetchone()) is not None:
+        actual.append(dict(zip(columns,row)))
     if not actual:
         print(json.dumps({"empty_sql_rows":[],"details_rows":[]}),flush=True)
         sys.exit(0)
     if payload['verb'] == 'rank' and actual[0]['failure'] is None and actual[0]['result'] is not None:
         actual.sort(key=lambda row: row['result']['value'])
     first = next((row for row in actual if row['failure'] is not None), actual[0])
-    events = {json.dumps(event,sort_keys=True):event for row in actual for event in (row['observations'] or [])}
+    if payload['verb'] in ('rank','relate') and all(row['failure'] is None for row in actual):
+        observation_row = next(row for row in actual if row['ordinal'] == 0)
+        assert all(row['observations'] == [] for row in actual if row['ordinal'] != 0)
+        events = observation_row['observations']
+    else:
+        unique = {json.dumps(event,sort_keys=True):event for row in actual for event in (row['observations'] or [])}
+        events = list(unique.values())
     assert isinstance(first['facts'],dict) or first['facts'] is None
     assert isinstance(first['failure'],dict) or first['failure'] is None
     receipt = {'results':[row['result'] for row in actual if row['result'] is not None],
-               'facts':first['facts'],'failure':first['failure'],'observations':list(events.values()),
+               'facts':first['facts'],'failure':first['failure'],'observations':events,
                'ordinals':[row['ordinal'] for row in actual if row['ordinal'] is not None and row['result'] is not None],
                'selection': first['ordinal'] if payload['verb']=='find' and first['result'] is not None else None}
     call_id = first['facts']['call_id'] if first['facts'] else None

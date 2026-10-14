@@ -27,6 +27,8 @@ def check(run):
         expect(rows(got[4]), [[True]], 'required input NULL shields settings')
         expect('error' in got[5], True, 'deadline raises')
         expect(backend.count(), 2, 'two admitted calls send; deadline and NULLs send nothing')
+    from native_set_observations import check as set_observations
+    set_observations(run)
     ordinary_forms(run)
     recovering_rows(run)
     named_forms(run)
