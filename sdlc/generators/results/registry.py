@@ -15,6 +15,8 @@ def group(target, mode, base, *names):
 
 
 OUTPUTS = (
+    *group('postgresql', 'results', 'databases/postgresql/src/native/',
+           'results_generated.rs', 'functions_generated.rs'),
     *group('c', 'results', 'libraries/c/src/session/', 'views_generated.rs'),
     *group('c', 'operations', 'libraries/c/src/ffi/', 'operations_generated.rs'),
     *group('c', 'operations', 'libraries/c/src/ffi/session/', 'operations_generated.rs'),
