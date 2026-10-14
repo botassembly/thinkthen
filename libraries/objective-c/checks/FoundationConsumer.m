@@ -90,9 +90,10 @@ int main(int argc, const char *argv[]) {
             require(filterCall.facts.value.requestsSent.value.unsignedIntegerValue == (filterInput == multiple ? 4 : filterInput == empty ? 0 : 1));
         }
         TTTextInput *decisionInput = [TTTextInput new];
+        TTControls *decisionControls = [TTControls new]; decisionControls.threshold = @"0.2:0.8";
         for (NSString *text in @[@"no", @"unsure"]) {
             decisionInput.text = text;
-            TTCall *decision = [client decide:question input:decisionInput options:nil feed:nil error:&error];
+            TTCall *decision = [client decide:question input:decisionInput options:decisionControls feed:nil error:&error];
             require(decision && !error && decision.value.items == nil);
             if ([text isEqual:@"no"]) {
                 require([decision.value.scalar isEqual:@NO] && decision.probability.scalar.doubleValue == .1);
