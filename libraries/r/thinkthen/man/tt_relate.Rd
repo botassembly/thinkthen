@@ -23,13 +23,13 @@ keeps the native defaults.}
 evidence for this call.}
 }
 \value{
-A complete call carrier of class \code{thinkthen_Call}. \code{$results} holds
-one typed row of class \code{thinkthen_RelateResult} for the whole set, with
-\code{$input_sources} naming where each entity came from, \code{$question},
-\code{$meta}, and \code{$answer_id}. \code{$answer} holds the typed answer
-view: a list of edges, each with the relation's \code{$relation} name, its
-\code{$source} and \code{$target} entity views, and its \code{$probability}.
-\code{$facts} holds the call's facts, including \code{requests_sent}.
+A carrier of class \code{thinkthen_Call} with \code{$value},
+\code{$probability}, complete native rows in \code{$results}, and actual
+settlement evidence in \code{$facts}. The value is a list of typed edges for the complete entity set. Each edge retains its relation, source and target entity views and probability. The call probability is a list of those edge probabilities.
+Atomic columns retain \code{$positions} and \code{$length} to identify
+missing slots without changing native record identities. Generated optional
+fields use \code{thinkthen_absent} for absence and \code{NULL} for explicit null.
+Bounded feeds join into these same call fields.
 }
 \description{
 Finds the named relationships that hold in one complete entity set, under the
@@ -49,11 +49,30 @@ are \code{thinkthen_absent} when missing and \code{NULL} when explicitly null.
 }
 \examples{
 \dontrun{
-relation <- tt_relate_question(relations = list(list(name = "knows",
-                                                     source = "person", target = "person")))
-edges <- tt_relate(relation, list(list(name = "Ada", kind = "person"),
-                                  list(name = "Bo", kind = "person")))$value
-edges[[1]]$source$name
+entities <- data.frame(
+  name = c(
+    "Apple",
+    "Amazon",
+    "iPhone",
+    "Kindle"
+  ),
+  kind = c("company", "company", "product", "product")
+)
+makes <- list(
+  name = "makes",
+  source = "company",
+  target = "product"
+)
+who_makes <- tt_relate(
+  list(version = 1, relate = list(relations = list(makes))),
+  entities
+)$value
+companies <- vapply(who_makes, function(edge) edge$source$name, "")
+products <- vapply(who_makes, function(edge) edge$target$name, "")
+stopifnot(
+  identical(companies, c("Apple", "Amazon")),
+  identical(products, c("iPhone", "Kindle"))
+)
 }
 }
 \seealso{

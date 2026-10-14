@@ -10,30 +10,24 @@ Set your hosted backend key: `export THINKTHEN_API_KEY=...`. Backends include Je
 
 ```r
 library(thinkthen)
-refunds <- c("Please refund my order. It arrived broken.", "Thanks for the quick help yesterday!",
-             "I want to send this back.")
-messages <- c("Please refund the extra fee on my invoice.", "My parcel went to the wrong address.",
-              "I cannot reset my password.")
+question <- "Does the customer ask for a refund?"
+refunds <- c("Please refund my order. It arrived broken.",
+             "Thanks for the quick help yesterday!", "I want to send this back.")
+messages <- c("Please refund the extra fee on my invoice.",
+              "My parcel went to the wrong address.", "I cannot reset my password.")
 teams <- list(billing = "Invoices, fees, and refunds.", shipping = "Parcels and delivery.",
               account = "Logins and passwords.")
-for (text in refunds) {
-  refund <- tt_decide("Does the customer ask for a refund?", text)$answer
-  print(refund)
-}
-for (text in messages) {
-  team <- tt_choose(list(choose = "Which team owns this?", options = teams), text)$answer
-  print(team)
-}
+is_refund <- tt_decide(question, refunds)
+stopifnot(identical(is_refund$value, c(TRUE, FALSE, TRUE)))
+stopifnot(identical(is_refund$probability, c(0.99, 0.01, 0.54)), length(is_refund$results) == 3)
+routing <- list(choose = "Which team owns this?", options = teams)
+owners <- tt_choose(routing, messages)
+stopifnot(identical(owners$value, c("billing", "shipping", "account")))
+stopifnot(identical(owners$probability, c(1, 1, 1)), length(owners$results) == 3)
 ```
 
-```text
-[1] TRUE
-[1] FALSE
-[1] TRUE
-[1] "billing"
-[1] "shipping"
-[1] "account"
-```
+Read `$value`, `$probability`, `$results` and `$facts` on the same call. A failed call raises an R condition.
+
 The library is free and MIT licensed. Hosted models charge per token. Local models are free to use; you supply the computer that runs them.
 
 [Backend setup](https://thinkthen.dev/install/backends/) · [ThinkThen documentation](https://thinkthen.dev)

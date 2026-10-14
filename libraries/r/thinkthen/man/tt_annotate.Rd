@@ -24,16 +24,13 @@ keeps the native defaults.}
 evidence for this call.}
 }
 \value{
-A complete call carrier of class \code{thinkthen_Call}. \code{$results} holds
-one typed row of class \code{thinkthen_AnnotateResult} per record, each with
-\code{$value} (one named field per question in the set), \code{$meta}, and
-\code{$answer_id}, and, when the reading provides them, the zero-based native
-\code{$index} and \code{$input}. \code{$answer} holds the typed answer view: a list of
-annotated row views, one per record, with one field per question name.
-\code{$facts} holds the call's facts, including \code{requests_sent}. The
-carrier also carries \code{$positions} and \code{$length} beside those views. A feed
-input returns a carrier with \code{$results} and \code{$facts} only,
-without the answer and column views.
+A carrier of class \code{thinkthen_Call} with \code{$value},
+\code{$probability}, complete native rows in \code{$results}, and actual
+settlement evidence in \code{$facts}. The value is a list of named annotation fields, one list per record. Probability is NULL. Complete rows retain each field's native answer.
+Atomic columns retain \code{$positions} and \code{$length} to identify
+missing slots without changing native record identities. Generated optional
+fields use \code{thinkthen_absent} for absence and \code{NULL} for explicit null.
+Bounded feeds join into these same call fields.
 }
 \description{
 Asks a saved question set about each record and adds one typed field per
@@ -53,10 +50,26 @@ are \code{thinkthen_absent} when missing and \code{NULL} when explicitly null.
 }
 \examples{
 \dontrun{
-approved <- tt_annotate(list(version = 1L,
-                              questions = list(approved = list(decide = "Approved?"))),
-                        "Yes")
-approved$value[[1]]$approved
+form <- list(version = 1, questions = list(
+  steps = list(
+    decide = "Does the report give steps to reproduce?"
+  ),
+  area = list(
+    choose = "Which part of the app is this?",
+    options = c("export", "login", "billing")
+  ),
+  impact = list(
+    score = "How much does this block the user?",
+    levels = c("None.", "Slows them.", "Blocks work.")
+  )
+))
+report <- "Steps: click Log in. Nobody gets in."
+triage <- tt_annotate(form, report)$value[[1]]
+stopifnot(
+  identical(triage$steps, TRUE),
+  identical(triage$area, "login"),
+  identical(triage$impact, 1.98)
+)
 }
 }
 \seealso{

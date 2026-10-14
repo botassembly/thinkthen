@@ -23,19 +23,13 @@ shortlist projection.}
 evidence for this call.}
 }
 \value{
-A complete call carrier of class \code{thinkthen_Call}. \code{$results} holds
-one typed row of class \code{thinkthen_ChooseResult} per record, each with
-\code{$value} (the chosen label), \code{$question}, \code{$meta}, and
-\code{$answer_id}, and, when the reading provides them, the zero-based native
-\code{$index} and
-\code{$input}. \code{$answer} holds the typed answer
-view; for an ordinary atomic column it is a plain character column, with
-\code{$value} and \code{$probability} beside it filling missing slots with
-typed missing values. \code{$facts} holds the call's facts, including
-\code{requests_sent}. For a column the carrier also carries \code{$positions}
-and \code{$length} beside those views. A feed
-input returns a carrier with \code{$results} and \code{$facts} only,
-without the answer and column views.
+A carrier of class \code{thinkthen_Call} with \code{$value},
+\code{$probability}, complete native rows in \code{$results}, and actual
+settlement evidence in \code{$facts}. The value is a selected label or NULL for not sure. Atomic columns return character columns with typed missing slots. Probability follows the same scalar or record shape.
+Atomic columns retain \code{$positions} and \code{$length} to identify
+missing slots without changing native record identities. Generated optional
+fields use \code{thinkthen_absent} for absence and \code{NULL} for explicit null.
+Bounded feeds join into these same call fields.
 }
 \description{
 Asks one question whose answer is exactly one label from the fixed option
@@ -55,9 +49,18 @@ are \code{thinkthen_absent} when missing and \code{NULL} when explicitly null.
 }
 \examples{
 \dontrun{
-choice <- tt_choose(list(choose = "Which category?", options = c("refund", "other")),
-                    "Please refund my order.")
-choice$value
+question <- "Which team owns this?"
+teams <- list(
+  billing = "Invoices, fees, and refunds.",
+  shipping = "Parcels and delivery.",
+  account = "Logins and passwords."
+)
+parcel <- "My parcel went to the wrong address."
+team <- tt_choose(
+  list(choose = question, options = teams),
+  parcel
+)$value
+stopifnot(identical(team, "shipping"))
 }
 }
 \seealso{

@@ -22,14 +22,13 @@ ranked rows.}
 evidence for this call.}
 }
 \value{
-A complete call carrier of class \code{thinkthen_Call}. \code{$results} holds
-one typed row of class \code{thinkthen_RankResult} per ranked position, each
-with \code{$question}, \code{$meta}, \code{$answer_id}, \code{$members}
-for aggregate readings, and, when the reading provides it, the zero-based
-native \code{$index} of the record it places. \code{$answer} holds the
-typed answer view: a list of zero-based native record indexes best first. \code{$facts}
-holds the call's facts, including \code{requests_sent}. The carrier also
-carries \code{$positions} and \code{$length} beside those views.
+A carrier of class \code{thinkthen_Call} with \code{$value},
+\code{$probability}, complete native rows in \code{$results}, and actual
+settlement evidence in \code{$facts}. The value is a list of zero-based original record indexes, best first. Probability is a list aligned with that retained order; score-based ranking can have no probability for a row.
+Atomic columns retain \code{$positions} and \code{$length} to identify
+missing slots without changing native record identities. Generated optional
+fields use \code{thinkthen_absent} for absence and \code{NULL} for explicit null.
+Bounded feeds join into these same call fields.
 }
 \description{
 Orders the records best first. Rank orders by yes probability under a decide
@@ -48,9 +47,22 @@ are \code{thinkthen_absent} when missing and \code{NULL} when explicitly null.
 }
 \examples{
 \dontrun{
-prioritized <- tt_rank("Which message most clearly asks for a refund?",
-                       c("Please refund my order.", "When will it arrive?"))
-prioritized$value[[1]]
+question <- "Is this urgent?"
+inbox <- c(
+  paste0(
+    "Newsletter: our autumn catalog is here. ",
+    "No reply needed."
+  ),
+  "Our checkout page is down and customers cannot pay",
+  "Reminder: your invoice is due in 30 days",
+  "Please send the signed quote by 5 pm today"
+)
+order <- unlist(
+  tt_rank(question, inbox)$value,
+  use.names = FALSE
+)
+by_urgency <- inbox[order + 1]
+stopifnot(identical(by_urgency, inbox[c(2, 4, 3, 1)]))
 }
 }
 \seealso{
