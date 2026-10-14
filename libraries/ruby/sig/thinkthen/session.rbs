@@ -18,17 +18,23 @@ module ThinkThen
 
     # The owned answer of one named call. Ruby treats every object as true,
     # including a result whose value is false; read value to branch.
-    class Completed[A = answer]
+    class Completed[A = answer, P = nil | Integer | Float | Array[untyped], R = Native::Result]
       def initialize: (Array[Native::Result] results, NativeSessionPacketTerminal? terminal, bool scalar, String verb, Array[NativeSessionPacketObservation] observations) -> void
 
       # The typed result rows.
-      attr_reader results: Array[Native::Result]
+      attr_reader results: Array[R]
       # Nil when the native session ended without a terminal packet.
       attr_reader terminal: Results::NativeSessionPacketTerminal?
       attr_reader observations: Array[Results::NativeSessionPacketObservation]
 
       def facts: () -> Results::NativeFacts
       def value: () -> A
+      def probability: () -> P
+      private
+      def project: (Array[untyped] values, Hash[String, untyped] spec) -> untyped
+      def read_path: (Native::Result row, Array[String] path) -> untyped
+      def item_probabilities: (Native::Result row) -> (Integer | Float | Array[Integer | Float])
+      public
       def inspect: () -> String
     end
   end
@@ -49,6 +55,7 @@ module ThinkThen
     def self.original: (untyped value) -> Hash[Symbol, untyped]
     def self.descriptor: (untyped value) -> Hash[Symbol, untyped]
     # Close the owner, keeping any exception already in flight.
+    def reject_details: (Hash[Symbol, untyped] options) -> void
     def self.cleanup: (Client | Client::Operation owner) -> void
     public
 

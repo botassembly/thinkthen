@@ -918,6 +918,7 @@ module ThinkThen
       define_method('input_tokens') { self['input_tokens'] }
       define_method('output_tokens') { self['output_tokens'] }
     end
+    CALL_RESULTS = JSON.parse('{"decide": {"value_projection": "value", "probability_mode": "yes", "probability_path": ["answer", "probability"], "collection": false}, "choose": {"value_projection": "value", "probability_mode": "picked", "probability_path": ["answer", "probabilities"], "pick_path": ["answer", "pick"], "collection": false}, "tag": {"value_projection": "value", "probability_mode": "null", "collection": false}, "score": {"value_projection": "value", "probability_mode": "null", "collection": false}, "filter": {"value_projection": "input", "probability_mode": "yes", "probability_path": ["answer", "probability"], "collection": true}, "rank": {"value_projection": "index", "probability_mode": "items", "collection": true}, "find": {"value_projection": "value", "probability_mode": "picked", "probability_path": ["answer", "probabilities"], "pick_path": ["answer", "pick"], "collection": false}, "annotate": {"value_projection": "value", "probability_mode": "null", "collection": true}, "recognize": {"value_projection": "value", "probability_mode": "items", "collection": true}, "relate": {"value_projection": "value", "probability_mode": "items", "collection": false}}').freeze
   end
   class Client
     def self.choose_question(text, options:)

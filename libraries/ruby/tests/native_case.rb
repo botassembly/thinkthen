@@ -29,6 +29,7 @@ begin
       ThinkThen::Client.item(value, **fields)
     end
   end
+  input = input.first if doc["call_result_contract"] && input.is_a?(Array)
   input = input.each if doc["incremental"] && input.is_a?(Array)
   cancel = ThinkThen::Cancel.new
   cancel.cancel if doc["cancel"]
@@ -38,7 +39,8 @@ begin
   done = client.public_send(doc.fetch("verb"), question, input, cancel: cancel, **doc.fetch("options").transform_keys(&:to_sym))
   raise "untyped facts" unless done.facts.is_a?(ThinkThen::Results::NativeFacts)
   done.results.each { |row| raise "untyped result" unless row.class.name.start_with?("ThinkThen::Results::Native") }
-  puts JSON.generate(packets: json_value(done.observations) + [{kind: "aggregate", value: json_value(done.results)}, json_value(done.terminal)])
+  call_result = doc["call_result_contract"] ? {call_result: {value: json_value(done.value), probability: json_value(done.probability), results: json_value(done.results), facts: json_value(done.facts)}} : {}
+  puts JSON.generate(**call_result, packets: json_value(done.observations) + [{kind: "aggregate", value: json_value(done.results)}, json_value(done.terminal)])
 rescue ThinkThen::Error => error
   if error.terminal
     puts JSON.generate(packets: [{kind: "aggregate", value: json_value(error.results)}, json_value(error.terminal)])

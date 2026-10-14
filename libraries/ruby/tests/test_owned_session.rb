@@ -65,6 +65,8 @@ class TestOwnedSession < Minitest::Test
       say retained[5].last.value
       say retained[6].last.value
       say retained[9].last.value.map(&:relation)
+      say retained.map { |_, result| result.probability }
+      raise "recognition span probability" unless retained[8].last.probability == retained[8].last.results.first.answer.proposals.select(&:kept).map(&:span_probability)
     RUBY
     TestBackend.with(script) do |backend, child|
       results = child.hear
@@ -76,6 +78,15 @@ class TestOwnedSession < Minitest::Test
       assert_equal [0, 1], child.hear
       assert_equal "first", child.hear
       assert_equal %w[knows knows], child.hear
+      probabilities = child.hear
+      assert_equal 0.9, probabilities[0]
+      assert_equal 0.9, probabilities[1]
+      assert_nil probabilities[2]
+      assert_nil probabilities[3]
+      assert_equal [0.9, 0.9], probabilities[4]
+      assert_equal [0.9, 0.9], probabilities[5]
+      assert_nil probabilities[7]
+      assert_equal 2, probabilities[9].length
       status, errors = child.finish
       assert status.success?, errors
       assert_operator backend.count, :>=, 10
