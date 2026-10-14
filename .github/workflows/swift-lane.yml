@@ -7,10 +7,17 @@ on:
       - 'sdlc/generators/results/templates/swift*'
       - '.github/workflows/swift-lane.yml'
   workflow_dispatch:
+    inputs:
+      native_run:
+        description: Run containing source-equivalent native C packages
+        required: false
+        type: string
 permissions:
   contents: read
+  actions: read
 jobs:
   native:
+    if: ${{ !inputs.native_run }}
     strategy:
       fail-fast: false
       matrix:
@@ -39,6 +46,7 @@ jobs:
           if-no-files-found: error
           retention-days: 7
   swift:
+    if: ${{ always() && (needs.native.result == 'success' || (needs.native.result == 'skipped' && inputs.native_run)) }}
     needs: native
     runs-on: macos-15
     env:
@@ -55,6 +63,8 @@ jobs:
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
         with:
           pattern: swift-native-*
+          run-id: ${{ inputs.native_run || github.run_id }}
+          github-token: ${{ github.token }}
           path: ${{ runner.temp }}/native
           merge-multiple: true
       - name: Assemble the existing Swift package
@@ -67,6 +77,8 @@ jobs:
           sh libraries/swift/build-xcframework.sh "$RUNNER_TEMP/x64" "$RUNNER_TEMP/arm64" "$RUNNER_TEMP/framework"
           cp -R "$RUNNER_TEMP/framework/CThinkThen.xcframework" libraries/swift/
           sdlc/scripts/release-pack --apple-wrappers aarch64-apple-darwin "$RUNNER_TEMP/native" swift objective-c
+      - name: Check Darwin admission and exclusive barriers
+        run: python3 sdlc/scripts/build-admission-test.py
       - name: Check the installed Swift package
         run: |
           cargo build --locked --package conformance-backend --jobs 2
