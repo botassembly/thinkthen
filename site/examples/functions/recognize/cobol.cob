@@ -70,7 +70,8 @@ procedure division.
        by reference tt-n-cobol-AnswerRecognizeResult
        tt-n-cobol-AnswerStatus returning status-code
     if status-code not = 0 stop run returning 1 end-if
-    set row-at to v-value-rows of tt-n-cobol-AnswerRecognizeResult
+    set row-at to v-value-rows of
+    tt-n-cobol-AnswerRecognizeResult
     perform varying row-number from 1 by 1 until
        row-number > v-value-count of
           tt-n-cobol-AnswerRecognizeResult

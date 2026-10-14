@@ -62,7 +62,8 @@ procedure division.
        by reference tt-n-cobol-AnswerChooseResult
        tt-n-cobol-AnswerStatus returning status-code
     if status-code not = 0 stop run returning 1 end-if
-    if v-value-first-present of tt-n-cobol-AnswerChooseResult = 1
+    if v-value-first-present of
+    tt-n-cobol-AnswerChooseResult = 1
        move v-value-first-value-text of
           tt-n-cobol-AnswerChooseResult
           to team

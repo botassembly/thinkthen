@@ -75,12 +75,15 @@ procedure division.
        by reference tt-n-cobol-AnswerFilterResult
        tt-n-cobol-AnswerStatus returning status-code
     if status-code not = 0 stop run returning 1 end-if
-    if v-value-count of tt-n-cobol-AnswerFilterResult not = 2
+    if v-value-count of tt-n-cobol-AnswerFilterResult not =
+    2
        stop run returning 1
     end-if
-    set row-at to v-value-rows of tt-n-cobol-AnswerFilterResult
+    set row-at to v-value-rows of
+    tt-n-cobol-AnswerFilterResult
     perform varying row-number from 1 by 1 until
-       row-number > v-value-count of tt-n-cobol-AnswerFilterResult
+       row-number > v-value-count of
+       tt-n-cobol-AnswerFilterResult
        set address of tt-n-cobol-AnswerFilterOriginal
           to row-at
        move spaces to selected-text

@@ -80,9 +80,11 @@ procedure division.
        by reference tt-n-cobol-AnswerRankResult
        tt-n-cobol-AnswerStatus returning status-code
     if status-code not = 0 stop run returning 1 end-if
-    set row-at to v-value-rows of tt-n-cobol-AnswerRankResult
+    set row-at to v-value-rows of
+    tt-n-cobol-AnswerRankResult
     perform varying row-number from 1 by 1 until
-       row-number > v-value-count of tt-n-cobol-AnswerRankResult
+       row-number > v-value-count of
+       tt-n-cobol-AnswerRankResult
        set address of tt-n-cobol-AnswerRankIndex to row-at
        compute message-number = 1 +
           v-value of tt-n-cobol-AnswerRankIndex

@@ -77,7 +77,8 @@ procedure division.
        by reference tt-n-cobol-AnswerFindResult
        tt-n-cobol-AnswerStatus returning status-code
     if status-code not = 0 stop run returning 1 end-if
-    if v-value-first-present of tt-n-cobol-AnswerFindResult = 1
+    if v-value-first-present of tt-n-cobol-AnswerFindResult
+    = 1
        compute at-line = 1 +
           v-value-first-index of tt-n-cobol-AnswerFindResult
        move policy-line(at-line) to refund-deadline
