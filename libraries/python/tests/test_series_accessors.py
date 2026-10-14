@@ -72,7 +72,7 @@ def test_polars_question_files_preserve_authored_readings(backend, tmp_path, rea
 
 def test_polars_frame_answers_keep_native_types_false_null_and_field_projection(backend, tmp_path):
     printed = run('''
-        import polars as pl, thinkthen as tt
+        import pickle, polars as pl, thinkthen as tt
         source = pl.DataFrame({'body': ['first', None, 'second'], 'context': ['a', 'b', 'c']})
         with tt.Engine(cache=False, batch=1) as engine:
             for verb, controls, dtype, expected in [
@@ -85,6 +85,7 @@ def test_polars_frame_answers_keep_native_types_false_null_and_field_projection(
                 assert call.value.to_list() == expected
                 assert call.value.name == 'body' and call.positions == (0, 2)
                 assert call.probability.dtype == pl.Float64
+                assert pickle.loads(pickle.dumps(call)).probability.to_list() == call.probability.to_list()
                 assert call.facts.records == 2 and call.facts.requests_sent == 2
                 assert call.results[0].input == {'body': 'first', 'context': 'a'}
             assert source.to_dicts()[1] == {'body': None, 'context': 'b'}
@@ -184,6 +185,8 @@ def test_named_and_async_series_calls_keep_owned_rows_and_original_positions(bac
                 assert done.probability.dtype == pl.Float64
             assert done.facts.requests_sent == 2
             assert pickle.loads(pickle.dumps(done)).value.to_list() == done.value.to_list()
+            restored = pickle.loads(pickle.dumps(done))
+            assert [None if value is pd.NA else value for value in restored.probability.to_list()] == [.9, None, .9]
             async_done = asyncio.run(engine.asyncio.decide('Late?', source))
             assert async_done.value.to_list() == done.value.to_list()
             ranked = engine.rank('Late?', source)

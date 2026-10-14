@@ -129,7 +129,7 @@ class PolarsFrameResult(FrameResult):
     def __reduce__(self):
         columns = [(name, self.source[name].to_list(), self.source[name].dtype) for name in self.source.columns]
         return (_restore, (self.results, self.terminal, self.function, self.scalar,
-                           columns, self.present, self.on, self.members))
+                           columns, self.present, self.on, self.members), {'_resolved': getattr(self, '_resolved', {})})
 
     def _annotated(self):
         import polars as pl
