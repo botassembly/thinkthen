@@ -50,10 +50,7 @@ pub(super) fn rows(verb: &str, receipt: &Receipt, rows: &mut Vec<Cells>) -> Resu
             Json::Bool(value) => Value::Integer(i64::from(*value)),
             Json::String(value) => Value::Text(value.clone()),
             Json::Number(number) => {
-                if verb == "score"
-                    || (matches!(verb, "details" | "details_images")
-                        && detail_root(value) == "score")
-                {
+                if verb == "score" {
                     number.as_f64().map_or(Value::Null, Value::Real)
                 } else {
                     number.as_i64().map_or(Value::Null, Value::Integer)
@@ -73,53 +70,8 @@ pub(super) fn rows(verb: &str, receipt: &Receipt, rows: &mut Vec<Cells>) -> Resu
                     .map_or(Value::Null, Value::Real),
             );
         }
-        if matches!(verb, "details" | "details_images") {
-            detail_columns(row, &receipt.carrier);
-        }
     }
     Ok(())
-}
-
-pub(super) fn detail_root(row: &Json) -> &str {
-    match row.pointer("/question/verb").and_then(Json::as_str) {
-        Some("choose") => "choice",
-        Some("tag") => "tags",
-        Some("score") => "score",
-        _ => "decision",
-    }
-}
-
-fn detail_columns(row: &mut Cells, carrier: &Json) {
-    let detail = carrier
-        .get("observations")
-        .and_then(Json::as_array)
-        .into_iter()
-        .flatten()
-        .find_map(|event| event.get("detail"));
-    let Some(detail) = detail else {
-        return;
-    };
-    let columns = [
-        detail
-            .get("confidence")
-            .and_then(Json::as_f64)
-            .map_or(Value::Null, Value::Real),
-        detail
-            .get("answer_id")
-            .and_then(Json::as_str)
-            .map_or(Value::Null, |value| Value::Text(value.to_owned())),
-        detail
-            .get("model")
-            .and_then(Json::as_str)
-            .map_or(Value::Null, |value| Value::Text(value.to_owned())),
-        detail
-            .get("requests_sent")
-            .and_then(Json::as_i64)
-            .map_or(Value::Null, Value::Integer),
-    ];
-    for (at, value) in columns.into_iter().enumerate() {
-        row.insert(at + 1, value);
-    }
 }
 
 fn rank_columns(row: &mut Cells, value: &Json, receipt: &Receipt, verb: &str) {

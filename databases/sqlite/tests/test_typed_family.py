@@ -104,15 +104,15 @@ def test_output_predicates_do_not_change_call_identity_or_admit_extra_options():
 db=connect();db.execute('SELECT thinkthen_configure(?)',('{"cache":false}',))
 args=('Fits?','red door')
 first=run(db,'SELECT value,probability FROM thinkthen_decide_details(?,?)',args)
-identity=run(db,'SELECT facts_call_id FROM thinkthen_decide_details(?,?)',args)
-filtered=run(db,'SELECT value FROM thinkthen_decide_details(?,?) WHERE facts_requests_sent=0',args)
-kept=run(db,'SELECT value FROM thinkthen_decide_details(?,?) WHERE facts_requests_sent=1',args)
+identity=run(db,"SELECT facts_call_id FROM thinkthen_decide_details(?,?) WHERE projection='facts'",args)
+filtered=run(db,"SELECT value FROM thinkthen_decide_details(?,?) WHERE projection='decision' AND facts_requests_sent=0",args)
+kept=run(db,"SELECT value FROM thinkthen_decide_details(?,?) WHERE projection='decision' AND facts_requests_sent=1",args)
 again=run(db,"SELECT facts_call_id FROM thinkthen_decide_details(?,?) WHERE projection='facts' AND facts_requests_sent=1",args)
 schema=db.execute("SELECT cid,name FROM pragma_table_xinfo('thinkthen_decide_details') WHERE name='facts_call_id'").fetchone()
 # A positional operand in an output slot is a SQLite predicate, outside input admission.
 visible=7;count=schema[0]-visible+1
 parameters=[None]*count;parameters[:2]=args;parameters[-1]='different-call-id'
-position=run(db,'SELECT value FROM thinkthen_decide_details('+','.join('?' for _ in parameters)+')',parameters)
+position=run(db,"SELECT value FROM thinkthen_decide_details("+','.join('?' for _ in parameters)+") WHERE projection='decision'",parameters)
 say(first=first,filtered=filtered,kept=kept,identity=identity,again=again,position=position)
 ''', environment(backend))
     expect(got['first'], [[1,.9]], 'compact default answer columns')
@@ -153,6 +153,44 @@ say(first=first,second=second,old=old)
     expect([row[1] for row in got['old']], [2,2], 'evicted source recomputes its rows')
     expect(got['first'][0][2] != got['second'][0][2] != got['old'][0][2],True,'each recomputation owns new facts')
     expect(backend.close(),11,'one packed call per source evaluation and eight other calls')
+
+
+def test_details_runtime_failure_keeps_later_valid_rows_and_final_facts():
+    from conditional_backend import ConditionalBackend
+    backend=Backend()
+    with ConditionalBackend(backend.base()) as proxy:
+        got=child('''
+from native_receipts import Read
+db=connect();db.execute('SELECT thinkthen_configure(?)',('{"cache":false,"batch":1,"max_retries":0}',))
+questions={'decide':{'decide':'Fits?'},'filter':{'decide':'Fits?'},
+ 'choose':{'choose':'Which?','options':['billing','shipping','other']},
+ 'tag':{'tag':'Which?','labels':['billing','urgent','security']},
+ 'score':{'score':'How?','levels':['low','medium','high']},
+ 'annotate':{'version':1,'questions':{'fits':{'decide':'Fits?'}}}}
+results={}
+for verb,question in questions.items():
+    records=[{'text':'first valid row'},{'text':'private evidence'},{'text':'last valid row'}]
+    if verb=='annotate': records=[{'json':{'body':record['text']}} for record in records]
+    question=json.dumps(question);items=json.dumps(records)
+    rows=db.execute('SELECT ordinal,value,probability,result,failure,facts FROM thinkthen_'+verb+'_details WHERE request_question=? AND request_records=?',(question,items)).fetchall()
+    assert [row[0] for row in rows]==[0,1,2],rows
+    assert rows[0][3] is not None and rows[2][3] is not None,rows
+    assert rows[1][1] is None and rows[1][3] is None and rows[1][4] is not None,rows
+    reader=Read(db,verb,question,{'records':records},None)
+    failure=reader.object('error',rows[1][4])
+    assert failure['kind']=='backend' and failure['retryable'] is False,failure
+    assert 'private evidence' not in json.dumps(failure),failure
+    facts=reader.object('facts',rows[1][5])
+    assert facts['requests_sent']==3,facts
+    assert all(row[5]==rows[0][5] for row in rows),rows
+    if verb in ('decide','filter'): assert rows[0][2]==.9 and rows[2][2]==.9,rows
+    if verb in ('score','tag','annotate'): assert all(row[2] is None for row in rows),rows
+    results[verb]=True
+say(results=results)
+''',environment(backend,THINKTHEN_BASE_URL=proxy.base))
+        expect(proxy.count(),18,'one request for each valid row, including six failures')
+    expect(all(got['results'].values()),True,'row failure preserves later answers and owning call facts')
+    expect(backend.close(),12,'only the twelve successful rows reached the generic backend')
 
 
 if __name__=='__main__':

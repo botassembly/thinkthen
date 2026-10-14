@@ -279,7 +279,8 @@ pub fn run_records_recovering<'a>(
         let observed = events
             .iter()
             .filter(|event| {
-                event.get("index").and_then(Value::as_u64) == Some(row.ordinal() as u64)
+                event.get("index").is_none()
+                    || event.get("index").and_then(Value::as_u64) == Some(row.ordinal() as u64)
             })
             .cloned()
             .collect::<Vec<_>>();

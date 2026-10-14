@@ -19,7 +19,6 @@ pub(super) fn root(verb: &str) -> &str {
         "annotate" => "annotation",
         "recognize" => "recognized",
         "relate" => "related",
-        "details" | "details_images" => "question_detail",
         _ => "error",
     }
 }
@@ -136,11 +135,7 @@ fn project(
         });
     let ordinals = carrier.get("ordinals").and_then(Json::as_array);
     for (at, value) in values.iter().enumerate() {
-        let actual = if matches!(verb, "details" | "details_images") {
-            super::answers::detail_root(value)
-        } else {
-            root(verb)
-        };
+        let actual = root(verb);
         let index = receipt.add(actual, value)?;
         receipt.add(
             "record_order",
@@ -206,7 +201,7 @@ pub(super) fn prepare(
     let mut inputs = input::inputs(if query.is_some() { &placeholder } else { args })?;
     let mut source = input::source(args)?;
     let settings = input::settings(args)?;
-    let actual = function(verb, &source)?;
+    let actual = if verb == "rank_set" { "rank" } else { verb };
     let legacy_recognize = verb == "recognize" && args.text("request_question")?.is_none();
     let legacy_relate = verb == "relate" && args.text("request_question")?.is_none();
     if verb == "rank" && args.text("request_question")?.is_none() {
@@ -324,22 +319,6 @@ pub(super) fn legacy_error(receipt: &Receipt) -> Result<(), Failure> {
     Err(failure)
 }
 
-fn function(verb: &'static str, source: &str) -> Result<&'static str, Error> {
-    if verb == "rank_set" {
-        return Ok("rank");
-    }
-    if !matches!(verb, "details" | "details_images") {
-        return Ok(verb);
-    }
-    match crate::question::question(source)?.kind() {
-        thinkthen::QuestionKind::Decide => Ok("decide"),
-        thinkthen::QuestionKind::Choose => Ok("choose"),
-        thinkthen::QuestionKind::Tag if verb == "details" => Ok("tag"),
-        thinkthen::QuestionKind::Score => Ok("score"),
-        _ => Err(Failure::usage("details takes a supported judgment question").into()),
-    }
-}
-
 fn admit(
     prepared: &complete_native::Prepared,
     selector: Option<thinkthen::AdmittedRequest>,
@@ -368,18 +347,7 @@ fn details_carrier(verb: &str, mut carrier: Json) -> Result<Json, Failure> {
     if carrier.get("rows").is_some() {
         return Ok(carrier);
     }
-    let facts = carrier
-        .pointer("/native/facts")
-        .cloned()
-        .unwrap_or(Json::Null);
     let error = carrier.pointer("/native/error").cloned();
-    let observations = carrier.get("observations").cloned().unwrap_or(json!([]));
-    let encoded = carrier
-        .pointer("/native/value")
-        .or_else(|| carrier.get("completed"))
-        .cloned()
-        .unwrap_or(json!([]));
-    let results = encoded.as_array().cloned().unwrap_or_else(|| vec![encoded]);
     let function = match verb {
         "decide" => thinkthen::RequestFunction::Decide,
         "choose" => thinkthen::RequestFunction::Choose,
@@ -393,26 +361,19 @@ fn details_carrier(verb: &str, mut carrier: Json) -> Result<Json, Failure> {
         "relate" => thinkthen::RequestFunction::Relate,
         _ => return Err(Failure::defect("unknown details function")),
     };
-    let mut rows = results.into_iter().enumerate().map(|(at,result)| {
-        let (value,probability) = sql_request::project_value(function, &result);
-        json!({"ordinal":result.get("index").cloned().unwrap_or(json!(at)),"value":value,"probability":probability,
-            "result":result,"failure":null,"facts":facts,"observations":observations})
-    }).collect::<Vec<_>>();
-    if let Some(error) = error {
-        if matches!(
-            error.get("kind").and_then(Json::as_str),
-            Some("cancelled" | "deadline" | "defect")
-        ) {
-            let mut receipt = Receipt::default();
-            receipt.carrier = carrier;
-            legacy_error(&receipt)?;
-            return Err(Failure::defect("a hard error was not raised"));
-        }
-        rows.push(
-            json!({"ordinal":rows.len(),"value":null,"probability":null,"result":null,
-            "failure":error,"facts":facts,"observations":observations}),
-        );
+    if matches!(
+        error
+            .as_ref()
+            .and_then(|error| error.get("kind"))
+            .and_then(Json::as_str),
+        Some("cancelled" | "deadline" | "defect")
+    ) {
+        let mut receipt = Receipt::default();
+        receipt.carrier = carrier;
+        legacy_error(&receipt)?;
+        return Err(Failure::defect("a hard error was not raised"));
     }
+    let rows = sql_request::project_carrier(function, &carrier);
     carrier["rows"] = json!(rows);
     Ok(carrier)
 }
