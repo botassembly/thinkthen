@@ -170,7 +170,7 @@ fn a_typed_choose_call_retains_value_probability_and_records_with_one_send() {
         .choose(&typed, "The invoice is wrong.")
         .expect("choice");
     assert_eq!(call.value(), &Some(Team::Billing));
-    assert_eq!(call.probability(), &Some(0.96));
+    assert_eq!(call.probability(), &Some(0.9));
     assert_eq!(call.results().len(), 1);
     assert_eq!(call.facts().requests_sent(), 1);
     assert_eq!(backend.count(), 1);

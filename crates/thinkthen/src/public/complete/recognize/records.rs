@@ -72,40 +72,16 @@ impl Engine {
             ) in units.enumerate()
             {
                 cancel.stop_or_remaining().map_err(Error::from)?;
-                let before = stop.facts().attempts().map_or(0, <[_]>::len);
-                let found = super::execute(
-                    &unit.engine,
-                    &unit.ask,
-                    &unit.text,
-                    &cancel,
+                rows.push(answer(
+                    at,
+                    Unit {
+                        original,
+                        prepared: unit,
+                    },
                     &stop,
-                    (at, (!options.scalar_input).then_some(&unit.input)),
-                )
-                .map_err(Error::from)
-                .map_err(|error| locate(error, at, options.scalar_input))?;
-                let value = Recognized::from_native(found.value.clone())?;
-                stop.observe(crate::public::RecordObservation::Row {
-                    index: at,
-                    value: crate::public::ObservedRow::Recognized(&value),
-                });
-                let attempts = stop
-                    .facts()
-                    .attempts()
-                    .map(|attempts| attempts.iter().skip(before).cloned().collect());
-                let mut result = rendered(
-                    &unit.engine,
-                    &unit.ask,
-                    found,
-                    value,
-                    (at, unit.context.as_deref(), attempts),
-                )?;
-                result.canonical.source = super::super::physical_source(&unit.input);
-                result.source_value = source_value(&result.canonical.value, &unit)?;
-                rows.push(CompleteRecord {
-                    original,
-                    ordinal: at,
-                    result,
-                });
+                    &cancel,
+                    options.scalar_input,
+                )?);
                 cancel.finished_records(1);
             }
             Ok(rows)
@@ -220,4 +196,50 @@ fn admit_source(record: &crate::public::RecordEvidence) -> Result<(), Error> {
 
 fn locate(error: Error, at: usize, scalar: bool) -> Error {
     if scalar { error } else { error.at_record(at) }
+}
+
+pub(super) fn answer<T>(
+    at: usize,
+    Unit {
+        original,
+        prepared: unit,
+    }: Unit<T>,
+    stop: &Stop<'_>,
+    cancel: &crate::engine::Cancel<'_>,
+    scalar: bool,
+) -> Result<CompleteRecord<T, CompleteRecognized>, Error> {
+    let before = stop.facts().attempts().map_or(0, <[_]>::len);
+    let found = super::execute(
+        &unit.engine,
+        &unit.ask,
+        &unit.text,
+        cancel,
+        stop,
+        (at, (!scalar).then_some(&unit.input)),
+    )
+    .map_err(Error::from)
+    .map_err(|error| locate(error, at, scalar))?;
+    let value = Recognized::from_native(found.value.clone())?;
+    stop.observe(crate::public::RecordObservation::Row {
+        index: at,
+        value: crate::public::ObservedRow::Recognized(&value),
+    });
+    let attempts = stop
+        .facts()
+        .attempts()
+        .map(|attempts| attempts.iter().skip(before).cloned().collect());
+    let mut result = rendered(
+        &unit.engine,
+        &unit.ask,
+        found,
+        value,
+        (at, unit.context.as_deref(), attempts),
+    )?;
+    result.canonical.source = super::super::physical_source(&unit.input);
+    result.source_value = source_value(&result.canonical.value, &unit)?;
+    Ok(CompleteRecord {
+        original,
+        ordinal: at,
+        result,
+    })
 }

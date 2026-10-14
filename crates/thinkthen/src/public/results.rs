@@ -46,7 +46,10 @@ pub use complete_record::CompleteRecord;
 pub use complete_set_rank::{CompleteRankMember, CompleteSetRank};
 mod found;
 pub use crate::core::{AttemptObservation, AttemptOutcome, CompleteAttempt};
-pub use call::{Call, CallReply, Facts};
+pub use call::{
+    AnnotationCall, Call, CallReply, ChoiceCall, DecisionCall, Facts, FilterCall, FindCall,
+    RankCall, RecognitionCall, RelationCall, ScoreCall, SetRankCall, TagCall,
+};
 pub use found::{Candidate, Found, Picked};
 mod ranked;
 pub use ranked::{Ranked, RankedRow};

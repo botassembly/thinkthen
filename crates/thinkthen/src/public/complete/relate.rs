@@ -15,7 +15,7 @@ impl Engine {
         ask: &Relate,
         entities: I,
         options: CallOptions<'_>,
-    ) -> Result<Call<Vec<Edge>, Vec<CompleteRelated>, Vec<Option<f64>>>, Error> {
+    ) -> Result<crate::RelationCall, Error> {
         self.relate_entities_request(ask, entities, options, |engine, ask, entities, options| {
             engine
                 .relate_admitted_complete(ask, entities, options, (false, true), &[])?

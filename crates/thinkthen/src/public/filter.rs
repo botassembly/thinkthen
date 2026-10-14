@@ -1,8 +1,5 @@
 //! Filter caller originals through the admitted Request scheduler.
-use super::{
-    Call, CallOptions, CompleteFilter, CompleteRecord, Engine, Error, InputEvidence, InputFunction,
-    Question,
-};
+use super::{CallOptions, CompleteRecord, Engine, Error, InputEvidence, InputFunction, Question};
 
 impl Engine {
     /// Keep the original records that reach the question's threshold, in input order.
@@ -15,7 +12,7 @@ impl Engine {
         &self,
         question: &Question,
         records: I,
-    ) -> Result<Call<Vec<T>, Vec<CompleteRecord<T, CompleteFilter>>, Vec<Option<f64>>>, Error>
+    ) -> Result<crate::FilterCall<T>, Error>
     where
         I: IntoIterator<Item = T> + 'a,
         T: InputEvidence + Clone + 'a,
@@ -32,7 +29,7 @@ impl Engine {
         question: &Question,
         records: I,
         controls: CallOptions<'a>,
-    ) -> Result<Call<Vec<T>, Vec<CompleteRecord<T, CompleteFilter>>, Vec<Option<f64>>>, Error>
+    ) -> Result<crate::FilterCall<T>, Error>
     where
         I: IntoIterator<Item = T> + 'a,
         T: InputEvidence + Clone + 'a,
@@ -55,14 +52,10 @@ impl Engine {
         )?
         .into_call()?
         .project(|rows| {
-            let mut values = Vec::new();
-            let mut probabilities = Vec::new();
-            for row in &rows {
-                if row.result.value() {
-                    values.push(row.original.clone());
-                    probabilities.push(row.result.probability());
-                }
-            }
+            let selected = rows.iter().filter(|row| row.result.value());
+            let (values, probabilities) = selected
+                .map(|row| (row.original.clone(), row.result.probability()))
+                .unzip();
             Ok((values, rows, probabilities))
         })
     }

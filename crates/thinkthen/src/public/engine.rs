@@ -11,9 +11,7 @@ use crate::public::choice::Choice;
 use crate::public::error::Error;
 use crate::public::options::{CallOptions, guarded};
 use crate::public::question::{ChooseQuestion, Kind, LoadedQuestion, Question, TagQuestion};
-use crate::public::results::{
-    Call, CompleteChoice, CompleteDecision, CompleteScore, CompleteTags, Counters,
-};
+use crate::public::results::Counters;
 use crate::public::settings::EngineBuilder;
 
 /// One judgment and the question keys behind it.
@@ -247,7 +245,7 @@ impl Engine {
         &self,
         question: &Q,
         evidence: &str,
-    ) -> Result<Call<Option<bool>, Vec<CompleteDecision>>, Error> {
+    ) -> Result<crate::DecisionCall, Error> {
         self.decide_with(question, evidence, CallOptions::new())
     }
 
@@ -261,7 +259,7 @@ impl Engine {
         question: &Q,
         evidence: &str,
         options: CallOptions<'_>,
-    ) -> Result<Call<Option<bool>, Vec<CompleteDecision>>, Error> {
+    ) -> Result<crate::DecisionCall, Error> {
         self.decide_input_complete_with(
             question,
             &super::QuestionInput::Text(evidence.to_owned()),
@@ -287,7 +285,7 @@ impl Engine {
         &self,
         question: &ChooseQuestion<C>,
         evidence: &str,
-    ) -> Result<Call<Option<C>, Vec<CompleteChoice>>, Error> {
+    ) -> Result<crate::ChoiceCall<C>, Error> {
         self.choose_with(question, evidence, CallOptions::new())
     }
 
@@ -301,7 +299,7 @@ impl Engine {
         question: &ChooseQuestion<C>,
         evidence: &str,
         options: CallOptions<'_>,
-    ) -> Result<Call<Option<C>, Vec<CompleteChoice>>, Error> {
+    ) -> Result<crate::ChoiceCall<C>, Error> {
         self.atomic_complete(
             super::InputFunction::Choose,
             question.question(),
@@ -328,11 +326,7 @@ impl Engine {
     /// # Errors
     ///
     /// As [`Engine::decide`], and [`Error::Usage`] for another kind of question.
-    pub fn score(
-        &self,
-        question: &Question,
-        evidence: &str,
-    ) -> Result<Call<f64, Vec<CompleteScore>>, Error> {
+    pub fn score(&self, question: &Question, evidence: &str) -> Result<crate::ScoreCall, Error> {
         self.score_with(question, evidence, CallOptions::new())
     }
 
@@ -346,7 +340,7 @@ impl Engine {
         question: &Question,
         evidence: &str,
         options: CallOptions<'_>,
-    ) -> Result<Call<f64, Vec<CompleteScore>>, Error> {
+    ) -> Result<crate::ScoreCall, Error> {
         self.atomic_complete(
             super::InputFunction::Score,
             question,
@@ -366,7 +360,7 @@ impl Engine {
         &self,
         question: &TagQuestion<C>,
         evidence: &str,
-    ) -> Result<Call<Vec<C>, Vec<CompleteTags>>, Error> {
+    ) -> Result<crate::TagCall<C>, Error> {
         self.tag_with(question, evidence, CallOptions::new())
     }
 
@@ -380,7 +374,7 @@ impl Engine {
         question: &TagQuestion<C>,
         evidence: &str,
         options: CallOptions<'_>,
-    ) -> Result<Call<Vec<C>, Vec<CompleteTags>>, Error> {
+    ) -> Result<crate::TagCall<C>, Error> {
         self.atomic_complete(
             super::InputFunction::Tag,
             question.question(),
