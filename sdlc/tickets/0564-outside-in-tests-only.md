@@ -10,6 +10,8 @@ Reviews: revision 80dc059, reject
 
 Reviews: revision 7134b30, accept
 
+Reviews: revision 387ccc1, accept
+
 ## Outcome
 
 Unit tests in `src` stay only where no public surface can show the behavior, or where the stakes call for a direct test, and each one says why. Every behavior they covered that a caller can reach has an outside-in test through the CLI, the Rust public API, the MCP command or an installed library. Outside-in coverage, measured by 0560, rises from 88.7%, and no unique covered line is lost. Passing tests leave no temporary folders behind.
@@ -57,3 +59,8 @@ Unit tests in `src` stay only where no public surface can show the behavior, or 
 
 
 PM amendment, 2026-10-13. Remaining work. 0564 keeps only Rust, in `crates/thinkthen/src` and `crates/thinkthen/tests`, outside `src/core/result/complete` and `src/public/results`, which the 0576 Rust lane owns. Delete or move `src/cli/conformance_tests`, `engine/facade_tests.rs`, `core/question_file/resolve/tests.rs`, the repeated framing tests in `core/records/tests.rs`, the inline tests in `core/digest.rs` and what `src/mcp/tests` duplicates, naming in each commit message the outside test that covers each deleted claim. Make `tests/native_complete.rs` remove its `/tmp/thinkthen-complete-*` folders. Move `src/ownership_tests.rs` into `tests/`. Stop `tests/public_batches/native.rs` using doc-hidden items. Give each remaining unit test module a `//! Stays:` line, and add a lint check for it. Add one outside-in test that refuses an old configuration file, for 0565. The candidate coverage run is the only coverage proof, against the 0560 floor; the 88.7% figure is withdrawn. The library test items move to the 0576 language lanes, and one shared privacy scanner goes in `libraries/` with the first lane that lands. Proof: `sdlc/scripts/test` and `sdlc/scripts/lint` pass, and the count of `/tmp/thinkthen-*` folders is the same before and after one routine run.
+
+## Progress
+
+- 2026-10-13 started
+- 2026-10-13 next: Merged the freshly accepted record-test cuts and parent-owned signal-folder cleanup into final at 39700e21b; preserve distinct checks and continue remaining test cleanup before the candidate.
