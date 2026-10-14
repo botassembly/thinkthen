@@ -91,6 +91,12 @@ if ($mode === 'usage-written' || $mode === 'usage-failed') {
     check(array_slice(array_map(fn($line) => explode(': ', $line, 2)[0], explode("\n", $example)), 0, count($asks)) === array_keys($asks), 'ten examples did not execute');
     check($retained['decide']->results[0]->value === true, 'true value');
     check($retained['decide']->results[0]->meta->question_sources[0] instanceof ThinkThen\Results\QuestionSource, 'typed nested optional source array');
+} elseif ($mode === 'wait-event') {
+    $operation = $client->start('decide', 'Is it?', 'hold-php-event');
+    echo "PHP_WAIT_ENTER\n"; flush();
+    $operation->wait();
+    check($operation->poll() !== null, 'native event wait returned without packet readiness');
+    check($operation->result()->results[0]->value === true, 'native event wait lost the answer');
 } elseif ($mode === 'poll') {
     $produced = 0;
     $input = (function() use (&$produced) {
