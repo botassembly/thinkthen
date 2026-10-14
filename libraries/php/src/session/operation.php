@@ -12,13 +12,15 @@ final class Operation
     private bool $advance = false;
     private bool $started = false;
     private ?\Throwable $producerError = null;
+    private bool $single;
     private array $rows = [];
     private array $packets = [];
     private ?\ThinkThen\Results\Node $terminal = null;
     private function __construct(private ?Client $client, private readonly \FFI $ffi, \FFI\CData $engine,
-        string $function, string|array|\stdClass|\ThinkThen\Inputs\QuestionDefinition|\ThinkThen\Inputs\QuestionSource $question, mixed $input,
+        private readonly string $function, string|array|\stdClass|\ThinkThen\Inputs\QuestionDefinition|\ThinkThen\Inputs\QuestionSource $question, mixed $input,
         \ThinkThen\Inputs\Options $options, private readonly ?Cancellation $token)
     {
+        $this->single = !($input instanceof Files || $input instanceof \Traversable || (is_array($input) && array_is_list($input)));
         if ($input instanceof \Traversable) $this->producer = $input instanceof \Iterator ? $input : $input->getIterator();
         $request = new \ThinkThen\Internal\Request($ffi, $function, $question, $input, $options);
         $buffers = [];
@@ -60,9 +62,14 @@ final class Operation
             return $packet;
         } finally { $this->ffi->thinkthen_session_result_free($owner); }
     }
+    private function requireBlockingContext(): void
+    {
+        if (\Fiber::getCurrent() !== null) throw new UsageFailure('blocking wait is unavailable inside a fiber; use poll');
+    }
     /** Wait for native readiness without consuming a packet; poll stays nonblocking. */
     public function wait(): void
     {
+        $this->requireBlockingContext();
         if ($this->session === null) throw new UsageFailure('operation is closed');
         $ready = $this->ffi->new('uint32_t');
         $interest = $this->producer !== null ? \ThinkThen\Internal\Session\THINKTHEN_SESSION_WAIT_INPUT_V1 : \ThinkThen\Internal\Session\THINKTHEN_SESSION_WAIT_SETTLEMENT_V1;
@@ -70,9 +77,10 @@ final class Operation
         $cooperative = $this->token !== null || (function_exists('pcntl_async_signals') && pcntl_async_signals());
         $this->check($this->ffi->thinkthen_session_wait($this->session, $interest, $cooperative ? 50 : 0xffffffff, \FFI::addr($ready)));
     }
-    public function result(): \ThinkThen\Results\Completed
+    public function result(): \ThinkThen\Results\Result
     {
         try {
+            $this->requireBlockingContext();
             while ($this->terminal === null) {
                 // Host generators, tokens and async signal handlers must regain the VM.
                 $blocking = $this->producer === null && $this->token === null
@@ -89,7 +97,7 @@ final class Operation
                 $class = \ThinkThen\Internal\ErrorFactory::classFor($detail->kind);
                 throw new $class($detail->message, $failure, $this->rows, $this->terminal, $this->packets, $this->producerError);
             }
-            return new \ThinkThen\Results\Completed($this->rows, $this->terminal, $this->packets);
+            return \ThinkThen\Internal\ResultBuilder::complete($this->function, $this->single, $this->rows, $this->terminal, $this->packets);
         } finally { $this->close(); }
     }
     private function feed(): void

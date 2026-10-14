@@ -36,8 +36,8 @@ $asks = [
 $mode = $argv[1];
 if ($mode === 'usage-written' || $mode === 'usage-failed') {
     $call = $client->decide('Is it?', 'surface-attribution');
-    $earlier = json_encode(fixtureValue($call->facts()));
-    check($call->results[0]->value === true && $call->facts()->requests_sent === 1, 'retained answer and sends');
+    $earlier = json_encode(fixtureValue($call->facts));
+    check($call->results[0]->value === true && $call->facts->requests_sent === 1, 'retained answer and sends');
     $observed = $client->usagePersistence();
     if ($mode === 'usage-failed') check($observed->state === ThinkThen\UsagePersistenceState::Pending && $observed->advice === null, 'held writer pending');
     $finished = $client->finishUsageStatus();
@@ -45,7 +45,7 @@ if ($mode === 'usage-written' || $mode === 'usage-failed') {
     check($finished->state === $expected, 'finalized state');
     check($finished->advice === ($mode === 'usage-failed' ? 'check the usage folder permissions and free space' : null), 'native safe advice');
     check($client->usagePersistence() == $finished && $client->finishUsageStatus() == $finished, 'latched observation');
-    check(json_encode(fixtureValue($call->facts())) === $earlier, 'retained facts changed');
+    check(json_encode(fixtureValue($call->facts)) === $earlier, 'retained facts changed');
     $client->close();
     foreach (['usagePersistence', 'finishUsageStatus'] as $method) {
         try { $client->$method(); throw new RuntimeException('closed method admitted'); }
@@ -57,28 +57,45 @@ if ($mode === 'usage-written' || $mode === 'usage-failed') {
     $call = $client->decide('Is it?', 'surface-attribution');
     $client->close();
     check($call->results[0]->value === true, 'attributed call answer');
-    check($call->facts() instanceof ThinkThen\Results\Facts && $call->facts()->requests_sent === 1, 'retained terminal send facts');
-    check(is_string($call->facts()->call_id) && $call->facts()->call_id !== '', 'retained native call identity');
+    check($call->facts instanceof ThinkThen\Results\Facts && $call->facts->requests_sent === 1, 'retained terminal send facts');
+    check(is_string($call->facts->call_id) && $call->facts->call_id !== '', 'retained native call identity');
 } elseif ($mode === 'named') {
     $retained = [];
     foreach ($asks as $verb => [$question, $input]) {
         $retained[$verb] = $client->$verb($question, $input);
-        check($retained[$verb]->facts() instanceof ThinkThen\Results\Facts, 'typed native facts');
+        check($retained[$verb]->facts instanceof ThinkThen\Results\Facts, 'typed native facts');
         check(count($retained[$verb]->results) > 0, 'native rows missing '.$verb);
-        check($retained[$verb]->facts()->requests_sent > 0, 'native sends missing '.$verb);
+        check($retained[$verb]->facts->requests_sent > 0, 'native sends missing '.$verb);
     }
-    check($retained['decide']->decideAnswer() === true, 'one safe decision');
-    check(is_string($retained['choose']->chooseAnswer()) && is_array($retained['tag']->tagAnswer()) && is_numeric($retained['score']->scoreAnswer()), 'one safe scalar answer');
-    check($retained['filter']->filterAnswer() === ['filter-yes'], 'filter returns only retained originals');
-    check($retained['rank']->rankAnswer() === [0, 1], 'rank returns original zero-based indexes');
-    check($retained['find']->findAnswer() instanceof ThinkThen\Results\Find, 'typed find answer');
-    check($retained['annotate']->annotateAnswer()[0] instanceof ThinkThen\Results\Annotation, 'typed annotation answer');
-    check($retained['recognize']->recognizeAnswer()[0] instanceof ThinkThen\Results\Recognition, 'typed recognition answer');
-    $relation = $retained['relate']->relateAnswer();
-    check($relation instanceof ThinkThen\Results\Relation && $relation->value[0]->sourceName() === 'Ana' && $relation->value[0]->targetName() === 'Bob', 'typed relation endpoints');
-    try { $retained['decide']->rankAnswer(); throw new RuntimeException('wrong answer reader accepted'); }
-    catch (ThinkThen\UsageFailure) {}
-    check($client->filter('Is it?', [null, false])->filterAnswer() === [null, false], 'filter lost original null or false');
+    check($retained['decide']->value === true, 'one safe decision');
+    check($retained['decide'] instanceof ThinkThen\Results\Result && $retained['decide']->probability === 0.9, 'one Result decision and probability');
+    check($retained['choose']->probability === 0.9 && $retained['find']->probability === 0.9, 'picked probability');
+    foreach (['score', 'tag', 'annotate'] as $verb) check($retained[$verb]->probability === null, 'non-probability function '.$verb);
+    check($retained['filter']->probability === [0.9] && $retained['rank']->probability === [0.9, 0.1], 'collection probability follows selected order');
+    check(is_string($retained['choose']->value) && is_array($retained['tag']->value) && is_numeric($retained['score']->value), 'one safe scalar answer');
+    check($retained['filter']->value === ['filter-yes'], 'filter returns only retained originals');
+    check($retained['rank']->value === [0, 1], 'rank returns original zero-based indexes');
+    check(in_array($retained['find']->value, ['find-first', 'find-second'], true), 'typed find answer');
+    check($retained['annotate']->value[0] instanceof stdClass, 'typed annotation answer');
+    check($retained['recognize']->value instanceof ThinkThen\Results\RecognizeEntities, 'typed recognition answer');
+    $relation = $retained['relate']->value;
+    check(is_array($relation) && $relation[0]->sourceName() === 'Ana' && $relation[0]->targetName() === 'Bob', 'typed relation endpoints');
+    check($retained['relate']->probability === array_map(fn($edge) => $edge->probability, $relation), 'relation edge probabilities');
+    $recognition = $retained['recognize'];
+    check(count($recognition->probability) === count($recognition->value->entities), 'recognition probabilities align with entities');
+    foreach ($recognition->value->entities as $i => $entity) {
+        $kept = array_values(array_filter($recognition->results[0]->answer->proposals, fn($p) => $p->kept && $p->kind === $entity->kind && $p->selected->start === $entity->start && $p->selected->end === $entity->end));
+        check(count($kept) === 1 && $recognition->probability[$i] === $kept[0]->span_probability, 'recognition uses kept span odds');
+    }
+    foreach (['decide', 'choose', 'tag', 'score', 'annotate', 'recognize'] as $verb) {
+        [$question, $input] = $asks[$verb];
+        $scalar = $client->$verb($question, 'text');
+        $list = $client->$verb($question, ['text']);
+        check(fixtureValue($list->value) == [fixtureValue($scalar->value)], 'one-element list shape '.$verb);
+        check($list->probability === ($scalar->probability === null ? null : [$scalar->probability]), 'one-element probability shape '.$verb);
+    }
+    check(!method_exists($retained['decide'], 'decideAnswer') && !class_exists('ThinkThen\\Results\\Completed'), 'old answer API remains');
+    check($client->filter('Is it?', [null, false])->value === [null, false], 'filter lost original null or false');
     $client->close();
     foreach ($retained as $call) foreach ($call->results as $row) {
         check($row instanceof ThinkThen\Results\Node, 'owned typed row');
@@ -133,10 +150,26 @@ if ($mode === 'usage-written' || $mode === 'usage-failed') {
     check($row->value->ok === true, 'map decision value');
     check(is_array($row->value->tags) && in_array('first', $row->value->tags, true), 'nested tags must remain an array');
     $false = $client->decide('Is it?', 'text', new Options(threshold: 0.95, context: ''));
+    $unresolved = $client->decide('Is it?', 'text', new Options(threshold: '0.1:0.95'));
+    check($unresolved->value === null && $unresolved->probability === null, 'unresolved decision probability');
+    check($false->value === false && $false->probability === 0.9, 'cut decision keeps yes probability');
+    $negative = $client->decide('Is it?', 'no');
+    check($negative->value === false && $negative->probability === 0.1, 'false is a settled answer');
+    $ordered = $client->decide('Is it?', ['text', 'no', 'text']);
+    check($ordered->value === [true, false, true] && $ordered->probability === [0.9, 0.1, 0.9], 'value and probability preserve input order');
     $null = $client->decide(['decide' => 'Is it?', 'true' => null], 'text');
     check($false->results[0]->value()->present && $false->results[0]->value === false, 'false confused with absence');
     check(!$false->results[0]->question->field('true')->present, 'absent author field');
     check($null->results[0]->question->field('true')->present && $null->results[0]->question->true === null, 'authored null');
+    check($null->value === null && $null->probability === 0.9, 'settled authored null keeps probability');
+    foreach ([(object)['ok' => true, 'no' => false, 'count' => PHP_INT_MAX], [], [1, false, null]] as $authored) {
+        $result = $client->decide(['decide' => 'Is it?', 'true' => $authored], 'text');
+        check(fixtureValue($result->value) == $authored && get_debug_type($result->value) === get_debug_type($authored) && $result->probability === 0.9, 'authored JSON leaf retained');
+    }
+    $selectedNull = $client->find('Which?', [null, false]);
+    check($selectedNull->value === null && $selectedNull->results[0]->index !== null && $selectedNull->probability === 0.9, 'selected null find keeps picked probability');
+    $boundary = $client->recognize(new RecognizeQuestion(new RecognitionSpec(mode: 'boundary_only')), 'Maria Chen');
+    check($boundary->probability === array_map(fn($p) => $p->probability, $boundary->value->proposals), 'boundary recognition uses proposal probability');
     $path = getenv('HOME').'/input.txt';
     file_put_contents($path, "located-first\n\nlocated-third\n");
     $located = $client->decide('Is it?', Client::files([$path], ['unit' => 'line']));
@@ -165,9 +198,7 @@ if ($mode === 'usage-written' || $mode === 'usage-failed') {
         check($error->facts()->requests_sent === 1, 'failure send facts');
         check($error->terminal->has('failure'), 'terminal failure missing');
         check($error->kind === ThinkThen\ErrorKind::Backend && !$error->retryable, 'typed error kind and retryability');
-        $prefix = new ThinkThen\Results\Completed($error->results, $error->terminal, $error->packets);
-        try { $prefix->decideAnswer(); throw new RuntimeException('failed prefix answered'); }
-        catch (ThinkThen\BackendFailure $again) { check($again->facts()->requests_sent === 1, 'failed prefix lost facts'); }
+
     }
 } elseif ($mode === 'zero') {
     $preview = $client->plan('decide', 'Is it?', 'secret-preview');
@@ -196,6 +227,15 @@ if ($mode === 'usage-written' || $mode === 'usage-failed') {
     check($emptyPreview->first_body_utf8()->present && $emptyPreview->first_body_utf8 === null, 'required null plan body became absent');
     check(!method_exists(ThinkThen\Results\Node::class, 'toObject'), 'public packet transport dump remains');
     check($preview->estimated_bytes > 0 && $preview->first_body_utf8()->present && str_contains($preview->first_body_utf8, 'secret-preview') && $preview->estimated_input_tokens instanceof ThinkThen\Results\TokenBand, 'complete typed plan fields');
+    $fiberProduced = false;
+    $fiberOperation = $client->start('decide', 'Is it?', (function() use (&$fiberProduced) { $fiberProduced = true; yield 'unreachable-fiber'; })());
+    (new Fiber(function() use ($fiberOperation) {
+        foreach (['wait', 'result'] as $method) {
+            try { $fiberOperation->$method(); throw new RuntimeException('fiber blocking wait admitted'); }
+            catch (ThinkThen\UsageFailure $error) { check($error->getMessage() === 'blocking wait is unavailable inside a fiber; use poll', 'fiber wait refusal'); }
+        }
+    }))->start();
+    check(!$fiberProduced, 'fiber blocking result consumed producer');
     $produced = false;
     try { $client->plan('decide', 'Is it?', (function() use (&$produced) { $produced = true; yield 'unreachable'; })()); throw new RuntimeException('feed plan admitted'); }
     catch (ThinkThen\UsageFailure) {}
