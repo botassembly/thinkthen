@@ -292,6 +292,15 @@ class Admission(unittest.TestCase):
             self.assertEqual(child.wait(timeout=2), 0)
 
     def test_library_wrapper_preserves_shell_arguments_and_owned_build_environment(self):
+        # Cold compiler/SDK setup is fixture work, outside the shell deadline.
+        # Use admission and a separate output; the timed caller still compiles.
+        warmup = self.root / 'compiler-warmup'
+        warmup.mkdir()
+        source = warmup / 'probe.c'
+        source.write_text('int main(void) { return 0; }\n')
+        compiler = self.launch('compiler-warmup', command=[
+            'cc', '-x', 'c', '-o', str(warmup / 'probe'), str(source)])
+        self.assertEqual(compiler.wait(), 0, 'compiler fixture warmup failed')
         scripts = self.entry_scripts()
         caller = self.root / 'library-check.sh'
         output = self.root / 'output'
