@@ -29,9 +29,9 @@ static class Program
    var q=sample.Item1=="unsure"?(RequestQuestion)FixtureQuestions.Parse(AuthoredQuestionKind.Atomic,"{\"decide\":\"Is it?\",\"threshold\":\"0.4:0.8\"}"):Question;
    var result=await e.DecideAsync(q,Records(sample.Item1));
    Answer(result,sample.Item2,sample.Item3);
-   Check(result.Value.Count==1&&result.Value[0].GetRawText()==JsonSerializer.Serialize(sample.Item2)&&result.Probability.Count==1&&result.Probability[0]==sample.Item3&&result.Results.Count==1,"one-item list result");
+   Check(result.Value.Count==1&&result.Value[0].GetRawText()==JsonSerializer.Serialize(sample.Item2)&&result.Probability.Count==1&&result.Probability[0]==(sample.Item2 is null ? (double?)null : sample.Item3)&&result.Results.Count==1,"one-item list result");
   }
-  foreach(var authored in new[]{"\"approved\"","{\"route\":\"billing\",\"nested\":[true,null,{\"count\":2}]}","[\"yes\",{\"nested\":[false,null,2]}]"}) {
+  foreach(var authored in new[]{"null","\"approved\"","{\"route\":\"billing\",\"nested\":[true,null,{\"count\":2}]}","[\"yes\",{\"nested\":[false,null,2]}]"}) {
    var question=FixtureQuestions.Parse(AuthoredQuestionKind.Atomic,"{\"decide\":\"Is it?\",\"true\":"+authored+"}");
    var scalar=await e.DecideAsync(question,new RequestInputText{Text="authored-value"});
    Check(scalar.Value.GetRawText()==authored&&scalar.Probability==.9&&scalar.Results.Count==1&&scalar.Facts.RequestsSent==1,"authored scalar value");

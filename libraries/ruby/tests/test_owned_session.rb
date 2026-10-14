@@ -410,6 +410,11 @@ class TestOwnedSession < Minitest::Test
         missing = client.decide({decide: "Question?", threshold: 0.95}, "text")
         authored_null = client.decide({decide: "Question?", true: nil}, T::Client.item("text"))
         unresolved = client.decide({decide: "Question?", threshold: "0.2:0.95"}, "text")
+        unsure_choice = client.choose({choose: "Question?", options: ["a", "b"], threshold: 0.95}, ["text", "other"])
+        not_found = client.find("Question?", ["first", "second"], none: true, threshold: 0.95)
+        selected_null = client.find("Question?", [nil, "other"], none: true)
+        raise "settled probability" unless authored_null.probability == 0.9 && unresolved.probability.nil? && unsure_choice.probability == [nil, nil] && not_found.probability.nil? && selected_null.probability == 0.9 && selected_null.results.first.index == 0
+
         path = File.join(ENV.fetch("HOME"), "input.txt")
         File.write(path, "first\\n\\nthird\\n")
         located = client.decide("Question?", T::Client.files([path], unit: "line"))

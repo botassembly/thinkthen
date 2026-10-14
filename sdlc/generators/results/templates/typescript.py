@@ -153,23 +153,30 @@ function convert(schema,value,key) {
 }
 function plan(value) { return convert(graph.completeplan,value,'completeplan'); }
 function packet(value) { return convert(graph.completesessionPacket,value,'completesessionPacket'); }
-''', result_runtime(definitions), 'module.exports = { callResult, plan, packet, parse, NativeNumber, REQUEST_VERSION: '+json.dumps(version)+', '+', '.join(name(k) for k,s in definitions.items() if 'properties' in s)+' };']
+''', result_runtime(definitions), 'module.exports = { callResult, callResolution, plan, packet, parse, NativeNumber, REQUEST_VERSION: '+json.dumps(version)+', '+', '.join(name(k) for k,s in definitions.items() if 'properties' in s)+' };']
     return '\n'.join(lines)+'\n'
 
 
 def result_runtime(definitions):
     rules = {function: {key: value for key, value in rule.items()
-                       if key in ('value_projection', 'probability_mode', 'probability_path', 'pick_path')}
+                       if key in ('value_projection', 'probability_mode', 'probability_path', 'pick_path', 'resolution', 'selection_path')}
              for function, rule in call_results(definitions).items()}
     return 'const callRules = '+json.dumps(rules)+';'+r'''
-function callResult(rows,functionName,scalar) {
+function callResolution(packet,functionName) {
+  const spec=callRules[functionName].resolution,at=(value,path)=>path.reduce((value,key)=>value?.[key],value);
+  if(!spec || packet.function!==functionName || spec.guards.some(([path,literal])=>at(packet,path)!==literal)) return null;
+  return [JSON.stringify(at(packet,spec.index_path)),at(packet,spec.path)!==null];
+}
+function callResult(rows,functionName,scalar,resolved=new Map()) {
   const rule=callRules[functionName],project=rule.value_projection;
   const values=rows.map(row=>row[project]);
   const single=functionName==='find' || functionName==='relate';
   const value=project!=='value' ? values : single ? values[0] ?? (functionName==='find'?null:[]) : scalar && values.length ? values[0] : values;
   if(rule.probability_mode==='null') return frozen({value,probability:null});
   const at=(row,path)=>path.reduce((value,key)=>value?.[key],row);
-  const chances=rows.map(row=>{
+  const chances=rows.map((row,ordinal)=>{
+    if(rule.selection_path && at(row,rule.selection_path)==null) return null;
+    if(rule.resolution && !resolved.get(JSON.stringify(row.index ?? ordinal))) return null;
     if(rule.probability_mode==='picked') return at(row,rule.probability_path)[at(row,rule.pick_path)] ?? null;
     if(functionName==='recognize') {
       if(!Object.hasOwn(row.value,'entities')) return row.value.proposals.map(p=>p.probability);

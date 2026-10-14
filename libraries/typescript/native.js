@@ -1,6 +1,6 @@
 'use strict';
 const addon=require('./loader.js');
-const {callResult:readResult,plan:readPlan,parse:readJson,packet:readPacket,...Results}=require('./results_generated.js');
+const {callResult:readResult,callResolution:readResolution,plan:readPlan,parse:readJson,packet:readPacket,...Results}=require('./results_generated.js');
 class ClientError extends Error {
   constructor(kind,message,retryable=false) {super(message);this.name='ClientError';this.kind=kind;this.retryable=retryable;}
 }
@@ -35,7 +35,7 @@ function requestValues(question,input,feed=false) {
   return {question:dump(question?.[questionTag] || question),selector:!!question?.[questionTag],literal:typeof question==='string',source:input?.[sourceTag]?dump(input[sourceTag]):undefined,items:feed || input?.[sourceTag]?[]:(Array.isArray(input)?input:[input]).map(v=>dump(descriptor(v))),feed};
 }
 class Result {
-  constructor(results,terminal,verb,scalar) {Object.assign(this,readResult(results,verb,scalar));this.results=Object.freeze(results);this.terminal=terminal;Object.freeze(this);}
+  constructor(results,terminal,verb,scalar,resolved) {Object.assign(this,readResult(results,verb,scalar,resolved));this.results=Object.freeze(results);this.terminal=terminal;Object.freeze(this);}
   get facts(){return this.terminal.facts;}
 }
 class Client {
@@ -73,7 +73,7 @@ class Client {
   close(){this.#closed=true;for(const op of this.#operations) op.close();this.#engine=null;}
 }
 class Operation {
-  #native; #waiting; #iterator; #pending; #rows=[]; #verb; #scalar; #remove; #signal; #abort; #closed=false; #busy=false; #done=false;
+  #native; #waiting; #iterator; #pending; #rows=[]; #resolved=new Map(); #verb; #scalar; #remove; #signal; #abort; #closed=false; #busy=false; #done=false;
   terminal;
   #producerError;
   constructor(engine,verb,question,input,controls,remove) {
@@ -111,6 +111,7 @@ class Operation {
         if(text==='end'){this.#done=true;this.close();return {done:true,value:undefined};}
         if(text) {
           const packet=readPacket(readJson(text));
+          const resolution=readResolution(packet,this.#verb);if(resolution)this.#resolved.set(...resolution);
           if(packet.kind==='terminal') {
             this.terminal=packet;this.#done=true;this.close();
             if(packet.has('failure')) {
@@ -136,7 +137,7 @@ class Operation {
       }
     } finally {this.#busy=false;}
   }
-  async result(){try {while(!(await this.next()).done){}return new Result(this.#rows,this.terminal,this.#verb,this.#scalar);} finally {this.close();}}
+  async result(){try {while(!(await this.next()).done){}return new Result(this.#rows,this.terminal,this.#verb,this.#scalar,this.#resolved);} finally {this.close();}}
   cancel(){this.#native?.cancel();this.close();}
   #releaseProducer(){
     const iterator=this.#iterator;this.#iterator=undefined;

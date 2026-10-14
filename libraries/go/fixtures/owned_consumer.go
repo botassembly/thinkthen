@@ -571,13 +571,13 @@ func main() {
 		}
 	}
 	require(nullFound, "null row missing")
-	require(nullCall.Value == nil, "authored null changed")
+	require(nullCall.Value == nil && nullCall.Probability != nil, "resolved authored null lost its yes probability")
 	uncertain, err := client.Decide(context.Background(), tt.DefinedQuestion(tt.RequestDefinitionAuthoredDecide{Decide: tt.AuthoredQuestionTextString("Is it?"), Threshold: tt.Ptr[tt.AuthoredThreshold](tt.AuthoredThresholdString("0.2:0.8"))}), fixtureInput("unsure"), nil)
 	require(err == nil, "uncertain call failed")
 	n, err = uncertain.Terminal.Facts().Value.RequestsSent().Value.Int64()
 	require(err == nil, "uncertain requests missing")
 	expectedRequests += n
-	require(uncertain.Value == nil, "nullable judgment changed")
+	require(uncertain.Value == nil && uncertain.Probability == nil, "unsure decision retained a probability")
 	uncertainChoice, err := client.Choose(context.Background(), tt.DefinedQuestion(tt.RequestDefinitionAuthoredChoose{Choose: tt.AuthoredQuestionTextString("Which?"), Options: tt.Ptr[tt.AuthoredOptions](tt.AuthoredOptionsArray{"a", "b"}), Threshold: tt.Ptr[tt.AuthoredCut](tt.AuthoredCutNumber(.95))}), fixtureInput("uncertain-choice"), nil)
 	require(err == nil, "uncertain choice call failed")
 	n, err = uncertainChoice.Terminal.Facts().Value.RequestsSent().Value.Int64()

@@ -63,7 +63,7 @@ fn decision_call_retains_nullable_value_probability_record_and_facts_without_res
     let band = Question::decide("Refund?").unwrap().band(0.2, 0.8).unwrap();
     let call = engine.decide(&band, "Maybe.").unwrap();
     assert_eq!(call.value(), &None);
-    assert_eq!(call.probability(), &Some(0.5));
+    assert_eq!(call.probability(), &None);
     assert_eq!(listener.count(), 1);
 }
 

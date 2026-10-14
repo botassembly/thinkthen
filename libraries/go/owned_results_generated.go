@@ -6,6 +6,7 @@ import (
 	"context"
 	"encoding/json"
 	"reflect"
+	"strconv"
 )
 
 type Annotation struct{ ownedJSON }
@@ -4635,21 +4636,30 @@ func (v Receipt) AsRelate() (Relation, error) {
 
 type callRule struct {
 	projection, shape, probability string
-	path, pick                     []string
+	path, pick, selection          []string
 	collection, nested             bool
+	resolution                     *resolutionRule
+}
+type resolutionGuard struct {
+	path  []string
+	value string
+}
+type resolutionRule struct {
+	path, index []string
+	guards      []resolutionGuard
 }
 
 var callRules = map[string]callRule{
-	"decide":    {"value", "input", "yes", []string{"answer", "probability"}, []string{}, true, false},
-	"choose":    {"value", "input", "picked", []string{"answer", "probabilities"}, []string{"answer", "pick"}, true, false},
-	"tag":       {"value", "input", "null", []string{}, []string{}, true, false},
-	"score":     {"value", "input", "null", []string{}, []string{}, true, false},
-	"filter":    {"input", "collection", "yes", []string{"answer", "probability"}, []string{}, true, false},
-	"rank":      {"index", "collection", "items", []string{}, []string{}, true, false},
-	"find":      {"value", "aggregate", "picked", []string{"answer", "probabilities"}, []string{"answer", "pick"}, false, false},
-	"annotate":  {"value", "input", "null", []string{}, []string{}, true, false},
-	"recognize": {"value", "input", "items", []string{}, []string{}, true, true},
-	"relate":    {"value", "aggregate", "items", []string{}, []string{}, false, false},
+	"decide":    {"value", "input", "yes", []string{"answer", "probability"}, []string{}, []string{}, true, false, &resolutionRule{[]string{"value", "value", "value", "value"}, []string{"value", "index"}, []resolutionGuard{{[]string{"kind"}, "observation"}, {[]string{"value", "kind"}, "row"}, {[]string{"value", "value", "kind"}, "judgment"}, {[]string{"value", "value", "value", "kind"}, "decision"}}}},
+	"choose":    {"value", "input", "picked", []string{"answer", "probabilities"}, []string{"answer", "pick"}, []string{}, true, false, &resolutionRule{[]string{"value", "value", "value", "value"}, []string{"value", "index"}, []resolutionGuard{{[]string{"kind"}, "observation"}, {[]string{"value", "kind"}, "row"}, {[]string{"value", "value", "kind"}, "judgment"}, {[]string{"value", "value", "value", "kind"}, "choice"}}}},
+	"tag":       {"value", "input", "null", []string{}, []string{}, []string{}, true, false, nil},
+	"score":     {"value", "input", "null", []string{}, []string{}, []string{}, true, false, nil},
+	"filter":    {"input", "collection", "yes", []string{"answer", "probability"}, []string{}, []string{}, true, false, nil},
+	"rank":      {"index", "collection", "items", []string{}, []string{}, []string{}, true, false, nil},
+	"find":      {"value", "aggregate", "picked", []string{"answer", "probabilities"}, []string{"answer", "pick"}, []string{"index"}, false, false, nil},
+	"annotate":  {"value", "input", "null", []string{}, []string{}, []string{}, true, false, nil},
+	"recognize": {"value", "input", "items", []string{}, []string{}, []string{}, true, true, nil},
+	"relate":    {"value", "aggregate", "items", []string{}, []string{}, []string{}, false, false, nil},
 }
 
 func scalarInput(input RequestInput) bool {
@@ -4687,6 +4697,9 @@ func probabilityPointer(value Probability) *float64 {
 	return nil
 }
 func receiptChance(receipt json.RawMessage, rule callRule) (Probability, error) {
+	if len(rule.selection) > 0 && len(callPath(receipt, rule.selection)) == 0 {
+		return nil, nil
+	}
 	switch rule.probability {
 	case "null":
 		return nil, nil
@@ -4761,6 +4774,24 @@ func receiptChance(receipt json.RawMessage, rule callRule) (Probability, error) 
 }
 func (v *Call) settle(function string, input RequestInput) error {
 	rule := callRules[function]
+	resolved := map[string]bool{}
+	if rule.resolution != nil {
+		for _, packet := range v.Packets {
+			if !ownedLiteral(packet.raw, "function", function) {
+				continue
+			}
+			matches := true
+			for _, guard := range rule.resolution.guards {
+				if !bytes.Equal(callPath(packet.raw, guard.path), json.RawMessage(strconv.Quote(guard.value))) {
+					matches = false
+					break
+				}
+			}
+			if matches {
+				resolved[string(callPath(packet.raw, rule.resolution.index))] = len(callPath(packet.raw, rule.resolution.path)) > 0
+			}
+		}
+	}
 	rows := make([]json.RawMessage, 0)
 	aggregates := make([]json.RawMessage, 0)
 	hasAggregate := false
@@ -4791,7 +4822,7 @@ func (v *Call) settle(function string, input RequestInput) error {
 	v.Results = make([]Receipt, 0, len(rows))
 	values := make([]any, 0, len(rows))
 	chances := make([]Probability, 0, len(rows))
-	for _, raw := range rows {
+	for ordinal, raw := range rows {
 		projected := ownedMember[json.RawMessage](raw, rule.projection)
 		if projected.Err != nil {
 			return projected.Err
@@ -4810,6 +4841,15 @@ func (v *Call) settle(function string, input RequestInput) error {
 		chance, err := receiptChance(raw, rule)
 		if err != nil {
 			return err
+		}
+		if rule.resolution != nil {
+			index := callPath(raw, []string{"index"})
+			if len(index) == 0 {
+				index = json.RawMessage(strconv.Itoa(ordinal))
+			}
+			if !resolved[string(index)] {
+				chance = nil
+			}
 		}
 		v.Results = append(v.Results, Receipt{ownedJSON{raw: raw}, function})
 		values = append(values, value)

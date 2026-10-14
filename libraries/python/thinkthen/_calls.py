@@ -103,11 +103,12 @@ class Result(Generic[T]):
         return values[0] if self.scalar and values else values
     @property
     def probability(self):
-        from ._native_results import _CALL_RESULTS
-        mode = _CALL_RESULTS[self.function]['probability_mode']
+        from ._native_results import _CALL_RESULTS, _call_path
+        spec = _CALL_RESULTS[self.function]
+        mode = spec['probability_mode']
         if mode == 'null': return None
         values = []
-        for row in self.results:
+        for ordinal, row in enumerate(self.results):
             answer = getattr(row, 'answer', None)
             if mode == 'picked':
                 chance = answer.probabilities.get(answer.pick)
@@ -122,6 +123,8 @@ class Result(Generic[T]):
                 chance = [edge.probability for edge in row.value]
             else:
                 chance = getattr(answer, 'probability', None)
+            if 'selection_path' in spec and _call_path(row, spec['selection_path']) is None: chance = None
+            if 'resolution' in spec and not getattr(self, '_resolved', {}).get(getattr(row, 'index', ordinal), False): chance = None
             values.append(chance)
         if self.function == 'relate': return values[0] if values else []
         if self.function == 'find': return values[0] if values else None
@@ -178,6 +181,7 @@ class Operation:
             self.pending = None
             self.producer_error = None
             self.results = []
+            self.resolved = {}
             self.terminal = None
             self.closed = False
             engine._sessions.add(self)
@@ -202,6 +206,9 @@ class Operation:
         # Poll before advancing the producer. Native closure stops all further reads.
         packet = self.session._poll_typed()
         if packet is not None:
+            from ._native_results import _call_resolution
+            resolution = _call_resolution(packet, self.verb)
+            if resolution is not None: self.resolved[resolution[0]] = resolution[1]
             kind = packet['kind']
             if kind == 'end':
                 return True
@@ -267,20 +274,24 @@ class Operation:
                 self.session.close()
                 self.engine._sessions.discard(self)
 
+    def _settled(self, result):
+        object.__setattr__(result, '_resolved', dict(self.resolved))
+        return result
+
     def result(self):
         if self.on is not None:
             from ._frame_calls import FrameResult, PolarsFrameResult
             Frame = FrameResult if self.surface == 'pandas' else PolarsFrameResult
-            return Frame(tuple(self.results), self.terminal, self.verb, self.scalar,
-                         self.frame, self.present, self.on, self.members)
+            return self._settled(Frame(tuple(self.results), self.terminal, self.verb, self.scalar,
+                         self.frame, self.present, self.on, self.members))
         if self.frame is not None:
             if self.surface == 'pandas':
                 from ._pandas_calls import PandasResult as ColumnResult
             else:
                 from ._polars_calls import PolarsResult as ColumnResult
-            return ColumnResult(tuple(self.results), self.terminal, self.verb, self.scalar,
-                                self.frame, self.present)
-        return Result(tuple(self.results), self.terminal, self.verb, self.scalar)
+            return self._settled(ColumnResult(tuple(self.results), self.terminal, self.verb, self.scalar,
+                                self.frame, self.present))
+        return self._settled(Result(tuple(self.results), self.terminal, self.verb, self.scalar))
 
 
 def call(engine, verb, question, value, controls):

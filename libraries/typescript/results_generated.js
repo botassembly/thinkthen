@@ -3756,11 +3756,31 @@ const callRules = {
   decide: {
     value_projection: "value",
     probability_mode: "yes",
+    resolution: {
+      path: ["value", "value", "value", "value"],
+      guards: [
+        [["kind"], "observation"],
+        [["value", "kind"], "row"],
+        [["value", "value", "kind"], "judgment"],
+        [["value", "value", "value", "kind"], "decision"],
+      ],
+      index_path: ["value", "index"],
+    },
     probability_path: ["answer", "probability"],
   },
   choose: {
     value_projection: "value",
     probability_mode: "picked",
+    resolution: {
+      path: ["value", "value", "value", "value"],
+      guards: [
+        [["kind"], "observation"],
+        [["value", "kind"], "row"],
+        [["value", "value", "kind"], "judgment"],
+        [["value", "value", "value", "kind"], "choice"],
+      ],
+      index_path: ["value", "index"],
+    },
     probability_path: ["answer", "probabilities"],
     pick_path: ["answer", "pick"],
   },
@@ -3775,6 +3795,7 @@ const callRules = {
   find: {
     value_projection: "value",
     probability_mode: "picked",
+    selection_path: ["index"],
     probability_path: ["answer", "probabilities"],
     pick_path: ["answer", "pick"],
   },
@@ -3782,7 +3803,21 @@ const callRules = {
   recognize: { value_projection: "value", probability_mode: "items" },
   relate: { value_projection: "value", probability_mode: "items" },
 };
-function callResult(rows, functionName, scalar) {
+function callResolution(packet, functionName) {
+  const spec = callRules[functionName].resolution,
+    at = (value, path) => path.reduce((value, key) => value?.[key], value);
+  if (
+    !spec ||
+    packet.function !== functionName ||
+    spec.guards.some(([path, literal]) => at(packet, path) !== literal)
+  )
+    return null;
+  return [
+    JSON.stringify(at(packet, spec.index_path)),
+    at(packet, spec.path) !== null,
+  ];
+}
+function callResult(rows, functionName, scalar, resolved = new Map()) {
   const rule = callRules[functionName],
     project = rule.value_projection;
   const values = rows.map((row) => row[project]);
@@ -3798,7 +3833,11 @@ function callResult(rows, functionName, scalar) {
   if (rule.probability_mode === "null")
     return frozen({ value, probability: null });
   const at = (row, path) => path.reduce((value, key) => value?.[key], row);
-  const chances = rows.map((row) => {
+  const chances = rows.map((row, ordinal) => {
+    if (rule.selection_path && at(row, rule.selection_path) == null)
+      return null;
+    if (rule.resolution && !resolved.get(JSON.stringify(row.index ?? ordinal)))
+      return null;
     if (rule.probability_mode === "picked")
       return at(row, rule.probability_path)[at(row, rule.pick_path)] ?? null;
     if (functionName === "recognize") {
@@ -3834,6 +3873,7 @@ function callResult(rows, functionName, scalar) {
 
 module.exports = {
   callResult,
+  callResolution,
   plan,
   packet,
   parse,

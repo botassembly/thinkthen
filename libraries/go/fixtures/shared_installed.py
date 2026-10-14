@@ -131,7 +131,7 @@ with tempfile.TemporaryDirectory(prefix='thinkthen-go-shared-') as folder:
             elif verb == 'rank':
                 assert call['Value'] == [row['index'] for row in aggregates[-1]] and call['Probability'] == [row['answer']['probability'] for row in aggregates[-1]], (case['name'], call)
             elif verb == 'find':
-                assert call['Value'] == aggregates[-1]['value'] and call['Probability'] == aggregates[-1]['answer']['probabilities'].get(aggregates[-1]['answer']['pick']), (case['name'], call)
+                assert call['Value'] == aggregates[-1]['value'] and call['Probability'] == (aggregates[-1]['answer']['probabilities'].get(aggregates[-1]['answer']['pick']) if aggregates[-1].get('index') is not None else None), (case['name'], call)
             if verb in ('tag', 'score', 'annotate'):
                 assert call['Probability'] is None, (case['name'], call['Probability'])
             assert facts['call_id'] and any(p['kind']=='observation' for p in packets),case['name']

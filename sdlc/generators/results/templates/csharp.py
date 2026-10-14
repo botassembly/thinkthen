@@ -624,6 +624,23 @@ def answer_helpers(definitions):
         elif function == 'rank': probability_expr = '(double?)((AnswerYesNo)row.Answer).Probability'
         elif function == 'relate': probability_expr = 'Array.AsReadOnly(row.Value.Select(edge => edge.Probability).ToArray())'
         else: probability_expr = 'RecognitionProbabilities(row)'
+        if 'selection_path' in spec:
+            selected = 'row.' + name(spec['selection_path'][0]) + '.State == PresenceState.Value'
+            probability_expr = '(' + selected + ' ? ' + probability_expr + ' : (double?)null)'
+        if 'resolution' in spec:
+            probability_expr = '(Resolved' + function.title() + '(call, row, ordinal) ? ' + probability_expr + ' : (double?)null)'
+            key = 'completesessionPacket'
+            classes = []
+            for path, literal in spec['resolution']['guards']:
+                arm = next(child for child, _ in definitions[key]['variants']
+                           if definitions[child]['properties'].get(path[-1], {}).get('const') == literal)
+                classes.append(name(arm))
+                value_schema = definitions[arm]['properties'].get('value', {})
+                key = value_schema.get('$ref', '').removeprefix('#/$defs/')
+            lines += ['private static bool Resolved' + function.title() + '(OwnedCall call, ' + receipt_type + ' row, int ordinal) =>',
+                      'call.Packets.OfType<' + classes[0] + '>().Any(packet => packet.Function == RequestFunction.' + function.title() + ' &&',
+                      'packet.Value is ' + classes[1] + ' observation && observation.Index == (row.Index.State == PresenceState.Value ? row.Index.Value : (ulong)ordinal) &&',
+                      'observation.Value is ' + classes[2] + ' judgment && judgment.Value is ' + classes[3] + ' settled && settled.Value.State == PresenceState.Value);']
         single_aggregate = spec['call_shape'] == 'aggregate'
         value_type = item_type if single_aggregate else 'IReadOnlyList<' + item_type + '>'
         odds_type = probability_type if single_aggregate or mode == 'null' else 'IReadOnlyList<' + probability_type + '>'
@@ -637,7 +654,7 @@ def answer_helpers(definitions):
                 lines += ['else if (packet is ' + name(child) + ' row) receipts.Add(row.Value);']
         lines += ['}', 'var results = receipts.AsReadOnly();', values_decl]
         if single_aggregate: lines += ['if (results.Count != 1) throw new JsonException("Missing aggregate result.");']
-        odds = '(double?)null' if mode == 'null' else ('results.Select(row => ' + probability_expr + ').Single()' if single_aggregate else 'Array.AsReadOnly(results.Select(row => ' + probability_expr + ').ToArray())')
+        odds = '(double?)null' if mode == 'null' else ('results.Select((row, ordinal) => ' + probability_expr + ').Single()' if single_aggregate else 'Array.AsReadOnly(results.Select((row, ordinal) => ' + probability_expr + ').ToArray())')
         value = 'values.Single()' if single_aggregate else 'Array.AsReadOnly(values)'
         lines += ['return new(call, ' + value + ', ' + odds + ', results);', '}']
         if per_input:
