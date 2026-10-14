@@ -1,5 +1,12 @@
 <?php
 declare(strict_types=1);
+namespace ThinkThen\Internal;
+
+function requireBlockingContext(): void
+{
+    if (\Fiber::getCurrent() !== null) throw new \ThinkThen\UsageFailure('blocking wait is unavailable inside a fiber; use poll');
+}
+
 namespace ThinkThen;
 use ThinkThen\Internal\Requests as Input;
 
@@ -62,14 +69,10 @@ final class Operation
             return $packet;
         } finally { $this->ffi->thinkthen_session_result_free($owner); }
     }
-    private function requireBlockingContext(): void
-    {
-        if (\Fiber::getCurrent() !== null) throw new UsageFailure('blocking wait is unavailable inside a fiber; use poll');
-    }
     /** Wait for native readiness without consuming a packet; poll stays nonblocking. */
     public function wait(): void
     {
-        $this->requireBlockingContext();
+        \ThinkThen\Internal\requireBlockingContext();
         if ($this->session === null) throw new UsageFailure('operation is closed');
         $ready = $this->ffi->new('uint32_t');
         $interest = $this->producer !== null ? \ThinkThen\Internal\Session\THINKTHEN_SESSION_WAIT_INPUT_V1 : \ThinkThen\Internal\Session\THINKTHEN_SESSION_WAIT_SETTLEMENT_V1;
@@ -80,7 +83,7 @@ final class Operation
     public function result(): \ThinkThen\Results\Result
     {
         try {
-            $this->requireBlockingContext();
+            \ThinkThen\Internal\requireBlockingContext();
             while ($this->terminal === null) {
                 // Host generators, tokens and async signal handlers must regain the VM.
                 $blocking = $this->producer === null && $this->token === null

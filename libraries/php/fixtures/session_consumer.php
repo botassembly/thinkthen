@@ -236,6 +236,10 @@ if ($mode === 'usage-written' || $mode === 'usage-failed') {
         }
     }))->start();
     check(!$fiberProduced, 'fiber blocking result consumed producer');
+    (new Fiber(function() use ($client) {
+        try { $client->decide('Is it?', 'unreachable-fiber-sync'); throw new RuntimeException('fiber synchronous call admitted'); }
+        catch (ThinkThen\UsageFailure $error) { check($error->getMessage() === 'blocking wait is unavailable inside a fiber; use poll', 'fiber call refusal before admission'); }
+    }))->start();
     $produced = false;
     try { $client->plan('decide', 'Is it?', (function() use (&$produced) { $produced = true; yield 'unreachable'; })()); throw new RuntimeException('feed plan admitted'); }
     catch (ThinkThen\UsageFailure) {}
