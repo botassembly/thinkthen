@@ -7,8 +7,8 @@ import thinkthen.Results.RecognizeEntities
 
 suspend fun main() = KotlinEngine().use { tt ->
     val kinds = listOf("person", "product", "place")
-        .associateWith {
-            null as Inputs.AuthoredDescription?
+        .fold(Inputs.Ordered<Inputs.AuthoredDescription>()) { values, name ->
+            values.entry(name, null)
         }
     val ask = RequestQuestionDefinition().value(
         Inputs.RequestDefinitionRecognizeDefinition()

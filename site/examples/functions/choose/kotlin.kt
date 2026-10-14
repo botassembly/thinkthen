@@ -1,3 +1,4 @@
+import thinkthen.Inputs.Ordered
 import thinkthen.Inputs.AuthoredDescription
 import thinkthen.Inputs.AuthoredOptions
 import thinkthen.Inputs.AuthoredQuestionText
@@ -8,11 +9,13 @@ import thinkthen.kotlin.KotlinEngine
 
 suspend fun main() = KotlinEngine().use { tt ->
     val question = "Which team owns this?"
-    val teams = mapOf(
+    val teams = listOf(
         "billing" to "Invoices, fees, and refunds.",
         "shipping" to "Parcels and delivery.",
         "account" to "Logins and passwords.",
-    ).mapValues { AuthoredDescription(it.value) }
+    ).fold(Ordered<AuthoredDescription>()) { values, (name, text) ->
+        values.entry(name, AuthoredDescription(text))
+    }
     val owner = RequestQuestionDefinition().value(
         RequestDefinitionAuthoredChoose()
             .choose(AuthoredQuestionText(question))

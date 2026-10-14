@@ -1,7 +1,6 @@
-import java.util.LinkedHashMap;
-import java.util.Map;
 import thinkthen.Engine;
 import thinkthen.Inputs.AuthoredDescription;
+import thinkthen.Inputs.Ordered;
 import thinkthen.Inputs.AuthoredOptions;
 import thinkthen.Inputs.AuthoredQuestionText;
 import thinkthen.Inputs.RequestDefinitionAuthoredChoose;
@@ -11,13 +10,12 @@ import thinkthen.Inputs.RequestQuestionDefinition;
 public class Choose {
     public static void main(String[] args) {
         var question = "Which team owns this?";
-        Map<String, AuthoredDescription> teams =
-            new LinkedHashMap<>();
-        teams.put("billing", new AuthoredDescription(
+        var teams = new Ordered<AuthoredDescription>();
+        teams.entry("billing", new AuthoredDescription(
             "Invoices, fees, and refunds."));
-        teams.put("shipping", new AuthoredDescription(
+        teams.entry("shipping", new AuthoredDescription(
             "Parcels and delivery."));
-        teams.put("account", new AuthoredDescription(
+        teams.entry("account", new AuthoredDescription(
             "Logins and passwords."));
         var owner = new RequestQuestionDefinition().value(
             new RequestDefinitionAuthoredChoose()

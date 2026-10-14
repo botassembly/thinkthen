@@ -1,6 +1,4 @@
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 import thinkthen.Engine;
 import thinkthen.Inputs;
 import thinkthen.Inputs.RequestInputText;
@@ -10,11 +8,10 @@ import thinkthen.Results.RecognizeEntities;
 public class Recognize {
     public static void main(String[] args) {
         var kinds =
-            new LinkedHashMap<String,
-                Inputs.AuthoredDescription>();
-        kinds.put("person", null);
-        kinds.put("product", null);
-        kinds.put("place", null);
+            new Inputs.Ordered<Inputs.AuthoredDescription>();
+        kinds.entry("person", null);
+        kinds.entry("product", null);
+        kinds.entry("place", null);
         var ask = new RequestQuestionDefinition().value(
             new Inputs
                 .RequestDefinitionRecognizeDefinition()
