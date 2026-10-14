@@ -10,6 +10,13 @@ for root in ROOTS:
 RESULTS = dict(zip(('decide', 'choose', 'tag', 'score', 'filter', 'rank', 'annotate', 'recognize', 'find', 'relate'), ROOTS))
 
 
+def required_present(value, field, schema):
+    if value[field] is not None or value.get(field + '_present'):
+        return True
+    return any(not isinstance(choice, dict) or not choice or choice.get('type') == 'null'
+               for choice in MODEL.alternatives(schema))
+
+
 def restore(descriptor, value, json_text=False):
     if value is None:
         return None
@@ -33,6 +40,8 @@ def restore(descriptor, value, json_text=False):
         for alternative in MODEL.object_alternatives.get(child, []):
             members = alternative['properties']
             if populated <= members.keys() and all(
+                    required_present(value, field, members[field])
+                    for field in alternative.get('required', [])) and all(
                     value[field] == shape['const'] for field, shape in members.items() if 'const' in shape):
                 required = required | set(alternative.get('required', []))
         for field, shape in fields.items():
