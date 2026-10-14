@@ -10,6 +10,8 @@ Reviews: revision 0043787, accept
 
 Reviews: revision 544c42d, accept
 
+Reviews: revision 41f439a, reject
+
 ## Outcome
 
 In every library except C, each of the ten functions returns one result with `value`, `probability`, `results` and `facts`, and no details switch or separate details call exists.
