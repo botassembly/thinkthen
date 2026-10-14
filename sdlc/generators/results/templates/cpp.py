@@ -47,7 +47,7 @@ def typ(raw, presence=False):
     if 'primitive_variants' in s:
         schemas=s.get('primitive_schemas',{})
         return 'std::variant<'+', '.join(dict.fromkeys(typ(schemas.get(k,{'type':k})) for k in s['primitive_variants'] if not presence or k != 'null'))+'>'
-    return {'string':'std::string','boolean':'bool','integer':integer_type(s),'number':'double','null':'std::nullptr_t'}.get(kind,'Json') if isinstance(kind,str) else 'Json'
+    return {'string':'std::string','boolean':'bool','integer':integer_type(s),'number':'double','null':'std::nullptr_t'}.get(kind,'Data') if isinstance(kind,str) else 'Data'
 
 def condition(tag):
     mode,member,value=tag
@@ -66,6 +66,9 @@ def cache_body(owner, value_type, method, expression):
 
 
 def render(definitions,version):
+    from generate import ROOT, SCHEMA, graph, immediate_schema, prepare
+    extras = prepare(graph(immediate_schema(json.loads(SCHEMA.read_text())), ('completeImmediateFacts',)))
+    definitions = dict(sorted({**extras, **definitions}.items()))
     lines=['// Generated from the shared Rust result graph; do not edit.','#pragma once','#include "result_value.hpp"','#include <memory>','#include <atomic>','namespace tt::results {',f'inline constexpr const char* request_version = {json.dumps(version)};']
     for key in definitions: lines += [f'class {name(key)};']
     bodies=[]
@@ -88,9 +91,9 @@ def render(definitions,version):
         if 'properties' not in s and 'variants' not in s:
             t=typ(s)
             lines += [cache_field(t, 'value'), f'public: const {t}& value() const;']
-            bodies += [cache_body(n, t, 'value', f'decode<{t}>(value_)')]
+            bodies += [cache_body(n, t, 'value', f'detail::decode<{t}>(value_)')]
         lines += ['};']
-    return '\n'.join(lines+bodies+['}'])+'\n' + answer_helpers(definitions) + native_values(definitions)
+    return usage((ROOT / 'libraries/c/include/thinkthen.h').read_text()) + '\n'.join(lines+bodies+['}'])+'\n' + answer_helpers(definitions) + native_values(definitions)
 
 def input_render(definitions):
     lines=['// Generated from request.schema.json; do not edit.','#pragma once','#include "result_value.hpp"','namespace tt::inputs {','using results::Node;']
@@ -98,11 +101,11 @@ def input_render(definitions):
     bodies=[]
     for key,raw in definitions.items():
         n=name(key);s=shape(raw)
-        lines += [f'class {n} : public Node {{', f'    {n}(const Json& value, int):Node(value) {{}}', f'public: static {n} from_document(const Json& value) {{ return {n}(value,0); }}']
+        lines += [f'class {n} : public Node {{', f'    {n}(const Data& value, int):Node(value) {{}}', 'friend struct ::tt::results::detail::Loader;', 'public:']
         if 'variants' in s:
             for child,_ in s['variants']:
                 cn=name(child); lines += [f'    {n}(const {cn}& value);']
-                bodies += [f'inline {n}::{n}(const {cn}& value):Node(value.document()) {{}}']
+                bodies += [f'inline {n}::{n}(const {cn}& value):Node(::tt::results::detail::document(value)) {{}}']
         elif 'properties' in s:
             constants={k:v['const'] for k,v in s['properties'].items() if isinstance(v,dict) and 'const' in v}
             for member, field in s['properties'].items():
@@ -111,16 +114,16 @@ def input_render(definitions):
                     values = enum_values(resolved)
                     if values and len(values) == 1:
                         constants[member] = values[0]
-            expr='Json::Object{'+','.join('{'+json.dumps(k)+',Json('+json.dumps(v)+')}' for k,v in constants.items())+'}'
-            lines += [f'    {n}():Node(Json({expr})) {{}}']
+            expr='Data::Object{'+','.join('{'+json.dumps(k)+',Data('+json.dumps(v)+')}' for k,v in constants.items())+'}'
+            lines += [f'    {n}():Node(Data({expr})) {{}}']
             for member,field in s['properties'].items():
                 if isinstance(field,dict) and 'const' in field: continue
                 t=typ(field); lines += [f'    {n}& set_{member}(const {t}& value);']
-                bodies += [f'inline {n}& {n}::set_{member}(const {t}& value) {{ set_member({json.dumps(member)},results::encode(value)); return *this; }}']
+                bodies += [f'inline {n}& {n}::set_{member}(const {t}& value) {{ set_member({json.dumps(member)},results::detail::encode(value)); return *this; }}']
         else:
             t=typ(s)
             lines += [f'    explicit {n}(const {t}& value);']
-            bodies += [f'inline {n}::{n}(const {t}& value):Node(results::encode(value)) {{}}']
+            bodies += [f'inline {n}::{n}(const {t}& value):Node(results::detail::encode(value)) {{}}']
         lines += ['};']
     lines = lines + bodies
     lines += [
@@ -136,11 +139,13 @@ def input_render(definitions):
 
 def usage(header):
     members = re.findall(r'^#define (THINKTHEN_COMPLETE_USAGE_PERSISTENCE_(\w+)_V1) (\d+)\s*$', header, re.M)
-    lines = ['// Generated from the compiler-derived C header; do not edit.', '#pragma once', '#include <thinkthen/thinkthen.h>', 'namespace tt {', 'enum class UsagePersistenceState : uint32_t {']
-    lines += [word.lower() + ' = ' + symbol + ',' for symbol, word, _ in members]
+    lines = ['// Generated from the compiler-derived C header; do not edit.', '#pragma once', '#include <cstdint>', '#include <string>', '#ifndef THINKTHEN_CPP_ENUMS', '#define THINKTHEN_CPP_ENUMS', 'namespace tt {', 'enum class UsagePersistenceState : uint32_t {']
+    lines += [word.lower() + ' = ' + value + ',' for _, word, value in members]
     lines += ['};', 'enum class NativeFailureKind {']
-    lines += [word.lower() + ' = ' + symbol + ',' for symbol, word in re.findall(r'^#define (THINKTHEN_E(\w+)) \d+\s*$', header, re.M)]
-    return '\n'.join(lines + ['};', '}']) + '\n'
+    lines += [word.lower() + ' = ' + value + ',' for word, value in re.findall(r'^#define THINKTHEN_E(\w+) (\d+)\s*$', header, re.M)]
+    lines += ['};', 'inline NativeFailureKind failure_kind(const std::string& name) {']
+    lines += [f'if(name=="{word.lower()}") return NativeFailureKind::{word.lower()};' for word, _ in re.findall(r'^#define THINKTHEN_E(\w+) (\d+)\s*$', header, re.M)]
+    return '\n'.join(lines + ['return NativeFailureKind::defect;', '}', '}', '#endif']) + '\n'
 
 
 def named_calls(functions, native_functions):
@@ -152,21 +157,10 @@ def named_calls(functions, native_functions):
                   f'return AnswerCall<results::read_{function}>(static_cast<const Owner*>(this)->start({json.dumps(function)}, question, input, options));', '}']
     if 'thinkthen_request_plan_named_value' in native_functions:
         lines += ['results::Plan plan(const inputs::RequestCall& call) const {',
-                  'const auto& value=call.document(); auto function=value.at("function").get<std::string>();',
-                  'auto question=value.at("question").dump(), input=value.at("input").dump();',
-                  'auto options=value.contains("options") ? value.at("options").dump() : std::string("{}");',
-                  'thinkthen_named_request_v1 request{{function.data(),function.size()},{question.data(),question.size()},{input.data(),input.size()},{options.data(),options.size()}};',
-                  'thinkthen_value* raw=nullptr;',
-                  'detail::check_session(thinkthen_request_plan_named_value(static_cast<const Owner*>(this)->native_engine(),&request,&raw));',
-                  'std::unique_ptr<thinkthen_value,decltype(&thinkthen_value_free)> owned(raw,&thinkthen_value_free);',
-                  'const thinkthen_complete_json_v1* view=nullptr; detail::check_session(thinkthen_value_view(owned.get(),&view));',
-                  'return results::Plan(results::detail::native_value(view));', '}']
-    for symbol, operation in usage_operations(native_functions):
+                  'return static_cast<const Owner*>(this)->plan_impl(call);', '}']
+    for _, operation in usage_operations(native_functions):
         lines += [f'UsageStatus {operation}() const {{',
-                  'auto engine=static_cast<const Owner*>(this)->native_engine();',
-                  'thinkthen_complete_usage_persistence_v1 state{}; thinkthen_complete_utf8_v1 advice{};',
-                  f'detail::check_session({symbol}(engine,&state,&advice));',
-                  'return {static_cast<UsagePersistenceState>(state.kind),advice.data ? std::optional<std::string>(std::string(advice.data,advice.len)) : std::nullopt};', '}']
+                  f'return static_cast<const Owner*>(this)->usage_impl({str(operation == "finish_usage_status").lower()});', '}']
     return '\n'.join(lines + ['};', '}']) + '\n'
 
 
@@ -176,17 +170,21 @@ def answer_helpers(definitions):
     scalar_names = {function for function, _, _ in scalars}
     path, guards = judgment_route(definitions)
     def access(parts):
-        return 'packet.document()' + ''.join('.at(' + json.dumps(part) + ')' for part in parts)
-    lines = ['namespace tt::results {',
-             'class AnswerCardinalityFailure : public std::runtime_error { public:',
-             'std::vector<SessionPacket> packets;',
-             'AnswerCardinalityFailure(const char* message, const std::vector<SessionPacket>& values):std::runtime_error(message),packets(values) {}', '};',
+        return '::tt::results::detail::document(packet)' + ''.join('.at(' + json.dumps(part) + ')' for part in parts)
+    lines = ['namespace tt {',
+             'class Failure : public std::runtime_error { public:',
+             'NativeFailureKind kind;', 'bool retryable=false;',
+             'std::optional<results::ImmediateFacts> facts;', 'std::optional<results::CallError> failure;',
+             'std::optional<results::SessionPacketTerminal> terminal;', 'std::vector<results::SessionPacket> packets;',
+             'Failure(int code, const std::string& message);',
+             'Failure(const char* message, const std::vector<results::SessionPacket>& values);',
+             'explicit Failure(results::SessionPacketTerminal value);', '};', '}', 'namespace tt::results {',
              'inline void successful_answer(const std::vector<SessionPacket>& packets) {',
              'size_t terminals=0;',
-             'for(const auto& packet:packets) if(literal(packet.document(), "kind", "terminal")) {',
+             'for(const auto& packet:packets) if(literal(::tt::results::detail::document(packet), "kind", "terminal")) {',
              '++terminals;',
-             'if(packet.document().contains("failure")) throw AnswerCardinalityFailure("terminal contains a failure",packets);', '}',
-             'if(terminals!=1 || packets.empty() || !literal(packets.back().document(),"kind","terminal")) throw AnswerCardinalityFailure("expected one final successful terminal",packets);', '}']
+             'if(::tt::results::detail::document(packet).contains("failure")) throw ::tt::Failure("terminal contains a failure",packets);', '}',
+             'if(terminals!=1 || packets.empty() || !literal(::tt::results::detail::document(packets.back()),"kind","terminal")) throw ::tt::Failure("expected one final successful terminal",packets);', '}']
     for function, kind, payload in scalars:
         nullable = isinstance(payload.get('type'), list) and 'null' in payload['type']
         raw = {**payload, 'type': next(k for k in payload['type'] if k != 'null')} if nullable else payload
@@ -198,12 +196,12 @@ def answer_helpers(definitions):
                   f'for(const auto& packet:packets) if({guard}) {{',
                   f'const auto& judgment={access(path)};',
                   f'if(!literal(judgment,"kind",{json.dumps(kind)})) continue;',
-                  'if(answer) throw AnswerCardinalityFailure("multiple matching judgments",packets);']
-        expression = f'decode<{value_type}>(judgment.at("value"))'
+                  'if(answer) throw ::tt::Failure("multiple matching judgments",packets);']
+        expression = f'detail::decode<{value_type}>(judgment.at("value"))'
         if nullable:
             expression = f'judgment.at("value").is_null() ? {answer_type}{{}} : {answer_type}({expression})'
         lines += [f'answer.emplace({expression});', '}',
-                  'if(!answer) throw AnswerCardinalityFailure("no matching judgment",packets);', 'return std::move(*answer);', '}']
+                  'if(!answer) throw ::tt::Failure("no matching judgment",packets);', 'return std::move(*answer);', '}']
     for function, aggregate, payload in aggregate_answers(definitions):
         if function in scalar_names: continue
         projected, member = aggregate_projection(function, payload, definitions)
@@ -211,10 +209,10 @@ def answer_helpers(definitions):
             value_type = typ(projected['items'])
             lines += [f'inline std::vector<{value_type}> read_{function}(const std::vector<SessionPacket>& packets) {{',
                       'successful_answer(packets);', f'std::vector<{value_type}> answer;',
-                      f'for(const auto& packet:packets) {{ if(literal(packet.document(),"function",{json.dumps(function)})) {{',
-                      'const auto& value=packet.document().at("value");',
-                      f'if(literal(packet.document(),"kind","row")) answer.push_back(decode<{value_type}>(value.at({json.dumps(member)})));',
-                      f'else if(literal(packet.document(),"kind","aggregate")) {{ if(!answer.empty()) continue; for(const auto& row:value) answer.push_back(decode<{value_type}>(row.at({json.dumps(member)}))); }}',
+                      f'for(const auto& packet:packets) {{ if(literal(::tt::results::detail::document(packet),"function",{json.dumps(function)})) {{',
+                      'const auto& value=::tt::results::detail::document(packet).at("value");',
+                      f'if(literal(::tt::results::detail::document(packet),"kind","row")) answer.push_back(detail::decode<{value_type}>(value.at({json.dumps(member)})));',
+                      f'else if(literal(::tt::results::detail::document(packet),"kind","aggregate")) {{ if(!answer.empty()) continue; for(const auto& row:value) answer.push_back(detail::decode<{value_type}>(row.at({json.dumps(member)}))); }}',
                       '}}', 'return answer;', '}']
             continue
         rows = [(key, value['properties']['value']) for key, value in definitions.items()
@@ -232,9 +230,9 @@ def answer_helpers(definitions):
             lines += [f'inline {value_type} read_{function}(const std::vector<SessionPacket>& packets) {{',
                       'successful_answer(packets);', f'std::optional<{value_type}> answer;',
                       f'for(const auto& packet:packets) if(auto aggregate=packet.as_{name(aggregate)}()) {{',
-                      'if(answer) throw AnswerCardinalityFailure("multiple matching aggregates",packets);',
+                      'if(answer) throw ::tt::Failure("multiple matching aggregates",packets);',
                       'answer.emplace(*aggregate->value().value);', '}',
-                      'if(!answer) throw AnswerCardinalityFailure("no matching aggregate",packets);',
+                      'if(!answer) throw ::tt::Failure("no matching aggregate",packets);',
                       'return std::move(*answer);', '}']
     return '\n'.join(lines + ['}']).replace('literal(', 'detail::literal(') + '\n'
 
@@ -267,22 +265,22 @@ def native_values(definitions):
     target = Layout()
     for key, schema in definitions.items():
         target.definition(key, schema)
-    lines = ['#include <thinkthen/thinkthen.h>', 'namespace tt::results::detail {']
-    lines += [f'inline Json native_value(const {key}& value);' for key in target.members]
-    lines += ['inline Json native_value(const thinkthen_complete_json_v1& value);',
-              'inline Json native_value(const thinkthen_complete_utf8_v1& value) { return Json(std::string(value.data ? value.data : "", value.len)); }',
-              'template<class T> Json native_value(const T* value) { if(!value) throw std::invalid_argument("missing native value"); return native_value(*value); }',
-              'template<class T, std::enable_if_t<std::is_arithmetic_v<T>, int> = 0> Json native_value(T value) { return Json(value); }',
-              'inline Json native_value(const thinkthen_complete_json_v1& value) {',
+    lines = ['#ifdef THINKTHEN_CPP_IMPLEMENTATION', '#include <thinkthen/thinkthen.h>', 'namespace tt::results::detail {']
+    lines += [f'inline Data native_value(const {key}& value);' for key in target.members]
+    lines += ['inline Data native_value(const thinkthen_complete_json_v1& value);',
+              'inline Data native_value(const thinkthen_complete_utf8_v1& value) { return Data(std::string(value.data ? value.data : "", value.len)); }',
+              'template<class T> Data native_value(const T* value) { if(!value) throw std::invalid_argument("missing native value"); return native_value(*value); }',
+              'template<class T, std::enable_if_t<std::is_arithmetic_v<T>, int> = 0> Data native_value(T value) { return Data(value); }',
+              'inline Data native_value(const thinkthen_complete_json_v1& value) {',
               'switch(value.kind) {',
-              'case THINKTHEN_COMPLETE_JSON_NULL_V1: return Json(nullptr);',
-              'case THINKTHEN_COMPLETE_JSON_BOOLEAN_V1: return Json(bool(value.data.boolean));',
+              'case THINKTHEN_COMPLETE_JSON_NULL_V1: return Data(nullptr);',
+              'case THINKTHEN_COMPLETE_JSON_BOOLEAN_V1: return Data(bool(value.data.boolean));',
               'case THINKTHEN_COMPLETE_JSON_STRING_V1: return native_value(value.data.string);',
               'case THINKTHEN_COMPLETE_JSON_NUMBER_V1: { auto text=native_value(value.data.number).get<std::string>();',
-              'if(text.find_first_of(".eE")==std::string::npos) { if(!text.empty() && text[0]==\'-\') { int64_t number{}; auto parsed=std::from_chars(text.data(),text.data()+text.size(),number); if(parsed.ec==std::errc{}) return Json(number); } else { uint64_t number{}; auto parsed=std::from_chars(text.data(),text.data()+text.size(),number); if(parsed.ec==std::errc{}) return Json(number); } }',
-              'double number{}; auto parsed=std::from_chars(text.data(),text.data()+text.size(),number); if(parsed.ec!=std::errc{}) throw std::invalid_argument("invalid native number"); return Json(number); }',
-              'case THINKTHEN_COMPLETE_JSON_ARRAY_V1: { Json::Array items; for(size_t i=0;i<value.data.array.len;++i) items.push_back(native_value(value.data.array.data[i])); return Json(std::move(items)); }',
-              'case THINKTHEN_COMPLETE_JSON_OBJECT_V1: { Json::Object items; for(size_t i=0;i<value.data.object.len;++i) { auto& item=value.data.object.data[i]; items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value)); } return Json(std::move(items)); }',
+              'if(text.find_first_of(".eE")==std::string::npos) { if(!text.empty() && text[0]==\'-\') { int64_t number{}; auto parsed=std::from_chars(text.data(),text.data()+text.size(),number); if(parsed.ec==std::errc{}) return Data(number); } else { uint64_t number{}; auto parsed=std::from_chars(text.data(),text.data()+text.size(),number); if(parsed.ec==std::errc{}) return Data(number); } }',
+              'double number{}; auto parsed=std::from_chars(text.data(),text.data()+text.size(),number); auto exponent=text.find_first_of("eE"); if(parsed.ec==std::errc::result_out_of_range && exponent!=std::string::npos && exponent+1<text.size() && text[exponent+1]=="-"[0]) return Data(text[0]=="-"[0] ? -0.0 : 0.0); if(parsed.ec!=std::errc{}) throw std::invalid_argument("invalid native number"); return Data(number); }',
+              'case THINKTHEN_COMPLETE_JSON_ARRAY_V1: { Data::Array items; for(size_t i=0;i<value.data.array.len;++i) items.push_back(native_value(value.data.array.data[i])); return Data(std::move(items)); }',
+              'case THINKTHEN_COMPLETE_JSON_OBJECT_V1: { Data::Object items; for(size_t i=0;i<value.data.object.len;++i) { auto& item=value.data.object.data[i]; items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value)); } return Data(std::move(items)); }',
               'default: throw std::invalid_argument("invalid native value kind"); } }']
     for key, members in target.members.items():
         schema = target.schemas.get(key, {})
@@ -292,43 +290,43 @@ def native_values(definitions):
             for arm, _, _, _ in target.arms[key]:
                 symbol = key.removesuffix('_v1').upper() + '_' + arm.upper() + '_V1'
                 field = arm + '_' if arm in ('true', 'false') else arm
-                expression = 'Json(nullptr)' if arm == 'null' else f'native_value(value.data.{field})'
-                if arm == 'boolean': expression = f'Json(bool(value.data.{field}))'
+                expression = 'Data(nullptr)' if arm == 'null' else f'native_value(value.data.{field})'
+                if arm == 'boolean': expression = f'Data(bool(value.data.{field}))'
                 body += [f'case {symbol}: return {expression};']
             body += ['default: throw std::invalid_argument("invalid native alternative"); }']
         elif 'enum' in schema:
             body += ['switch(value.kind) {']
             for value in schema['enum']:
                 symbol = key.removesuffix('_v1').upper() + '_' + re.sub(r'[^A-Za-z0-9]+', '_', value).strip('_').upper() + '_V1'
-                body += [f'case {symbol}: return Json({json.dumps(value)});']
+                body += [f'case {symbol}: return Data({json.dumps(value)});']
             body += ['default: throw std::invalid_argument("invalid native enum"); }']
         elif 'properties' in schema:
-            body += ['Json::Object items;']
+            body += ['Data::Object items;']
             for member, field_type in members:
                 if member == 'extensions': continue
                 expression = f'value.{member + "_" if member in ("true", "false") else member}'
                 if field_type.endswith('_presence_v1'):
                     decoded = f'native_value({expression}.value)'
                     if c.normalized(schema['properties'][member]).get('type') == 'boolean':
-                        decoded = f'Json(bool({expression}.value))'
-                    body += [f'if({expression}.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back({json.dumps(member)},Json(nullptr));',
+                        decoded = f'Data(bool({expression}.value))'
+                    body += [f'if({expression}.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back({json.dumps(member)},Data(nullptr));',
                              f'else if({expression}.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back({json.dumps(member)},{decoded});']
                 else:
                     decoded = f'native_value({expression})'
-                    if c.normalized(schema['properties'][member]).get('type') == 'boolean': decoded = f'Json(bool({expression}))'
+                    if c.normalized(schema['properties'][member]).get('type') == 'boolean': decoded = f'Data(bool({expression}))'
                     body += [f'items.emplace_back({json.dumps(member)},{decoded});']
-            body += ['for(size_t i=0;i<value.extensions.len;++i) { auto& item=value.extensions.data[i]; items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value)); }', 'return Json(std::move(items));']
+            body += ['for(size_t i=0;i<value.extensions.len;++i) { auto& item=value.extensions.data[i]; items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value)); }', 'return Data(std::move(items));']
         elif members[0][0] == 'presence':
-            body += ['return value.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? native_value(value.value) : Json(nullptr);']
+            body += ['return value.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? native_value(value.value) : Data(nullptr);']
         elif members[0][0] == 'data':
             mapping = key.endswith('_map_v1')
-            body += ['Json::Object items;' if mapping else 'Json::Array items;', 'for(size_t i=0;i<value.len;++i) {']
+            body += ['Data::Object items;' if mapping else 'Data::Array items;', 'for(size_t i=0;i<value.len;++i) {']
             body += ['auto& item=value.data[i]; items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));' if mapping else 'items.push_back(native_value(value.data[i]));']
-            body += ['}', 'return Json(std::move(items));']
+            body += ['}', 'return Data(std::move(items));']
         elif members[0][0] == 'name':
             body += ['return native_value(value.value);']
         else:
-            expression = 'Json(bool(value.value))' if schema.get('type') == 'boolean' else 'native_value(value.value)'
+            expression = 'Data(bool(value.value))' if schema.get('type') == 'boolean' else 'native_value(value.value)'
             body += [f'return {expression};']
-        lines += [f'inline Json native_value(const {key}& value) {{'] + body + ['}']
-    return '\n'.join(lines + ['}']) + '\n'
+        lines += [f'inline Data native_value(const {key}& value) {{'] + body + ['}']
+    return '\n'.join(lines + ['}', '#endif']) + '\n'

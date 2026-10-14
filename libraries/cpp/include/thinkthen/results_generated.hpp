@@ -1,3 +1,35 @@
+// Generated from the compiler-derived C header; do not edit.
+#pragma once
+#include <cstdint>
+#include <string>
+#ifndef THINKTHEN_CPP_ENUMS
+#define THINKTHEN_CPP_ENUMS
+namespace tt {
+    enum class UsagePersistenceState : uint32_t {
+        disabled = 1,
+        failed = 4,
+        pending = 2,
+        written = 3,
+    };
+    enum class NativeFailureKind {
+        backend = 2,
+        cancelled = 5,
+        deadline = 3,
+        defect = 6,
+        local = 4,
+        usage = 1,
+    };
+    inline NativeFailureKind failure_kind(const std::string& name) {
+        if(name=="backend") return NativeFailureKind::backend;
+        if(name=="cancelled") return NativeFailureKind::cancelled;
+        if(name=="deadline") return NativeFailureKind::deadline;
+        if(name=="defect") return NativeFailureKind::defect;
+        if(name=="local") return NativeFailureKind::local;
+        if(name=="usage") return NativeFailureKind::usage;
+        return NativeFailureKind::defect;
+    }
+}
+#endif
 // Generated from the shared Rust result graph; do not edit.
 #pragma once
 #include "result_value.hpp"
@@ -43,6 +75,7 @@ namespace tt::results {
     class FindCandidate;
     class Image;
     class ImageMedia;
+    class ImmediateFacts;
     class InputDeclaration;
     class InputDeclarationObjectRoot;
     class InputDeclarationStringRoot;
@@ -198,8 +231,8 @@ namespace tt::results {
         public: const Presence<uint64_t>& first_line() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<uint64_t>>> cached_index_ = std::make_shared<std::shared_ptr<const Presence<uint64_t>>>();
         public: const Presence<uint64_t>& index() const;
-        private: std::shared_ptr<std::shared_ptr<const Presence<Json>>> cached_input_ = std::make_shared<std::shared_ptr<const Presence<Json>>>();
-        public: const Presence<Json>& input() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<Data>>> cached_input_ = std::make_shared<std::shared_ptr<const Presence<Data>>>();
+        public: const Presence<Data>& input() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<uint64_t>>> cached_last_line_ = std::make_shared<std::shared_ptr<const Presence<uint64_t>>>();
         public: const Presence<uint64_t>& last_line() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<Meta>>> cached_meta_ = std::make_shared<std::shared_ptr<const Presence<Meta>>>();
@@ -321,8 +354,8 @@ namespace tt::results {
         public: const Presence<std::vector<Image>>& images() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<uint64_t>>> cached_index_ = std::make_shared<std::shared_ptr<const Presence<uint64_t>>>();
         public: const Presence<uint64_t>& index() const;
-        private: std::shared_ptr<std::shared_ptr<const Presence<Json>>> cached_input_ = std::make_shared<std::shared_ptr<const Presence<Json>>>();
-        public: const Presence<Json>& input() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<Data>>> cached_input_ = std::make_shared<std::shared_ptr<const Presence<Data>>>();
+        public: const Presence<Data>& input() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<std::vector<RankMember>>>> cached_members_ = std::make_shared<std::shared_ptr<const Presence<std::vector<RankMember>>>>();
         public: const Presence<std::vector<RankMember>>& members() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<Meta>>> cached_meta_ = std::make_shared<std::shared_ptr<const Presence<Meta>>>();
@@ -350,8 +383,8 @@ namespace tt::results {
         public: const Presence<std::vector<Image>>& images() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<uint64_t>>> cached_index_ = std::make_shared<std::shared_ptr<const Presence<uint64_t>>>();
         public: const Presence<uint64_t>& index() const;
-        private: std::shared_ptr<std::shared_ptr<const Presence<Json>>> cached_input_ = std::make_shared<std::shared_ptr<const Presence<Json>>>();
-        public: const Presence<Json>& input() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<Data>>> cached_input_ = std::make_shared<std::shared_ptr<const Presence<Data>>>();
+        public: const Presence<Data>& input() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<std::vector<RankMember>>>> cached_members_ = std::make_shared<std::shared_ptr<const Presence<std::vector<RankMember>>>>();
         public: const Presence<std::vector<RankMember>>& members() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<Meta>>> cached_meta_ = std::make_shared<std::shared_ptr<const Presence<Meta>>>();
@@ -379,8 +412,8 @@ namespace tt::results {
         public: const Presence<std::vector<Image>>& images() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<uint64_t>>> cached_index_ = std::make_shared<std::shared_ptr<const Presence<uint64_t>>>();
         public: const Presence<uint64_t>& index() const;
-        private: std::shared_ptr<std::shared_ptr<const Presence<Json>>> cached_input_ = std::make_shared<std::shared_ptr<const Presence<Json>>>();
-        public: const Presence<Json>& input() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<Data>>> cached_input_ = std::make_shared<std::shared_ptr<const Presence<Data>>>();
+        public: const Presence<Data>& input() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<std::vector<RankMember>>>> cached_members_ = std::make_shared<std::shared_ptr<const Presence<std::vector<RankMember>>>>();
         public: const Presence<std::vector<RankMember>>& members() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<Meta>>> cached_meta_ = std::make_shared<std::shared_ptr<const Presence<Meta>>>();
@@ -408,8 +441,8 @@ namespace tt::results {
         public: const Presence<std::vector<Image>>& images() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<uint64_t>>> cached_index_ = std::make_shared<std::shared_ptr<const Presence<uint64_t>>>();
         public: const Presence<uint64_t>& index() const;
-        private: std::shared_ptr<std::shared_ptr<const Presence<Json>>> cached_input_ = std::make_shared<std::shared_ptr<const Presence<Json>>>();
-        public: const Presence<Json>& input() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<Data>>> cached_input_ = std::make_shared<std::shared_ptr<const Presence<Data>>>();
+        public: const Presence<Data>& input() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<std::vector<RankMember>>>> cached_members_ = std::make_shared<std::shared_ptr<const Presence<std::vector<RankMember>>>>();
         public: const Presence<std::vector<RankMember>>& members() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<Meta>>> cached_meta_ = std::make_shared<std::shared_ptr<const Presence<Meta>>>();
@@ -437,8 +470,8 @@ namespace tt::results {
         public: const Presence<std::vector<Image>>& images() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<uint64_t>>> cached_index_ = std::make_shared<std::shared_ptr<const Presence<uint64_t>>>();
         public: const Presence<uint64_t>& index() const;
-        private: std::shared_ptr<std::shared_ptr<const Presence<Json>>> cached_input_ = std::make_shared<std::shared_ptr<const Presence<Json>>>();
-        public: const Presence<Json>& input() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<Data>>> cached_input_ = std::make_shared<std::shared_ptr<const Presence<Data>>>();
+        public: const Presence<Data>& input() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<std::vector<RankMember>>>> cached_members_ = std::make_shared<std::shared_ptr<const Presence<std::vector<RankMember>>>>();
         public: const Presence<std::vector<RankMember>>& members() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<Meta>>> cached_meta_ = std::make_shared<std::shared_ptr<const Presence<Meta>>>();
@@ -466,8 +499,8 @@ namespace tt::results {
         public: const Presence<std::vector<Image>>& images() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<uint64_t>>> cached_index_ = std::make_shared<std::shared_ptr<const Presence<uint64_t>>>();
         public: const Presence<uint64_t>& index() const;
-        private: std::shared_ptr<std::shared_ptr<const Presence<Json>>> cached_input_ = std::make_shared<std::shared_ptr<const Presence<Json>>>();
-        public: const Presence<Json>& input() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<Data>>> cached_input_ = std::make_shared<std::shared_ptr<const Presence<Data>>>();
+        public: const Presence<Data>& input() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<std::vector<RankMember>>>> cached_members_ = std::make_shared<std::shared_ptr<const Presence<std::vector<RankMember>>>>();
         public: const Presence<std::vector<RankMember>>& members() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<Meta>>> cached_meta_ = std::make_shared<std::shared_ptr<const Presence<Meta>>>();
@@ -549,8 +582,8 @@ namespace tt::results {
     };
     class DecideValue : public Node {
         public: using Node::Node;
-        private: std::shared_ptr<std::shared_ptr<const Json>> cached_value_ = std::make_shared<std::shared_ptr<const Json>>();
-        public: const Json& value() const;
+        private: std::shared_ptr<std::shared_ptr<const Data>> cached_value_ = std::make_shared<std::shared_ptr<const Data>>();
+        public: const Data& value() const;
     };
     class EntityDocument : public Node {
         public: using Node::Node;
@@ -667,15 +700,15 @@ namespace tt::results {
         public: const Presence<Version>& schema() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<std::nullptr_t>>> cached_threshold_ = std::make_shared<std::shared_ptr<const Presence<std::nullptr_t>>>();
         public: const Presence<std::nullptr_t>& threshold() const;
-        private: std::shared_ptr<std::shared_ptr<const Presence<Json>>> cached_value_ = std::make_shared<std::shared_ptr<const Presence<Json>>>();
-        public: const Presence<Json>& value() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<Data>>> cached_value_ = std::make_shared<std::shared_ptr<const Presence<Data>>>();
+        public: const Presence<Data>& value() const;
     };
     class FindCandidate : public Node {
         public: using Node::Node;
         private: std::shared_ptr<std::shared_ptr<const Presence<uint64_t>>> cached_index_ = std::make_shared<std::shared_ptr<const Presence<uint64_t>>>();
         public: const Presence<uint64_t>& index() const;
-        private: std::shared_ptr<std::shared_ptr<const Presence<Json>>> cached_input_ = std::make_shared<std::shared_ptr<const Presence<Json>>>();
-        public: const Presence<Json>& input() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<Data>>> cached_input_ = std::make_shared<std::shared_ptr<const Presence<Data>>>();
+        public: const Presence<Data>& input() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<double>>> cached_probability_ = std::make_shared<std::shared_ptr<const Presence<double>>>();
         public: const Presence<double>& probability() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<PhysicalSource>>> cached_source_ = std::make_shared<std::shared_ptr<const Presence<PhysicalSource>>>();
@@ -696,6 +729,39 @@ namespace tt::results {
         public: using Node::Node;
         private: std::shared_ptr<std::shared_ptr<const std::string>> cached_value_ = std::make_shared<std::shared_ptr<const std::string>>();
         public: const std::string& value() const;
+    };
+    class ImmediateFacts : public Node {
+        public: using Node::Node;
+        private: std::shared_ptr<std::shared_ptr<const Presence<std::vector<Attempt>>>> cached_attempts_ = std::make_shared<std::shared_ptr<const Presence<std::vector<Attempt>>>>();
+        public: const Presence<std::vector<Attempt>>& attempts() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<uint64_t>>> cached_cache_answers_ = std::make_shared<std::shared_ptr<const Presence<uint64_t>>>();
+        public: const Presence<uint64_t>& cache_answers() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<CallId>>> cached_call_id_ = std::make_shared<std::shared_ptr<const Presence<CallId>>>();
+        public: const Presence<CallId>& call_id() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_estimated_cost_usd_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
+        public: const Presence<std::string>& estimated_cost_usd() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<bool>>> cached_held_model_mismatch_ = std::make_shared<std::shared_ptr<const Presence<bool>>>();
+        public: const Presence<bool>& held_model_mismatch() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<uint64_t>>> cached_input_tokens_ = std::make_shared<std::shared_ptr<const Presence<uint64_t>>>();
+        public: const Presence<uint64_t>& input_tokens() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<uint64_t>>> cached_largest_request_bytes_ = std::make_shared<std::shared_ptr<const Presence<uint64_t>>>();
+        public: const Presence<uint64_t>& largest_request_bytes() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<uint64_t>>> cached_largest_request_estimated_input_tokens_ = std::make_shared<std::shared_ptr<const Presence<uint64_t>>>();
+        public: const Presence<uint64_t>& largest_request_estimated_input_tokens() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_model_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
+        public: const Presence<std::string>& model() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<uint64_t>>> cached_output_tokens_ = std::make_shared<std::shared_ptr<const Presence<uint64_t>>>();
+        public: const Presence<uint64_t>& output_tokens() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<uint64_t>>> cached_records_ = std::make_shared<std::shared_ptr<const Presence<uint64_t>>>();
+        public: const Presence<uint64_t>& records() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<uint64_t>>> cached_requests_sent_ = std::make_shared<std::shared_ptr<const Presence<uint64_t>>>();
+        public: const Presence<uint64_t>& requests_sent() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<double>>> cached_seconds_ = std::make_shared<std::shared_ptr<const Presence<double>>>();
+        public: const Presence<double>& seconds() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_token_estimate_method_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
+        public: const Presence<std::string>& token_estimate_method() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<PersistenceObservation>>> cached_usage_persistence_ = std::make_shared<std::shared_ptr<const Presence<PersistenceObservation>>>();
+        public: const Presence<PersistenceObservation>& usage_persistence() const;
     };
     class InputDeclaration : public Node {
         public: using Node::Node;
@@ -748,8 +814,8 @@ namespace tt::results {
     };
     class Label : public Node {
         public: using Node::Node;
-        private: std::shared_ptr<std::shared_ptr<const Presence<Json>>> cached_description_ = std::make_shared<std::shared_ptr<const Presence<Json>>>();
-        public: const Presence<Json>& description() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<Data>>> cached_description_ = std::make_shared<std::shared_ptr<const Presence<Data>>>();
+        public: const Presence<Data>& description() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_name_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
         public: const Presence<std::string>& name() const;
     };
@@ -917,8 +983,8 @@ namespace tt::results {
         public: const Presence<uint64_t>& first_line() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<uint64_t>>> cached_index_ = std::make_shared<std::shared_ptr<const Presence<uint64_t>>>();
         public: const Presence<uint64_t>& index() const;
-        private: std::shared_ptr<std::shared_ptr<const Presence<Json>>> cached_input_ = std::make_shared<std::shared_ptr<const Presence<Json>>>();
-        public: const Presence<Json>& input() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<Data>>> cached_input_ = std::make_shared<std::shared_ptr<const Presence<Data>>>();
+        public: const Presence<Data>& input() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<uint64_t>>> cached_last_line_ = std::make_shared<std::shared_ptr<const Presence<uint64_t>>>();
         public: const Presence<uint64_t>& last_line() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<Meta>>> cached_meta_ = std::make_shared<std::shared_ptr<const Presence<Meta>>>();
@@ -1013,8 +1079,8 @@ namespace tt::results {
         public: const Presence<uint64_t>& first_line() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<uint64_t>>> cached_index_ = std::make_shared<std::shared_ptr<const Presence<uint64_t>>>();
         public: const Presence<uint64_t>& index() const;
-        private: std::shared_ptr<std::shared_ptr<const Presence<Json>>> cached_input_ = std::make_shared<std::shared_ptr<const Presence<Json>>>();
-        public: const Presence<Json>& input() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<Data>>> cached_input_ = std::make_shared<std::shared_ptr<const Presence<Data>>>();
+        public: const Presence<Data>& input() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<std::vector<SessionInputSource>>>> cached_input_sources_ = std::make_shared<std::shared_ptr<const Presence<std::vector<SessionInputSource>>>>();
         public: const Presence<std::vector<SessionInputSource>>& input_sources() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<uint64_t>>> cached_last_line_ = std::make_shared<std::shared_ptr<const Presence<uint64_t>>>();
@@ -1061,8 +1127,8 @@ namespace tt::results {
         public: const Presence<std::string>& name() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<uint64_t>>> cached_ordinal_ = std::make_shared<std::shared_ptr<const Presence<uint64_t>>>();
         public: const Presence<uint64_t>& ordinal() const;
-        private: std::shared_ptr<std::shared_ptr<const Presence<Json>>> cached_record_ = std::make_shared<std::shared_ptr<const Presence<Json>>>();
-        public: const Presence<Json>& record() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<Data>>> cached_record_ = std::make_shared<std::shared_ptr<const Presence<Data>>>();
+        public: const Presence<Data>& record() const;
     };
     class RelationMember : public Node {
         public: using Node::Node;
@@ -1394,8 +1460,8 @@ namespace tt::results {
         public: const Presence<std::vector<std::string>>& on() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_profile_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
         public: const Presence<std::string>& profile() const;
-        private: std::shared_ptr<std::shared_ptr<const Presence<Json>>> cached_text_ = std::make_shared<std::shared_ptr<const Presence<Json>>>();
-        public: const Presence<Json>& text() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<Data>>> cached_text_ = std::make_shared<std::shared_ptr<const Presence<Data>>>();
+        public: const Presence<Data>& text() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_verb_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
         public: const Presence<std::string>& verb() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<WordingVersion>>> cached_wording_version_ = std::make_shared<std::shared_ptr<const Presence<WordingVersion>>>();
@@ -1499,8 +1565,8 @@ namespace tt::results {
         public: const Presence<WordingVersion>& wording_version() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<std::vector<std::string>>>> cached_options_ = std::make_shared<std::shared_ptr<const Presence<std::vector<std::string>>>>();
         public: const Presence<std::vector<std::string>>& options() const;
-        private: std::shared_ptr<std::shared_ptr<const Presence<Json>>> cached_text_ = std::make_shared<std::shared_ptr<const Presence<Json>>>();
-        public: const Presence<Json>& text() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<Data>>> cached_text_ = std::make_shared<std::shared_ptr<const Presence<Data>>>();
+        public: const Presence<Data>& text() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_verb_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
         public: const Presence<std::string>& verb() const;
     };
@@ -1524,12 +1590,12 @@ namespace tt::results {
         public: const Presence<std::string>& profile() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<WordingVersion>>> cached_wording_version_ = std::make_shared<std::shared_ptr<const Presence<WordingVersion>>>();
         public: const Presence<WordingVersion>& wording_version() const;
-        private: std::shared_ptr<std::shared_ptr<const Presence<Json>>> cached_false__ = std::make_shared<std::shared_ptr<const Presence<Json>>>();
-        public: const Presence<Json>& false_() const;
-        private: std::shared_ptr<std::shared_ptr<const Presence<Json>>> cached_text_ = std::make_shared<std::shared_ptr<const Presence<Json>>>();
-        public: const Presence<Json>& text() const;
-        private: std::shared_ptr<std::shared_ptr<const Presence<Json>>> cached_true__ = std::make_shared<std::shared_ptr<const Presence<Json>>>();
-        public: const Presence<Json>& true_() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<Data>>> cached_false__ = std::make_shared<std::shared_ptr<const Presence<Data>>>();
+        public: const Presence<Data>& false_() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<Data>>> cached_text_ = std::make_shared<std::shared_ptr<const Presence<Data>>>();
+        public: const Presence<Data>& text() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<Data>>> cached_true__ = std::make_shared<std::shared_ptr<const Presence<Data>>>();
+        public: const Presence<Data>& true_() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_verb_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
         public: const Presence<std::string>& verb() const;
     };
@@ -1555,8 +1621,8 @@ namespace tt::results {
         public: const Presence<WordingVersion>& wording_version() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<std::vector<std::string>>>> cached_levels_ = std::make_shared<std::shared_ptr<const Presence<std::vector<std::string>>>>();
         public: const Presence<std::vector<std::string>>& levels() const;
-        private: std::shared_ptr<std::shared_ptr<const Presence<Json>>> cached_text_ = std::make_shared<std::shared_ptr<const Presence<Json>>>();
-        public: const Presence<Json>& text() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<Data>>> cached_text_ = std::make_shared<std::shared_ptr<const Presence<Data>>>();
+        public: const Presence<Data>& text() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_verb_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
         public: const Presence<std::string>& verb() const;
     };
@@ -1582,8 +1648,8 @@ namespace tt::results {
         public: const Presence<WordingVersion>& wording_version() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<std::vector<std::string>>>> cached_labels_ = std::make_shared<std::shared_ptr<const Presence<std::vector<std::string>>>>();
         public: const Presence<std::vector<std::string>>& labels() const;
-        private: std::shared_ptr<std::shared_ptr<const Presence<Json>>> cached_text_ = std::make_shared<std::shared_ptr<const Presence<Json>>>();
-        public: const Presence<Json>& text() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<Data>>> cached_text_ = std::make_shared<std::shared_ptr<const Presence<Data>>>();
+        public: const Presence<Data>& text() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_verb_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
         public: const Presence<std::string>& verb() const;
     };
@@ -1609,15 +1675,15 @@ namespace tt::results {
         public: const Presence<Batch>& batch() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<InputDeclaration>>> cached_context_schema_ = std::make_shared<std::shared_ptr<const Presence<InputDeclaration>>>();
         public: const Presence<InputDeclaration>& context_schema() const;
-        private: std::shared_ptr<std::shared_ptr<const Presence<Json>>> cached_entity_definition_ = std::make_shared<std::shared_ptr<const Presence<Json>>>();
-        public: const Presence<Json>& entity_definition() const;
-        private: std::shared_ptr<std::shared_ptr<const Presence<Json>>> cached_instructions_ = std::make_shared<std::shared_ptr<const Presence<Json>>>();
-        public: const Presence<Json>& instructions() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<Data>>> cached_entity_definition_ = std::make_shared<std::shared_ptr<const Presence<Data>>>();
+        public: const Presence<Data>& entity_definition() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<Data>>> cached_instructions_ = std::make_shared<std::shared_ptr<const Presence<Data>>>();
+        public: const Presence<Data>& instructions() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<InputDeclaration>>> cached_item_schema_ = std::make_shared<std::shared_ptr<const Presence<InputDeclaration>>>();
         public: const Presence<InputDeclaration>& item_schema() const;
-        private: std::shared_ptr<std::shared_ptr<const Presence<std::vector<std::pair<std::string, Json>>>>> cached_kinds_ = std::make_shared<std::shared_ptr<const Presence<std::vector<std::pair<std::string,
-        Json>>>>>();
-        public: const Presence<std::vector<std::pair<std::string, Json>>>& kinds() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<std::vector<std::pair<std::string, Data>>>>> cached_kinds_ = std::make_shared<std::shared_ptr<const Presence<std::vector<std::pair<std::string,
+        Data>>>>>();
+        public: const Presence<std::vector<std::pair<std::string, Data>>>& kinds() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<std::vector<Label>>>> cached_label_details_ = std::make_shared<std::shared_ptr<const Presence<std::vector<Label>>>>();
         public: const Presence<std::vector<Label>>& label_details() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<RecognitionMode>>> cached_mode_ = std::make_shared<std::shared_ptr<const Presence<RecognitionMode>>>();
@@ -2076,14 +2142,14 @@ namespace tt::results {
         public: const Presence<Failure>& failure() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<FailureId>>> cached_failure_id_ = std::make_shared<std::shared_ptr<const Presence<FailureId>>>();
         public: const Presence<FailureId>& failure_id() const;
-        private: std::shared_ptr<std::shared_ptr<const Presence<Json>>> cached_input_ = std::make_shared<std::shared_ptr<const Presence<Json>>>();
-        public: const Presence<Json>& input() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<Data>>> cached_input_ = std::make_shared<std::shared_ptr<const Presence<Data>>>();
+        public: const Presence<Data>& input() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<PhysicalSource>>> cached_input_source_ = std::make_shared<std::shared_ptr<const Presence<PhysicalSource>>>();
         public: const Presence<PhysicalSource>& input_source() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<std::vector<SessionInputSource>>>> cached_input_sources_ = std::make_shared<std::shared_ptr<const Presence<std::vector<SessionInputSource>>>>();
         public: const Presence<std::vector<SessionInputSource>>& input_sources() const;
-        private: std::shared_ptr<std::shared_ptr<const Presence<std::vector<Json>>>> cached_inputs_ = std::make_shared<std::shared_ptr<const Presence<std::vector<Json>>>>();
-        public: const Presence<std::vector<Json>>& inputs() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<std::vector<Data>>>> cached_inputs_ = std::make_shared<std::shared_ptr<const Presence<std::vector<Data>>>>();
+        public: const Presence<std::vector<Data>>& inputs() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_model_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
         public: const Presence<std::string>& model() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<std::vector<Observation>>>> cached_observations_ = std::make_shared<std::shared_ptr<const Presence<std::vector<Observation>>>>();
@@ -2153,8 +2219,8 @@ namespace tt::results {
         public: const Presence<std::string>& name() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<uint64_t>>> cached_ordinal_ = std::make_shared<std::shared_ptr<const Presence<uint64_t>>>();
         public: const Presence<uint64_t>& ordinal() const;
-        private: std::shared_ptr<std::shared_ptr<const Presence<Json>>> cached_record_ = std::make_shared<std::shared_ptr<const Presence<Json>>>();
-        public: const Presence<Json>& record() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<Data>>> cached_record_ = std::make_shared<std::shared_ptr<const Presence<Data>>>();
+        public: const Presence<Data>& record() const;
     };
     class Threshold : public Node {
         public: using Node::Node;
@@ -2223,10 +2289,10 @@ namespace tt::results {
             if (std::atomic_compare_exchange_strong(cached_index_.get(), &stored, candidate)) stored = std::move(candidate);
         } return *stored;
     }
-    inline const Presence<Json>& Annotation::input() const {
+    inline const Presence<Data>& Annotation::input() const {
         auto stored = std::atomic_load(cached_input_.get());
         if (!stored) {
-            auto candidate = std::make_shared<const Presence<Json>>(detail::member_value<Json>(value_,
+            auto candidate = std::make_shared<const Presence<Data>>(detail::member_value<Data>(value_,
             "input"));
             if (std::atomic_compare_exchange_strong(cached_input_.get(), &stored, candidate)) stored = std::move(candidate);
         } return *stored;
@@ -2526,7 +2592,7 @@ namespace tt::results {
     inline const std::string& AnswerId::value() const {
         auto stored = std::atomic_load(cached_value_.get());
         if (!stored) {
-            auto candidate = std::make_shared<const std::string>(decode<std::string>(value_));
+            auto candidate = std::make_shared<const std::string>(detail::decode<std::string>(value_));
             if (std::atomic_compare_exchange_strong(cached_value_.get(), &stored, candidate)) stored = std::move(candidate);
         } return *stored;
     }
@@ -2570,10 +2636,10 @@ namespace tt::results {
             if (std::atomic_compare_exchange_strong(cached_index_.get(), &stored, candidate)) stored = std::move(candidate);
         } return *stored;
     }
-    inline const Presence<Json>& AtomicArrayOfString::input() const {
+    inline const Presence<Data>& AtomicArrayOfString::input() const {
         auto stored = std::atomic_load(cached_input_.get());
         if (!stored) {
-            auto candidate = std::make_shared<const Presence<Json>>(detail::member_value<Json>(value_,
+            auto candidate = std::make_shared<const Presence<Data>>(detail::member_value<Data>(value_,
             "input"));
             if (std::atomic_compare_exchange_strong(cached_input_.get(), &stored, candidate)) stored = std::move(candidate);
         } return *stored;
@@ -2674,10 +2740,10 @@ namespace tt::results {
             if (std::atomic_compare_exchange_strong(cached_index_.get(), &stored, candidate)) stored = std::move(candidate);
         } return *stored;
     }
-    inline const Presence<Json>& AtomicDecideValue::input() const {
+    inline const Presence<Data>& AtomicDecideValue::input() const {
         auto stored = std::atomic_load(cached_input_.get());
         if (!stored) {
-            auto candidate = std::make_shared<const Presence<Json>>(detail::member_value<Json>(value_,
+            auto candidate = std::make_shared<const Presence<Data>>(detail::member_value<Data>(value_,
             "input"));
             if (std::atomic_compare_exchange_strong(cached_input_.get(), &stored, candidate)) stored = std::move(candidate);
         } return *stored;
@@ -2778,10 +2844,10 @@ namespace tt::results {
             if (std::atomic_compare_exchange_strong(cached_index_.get(), &stored, candidate)) stored = std::move(candidate);
         } return *stored;
     }
-    inline const Presence<Json>& AtomicNonZeroUsize::input() const {
+    inline const Presence<Data>& AtomicNonZeroUsize::input() const {
         auto stored = std::atomic_load(cached_input_.get());
         if (!stored) {
-            auto candidate = std::make_shared<const Presence<Json>>(detail::member_value<Json>(value_,
+            auto candidate = std::make_shared<const Presence<Data>>(detail::member_value<Data>(value_,
             "input"));
             if (std::atomic_compare_exchange_strong(cached_input_.get(), &stored, candidate)) stored = std::move(candidate);
         } return *stored;
@@ -2882,10 +2948,10 @@ namespace tt::results {
             if (std::atomic_compare_exchange_strong(cached_index_.get(), &stored, candidate)) stored = std::move(candidate);
         } return *stored;
     }
-    inline const Presence<Json>& AtomicNullableString::input() const {
+    inline const Presence<Data>& AtomicNullableString::input() const {
         auto stored = std::atomic_load(cached_input_.get());
         if (!stored) {
-            auto candidate = std::make_shared<const Presence<Json>>(detail::member_value<Json>(value_,
+            auto candidate = std::make_shared<const Presence<Data>>(detail::member_value<Data>(value_,
             "input"));
             if (std::atomic_compare_exchange_strong(cached_input_.get(), &stored, candidate)) stored = std::move(candidate);
         } return *stored;
@@ -2986,10 +3052,10 @@ namespace tt::results {
             if (std::atomic_compare_exchange_strong(cached_index_.get(), &stored, candidate)) stored = std::move(candidate);
         } return *stored;
     }
-    inline const Presence<Json>& AtomicBoolean::input() const {
+    inline const Presence<Data>& AtomicBoolean::input() const {
         auto stored = std::atomic_load(cached_input_.get());
         if (!stored) {
-            auto candidate = std::make_shared<const Presence<Json>>(detail::member_value<Json>(value_,
+            auto candidate = std::make_shared<const Presence<Data>>(detail::member_value<Data>(value_,
             "input"));
             if (std::atomic_compare_exchange_strong(cached_input_.get(), &stored, candidate)) stored = std::move(candidate);
         } return *stored;
@@ -3090,10 +3156,10 @@ namespace tt::results {
             if (std::atomic_compare_exchange_strong(cached_index_.get(), &stored, candidate)) stored = std::move(candidate);
         } return *stored;
     }
-    inline const Presence<Json>& AtomicDouble::input() const {
+    inline const Presence<Data>& AtomicDouble::input() const {
         auto stored = std::atomic_load(cached_input_.get());
         if (!stored) {
-            auto candidate = std::make_shared<const Presence<Json>>(detail::member_value<Json>(value_,
+            auto candidate = std::make_shared<const Presence<Data>>(detail::member_value<Data>(value_,
             "input"));
             if (std::atomic_compare_exchange_strong(cached_input_.get(), &stored, candidate)) stored = std::move(candidate);
         } return *stored;
@@ -3229,7 +3295,7 @@ namespace tt::results {
     inline const std::variant<uint64_t, std::string>& Batch::value() const {
         auto stored = std::atomic_load(cached_value_.get());
         if (!stored) {
-            auto candidate = std::make_shared<const std::variant<uint64_t, std::string>>(decode<std::variant<uint64_t,
+            auto candidate = std::make_shared<const std::variant<uint64_t, std::string>>(detail::decode<std::variant<uint64_t,
             std::string>>(value_));
             if (std::atomic_compare_exchange_strong(cached_value_.get(), &stored, candidate)) stored = std::move(candidate);
         } return *stored;
@@ -3237,7 +3303,7 @@ namespace tt::results {
     inline const std::string& BoundaryMode::value() const {
         auto stored = std::atomic_load(cached_value_.get());
         if (!stored) {
-            auto candidate = std::make_shared<const std::string>(decode<std::string>(value_));
+            auto candidate = std::make_shared<const std::string>(detail::decode<std::string>(value_));
             if (std::atomic_compare_exchange_strong(cached_value_.get(), &stored, candidate)) stored = std::move(candidate);
         } return *stored;
     }
@@ -3316,14 +3382,14 @@ namespace tt::results {
     inline const std::string& CallId::value() const {
         auto stored = std::atomic_load(cached_value_.get());
         if (!stored) {
-            auto candidate = std::make_shared<const std::string>(decode<std::string>(value_));
+            auto candidate = std::make_shared<const std::string>(detail::decode<std::string>(value_));
             if (std::atomic_compare_exchange_strong(cached_value_.get(), &stored, candidate)) stored = std::move(candidate);
         } return *stored;
     }
-    inline const Json& DecideValue::value() const {
+    inline const Data& DecideValue::value() const {
         auto stored = std::atomic_load(cached_value_.get());
         if (!stored) {
-            auto candidate = std::make_shared<const Json>(decode<Json>(value_));
+            auto candidate = std::make_shared<const Data>(detail::decode<Data>(value_));
             if (std::atomic_compare_exchange_strong(cached_value_.get(), &stored, candidate)) stored = std::move(candidate);
         } return *stored;
     }
@@ -3583,7 +3649,7 @@ namespace tt::results {
     inline const std::string& FailureId::value() const {
         auto stored = std::atomic_load(cached_value_.get());
         if (!stored) {
-            auto candidate = std::make_shared<const std::string>(decode<std::string>(value_));
+            auto candidate = std::make_shared<const std::string>(detail::decode<std::string>(value_));
             if (std::atomic_compare_exchange_strong(cached_value_.get(), &stored, candidate)) stored = std::move(candidate);
         } return *stored;
     }
@@ -3683,10 +3749,10 @@ namespace tt::results {
             if (std::atomic_compare_exchange_strong(cached_threshold_.get(), &stored, candidate)) stored = std::move(candidate);
         } return *stored;
     }
-    inline const Presence<Json>& Find::value() const {
+    inline const Presence<Data>& Find::value() const {
         auto stored = std::atomic_load(cached_value_.get());
         if (!stored) {
-            auto candidate = std::make_shared<const Presence<Json>>(detail::member_value<Json>(value_,
+            auto candidate = std::make_shared<const Presence<Data>>(detail::member_value<Data>(value_,
             "value"));
             if (std::atomic_compare_exchange_strong(cached_value_.get(), &stored, candidate)) stored = std::move(candidate);
         } return *stored;
@@ -3699,10 +3765,10 @@ namespace tt::results {
             if (std::atomic_compare_exchange_strong(cached_index_.get(), &stored, candidate)) stored = std::move(candidate);
         } return *stored;
     }
-    inline const Presence<Json>& FindCandidate::input() const {
+    inline const Presence<Data>& FindCandidate::input() const {
         auto stored = std::atomic_load(cached_input_.get());
         if (!stored) {
-            auto candidate = std::make_shared<const Presence<Json>>(detail::member_value<Json>(value_,
+            auto candidate = std::make_shared<const Presence<Data>>(detail::member_value<Data>(value_,
             "input"));
             if (std::atomic_compare_exchange_strong(cached_input_.get(), &stored, candidate)) stored = std::move(candidate);
         } return *stored;
@@ -3758,8 +3824,129 @@ namespace tt::results {
     inline const std::string& ImageMedia::value() const {
         auto stored = std::atomic_load(cached_value_.get());
         if (!stored) {
-            auto candidate = std::make_shared<const std::string>(decode<std::string>(value_));
+            auto candidate = std::make_shared<const std::string>(detail::decode<std::string>(value_));
             if (std::atomic_compare_exchange_strong(cached_value_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<std::vector<Attempt>>& ImmediateFacts::attempts() const {
+        auto stored = std::atomic_load(cached_attempts_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<std::vector<Attempt>>>(detail::member_value<std::vector<Attempt>>(value_,
+            "attempts"));
+            if (std::atomic_compare_exchange_strong(cached_attempts_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<uint64_t>& ImmediateFacts::cache_answers() const {
+        auto stored = std::atomic_load(cached_cache_answers_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<uint64_t>>(detail::member_value<uint64_t>(value_,
+            "cache_answers"));
+            if (std::atomic_compare_exchange_strong(cached_cache_answers_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<CallId>& ImmediateFacts::call_id() const {
+        auto stored = std::atomic_load(cached_call_id_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<CallId>>(detail::member_value<CallId>(value_,
+            "call_id"));
+            if (std::atomic_compare_exchange_strong(cached_call_id_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<std::string>& ImmediateFacts::estimated_cost_usd() const {
+        auto stored = std::atomic_load(cached_estimated_cost_usd_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
+            "estimated_cost_usd"));
+            if (std::atomic_compare_exchange_strong(cached_estimated_cost_usd_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<bool>& ImmediateFacts::held_model_mismatch() const {
+        auto stored = std::atomic_load(cached_held_model_mismatch_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<bool>>(detail::member_value<bool>(value_,
+            "held_model_mismatch"));
+            if (std::atomic_compare_exchange_strong(cached_held_model_mismatch_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<uint64_t>& ImmediateFacts::input_tokens() const {
+        auto stored = std::atomic_load(cached_input_tokens_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<uint64_t>>(detail::member_value<uint64_t>(value_,
+            "input_tokens"));
+            if (std::atomic_compare_exchange_strong(cached_input_tokens_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<uint64_t>& ImmediateFacts::largest_request_bytes() const {
+        auto stored = std::atomic_load(cached_largest_request_bytes_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<uint64_t>>(detail::member_value<uint64_t>(value_,
+            "largest_request_bytes"));
+            if (std::atomic_compare_exchange_strong(cached_largest_request_bytes_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<uint64_t>& ImmediateFacts::largest_request_estimated_input_tokens() const {
+        auto stored = std::atomic_load(cached_largest_request_estimated_input_tokens_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<uint64_t>>(detail::member_value<uint64_t>(value_,
+            "largest_request_estimated_input_tokens"));
+            if (std::atomic_compare_exchange_strong(cached_largest_request_estimated_input_tokens_.get(),
+            &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<std::string>& ImmediateFacts::model() const {
+        auto stored = std::atomic_load(cached_model_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
+            "model"));
+            if (std::atomic_compare_exchange_strong(cached_model_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<uint64_t>& ImmediateFacts::output_tokens() const {
+        auto stored = std::atomic_load(cached_output_tokens_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<uint64_t>>(detail::member_value<uint64_t>(value_,
+            "output_tokens"));
+            if (std::atomic_compare_exchange_strong(cached_output_tokens_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<uint64_t>& ImmediateFacts::records() const {
+        auto stored = std::atomic_load(cached_records_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<uint64_t>>(detail::member_value<uint64_t>(value_,
+            "records"));
+            if (std::atomic_compare_exchange_strong(cached_records_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<uint64_t>& ImmediateFacts::requests_sent() const {
+        auto stored = std::atomic_load(cached_requests_sent_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<uint64_t>>(detail::member_value<uint64_t>(value_,
+            "requests_sent"));
+            if (std::atomic_compare_exchange_strong(cached_requests_sent_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<double>& ImmediateFacts::seconds() const {
+        auto stored = std::atomic_load(cached_seconds_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<double>>(detail::member_value<double>(value_,
+            "seconds"));
+            if (std::atomic_compare_exchange_strong(cached_seconds_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<std::string>& ImmediateFacts::token_estimate_method() const {
+        auto stored = std::atomic_load(cached_token_estimate_method_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
+            "token_estimate_method"));
+            if (std::atomic_compare_exchange_strong(cached_token_estimate_method_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<PersistenceObservation>& ImmediateFacts::usage_persistence() const {
+        auto stored = std::atomic_load(cached_usage_persistence_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<PersistenceObservation>>(detail::member_value<PersistenceObservation>(value_,
+            "usage_persistence"));
+            if (std::atomic_compare_exchange_strong(cached_usage_persistence_.get(), &stored, candidate)) stored = std::move(candidate);
         } return *stored;
     }
     inline std::optional<InputDeclarationStringRoot> InputDeclaration::as_InputDeclarationStringRoot() const {
@@ -3858,10 +4045,10 @@ namespace tt::results {
             if (std::atomic_compare_exchange_strong(cached_type_.get(), &stored, candidate)) stored = std::move(candidate);
         } return *stored;
     }
-    inline const Presence<Json>& Label::description() const {
+    inline const Presence<Data>& Label::description() const {
         auto stored = std::atomic_load(cached_description_.get());
         if (!stored) {
-            auto candidate = std::make_shared<const Presence<Json>>(detail::member_value<Json>(value_,
+            auto candidate = std::make_shared<const Presence<Data>>(detail::member_value<Data>(value_,
             "description"));
             if (std::atomic_compare_exchange_strong(cached_description_.get(), &stored, candidate)) stored = std::move(candidate);
         } return *stored;
@@ -4053,7 +4240,7 @@ namespace tt::results {
     inline const std::string& ObjectType::value() const {
         auto stored = std::atomic_load(cached_value_.get());
         if (!stored) {
-            auto candidate = std::make_shared<const std::string>(decode<std::string>(value_));
+            auto candidate = std::make_shared<const std::string>(detail::decode<std::string>(value_));
             if (std::atomic_compare_exchange_strong(cached_value_.get(), &stored, candidate)) stored = std::move(candidate);
         } return *stored;
     }
@@ -4068,7 +4255,7 @@ namespace tt::results {
     inline const std::string& ObservationId::value() const {
         auto stored = std::atomic_load(cached_value_.get());
         if (!stored) {
-            auto candidate = std::make_shared<const std::string>(decode<std::string>(value_));
+            auto candidate = std::make_shared<const std::string>(detail::decode<std::string>(value_));
             if (std::atomic_compare_exchange_strong(cached_value_.get(), &stored, candidate)) stored = std::move(candidate);
         } return *stored;
     }
@@ -4091,7 +4278,7 @@ namespace tt::results {
     inline const std::string& Origin::value() const {
         auto stored = std::atomic_load(cached_value_.get());
         if (!stored) {
-            auto candidate = std::make_shared<const std::string>(decode<std::string>(value_));
+            auto candidate = std::make_shared<const std::string>(detail::decode<std::string>(value_));
             if (std::atomic_compare_exchange_strong(cached_value_.get(), &stored, candidate)) stored = std::move(candidate);
         } return *stored;
     }
@@ -4178,7 +4365,7 @@ namespace tt::results {
     inline const std::string& QuestionName::value() const {
         auto stored = std::atomic_load(cached_value_.get());
         if (!stored) {
-            auto candidate = std::make_shared<const std::string>(decode<std::string>(value_));
+            auto candidate = std::make_shared<const std::string>(detail::decode<std::string>(value_));
             if (std::atomic_compare_exchange_strong(cached_value_.get(), &stored, candidate)) stored = std::move(candidate);
         } return *stored;
     }
@@ -4334,10 +4521,10 @@ namespace tt::results {
             if (std::atomic_compare_exchange_strong(cached_index_.get(), &stored, candidate)) stored = std::move(candidate);
         } return *stored;
     }
-    inline const Presence<Json>& Recognition::input() const {
+    inline const Presence<Data>& Recognition::input() const {
         auto stored = std::atomic_load(cached_input_.get());
         if (!stored) {
-            auto candidate = std::make_shared<const Presence<Json>>(detail::member_value<Json>(value_,
+            auto candidate = std::make_shared<const Presence<Data>>(detail::member_value<Data>(value_,
             "input"));
             if (std::atomic_compare_exchange_strong(cached_input_.get(), &stored, candidate)) stored = std::move(candidate);
         } return *stored;
@@ -4441,7 +4628,7 @@ namespace tt::results {
     inline const std::string& RecognitionMode::value() const {
         auto stored = std::atomic_load(cached_value_.get());
         if (!stored) {
-            auto candidate = std::make_shared<const std::string>(decode<std::string>(value_));
+            auto candidate = std::make_shared<const std::string>(detail::decode<std::string>(value_));
             if (std::atomic_compare_exchange_strong(cached_value_.get(), &stored, candidate)) stored = std::move(candidate);
         } return *stored;
     }
@@ -4621,10 +4808,10 @@ namespace tt::results {
             if (std::atomic_compare_exchange_strong(cached_index_.get(), &stored, candidate)) stored = std::move(candidate);
         } return *stored;
     }
-    inline const Presence<Json>& Relation::input() const {
+    inline const Presence<Data>& Relation::input() const {
         auto stored = std::atomic_load(cached_input_.get());
         if (!stored) {
-            auto candidate = std::make_shared<const Presence<Json>>(detail::member_value<Json>(value_,
+            auto candidate = std::make_shared<const Presence<Data>>(detail::member_value<Data>(value_,
             "input"));
             if (std::atomic_compare_exchange_strong(cached_input_.get(), &stored, candidate)) stored = std::move(candidate);
         } return *stored;
@@ -4688,7 +4875,7 @@ namespace tt::results {
     inline const std::string& RelationDirection::value() const {
         auto stored = std::atomic_load(cached_value_.get());
         if (!stored) {
-            auto candidate = std::make_shared<const std::string>(decode<std::string>(value_));
+            auto candidate = std::make_shared<const std::string>(detail::decode<std::string>(value_));
             if (std::atomic_compare_exchange_strong(cached_value_.get(), &stored, candidate)) stored = std::move(candidate);
         } return *stored;
     }
@@ -4764,10 +4951,10 @@ namespace tt::results {
             if (std::atomic_compare_exchange_strong(cached_ordinal_.get(), &stored, candidate)) stored = std::move(candidate);
         } return *stored;
     }
-    inline const Presence<Json>& RelationEndpointSource::record() const {
+    inline const Presence<Data>& RelationEndpointSource::record() const {
         auto stored = std::atomic_load(cached_record_.get());
         if (!stored) {
-            auto candidate = std::make_shared<const Presence<Json>>(detail::member_value<Json>(value_,
+            auto candidate = std::make_shared<const Presence<Data>>(detail::member_value<Data>(value_,
             "record"));
             if (std::atomic_compare_exchange_strong(cached_record_.get(), &stored, candidate)) stored = std::move(candidate);
         } return *stored;
@@ -5029,21 +5216,21 @@ namespace tt::results {
     inline const std::string& RelationMethod::value() const {
         auto stored = std::atomic_load(cached_value_.get());
         if (!stored) {
-            auto candidate = std::make_shared<const std::string>(decode<std::string>(value_));
+            auto candidate = std::make_shared<const std::string>(detail::decode<std::string>(value_));
             if (std::atomic_compare_exchange_strong(cached_value_.get(), &stored, candidate)) stored = std::move(candidate);
         } return *stored;
     }
     inline const std::string& RequestFunction::value() const {
         auto stored = std::atomic_load(cached_value_.get());
         if (!stored) {
-            auto candidate = std::make_shared<const std::string>(decode<std::string>(value_));
+            auto candidate = std::make_shared<const std::string>(detail::decode<std::string>(value_));
             if (std::atomic_compare_exchange_strong(cached_value_.get(), &stored, candidate)) stored = std::move(candidate);
         } return *stored;
     }
     inline const std::string& SdkRequestId::value() const {
         auto stored = std::atomic_load(cached_value_.get());
         if (!stored) {
-            auto candidate = std::make_shared<const std::string>(decode<std::string>(value_));
+            auto candidate = std::make_shared<const std::string>(detail::decode<std::string>(value_));
             if (std::atomic_compare_exchange_strong(cached_value_.get(), &stored, candidate)) stored = std::move(candidate);
         } return *stored;
     }
@@ -5094,7 +5281,7 @@ namespace tt::results {
     inline const std::string& StopCause::value() const {
         auto stored = std::atomic_load(cached_value_.get());
         if (!stored) {
-            auto candidate = std::make_shared<const std::string>(decode<std::string>(value_));
+            auto candidate = std::make_shared<const std::string>(detail::decode<std::string>(value_));
             if (std::atomic_compare_exchange_strong(cached_value_.get(), &stored, candidate)) stored = std::move(candidate);
         } return *stored;
     }
@@ -5141,7 +5328,7 @@ namespace tt::results {
     inline const std::string& StringType::value() const {
         auto stored = std::atomic_load(cached_value_.get());
         if (!stored) {
-            auto candidate = std::make_shared<const std::string>(decode<std::string>(value_));
+            auto candidate = std::make_shared<const std::string>(detail::decode<std::string>(value_));
             if (std::atomic_compare_exchange_strong(cached_value_.get(), &stored, candidate)) stored = std::move(candidate);
         } return *stored;
     }
@@ -5164,28 +5351,28 @@ namespace tt::results {
     inline const std::string& UsagePersistence::value() const {
         auto stored = std::atomic_load(cached_value_.get());
         if (!stored) {
-            auto candidate = std::make_shared<const std::string>(decode<std::string>(value_));
+            auto candidate = std::make_shared<const std::string>(detail::decode<std::string>(value_));
             if (std::atomic_compare_exchange_strong(cached_value_.get(), &stored, candidate)) stored = std::move(candidate);
         } return *stored;
     }
     inline const std::string& Verb::value() const {
         auto stored = std::atomic_load(cached_value_.get());
         if (!stored) {
-            auto candidate = std::make_shared<const std::string>(decode<std::string>(value_));
+            auto candidate = std::make_shared<const std::string>(detail::decode<std::string>(value_));
             if (std::atomic_compare_exchange_strong(cached_value_.get(), &stored, candidate)) stored = std::move(candidate);
         } return *stored;
     }
     inline const std::string& Version::value() const {
         auto stored = std::atomic_load(cached_value_.get());
         if (!stored) {
-            auto candidate = std::make_shared<const std::string>(decode<std::string>(value_));
+            auto candidate = std::make_shared<const std::string>(detail::decode<std::string>(value_));
             if (std::atomic_compare_exchange_strong(cached_value_.get(), &stored, candidate)) stored = std::move(candidate);
         } return *stored;
     }
     inline const uint32_t& WordingVersion::value() const {
         auto stored = std::atomic_load(cached_value_.get());
         if (!stored) {
-            auto candidate = std::make_shared<const uint32_t>(decode<uint32_t>(value_));
+            auto candidate = std::make_shared<const uint32_t>(detail::decode<uint32_t>(value_));
             if (std::atomic_compare_exchange_strong(cached_value_.get(), &stored, candidate)) stored = std::move(candidate);
         } return *stored;
     }
@@ -5194,7 +5381,7 @@ namespace tt::results {
         auto stored = std::atomic_load(cached_value_.get());
         if (!stored) {
             auto candidate = std::make_shared<const std::variant<bool, std::nullptr_t, std::string, std::vector<std::string>,
-            double, Failed>>(decode<std::variant<bool, std::nullptr_t, std::string, std::vector<std::string>,
+            double, Failed>>(detail::decode<std::variant<bool, std::nullptr_t, std::string, std::vector<std::string>,
             double, Failed>>(value_));
             if (std::atomic_compare_exchange_strong(cached_value_.get(), &stored, candidate)) stored = std::move(candidate);
         } return *stored;
@@ -5202,7 +5389,7 @@ namespace tt::results {
     inline const std::vector<std::pair<std::string, AnnotatedField>>& AnnotatedRow::value() const {
         auto stored = std::atomic_load(cached_value_.get());
         if (!stored) {
-            auto candidate = std::make_shared<const std::vector<std::pair<std::string, AnnotatedField>>>(decode<std::vector<std::pair<std::string,
+            auto candidate = std::make_shared<const std::vector<std::pair<std::string, AnnotatedField>>>(detail::decode<std::vector<std::pair<std::string,
             AnnotatedField>>>(value_));
             if (std::atomic_compare_exchange_strong(cached_value_.get(), &stored, candidate)) stored = std::move(candidate);
         } return *stored;
@@ -5322,14 +5509,14 @@ namespace tt::results {
     inline const std::string& AttemptOutcome::value() const {
         auto stored = std::atomic_load(cached_value_.get());
         if (!stored) {
-            auto candidate = std::make_shared<const std::string>(decode<std::string>(value_));
+            auto candidate = std::make_shared<const std::string>(detail::decode<std::string>(value_));
             if (std::atomic_compare_exchange_strong(cached_value_.get(), &stored, candidate)) stored = std::move(candidate);
         } return *stored;
     }
     inline const std::variant<uint64_t, std::string>& BatchSetting::value() const {
         auto stored = std::atomic_load(cached_value_.get());
         if (!stored) {
-            auto candidate = std::make_shared<const std::variant<uint64_t, std::string>>(decode<std::variant<uint64_t,
+            auto candidate = std::make_shared<const std::variant<uint64_t, std::string>>(detail::decode<std::variant<uint64_t,
             std::string>>(value_));
             if (std::atomic_compare_exchange_strong(cached_value_.get(), &stored, candidate)) stored = std::move(candidate);
         } return *stored;
@@ -5489,14 +5676,14 @@ namespace tt::results {
     inline const std::string& FailureCause::value() const {
         auto stored = std::atomic_load(cached_value_.get());
         if (!stored) {
-            auto candidate = std::make_shared<const std::string>(decode<std::string>(value_));
+            auto candidate = std::make_shared<const std::string>(detail::decode<std::string>(value_));
             if (std::atomic_compare_exchange_strong(cached_value_.get(), &stored, candidate)) stored = std::move(candidate);
         } return *stored;
     }
     inline const std::string& FailureKind::value() const {
         auto stored = std::atomic_load(cached_value_.get());
         if (!stored) {
-            auto candidate = std::make_shared<const std::string>(decode<std::string>(value_));
+            auto candidate = std::make_shared<const std::string>(detail::decode<std::string>(value_));
             if (std::atomic_compare_exchange_strong(cached_value_.get(), &stored, candidate)) stored = std::move(candidate);
         } return *stored;
     }
@@ -5604,10 +5791,10 @@ namespace tt::results {
             if (std::atomic_compare_exchange_strong(cached_profile_.get(), &stored, candidate)) stored = std::move(candidate);
         } return *stored;
     }
-    inline const Presence<Json>& FindQuestionDocument::text() const {
+    inline const Presence<Data>& FindQuestionDocument::text() const {
         auto stored = std::atomic_load(cached_text_.get());
         if (!stored) {
-            auto candidate = std::make_shared<const Presence<Json>>(detail::member_value<Json>(value_,
+            auto candidate = std::make_shared<const Presence<Data>>(detail::member_value<Data>(value_,
             "text"));
             if (std::atomic_compare_exchange_strong(cached_text_.get(), &stored, candidate)) stored = std::move(candidate);
         } return *stored;
@@ -5917,10 +6104,10 @@ namespace tt::results {
             if (std::atomic_compare_exchange_strong(cached_options_.get(), &stored, candidate)) stored = std::move(candidate);
         } return *stored;
     }
-    inline const Presence<Json>& QuestionDocumentChoose::text() const {
+    inline const Presence<Data>& QuestionDocumentChoose::text() const {
         auto stored = std::atomic_load(cached_text_.get());
         if (!stored) {
-            auto candidate = std::make_shared<const Presence<Json>>(detail::member_value<Json>(value_,
+            auto candidate = std::make_shared<const Presence<Data>>(detail::member_value<Data>(value_,
             "text"));
             if (std::atomic_compare_exchange_strong(cached_text_.get(), &stored, candidate)) stored = std::move(candidate);
         } return *stored;
@@ -6005,26 +6192,26 @@ namespace tt::results {
             if (std::atomic_compare_exchange_strong(cached_wording_version_.get(), &stored, candidate)) stored = std::move(candidate);
         } return *stored;
     }
-    inline const Presence<Json>& QuestionDocumentDecide::false_() const {
+    inline const Presence<Data>& QuestionDocumentDecide::false_() const {
         auto stored = std::atomic_load(cached_false__.get());
         if (!stored) {
-            auto candidate = std::make_shared<const Presence<Json>>(detail::member_value<Json>(value_,
+            auto candidate = std::make_shared<const Presence<Data>>(detail::member_value<Data>(value_,
             "false"));
             if (std::atomic_compare_exchange_strong(cached_false__.get(), &stored, candidate)) stored = std::move(candidate);
         } return *stored;
     }
-    inline const Presence<Json>& QuestionDocumentDecide::text() const {
+    inline const Presence<Data>& QuestionDocumentDecide::text() const {
         auto stored = std::atomic_load(cached_text_.get());
         if (!stored) {
-            auto candidate = std::make_shared<const Presence<Json>>(detail::member_value<Json>(value_,
+            auto candidate = std::make_shared<const Presence<Data>>(detail::member_value<Data>(value_,
             "text"));
             if (std::atomic_compare_exchange_strong(cached_text_.get(), &stored, candidate)) stored = std::move(candidate);
         } return *stored;
     }
-    inline const Presence<Json>& QuestionDocumentDecide::true_() const {
+    inline const Presence<Data>& QuestionDocumentDecide::true_() const {
         auto stored = std::atomic_load(cached_true__.get());
         if (!stored) {
-            auto candidate = std::make_shared<const Presence<Json>>(detail::member_value<Json>(value_,
+            auto candidate = std::make_shared<const Presence<Data>>(detail::member_value<Data>(value_,
             "true"));
             if (std::atomic_compare_exchange_strong(cached_true__.get(), &stored, candidate)) stored = std::move(candidate);
         } return *stored;
@@ -6117,10 +6304,10 @@ namespace tt::results {
             if (std::atomic_compare_exchange_strong(cached_levels_.get(), &stored, candidate)) stored = std::move(candidate);
         } return *stored;
     }
-    inline const Presence<Json>& QuestionDocumentScore::text() const {
+    inline const Presence<Data>& QuestionDocumentScore::text() const {
         auto stored = std::atomic_load(cached_text_.get());
         if (!stored) {
-            auto candidate = std::make_shared<const Presence<Json>>(detail::member_value<Json>(value_,
+            auto candidate = std::make_shared<const Presence<Data>>(detail::member_value<Data>(value_,
             "text"));
             if (std::atomic_compare_exchange_strong(cached_text_.get(), &stored, candidate)) stored = std::move(candidate);
         } return *stored;
@@ -6213,10 +6400,10 @@ namespace tt::results {
             if (std::atomic_compare_exchange_strong(cached_labels_.get(), &stored, candidate)) stored = std::move(candidate);
         } return *stored;
     }
-    inline const Presence<Json>& QuestionDocumentTag::text() const {
+    inline const Presence<Data>& QuestionDocumentTag::text() const {
         auto stored = std::atomic_load(cached_text_.get());
         if (!stored) {
-            auto candidate = std::make_shared<const Presence<Json>>(detail::member_value<Json>(value_,
+            auto candidate = std::make_shared<const Presence<Data>>(detail::member_value<Data>(value_,
             "text"));
             if (std::atomic_compare_exchange_strong(cached_text_.get(), &stored, candidate)) stored = std::move(candidate);
         } return *stored;
@@ -6285,18 +6472,18 @@ namespace tt::results {
             if (std::atomic_compare_exchange_strong(cached_context_schema_.get(), &stored, candidate)) stored = std::move(candidate);
         } return *stored;
     }
-    inline const Presence<Json>& RecognizeQuestionDocument::entity_definition() const {
+    inline const Presence<Data>& RecognizeQuestionDocument::entity_definition() const {
         auto stored = std::atomic_load(cached_entity_definition_.get());
         if (!stored) {
-            auto candidate = std::make_shared<const Presence<Json>>(detail::member_value<Json>(value_,
+            auto candidate = std::make_shared<const Presence<Data>>(detail::member_value<Data>(value_,
             "entity_definition"));
             if (std::atomic_compare_exchange_strong(cached_entity_definition_.get(), &stored, candidate)) stored = std::move(candidate);
         } return *stored;
     }
-    inline const Presence<Json>& RecognizeQuestionDocument::instructions() const {
+    inline const Presence<Data>& RecognizeQuestionDocument::instructions() const {
         auto stored = std::atomic_load(cached_instructions_.get());
         if (!stored) {
-            auto candidate = std::make_shared<const Presence<Json>>(detail::member_value<Json>(value_,
+            auto candidate = std::make_shared<const Presence<Data>>(detail::member_value<Data>(value_,
             "instructions"));
             if (std::atomic_compare_exchange_strong(cached_instructions_.get(), &stored, candidate)) stored = std::move(candidate);
         } return *stored;
@@ -6309,11 +6496,11 @@ namespace tt::results {
             if (std::atomic_compare_exchange_strong(cached_item_schema_.get(), &stored, candidate)) stored = std::move(candidate);
         } return *stored;
     }
-    inline const Presence<std::vector<std::pair<std::string, Json>>>& RecognizeQuestionDocument::kinds() const {
+    inline const Presence<std::vector<std::pair<std::string, Data>>>& RecognizeQuestionDocument::kinds() const {
         auto stored = std::atomic_load(cached_kinds_.get());
         if (!stored) {
-            auto candidate = std::make_shared<const Presence<std::vector<std::pair<std::string, Json>>>>(detail::member_value<std::vector<std::pair<std::string,
-            Json>>>(value_, "kinds"));
+            auto candidate = std::make_shared<const Presence<std::vector<std::pair<std::string, Data>>>>(detail::member_value<std::vector<std::pair<std::string,
+            Data>>>(value_, "kinds"));
             if (std::atomic_compare_exchange_strong(cached_kinds_.get(), &stored, candidate)) stored = std::move(candidate);
         } return *stored;
     }
@@ -7583,10 +7770,10 @@ namespace tt::results {
             if (std::atomic_compare_exchange_strong(cached_failure_id_.get(), &stored, candidate)) stored = std::move(candidate);
         } return *stored;
     }
-    inline const Presence<Json>& SessionQuestionDetail::input() const {
+    inline const Presence<Data>& SessionQuestionDetail::input() const {
         auto stored = std::atomic_load(cached_input_.get());
         if (!stored) {
-            auto candidate = std::make_shared<const Presence<Json>>(detail::member_value<Json>(value_,
+            auto candidate = std::make_shared<const Presence<Data>>(detail::member_value<Data>(value_,
             "input"));
             if (std::atomic_compare_exchange_strong(cached_input_.get(), &stored, candidate)) stored = std::move(candidate);
         } return *stored;
@@ -7607,10 +7794,10 @@ namespace tt::results {
             if (std::atomic_compare_exchange_strong(cached_input_sources_.get(), &stored, candidate)) stored = std::move(candidate);
         } return *stored;
     }
-    inline const Presence<std::vector<Json>>& SessionQuestionDetail::inputs() const {
+    inline const Presence<std::vector<Data>>& SessionQuestionDetail::inputs() const {
         auto stored = std::atomic_load(cached_inputs_.get());
         if (!stored) {
-            auto candidate = std::make_shared<const Presence<std::vector<Json>>>(detail::member_value<std::vector<Json>>(value_,
+            auto candidate = std::make_shared<const Presence<std::vector<Data>>>(detail::member_value<std::vector<Data>>(value_,
             "inputs"));
             if (std::atomic_compare_exchange_strong(cached_inputs_.get(), &stored, candidate)) stored = std::move(candidate);
         } return *stored;
@@ -7853,10 +8040,10 @@ namespace tt::results {
             if (std::atomic_compare_exchange_strong(cached_ordinal_.get(), &stored, candidate)) stored = std::move(candidate);
         } return *stored;
     }
-    inline const Presence<Json>& SourceRelationEndpoint::record() const {
+    inline const Presence<Data>& SourceRelationEndpoint::record() const {
         auto stored = std::atomic_load(cached_record_.get());
         if (!stored) {
-            auto candidate = std::make_shared<const Presence<Json>>(detail::member_value<Json>(value_,
+            auto candidate = std::make_shared<const Presence<Data>>(detail::member_value<Data>(value_,
             "record"));
             if (std::atomic_compare_exchange_strong(cached_record_.get(), &stored, candidate)) stored = std::move(candidate);
         } return *stored;
@@ -7864,7 +8051,7 @@ namespace tt::results {
     inline const std::variant<double, std::string>& Threshold::value() const {
         auto stored = std::atomic_load(cached_value_.get());
         if (!stored) {
-            auto candidate = std::make_shared<const std::variant<double, std::string>>(decode<std::variant<double,
+            auto candidate = std::make_shared<const std::variant<double, std::string>>(detail::decode<std::variant<double,
             std::string>>(value_));
             if (std::atomic_compare_exchange_strong(cached_value_.get(), &stored, candidate)) stored = std::move(candidate);
         } return *stored;
@@ -7905,93 +8092,110 @@ namespace tt::results {
         auto stored = std::atomic_load(cached_value_.get());
         if (!stored) {
             auto candidate = std::make_shared<const std::variant<bool, std::nullptr_t, std::string, std::vector<std::string>,
-            double>>(decode<std::variant<bool, std::nullptr_t, std::string, std::vector<std::string>, double>>(value_));
+            double>>(detail::decode<std::variant<bool, std::nullptr_t, std::string, std::vector<std::string>,
+            double>>(value_));
             if (std::atomic_compare_exchange_strong(cached_value_.get(), &stored, candidate)) stored = std::move(candidate);
         } return *stored;
     }
 }
-namespace tt::results {
-    class AnswerCardinalityFailure : public std::runtime_error {
+namespace tt {
+    class Failure : public std::runtime_error {
         public:
-        std::vector<SessionPacket> packets;
-        AnswerCardinalityFailure(const char* message, const std::vector<SessionPacket>& values):std::runtime_error(message),
-        packets(values) {
-        }
+        NativeFailureKind kind;
+        bool retryable=false;
+        std::optional<results::ImmediateFacts> facts;
+        std::optional<results::CallError> failure;
+        std::optional<results::SessionPacketTerminal> terminal;
+        std::vector<results::SessionPacket> packets;
+        Failure(int code, const std::string& message);
+        Failure(const char* message, const std::vector<results::SessionPacket>& values);
+        explicit Failure(results::SessionPacketTerminal value);
     };
+}
+namespace tt::results {
     inline void successful_answer(const std::vector<SessionPacket>& packets) {
         size_t terminals=0;
-        for(const auto& packet:packets) if(detail::literal(packet.document(), "kind", "terminal")) {
+        for(const auto& packet:packets) if(detail::literal(::tt::results::detail::document(packet),
+        "kind", "terminal")) {
             ++terminals;
-            if(packet.document().contains("failure")) throw AnswerCardinalityFailure("terminal contains a failure",
+            if(::tt::results::detail::document(packet).contains("failure")) throw ::tt::Failure("terminal contains a failure",
             packets);
         }
-        if(terminals!=1 || packets.empty() || !detail::literal(packets.back().document(),"kind","terminal")) throw AnswerCardinalityFailure("expected one final successful terminal",
-        packets);
+        if(terminals!=1 || packets.empty() || !detail::literal(::tt::results::detail::document(packets.back()),
+        "kind","terminal")) throw ::tt::Failure("expected one final successful terminal",packets);
     }
     inline std::optional<bool> read_decide(const std::vector<SessionPacket>& packets) {
         successful_answer(packets);
         std::optional<std::optional<bool>> answer;
-        for(const auto& packet:packets) if(detail::literal(packet.document(), "kind", "observation") && detail::literal(packet.document().at("value"),
-        "kind", "row") && detail::literal(packet.document().at("value").at("value"), "kind", "judgment")) {
-            const auto& judgment=packet.document().at("value").at("value").at("value");
+        for(const auto& packet:packets) if(detail::literal(::tt::results::detail::document(packet),
+        "kind", "observation") && detail::literal(::tt::results::detail::document(packet).at("value"),
+        "kind", "row") && detail::literal(::tt::results::detail::document(packet).at("value").at("value"),
+        "kind", "judgment")) {
+            const auto& judgment=::tt::results::detail::document(packet).at("value").at("value").at("value");
             if(!detail::literal(judgment,"kind","decision")) continue;
-            if(answer) throw AnswerCardinalityFailure("multiple matching judgments",packets);
+            if(answer) throw ::tt::Failure("multiple matching judgments",packets);
             answer.emplace(judgment.at("value").is_null() ? std::optional<bool>{
-            } : std::optional<bool>(decode<bool>(judgment.at("value"))));
+            } : std::optional<bool>(detail::decode<bool>(judgment.at("value"))));
         }
-        if(!answer) throw AnswerCardinalityFailure("no matching judgment",packets);
+        if(!answer) throw ::tt::Failure("no matching judgment",packets);
         return std::move(*answer);
     }
     inline std::optional<std::string> read_choose(const std::vector<SessionPacket>& packets) {
         successful_answer(packets);
         std::optional<std::optional<std::string>> answer;
-        for(const auto& packet:packets) if(detail::literal(packet.document(), "kind", "observation") && detail::literal(packet.document().at("value"),
-        "kind", "row") && detail::literal(packet.document().at("value").at("value"), "kind", "judgment")) {
-            const auto& judgment=packet.document().at("value").at("value").at("value");
+        for(const auto& packet:packets) if(detail::literal(::tt::results::detail::document(packet),
+        "kind", "observation") && detail::literal(::tt::results::detail::document(packet).at("value"),
+        "kind", "row") && detail::literal(::tt::results::detail::document(packet).at("value").at("value"),
+        "kind", "judgment")) {
+            const auto& judgment=::tt::results::detail::document(packet).at("value").at("value").at("value");
             if(!detail::literal(judgment,"kind","choice")) continue;
-            if(answer) throw AnswerCardinalityFailure("multiple matching judgments",packets);
+            if(answer) throw ::tt::Failure("multiple matching judgments",packets);
             answer.emplace(judgment.at("value").is_null() ? std::optional<std::string>{
-            } : std::optional<std::string>(decode<std::string>(judgment.at("value"))));
+            } : std::optional<std::string>(detail::decode<std::string>(judgment.at("value"))));
         }
-        if(!answer) throw AnswerCardinalityFailure("no matching judgment",packets);
+        if(!answer) throw ::tt::Failure("no matching judgment",packets);
         return std::move(*answer);
     }
     inline double read_score(const std::vector<SessionPacket>& packets) {
         successful_answer(packets);
         std::optional<double> answer;
-        for(const auto& packet:packets) if(detail::literal(packet.document(), "kind", "observation") && detail::literal(packet.document().at("value"),
-        "kind", "row") && detail::literal(packet.document().at("value").at("value"), "kind", "judgment")) {
-            const auto& judgment=packet.document().at("value").at("value").at("value");
+        for(const auto& packet:packets) if(detail::literal(::tt::results::detail::document(packet),
+        "kind", "observation") && detail::literal(::tt::results::detail::document(packet).at("value"),
+        "kind", "row") && detail::literal(::tt::results::detail::document(packet).at("value").at("value"),
+        "kind", "judgment")) {
+            const auto& judgment=::tt::results::detail::document(packet).at("value").at("value").at("value");
             if(!detail::literal(judgment,"kind","score")) continue;
-            if(answer) throw AnswerCardinalityFailure("multiple matching judgments",packets);
-            answer.emplace(decode<double>(judgment.at("value")));
+            if(answer) throw ::tt::Failure("multiple matching judgments",packets);
+            answer.emplace(detail::decode<double>(judgment.at("value")));
         }
-        if(!answer) throw AnswerCardinalityFailure("no matching judgment",packets);
+        if(!answer) throw ::tt::Failure("no matching judgment",packets);
         return std::move(*answer);
     }
     inline std::vector<std::string> read_tag(const std::vector<SessionPacket>& packets) {
         successful_answer(packets);
         std::optional<std::vector<std::string>> answer;
-        for(const auto& packet:packets) if(detail::literal(packet.document(), "kind", "observation") && detail::literal(packet.document().at("value"),
-        "kind", "row") && detail::literal(packet.document().at("value").at("value"), "kind", "judgment")) {
-            const auto& judgment=packet.document().at("value").at("value").at("value");
+        for(const auto& packet:packets) if(detail::literal(::tt::results::detail::document(packet),
+        "kind", "observation") && detail::literal(::tt::results::detail::document(packet).at("value"),
+        "kind", "row") && detail::literal(::tt::results::detail::document(packet).at("value").at("value"),
+        "kind", "judgment")) {
+            const auto& judgment=::tt::results::detail::document(packet).at("value").at("value").at("value");
             if(!detail::literal(judgment,"kind","tags")) continue;
-            if(answer) throw AnswerCardinalityFailure("multiple matching judgments",packets);
-            answer.emplace(decode<std::vector<std::string>>(judgment.at("value")));
+            if(answer) throw ::tt::Failure("multiple matching judgments",packets);
+            answer.emplace(detail::decode<std::vector<std::string>>(judgment.at("value")));
         }
-        if(!answer) throw AnswerCardinalityFailure("no matching judgment",packets);
+        if(!answer) throw ::tt::Failure("no matching judgment",packets);
         return std::move(*answer);
     }
-    inline std::vector<Json> read_filter(const std::vector<SessionPacket>& packets) {
+    inline std::vector<Data> read_filter(const std::vector<SessionPacket>& packets) {
         successful_answer(packets);
-        std::vector<Json> answer;
+        std::vector<Data> answer;
         for(const auto& packet:packets) {
-            if(detail::literal(packet.document(),"function","filter")) {
-                const auto& value=packet.document().at("value");
-                if(detail::literal(packet.document(),"kind","row")) answer.push_back(decode<Json>(value.at("input")));
-                else if(detail::literal(packet.document(),"kind","aggregate")) {
+            if(detail::literal(::tt::results::detail::document(packet),"function","filter")) {
+                const auto& value=::tt::results::detail::document(packet).at("value");
+                if(detail::literal(::tt::results::detail::document(packet),"kind","row")) answer.push_back(detail::decode<Data>(value.at("input")));
+                else if(detail::literal(::tt::results::detail::document(packet),"kind","aggregate")) {
                     if(!answer.empty()) continue;
-                    for(const auto& row:value) answer.push_back(decode<Json>(row.at("input")));
+                    for(const auto& row:value) answer.push_back(detail::decode<Data>(row.at("input")));
                 }
             }
         }
@@ -8001,12 +8205,12 @@ namespace tt::results {
         successful_answer(packets);
         std::vector<uint64_t> answer;
         for(const auto& packet:packets) {
-            if(detail::literal(packet.document(),"function","rank")) {
-                const auto& value=packet.document().at("value");
-                if(detail::literal(packet.document(),"kind","row")) answer.push_back(decode<uint64_t>(value.at("index")));
-                else if(detail::literal(packet.document(),"kind","aggregate")) {
+            if(detail::literal(::tt::results::detail::document(packet),"function","rank")) {
+                const auto& value=::tt::results::detail::document(packet).at("value");
+                if(detail::literal(::tt::results::detail::document(packet),"kind","row")) answer.push_back(detail::decode<uint64_t>(value.at("index")));
+                else if(detail::literal(::tt::results::detail::document(packet),"kind","aggregate")) {
                     if(!answer.empty()) continue;
-                    for(const auto& row:value) answer.push_back(decode<uint64_t>(row.at("index")));
+                    for(const auto& row:value) answer.push_back(detail::decode<uint64_t>(row.at("index")));
                 }
             }
         }
@@ -8016,10 +8220,10 @@ namespace tt::results {
         successful_answer(packets);
         std::optional<Find> answer;
         for(const auto& packet:packets) if(auto aggregate=packet.as_SessionPacketFindAggregate()) {
-            if(answer) throw AnswerCardinalityFailure("multiple matching aggregates",packets);
+            if(answer) throw ::tt::Failure("multiple matching aggregates",packets);
             answer.emplace(*aggregate->value().value);
         }
-        if(!answer) throw AnswerCardinalityFailure("no matching aggregate",packets);
+        if(!answer) throw ::tt::Failure("no matching aggregate",packets);
         return std::move(*answer);
     }
     inline std::vector<Annotation> read_annotate(const std::vector<SessionPacket>& packets) {
@@ -8032,306 +8236,307 @@ namespace tt::results {
         successful_answer(packets);
         std::optional<std::vector<Recognition>> answer;
         for(const auto& packet:packets) if(auto aggregate=packet.as_SessionPacketRecognizeAggregate()) {
-            if(answer) throw AnswerCardinalityFailure("multiple matching aggregates",packets);
+            if(answer) throw ::tt::Failure("multiple matching aggregates",packets);
             answer.emplace(*aggregate->value().value);
         }
-        if(!answer) throw AnswerCardinalityFailure("no matching aggregate",packets);
+        if(!answer) throw ::tt::Failure("no matching aggregate",packets);
         return std::move(*answer);
     }
     inline Relation read_relate(const std::vector<SessionPacket>& packets) {
         successful_answer(packets);
         std::optional<Relation> answer;
         for(const auto& packet:packets) if(auto aggregate=packet.as_SessionPacketRelateAggregate()) {
-            if(answer) throw AnswerCardinalityFailure("multiple matching aggregates",packets);
+            if(answer) throw ::tt::Failure("multiple matching aggregates",packets);
             answer.emplace(*aggregate->value().value);
         }
-        if(!answer) throw AnswerCardinalityFailure("no matching aggregate",packets);
+        if(!answer) throw ::tt::Failure("no matching aggregate",packets);
         return std::move(*answer);
     }
 }
+#ifdef THINKTHEN_CPP_IMPLEMENTATION
 #include <thinkthen/thinkthen.h>
 namespace tt::results::detail {
-    inline Json native_value(const thinkthen_complete_attempt_list_v1& value);
-    inline Json native_value(const thinkthen_complete_attempt_list_presence_v1& value);
-    inline Json native_value(const thinkthen_complete_call_id_presence_v1& value);
-    inline Json native_value(const thinkthen_complete_utf8_presence_v1& value);
-    inline Json native_value(const thinkthen_complete_u32_presence_v1& value);
-    inline Json native_value(const thinkthen_complete_u64_presence_v1& value);
-    inline Json native_value(const thinkthen_complete_persistence_observation_presence_v1& value);
-    inline Json native_value(const thinkthen_complete_immediate_facts_v1& value);
-    inline Json native_value(const thinkthen_complete_persistence_observation_v1& value);
-    inline Json native_value(const thinkthen_complete_usage_persistence_v1& value);
-    inline Json native_value(const thinkthen_complete_call_id_v1& value);
-    inline Json native_value(const thinkthen_complete_attempt_v1& value);
-    inline Json native_value(const thinkthen_complete_sdk_request_id_v1& value);
-    inline Json native_value(const thinkthen_complete_attempt_outcome_v1& value);
-    inline Json native_value(const thinkthen_complete_session_packet_v1& value);
-    inline Json native_value(const thinkthen_complete_facts_presence_v1& value);
-    inline Json native_value(const thinkthen_complete_call_error_presence_v1& value);
-    inline Json native_value(const thinkthen_complete_session_packet_terminal_v1& value);
-    inline Json native_value(const thinkthen_complete_call_error_v1& value);
-    inline Json native_value(const thinkthen_complete_facts_v1& value);
-    inline Json native_value(const thinkthen_complete_input_denial_presence_v1& value);
-    inline Json native_value(const thinkthen_complete_send_denial_presence_v1& value);
-    inline Json native_value(const thinkthen_complete_error_v1& value);
-    inline Json native_value(const thinkthen_complete_stopped_v1& value);
-    inline Json native_value(const thinkthen_complete_stop_cause_v1& value);
-    inline Json native_value(const thinkthen_complete_send_denial_v1& value);
-    inline Json native_value(const thinkthen_complete_send_denial_before_retry_v1& value);
-    inline Json native_value(const thinkthen_complete_send_denial_before_additional_send_v1& value);
-    inline Json native_value(const thinkthen_complete_send_denial_before_first_send_v1& value);
-    inline Json native_value(const thinkthen_complete_failure_kind_v1& value);
-    inline Json native_value(const thinkthen_complete_input_denial_v1& value);
-    inline Json native_value(const thinkthen_complete_input_denial_retry_v1& value);
-    inline Json native_value(const thinkthen_complete_input_denial_additional_request_v1& value);
-    inline Json native_value(const thinkthen_complete_input_denial_initial_request_v1& value);
-    inline Json native_value(const thinkthen_complete_session_packet_observation_v1& value);
-    inline Json native_value(const thinkthen_complete_session_observation_v1& value);
-    inline Json native_value(const thinkthen_complete_session_observation_row_v1& value);
-    inline Json native_value(const thinkthen_complete_session_observed_row_v1& value);
-    inline Json native_value(const thinkthen_complete_session_relation_edge_list_v1& value);
-    inline Json native_value(const thinkthen_complete_session_observed_row_relations_v1& value);
-    inline Json native_value(const thinkthen_complete_session_relation_edge_v1& value);
-    inline Json native_value(const thinkthen_complete_entity_document_v1& value);
-    inline Json native_value(const thinkthen_complete_session_observed_row_find_v1& value);
-    inline Json native_value(const thinkthen_complete_session_observed_row_recognized_v1& value);
-    inline Json native_value(const thinkthen_complete_entity_list_v1& value);
-    inline Json native_value(const thinkthen_complete_boundary_proposal_list_v1& value);
-    inline Json native_value(const thinkthen_complete_boundary_proposal_list_presence_v1& value);
-    inline Json native_value(const thinkthen_complete_recognition_edge_list_v1& value);
-    inline Json native_value(const thinkthen_complete_recognition_edge_list_presence_v1& value);
-    inline Json native_value(const thinkthen_complete_session_recognition_v1& value);
-    inline Json native_value(const thinkthen_complete_recognition_edge_v1& value);
-    inline Json native_value(const thinkthen_complete_entity_v1& value);
-    inline Json native_value(const thinkthen_complete_boundary_proposal_v1& value);
-    inline Json native_value(const thinkthen_complete_recognition_mode_v1& value);
-    inline Json native_value(const thinkthen_complete_session_annotation_list_v1& value);
-    inline Json native_value(const thinkthen_complete_session_observed_row_annotated_v1& value);
-    inline Json native_value(const thinkthen_complete_session_annotation_v1& value);
-    inline Json native_value(const thinkthen_complete_annotation_value_v1& value);
-    inline Json native_value(const thinkthen_complete_annotation_value_failed_v1& value);
-    inline Json native_value(const thinkthen_complete_failure_field_kind_v1& value);
-    inline Json native_value(const thinkthen_complete_failure_v1& value);
-    inline Json native_value(const thinkthen_complete_failure_cause_v1& value);
-    inline Json native_value(const thinkthen_complete_string_list_v1& value);
-    inline Json native_value(const thinkthen_complete_annotation_value_tags_v1& value);
-    inline Json native_value(const thinkthen_complete_annotation_value_score_v1& value);
-    inline Json native_value(const thinkthen_complete_annotation_value_choice_v1& value);
-    inline Json native_value(const thinkthen_complete_annotation_value_decision_v1& value);
-    inline Json native_value(const thinkthen_complete_session_observed_row_judgment_v1& value);
-    inline Json native_value(const thinkthen_complete_session_judgment_v1& value);
-    inline Json native_value(const thinkthen_complete_session_judgment_tags_v1& value);
-    inline Json native_value(const thinkthen_complete_session_judgment_score_v1& value);
-    inline Json native_value(const thinkthen_complete_session_judgment_choice_v1& value);
-    inline Json native_value(const thinkthen_complete_session_judgment_decision_v1& value);
-    inline Json native_value(const thinkthen_complete_session_observation_question_v1& value);
-    inline Json native_value(const thinkthen_complete_answer_id_presence_v1& value);
-    inline Json native_value(const thinkthen_complete_f64_presence_v1& value);
-    inline Json native_value(const thinkthen_complete_failure_presence_v1& value);
-    inline Json native_value(const thinkthen_complete_failure_id_presence_v1& value);
-    inline Json native_value(const thinkthen_complete_json_presence_v1& value);
-    inline Json native_value(const thinkthen_complete_physical_source_presence_v1& value);
-    inline Json native_value(const thinkthen_complete_session_input_source_list_v1& value);
-    inline Json native_value(const thinkthen_complete_json_list_v1& value);
-    inline Json native_value(const thinkthen_complete_observation_list_v1& value);
-    inline Json native_value(const thinkthen_complete_session_probabilities_presence_v1& value);
-    inline Json native_value(const thinkthen_complete_question_source_list_v1& value);
-    inline Json native_value(const thinkthen_complete_usage_presence_v1& value);
-    inline Json native_value(const thinkthen_complete_threshold_presence_v1& value);
-    inline Json native_value(const thinkthen_complete_token_usage_presence_v1& value);
-    inline Json native_value(const thinkthen_complete_value_presence_v1& value);
-    inline Json native_value(const thinkthen_complete_session_question_detail_v1& value);
-    inline Json native_value(const thinkthen_complete_value_v1& value);
-    inline Json native_value(const thinkthen_complete_token_usage_v1& value);
-    inline Json native_value(const thinkthen_complete_threshold_v1& value);
-    inline Json native_value(const thinkthen_complete_usage_v1& value);
-    inline Json native_value(const thinkthen_complete_question_source_v1& value);
-    inline Json native_value(const thinkthen_complete_origin_v1& value);
-    inline Json native_value(const thinkthen_complete_question_document_v1& value);
-    inline Json native_value(const thinkthen_complete_batch_presence_v1& value);
-    inline Json native_value(const thinkthen_complete_input_declaration_presence_v1& value);
-    inline Json native_value(const thinkthen_complete_label_list_v1& value);
-    inline Json native_value(const thinkthen_complete_label_list_presence_v1& value);
-    inline Json native_value(const thinkthen_complete_question_name_presence_v1& value);
-    inline Json native_value(const thinkthen_complete_string_list_presence_v1& value);
-    inline Json native_value(const thinkthen_complete_wording_version_presence_v1& value);
-    inline Json native_value(const thinkthen_complete_question_document_score_v1& value);
-    inline Json native_value(const thinkthen_complete_wording_version_v1& value);
-    inline Json native_value(const thinkthen_complete_question_name_v1& value);
-    inline Json native_value(const thinkthen_complete_label_v1& value);
-    inline Json native_value(const thinkthen_complete_input_declaration_v1& value);
-    inline Json native_value(const thinkthen_complete_input_property_type_map_entry_v1& value);
-    inline Json native_value(const thinkthen_complete_input_property_type_map_v1& value);
-    inline Json native_value(const thinkthen_complete_input_declaration_object_root_v1& value);
-    inline Json native_value(const thinkthen_complete_object_type_v1& value);
-    inline Json native_value(const thinkthen_complete_input_property_type_v1& value);
-    inline Json native_value(const thinkthen_complete_input_property_type_array_v1& value);
-    inline Json native_value(const thinkthen_complete_string_root_v1& value);
-    inline Json native_value(const thinkthen_complete_string_type_v1& value);
-    inline Json native_value(const thinkthen_complete_input_property_type_boolean_v1& value);
-    inline Json native_value(const thinkthen_complete_input_property_type_number_v1& value);
-    inline Json native_value(const thinkthen_complete_input_property_type_string_v1& value);
-    inline Json native_value(const thinkthen_complete_input_declaration_string_root_v1& value);
-    inline Json native_value(const thinkthen_complete_batch_string_v1& value);
-    inline Json native_value(const thinkthen_complete_batch_v1& value);
-    inline Json native_value(const thinkthen_complete_question_document_tag_v1& value);
-    inline Json native_value(const thinkthen_complete_question_document_choose_v1& value);
-    inline Json native_value(const thinkthen_complete_question_document_decide_v1& value);
-    inline Json native_value(const thinkthen_complete_session_probabilities_v1& value);
-    inline Json native_value(const thinkthen_complete_session_named_probability_list_v1& value);
-    inline Json native_value(const thinkthen_complete_session_probabilities_named_v1& value);
-    inline Json native_value(const thinkthen_complete_session_named_probability_v1& value);
-    inline Json native_value(const thinkthen_complete_session_probabilities_yes_no_v1& value);
-    inline Json native_value(const thinkthen_complete_observation_v1& value);
-    inline Json native_value(const thinkthen_complete_observation_failure_id_v1& value);
-    inline Json native_value(const thinkthen_complete_failure_id_v1& value);
-    inline Json native_value(const thinkthen_complete_observation_observation_id_v1& value);
-    inline Json native_value(const thinkthen_complete_observation_id_v1& value);
-    inline Json native_value(const thinkthen_complete_session_input_source_v1& value);
-    inline Json native_value(const thinkthen_complete_physical_source_v1& value);
-    inline Json native_value(const thinkthen_complete_answer_id_v1& value);
-    inline Json native_value(const thinkthen_complete_request_function_v1& value);
-    inline Json native_value(const thinkthen_complete_session_packet_relate_aggregate_v1& value);
-    inline Json native_value(const thinkthen_complete_session_input_source_list_presence_v1& value);
-    inline Json native_value(const thinkthen_complete_position_presence_v1& value);
-    inline Json native_value(const thinkthen_complete_related_entity_edge_list_v1& value);
-    inline Json native_value(const thinkthen_complete_relation_v1& value);
-    inline Json native_value(const thinkthen_complete_related_entity_edge_v1& value);
-    inline Json native_value(const thinkthen_complete_relation_endpoint_v1& value);
-    inline Json native_value(const thinkthen_complete_relation_endpoint_source_v1& value);
-    inline Json native_value(const thinkthen_complete_relation_endpoint_related_entity_v1& value);
-    inline Json native_value(const thinkthen_complete_version_v1& value);
-    inline Json native_value(const thinkthen_complete_relate_fields_presence_v1& value);
-    inline Json native_value(const thinkthen_complete_relation_rule_list_v1& value);
-    inline Json native_value(const thinkthen_complete_relate_question_document_v1& value);
-    inline Json native_value(const thinkthen_complete_relation_rule_v1& value);
-    inline Json native_value(const thinkthen_complete_relate_fields_v1& value);
-    inline Json native_value(const thinkthen_complete_position_v1& value);
-    inline Json native_value(const thinkthen_complete_batch_setting_presence_v1& value);
-    inline Json native_value(const thinkthen_complete_batch_warning_presence_v1& value);
-    inline Json native_value(const thinkthen_complete_origin_presence_v1& value);
-    inline Json native_value(const thinkthen_complete_profile_warning_presence_v1& value);
-    inline Json native_value(const thinkthen_complete_meta_v1& value);
-    inline Json native_value(const thinkthen_complete_profile_warning_v1& value);
-    inline Json native_value(const thinkthen_complete_batch_warning_v1& value);
-    inline Json native_value(const thinkthen_complete_batch_setting_v1& value);
-    inline Json native_value(const thinkthen_complete_relation_member_list_v1& value);
-    inline Json native_value(const thinkthen_complete_answers_v1& value);
-    inline Json native_value(const thinkthen_complete_relation_member_v1& value);
-    inline Json native_value(const thinkthen_complete_related_entity_presence_v1& value);
-    inline Json native_value(const thinkthen_complete_relation_member_failure_id_v1& value);
-    inline Json native_value(const thinkthen_complete_related_entity_v1& value);
-    inline Json native_value(const thinkthen_complete_relation_method_v1& value);
-    inline Json native_value(const thinkthen_complete_relation_direction_v1& value);
-    inline Json native_value(const thinkthen_complete_relation_member_answer_id_v1& value);
-    inline Json native_value(const thinkthen_complete_answer_v1& value);
-    inline Json native_value(const thinkthen_complete_number_map_entry_v1& value);
-    inline Json native_value(const thinkthen_complete_number_map_v1& value);
-    inline Json native_value(const thinkthen_complete_answer_score_v1& value);
-    inline Json native_value(const thinkthen_complete_answer_tag_v1& value);
-    inline Json native_value(const thinkthen_complete_answer_choice_v1& value);
-    inline Json native_value(const thinkthen_complete_answer_yes_no_v1& value);
-    inline Json native_value(const thinkthen_complete_recognition_list_v1& value);
-    inline Json native_value(const thinkthen_complete_session_packet_recognize_aggregate_v1& value);
-    inline Json native_value(const thinkthen_complete_recognition_v1& value);
-    inline Json native_value(const thinkthen_complete_recognize_v1& value);
-    inline Json native_value(const thinkthen_complete_recognize_mode_proposals_v1& value);
-    inline Json native_value(const thinkthen_complete_boundary_mode_v1& value);
-    inline Json native_value(const thinkthen_complete_entity_edge_list_v1& value);
-    inline Json native_value(const thinkthen_complete_entity_edge_list_presence_v1& value);
-    inline Json native_value(const thinkthen_complete_recognize_entities_v1& value);
-    inline Json native_value(const thinkthen_complete_entity_edge_v1& value);
-    inline Json native_value(const thinkthen_complete_json_map_entry_v1& value);
-    inline Json native_value(const thinkthen_complete_json_map_v1& value);
-    inline Json native_value(const thinkthen_complete_recognition_mode_presence_v1& value);
-    inline Json native_value(const thinkthen_complete_relation_rule_list_presence_v1& value);
-    inline Json native_value(const thinkthen_complete_recognition_stage_context_presence_v1& value);
-    inline Json native_value(const thinkthen_complete_recognize_question_document_v1& value);
-    inline Json native_value(const thinkthen_complete_verb_v1& value);
-    inline Json native_value(const thinkthen_complete_recognition_stage_context_v1& value);
-    inline Json native_value(const thinkthen_complete_recognition_odds_v1& value);
-    inline Json native_value(const thinkthen_complete_piece_odds_list_v1& value);
-    inline Json native_value(const thinkthen_complete_recognition_odds_boundary_odds_v1& value);
-    inline Json native_value(const thinkthen_complete_piece_odds_v1& value);
-    inline Json native_value(const thinkthen_complete_name_odds_list_v1& value);
-    inline Json native_value(const thinkthen_complete_pair_odds_list_v1& value);
-    inline Json native_value(const thinkthen_complete_recognition_proposal_list_v1& value);
-    inline Json native_value(const thinkthen_complete_recognition_odds_recognize_answer_v1& value);
-    inline Json native_value(const thinkthen_complete_place_presence_v1& value);
-    inline Json native_value(const thinkthen_complete_recognition_proposal_v1& value);
-    inline Json native_value(const thinkthen_complete_place_v1& value);
-    inline Json native_value(const thinkthen_complete_pair_odds_v1& value);
-    inline Json native_value(const thinkthen_complete_number_map_presence_v1& value);
-    inline Json native_value(const thinkthen_complete_name_odds_v1& value);
-    inline Json native_value(const thinkthen_complete_annotation_list_v1& value);
-    inline Json native_value(const thinkthen_complete_session_packet_annotate_aggregate_v1& value);
-    inline Json native_value(const thinkthen_complete_annotation_member_map_entry_v1& value);
-    inline Json native_value(const thinkthen_complete_annotation_member_map_v1& value);
-    inline Json native_value(const thinkthen_complete_annotation_v1& value);
-    inline Json native_value(const thinkthen_complete_annotated_field_map_entry_v1& value);
-    inline Json native_value(const thinkthen_complete_annotated_field_map_v1& value);
-    inline Json native_value(const thinkthen_complete_annotated_row_v1& value);
-    inline Json native_value(const thinkthen_complete_annotated_field_v1& value);
-    inline Json native_value(const thinkthen_complete_failed_v1& value);
-    inline Json native_value(const thinkthen_complete_annotation_member_v1& value);
-    inline Json native_value(const thinkthen_complete_annotation_member_failure_id_v1& value);
-    inline Json native_value(const thinkthen_complete_annotation_member_answer_id_v1& value);
-    inline Json native_value(const thinkthen_complete_session_packet_find_aggregate_v1& value);
-    inline Json native_value(const thinkthen_complete_find_candidate_list_v1& value);
-    inline Json native_value(const thinkthen_complete_find_candidate_list_presence_v1& value);
-    inline Json native_value(const thinkthen_complete_find_v1& value);
-    inline Json native_value(const thinkthen_complete_find_question_document_v1& value);
-    inline Json native_value(const thinkthen_complete_find_candidate_v1& value);
-    inline Json native_value(const thinkthen_complete_find_answer_v1& value);
-    inline Json native_value(const thinkthen_complete_atomic_non_zero_usize_list_v1& value);
-    inline Json native_value(const thinkthen_complete_session_packet_rank_aggregate_v1& value);
-    inline Json native_value(const thinkthen_complete_image_list_v1& value);
-    inline Json native_value(const thinkthen_complete_image_list_presence_v1& value);
-    inline Json native_value(const thinkthen_complete_rank_member_list_v1& value);
-    inline Json native_value(const thinkthen_complete_rank_member_list_presence_v1& value);
-    inline Json native_value(const thinkthen_complete_atomic_non_zero_usize_v1& value);
-    inline Json native_value(const thinkthen_complete_rank_member_v1& value);
-    inline Json native_value(const thinkthen_complete_rank_member_result_v1& value);
-    inline Json native_value(const thinkthen_complete_image_v1& value);
-    inline Json native_value(const thinkthen_complete_image_media_v1& value);
-    inline Json native_value(const thinkthen_complete_atomic_boolean_list_v1& value);
-    inline Json native_value(const thinkthen_complete_session_packet_filter_aggregate_v1& value);
-    inline Json native_value(const thinkthen_complete_atomic_boolean_v1& value);
-    inline Json native_value(const thinkthen_complete_atomic_double_list_v1& value);
-    inline Json native_value(const thinkthen_complete_session_packet_score_aggregate_v1& value);
-    inline Json native_value(const thinkthen_complete_atomic_double_v1& value);
-    inline Json native_value(const thinkthen_complete_atomic_array_of_string_list_v1& value);
-    inline Json native_value(const thinkthen_complete_session_packet_tag_aggregate_v1& value);
-    inline Json native_value(const thinkthen_complete_atomic_array_of_string_v1& value);
-    inline Json native_value(const thinkthen_complete_atomic_nullable_string_list_v1& value);
-    inline Json native_value(const thinkthen_complete_session_packet_choose_aggregate_v1& value);
-    inline Json native_value(const thinkthen_complete_atomic_nullable_string_v1& value);
-    inline Json native_value(const thinkthen_complete_atomic_decide_value_list_v1& value);
-    inline Json native_value(const thinkthen_complete_session_packet_decide_aggregate_v1& value);
-    inline Json native_value(const thinkthen_complete_decide_value_presence_v1& value);
-    inline Json native_value(const thinkthen_complete_atomic_decide_value_v1& value);
-    inline Json native_value(const thinkthen_complete_decide_value_v1& value);
-    inline Json native_value(const thinkthen_complete_session_packet_annotate_row_v1& value);
-    inline Json native_value(const thinkthen_complete_session_packet_filter_row_v1& value);
-    inline Json native_value(const thinkthen_complete_session_packet_score_row_v1& value);
-    inline Json native_value(const thinkthen_complete_session_packet_tag_row_v1& value);
-    inline Json native_value(const thinkthen_complete_session_packet_choose_row_v1& value);
-    inline Json native_value(const thinkthen_complete_session_packet_decide_row_v1& value);
-    inline Json native_value(const thinkthen_complete_json_v1& value);
-    inline Json native_value(const thinkthen_complete_utf8_v1& value) {
-        return Json(std::string(value.data ? value.data : "", value.len));
+    inline Data native_value(const thinkthen_complete_attempt_list_v1& value);
+    inline Data native_value(const thinkthen_complete_attempt_list_presence_v1& value);
+    inline Data native_value(const thinkthen_complete_call_id_presence_v1& value);
+    inline Data native_value(const thinkthen_complete_utf8_presence_v1& value);
+    inline Data native_value(const thinkthen_complete_u32_presence_v1& value);
+    inline Data native_value(const thinkthen_complete_u64_presence_v1& value);
+    inline Data native_value(const thinkthen_complete_persistence_observation_presence_v1& value);
+    inline Data native_value(const thinkthen_complete_immediate_facts_v1& value);
+    inline Data native_value(const thinkthen_complete_persistence_observation_v1& value);
+    inline Data native_value(const thinkthen_complete_usage_persistence_v1& value);
+    inline Data native_value(const thinkthen_complete_call_id_v1& value);
+    inline Data native_value(const thinkthen_complete_attempt_v1& value);
+    inline Data native_value(const thinkthen_complete_sdk_request_id_v1& value);
+    inline Data native_value(const thinkthen_complete_attempt_outcome_v1& value);
+    inline Data native_value(const thinkthen_complete_session_packet_v1& value);
+    inline Data native_value(const thinkthen_complete_facts_presence_v1& value);
+    inline Data native_value(const thinkthen_complete_call_error_presence_v1& value);
+    inline Data native_value(const thinkthen_complete_session_packet_terminal_v1& value);
+    inline Data native_value(const thinkthen_complete_call_error_v1& value);
+    inline Data native_value(const thinkthen_complete_facts_v1& value);
+    inline Data native_value(const thinkthen_complete_input_denial_presence_v1& value);
+    inline Data native_value(const thinkthen_complete_send_denial_presence_v1& value);
+    inline Data native_value(const thinkthen_complete_error_v1& value);
+    inline Data native_value(const thinkthen_complete_stopped_v1& value);
+    inline Data native_value(const thinkthen_complete_stop_cause_v1& value);
+    inline Data native_value(const thinkthen_complete_send_denial_v1& value);
+    inline Data native_value(const thinkthen_complete_send_denial_before_retry_v1& value);
+    inline Data native_value(const thinkthen_complete_send_denial_before_additional_send_v1& value);
+    inline Data native_value(const thinkthen_complete_send_denial_before_first_send_v1& value);
+    inline Data native_value(const thinkthen_complete_failure_kind_v1& value);
+    inline Data native_value(const thinkthen_complete_input_denial_v1& value);
+    inline Data native_value(const thinkthen_complete_input_denial_retry_v1& value);
+    inline Data native_value(const thinkthen_complete_input_denial_additional_request_v1& value);
+    inline Data native_value(const thinkthen_complete_input_denial_initial_request_v1& value);
+    inline Data native_value(const thinkthen_complete_session_packet_observation_v1& value);
+    inline Data native_value(const thinkthen_complete_session_observation_v1& value);
+    inline Data native_value(const thinkthen_complete_session_observation_row_v1& value);
+    inline Data native_value(const thinkthen_complete_session_observed_row_v1& value);
+    inline Data native_value(const thinkthen_complete_session_relation_edge_list_v1& value);
+    inline Data native_value(const thinkthen_complete_session_observed_row_relations_v1& value);
+    inline Data native_value(const thinkthen_complete_session_relation_edge_v1& value);
+    inline Data native_value(const thinkthen_complete_entity_document_v1& value);
+    inline Data native_value(const thinkthen_complete_session_observed_row_find_v1& value);
+    inline Data native_value(const thinkthen_complete_session_observed_row_recognized_v1& value);
+    inline Data native_value(const thinkthen_complete_entity_list_v1& value);
+    inline Data native_value(const thinkthen_complete_boundary_proposal_list_v1& value);
+    inline Data native_value(const thinkthen_complete_boundary_proposal_list_presence_v1& value);
+    inline Data native_value(const thinkthen_complete_recognition_edge_list_v1& value);
+    inline Data native_value(const thinkthen_complete_recognition_edge_list_presence_v1& value);
+    inline Data native_value(const thinkthen_complete_session_recognition_v1& value);
+    inline Data native_value(const thinkthen_complete_recognition_edge_v1& value);
+    inline Data native_value(const thinkthen_complete_entity_v1& value);
+    inline Data native_value(const thinkthen_complete_boundary_proposal_v1& value);
+    inline Data native_value(const thinkthen_complete_recognition_mode_v1& value);
+    inline Data native_value(const thinkthen_complete_session_annotation_list_v1& value);
+    inline Data native_value(const thinkthen_complete_session_observed_row_annotated_v1& value);
+    inline Data native_value(const thinkthen_complete_session_annotation_v1& value);
+    inline Data native_value(const thinkthen_complete_annotation_value_v1& value);
+    inline Data native_value(const thinkthen_complete_annotation_value_failed_v1& value);
+    inline Data native_value(const thinkthen_complete_failure_field_kind_v1& value);
+    inline Data native_value(const thinkthen_complete_failure_v1& value);
+    inline Data native_value(const thinkthen_complete_failure_cause_v1& value);
+    inline Data native_value(const thinkthen_complete_string_list_v1& value);
+    inline Data native_value(const thinkthen_complete_annotation_value_tags_v1& value);
+    inline Data native_value(const thinkthen_complete_annotation_value_score_v1& value);
+    inline Data native_value(const thinkthen_complete_annotation_value_choice_v1& value);
+    inline Data native_value(const thinkthen_complete_annotation_value_decision_v1& value);
+    inline Data native_value(const thinkthen_complete_session_observed_row_judgment_v1& value);
+    inline Data native_value(const thinkthen_complete_session_judgment_v1& value);
+    inline Data native_value(const thinkthen_complete_session_judgment_tags_v1& value);
+    inline Data native_value(const thinkthen_complete_session_judgment_score_v1& value);
+    inline Data native_value(const thinkthen_complete_session_judgment_choice_v1& value);
+    inline Data native_value(const thinkthen_complete_session_judgment_decision_v1& value);
+    inline Data native_value(const thinkthen_complete_session_observation_question_v1& value);
+    inline Data native_value(const thinkthen_complete_answer_id_presence_v1& value);
+    inline Data native_value(const thinkthen_complete_f64_presence_v1& value);
+    inline Data native_value(const thinkthen_complete_failure_presence_v1& value);
+    inline Data native_value(const thinkthen_complete_failure_id_presence_v1& value);
+    inline Data native_value(const thinkthen_complete_json_presence_v1& value);
+    inline Data native_value(const thinkthen_complete_physical_source_presence_v1& value);
+    inline Data native_value(const thinkthen_complete_session_input_source_list_v1& value);
+    inline Data native_value(const thinkthen_complete_json_list_v1& value);
+    inline Data native_value(const thinkthen_complete_observation_list_v1& value);
+    inline Data native_value(const thinkthen_complete_session_probabilities_presence_v1& value);
+    inline Data native_value(const thinkthen_complete_question_source_list_v1& value);
+    inline Data native_value(const thinkthen_complete_usage_presence_v1& value);
+    inline Data native_value(const thinkthen_complete_threshold_presence_v1& value);
+    inline Data native_value(const thinkthen_complete_token_usage_presence_v1& value);
+    inline Data native_value(const thinkthen_complete_value_presence_v1& value);
+    inline Data native_value(const thinkthen_complete_session_question_detail_v1& value);
+    inline Data native_value(const thinkthen_complete_value_v1& value);
+    inline Data native_value(const thinkthen_complete_token_usage_v1& value);
+    inline Data native_value(const thinkthen_complete_threshold_v1& value);
+    inline Data native_value(const thinkthen_complete_usage_v1& value);
+    inline Data native_value(const thinkthen_complete_question_source_v1& value);
+    inline Data native_value(const thinkthen_complete_origin_v1& value);
+    inline Data native_value(const thinkthen_complete_question_document_v1& value);
+    inline Data native_value(const thinkthen_complete_batch_presence_v1& value);
+    inline Data native_value(const thinkthen_complete_input_declaration_presence_v1& value);
+    inline Data native_value(const thinkthen_complete_label_list_v1& value);
+    inline Data native_value(const thinkthen_complete_label_list_presence_v1& value);
+    inline Data native_value(const thinkthen_complete_question_name_presence_v1& value);
+    inline Data native_value(const thinkthen_complete_string_list_presence_v1& value);
+    inline Data native_value(const thinkthen_complete_wording_version_presence_v1& value);
+    inline Data native_value(const thinkthen_complete_question_document_score_v1& value);
+    inline Data native_value(const thinkthen_complete_wording_version_v1& value);
+    inline Data native_value(const thinkthen_complete_question_name_v1& value);
+    inline Data native_value(const thinkthen_complete_label_v1& value);
+    inline Data native_value(const thinkthen_complete_input_declaration_v1& value);
+    inline Data native_value(const thinkthen_complete_input_property_type_map_entry_v1& value);
+    inline Data native_value(const thinkthen_complete_input_property_type_map_v1& value);
+    inline Data native_value(const thinkthen_complete_input_declaration_object_root_v1& value);
+    inline Data native_value(const thinkthen_complete_object_type_v1& value);
+    inline Data native_value(const thinkthen_complete_input_property_type_v1& value);
+    inline Data native_value(const thinkthen_complete_input_property_type_array_v1& value);
+    inline Data native_value(const thinkthen_complete_string_root_v1& value);
+    inline Data native_value(const thinkthen_complete_string_type_v1& value);
+    inline Data native_value(const thinkthen_complete_input_property_type_boolean_v1& value);
+    inline Data native_value(const thinkthen_complete_input_property_type_number_v1& value);
+    inline Data native_value(const thinkthen_complete_input_property_type_string_v1& value);
+    inline Data native_value(const thinkthen_complete_input_declaration_string_root_v1& value);
+    inline Data native_value(const thinkthen_complete_batch_string_v1& value);
+    inline Data native_value(const thinkthen_complete_batch_v1& value);
+    inline Data native_value(const thinkthen_complete_question_document_tag_v1& value);
+    inline Data native_value(const thinkthen_complete_question_document_choose_v1& value);
+    inline Data native_value(const thinkthen_complete_question_document_decide_v1& value);
+    inline Data native_value(const thinkthen_complete_session_probabilities_v1& value);
+    inline Data native_value(const thinkthen_complete_session_named_probability_list_v1& value);
+    inline Data native_value(const thinkthen_complete_session_probabilities_named_v1& value);
+    inline Data native_value(const thinkthen_complete_session_named_probability_v1& value);
+    inline Data native_value(const thinkthen_complete_session_probabilities_yes_no_v1& value);
+    inline Data native_value(const thinkthen_complete_observation_v1& value);
+    inline Data native_value(const thinkthen_complete_observation_failure_id_v1& value);
+    inline Data native_value(const thinkthen_complete_failure_id_v1& value);
+    inline Data native_value(const thinkthen_complete_observation_observation_id_v1& value);
+    inline Data native_value(const thinkthen_complete_observation_id_v1& value);
+    inline Data native_value(const thinkthen_complete_session_input_source_v1& value);
+    inline Data native_value(const thinkthen_complete_physical_source_v1& value);
+    inline Data native_value(const thinkthen_complete_answer_id_v1& value);
+    inline Data native_value(const thinkthen_complete_request_function_v1& value);
+    inline Data native_value(const thinkthen_complete_session_packet_relate_aggregate_v1& value);
+    inline Data native_value(const thinkthen_complete_session_input_source_list_presence_v1& value);
+    inline Data native_value(const thinkthen_complete_position_presence_v1& value);
+    inline Data native_value(const thinkthen_complete_related_entity_edge_list_v1& value);
+    inline Data native_value(const thinkthen_complete_relation_v1& value);
+    inline Data native_value(const thinkthen_complete_related_entity_edge_v1& value);
+    inline Data native_value(const thinkthen_complete_relation_endpoint_v1& value);
+    inline Data native_value(const thinkthen_complete_relation_endpoint_source_v1& value);
+    inline Data native_value(const thinkthen_complete_relation_endpoint_related_entity_v1& value);
+    inline Data native_value(const thinkthen_complete_version_v1& value);
+    inline Data native_value(const thinkthen_complete_relate_fields_presence_v1& value);
+    inline Data native_value(const thinkthen_complete_relation_rule_list_v1& value);
+    inline Data native_value(const thinkthen_complete_relate_question_document_v1& value);
+    inline Data native_value(const thinkthen_complete_relation_rule_v1& value);
+    inline Data native_value(const thinkthen_complete_relate_fields_v1& value);
+    inline Data native_value(const thinkthen_complete_position_v1& value);
+    inline Data native_value(const thinkthen_complete_batch_setting_presence_v1& value);
+    inline Data native_value(const thinkthen_complete_batch_warning_presence_v1& value);
+    inline Data native_value(const thinkthen_complete_origin_presence_v1& value);
+    inline Data native_value(const thinkthen_complete_profile_warning_presence_v1& value);
+    inline Data native_value(const thinkthen_complete_meta_v1& value);
+    inline Data native_value(const thinkthen_complete_profile_warning_v1& value);
+    inline Data native_value(const thinkthen_complete_batch_warning_v1& value);
+    inline Data native_value(const thinkthen_complete_batch_setting_v1& value);
+    inline Data native_value(const thinkthen_complete_relation_member_list_v1& value);
+    inline Data native_value(const thinkthen_complete_answers_v1& value);
+    inline Data native_value(const thinkthen_complete_relation_member_v1& value);
+    inline Data native_value(const thinkthen_complete_related_entity_presence_v1& value);
+    inline Data native_value(const thinkthen_complete_relation_member_failure_id_v1& value);
+    inline Data native_value(const thinkthen_complete_related_entity_v1& value);
+    inline Data native_value(const thinkthen_complete_relation_method_v1& value);
+    inline Data native_value(const thinkthen_complete_relation_direction_v1& value);
+    inline Data native_value(const thinkthen_complete_relation_member_answer_id_v1& value);
+    inline Data native_value(const thinkthen_complete_answer_v1& value);
+    inline Data native_value(const thinkthen_complete_number_map_entry_v1& value);
+    inline Data native_value(const thinkthen_complete_number_map_v1& value);
+    inline Data native_value(const thinkthen_complete_answer_score_v1& value);
+    inline Data native_value(const thinkthen_complete_answer_tag_v1& value);
+    inline Data native_value(const thinkthen_complete_answer_choice_v1& value);
+    inline Data native_value(const thinkthen_complete_answer_yes_no_v1& value);
+    inline Data native_value(const thinkthen_complete_recognition_list_v1& value);
+    inline Data native_value(const thinkthen_complete_session_packet_recognize_aggregate_v1& value);
+    inline Data native_value(const thinkthen_complete_recognition_v1& value);
+    inline Data native_value(const thinkthen_complete_recognize_v1& value);
+    inline Data native_value(const thinkthen_complete_recognize_mode_proposals_v1& value);
+    inline Data native_value(const thinkthen_complete_boundary_mode_v1& value);
+    inline Data native_value(const thinkthen_complete_entity_edge_list_v1& value);
+    inline Data native_value(const thinkthen_complete_entity_edge_list_presence_v1& value);
+    inline Data native_value(const thinkthen_complete_recognize_entities_v1& value);
+    inline Data native_value(const thinkthen_complete_entity_edge_v1& value);
+    inline Data native_value(const thinkthen_complete_json_map_entry_v1& value);
+    inline Data native_value(const thinkthen_complete_json_map_v1& value);
+    inline Data native_value(const thinkthen_complete_recognition_mode_presence_v1& value);
+    inline Data native_value(const thinkthen_complete_relation_rule_list_presence_v1& value);
+    inline Data native_value(const thinkthen_complete_recognition_stage_context_presence_v1& value);
+    inline Data native_value(const thinkthen_complete_recognize_question_document_v1& value);
+    inline Data native_value(const thinkthen_complete_verb_v1& value);
+    inline Data native_value(const thinkthen_complete_recognition_stage_context_v1& value);
+    inline Data native_value(const thinkthen_complete_recognition_odds_v1& value);
+    inline Data native_value(const thinkthen_complete_piece_odds_list_v1& value);
+    inline Data native_value(const thinkthen_complete_recognition_odds_boundary_odds_v1& value);
+    inline Data native_value(const thinkthen_complete_piece_odds_v1& value);
+    inline Data native_value(const thinkthen_complete_name_odds_list_v1& value);
+    inline Data native_value(const thinkthen_complete_pair_odds_list_v1& value);
+    inline Data native_value(const thinkthen_complete_recognition_proposal_list_v1& value);
+    inline Data native_value(const thinkthen_complete_recognition_odds_recognize_answer_v1& value);
+    inline Data native_value(const thinkthen_complete_place_presence_v1& value);
+    inline Data native_value(const thinkthen_complete_recognition_proposal_v1& value);
+    inline Data native_value(const thinkthen_complete_place_v1& value);
+    inline Data native_value(const thinkthen_complete_pair_odds_v1& value);
+    inline Data native_value(const thinkthen_complete_number_map_presence_v1& value);
+    inline Data native_value(const thinkthen_complete_name_odds_v1& value);
+    inline Data native_value(const thinkthen_complete_annotation_list_v1& value);
+    inline Data native_value(const thinkthen_complete_session_packet_annotate_aggregate_v1& value);
+    inline Data native_value(const thinkthen_complete_annotation_member_map_entry_v1& value);
+    inline Data native_value(const thinkthen_complete_annotation_member_map_v1& value);
+    inline Data native_value(const thinkthen_complete_annotation_v1& value);
+    inline Data native_value(const thinkthen_complete_annotated_field_map_entry_v1& value);
+    inline Data native_value(const thinkthen_complete_annotated_field_map_v1& value);
+    inline Data native_value(const thinkthen_complete_annotated_row_v1& value);
+    inline Data native_value(const thinkthen_complete_annotated_field_v1& value);
+    inline Data native_value(const thinkthen_complete_failed_v1& value);
+    inline Data native_value(const thinkthen_complete_annotation_member_v1& value);
+    inline Data native_value(const thinkthen_complete_annotation_member_failure_id_v1& value);
+    inline Data native_value(const thinkthen_complete_annotation_member_answer_id_v1& value);
+    inline Data native_value(const thinkthen_complete_session_packet_find_aggregate_v1& value);
+    inline Data native_value(const thinkthen_complete_find_candidate_list_v1& value);
+    inline Data native_value(const thinkthen_complete_find_candidate_list_presence_v1& value);
+    inline Data native_value(const thinkthen_complete_find_v1& value);
+    inline Data native_value(const thinkthen_complete_find_question_document_v1& value);
+    inline Data native_value(const thinkthen_complete_find_candidate_v1& value);
+    inline Data native_value(const thinkthen_complete_find_answer_v1& value);
+    inline Data native_value(const thinkthen_complete_atomic_non_zero_usize_list_v1& value);
+    inline Data native_value(const thinkthen_complete_session_packet_rank_aggregate_v1& value);
+    inline Data native_value(const thinkthen_complete_image_list_v1& value);
+    inline Data native_value(const thinkthen_complete_image_list_presence_v1& value);
+    inline Data native_value(const thinkthen_complete_rank_member_list_v1& value);
+    inline Data native_value(const thinkthen_complete_rank_member_list_presence_v1& value);
+    inline Data native_value(const thinkthen_complete_atomic_non_zero_usize_v1& value);
+    inline Data native_value(const thinkthen_complete_rank_member_v1& value);
+    inline Data native_value(const thinkthen_complete_rank_member_result_v1& value);
+    inline Data native_value(const thinkthen_complete_image_v1& value);
+    inline Data native_value(const thinkthen_complete_image_media_v1& value);
+    inline Data native_value(const thinkthen_complete_atomic_boolean_list_v1& value);
+    inline Data native_value(const thinkthen_complete_session_packet_filter_aggregate_v1& value);
+    inline Data native_value(const thinkthen_complete_atomic_boolean_v1& value);
+    inline Data native_value(const thinkthen_complete_atomic_double_list_v1& value);
+    inline Data native_value(const thinkthen_complete_session_packet_score_aggregate_v1& value);
+    inline Data native_value(const thinkthen_complete_atomic_double_v1& value);
+    inline Data native_value(const thinkthen_complete_atomic_array_of_string_list_v1& value);
+    inline Data native_value(const thinkthen_complete_session_packet_tag_aggregate_v1& value);
+    inline Data native_value(const thinkthen_complete_atomic_array_of_string_v1& value);
+    inline Data native_value(const thinkthen_complete_atomic_nullable_string_list_v1& value);
+    inline Data native_value(const thinkthen_complete_session_packet_choose_aggregate_v1& value);
+    inline Data native_value(const thinkthen_complete_atomic_nullable_string_v1& value);
+    inline Data native_value(const thinkthen_complete_atomic_decide_value_list_v1& value);
+    inline Data native_value(const thinkthen_complete_session_packet_decide_aggregate_v1& value);
+    inline Data native_value(const thinkthen_complete_decide_value_presence_v1& value);
+    inline Data native_value(const thinkthen_complete_atomic_decide_value_v1& value);
+    inline Data native_value(const thinkthen_complete_decide_value_v1& value);
+    inline Data native_value(const thinkthen_complete_session_packet_annotate_row_v1& value);
+    inline Data native_value(const thinkthen_complete_session_packet_filter_row_v1& value);
+    inline Data native_value(const thinkthen_complete_session_packet_score_row_v1& value);
+    inline Data native_value(const thinkthen_complete_session_packet_tag_row_v1& value);
+    inline Data native_value(const thinkthen_complete_session_packet_choose_row_v1& value);
+    inline Data native_value(const thinkthen_complete_session_packet_decide_row_v1& value);
+    inline Data native_value(const thinkthen_complete_json_v1& value);
+    inline Data native_value(const thinkthen_complete_utf8_v1& value) {
+        return Data(std::string(value.data ? value.data : "", value.len));
     }
-    template<class T> Json native_value(const T* value) {
+    template<class T> Data native_value(const T* value) {
         if(!value) throw std::invalid_argument("missing native value");
         return native_value(*value);
     }
-    template<class T, std::enable_if_t<std::is_arithmetic_v<T>, int> = 0> Json native_value(T value) {
-        return Json(value);
+    template<class T, std::enable_if_t<std::is_arithmetic_v<T>, int> = 0> Data native_value(T value) {
+        return Data(value);
     }
-    inline Json native_value(const thinkthen_complete_json_v1& value) {
+    inline Data native_value(const thinkthen_complete_json_v1& value) {
         switch(value.kind) {
-            case THINKTHEN_COMPLETE_JSON_NULL_V1: return Json(nullptr);
-            case THINKTHEN_COMPLETE_JSON_BOOLEAN_V1: return Json(bool(value.data.boolean));
+            case THINKTHEN_COMPLETE_JSON_NULL_V1: return Data(nullptr);
+            case THINKTHEN_COMPLETE_JSON_BOOLEAN_V1: return Data(bool(value.data.boolean));
             case THINKTHEN_COMPLETE_JSON_STRING_V1: return native_value(value.data.string);
             case THINKTHEN_COMPLETE_JSON_NUMBER_V1: {
                 auto text=native_value(value.data.number).get<std::string>();
@@ -8341,101 +8546,103 @@ namespace tt::results::detail {
                         };
                         auto parsed=std::from_chars(text.data(),text.data()+text.size(),number);
                         if(parsed.ec==std::errc{
-                        }) return Json(number);
+                        }) return Data(number);
                     } else {
                         uint64_t number{
                         };
                         auto parsed=std::from_chars(text.data(),text.data()+text.size(),number);
                         if(parsed.ec==std::errc{
-                        }) return Json(number);
+                        }) return Data(number);
                     }
                 }
                 double number{
                 };
                 auto parsed=std::from_chars(text.data(),text.data()+text.size(),number);
+                auto exponent=text.find_first_of("eE");
+                if(parsed.ec==std::errc::result_out_of_range && exponent!=std::string::npos && exponent+1<text.size() && text[exponent+1]=="-"[0]) return Data(text[0]=="-"[0] ? -0.0 : 0.0);
                 if(parsed.ec!=std::errc{
                 }) throw std::invalid_argument("invalid native number");
-                return Json(number);
+                return Data(number);
             }
             case THINKTHEN_COMPLETE_JSON_ARRAY_V1: {
-                Json::Array items;
+                Data::Array items;
                 for(size_t i=0;
                 i<value.data.array.len;
                 ++i) items.push_back(native_value(value.data.array.data[i]));
-                return Json(std::move(items));
+                return Data(std::move(items));
             }
             case THINKTHEN_COMPLETE_JSON_OBJECT_V1: {
-                Json::Object items;
+                Data::Object items;
                 for(size_t i=0;
                 i<value.data.object.len;
                 ++i) {
                     auto& item=value.data.object.data[i];
                     items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));
-                } return Json(std::move(items));
+                } return Data(std::move(items));
             }
             default: throw std::invalid_argument("invalid native value kind");
         }
     }
-    inline Json native_value(const thinkthen_complete_attempt_list_v1& value) {
-        Json::Array items;
+    inline Data native_value(const thinkthen_complete_attempt_list_v1& value) {
+        Data::Array items;
         for(size_t i=0;
         i<value.len;
         ++i) {
             items.push_back(native_value(value.data[i]));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_attempt_list_presence_v1& value) {
-        return value.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? native_value(value.value) : Json(nullptr);
+    inline Data native_value(const thinkthen_complete_attempt_list_presence_v1& value) {
+        return value.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? native_value(value.value) : Data(nullptr);
     }
-    inline Json native_value(const thinkthen_complete_call_id_presence_v1& value) {
-        return value.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? native_value(value.value) : Json(nullptr);
+    inline Data native_value(const thinkthen_complete_call_id_presence_v1& value) {
+        return value.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? native_value(value.value) : Data(nullptr);
     }
-    inline Json native_value(const thinkthen_complete_utf8_presence_v1& value) {
-        return value.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? native_value(value.value) : Json(nullptr);
+    inline Data native_value(const thinkthen_complete_utf8_presence_v1& value) {
+        return value.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? native_value(value.value) : Data(nullptr);
     }
-    inline Json native_value(const thinkthen_complete_u32_presence_v1& value) {
-        return value.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? native_value(value.value) : Json(nullptr);
+    inline Data native_value(const thinkthen_complete_u32_presence_v1& value) {
+        return value.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? native_value(value.value) : Data(nullptr);
     }
-    inline Json native_value(const thinkthen_complete_u64_presence_v1& value) {
-        return value.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? native_value(value.value) : Json(nullptr);
+    inline Data native_value(const thinkthen_complete_u64_presence_v1& value) {
+        return value.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? native_value(value.value) : Data(nullptr);
     }
-    inline Json native_value(const thinkthen_complete_persistence_observation_presence_v1& value) {
-        return value.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? native_value(value.value) : Json(nullptr);
+    inline Data native_value(const thinkthen_complete_persistence_observation_presence_v1& value) {
+        return value.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? native_value(value.value) : Data(nullptr);
     }
-    inline Json native_value(const thinkthen_complete_immediate_facts_v1& value) {
-        Json::Object items;
+    inline Data native_value(const thinkthen_complete_immediate_facts_v1& value) {
+        Data::Object items;
         if(value.attempts.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("attempts",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.attempts.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("attempts",
         native_value(value.attempts.value));
         items.emplace_back("cache_answers",native_value(value.cache_answers));
         if(value.call_id.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("call_id",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.call_id.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("call_id",
         native_value(value.call_id.value));
         if(value.estimated_cost_usd.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("estimated_cost_usd",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.estimated_cost_usd.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("estimated_cost_usd",
         native_value(value.estimated_cost_usd.value));
         if(value.held_model_mismatch.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("held_model_mismatch",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.held_model_mismatch.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("held_model_mismatch",
-        Json(bool(value.held_model_mismatch.value)));
+        Data(bool(value.held_model_mismatch.value)));
         if(value.input_tokens.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("input_tokens",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.input_tokens.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("input_tokens",
         native_value(value.input_tokens.value));
         items.emplace_back("largest_request_bytes",native_value(value.largest_request_bytes));
         if(value.largest_request_estimated_input_tokens.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("largest_request_estimated_input_tokens",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.largest_request_estimated_input_tokens.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("largest_request_estimated_input_tokens",
         native_value(value.largest_request_estimated_input_tokens.value));
-        if(value.model.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("model",Json(nullptr));
+        if(value.model.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("model",Data(nullptr));
         else if(value.model.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("model",
         native_value(value.model.value));
         if(value.output_tokens.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("output_tokens",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.output_tokens.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("output_tokens",
         native_value(value.output_tokens.value));
         items.emplace_back("records",native_value(value.records));
@@ -8443,7 +8650,7 @@ namespace tt::results::detail {
         items.emplace_back("seconds",native_value(value.seconds));
         items.emplace_back("token_estimate_method",native_value(value.token_estimate_method));
         if(value.usage_persistence.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("usage_persistence",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.usage_persistence.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("usage_persistence",
         native_value(value.usage_persistence.value));
         for(size_t i=0;
@@ -8452,12 +8659,12 @@ namespace tt::results::detail {
             auto& item=value.extensions.data[i];
             items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_persistence_observation_v1& value) {
-        Json::Object items;
+    inline Data native_value(const thinkthen_complete_persistence_observation_v1& value) {
+        Data::Object items;
         if(value.advice.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("advice",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.advice.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("advice",
         native_value(value.advice.value));
         items.emplace_back("observed_at",native_value(value.observed_at));
@@ -8468,36 +8675,36 @@ namespace tt::results::detail {
             auto& item=value.extensions.data[i];
             items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_usage_persistence_v1& value) {
+    inline Data native_value(const thinkthen_complete_usage_persistence_v1& value) {
         switch(value.kind) {
-            case THINKTHEN_COMPLETE_USAGE_PERSISTENCE_DISABLED_V1: return Json("disabled");
-            case THINKTHEN_COMPLETE_USAGE_PERSISTENCE_PENDING_V1: return Json("pending");
-            case THINKTHEN_COMPLETE_USAGE_PERSISTENCE_WRITTEN_V1: return Json("written");
-            case THINKTHEN_COMPLETE_USAGE_PERSISTENCE_FAILED_V1: return Json("failed");
+            case THINKTHEN_COMPLETE_USAGE_PERSISTENCE_DISABLED_V1: return Data("disabled");
+            case THINKTHEN_COMPLETE_USAGE_PERSISTENCE_PENDING_V1: return Data("pending");
+            case THINKTHEN_COMPLETE_USAGE_PERSISTENCE_WRITTEN_V1: return Data("written");
+            case THINKTHEN_COMPLETE_USAGE_PERSISTENCE_FAILED_V1: return Data("failed");
             default: throw std::invalid_argument("invalid native enum");
         }
     }
-    inline Json native_value(const thinkthen_complete_call_id_v1& value) {
+    inline Data native_value(const thinkthen_complete_call_id_v1& value) {
         return native_value(value.value);
     }
-    inline Json native_value(const thinkthen_complete_attempt_v1& value) {
-        Json::Object items;
+    inline Data native_value(const thinkthen_complete_attempt_v1& value) {
+        Data::Object items;
         items.emplace_back("ordinal",native_value(value.ordinal));
         items.emplace_back("outcome",native_value(value.outcome));
         if(value.request_id.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("request_id",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.request_id.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("request_id",
         native_value(value.request_id.value));
         items.emplace_back("request_sha256",native_value(value.request_sha256));
         items.emplace_back("sdk_request_id",native_value(value.sdk_request_id));
         if(value.server_ms.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("server_ms",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.server_ms.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("server_ms",
         native_value(value.server_ms.value));
         if(value.status.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("status",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.status.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("status",
         native_value(value.status.value));
         items.emplace_back("wall_ms",native_value(value.wall_ms));
@@ -8507,20 +8714,20 @@ namespace tt::results::detail {
             auto& item=value.extensions.data[i];
             items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_sdk_request_id_v1& value) {
+    inline Data native_value(const thinkthen_complete_sdk_request_id_v1& value) {
         return native_value(value.value);
     }
-    inline Json native_value(const thinkthen_complete_attempt_outcome_v1& value) {
+    inline Data native_value(const thinkthen_complete_attempt_outcome_v1& value) {
         switch(value.kind) {
-            case THINKTHEN_COMPLETE_ATTEMPT_OUTCOME_OK_V1: return Json("ok");
-            case THINKTHEN_COMPLETE_ATTEMPT_OUTCOME_STATUS_V1: return Json("status");
-            case THINKTHEN_COMPLETE_ATTEMPT_OUTCOME_TRANSPORT_V1: return Json("transport");
+            case THINKTHEN_COMPLETE_ATTEMPT_OUTCOME_OK_V1: return Data("ok");
+            case THINKTHEN_COMPLETE_ATTEMPT_OUTCOME_STATUS_V1: return Data("status");
+            case THINKTHEN_COMPLETE_ATTEMPT_OUTCOME_TRANSPORT_V1: return Data("transport");
             default: throw std::invalid_argument("invalid native enum");
         }
     }
-    inline Json native_value(const thinkthen_complete_session_packet_v1& value) {
+    inline Data native_value(const thinkthen_complete_session_packet_v1& value) {
         switch(value.kind) {
             case THINKTHEN_COMPLETE_SESSION_PACKET_DECIDE_ROW_V1: return native_value(value.data.decide_row);
             case THINKTHEN_COMPLETE_SESSION_PACKET_CHOOSE_ROW_V1: return native_value(value.data.choose_row);
@@ -8543,19 +8750,19 @@ namespace tt::results::detail {
             default: throw std::invalid_argument("invalid native alternative");
         }
     }
-    inline Json native_value(const thinkthen_complete_facts_presence_v1& value) {
-        return value.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? native_value(value.value) : Json(nullptr);
+    inline Data native_value(const thinkthen_complete_facts_presence_v1& value) {
+        return value.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? native_value(value.value) : Data(nullptr);
     }
-    inline Json native_value(const thinkthen_complete_call_error_presence_v1& value) {
-        return value.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? native_value(value.value) : Json(nullptr);
+    inline Data native_value(const thinkthen_complete_call_error_presence_v1& value) {
+        return value.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? native_value(value.value) : Data(nullptr);
     }
-    inline Json native_value(const thinkthen_complete_session_packet_terminal_v1& value) {
-        Json::Object items;
-        if(value.facts.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("facts",Json(nullptr));
+    inline Data native_value(const thinkthen_complete_session_packet_terminal_v1& value) {
+        Data::Object items;
+        if(value.facts.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("facts",Data(nullptr));
         else if(value.facts.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("facts",
         native_value(value.facts.value));
         if(value.failure.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("failure",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.failure.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("failure",
         native_value(value.failure.value));
         items.emplace_back("kind",native_value(value.kind));
@@ -8565,12 +8772,12 @@ namespace tt::results::detail {
             auto& item=value.extensions.data[i];
             items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_call_error_v1& value) {
-        Json::Object items;
+    inline Data native_value(const thinkthen_complete_call_error_v1& value) {
+        Data::Object items;
         items.emplace_back("error",native_value(value.error));
-        if(value.facts.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("facts",Json(nullptr));
+        if(value.facts.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("facts",Data(nullptr));
         else if(value.facts.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("facts",
         native_value(value.facts.value));
         for(size_t i=0;
@@ -8579,38 +8786,38 @@ namespace tt::results::detail {
             auto& item=value.extensions.data[i];
             items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_facts_v1& value) {
-        Json::Object items;
+    inline Data native_value(const thinkthen_complete_facts_v1& value) {
+        Data::Object items;
         if(value.attempts.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("attempts",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.attempts.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("attempts",
         native_value(value.attempts.value));
         items.emplace_back("cache_answers",native_value(value.cache_answers));
         items.emplace_back("call_id",native_value(value.call_id));
         if(value.estimated_cost_usd.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("estimated_cost_usd",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.estimated_cost_usd.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("estimated_cost_usd",
         native_value(value.estimated_cost_usd.value));
         if(value.held_model_mismatch.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("held_model_mismatch",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.held_model_mismatch.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("held_model_mismatch",
-        Json(bool(value.held_model_mismatch.value)));
+        Data(bool(value.held_model_mismatch.value)));
         if(value.input_tokens.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("input_tokens",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.input_tokens.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("input_tokens",
         native_value(value.input_tokens.value));
         items.emplace_back("largest_request_bytes",native_value(value.largest_request_bytes));
         if(value.largest_request_estimated_input_tokens.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("largest_request_estimated_input_tokens",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.largest_request_estimated_input_tokens.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("largest_request_estimated_input_tokens",
         native_value(value.largest_request_estimated_input_tokens.value));
-        if(value.model.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("model",Json(nullptr));
+        if(value.model.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("model",Data(nullptr));
         else if(value.model.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("model",
         native_value(value.model.value));
         if(value.output_tokens.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("output_tokens",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.output_tokens.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("output_tokens",
         native_value(value.output_tokens.value));
         items.emplace_back("records",native_value(value.records));
@@ -8618,7 +8825,7 @@ namespace tt::results::detail {
         items.emplace_back("seconds",native_value(value.seconds));
         items.emplace_back("token_estimate_method",native_value(value.token_estimate_method));
         if(value.usage_persistence.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("usage_persistence",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.usage_persistence.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("usage_persistence",
         native_value(value.usage_persistence.value));
         for(size_t i=0;
@@ -8627,25 +8834,25 @@ namespace tt::results::detail {
             auto& item=value.extensions.data[i];
             items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_input_denial_presence_v1& value) {
-        return value.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? native_value(value.value) : Json(nullptr);
+    inline Data native_value(const thinkthen_complete_input_denial_presence_v1& value) {
+        return value.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? native_value(value.value) : Data(nullptr);
     }
-    inline Json native_value(const thinkthen_complete_send_denial_presence_v1& value) {
-        return value.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? native_value(value.value) : Json(nullptr);
+    inline Data native_value(const thinkthen_complete_send_denial_presence_v1& value) {
+        return value.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? native_value(value.value) : Data(nullptr);
     }
-    inline Json native_value(const thinkthen_complete_error_v1& value) {
-        Json::Object items;
+    inline Data native_value(const thinkthen_complete_error_v1& value) {
+        Data::Object items;
         if(value.estimated_input_denial.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("estimated_input_denial",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.estimated_input_denial.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("estimated_input_denial",
         native_value(value.estimated_input_denial.value));
         items.emplace_back("kind",native_value(value.kind));
         items.emplace_back("message",native_value(value.message));
-        items.emplace_back("retryable",Json(bool(value.retryable)));
+        items.emplace_back("retryable",Data(bool(value.retryable)));
         if(value.send_budget_denial.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("send_budget_denial",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.send_budget_denial.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("send_budget_denial",
         native_value(value.send_budget_denial.value));
         items.emplace_back("stopped",native_value(value.stopped));
@@ -8655,16 +8862,16 @@ namespace tt::results::detail {
             auto& item=value.extensions.data[i];
             items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_stopped_v1& value) {
-        Json::Object items;
-        if(value.at.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("at",Json(nullptr));
+    inline Data native_value(const thinkthen_complete_stopped_v1& value) {
+        Data::Object items;
+        if(value.at.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("at",Data(nullptr));
         else if(value.at.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("at",native_value(value.at.value));
         items.emplace_back("cause",native_value(value.cause));
-        items.emplace_back("retryable",Json(bool(value.retryable)));
+        items.emplace_back("retryable",Data(bool(value.retryable)));
         if(value.status.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("status",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.status.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("status",
         native_value(value.status.value));
         for(size_t i=0;
@@ -8673,25 +8880,25 @@ namespace tt::results::detail {
             auto& item=value.extensions.data[i];
             items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_stop_cause_v1& value) {
+    inline Data native_value(const thinkthen_complete_stop_cause_v1& value) {
         switch(value.kind) {
-            case THINKTHEN_COMPLETE_STOP_CAUSE_USAGE_V1: return Json("usage");
-            case THINKTHEN_COMPLETE_STOP_CAUSE_LOCAL_V1: return Json("local");
-            case THINKTHEN_COMPLETE_STOP_CAUSE_NO_KEY_V1: return Json("no_key");
-            case THINKTHEN_COMPLETE_STOP_CAUSE_TRANSPORT_V1: return Json("transport");
-            case THINKTHEN_COMPLETE_STOP_CAUSE_STATUS_V1: return Json("status");
-            case THINKTHEN_COMPLETE_STOP_CAUSE_TOO_LARGE_V1: return Json("too_large");
-            case THINKTHEN_COMPLETE_STOP_CAUSE_REPLY_V1: return Json("reply");
-            case THINKTHEN_COMPLETE_STOP_CAUSE_BACKEND_V1: return Json("backend");
-            case THINKTHEN_COMPLETE_STOP_CAUSE_CANCELLED_V1: return Json("cancelled");
-            case THINKTHEN_COMPLETE_STOP_CAUSE_DEADLINE_V1: return Json("deadline");
-            case THINKTHEN_COMPLETE_STOP_CAUSE_DEFECT_V1: return Json("defect");
+            case THINKTHEN_COMPLETE_STOP_CAUSE_USAGE_V1: return Data("usage");
+            case THINKTHEN_COMPLETE_STOP_CAUSE_LOCAL_V1: return Data("local");
+            case THINKTHEN_COMPLETE_STOP_CAUSE_NO_KEY_V1: return Data("no_key");
+            case THINKTHEN_COMPLETE_STOP_CAUSE_TRANSPORT_V1: return Data("transport");
+            case THINKTHEN_COMPLETE_STOP_CAUSE_STATUS_V1: return Data("status");
+            case THINKTHEN_COMPLETE_STOP_CAUSE_TOO_LARGE_V1: return Data("too_large");
+            case THINKTHEN_COMPLETE_STOP_CAUSE_REPLY_V1: return Data("reply");
+            case THINKTHEN_COMPLETE_STOP_CAUSE_BACKEND_V1: return Data("backend");
+            case THINKTHEN_COMPLETE_STOP_CAUSE_CANCELLED_V1: return Data("cancelled");
+            case THINKTHEN_COMPLETE_STOP_CAUSE_DEADLINE_V1: return Data("deadline");
+            case THINKTHEN_COMPLETE_STOP_CAUSE_DEFECT_V1: return Data("defect");
             default: throw std::invalid_argument("invalid native enum");
         }
     }
-    inline Json native_value(const thinkthen_complete_send_denial_v1& value) {
+    inline Data native_value(const thinkthen_complete_send_denial_v1& value) {
         switch(value.kind) {
             case THINKTHEN_COMPLETE_SEND_DENIAL_BEFORE_FIRST_SEND_V1: return native_value(value.data.before_first_send);
             case THINKTHEN_COMPLETE_SEND_DENIAL_BEFORE_ADDITIONAL_SEND_V1: return native_value(value.data.before_additional_send);
@@ -8699,8 +8906,8 @@ namespace tt::results::detail {
             default: throw std::invalid_argument("invalid native alternative");
         }
     }
-    inline Json native_value(const thinkthen_complete_send_denial_before_retry_v1& value) {
-        Json::Object items;
+    inline Data native_value(const thinkthen_complete_send_denial_before_retry_v1& value) {
+        Data::Object items;
         items.emplace_back("kind",native_value(value.kind));
         items.emplace_back("last_status",native_value(value.last_status));
         for(size_t i=0;
@@ -8709,10 +8916,10 @@ namespace tt::results::detail {
             auto& item=value.extensions.data[i];
             items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_send_denial_before_additional_send_v1& value) {
-        Json::Object items;
+    inline Data native_value(const thinkthen_complete_send_denial_before_additional_send_v1& value) {
+        Data::Object items;
         items.emplace_back("kind",native_value(value.kind));
         for(size_t i=0;
         i<value.extensions.len;
@@ -8720,10 +8927,10 @@ namespace tt::results::detail {
             auto& item=value.extensions.data[i];
             items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_send_denial_before_first_send_v1& value) {
-        Json::Object items;
+    inline Data native_value(const thinkthen_complete_send_denial_before_first_send_v1& value) {
+        Data::Object items;
         items.emplace_back("kind",native_value(value.kind));
         for(size_t i=0;
         i<value.extensions.len;
@@ -8731,20 +8938,20 @@ namespace tt::results::detail {
             auto& item=value.extensions.data[i];
             items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_failure_kind_v1& value) {
+    inline Data native_value(const thinkthen_complete_failure_kind_v1& value) {
         switch(value.kind) {
-            case THINKTHEN_COMPLETE_FAILURE_KIND_USAGE_V1: return Json("usage");
-            case THINKTHEN_COMPLETE_FAILURE_KIND_BACKEND_V1: return Json("backend");
-            case THINKTHEN_COMPLETE_FAILURE_KIND_LOCAL_V1: return Json("local");
-            case THINKTHEN_COMPLETE_FAILURE_KIND_CANCELLED_V1: return Json("cancelled");
-            case THINKTHEN_COMPLETE_FAILURE_KIND_DEADLINE_V1: return Json("deadline");
-            case THINKTHEN_COMPLETE_FAILURE_KIND_DEFECT_V1: return Json("defect");
+            case THINKTHEN_COMPLETE_FAILURE_KIND_USAGE_V1: return Data("usage");
+            case THINKTHEN_COMPLETE_FAILURE_KIND_BACKEND_V1: return Data("backend");
+            case THINKTHEN_COMPLETE_FAILURE_KIND_LOCAL_V1: return Data("local");
+            case THINKTHEN_COMPLETE_FAILURE_KIND_CANCELLED_V1: return Data("cancelled");
+            case THINKTHEN_COMPLETE_FAILURE_KIND_DEADLINE_V1: return Data("deadline");
+            case THINKTHEN_COMPLETE_FAILURE_KIND_DEFECT_V1: return Data("defect");
             default: throw std::invalid_argument("invalid native enum");
         }
     }
-    inline Json native_value(const thinkthen_complete_input_denial_v1& value) {
+    inline Data native_value(const thinkthen_complete_input_denial_v1& value) {
         switch(value.kind) {
             case THINKTHEN_COMPLETE_INPUT_DENIAL_INITIAL_REQUEST_V1: return native_value(value.data.initial_request);
             case THINKTHEN_COMPLETE_INPUT_DENIAL_ADDITIONAL_REQUEST_V1: return native_value(value.data.additional_request);
@@ -8752,8 +8959,8 @@ namespace tt::results::detail {
             default: throw std::invalid_argument("invalid native alternative");
         }
     }
-    inline Json native_value(const thinkthen_complete_input_denial_retry_v1& value) {
-        Json::Object items;
+    inline Data native_value(const thinkthen_complete_input_denial_retry_v1& value) {
+        Data::Object items;
         items.emplace_back("kind",native_value(value.kind));
         items.emplace_back("last_status",native_value(value.last_status));
         items.emplace_back("limit",native_value(value.limit));
@@ -8763,10 +8970,10 @@ namespace tt::results::detail {
             auto& item=value.extensions.data[i];
             items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_input_denial_additional_request_v1& value) {
-        Json::Object items;
+    inline Data native_value(const thinkthen_complete_input_denial_additional_request_v1& value) {
+        Data::Object items;
         items.emplace_back("kind",native_value(value.kind));
         items.emplace_back("limit",native_value(value.limit));
         for(size_t i=0;
@@ -8775,10 +8982,10 @@ namespace tt::results::detail {
             auto& item=value.extensions.data[i];
             items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_input_denial_initial_request_v1& value) {
-        Json::Object items;
+    inline Data native_value(const thinkthen_complete_input_denial_initial_request_v1& value) {
+        Data::Object items;
         items.emplace_back("kind",native_value(value.kind));
         items.emplace_back("limit",native_value(value.limit));
         for(size_t i=0;
@@ -8787,10 +8994,10 @@ namespace tt::results::detail {
             auto& item=value.extensions.data[i];
             items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_session_packet_observation_v1& value) {
-        Json::Object items;
+    inline Data native_value(const thinkthen_complete_session_packet_observation_v1& value) {
+        Data::Object items;
         items.emplace_back("function",native_value(value.function));
         items.emplace_back("kind",native_value(value.kind));
         items.emplace_back("value",native_value(value.value));
@@ -8800,17 +9007,17 @@ namespace tt::results::detail {
             auto& item=value.extensions.data[i];
             items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_session_observation_v1& value) {
+    inline Data native_value(const thinkthen_complete_session_observation_v1& value) {
         switch(value.kind) {
             case THINKTHEN_COMPLETE_SESSION_OBSERVATION_QUESTION_V1: return native_value(value.data.question);
             case THINKTHEN_COMPLETE_SESSION_OBSERVATION_ROW_V1: return native_value(value.data.row);
             default: throw std::invalid_argument("invalid native alternative");
         }
     }
-    inline Json native_value(const thinkthen_complete_session_observation_row_v1& value) {
-        Json::Object items;
+    inline Data native_value(const thinkthen_complete_session_observation_row_v1& value) {
+        Data::Object items;
         items.emplace_back("index",native_value(value.index));
         items.emplace_back("kind",native_value(value.kind));
         items.emplace_back("value",native_value(value.value));
@@ -8820,9 +9027,9 @@ namespace tt::results::detail {
             auto& item=value.extensions.data[i];
             items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_session_observed_row_v1& value) {
+    inline Data native_value(const thinkthen_complete_session_observed_row_v1& value) {
         switch(value.kind) {
             case THINKTHEN_COMPLETE_SESSION_OBSERVED_ROW_JUDGMENT_V1: return native_value(value.data.judgment);
             case THINKTHEN_COMPLETE_SESSION_OBSERVED_ROW_ANNOTATED_V1: return native_value(value.data.annotated);
@@ -8832,17 +9039,17 @@ namespace tt::results::detail {
             default: throw std::invalid_argument("invalid native alternative");
         }
     }
-    inline Json native_value(const thinkthen_complete_session_relation_edge_list_v1& value) {
-        Json::Array items;
+    inline Data native_value(const thinkthen_complete_session_relation_edge_list_v1& value) {
+        Data::Array items;
         for(size_t i=0;
         i<value.len;
         ++i) {
             items.push_back(native_value(value.data[i]));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_session_observed_row_relations_v1& value) {
-        Json::Object items;
+    inline Data native_value(const thinkthen_complete_session_observed_row_relations_v1& value) {
+        Data::Object items;
         items.emplace_back("kind",native_value(value.kind));
         items.emplace_back("value",native_value(value.value));
         for(size_t i=0;
@@ -8851,11 +9058,11 @@ namespace tt::results::detail {
             auto& item=value.extensions.data[i];
             items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_session_relation_edge_v1& value) {
-        Json::Object items;
-        items.emplace_back("either",Json(bool(value.either)));
+    inline Data native_value(const thinkthen_complete_session_relation_edge_v1& value) {
+        Data::Object items;
+        items.emplace_back("either",Data(bool(value.either)));
         items.emplace_back("probability",native_value(value.probability));
         items.emplace_back("relation",native_value(value.relation));
         items.emplace_back("source",native_value(value.source));
@@ -8866,10 +9073,10 @@ namespace tt::results::detail {
             auto& item=value.extensions.data[i];
             items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_entity_document_v1& value) {
-        Json::Object items;
+    inline Data native_value(const thinkthen_complete_entity_document_v1& value) {
+        Data::Object items;
         items.emplace_back("kind",native_value(value.kind));
         items.emplace_back("name",native_value(value.name));
         for(size_t i=0;
@@ -8878,12 +9085,12 @@ namespace tt::results::detail {
             auto& item=value.extensions.data[i];
             items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_session_observed_row_find_v1& value) {
-        Json::Object items;
+    inline Data native_value(const thinkthen_complete_session_observed_row_find_v1& value) {
+        Data::Object items;
         items.emplace_back("kind",native_value(value.kind));
-        if(value.value.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("value",Json(nullptr));
+        if(value.value.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("value",Data(nullptr));
         else if(value.value.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("value",
         native_value(value.value.value));
         for(size_t i=0;
@@ -8892,10 +9099,10 @@ namespace tt::results::detail {
             auto& item=value.extensions.data[i];
             items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_session_observed_row_recognized_v1& value) {
-        Json::Object items;
+    inline Data native_value(const thinkthen_complete_session_observed_row_recognized_v1& value) {
+        Data::Object items;
         items.emplace_back("kind",native_value(value.kind));
         items.emplace_back("value",native_value(value.value));
         for(size_t i=0;
@@ -8904,51 +9111,51 @@ namespace tt::results::detail {
             auto& item=value.extensions.data[i];
             items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_entity_list_v1& value) {
-        Json::Array items;
+    inline Data native_value(const thinkthen_complete_entity_list_v1& value) {
+        Data::Array items;
         for(size_t i=0;
         i<value.len;
         ++i) {
             items.push_back(native_value(value.data[i]));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_boundary_proposal_list_v1& value) {
-        Json::Array items;
+    inline Data native_value(const thinkthen_complete_boundary_proposal_list_v1& value) {
+        Data::Array items;
         for(size_t i=0;
         i<value.len;
         ++i) {
             items.push_back(native_value(value.data[i]));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_boundary_proposal_list_presence_v1& value) {
-        return value.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? native_value(value.value) : Json(nullptr);
+    inline Data native_value(const thinkthen_complete_boundary_proposal_list_presence_v1& value) {
+        return value.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? native_value(value.value) : Data(nullptr);
     }
-    inline Json native_value(const thinkthen_complete_recognition_edge_list_v1& value) {
-        Json::Array items;
+    inline Data native_value(const thinkthen_complete_recognition_edge_list_v1& value) {
+        Data::Array items;
         for(size_t i=0;
         i<value.len;
         ++i) {
             items.push_back(native_value(value.data[i]));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_recognition_edge_list_presence_v1& value) {
-        return value.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? native_value(value.value) : Json(nullptr);
+    inline Data native_value(const thinkthen_complete_recognition_edge_list_presence_v1& value) {
+        return value.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? native_value(value.value) : Data(nullptr);
     }
-    inline Json native_value(const thinkthen_complete_session_recognition_v1& value) {
-        Json::Object items;
+    inline Data native_value(const thinkthen_complete_session_recognition_v1& value) {
+        Data::Object items;
         items.emplace_back("entities",native_value(value.entities));
         items.emplace_back("mode",native_value(value.mode));
         if(value.proposals.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("proposals",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.proposals.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("proposals",
         native_value(value.proposals.value));
         if(value.relations.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("relations",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.relations.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("relations",
         native_value(value.relations.value));
         for(size_t i=0;
@@ -8957,11 +9164,11 @@ namespace tt::results::detail {
             auto& item=value.extensions.data[i];
             items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_recognition_edge_v1& value) {
-        Json::Object items;
-        items.emplace_back("either",Json(bool(value.either)));
+    inline Data native_value(const thinkthen_complete_recognition_edge_v1& value) {
+        Data::Object items;
+        items.emplace_back("either",Data(bool(value.either)));
         items.emplace_back("probability",native_value(value.probability));
         items.emplace_back("relation",native_value(value.relation));
         items.emplace_back("source",native_value(value.source));
@@ -8972,21 +9179,21 @@ namespace tt::results::detail {
             auto& item=value.extensions.data[i];
             items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_entity_v1& value) {
-        Json::Object items;
+    inline Data native_value(const thinkthen_complete_entity_v1& value) {
+        Data::Object items;
         items.emplace_back("end",native_value(value.end));
-        if(value.file.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("file",Json(nullptr));
+        if(value.file.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("file",Data(nullptr));
         else if(value.file.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("file",
         native_value(value.file.value));
         if(value.first_line.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("first_line",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.first_line.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("first_line",
         native_value(value.first_line.value));
         items.emplace_back("kind",native_value(value.kind));
         if(value.last_line.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("last_line",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.last_line.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("last_line",
         native_value(value.last_line.value));
         items.emplace_back("length",native_value(value.length));
@@ -8999,10 +9206,10 @@ namespace tt::results::detail {
             auto& item=value.extensions.data[i];
             items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_boundary_proposal_v1& value) {
-        Json::Object items;
+    inline Data native_value(const thinkthen_complete_boundary_proposal_v1& value) {
+        Data::Object items;
         items.emplace_back("end",native_value(value.end));
         items.emplace_back("length",native_value(value.length));
         items.emplace_back("probability",native_value(value.probability));
@@ -9014,26 +9221,26 @@ namespace tt::results::detail {
             auto& item=value.extensions.data[i];
             items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_recognition_mode_v1& value) {
+    inline Data native_value(const thinkthen_complete_recognition_mode_v1& value) {
         switch(value.kind) {
-            case THINKTHEN_COMPLETE_RECOGNITION_MODE_WHOLE_V1: return Json("whole");
-            case THINKTHEN_COMPLETE_RECOGNITION_MODE_BOUNDARY_ONLY_V1: return Json("boundary_only");
+            case THINKTHEN_COMPLETE_RECOGNITION_MODE_WHOLE_V1: return Data("whole");
+            case THINKTHEN_COMPLETE_RECOGNITION_MODE_BOUNDARY_ONLY_V1: return Data("boundary_only");
             default: throw std::invalid_argument("invalid native enum");
         }
     }
-    inline Json native_value(const thinkthen_complete_session_annotation_list_v1& value) {
-        Json::Array items;
+    inline Data native_value(const thinkthen_complete_session_annotation_list_v1& value) {
+        Data::Array items;
         for(size_t i=0;
         i<value.len;
         ++i) {
             items.push_back(native_value(value.data[i]));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_session_observed_row_annotated_v1& value) {
-        Json::Object items;
+    inline Data native_value(const thinkthen_complete_session_observed_row_annotated_v1& value) {
+        Data::Object items;
         items.emplace_back("kind",native_value(value.kind));
         items.emplace_back("value",native_value(value.value));
         for(size_t i=0;
@@ -9042,10 +9249,10 @@ namespace tt::results::detail {
             auto& item=value.extensions.data[i];
             items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_session_annotation_v1& value) {
-        Json::Object items;
+    inline Data native_value(const thinkthen_complete_session_annotation_v1& value) {
+        Data::Object items;
         items.emplace_back("name",native_value(value.name));
         items.emplace_back("value",native_value(value.value));
         for(size_t i=0;
@@ -9054,9 +9261,9 @@ namespace tt::results::detail {
             auto& item=value.extensions.data[i];
             items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_annotation_value_v1& value) {
+    inline Data native_value(const thinkthen_complete_annotation_value_v1& value) {
         switch(value.kind) {
             case THINKTHEN_COMPLETE_ANNOTATION_VALUE_DECISION_V1: return native_value(value.data.decision);
             case THINKTHEN_COMPLETE_ANNOTATION_VALUE_CHOICE_V1: return native_value(value.data.choice);
@@ -9066,8 +9273,8 @@ namespace tt::results::detail {
             default: throw std::invalid_argument("invalid native alternative");
         }
     }
-    inline Json native_value(const thinkthen_complete_annotation_value_failed_v1& value) {
-        Json::Object items;
+    inline Data native_value(const thinkthen_complete_annotation_value_failed_v1& value) {
+        Data::Object items;
         items.emplace_back("kind",native_value(value.kind));
         items.emplace_back("value",native_value(value.value));
         for(size_t i=0;
@@ -9076,16 +9283,16 @@ namespace tt::results::detail {
             auto& item=value.extensions.data[i];
             items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_failure_field_kind_v1& value) {
+    inline Data native_value(const thinkthen_complete_failure_field_kind_v1& value) {
         switch(value.kind) {
-            case THINKTHEN_COMPLETE_FAILURE_FIELD_KIND_BACKEND_V1: return Json("backend");
+            case THINKTHEN_COMPLETE_FAILURE_FIELD_KIND_BACKEND_V1: return Data("backend");
             default: throw std::invalid_argument("invalid native enum");
         }
     }
-    inline Json native_value(const thinkthen_complete_failure_v1& value) {
-        Json::Object items;
+    inline Data native_value(const thinkthen_complete_failure_v1& value) {
+        Data::Object items;
         items.emplace_back("cause",native_value(value.cause));
         items.emplace_back("kind",native_value(value.kind));
         for(size_t i=0;
@@ -9094,30 +9301,30 @@ namespace tt::results::detail {
             auto& item=value.extensions.data[i];
             items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_failure_cause_v1& value) {
+    inline Data native_value(const thinkthen_complete_failure_cause_v1& value) {
         switch(value.kind) {
-            case THINKTHEN_COMPLETE_FAILURE_CAUSE_MISSING_ANSWER_V1: return Json("missing_answer");
-            case THINKTHEN_COMPLETE_FAILURE_CAUSE_WRONG_KIND_V1: return Json("wrong_kind");
-            case THINKTHEN_COMPLETE_FAILURE_CAUSE_MISSING_PROBABILITY_V1: return Json("missing_probability");
-            case THINKTHEN_COMPLETE_FAILURE_CAUSE_INVALID_PROBABILITY_V1: return Json("invalid_probability");
-            case THINKTHEN_COMPLETE_FAILURE_CAUSE_INVALID_DISTRIBUTION_V1: return Json("invalid_distribution");
-            case THINKTHEN_COMPLETE_FAILURE_CAUSE_UNEXPECTED_PROBABILITY_V1: return Json("unexpected_probability");
+            case THINKTHEN_COMPLETE_FAILURE_CAUSE_MISSING_ANSWER_V1: return Data("missing_answer");
+            case THINKTHEN_COMPLETE_FAILURE_CAUSE_WRONG_KIND_V1: return Data("wrong_kind");
+            case THINKTHEN_COMPLETE_FAILURE_CAUSE_MISSING_PROBABILITY_V1: return Data("missing_probability");
+            case THINKTHEN_COMPLETE_FAILURE_CAUSE_INVALID_PROBABILITY_V1: return Data("invalid_probability");
+            case THINKTHEN_COMPLETE_FAILURE_CAUSE_INVALID_DISTRIBUTION_V1: return Data("invalid_distribution");
+            case THINKTHEN_COMPLETE_FAILURE_CAUSE_UNEXPECTED_PROBABILITY_V1: return Data("unexpected_probability");
             default: throw std::invalid_argument("invalid native enum");
         }
     }
-    inline Json native_value(const thinkthen_complete_string_list_v1& value) {
-        Json::Array items;
+    inline Data native_value(const thinkthen_complete_string_list_v1& value) {
+        Data::Array items;
         for(size_t i=0;
         i<value.len;
         ++i) {
             items.push_back(native_value(value.data[i]));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_annotation_value_tags_v1& value) {
-        Json::Object items;
+    inline Data native_value(const thinkthen_complete_annotation_value_tags_v1& value) {
+        Data::Object items;
         items.emplace_back("kind",native_value(value.kind));
         items.emplace_back("value",native_value(value.value));
         for(size_t i=0;
@@ -9126,10 +9333,10 @@ namespace tt::results::detail {
             auto& item=value.extensions.data[i];
             items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_annotation_value_score_v1& value) {
-        Json::Object items;
+    inline Data native_value(const thinkthen_complete_annotation_value_score_v1& value) {
+        Data::Object items;
         items.emplace_back("kind",native_value(value.kind));
         items.emplace_back("value",native_value(value.value));
         for(size_t i=0;
@@ -9138,12 +9345,12 @@ namespace tt::results::detail {
             auto& item=value.extensions.data[i];
             items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_annotation_value_choice_v1& value) {
-        Json::Object items;
+    inline Data native_value(const thinkthen_complete_annotation_value_choice_v1& value) {
+        Data::Object items;
         items.emplace_back("kind",native_value(value.kind));
-        if(value.value.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("value",Json(nullptr));
+        if(value.value.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("value",Data(nullptr));
         else if(value.value.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("value",
         native_value(value.value.value));
         for(size_t i=0;
@@ -9152,24 +9359,24 @@ namespace tt::results::detail {
             auto& item=value.extensions.data[i];
             items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_annotation_value_decision_v1& value) {
-        Json::Object items;
+    inline Data native_value(const thinkthen_complete_annotation_value_decision_v1& value) {
+        Data::Object items;
         items.emplace_back("kind",native_value(value.kind));
-        if(value.value.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("value",Json(nullptr));
+        if(value.value.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("value",Data(nullptr));
         else if(value.value.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("value",
-        Json(bool(value.value.value)));
+        Data(bool(value.value.value)));
         for(size_t i=0;
         i<value.extensions.len;
         ++i) {
             auto& item=value.extensions.data[i];
             items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_session_observed_row_judgment_v1& value) {
-        Json::Object items;
+    inline Data native_value(const thinkthen_complete_session_observed_row_judgment_v1& value) {
+        Data::Object items;
         items.emplace_back("kind",native_value(value.kind));
         items.emplace_back("value",native_value(value.value));
         for(size_t i=0;
@@ -9178,9 +9385,9 @@ namespace tt::results::detail {
             auto& item=value.extensions.data[i];
             items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_session_judgment_v1& value) {
+    inline Data native_value(const thinkthen_complete_session_judgment_v1& value) {
         switch(value.kind) {
             case THINKTHEN_COMPLETE_SESSION_JUDGMENT_DECISION_V1: return native_value(value.data.decision);
             case THINKTHEN_COMPLETE_SESSION_JUDGMENT_CHOICE_V1: return native_value(value.data.choice);
@@ -9189,8 +9396,8 @@ namespace tt::results::detail {
             default: throw std::invalid_argument("invalid native alternative");
         }
     }
-    inline Json native_value(const thinkthen_complete_session_judgment_tags_v1& value) {
-        Json::Object items;
+    inline Data native_value(const thinkthen_complete_session_judgment_tags_v1& value) {
+        Data::Object items;
         items.emplace_back("kind",native_value(value.kind));
         items.emplace_back("value",native_value(value.value));
         for(size_t i=0;
@@ -9199,10 +9406,10 @@ namespace tt::results::detail {
             auto& item=value.extensions.data[i];
             items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_session_judgment_score_v1& value) {
-        Json::Object items;
+    inline Data native_value(const thinkthen_complete_session_judgment_score_v1& value) {
+        Data::Object items;
         items.emplace_back("kind",native_value(value.kind));
         items.emplace_back("value",native_value(value.value));
         for(size_t i=0;
@@ -9211,12 +9418,12 @@ namespace tt::results::detail {
             auto& item=value.extensions.data[i];
             items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_session_judgment_choice_v1& value) {
-        Json::Object items;
+    inline Data native_value(const thinkthen_complete_session_judgment_choice_v1& value) {
+        Data::Object items;
         items.emplace_back("kind",native_value(value.kind));
-        if(value.value.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("value",Json(nullptr));
+        if(value.value.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("value",Data(nullptr));
         else if(value.value.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("value",
         native_value(value.value.value));
         for(size_t i=0;
@@ -9225,33 +9432,33 @@ namespace tt::results::detail {
             auto& item=value.extensions.data[i];
             items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_session_judgment_decision_v1& value) {
-        Json::Object items;
+    inline Data native_value(const thinkthen_complete_session_judgment_decision_v1& value) {
+        Data::Object items;
         items.emplace_back("kind",native_value(value.kind));
-        if(value.value.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("value",Json(nullptr));
+        if(value.value.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("value",Data(nullptr));
         else if(value.value.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("value",
-        Json(bool(value.value.value)));
+        Data(bool(value.value.value)));
         for(size_t i=0;
         i<value.extensions.len;
         ++i) {
             auto& item=value.extensions.data[i];
             items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_session_observation_question_v1& value) {
-        Json::Object items;
+    inline Data native_value(const thinkthen_complete_session_observation_question_v1& value) {
+        Data::Object items;
         items.emplace_back("detail",native_value(value.detail));
         items.emplace_back("index",native_value(value.index));
         items.emplace_back("kind",native_value(value.kind));
         if(value.member.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("member",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.member.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("member",
         native_value(value.member.value));
         items.emplace_back("position",native_value(value.position));
-        if(value.stage.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("stage",Json(nullptr));
+        if(value.stage.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("stage",Data(nullptr));
         else if(value.stage.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("stage",
         native_value(value.stage.value));
         for(size_t i=0;
@@ -9260,102 +9467,102 @@ namespace tt::results::detail {
             auto& item=value.extensions.data[i];
             items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_answer_id_presence_v1& value) {
-        return value.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? native_value(value.value) : Json(nullptr);
+    inline Data native_value(const thinkthen_complete_answer_id_presence_v1& value) {
+        return value.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? native_value(value.value) : Data(nullptr);
     }
-    inline Json native_value(const thinkthen_complete_f64_presence_v1& value) {
-        return value.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? native_value(value.value) : Json(nullptr);
+    inline Data native_value(const thinkthen_complete_f64_presence_v1& value) {
+        return value.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? native_value(value.value) : Data(nullptr);
     }
-    inline Json native_value(const thinkthen_complete_failure_presence_v1& value) {
-        return value.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? native_value(value.value) : Json(nullptr);
+    inline Data native_value(const thinkthen_complete_failure_presence_v1& value) {
+        return value.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? native_value(value.value) : Data(nullptr);
     }
-    inline Json native_value(const thinkthen_complete_failure_id_presence_v1& value) {
-        return value.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? native_value(value.value) : Json(nullptr);
+    inline Data native_value(const thinkthen_complete_failure_id_presence_v1& value) {
+        return value.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? native_value(value.value) : Data(nullptr);
     }
-    inline Json native_value(const thinkthen_complete_json_presence_v1& value) {
-        return value.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? native_value(value.value) : Json(nullptr);
+    inline Data native_value(const thinkthen_complete_json_presence_v1& value) {
+        return value.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? native_value(value.value) : Data(nullptr);
     }
-    inline Json native_value(const thinkthen_complete_physical_source_presence_v1& value) {
-        return value.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? native_value(value.value) : Json(nullptr);
+    inline Data native_value(const thinkthen_complete_physical_source_presence_v1& value) {
+        return value.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? native_value(value.value) : Data(nullptr);
     }
-    inline Json native_value(const thinkthen_complete_session_input_source_list_v1& value) {
-        Json::Array items;
+    inline Data native_value(const thinkthen_complete_session_input_source_list_v1& value) {
+        Data::Array items;
         for(size_t i=0;
         i<value.len;
         ++i) {
             items.push_back(native_value(value.data[i]));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_json_list_v1& value) {
-        Json::Array items;
+    inline Data native_value(const thinkthen_complete_json_list_v1& value) {
+        Data::Array items;
         for(size_t i=0;
         i<value.len;
         ++i) {
             items.push_back(native_value(value.data[i]));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_observation_list_v1& value) {
-        Json::Array items;
+    inline Data native_value(const thinkthen_complete_observation_list_v1& value) {
+        Data::Array items;
         for(size_t i=0;
         i<value.len;
         ++i) {
             items.push_back(native_value(value.data[i]));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_session_probabilities_presence_v1& value) {
-        return value.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? native_value(value.value) : Json(nullptr);
+    inline Data native_value(const thinkthen_complete_session_probabilities_presence_v1& value) {
+        return value.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? native_value(value.value) : Data(nullptr);
     }
-    inline Json native_value(const thinkthen_complete_question_source_list_v1& value) {
-        Json::Array items;
+    inline Data native_value(const thinkthen_complete_question_source_list_v1& value) {
+        Data::Array items;
         for(size_t i=0;
         i<value.len;
         ++i) {
             items.push_back(native_value(value.data[i]));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_usage_presence_v1& value) {
-        return value.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? native_value(value.value) : Json(nullptr);
+    inline Data native_value(const thinkthen_complete_usage_presence_v1& value) {
+        return value.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? native_value(value.value) : Data(nullptr);
     }
-    inline Json native_value(const thinkthen_complete_threshold_presence_v1& value) {
-        return value.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? native_value(value.value) : Json(nullptr);
+    inline Data native_value(const thinkthen_complete_threshold_presence_v1& value) {
+        return value.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? native_value(value.value) : Data(nullptr);
     }
-    inline Json native_value(const thinkthen_complete_token_usage_presence_v1& value) {
-        return value.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? native_value(value.value) : Json(nullptr);
+    inline Data native_value(const thinkthen_complete_token_usage_presence_v1& value) {
+        return value.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? native_value(value.value) : Data(nullptr);
     }
-    inline Json native_value(const thinkthen_complete_value_presence_v1& value) {
-        return value.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? native_value(value.value) : Json(nullptr);
+    inline Data native_value(const thinkthen_complete_value_presence_v1& value) {
+        return value.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? native_value(value.value) : Data(nullptr);
     }
-    inline Json native_value(const thinkthen_complete_session_question_detail_v1& value) {
-        Json::Object items;
+    inline Data native_value(const thinkthen_complete_session_question_detail_v1& value) {
+        Data::Object items;
         if(value.answer_id.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("answer_id",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.answer_id.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("answer_id",
         native_value(value.answer_id.value));
-        items.emplace_back("cached",Json(bool(value.cached)));
+        items.emplace_back("cached",Data(bool(value.cached)));
         if(value.confidence.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("confidence",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.confidence.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("confidence",
         native_value(value.confidence.value));
         items.emplace_back("failed_questions",native_value(value.failed_questions));
         if(value.failure.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("failure",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.failure.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("failure",
         native_value(value.failure.value));
         if(value.failure_id.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("failure_id",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.failure_id.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("failure_id",
         native_value(value.failure_id.value));
-        if(value.input.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("input",Json(nullptr));
+        if(value.input.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("input",Data(nullptr));
         else if(value.input.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("input",
         native_value(value.input.value));
         if(value.input_source.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("input_source",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.input_source.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("input_source",
         native_value(value.input_source.value));
         items.emplace_back("input_sources",native_value(value.input_sources));
@@ -9363,31 +9570,31 @@ namespace tt::results::detail {
         items.emplace_back("model",native_value(value.model));
         items.emplace_back("observations",native_value(value.observations));
         if(value.probabilities.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("probabilities",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.probabilities.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("probabilities",
         native_value(value.probabilities.value));
         items.emplace_back("question",native_value(value.question));
         items.emplace_back("question_sha256",native_value(value.question_sha256));
         items.emplace_back("question_sources",native_value(value.question_sources));
         if(value.raw_pick.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("raw_pick",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.raw_pick.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("raw_pick",
         native_value(value.raw_pick.value));
         if(value.reported_usage.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("reported_usage",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.reported_usage.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("reported_usage",
         native_value(value.reported_usage.value));
         items.emplace_back("requests",native_value(value.requests));
         items.emplace_back("requests_sent",native_value(value.requests_sent));
         if(value.threshold.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("threshold",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.threshold.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("threshold",
         native_value(value.threshold.value));
         items.emplace_back("url",native_value(value.url));
-        if(value.usage.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("usage",Json(nullptr));
+        if(value.usage.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("usage",Data(nullptr));
         else if(value.usage.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("usage",
         native_value(value.usage.value));
-        if(value.value.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("value",Json(nullptr));
+        if(value.value.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("value",Data(nullptr));
         else if(value.value.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("value",
         native_value(value.value.value));
         for(size_t i=0;
@@ -9396,20 +9603,20 @@ namespace tt::results::detail {
             auto& item=value.extensions.data[i];
             items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_value_v1& value) {
+    inline Data native_value(const thinkthen_complete_value_v1& value) {
         switch(value.kind) {
-            case THINKTHEN_COMPLETE_VALUE_BOOLEAN_V1: return Json(bool(value.data.boolean));
-            case THINKTHEN_COMPLETE_VALUE_NULL_V1: return Json(nullptr);
+            case THINKTHEN_COMPLETE_VALUE_BOOLEAN_V1: return Data(bool(value.data.boolean));
+            case THINKTHEN_COMPLETE_VALUE_NULL_V1: return Data(nullptr);
             case THINKTHEN_COMPLETE_VALUE_STRING_V1: return native_value(value.data.string);
             case THINKTHEN_COMPLETE_VALUE_ARRAY_V1: return native_value(value.data.array);
             case THINKTHEN_COMPLETE_VALUE_NUMBER_V1: return native_value(value.data.number);
             default: throw std::invalid_argument("invalid native alternative");
         }
     }
-    inline Json native_value(const thinkthen_complete_token_usage_v1& value) {
-        Json::Object items;
+    inline Data native_value(const thinkthen_complete_token_usage_v1& value) {
+        Data::Object items;
         items.emplace_back("input_tokens",native_value(value.input_tokens));
         items.emplace_back("output_tokens",native_value(value.output_tokens));
         for(size_t i=0;
@@ -9418,23 +9625,23 @@ namespace tt::results::detail {
             auto& item=value.extensions.data[i];
             items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_threshold_v1& value) {
+    inline Data native_value(const thinkthen_complete_threshold_v1& value) {
         switch(value.kind) {
             case THINKTHEN_COMPLETE_THRESHOLD_NUMBER_V1: return native_value(value.data.number);
             case THINKTHEN_COMPLETE_THRESHOLD_STRING_V1: return native_value(value.data.string);
             default: throw std::invalid_argument("invalid native alternative");
         }
     }
-    inline Json native_value(const thinkthen_complete_usage_v1& value) {
-        Json::Object items;
+    inline Data native_value(const thinkthen_complete_usage_v1& value) {
+        Data::Object items;
         if(value.input_tokens.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("input_tokens",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.input_tokens.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("input_tokens",
         native_value(value.input_tokens.value));
         if(value.output_tokens.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("output_tokens",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.output_tokens.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("output_tokens",
         native_value(value.output_tokens.value));
         for(size_t i=0;
@@ -9443,13 +9650,13 @@ namespace tt::results::detail {
             auto& item=value.extensions.data[i];
             items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_question_source_v1& value) {
-        Json::Object items;
+    inline Data native_value(const thinkthen_complete_question_source_v1& value) {
+        Data::Object items;
         items.emplace_back("answered_by",native_value(value.answered_by));
         if(value.batch_size.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("batch_size",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.batch_size.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("batch_size",
         native_value(value.batch_size.value));
         items.emplace_back("origin",native_value(value.origin));
@@ -9459,19 +9666,19 @@ namespace tt::results::detail {
             auto& item=value.extensions.data[i];
             items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_origin_v1& value) {
+    inline Data native_value(const thinkthen_complete_origin_v1& value) {
         switch(value.kind) {
-            case THINKTHEN_COMPLETE_ORIGIN_LIVE_V1: return Json("live");
-            case THINKTHEN_COMPLETE_ORIGIN_CACHE_V1: return Json("cache");
-            case THINKTHEN_COMPLETE_ORIGIN_REPLAY_V1: return Json("replay");
-            case THINKTHEN_COMPLETE_ORIGIN_PROXY_V1: return Json("proxy");
-            case THINKTHEN_COMPLETE_ORIGIN_MEMORY_V1: return Json("memory");
+            case THINKTHEN_COMPLETE_ORIGIN_LIVE_V1: return Data("live");
+            case THINKTHEN_COMPLETE_ORIGIN_CACHE_V1: return Data("cache");
+            case THINKTHEN_COMPLETE_ORIGIN_REPLAY_V1: return Data("replay");
+            case THINKTHEN_COMPLETE_ORIGIN_PROXY_V1: return Data("proxy");
+            case THINKTHEN_COMPLETE_ORIGIN_MEMORY_V1: return Data("memory");
             default: throw std::invalid_argument("invalid native enum");
         }
     }
-    inline Json native_value(const thinkthen_complete_question_document_v1& value) {
+    inline Data native_value(const thinkthen_complete_question_document_v1& value) {
         switch(value.kind) {
             case THINKTHEN_COMPLETE_QUESTION_DOCUMENT_DECIDE_V1: return native_value(value.data.decide);
             case THINKTHEN_COMPLETE_QUESTION_DOCUMENT_CHOOSE_V1: return native_value(value.data.choose);
@@ -9480,68 +9687,68 @@ namespace tt::results::detail {
             default: throw std::invalid_argument("invalid native alternative");
         }
     }
-    inline Json native_value(const thinkthen_complete_batch_presence_v1& value) {
-        return value.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? native_value(value.value) : Json(nullptr);
+    inline Data native_value(const thinkthen_complete_batch_presence_v1& value) {
+        return value.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? native_value(value.value) : Data(nullptr);
     }
-    inline Json native_value(const thinkthen_complete_input_declaration_presence_v1& value) {
-        return value.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? native_value(value.value) : Json(nullptr);
+    inline Data native_value(const thinkthen_complete_input_declaration_presence_v1& value) {
+        return value.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? native_value(value.value) : Data(nullptr);
     }
-    inline Json native_value(const thinkthen_complete_label_list_v1& value) {
-        Json::Array items;
+    inline Data native_value(const thinkthen_complete_label_list_v1& value) {
+        Data::Array items;
         for(size_t i=0;
         i<value.len;
         ++i) {
             items.push_back(native_value(value.data[i]));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_label_list_presence_v1& value) {
-        return value.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? native_value(value.value) : Json(nullptr);
+    inline Data native_value(const thinkthen_complete_label_list_presence_v1& value) {
+        return value.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? native_value(value.value) : Data(nullptr);
     }
-    inline Json native_value(const thinkthen_complete_question_name_presence_v1& value) {
-        return value.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? native_value(value.value) : Json(nullptr);
+    inline Data native_value(const thinkthen_complete_question_name_presence_v1& value) {
+        return value.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? native_value(value.value) : Data(nullptr);
     }
-    inline Json native_value(const thinkthen_complete_string_list_presence_v1& value) {
-        return value.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? native_value(value.value) : Json(nullptr);
+    inline Data native_value(const thinkthen_complete_string_list_presence_v1& value) {
+        return value.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? native_value(value.value) : Data(nullptr);
     }
-    inline Json native_value(const thinkthen_complete_wording_version_presence_v1& value) {
-        return value.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? native_value(value.value) : Json(nullptr);
+    inline Data native_value(const thinkthen_complete_wording_version_presence_v1& value) {
+        return value.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? native_value(value.value) : Data(nullptr);
     }
-    inline Json native_value(const thinkthen_complete_question_document_score_v1& value) {
-        Json::Object items;
-        if(value.batch.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("batch",Json(nullptr));
+    inline Data native_value(const thinkthen_complete_question_document_score_v1& value) {
+        Data::Object items;
+        if(value.batch.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("batch",Data(nullptr));
         else if(value.batch.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("batch",
         native_value(value.batch.value));
         if(value.context_schema.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("context_schema",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.context_schema.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("context_schema",
         native_value(value.context_schema.value));
         if(value.item_schema.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("item_schema",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.item_schema.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("item_schema",
         native_value(value.item_schema.value));
         if(value.label_details.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("label_details",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.label_details.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("label_details",
         native_value(value.label_details.value));
-        if(value.model.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("model",Json(nullptr));
+        if(value.model.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("model",Data(nullptr));
         else if(value.model.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("model",
         native_value(value.model.value));
-        if(value.name.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("name",Json(nullptr));
+        if(value.name.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("name",Data(nullptr));
         else if(value.name.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("name",
         native_value(value.name.value));
-        if(value.on.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("on",Json(nullptr));
+        if(value.on.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("on",Data(nullptr));
         else if(value.on.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("on",native_value(value.on.value));
         if(value.profile.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("profile",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.profile.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("profile",
         native_value(value.profile.value));
         if(value.wording_version.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("wording_version",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.wording_version.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("wording_version",
         native_value(value.wording_version.value));
         items.emplace_back("levels",native_value(value.levels));
-        if(value.text.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("text",Json(nullptr));
+        if(value.text.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("text",Data(nullptr));
         else if(value.text.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("text",
         native_value(value.text.value));
         items.emplace_back("verb",native_value(value.verb));
@@ -9551,18 +9758,18 @@ namespace tt::results::detail {
             auto& item=value.extensions.data[i];
             items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_wording_version_v1& value) {
+    inline Data native_value(const thinkthen_complete_wording_version_v1& value) {
         return native_value(value.value);
     }
-    inline Json native_value(const thinkthen_complete_question_name_v1& value) {
+    inline Data native_value(const thinkthen_complete_question_name_v1& value) {
         return native_value(value.value);
     }
-    inline Json native_value(const thinkthen_complete_label_v1& value) {
-        Json::Object items;
+    inline Data native_value(const thinkthen_complete_label_v1& value) {
+        Data::Object items;
         if(value.description.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("description",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.description.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("description",
         native_value(value.description.value));
         items.emplace_back("name",native_value(value.name));
@@ -9572,33 +9779,33 @@ namespace tt::results::detail {
             auto& item=value.extensions.data[i];
             items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_input_declaration_v1& value) {
+    inline Data native_value(const thinkthen_complete_input_declaration_v1& value) {
         switch(value.kind) {
             case THINKTHEN_COMPLETE_INPUT_DECLARATION_STRING_ROOT_V1: return native_value(value.data.string_root);
             case THINKTHEN_COMPLETE_INPUT_DECLARATION_OBJECT_ROOT_V1: return native_value(value.data.object_root);
             default: throw std::invalid_argument("invalid native alternative");
         }
     }
-    inline Json native_value(const thinkthen_complete_input_property_type_map_entry_v1& value) {
+    inline Data native_value(const thinkthen_complete_input_property_type_map_entry_v1& value) {
         return native_value(value.value);
     }
-    inline Json native_value(const thinkthen_complete_input_property_type_map_v1& value) {
-        Json::Object items;
+    inline Data native_value(const thinkthen_complete_input_property_type_map_v1& value) {
+        Data::Object items;
         for(size_t i=0;
         i<value.len;
         ++i) {
             auto& item=value.data[i];
             items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_input_declaration_object_root_v1& value) {
-        Json::Object items;
+    inline Data native_value(const thinkthen_complete_input_declaration_object_root_v1& value) {
+        Data::Object items;
         items.emplace_back("properties",native_value(value.properties));
         if(value.required.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("required",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.required.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("required",
         native_value(value.required.value));
         items.emplace_back("type",native_value(value.type));
@@ -9608,25 +9815,25 @@ namespace tt::results::detail {
             auto& item=value.extensions.data[i];
             items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_object_type_v1& value) {
+    inline Data native_value(const thinkthen_complete_object_type_v1& value) {
         switch(value.kind) {
-            case THINKTHEN_COMPLETE_OBJECT_TYPE_OBJECT_V1: return Json("object");
+            case THINKTHEN_COMPLETE_OBJECT_TYPE_OBJECT_V1: return Data("object");
             default: throw std::invalid_argument("invalid native enum");
         }
     }
-    inline Json native_value(const thinkthen_complete_input_property_type_v1& value) {
+    inline Data native_value(const thinkthen_complete_input_property_type_v1& value) {
         switch(value.kind) {
             case THINKTHEN_COMPLETE_INPUT_PROPERTY_TYPE_STRING_V1: return native_value(value.data.string);
             case THINKTHEN_COMPLETE_INPUT_PROPERTY_TYPE_NUMBER_V1: return native_value(value.data.number);
-            case THINKTHEN_COMPLETE_INPUT_PROPERTY_TYPE_BOOLEAN_V1: return Json(bool(value.data.boolean));
+            case THINKTHEN_COMPLETE_INPUT_PROPERTY_TYPE_BOOLEAN_V1: return Data(bool(value.data.boolean));
             case THINKTHEN_COMPLETE_INPUT_PROPERTY_TYPE_ARRAY_V1: return native_value(value.data.array);
             default: throw std::invalid_argument("invalid native alternative");
         }
     }
-    inline Json native_value(const thinkthen_complete_input_property_type_array_v1& value) {
-        Json::Object items;
+    inline Data native_value(const thinkthen_complete_input_property_type_array_v1& value) {
+        Data::Object items;
         items.emplace_back("items",native_value(value.items));
         items.emplace_back("type",native_value(value.type));
         for(size_t i=0;
@@ -9635,10 +9842,10 @@ namespace tt::results::detail {
             auto& item=value.extensions.data[i];
             items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_string_root_v1& value) {
-        Json::Object items;
+    inline Data native_value(const thinkthen_complete_string_root_v1& value) {
+        Data::Object items;
         items.emplace_back("type",native_value(value.type));
         for(size_t i=0;
         i<value.extensions.len;
@@ -9646,16 +9853,16 @@ namespace tt::results::detail {
             auto& item=value.extensions.data[i];
             items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_string_type_v1& value) {
+    inline Data native_value(const thinkthen_complete_string_type_v1& value) {
         switch(value.kind) {
-            case THINKTHEN_COMPLETE_STRING_TYPE_STRING_V1: return Json("string");
+            case THINKTHEN_COMPLETE_STRING_TYPE_STRING_V1: return Data("string");
             default: throw std::invalid_argument("invalid native enum");
         }
     }
-    inline Json native_value(const thinkthen_complete_input_property_type_boolean_v1& value) {
-        Json::Object items;
+    inline Data native_value(const thinkthen_complete_input_property_type_boolean_v1& value) {
+        Data::Object items;
         items.emplace_back("type",native_value(value.type));
         for(size_t i=0;
         i<value.extensions.len;
@@ -9663,10 +9870,10 @@ namespace tt::results::detail {
             auto& item=value.extensions.data[i];
             items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_input_property_type_number_v1& value) {
-        Json::Object items;
+    inline Data native_value(const thinkthen_complete_input_property_type_number_v1& value) {
+        Data::Object items;
         items.emplace_back("type",native_value(value.type));
         for(size_t i=0;
         i<value.extensions.len;
@@ -9674,10 +9881,10 @@ namespace tt::results::detail {
             auto& item=value.extensions.data[i];
             items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_input_property_type_string_v1& value) {
-        Json::Object items;
+    inline Data native_value(const thinkthen_complete_input_property_type_string_v1& value) {
+        Data::Object items;
         items.emplace_back("type",native_value(value.type));
         for(size_t i=0;
         i<value.extensions.len;
@@ -9685,10 +9892,10 @@ namespace tt::results::detail {
             auto& item=value.extensions.data[i];
             items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_input_declaration_string_root_v1& value) {
-        Json::Object items;
+    inline Data native_value(const thinkthen_complete_input_declaration_string_root_v1& value) {
+        Data::Object items;
         items.emplace_back("type",native_value(value.type));
         for(size_t i=0;
         i<value.extensions.len;
@@ -9696,56 +9903,56 @@ namespace tt::results::detail {
             auto& item=value.extensions.data[i];
             items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_batch_string_v1& value) {
+    inline Data native_value(const thinkthen_complete_batch_string_v1& value) {
         switch(value.kind) {
-            case THINKTHEN_COMPLETE_BATCH_STRING_MAX_V1: return Json("max");
+            case THINKTHEN_COMPLETE_BATCH_STRING_MAX_V1: return Data("max");
             default: throw std::invalid_argument("invalid native enum");
         }
     }
-    inline Json native_value(const thinkthen_complete_batch_v1& value) {
+    inline Data native_value(const thinkthen_complete_batch_v1& value) {
         switch(value.kind) {
             case THINKTHEN_COMPLETE_BATCH_INTEGER_V1: return native_value(value.data.integer);
             case THINKTHEN_COMPLETE_BATCH_STRING_V1: return native_value(value.data.string);
             default: throw std::invalid_argument("invalid native alternative");
         }
     }
-    inline Json native_value(const thinkthen_complete_question_document_tag_v1& value) {
-        Json::Object items;
-        if(value.batch.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("batch",Json(nullptr));
+    inline Data native_value(const thinkthen_complete_question_document_tag_v1& value) {
+        Data::Object items;
+        if(value.batch.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("batch",Data(nullptr));
         else if(value.batch.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("batch",
         native_value(value.batch.value));
         if(value.context_schema.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("context_schema",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.context_schema.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("context_schema",
         native_value(value.context_schema.value));
         if(value.item_schema.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("item_schema",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.item_schema.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("item_schema",
         native_value(value.item_schema.value));
         if(value.label_details.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("label_details",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.label_details.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("label_details",
         native_value(value.label_details.value));
-        if(value.model.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("model",Json(nullptr));
+        if(value.model.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("model",Data(nullptr));
         else if(value.model.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("model",
         native_value(value.model.value));
-        if(value.name.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("name",Json(nullptr));
+        if(value.name.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("name",Data(nullptr));
         else if(value.name.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("name",
         native_value(value.name.value));
-        if(value.on.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("on",Json(nullptr));
+        if(value.on.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("on",Data(nullptr));
         else if(value.on.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("on",native_value(value.on.value));
         if(value.profile.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("profile",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.profile.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("profile",
         native_value(value.profile.value));
         if(value.wording_version.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("wording_version",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.wording_version.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("wording_version",
         native_value(value.wording_version.value));
         items.emplace_back("labels",native_value(value.labels));
-        if(value.text.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("text",Json(nullptr));
+        if(value.text.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("text",Data(nullptr));
         else if(value.text.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("text",
         native_value(value.text.value));
         items.emplace_back("verb",native_value(value.verb));
@@ -9755,43 +9962,43 @@ namespace tt::results::detail {
             auto& item=value.extensions.data[i];
             items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_question_document_choose_v1& value) {
-        Json::Object items;
-        if(value.batch.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("batch",Json(nullptr));
+    inline Data native_value(const thinkthen_complete_question_document_choose_v1& value) {
+        Data::Object items;
+        if(value.batch.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("batch",Data(nullptr));
         else if(value.batch.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("batch",
         native_value(value.batch.value));
         if(value.context_schema.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("context_schema",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.context_schema.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("context_schema",
         native_value(value.context_schema.value));
         if(value.item_schema.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("item_schema",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.item_schema.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("item_schema",
         native_value(value.item_schema.value));
         if(value.label_details.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("label_details",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.label_details.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("label_details",
         native_value(value.label_details.value));
-        if(value.model.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("model",Json(nullptr));
+        if(value.model.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("model",Data(nullptr));
         else if(value.model.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("model",
         native_value(value.model.value));
-        if(value.name.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("name",Json(nullptr));
+        if(value.name.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("name",Data(nullptr));
         else if(value.name.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("name",
         native_value(value.name.value));
-        if(value.on.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("on",Json(nullptr));
+        if(value.on.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("on",Data(nullptr));
         else if(value.on.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("on",native_value(value.on.value));
         if(value.profile.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("profile",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.profile.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("profile",
         native_value(value.profile.value));
         if(value.wording_version.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("wording_version",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.wording_version.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("wording_version",
         native_value(value.wording_version.value));
         items.emplace_back("options",native_value(value.options));
-        if(value.text.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("text",Json(nullptr));
+        if(value.text.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("text",Data(nullptr));
         else if(value.text.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("text",
         native_value(value.text.value));
         items.emplace_back("verb",native_value(value.verb));
@@ -9801,48 +10008,48 @@ namespace tt::results::detail {
             auto& item=value.extensions.data[i];
             items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_question_document_decide_v1& value) {
-        Json::Object items;
-        if(value.batch.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("batch",Json(nullptr));
+    inline Data native_value(const thinkthen_complete_question_document_decide_v1& value) {
+        Data::Object items;
+        if(value.batch.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("batch",Data(nullptr));
         else if(value.batch.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("batch",
         native_value(value.batch.value));
         if(value.context_schema.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("context_schema",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.context_schema.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("context_schema",
         native_value(value.context_schema.value));
         if(value.item_schema.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("item_schema",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.item_schema.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("item_schema",
         native_value(value.item_schema.value));
         if(value.label_details.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("label_details",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.label_details.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("label_details",
         native_value(value.label_details.value));
-        if(value.model.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("model",Json(nullptr));
+        if(value.model.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("model",Data(nullptr));
         else if(value.model.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("model",
         native_value(value.model.value));
-        if(value.name.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("name",Json(nullptr));
+        if(value.name.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("name",Data(nullptr));
         else if(value.name.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("name",
         native_value(value.name.value));
-        if(value.on.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("on",Json(nullptr));
+        if(value.on.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("on",Data(nullptr));
         else if(value.on.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("on",native_value(value.on.value));
         if(value.profile.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("profile",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.profile.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("profile",
         native_value(value.profile.value));
         if(value.wording_version.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("wording_version",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.wording_version.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("wording_version",
         native_value(value.wording_version.value));
-        if(value.false_.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("false",Json(nullptr));
+        if(value.false_.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("false",Data(nullptr));
         else if(value.false_.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("false",
         native_value(value.false_.value));
-        if(value.text.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("text",Json(nullptr));
+        if(value.text.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("text",Data(nullptr));
         else if(value.text.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("text",
         native_value(value.text.value));
-        if(value.true_.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("true",Json(nullptr));
+        if(value.true_.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("true",Data(nullptr));
         else if(value.true_.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("true",
         native_value(value.true_.value));
         items.emplace_back("verb",native_value(value.verb));
@@ -9852,26 +10059,26 @@ namespace tt::results::detail {
             auto& item=value.extensions.data[i];
             items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_session_probabilities_v1& value) {
+    inline Data native_value(const thinkthen_complete_session_probabilities_v1& value) {
         switch(value.kind) {
             case THINKTHEN_COMPLETE_SESSION_PROBABILITIES_YES_NO_V1: return native_value(value.data.yes_no);
             case THINKTHEN_COMPLETE_SESSION_PROBABILITIES_NAMED_V1: return native_value(value.data.named);
             default: throw std::invalid_argument("invalid native alternative");
         }
     }
-    inline Json native_value(const thinkthen_complete_session_named_probability_list_v1& value) {
-        Json::Array items;
+    inline Data native_value(const thinkthen_complete_session_named_probability_list_v1& value) {
+        Data::Array items;
         for(size_t i=0;
         i<value.len;
         ++i) {
             items.push_back(native_value(value.data[i]));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_session_probabilities_named_v1& value) {
-        Json::Object items;
+    inline Data native_value(const thinkthen_complete_session_probabilities_named_v1& value) {
+        Data::Object items;
         items.emplace_back("kind",native_value(value.kind));
         items.emplace_back("value",native_value(value.value));
         for(size_t i=0;
@@ -9880,10 +10087,10 @@ namespace tt::results::detail {
             auto& item=value.extensions.data[i];
             items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_session_named_probability_v1& value) {
-        Json::Object items;
+    inline Data native_value(const thinkthen_complete_session_named_probability_v1& value) {
+        Data::Object items;
         items.emplace_back("name",native_value(value.name));
         items.emplace_back("probability",native_value(value.probability));
         for(size_t i=0;
@@ -9892,10 +10099,10 @@ namespace tt::results::detail {
             auto& item=value.extensions.data[i];
             items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_session_probabilities_yes_no_v1& value) {
-        Json::Object items;
+    inline Data native_value(const thinkthen_complete_session_probabilities_yes_no_v1& value) {
+        Data::Object items;
         items.emplace_back("kind",native_value(value.kind));
         items.emplace_back("value",native_value(value.value));
         for(size_t i=0;
@@ -9904,17 +10111,17 @@ namespace tt::results::detail {
             auto& item=value.extensions.data[i];
             items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_observation_v1& value) {
+    inline Data native_value(const thinkthen_complete_observation_v1& value) {
         switch(value.kind) {
             case THINKTHEN_COMPLETE_OBSERVATION_OBSERVATION_ID_V1: return native_value(value.data.observation_id);
             case THINKTHEN_COMPLETE_OBSERVATION_FAILURE_ID_V1: return native_value(value.data.failure_id);
             default: throw std::invalid_argument("invalid native alternative");
         }
     }
-    inline Json native_value(const thinkthen_complete_observation_failure_id_v1& value) {
-        Json::Object items;
+    inline Data native_value(const thinkthen_complete_observation_failure_id_v1& value) {
+        Data::Object items;
         items.emplace_back("failure_id",native_value(value.failure_id));
         for(size_t i=0;
         i<value.extensions.len;
@@ -9922,13 +10129,13 @@ namespace tt::results::detail {
             auto& item=value.extensions.data[i];
             items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_failure_id_v1& value) {
+    inline Data native_value(const thinkthen_complete_failure_id_v1& value) {
         return native_value(value.value);
     }
-    inline Json native_value(const thinkthen_complete_observation_observation_id_v1& value) {
-        Json::Object items;
+    inline Data native_value(const thinkthen_complete_observation_observation_id_v1& value) {
+        Data::Object items;
         items.emplace_back("observation_id",native_value(value.observation_id));
         for(size_t i=0;
         i<value.extensions.len;
@@ -9936,13 +10143,13 @@ namespace tt::results::detail {
             auto& item=value.extensions.data[i];
             items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_observation_id_v1& value) {
+    inline Data native_value(const thinkthen_complete_observation_id_v1& value) {
         return native_value(value.value);
     }
-    inline Json native_value(const thinkthen_complete_session_input_source_v1& value) {
-        Json::Object items;
+    inline Data native_value(const thinkthen_complete_session_input_source_v1& value) {
+        Data::Object items;
         items.emplace_back("index",native_value(value.index));
         items.emplace_back("source",native_value(value.source));
         for(size_t i=0;
@@ -9951,17 +10158,17 @@ namespace tt::results::detail {
             auto& item=value.extensions.data[i];
             items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_physical_source_v1& value) {
-        Json::Object items;
+    inline Data native_value(const thinkthen_complete_physical_source_v1& value) {
+        Data::Object items;
         items.emplace_back("file",native_value(value.file));
         if(value.first_line.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("first_line",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.first_line.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("first_line",
         native_value(value.first_line.value));
         if(value.last_line.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("last_line",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.last_line.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("last_line",
         native_value(value.last_line.value));
         for(size_t i=0;
@@ -9970,28 +10177,28 @@ namespace tt::results::detail {
             auto& item=value.extensions.data[i];
             items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_answer_id_v1& value) {
+    inline Data native_value(const thinkthen_complete_answer_id_v1& value) {
         return native_value(value.value);
     }
-    inline Json native_value(const thinkthen_complete_request_function_v1& value) {
+    inline Data native_value(const thinkthen_complete_request_function_v1& value) {
         switch(value.kind) {
-            case THINKTHEN_COMPLETE_REQUEST_FUNCTION_DECIDE_V1: return Json("decide");
-            case THINKTHEN_COMPLETE_REQUEST_FUNCTION_CHOOSE_V1: return Json("choose");
-            case THINKTHEN_COMPLETE_REQUEST_FUNCTION_TAG_V1: return Json("tag");
-            case THINKTHEN_COMPLETE_REQUEST_FUNCTION_SCORE_V1: return Json("score");
-            case THINKTHEN_COMPLETE_REQUEST_FUNCTION_FILTER_V1: return Json("filter");
-            case THINKTHEN_COMPLETE_REQUEST_FUNCTION_RANK_V1: return Json("rank");
-            case THINKTHEN_COMPLETE_REQUEST_FUNCTION_FIND_V1: return Json("find");
-            case THINKTHEN_COMPLETE_REQUEST_FUNCTION_ANNOTATE_V1: return Json("annotate");
-            case THINKTHEN_COMPLETE_REQUEST_FUNCTION_RECOGNIZE_V1: return Json("recognize");
-            case THINKTHEN_COMPLETE_REQUEST_FUNCTION_RELATE_V1: return Json("relate");
+            case THINKTHEN_COMPLETE_REQUEST_FUNCTION_DECIDE_V1: return Data("decide");
+            case THINKTHEN_COMPLETE_REQUEST_FUNCTION_CHOOSE_V1: return Data("choose");
+            case THINKTHEN_COMPLETE_REQUEST_FUNCTION_TAG_V1: return Data("tag");
+            case THINKTHEN_COMPLETE_REQUEST_FUNCTION_SCORE_V1: return Data("score");
+            case THINKTHEN_COMPLETE_REQUEST_FUNCTION_FILTER_V1: return Data("filter");
+            case THINKTHEN_COMPLETE_REQUEST_FUNCTION_RANK_V1: return Data("rank");
+            case THINKTHEN_COMPLETE_REQUEST_FUNCTION_FIND_V1: return Data("find");
+            case THINKTHEN_COMPLETE_REQUEST_FUNCTION_ANNOTATE_V1: return Data("annotate");
+            case THINKTHEN_COMPLETE_REQUEST_FUNCTION_RECOGNIZE_V1: return Data("recognize");
+            case THINKTHEN_COMPLETE_REQUEST_FUNCTION_RELATE_V1: return Data("relate");
             default: throw std::invalid_argument("invalid native enum");
         }
     }
-    inline Json native_value(const thinkthen_complete_session_packet_relate_aggregate_v1& value) {
-        Json::Object items;
+    inline Data native_value(const thinkthen_complete_session_packet_relate_aggregate_v1& value) {
+        Data::Object items;
         items.emplace_back("function",native_value(value.function));
         items.emplace_back("kind",native_value(value.kind));
         items.emplace_back("value",native_value(value.value));
@@ -10001,51 +10208,51 @@ namespace tt::results::detail {
             auto& item=value.extensions.data[i];
             items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_session_input_source_list_presence_v1& value) {
-        return value.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? native_value(value.value) : Json(nullptr);
+    inline Data native_value(const thinkthen_complete_session_input_source_list_presence_v1& value) {
+        return value.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? native_value(value.value) : Data(nullptr);
     }
-    inline Json native_value(const thinkthen_complete_position_presence_v1& value) {
-        return value.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? native_value(value.value) : Json(nullptr);
+    inline Data native_value(const thinkthen_complete_position_presence_v1& value) {
+        return value.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? native_value(value.value) : Data(nullptr);
     }
-    inline Json native_value(const thinkthen_complete_related_entity_edge_list_v1& value) {
-        Json::Array items;
+    inline Data native_value(const thinkthen_complete_related_entity_edge_list_v1& value) {
+        Data::Array items;
         for(size_t i=0;
         i<value.len;
         ++i) {
             items.push_back(native_value(value.data[i]));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_relation_v1& value) {
-        Json::Object items;
+    inline Data native_value(const thinkthen_complete_relation_v1& value) {
+        Data::Object items;
         items.emplace_back("answer",native_value(value.answer));
         items.emplace_back("answer_id",native_value(value.answer_id));
-        if(value.file.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("file",Json(nullptr));
+        if(value.file.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("file",Data(nullptr));
         else if(value.file.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("file",
         native_value(value.file.value));
         if(value.first_line.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("first_line",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.first_line.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("first_line",
         native_value(value.first_line.value));
-        if(value.index.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("index",Json(nullptr));
+        if(value.index.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("index",Data(nullptr));
         else if(value.index.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("index",
         native_value(value.index.value));
-        if(value.input.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("input",Json(nullptr));
+        if(value.input.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("input",Data(nullptr));
         else if(value.input.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("input",
         native_value(value.input.value));
         if(value.input_sources.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("input_sources",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.input_sources.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("input_sources",
         native_value(value.input_sources.value));
         if(value.last_line.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("last_line",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.last_line.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("last_line",
         native_value(value.last_line.value));
         items.emplace_back("meta",native_value(value.meta));
         if(value.position.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("position",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.position.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("position",
         native_value(value.position.value));
         items.emplace_back("question",native_value(value.question));
@@ -10057,14 +10264,14 @@ namespace tt::results::detail {
             auto& item=value.extensions.data[i];
             items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_related_entity_edge_v1& value) {
-        Json::Object items;
+    inline Data native_value(const thinkthen_complete_related_entity_edge_v1& value) {
+        Data::Object items;
         if(value.either.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("either",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.either.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("either",
-        Json(bool(value.either.value)));
+        Data(bool(value.either.value)));
         items.emplace_back("probability",native_value(value.probability));
         items.emplace_back("relation",native_value(value.relation));
         items.emplace_back("source",native_value(value.source));
@@ -10075,33 +10282,33 @@ namespace tt::results::detail {
             auto& item=value.extensions.data[i];
             items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_relation_endpoint_v1& value) {
+    inline Data native_value(const thinkthen_complete_relation_endpoint_v1& value) {
         switch(value.kind) {
             case THINKTHEN_COMPLETE_RELATION_ENDPOINT_RELATED_ENTITY_V1: return native_value(value.data.related_entity);
             case THINKTHEN_COMPLETE_RELATION_ENDPOINT_SOURCE_V1: return native_value(value.data.source);
             default: throw std::invalid_argument("invalid native alternative");
         }
     }
-    inline Json native_value(const thinkthen_complete_relation_endpoint_source_v1& value) {
-        Json::Object items;
-        if(value.file.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("file",Json(nullptr));
+    inline Data native_value(const thinkthen_complete_relation_endpoint_source_v1& value) {
+        Data::Object items;
+        if(value.file.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("file",Data(nullptr));
         else if(value.file.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("file",
         native_value(value.file.value));
         if(value.first_line.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("first_line",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.first_line.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("first_line",
         native_value(value.first_line.value));
         items.emplace_back("kind",native_value(value.kind));
         if(value.last_line.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("last_line",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.last_line.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("last_line",
         native_value(value.last_line.value));
         items.emplace_back("name",native_value(value.name));
         items.emplace_back("ordinal",native_value(value.ordinal));
         if(value.record.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("record",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.record.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("record",
         native_value(value.record.value));
         for(size_t i=0;
@@ -10110,10 +10317,10 @@ namespace tt::results::detail {
             auto& item=value.extensions.data[i];
             items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_relation_endpoint_related_entity_v1& value) {
-        Json::Object items;
+    inline Data native_value(const thinkthen_complete_relation_endpoint_related_entity_v1& value) {
+        Data::Object items;
         items.emplace_back("kind",native_value(value.kind));
         items.emplace_back("name",native_value(value.name));
         for(size_t i=0;
@@ -10122,64 +10329,64 @@ namespace tt::results::detail {
             auto& item=value.extensions.data[i];
             items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_version_v1& value) {
+    inline Data native_value(const thinkthen_complete_version_v1& value) {
         switch(value.kind) {
-            case THINKTHEN_COMPLETE_VERSION_THINKTHEN_RESULT_2_V1: return Json("thinkthen.result/2");
+            case THINKTHEN_COMPLETE_VERSION_THINKTHEN_RESULT_2_V1: return Data("thinkthen.result/2");
             default: throw std::invalid_argument("invalid native enum");
         }
     }
-    inline Json native_value(const thinkthen_complete_relate_fields_presence_v1& value) {
-        return value.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? native_value(value.value) : Json(nullptr);
+    inline Data native_value(const thinkthen_complete_relate_fields_presence_v1& value) {
+        return value.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? native_value(value.value) : Data(nullptr);
     }
-    inline Json native_value(const thinkthen_complete_relation_rule_list_v1& value) {
-        Json::Array items;
+    inline Data native_value(const thinkthen_complete_relation_rule_list_v1& value) {
+        Data::Array items;
         for(size_t i=0;
         i<value.len;
         ++i) {
             items.push_back(native_value(value.data[i]));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_relate_question_document_v1& value) {
-        Json::Object items;
-        if(value.batch.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("batch",Json(nullptr));
+    inline Data native_value(const thinkthen_complete_relate_question_document_v1& value) {
+        Data::Object items;
+        if(value.batch.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("batch",Data(nullptr));
         else if(value.batch.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("batch",
         native_value(value.batch.value));
         if(value.context_schema.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("context_schema",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.context_schema.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("context_schema",
         native_value(value.context_schema.value));
         if(value.fields.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("fields",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.fields.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("fields",
         native_value(value.fields.value));
         if(value.item_schema.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("item_schema",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.item_schema.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("item_schema",
         native_value(value.item_schema.value));
         if(value.label_details.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("label_details",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.label_details.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("label_details",
         native_value(value.label_details.value));
-        if(value.model.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("model",Json(nullptr));
+        if(value.model.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("model",Data(nullptr));
         else if(value.model.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("model",
         native_value(value.model.value));
-        if(value.name.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("name",Json(nullptr));
+        if(value.name.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("name",Data(nullptr));
         else if(value.name.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("name",
         native_value(value.name.value));
-        if(value.on.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("on",Json(nullptr));
+        if(value.on.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("on",Data(nullptr));
         else if(value.on.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("on",native_value(value.on.value));
         if(value.profile.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("profile",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.profile.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("profile",
         native_value(value.profile.value));
         items.emplace_back("relations",native_value(value.relations));
         items.emplace_back("threshold",native_value(value.threshold));
         items.emplace_back("verb",native_value(value.verb));
         if(value.wording_version.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("wording_version",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.wording_version.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("wording_version",
         native_value(value.wording_version.value));
         for(size_t i=0;
@@ -10188,17 +10395,17 @@ namespace tt::results::detail {
             auto& item=value.extensions.data[i];
             items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_relation_rule_v1& value) {
-        Json::Object items;
-        items.emplace_back("either",Json(bool(value.either)));
+    inline Data native_value(const thinkthen_complete_relation_rule_v1& value) {
+        Data::Object items;
+        items.emplace_back("either",Data(bool(value.either)));
         items.emplace_back("name",native_value(value.name));
         items.emplace_back("reads",native_value(value.reads));
         if(value.single.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("single",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.single.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("single",
-        Json(bool(value.single.value)));
+        Data(bool(value.single.value)));
         items.emplace_back("source",native_value(value.source));
         items.emplace_back("target",native_value(value.target));
         for(size_t i=0;
@@ -10207,10 +10414,10 @@ namespace tt::results::detail {
             auto& item=value.extensions.data[i];
             items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_relate_fields_v1& value) {
-        Json::Object items;
+    inline Data native_value(const thinkthen_complete_relate_fields_v1& value) {
+        Data::Object items;
         items.emplace_back("kind",native_value(value.kind));
         items.emplace_back("name",native_value(value.name));
         for(size_t i=0;
@@ -10219,21 +10426,21 @@ namespace tt::results::detail {
             auto& item=value.extensions.data[i];
             items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_position_v1& value) {
-        Json::Object items;
-        if(value.file.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("file",Json(nullptr));
+    inline Data native_value(const thinkthen_complete_position_v1& value) {
+        Data::Object items;
+        if(value.file.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("file",Data(nullptr));
         else if(value.file.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("file",
         native_value(value.file.value));
-        if(value.first.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("first",Json(nullptr));
+        if(value.first.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("first",Data(nullptr));
         else if(value.first.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("first",
         native_value(value.first.value));
         if(value.images.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("images",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.images.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("images",
         native_value(value.images.value));
-        if(value.last.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("last",Json(nullptr));
+        if(value.last.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("last",Data(nullptr));
         else if(value.last.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("last",
         native_value(value.last.value));
         for(size_t i=0;
@@ -10242,68 +10449,68 @@ namespace tt::results::detail {
             auto& item=value.extensions.data[i];
             items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_batch_setting_presence_v1& value) {
-        return value.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? native_value(value.value) : Json(nullptr);
+    inline Data native_value(const thinkthen_complete_batch_setting_presence_v1& value) {
+        return value.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? native_value(value.value) : Data(nullptr);
     }
-    inline Json native_value(const thinkthen_complete_batch_warning_presence_v1& value) {
-        return value.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? native_value(value.value) : Json(nullptr);
+    inline Data native_value(const thinkthen_complete_batch_warning_presence_v1& value) {
+        return value.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? native_value(value.value) : Data(nullptr);
     }
-    inline Json native_value(const thinkthen_complete_origin_presence_v1& value) {
-        return value.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? native_value(value.value) : Json(nullptr);
+    inline Data native_value(const thinkthen_complete_origin_presence_v1& value) {
+        return value.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? native_value(value.value) : Data(nullptr);
     }
-    inline Json native_value(const thinkthen_complete_profile_warning_presence_v1& value) {
-        return value.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? native_value(value.value) : Json(nullptr);
+    inline Data native_value(const thinkthen_complete_profile_warning_presence_v1& value) {
+        return value.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? native_value(value.value) : Data(nullptr);
     }
-    inline Json native_value(const thinkthen_complete_meta_v1& value) {
-        Json::Object items;
+    inline Data native_value(const thinkthen_complete_meta_v1& value) {
+        Data::Object items;
         if(value.answered_by.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("answered_by",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.answered_by.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("answered_by",
         native_value(value.answered_by.value));
         if(value.attempts.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("attempts",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.attempts.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("attempts",
         native_value(value.attempts.value));
         if(value.batch_setting.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("batch_setting",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.batch_setting.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("batch_setting",
         native_value(value.batch_setting.value));
         if(value.batch_warning.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("batch_warning",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.batch_warning.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("batch_warning",
         native_value(value.batch_warning.value));
-        items.emplace_back("cached",Json(bool(value.cached)));
+        items.emplace_back("cached",Data(bool(value.cached)));
         if(value.context_sha256.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("context_sha256",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.context_sha256.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("context_sha256",
         native_value(value.context_sha256.value));
         items.emplace_back("failed_questions",native_value(value.failed_questions));
         items.emplace_back("model",native_value(value.model));
         items.emplace_back("observations",native_value(value.observations));
         if(value.origin.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("origin",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.origin.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("origin",
         native_value(value.origin.value));
         if(value.profile_warning.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("profile_warning",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.profile_warning.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("profile_warning",
         native_value(value.profile_warning.value));
         if(value.question_sha256.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("question_sha256",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.question_sha256.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("question_sha256",
         native_value(value.question_sha256.value));
         items.emplace_back("question_sources",native_value(value.question_sources));
         if(value.questions_sha256.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("questions_sha256",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.questions_sha256.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("questions_sha256",
         native_value(value.questions_sha256.value));
         items.emplace_back("requests",native_value(value.requests));
         items.emplace_back("requests_sent",native_value(value.requests_sent));
         items.emplace_back("tool",native_value(value.tool));
         items.emplace_back("url",native_value(value.url));
-        if(value.usage.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("usage",Json(nullptr));
+        if(value.usage.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("usage",Data(nullptr));
         else if(value.usage.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("usage",
         native_value(value.usage.value));
         for(size_t i=0;
@@ -10312,10 +10519,10 @@ namespace tt::results::detail {
             auto& item=value.extensions.data[i];
             items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_profile_warning_v1& value) {
-        Json::Object items;
+    inline Data native_value(const thinkthen_complete_profile_warning_v1& value) {
+        Data::Object items;
         items.emplace_back("running",native_value(value.running));
         items.emplace_back("tuned_for",native_value(value.tuned_for));
         for(size_t i=0;
@@ -10324,10 +10531,10 @@ namespace tt::results::detail {
             auto& item=value.extensions.data[i];
             items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_batch_warning_v1& value) {
-        Json::Object items;
+    inline Data native_value(const thinkthen_complete_batch_warning_v1& value) {
+        Data::Object items;
         items.emplace_back("running",native_value(value.running));
         items.emplace_back("tuned_for",native_value(value.tuned_for));
         for(size_t i=0;
@@ -10336,26 +10543,26 @@ namespace tt::results::detail {
             auto& item=value.extensions.data[i];
             items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_batch_setting_v1& value) {
+    inline Data native_value(const thinkthen_complete_batch_setting_v1& value) {
         switch(value.kind) {
             case THINKTHEN_COMPLETE_BATCH_SETTING_INTEGER_V1: return native_value(value.data.integer);
             case THINKTHEN_COMPLETE_BATCH_SETTING_STRING_V1: return native_value(value.data.string);
             default: throw std::invalid_argument("invalid native alternative");
         }
     }
-    inline Json native_value(const thinkthen_complete_relation_member_list_v1& value) {
-        Json::Array items;
+    inline Data native_value(const thinkthen_complete_relation_member_list_v1& value) {
+        Data::Array items;
         for(size_t i=0;
         i<value.len;
         ++i) {
             items.push_back(native_value(value.data[i]));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_answers_v1& value) {
-        Json::Object items;
+    inline Data native_value(const thinkthen_complete_answers_v1& value) {
+        Data::Object items;
         items.emplace_back("questions",native_value(value.questions));
         for(size_t i=0;
         i<value.extensions.len;
@@ -10363,20 +10570,20 @@ namespace tt::results::detail {
             auto& item=value.extensions.data[i];
             items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_relation_member_v1& value) {
+    inline Data native_value(const thinkthen_complete_relation_member_v1& value) {
         switch(value.kind) {
             case THINKTHEN_COMPLETE_RELATION_MEMBER_ANSWER_ID_V1: return native_value(value.data.answer_id);
             case THINKTHEN_COMPLETE_RELATION_MEMBER_FAILURE_ID_V1: return native_value(value.data.failure_id);
             default: throw std::invalid_argument("invalid native alternative");
         }
     }
-    inline Json native_value(const thinkthen_complete_related_entity_presence_v1& value) {
-        return value.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? native_value(value.value) : Json(nullptr);
+    inline Data native_value(const thinkthen_complete_related_entity_presence_v1& value) {
+        return value.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? native_value(value.value) : Data(nullptr);
     }
-    inline Json native_value(const thinkthen_complete_relation_member_failure_id_v1& value) {
-        Json::Object items;
+    inline Data native_value(const thinkthen_complete_relation_member_failure_id_v1& value) {
+        Data::Object items;
         items.emplace_back("direction",native_value(value.direction));
         items.emplace_back("method",native_value(value.method));
         items.emplace_back("observations",native_value(value.observations));
@@ -10387,11 +10594,11 @@ namespace tt::results::detail {
         items.emplace_back("request",native_value(value.request));
         items.emplace_back("source",native_value(value.source));
         if(value.target.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("target",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.target.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("target",
         native_value(value.target.value));
         items.emplace_back("threshold",native_value(value.threshold));
-        if(value.usage.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("usage",Json(nullptr));
+        if(value.usage.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("usage",Data(nullptr));
         else if(value.usage.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("usage",
         native_value(value.usage.value));
         items.emplace_back("failure",native_value(value.failure));
@@ -10402,10 +10609,10 @@ namespace tt::results::detail {
             auto& item=value.extensions.data[i];
             items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_related_entity_v1& value) {
-        Json::Object items;
+    inline Data native_value(const thinkthen_complete_related_entity_v1& value) {
+        Data::Object items;
         items.emplace_back("kind",native_value(value.kind));
         items.emplace_back("name",native_value(value.name));
         for(size_t i=0;
@@ -10414,24 +10621,24 @@ namespace tt::results::detail {
             auto& item=value.extensions.data[i];
             items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_relation_method_v1& value) {
+    inline Data native_value(const thinkthen_complete_relation_method_v1& value) {
         switch(value.kind) {
-            case THINKTHEN_COMPLETE_RELATION_METHOD_YES_NO_V1: return Json("yes_no");
-            case THINKTHEN_COMPLETE_RELATION_METHOD_CHOICE_V1: return Json("choice");
+            case THINKTHEN_COMPLETE_RELATION_METHOD_YES_NO_V1: return Data("yes_no");
+            case THINKTHEN_COMPLETE_RELATION_METHOD_CHOICE_V1: return Data("choice");
             default: throw std::invalid_argument("invalid native enum");
         }
     }
-    inline Json native_value(const thinkthen_complete_relation_direction_v1& value) {
+    inline Data native_value(const thinkthen_complete_relation_direction_v1& value) {
         switch(value.kind) {
-            case THINKTHEN_COMPLETE_RELATION_DIRECTION_SOURCE_TO_TARGET_V1: return Json("source_to_target");
-            case THINKTHEN_COMPLETE_RELATION_DIRECTION_EITHER_V1: return Json("either");
+            case THINKTHEN_COMPLETE_RELATION_DIRECTION_SOURCE_TO_TARGET_V1: return Data("source_to_target");
+            case THINKTHEN_COMPLETE_RELATION_DIRECTION_EITHER_V1: return Data("either");
             default: throw std::invalid_argument("invalid native enum");
         }
     }
-    inline Json native_value(const thinkthen_complete_relation_member_answer_id_v1& value) {
-        Json::Object items;
+    inline Data native_value(const thinkthen_complete_relation_member_answer_id_v1& value) {
+        Data::Object items;
         items.emplace_back("direction",native_value(value.direction));
         items.emplace_back("method",native_value(value.method));
         items.emplace_back("observations",native_value(value.observations));
@@ -10442,14 +10649,14 @@ namespace tt::results::detail {
         items.emplace_back("request",native_value(value.request));
         items.emplace_back("source",native_value(value.source));
         if(value.target.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("target",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.target.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("target",
         native_value(value.target.value));
         items.emplace_back("threshold",native_value(value.threshold));
-        if(value.usage.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("usage",Json(nullptr));
+        if(value.usage.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("usage",Data(nullptr));
         else if(value.usage.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("usage",
         native_value(value.usage.value));
-        items.emplace_back("accepted",Json(bool(value.accepted)));
+        items.emplace_back("accepted",Data(bool(value.accepted)));
         items.emplace_back("answer",native_value(value.answer));
         items.emplace_back("answer_id",native_value(value.answer_id));
         items.emplace_back("probability",native_value(value.probability));
@@ -10459,9 +10666,9 @@ namespace tt::results::detail {
             auto& item=value.extensions.data[i];
             items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_answer_v1& value) {
+    inline Data native_value(const thinkthen_complete_answer_v1& value) {
         switch(value.kind) {
             case THINKTHEN_COMPLETE_ANSWER_YES_NO_V1: return native_value(value.data.yes_no);
             case THINKTHEN_COMPLETE_ANSWER_CHOICE_V1: return native_value(value.data.choice);
@@ -10470,23 +10677,23 @@ namespace tt::results::detail {
             default: throw std::invalid_argument("invalid native alternative");
         }
     }
-    inline Json native_value(const thinkthen_complete_number_map_entry_v1& value) {
+    inline Data native_value(const thinkthen_complete_number_map_entry_v1& value) {
         return native_value(value.value);
     }
-    inline Json native_value(const thinkthen_complete_number_map_v1& value) {
-        Json::Object items;
+    inline Data native_value(const thinkthen_complete_number_map_v1& value) {
+        Data::Object items;
         for(size_t i=0;
         i<value.len;
         ++i) {
             auto& item=value.data[i];
             items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_answer_score_v1& value) {
-        Json::Object items;
+    inline Data native_value(const thinkthen_complete_answer_score_v1& value) {
+        Data::Object items;
         if(value.confidence.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("confidence",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.confidence.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("confidence",
         native_value(value.confidence.value));
         items.emplace_back("kind",native_value(value.kind));
@@ -10498,10 +10705,10 @@ namespace tt::results::detail {
             auto& item=value.extensions.data[i];
             items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_answer_tag_v1& value) {
-        Json::Object items;
+    inline Data native_value(const thinkthen_complete_answer_tag_v1& value) {
+        Data::Object items;
         items.emplace_back("kind",native_value(value.kind));
         items.emplace_back("probabilities",native_value(value.probabilities));
         for(size_t i=0;
@@ -10510,12 +10717,12 @@ namespace tt::results::detail {
             auto& item=value.extensions.data[i];
             items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_answer_choice_v1& value) {
-        Json::Object items;
+    inline Data native_value(const thinkthen_complete_answer_choice_v1& value) {
+        Data::Object items;
         if(value.confidence.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("confidence",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.confidence.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("confidence",
         native_value(value.confidence.value));
         items.emplace_back("kind",native_value(value.kind));
@@ -10527,10 +10734,10 @@ namespace tt::results::detail {
             auto& item=value.extensions.data[i];
             items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_answer_yes_no_v1& value) {
-        Json::Object items;
+    inline Data native_value(const thinkthen_complete_answer_yes_no_v1& value) {
+        Data::Object items;
         items.emplace_back("kind",native_value(value.kind));
         items.emplace_back("probability",native_value(value.probability));
         for(size_t i=0;
@@ -10539,19 +10746,19 @@ namespace tt::results::detail {
             auto& item=value.extensions.data[i];
             items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_recognition_list_v1& value) {
-        Json::Array items;
+    inline Data native_value(const thinkthen_complete_recognition_list_v1& value) {
+        Data::Array items;
         for(size_t i=0;
         i<value.len;
         ++i) {
             items.push_back(native_value(value.data[i]));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_session_packet_recognize_aggregate_v1& value) {
-        Json::Object items;
+    inline Data native_value(const thinkthen_complete_session_packet_recognize_aggregate_v1& value) {
+        Data::Object items;
         items.emplace_back("function",native_value(value.function));
         items.emplace_back("kind",native_value(value.kind));
         items.emplace_back("value",native_value(value.value));
@@ -10561,38 +10768,38 @@ namespace tt::results::detail {
             auto& item=value.extensions.data[i];
             items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_recognition_v1& value) {
-        Json::Object items;
+    inline Data native_value(const thinkthen_complete_recognition_v1& value) {
+        Data::Object items;
         items.emplace_back("answer",native_value(value.answer));
         items.emplace_back("answer_id",native_value(value.answer_id));
-        if(value.file.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("file",Json(nullptr));
+        if(value.file.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("file",Data(nullptr));
         else if(value.file.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("file",
         native_value(value.file.value));
         if(value.first_line.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("first_line",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.first_line.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("first_line",
         native_value(value.first_line.value));
-        if(value.index.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("index",Json(nullptr));
+        if(value.index.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("index",Data(nullptr));
         else if(value.index.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("index",
         native_value(value.index.value));
-        if(value.input.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("input",Json(nullptr));
+        if(value.input.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("input",Data(nullptr));
         else if(value.input.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("input",
         native_value(value.input.value));
         if(value.last_line.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("last_line",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.last_line.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("last_line",
         native_value(value.last_line.value));
         items.emplace_back("meta",native_value(value.meta));
         if(value.position.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("position",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.position.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("position",
         native_value(value.position.value));
         items.emplace_back("question",native_value(value.question));
         items.emplace_back("schema",native_value(value.schema));
         if(value.source.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("source",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.source.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("source",
         native_value(value.source.value));
         items.emplace_back("value",native_value(value.value));
@@ -10602,17 +10809,17 @@ namespace tt::results::detail {
             auto& item=value.extensions.data[i];
             items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_recognize_v1& value) {
+    inline Data native_value(const thinkthen_complete_recognize_v1& value) {
         switch(value.kind) {
             case THINKTHEN_COMPLETE_RECOGNIZE_ENTITIES_V1: return native_value(value.data.entities);
             case THINKTHEN_COMPLETE_RECOGNIZE_MODE_PROPOSALS_V1: return native_value(value.data.mode_proposals);
             default: throw std::invalid_argument("invalid native alternative");
         }
     }
-    inline Json native_value(const thinkthen_complete_recognize_mode_proposals_v1& value) {
-        Json::Object items;
+    inline Data native_value(const thinkthen_complete_recognize_mode_proposals_v1& value) {
+        Data::Object items;
         items.emplace_back("mode",native_value(value.mode));
         items.emplace_back("proposals",native_value(value.proposals));
         for(size_t i=0;
@@ -10621,31 +10828,31 @@ namespace tt::results::detail {
             auto& item=value.extensions.data[i];
             items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_boundary_mode_v1& value) {
+    inline Data native_value(const thinkthen_complete_boundary_mode_v1& value) {
         switch(value.kind) {
-            case THINKTHEN_COMPLETE_BOUNDARY_MODE_BOUNDARY_ONLY_V1: return Json("boundary_only");
+            case THINKTHEN_COMPLETE_BOUNDARY_MODE_BOUNDARY_ONLY_V1: return Data("boundary_only");
             default: throw std::invalid_argument("invalid native enum");
         }
     }
-    inline Json native_value(const thinkthen_complete_entity_edge_list_v1& value) {
-        Json::Array items;
+    inline Data native_value(const thinkthen_complete_entity_edge_list_v1& value) {
+        Data::Array items;
         for(size_t i=0;
         i<value.len;
         ++i) {
             items.push_back(native_value(value.data[i]));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_entity_edge_list_presence_v1& value) {
-        return value.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? native_value(value.value) : Json(nullptr);
+    inline Data native_value(const thinkthen_complete_entity_edge_list_presence_v1& value) {
+        return value.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? native_value(value.value) : Data(nullptr);
     }
-    inline Json native_value(const thinkthen_complete_recognize_entities_v1& value) {
-        Json::Object items;
+    inline Data native_value(const thinkthen_complete_recognize_entities_v1& value) {
+        Data::Object items;
         items.emplace_back("entities",native_value(value.entities));
         if(value.relations.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("relations",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.relations.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("relations",
         native_value(value.relations.value));
         for(size_t i=0;
@@ -10654,14 +10861,14 @@ namespace tt::results::detail {
             auto& item=value.extensions.data[i];
             items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_entity_edge_v1& value) {
-        Json::Object items;
+    inline Data native_value(const thinkthen_complete_entity_edge_v1& value) {
+        Data::Object items;
         if(value.either.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("either",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.either.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("either",
-        Json(bool(value.either.value)));
+        Data(bool(value.either.value)));
         items.emplace_back("probability",native_value(value.probability));
         items.emplace_back("relation",native_value(value.relation));
         items.emplace_back("source",native_value(value.source));
@@ -10672,91 +10879,91 @@ namespace tt::results::detail {
             auto& item=value.extensions.data[i];
             items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_json_map_entry_v1& value) {
+    inline Data native_value(const thinkthen_complete_json_map_entry_v1& value) {
         return native_value(value.value);
     }
-    inline Json native_value(const thinkthen_complete_json_map_v1& value) {
-        Json::Object items;
+    inline Data native_value(const thinkthen_complete_json_map_v1& value) {
+        Data::Object items;
         for(size_t i=0;
         i<value.len;
         ++i) {
             auto& item=value.data[i];
             items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_recognition_mode_presence_v1& value) {
-        return value.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? native_value(value.value) : Json(nullptr);
+    inline Data native_value(const thinkthen_complete_recognition_mode_presence_v1& value) {
+        return value.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? native_value(value.value) : Data(nullptr);
     }
-    inline Json native_value(const thinkthen_complete_relation_rule_list_presence_v1& value) {
-        return value.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? native_value(value.value) : Json(nullptr);
+    inline Data native_value(const thinkthen_complete_relation_rule_list_presence_v1& value) {
+        return value.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? native_value(value.value) : Data(nullptr);
     }
-    inline Json native_value(const thinkthen_complete_recognition_stage_context_presence_v1& value) {
-        return value.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? native_value(value.value) : Json(nullptr);
+    inline Data native_value(const thinkthen_complete_recognition_stage_context_presence_v1& value) {
+        return value.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? native_value(value.value) : Data(nullptr);
     }
-    inline Json native_value(const thinkthen_complete_recognize_question_document_v1& value) {
-        Json::Object items;
-        if(value.batch.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("batch",Json(nullptr));
+    inline Data native_value(const thinkthen_complete_recognize_question_document_v1& value) {
+        Data::Object items;
+        if(value.batch.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("batch",Data(nullptr));
         else if(value.batch.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("batch",
         native_value(value.batch.value));
         if(value.context_schema.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("context_schema",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.context_schema.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("context_schema",
         native_value(value.context_schema.value));
         if(value.entity_definition.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("entity_definition",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.entity_definition.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("entity_definition",
         native_value(value.entity_definition.value));
         if(value.instructions.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("instructions",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.instructions.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("instructions",
         native_value(value.instructions.value));
         if(value.item_schema.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("item_schema",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.item_schema.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("item_schema",
         native_value(value.item_schema.value));
         items.emplace_back("kinds",native_value(value.kinds));
         if(value.label_details.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("label_details",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.label_details.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("label_details",
         native_value(value.label_details.value));
-        if(value.mode.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("mode",Json(nullptr));
+        if(value.mode.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("mode",Data(nullptr));
         else if(value.mode.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("mode",
         native_value(value.mode.value));
-        if(value.model.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("model",Json(nullptr));
+        if(value.model.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("model",Data(nullptr));
         else if(value.model.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("model",
         native_value(value.model.value));
-        if(value.name.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("name",Json(nullptr));
+        if(value.name.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("name",Data(nullptr));
         else if(value.name.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("name",
         native_value(value.name.value));
-        if(value.on.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("on",Json(nullptr));
+        if(value.on.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("on",Data(nullptr));
         else if(value.on.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("on",native_value(value.on.value));
         if(value.profile.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("profile",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.profile.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("profile",
         native_value(value.profile.value));
         if(value.relation_threshold.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("relation_threshold",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.relation_threshold.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("relation_threshold",
         native_value(value.relation_threshold.value));
         if(value.relations.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("relations",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.relations.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("relations",
         native_value(value.relations.value));
         if(value.snippet_pieces.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("snippet_pieces",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.snippet_pieces.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("snippet_pieces",
         native_value(value.snippet_pieces.value));
         if(value.stage_context.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("stage_context",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.stage_context.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("stage_context",
         native_value(value.stage_context.value));
         items.emplace_back("threshold",native_value(value.threshold));
         items.emplace_back("verb",native_value(value.verb));
         if(value.wording_version.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("wording_version",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.wording_version.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("wording_version",
         native_value(value.wording_version.value));
         for(size_t i=0;
@@ -10765,26 +10972,26 @@ namespace tt::results::detail {
             auto& item=value.extensions.data[i];
             items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_verb_v1& value) {
+    inline Data native_value(const thinkthen_complete_verb_v1& value) {
         switch(value.kind) {
-            case THINKTHEN_COMPLETE_VERB_RECOGNIZE_V1: return Json("recognize");
+            case THINKTHEN_COMPLETE_VERB_RECOGNIZE_V1: return Data("recognize");
             default: throw std::invalid_argument("invalid native enum");
         }
     }
-    inline Json native_value(const thinkthen_complete_recognition_stage_context_v1& value) {
-        Json::Object items;
+    inline Data native_value(const thinkthen_complete_recognition_stage_context_v1& value) {
+        Data::Object items;
         if(value.boundary.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("boundary",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.boundary.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("boundary",
         native_value(value.boundary.value));
         if(value.kind_edge.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("kind_edge",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.kind_edge.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("kind_edge",
         native_value(value.kind_edge.value));
         if(value.relation.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("relation",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.relation.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("relation",
         native_value(value.relation.value));
         for(size_t i=0;
@@ -10793,26 +11000,26 @@ namespace tt::results::detail {
             auto& item=value.extensions.data[i];
             items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_recognition_odds_v1& value) {
+    inline Data native_value(const thinkthen_complete_recognition_odds_v1& value) {
         switch(value.kind) {
             case THINKTHEN_COMPLETE_RECOGNITION_ODDS_RECOGNIZE_ANSWER_V1: return native_value(value.data.recognize_answer);
             case THINKTHEN_COMPLETE_RECOGNITION_ODDS_BOUNDARY_ODDS_V1: return native_value(value.data.boundary_odds);
             default: throw std::invalid_argument("invalid native alternative");
         }
     }
-    inline Json native_value(const thinkthen_complete_piece_odds_list_v1& value) {
-        Json::Array items;
+    inline Data native_value(const thinkthen_complete_piece_odds_list_v1& value) {
+        Data::Array items;
         for(size_t i=0;
         i<value.len;
         ++i) {
             items.push_back(native_value(value.data[i]));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_recognition_odds_boundary_odds_v1& value) {
-        Json::Object items;
+    inline Data native_value(const thinkthen_complete_recognition_odds_boundary_odds_v1& value) {
+        Data::Object items;
         items.emplace_back("pieces",native_value(value.pieces));
         items.emplace_back("proposals",native_value(value.proposals));
         for(size_t i=0;
@@ -10821,10 +11028,10 @@ namespace tt::results::detail {
             auto& item=value.extensions.data[i];
             items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_piece_odds_v1& value) {
-        Json::Object items;
+    inline Data native_value(const thinkthen_complete_piece_odds_v1& value) {
+        Data::Object items;
         items.emplace_back("end",native_value(value.end));
         items.emplace_back("start",native_value(value.start));
         items.emplace_back("tags",native_value(value.tags));
@@ -10834,37 +11041,37 @@ namespace tt::results::detail {
             auto& item=value.extensions.data[i];
             items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_name_odds_list_v1& value) {
-        Json::Array items;
+    inline Data native_value(const thinkthen_complete_name_odds_list_v1& value) {
+        Data::Array items;
         for(size_t i=0;
         i<value.len;
         ++i) {
             items.push_back(native_value(value.data[i]));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_pair_odds_list_v1& value) {
-        Json::Array items;
+    inline Data native_value(const thinkthen_complete_pair_odds_list_v1& value) {
+        Data::Array items;
         for(size_t i=0;
         i<value.len;
         ++i) {
             items.push_back(native_value(value.data[i]));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_recognition_proposal_list_v1& value) {
-        Json::Array items;
+    inline Data native_value(const thinkthen_complete_recognition_proposal_list_v1& value) {
+        Data::Array items;
         for(size_t i=0;
         i<value.len;
         ++i) {
             items.push_back(native_value(value.data[i]));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_recognition_odds_recognize_answer_v1& value) {
-        Json::Object items;
+    inline Data native_value(const thinkthen_complete_recognition_odds_recognize_answer_v1& value) {
+        Data::Object items;
         items.emplace_back("names",native_value(value.names));
         items.emplace_back("pairs",native_value(value.pairs));
         items.emplace_back("pieces",native_value(value.pieces));
@@ -10875,26 +11082,26 @@ namespace tt::results::detail {
             auto& item=value.extensions.data[i];
             items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_place_presence_v1& value) {
-        return value.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? native_value(value.value) : Json(nullptr);
+    inline Data native_value(const thinkthen_complete_place_presence_v1& value) {
+        return value.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? native_value(value.value) : Data(nullptr);
     }
-    inline Json native_value(const thinkthen_complete_recognition_proposal_v1& value) {
-        Json::Object items;
+    inline Data native_value(const thinkthen_complete_recognition_proposal_v1& value) {
+        Data::Object items;
         items.emplace_back("end",native_value(value.end));
-        items.emplace_back("kept",Json(bool(value.kept)));
-        if(value.kind.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("kind",Json(nullptr));
+        items.emplace_back("kept",Data(bool(value.kept)));
+        if(value.kind.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("kind",Data(nullptr));
         else if(value.kind.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("kind",
         native_value(value.kind.value));
         if(value.selected.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("selected",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.selected.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("selected",
         native_value(value.selected.value));
         items.emplace_back("span_probability",native_value(value.span_probability));
         items.emplace_back("start",native_value(value.start));
         if(value.strength.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("strength",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.strength.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("strength",
         native_value(value.strength.value));
         for(size_t i=0;
@@ -10903,10 +11110,10 @@ namespace tt::results::detail {
             auto& item=value.extensions.data[i];
             items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_place_v1& value) {
-        Json::Object items;
+    inline Data native_value(const thinkthen_complete_place_v1& value) {
+        Data::Object items;
         items.emplace_back("end",native_value(value.end));
         items.emplace_back("start",native_value(value.start));
         for(size_t i=0;
@@ -10915,10 +11122,10 @@ namespace tt::results::detail {
             auto& item=value.extensions.data[i];
             items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_pair_odds_v1& value) {
-        Json::Object items;
+    inline Data native_value(const thinkthen_complete_pair_odds_v1& value) {
+        Data::Object items;
         items.emplace_back("probability",native_value(value.probability));
         items.emplace_back("relation",native_value(value.relation));
         items.emplace_back("source",native_value(value.source));
@@ -10929,18 +11136,18 @@ namespace tt::results::detail {
             auto& item=value.extensions.data[i];
             items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_number_map_presence_v1& value) {
-        return value.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? native_value(value.value) : Json(nullptr);
+    inline Data native_value(const thinkthen_complete_number_map_presence_v1& value) {
+        return value.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? native_value(value.value) : Data(nullptr);
     }
-    inline Json native_value(const thinkthen_complete_name_odds_v1& value) {
-        Json::Object items;
-        if(value.edges.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("edges",Json(nullptr));
+    inline Data native_value(const thinkthen_complete_name_odds_v1& value) {
+        Data::Object items;
+        if(value.edges.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("edges",Data(nullptr));
         else if(value.edges.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("edges",
         native_value(value.edges.value));
         items.emplace_back("end",native_value(value.end));
-        if(value.kinds.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("kinds",Json(nullptr));
+        if(value.kinds.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("kinds",Data(nullptr));
         else if(value.kinds.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("kinds",
         native_value(value.kinds.value));
         items.emplace_back("start",native_value(value.start));
@@ -10950,19 +11157,19 @@ namespace tt::results::detail {
             auto& item=value.extensions.data[i];
             items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_annotation_list_v1& value) {
-        Json::Array items;
+    inline Data native_value(const thinkthen_complete_annotation_list_v1& value) {
+        Data::Array items;
         for(size_t i=0;
         i<value.len;
         ++i) {
             items.push_back(native_value(value.data[i]));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_session_packet_annotate_aggregate_v1& value) {
-        Json::Object items;
+    inline Data native_value(const thinkthen_complete_session_packet_annotate_aggregate_v1& value) {
+        Data::Object items;
         items.emplace_back("function",native_value(value.function));
         items.emplace_back("kind",native_value(value.kind));
         items.emplace_back("value",native_value(value.value));
@@ -10972,50 +11179,50 @@ namespace tt::results::detail {
             auto& item=value.extensions.data[i];
             items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_annotation_member_map_entry_v1& value) {
+    inline Data native_value(const thinkthen_complete_annotation_member_map_entry_v1& value) {
         return native_value(value.value);
     }
-    inline Json native_value(const thinkthen_complete_annotation_member_map_v1& value) {
-        Json::Object items;
+    inline Data native_value(const thinkthen_complete_annotation_member_map_v1& value) {
+        Data::Object items;
         for(size_t i=0;
         i<value.len;
         ++i) {
             auto& item=value.data[i];
             items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_annotation_v1& value) {
-        Json::Object items;
+    inline Data native_value(const thinkthen_complete_annotation_v1& value) {
+        Data::Object items;
         items.emplace_back("answer_id",native_value(value.answer_id));
         items.emplace_back("answers",native_value(value.answers));
-        if(value.file.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("file",Json(nullptr));
+        if(value.file.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("file",Data(nullptr));
         else if(value.file.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("file",
         native_value(value.file.value));
         if(value.first_line.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("first_line",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.first_line.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("first_line",
         native_value(value.first_line.value));
-        if(value.index.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("index",Json(nullptr));
+        if(value.index.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("index",Data(nullptr));
         else if(value.index.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("index",
         native_value(value.index.value));
-        if(value.input.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("input",Json(nullptr));
+        if(value.input.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("input",Data(nullptr));
         else if(value.input.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("input",
         native_value(value.input.value));
         if(value.last_line.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("last_line",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.last_line.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("last_line",
         native_value(value.last_line.value));
         items.emplace_back("meta",native_value(value.meta));
         if(value.position.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("position",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.position.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("position",
         native_value(value.position.value));
         items.emplace_back("schema",native_value(value.schema));
         if(value.source.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("source",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.source.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("source",
         native_value(value.source.value));
         items.emplace_back("value",native_value(value.value));
@@ -11025,28 +11232,28 @@ namespace tt::results::detail {
             auto& item=value.extensions.data[i];
             items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_annotated_field_map_entry_v1& value) {
+    inline Data native_value(const thinkthen_complete_annotated_field_map_entry_v1& value) {
         return native_value(value.value);
     }
-    inline Json native_value(const thinkthen_complete_annotated_field_map_v1& value) {
-        Json::Object items;
+    inline Data native_value(const thinkthen_complete_annotated_field_map_v1& value) {
+        Data::Object items;
         for(size_t i=0;
         i<value.len;
         ++i) {
             auto& item=value.data[i];
             items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_annotated_row_v1& value) {
+    inline Data native_value(const thinkthen_complete_annotated_row_v1& value) {
         return native_value(value.value);
     }
-    inline Json native_value(const thinkthen_complete_annotated_field_v1& value) {
+    inline Data native_value(const thinkthen_complete_annotated_field_v1& value) {
         switch(value.kind) {
-            case THINKTHEN_COMPLETE_ANNOTATED_FIELD_BOOLEAN_V1: return Json(bool(value.data.boolean));
-            case THINKTHEN_COMPLETE_ANNOTATED_FIELD_NULL_V1: return Json(nullptr);
+            case THINKTHEN_COMPLETE_ANNOTATED_FIELD_BOOLEAN_V1: return Data(bool(value.data.boolean));
+            case THINKTHEN_COMPLETE_ANNOTATED_FIELD_NULL_V1: return Data(nullptr);
             case THINKTHEN_COMPLETE_ANNOTATED_FIELD_STRING_V1: return native_value(value.data.string);
             case THINKTHEN_COMPLETE_ANNOTATED_FIELD_ARRAY_V1: return native_value(value.data.array);
             case THINKTHEN_COMPLETE_ANNOTATED_FIELD_NUMBER_V1: return native_value(value.data.number);
@@ -11054,8 +11261,8 @@ namespace tt::results::detail {
             default: throw std::invalid_argument("invalid native alternative");
         }
     }
-    inline Json native_value(const thinkthen_complete_failed_v1& value) {
-        Json::Object items;
+    inline Data native_value(const thinkthen_complete_failed_v1& value) {
+        Data::Object items;
         items.emplace_back("failed",native_value(value.failed));
         for(size_t i=0;
         i<value.extensions.len;
@@ -11063,17 +11270,17 @@ namespace tt::results::detail {
             auto& item=value.extensions.data[i];
             items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_annotation_member_v1& value) {
+    inline Data native_value(const thinkthen_complete_annotation_member_v1& value) {
         switch(value.kind) {
             case THINKTHEN_COMPLETE_ANNOTATION_MEMBER_ANSWER_ID_V1: return native_value(value.data.answer_id);
             case THINKTHEN_COMPLETE_ANNOTATION_MEMBER_FAILURE_ID_V1: return native_value(value.data.failure_id);
             default: throw std::invalid_argument("invalid native alternative");
         }
     }
-    inline Json native_value(const thinkthen_complete_annotation_member_failure_id_v1& value) {
-        Json::Object items;
+    inline Data native_value(const thinkthen_complete_annotation_member_failure_id_v1& value) {
+        Data::Object items;
         items.emplace_back("failure",native_value(value.failure));
         items.emplace_back("failure_id",native_value(value.failure_id));
         items.emplace_back("observations",native_value(value.observations));
@@ -11081,10 +11288,10 @@ namespace tt::results::detail {
         items.emplace_back("question_sources",native_value(value.question_sources));
         items.emplace_back("request",native_value(value.request));
         if(value.threshold.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("threshold",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.threshold.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("threshold",
         native_value(value.threshold.value));
-        if(value.usage.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("usage",Json(nullptr));
+        if(value.usage.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("usage",Data(nullptr));
         else if(value.usage.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("usage",
         native_value(value.usage.value));
         for(size_t i=0;
@@ -11093,10 +11300,10 @@ namespace tt::results::detail {
             auto& item=value.extensions.data[i];
             items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_annotation_member_answer_id_v1& value) {
-        Json::Object items;
+    inline Data native_value(const thinkthen_complete_annotation_member_answer_id_v1& value) {
+        Data::Object items;
         items.emplace_back("answer",native_value(value.answer));
         items.emplace_back("answer_id",native_value(value.answer_id));
         items.emplace_back("observations",native_value(value.observations));
@@ -11104,13 +11311,13 @@ namespace tt::results::detail {
         items.emplace_back("question_sources",native_value(value.question_sources));
         items.emplace_back("request",native_value(value.request));
         if(value.threshold.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("threshold",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.threshold.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("threshold",
         native_value(value.threshold.value));
-        if(value.usage.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("usage",Json(nullptr));
+        if(value.usage.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("usage",Data(nullptr));
         else if(value.usage.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("usage",
         native_value(value.usage.value));
-        if(value.value.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("value",Json(nullptr));
+        if(value.value.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("value",Data(nullptr));
         else if(value.value.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("value",
         native_value(value.value.value));
         for(size_t i=0;
@@ -11119,10 +11326,10 @@ namespace tt::results::detail {
             auto& item=value.extensions.data[i];
             items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_session_packet_find_aggregate_v1& value) {
-        Json::Object items;
+    inline Data native_value(const thinkthen_complete_session_packet_find_aggregate_v1& value) {
+        Data::Object items;
         items.emplace_back("function",native_value(value.function));
         items.emplace_back("kind",native_value(value.kind));
         items.emplace_back("value",native_value(value.value));
@@ -11132,54 +11339,54 @@ namespace tt::results::detail {
             auto& item=value.extensions.data[i];
             items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_find_candidate_list_v1& value) {
-        Json::Array items;
+    inline Data native_value(const thinkthen_complete_find_candidate_list_v1& value) {
+        Data::Array items;
         for(size_t i=0;
         i<value.len;
         ++i) {
             items.push_back(native_value(value.data[i]));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_find_candidate_list_presence_v1& value) {
-        return value.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? native_value(value.value) : Json(nullptr);
+    inline Data native_value(const thinkthen_complete_find_candidate_list_presence_v1& value) {
+        return value.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? native_value(value.value) : Data(nullptr);
     }
-    inline Json native_value(const thinkthen_complete_find_v1& value) {
-        Json::Object items;
+    inline Data native_value(const thinkthen_complete_find_v1& value) {
+        Data::Object items;
         items.emplace_back("answer",native_value(value.answer));
         items.emplace_back("answer_id",native_value(value.answer_id));
         if(value.candidates.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("candidates",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.candidates.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("candidates",
         native_value(value.candidates.value));
-        if(value.file.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("file",Json(nullptr));
+        if(value.file.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("file",Data(nullptr));
         else if(value.file.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("file",
         native_value(value.file.value));
         if(value.first_line.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("first_line",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.first_line.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("first_line",
         native_value(value.first_line.value));
-        if(value.index.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("index",Json(nullptr));
+        if(value.index.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("index",Data(nullptr));
         else if(value.index.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("index",
         native_value(value.index.value));
         if(value.last_line.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("last_line",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.last_line.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("last_line",
         native_value(value.last_line.value));
         items.emplace_back("meta",native_value(value.meta));
         if(value.position.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("position",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.position.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("position",
         native_value(value.position.value));
         items.emplace_back("question",native_value(value.question));
         items.emplace_back("schema",native_value(value.schema));
         if(value.threshold.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("threshold",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.threshold.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("threshold",
         native_value(value.threshold.value));
-        if(value.value.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("value",Json(nullptr));
+        if(value.value.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("value",Data(nullptr));
         else if(value.value.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("value",
         native_value(value.value.value));
         for(size_t i=0;
@@ -11188,44 +11395,44 @@ namespace tt::results::detail {
             auto& item=value.extensions.data[i];
             items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_find_question_document_v1& value) {
-        Json::Object items;
-        if(value.batch.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("batch",Json(nullptr));
+    inline Data native_value(const thinkthen_complete_find_question_document_v1& value) {
+        Data::Object items;
+        if(value.batch.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("batch",Data(nullptr));
         else if(value.batch.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("batch",
         native_value(value.batch.value));
         if(value.context_schema.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("context_schema",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.context_schema.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("context_schema",
         native_value(value.context_schema.value));
         if(value.item_schema.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("item_schema",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.item_schema.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("item_schema",
         native_value(value.item_schema.value));
         if(value.label_details.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("label_details",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.label_details.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("label_details",
         native_value(value.label_details.value));
-        if(value.model.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("model",Json(nullptr));
+        if(value.model.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("model",Data(nullptr));
         else if(value.model.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("model",
         native_value(value.model.value));
-        if(value.name.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("name",Json(nullptr));
+        if(value.name.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("name",Data(nullptr));
         else if(value.name.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("name",
         native_value(value.name.value));
-        items.emplace_back("none",Json(bool(value.none)));
-        if(value.on.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("on",Json(nullptr));
+        items.emplace_back("none",Data(bool(value.none)));
+        if(value.on.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("on",Data(nullptr));
         else if(value.on.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("on",native_value(value.on.value));
         if(value.profile.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("profile",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.profile.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("profile",
         native_value(value.profile.value));
-        if(value.text.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("text",Json(nullptr));
+        if(value.text.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("text",Data(nullptr));
         else if(value.text.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("text",
         native_value(value.text.value));
         items.emplace_back("verb",native_value(value.verb));
         if(value.wording_version.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("wording_version",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.wording_version.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("wording_version",
         native_value(value.wording_version.value));
         for(size_t i=0;
@@ -11234,19 +11441,19 @@ namespace tt::results::detail {
             auto& item=value.extensions.data[i];
             items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_find_candidate_v1& value) {
-        Json::Object items;
-        if(value.index.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("index",Json(nullptr));
+    inline Data native_value(const thinkthen_complete_find_candidate_v1& value) {
+        Data::Object items;
+        if(value.index.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("index",Data(nullptr));
         else if(value.index.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("index",
         native_value(value.index.value));
-        if(value.input.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("input",Json(nullptr));
+        if(value.input.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("input",Data(nullptr));
         else if(value.input.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("input",
         native_value(value.input.value));
         items.emplace_back("probability",native_value(value.probability));
         if(value.source.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("source",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.source.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("source",
         native_value(value.source.value));
         for(size_t i=0;
@@ -11255,12 +11462,12 @@ namespace tt::results::detail {
             auto& item=value.extensions.data[i];
             items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_find_answer_v1& value) {
-        Json::Object items;
+    inline Data native_value(const thinkthen_complete_find_answer_v1& value) {
+        Data::Object items;
         if(value.confidence.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("confidence",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.confidence.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("confidence",
         native_value(value.confidence.value));
         items.emplace_back("kind",native_value(value.kind));
@@ -11272,19 +11479,19 @@ namespace tt::results::detail {
             auto& item=value.extensions.data[i];
             items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_atomic_non_zero_usize_list_v1& value) {
-        Json::Array items;
+    inline Data native_value(const thinkthen_complete_atomic_non_zero_usize_list_v1& value) {
+        Data::Array items;
         for(size_t i=0;
         i<value.len;
         ++i) {
             items.push_back(native_value(value.data[i]));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_session_packet_rank_aggregate_v1& value) {
-        Json::Object items;
+    inline Data native_value(const thinkthen_complete_session_packet_rank_aggregate_v1& value) {
+        Data::Object items;
         items.emplace_back("function",native_value(value.function));
         items.emplace_back("kind",native_value(value.kind));
         items.emplace_back("value",native_value(value.value));
@@ -11294,63 +11501,63 @@ namespace tt::results::detail {
             auto& item=value.extensions.data[i];
             items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_image_list_v1& value) {
-        Json::Array items;
+    inline Data native_value(const thinkthen_complete_image_list_v1& value) {
+        Data::Array items;
         for(size_t i=0;
         i<value.len;
         ++i) {
             items.push_back(native_value(value.data[i]));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_image_list_presence_v1& value) {
-        return value.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? native_value(value.value) : Json(nullptr);
+    inline Data native_value(const thinkthen_complete_image_list_presence_v1& value) {
+        return value.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? native_value(value.value) : Data(nullptr);
     }
-    inline Json native_value(const thinkthen_complete_rank_member_list_v1& value) {
-        Json::Array items;
+    inline Data native_value(const thinkthen_complete_rank_member_list_v1& value) {
+        Data::Array items;
         for(size_t i=0;
         i<value.len;
         ++i) {
             items.push_back(native_value(value.data[i]));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_rank_member_list_presence_v1& value) {
-        return value.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? native_value(value.value) : Json(nullptr);
+    inline Data native_value(const thinkthen_complete_rank_member_list_presence_v1& value) {
+        return value.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? native_value(value.value) : Data(nullptr);
     }
-    inline Json native_value(const thinkthen_complete_atomic_non_zero_usize_v1& value) {
-        Json::Object items;
+    inline Data native_value(const thinkthen_complete_atomic_non_zero_usize_v1& value) {
+        Data::Object items;
         items.emplace_back("answer",native_value(value.answer));
         items.emplace_back("answer_id",native_value(value.answer_id));
         if(value.images.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("images",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.images.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("images",
         native_value(value.images.value));
-        if(value.index.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("index",Json(nullptr));
+        if(value.index.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("index",Data(nullptr));
         else if(value.index.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("index",
         native_value(value.index.value));
-        if(value.input.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("input",Json(nullptr));
+        if(value.input.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("input",Data(nullptr));
         else if(value.input.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("input",
         native_value(value.input.value));
         if(value.members.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("members",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.members.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("members",
         native_value(value.members.value));
         items.emplace_back("meta",native_value(value.meta));
         items.emplace_back("question",native_value(value.question));
         if(value.question_name.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("question_name",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.question_name.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("question_name",
         native_value(value.question_name.value));
         items.emplace_back("schema",native_value(value.schema));
         if(value.source.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("source",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.source.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("source",
         native_value(value.source.value));
         if(value.threshold.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("threshold",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.threshold.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("threshold",
         native_value(value.threshold.value));
         items.emplace_back("value",native_value(value.value));
@@ -11360,10 +11567,10 @@ namespace tt::results::detail {
             auto& item=value.extensions.data[i];
             items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_rank_member_v1& value) {
-        Json::Object items;
+    inline Data native_value(const thinkthen_complete_rank_member_v1& value) {
+        Data::Object items;
         items.emplace_back("name",native_value(value.name));
         items.emplace_back("result",native_value(value.result));
         for(size_t i=0;
@@ -11372,25 +11579,25 @@ namespace tt::results::detail {
             auto& item=value.extensions.data[i];
             items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_rank_member_result_v1& value) {
-        Json::Object items;
+    inline Data native_value(const thinkthen_complete_rank_member_result_v1& value) {
+        Data::Object items;
         items.emplace_back("answer",native_value(value.answer));
         items.emplace_back("answer_id",native_value(value.answer_id));
         if(value.images.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("images",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.images.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("images",
         native_value(value.images.value));
         items.emplace_back("meta",native_value(value.meta));
         items.emplace_back("question",native_value(value.question));
         items.emplace_back("schema",native_value(value.schema));
         if(value.source.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("source",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.source.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("source",
         native_value(value.source.value));
         if(value.threshold.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("threshold",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.threshold.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("threshold",
         native_value(value.threshold.value));
         items.emplace_back("value",native_value(value.value));
@@ -11400,10 +11607,10 @@ namespace tt::results::detail {
             auto& item=value.extensions.data[i];
             items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_image_v1& value) {
-        Json::Object items;
+    inline Data native_value(const thinkthen_complete_image_v1& value) {
+        Data::Object items;
         items.emplace_back("base64",native_value(value.base64));
         items.emplace_back("height",native_value(value.height));
         items.emplace_back("media",native_value(value.media));
@@ -11414,26 +11621,26 @@ namespace tt::results::detail {
             auto& item=value.extensions.data[i];
             items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_image_media_v1& value) {
+    inline Data native_value(const thinkthen_complete_image_media_v1& value) {
         switch(value.kind) {
-            case THINKTHEN_COMPLETE_IMAGE_MEDIA_IMAGE_JPEG_V1: return Json("image/jpeg");
-            case THINKTHEN_COMPLETE_IMAGE_MEDIA_IMAGE_PNG_V1: return Json("image/png");
+            case THINKTHEN_COMPLETE_IMAGE_MEDIA_IMAGE_JPEG_V1: return Data("image/jpeg");
+            case THINKTHEN_COMPLETE_IMAGE_MEDIA_IMAGE_PNG_V1: return Data("image/png");
             default: throw std::invalid_argument("invalid native enum");
         }
     }
-    inline Json native_value(const thinkthen_complete_atomic_boolean_list_v1& value) {
-        Json::Array items;
+    inline Data native_value(const thinkthen_complete_atomic_boolean_list_v1& value) {
+        Data::Array items;
         for(size_t i=0;
         i<value.len;
         ++i) {
             items.push_back(native_value(value.data[i]));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_session_packet_filter_aggregate_v1& value) {
-        Json::Object items;
+    inline Data native_value(const thinkthen_complete_session_packet_filter_aggregate_v1& value) {
+        Data::Object items;
         items.emplace_back("function",native_value(value.function));
         items.emplace_back("kind",native_value(value.kind));
         items.emplace_back("value",native_value(value.value));
@@ -11443,61 +11650,61 @@ namespace tt::results::detail {
             auto& item=value.extensions.data[i];
             items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_atomic_boolean_v1& value) {
-        Json::Object items;
+    inline Data native_value(const thinkthen_complete_atomic_boolean_v1& value) {
+        Data::Object items;
         items.emplace_back("answer",native_value(value.answer));
         items.emplace_back("answer_id",native_value(value.answer_id));
         if(value.images.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("images",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.images.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("images",
         native_value(value.images.value));
-        if(value.index.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("index",Json(nullptr));
+        if(value.index.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("index",Data(nullptr));
         else if(value.index.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("index",
         native_value(value.index.value));
-        if(value.input.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("input",Json(nullptr));
+        if(value.input.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("input",Data(nullptr));
         else if(value.input.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("input",
         native_value(value.input.value));
         if(value.members.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("members",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.members.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("members",
         native_value(value.members.value));
         items.emplace_back("meta",native_value(value.meta));
         items.emplace_back("question",native_value(value.question));
         if(value.question_name.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("question_name",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.question_name.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("question_name",
         native_value(value.question_name.value));
         items.emplace_back("schema",native_value(value.schema));
         if(value.source.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("source",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.source.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("source",
         native_value(value.source.value));
         if(value.threshold.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("threshold",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.threshold.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("threshold",
         native_value(value.threshold.value));
-        items.emplace_back("value",Json(bool(value.value)));
+        items.emplace_back("value",Data(bool(value.value)));
         for(size_t i=0;
         i<value.extensions.len;
         ++i) {
             auto& item=value.extensions.data[i];
             items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_atomic_double_list_v1& value) {
-        Json::Array items;
+    inline Data native_value(const thinkthen_complete_atomic_double_list_v1& value) {
+        Data::Array items;
         for(size_t i=0;
         i<value.len;
         ++i) {
             items.push_back(native_value(value.data[i]));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_session_packet_score_aggregate_v1& value) {
-        Json::Object items;
+    inline Data native_value(const thinkthen_complete_session_packet_score_aggregate_v1& value) {
+        Data::Object items;
         items.emplace_back("function",native_value(value.function));
         items.emplace_back("kind",native_value(value.kind));
         items.emplace_back("value",native_value(value.value));
@@ -11507,39 +11714,39 @@ namespace tt::results::detail {
             auto& item=value.extensions.data[i];
             items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_atomic_double_v1& value) {
-        Json::Object items;
+    inline Data native_value(const thinkthen_complete_atomic_double_v1& value) {
+        Data::Object items;
         items.emplace_back("answer",native_value(value.answer));
         items.emplace_back("answer_id",native_value(value.answer_id));
         if(value.images.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("images",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.images.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("images",
         native_value(value.images.value));
-        if(value.index.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("index",Json(nullptr));
+        if(value.index.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("index",Data(nullptr));
         else if(value.index.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("index",
         native_value(value.index.value));
-        if(value.input.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("input",Json(nullptr));
+        if(value.input.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("input",Data(nullptr));
         else if(value.input.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("input",
         native_value(value.input.value));
         if(value.members.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("members",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.members.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("members",
         native_value(value.members.value));
         items.emplace_back("meta",native_value(value.meta));
         items.emplace_back("question",native_value(value.question));
         if(value.question_name.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("question_name",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.question_name.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("question_name",
         native_value(value.question_name.value));
         items.emplace_back("schema",native_value(value.schema));
         if(value.source.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("source",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.source.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("source",
         native_value(value.source.value));
         if(value.threshold.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("threshold",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.threshold.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("threshold",
         native_value(value.threshold.value));
         items.emplace_back("value",native_value(value.value));
@@ -11549,19 +11756,19 @@ namespace tt::results::detail {
             auto& item=value.extensions.data[i];
             items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_atomic_array_of_string_list_v1& value) {
-        Json::Array items;
+    inline Data native_value(const thinkthen_complete_atomic_array_of_string_list_v1& value) {
+        Data::Array items;
         for(size_t i=0;
         i<value.len;
         ++i) {
             items.push_back(native_value(value.data[i]));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_session_packet_tag_aggregate_v1& value) {
-        Json::Object items;
+    inline Data native_value(const thinkthen_complete_session_packet_tag_aggregate_v1& value) {
+        Data::Object items;
         items.emplace_back("function",native_value(value.function));
         items.emplace_back("kind",native_value(value.kind));
         items.emplace_back("value",native_value(value.value));
@@ -11571,39 +11778,39 @@ namespace tt::results::detail {
             auto& item=value.extensions.data[i];
             items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_atomic_array_of_string_v1& value) {
-        Json::Object items;
+    inline Data native_value(const thinkthen_complete_atomic_array_of_string_v1& value) {
+        Data::Object items;
         items.emplace_back("answer",native_value(value.answer));
         items.emplace_back("answer_id",native_value(value.answer_id));
         if(value.images.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("images",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.images.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("images",
         native_value(value.images.value));
-        if(value.index.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("index",Json(nullptr));
+        if(value.index.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("index",Data(nullptr));
         else if(value.index.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("index",
         native_value(value.index.value));
-        if(value.input.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("input",Json(nullptr));
+        if(value.input.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("input",Data(nullptr));
         else if(value.input.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("input",
         native_value(value.input.value));
         if(value.members.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("members",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.members.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("members",
         native_value(value.members.value));
         items.emplace_back("meta",native_value(value.meta));
         items.emplace_back("question",native_value(value.question));
         if(value.question_name.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("question_name",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.question_name.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("question_name",
         native_value(value.question_name.value));
         items.emplace_back("schema",native_value(value.schema));
         if(value.source.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("source",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.source.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("source",
         native_value(value.source.value));
         if(value.threshold.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("threshold",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.threshold.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("threshold",
         native_value(value.threshold.value));
         items.emplace_back("value",native_value(value.value));
@@ -11613,19 +11820,19 @@ namespace tt::results::detail {
             auto& item=value.extensions.data[i];
             items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_atomic_nullable_string_list_v1& value) {
-        Json::Array items;
+    inline Data native_value(const thinkthen_complete_atomic_nullable_string_list_v1& value) {
+        Data::Array items;
         for(size_t i=0;
         i<value.len;
         ++i) {
             items.push_back(native_value(value.data[i]));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_session_packet_choose_aggregate_v1& value) {
-        Json::Object items;
+    inline Data native_value(const thinkthen_complete_session_packet_choose_aggregate_v1& value) {
+        Data::Object items;
         items.emplace_back("function",native_value(value.function));
         items.emplace_back("kind",native_value(value.kind));
         items.emplace_back("value",native_value(value.value));
@@ -11635,42 +11842,42 @@ namespace tt::results::detail {
             auto& item=value.extensions.data[i];
             items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_atomic_nullable_string_v1& value) {
-        Json::Object items;
+    inline Data native_value(const thinkthen_complete_atomic_nullable_string_v1& value) {
+        Data::Object items;
         items.emplace_back("answer",native_value(value.answer));
         items.emplace_back("answer_id",native_value(value.answer_id));
         if(value.images.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("images",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.images.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("images",
         native_value(value.images.value));
-        if(value.index.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("index",Json(nullptr));
+        if(value.index.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("index",Data(nullptr));
         else if(value.index.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("index",
         native_value(value.index.value));
-        if(value.input.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("input",Json(nullptr));
+        if(value.input.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("input",Data(nullptr));
         else if(value.input.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("input",
         native_value(value.input.value));
         if(value.members.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("members",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.members.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("members",
         native_value(value.members.value));
         items.emplace_back("meta",native_value(value.meta));
         items.emplace_back("question",native_value(value.question));
         if(value.question_name.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("question_name",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.question_name.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("question_name",
         native_value(value.question_name.value));
         items.emplace_back("schema",native_value(value.schema));
         if(value.source.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("source",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.source.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("source",
         native_value(value.source.value));
         if(value.threshold.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("threshold",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.threshold.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("threshold",
         native_value(value.threshold.value));
-        if(value.value.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("value",Json(nullptr));
+        if(value.value.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("value",Data(nullptr));
         else if(value.value.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("value",
         native_value(value.value.value));
         for(size_t i=0;
@@ -11679,19 +11886,19 @@ namespace tt::results::detail {
             auto& item=value.extensions.data[i];
             items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_atomic_decide_value_list_v1& value) {
-        Json::Array items;
+    inline Data native_value(const thinkthen_complete_atomic_decide_value_list_v1& value) {
+        Data::Array items;
         for(size_t i=0;
         i<value.len;
         ++i) {
             items.push_back(native_value(value.data[i]));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_session_packet_decide_aggregate_v1& value) {
-        Json::Object items;
+    inline Data native_value(const thinkthen_complete_session_packet_decide_aggregate_v1& value) {
+        Data::Object items;
         items.emplace_back("function",native_value(value.function));
         items.emplace_back("kind",native_value(value.kind));
         items.emplace_back("value",native_value(value.value));
@@ -11701,45 +11908,45 @@ namespace tt::results::detail {
             auto& item=value.extensions.data[i];
             items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_decide_value_presence_v1& value) {
-        return value.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? native_value(value.value) : Json(nullptr);
+    inline Data native_value(const thinkthen_complete_decide_value_presence_v1& value) {
+        return value.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? native_value(value.value) : Data(nullptr);
     }
-    inline Json native_value(const thinkthen_complete_atomic_decide_value_v1& value) {
-        Json::Object items;
+    inline Data native_value(const thinkthen_complete_atomic_decide_value_v1& value) {
+        Data::Object items;
         items.emplace_back("answer",native_value(value.answer));
         items.emplace_back("answer_id",native_value(value.answer_id));
         if(value.images.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("images",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.images.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("images",
         native_value(value.images.value));
-        if(value.index.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("index",Json(nullptr));
+        if(value.index.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("index",Data(nullptr));
         else if(value.index.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("index",
         native_value(value.index.value));
-        if(value.input.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("input",Json(nullptr));
+        if(value.input.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("input",Data(nullptr));
         else if(value.input.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("input",
         native_value(value.input.value));
         if(value.members.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("members",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.members.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("members",
         native_value(value.members.value));
         items.emplace_back("meta",native_value(value.meta));
         items.emplace_back("question",native_value(value.question));
         if(value.question_name.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("question_name",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.question_name.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("question_name",
         native_value(value.question_name.value));
         items.emplace_back("schema",native_value(value.schema));
         if(value.source.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("source",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.source.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("source",
         native_value(value.source.value));
         if(value.threshold.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("threshold",
-        Json(nullptr));
+        Data(nullptr));
         else if(value.threshold.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("threshold",
         native_value(value.threshold.value));
-        if(value.value.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("value",Json(nullptr));
+        if(value.value.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("value",Data(nullptr));
         else if(value.value.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("value",
         native_value(value.value.value));
         for(size_t i=0;
@@ -11748,13 +11955,13 @@ namespace tt::results::detail {
             auto& item=value.extensions.data[i];
             items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_decide_value_v1& value) {
+    inline Data native_value(const thinkthen_complete_decide_value_v1& value) {
         return native_value(value.value);
     }
-    inline Json native_value(const thinkthen_complete_session_packet_annotate_row_v1& value) {
-        Json::Object items;
+    inline Data native_value(const thinkthen_complete_session_packet_annotate_row_v1& value) {
+        Data::Object items;
         items.emplace_back("function",native_value(value.function));
         items.emplace_back("kind",native_value(value.kind));
         items.emplace_back("value",native_value(value.value));
@@ -11764,10 +11971,10 @@ namespace tt::results::detail {
             auto& item=value.extensions.data[i];
             items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_session_packet_filter_row_v1& value) {
-        Json::Object items;
+    inline Data native_value(const thinkthen_complete_session_packet_filter_row_v1& value) {
+        Data::Object items;
         items.emplace_back("function",native_value(value.function));
         items.emplace_back("kind",native_value(value.kind));
         items.emplace_back("value",native_value(value.value));
@@ -11777,10 +11984,10 @@ namespace tt::results::detail {
             auto& item=value.extensions.data[i];
             items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_session_packet_score_row_v1& value) {
-        Json::Object items;
+    inline Data native_value(const thinkthen_complete_session_packet_score_row_v1& value) {
+        Data::Object items;
         items.emplace_back("function",native_value(value.function));
         items.emplace_back("kind",native_value(value.kind));
         items.emplace_back("value",native_value(value.value));
@@ -11790,10 +11997,10 @@ namespace tt::results::detail {
             auto& item=value.extensions.data[i];
             items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_session_packet_tag_row_v1& value) {
-        Json::Object items;
+    inline Data native_value(const thinkthen_complete_session_packet_tag_row_v1& value) {
+        Data::Object items;
         items.emplace_back("function",native_value(value.function));
         items.emplace_back("kind",native_value(value.kind));
         items.emplace_back("value",native_value(value.value));
@@ -11803,10 +12010,10 @@ namespace tt::results::detail {
             auto& item=value.extensions.data[i];
             items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_session_packet_choose_row_v1& value) {
-        Json::Object items;
+    inline Data native_value(const thinkthen_complete_session_packet_choose_row_v1& value) {
+        Data::Object items;
         items.emplace_back("function",native_value(value.function));
         items.emplace_back("kind",native_value(value.kind));
         items.emplace_back("value",native_value(value.value));
@@ -11816,10 +12023,10 @@ namespace tt::results::detail {
             auto& item=value.extensions.data[i];
             items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
-    inline Json native_value(const thinkthen_complete_session_packet_decide_row_v1& value) {
-        Json::Object items;
+    inline Data native_value(const thinkthen_complete_session_packet_decide_row_v1& value) {
+        Data::Object items;
         items.emplace_back("function",native_value(value.function));
         items.emplace_back("kind",native_value(value.kind));
         items.emplace_back("value",native_value(value.value));
@@ -11829,24 +12036,38 @@ namespace tt::results::detail {
             auto& item=value.extensions.data[i];
             items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));
         }
-        return Json(std::move(items));
+        return Data(std::move(items));
     }
 }
+#endif
 // Generated from the compiler-derived C header; do not edit.
-#include <thinkthen/thinkthen.h>
+#include <cstdint>
+#include <string>
+#ifndef THINKTHEN_CPP_ENUMS
+#define THINKTHEN_CPP_ENUMS
 namespace tt {
     enum class UsagePersistenceState : uint32_t {
-        disabled = THINKTHEN_COMPLETE_USAGE_PERSISTENCE_DISABLED_V1,
-        failed = THINKTHEN_COMPLETE_USAGE_PERSISTENCE_FAILED_V1,
-        pending = THINKTHEN_COMPLETE_USAGE_PERSISTENCE_PENDING_V1,
-        written = THINKTHEN_COMPLETE_USAGE_PERSISTENCE_WRITTEN_V1,
+        disabled = 1,
+        failed = 4,
+        pending = 2,
+        written = 3,
     };
     enum class NativeFailureKind {
-        backend = THINKTHEN_EBACKEND,
-        cancelled = THINKTHEN_ECANCELLED,
-        deadline = THINKTHEN_EDEADLINE,
-        defect = THINKTHEN_EDEFECT,
-        local = THINKTHEN_ELOCAL,
-        usage = THINKTHEN_EUSAGE,
+        backend = 2,
+        cancelled = 5,
+        deadline = 3,
+        defect = 6,
+        local = 4,
+        usage = 1,
     };
+    inline NativeFailureKind failure_kind(const std::string& name) {
+        if(name=="backend") return NativeFailureKind::backend;
+        if(name=="cancelled") return NativeFailureKind::cancelled;
+        if(name=="deadline") return NativeFailureKind::deadline;
+        if(name=="defect") return NativeFailureKind::defect;
+        if(name=="local") return NativeFailureKind::local;
+        if(name=="usage") return NativeFailureKind::usage;
+        return NativeFailureKind::defect;
+    }
 }
+#endif
