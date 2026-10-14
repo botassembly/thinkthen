@@ -13,6 +13,10 @@ template<class T> struct Presence {
 class Node {
     friend const Data& detail::document(const Node& value);
 protected:
+    Node(const Node&) = default;
+    Node(Node&&) = default;
+    Node& operator=(const Node&) = default;
+    Node& operator=(Node&&) = default;
     Data value_;
     void set_member(const char* key, Data value) {
         auto members=value_.object();

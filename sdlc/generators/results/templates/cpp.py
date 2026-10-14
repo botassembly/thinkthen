@@ -74,7 +74,7 @@ def render(definitions,version):
     bodies=[]
     for key,raw in definitions.items():
         n=name(key); s=shape(raw)
-        lines += [f'class {n} : public Node {{', f'    {n}(const Data& value, int):Node(value) {{}}', 'friend struct detail::Loader;', 'public:']
+        lines += [f'class {n} final : public Node {{', f'    {n}(const Data& value, int):Node(value) {{}}', 'friend struct detail::Loader;', 'public:']
         if 'properties' in s:
             for member,field in s['properties'].items():
                 t=typ(field, presence=True); method=member+'_' if member in ('template','class','operator','namespace','default','true','false') else member

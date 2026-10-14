@@ -11,4 +11,15 @@ int main() {
     for(const auto& entity:*found->value().value) assert(::tt::results::detail::document(entity).at("name").get<std::string>()=="Paris");
     const auto& retained=ranked->value();
     assert(&retained==&ranked->value());
+    auto replacement=::tt::results::detail::Loader::input<SessionPacketRankAggregate>(::tt::detail::parse_original(R"({"kind":"aggregate","function":"rank","value":[{"input":"two","value":2}]})"));
+    auto snapshot=*ranked;
+    *ranked=replacement;
+    assert(*ranked->value().value->at(0).value().value==2);
+    assert(*retained.value->at(0).value().value==1);
+    assert(&snapshot.value()==&retained);
+    assert(::tt::results::detail::document(*ranked).at("value").at(0).at("value").get<int>()==2);
+    auto copied=*ranked;
+    *ranked=std::move(replacement);
+    assert(*ranked->value().value->at(0).value().value==2);
+    assert(*copied.value().value->at(0).value().value==2);
 }

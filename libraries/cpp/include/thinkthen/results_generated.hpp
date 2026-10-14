@@ -218,7 +218,7 @@ namespace tt::results {
     class TokenBand;
     class TokenUsage;
     class Value;
-    class Annotation : public Node {
+    class Annotation final : public Node {
         Annotation(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -249,7 +249,7 @@ namespace tt::results {
         private: std::shared_ptr<std::shared_ptr<const Presence<AnnotatedRow>>> cached_value_ = std::make_shared<std::shared_ptr<const Presence<AnnotatedRow>>>();
         public: const Presence<AnnotatedRow>& value() const;
     };
-    class AnnotationMember : public Node {
+    class AnnotationMember final : public Node {
         AnnotationMember(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -257,7 +257,7 @@ namespace tt::results {
         std::optional<AnnotationMemberAnswerId> as_AnnotationMemberAnswerId() const;
         std::optional<AnnotationMemberFailureId> as_AnnotationMemberFailureId() const;
     };
-    class AnnotationMemberAnswerId : public Node {
+    class AnnotationMemberAnswerId final : public Node {
         AnnotationMemberAnswerId(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -281,7 +281,7 @@ namespace tt::results {
         private: std::shared_ptr<std::shared_ptr<const Presence<Value>>> cached_value_ = std::make_shared<std::shared_ptr<const Presence<Value>>>();
         public: const Presence<Value>& value() const;
     };
-    class AnnotationMemberFailureId : public Node {
+    class AnnotationMemberFailureId final : public Node {
         AnnotationMemberFailureId(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -303,7 +303,7 @@ namespace tt::results {
         private: std::shared_ptr<std::shared_ptr<const Presence<Usage>>> cached_usage_ = std::make_shared<std::shared_ptr<const Presence<Usage>>>();
         public: const Presence<Usage>& usage() const;
     };
-    class AnnotationValue : public Node {
+    class AnnotationValue final : public Node {
         AnnotationValue(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -314,7 +314,7 @@ namespace tt::results {
         std::optional<AnnotationValueTags> as_AnnotationValueTags() const;
         std::optional<AnnotationValueFailed> as_AnnotationValueFailed() const;
     };
-    class AnnotationValueChoice : public Node {
+    class AnnotationValueChoice final : public Node {
         AnnotationValueChoice(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -324,7 +324,7 @@ namespace tt::results {
         private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_value_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
         public: const Presence<std::string>& value() const;
     };
-    class AnnotationValueDecision : public Node {
+    class AnnotationValueDecision final : public Node {
         AnnotationValueDecision(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -334,7 +334,7 @@ namespace tt::results {
         private: std::shared_ptr<std::shared_ptr<const Presence<bool>>> cached_value_ = std::make_shared<std::shared_ptr<const Presence<bool>>>();
         public: const Presence<bool>& value() const;
     };
-    class AnnotationValueFailed : public Node {
+    class AnnotationValueFailed final : public Node {
         AnnotationValueFailed(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -344,7 +344,7 @@ namespace tt::results {
         private: std::shared_ptr<std::shared_ptr<const Presence<Failure>>> cached_value_ = std::make_shared<std::shared_ptr<const Presence<Failure>>>();
         public: const Presence<Failure>& value() const;
     };
-    class AnnotationValueScore : public Node {
+    class AnnotationValueScore final : public Node {
         AnnotationValueScore(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -354,7 +354,7 @@ namespace tt::results {
         private: std::shared_ptr<std::shared_ptr<const Presence<double>>> cached_value_ = std::make_shared<std::shared_ptr<const Presence<double>>>();
         public: const Presence<double>& value() const;
     };
-    class AnnotationValueTags : public Node {
+    class AnnotationValueTags final : public Node {
         AnnotationValueTags(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -364,7 +364,7 @@ namespace tt::results {
         private: std::shared_ptr<std::shared_ptr<const Presence<std::vector<std::string>>>> cached_value_ = std::make_shared<std::shared_ptr<const Presence<std::vector<std::string>>>>();
         public: const Presence<std::vector<std::string>>& value() const;
     };
-    class AnswerId : public Node {
+    class AnswerId final : public Node {
         AnswerId(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -372,7 +372,7 @@ namespace tt::results {
         private: std::shared_ptr<std::shared_ptr<const std::string>> cached_value_ = std::make_shared<std::shared_ptr<const std::string>>();
         public: const std::string& value() const;
     };
-    class Answers : public Node {
+    class Answers final : public Node {
         Answers(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -380,7 +380,7 @@ namespace tt::results {
         private: std::shared_ptr<std::shared_ptr<const Presence<std::vector<RelationMember>>>> cached_questions_ = std::make_shared<std::shared_ptr<const Presence<std::vector<RelationMember>>>>();
         public: const Presence<std::vector<RelationMember>>& questions() const;
     };
-    class AtomicArrayOfString : public Node {
+    class AtomicArrayOfString final : public Node {
         AtomicArrayOfString(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -412,7 +412,7 @@ namespace tt::results {
         private: std::shared_ptr<std::shared_ptr<const Presence<std::vector<std::string>>>> cached_value_ = std::make_shared<std::shared_ptr<const Presence<std::vector<std::string>>>>();
         public: const Presence<std::vector<std::string>>& value() const;
     };
-    class AtomicDecideValue : public Node {
+    class AtomicDecideValue final : public Node {
         AtomicDecideValue(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -444,7 +444,7 @@ namespace tt::results {
         private: std::shared_ptr<std::shared_ptr<const Presence<DecideValue>>> cached_value_ = std::make_shared<std::shared_ptr<const Presence<DecideValue>>>();
         public: const Presence<DecideValue>& value() const;
     };
-    class AtomicNonZeroUsize : public Node {
+    class AtomicNonZeroUsize final : public Node {
         AtomicNonZeroUsize(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -476,7 +476,7 @@ namespace tt::results {
         private: std::shared_ptr<std::shared_ptr<const Presence<uint64_t>>> cached_value_ = std::make_shared<std::shared_ptr<const Presence<uint64_t>>>();
         public: const Presence<uint64_t>& value() const;
     };
-    class AtomicNullableString : public Node {
+    class AtomicNullableString final : public Node {
         AtomicNullableString(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -508,7 +508,7 @@ namespace tt::results {
         private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_value_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
         public: const Presence<std::string>& value() const;
     };
-    class AtomicBoolean : public Node {
+    class AtomicBoolean final : public Node {
         AtomicBoolean(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -540,7 +540,7 @@ namespace tt::results {
         private: std::shared_ptr<std::shared_ptr<const Presence<bool>>> cached_value_ = std::make_shared<std::shared_ptr<const Presence<bool>>>();
         public: const Presence<bool>& value() const;
     };
-    class AtomicDouble : public Node {
+    class AtomicDouble final : public Node {
         AtomicDouble(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -572,7 +572,7 @@ namespace tt::results {
         private: std::shared_ptr<std::shared_ptr<const Presence<double>>> cached_value_ = std::make_shared<std::shared_ptr<const Presence<double>>>();
         public: const Presence<double>& value() const;
     };
-    class Attempt : public Node {
+    class Attempt final : public Node {
         Attempt(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -594,7 +594,7 @@ namespace tt::results {
         private: std::shared_ptr<std::shared_ptr<const Presence<uint64_t>>> cached_wall_ms_ = std::make_shared<std::shared_ptr<const Presence<uint64_t>>>();
         public: const Presence<uint64_t>& wall_ms() const;
     };
-    class Batch : public Node {
+    class Batch final : public Node {
         Batch(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -603,7 +603,7 @@ namespace tt::results {
         std::string>>>();
         public: const std::variant<uint64_t, std::string>& value() const;
     };
-    class BoundaryMode : public Node {
+    class BoundaryMode final : public Node {
         BoundaryMode(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -611,7 +611,7 @@ namespace tt::results {
         private: std::shared_ptr<std::shared_ptr<const std::string>> cached_value_ = std::make_shared<std::shared_ptr<const std::string>>();
         public: const std::string& value() const;
     };
-    class BoundaryOdds : public Node {
+    class BoundaryOdds final : public Node {
         BoundaryOdds(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -621,7 +621,7 @@ namespace tt::results {
         private: std::shared_ptr<std::shared_ptr<const Presence<std::vector<BoundaryProposal>>>> cached_proposals_ = std::make_shared<std::shared_ptr<const Presence<std::vector<BoundaryProposal>>>>();
         public: const Presence<std::vector<BoundaryProposal>>& proposals() const;
     };
-    class BoundaryProposal : public Node {
+    class BoundaryProposal final : public Node {
         BoundaryProposal(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -637,7 +637,7 @@ namespace tt::results {
         private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_text_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
         public: const Presence<std::string>& text() const;
     };
-    class CallError : public Node {
+    class CallError final : public Node {
         CallError(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -647,7 +647,7 @@ namespace tt::results {
         private: std::shared_ptr<std::shared_ptr<const Presence<Facts>>> cached_facts_ = std::make_shared<std::shared_ptr<const Presence<Facts>>>();
         public: const Presence<Facts>& facts() const;
     };
-    class CallId : public Node {
+    class CallId final : public Node {
         CallId(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -655,7 +655,7 @@ namespace tt::results {
         private: std::shared_ptr<std::shared_ptr<const std::string>> cached_value_ = std::make_shared<std::shared_ptr<const std::string>>();
         public: const std::string& value() const;
     };
-    class DecideValue : public Node {
+    class DecideValue final : public Node {
         DecideValue(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -663,7 +663,7 @@ namespace tt::results {
         private: std::shared_ptr<std::shared_ptr<const Data>> cached_value_ = std::make_shared<std::shared_ptr<const Data>>();
         public: const Data& value() const;
     };
-    class EntityDocument : public Node {
+    class EntityDocument final : public Node {
         EntityDocument(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -673,7 +673,7 @@ namespace tt::results {
         private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_name_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
         public: const Presence<std::string>& name() const;
     };
-    class Error : public Node {
+    class Error final : public Node {
         Error(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -691,7 +691,7 @@ namespace tt::results {
         private: std::shared_ptr<std::shared_ptr<const Presence<Stopped>>> cached_stopped_ = std::make_shared<std::shared_ptr<const Presence<Stopped>>>();
         public: const Presence<Stopped>& stopped() const;
     };
-    class EstimatedInputDenial : public Node {
+    class EstimatedInputDenial final : public Node {
         EstimatedInputDenial(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -700,7 +700,7 @@ namespace tt::results {
         std::optional<EstimatedInputDenialAdditionalRequest> as_EstimatedInputDenialAdditionalRequest() const;
         std::optional<EstimatedInputDenialRetry> as_EstimatedInputDenialRetry() const;
     };
-    class EstimatedInputDenialAdditionalRequest : public Node {
+    class EstimatedInputDenialAdditionalRequest final : public Node {
         EstimatedInputDenialAdditionalRequest(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -710,7 +710,7 @@ namespace tt::results {
         private: std::shared_ptr<std::shared_ptr<const Presence<uint64_t>>> cached_limit_ = std::make_shared<std::shared_ptr<const Presence<uint64_t>>>();
         public: const Presence<uint64_t>& limit() const;
     };
-    class EstimatedInputDenialInitialRequest : public Node {
+    class EstimatedInputDenialInitialRequest final : public Node {
         EstimatedInputDenialInitialRequest(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -720,7 +720,7 @@ namespace tt::results {
         private: std::shared_ptr<std::shared_ptr<const Presence<uint64_t>>> cached_limit_ = std::make_shared<std::shared_ptr<const Presence<uint64_t>>>();
         public: const Presence<uint64_t>& limit() const;
     };
-    class EstimatedInputDenialRetry : public Node {
+    class EstimatedInputDenialRetry final : public Node {
         EstimatedInputDenialRetry(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -732,7 +732,7 @@ namespace tt::results {
         private: std::shared_ptr<std::shared_ptr<const Presence<uint64_t>>> cached_limit_ = std::make_shared<std::shared_ptr<const Presence<uint64_t>>>();
         public: const Presence<uint64_t>& limit() const;
     };
-    class Facts : public Node {
+    class Facts final : public Node {
         Facts(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -768,7 +768,7 @@ namespace tt::results {
         private: std::shared_ptr<std::shared_ptr<const Presence<PersistenceObservation>>> cached_usage_persistence_ = std::make_shared<std::shared_ptr<const Presence<PersistenceObservation>>>();
         public: const Presence<PersistenceObservation>& usage_persistence() const;
     };
-    class FailureId : public Node {
+    class FailureId final : public Node {
         FailureId(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -776,7 +776,7 @@ namespace tt::results {
         private: std::shared_ptr<std::shared_ptr<const std::string>> cached_value_ = std::make_shared<std::shared_ptr<const std::string>>();
         public: const std::string& value() const;
     };
-    class Find : public Node {
+    class Find final : public Node {
         Find(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -808,7 +808,7 @@ namespace tt::results {
         private: std::shared_ptr<std::shared_ptr<const Presence<Data>>> cached_value_ = std::make_shared<std::shared_ptr<const Presence<Data>>>();
         public: const Presence<Data>& value() const;
     };
-    class FindCandidate : public Node {
+    class FindCandidate final : public Node {
         FindCandidate(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -822,7 +822,7 @@ namespace tt::results {
         private: std::shared_ptr<std::shared_ptr<const Presence<PhysicalSource>>> cached_source_ = std::make_shared<std::shared_ptr<const Presence<PhysicalSource>>>();
         public: const Presence<PhysicalSource>& source() const;
     };
-    class Image : public Node {
+    class Image final : public Node {
         Image(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -836,7 +836,7 @@ namespace tt::results {
         private: std::shared_ptr<std::shared_ptr<const Presence<uint32_t>>> cached_width_ = std::make_shared<std::shared_ptr<const Presence<uint32_t>>>();
         public: const Presence<uint32_t>& width() const;
     };
-    class ImageMedia : public Node {
+    class ImageMedia final : public Node {
         ImageMedia(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -844,7 +844,7 @@ namespace tt::results {
         private: std::shared_ptr<std::shared_ptr<const std::string>> cached_value_ = std::make_shared<std::shared_ptr<const std::string>>();
         public: const std::string& value() const;
     };
-    class ImmediateFacts : public Node {
+    class ImmediateFacts final : public Node {
         ImmediateFacts(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -880,7 +880,7 @@ namespace tt::results {
         private: std::shared_ptr<std::shared_ptr<const Presence<PersistenceObservation>>> cached_usage_persistence_ = std::make_shared<std::shared_ptr<const Presence<PersistenceObservation>>>();
         public: const Presence<PersistenceObservation>& usage_persistence() const;
     };
-    class InputDeclaration : public Node {
+    class InputDeclaration final : public Node {
         InputDeclaration(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -888,7 +888,7 @@ namespace tt::results {
         std::optional<InputDeclarationStringRoot> as_InputDeclarationStringRoot() const;
         std::optional<InputDeclarationObjectRoot> as_InputDeclarationObjectRoot() const;
     };
-    class InputDeclarationObjectRoot : public Node {
+    class InputDeclarationObjectRoot final : public Node {
         InputDeclarationObjectRoot(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -901,7 +901,7 @@ namespace tt::results {
         private: std::shared_ptr<std::shared_ptr<const Presence<ObjectType>>> cached_type_ = std::make_shared<std::shared_ptr<const Presence<ObjectType>>>();
         public: const Presence<ObjectType>& type() const;
     };
-    class InputDeclarationStringRoot : public Node {
+    class InputDeclarationStringRoot final : public Node {
         InputDeclarationStringRoot(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -909,7 +909,7 @@ namespace tt::results {
         private: std::shared_ptr<std::shared_ptr<const Presence<StringType>>> cached_type_ = std::make_shared<std::shared_ptr<const Presence<StringType>>>();
         public: const Presence<StringType>& type() const;
     };
-    class InputPropertyType : public Node {
+    class InputPropertyType final : public Node {
         InputPropertyType(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -919,7 +919,7 @@ namespace tt::results {
         std::optional<InputPropertyTypeBoolean> as_InputPropertyTypeBoolean() const;
         std::optional<InputPropertyTypeArray> as_InputPropertyTypeArray() const;
     };
-    class InputPropertyTypeArray : public Node {
+    class InputPropertyTypeArray final : public Node {
         InputPropertyTypeArray(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -929,7 +929,7 @@ namespace tt::results {
         private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_type_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
         public: const Presence<std::string>& type() const;
     };
-    class InputPropertyTypeBoolean : public Node {
+    class InputPropertyTypeBoolean final : public Node {
         InputPropertyTypeBoolean(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -937,7 +937,7 @@ namespace tt::results {
         private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_type_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
         public: const Presence<std::string>& type() const;
     };
-    class InputPropertyTypeNumber : public Node {
+    class InputPropertyTypeNumber final : public Node {
         InputPropertyTypeNumber(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -945,7 +945,7 @@ namespace tt::results {
         private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_type_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
         public: const Presence<std::string>& type() const;
     };
-    class InputPropertyTypeString : public Node {
+    class InputPropertyTypeString final : public Node {
         InputPropertyTypeString(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -953,7 +953,7 @@ namespace tt::results {
         private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_type_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
         public: const Presence<std::string>& type() const;
     };
-    class Label : public Node {
+    class Label final : public Node {
         Label(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -963,7 +963,7 @@ namespace tt::results {
         private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_name_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
         public: const Presence<std::string>& name() const;
     };
-    class Meta : public Node {
+    class Meta final : public Node {
         Meta(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -1007,7 +1007,7 @@ namespace tt::results {
         private: std::shared_ptr<std::shared_ptr<const Presence<Usage>>> cached_usage_ = std::make_shared<std::shared_ptr<const Presence<Usage>>>();
         public: const Presence<Usage>& usage() const;
     };
-    class ObjectRoot : public Node {
+    class ObjectRoot final : public Node {
         ObjectRoot(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -1020,7 +1020,7 @@ namespace tt::results {
         private: std::shared_ptr<std::shared_ptr<const Presence<ObjectType>>> cached_type_ = std::make_shared<std::shared_ptr<const Presence<ObjectType>>>();
         public: const Presence<ObjectType>& type() const;
     };
-    class ObjectType : public Node {
+    class ObjectType final : public Node {
         ObjectType(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -1028,7 +1028,7 @@ namespace tt::results {
         private: std::shared_ptr<std::shared_ptr<const std::string>> cached_value_ = std::make_shared<std::shared_ptr<const std::string>>();
         public: const std::string& value() const;
     };
-    class Observation : public Node {
+    class Observation final : public Node {
         Observation(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -1036,7 +1036,7 @@ namespace tt::results {
         std::optional<ObservationObservationId> as_ObservationObservationId() const;
         std::optional<ObservationFailureId> as_ObservationFailureId() const;
     };
-    class ObservationId : public Node {
+    class ObservationId final : public Node {
         ObservationId(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -1044,7 +1044,7 @@ namespace tt::results {
         private: std::shared_ptr<std::shared_ptr<const std::string>> cached_value_ = std::make_shared<std::shared_ptr<const std::string>>();
         public: const std::string& value() const;
     };
-    class ObservationFailureId : public Node {
+    class ObservationFailureId final : public Node {
         ObservationFailureId(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -1052,7 +1052,7 @@ namespace tt::results {
         private: std::shared_ptr<std::shared_ptr<const Presence<FailureId>>> cached_failure_id_ = std::make_shared<std::shared_ptr<const Presence<FailureId>>>();
         public: const Presence<FailureId>& failure_id() const;
     };
-    class ObservationObservationId : public Node {
+    class ObservationObservationId final : public Node {
         ObservationObservationId(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -1060,7 +1060,7 @@ namespace tt::results {
         private: std::shared_ptr<std::shared_ptr<const Presence<ObservationId>>> cached_observation_id_ = std::make_shared<std::shared_ptr<const Presence<ObservationId>>>();
         public: const Presence<ObservationId>& observation_id() const;
     };
-    class Origin : public Node {
+    class Origin final : public Node {
         Origin(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -1068,7 +1068,7 @@ namespace tt::results {
         private: std::shared_ptr<std::shared_ptr<const std::string>> cached_value_ = std::make_shared<std::shared_ptr<const std::string>>();
         public: const std::string& value() const;
     };
-    class PersistenceObservation : public Node {
+    class PersistenceObservation final : public Node {
         PersistenceObservation(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -1080,7 +1080,7 @@ namespace tt::results {
         private: std::shared_ptr<std::shared_ptr<const Presence<UsagePersistence>>> cached_state_ = std::make_shared<std::shared_ptr<const Presence<UsagePersistence>>>();
         public: const Presence<UsagePersistence>& state() const;
     };
-    class PhysicalSource : public Node {
+    class PhysicalSource final : public Node {
         PhysicalSource(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -1092,7 +1092,7 @@ namespace tt::results {
         private: std::shared_ptr<std::shared_ptr<const Presence<uint64_t>>> cached_last_line_ = std::make_shared<std::shared_ptr<const Presence<uint64_t>>>();
         public: const Presence<uint64_t>& last_line() const;
     };
-    class Position : public Node {
+    class Position final : public Node {
         Position(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -1106,7 +1106,7 @@ namespace tt::results {
         private: std::shared_ptr<std::shared_ptr<const Presence<uint64_t>>> cached_last_ = std::make_shared<std::shared_ptr<const Presence<uint64_t>>>();
         public: const Presence<uint64_t>& last() const;
     };
-    class QuestionName : public Node {
+    class QuestionName final : public Node {
         QuestionName(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -1114,7 +1114,7 @@ namespace tt::results {
         private: std::shared_ptr<std::shared_ptr<const std::string>> cached_value_ = std::make_shared<std::shared_ptr<const std::string>>();
         public: const std::string& value() const;
     };
-    class QuestionSource : public Node {
+    class QuestionSource final : public Node {
         QuestionSource(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -1126,7 +1126,7 @@ namespace tt::results {
         private: std::shared_ptr<std::shared_ptr<const Presence<Origin>>> cached_origin_ = std::make_shared<std::shared_ptr<const Presence<Origin>>>();
         public: const Presence<Origin>& origin() const;
     };
-    class RankMember : public Node {
+    class RankMember final : public Node {
         RankMember(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -1136,7 +1136,7 @@ namespace tt::results {
         private: std::shared_ptr<std::shared_ptr<const Presence<RankMemberResult>>> cached_result_ = std::make_shared<std::shared_ptr<const Presence<RankMemberResult>>>();
         public: const Presence<RankMemberResult>& result() const;
     };
-    class RankMemberResult : public Node {
+    class RankMemberResult final : public Node {
         RankMemberResult(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -1160,7 +1160,7 @@ namespace tt::results {
         private: std::shared_ptr<std::shared_ptr<const Presence<uint64_t>>> cached_value_ = std::make_shared<std::shared_ptr<const Presence<uint64_t>>>();
         public: const Presence<uint64_t>& value() const;
     };
-    class Recognition : public Node {
+    class Recognition final : public Node {
         Recognition(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -1192,7 +1192,7 @@ namespace tt::results {
         private: std::shared_ptr<std::shared_ptr<const Presence<Recognize>>> cached_value_ = std::make_shared<std::shared_ptr<const Presence<Recognize>>>();
         public: const Presence<Recognize>& value() const;
     };
-    class RecognitionEdgeDocument : public Node {
+    class RecognitionEdgeDocument final : public Node {
         RecognitionEdgeDocument(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -1208,7 +1208,7 @@ namespace tt::results {
         private: std::shared_ptr<std::shared_ptr<const Presence<Entity>>> cached_target_ = std::make_shared<std::shared_ptr<const Presence<Entity>>>();
         public: const Presence<Entity>& target() const;
     };
-    class RecognitionMode : public Node {
+    class RecognitionMode final : public Node {
         RecognitionMode(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -1216,7 +1216,7 @@ namespace tt::results {
         private: std::shared_ptr<std::shared_ptr<const std::string>> cached_value_ = std::make_shared<std::shared_ptr<const std::string>>();
         public: const std::string& value() const;
     };
-    class RecognitionOdds : public Node {
+    class RecognitionOdds final : public Node {
         RecognitionOdds(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -1224,7 +1224,7 @@ namespace tt::results {
         std::optional<RecognitionOddsRecognizeAnswer> as_RecognitionOddsRecognizeAnswer() const;
         std::optional<RecognitionOddsBoundaryOdds> as_RecognitionOddsBoundaryOdds() const;
     };
-    class RecognitionOddsBoundaryOdds : public Node {
+    class RecognitionOddsBoundaryOdds final : public Node {
         RecognitionOddsBoundaryOdds(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -1234,7 +1234,7 @@ namespace tt::results {
         private: std::shared_ptr<std::shared_ptr<const Presence<std::vector<BoundaryProposal>>>> cached_proposals_ = std::make_shared<std::shared_ptr<const Presence<std::vector<BoundaryProposal>>>>();
         public: const Presence<std::vector<BoundaryProposal>>& proposals() const;
     };
-    class RecognitionOddsRecognizeAnswer : public Node {
+    class RecognitionOddsRecognizeAnswer final : public Node {
         RecognitionOddsRecognizeAnswer(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -1248,7 +1248,7 @@ namespace tt::results {
         private: std::shared_ptr<std::shared_ptr<const Presence<std::vector<RecognitionProposal>>>> cached_proposals_ = std::make_shared<std::shared_ptr<const Presence<std::vector<RecognitionProposal>>>>();
         public: const Presence<std::vector<RecognitionProposal>>& proposals() const;
     };
-    class RecognitionProposal : public Node {
+    class RecognitionProposal final : public Node {
         RecognitionProposal(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -1268,7 +1268,7 @@ namespace tt::results {
         private: std::shared_ptr<std::shared_ptr<const Presence<double>>> cached_strength_ = std::make_shared<std::shared_ptr<const Presence<double>>>();
         public: const Presence<double>& strength() const;
     };
-    class RecognitionStageContext : public Node {
+    class RecognitionStageContext final : public Node {
         RecognitionStageContext(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -1280,7 +1280,7 @@ namespace tt::results {
         private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_relation_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
         public: const Presence<std::string>& relation() const;
     };
-    class Relation : public Node {
+    class Relation final : public Node {
         Relation(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -1312,7 +1312,7 @@ namespace tt::results {
         private: std::shared_ptr<std::shared_ptr<const Presence<std::vector<RelatedEntityEdge>>>> cached_value_ = std::make_shared<std::shared_ptr<const Presence<std::vector<RelatedEntityEdge>>>>();
         public: const Presence<std::vector<RelatedEntityEdge>>& value() const;
     };
-    class RelationDirection : public Node {
+    class RelationDirection final : public Node {
         RelationDirection(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -1320,7 +1320,7 @@ namespace tt::results {
         private: std::shared_ptr<std::shared_ptr<const std::string>> cached_value_ = std::make_shared<std::shared_ptr<const std::string>>();
         public: const std::string& value() const;
     };
-    class RelationEndpoint : public Node {
+    class RelationEndpoint final : public Node {
         RelationEndpoint(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -1328,7 +1328,7 @@ namespace tt::results {
         std::optional<RelationEndpointRelatedEntity> as_RelationEndpointRelatedEntity() const;
         std::optional<RelationEndpointSource> as_RelationEndpointSource() const;
     };
-    class RelationEndpointRelatedEntity : public Node {
+    class RelationEndpointRelatedEntity final : public Node {
         RelationEndpointRelatedEntity(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -1338,7 +1338,7 @@ namespace tt::results {
         private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_name_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
         public: const Presence<std::string>& name() const;
     };
-    class RelationEndpointSource : public Node {
+    class RelationEndpointSource final : public Node {
         RelationEndpointSource(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -1358,7 +1358,7 @@ namespace tt::results {
         private: std::shared_ptr<std::shared_ptr<const Presence<Data>>> cached_record_ = std::make_shared<std::shared_ptr<const Presence<Data>>>();
         public: const Presence<Data>& record() const;
     };
-    class RelationMember : public Node {
+    class RelationMember final : public Node {
         RelationMember(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -1366,7 +1366,7 @@ namespace tt::results {
         std::optional<RelationMemberAnswerId> as_RelationMemberAnswerId() const;
         std::optional<RelationMemberFailureId> as_RelationMemberFailureId() const;
     };
-    class RelationMemberAnswerId : public Node {
+    class RelationMemberAnswerId final : public Node {
         RelationMemberAnswerId(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -1405,7 +1405,7 @@ namespace tt::results {
         public: const Presence<double>& probability() const;
         std::string source_name() const;
     };
-    class RelationMemberFailureId : public Node {
+    class RelationMemberFailureId final : public Node {
         RelationMemberFailureId(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -1440,7 +1440,7 @@ namespace tt::results {
         public: const Presence<FailureId>& failure_id() const;
         std::string source_name() const;
     };
-    class RelationMethod : public Node {
+    class RelationMethod final : public Node {
         RelationMethod(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -1448,7 +1448,7 @@ namespace tt::results {
         private: std::shared_ptr<std::shared_ptr<const std::string>> cached_value_ = std::make_shared<std::shared_ptr<const std::string>>();
         public: const std::string& value() const;
     };
-    class RequestFunction : public Node {
+    class RequestFunction final : public Node {
         RequestFunction(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -1456,7 +1456,7 @@ namespace tt::results {
         private: std::shared_ptr<std::shared_ptr<const std::string>> cached_value_ = std::make_shared<std::shared_ptr<const std::string>>();
         public: const std::string& value() const;
     };
-    class SdkRequestId : public Node {
+    class SdkRequestId final : public Node {
         SdkRequestId(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -1464,7 +1464,7 @@ namespace tt::results {
         private: std::shared_ptr<std::shared_ptr<const std::string>> cached_value_ = std::make_shared<std::shared_ptr<const std::string>>();
         public: const std::string& value() const;
     };
-    class SendBudgetDenial : public Node {
+    class SendBudgetDenial final : public Node {
         SendBudgetDenial(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -1473,7 +1473,7 @@ namespace tt::results {
         std::optional<SendBudgetDenialBeforeAdditionalSend> as_SendBudgetDenialBeforeAdditionalSend() const;
         std::optional<SendBudgetDenialBeforeRetry> as_SendBudgetDenialBeforeRetry() const;
     };
-    class SendBudgetDenialBeforeAdditionalSend : public Node {
+    class SendBudgetDenialBeforeAdditionalSend final : public Node {
         SendBudgetDenialBeforeAdditionalSend(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -1481,7 +1481,7 @@ namespace tt::results {
         private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_kind_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
         public: const Presence<std::string>& kind() const;
     };
-    class SendBudgetDenialBeforeFirstSend : public Node {
+    class SendBudgetDenialBeforeFirstSend final : public Node {
         SendBudgetDenialBeforeFirstSend(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -1489,7 +1489,7 @@ namespace tt::results {
         private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_kind_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
         public: const Presence<std::string>& kind() const;
     };
-    class SendBudgetDenialBeforeRetry : public Node {
+    class SendBudgetDenialBeforeRetry final : public Node {
         SendBudgetDenialBeforeRetry(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -1499,7 +1499,7 @@ namespace tt::results {
         private: std::shared_ptr<std::shared_ptr<const Presence<uint64_t>>> cached_last_status_ = std::make_shared<std::shared_ptr<const Presence<uint64_t>>>();
         public: const Presence<uint64_t>& last_status() const;
     };
-    class StopCause : public Node {
+    class StopCause final : public Node {
         StopCause(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -1507,7 +1507,7 @@ namespace tt::results {
         private: std::shared_ptr<std::shared_ptr<const std::string>> cached_value_ = std::make_shared<std::shared_ptr<const std::string>>();
         public: const std::string& value() const;
     };
-    class Stopped : public Node {
+    class Stopped final : public Node {
         Stopped(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -1521,7 +1521,7 @@ namespace tt::results {
         private: std::shared_ptr<std::shared_ptr<const Presence<uint64_t>>> cached_status_ = std::make_shared<std::shared_ptr<const Presence<uint64_t>>>();
         public: const Presence<uint64_t>& status() const;
     };
-    class StringRoot : public Node {
+    class StringRoot final : public Node {
         StringRoot(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -1529,7 +1529,7 @@ namespace tt::results {
         private: std::shared_ptr<std::shared_ptr<const Presence<StringType>>> cached_type_ = std::make_shared<std::shared_ptr<const Presence<StringType>>>();
         public: const Presence<StringType>& type() const;
     };
-    class StringType : public Node {
+    class StringType final : public Node {
         StringType(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -1537,7 +1537,7 @@ namespace tt::results {
         private: std::shared_ptr<std::shared_ptr<const std::string>> cached_value_ = std::make_shared<std::shared_ptr<const std::string>>();
         public: const std::string& value() const;
     };
-    class Usage : public Node {
+    class Usage final : public Node {
         Usage(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -1547,7 +1547,7 @@ namespace tt::results {
         private: std::shared_ptr<std::shared_ptr<const Presence<uint64_t>>> cached_output_tokens_ = std::make_shared<std::shared_ptr<const Presence<uint64_t>>>();
         public: const Presence<uint64_t>& output_tokens() const;
     };
-    class UsagePersistence : public Node {
+    class UsagePersistence final : public Node {
         UsagePersistence(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -1555,7 +1555,7 @@ namespace tt::results {
         private: std::shared_ptr<std::shared_ptr<const std::string>> cached_value_ = std::make_shared<std::shared_ptr<const std::string>>();
         public: const std::string& value() const;
     };
-    class Verb : public Node {
+    class Verb final : public Node {
         Verb(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -1563,7 +1563,7 @@ namespace tt::results {
         private: std::shared_ptr<std::shared_ptr<const std::string>> cached_value_ = std::make_shared<std::shared_ptr<const std::string>>();
         public: const std::string& value() const;
     };
-    class Version : public Node {
+    class Version final : public Node {
         Version(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -1571,7 +1571,7 @@ namespace tt::results {
         private: std::shared_ptr<std::shared_ptr<const std::string>> cached_value_ = std::make_shared<std::shared_ptr<const std::string>>();
         public: const std::string& value() const;
     };
-    class WordingVersion : public Node {
+    class WordingVersion final : public Node {
         WordingVersion(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -1579,7 +1579,7 @@ namespace tt::results {
         private: std::shared_ptr<std::shared_ptr<const uint32_t>> cached_value_ = std::make_shared<std::shared_ptr<const uint32_t>>();
         public: const uint32_t& value() const;
     };
-    class AnnotatedField : public Node {
+    class AnnotatedField final : public Node {
         AnnotatedField(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -1590,7 +1590,7 @@ namespace tt::results {
         public: const std::variant<bool, std::nullptr_t, std::string, std::vector<std::string>, double,
         Failed>& value() const;
     };
-    class AnnotatedRow : public Node {
+    class AnnotatedRow final : public Node {
         AnnotatedRow(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -1599,7 +1599,7 @@ namespace tt::results {
         AnnotatedField>>>>();
         public: const std::vector<std::pair<std::string, AnnotatedField>>& value() const;
     };
-    class Answer : public Node {
+    class Answer final : public Node {
         Answer(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -1609,7 +1609,7 @@ namespace tt::results {
         std::optional<AnswerTag> as_AnswerTag() const;
         std::optional<AnswerScore> as_AnswerScore() const;
     };
-    class AnswerChoice : public Node {
+    class AnswerChoice final : public Node {
         AnswerChoice(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -1624,7 +1624,7 @@ namespace tt::results {
         double>>>>>();
         public: const Presence<std::vector<std::pair<std::string, double>>>& probabilities() const;
     };
-    class AnswerScore : public Node {
+    class AnswerScore final : public Node {
         AnswerScore(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -1639,7 +1639,7 @@ namespace tt::results {
         double>>>>>();
         public: const Presence<std::vector<std::pair<std::string, double>>>& probabilities() const;
     };
-    class AnswerTag : public Node {
+    class AnswerTag final : public Node {
         AnswerTag(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -1650,7 +1650,7 @@ namespace tt::results {
         double>>>>>();
         public: const Presence<std::vector<std::pair<std::string, double>>>& probabilities() const;
     };
-    class AnswerYesNo : public Node {
+    class AnswerYesNo final : public Node {
         AnswerYesNo(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -1660,7 +1660,7 @@ namespace tt::results {
         private: std::shared_ptr<std::shared_ptr<const Presence<double>>> cached_probability_ = std::make_shared<std::shared_ptr<const Presence<double>>>();
         public: const Presence<double>& probability() const;
     };
-    class AttemptOutcome : public Node {
+    class AttemptOutcome final : public Node {
         AttemptOutcome(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -1668,7 +1668,7 @@ namespace tt::results {
         private: std::shared_ptr<std::shared_ptr<const std::string>> cached_value_ = std::make_shared<std::shared_ptr<const std::string>>();
         public: const std::string& value() const;
     };
-    class BatchSetting : public Node {
+    class BatchSetting final : public Node {
         BatchSetting(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -1677,7 +1677,7 @@ namespace tt::results {
         std::string>>>();
         public: const std::variant<uint64_t, std::string>& value() const;
     };
-    class BatchWarning : public Node {
+    class BatchWarning final : public Node {
         BatchWarning(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -1687,7 +1687,7 @@ namespace tt::results {
         private: std::shared_ptr<std::shared_ptr<const Presence<BatchSetting>>> cached_tuned_for_ = std::make_shared<std::shared_ptr<const Presence<BatchSetting>>>();
         public: const Presence<BatchSetting>& tuned_for() const;
     };
-    class Entity : public Node {
+    class Entity final : public Node {
         Entity(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -1711,7 +1711,7 @@ namespace tt::results {
         private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_text_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
         public: const Presence<std::string>& text() const;
     };
-    class EntityEdge : public Node {
+    class EntityEdge final : public Node {
         EntityEdge(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -1727,7 +1727,7 @@ namespace tt::results {
         private: std::shared_ptr<std::shared_ptr<const Presence<Entity>>> cached_target_ = std::make_shared<std::shared_ptr<const Presence<Entity>>>();
         public: const Presence<Entity>& target() const;
     };
-    class Failed : public Node {
+    class Failed final : public Node {
         Failed(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -1735,7 +1735,7 @@ namespace tt::results {
         private: std::shared_ptr<std::shared_ptr<const Presence<Failure>>> cached_failed_ = std::make_shared<std::shared_ptr<const Presence<Failure>>>();
         public: const Presence<Failure>& failed() const;
     };
-    class Failure : public Node {
+    class Failure final : public Node {
         Failure(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -1745,7 +1745,7 @@ namespace tt::results {
         private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_kind_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
         public: const Presence<std::string>& kind() const;
     };
-    class FailureCause : public Node {
+    class FailureCause final : public Node {
         FailureCause(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -1753,7 +1753,7 @@ namespace tt::results {
         private: std::shared_ptr<std::shared_ptr<const std::string>> cached_value_ = std::make_shared<std::shared_ptr<const std::string>>();
         public: const std::string& value() const;
     };
-    class FailureKind : public Node {
+    class FailureKind final : public Node {
         FailureKind(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -1761,7 +1761,7 @@ namespace tt::results {
         private: std::shared_ptr<std::shared_ptr<const std::string>> cached_value_ = std::make_shared<std::shared_ptr<const std::string>>();
         public: const std::string& value() const;
     };
-    class FindAnswer : public Node {
+    class FindAnswer final : public Node {
         FindAnswer(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -1776,7 +1776,7 @@ namespace tt::results {
         double>>>>>();
         public: const Presence<std::vector<std::pair<std::string, double>>>& probabilities() const;
     };
-    class FindQuestionDocument : public Node {
+    class FindQuestionDocument final : public Node {
         FindQuestionDocument(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -1806,7 +1806,7 @@ namespace tt::results {
         private: std::shared_ptr<std::shared_ptr<const Presence<WordingVersion>>> cached_wording_version_ = std::make_shared<std::shared_ptr<const Presence<WordingVersion>>>();
         public: const Presence<WordingVersion>& wording_version() const;
     };
-    class NameOdds : public Node {
+    class NameOdds final : public Node {
         NameOdds(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -1822,7 +1822,7 @@ namespace tt::results {
         private: std::shared_ptr<std::shared_ptr<const Presence<uint64_t>>> cached_start_ = std::make_shared<std::shared_ptr<const Presence<uint64_t>>>();
         public: const Presence<uint64_t>& start() const;
     };
-    class PairOdds : public Node {
+    class PairOdds final : public Node {
         PairOdds(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -1836,7 +1836,7 @@ namespace tt::results {
         private: std::shared_ptr<std::shared_ptr<const Presence<Place>>> cached_target_ = std::make_shared<std::shared_ptr<const Presence<Place>>>();
         public: const Presence<Place>& target() const;
     };
-    class PieceOdds : public Node {
+    class PieceOdds final : public Node {
         PieceOdds(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -1849,7 +1849,7 @@ namespace tt::results {
         double>>>>>();
         public: const Presence<std::vector<std::pair<std::string, double>>>& tags() const;
     };
-    class Place : public Node {
+    class Place final : public Node {
         Place(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -1859,7 +1859,7 @@ namespace tt::results {
         private: std::shared_ptr<std::shared_ptr<const Presence<uint64_t>>> cached_start_ = std::make_shared<std::shared_ptr<const Presence<uint64_t>>>();
         public: const Presence<uint64_t>& start() const;
     };
-    class Plan : public Node {
+    class Plan final : public Node {
         Plan(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -1883,7 +1883,7 @@ namespace tt::results {
         private: std::shared_ptr<std::shared_ptr<const Presence<bool>>> cached_upper_bound_ = std::make_shared<std::shared_ptr<const Presence<bool>>>();
         public: const Presence<bool>& upper_bound() const;
     };
-    class ProfileWarning : public Node {
+    class ProfileWarning final : public Node {
         ProfileWarning(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -1893,7 +1893,7 @@ namespace tt::results {
         private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_tuned_for_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
         public: const Presence<std::string>& tuned_for() const;
     };
-    class QuestionDocument : public Node {
+    class QuestionDocument final : public Node {
         QuestionDocument(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -1903,7 +1903,7 @@ namespace tt::results {
         std::optional<QuestionDocumentTag> as_QuestionDocumentTag() const;
         std::optional<QuestionDocumentScore> as_QuestionDocumentScore() const;
     };
-    class QuestionDocumentChoose : public Node {
+    class QuestionDocumentChoose final : public Node {
         QuestionDocumentChoose(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -1933,7 +1933,7 @@ namespace tt::results {
         private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_verb_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
         public: const Presence<std::string>& verb() const;
     };
-    class QuestionDocumentDecide : public Node {
+    class QuestionDocumentDecide final : public Node {
         QuestionDocumentDecide(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -1965,7 +1965,7 @@ namespace tt::results {
         private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_verb_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
         public: const Presence<std::string>& verb() const;
     };
-    class QuestionDocumentScore : public Node {
+    class QuestionDocumentScore final : public Node {
         QuestionDocumentScore(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -1995,7 +1995,7 @@ namespace tt::results {
         private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_verb_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
         public: const Presence<std::string>& verb() const;
     };
-    class QuestionDocumentTag : public Node {
+    class QuestionDocumentTag final : public Node {
         QuestionDocumentTag(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -2025,7 +2025,7 @@ namespace tt::results {
         private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_verb_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
         public: const Presence<std::string>& verb() const;
     };
-    class Recognize : public Node {
+    class Recognize final : public Node {
         Recognize(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -2033,7 +2033,7 @@ namespace tt::results {
         std::optional<RecognizeEntities> as_RecognizeEntities() const;
         std::optional<RecognizeModeProposals> as_RecognizeModeProposals() const;
     };
-    class RecognizeAnswer : public Node {
+    class RecognizeAnswer final : public Node {
         RecognizeAnswer(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -2047,7 +2047,7 @@ namespace tt::results {
         private: std::shared_ptr<std::shared_ptr<const Presence<std::vector<RecognitionProposal>>>> cached_proposals_ = std::make_shared<std::shared_ptr<const Presence<std::vector<RecognitionProposal>>>>();
         public: const Presence<std::vector<RecognitionProposal>>& proposals() const;
     };
-    class RecognizeQuestionDocument : public Node {
+    class RecognizeQuestionDocument final : public Node {
         RecognizeQuestionDocument(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -2092,7 +2092,7 @@ namespace tt::results {
         private: std::shared_ptr<std::shared_ptr<const Presence<WordingVersion>>> cached_wording_version_ = std::make_shared<std::shared_ptr<const Presence<WordingVersion>>>();
         public: const Presence<WordingVersion>& wording_version() const;
     };
-    class RecognizeEntities : public Node {
+    class RecognizeEntities final : public Node {
         RecognizeEntities(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -2102,7 +2102,7 @@ namespace tt::results {
         private: std::shared_ptr<std::shared_ptr<const Presence<std::vector<EntityEdge>>>> cached_relations_ = std::make_shared<std::shared_ptr<const Presence<std::vector<EntityEdge>>>>();
         public: const Presence<std::vector<EntityEdge>>& relations() const;
     };
-    class RecognizeModeProposals : public Node {
+    class RecognizeModeProposals final : public Node {
         RecognizeModeProposals(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -2112,7 +2112,7 @@ namespace tt::results {
         private: std::shared_ptr<std::shared_ptr<const Presence<std::vector<BoundaryProposal>>>> cached_proposals_ = std::make_shared<std::shared_ptr<const Presence<std::vector<BoundaryProposal>>>>();
         public: const Presence<std::vector<BoundaryProposal>>& proposals() const;
     };
-    class RelateFields : public Node {
+    class RelateFields final : public Node {
         RelateFields(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -2122,7 +2122,7 @@ namespace tt::results {
         private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_name_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
         public: const Presence<std::string>& name() const;
     };
-    class RelateQuestionDocument : public Node {
+    class RelateQuestionDocument final : public Node {
         RelateQuestionDocument(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -2154,7 +2154,7 @@ namespace tt::results {
         private: std::shared_ptr<std::shared_ptr<const Presence<WordingVersion>>> cached_wording_version_ = std::make_shared<std::shared_ptr<const Presence<WordingVersion>>>();
         public: const Presence<WordingVersion>& wording_version() const;
     };
-    class RelatedEntity : public Node {
+    class RelatedEntity final : public Node {
         RelatedEntity(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -2164,7 +2164,7 @@ namespace tt::results {
         private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_name_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
         public: const Presence<std::string>& name() const;
     };
-    class RelatedEntityEdge : public Node {
+    class RelatedEntityEdge final : public Node {
         RelatedEntityEdge(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -2182,7 +2182,7 @@ namespace tt::results {
         std::string source_name() const;
         std::string target_name() const;
     };
-    class RelationRule : public Node {
+    class RelationRule final : public Node {
         RelationRule(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -2200,7 +2200,7 @@ namespace tt::results {
         private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_target_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
         public: const Presence<std::string>& target() const;
     };
-    class SessionAnnotation : public Node {
+    class SessionAnnotation final : public Node {
         SessionAnnotation(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -2210,7 +2210,7 @@ namespace tt::results {
         private: std::shared_ptr<std::shared_ptr<const Presence<AnnotationValue>>> cached_value_ = std::make_shared<std::shared_ptr<const Presence<AnnotationValue>>>();
         public: const Presence<AnnotationValue>& value() const;
     };
-    class SessionInputSource : public Node {
+    class SessionInputSource final : public Node {
         SessionInputSource(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -2220,7 +2220,7 @@ namespace tt::results {
         private: std::shared_ptr<std::shared_ptr<const Presence<PhysicalSource>>> cached_source_ = std::make_shared<std::shared_ptr<const Presence<PhysicalSource>>>();
         public: const Presence<PhysicalSource>& source() const;
     };
-    class SessionJudgment : public Node {
+    class SessionJudgment final : public Node {
         SessionJudgment(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -2230,7 +2230,7 @@ namespace tt::results {
         std::optional<SessionJudgmentScore> as_SessionJudgmentScore() const;
         std::optional<SessionJudgmentTags> as_SessionJudgmentTags() const;
     };
-    class SessionJudgmentChoice : public Node {
+    class SessionJudgmentChoice final : public Node {
         SessionJudgmentChoice(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -2240,7 +2240,7 @@ namespace tt::results {
         private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_value_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
         public: const Presence<std::string>& value() const;
     };
-    class SessionJudgmentDecision : public Node {
+    class SessionJudgmentDecision final : public Node {
         SessionJudgmentDecision(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -2250,7 +2250,7 @@ namespace tt::results {
         private: std::shared_ptr<std::shared_ptr<const Presence<bool>>> cached_value_ = std::make_shared<std::shared_ptr<const Presence<bool>>>();
         public: const Presence<bool>& value() const;
     };
-    class SessionJudgmentScore : public Node {
+    class SessionJudgmentScore final : public Node {
         SessionJudgmentScore(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -2260,7 +2260,7 @@ namespace tt::results {
         private: std::shared_ptr<std::shared_ptr<const Presence<double>>> cached_value_ = std::make_shared<std::shared_ptr<const Presence<double>>>();
         public: const Presence<double>& value() const;
     };
-    class SessionJudgmentTags : public Node {
+    class SessionJudgmentTags final : public Node {
         SessionJudgmentTags(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -2270,7 +2270,7 @@ namespace tt::results {
         private: std::shared_ptr<std::shared_ptr<const Presence<std::vector<std::string>>>> cached_value_ = std::make_shared<std::shared_ptr<const Presence<std::vector<std::string>>>>();
         public: const Presence<std::vector<std::string>>& value() const;
     };
-    class SessionNamedProbability : public Node {
+    class SessionNamedProbability final : public Node {
         SessionNamedProbability(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -2280,7 +2280,7 @@ namespace tt::results {
         private: std::shared_ptr<std::shared_ptr<const Presence<double>>> cached_probability_ = std::make_shared<std::shared_ptr<const Presence<double>>>();
         public: const Presence<double>& probability() const;
     };
-    class SessionObservation : public Node {
+    class SessionObservation final : public Node {
         SessionObservation(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -2288,7 +2288,7 @@ namespace tt::results {
         std::optional<SessionObservationQuestion> as_SessionObservationQuestion() const;
         std::optional<SessionObservationRow> as_SessionObservationRow() const;
     };
-    class SessionObservationQuestion : public Node {
+    class SessionObservationQuestion final : public Node {
         SessionObservationQuestion(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -2306,7 +2306,7 @@ namespace tt::results {
         private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_stage_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
         public: const Presence<std::string>& stage() const;
     };
-    class SessionObservationRow : public Node {
+    class SessionObservationRow final : public Node {
         SessionObservationRow(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -2318,7 +2318,7 @@ namespace tt::results {
         private: std::shared_ptr<std::shared_ptr<const Presence<SessionObservedRow>>> cached_value_ = std::make_shared<std::shared_ptr<const Presence<SessionObservedRow>>>();
         public: const Presence<SessionObservedRow>& value() const;
     };
-    class SessionObservedRow : public Node {
+    class SessionObservedRow final : public Node {
         SessionObservedRow(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -2329,7 +2329,7 @@ namespace tt::results {
         std::optional<SessionObservedRowFind> as_SessionObservedRowFind() const;
         std::optional<SessionObservedRowRelations> as_SessionObservedRowRelations() const;
     };
-    class SessionObservedRowAnnotated : public Node {
+    class SessionObservedRowAnnotated final : public Node {
         SessionObservedRowAnnotated(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -2339,7 +2339,7 @@ namespace tt::results {
         private: std::shared_ptr<std::shared_ptr<const Presence<std::vector<SessionAnnotation>>>> cached_value_ = std::make_shared<std::shared_ptr<const Presence<std::vector<SessionAnnotation>>>>();
         public: const Presence<std::vector<SessionAnnotation>>& value() const;
     };
-    class SessionObservedRowFind : public Node {
+    class SessionObservedRowFind final : public Node {
         SessionObservedRowFind(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -2349,7 +2349,7 @@ namespace tt::results {
         private: std::shared_ptr<std::shared_ptr<const Presence<uint64_t>>> cached_value_ = std::make_shared<std::shared_ptr<const Presence<uint64_t>>>();
         public: const Presence<uint64_t>& value() const;
     };
-    class SessionObservedRowJudgment : public Node {
+    class SessionObservedRowJudgment final : public Node {
         SessionObservedRowJudgment(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -2359,7 +2359,7 @@ namespace tt::results {
         private: std::shared_ptr<std::shared_ptr<const Presence<SessionJudgment>>> cached_value_ = std::make_shared<std::shared_ptr<const Presence<SessionJudgment>>>();
         public: const Presence<SessionJudgment>& value() const;
     };
-    class SessionObservedRowRecognized : public Node {
+    class SessionObservedRowRecognized final : public Node {
         SessionObservedRowRecognized(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -2369,7 +2369,7 @@ namespace tt::results {
         private: std::shared_ptr<std::shared_ptr<const Presence<SessionRecognition>>> cached_value_ = std::make_shared<std::shared_ptr<const Presence<SessionRecognition>>>();
         public: const Presence<SessionRecognition>& value() const;
     };
-    class SessionObservedRowRelations : public Node {
+    class SessionObservedRowRelations final : public Node {
         SessionObservedRowRelations(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -2379,7 +2379,7 @@ namespace tt::results {
         private: std::shared_ptr<std::shared_ptr<const Presence<std::vector<SessionRelationEdge>>>> cached_value_ = std::make_shared<std::shared_ptr<const Presence<std::vector<SessionRelationEdge>>>>();
         public: const Presence<std::vector<SessionRelationEdge>>& value() const;
     };
-    class SessionPacket : public Node {
+    class SessionPacket final : public Node {
         SessionPacket(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -2403,7 +2403,7 @@ namespace tt::results {
         std::optional<SessionPacketObservation> as_SessionPacketObservation() const;
         std::optional<SessionPacketTerminal> as_SessionPacketTerminal() const;
     };
-    class SessionPacketAnnotateAggregate : public Node {
+    class SessionPacketAnnotateAggregate final : public Node {
         SessionPacketAnnotateAggregate(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -2415,7 +2415,7 @@ namespace tt::results {
         private: std::shared_ptr<std::shared_ptr<const Presence<std::vector<Annotation>>>> cached_value_ = std::make_shared<std::shared_ptr<const Presence<std::vector<Annotation>>>>();
         public: const Presence<std::vector<Annotation>>& value() const;
     };
-    class SessionPacketAnnotateRow : public Node {
+    class SessionPacketAnnotateRow final : public Node {
         SessionPacketAnnotateRow(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -2427,7 +2427,7 @@ namespace tt::results {
         private: std::shared_ptr<std::shared_ptr<const Presence<Annotation>>> cached_value_ = std::make_shared<std::shared_ptr<const Presence<Annotation>>>();
         public: const Presence<Annotation>& value() const;
     };
-    class SessionPacketChooseAggregate : public Node {
+    class SessionPacketChooseAggregate final : public Node {
         SessionPacketChooseAggregate(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -2439,7 +2439,7 @@ namespace tt::results {
         private: std::shared_ptr<std::shared_ptr<const Presence<std::vector<AtomicNullableString>>>> cached_value_ = std::make_shared<std::shared_ptr<const Presence<std::vector<AtomicNullableString>>>>();
         public: const Presence<std::vector<AtomicNullableString>>& value() const;
     };
-    class SessionPacketChooseRow : public Node {
+    class SessionPacketChooseRow final : public Node {
         SessionPacketChooseRow(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -2451,7 +2451,7 @@ namespace tt::results {
         private: std::shared_ptr<std::shared_ptr<const Presence<AtomicNullableString>>> cached_value_ = std::make_shared<std::shared_ptr<const Presence<AtomicNullableString>>>();
         public: const Presence<AtomicNullableString>& value() const;
     };
-    class SessionPacketDecideAggregate : public Node {
+    class SessionPacketDecideAggregate final : public Node {
         SessionPacketDecideAggregate(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -2463,7 +2463,7 @@ namespace tt::results {
         private: std::shared_ptr<std::shared_ptr<const Presence<std::vector<AtomicDecideValue>>>> cached_value_ = std::make_shared<std::shared_ptr<const Presence<std::vector<AtomicDecideValue>>>>();
         public: const Presence<std::vector<AtomicDecideValue>>& value() const;
     };
-    class SessionPacketDecideRow : public Node {
+    class SessionPacketDecideRow final : public Node {
         SessionPacketDecideRow(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -2475,7 +2475,7 @@ namespace tt::results {
         private: std::shared_ptr<std::shared_ptr<const Presence<AtomicDecideValue>>> cached_value_ = std::make_shared<std::shared_ptr<const Presence<AtomicDecideValue>>>();
         public: const Presence<AtomicDecideValue>& value() const;
     };
-    class SessionPacketFilterAggregate : public Node {
+    class SessionPacketFilterAggregate final : public Node {
         SessionPacketFilterAggregate(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -2487,7 +2487,7 @@ namespace tt::results {
         private: std::shared_ptr<std::shared_ptr<const Presence<std::vector<AtomicBoolean>>>> cached_value_ = std::make_shared<std::shared_ptr<const Presence<std::vector<AtomicBoolean>>>>();
         public: const Presence<std::vector<AtomicBoolean>>& value() const;
     };
-    class SessionPacketFilterRow : public Node {
+    class SessionPacketFilterRow final : public Node {
         SessionPacketFilterRow(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -2499,7 +2499,7 @@ namespace tt::results {
         private: std::shared_ptr<std::shared_ptr<const Presence<AtomicBoolean>>> cached_value_ = std::make_shared<std::shared_ptr<const Presence<AtomicBoolean>>>();
         public: const Presence<AtomicBoolean>& value() const;
     };
-    class SessionPacketFindAggregate : public Node {
+    class SessionPacketFindAggregate final : public Node {
         SessionPacketFindAggregate(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -2511,7 +2511,7 @@ namespace tt::results {
         private: std::shared_ptr<std::shared_ptr<const Presence<Find>>> cached_value_ = std::make_shared<std::shared_ptr<const Presence<Find>>>();
         public: const Presence<Find>& value() const;
     };
-    class SessionPacketObservation : public Node {
+    class SessionPacketObservation final : public Node {
         SessionPacketObservation(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -2523,7 +2523,7 @@ namespace tt::results {
         private: std::shared_ptr<std::shared_ptr<const Presence<SessionObservation>>> cached_value_ = std::make_shared<std::shared_ptr<const Presence<SessionObservation>>>();
         public: const Presence<SessionObservation>& value() const;
     };
-    class SessionPacketRankAggregate : public Node {
+    class SessionPacketRankAggregate final : public Node {
         SessionPacketRankAggregate(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -2535,7 +2535,7 @@ namespace tt::results {
         private: std::shared_ptr<std::shared_ptr<const Presence<std::vector<AtomicNonZeroUsize>>>> cached_value_ = std::make_shared<std::shared_ptr<const Presence<std::vector<AtomicNonZeroUsize>>>>();
         public: const Presence<std::vector<AtomicNonZeroUsize>>& value() const;
     };
-    class SessionPacketRecognizeAggregate : public Node {
+    class SessionPacketRecognizeAggregate final : public Node {
         SessionPacketRecognizeAggregate(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -2547,7 +2547,7 @@ namespace tt::results {
         private: std::shared_ptr<std::shared_ptr<const Presence<std::vector<Recognition>>>> cached_value_ = std::make_shared<std::shared_ptr<const Presence<std::vector<Recognition>>>>();
         public: const Presence<std::vector<Recognition>>& value() const;
     };
-    class SessionPacketRelateAggregate : public Node {
+    class SessionPacketRelateAggregate final : public Node {
         SessionPacketRelateAggregate(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -2559,7 +2559,7 @@ namespace tt::results {
         private: std::shared_ptr<std::shared_ptr<const Presence<Relation>>> cached_value_ = std::make_shared<std::shared_ptr<const Presence<Relation>>>();
         public: const Presence<Relation>& value() const;
     };
-    class SessionPacketScoreAggregate : public Node {
+    class SessionPacketScoreAggregate final : public Node {
         SessionPacketScoreAggregate(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -2571,7 +2571,7 @@ namespace tt::results {
         private: std::shared_ptr<std::shared_ptr<const Presence<std::vector<AtomicDouble>>>> cached_value_ = std::make_shared<std::shared_ptr<const Presence<std::vector<AtomicDouble>>>>();
         public: const Presence<std::vector<AtomicDouble>>& value() const;
     };
-    class SessionPacketScoreRow : public Node {
+    class SessionPacketScoreRow final : public Node {
         SessionPacketScoreRow(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -2583,7 +2583,7 @@ namespace tt::results {
         private: std::shared_ptr<std::shared_ptr<const Presence<AtomicDouble>>> cached_value_ = std::make_shared<std::shared_ptr<const Presence<AtomicDouble>>>();
         public: const Presence<AtomicDouble>& value() const;
     };
-    class SessionPacketTagAggregate : public Node {
+    class SessionPacketTagAggregate final : public Node {
         SessionPacketTagAggregate(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -2595,7 +2595,7 @@ namespace tt::results {
         private: std::shared_ptr<std::shared_ptr<const Presence<std::vector<AtomicArrayOfString>>>> cached_value_ = std::make_shared<std::shared_ptr<const Presence<std::vector<AtomicArrayOfString>>>>();
         public: const Presence<std::vector<AtomicArrayOfString>>& value() const;
     };
-    class SessionPacketTagRow : public Node {
+    class SessionPacketTagRow final : public Node {
         SessionPacketTagRow(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -2607,7 +2607,7 @@ namespace tt::results {
         private: std::shared_ptr<std::shared_ptr<const Presence<AtomicArrayOfString>>> cached_value_ = std::make_shared<std::shared_ptr<const Presence<AtomicArrayOfString>>>();
         public: const Presence<AtomicArrayOfString>& value() const;
     };
-    class SessionPacketTerminal : public Node {
+    class SessionPacketTerminal final : public Node {
         SessionPacketTerminal(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -2619,7 +2619,7 @@ namespace tt::results {
         private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_kind_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
         public: const Presence<std::string>& kind() const;
     };
-    class SessionProbabilities : public Node {
+    class SessionProbabilities final : public Node {
         SessionProbabilities(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -2627,7 +2627,7 @@ namespace tt::results {
         std::optional<SessionProbabilitiesYesNo> as_SessionProbabilitiesYesNo() const;
         std::optional<SessionProbabilitiesNamed> as_SessionProbabilitiesNamed() const;
     };
-    class SessionProbabilitiesNamed : public Node {
+    class SessionProbabilitiesNamed final : public Node {
         SessionProbabilitiesNamed(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -2637,7 +2637,7 @@ namespace tt::results {
         private: std::shared_ptr<std::shared_ptr<const Presence<std::vector<SessionNamedProbability>>>> cached_value_ = std::make_shared<std::shared_ptr<const Presence<std::vector<SessionNamedProbability>>>>();
         public: const Presence<std::vector<SessionNamedProbability>>& value() const;
     };
-    class SessionProbabilitiesYesNo : public Node {
+    class SessionProbabilitiesYesNo final : public Node {
         SessionProbabilitiesYesNo(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -2647,7 +2647,7 @@ namespace tt::results {
         private: std::shared_ptr<std::shared_ptr<const Presence<double>>> cached_value_ = std::make_shared<std::shared_ptr<const Presence<double>>>();
         public: const Presence<double>& value() const;
     };
-    class SessionQuestionDetail : public Node {
+    class SessionQuestionDetail final : public Node {
         SessionQuestionDetail(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -2701,7 +2701,7 @@ namespace tt::results {
         private: std::shared_ptr<std::shared_ptr<const Presence<Value>>> cached_value_ = std::make_shared<std::shared_ptr<const Presence<Value>>>();
         public: const Presence<Value>& value() const;
     };
-    class SessionRecognition : public Node {
+    class SessionRecognition final : public Node {
         SessionRecognition(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -2715,7 +2715,7 @@ namespace tt::results {
         private: std::shared_ptr<std::shared_ptr<const Presence<std::vector<RecognitionEdgeDocument>>>> cached_relations_ = std::make_shared<std::shared_ptr<const Presence<std::vector<RecognitionEdgeDocument>>>>();
         public: const Presence<std::vector<RecognitionEdgeDocument>>& relations() const;
     };
-    class SessionRelationEdge : public Node {
+    class SessionRelationEdge final : public Node {
         SessionRelationEdge(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -2733,7 +2733,7 @@ namespace tt::results {
         std::string source_name() const;
         std::string target_name() const;
     };
-    class SourceRelationEndpoint : public Node {
+    class SourceRelationEndpoint final : public Node {
         SourceRelationEndpoint(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -2753,7 +2753,7 @@ namespace tt::results {
         private: std::shared_ptr<std::shared_ptr<const Presence<Data>>> cached_record_ = std::make_shared<std::shared_ptr<const Presence<Data>>>();
         public: const Presence<Data>& record() const;
     };
-    class Threshold : public Node {
+    class Threshold final : public Node {
         Threshold(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -2762,7 +2762,7 @@ namespace tt::results {
         std::string>>>();
         public: const std::variant<double, std::string>& value() const;
     };
-    class TokenBand : public Node {
+    class TokenBand final : public Node {
         TokenBand(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -2772,7 +2772,7 @@ namespace tt::results {
         private: std::shared_ptr<std::shared_ptr<const Presence<uint64_t>>> cached_upper_ = std::make_shared<std::shared_ptr<const Presence<uint64_t>>>();
         public: const Presence<uint64_t>& upper() const;
     };
-    class TokenUsage : public Node {
+    class TokenUsage final : public Node {
         TokenUsage(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
@@ -2782,7 +2782,7 @@ namespace tt::results {
         private: std::shared_ptr<std::shared_ptr<const Presence<uint64_t>>> cached_output_tokens_ = std::make_shared<std::shared_ptr<const Presence<uint64_t>>>();
         public: const Presence<uint64_t>& output_tokens() const;
     };
-    class Value : public Node {
+    class Value final : public Node {
         Value(const Data& value, int):Node(value) {
         }
         friend struct detail::Loader;
