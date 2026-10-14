@@ -816,8 +816,9 @@ extraPublicExport <- function(context = NULL, enabled = FALSE,
             manifest['libraries']['php']['setting_containers'] = ['Settings']
             selected = root / 'manifest.json'
             selected.write_text(json.dumps(manifest))
-            calls = root / 'libraries/php/src/session/inputs_generated.php'
+            calls = root / 'libraries/php/src/session/results_generated.php'
             original = calls.read_text()
+            self.assertIn('trait NamedCalls\n{', original)
             def invoke(source):
                 calls.write_text(source)
                 result = subprocess.run(['python3', str(CHECK), '--root', str(root), '--manifest',
@@ -828,7 +829,7 @@ extraPublicExport <- function(context = NULL, enabled = FALSE,
             baseline = invoke(original)
             self.assertFalse(any(error.startswith('missing function:') for error in baseline), baseline)
             errors = invoke(original.replace('trait NamedCalls\n{', 'trait NamedCalls\n{ public function extraPublicExport() {}', 1))
-            self.assertIn('unlisted generated declaration: inputs_generated.php:NamedCalls.extraPublicExport', errors)
+            self.assertIn('unlisted generated declaration: results_generated.php:NamedCalls.extraPublicExport', errors)
             self.assertIn('unlisted public call/export: NamedCalls.extraPublicExport', errors)
             errors = invoke(original.replace('function decide(', 'function missingDecide(', 1))
             self.assertIn('missing function: decide', errors)
