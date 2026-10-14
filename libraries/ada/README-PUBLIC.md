@@ -6,9 +6,9 @@ Unpack the matching release archive: `tar -xzf thinkthen-ada-0.2.0-TARGET.tar.gz
 
 ```ada
 with Ada.Text_IO; with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
-with Thinkthen.Inputs; with Thinkthen.Inputs.Calls; with Thinkthen.Sessions; with Thinkthen.Answers;
+with Thinkthen.Inputs; with Thinkthen.Inputs.Calls; with Thinkthen.Answers; with Thinkthen.Values;
 procedure Registry_Example is
-   use Thinkthen.Inputs; use Thinkthen.Sessions; use Thinkthen.Answers; Owner : Session; Completed : Completion;
+   use Thinkthen.Inputs; use Thinkthen.Answers; use type Thinkthen.Values.Value_Kind;
    type Texts is array (Positive range <>) of Unbounded_String; Teams : constant description_Map := [
       (To_Unbounded_String ("billing"), description_From_String ("Invoices, fees, and refunds.")),
       (To_Unbounded_String ("shipping"), description_From_String ("Parcels and delivery.")),
@@ -21,16 +21,17 @@ procedure Registry_Example is
       To_Unbounded_String ("My parcel went to the wrong address."), To_Unbounded_String ("I cannot reset my password.")];
 begin
    for Text of Refunds loop
-      Thinkthen.Inputs.Calls.Decide (Owner, Text_Question ("Does the customer ask for a refund?"), Text_Input (To_String (Text))); Finish (Owner);
-      declare Refund : constant Decision := Decide_Answer (Owner, Completed); begin
-         Ada.Text_IO.Put_Line (if Refund.Known then Boolean'Image (Refund.Value) else "not sure");
-      end; Close (Owner);
+      declare Refund : constant Decide_Result := Thinkthen.Inputs.Calls.Decide
+        (Text_Question ("Does the customer ask for a refund?"), Text_Input (To_String (Text))); begin
+         Ada.Text_IO.Put_Line (if Thinkthen.Values.Kind (Refund.Value) = Thinkthen.Values.Null_Value then "not sure"
+           else Boolean'Image (Thinkthen.Values.As_Boolean (Refund.Value)));
+      end;
    end loop;
    for Text of Messages loop
-      Thinkthen.Inputs.Calls.Choose (Owner, Team_Question, Text_Input (To_String (Text))); Finish (Owner);
-      declare Team : constant Choice := Choose_Answer (Owner, Completed); begin
-         Ada.Text_IO.Put_Line (if Team.Known then To_String (Team.Value) else "not sure");
-      end; Close (Owner);
+      declare Team : constant Choose_Result := Thinkthen.Inputs.Calls.Choose
+        (Team_Question, Text_Input (To_String (Text))); begin
+         Ada.Text_IO.Put_Line (if Team.Value.Known then To_String (Team.Value.Value) else "not sure");
+      end;
    end loop; end Registry_Example;
 ```
 

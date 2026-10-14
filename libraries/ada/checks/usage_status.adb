@@ -9,6 +9,7 @@ with Thinkthen.Inputs;
 with Thinkthen.Inputs.Calls;
 with Thinkthen; use Thinkthen;
 with Thinkthen.Answers;
+with Thinkthen.Values;
 with Thinkthen.Persistence; use Thinkthen.Persistence;
 with Thinkthen.Sessions; use Thinkthen.Sessions;
 with Thinkthen.Sessions.Calls;
@@ -16,7 +17,7 @@ procedure Usage_Status is
    use type Thinkthen.Answers.Completion_Status;
    Mode : constant String := Ada.Command_Line.Argument (1);
    Completed : Thinkthen.Answers.Completion;
-   Answer : Thinkthen.Answers.Decision;
+   Answer : Thinkthen.Values.Value;
    Owner : Session;
    Saved : Thinkthen.Persistence.Observation;
    procedure Require (Condition : Boolean) is
@@ -40,8 +41,9 @@ begin
       Thinkthen.Sessions.Calls.Decide (Client, Owner, Thinkthen.Inputs.Text_Question ("Is it?"),
         Thinkthen.Inputs.Text_Input ("usage-ada-" & Mode));
       Thinkthen.Sessions.Finish (Owner);
-      Answer := Thinkthen.Answers.Decide_Answer (Owner, Completed);
-      Require (Answer.Known and then Answer.Value);
+      Completed := Thinkthen.Answers.Collect (Owner);
+      declare Call : constant Thinkthen.Answers.Decide_Result := Thinkthen.Answers.Decide (Completed); begin Answer := Call.Value; end;
+      Require (Thinkthen.Values.As_Boolean (Answer));
       Thinkthen.Sessions.Close (Owner);
       Require (Thinkthen.Answers.Status (Completed) = Thinkthen.Answers.Succeeded and then
         Thinkthen.Answers.Requests_Sent (Thinkthen.Answers.Call_Facts (Completed)) = 1);
@@ -72,7 +74,7 @@ begin
          end;
       end loop;
    end;
-   Require (Answer.Known and then Answer.Value);
+   Require (Thinkthen.Values.As_Boolean (Answer));
    Require (Thinkthen.Answers.Requests_Sent (Thinkthen.Answers.Call_Facts (Completed)) = 1);
    Require (To_String (Saved.Advice) =
      (if Mode = "written" then "" else "check the usage folder permissions and free space"));

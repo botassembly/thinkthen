@@ -8,25 +8,21 @@ with Thinkthen.Values;
 
 procedure Sample is
    package V renames Thinkthen.Values;
-   Owner : Session;
-   Completed : Completion;
+   use type V.Value;
    Evidence : constant String :=
      "Love the new dashboard, "
      & "but export crashes the app," & ASCII.LF
      & "and I was charged twice." & ASCII.LF;
 begin
-   Thinkthen.Inputs.Calls.Tag (Owner,
-     File_Question ("labels.json"),
-     Text_Input (Evidence));
-   Finish (Owner);
    declare
-      Fitting_Labels : constant
-        Thinkthen.Answers.Text_List :=
-        Tag_Answer (Owner, Completed);
+      Result : constant Tag_Result :=
+        Thinkthen.Inputs.Calls.Tag (
+     File_Question ("labels.json"),
+     Make_Input_text (Evidence));
+      Fitting_Labels : constant Thinkthen.Answers.Text_List := Result.Value;
    begin
       pragma Assert (Fitting_Labels =
         [To_Unbounded_String ("praise"),
-         To_Unbounded_String ("bug"),
-         To_Unbounded_String ("billing")]);
+         To_Unbounded_String ("bug"), To_Unbounded_String ("billing")]);
    end;
 end Sample;

@@ -4,6 +4,7 @@ with Interfaces.C.Strings;
 with Thinkthen.Session_C;
 with Thinkthen.Requests.Native;
 with System;
+with Thinkthen.Answers;
 with Thinkthen.Inputs.Native;
 with Thinkthen.Native_Sessions;
 with Thinkthen.Requests; use Thinkthen.Requests;
@@ -88,6 +89,1766 @@ end Relate;
 procedure Relate (Client : Engine; Owner : in out Thinkthen.Sessions.Session; Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input; Options : Call_Options := No_Options) is
 begin
 Thinkthen.Native_Sessions.Start (Client, Owner, (T_question => Native.Unwrap (Question), T_input => Native.Unwrap (Input), T_options => Native.Unwrap (Options), others => <>), "relate");
+end Relate;
+function Decide (Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input_text; Options : Call_Options := No_Options) return Thinkthen.Answers.Decide_Result is
+Owner : Thinkthen.Sessions.Session;
+begin
+Decide (Owner, Question, Input_From_text (Input), Options);
+Thinkthen.Sessions.Finish (Owner);
+declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin
+Thinkthen.Sessions.Close (Owner);
+return Thinkthen.Answers.Decide (Completed);
+end;
+exception when others => Thinkthen.Sessions.Close (Owner); raise;
+end Decide;
+function Decide (Client : Engine; Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input_text; Options : Call_Options := No_Options) return Thinkthen.Answers.Decide_Result is
+Owner : Thinkthen.Sessions.Session;
+begin
+Decide (Client, Owner, Question, Input_From_text (Input), Options);
+Thinkthen.Sessions.Finish (Owner);
+declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin
+Thinkthen.Sessions.Close (Owner);
+return Thinkthen.Answers.Decide (Completed);
+end;
+exception when others => Thinkthen.Sessions.Close (Owner); raise;
+end Decide;
+function Decide (Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input_json; Options : Call_Options := No_Options) return Thinkthen.Answers.Decide_Result is
+Owner : Thinkthen.Sessions.Session;
+begin
+Decide (Owner, Question, Input_From_json (Input), Options);
+Thinkthen.Sessions.Finish (Owner);
+declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin
+Thinkthen.Sessions.Close (Owner);
+return Thinkthen.Answers.Decide (Completed);
+end;
+exception when others => Thinkthen.Sessions.Close (Owner); raise;
+end Decide;
+function Decide (Client : Engine; Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input_json; Options : Call_Options := No_Options) return Thinkthen.Answers.Decide_Result is
+Owner : Thinkthen.Sessions.Session;
+begin
+Decide (Client, Owner, Question, Input_From_json (Input), Options);
+Thinkthen.Sessions.Finish (Owner);
+declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin
+Thinkthen.Sessions.Close (Owner);
+return Thinkthen.Answers.Decide (Completed);
+end;
+exception when others => Thinkthen.Sessions.Close (Owner); raise;
+end Decide;
+function Decide (Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input_records; Options : Call_Options := No_Options) return Thinkthen.Answers.Decide_List_Result is
+Owner : Thinkthen.Sessions.Session;
+begin
+Decide (Owner, Question, Input_From_records (Input), Options);
+Thinkthen.Sessions.Finish (Owner);
+declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin
+Thinkthen.Sessions.Close (Owner);
+return Thinkthen.Answers.Decide (Completed);
+end;
+exception when others => Thinkthen.Sessions.Close (Owner); raise;
+end Decide;
+function Decide (Client : Engine; Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input_records; Options : Call_Options := No_Options) return Thinkthen.Answers.Decide_List_Result is
+Owner : Thinkthen.Sessions.Session;
+begin
+Decide (Client, Owner, Question, Input_From_records (Input), Options);
+Thinkthen.Sessions.Finish (Owner);
+declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin
+Thinkthen.Sessions.Close (Owner);
+return Thinkthen.Answers.Decide (Completed);
+end;
+exception when others => Thinkthen.Sessions.Close (Owner); raise;
+end Decide;
+function Decide (Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input_units; Options : Call_Options := No_Options) return Thinkthen.Answers.Decide_List_Result is
+Owner : Thinkthen.Sessions.Session;
+begin
+Decide (Owner, Question, Input_From_units (Input), Options);
+Thinkthen.Sessions.Finish (Owner);
+declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin
+Thinkthen.Sessions.Close (Owner);
+return Thinkthen.Answers.Decide (Completed);
+end;
+exception when others => Thinkthen.Sessions.Close (Owner); raise;
+end Decide;
+function Decide (Client : Engine; Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input_units; Options : Call_Options := No_Options) return Thinkthen.Answers.Decide_List_Result is
+Owner : Thinkthen.Sessions.Session;
+begin
+Decide (Client, Owner, Question, Input_From_units (Input), Options);
+Thinkthen.Sessions.Finish (Owner);
+declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin
+Thinkthen.Sessions.Close (Owner);
+return Thinkthen.Answers.Decide (Completed);
+end;
+exception when others => Thinkthen.Sessions.Close (Owner); raise;
+end Decide;
+function Decide (Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input_entities; Options : Call_Options := No_Options) return Thinkthen.Answers.Decide_List_Result is
+Owner : Thinkthen.Sessions.Session;
+begin
+Decide (Owner, Question, Input_From_entities (Input), Options);
+Thinkthen.Sessions.Finish (Owner);
+declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin
+Thinkthen.Sessions.Close (Owner);
+return Thinkthen.Answers.Decide (Completed);
+end;
+exception when others => Thinkthen.Sessions.Close (Owner); raise;
+end Decide;
+function Decide (Client : Engine; Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input_entities; Options : Call_Options := No_Options) return Thinkthen.Answers.Decide_List_Result is
+Owner : Thinkthen.Sessions.Session;
+begin
+Decide (Client, Owner, Question, Input_From_entities (Input), Options);
+Thinkthen.Sessions.Finish (Owner);
+declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin
+Thinkthen.Sessions.Close (Owner);
+return Thinkthen.Answers.Decide (Completed);
+end;
+exception when others => Thinkthen.Sessions.Close (Owner); raise;
+end Decide;
+function Decide (Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input_source; Options : Call_Options := No_Options) return Thinkthen.Answers.Decide_List_Result is
+Owner : Thinkthen.Sessions.Session;
+begin
+Decide (Owner, Question, Input_From_source (Input), Options);
+Thinkthen.Sessions.Finish (Owner);
+declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin
+Thinkthen.Sessions.Close (Owner);
+return Thinkthen.Answers.Decide (Completed);
+end;
+exception when others => Thinkthen.Sessions.Close (Owner); raise;
+end Decide;
+function Decide (Client : Engine; Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input_source; Options : Call_Options := No_Options) return Thinkthen.Answers.Decide_List_Result is
+Owner : Thinkthen.Sessions.Session;
+begin
+Decide (Client, Owner, Question, Input_From_source (Input), Options);
+Thinkthen.Sessions.Finish (Owner);
+declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin
+Thinkthen.Sessions.Close (Owner);
+return Thinkthen.Answers.Decide (Completed);
+end;
+exception when others => Thinkthen.Sessions.Close (Owner); raise;
+end Decide;
+function Decide (Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input_feed; Options : Call_Options := No_Options) return Thinkthen.Answers.Decide_List_Result is
+Owner : Thinkthen.Sessions.Session;
+begin
+Decide (Owner, Question, Input_From_feed (Input), Options);
+Thinkthen.Sessions.Finish (Owner);
+declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin
+Thinkthen.Sessions.Close (Owner);
+return Thinkthen.Answers.Decide (Completed);
+end;
+exception when others => Thinkthen.Sessions.Close (Owner); raise;
+end Decide;
+function Decide (Client : Engine; Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input_feed; Options : Call_Options := No_Options) return Thinkthen.Answers.Decide_List_Result is
+Owner : Thinkthen.Sessions.Session;
+begin
+Decide (Client, Owner, Question, Input_From_feed (Input), Options);
+Thinkthen.Sessions.Finish (Owner);
+declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin
+Thinkthen.Sessions.Close (Owner);
+return Thinkthen.Answers.Decide (Completed);
+end;
+exception when others => Thinkthen.Sessions.Close (Owner); raise;
+end Decide;
+function Decide (Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input; Options : Call_Options := No_Options) return Thinkthen.Answers.Decide_List_Result is
+Owner : Thinkthen.Sessions.Session;
+begin
+Decide (Owner, Question, Input, Options);
+Thinkthen.Sessions.Finish (Owner);
+declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin
+Thinkthen.Sessions.Close (Owner);
+return Thinkthen.Answers.Decide (Completed);
+end;
+exception when others => Thinkthen.Sessions.Close (Owner); raise;
+end Decide;
+function Decide (Client : Engine; Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input; Options : Call_Options := No_Options) return Thinkthen.Answers.Decide_List_Result is
+Owner : Thinkthen.Sessions.Session;
+begin
+Decide (Client, Owner, Question, Input, Options);
+Thinkthen.Sessions.Finish (Owner);
+declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin
+Thinkthen.Sessions.Close (Owner);
+return Thinkthen.Answers.Decide (Completed);
+end;
+exception when others => Thinkthen.Sessions.Close (Owner); raise;
+end Decide;
+function Choose (Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input_text; Options : Call_Options := No_Options) return Thinkthen.Answers.Choose_Result is
+Owner : Thinkthen.Sessions.Session;
+begin
+Choose (Owner, Question, Input_From_text (Input), Options);
+Thinkthen.Sessions.Finish (Owner);
+declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin
+Thinkthen.Sessions.Close (Owner);
+return Thinkthen.Answers.Choose (Completed);
+end;
+exception when others => Thinkthen.Sessions.Close (Owner); raise;
+end Choose;
+function Choose (Client : Engine; Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input_text; Options : Call_Options := No_Options) return Thinkthen.Answers.Choose_Result is
+Owner : Thinkthen.Sessions.Session;
+begin
+Choose (Client, Owner, Question, Input_From_text (Input), Options);
+Thinkthen.Sessions.Finish (Owner);
+declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin
+Thinkthen.Sessions.Close (Owner);
+return Thinkthen.Answers.Choose (Completed);
+end;
+exception when others => Thinkthen.Sessions.Close (Owner); raise;
+end Choose;
+function Choose (Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input_json; Options : Call_Options := No_Options) return Thinkthen.Answers.Choose_Result is
+Owner : Thinkthen.Sessions.Session;
+begin
+Choose (Owner, Question, Input_From_json (Input), Options);
+Thinkthen.Sessions.Finish (Owner);
+declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin
+Thinkthen.Sessions.Close (Owner);
+return Thinkthen.Answers.Choose (Completed);
+end;
+exception when others => Thinkthen.Sessions.Close (Owner); raise;
+end Choose;
+function Choose (Client : Engine; Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input_json; Options : Call_Options := No_Options) return Thinkthen.Answers.Choose_Result is
+Owner : Thinkthen.Sessions.Session;
+begin
+Choose (Client, Owner, Question, Input_From_json (Input), Options);
+Thinkthen.Sessions.Finish (Owner);
+declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin
+Thinkthen.Sessions.Close (Owner);
+return Thinkthen.Answers.Choose (Completed);
+end;
+exception when others => Thinkthen.Sessions.Close (Owner); raise;
+end Choose;
+function Choose (Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input_records; Options : Call_Options := No_Options) return Thinkthen.Answers.Choose_List_Result is
+Owner : Thinkthen.Sessions.Session;
+begin
+Choose (Owner, Question, Input_From_records (Input), Options);
+Thinkthen.Sessions.Finish (Owner);
+declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin
+Thinkthen.Sessions.Close (Owner);
+return Thinkthen.Answers.Choose (Completed);
+end;
+exception when others => Thinkthen.Sessions.Close (Owner); raise;
+end Choose;
+function Choose (Client : Engine; Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input_records; Options : Call_Options := No_Options) return Thinkthen.Answers.Choose_List_Result is
+Owner : Thinkthen.Sessions.Session;
+begin
+Choose (Client, Owner, Question, Input_From_records (Input), Options);
+Thinkthen.Sessions.Finish (Owner);
+declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin
+Thinkthen.Sessions.Close (Owner);
+return Thinkthen.Answers.Choose (Completed);
+end;
+exception when others => Thinkthen.Sessions.Close (Owner); raise;
+end Choose;
+function Choose (Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input_units; Options : Call_Options := No_Options) return Thinkthen.Answers.Choose_List_Result is
+Owner : Thinkthen.Sessions.Session;
+begin
+Choose (Owner, Question, Input_From_units (Input), Options);
+Thinkthen.Sessions.Finish (Owner);
+declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin
+Thinkthen.Sessions.Close (Owner);
+return Thinkthen.Answers.Choose (Completed);
+end;
+exception when others => Thinkthen.Sessions.Close (Owner); raise;
+end Choose;
+function Choose (Client : Engine; Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input_units; Options : Call_Options := No_Options) return Thinkthen.Answers.Choose_List_Result is
+Owner : Thinkthen.Sessions.Session;
+begin
+Choose (Client, Owner, Question, Input_From_units (Input), Options);
+Thinkthen.Sessions.Finish (Owner);
+declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin
+Thinkthen.Sessions.Close (Owner);
+return Thinkthen.Answers.Choose (Completed);
+end;
+exception when others => Thinkthen.Sessions.Close (Owner); raise;
+end Choose;
+function Choose (Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input_entities; Options : Call_Options := No_Options) return Thinkthen.Answers.Choose_List_Result is
+Owner : Thinkthen.Sessions.Session;
+begin
+Choose (Owner, Question, Input_From_entities (Input), Options);
+Thinkthen.Sessions.Finish (Owner);
+declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin
+Thinkthen.Sessions.Close (Owner);
+return Thinkthen.Answers.Choose (Completed);
+end;
+exception when others => Thinkthen.Sessions.Close (Owner); raise;
+end Choose;
+function Choose (Client : Engine; Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input_entities; Options : Call_Options := No_Options) return Thinkthen.Answers.Choose_List_Result is
+Owner : Thinkthen.Sessions.Session;
+begin
+Choose (Client, Owner, Question, Input_From_entities (Input), Options);
+Thinkthen.Sessions.Finish (Owner);
+declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin
+Thinkthen.Sessions.Close (Owner);
+return Thinkthen.Answers.Choose (Completed);
+end;
+exception when others => Thinkthen.Sessions.Close (Owner); raise;
+end Choose;
+function Choose (Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input_source; Options : Call_Options := No_Options) return Thinkthen.Answers.Choose_List_Result is
+Owner : Thinkthen.Sessions.Session;
+begin
+Choose (Owner, Question, Input_From_source (Input), Options);
+Thinkthen.Sessions.Finish (Owner);
+declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin
+Thinkthen.Sessions.Close (Owner);
+return Thinkthen.Answers.Choose (Completed);
+end;
+exception when others => Thinkthen.Sessions.Close (Owner); raise;
+end Choose;
+function Choose (Client : Engine; Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input_source; Options : Call_Options := No_Options) return Thinkthen.Answers.Choose_List_Result is
+Owner : Thinkthen.Sessions.Session;
+begin
+Choose (Client, Owner, Question, Input_From_source (Input), Options);
+Thinkthen.Sessions.Finish (Owner);
+declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin
+Thinkthen.Sessions.Close (Owner);
+return Thinkthen.Answers.Choose (Completed);
+end;
+exception when others => Thinkthen.Sessions.Close (Owner); raise;
+end Choose;
+function Choose (Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input_feed; Options : Call_Options := No_Options) return Thinkthen.Answers.Choose_List_Result is
+Owner : Thinkthen.Sessions.Session;
+begin
+Choose (Owner, Question, Input_From_feed (Input), Options);
+Thinkthen.Sessions.Finish (Owner);
+declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin
+Thinkthen.Sessions.Close (Owner);
+return Thinkthen.Answers.Choose (Completed);
+end;
+exception when others => Thinkthen.Sessions.Close (Owner); raise;
+end Choose;
+function Choose (Client : Engine; Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input_feed; Options : Call_Options := No_Options) return Thinkthen.Answers.Choose_List_Result is
+Owner : Thinkthen.Sessions.Session;
+begin
+Choose (Client, Owner, Question, Input_From_feed (Input), Options);
+Thinkthen.Sessions.Finish (Owner);
+declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin
+Thinkthen.Sessions.Close (Owner);
+return Thinkthen.Answers.Choose (Completed);
+end;
+exception when others => Thinkthen.Sessions.Close (Owner); raise;
+end Choose;
+function Choose (Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input; Options : Call_Options := No_Options) return Thinkthen.Answers.Choose_List_Result is
+Owner : Thinkthen.Sessions.Session;
+begin
+Choose (Owner, Question, Input, Options);
+Thinkthen.Sessions.Finish (Owner);
+declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin
+Thinkthen.Sessions.Close (Owner);
+return Thinkthen.Answers.Choose (Completed);
+end;
+exception when others => Thinkthen.Sessions.Close (Owner); raise;
+end Choose;
+function Choose (Client : Engine; Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input; Options : Call_Options := No_Options) return Thinkthen.Answers.Choose_List_Result is
+Owner : Thinkthen.Sessions.Session;
+begin
+Choose (Client, Owner, Question, Input, Options);
+Thinkthen.Sessions.Finish (Owner);
+declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin
+Thinkthen.Sessions.Close (Owner);
+return Thinkthen.Answers.Choose (Completed);
+end;
+exception when others => Thinkthen.Sessions.Close (Owner); raise;
+end Choose;
+function Tag (Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input_text; Options : Call_Options := No_Options) return Thinkthen.Answers.Tag_Result is
+Owner : Thinkthen.Sessions.Session;
+begin
+Tag (Owner, Question, Input_From_text (Input), Options);
+Thinkthen.Sessions.Finish (Owner);
+declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin
+Thinkthen.Sessions.Close (Owner);
+return Thinkthen.Answers.Tag (Completed);
+end;
+exception when others => Thinkthen.Sessions.Close (Owner); raise;
+end Tag;
+function Tag (Client : Engine; Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input_text; Options : Call_Options := No_Options) return Thinkthen.Answers.Tag_Result is
+Owner : Thinkthen.Sessions.Session;
+begin
+Tag (Client, Owner, Question, Input_From_text (Input), Options);
+Thinkthen.Sessions.Finish (Owner);
+declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin
+Thinkthen.Sessions.Close (Owner);
+return Thinkthen.Answers.Tag (Completed);
+end;
+exception when others => Thinkthen.Sessions.Close (Owner); raise;
+end Tag;
+function Tag (Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input_json; Options : Call_Options := No_Options) return Thinkthen.Answers.Tag_Result is
+Owner : Thinkthen.Sessions.Session;
+begin
+Tag (Owner, Question, Input_From_json (Input), Options);
+Thinkthen.Sessions.Finish (Owner);
+declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin
+Thinkthen.Sessions.Close (Owner);
+return Thinkthen.Answers.Tag (Completed);
+end;
+exception when others => Thinkthen.Sessions.Close (Owner); raise;
+end Tag;
+function Tag (Client : Engine; Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input_json; Options : Call_Options := No_Options) return Thinkthen.Answers.Tag_Result is
+Owner : Thinkthen.Sessions.Session;
+begin
+Tag (Client, Owner, Question, Input_From_json (Input), Options);
+Thinkthen.Sessions.Finish (Owner);
+declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin
+Thinkthen.Sessions.Close (Owner);
+return Thinkthen.Answers.Tag (Completed);
+end;
+exception when others => Thinkthen.Sessions.Close (Owner); raise;
+end Tag;
+function Tag (Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input_records; Options : Call_Options := No_Options) return Thinkthen.Answers.Tag_List_Result is
+Owner : Thinkthen.Sessions.Session;
+begin
+Tag (Owner, Question, Input_From_records (Input), Options);
+Thinkthen.Sessions.Finish (Owner);
+declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin
+Thinkthen.Sessions.Close (Owner);
+return Thinkthen.Answers.Tag (Completed);
+end;
+exception when others => Thinkthen.Sessions.Close (Owner); raise;
+end Tag;
+function Tag (Client : Engine; Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input_records; Options : Call_Options := No_Options) return Thinkthen.Answers.Tag_List_Result is
+Owner : Thinkthen.Sessions.Session;
+begin
+Tag (Client, Owner, Question, Input_From_records (Input), Options);
+Thinkthen.Sessions.Finish (Owner);
+declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin
+Thinkthen.Sessions.Close (Owner);
+return Thinkthen.Answers.Tag (Completed);
+end;
+exception when others => Thinkthen.Sessions.Close (Owner); raise;
+end Tag;
+function Tag (Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input_units; Options : Call_Options := No_Options) return Thinkthen.Answers.Tag_List_Result is
+Owner : Thinkthen.Sessions.Session;
+begin
+Tag (Owner, Question, Input_From_units (Input), Options);
+Thinkthen.Sessions.Finish (Owner);
+declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin
+Thinkthen.Sessions.Close (Owner);
+return Thinkthen.Answers.Tag (Completed);
+end;
+exception when others => Thinkthen.Sessions.Close (Owner); raise;
+end Tag;
+function Tag (Client : Engine; Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input_units; Options : Call_Options := No_Options) return Thinkthen.Answers.Tag_List_Result is
+Owner : Thinkthen.Sessions.Session;
+begin
+Tag (Client, Owner, Question, Input_From_units (Input), Options);
+Thinkthen.Sessions.Finish (Owner);
+declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin
+Thinkthen.Sessions.Close (Owner);
+return Thinkthen.Answers.Tag (Completed);
+end;
+exception when others => Thinkthen.Sessions.Close (Owner); raise;
+end Tag;
+function Tag (Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input_entities; Options : Call_Options := No_Options) return Thinkthen.Answers.Tag_List_Result is
+Owner : Thinkthen.Sessions.Session;
+begin
+Tag (Owner, Question, Input_From_entities (Input), Options);
+Thinkthen.Sessions.Finish (Owner);
+declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin
+Thinkthen.Sessions.Close (Owner);
+return Thinkthen.Answers.Tag (Completed);
+end;
+exception when others => Thinkthen.Sessions.Close (Owner); raise;
+end Tag;
+function Tag (Client : Engine; Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input_entities; Options : Call_Options := No_Options) return Thinkthen.Answers.Tag_List_Result is
+Owner : Thinkthen.Sessions.Session;
+begin
+Tag (Client, Owner, Question, Input_From_entities (Input), Options);
+Thinkthen.Sessions.Finish (Owner);
+declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin
+Thinkthen.Sessions.Close (Owner);
+return Thinkthen.Answers.Tag (Completed);
+end;
+exception when others => Thinkthen.Sessions.Close (Owner); raise;
+end Tag;
+function Tag (Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input_source; Options : Call_Options := No_Options) return Thinkthen.Answers.Tag_List_Result is
+Owner : Thinkthen.Sessions.Session;
+begin
+Tag (Owner, Question, Input_From_source (Input), Options);
+Thinkthen.Sessions.Finish (Owner);
+declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin
+Thinkthen.Sessions.Close (Owner);
+return Thinkthen.Answers.Tag (Completed);
+end;
+exception when others => Thinkthen.Sessions.Close (Owner); raise;
+end Tag;
+function Tag (Client : Engine; Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input_source; Options : Call_Options := No_Options) return Thinkthen.Answers.Tag_List_Result is
+Owner : Thinkthen.Sessions.Session;
+begin
+Tag (Client, Owner, Question, Input_From_source (Input), Options);
+Thinkthen.Sessions.Finish (Owner);
+declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin
+Thinkthen.Sessions.Close (Owner);
+return Thinkthen.Answers.Tag (Completed);
+end;
+exception when others => Thinkthen.Sessions.Close (Owner); raise;
+end Tag;
+function Tag (Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input_feed; Options : Call_Options := No_Options) return Thinkthen.Answers.Tag_List_Result is
+Owner : Thinkthen.Sessions.Session;
+begin
+Tag (Owner, Question, Input_From_feed (Input), Options);
+Thinkthen.Sessions.Finish (Owner);
+declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin
+Thinkthen.Sessions.Close (Owner);
+return Thinkthen.Answers.Tag (Completed);
+end;
+exception when others => Thinkthen.Sessions.Close (Owner); raise;
+end Tag;
+function Tag (Client : Engine; Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input_feed; Options : Call_Options := No_Options) return Thinkthen.Answers.Tag_List_Result is
+Owner : Thinkthen.Sessions.Session;
+begin
+Tag (Client, Owner, Question, Input_From_feed (Input), Options);
+Thinkthen.Sessions.Finish (Owner);
+declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin
+Thinkthen.Sessions.Close (Owner);
+return Thinkthen.Answers.Tag (Completed);
+end;
+exception when others => Thinkthen.Sessions.Close (Owner); raise;
+end Tag;
+function Tag (Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input; Options : Call_Options := No_Options) return Thinkthen.Answers.Tag_List_Result is
+Owner : Thinkthen.Sessions.Session;
+begin
+Tag (Owner, Question, Input, Options);
+Thinkthen.Sessions.Finish (Owner);
+declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin
+Thinkthen.Sessions.Close (Owner);
+return Thinkthen.Answers.Tag (Completed);
+end;
+exception when others => Thinkthen.Sessions.Close (Owner); raise;
+end Tag;
+function Tag (Client : Engine; Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input; Options : Call_Options := No_Options) return Thinkthen.Answers.Tag_List_Result is
+Owner : Thinkthen.Sessions.Session;
+begin
+Tag (Client, Owner, Question, Input, Options);
+Thinkthen.Sessions.Finish (Owner);
+declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin
+Thinkthen.Sessions.Close (Owner);
+return Thinkthen.Answers.Tag (Completed);
+end;
+exception when others => Thinkthen.Sessions.Close (Owner); raise;
+end Tag;
+function Score (Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input_text; Options : Call_Options := No_Options) return Thinkthen.Answers.Score_Result is
+Owner : Thinkthen.Sessions.Session;
+begin
+Score (Owner, Question, Input_From_text (Input), Options);
+Thinkthen.Sessions.Finish (Owner);
+declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin
+Thinkthen.Sessions.Close (Owner);
+return Thinkthen.Answers.Score (Completed);
+end;
+exception when others => Thinkthen.Sessions.Close (Owner); raise;
+end Score;
+function Score (Client : Engine; Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input_text; Options : Call_Options := No_Options) return Thinkthen.Answers.Score_Result is
+Owner : Thinkthen.Sessions.Session;
+begin
+Score (Client, Owner, Question, Input_From_text (Input), Options);
+Thinkthen.Sessions.Finish (Owner);
+declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin
+Thinkthen.Sessions.Close (Owner);
+return Thinkthen.Answers.Score (Completed);
+end;
+exception when others => Thinkthen.Sessions.Close (Owner); raise;
+end Score;
+function Score (Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input_json; Options : Call_Options := No_Options) return Thinkthen.Answers.Score_Result is
+Owner : Thinkthen.Sessions.Session;
+begin
+Score (Owner, Question, Input_From_json (Input), Options);
+Thinkthen.Sessions.Finish (Owner);
+declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin
+Thinkthen.Sessions.Close (Owner);
+return Thinkthen.Answers.Score (Completed);
+end;
+exception when others => Thinkthen.Sessions.Close (Owner); raise;
+end Score;
+function Score (Client : Engine; Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input_json; Options : Call_Options := No_Options) return Thinkthen.Answers.Score_Result is
+Owner : Thinkthen.Sessions.Session;
+begin
+Score (Client, Owner, Question, Input_From_json (Input), Options);
+Thinkthen.Sessions.Finish (Owner);
+declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin
+Thinkthen.Sessions.Close (Owner);
+return Thinkthen.Answers.Score (Completed);
+end;
+exception when others => Thinkthen.Sessions.Close (Owner); raise;
+end Score;
+function Score (Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input_records; Options : Call_Options := No_Options) return Thinkthen.Answers.Score_List_Result is
+Owner : Thinkthen.Sessions.Session;
+begin
+Score (Owner, Question, Input_From_records (Input), Options);
+Thinkthen.Sessions.Finish (Owner);
+declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin
+Thinkthen.Sessions.Close (Owner);
+return Thinkthen.Answers.Score (Completed);
+end;
+exception when others => Thinkthen.Sessions.Close (Owner); raise;
+end Score;
+function Score (Client : Engine; Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input_records; Options : Call_Options := No_Options) return Thinkthen.Answers.Score_List_Result is
+Owner : Thinkthen.Sessions.Session;
+begin
+Score (Client, Owner, Question, Input_From_records (Input), Options);
+Thinkthen.Sessions.Finish (Owner);
+declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin
+Thinkthen.Sessions.Close (Owner);
+return Thinkthen.Answers.Score (Completed);
+end;
+exception when others => Thinkthen.Sessions.Close (Owner); raise;
+end Score;
+function Score (Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input_units; Options : Call_Options := No_Options) return Thinkthen.Answers.Score_List_Result is
+Owner : Thinkthen.Sessions.Session;
+begin
+Score (Owner, Question, Input_From_units (Input), Options);
+Thinkthen.Sessions.Finish (Owner);
+declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin
+Thinkthen.Sessions.Close (Owner);
+return Thinkthen.Answers.Score (Completed);
+end;
+exception when others => Thinkthen.Sessions.Close (Owner); raise;
+end Score;
+function Score (Client : Engine; Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input_units; Options : Call_Options := No_Options) return Thinkthen.Answers.Score_List_Result is
+Owner : Thinkthen.Sessions.Session;
+begin
+Score (Client, Owner, Question, Input_From_units (Input), Options);
+Thinkthen.Sessions.Finish (Owner);
+declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin
+Thinkthen.Sessions.Close (Owner);
+return Thinkthen.Answers.Score (Completed);
+end;
+exception when others => Thinkthen.Sessions.Close (Owner); raise;
+end Score;
+function Score (Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input_entities; Options : Call_Options := No_Options) return Thinkthen.Answers.Score_List_Result is
+Owner : Thinkthen.Sessions.Session;
+begin
+Score (Owner, Question, Input_From_entities (Input), Options);
+Thinkthen.Sessions.Finish (Owner);
+declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin
+Thinkthen.Sessions.Close (Owner);
+return Thinkthen.Answers.Score (Completed);
+end;
+exception when others => Thinkthen.Sessions.Close (Owner); raise;
+end Score;
+function Score (Client : Engine; Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input_entities; Options : Call_Options := No_Options) return Thinkthen.Answers.Score_List_Result is
+Owner : Thinkthen.Sessions.Session;
+begin
+Score (Client, Owner, Question, Input_From_entities (Input), Options);
+Thinkthen.Sessions.Finish (Owner);
+declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin
+Thinkthen.Sessions.Close (Owner);
+return Thinkthen.Answers.Score (Completed);
+end;
+exception when others => Thinkthen.Sessions.Close (Owner); raise;
+end Score;
+function Score (Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input_source; Options : Call_Options := No_Options) return Thinkthen.Answers.Score_List_Result is
+Owner : Thinkthen.Sessions.Session;
+begin
+Score (Owner, Question, Input_From_source (Input), Options);
+Thinkthen.Sessions.Finish (Owner);
+declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin
+Thinkthen.Sessions.Close (Owner);
+return Thinkthen.Answers.Score (Completed);
+end;
+exception when others => Thinkthen.Sessions.Close (Owner); raise;
+end Score;
+function Score (Client : Engine; Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input_source; Options : Call_Options := No_Options) return Thinkthen.Answers.Score_List_Result is
+Owner : Thinkthen.Sessions.Session;
+begin
+Score (Client, Owner, Question, Input_From_source (Input), Options);
+Thinkthen.Sessions.Finish (Owner);
+declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin
+Thinkthen.Sessions.Close (Owner);
+return Thinkthen.Answers.Score (Completed);
+end;
+exception when others => Thinkthen.Sessions.Close (Owner); raise;
+end Score;
+function Score (Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input_feed; Options : Call_Options := No_Options) return Thinkthen.Answers.Score_List_Result is
+Owner : Thinkthen.Sessions.Session;
+begin
+Score (Owner, Question, Input_From_feed (Input), Options);
+Thinkthen.Sessions.Finish (Owner);
+declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin
+Thinkthen.Sessions.Close (Owner);
+return Thinkthen.Answers.Score (Completed);
+end;
+exception when others => Thinkthen.Sessions.Close (Owner); raise;
+end Score;
+function Score (Client : Engine; Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input_feed; Options : Call_Options := No_Options) return Thinkthen.Answers.Score_List_Result is
+Owner : Thinkthen.Sessions.Session;
+begin
+Score (Client, Owner, Question, Input_From_feed (Input), Options);
+Thinkthen.Sessions.Finish (Owner);
+declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin
+Thinkthen.Sessions.Close (Owner);
+return Thinkthen.Answers.Score (Completed);
+end;
+exception when others => Thinkthen.Sessions.Close (Owner); raise;
+end Score;
+function Score (Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input; Options : Call_Options := No_Options) return Thinkthen.Answers.Score_List_Result is
+Owner : Thinkthen.Sessions.Session;
+begin
+Score (Owner, Question, Input, Options);
+Thinkthen.Sessions.Finish (Owner);
+declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin
+Thinkthen.Sessions.Close (Owner);
+return Thinkthen.Answers.Score (Completed);
+end;
+exception when others => Thinkthen.Sessions.Close (Owner); raise;
+end Score;
+function Score (Client : Engine; Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input; Options : Call_Options := No_Options) return Thinkthen.Answers.Score_List_Result is
+Owner : Thinkthen.Sessions.Session;
+begin
+Score (Client, Owner, Question, Input, Options);
+Thinkthen.Sessions.Finish (Owner);
+declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin
+Thinkthen.Sessions.Close (Owner);
+return Thinkthen.Answers.Score (Completed);
+end;
+exception when others => Thinkthen.Sessions.Close (Owner); raise;
+end Score;
+function Filter (Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input_text; Options : Call_Options := No_Options) return Thinkthen.Answers.Filter_Result is
+Owner : Thinkthen.Sessions.Session;
+begin
+Filter (Owner, Question, Input_From_text (Input), Options);
+Thinkthen.Sessions.Finish (Owner);
+declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin
+Thinkthen.Sessions.Close (Owner);
+return Thinkthen.Answers.Filter (Completed);
+end;
+exception when others => Thinkthen.Sessions.Close (Owner); raise;
+end Filter;
+function Filter (Client : Engine; Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input_text; Options : Call_Options := No_Options) return Thinkthen.Answers.Filter_Result is
+Owner : Thinkthen.Sessions.Session;
+begin
+Filter (Client, Owner, Question, Input_From_text (Input), Options);
+Thinkthen.Sessions.Finish (Owner);
+declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin
+Thinkthen.Sessions.Close (Owner);
+return Thinkthen.Answers.Filter (Completed);
+end;
+exception when others => Thinkthen.Sessions.Close (Owner); raise;
+end Filter;
+function Filter (Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input_json; Options : Call_Options := No_Options) return Thinkthen.Answers.Filter_Result is
+Owner : Thinkthen.Sessions.Session;
+begin
+Filter (Owner, Question, Input_From_json (Input), Options);
+Thinkthen.Sessions.Finish (Owner);
+declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin
+Thinkthen.Sessions.Close (Owner);
+return Thinkthen.Answers.Filter (Completed);
+end;
+exception when others => Thinkthen.Sessions.Close (Owner); raise;
+end Filter;
+function Filter (Client : Engine; Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input_json; Options : Call_Options := No_Options) return Thinkthen.Answers.Filter_Result is
+Owner : Thinkthen.Sessions.Session;
+begin
+Filter (Client, Owner, Question, Input_From_json (Input), Options);
+Thinkthen.Sessions.Finish (Owner);
+declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin
+Thinkthen.Sessions.Close (Owner);
+return Thinkthen.Answers.Filter (Completed);
+end;
+exception when others => Thinkthen.Sessions.Close (Owner); raise;
+end Filter;
+function Filter (Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input_records; Options : Call_Options := No_Options) return Thinkthen.Answers.Filter_Result is
+Owner : Thinkthen.Sessions.Session;
+begin
+Filter (Owner, Question, Input_From_records (Input), Options);
+Thinkthen.Sessions.Finish (Owner);
+declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin
+Thinkthen.Sessions.Close (Owner);
+return Thinkthen.Answers.Filter (Completed);
+end;
+exception when others => Thinkthen.Sessions.Close (Owner); raise;
+end Filter;
+function Filter (Client : Engine; Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input_records; Options : Call_Options := No_Options) return Thinkthen.Answers.Filter_Result is
+Owner : Thinkthen.Sessions.Session;
+begin
+Filter (Client, Owner, Question, Input_From_records (Input), Options);
+Thinkthen.Sessions.Finish (Owner);
+declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin
+Thinkthen.Sessions.Close (Owner);
+return Thinkthen.Answers.Filter (Completed);
+end;
+exception when others => Thinkthen.Sessions.Close (Owner); raise;
+end Filter;
+function Filter (Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input_units; Options : Call_Options := No_Options) return Thinkthen.Answers.Filter_Result is
+Owner : Thinkthen.Sessions.Session;
+begin
+Filter (Owner, Question, Input_From_units (Input), Options);
+Thinkthen.Sessions.Finish (Owner);
+declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin
+Thinkthen.Sessions.Close (Owner);
+return Thinkthen.Answers.Filter (Completed);
+end;
+exception when others => Thinkthen.Sessions.Close (Owner); raise;
+end Filter;
+function Filter (Client : Engine; Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input_units; Options : Call_Options := No_Options) return Thinkthen.Answers.Filter_Result is
+Owner : Thinkthen.Sessions.Session;
+begin
+Filter (Client, Owner, Question, Input_From_units (Input), Options);
+Thinkthen.Sessions.Finish (Owner);
+declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin
+Thinkthen.Sessions.Close (Owner);
+return Thinkthen.Answers.Filter (Completed);
+end;
+exception when others => Thinkthen.Sessions.Close (Owner); raise;
+end Filter;
+function Filter (Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input_entities; Options : Call_Options := No_Options) return Thinkthen.Answers.Filter_Result is
+Owner : Thinkthen.Sessions.Session;
+begin
+Filter (Owner, Question, Input_From_entities (Input), Options);
+Thinkthen.Sessions.Finish (Owner);
+declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin
+Thinkthen.Sessions.Close (Owner);
+return Thinkthen.Answers.Filter (Completed);
+end;
+exception when others => Thinkthen.Sessions.Close (Owner); raise;
+end Filter;
+function Filter (Client : Engine; Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input_entities; Options : Call_Options := No_Options) return Thinkthen.Answers.Filter_Result is
+Owner : Thinkthen.Sessions.Session;
+begin
+Filter (Client, Owner, Question, Input_From_entities (Input), Options);
+Thinkthen.Sessions.Finish (Owner);
+declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin
+Thinkthen.Sessions.Close (Owner);
+return Thinkthen.Answers.Filter (Completed);
+end;
+exception when others => Thinkthen.Sessions.Close (Owner); raise;
+end Filter;
+function Filter (Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input_source; Options : Call_Options := No_Options) return Thinkthen.Answers.Filter_Result is
+Owner : Thinkthen.Sessions.Session;
+begin
+Filter (Owner, Question, Input_From_source (Input), Options);
+Thinkthen.Sessions.Finish (Owner);
+declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin
+Thinkthen.Sessions.Close (Owner);
+return Thinkthen.Answers.Filter (Completed);
+end;
+exception when others => Thinkthen.Sessions.Close (Owner); raise;
+end Filter;
+function Filter (Client : Engine; Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input_source; Options : Call_Options := No_Options) return Thinkthen.Answers.Filter_Result is
+Owner : Thinkthen.Sessions.Session;
+begin
+Filter (Client, Owner, Question, Input_From_source (Input), Options);
+Thinkthen.Sessions.Finish (Owner);
+declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin
+Thinkthen.Sessions.Close (Owner);
+return Thinkthen.Answers.Filter (Completed);
+end;
+exception when others => Thinkthen.Sessions.Close (Owner); raise;
+end Filter;
+function Filter (Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input_feed; Options : Call_Options := No_Options) return Thinkthen.Answers.Filter_Result is
+Owner : Thinkthen.Sessions.Session;
+begin
+Filter (Owner, Question, Input_From_feed (Input), Options);
+Thinkthen.Sessions.Finish (Owner);
+declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin
+Thinkthen.Sessions.Close (Owner);
+return Thinkthen.Answers.Filter (Completed);
+end;
+exception when others => Thinkthen.Sessions.Close (Owner); raise;
+end Filter;
+function Filter (Client : Engine; Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input_feed; Options : Call_Options := No_Options) return Thinkthen.Answers.Filter_Result is
+Owner : Thinkthen.Sessions.Session;
+begin
+Filter (Client, Owner, Question, Input_From_feed (Input), Options);
+Thinkthen.Sessions.Finish (Owner);
+declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin
+Thinkthen.Sessions.Close (Owner);
+return Thinkthen.Answers.Filter (Completed);
+end;
+exception when others => Thinkthen.Sessions.Close (Owner); raise;
+end Filter;
+function Filter (Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input; Options : Call_Options := No_Options) return Thinkthen.Answers.Filter_Result is
+Owner : Thinkthen.Sessions.Session;
+begin
+Filter (Owner, Question, Input, Options);
+Thinkthen.Sessions.Finish (Owner);
+declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin
+Thinkthen.Sessions.Close (Owner);
+return Thinkthen.Answers.Filter (Completed);
+end;
+exception when others => Thinkthen.Sessions.Close (Owner); raise;
+end Filter;
+function Filter (Client : Engine; Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input; Options : Call_Options := No_Options) return Thinkthen.Answers.Filter_Result is
+Owner : Thinkthen.Sessions.Session;
+begin
+Filter (Client, Owner, Question, Input, Options);
+Thinkthen.Sessions.Finish (Owner);
+declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin
+Thinkthen.Sessions.Close (Owner);
+return Thinkthen.Answers.Filter (Completed);
+end;
+exception when others => Thinkthen.Sessions.Close (Owner); raise;
+end Filter;
+function Rank (Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input_text; Options : Call_Options := No_Options) return Thinkthen.Answers.Rank_Result is
+Owner : Thinkthen.Sessions.Session;
+begin
+Rank (Owner, Question, Input_From_text (Input), Options);
+Thinkthen.Sessions.Finish (Owner);
+declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin
+Thinkthen.Sessions.Close (Owner);
+return Thinkthen.Answers.Rank (Completed);
+end;
+exception when others => Thinkthen.Sessions.Close (Owner); raise;
+end Rank;
+function Rank (Client : Engine; Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input_text; Options : Call_Options := No_Options) return Thinkthen.Answers.Rank_Result is
+Owner : Thinkthen.Sessions.Session;
+begin
+Rank (Client, Owner, Question, Input_From_text (Input), Options);
+Thinkthen.Sessions.Finish (Owner);
+declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin
+Thinkthen.Sessions.Close (Owner);
+return Thinkthen.Answers.Rank (Completed);
+end;
+exception when others => Thinkthen.Sessions.Close (Owner); raise;
+end Rank;
+function Rank (Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input_json; Options : Call_Options := No_Options) return Thinkthen.Answers.Rank_Result is
+Owner : Thinkthen.Sessions.Session;
+begin
+Rank (Owner, Question, Input_From_json (Input), Options);
+Thinkthen.Sessions.Finish (Owner);
+declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin
+Thinkthen.Sessions.Close (Owner);
+return Thinkthen.Answers.Rank (Completed);
+end;
+exception when others => Thinkthen.Sessions.Close (Owner); raise;
+end Rank;
+function Rank (Client : Engine; Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input_json; Options : Call_Options := No_Options) return Thinkthen.Answers.Rank_Result is
+Owner : Thinkthen.Sessions.Session;
+begin
+Rank (Client, Owner, Question, Input_From_json (Input), Options);
+Thinkthen.Sessions.Finish (Owner);
+declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin
+Thinkthen.Sessions.Close (Owner);
+return Thinkthen.Answers.Rank (Completed);
+end;
+exception when others => Thinkthen.Sessions.Close (Owner); raise;
+end Rank;
+function Rank (Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input_records; Options : Call_Options := No_Options) return Thinkthen.Answers.Rank_Result is
+Owner : Thinkthen.Sessions.Session;
+begin
+Rank (Owner, Question, Input_From_records (Input), Options);
+Thinkthen.Sessions.Finish (Owner);
+declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin
+Thinkthen.Sessions.Close (Owner);
+return Thinkthen.Answers.Rank (Completed);
+end;
+exception when others => Thinkthen.Sessions.Close (Owner); raise;
+end Rank;
+function Rank (Client : Engine; Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input_records; Options : Call_Options := No_Options) return Thinkthen.Answers.Rank_Result is
+Owner : Thinkthen.Sessions.Session;
+begin
+Rank (Client, Owner, Question, Input_From_records (Input), Options);
+Thinkthen.Sessions.Finish (Owner);
+declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin
+Thinkthen.Sessions.Close (Owner);
+return Thinkthen.Answers.Rank (Completed);
+end;
+exception when others => Thinkthen.Sessions.Close (Owner); raise;
+end Rank;
+function Rank (Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input_units; Options : Call_Options := No_Options) return Thinkthen.Answers.Rank_Result is
+Owner : Thinkthen.Sessions.Session;
+begin
+Rank (Owner, Question, Input_From_units (Input), Options);
+Thinkthen.Sessions.Finish (Owner);
+declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin
+Thinkthen.Sessions.Close (Owner);
+return Thinkthen.Answers.Rank (Completed);
+end;
+exception when others => Thinkthen.Sessions.Close (Owner); raise;
+end Rank;
+function Rank (Client : Engine; Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input_units; Options : Call_Options := No_Options) return Thinkthen.Answers.Rank_Result is
+Owner : Thinkthen.Sessions.Session;
+begin
+Rank (Client, Owner, Question, Input_From_units (Input), Options);
+Thinkthen.Sessions.Finish (Owner);
+declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin
+Thinkthen.Sessions.Close (Owner);
+return Thinkthen.Answers.Rank (Completed);
+end;
+exception when others => Thinkthen.Sessions.Close (Owner); raise;
+end Rank;
+function Rank (Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input_entities; Options : Call_Options := No_Options) return Thinkthen.Answers.Rank_Result is
+Owner : Thinkthen.Sessions.Session;
+begin
+Rank (Owner, Question, Input_From_entities (Input), Options);
+Thinkthen.Sessions.Finish (Owner);
+declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin
+Thinkthen.Sessions.Close (Owner);
+return Thinkthen.Answers.Rank (Completed);
+end;
+exception when others => Thinkthen.Sessions.Close (Owner); raise;
+end Rank;
+function Rank (Client : Engine; Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input_entities; Options : Call_Options := No_Options) return Thinkthen.Answers.Rank_Result is
+Owner : Thinkthen.Sessions.Session;
+begin
+Rank (Client, Owner, Question, Input_From_entities (Input), Options);
+Thinkthen.Sessions.Finish (Owner);
+declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin
+Thinkthen.Sessions.Close (Owner);
+return Thinkthen.Answers.Rank (Completed);
+end;
+exception when others => Thinkthen.Sessions.Close (Owner); raise;
+end Rank;
+function Rank (Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input_source; Options : Call_Options := No_Options) return Thinkthen.Answers.Rank_Result is
+Owner : Thinkthen.Sessions.Session;
+begin
+Rank (Owner, Question, Input_From_source (Input), Options);
+Thinkthen.Sessions.Finish (Owner);
+declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin
+Thinkthen.Sessions.Close (Owner);
+return Thinkthen.Answers.Rank (Completed);
+end;
+exception when others => Thinkthen.Sessions.Close (Owner); raise;
+end Rank;
+function Rank (Client : Engine; Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input_source; Options : Call_Options := No_Options) return Thinkthen.Answers.Rank_Result is
+Owner : Thinkthen.Sessions.Session;
+begin
+Rank (Client, Owner, Question, Input_From_source (Input), Options);
+Thinkthen.Sessions.Finish (Owner);
+declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin
+Thinkthen.Sessions.Close (Owner);
+return Thinkthen.Answers.Rank (Completed);
+end;
+exception when others => Thinkthen.Sessions.Close (Owner); raise;
+end Rank;
+function Rank (Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input_feed; Options : Call_Options := No_Options) return Thinkthen.Answers.Rank_Result is
+Owner : Thinkthen.Sessions.Session;
+begin
+Rank (Owner, Question, Input_From_feed (Input), Options);
+Thinkthen.Sessions.Finish (Owner);
+declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin
+Thinkthen.Sessions.Close (Owner);
+return Thinkthen.Answers.Rank (Completed);
+end;
+exception when others => Thinkthen.Sessions.Close (Owner); raise;
+end Rank;
+function Rank (Client : Engine; Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input_feed; Options : Call_Options := No_Options) return Thinkthen.Answers.Rank_Result is
+Owner : Thinkthen.Sessions.Session;
+begin
+Rank (Client, Owner, Question, Input_From_feed (Input), Options);
+Thinkthen.Sessions.Finish (Owner);
+declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin
+Thinkthen.Sessions.Close (Owner);
+return Thinkthen.Answers.Rank (Completed);
+end;
+exception when others => Thinkthen.Sessions.Close (Owner); raise;
+end Rank;
+function Rank (Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input; Options : Call_Options := No_Options) return Thinkthen.Answers.Rank_Result is
+Owner : Thinkthen.Sessions.Session;
+begin
+Rank (Owner, Question, Input, Options);
+Thinkthen.Sessions.Finish (Owner);
+declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin
+Thinkthen.Sessions.Close (Owner);
+return Thinkthen.Answers.Rank (Completed);
+end;
+exception when others => Thinkthen.Sessions.Close (Owner); raise;
+end Rank;
+function Rank (Client : Engine; Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input; Options : Call_Options := No_Options) return Thinkthen.Answers.Rank_Result is
+Owner : Thinkthen.Sessions.Session;
+begin
+Rank (Client, Owner, Question, Input, Options);
+Thinkthen.Sessions.Finish (Owner);
+declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin
+Thinkthen.Sessions.Close (Owner);
+return Thinkthen.Answers.Rank (Completed);
+end;
+exception when others => Thinkthen.Sessions.Close (Owner); raise;
+end Rank;
+function Find (Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input_text; Options : Call_Options := No_Options) return Thinkthen.Answers.Find_Result is
+Owner : Thinkthen.Sessions.Session;
+begin
+Find (Owner, Question, Input_From_text (Input), Options);
+Thinkthen.Sessions.Finish (Owner);
+declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin
+Thinkthen.Sessions.Close (Owner);
+return Thinkthen.Answers.Find (Completed);
+end;
+exception when others => Thinkthen.Sessions.Close (Owner); raise;
+end Find;
+function Find (Client : Engine; Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input_text; Options : Call_Options := No_Options) return Thinkthen.Answers.Find_Result is
+Owner : Thinkthen.Sessions.Session;
+begin
+Find (Client, Owner, Question, Input_From_text (Input), Options);
+Thinkthen.Sessions.Finish (Owner);
+declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin
+Thinkthen.Sessions.Close (Owner);
+return Thinkthen.Answers.Find (Completed);
+end;
+exception when others => Thinkthen.Sessions.Close (Owner); raise;
+end Find;
+function Find (Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input_json; Options : Call_Options := No_Options) return Thinkthen.Answers.Find_Result is
+Owner : Thinkthen.Sessions.Session;
+begin
+Find (Owner, Question, Input_From_json (Input), Options);
+Thinkthen.Sessions.Finish (Owner);
+declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin
+Thinkthen.Sessions.Close (Owner);
+return Thinkthen.Answers.Find (Completed);
+end;
+exception when others => Thinkthen.Sessions.Close (Owner); raise;
+end Find;
+function Find (Client : Engine; Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input_json; Options : Call_Options := No_Options) return Thinkthen.Answers.Find_Result is
+Owner : Thinkthen.Sessions.Session;
+begin
+Find (Client, Owner, Question, Input_From_json (Input), Options);
+Thinkthen.Sessions.Finish (Owner);
+declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin
+Thinkthen.Sessions.Close (Owner);
+return Thinkthen.Answers.Find (Completed);
+end;
+exception when others => Thinkthen.Sessions.Close (Owner); raise;
+end Find;
+function Find (Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input_records; Options : Call_Options := No_Options) return Thinkthen.Answers.Find_Result is
+Owner : Thinkthen.Sessions.Session;
+begin
+Find (Owner, Question, Input_From_records (Input), Options);
+Thinkthen.Sessions.Finish (Owner);
+declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin
+Thinkthen.Sessions.Close (Owner);
+return Thinkthen.Answers.Find (Completed);
+end;
+exception when others => Thinkthen.Sessions.Close (Owner); raise;
+end Find;
+function Find (Client : Engine; Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input_records; Options : Call_Options := No_Options) return Thinkthen.Answers.Find_Result is
+Owner : Thinkthen.Sessions.Session;
+begin
+Find (Client, Owner, Question, Input_From_records (Input), Options);
+Thinkthen.Sessions.Finish (Owner);
+declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin
+Thinkthen.Sessions.Close (Owner);
+return Thinkthen.Answers.Find (Completed);
+end;
+exception when others => Thinkthen.Sessions.Close (Owner); raise;
+end Find;
+function Find (Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input_units; Options : Call_Options := No_Options) return Thinkthen.Answers.Find_Result is
+Owner : Thinkthen.Sessions.Session;
+begin
+Find (Owner, Question, Input_From_units (Input), Options);
+Thinkthen.Sessions.Finish (Owner);
+declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin
+Thinkthen.Sessions.Close (Owner);
+return Thinkthen.Answers.Find (Completed);
+end;
+exception when others => Thinkthen.Sessions.Close (Owner); raise;
+end Find;
+function Find (Client : Engine; Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input_units; Options : Call_Options := No_Options) return Thinkthen.Answers.Find_Result is
+Owner : Thinkthen.Sessions.Session;
+begin
+Find (Client, Owner, Question, Input_From_units (Input), Options);
+Thinkthen.Sessions.Finish (Owner);
+declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin
+Thinkthen.Sessions.Close (Owner);
+return Thinkthen.Answers.Find (Completed);
+end;
+exception when others => Thinkthen.Sessions.Close (Owner); raise;
+end Find;
+function Find (Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input_entities; Options : Call_Options := No_Options) return Thinkthen.Answers.Find_Result is
+Owner : Thinkthen.Sessions.Session;
+begin
+Find (Owner, Question, Input_From_entities (Input), Options);
+Thinkthen.Sessions.Finish (Owner);
+declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin
+Thinkthen.Sessions.Close (Owner);
+return Thinkthen.Answers.Find (Completed);
+end;
+exception when others => Thinkthen.Sessions.Close (Owner); raise;
+end Find;
+function Find (Client : Engine; Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input_entities; Options : Call_Options := No_Options) return Thinkthen.Answers.Find_Result is
+Owner : Thinkthen.Sessions.Session;
+begin
+Find (Client, Owner, Question, Input_From_entities (Input), Options);
+Thinkthen.Sessions.Finish (Owner);
+declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin
+Thinkthen.Sessions.Close (Owner);
+return Thinkthen.Answers.Find (Completed);
+end;
+exception when others => Thinkthen.Sessions.Close (Owner); raise;
+end Find;
+function Find (Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input_source; Options : Call_Options := No_Options) return Thinkthen.Answers.Find_Result is
+Owner : Thinkthen.Sessions.Session;
+begin
+Find (Owner, Question, Input_From_source (Input), Options);
+Thinkthen.Sessions.Finish (Owner);
+declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin
+Thinkthen.Sessions.Close (Owner);
+return Thinkthen.Answers.Find (Completed);
+end;
+exception when others => Thinkthen.Sessions.Close (Owner); raise;
+end Find;
+function Find (Client : Engine; Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input_source; Options : Call_Options := No_Options) return Thinkthen.Answers.Find_Result is
+Owner : Thinkthen.Sessions.Session;
+begin
+Find (Client, Owner, Question, Input_From_source (Input), Options);
+Thinkthen.Sessions.Finish (Owner);
+declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin
+Thinkthen.Sessions.Close (Owner);
+return Thinkthen.Answers.Find (Completed);
+end;
+exception when others => Thinkthen.Sessions.Close (Owner); raise;
+end Find;
+function Find (Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input_feed; Options : Call_Options := No_Options) return Thinkthen.Answers.Find_Result is
+Owner : Thinkthen.Sessions.Session;
+begin
+Find (Owner, Question, Input_From_feed (Input), Options);
+Thinkthen.Sessions.Finish (Owner);
+declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin
+Thinkthen.Sessions.Close (Owner);
+return Thinkthen.Answers.Find (Completed);
+end;
+exception when others => Thinkthen.Sessions.Close (Owner); raise;
+end Find;
+function Find (Client : Engine; Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input_feed; Options : Call_Options := No_Options) return Thinkthen.Answers.Find_Result is
+Owner : Thinkthen.Sessions.Session;
+begin
+Find (Client, Owner, Question, Input_From_feed (Input), Options);
+Thinkthen.Sessions.Finish (Owner);
+declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin
+Thinkthen.Sessions.Close (Owner);
+return Thinkthen.Answers.Find (Completed);
+end;
+exception when others => Thinkthen.Sessions.Close (Owner); raise;
+end Find;
+function Find (Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input; Options : Call_Options := No_Options) return Thinkthen.Answers.Find_Result is
+Owner : Thinkthen.Sessions.Session;
+begin
+Find (Owner, Question, Input, Options);
+Thinkthen.Sessions.Finish (Owner);
+declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin
+Thinkthen.Sessions.Close (Owner);
+return Thinkthen.Answers.Find (Completed);
+end;
+exception when others => Thinkthen.Sessions.Close (Owner); raise;
+end Find;
+function Find (Client : Engine; Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input; Options : Call_Options := No_Options) return Thinkthen.Answers.Find_Result is
+Owner : Thinkthen.Sessions.Session;
+begin
+Find (Client, Owner, Question, Input, Options);
+Thinkthen.Sessions.Finish (Owner);
+declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin
+Thinkthen.Sessions.Close (Owner);
+return Thinkthen.Answers.Find (Completed);
+end;
+exception when others => Thinkthen.Sessions.Close (Owner); raise;
+end Find;
+function Annotate (Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input_text; Options : Call_Options := No_Options) return Thinkthen.Answers.Annotate_Result is
+Owner : Thinkthen.Sessions.Session;
+begin
+Annotate (Owner, Question, Input_From_text (Input), Options);
+Thinkthen.Sessions.Finish (Owner);
+declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin
+Thinkthen.Sessions.Close (Owner);
+return Thinkthen.Answers.Annotate (Completed);
+end;
+exception when others => Thinkthen.Sessions.Close (Owner); raise;
+end Annotate;
+function Annotate (Client : Engine; Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input_text; Options : Call_Options := No_Options) return Thinkthen.Answers.Annotate_Result is
+Owner : Thinkthen.Sessions.Session;
+begin
+Annotate (Client, Owner, Question, Input_From_text (Input), Options);
+Thinkthen.Sessions.Finish (Owner);
+declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin
+Thinkthen.Sessions.Close (Owner);
+return Thinkthen.Answers.Annotate (Completed);
+end;
+exception when others => Thinkthen.Sessions.Close (Owner); raise;
+end Annotate;
+function Annotate (Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input_json; Options : Call_Options := No_Options) return Thinkthen.Answers.Annotate_Result is
+Owner : Thinkthen.Sessions.Session;
+begin
+Annotate (Owner, Question, Input_From_json (Input), Options);
+Thinkthen.Sessions.Finish (Owner);
+declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin
+Thinkthen.Sessions.Close (Owner);
+return Thinkthen.Answers.Annotate (Completed);
+end;
+exception when others => Thinkthen.Sessions.Close (Owner); raise;
+end Annotate;
+function Annotate (Client : Engine; Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input_json; Options : Call_Options := No_Options) return Thinkthen.Answers.Annotate_Result is
+Owner : Thinkthen.Sessions.Session;
+begin
+Annotate (Client, Owner, Question, Input_From_json (Input), Options);
+Thinkthen.Sessions.Finish (Owner);
+declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin
+Thinkthen.Sessions.Close (Owner);
+return Thinkthen.Answers.Annotate (Completed);
+end;
+exception when others => Thinkthen.Sessions.Close (Owner); raise;
+end Annotate;
+function Annotate (Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input_records; Options : Call_Options := No_Options) return Thinkthen.Answers.Annotate_List_Result is
+Owner : Thinkthen.Sessions.Session;
+begin
+Annotate (Owner, Question, Input_From_records (Input), Options);
+Thinkthen.Sessions.Finish (Owner);
+declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin
+Thinkthen.Sessions.Close (Owner);
+return Thinkthen.Answers.Annotate (Completed);
+end;
+exception when others => Thinkthen.Sessions.Close (Owner); raise;
+end Annotate;
+function Annotate (Client : Engine; Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input_records; Options : Call_Options := No_Options) return Thinkthen.Answers.Annotate_List_Result is
+Owner : Thinkthen.Sessions.Session;
+begin
+Annotate (Client, Owner, Question, Input_From_records (Input), Options);
+Thinkthen.Sessions.Finish (Owner);
+declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin
+Thinkthen.Sessions.Close (Owner);
+return Thinkthen.Answers.Annotate (Completed);
+end;
+exception when others => Thinkthen.Sessions.Close (Owner); raise;
+end Annotate;
+function Annotate (Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input_units; Options : Call_Options := No_Options) return Thinkthen.Answers.Annotate_List_Result is
+Owner : Thinkthen.Sessions.Session;
+begin
+Annotate (Owner, Question, Input_From_units (Input), Options);
+Thinkthen.Sessions.Finish (Owner);
+declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin
+Thinkthen.Sessions.Close (Owner);
+return Thinkthen.Answers.Annotate (Completed);
+end;
+exception when others => Thinkthen.Sessions.Close (Owner); raise;
+end Annotate;
+function Annotate (Client : Engine; Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input_units; Options : Call_Options := No_Options) return Thinkthen.Answers.Annotate_List_Result is
+Owner : Thinkthen.Sessions.Session;
+begin
+Annotate (Client, Owner, Question, Input_From_units (Input), Options);
+Thinkthen.Sessions.Finish (Owner);
+declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin
+Thinkthen.Sessions.Close (Owner);
+return Thinkthen.Answers.Annotate (Completed);
+end;
+exception when others => Thinkthen.Sessions.Close (Owner); raise;
+end Annotate;
+function Annotate (Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input_entities; Options : Call_Options := No_Options) return Thinkthen.Answers.Annotate_List_Result is
+Owner : Thinkthen.Sessions.Session;
+begin
+Annotate (Owner, Question, Input_From_entities (Input), Options);
+Thinkthen.Sessions.Finish (Owner);
+declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin
+Thinkthen.Sessions.Close (Owner);
+return Thinkthen.Answers.Annotate (Completed);
+end;
+exception when others => Thinkthen.Sessions.Close (Owner); raise;
+end Annotate;
+function Annotate (Client : Engine; Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input_entities; Options : Call_Options := No_Options) return Thinkthen.Answers.Annotate_List_Result is
+Owner : Thinkthen.Sessions.Session;
+begin
+Annotate (Client, Owner, Question, Input_From_entities (Input), Options);
+Thinkthen.Sessions.Finish (Owner);
+declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin
+Thinkthen.Sessions.Close (Owner);
+return Thinkthen.Answers.Annotate (Completed);
+end;
+exception when others => Thinkthen.Sessions.Close (Owner); raise;
+end Annotate;
+function Annotate (Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input_source; Options : Call_Options := No_Options) return Thinkthen.Answers.Annotate_List_Result is
+Owner : Thinkthen.Sessions.Session;
+begin
+Annotate (Owner, Question, Input_From_source (Input), Options);
+Thinkthen.Sessions.Finish (Owner);
+declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin
+Thinkthen.Sessions.Close (Owner);
+return Thinkthen.Answers.Annotate (Completed);
+end;
+exception when others => Thinkthen.Sessions.Close (Owner); raise;
+end Annotate;
+function Annotate (Client : Engine; Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input_source; Options : Call_Options := No_Options) return Thinkthen.Answers.Annotate_List_Result is
+Owner : Thinkthen.Sessions.Session;
+begin
+Annotate (Client, Owner, Question, Input_From_source (Input), Options);
+Thinkthen.Sessions.Finish (Owner);
+declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin
+Thinkthen.Sessions.Close (Owner);
+return Thinkthen.Answers.Annotate (Completed);
+end;
+exception when others => Thinkthen.Sessions.Close (Owner); raise;
+end Annotate;
+function Annotate (Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input_feed; Options : Call_Options := No_Options) return Thinkthen.Answers.Annotate_List_Result is
+Owner : Thinkthen.Sessions.Session;
+begin
+Annotate (Owner, Question, Input_From_feed (Input), Options);
+Thinkthen.Sessions.Finish (Owner);
+declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin
+Thinkthen.Sessions.Close (Owner);
+return Thinkthen.Answers.Annotate (Completed);
+end;
+exception when others => Thinkthen.Sessions.Close (Owner); raise;
+end Annotate;
+function Annotate (Client : Engine; Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input_feed; Options : Call_Options := No_Options) return Thinkthen.Answers.Annotate_List_Result is
+Owner : Thinkthen.Sessions.Session;
+begin
+Annotate (Client, Owner, Question, Input_From_feed (Input), Options);
+Thinkthen.Sessions.Finish (Owner);
+declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin
+Thinkthen.Sessions.Close (Owner);
+return Thinkthen.Answers.Annotate (Completed);
+end;
+exception when others => Thinkthen.Sessions.Close (Owner); raise;
+end Annotate;
+function Annotate (Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input; Options : Call_Options := No_Options) return Thinkthen.Answers.Annotate_List_Result is
+Owner : Thinkthen.Sessions.Session;
+begin
+Annotate (Owner, Question, Input, Options);
+Thinkthen.Sessions.Finish (Owner);
+declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin
+Thinkthen.Sessions.Close (Owner);
+return Thinkthen.Answers.Annotate (Completed);
+end;
+exception when others => Thinkthen.Sessions.Close (Owner); raise;
+end Annotate;
+function Annotate (Client : Engine; Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input; Options : Call_Options := No_Options) return Thinkthen.Answers.Annotate_List_Result is
+Owner : Thinkthen.Sessions.Session;
+begin
+Annotate (Client, Owner, Question, Input, Options);
+Thinkthen.Sessions.Finish (Owner);
+declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin
+Thinkthen.Sessions.Close (Owner);
+return Thinkthen.Answers.Annotate (Completed);
+end;
+exception when others => Thinkthen.Sessions.Close (Owner); raise;
+end Annotate;
+function Recognize (Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input_text; Options : Call_Options := No_Options) return Thinkthen.Answers.Recognize_Result is
+Owner : Thinkthen.Sessions.Session;
+begin
+Recognize (Owner, Question, Input_From_text (Input), Options);
+Thinkthen.Sessions.Finish (Owner);
+declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin
+Thinkthen.Sessions.Close (Owner);
+return Thinkthen.Answers.Recognize (Completed);
+end;
+exception when others => Thinkthen.Sessions.Close (Owner); raise;
+end Recognize;
+function Recognize (Client : Engine; Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input_text; Options : Call_Options := No_Options) return Thinkthen.Answers.Recognize_Result is
+Owner : Thinkthen.Sessions.Session;
+begin
+Recognize (Client, Owner, Question, Input_From_text (Input), Options);
+Thinkthen.Sessions.Finish (Owner);
+declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin
+Thinkthen.Sessions.Close (Owner);
+return Thinkthen.Answers.Recognize (Completed);
+end;
+exception when others => Thinkthen.Sessions.Close (Owner); raise;
+end Recognize;
+function Recognize (Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input_json; Options : Call_Options := No_Options) return Thinkthen.Answers.Recognize_Result is
+Owner : Thinkthen.Sessions.Session;
+begin
+Recognize (Owner, Question, Input_From_json (Input), Options);
+Thinkthen.Sessions.Finish (Owner);
+declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin
+Thinkthen.Sessions.Close (Owner);
+return Thinkthen.Answers.Recognize (Completed);
+end;
+exception when others => Thinkthen.Sessions.Close (Owner); raise;
+end Recognize;
+function Recognize (Client : Engine; Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input_json; Options : Call_Options := No_Options) return Thinkthen.Answers.Recognize_Result is
+Owner : Thinkthen.Sessions.Session;
+begin
+Recognize (Client, Owner, Question, Input_From_json (Input), Options);
+Thinkthen.Sessions.Finish (Owner);
+declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin
+Thinkthen.Sessions.Close (Owner);
+return Thinkthen.Answers.Recognize (Completed);
+end;
+exception when others => Thinkthen.Sessions.Close (Owner); raise;
+end Recognize;
+function Recognize (Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input_records; Options : Call_Options := No_Options) return Thinkthen.Answers.Recognize_List_Result is
+Owner : Thinkthen.Sessions.Session;
+begin
+Recognize (Owner, Question, Input_From_records (Input), Options);
+Thinkthen.Sessions.Finish (Owner);
+declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin
+Thinkthen.Sessions.Close (Owner);
+return Thinkthen.Answers.Recognize (Completed);
+end;
+exception when others => Thinkthen.Sessions.Close (Owner); raise;
+end Recognize;
+function Recognize (Client : Engine; Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input_records; Options : Call_Options := No_Options) return Thinkthen.Answers.Recognize_List_Result is
+Owner : Thinkthen.Sessions.Session;
+begin
+Recognize (Client, Owner, Question, Input_From_records (Input), Options);
+Thinkthen.Sessions.Finish (Owner);
+declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin
+Thinkthen.Sessions.Close (Owner);
+return Thinkthen.Answers.Recognize (Completed);
+end;
+exception when others => Thinkthen.Sessions.Close (Owner); raise;
+end Recognize;
+function Recognize (Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input_units; Options : Call_Options := No_Options) return Thinkthen.Answers.Recognize_List_Result is
+Owner : Thinkthen.Sessions.Session;
+begin
+Recognize (Owner, Question, Input_From_units (Input), Options);
+Thinkthen.Sessions.Finish (Owner);
+declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin
+Thinkthen.Sessions.Close (Owner);
+return Thinkthen.Answers.Recognize (Completed);
+end;
+exception when others => Thinkthen.Sessions.Close (Owner); raise;
+end Recognize;
+function Recognize (Client : Engine; Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input_units; Options : Call_Options := No_Options) return Thinkthen.Answers.Recognize_List_Result is
+Owner : Thinkthen.Sessions.Session;
+begin
+Recognize (Client, Owner, Question, Input_From_units (Input), Options);
+Thinkthen.Sessions.Finish (Owner);
+declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin
+Thinkthen.Sessions.Close (Owner);
+return Thinkthen.Answers.Recognize (Completed);
+end;
+exception when others => Thinkthen.Sessions.Close (Owner); raise;
+end Recognize;
+function Recognize (Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input_entities; Options : Call_Options := No_Options) return Thinkthen.Answers.Recognize_List_Result is
+Owner : Thinkthen.Sessions.Session;
+begin
+Recognize (Owner, Question, Input_From_entities (Input), Options);
+Thinkthen.Sessions.Finish (Owner);
+declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin
+Thinkthen.Sessions.Close (Owner);
+return Thinkthen.Answers.Recognize (Completed);
+end;
+exception when others => Thinkthen.Sessions.Close (Owner); raise;
+end Recognize;
+function Recognize (Client : Engine; Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input_entities; Options : Call_Options := No_Options) return Thinkthen.Answers.Recognize_List_Result is
+Owner : Thinkthen.Sessions.Session;
+begin
+Recognize (Client, Owner, Question, Input_From_entities (Input), Options);
+Thinkthen.Sessions.Finish (Owner);
+declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin
+Thinkthen.Sessions.Close (Owner);
+return Thinkthen.Answers.Recognize (Completed);
+end;
+exception when others => Thinkthen.Sessions.Close (Owner); raise;
+end Recognize;
+function Recognize (Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input_source; Options : Call_Options := No_Options) return Thinkthen.Answers.Recognize_List_Result is
+Owner : Thinkthen.Sessions.Session;
+begin
+Recognize (Owner, Question, Input_From_source (Input), Options);
+Thinkthen.Sessions.Finish (Owner);
+declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin
+Thinkthen.Sessions.Close (Owner);
+return Thinkthen.Answers.Recognize (Completed);
+end;
+exception when others => Thinkthen.Sessions.Close (Owner); raise;
+end Recognize;
+function Recognize (Client : Engine; Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input_source; Options : Call_Options := No_Options) return Thinkthen.Answers.Recognize_List_Result is
+Owner : Thinkthen.Sessions.Session;
+begin
+Recognize (Client, Owner, Question, Input_From_source (Input), Options);
+Thinkthen.Sessions.Finish (Owner);
+declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin
+Thinkthen.Sessions.Close (Owner);
+return Thinkthen.Answers.Recognize (Completed);
+end;
+exception when others => Thinkthen.Sessions.Close (Owner); raise;
+end Recognize;
+function Recognize (Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input_feed; Options : Call_Options := No_Options) return Thinkthen.Answers.Recognize_List_Result is
+Owner : Thinkthen.Sessions.Session;
+begin
+Recognize (Owner, Question, Input_From_feed (Input), Options);
+Thinkthen.Sessions.Finish (Owner);
+declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin
+Thinkthen.Sessions.Close (Owner);
+return Thinkthen.Answers.Recognize (Completed);
+end;
+exception when others => Thinkthen.Sessions.Close (Owner); raise;
+end Recognize;
+function Recognize (Client : Engine; Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input_feed; Options : Call_Options := No_Options) return Thinkthen.Answers.Recognize_List_Result is
+Owner : Thinkthen.Sessions.Session;
+begin
+Recognize (Client, Owner, Question, Input_From_feed (Input), Options);
+Thinkthen.Sessions.Finish (Owner);
+declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin
+Thinkthen.Sessions.Close (Owner);
+return Thinkthen.Answers.Recognize (Completed);
+end;
+exception when others => Thinkthen.Sessions.Close (Owner); raise;
+end Recognize;
+function Recognize (Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input; Options : Call_Options := No_Options) return Thinkthen.Answers.Recognize_List_Result is
+Owner : Thinkthen.Sessions.Session;
+begin
+Recognize (Owner, Question, Input, Options);
+Thinkthen.Sessions.Finish (Owner);
+declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin
+Thinkthen.Sessions.Close (Owner);
+return Thinkthen.Answers.Recognize (Completed);
+end;
+exception when others => Thinkthen.Sessions.Close (Owner); raise;
+end Recognize;
+function Recognize (Client : Engine; Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input; Options : Call_Options := No_Options) return Thinkthen.Answers.Recognize_List_Result is
+Owner : Thinkthen.Sessions.Session;
+begin
+Recognize (Client, Owner, Question, Input, Options);
+Thinkthen.Sessions.Finish (Owner);
+declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin
+Thinkthen.Sessions.Close (Owner);
+return Thinkthen.Answers.Recognize (Completed);
+end;
+exception when others => Thinkthen.Sessions.Close (Owner); raise;
+end Recognize;
+function Relate (Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input_text; Options : Call_Options := No_Options) return Thinkthen.Answers.Relate_Result is
+Owner : Thinkthen.Sessions.Session;
+begin
+Relate (Owner, Question, Input_From_text (Input), Options);
+Thinkthen.Sessions.Finish (Owner);
+declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin
+Thinkthen.Sessions.Close (Owner);
+return Thinkthen.Answers.Relate (Completed);
+end;
+exception when others => Thinkthen.Sessions.Close (Owner); raise;
+end Relate;
+function Relate (Client : Engine; Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input_text; Options : Call_Options := No_Options) return Thinkthen.Answers.Relate_Result is
+Owner : Thinkthen.Sessions.Session;
+begin
+Relate (Client, Owner, Question, Input_From_text (Input), Options);
+Thinkthen.Sessions.Finish (Owner);
+declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin
+Thinkthen.Sessions.Close (Owner);
+return Thinkthen.Answers.Relate (Completed);
+end;
+exception when others => Thinkthen.Sessions.Close (Owner); raise;
+end Relate;
+function Relate (Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input_json; Options : Call_Options := No_Options) return Thinkthen.Answers.Relate_Result is
+Owner : Thinkthen.Sessions.Session;
+begin
+Relate (Owner, Question, Input_From_json (Input), Options);
+Thinkthen.Sessions.Finish (Owner);
+declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin
+Thinkthen.Sessions.Close (Owner);
+return Thinkthen.Answers.Relate (Completed);
+end;
+exception when others => Thinkthen.Sessions.Close (Owner); raise;
+end Relate;
+function Relate (Client : Engine; Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input_json; Options : Call_Options := No_Options) return Thinkthen.Answers.Relate_Result is
+Owner : Thinkthen.Sessions.Session;
+begin
+Relate (Client, Owner, Question, Input_From_json (Input), Options);
+Thinkthen.Sessions.Finish (Owner);
+declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin
+Thinkthen.Sessions.Close (Owner);
+return Thinkthen.Answers.Relate (Completed);
+end;
+exception when others => Thinkthen.Sessions.Close (Owner); raise;
+end Relate;
+function Relate (Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input_records; Options : Call_Options := No_Options) return Thinkthen.Answers.Relate_Result is
+Owner : Thinkthen.Sessions.Session;
+begin
+Relate (Owner, Question, Input_From_records (Input), Options);
+Thinkthen.Sessions.Finish (Owner);
+declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin
+Thinkthen.Sessions.Close (Owner);
+return Thinkthen.Answers.Relate (Completed);
+end;
+exception when others => Thinkthen.Sessions.Close (Owner); raise;
+end Relate;
+function Relate (Client : Engine; Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input_records; Options : Call_Options := No_Options) return Thinkthen.Answers.Relate_Result is
+Owner : Thinkthen.Sessions.Session;
+begin
+Relate (Client, Owner, Question, Input_From_records (Input), Options);
+Thinkthen.Sessions.Finish (Owner);
+declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin
+Thinkthen.Sessions.Close (Owner);
+return Thinkthen.Answers.Relate (Completed);
+end;
+exception when others => Thinkthen.Sessions.Close (Owner); raise;
+end Relate;
+function Relate (Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input_units; Options : Call_Options := No_Options) return Thinkthen.Answers.Relate_Result is
+Owner : Thinkthen.Sessions.Session;
+begin
+Relate (Owner, Question, Input_From_units (Input), Options);
+Thinkthen.Sessions.Finish (Owner);
+declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin
+Thinkthen.Sessions.Close (Owner);
+return Thinkthen.Answers.Relate (Completed);
+end;
+exception when others => Thinkthen.Sessions.Close (Owner); raise;
+end Relate;
+function Relate (Client : Engine; Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input_units; Options : Call_Options := No_Options) return Thinkthen.Answers.Relate_Result is
+Owner : Thinkthen.Sessions.Session;
+begin
+Relate (Client, Owner, Question, Input_From_units (Input), Options);
+Thinkthen.Sessions.Finish (Owner);
+declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin
+Thinkthen.Sessions.Close (Owner);
+return Thinkthen.Answers.Relate (Completed);
+end;
+exception when others => Thinkthen.Sessions.Close (Owner); raise;
+end Relate;
+function Relate (Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input_entities; Options : Call_Options := No_Options) return Thinkthen.Answers.Relate_Result is
+Owner : Thinkthen.Sessions.Session;
+begin
+Relate (Owner, Question, Input_From_entities (Input), Options);
+Thinkthen.Sessions.Finish (Owner);
+declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin
+Thinkthen.Sessions.Close (Owner);
+return Thinkthen.Answers.Relate (Completed);
+end;
+exception when others => Thinkthen.Sessions.Close (Owner); raise;
+end Relate;
+function Relate (Client : Engine; Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input_entities; Options : Call_Options := No_Options) return Thinkthen.Answers.Relate_Result is
+Owner : Thinkthen.Sessions.Session;
+begin
+Relate (Client, Owner, Question, Input_From_entities (Input), Options);
+Thinkthen.Sessions.Finish (Owner);
+declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin
+Thinkthen.Sessions.Close (Owner);
+return Thinkthen.Answers.Relate (Completed);
+end;
+exception when others => Thinkthen.Sessions.Close (Owner); raise;
+end Relate;
+function Relate (Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input_source; Options : Call_Options := No_Options) return Thinkthen.Answers.Relate_Result is
+Owner : Thinkthen.Sessions.Session;
+begin
+Relate (Owner, Question, Input_From_source (Input), Options);
+Thinkthen.Sessions.Finish (Owner);
+declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin
+Thinkthen.Sessions.Close (Owner);
+return Thinkthen.Answers.Relate (Completed);
+end;
+exception when others => Thinkthen.Sessions.Close (Owner); raise;
+end Relate;
+function Relate (Client : Engine; Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input_source; Options : Call_Options := No_Options) return Thinkthen.Answers.Relate_Result is
+Owner : Thinkthen.Sessions.Session;
+begin
+Relate (Client, Owner, Question, Input_From_source (Input), Options);
+Thinkthen.Sessions.Finish (Owner);
+declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin
+Thinkthen.Sessions.Close (Owner);
+return Thinkthen.Answers.Relate (Completed);
+end;
+exception when others => Thinkthen.Sessions.Close (Owner); raise;
+end Relate;
+function Relate (Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input_feed; Options : Call_Options := No_Options) return Thinkthen.Answers.Relate_Result is
+Owner : Thinkthen.Sessions.Session;
+begin
+Relate (Owner, Question, Input_From_feed (Input), Options);
+Thinkthen.Sessions.Finish (Owner);
+declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin
+Thinkthen.Sessions.Close (Owner);
+return Thinkthen.Answers.Relate (Completed);
+end;
+exception when others => Thinkthen.Sessions.Close (Owner); raise;
+end Relate;
+function Relate (Client : Engine; Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input_feed; Options : Call_Options := No_Options) return Thinkthen.Answers.Relate_Result is
+Owner : Thinkthen.Sessions.Session;
+begin
+Relate (Client, Owner, Question, Input_From_feed (Input), Options);
+Thinkthen.Sessions.Finish (Owner);
+declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin
+Thinkthen.Sessions.Close (Owner);
+return Thinkthen.Answers.Relate (Completed);
+end;
+exception when others => Thinkthen.Sessions.Close (Owner); raise;
+end Relate;
+function Relate (Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input; Options : Call_Options := No_Options) return Thinkthen.Answers.Relate_Result is
+Owner : Thinkthen.Sessions.Session;
+begin
+Relate (Owner, Question, Input, Options);
+Thinkthen.Sessions.Finish (Owner);
+declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin
+Thinkthen.Sessions.Close (Owner);
+return Thinkthen.Answers.Relate (Completed);
+end;
+exception when others => Thinkthen.Sessions.Close (Owner); raise;
+end Relate;
+function Relate (Client : Engine; Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input; Options : Call_Options := No_Options) return Thinkthen.Answers.Relate_Result is
+Owner : Thinkthen.Sessions.Session;
+begin
+Relate (Client, Owner, Question, Input, Options);
+Thinkthen.Sessions.Finish (Owner);
+declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin
+Thinkthen.Sessions.Close (Owner);
+return Thinkthen.Answers.Relate (Completed);
+end;
+exception when others => Thinkthen.Sessions.Close (Owner); raise;
 end Relate;
 procedure Push (Owner : in out Thinkthen.Sessions.Session; Item : Feed_Item; Status : out Thinkthen.Sessions.Push_Status) is
 begin

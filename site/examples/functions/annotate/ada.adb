@@ -8,19 +8,15 @@ with Thinkthen.Values;
 
 procedure Sample is
    package V renames Thinkthen.Values;
-   Owner : Session;
-   Completed : Completion;
    Evidence : constant String :=
      "Steps: click Log in. Nobody gets in.";
 begin
-   Thinkthen.Inputs.Calls.Annotate (Owner,
-     File_Question ("form.json"),
-     Text_Input (Evidence));
-   Finish (Owner);
    declare
-      Rows : constant Annotation_List :=
-        Annotate_Answer (Owner, Completed);
-      Triage : constant V.Value := Fields (Rows (1));
+      Result : constant Annotate_Result :=
+        Thinkthen.Inputs.Calls.Annotate (
+     File_Question ("form.json"),
+     Make_Input_text (Evidence));
+      Triage : constant V.Value := Result.Value;
    begin
       pragma Assert
         (V.As_Boolean (V.Field_Value (Triage, "steps")));

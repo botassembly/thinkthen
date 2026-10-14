@@ -52,16 +52,16 @@ with tempfile.TemporaryDirectory(prefix='thinkthen-ada-session-') as temporary:
         declarations.append(f'R_{verb} : constant T_RequestCall := {expression};')
         calls.append(f'Select_Route ("case/{case}/v1"); Thinkthen.Native_Sessions.Start (Client, Owner, R_{verb}, "{verb}"); Finish (Owner); Drain{" (Odds => 0.99)" if verb == "decide" else ""}; Put_Line ("SHARED_CASE {case}");')
     answer_checks = {
-        'decide': '''Require (Decide_Answer (Completed).Known and then Decide_Answer (Completed).Value, "safe decide"); declare Refused : Boolean := False; begin begin declare Ignored : constant Choice := Choose_Answer (Completed); begin if Ignored.Known then null; end if; end; exception when Answer_Cardinality_Error => Refused := True; end; Require (Refused and then Has_Facts (Completed) and then Packet_Count (Completed) > 0, "cardinality refusal retained completion"); end;''',
-        'choose': '''Require (Choose_Answer (Completed).Known and then To_String (Choose_Answer (Completed).Value) = "billing", "safe choose");''',
-        'tag': '''Require (Tag_Answer (Completed)'Length = 2, "safe tags");''',
-        'score': '''Require (Score_Answer (Completed) > 0.0, "safe score");''',
-        'filter': '''Require (Filter_Answer (Completed)'Length = 2 and then Thinkthen.Values.As_String (Filter_Answer (Completed) (1)) = "row 0" and then Thinkthen.Values.As_String (Filter_Answer (Completed) (2)) = "row 2", "plain filter originals");''',
-        'rank': '''Require (Rank_Answer (Completed) = Rank_List'[1, 2, 0], "plain original rank indexes");''',
-        'find': '''Require (Has_Match (Find_Answer (Completed)), "safe find");''',
-        'annotate': '''Require (Annotate_Answer (Completed)'Length > 0, "safe annotations");''',
-        'recognize': '''Require (Recognize_Answer (Completed)'Length = 1, "safe recognition aggregate");''',
-        'relate': '''declare Item : constant Thinkthen.Values.Value := Edges (Relate_Answer (Completed)); begin Require (Thinkthen.Values.Length (Item) > 0 and then Source_Name (Thinkthen.Values.Element (Item, 1))'Length > 0 and then Target_Name (Thinkthen.Values.Element (Item, 1))'Length > 0, "direct relation names"); end;''',
+        'decide': 'Require (As_Boolean (Item.Value) and then Item.Probability.State = Present_Field and then Item.Probability.Value = 0.99 and then Item.Results\'Length = 1 and then Requests_Sent (Item.Facts) = 1, "paired refund result");',
+        'choose': 'Require (Item.Value.Known and then To_String (Item.Value.Value) = "billing" and then Item.Probability.State = Present_Field and then abs (Item.Probability.Value - 0.7) < 0.00001 and then Item.Results\'Length = 1 and then Requests_Sent (Item.Facts) = 1, "paired choose result");',
+        'tag': '''Require (Item.Value'Length = 2 and then Item.Probability.State = Null_Field, "safe tags");''',
+        'score': 'Require (Item.Value > 0.0 and then Item.Probability.State = Null_Field, "safe score");',
+        'filter': 'Require (Item.Value\'Length = 2 and then As_String (Item.Value (1)) = "row 0" and then As_String (Item.Value (2)) = "row 2" and then Item.Probability\'Length = 2, "plain filter originals");',
+        'rank': '''Require (Item.Value'Length = 3 and then Item.Value = Rank_List'[1, 2, 0] and then Item.Probability'Length = 3, "plain original rank indexes");''',
+        'find': 'Require (Kind (Item.Value) /= Thinkthen.Values.Null_Value and then Item.Probability.State = Present_Field, "safe find");',
+        'annotate': 'Require (Item.Value\'Length > 0 and then Item.Probability.State = Null_Field, "safe annotations");',
+        'recognize': 'Require (Length (Field_Value (Item.Value, "entities")) > 0 and then Natural (Item.Probability.Length) > 0 and then Item.Probability (1).Value > 0.99 and then abs (Item.Probability (1).Value - 0.9877) > 0.001, "kept selected span probability");',
+        'relate': 'Require (Length (Item.Value) > 0 and then Source_Name (Element (Item.Value, 1))\'Length > 0 and then Target_Name (Element (Item.Value, 1))\'Length > 0 and then Natural (Item.Probability.Length) = Length (Item.Value), "direct relation names");',
     }
     for verb, case, _ in cases():
         question = f'Thinkthen.Inputs.Native.Wrap (R_{verb}.T_question)'
@@ -69,7 +69,11 @@ with tempfile.TemporaryDirectory(prefix='thinkthen-ada-session-') as temporary:
             qi = next(i for i,(key,_) in enumerate(definitions['RequestQuestion']['variants']) if key == 'RequestQuestion_definition')
             di = next(i for i,(key,_) in enumerate(definitions['RequestDefinition']['variants']) if verb in definitions[key].get('properties',{}))
             question = f'Thinkthen.Inputs.{verb.title()}_Question (Thinkthen.Inputs.Native.Wrap (R_{verb}.T_question.V_{qi}.T_value.V_{di}))'
-        calls.append(f'Select_Route ("case/{case}/v1"); Thinkthen.Sessions.Calls.{verb.title()} (Client, Owner, {question}, Thinkthen.Inputs.Native.Wrap (R_{verb}.T_input), Thinkthen.Inputs.Native.Wrap (R_{verb}.T_options)); Finish (Owner); declare use Thinkthen.Answers; Completed : constant Completion := Collect (Owner); begin Close (Owner); Require (Status (Completed) = Succeeded and then Has_Facts (Completed) and then Requests_Sent (Call_Facts (Completed)) > 0, "owned safe completion"); {answer_checks[verb]} end;')
+        original = f'Thinkthen.Inputs.Native.Wrap (R_{verb}.T_input)'
+        if verb not in ('filter', 'rank', 'find', 'annotate', 'relate'):
+            original = f'Thinkthen.Inputs.As_text ({original})'
+        target = verb.title() + ('_List_Result' if verb == 'annotate' else '_Result')
+        calls.append(f'Select_Route ("case/{case}/v1"); declare use Thinkthen.Answers; use Thinkthen.Values; Item : constant {target} := Thinkthen.Inputs.Calls.{verb.title()} (Client, {question}, {original}, Thinkthen.Inputs.Native.Wrap (R_{verb}.T_options)); begin Require (Item.Results\'Length > 0 and then Requests_Sent (Item.Facts) > 0, "owned call result"); {answer_checks[verb]} end;')
     # Planning crosses the public typed API and preserves the native zero-send refusals.
     for verb, _, _ in cases():
         preview = f'Thinkthen.Inputs.Calls.Plan (Client, Thinkthen.Inputs.Function_Kind_{verb.title()}, Thinkthen.Inputs.Native.Wrap (R_{verb}.T_question), Thinkthen.Inputs.Native.Wrap (R_{verb}.T_input), Thinkthen.Inputs.Native.Wrap (R_{verb}.T_options))'
@@ -86,6 +90,9 @@ with tempfile.TemporaryDirectory(prefix='thinkthen-ada-session-') as temporary:
     invalid = request({'kind':'text','text':''}, {'kind':'text','text':'invalid'})
     false_request = request({'kind':'definition','value':{'decide':'Does it pass?', 'threshold':0.95}}, {'kind':'text','text':'False evidence.'})
     null_request = request({'kind':'definition','value':{'decide':'Does it pass?', 'threshold':'0.7:0.95'}}, {'kind':'text','text':'Null evidence.'})
+    authored_null = request({'kind':'definition','value':{'decide':'Does it pass?', 'true':None}}, {'kind':'text','text':'Authored null evidence.'})
+    authored_object = request({'kind':'definition','value':{'decide':'Does it pass?', 'threshold':0.95, 'false':{'wide':18446744073709551615, 'list':[False,None], 'null':None}}}, {'kind':'text','text':'Authored object evidence.'})
+    declarations += [f'Authored_Null : constant T_RequestCall := {authored_null};', f'Authored_Object : constant T_RequestCall := {authored_object};']
     item = construct('RequestSessionDescriptor', definitions['RequestSessionDescriptor'], {'item':{'original':{'kind':'text','text':'Located evidence.'}}, 'location':{'file':'owned.txt','first_line':1,'last_line':1}})
     declarations += [f'False_Request : constant T_RequestCall := {false_request};', f'Null_Request : constant T_RequestCall := {null_request};', f'Item : T_RequestSessionDescriptor := {item};', 'Pushed : Push_Status;', f'Failed : constant T_RequestCall := {failure};', f'Feed : constant T_RequestCall := {feed};', f'Invalid : constant T_RequestCall := {invalid};']
     calls += ['Select_Route ("generic/v1");', 'declare Preview : constant Thinkthen.Values.Value := Thinkthen.Native_Sessions.Plan (Client, False_Request, "decide"); begin Require (Thinkthen.Values.As_Number (Thinkthen.Values.Field_Value (Preview, "records")) = "1", "typed plan result"); end;', 'Thinkthen.Native_Sessions.Start (Owner, False_Request, "decide"); Finish (Owner); Drain (Decision => 0);', 'Thinkthen.Native_Sessions.Start (Owner, Null_Request, "decide"); Finish (Owner); Drain (Decision => 1);', 'Thinkthen.Native_Sessions.Start (Owner, Feed, "decide"); Push (Owner, Item, Pushed); if Pushed /= Accepted then raise Program_Error with "feed refused"; end if; Finish (Owner); Drain (Located => True);', 'Thinkthen.Native_Sessions.Start (Owner, Feed, "decide"); Cancel (Owner); Drain (Cancelled);', '''declare
@@ -102,9 +109,21 @@ begin Thinkthen.Native_Sessions.Start (Owner, Invalid, "decide"); exception when
 if not Refused then raise Program_Error with "invalid question admitted"; end if;
 end;''']
     calls += [
-        'Thinkthen.Native_Sessions.Start (Owner, False_Request, "decide"); Finish (Owner); declare Completed : Thinkthen.Answers.Completion; Answer : constant Thinkthen.Answers.Decision := Thinkthen.Answers.Decide_Answer (Owner, Completed); begin Require (Answer.Known and then not Answer.Value, "safe false value"); Require (Thinkthen.Answers.Requests_Sent (Thinkthen.Answers.Call_Facts (Completed)) = 0 and then Thinkthen.Answers.Cache_Answers (Thinkthen.Answers.Call_Facts (Completed)) = 1, "safe cached facts"); end;',
-        'Thinkthen.Native_Sessions.Start (Owner, Null_Request, "decide"); Finish (Owner); declare Completed : Thinkthen.Answers.Completion; Answer : constant Thinkthen.Answers.Decision := Thinkthen.Answers.Decide_Answer (Owner, Completed); begin Require (not Answer.Known, "safe null value"); end;',
-        '''Thinkthen.Native_Sessions.Start (Owner, Feed, "decide"); Cancel (Owner); declare use Thinkthen.Answers; Completed : constant Completion := Collect (Owner); Refused : Boolean := False; begin Require (Status (Completed) = Thinkthen.Answers.Failed and then Kind (Call_Failure (Completed)) = Cancelled, "retained cancellation"); begin declare Ignored : constant Decision := Decide_Answer (Completed); begin if Ignored.Known then null; end if; end; exception when Session_Failure => Refused := True; end; Require (Refused and then Message (Call_Failure (Completed))'Length > 0, "typed execution failure retained"); end;''',
+        'Thinkthen.Native_Sessions.Start (Owner, False_Request, "decide"); Finish (Owner); declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); Answer : constant Thinkthen.Answers.Decide_Result := Thinkthen.Answers.Decide (Completed); begin Require (not Thinkthen.Values.As_Boolean (Answer.Value) and then Answer.Probability.State = Thinkthen.Answers.Present_Field and then Answer.Probability.Value = 0.9, "safe false value"); Require (Thinkthen.Answers.Requests_Sent (Thinkthen.Answers.Call_Facts (Completed)) = 0 and then Thinkthen.Answers.Cache_Answers (Thinkthen.Answers.Call_Facts (Completed)) = 1, "safe cached facts"); declare Refused : Boolean := False; begin begin declare Ignored : constant Thinkthen.Answers.Choose_Result := Thinkthen.Answers.Choose (Completed); begin if Ignored.Results\'Length > 0 then null; end if; end; exception when Thinkthen.Answers.Answer_Cardinality_Error => Refused := True; end; Require (Refused and then Thinkthen.Answers.Has_Facts (Completed) and then Thinkthen.Answers.Packet_Count (Completed) > 0, "cardinality refusal retained completion"); end; end;',
+        'Thinkthen.Native_Sessions.Start (Owner, Null_Request, "decide"); Finish (Owner); declare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); Answer : constant Thinkthen.Answers.Decide_Result := Thinkthen.Answers.Decide (Completed); begin Require (Thinkthen.Values.Kind (Answer.Value) = Thinkthen.Values.Null_Value and then Answer.Probability.State = Thinkthen.Answers.Null_Field, "safe null value"); end;',
+        '''Thinkthen.Native_Sessions.Start (Owner, Feed, "decide"); Cancel (Owner); declare use Thinkthen.Answers; Completed : constant Completion := Collect (Owner); Refused : Boolean := False; begin Require (Status (Completed) = Thinkthen.Answers.Failed and then Kind (Call_Failure (Completed)) = Cancelled, "retained cancellation"); begin declare Ignored : constant Decide_Result := Thinkthen.Answers.Decide (Completed); begin if Ignored.Results'Length > 0 then null; end if; end; exception when Session_Failure => Refused := True; end; Require (Refused and then Message (Call_Failure (Completed))'Length > 0, "typed execution failure retained"); end;''',
+    ]
+    calls += [
+        'Select_Route ("generic/v1");',
+        '''declare use Thinkthen.Answers; use Thinkthen.Values;
+Answer : constant Decide_Result := Thinkthen.Inputs.Calls.Decide (Client, Thinkthen.Inputs.Native.Wrap (Authored_Null.T_question), Thinkthen.Inputs.As_text (Thinkthen.Inputs.Native.Wrap (Authored_Null.T_input)));
+begin Require (Kind (Answer.Value) = Thinkthen.Values.Null_Value and then Answer.Probability.State = Present_Field and then Answer.Probability.Value = 0.9, "resolved authored null retains probability"); end;''',
+        '''declare use Thinkthen.Answers; use Thinkthen.Values;
+Answer : constant Decide_Result := Thinkthen.Inputs.Calls.Decide (Client, Thinkthen.Inputs.Native.Wrap (Authored_Object.T_question), Thinkthen.Inputs.As_text (Thinkthen.Inputs.Native.Wrap (Authored_Object.T_input)));
+begin Require (Kind (Answer.Value) = Object_Value and then Field_Name (Answer.Value, 1) = "wide" and then As_Number (Field_Value (Answer.Value, "wide")) = "18446744073709551615" and then not As_Boolean (Element (Field_Value (Answer.Value, "list"), 1)) and then Kind (Element (Field_Value (Answer.Value, "list"), 2)) = Thinkthen.Values.Null_Value and then Kind (Field_Value (Answer.Value, "null")) = Thinkthen.Values.Null_Value and then Answer.Probability.State = Present_Field and then Answer.Probability.Value = 0.9, "resolved authored object preserves leaf and order"); end;''',
+        '''declare use Thinkthen.Answers; use Thinkthen.Values;
+Answer : constant Decide_List_Result := Thinkthen.Inputs.Calls.Decide (Client, Thinkthen.Inputs.Text_Question ("Does it pass?"), Thinkthen.Inputs.Make_Input_records ([Thinkthen.Inputs.Text_Item ("A one-record list.")]));
+begin Require (Answer.Value'Length = 1 and then As_Boolean (Answer.Value (1)) and then Answer.Probability'Length = 1 and then Answer.Probability (1).State = Present_Field and then Answer.Probability (1).Value = 0.9, "concrete one-record list retains list shape"); end;''',
     ]
     evidence = work / 'evidence.txt'
     evidence.write_text('File evidence.\n')
@@ -129,7 +148,7 @@ end;''']
         'Select_Settings ("arm/images/liquid/decide/v1", ' + 'Thinkthen.Inputs.Native.Wrap (' + construct('EngineSettings', definitions['EngineSettings'], {'cache':False,'backend':'liquid','model':'d1'}) + ')' + ');',
         'Thinkthen.Native_Sessions.Start (Client, Owner, Image_Request, "decide"); Finish (Owner); Drain (Expected_Sends => 1, Images => True);',
     ]
-    source = ('with Thinkthen.Native_Sessions; use Thinkthen.Native_Sessions;\nwith Thinkthen.Inputs.Calls;\nwith Thinkthen.Inputs;\nwith Thinkthen.Inputs.Native;\nwith Ada.Strings.Fixed;\n' + (PACKAGE / 'checks/native_session.adb').read_text()).replace('-- DECLARATIONS', '\n'.join(declarations)).replace('-- CALLS', '\n'.join(calls))
+    source = ('with Thinkthen.Native_Sessions; use Thinkthen.Native_Sessions;\nwith Thinkthen.Inputs.Calls;\nwith Thinkthen.Inputs;\nwith Thinkthen.Inputs.Native;\nwith Ada.Strings.Fixed;\nwith Thinkthen.Answers;\nwith Thinkthen.Values;\nuse type Thinkthen.Answers.Field_State;\nuse type Thinkthen.Values.Value_Kind;\n' + (PACKAGE / 'checks/native_session.adb').read_text()).replace('-- DECLARATIONS', '\n'.join(declarations)).replace('-- CALLS', '\n'.join(calls))
     source = __import__('re').sub(r'(?<![.\w])(?:Close|Finish|Cancel|Next_Packet|Try_Read)\s*\(', lambda match: 'Thinkthen.Native_Sessions.' + match.group(0), source)
     source = __import__('re').sub(r'\bText\s*\(', 'Thinkthen.Native_Sessions.Text (', source)
     (work / 'thinkthen-inputs-native_check.ads').write_text('procedure Thinkthen.Inputs.Native_Check;\n')
@@ -165,7 +184,7 @@ end;''']
         print('Installed Ada safe answer example PASS')
         backend.stdin.write('count\n'); backend.stdin.flush()
         count = backend.stdout.readline().strip()
-        assert count == '39', count
+        assert count == '42', count
         print('native session loopback requests:', count)
         print('development package artifact:', artifact)
     finally:

@@ -19,7 +19,7 @@ def friendly(raw):
     return {'JSON':'Value', 'Call':'Call', 'Engine_Settings':'Engine_Settings', 'Function':'Function_Kind'}.get(value, value)
 
 
-def outputs(definitions, names, schemas, metadata=None, plan_definitions=None):
+def outputs(definitions, names, schemas, metadata=None, plan_definitions=None, result_definitions=None):
     representatives = {}
     ordered = sorted(names, key=lambda key: (identifier(key) != names[key], key))
     for key in ordered:
@@ -164,6 +164,10 @@ def outputs(definitions, names, schemas, metadata=None, plan_definitions=None):
                         public.append(short_signature+';')
                         value = '(' + identifier(member) + ' => ' + unwrap(value_raw,'Item') + ', others => <>)'
                         bodies.append(short_signature + f' is ((Data => (Kind => Requests.{raw_tag}, V_{index} => '+value+')));')
+                        if label == 'Input' and child_schema['properties'].get('kind', {}).get('const') in ('text', 'json'):
+                            typed_signature = f'function {short} (Item : {argument(value_raw)}) return Thinkthen.Inputs.{child_label}'
+                            public.append(typed_signature + ';')
+                            bodies.append(typed_signature + f' is (Native.Wrap (Requests.{host_key if host_key.startswith("T_") else names[host_key]}\'(' + value[1:-1] + ')));')
                 if child_label:
                     getter = f'function As_{suffix} (Item : Thinkthen.Inputs.{label}) return Thinkthen.Inputs.{child_label}'
                     public.append(getter + ';')
@@ -199,6 +203,32 @@ def outputs(definitions, names, schemas, metadata=None, plan_definitions=None):
         call_spec += [signature+';',shared+';']
         for declaration,owner in ((signature,'Owner'),(shared,'Client, Owner')):
             call_body.append(declaration+' is\nbegin\nThinkthen.Native_Sessions.Start ('+owner+', (T_question => Native.Unwrap (Question), T_input => Native.Unwrap (Input), T_options => Native.Unwrap (Options), others => <>), "'+function+'");\nend '+function.title()+';')
+    from templates.ada_call_results import result_type
+    from templates.host_answers import call_results, scalar_input_selectors
+    result_specs = call_results(result_definitions)
+    call_spec.insert(2, 'with Thinkthen.Answers;')
+    call_body.insert(1, 'with Thinkthen.Answers;')
+    scalar_selectors = set(scalar_input_selectors(definitions))
+    for function, result_spec in result_specs.items():
+        for child, _ in definitions['RequestInput']['variants']:
+            raw = names[child]
+            input_type = public_names[raw]
+            scalar = child in scalar_selectors and result_spec['call_shape'] == 'input'
+            result = 'Thinkthen.Answers.' + result_type(function, result_spec, scalar)
+            signature = f'function {function.title()} (Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.{input_type}; Options : Call_Options := No_Options) return {result}'
+            shared = signature.replace('(Question', '(Client : Engine; Question')
+            suffix = child.removeprefix('RequestInput_')
+            converted = f'Input_From_{suffix} (Input)'
+            for declaration, owner in ((signature, 'Owner'), (shared, 'Client, Owner')):
+                call_spec.append(declaration + ';')
+                call_body.append(declaration + ' is\nOwner : Thinkthen.Sessions.Session;\nbegin\n' + function.title() + ' (' + owner + ', Question, ' + converted + ', Options);\nThinkthen.Sessions.Finish (Owner);\ndeclare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin\nThinkthen.Sessions.Close (Owner);\nreturn Thinkthen.Answers.' + function.title() + ' (Completed);\nend;\nexception when others => Thinkthen.Sessions.Close (Owner); raise;\nend ' + function.title() + ';')
+        # A union Input always denotes the list shape for per-input results.
+        result = 'Thinkthen.Answers.' + result_type(function, result_spec, False)
+        signature = f'function {function.title()} (Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input; Options : Call_Options := No_Options) return {result}'
+        shared = signature.replace('(Question', '(Client : Engine; Question')
+        for declaration, owner in ((signature, 'Owner'), (shared, 'Client, Owner')):
+            call_spec.append(declaration + ';')
+            call_body.append(declaration + ' is\nOwner : Thinkthen.Sessions.Session;\nbegin\n' + function.title() + ' (' + owner + ', Question, Input, Options);\nThinkthen.Sessions.Finish (Owner);\ndeclare Completed : constant Thinkthen.Answers.Completion := Thinkthen.Answers.Collect (Owner); begin\nThinkthen.Sessions.Close (Owner);\nreturn Thinkthen.Answers.' + function.title() + ' (Completed);\nend;\nexception when others => Thinkthen.Sessions.Close (Owner); raise;\nend ' + function.title() + ';')
     call_spec += ['procedure Configure (Client : in out Engine; Settings : Engine_Settings; Error : out Failure);',
                   'procedure Push (Owner : in out Thinkthen.Sessions.Session; Item : Feed_Item; Status : out Thinkthen.Sessions.Push_Status);',
                   'procedure Finish (Owner : in out Thinkthen.Sessions.Session; Error : Reader_Error);',
@@ -206,7 +236,7 @@ def outputs(definitions, names, schemas, metadata=None, plan_definitions=None):
     call_body += ['procedure Push (Owner : in out Thinkthen.Sessions.Session; Item : Feed_Item; Status : out Thinkthen.Sessions.Push_Status) is\nbegin\nThinkthen.Native_Sessions.Push (Owner, Native.Unwrap (Item), Status);\nend Push;',
                   'procedure Finish (Owner : in out Thinkthen.Sessions.Session; Error : Reader_Error) is\nbegin\nThinkthen.Native_Sessions.Finish (Owner, Native.Unwrap (Error));\nend Finish;']
     call_body.insert(1, 'with Ada.Unchecked_Conversion;\nwith Interfaces.C.Strings;\nwith Thinkthen.Session_C;\nwith Thinkthen.Requests.Native;\nwith System;')
-    call_spec.insert(3, 'type Plan_Estimate is private;\ntype Token_Band is record Lower, Upper : Interfaces.Unsigned_64; end record;\ntype Optional_Text (Present : Boolean := False) is record\ncase Present is when True => Value : Ada.Strings.Unbounded.Unbounded_String; when False => null; end case;\nend record;')
+    call_spec.insert(call_spec.index('package Thinkthen.Inputs.Calls is') + 1, 'type Plan_Estimate is private;\ntype Token_Band is record Lower, Upper : Interfaces.Unsigned_64; end record;\ntype Optional_Text (Present : Boolean := False) is record\ncase Present is when True => Value : Ada.Strings.Unbounded.Unbounded_String; when False => null; end case;\nend record;')
     for member, field in plan_definitions['plan']['properties'].items():
         raw = 'Thinkthen.Values.Field_Value (Item.Data, "' + member + '")'
         method = member.title()

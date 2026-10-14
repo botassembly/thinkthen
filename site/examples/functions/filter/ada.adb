@@ -8,8 +8,6 @@ with Thinkthen.Values;
 
 procedure Sample is
    package V renames Thinkthen.Values;
-   Owner : Session;
-   Completed : Completion;
    Records : constant Item_List :=
      [Text_Item ("Arrived a day early. Thank you!"),
       Text_Item (
@@ -17,13 +15,13 @@ procedure Sample is
       Text_Item ("Does this come in blue?"),
       Text_Item ("The strap snapped on day two.")];
 begin
-   Thinkthen.Inputs.Calls.Filter (Owner,
+   declare
+      Result : constant Filter_Result :=
+        Thinkthen.Inputs.Calls.Filter (
      Text_Question ("Is this a complaint?"),
      Records_Input (Records));
-   Finish (Owner);
-   declare
       Complaints : constant V.Value_List :=
-        Filter_Answer (Owner, Completed);
+        Result.Value;
    begin
       pragma Assert (Complaints'Length = 2);
       pragma Assert (V.As_String (Complaints (1)) =

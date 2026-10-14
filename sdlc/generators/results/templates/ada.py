@@ -258,8 +258,10 @@ def generate(root, graph, prepare, env, check):
                'thinkthen-session_c.ads': header(root, env)}
     from templates.ada_sessions import outputs as session_outputs
     outputs.update(session_outputs())
+    results = json.loads((root / 'crates/thinkthen/src/public/results/complete.schema.json').read_text())
+    result_definitions = prepare(graph(results, ('completesessionPacket',)))
     from templates.ada_inputs import outputs as input_outputs
-    outputs.update(input_outputs(definitions, names, schemas, plan_definitions=json.loads((root / 'specification/result.schema.json').read_text())['$defs']))
+    outputs.update(input_outputs(definitions, names, schemas, plan_definitions=json.loads((root / 'specification/result.schema.json').read_text())['$defs'], result_definitions=result_definitions))
     from templates.ada_value_readers import outputs as value_reader_outputs
     outputs.update(value_reader_outputs())
     from templates.ada_answers import outputs as answer_outputs

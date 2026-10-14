@@ -1018,9 +1018,11 @@ function Get_Path (Item : Thinkthen.Inputs.Image_file) return Thinkthen.Inputs.T
 function Kind (Item : Thinkthen.Inputs.Input) return Input_Kind;
 function Input_From_text (Item : Thinkthen.Inputs.Input_text) return Thinkthen.Inputs.Input;
 function Text_Input (Item : String) return Thinkthen.Inputs.Input;
+function Text_Input (Item : String) return Thinkthen.Inputs.Input_text;
 function As_text (Item : Thinkthen.Inputs.Input) return Thinkthen.Inputs.Input_text;
 function Input_From_json (Item : Thinkthen.Inputs.Input_json) return Thinkthen.Inputs.Input;
 function Json_Input (Item : Thinkthen.Inputs.Value) return Thinkthen.Inputs.Input;
+function Json_Input (Item : Thinkthen.Inputs.Value) return Thinkthen.Inputs.Input_json;
 function As_json (Item : Thinkthen.Inputs.Input) return Thinkthen.Inputs.Input_json;
 function Input_From_records (Item : Thinkthen.Inputs.Input_records) return Thinkthen.Inputs.Input;
 function Records_Input (Item : Thinkthen.Inputs.Item_List) return Thinkthen.Inputs.Input;

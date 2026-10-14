@@ -8,19 +8,17 @@ with Thinkthen.Values;
 
 procedure Sample is
    package V renames Thinkthen.Values;
-   Owner : Session;
-   Completed : Completion;
    Evidence : constant String :=
      "Our checkout page is down and customers cannot pay."
      & ASCII.LF;
 begin
-   Thinkthen.Inputs.Calls.Score (Owner,
-     File_Question ("levels.json"),
-     Text_Input (Evidence));
-   Finish (Owner);
    declare
+      Result : constant Score_Result :=
+        Thinkthen.Inputs.Calls.Score (
+     File_Question ("levels.json"),
+     Make_Input_text (Evidence));
       Urgency : constant Long_Float :=
-        Score_Answer (Owner, Completed);
+        Result.Value;
    begin
       pragma Assert (Urgency = 2.0);
    end;

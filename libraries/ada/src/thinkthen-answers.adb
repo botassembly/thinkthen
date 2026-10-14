@@ -1,6 +1,5 @@
 -- Generated owned native answers. Do not edit.
 with Thinkthen.Native_Values;
-with Ada.Containers.Vectors;
 with Ada.Unchecked_Conversion;
 with Ada.Strings.Fixed;
 with System;
@@ -5586,8 +5585,6 @@ end Read_thinkthen_complete_session_packet_v1;
        Kind (Field_Value (Call.Terminal, "facts")) = Object_Value);
    function Call_Facts (Call : Completion) return Facts is ((Data => Field_Value (Call.Terminal, "facts")));
    function Call_Failure (Call : Completion) return Failure is ((Data => Field_Value (Call.Terminal, "failure")));
-   function Details (Item : Facts) return Value is (Item.Data);
-   function Details (Error : Failure) return Value is (Error.Data);
    function Kind (Error : Failure) return Error_Status is
       Name : constant String := As_String (Field_Value (Field_Value (Error.Data, "error"), "kind"));
    begin
@@ -5650,25 +5647,9 @@ if As_String (Field_Value (Field_Value (Field_Value (Packet, "value"), "value"),
       if Natural (Items.Length) /= 1 then raise Answer_Cardinality_Error with "expected exactly one matching answer"; end if;
       return Items (1);
    end Answer;
-   function Texts (Item : Value) return Text_List is
-      Result : Text_List (1 .. Length (Item));
-   begin
-      for I in Result'Range loop Result (I) := To_Unbounded_String (As_String (Element (Item, I))); end loop;
-      return Result;
-   end Texts;
-   function Found_Value (Item : Find_Result) return Value is (Field_Value (Item.Data, "value"));
-   function Has_Match (Item : Find_Result) return Boolean is (Kind (Field_Value (Item.Data, "index")) /= Null_Value);
-   function Match_Index (Item : Find_Result) return Interfaces.Unsigned_64 is (Interfaces.Unsigned_64'Value (As_Number (Field_Value (Item.Data, "index"))));
-   function Fields (Item : Annotation) return Value is (Field_Value (Item.Data, "value"));
-   function Entities (Item : Recognition) return Value is (Field_Value (Field_Value (Item.Data, "value"), "entities"));
-   function Edges (Item : Relation) return Value is (Field_Value (Item.Data, "value"));
    function Source_Name (Edge : Value) return String is (As_String (Field_Value (Field_Value (Edge, "source"), "name")));
    function Target_Name (Edge : Value) return String is (As_String (Field_Value (Field_Value (Edge, "target"), "name")));
    function Relation_Name (Edge : Value) return String is (As_String (Field_Value (Edge, "relation")));
-   function Details (Item : Find_Result) return Value is (Item.Data);
-   function Details (Item : Annotation) return Value is (Item.Data);
-   function Details (Item : Recognition) return Value is (Item.Data);
-   function Details (Item : Relation) return Value is (Item.Data);
    function Cache_Answers (Item : Facts) return Interfaces.Unsigned_64 is (Interfaces.Unsigned_64'Value (As_Number (Field_Value (Item.Data, "cache_answers"))));
 function Call_Id (Item : Facts) return String is (As_String (Field_Value (Item.Data, "call_id")));
 function Estimated_Cost_Usd (Item : Facts) return Text_Field is
@@ -5730,130 +5711,318 @@ for I in Copy'Range loop Copy (I) := Element (Item, I); end loop;
 return Copy;
 end;
 end Retained_Values;
-function Decide_Answer (Call : Completion) return Decision is
-Item : constant Value := Answer (Call, "decide", "decision");
+function Resolved_Decide (Call : Completion; Row : Value; Ordinal : Positive) return Boolean is
+Row_Index : constant Value := (if Has_Field (Row, "index") and then Kind (Field_Value (Row, "index")) /= Null_Value then Field_Value (Row, "index") else Number_Item (Ada.Strings.Fixed.Trim (Natural'Image (Ordinal - 1), Ada.Strings.Both)));
 begin
-if Kind (Item) = Null_Value then return (Known => False); end if;
-return (Known => True, Value => As_Boolean (Item));
-end Decide_Answer;
-function Choose_Answer (Call : Completion) return Choice is
-Item : constant Value := Answer (Call, "choose", "choice");
-begin
-if Kind (Item) = Null_Value then return (Known => False); end if;
-return (Known => True, Value => To_Unbounded_String (As_String (Item)));
-end Choose_Answer;
-function Score_Answer (Call : Completion) return Long_Float is
-Item : constant Value := Answer (Call, "score", "score");
-begin
-return Long_Float'Value (As_Number (Item));
-end Score_Answer;
-function Tag_Answer (Call : Completion) return Text_List is
-Item : constant Value := Answer (Call, "tag", "tags");
-begin
-return Texts (Item);
-end Tag_Answer;
-function Filter_Answer (Call : Completion) return Thinkthen.Values.Value_List is
-Item : constant Value := Answer (Call, "filter", "");
-begin
-declare
-Items : Thinkthen.Values.Value_List (1 .. Length (Item));
-begin
-for I in Items'Range loop
-Items (I) := Field_Value (Element (Item, I), "input");
+for J in 1 .. Length (Call.Packets) loop
+declare Packet : constant Value := Element (Call.Packets, J); begin
+if As_String (Field_Value (Packet, "kind")) = "observation" and then As_String (Field_Value (Field_Value (Packet, "value"), "kind")) = "row" and then As_String (Field_Value (Field_Value (Field_Value (Packet, "value"), "value"), "kind")) = "judgment" and then As_String (Field_Value (Field_Value (Field_Value (Field_Value (Packet, "value"), "value"), "value"), "kind")) = "decision" and then As_String (Field_Value (Packet, "function")) = "decide" and then Field_Value (Field_Value (Packet, "value"), "index") = Row_Index and then Kind (Field_Value (Field_Value (Field_Value (Field_Value (Packet, "value"), "value"), "value"), "value")) /= Null_Value then return True; end if;
+exception when Constraint_Error => null; end;
 end loop;
-return Items;
-end;
-end Filter_Answer;
-function Rank_Answer (Call : Completion) return Rank_List is
-Item : constant Value := Answer (Call, "rank", "");
+return False;
+end Resolved_Decide;
+function Resolved_Choose (Call : Completion; Row : Value; Ordinal : Positive) return Boolean is
+Row_Index : constant Value := (if Has_Field (Row, "index") and then Kind (Field_Value (Row, "index")) /= Null_Value then Field_Value (Row, "index") else Number_Item (Ada.Strings.Fixed.Trim (Natural'Image (Ordinal - 1), Ada.Strings.Both)));
 begin
-declare
-Items : Rank_List (1 .. Length (Item));
-begin
-for I in Items'Range loop
-Items (I) := Interfaces.Unsigned_64'Value (As_Number (Field_Value (Element (Item, I), "index")));
+for J in 1 .. Length (Call.Packets) loop
+declare Packet : constant Value := Element (Call.Packets, J); begin
+if As_String (Field_Value (Packet, "kind")) = "observation" and then As_String (Field_Value (Field_Value (Packet, "value"), "kind")) = "row" and then As_String (Field_Value (Field_Value (Field_Value (Packet, "value"), "value"), "kind")) = "judgment" and then As_String (Field_Value (Field_Value (Field_Value (Field_Value (Packet, "value"), "value"), "value"), "kind")) = "choice" and then As_String (Field_Value (Packet, "function")) = "choose" and then Field_Value (Field_Value (Packet, "value"), "index") = Row_Index and then Kind (Field_Value (Field_Value (Field_Value (Field_Value (Packet, "value"), "value"), "value"), "value")) /= Null_Value then return True; end if;
+exception when Constraint_Error => null; end;
 end loop;
-return Items;
-end;
-end Rank_Answer;
-function Find_Answer (Call : Completion) return Find_Result is
-Item : constant Value := Answer (Call, "find", "");
+return False;
+end Resolved_Choose;
+function Record_Value (Item : Receipt) return Value is (Item.Data);
+function Read_Choice (Item : Value) return Choice is
 begin
-return (Data => Item);
-end Find_Answer;
-function Annotate_Answer (Call : Completion) return Annotation_List is
-Item : constant Value := Answer (Call, "annotate", "");
+   if Kind (Item) = Null_Value then return (Known => False); end if;
+   return (Known => True, Value => To_Unbounded_String (As_String (Item)));
+end Read_Choice;
+function Texts (Item : Value) return Text_List is
+   Result : Text_List (1 .. Length (Item));
 begin
-declare
-Items : Annotation_List (1 .. Length (Item));
+   for I in Result'Range loop Result (I) := To_Unbounded_String (As_String (Element (Item, I))); end loop;
+   return Result;
+end Texts;
+function Receipts (Call : Completion; Function_Name : String; Is_Array : Boolean) return Value_List is
+   Owned : Packet_Lists.Vector;
 begin
-for I in Items'Range loop Items (I) := (Data => Element (Item, I)); end loop;
-return Items;
-end;
-end Annotate_Answer;
-function Recognize_Answer (Call : Completion) return Recognition_List is
-Item : constant Value := Answer (Call, "recognize", "");
+   case Status (Call) is
+      when Failed => raise Session_Failure with Message (Call_Failure (Call));
+      when Malformed => raise Answer_Cardinality_Error with "expected one valid terminal";
+      when Succeeded => null;
+   end case;
+   for I in 1 .. Length (Call.Packets) loop
+      declare Packet : constant Value := Element (Call.Packets, I); begin
+         if Has_Field (Packet, "function") and then As_String (Field_Value (Packet, "function")) = Function_Name then
+            declare
+               Packet_Kind : constant String := As_String (Field_Value (Packet, "kind"));
+               Payload : constant Value := Field_Value (Packet, "value");
+            begin
+               if Packet_Kind = "aggregate" and then Is_Array then
+                  for J in 1 .. Length (Payload) loop Owned.Append (Element (Payload, J)); end loop;
+               elsif Packet_Kind = "row" or else Packet_Kind = "aggregate" then
+                  Owned.Append (Payload);
+               end if;
+            end;
+         end if;
+      end;
+   end loop;
+   declare Result : Value_List (1 .. Natural (Owned.Length)); begin
+      for I in Result'Range loop Result (I) := Owned (I); end loop;
+      return Result;
+   end;
+end Receipts;
+function Number (Item : Value) return Number_Field is
 begin
-declare
-Items : Recognition_List (1 .. Length (Item));
+   if Kind (Item) = Null_Value then return (State => Null_Field); end if;
+   return (State => Present_Field, Value => Long_Float'Value (As_Number (Item)));
+end Number;
+function Item_Probabilities (Row : Value; Recognition : Boolean) return Probability_Lists.Vector is
+   Result : Probability_Lists.Vector;
+   Payload : constant Value := Field_Value (Row, "value");
 begin
-for I in Items'Range loop Items (I) := (Data => Element (Item, I)); end loop;
-return Items;
-end;
-end Recognize_Answer;
-function Relate_Answer (Call : Completion) return Relation is
-Item : constant Value := Answer (Call, "relate", "");
+   if not Recognition then
+      for I in 1 .. Length (Payload) loop
+         Result.Append (Number (Field_Value (Element (Payload, I), "probability")));
+      end loop;
+   elsif Has_Field (Payload, "proposals") then
+      declare Proposals : constant Value := Field_Value (Payload, "proposals"); begin
+         for I in 1 .. Length (Proposals) loop
+            Result.Append (Number (Field_Value (Element (Proposals, I), "probability")));
+         end loop;
+      end;
+   else
+      declare
+         Entities : constant Value := Field_Value (Payload, "entities");
+         Proposals : constant Value := Field_Value (Field_Value (Row, "answer"), "proposals");
+      begin
+         for I in 1 .. Length (Entities) loop
+            declare
+               Entity : constant Value := Element (Entities, I);
+               Matched : Boolean := False;
+            begin
+               for J in 1 .. Length (Proposals) loop
+                  declare
+                     Proposal : constant Value := Element (Proposals, J);
+                     Selected : constant Value := (if Has_Field (Proposal, "selected") then Field_Value (Proposal, "selected") else Null_Item);
+                  begin
+                     if As_Boolean (Field_Value (Proposal, "kept")) and then Kind (Selected) /= Null_Value
+                       and then Field_Value (Selected, "start") = Field_Value (Entity, "start")
+                       and then Field_Value (Selected, "end") = Field_Value (Entity, "end")
+                       and then Has_Field (Proposal, "kind")
+                       and then Field_Value (Proposal, "kind") = Field_Value (Entity, "kind") then
+                        if Matched then raise Answer_Cardinality_Error with "duplicate selected span"; end if;
+                        Result.Append (Number (Field_Value (Proposal, "span_probability")));
+                        Matched := True;
+                     end if;
+                  end;
+               end loop;
+               if not Matched then raise Answer_Cardinality_Error with "missing selected span"; end if;
+            end;
+         end loop;
+      end;
+   end if;
+   return Result;
+end Item_Probabilities;
+
+function Decide (Call : Completion) return Decide_Result is
+Rows : constant Value_List := Receipts (Call, "decide", True);
+Result : Decide_Result (Rows'Length);
 begin
-return (Data => Item);
-end Relate_Answer;
-function Decide_Answer (Owner : in out Thinkthen.Sessions.Session; Call : in out Completion) return Decision is
+if Rows'Length /= 1 then raise Answer_Cardinality_Error with "expected one result"; end if;
+Result.Facts := Call_Facts (Call);
+for I in Rows'Range loop
+Result.Results (I) := (Data => Rows (I));
+Result.Value := Field_Value (Rows (I), "value");
+Result.Probability := (if Resolved_Decide (Call, Rows (I), I) then Number (Field_Value (Field_Value (Rows (I), "answer"), "probability")) else (State => Null_Field));
+end loop;
+return Result;
+end Decide;
+function Decide (Call : Completion) return Decide_List_Result is
+Rows : constant Value_List := Receipts (Call, "decide", True);
+Result : Decide_List_Result (Rows'Length, Rows'Length);
 begin
-Call := Collect (Owner);
-return Decide_Answer (Call);
-end Decide_Answer;
-function Choose_Answer (Owner : in out Thinkthen.Sessions.Session; Call : in out Completion) return Choice is
+Result.Facts := Call_Facts (Call);
+for I in Rows'Range loop
+Result.Results (I) := (Data => Rows (I));
+Result.Value (I) := Field_Value (Rows (I), "value");
+Result.Probability (I) := (if Resolved_Decide (Call, Rows (I), I) then Number (Field_Value (Field_Value (Rows (I), "answer"), "probability")) else (State => Null_Field));
+end loop;
+return Result;
+end Decide;
+function Choose (Call : Completion) return Choose_Result is
+Rows : constant Value_List := Receipts (Call, "choose", True);
+Result : Choose_Result (Rows'Length);
 begin
-Call := Collect (Owner);
-return Choose_Answer (Call);
-end Choose_Answer;
-function Tag_Answer (Owner : in out Thinkthen.Sessions.Session; Call : in out Completion) return Text_List is
+if Rows'Length /= 1 then raise Answer_Cardinality_Error with "expected one result"; end if;
+Result.Facts := Call_Facts (Call);
+for I in Rows'Range loop
+Result.Results (I) := (Data => Rows (I));
+Result.Value := Read_Choice (Field_Value (Rows (I), "value"));
+Result.Probability := (if Resolved_Choose (Call, Rows (I), I) then Number (Field_Value (Field_Value (Field_Value (Rows (I), "answer"), "probabilities"), As_String (Field_Value (Field_Value (Rows (I), "answer"), "pick")))) else (State => Null_Field));
+end loop;
+return Result;
+end Choose;
+function Choose (Call : Completion) return Choose_List_Result is
+Rows : constant Value_List := Receipts (Call, "choose", True);
+Result : Choose_List_Result (Rows'Length, Rows'Length);
 begin
-Call := Collect (Owner);
-return Tag_Answer (Call);
-end Tag_Answer;
-function Score_Answer (Owner : in out Thinkthen.Sessions.Session; Call : in out Completion) return Long_Float is
+Result.Facts := Call_Facts (Call);
+for I in Rows'Range loop
+Result.Results (I) := (Data => Rows (I));
+Result.Value (I) := Read_Choice (Field_Value (Rows (I), "value"));
+Result.Probability (I) := (if Resolved_Choose (Call, Rows (I), I) then Number (Field_Value (Field_Value (Field_Value (Rows (I), "answer"), "probabilities"), As_String (Field_Value (Field_Value (Rows (I), "answer"), "pick")))) else (State => Null_Field));
+end loop;
+return Result;
+end Choose;
+function Tag (Call : Completion) return Tag_Result is
+Rows : constant Value_List := Receipts (Call, "tag", True);
+Result : Tag_Result (Value_Count => (if Rows'Length = 1 then Length (Field_Value (Rows (1), "value")) else 0), Record_Count => Rows'Length);
 begin
-Call := Collect (Owner);
-return Score_Answer (Call);
-end Score_Answer;
-function Filter_Answer (Owner : in out Thinkthen.Sessions.Session; Call : in out Completion) return Thinkthen.Values.Value_List is
+if Rows'Length /= 1 then raise Answer_Cardinality_Error with "expected one result"; end if;
+Result.Facts := Call_Facts (Call);
+Result.Probability := (State => Null_Field);
+for I in Rows'Range loop
+Result.Results (I) := (Data => Rows (I));
+Result.Value := Texts (Field_Value (Rows (I), "value"));
+end loop;
+return Result;
+end Tag;
+function Tag (Call : Completion) return Tag_List_Result is
+Rows : constant Value_List := Receipts (Call, "tag", True);
+Result : Tag_List_Result (Rows'Length, Rows'Length);
 begin
-Call := Collect (Owner);
-return Filter_Answer (Call);
-end Filter_Answer;
-function Rank_Answer (Owner : in out Thinkthen.Sessions.Session; Call : in out Completion) return Rank_List is
+Result.Facts := Call_Facts (Call);
+Result.Probability := (State => Null_Field);
+for I in Rows'Range loop
+Result.Results (I) := (Data => Rows (I));
+Result.Value.Append (Texts (Field_Value (Rows (I), "value")));
+end loop;
+return Result;
+end Tag;
+function Score (Call : Completion) return Score_Result is
+Rows : constant Value_List := Receipts (Call, "score", True);
+Result : Score_Result (Rows'Length);
 begin
-Call := Collect (Owner);
-return Rank_Answer (Call);
-end Rank_Answer;
-function Find_Answer (Owner : in out Thinkthen.Sessions.Session; Call : in out Completion) return Find_Result is
+if Rows'Length /= 1 then raise Answer_Cardinality_Error with "expected one result"; end if;
+Result.Facts := Call_Facts (Call);
+Result.Probability := (State => Null_Field);
+for I in Rows'Range loop
+Result.Results (I) := (Data => Rows (I));
+Result.Value := Long_Float'Value (As_Number (Field_Value (Rows (I), "value")));
+end loop;
+return Result;
+end Score;
+function Score (Call : Completion) return Score_List_Result is
+Rows : constant Value_List := Receipts (Call, "score", True);
+Result : Score_List_Result (Rows'Length, Rows'Length);
 begin
-Call := Collect (Owner);
-return Find_Answer (Call);
-end Find_Answer;
-function Annotate_Answer (Owner : in out Thinkthen.Sessions.Session; Call : in out Completion) return Annotation_List is
+Result.Facts := Call_Facts (Call);
+Result.Probability := (State => Null_Field);
+for I in Rows'Range loop
+Result.Results (I) := (Data => Rows (I));
+Result.Value (I) := Long_Float'Value (As_Number (Field_Value (Rows (I), "value")));
+end loop;
+return Result;
+end Score;
+function Filter (Call : Completion) return Filter_Result is
+Rows : constant Value_List := Receipts (Call, "filter", True);
+Result : Filter_Result (Rows'Length, Rows'Length);
 begin
-Call := Collect (Owner);
-return Annotate_Answer (Call);
-end Annotate_Answer;
-function Recognize_Answer (Owner : in out Thinkthen.Sessions.Session; Call : in out Completion) return Recognition_List is
+Result.Facts := Call_Facts (Call);
+for I in Rows'Range loop
+Result.Results (I) := (Data => Rows (I));
+Result.Value (I) := Field_Value (Rows (I), "input");
+Result.Probability (I) := Number (Field_Value (Field_Value (Rows (I), "answer"), "probability"));
+end loop;
+return Result;
+end Filter;
+function Rank (Call : Completion) return Rank_Result is
+Rows : constant Value_List := Receipts (Call, "rank", True);
+Result : Rank_Result (Rows'Length, Rows'Length);
 begin
-Call := Collect (Owner);
-return Recognize_Answer (Call);
-end Recognize_Answer;
-function Relate_Answer (Owner : in out Thinkthen.Sessions.Session; Call : in out Completion) return Relation is
+Result.Facts := Call_Facts (Call);
+for I in Rows'Range loop
+Result.Results (I) := (Data => Rows (I));
+Result.Value (I) := Interfaces.Unsigned_64'Value (As_Number (Field_Value (Rows (I), "index")));
+Result.Probability (I) := Number (Field_Value (Field_Value (Rows (I), "answer"), "probability"));
+end loop;
+return Result;
+end Rank;
+function Find (Call : Completion) return Find_Result is
+Rows : constant Value_List := Receipts (Call, "find", False);
+Result : Find_Result (Rows'Length);
 begin
-Call := Collect (Owner);
-return Relate_Answer (Call);
-end Relate_Answer;
+if Rows'Length /= 1 then raise Answer_Cardinality_Error with "expected one result"; end if;
+Result.Facts := Call_Facts (Call);
+for I in Rows'Range loop
+Result.Results (I) := (Data => Rows (I));
+Result.Value := Field_Value (Rows (I), "value");
+Result.Probability := (if Kind (Field_Value (Rows (I), "index")) /= Null_Value then Number (Field_Value (Field_Value (Field_Value (Rows (I), "answer"), "probabilities"), As_String (Field_Value (Field_Value (Rows (I), "answer"), "pick")))) else (State => Null_Field));
+end loop;
+return Result;
+end Find;
+function Annotate (Call : Completion) return Annotate_Result is
+Rows : constant Value_List := Receipts (Call, "annotate", True);
+Result : Annotate_Result (Rows'Length);
+begin
+if Rows'Length /= 1 then raise Answer_Cardinality_Error with "expected one result"; end if;
+Result.Facts := Call_Facts (Call);
+Result.Probability := (State => Null_Field);
+for I in Rows'Range loop
+Result.Results (I) := (Data => Rows (I));
+Result.Value := Field_Value (Rows (I), "value");
+end loop;
+return Result;
+end Annotate;
+function Annotate (Call : Completion) return Annotate_List_Result is
+Rows : constant Value_List := Receipts (Call, "annotate", True);
+Result : Annotate_List_Result (Rows'Length, Rows'Length);
+begin
+Result.Facts := Call_Facts (Call);
+Result.Probability := (State => Null_Field);
+for I in Rows'Range loop
+Result.Results (I) := (Data => Rows (I));
+Result.Value (I) := Field_Value (Rows (I), "value");
+end loop;
+return Result;
+end Annotate;
+function Recognize (Call : Completion) return Recognize_Result is
+Rows : constant Value_List := Receipts (Call, "recognize", True);
+Result : Recognize_Result (Rows'Length);
+begin
+if Rows'Length /= 1 then raise Answer_Cardinality_Error with "expected one result"; end if;
+Result.Facts := Call_Facts (Call);
+for I in Rows'Range loop
+Result.Results (I) := (Data => Rows (I));
+Result.Value := Field_Value (Rows (I), "value");
+Result.Probability := Item_Probabilities (Rows (I), True);
+end loop;
+return Result;
+end Recognize;
+function Recognize (Call : Completion) return Recognize_List_Result is
+Rows : constant Value_List := Receipts (Call, "recognize", True);
+Result : Recognize_List_Result (Rows'Length, Rows'Length);
+begin
+Result.Facts := Call_Facts (Call);
+for I in Rows'Range loop
+Result.Results (I) := (Data => Rows (I));
+Result.Value (I) := Field_Value (Rows (I), "value");
+Result.Probability.Append (Item_Probabilities (Rows (I), True));
+end loop;
+return Result;
+end Recognize;
+function Relate (Call : Completion) return Relate_Result is
+Rows : constant Value_List := Receipts (Call, "relate", False);
+Result : Relate_Result (Rows'Length);
+begin
+if Rows'Length /= 1 then raise Answer_Cardinality_Error with "expected one result"; end if;
+Result.Facts := Call_Facts (Call);
+for I in Rows'Range loop
+Result.Results (I) := (Data => Rows (I));
+Result.Value := Field_Value (Rows (I), "value");
+Result.Probability := Item_Probabilities (Rows (I), False);
+end loop;
+return Result;
+end Relate;
 end Thinkthen.Answers;

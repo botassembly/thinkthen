@@ -1,7 +1,6 @@
 -- Generated native usage status wrappers; do not edit.
 with Interfaces.C;
 with Thinkthen.Native_Sessions;
-with Thinkthen.Sessions;
 with Thinkthen.Session_C; use Thinkthen.Session_C;
 package body Thinkthen.Persistence is
 function Observe (Client : Engine; Finish : Boolean) return Observation is
