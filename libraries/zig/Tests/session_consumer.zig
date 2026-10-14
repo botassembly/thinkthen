@@ -98,7 +98,7 @@ pub fn main() !void {
     for (packets.items, 0..) |packet, i| {
         if (i > 0) try out.interface.writeAll(",");
         var writer: std.json.Stringify = .{ .writer = &out.interface };
-        try request_fixture.writeNative(try request_fixture.projectAnswers(packet, projection_arena.allocator()), &writer);
+        try request_fixture.writeNative(try request_fixture.projectAnswers(packet, packets.items, projection_arena.allocator()), &writer);
     }
     try out.interface.writeAll("]}\n");
 }
