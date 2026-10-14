@@ -40,3 +40,5 @@ One new case in `conformance/cases.json`, replayed by every binding's installed 
 ## Defers
 
 Registry pages (0578), the website (0575) and docs examples follow after this lands.
+
+PM amendment, 2026-10-14. In pandas and Polars `.tt` results, `.probability` for recognize and relate is a typed list of Float64 per original row, one per item. Decide, filter, choose, find and rank stay nullable Float64; score, tag and annotate stay null.
