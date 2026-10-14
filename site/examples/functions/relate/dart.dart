@@ -1,8 +1,7 @@
 import 'package:collection/collection.dart';
 import 'package:thinkthen_dart/thinkthen_dart.dart';
 
-typedef Named =
-    RelationEndpointRelatedEntity;
+typedef Named = RelationEndpointRelatedEntity;
 
 Future<void> main() async {
   final engine = Engine.open();
@@ -18,37 +17,24 @@ Future<void> main() async {
         'version': 1,
         'relate': {
           'relations': [
-            {
-              'name': 'makes',
-              'source': 'company',
-              'target': 'product',
-            },
+            {'name': 'makes', 'source': 'company', 'target': 'product'},
           ],
         },
       }),
     ),
-    InputEntities(items: [
-      for (final name in names)
-        Item(
-          original: Presence.present(
-            OriginalJson(value: name),
-          ),
-        ),
-    ]),
+    InputEntities(
+      items: [
+        for (final name in names)
+          Item(original: Presence.present(OriginalJson(value: name))),
+      ],
+    ),
   );
-  final whoMakes = call.relateAnswer().value;
+  final whoMakes = call.value;
   final pairs = [
     for (final edge in whoMakes)
-      (
-        (edge.source as Named).name,
-        (edge.target as Named).name,
-      ),
+      ((edge.source as Named).name, (edge.target as Named).name),
   ];
-  const expected = [
-    ('Apple', 'iPhone'),
-    ('Amazon', 'Kindle'),
-  ];
-  assert(const ListEquality<(String, String)>()
-      .equals(pairs, expected));
+  const expected = [('Apple', 'iPhone'), ('Amazon', 'Kindle')];
+  assert(const ListEquality<(String, String)>().equals(pairs, expected));
   engine.close();
 }

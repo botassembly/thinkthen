@@ -337,44 +337,85 @@ def abi_helpers(abi):
 def calls(inputs, definitions):
     global PREFIX
     PREFIX = ''
-    from host_answers import scalar_answers, aggregate_answers, aggregate_projection, named_object_fields
-    lines = ['// Generated named calls and answers from canonical contracts; do not edit.', 'part of thinkthen_session;', 'mixin NamedCalls {', '  Future<OwnedCall> _call(String function, Question question, Input input, Options? options, Cancellation? cancellation, Stream<FeedItem>? feed);', '  OwnedSession _startSession(Question question, Input input, String function, {Options? options});']
-    for function in inputs['RequestFunction']['oneOf']:
-        value = function['const']
-        lines += [f'  OwnedSession {value}Session(Question question, Input input, {{Options? options}}) => _startSession(question, input, "{value}", options: options);']
-        lines += [f'  Future<OwnedCall> {value}(Question question, Input input,',
-                  '      {Options? options, Cancellation? cancellation, Stream<FeedItem>? feed}) =>',
-                  f'      _call("{value}", question, input, options, cancellation, feed);']
-    lines += ['}', 'mixin CallAnswers {', '  List<SessionPacket> get packets;', '  SessionPacketTerminal get terminal;',
-              '  void _successful() {', '    if (terminal.failure.value case final CallError failure) throw CallFailure._result(failure, this as OwnedCall);', '  }']
-    for function, kind, payload in scalar_answers(definitions):
-        child = next(key for key, _ in definitions['completesessionJudgment']['variants'] if definitions[key].get('x-request-function') == function)
-        typ = hint(payload, definitions)
-        lines += [f'  {typ} {function}Answer() {{', '    _successful();', f'    final answers = <{typ}>[];', '    for (final packet in packets) {', '      if (packet is SessionPacketObservation && packet.function == ' + json.dumps(function) + ') {', '        final observation = packet.value;', '        if (observation is SessionObservationRow) {', '          final row = observation.value;', f'          if (row is SessionObservedRowJudgment && row.value is {name(child)}) answers.add((row.value as {name(child)}).value);', '        }', '      }', '    }', "    if (answers.length != 1) throw StateError('Expected exactly one answer');", '    return answers.single;', '  }']
-    for function, child, payload in aggregate_answers(definitions):
-        if function in {function for function, _, _ in scalar_answers(definitions)}: continue
-        typ = hint(payload, definitions)
-        projected, projection = aggregate_projection(function, payload, definitions)
-        result_type = hint(projected, definitions)
-        lines += [f'  {result_type} {function}Answer() {{', '    _successful();']
+    from host_answers import call_results, scalar_input_selectors
+    rules = call_results(definitions)
+    PREFIX = 'Input'
+    singles = ' || '.join('input is ' + name(key) for key in scalar_input_selectors(inputs))
+    PREFIX = ''
+    lines = ['// Generated named calls and results from canonical contracts; do not edit.',
+             'part of thinkthen_session;', 'mixin NamedCalls {',
+             '  Future<OwnedCall> _call(String function, Question question, Input input, Options? options, Cancellation? cancellation, Stream<FeedItem>? feed);',
+             '  OwnedSession _startSession(Question question, Input input, String function, {Options? options});']
+    for entry in inputs['RequestFunction']['oneOf']:
+        function = entry['const']
+        rule = rules[function]
+        payload = rule['receipt_payload']
+        item = payload.get('items', payload)
+        receipt = hint(item, definitions)
+        value_type = hint(rule['aggregate_value'], definitions)
+        if rule['call_shape'] == 'input': value_type = 'Object?'
+        typ = f'CallResult<{value_type}, {receipt}>'
+        lines += [f'  OwnedSession {function}Session(Question question, Input input, {{Options? options}}) => _startSession(question, input, "{function}", options: options);',
+                  f'  Future<{typ}> {function}(Question question, Input input, {{Options? options, Cancellation? cancellation, Stream<FeedItem>? feed}}) async {{',
+                  f'    final call = await _call("{function}", question, input, options, cancellation, feed);',
+                  f'    final rows = <{receipt}>[];', '    var aggregated = false;', '    for (final packet in call.packets) {',
+                  f'      if (packet is {name(rule["carrier"])}) {{', '        if (!aggregated) rows.clear();', '        aggregated = true;', '        ' + ('rows.addAll(packet.value);' if payload.get('type') == 'array' else 'rows.add(packet.value);'), '      }']
         if payload.get('type') == 'array':
-            item = hint(payload['items'], definitions)
-            lines += [f'    final answers = <{item}>[];', '    for (final packet in packets) {', f'      if (packet is {name(child)}) answers.addAll(packet.value);']
-            for row, _ in definitions['completesessionPacket']['variants']:
-                fields = definitions[row].get('properties', {})
-                if fields.get('kind', {}).get('const') == 'row' and fields.get('function', {}).get('const') == function and fields.get('value') == payload['items']:
-                    lines += [f'      else if (packet is {name(row)}) answers.add(packet.value);']
-            lines += ['    }']
-        else:
-            lines += [f'    final values = packets.whereType<{name(child)}>().toList(growable: false);', "    if (values.length != 1) throw StateError('Expected exactly one answer');", '    final answers = values.single.value;']
+            for key, _ in definitions['completesessionPacket']['variants']:
+                fields = definitions[key].get('properties', {})
+                if fields.get('kind', {}).get('const') == 'row' and fields.get('function', {}).get('const') == function and fields.get('value') == item:
+                    lines += [f'      else if (!aggregated && packet is {name(key)}) rows.add(packet.value);']
+        lines += ['    }']
+        if function == 'rank': lines += ['    rows.sort((a, b) => a.value.compareTo(b.value));']
+        rowdefs = definitions[item['$ref'].split('/')[-1]]
+        projection = rule['value_projection']
+        prop = member(projection)
+        getter = f'row.{prop}'
+        if projection not in rowdefs.get('required', []): getter += '.value'
         if function == 'filter':
-            lines += ['    return List.unmodifiable(answers.where((row) => row.value == true).map((row) => row.input.value));']
+            value = f'List<Object?>.unmodifiable(rows.where((row) => row.value == true).map((row) => {getter}))'
         elif function == 'rank':
-            lines += ['    answers.sort((a, b) => a.value.compareTo(b.value));', f'    return List.unmodifiable(answers.map((row) => row.{projection}.value ?? (throw StateError("Rank answer has no input index"))));']
-        elif payload.get('type') == 'array': lines += ['    return List.unmodifiable(answers);']
-        else: lines += ['    return answers;']
-        lines += ['  }']
+            value = f'List<BigInt>.unmodifiable(rows.map((row) => {getter} ?? (throw StateError("Rank answer has no input index"))))'
+        elif rule['call_shape'] == 'aggregate':
+            value = 'rows.single.value'
+        else:
+            value = f'({singles}) ? rows.single.value : List.unmodifiable(rows.map((row) => row.value))'
+        schema = rowdefs['properties'].get('value', {})
+        target = resolved(schema, definitions) if isinstance(schema, dict) else {}
+        if 'primitive_variants' in target or union(target, definitions):
+            value = value.replace('row.value', 'row.value.value').replace('rows.single.value', 'rows.single.value.value')
+        if function == 'annotate':
+            value = value.replace('row.value', "row._fields['value']").replace('rows.single.value', "rows.single._fields['value']")
+        mode = rule['probability_mode']
+        chances = 'null'
+        if mode != 'null':
+            resolution = rule.get('resolution')
+            if resolution:
+                cond = ' && '.join('_atPath(packet._fields, ' + json.dumps(path) + ') == ' + json.dumps(literal) for path, literal in resolution['guards'])
+                lines += ['    final resolved = <BigInt, bool>{};', '    for (final packet in call.packets) {',
+                          f'      if ({cond}) resolved[_readInteger(_atPath(packet._fields, {json.dumps(resolution["index_path"])}))] = _atPath(packet._fields, {json.dumps(resolution["path"])}) != null;', '    }']
+            if function == 'recognize':
+                expr = '_recognitionProbability(row)'
+            elif function == 'relate': expr = 'row.value.map((edge) => edge.probability.toDouble()).toList(growable: false)'
+            else:
+                path = rule.get('probability_path', ('answer', 'probability'))
+                expr = f'_numberProbability(_atPath(row._fields, {json.dumps(path)}))'
+                if mode == 'picked':
+                    expr = f'_numberProbability((_atPath(row._fields, {json.dumps(path)}) as Map)[_atPath(row._fields, {json.dumps(rule["pick_path"])})])'
+                if resolution:
+                    expr = f'resolved[row.index.value ?? BigInt.zero] == true ? {expr} : null'
+                elif mode == 'picked':
+                    expr = f'_atPath(row._fields, {json.dumps(rule["selection_path"])}) != null ? {expr} : null'
+            chance_rows = 'rows.where((row) => row.value == true)' if function == 'filter' else 'rows'
+            lines += [f'    final chances = {chance_rows}.map((row) => {expr}).toList(growable: false);']
+            if function == 'relate': chances = 'ListProbability(chances.single)'
+            elif function == 'recognize': chances = f'({singles}) ? ListProbability(chances.single) : GroupProbability(chances)'
+            elif rule['call_shape'] == 'aggregate': chances = '_scalarProbability(chances.single)'
+            elif rule['call_shape'] == 'collection': chances = 'ListProbability(chances)'
+            else: chances = f'({singles}) ? _scalarProbability(chances.single) : ListProbability(chances)'
+        lines += [f'    return {typ}._({value}, {chances}, rows, call);', '  }']
     return '\n'.join(lines + ['}']) + '\n'
+
 
 def native_readers(abi, definitions):
     """Read measured native graph fields, preserving exact integers and presence."""

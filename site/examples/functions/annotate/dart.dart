@@ -5,17 +5,13 @@ Future<void> main() async {
   const report = 'Steps: click Log in. Nobody gets in.';
   final call = await engine.annotate(
     QuestionFile(path: 'form.json'),
-    InputRecords(items: [
-      Item(
-        original: Presence.present(
-          OriginalText(text: report),
-        ),
-      ),
-    ]),
+    InputRecords(
+      items: [Item(original: Presence.present(OriginalText(text: report)))],
+    ),
   );
-  final triage = call.annotateAnswer().single.value;
-  assert(triage['steps']!.asBoolean == true);
-  assert(triage['area']!.asString == 'login');
-  assert(triage['impact']!.asNumber == 1.98);
+  final triage = (call.value as List).single;
+  assert(triage['steps'] == true);
+  assert(triage['area'] == 'login');
+  assert(triage['impact'] == 1.98);
   engine.close();
 }

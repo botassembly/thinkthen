@@ -6,6 +6,7 @@ import 'package:thinkthen_dart/thinkthen_dart.dart';
 
 import 'stream_cases.dart';
 import 'data_cases.dart';
+import 'result_cases.dart';
 import 'fixture_values.dart';
 import 'shipped_example.dart' as shipped;
 
@@ -34,6 +35,10 @@ Future<void> main(List<String> args) async {
     } finally {
       engine.close();
     }
+    return;
+  }
+  if (args.contains('call-result')) {
+    await callResultCases();
     return;
   }
   final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
@@ -140,6 +145,13 @@ Future<void> main(List<String> args) async {
     }
     final call = await engine.decide(question, text);
     check(
+      call.value == true &&
+          call.probability != null &&
+          call.results.length == 1 &&
+          call.facts.requestsSent > BigInt.zero,
+      'one result retains answer probability records and facts',
+    );
+    check(
       !call.terminal.failure.isPresent && call.terminal.facts.isPresent,
       'typed terminal facts',
     );
@@ -223,6 +235,11 @@ Future<void> main(List<String> args) async {
         .value;
     final saved = value.question as QuestionDocumentDecide;
     check(
+      present.value == null &&
+          (present.probability as ScalarProbability).value == 0.9,
+      'settled authored null retains probability',
+    );
+    check(
       saved.trueValue.isPresent &&
           saved.trueValue.value == null &&
           saved.falseValue.value == 'No.',
@@ -244,6 +261,7 @@ Future<void> main(List<String> args) async {
       (extended.extensions['future'] as Map)['wide'] == wide,
       'unknown output retained',
     );
+    await authoredValueCases(engine);
     final absent = QuestionDocumentDecide.read({
       'verb': 'decide',
       'text': 'Is it?',
@@ -265,6 +283,10 @@ Future<void> main(List<String> args) async {
               .value ==
           null,
       'unresolved value stays null',
+    );
+    check(
+      unresolved.value == null && unresolved.probability == null,
+      'unresolved scalar has no probability',
     );
     check(
       unresolved.terminal.failure.value == null,
@@ -382,29 +404,29 @@ Future<void> main(List<String> args) async {
       check(!result.terminal.failure.isPresent, 'named call $i');
       switch (i) {
         case 0:
-          check(result.decideAnswer() == true, 'decide helper');
+          check(result.value == true, 'decide helper');
         case 1:
-          check(result.chooseAnswer() == 'a', 'choose helper');
+          check(result.value == 'a', 'choose helper');
         case 2:
-          check(result.tagAnswer().join(',') == 'a,b', 'tag helper');
+          check((result.value as List).join(',') == 'a,b', 'tag helper');
         case 3:
-          check(result.scoreAnswer() == 0.1, 'score helper');
+          check(result.value == 0.1, 'score helper');
         case 4:
-          check(result.filterAnswer().single == 'owned', 'filter helper');
+          check((result.value as List).single == 'owned', 'filter helper');
         case 5:
-          check(result.rankAnswer().single == BigInt.zero, 'rank helper');
+          check((result.value as List).single == BigInt.zero, 'rank helper');
         case 6:
-          check(result.findAnswer().value == 'owned', 'find helper');
+          check(result.value == 'owned', 'find helper');
         case 7:
           check(
-            result.annotateAnswer().single.value.containsKey('refund'),
+            ((result.value as List).single as Map).containsKey('refund'),
             'annotate helper',
           );
         case 8:
-          check(result.recognizeAnswer().isNotEmpty, 'recognize helper');
+          check(result.results.isNotEmpty, 'recognize helper');
         case 9:
           check(
-            result.relateAnswer().value.every(
+            (result.value as List<RelatedEntityEdge>).every(
               (edge) =>
                   ['Alice', 'Bob'].contains(edge.sourceName) &&
                   ['Alice', 'Bob'].contains(edge.targetName),
@@ -412,6 +434,30 @@ Future<void> main(List<String> args) async {
             'relate helper',
           );
       }
+      check(
+        result.results.isNotEmpty && result.facts.requestsSent >= BigInt.zero,
+        'result records and facts $i',
+      );
+      if ([2, 3, 7].contains(i))
+        check(result.probability == null, 'no scalar probability $i');
+      if ([0, 1, 6].contains(i))
+        check(
+          (result.probability as ScalarProbability).value == 0.9,
+          'settled picked or yes probability $i',
+        );
+      if ([4, 5, 9].contains(i))
+        check(
+          (result.probability as ListProbability).value.every(
+            (value) => value == 0.9,
+          ),
+          'item probabilities $i',
+        );
+      if (i == 8)
+        check(
+          (result.probability as ListProbability).value.length ==
+              (result.value as RecognizeEntities).entities.length,
+          'recognition probability aligns with kept entities',
+        );
       final beforePreview = sends;
       if (i < 6) {
         final preview = engine.plan(
@@ -451,6 +497,51 @@ Future<void> main(List<String> args) async {
       }
       check(sends == beforePreview, 'preview sends nothing');
     }
+    final falseCall = await engine.decide(
+      question,
+      InputText(text: 'rank-low-original'),
+    );
+    check(
+      falseCall.value == false &&
+          (falseCall.probability as ScalarProbability).value == 0.2,
+      'false is settled and retains yes probability',
+    );
+    final one = await engine.decide(question, records);
+    check(
+      (one.value as List).single == true &&
+          (one.probability as ListProbability).value.single == 0.9,
+      'one-element list retains list cardinality',
+    );
+    final ordered = await engine.decide(
+      question,
+      InputRecords(
+        items: [
+          Item(
+            original: Presence.present(OriginalText(text: 'rank-low-original')),
+          ),
+          Item(original: Presence.present(OriginalText(text: 'owned'))),
+        ],
+      ),
+    );
+    check(
+      (ordered.value as List).join(',') == 'false,true' &&
+          (ordered.probability as ListProbability).value.join(',') == '0.2,0.9',
+      'list values and probability retain input order',
+    );
+    final foundNull = await engine.find(
+      QuestionText(text: 'Which text?'),
+      InputUnits(
+        items: [
+          Item(original: Presence.present(OriginalJson(value: null))),
+          Item(original: Presence.present(OriginalText(text: 'other'))),
+        ],
+      ),
+    );
+    check(
+      foundNull.value == null &&
+          (foundNull.probability as ScalarProbability).value == 0.9,
+      'find selected original null retains probability',
+    );
     final rankedRecords = InputRecords(
       items: [
         for (final original in [
@@ -461,7 +552,7 @@ Future<void> main(List<String> args) async {
           Item(original: Presence.present(OriginalText(text: original))),
       ],
     );
-    final ranked = (await engine.rank(question, rankedRecords)).rankAnswer();
+    final ranked = (await engine.rank(question, rankedRecords)).value;
     check(
       ranked.length == 3 &&
           ranked[0] == BigInt.one &&
@@ -469,10 +560,7 @@ Future<void> main(List<String> args) async {
           ranked[2] == BigInt.zero,
       'rank returns input indexes for reordered ties and duplicate originals',
     );
-    final filtered = (await engine.filter(
-      question,
-      rankedRecords,
-    )).filterAnswer();
+    final filtered = (await engine.filter(question, rankedRecords)).value;
     check(
       filtered.length == 2 &&
           filtered.every((value) => value == 'rank-high-original'),

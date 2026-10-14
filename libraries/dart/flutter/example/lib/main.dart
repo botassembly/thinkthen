@@ -9,26 +9,26 @@ Future<void> showAnswers(Engine engine) async {
       Item(original: Presence.present(OriginalText(text: 'Thank you.'))),
     ],
   );
-  print('decide: ${(await engine.decide(question, text)).decideAnswer()}');
+  print('decide: ${(await engine.decide(question, text)).value}');
   print(
     'choose: ${(await engine.choose(DefinedQuestion(
       value: ChooseQuestion(choose: const Wording.text('Which team?'), options: const Presence.present(ChoiceOptions.list(['billing', 'support']))),
-    ), text)).chooseAnswer()}',
+    ), text)).value}',
   );
   print(
     'tag: ${(await engine.tag(DefinedQuestion(
       value: TagQuestion(tag: const Wording.text('Which topics?'), labels: const Presence.present(Labels.list(['billing', 'support']))),
-    ), text)).tagAnswer()}',
+    ), text)).value}',
   );
   print(
     'score: ${(await engine.score(DefinedQuestion(
       value: ScoreQuestion(score: const Wording.text('How urgent?'), levels: const Presence.present(Levels.list(['low', 'high']))),
-    ), text)).scoreAnswer()}',
+    ), text)).value}',
   );
-  print('filter: ${(await engine.filter(question, records)).filterAnswer()}');
-  print('rank: ${(await engine.rank(question, records)).rankAnswer()}');
+  print('filter: ${(await engine.filter(question, records)).value}');
+  print('rank: ${(await engine.rank(question, records)).value}');
   print(
-    'find: ${(await engine.find(QuestionText(text: 'Which line asks for a refund?'), InputUnits(items: records.items))).findAnswer().value}',
+    'find: ${(await engine.find(QuestionText(text: 'Which line asks for a refund?'), InputUnits(items: records.items))).value}',
   );
   final annotations = (await engine.annotate(
     DefinedQuestion(
@@ -41,9 +41,9 @@ Future<void> showAnswers(Engine engine) async {
       ),
     ),
     records,
-  )).annotateAnswer();
+  )).value;
   print(
-    'annotate: ${annotations.map((row) => row.value.keys.toList()).toList()}',
+    'annotate: ${(annotations as List).map((row) => (row as Map).keys.toList()).toList()}',
   );
   final recognized = (await engine.recognize(
     DefinedQuestion(
@@ -54,8 +54,10 @@ Future<void> showAnswers(Engine engine) async {
       ),
     ),
     InputText(text: 'Maria Chen'),
-  )).recognizeAnswer();
-  print('recognize: ${recognized.length} results');
+  )).value;
+  print(
+    'recognize: ${(recognized as RecognizeEntities).entities.length} results',
+  );
   final relation = (await engine.relate(
     DefinedQuestion(
       value: RelateQuestion(
@@ -84,9 +86,9 @@ Future<void> showAnswers(Engine engine) async {
         ),
       ],
     ),
-  )).relateAnswer();
+  )).value;
   print(
-    'relate: ${relation.value.map((edge) => '${edge.sourceName} -> ${edge.targetName}').toList()}',
+    'relate: ${relation.map((edge) => '${edge.sourceName} -> ${edge.targetName}').toList()}',
   );
 }
 

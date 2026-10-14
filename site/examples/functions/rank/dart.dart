@@ -13,21 +13,20 @@ Future<void> main() async {
   ];
   final call = await engine.rank(
     QuestionText(text: question),
-    InputRecords(items: [
-      for (final message in inbox)
-        Item(
-          original: Presence.present(
-            OriginalText(text: message),
-          ),
-        ),
-    ]),
+    InputRecords(
+      items: [
+        for (final message in inbox)
+          Item(original: Presence.present(OriginalText(text: message))),
+      ],
+    ),
   );
-  final byUrgency = call.rankAnswer();
+  final byUrgency = call.value;
   final expected = [
-    BigInt.from(1), BigInt.from(3),
-    BigInt.from(2), BigInt.from(0),
+    BigInt.from(1),
+    BigInt.from(3),
+    BigInt.from(2),
+    BigInt.from(0),
   ];
-  assert(const ListEquality<Object?>()
-      .equals(byUrgency, expected));
+  assert(const ListEquality<Object?>().equals(byUrgency, expected));
   engine.close();
 }
