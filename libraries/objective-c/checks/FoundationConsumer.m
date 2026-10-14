@@ -75,6 +75,7 @@ int main(int argc, const char *argv[]) {
         }
         TTTextQuestion *filterQuestion = [TTTextQuestion new]; filterQuestion.text = @"Select the originals?";
         NSArray *originals = @[NSNull.null, @NO, @(1e308), @(1e-308)];
+        TTControls *filterOptions = [TTControls new]; filterOptions.batch = @1;
         TTRecordsInput *multiple = [TTRecordsInput new];
         NSMutableArray *records = [NSMutableArray array];
         for (id original in originals) { TTOriginalJSON *value = [TTOriginalJSON new]; value.value = original; TTItem *item = [TTItem new]; item.original = value; [records addObject:item]; }
@@ -82,7 +83,7 @@ int main(int argc, const char *argv[]) {
         TTTextInput *unselected = [TTTextInput new]; unselected.text = @"no";
         for (TTInput *filterInput in @[unselected, multiple, empty]) {
             __block TTCall *filterCall = nil;
-            task = [client filter:filterQuestion input:filterInput options:nil feed:nil completion:^(TTCall *call, NSError *failure) {
+            task = [client filter:filterQuestion input:filterInput options:filterOptions feed:nil completion:^(TTCall *call, NSError *failure) {
                 require(call != nil && failure == nil); filterCall = call; dispatch_semaphore_signal(completed);
             } error:&error];
             require(task != nil && error == nil);
