@@ -105,12 +105,37 @@ def remote_pins(folder):
     return out
 
 
-def every(name, doc, text):
+def duckdb_internal_call(folder, doc):
+    """Accept the no-argument reusable hook only from its manual Windows lane."""
+    triggers = doc.get('on', doc.get(True))
+    if not isinstance(triggers, dict) or set(triggers) != {'workflow_dispatch', 'workflow_call'}:
+        return False
+    if triggers['workflow_call'] not in (None, {}) or doc.get('permissions') != {'contents': 'read'}:
+        return False
+    caller = folder / 'windows.yml'
+    if not caller.is_file():
+        return False
+    windows = yaml.safe_load(caller.read_text()) or {}
+    manual = windows.get('on', windows.get(True))
+    if not isinstance(manual, dict) or set(manual) != {'workflow_dispatch'}:
+        return False
+    dispatch = manual['workflow_dispatch'] or {}
+    lane = dispatch.get('inputs', {}).get('lane', {})
+    expected = {'if': "inputs.lane == 'duckdb-community'", 'uses': './.github/workflows/duckdb-community.yml'}
+    return (set(dispatch.get('inputs', {})) == {'lane'} and lane.get('type') == 'choice'
+            and lane.get('options') == ['windows', 'duckdb-community'] and lane.get('default') == 'windows'
+            and windows.get('permissions') == {'contents': 'read'}
+            and windows.get('jobs', {}).get('duckdb-community') == expected)
+
+
+def every(name, doc, text, folder=None):
     out = []
     triggers = doc.get("on", doc.get(True))
     triggers = [triggers] if isinstance(triggers, str) else list(triggers or [])
     for trigger in triggers:
-        if trigger != "workflow_dispatch":
+        reusable = (trigger == "workflow_call" and name == "duckdb-community.yml"
+                    and folder is not None and duckdb_internal_call(folder, doc))
+        if trigger != "workflow_dispatch" and not reusable:
             out.append(f"{name}: starts on `{trigger}`; only workflow_dispatch may start a workflow")
     for job, _, step in steps(doc):
         uses = step.get("uses")
@@ -508,7 +533,7 @@ def check(folder, lint_text=None):
     for path in sorted(folder.glob("*.y*ml")):
         text = path.read_text(encoding="utf-8")
         doc = yaml.safe_load(text) or {}
-        out += every(path.name, doc, text)
+        out += every(path.name, doc, text, folder)
         if path.name == "release.yml":
             out += release(path.name, doc)
         if path.name == "windows.yml":
@@ -803,7 +828,39 @@ jobs:
 """
 
 
+def duckdb_hook_self_test():
+    """Plant nonmanual callers and argument/secret escalation at the gate boundary."""
+    target = {'on': {'workflow_dispatch': None, 'workflow_call': None}, 'permissions': {'contents': 'read'}}
+    caller = {'on': {'workflow_dispatch': {'inputs': {'lane': {
+        'type': 'choice', 'default': 'windows', 'options': ['windows', 'duckdb-community']}}}},
+        'permissions': {'contents': 'read'}, 'jobs': {'duckdb-community': {
+            'if': "inputs.lane == 'duckdb-community'", 'uses': './.github/workflows/duckdb-community.yml'}}}
+    with tempfile.TemporaryDirectory() as directory:
+        folder = pathlib.Path(directory)
+        path = folder / 'windows.yml'
+        def findings(document, parent, name='duckdb-community.yml'):
+            path.write_text(yaml.safe_dump(parent))
+            return every(name, document, yaml.safe_dump(document), folder)
+        assert not findings(target, caller), 'MANUAL_DUCKDB_CALL_REFUSED'
+        import copy
+        for defect in ('caller-push', 'caller-secrets', 'caller-input', 'caller-matrix', 'hook-input', 'hook-secret', 'hook-push', 'other-hook'):
+            document, parent = copy.deepcopy(target), copy.deepcopy(caller)
+            name = 'duckdb-community.yml'
+            if defect == 'caller-push': parent['on']['push'] = None
+            elif defect == 'caller-secrets': parent['jobs']['duckdb-community']['secrets'] = 'inherit'
+            elif defect == 'caller-input': parent['jobs']['duckdb-community']['with'] = {'live': True}
+            elif defect == 'caller-matrix': parent['jobs']['duckdb-community']['strategy'] = {'matrix': {'lane': ['live']}}
+            elif defect == 'hook-input': document['on']['workflow_call'] = {'inputs': {'live': {'type': 'boolean'}}}
+            elif defect == 'hook-secret': document['on']['workflow_call'] = {'secrets': {'API_KEY': {'required': True}}}
+            elif defect == 'hook-push': document['on']['push'] = None
+            else: name = 'other.yml'
+            errors = findings(document, parent, name)
+            assert any('starts on `workflow_call`' in error for error in errors), (defect, errors)
+    print('workflows DuckDB hook: manual caller accepted; 8 planted violations refused')
+
+
 def self_test():
+    duckdb_hook_self_test()
     real = check(REPO / ".github/workflows")
     cases = [
         ("real", None, None, []),

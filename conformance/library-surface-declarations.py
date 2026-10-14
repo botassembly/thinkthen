@@ -134,7 +134,7 @@ def cstyle(source, language):
     for char in text:
         parentheses.append(nesting)
         nesting += (char == '(') - (char == ')')
-    type_pattern = r'\b(?:class|struct|interface|enum(?:\s+class)?|record|union|trait|object|extension|mixin)\s+(\w+)'
+    type_pattern = r'\b(?:class|struct|interface|enum(?:\s+class)?|record|union|trait|object|extension)\s+(\w+)'
     if language == 'dart':
         type_pattern = r'\b(?:class|enum|mixin)\s+(\w+)'
     if language == 'zig':
@@ -175,7 +175,7 @@ def cstyle(source, language):
                     result.add(Declaration(name, base[2].split('::')[-1], 'inherited'))
         if language == 'dart':
             header = text[match.end():start]
-            bases = re.search(r'\bwith\s+(.+?)(?=\bimplements\b|$)', header)
+            bases = re.search(r'\bwith\s+(.+?)(?=\bimplements\b|$)', header, re.S)
             if bases:
                 for base in bases[1].split(','):
                     target = re.match(r'\s*(\w+)', base)

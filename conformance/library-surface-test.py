@@ -37,6 +37,8 @@ class PublicSurface(unittest.TestCase):
             client = root / 'libraries/dart/lib/src/session/client.dart'
             original = client.read_text()
             self.assertIn('with NamedCalls', original)
+            client.write_text(original.replace('with NamedCalls', 'with\n    NamedCalls', 1))
+            self.assertNotIn('missing function: decide', invoke())
             client.write_text(original.replace('with NamedCalls', '', 1))
             self.assertIn('missing function: decide', invoke())
             client.write_text(original)
