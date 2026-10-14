@@ -282,11 +282,9 @@ table { border-collapse: collapse; width: 100%; margin: 0 0 1.2rem; font-size: .
 th, td { text-align: left; padding: .45rem .6rem; border-bottom: 1px solid var(--line); vertical-align: top; }
 th { color: var(--muted); font-weight: 600; font-size: .85rem; }
 
-/* A flag, a key name, an address, a path or a file name in a table stays
-   whole while the table has columns. A browser breaks at a <wbr> even in
-   nowrap text, so the <wbr> hides. On a phone or a tablet, a long path or
-   address may break after a slash, where src/lib/path.mjs puts a <wbr>. */
-td code { white-space: nowrap; }
+/* Inline code wraps within its column, including a single long token.
+   Code panes keep their own whitespace and scrolling rules. */
+td code { white-space: normal; overflow-wrap: anywhere; }
 td code wbr, code.short wbr { display: none; }
 /* A flag table holds flags too long to stay whole beside four columns.
    There a long flag or default may wrap, and a short one still never splits. */
@@ -451,16 +449,8 @@ ol.talk li { text-wrap: pretty; }
 .bench-pager .next { text-align: right; }
 
 
-p code, li code { white-space: nowrap; }
-/* A short code span never splits, on any screen. scripts/label-tables.mjs
-   marks each span of 24 characters or fewer. The rule outranks every rule
-   above and each page's own style that lets code wrap. */
-code.short { white-space: nowrap !important; }
-/* On a screen narrower than 375 px, a code span in prose too long for the
-   line may wrap. Wider screens keep it whole. */
-@media (max-width: 374px) {
-  p code, li code { white-space: normal; overflow-wrap: anywhere; }
-}
+/* Inline calls and paths wrap within prose at every screen width. */
+p code, li code { white-space: normal; overflow-wrap: anywhere; }
 
 /* --------------------------------------------------------------- settings */
 /* The settings page renders the specification's text, whose code spans can
