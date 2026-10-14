@@ -465,7 +465,12 @@
       "language": "cpp",
       "naming": "snake",
       "declarations": [
-        "libraries/cpp/include/thinkthen/*.hpp"
+        "libraries/cpp/include/thinkthen/client.hpp",
+        "libraries/cpp/include/thinkthen/results_generated.hpp",
+        "libraries/cpp/include/thinkthen/inputs_generated.hpp",
+        "libraries/cpp/include/thinkthen/calls_generated.hpp",
+        "libraries/cpp/include/thinkthen/result_value.hpp",
+        "libraries/cpp/include/thinkthen/value.hpp"
       ],
       "option_containers": [
         "RequestOptions",
@@ -498,7 +503,7 @@
         "AnswerCall"
       ],
       "representation_owners": [
-        "Json",
+        "Data",
         "Node",
         ""
       ],
@@ -518,15 +523,16 @@
         "Poll",
         "PollState",
         "PresenceState",
-        "Json",
+        "Data",
         "Node"
       ],
       "representation_members": {
-        "Json": [
+        "Node": [],
+        "": [],
+        "Data": [
           "at",
           "begin",
           "contains",
-          "dump",
           "end",
           "get",
           "is_array",
@@ -536,21 +542,10 @@
           "is_object",
           "is_string",
           "object",
-          "parse"
-        ],
-        "Node": [
-          "document"
-        ],
-        "": [
-          "encode",
-          "decode"
+          "read"
         ]
       },
       "wrapper_members": {
-        "Json": [
-          "Array",
-          "Object"
-        ],
         "Poll": [
           "packet"
         ],
@@ -565,6 +560,10 @@
         ],
         "SessionFailure": [
           "failure"
+        ],
+        "Data": [
+          "Array",
+          "Object"
         ]
       }
     },

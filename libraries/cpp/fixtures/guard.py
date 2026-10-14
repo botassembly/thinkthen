@@ -5,6 +5,8 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[3] / "conformanc
 from native_guard import normalized_bytes
 
 root = pathlib.Path(sys.argv[1])
+for private in ('thinkthen.h', 'native_implementation.hpp', 'json.hpp'):
+    assert not (root / 'include/thinkthen' / private).exists(), 'PRIVATE_HEADER_INSTALLED ' + private
 needles = (b"/home/", b"/Users/", b"auth.json", b"-----BEGIN PRIVATE KEY-----", b"tt-canary-")
 files = [p for p in root.rglob("*") if p.is_file() and "fixtures" not in p.parts
          and (p.suffix in {".go", ".md", ".mod", ".hpp", ".h", ".cpp", ".txt", ".in"}

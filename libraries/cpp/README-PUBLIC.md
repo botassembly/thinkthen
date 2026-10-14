@@ -20,7 +20,8 @@ int main() {
     auto question = RequestQuestion(RequestQuestionText().set_text("Does this ask for a refund?"));
     auto input = RequestInput(RequestInputText().set_text("Please refund my order."));
     auto answer = client.decide(question, input).answer();
-    std::cout << tt::results::encode(answer).dump() << "\n";
+    if(answer) std::cout << std::boolalpha << *answer << "\n";
+    else std::cout << "null\n";
 }
 ```
 

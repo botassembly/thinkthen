@@ -5,7 +5,7 @@ using namespace tt::inputs;
 int main(int argc,char** argv) {
     if(argc!=4) return 2;
     std::ifstream file(argv[2]);
-    auto original=tt::Json::parse(file);
+    auto original=tt::Data::read(file);
     auto question=RequestQuestion(RequestQuestionDefinition().set_value(
         RequestDefinitionAuthoredRelate().set_relate(RelateQuestion().set_relations({
             AuthoredRelation().set_name(AuthoredName("caused_by")).set_source(AuthoredName("alert")).set_target(AuthoredName("alert")),
@@ -16,5 +16,5 @@ int main(int argc,char** argv) {
     auto input=RequestInput(RequestInputEntities().set_items(items));
     tt::Client client(EngineSettings().set_replay(argv[3]));
     auto answer=client.relate(question,input).answer();
-    std::cout<<tt::results::encode(answer).dump()<<'\n';
+    std::cout<<::tt::detail::serialize(tt::results::detail::encode(answer))<<'\n';
 }

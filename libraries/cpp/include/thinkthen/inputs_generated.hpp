@@ -96,40 +96,37 @@ namespace tt::inputs {
     class SessionSourceLocation;
     class SourceUnit;
     class AnnotateDefinition : public Node {
-        AnnotateDefinition(const Json& value, int):Node(value) {
+        AnnotateDefinition(const Data& value, int):Node(value) {
         }
-        public: static AnnotateDefinition from_document(const Json& value) {
-            return AnnotateDefinition(value,0);
-        }
-        AnnotateDefinition():Node(Json(Json::Object{
+        friend struct ::tt::results::detail::Loader;
+        public:
+        AnnotateDefinition():Node(Data(Data::Object{
             {
-                "version",Json(1)
+                "version",Data(1)
             }
         })) {
         }
-        AnnotateDefinition& set_batch(const Json& value);
+        AnnotateDefinition& set_batch(const Data& value);
         AnnotateDefinition& set_profile(const AuthoredProfile& value);
         AnnotateDefinition& set_questions(const std::vector<std::pair<std::string, AnnotateQuestion>>& value);
         AnnotateDefinition& set_threshold(const AuthoredThreshold& value);
     };
     class AnnotateQuestion : public Node {
-        AnnotateQuestion(const Json& value, int):Node(value) {
+        AnnotateQuestion(const Data& value, int):Node(value) {
         }
-        public: static AnnotateQuestion from_document(const Json& value) {
-            return AnnotateQuestion(value,0);
-        }
+        friend struct ::tt::results::detail::Loader;
+        public:
         AnnotateQuestion(const AnnotateQuestionDecide& value);
         AnnotateQuestion(const AnnotateQuestionChoose& value);
         AnnotateQuestion(const AnnotateQuestionTag& value);
         AnnotateQuestion(const AnnotateQuestionScore& value);
     };
     class AnnotateQuestionChoose : public Node {
-        AnnotateQuestionChoose(const Json& value, int):Node(value) {
+        AnnotateQuestionChoose(const Data& value, int):Node(value) {
         }
-        public: static AnnotateQuestionChoose from_document(const Json& value) {
-            return AnnotateQuestionChoose(value,0);
-        }
-        AnnotateQuestionChoose():Node(Json(Json::Object{
+        friend struct ::tt::results::detail::Loader;
+        public:
+        AnnotateQuestionChoose():Node(Data(Data::Object{
         })) {
         }
         AnnotateQuestionChoose& set_choose(const AuthoredQuestionText& value);
@@ -142,12 +139,11 @@ namespace tt::inputs {
         AnnotateQuestionChoose& set_wording_version(const uint64_t& value);
     };
     class AnnotateQuestionDecide : public Node {
-        AnnotateQuestionDecide(const Json& value, int):Node(value) {
+        AnnotateQuestionDecide(const Data& value, int):Node(value) {
         }
-        public: static AnnotateQuestionDecide from_document(const Json& value) {
-            return AnnotateQuestionDecide(value,0);
-        }
-        AnnotateQuestionDecide():Node(Json(Json::Object{
+        friend struct ::tt::results::detail::Loader;
+        public:
+        AnnotateQuestionDecide():Node(Data(Data::Object{
         })) {
         }
         AnnotateQuestionDecide& set_context_schema(const AuthoredInputDeclaration& value);
@@ -161,12 +157,11 @@ namespace tt::inputs {
         AnnotateQuestionDecide& set_wording_version(const uint64_t& value);
     };
     class AnnotateQuestionScore : public Node {
-        AnnotateQuestionScore(const Json& value, int):Node(value) {
+        AnnotateQuestionScore(const Data& value, int):Node(value) {
         }
-        public: static AnnotateQuestionScore from_document(const Json& value) {
-            return AnnotateQuestionScore(value,0);
-        }
-        AnnotateQuestionScore():Node(Json(Json::Object{
+        friend struct ::tt::results::detail::Loader;
+        public:
+        AnnotateQuestionScore():Node(Data(Data::Object{
         })) {
         }
         AnnotateQuestionScore& set_context_schema(const AuthoredInputDeclaration& value);
@@ -178,12 +173,11 @@ namespace tt::inputs {
         AnnotateQuestionScore& set_wording_version(const uint64_t& value);
     };
     class AnnotateQuestionTag : public Node {
-        AnnotateQuestionTag(const Json& value, int):Node(value) {
+        AnnotateQuestionTag(const Data& value, int):Node(value) {
         }
-        public: static AnnotateQuestionTag from_document(const Json& value) {
-            return AnnotateQuestionTag(value,0);
-        }
-        AnnotateQuestionTag():Node(Json(Json::Object{
+        friend struct ::tt::results::detail::Loader;
+        public:
+        AnnotateQuestionTag():Node(Data(Data::Object{
         })) {
         }
         AnnotateQuestionTag& set_context_schema(const AuthoredInputDeclaration& value);
@@ -196,12 +190,11 @@ namespace tt::inputs {
         AnnotateQuestionTag& set_wording_version(const uint64_t& value);
     };
     class AuthoredChoose : public Node {
-        AuthoredChoose(const Json& value, int):Node(value) {
+        AuthoredChoose(const Data& value, int):Node(value) {
         }
-        public: static AuthoredChoose from_document(const Json& value) {
-            return AuthoredChoose(value,0);
-        }
-        AuthoredChoose():Node(Json(Json::Object{
+        friend struct ::tt::results::detail::Loader;
+        public:
+        AuthoredChoose():Node(Data(Data::Object{
         })) {
         }
         AuthoredChoose& set_batch(const std::variant<std::string, uint64_t>& value);
@@ -217,28 +210,25 @@ namespace tt::inputs {
         AuthoredChoose& set_wording_version(const uint64_t& value);
     };
     class AuthoredCriterion : public Node {
-        AuthoredCriterion(const Json& value, int):Node(value) {
+        AuthoredCriterion(const Data& value, int):Node(value) {
         }
-        public: static AuthoredCriterion from_document(const Json& value) {
-            return AuthoredCriterion(value,0);
-        }
-        explicit AuthoredCriterion(const std::variant<std::string, Json, std::vector<Json>, std::nullptr_t>& value);
+        friend struct ::tt::results::detail::Loader;
+        public:
+        explicit AuthoredCriterion(const std::variant<std::string, Data, std::vector<Data>, std::nullptr_t>& value);
     };
     class AuthoredCut : public Node {
-        AuthoredCut(const Json& value, int):Node(value) {
+        AuthoredCut(const Data& value, int):Node(value) {
         }
-        public: static AuthoredCut from_document(const Json& value) {
-            return AuthoredCut(value,0);
-        }
+        friend struct ::tt::results::detail::Loader;
+        public:
         explicit AuthoredCut(const std::variant<double, std::string>& value);
     };
     class AuthoredDecide : public Node {
-        AuthoredDecide(const Json& value, int):Node(value) {
+        AuthoredDecide(const Data& value, int):Node(value) {
         }
-        public: static AuthoredDecide from_document(const Json& value) {
-            return AuthoredDecide(value,0);
-        }
-        AuthoredDecide():Node(Json(Json::Object{
+        friend struct ::tt::results::detail::Loader;
+        public:
+        AuthoredDecide():Node(Data(Data::Object{
         })) {
         }
         AuthoredDecide& set_batch(const std::variant<std::string, uint64_t>& value);
@@ -255,20 +245,18 @@ namespace tt::inputs {
         AuthoredDecide& set_wording_version(const uint64_t& value);
     };
     class AuthoredDescription : public Node {
-        AuthoredDescription(const Json& value, int):Node(value) {
+        AuthoredDescription(const Data& value, int):Node(value) {
         }
-        public: static AuthoredDescription from_document(const Json& value) {
-            return AuthoredDescription(value,0);
-        }
-        explicit AuthoredDescription(const std::variant<std::string, Json, std::vector<Json>, std::nullptr_t>& value);
+        friend struct ::tt::results::detail::Loader;
+        public:
+        explicit AuthoredDescription(const std::variant<std::string, Data, std::vector<Data>, std::nullptr_t>& value);
     };
     class AuthoredFind : public Node {
-        AuthoredFind(const Json& value, int):Node(value) {
+        AuthoredFind(const Data& value, int):Node(value) {
         }
-        public: static AuthoredFind from_document(const Json& value) {
-            return AuthoredFind(value,0);
-        }
-        AuthoredFind():Node(Json(Json::Object{
+        friend struct ::tt::results::detail::Loader;
+        public:
+        AuthoredFind():Node(Data(Data::Object{
         })) {
         }
         AuthoredFind& set_context_schema(const AuthoredInputDeclaration& value);
@@ -281,23 +269,21 @@ namespace tt::inputs {
         AuthoredFind& set_wording_version(const uint64_t& value);
     };
     class AuthoredInputDeclaration : public Node {
-        AuthoredInputDeclaration(const Json& value, int):Node(value) {
+        AuthoredInputDeclaration(const Data& value, int):Node(value) {
         }
-        public: static AuthoredInputDeclaration from_document(const Json& value) {
-            return AuthoredInputDeclaration(value,0);
-        }
+        friend struct ::tt::results::detail::Loader;
+        public:
         AuthoredInputDeclaration(const AuthoredInputDeclarationString& value);
         AuthoredInputDeclaration(const AuthoredInputDeclarationObject& value);
     };
     class AuthoredInputDeclarationObject : public Node {
-        AuthoredInputDeclarationObject(const Json& value, int):Node(value) {
+        AuthoredInputDeclarationObject(const Data& value, int):Node(value) {
         }
-        public: static AuthoredInputDeclarationObject from_document(const Json& value) {
-            return AuthoredInputDeclarationObject(value,0);
-        }
-        AuthoredInputDeclarationObject():Node(Json(Json::Object{
+        friend struct ::tt::results::detail::Loader;
+        public:
+        AuthoredInputDeclarationObject():Node(Data(Data::Object{
             {
-                "type",Json("object")
+                "type",Data("object")
             }
         })) {
         }
@@ -306,150 +292,136 @@ namespace tt::inputs {
         AuthoredInputDeclarationObject& set_required(const std::vector<std::string>& value);
     };
     class AuthoredInputDeclarationString : public Node {
-        AuthoredInputDeclarationString(const Json& value, int):Node(value) {
+        AuthoredInputDeclarationString(const Data& value, int):Node(value) {
         }
-        public: static AuthoredInputDeclarationString from_document(const Json& value) {
-            return AuthoredInputDeclarationString(value,0);
-        }
-        AuthoredInputDeclarationString():Node(Json(Json::Object{
+        friend struct ::tt::results::detail::Loader;
+        public:
+        AuthoredInputDeclarationString():Node(Data(Data::Object{
             {
-                "type",Json("string")
+                "type",Data("string")
             }
         })) {
         }
     };
     class AuthoredInputProperty : public Node {
-        AuthoredInputProperty(const Json& value, int):Node(value) {
+        AuthoredInputProperty(const Data& value, int):Node(value) {
         }
-        public: static AuthoredInputProperty from_document(const Json& value) {
-            return AuthoredInputProperty(value,0);
-        }
+        friend struct ::tt::results::detail::Loader;
+        public:
         AuthoredInputProperty(const AuthoredInputPropertyString& value);
         AuthoredInputProperty(const AuthoredInputPropertyNumber& value);
         AuthoredInputProperty(const AuthoredInputPropertyBoolean& value);
         AuthoredInputProperty(const AuthoredInputPropertyArray& value);
     };
     class AuthoredInputPropertyArray : public Node {
-        AuthoredInputPropertyArray(const Json& value, int):Node(value) {
+        AuthoredInputPropertyArray(const Data& value, int):Node(value) {
         }
-        public: static AuthoredInputPropertyArray from_document(const Json& value) {
-            return AuthoredInputPropertyArray(value,0);
-        }
-        AuthoredInputPropertyArray():Node(Json(Json::Object{
+        friend struct ::tt::results::detail::Loader;
+        public:
+        AuthoredInputPropertyArray():Node(Data(Data::Object{
             {
-                "type",Json("array")
+                "type",Data("array")
             }
         })) {
         }
-        AuthoredInputPropertyArray& set_items(const Json& value);
+        AuthoredInputPropertyArray& set_items(const Data& value);
     };
     class AuthoredInputPropertyBoolean : public Node {
-        AuthoredInputPropertyBoolean(const Json& value, int):Node(value) {
+        AuthoredInputPropertyBoolean(const Data& value, int):Node(value) {
         }
-        public: static AuthoredInputPropertyBoolean from_document(const Json& value) {
-            return AuthoredInputPropertyBoolean(value,0);
-        }
-        AuthoredInputPropertyBoolean():Node(Json(Json::Object{
+        friend struct ::tt::results::detail::Loader;
+        public:
+        AuthoredInputPropertyBoolean():Node(Data(Data::Object{
             {
-                "type",Json("boolean")
+                "type",Data("boolean")
             }
         })) {
         }
     };
     class AuthoredInputPropertyNumber : public Node {
-        AuthoredInputPropertyNumber(const Json& value, int):Node(value) {
+        AuthoredInputPropertyNumber(const Data& value, int):Node(value) {
         }
-        public: static AuthoredInputPropertyNumber from_document(const Json& value) {
-            return AuthoredInputPropertyNumber(value,0);
-        }
-        AuthoredInputPropertyNumber():Node(Json(Json::Object{
+        friend struct ::tt::results::detail::Loader;
+        public:
+        AuthoredInputPropertyNumber():Node(Data(Data::Object{
             {
-                "type",Json("number")
+                "type",Data("number")
             }
         })) {
         }
     };
     class AuthoredInputPropertyString : public Node {
-        AuthoredInputPropertyString(const Json& value, int):Node(value) {
+        AuthoredInputPropertyString(const Data& value, int):Node(value) {
         }
-        public: static AuthoredInputPropertyString from_document(const Json& value) {
-            return AuthoredInputPropertyString(value,0);
-        }
-        AuthoredInputPropertyString():Node(Json(Json::Object{
+        friend struct ::tt::results::detail::Loader;
+        public:
+        AuthoredInputPropertyString():Node(Data(Data::Object{
             {
-                "type",Json("string")
+                "type",Data("string")
             }
         })) {
         }
     };
     class AuthoredLabels : public Node {
-        AuthoredLabels(const Json& value, int):Node(value) {
+        AuthoredLabels(const Data& value, int):Node(value) {
         }
-        public: static AuthoredLabels from_document(const Json& value) {
-            return AuthoredLabels(value,0);
-        }
+        friend struct ::tt::results::detail::Loader;
+        public:
         explicit AuthoredLabels(const std::variant<std::vector<AuthoredName>, std::vector<std::pair<std::string,
         AuthoredDescription>>>& value);
     };
     class AuthoredLevels : public Node {
-        AuthoredLevels(const Json& value, int):Node(value) {
+        AuthoredLevels(const Data& value, int):Node(value) {
         }
-        public: static AuthoredLevels from_document(const Json& value) {
-            return AuthoredLevels(value,0);
-        }
+        friend struct ::tt::results::detail::Loader;
+        public:
         explicit AuthoredLevels(const std::variant<std::vector<AuthoredName>, std::vector<std::pair<std::string,
         AuthoredCriterion>>>& value);
     };
     class AuthoredName : public Node {
-        AuthoredName(const Json& value, int):Node(value) {
+        AuthoredName(const Data& value, int):Node(value) {
         }
-        public: static AuthoredName from_document(const Json& value) {
-            return AuthoredName(value,0);
-        }
+        friend struct ::tt::results::detail::Loader;
+        public:
         explicit AuthoredName(const std::string& value);
     };
     class AuthoredOptions : public Node {
-        AuthoredOptions(const Json& value, int):Node(value) {
+        AuthoredOptions(const Data& value, int):Node(value) {
         }
-        public: static AuthoredOptions from_document(const Json& value) {
-            return AuthoredOptions(value,0);
-        }
+        friend struct ::tt::results::detail::Loader;
+        public:
         explicit AuthoredOptions(const std::variant<std::vector<AuthoredName>, std::vector<std::pair<std::string,
         AuthoredDescription>>>& value);
     };
     class AuthoredPointers : public Node {
-        AuthoredPointers(const Json& value, int):Node(value) {
+        AuthoredPointers(const Data& value, int):Node(value) {
         }
-        public: static AuthoredPointers from_document(const Json& value) {
-            return AuthoredPointers(value,0);
-        }
+        friend struct ::tt::results::detail::Loader;
+        public:
         explicit AuthoredPointers(const std::variant<std::string, std::vector<std::string>>& value);
     };
     class AuthoredProfile : public Node {
-        AuthoredProfile(const Json& value, int):Node(value) {
+        AuthoredProfile(const Data& value, int):Node(value) {
         }
-        public: static AuthoredProfile from_document(const Json& value) {
-            return AuthoredProfile(value,0);
-        }
+        friend struct ::tt::results::detail::Loader;
+        public:
         explicit AuthoredProfile(const std::string& value);
     };
     class AuthoredQuestionText : public Node {
-        AuthoredQuestionText(const Json& value, int):Node(value) {
+        AuthoredQuestionText(const Data& value, int):Node(value) {
         }
-        public: static AuthoredQuestionText from_document(const Json& value) {
-            return AuthoredQuestionText(value,0);
-        }
-        explicit AuthoredQuestionText(const std::variant<std::string, Json, std::vector<Json>>& value);
+        friend struct ::tt::results::detail::Loader;
+        public:
+        explicit AuthoredQuestionText(const std::variant<std::string, Data, std::vector<Data>>& value);
     };
     class AuthoredRelate : public Node {
-        AuthoredRelate(const Json& value, int):Node(value) {
+        AuthoredRelate(const Data& value, int):Node(value) {
         }
-        public: static AuthoredRelate from_document(const Json& value) {
-            return AuthoredRelate(value,0);
-        }
-        AuthoredRelate():Node(Json(Json::Object{
+        friend struct ::tt::results::detail::Loader;
+        public:
+        AuthoredRelate():Node(Data(Data::Object{
             {
-                "version",Json(1)
+                "version",Data(1)
             }
         })) {
         }
@@ -463,12 +435,11 @@ namespace tt::inputs {
         AuthoredRelate& set_wording_version(const uint64_t& value);
     };
     class AuthoredRelation : public Node {
-        AuthoredRelation(const Json& value, int):Node(value) {
+        AuthoredRelation(const Data& value, int):Node(value) {
         }
-        public: static AuthoredRelation from_document(const Json& value) {
-            return AuthoredRelation(value,0);
-        }
-        AuthoredRelation():Node(Json(Json::Object{
+        friend struct ::tt::results::detail::Loader;
+        public:
+        AuthoredRelation():Node(Data(Data::Object{
         })) {
         }
         AuthoredRelation& set_either(const bool& value);
@@ -479,12 +450,11 @@ namespace tt::inputs {
         AuthoredRelation& set_target(const AuthoredName& value);
     };
     class AuthoredScore : public Node {
-        AuthoredScore(const Json& value, int):Node(value) {
+        AuthoredScore(const Data& value, int):Node(value) {
         }
-        public: static AuthoredScore from_document(const Json& value) {
-            return AuthoredScore(value,0);
-        }
-        AuthoredScore():Node(Json(Json::Object{
+        friend struct ::tt::results::detail::Loader;
+        public:
+        AuthoredScore():Node(Data(Data::Object{
         })) {
         }
         AuthoredScore& set_batch(const std::variant<std::string, uint64_t>& value);
@@ -499,12 +469,11 @@ namespace tt::inputs {
         AuthoredScore& set_wording_version(const uint64_t& value);
     };
     class AuthoredTag : public Node {
-        AuthoredTag(const Json& value, int):Node(value) {
+        AuthoredTag(const Data& value, int):Node(value) {
         }
-        public: static AuthoredTag from_document(const Json& value) {
-            return AuthoredTag(value,0);
-        }
-        AuthoredTag():Node(Json(Json::Object{
+        friend struct ::tt::results::detail::Loader;
+        public:
+        AuthoredTag():Node(Data(Data::Object{
         })) {
         }
         AuthoredTag& set_batch(const std::variant<std::string, uint64_t>& value);
@@ -520,44 +489,39 @@ namespace tt::inputs {
         AuthoredTag& set_wording_version(const uint64_t& value);
     };
     class AuthoredThreshold : public Node {
-        AuthoredThreshold(const Json& value, int):Node(value) {
+        AuthoredThreshold(const Data& value, int):Node(value) {
         }
-        public: static AuthoredThreshold from_document(const Json& value) {
-            return AuthoredThreshold(value,0);
-        }
+        friend struct ::tt::results::detail::Loader;
+        public:
         explicit AuthoredThreshold(const std::variant<double, std::string>& value);
     };
     class CacheDocument : public Node {
-        CacheDocument(const Json& value, int):Node(value) {
+        CacheDocument(const Data& value, int):Node(value) {
         }
-        public: static CacheDocument from_document(const Json& value) {
-            return CacheDocument(value,0);
-        }
+        friend struct ::tt::results::detail::Loader;
+        public:
         explicit CacheDocument(const std::variant<std::string, DisabledCache>& value);
     };
     class ContextSchema : public Node {
-        ContextSchema(const Json& value, int):Node(value) {
+        ContextSchema(const Data& value, int):Node(value) {
         }
-        public: static ContextSchema from_document(const Json& value) {
-            return ContextSchema(value,0);
-        }
-        explicit ContextSchema(const std::variant<std::string, Json>& value);
+        friend struct ::tt::results::detail::Loader;
+        public:
+        explicit ContextSchema(const std::variant<std::string, Data>& value);
     };
     class DisabledCache : public Node {
-        DisabledCache(const Json& value, int):Node(value) {
+        DisabledCache(const Data& value, int):Node(value) {
         }
-        public: static DisabledCache from_document(const Json& value) {
-            return DisabledCache(value,0);
-        }
+        friend struct ::tt::results::detail::Loader;
+        public:
         explicit DisabledCache(const bool& value);
     };
     class EngineSettings : public Node {
-        EngineSettings(const Json& value, int):Node(value) {
+        EngineSettings(const Data& value, int):Node(value) {
         }
-        public: static EngineSettings from_document(const Json& value) {
-            return EngineSettings(value,0);
-        }
-        EngineSettings():Node(Json(Json::Object{
+        friend struct ::tt::results::detail::Loader;
+        public:
+        EngineSettings():Node(Data(Data::Object{
         })) {
         }
         EngineSettings& set_backend(const std::string& value);
@@ -571,7 +535,7 @@ namespace tt::inputs {
         EngineSettings& set_max_retries(const uint64_t& value);
         EngineSettings& set_model(const std::string& value);
         EngineSettings& set_profile(const std::string& value);
-        EngineSettings& set_proxy(const Json& value);
+        EngineSettings& set_proxy(const Data& value);
         EngineSettings& set_record(const std::string& value);
         EngineSettings& set_refresh_cache(const bool& value);
         EngineSettings& set_replay(const std::string& value);
@@ -581,48 +545,43 @@ namespace tt::inputs {
         EngineSettings& set_usd_per_million_output(const std::string& value);
     };
     class ImageMedia : public Node {
-        ImageMedia(const Json& value, int):Node(value) {
+        ImageMedia(const Data& value, int):Node(value) {
         }
-        public: static ImageMedia from_document(const Json& value) {
-            return ImageMedia(value,0);
-        }
+        friend struct ::tt::results::detail::Loader;
+        public:
         explicit ImageMedia(const std::string& value);
     };
     class OptionSchema : public Node {
-        OptionSchema(const Json& value, int):Node(value) {
+        OptionSchema(const Data& value, int):Node(value) {
         }
-        public: static OptionSchema from_document(const Json& value) {
-            return OptionSchema(value,0);
-        }
-        OptionSchema():Node(Json(Json::Object{
+        friend struct ::tt::results::detail::Loader;
+        public:
+        OptionSchema():Node(Data(Data::Object{
         })) {
         }
-        OptionSchema& set_description(const Json& value);
+        OptionSchema& set_description(const Data& value);
         OptionSchema& set_name(const std::string& value);
     };
     class ReaderMedia : public Node {
-        ReaderMedia(const Json& value, int):Node(value) {
+        ReaderMedia(const Data& value, int):Node(value) {
         }
-        public: static ReaderMedia from_document(const Json& value) {
-            return ReaderMedia(value,0);
-        }
+        friend struct ::tt::results::detail::Loader;
+        public:
         explicit ReaderMedia(const std::string& value);
     };
     class RecognitionExample : public Node {
-        RecognitionExample(const Json& value, int):Node(value) {
+        RecognitionExample(const Data& value, int):Node(value) {
         }
-        public: static RecognitionExample from_document(const Json& value) {
-            return RecognitionExample(value,0);
-        }
+        friend struct ::tt::results::detail::Loader;
+        public:
         explicit RecognitionExample(const std::variant<std::string, RecognitionExampleText>& value);
     };
     class RecognitionExampleEntity : public Node {
-        RecognitionExampleEntity(const Json& value, int):Node(value) {
+        RecognitionExampleEntity(const Data& value, int):Node(value) {
         }
-        public: static RecognitionExampleEntity from_document(const Json& value) {
-            return RecognitionExampleEntity(value,0);
-        }
-        RecognitionExampleEntity():Node(Json(Json::Object{
+        friend struct ::tt::results::detail::Loader;
+        public:
+        RecognitionExampleEntity():Node(Data(Data::Object{
         })) {
         }
         RecognitionExampleEntity& set_end(const uint64_t& value);
@@ -630,12 +589,11 @@ namespace tt::inputs {
         RecognitionExampleEntity& set_start(const uint64_t& value);
     };
     class RecognitionExampleText : public Node {
-        RecognitionExampleText(const Json& value, int):Node(value) {
+        RecognitionExampleText(const Data& value, int):Node(value) {
         }
-        public: static RecognitionExampleText from_document(const Json& value) {
-            return RecognitionExampleText(value,0);
-        }
-        RecognitionExampleText():Node(Json(Json::Object{
+        friend struct ::tt::results::detail::Loader;
+        public:
+        RecognitionExampleText():Node(Data(Data::Object{
         })) {
         }
         RecognitionExampleText& set_entities(const std::vector<RecognitionExampleEntity>& value);
@@ -643,20 +601,18 @@ namespace tt::inputs {
         RecognitionExampleText& set_text(const std::string& value);
     };
     class RecognitionMode : public Node {
-        RecognitionMode(const Json& value, int):Node(value) {
+        RecognitionMode(const Data& value, int):Node(value) {
         }
-        public: static RecognitionMode from_document(const Json& value) {
-            return RecognitionMode(value,0);
-        }
+        friend struct ::tt::results::detail::Loader;
+        public:
         explicit RecognitionMode(const std::string& value);
     };
     class RecognitionSeedSpan : public Node {
-        RecognitionSeedSpan(const Json& value, int):Node(value) {
+        RecognitionSeedSpan(const Data& value, int):Node(value) {
         }
-        public: static RecognitionSeedSpan from_document(const Json& value) {
-            return RecognitionSeedSpan(value,0);
-        }
-        RecognitionSeedSpan():Node(Json(Json::Object{
+        friend struct ::tt::results::detail::Loader;
+        public:
+        RecognitionSeedSpan():Node(Data(Data::Object{
         })) {
         }
         RecognitionSeedSpan& set_end(const uint64_t& value);
@@ -664,12 +620,11 @@ namespace tt::inputs {
         RecognitionSeedSpan& set_start(const uint64_t& value);
     };
     class RecognitionStageContext : public Node {
-        RecognitionStageContext(const Json& value, int):Node(value) {
+        RecognitionStageContext(const Data& value, int):Node(value) {
         }
-        public: static RecognitionStageContext from_document(const Json& value) {
-            return RecognitionStageContext(value,0);
-        }
-        RecognitionStageContext():Node(Json(Json::Object{
+        friend struct ::tt::results::detail::Loader;
+        public:
+        RecognitionStageContext():Node(Data(Data::Object{
         })) {
         }
         RecognitionStageContext& set_boundary(const std::string& value);
@@ -677,14 +632,13 @@ namespace tt::inputs {
         RecognitionStageContext& set_relation(const std::string& value);
     };
     class RecognizeDefinition : public Node {
-        RecognizeDefinition(const Json& value, int):Node(value) {
+        RecognizeDefinition(const Data& value, int):Node(value) {
         }
-        public: static RecognizeDefinition from_document(const Json& value) {
-            return RecognizeDefinition(value,0);
-        }
-        RecognizeDefinition():Node(Json(Json::Object{
+        friend struct ::tt::results::detail::Loader;
+        public:
+        RecognizeDefinition():Node(Data(Data::Object{
             {
-                "version",Json(1)
+                "version",Data(1)
             }
         })) {
         }
@@ -700,12 +654,11 @@ namespace tt::inputs {
         RecognizeDefinition& set_wording_version(const uint64_t& value);
     };
     class RecognizeQuestion : public Node {
-        RecognizeQuestion(const Json& value, int):Node(value) {
+        RecognizeQuestion(const Data& value, int):Node(value) {
         }
-        public: static RecognizeQuestion from_document(const Json& value) {
-            return RecognizeQuestion(value,0);
-        }
-        RecognizeQuestion():Node(Json(Json::Object{
+        friend struct ::tt::results::detail::Loader;
+        public:
+        RecognizeQuestion():Node(Data(Data::Object{
         })) {
         }
         RecognizeQuestion& set_entity_definition(const AuthoredQuestionText& value);
@@ -717,38 +670,35 @@ namespace tt::inputs {
         RecognizeQuestion& set_stage_context(const RecognitionStageContext& value);
     };
     class RelateFields : public Node {
-        RelateFields(const Json& value, int):Node(value) {
+        RelateFields(const Data& value, int):Node(value) {
         }
-        public: static RelateFields from_document(const Json& value) {
-            return RelateFields(value,0);
-        }
-        RelateFields():Node(Json(Json::Object{
+        friend struct ::tt::results::detail::Loader;
+        public:
+        RelateFields():Node(Data(Data::Object{
         })) {
         }
         RelateFields& set_kind(const std::string& value);
         RelateFields& set_name(const std::string& value);
     };
     class RelateQuestion : public Node {
-        RelateQuestion(const Json& value, int):Node(value) {
+        RelateQuestion(const Data& value, int):Node(value) {
         }
-        public: static RelateQuestion from_document(const Json& value) {
-            return RelateQuestion(value,0);
-        }
-        RelateQuestion():Node(Json(Json::Object{
+        friend struct ::tt::results::detail::Loader;
+        public:
+        RelateQuestion():Node(Data(Data::Object{
         })) {
         }
         RelateQuestion& set_fields(const RelateFields& value);
         RelateQuestion& set_relations(const std::vector<AuthoredRelation>& value);
     };
     class Request : public Node {
-        Request(const Json& value, int):Node(value) {
+        Request(const Data& value, int):Node(value) {
         }
-        public: static Request from_document(const Json& value) {
-            return Request(value,0);
-        }
-        Request():Node(Json(Json::Object{
+        friend struct ::tt::results::detail::Loader;
+        public:
+        Request():Node(Data(Data::Object{
             {
-                "schema",Json("thinkthen.request/1")
+                "schema",Data("thinkthen.request/1")
             }
         })) {
         }
@@ -756,20 +706,18 @@ namespace tt::inputs {
         Request& set_schema(const RequestVersion& value);
     };
     class RequestBatch : public Node {
-        RequestBatch(const Json& value, int):Node(value) {
+        RequestBatch(const Data& value, int):Node(value) {
         }
-        public: static RequestBatch from_document(const Json& value) {
-            return RequestBatch(value,0);
-        }
+        friend struct ::tt::results::detail::Loader;
+        public:
         explicit RequestBatch(const std::variant<uint64_t, std::string>& value);
     };
     class RequestCall : public Node {
-        RequestCall(const Json& value, int):Node(value) {
+        RequestCall(const Data& value, int):Node(value) {
         }
-        public: static RequestCall from_document(const Json& value) {
-            return RequestCall(value,0);
-        }
-        RequestCall():Node(Json(Json::Object{
+        friend struct ::tt::results::detail::Loader;
+        public:
+        RequestCall():Node(Data(Data::Object{
         })) {
         }
         RequestCall& set_function(const RequestFunction& value);
@@ -778,11 +726,10 @@ namespace tt::inputs {
         RequestCall& set_question(const RequestQuestion& value);
     };
     class RequestDefinition : public Node {
-        RequestDefinition(const Json& value, int):Node(value) {
+        RequestDefinition(const Data& value, int):Node(value) {
         }
-        public: static RequestDefinition from_document(const Json& value) {
-            return RequestDefinition(value,0);
-        }
+        friend struct ::tt::results::detail::Loader;
+        public:
         RequestDefinition(const RequestDefinitionAuthoredDecide& value);
         RequestDefinition(const RequestDefinitionAuthoredChoose& value);
         RequestDefinition(const RequestDefinitionAuthoredTag& value);
@@ -793,30 +740,28 @@ namespace tt::inputs {
         RequestDefinition(const RequestDefinitionAnnotateDefinition& value);
     };
     class RequestDefinitionAnnotateDefinition : public Node {
-        RequestDefinitionAnnotateDefinition(const Json& value, int):Node(value) {
+        RequestDefinitionAnnotateDefinition(const Data& value, int):Node(value) {
         }
-        public: static RequestDefinitionAnnotateDefinition from_document(const Json& value) {
-            return RequestDefinitionAnnotateDefinition(value,0);
-        }
-        RequestDefinitionAnnotateDefinition():Node(Json(Json::Object{
+        friend struct ::tt::results::detail::Loader;
+        public:
+        RequestDefinitionAnnotateDefinition():Node(Data(Data::Object{
             {
-                "version",Json(1)
+                "version",Data(1)
             }
         })) {
         }
-        RequestDefinitionAnnotateDefinition& set_batch(const Json& value);
+        RequestDefinitionAnnotateDefinition& set_batch(const Data& value);
         RequestDefinitionAnnotateDefinition& set_profile(const AuthoredProfile& value);
         RequestDefinitionAnnotateDefinition& set_questions(const std::vector<std::pair<std::string,
         AnnotateQuestion>>& value);
         RequestDefinitionAnnotateDefinition& set_threshold(const AuthoredThreshold& value);
     };
     class RequestDefinitionAuthoredChoose : public Node {
-        RequestDefinitionAuthoredChoose(const Json& value, int):Node(value) {
+        RequestDefinitionAuthoredChoose(const Data& value, int):Node(value) {
         }
-        public: static RequestDefinitionAuthoredChoose from_document(const Json& value) {
-            return RequestDefinitionAuthoredChoose(value,0);
-        }
-        RequestDefinitionAuthoredChoose():Node(Json(Json::Object{
+        friend struct ::tt::results::detail::Loader;
+        public:
+        RequestDefinitionAuthoredChoose():Node(Data(Data::Object{
         })) {
         }
         RequestDefinitionAuthoredChoose& set_batch(const std::variant<std::string, uint64_t>& value);
@@ -832,12 +777,11 @@ namespace tt::inputs {
         RequestDefinitionAuthoredChoose& set_wording_version(const uint64_t& value);
     };
     class RequestDefinitionAuthoredDecide : public Node {
-        RequestDefinitionAuthoredDecide(const Json& value, int):Node(value) {
+        RequestDefinitionAuthoredDecide(const Data& value, int):Node(value) {
         }
-        public: static RequestDefinitionAuthoredDecide from_document(const Json& value) {
-            return RequestDefinitionAuthoredDecide(value,0);
-        }
-        RequestDefinitionAuthoredDecide():Node(Json(Json::Object{
+        friend struct ::tt::results::detail::Loader;
+        public:
+        RequestDefinitionAuthoredDecide():Node(Data(Data::Object{
         })) {
         }
         RequestDefinitionAuthoredDecide& set_batch(const std::variant<std::string, uint64_t>& value);
@@ -854,12 +798,11 @@ namespace tt::inputs {
         RequestDefinitionAuthoredDecide& set_wording_version(const uint64_t& value);
     };
     class RequestDefinitionAuthoredFind : public Node {
-        RequestDefinitionAuthoredFind(const Json& value, int):Node(value) {
+        RequestDefinitionAuthoredFind(const Data& value, int):Node(value) {
         }
-        public: static RequestDefinitionAuthoredFind from_document(const Json& value) {
-            return RequestDefinitionAuthoredFind(value,0);
-        }
-        RequestDefinitionAuthoredFind():Node(Json(Json::Object{
+        friend struct ::tt::results::detail::Loader;
+        public:
+        RequestDefinitionAuthoredFind():Node(Data(Data::Object{
         })) {
         }
         RequestDefinitionAuthoredFind& set_context_schema(const AuthoredInputDeclaration& value);
@@ -872,14 +815,13 @@ namespace tt::inputs {
         RequestDefinitionAuthoredFind& set_wording_version(const uint64_t& value);
     };
     class RequestDefinitionAuthoredRelate : public Node {
-        RequestDefinitionAuthoredRelate(const Json& value, int):Node(value) {
+        RequestDefinitionAuthoredRelate(const Data& value, int):Node(value) {
         }
-        public: static RequestDefinitionAuthoredRelate from_document(const Json& value) {
-            return RequestDefinitionAuthoredRelate(value,0);
-        }
-        RequestDefinitionAuthoredRelate():Node(Json(Json::Object{
+        friend struct ::tt::results::detail::Loader;
+        public:
+        RequestDefinitionAuthoredRelate():Node(Data(Data::Object{
             {
-                "version",Json(1)
+                "version",Data(1)
             }
         })) {
         }
@@ -893,12 +835,11 @@ namespace tt::inputs {
         RequestDefinitionAuthoredRelate& set_wording_version(const uint64_t& value);
     };
     class RequestDefinitionAuthoredScore : public Node {
-        RequestDefinitionAuthoredScore(const Json& value, int):Node(value) {
+        RequestDefinitionAuthoredScore(const Data& value, int):Node(value) {
         }
-        public: static RequestDefinitionAuthoredScore from_document(const Json& value) {
-            return RequestDefinitionAuthoredScore(value,0);
-        }
-        RequestDefinitionAuthoredScore():Node(Json(Json::Object{
+        friend struct ::tt::results::detail::Loader;
+        public:
+        RequestDefinitionAuthoredScore():Node(Data(Data::Object{
         })) {
         }
         RequestDefinitionAuthoredScore& set_batch(const std::variant<std::string, uint64_t>& value);
@@ -913,12 +854,11 @@ namespace tt::inputs {
         RequestDefinitionAuthoredScore& set_wording_version(const uint64_t& value);
     };
     class RequestDefinitionAuthoredTag : public Node {
-        RequestDefinitionAuthoredTag(const Json& value, int):Node(value) {
+        RequestDefinitionAuthoredTag(const Data& value, int):Node(value) {
         }
-        public: static RequestDefinitionAuthoredTag from_document(const Json& value) {
-            return RequestDefinitionAuthoredTag(value,0);
-        }
-        RequestDefinitionAuthoredTag():Node(Json(Json::Object{
+        friend struct ::tt::results::detail::Loader;
+        public:
+        RequestDefinitionAuthoredTag():Node(Data(Data::Object{
         })) {
         }
         RequestDefinitionAuthoredTag& set_batch(const std::variant<std::string, uint64_t>& value);
@@ -934,14 +874,13 @@ namespace tt::inputs {
         RequestDefinitionAuthoredTag& set_wording_version(const uint64_t& value);
     };
     class RequestDefinitionRecognizeDefinition : public Node {
-        RequestDefinitionRecognizeDefinition(const Json& value, int):Node(value) {
+        RequestDefinitionRecognizeDefinition(const Data& value, int):Node(value) {
         }
-        public: static RequestDefinitionRecognizeDefinition from_document(const Json& value) {
-            return RequestDefinitionRecognizeDefinition(value,0);
-        }
-        RequestDefinitionRecognizeDefinition():Node(Json(Json::Object{
+        friend struct ::tt::results::detail::Loader;
+        public:
+        RequestDefinitionRecognizeDefinition():Node(Data(Data::Object{
             {
-                "version",Json(1)
+                "version",Data(1)
             }
         })) {
         }
@@ -957,39 +896,35 @@ namespace tt::inputs {
         RequestDefinitionRecognizeDefinition& set_wording_version(const uint64_t& value);
     };
     class RequestFraming : public Node {
-        RequestFraming(const Json& value, int):Node(value) {
+        RequestFraming(const Data& value, int):Node(value) {
         }
-        public: static RequestFraming from_document(const Json& value) {
-            return RequestFraming(value,0);
-        }
+        friend struct ::tt::results::detail::Loader;
+        public:
         explicit RequestFraming(const std::string& value);
     };
     class RequestFunction : public Node {
-        RequestFunction(const Json& value, int):Node(value) {
+        RequestFunction(const Data& value, int):Node(value) {
         }
-        public: static RequestFunction from_document(const Json& value) {
-            return RequestFunction(value,0);
-        }
+        friend struct ::tt::results::detail::Loader;
+        public:
         explicit RequestFunction(const std::string& value);
     };
     class RequestImage : public Node {
-        RequestImage(const Json& value, int):Node(value) {
+        RequestImage(const Data& value, int):Node(value) {
         }
-        public: static RequestImage from_document(const Json& value) {
-            return RequestImage(value,0);
-        }
+        friend struct ::tt::results::detail::Loader;
+        public:
         RequestImage(const RequestImageFile& value);
         RequestImage(const RequestImageBytes& value);
     };
     class RequestImageBytes : public Node {
-        RequestImageBytes(const Json& value, int):Node(value) {
+        RequestImageBytes(const Data& value, int):Node(value) {
         }
-        public: static RequestImageBytes from_document(const Json& value) {
-            return RequestImageBytes(value,0);
-        }
-        RequestImageBytes():Node(Json(Json::Object{
+        friend struct ::tt::results::detail::Loader;
+        public:
+        RequestImageBytes():Node(Data(Data::Object{
             {
-                "kind",Json("bytes")
+                "kind",Data("bytes")
             }
         })) {
         }
@@ -997,14 +932,13 @@ namespace tt::inputs {
         RequestImageBytes& set_media(const ImageMedia& value);
     };
     class RequestImageFile : public Node {
-        RequestImageFile(const Json& value, int):Node(value) {
+        RequestImageFile(const Data& value, int):Node(value) {
         }
-        public: static RequestImageFile from_document(const Json& value) {
-            return RequestImageFile(value,0);
-        }
-        RequestImageFile():Node(Json(Json::Object{
+        friend struct ::tt::results::detail::Loader;
+        public:
+        RequestImageFile():Node(Data(Data::Object{
             {
-                "kind",Json("file")
+                "kind",Data("file")
             }
         })) {
         }
@@ -1012,11 +946,10 @@ namespace tt::inputs {
         RequestImageFile& set_path(const std::string& value);
     };
     class RequestInput : public Node {
-        RequestInput(const Json& value, int):Node(value) {
+        RequestInput(const Data& value, int):Node(value) {
         }
-        public: static RequestInput from_document(const Json& value) {
-            return RequestInput(value,0);
-        }
+        friend struct ::tt::results::detail::Loader;
+        public:
         RequestInput(const RequestInputText& value);
         RequestInput(const RequestInputJson& value);
         RequestInput(const RequestInputRecords& value);
@@ -1026,28 +959,26 @@ namespace tt::inputs {
         RequestInput(const RequestInputFeed& value);
     };
     class RequestInputEntities : public Node {
-        RequestInputEntities(const Json& value, int):Node(value) {
+        RequestInputEntities(const Data& value, int):Node(value) {
         }
-        public: static RequestInputEntities from_document(const Json& value) {
-            return RequestInputEntities(value,0);
-        }
-        RequestInputEntities():Node(Json(Json::Object{
+        friend struct ::tt::results::detail::Loader;
+        public:
+        RequestInputEntities():Node(Data(Data::Object{
             {
-                "kind",Json("entities")
+                "kind",Data("entities")
             }
         })) {
         }
         RequestInputEntities& set_items(const std::vector<RequestItem>& value);
     };
     class RequestInputFeed : public Node {
-        RequestInputFeed(const Json& value, int):Node(value) {
+        RequestInputFeed(const Data& value, int):Node(value) {
         }
-        public: static RequestInputFeed from_document(const Json& value) {
-            return RequestInputFeed(value,0);
-        }
-        RequestInputFeed():Node(Json(Json::Object{
+        friend struct ::tt::results::detail::Loader;
+        public:
+        RequestInputFeed():Node(Data(Data::Object{
             {
-                "kind",Json("feed")
+                "kind",Data("feed")
             }
         })) {
         }
@@ -1057,57 +988,53 @@ namespace tt::inputs {
         RequestInputFeed& set_reading(const RequestReader& value);
     };
     class RequestInputJson : public Node {
-        RequestInputJson(const Json& value, int):Node(value) {
+        RequestInputJson(const Data& value, int):Node(value) {
         }
-        public: static RequestInputJson from_document(const Json& value) {
-            return RequestInputJson(value,0);
-        }
-        RequestInputJson():Node(Json(Json::Object{
+        friend struct ::tt::results::detail::Loader;
+        public:
+        RequestInputJson():Node(Data(Data::Object{
             {
-                "kind",Json("json")
+                "kind",Data("json")
             }
         })) {
         }
         RequestInputJson& set_images(const std::vector<RequestImage>& value);
-        RequestInputJson& set_value(const Json& value);
+        RequestInputJson& set_value(const Data& value);
     };
     class RequestInputRecords : public Node {
-        RequestInputRecords(const Json& value, int):Node(value) {
+        RequestInputRecords(const Data& value, int):Node(value) {
         }
-        public: static RequestInputRecords from_document(const Json& value) {
-            return RequestInputRecords(value,0);
-        }
-        RequestInputRecords():Node(Json(Json::Object{
+        friend struct ::tt::results::detail::Loader;
+        public:
+        RequestInputRecords():Node(Data(Data::Object{
             {
-                "kind",Json("records")
+                "kind",Data("records")
             }
         })) {
         }
         RequestInputRecords& set_items(const std::vector<RequestItem>& value);
     };
     class RequestInputSource : public Node {
-        RequestInputSource(const Json& value, int):Node(value) {
+        RequestInputSource(const Data& value, int):Node(value) {
         }
-        public: static RequestInputSource from_document(const Json& value) {
-            return RequestInputSource(value,0);
-        }
-        RequestInputSource():Node(Json(Json::Object{
+        friend struct ::tt::results::detail::Loader;
+        public:
+        RequestInputSource():Node(Data(Data::Object{
             {
-                "kind",Json("source")
+                "kind",Data("source")
             }
         })) {
         }
         RequestInputSource& set_source(const RequestSource& value);
     };
     class RequestInputText : public Node {
-        RequestInputText(const Json& value, int):Node(value) {
+        RequestInputText(const Data& value, int):Node(value) {
         }
-        public: static RequestInputText from_document(const Json& value) {
-            return RequestInputText(value,0);
-        }
-        RequestInputText():Node(Json(Json::Object{
+        friend struct ::tt::results::detail::Loader;
+        public:
+        RequestInputText():Node(Data(Data::Object{
             {
-                "kind",Json("text")
+                "kind",Data("text")
             }
         })) {
         }
@@ -1115,26 +1042,24 @@ namespace tt::inputs {
         RequestInputText& set_text(const std::string& value);
     };
     class RequestInputUnits : public Node {
-        RequestInputUnits(const Json& value, int):Node(value) {
+        RequestInputUnits(const Data& value, int):Node(value) {
         }
-        public: static RequestInputUnits from_document(const Json& value) {
-            return RequestInputUnits(value,0);
-        }
-        RequestInputUnits():Node(Json(Json::Object{
+        friend struct ::tt::results::detail::Loader;
+        public:
+        RequestInputUnits():Node(Data(Data::Object{
             {
-                "kind",Json("units")
+                "kind",Data("units")
             }
         })) {
         }
         RequestInputUnits& set_items(const std::vector<RequestItem>& value);
     };
     class RequestItem : public Node {
-        RequestItem(const Json& value, int):Node(value) {
+        RequestItem(const Data& value, int):Node(value) {
         }
-        public: static RequestItem from_document(const Json& value) {
-            return RequestItem(value,0);
-        }
-        RequestItem():Node(Json(Json::Object{
+        friend struct ::tt::results::detail::Loader;
+        public:
+        RequestItem():Node(Data(Data::Object{
         })) {
         }
         RequestItem& set_context(const ContextSchema& value);
@@ -1145,12 +1070,11 @@ namespace tt::inputs {
         RequestItem& set_seed_spans(const std::vector<RecognitionSeedSpan>& value);
     };
     class RequestOptions : public Node {
-        RequestOptions(const Json& value, int):Node(value) {
+        RequestOptions(const Data& value, int):Node(value) {
         }
-        public: static RequestOptions from_document(const Json& value) {
-            return RequestOptions(value,0);
-        }
-        RequestOptions():Node(Json(Json::Object{
+        friend struct ::tt::results::detail::Loader;
+        public:
+        RequestOptions():Node(Data(Data::Object{
         })) {
         }
         RequestOptions& set_attempts(const bool& value);
@@ -1177,48 +1101,44 @@ namespace tt::inputs {
         RequestOptions& set_top(const uint64_t& value);
     };
     class RequestOriginal : public Node {
-        RequestOriginal(const Json& value, int):Node(value) {
+        RequestOriginal(const Data& value, int):Node(value) {
         }
-        public: static RequestOriginal from_document(const Json& value) {
-            return RequestOriginal(value,0);
-        }
+        friend struct ::tt::results::detail::Loader;
+        public:
         RequestOriginal(const RequestOriginalText& value);
         RequestOriginal(const RequestOriginalJson& value);
     };
     class RequestOriginalJson : public Node {
-        RequestOriginalJson(const Json& value, int):Node(value) {
+        RequestOriginalJson(const Data& value, int):Node(value) {
         }
-        public: static RequestOriginalJson from_document(const Json& value) {
-            return RequestOriginalJson(value,0);
-        }
-        RequestOriginalJson():Node(Json(Json::Object{
+        friend struct ::tt::results::detail::Loader;
+        public:
+        RequestOriginalJson():Node(Data(Data::Object{
             {
-                "kind",Json("json")
+                "kind",Data("json")
             }
         })) {
         }
-        RequestOriginalJson& set_value(const Json& value);
+        RequestOriginalJson& set_value(const Data& value);
     };
     class RequestOriginalText : public Node {
-        RequestOriginalText(const Json& value, int):Node(value) {
+        RequestOriginalText(const Data& value, int):Node(value) {
         }
-        public: static RequestOriginalText from_document(const Json& value) {
-            return RequestOriginalText(value,0);
-        }
-        RequestOriginalText():Node(Json(Json::Object{
+        friend struct ::tt::results::detail::Loader;
+        public:
+        RequestOriginalText():Node(Data(Data::Object{
             {
-                "kind",Json("text")
+                "kind",Data("text")
             }
         })) {
         }
         RequestOriginalText& set_text(const std::string& value);
     };
     class RequestQuestion : public Node {
-        RequestQuestion(const Json& value, int):Node(value) {
+        RequestQuestion(const Data& value, int):Node(value) {
         }
-        public: static RequestQuestion from_document(const Json& value) {
-            return RequestQuestion(value,0);
-        }
+        friend struct ::tt::results::detail::Loader;
+        public:
         RequestQuestion(const RequestQuestionText& value);
         RequestQuestion(const RequestQuestionDefinition& value);
         RequestQuestion(const RequestQuestionFile& value);
@@ -1226,106 +1146,98 @@ namespace tt::inputs {
         RequestQuestion(const RequestQuestionReference& value);
     };
     class RequestQuestionDefinition : public Node {
-        RequestQuestionDefinition(const Json& value, int):Node(value) {
+        RequestQuestionDefinition(const Data& value, int):Node(value) {
         }
-        public: static RequestQuestionDefinition from_document(const Json& value) {
-            return RequestQuestionDefinition(value,0);
-        }
-        RequestQuestionDefinition():Node(Json(Json::Object{
+        friend struct ::tt::results::detail::Loader;
+        public:
+        RequestQuestionDefinition():Node(Data(Data::Object{
             {
-                "kind",Json("definition")
+                "kind",Data("definition")
             }
         })) {
         }
         RequestQuestionDefinition& set_value(const RequestDefinition& value);
     };
     class RequestQuestionFile : public Node {
-        RequestQuestionFile(const Json& value, int):Node(value) {
+        RequestQuestionFile(const Data& value, int):Node(value) {
         }
-        public: static RequestQuestionFile from_document(const Json& value) {
-            return RequestQuestionFile(value,0);
-        }
-        RequestQuestionFile():Node(Json(Json::Object{
+        friend struct ::tt::results::detail::Loader;
+        public:
+        RequestQuestionFile():Node(Data(Data::Object{
             {
-                "kind",Json("file")
+                "kind",Data("file")
             }
         })) {
         }
         RequestQuestionFile& set_path(const std::string& value);
     };
     class RequestQuestionName : public Node {
-        RequestQuestionName(const Json& value, int):Node(value) {
+        RequestQuestionName(const Data& value, int):Node(value) {
         }
-        public: static RequestQuestionName from_document(const Json& value) {
-            return RequestQuestionName(value,0);
-        }
-        RequestQuestionName():Node(Json(Json::Object{
+        friend struct ::tt::results::detail::Loader;
+        public:
+        RequestQuestionName():Node(Data(Data::Object{
             {
-                "kind",Json("name")
+                "kind",Data("name")
             }
         })) {
         }
         RequestQuestionName& set_name(const std::string& value);
     };
     class RequestQuestionReference : public Node {
-        RequestQuestionReference(const Json& value, int):Node(value) {
+        RequestQuestionReference(const Data& value, int):Node(value) {
         }
-        public: static RequestQuestionReference from_document(const Json& value) {
-            return RequestQuestionReference(value,0);
-        }
-        RequestQuestionReference():Node(Json(Json::Object{
+        friend struct ::tt::results::detail::Loader;
+        public:
+        RequestQuestionReference():Node(Data(Data::Object{
             {
-                "kind",Json("reference")
+                "kind",Data("reference")
             }
         })) {
         }
         RequestQuestionReference& set_reference(const std::string& value);
     };
     class RequestQuestionText : public Node {
-        RequestQuestionText(const Json& value, int):Node(value) {
+        RequestQuestionText(const Data& value, int):Node(value) {
         }
-        public: static RequestQuestionText from_document(const Json& value) {
-            return RequestQuestionText(value,0);
-        }
-        RequestQuestionText():Node(Json(Json::Object{
+        friend struct ::tt::results::detail::Loader;
+        public:
+        RequestQuestionText():Node(Data(Data::Object{
             {
-                "kind",Json("text")
+                "kind",Data("text")
             }
         })) {
         }
         RequestQuestionText& set_text(const std::string& value);
     };
     class RequestReader : public Node {
-        RequestReader(const Json& value, int):Node(value) {
+        RequestReader(const Data& value, int):Node(value) {
         }
-        public: static RequestReader from_document(const Json& value) {
-            return RequestReader(value,0);
-        }
-        RequestReader():Node(Json(Json::Object{
+        friend struct ::tt::results::detail::Loader;
+        public:
+        RequestReader():Node(Data(Data::Object{
         })) {
         }
         RequestReader& set_unit(const SourceUnit& value);
         RequestReader& set_window(const uint64_t& value);
     };
     class RequestSessionDescriptor : public Node {
-        RequestSessionDescriptor(const Json& value, int):Node(value) {
+        RequestSessionDescriptor(const Data& value, int):Node(value) {
         }
-        public: static RequestSessionDescriptor from_document(const Json& value) {
-            return RequestSessionDescriptor(value,0);
-        }
-        RequestSessionDescriptor():Node(Json(Json::Object{
+        friend struct ::tt::results::detail::Loader;
+        public:
+        RequestSessionDescriptor():Node(Data(Data::Object{
         })) {
         }
         RequestSessionDescriptor& set_item(const RequestItem& value);
         RequestSessionDescriptor& set_location(const SessionSourceLocation& value);
     };
     class RequestSource : public Node {
-        RequestSource(const Json& value, int):Node(value) {
+        RequestSource(const Data& value, int):Node(value) {
         }
-        public: static RequestSource from_document(const Json& value) {
-            return RequestSource(value,0);
-        }
-        RequestSource():Node(Json(Json::Object{
+        friend struct ::tt::results::detail::Loader;
+        public:
+        RequestSource():Node(Data(Data::Object{
         })) {
         }
         RequestSource& set_framing(const RequestFraming& value);
@@ -1334,28 +1246,25 @@ namespace tt::inputs {
         RequestSource& set_reading(const RequestReader& value);
     };
     class RequestThreshold : public Node {
-        RequestThreshold(const Json& value, int):Node(value) {
+        RequestThreshold(const Data& value, int):Node(value) {
         }
-        public: static RequestThreshold from_document(const Json& value) {
-            return RequestThreshold(value,0);
-        }
+        friend struct ::tt::results::detail::Loader;
+        public:
         explicit RequestThreshold(const std::variant<double, std::string>& value);
     };
     class RequestVersion : public Node {
-        RequestVersion(const Json& value, int):Node(value) {
+        RequestVersion(const Data& value, int):Node(value) {
         }
-        public: static RequestVersion from_document(const Json& value) {
-            return RequestVersion(value,0);
-        }
+        friend struct ::tt::results::detail::Loader;
+        public:
         explicit RequestVersion(const std::string& value);
     };
     class SessionSourceLocation : public Node {
-        SessionSourceLocation(const Json& value, int):Node(value) {
+        SessionSourceLocation(const Data& value, int):Node(value) {
         }
-        public: static SessionSourceLocation from_document(const Json& value) {
-            return SessionSourceLocation(value,0);
-        }
-        SessionSourceLocation():Node(Json(Json::Object{
+        friend struct ::tt::results::detail::Loader;
+        public:
+        SessionSourceLocation():Node(Data(Data::Object{
         })) {
         }
         SessionSourceLocation& set_file(const std::string& value);
@@ -1363,1346 +1272,1345 @@ namespace tt::inputs {
         SessionSourceLocation& set_last_line(const uint64_t& value);
     };
     class SourceUnit : public Node {
-        SourceUnit(const Json& value, int):Node(value) {
+        SourceUnit(const Data& value, int):Node(value) {
         }
-        public: static SourceUnit from_document(const Json& value) {
-            return SourceUnit(value,0);
-        }
+        friend struct ::tt::results::detail::Loader;
+        public:
         explicit SourceUnit(const std::string& value);
     };
-    inline AnnotateDefinition& AnnotateDefinition::set_batch(const Json& value) {
-        set_member("batch",results::encode(value));
+    inline AnnotateDefinition& AnnotateDefinition::set_batch(const Data& value) {
+        set_member("batch",results::detail::encode(value));
         return *this;
     }
     inline AnnotateDefinition& AnnotateDefinition::set_profile(const AuthoredProfile& value) {
-        set_member("profile",results::encode(value));
+        set_member("profile",results::detail::encode(value));
         return *this;
     }
     inline AnnotateDefinition& AnnotateDefinition::set_questions(const std::vector<std::pair<std::string,
     AnnotateQuestion>>& value) {
-        set_member("questions",results::encode(value));
+        set_member("questions",results::detail::encode(value));
         return *this;
     }
     inline AnnotateDefinition& AnnotateDefinition::set_threshold(const AuthoredThreshold& value) {
-        set_member("threshold",results::encode(value));
+        set_member("threshold",results::detail::encode(value));
         return *this;
     }
-    inline AnnotateQuestion::AnnotateQuestion(const AnnotateQuestionDecide& value):Node(value.document()) {
+    inline AnnotateQuestion::AnnotateQuestion(const AnnotateQuestionDecide& value):Node(::tt::results::detail::document(value)) {
     }
-    inline AnnotateQuestion::AnnotateQuestion(const AnnotateQuestionChoose& value):Node(value.document()) {
+    inline AnnotateQuestion::AnnotateQuestion(const AnnotateQuestionChoose& value):Node(::tt::results::detail::document(value)) {
     }
-    inline AnnotateQuestion::AnnotateQuestion(const AnnotateQuestionTag& value):Node(value.document()) {
+    inline AnnotateQuestion::AnnotateQuestion(const AnnotateQuestionTag& value):Node(::tt::results::detail::document(value)) {
     }
-    inline AnnotateQuestion::AnnotateQuestion(const AnnotateQuestionScore& value):Node(value.document()) {
+    inline AnnotateQuestion::AnnotateQuestion(const AnnotateQuestionScore& value):Node(::tt::results::detail::document(value)) {
     }
     inline AnnotateQuestionChoose& AnnotateQuestionChoose::set_choose(const AuthoredQuestionText& value) {
-        set_member("choose",results::encode(value));
+        set_member("choose",results::detail::encode(value));
         return *this;
     }
     inline AnnotateQuestionChoose& AnnotateQuestionChoose::set_context_schema(const AuthoredInputDeclaration& value) {
-        set_member("context_schema",results::encode(value));
+        set_member("context_schema",results::detail::encode(value));
         return *this;
     }
     inline AnnotateQuestionChoose& AnnotateQuestionChoose::set_item_schema(const AuthoredInputDeclaration& value) {
-        set_member("item_schema",results::encode(value));
+        set_member("item_schema",results::detail::encode(value));
         return *this;
     }
     inline AnnotateQuestionChoose& AnnotateQuestionChoose::set_name(const std::string& value) {
-        set_member("name",results::encode(value));
+        set_member("name",results::detail::encode(value));
         return *this;
     }
     inline AnnotateQuestionChoose& AnnotateQuestionChoose::set_on(const AuthoredPointers& value) {
-        set_member("on",results::encode(value));
+        set_member("on",results::detail::encode(value));
         return *this;
     }
     inline AnnotateQuestionChoose& AnnotateQuestionChoose::set_options(const AuthoredOptions& value) {
-        set_member("options",results::encode(value));
+        set_member("options",results::detail::encode(value));
         return *this;
     }
     inline AnnotateQuestionChoose& AnnotateQuestionChoose::set_threshold(const AuthoredCut& value) {
-        set_member("threshold",results::encode(value));
+        set_member("threshold",results::detail::encode(value));
         return *this;
     }
     inline AnnotateQuestionChoose& AnnotateQuestionChoose::set_wording_version(const uint64_t& value) {
-        set_member("wording_version",results::encode(value));
+        set_member("wording_version",results::detail::encode(value));
         return *this;
     }
     inline AnnotateQuestionDecide& AnnotateQuestionDecide::set_context_schema(const AuthoredInputDeclaration& value) {
-        set_member("context_schema",results::encode(value));
+        set_member("context_schema",results::detail::encode(value));
         return *this;
     }
     inline AnnotateQuestionDecide& AnnotateQuestionDecide::set_decide(const AuthoredQuestionText& value) {
-        set_member("decide",results::encode(value));
+        set_member("decide",results::detail::encode(value));
         return *this;
     }
     inline AnnotateQuestionDecide& AnnotateQuestionDecide::set_false(const AuthoredCriterion& value) {
-        set_member("false",results::encode(value));
+        set_member("false",results::detail::encode(value));
         return *this;
     }
     inline AnnotateQuestionDecide& AnnotateQuestionDecide::set_item_schema(const AuthoredInputDeclaration& value) {
-        set_member("item_schema",results::encode(value));
+        set_member("item_schema",results::detail::encode(value));
         return *this;
     }
     inline AnnotateQuestionDecide& AnnotateQuestionDecide::set_name(const std::string& value) {
-        set_member("name",results::encode(value));
+        set_member("name",results::detail::encode(value));
         return *this;
     }
     inline AnnotateQuestionDecide& AnnotateQuestionDecide::set_on(const AuthoredPointers& value) {
-        set_member("on",results::encode(value));
+        set_member("on",results::detail::encode(value));
         return *this;
     }
     inline AnnotateQuestionDecide& AnnotateQuestionDecide::set_threshold(const AuthoredThreshold& value) {
-        set_member("threshold",results::encode(value));
+        set_member("threshold",results::detail::encode(value));
         return *this;
     }
     inline AnnotateQuestionDecide& AnnotateQuestionDecide::set_true(const AuthoredCriterion& value) {
-        set_member("true",results::encode(value));
+        set_member("true",results::detail::encode(value));
         return *this;
     }
     inline AnnotateQuestionDecide& AnnotateQuestionDecide::set_wording_version(const uint64_t& value) {
-        set_member("wording_version",results::encode(value));
+        set_member("wording_version",results::detail::encode(value));
         return *this;
     }
     inline AnnotateQuestionScore& AnnotateQuestionScore::set_context_schema(const AuthoredInputDeclaration& value) {
-        set_member("context_schema",results::encode(value));
+        set_member("context_schema",results::detail::encode(value));
         return *this;
     }
     inline AnnotateQuestionScore& AnnotateQuestionScore::set_item_schema(const AuthoredInputDeclaration& value) {
-        set_member("item_schema",results::encode(value));
+        set_member("item_schema",results::detail::encode(value));
         return *this;
     }
     inline AnnotateQuestionScore& AnnotateQuestionScore::set_levels(const AuthoredLevels& value) {
-        set_member("levels",results::encode(value));
+        set_member("levels",results::detail::encode(value));
         return *this;
     }
     inline AnnotateQuestionScore& AnnotateQuestionScore::set_name(const std::string& value) {
-        set_member("name",results::encode(value));
+        set_member("name",results::detail::encode(value));
         return *this;
     }
     inline AnnotateQuestionScore& AnnotateQuestionScore::set_on(const AuthoredPointers& value) {
-        set_member("on",results::encode(value));
+        set_member("on",results::detail::encode(value));
         return *this;
     }
     inline AnnotateQuestionScore& AnnotateQuestionScore::set_score(const AuthoredQuestionText& value) {
-        set_member("score",results::encode(value));
+        set_member("score",results::detail::encode(value));
         return *this;
     }
     inline AnnotateQuestionScore& AnnotateQuestionScore::set_wording_version(const uint64_t& value) {
-        set_member("wording_version",results::encode(value));
+        set_member("wording_version",results::detail::encode(value));
         return *this;
     }
     inline AnnotateQuestionTag& AnnotateQuestionTag::set_context_schema(const AuthoredInputDeclaration& value) {
-        set_member("context_schema",results::encode(value));
+        set_member("context_schema",results::detail::encode(value));
         return *this;
     }
     inline AnnotateQuestionTag& AnnotateQuestionTag::set_item_schema(const AuthoredInputDeclaration& value) {
-        set_member("item_schema",results::encode(value));
+        set_member("item_schema",results::detail::encode(value));
         return *this;
     }
     inline AnnotateQuestionTag& AnnotateQuestionTag::set_labels(const AuthoredLabels& value) {
-        set_member("labels",results::encode(value));
+        set_member("labels",results::detail::encode(value));
         return *this;
     }
     inline AnnotateQuestionTag& AnnotateQuestionTag::set_name(const std::string& value) {
-        set_member("name",results::encode(value));
+        set_member("name",results::detail::encode(value));
         return *this;
     }
     inline AnnotateQuestionTag& AnnotateQuestionTag::set_on(const AuthoredPointers& value) {
-        set_member("on",results::encode(value));
+        set_member("on",results::detail::encode(value));
         return *this;
     }
     inline AnnotateQuestionTag& AnnotateQuestionTag::set_tag(const AuthoredQuestionText& value) {
-        set_member("tag",results::encode(value));
+        set_member("tag",results::detail::encode(value));
         return *this;
     }
     inline AnnotateQuestionTag& AnnotateQuestionTag::set_threshold(const AuthoredCut& value) {
-        set_member("threshold",results::encode(value));
+        set_member("threshold",results::detail::encode(value));
         return *this;
     }
     inline AnnotateQuestionTag& AnnotateQuestionTag::set_wording_version(const uint64_t& value) {
-        set_member("wording_version",results::encode(value));
+        set_member("wording_version",results::detail::encode(value));
         return *this;
     }
     inline AuthoredChoose& AuthoredChoose::set_batch(const std::variant<std::string, uint64_t>& value) {
-        set_member("batch",results::encode(value));
+        set_member("batch",results::detail::encode(value));
         return *this;
     }
     inline AuthoredChoose& AuthoredChoose::set_choose(const AuthoredQuestionText& value) {
-        set_member("choose",results::encode(value));
+        set_member("choose",results::detail::encode(value));
         return *this;
     }
     inline AuthoredChoose& AuthoredChoose::set_context_schema(const AuthoredInputDeclaration& value) {
-        set_member("context_schema",results::encode(value));
+        set_member("context_schema",results::detail::encode(value));
         return *this;
     }
     inline AuthoredChoose& AuthoredChoose::set_item_schema(const AuthoredInputDeclaration& value) {
-        set_member("item_schema",results::encode(value));
+        set_member("item_schema",results::detail::encode(value));
         return *this;
     }
     inline AuthoredChoose& AuthoredChoose::set_model(const AuthoredName& value) {
-        set_member("model",results::encode(value));
+        set_member("model",results::detail::encode(value));
         return *this;
     }
     inline AuthoredChoose& AuthoredChoose::set_name(const std::string& value) {
-        set_member("name",results::encode(value));
+        set_member("name",results::detail::encode(value));
         return *this;
     }
     inline AuthoredChoose& AuthoredChoose::set_on(const AuthoredPointers& value) {
-        set_member("on",results::encode(value));
+        set_member("on",results::detail::encode(value));
         return *this;
     }
     inline AuthoredChoose& AuthoredChoose::set_options(const AuthoredOptions& value) {
-        set_member("options",results::encode(value));
+        set_member("options",results::detail::encode(value));
         return *this;
     }
     inline AuthoredChoose& AuthoredChoose::set_profile(const AuthoredProfile& value) {
-        set_member("profile",results::encode(value));
+        set_member("profile",results::detail::encode(value));
         return *this;
     }
     inline AuthoredChoose& AuthoredChoose::set_threshold(const AuthoredCut& value) {
-        set_member("threshold",results::encode(value));
+        set_member("threshold",results::detail::encode(value));
         return *this;
     }
     inline AuthoredChoose& AuthoredChoose::set_wording_version(const uint64_t& value) {
-        set_member("wording_version",results::encode(value));
+        set_member("wording_version",results::detail::encode(value));
         return *this;
     }
-    inline AuthoredCriterion::AuthoredCriterion(const std::variant<std::string, Json, std::vector<Json>,
-    std::nullptr_t>& value):Node(results::encode(value)) {
+    inline AuthoredCriterion::AuthoredCriterion(const std::variant<std::string, Data, std::vector<Data>,
+    std::nullptr_t>& value):Node(results::detail::encode(value)) {
     }
-    inline AuthoredCut::AuthoredCut(const std::variant<double, std::string>& value):Node(results::encode(value)) {
+    inline AuthoredCut::AuthoredCut(const std::variant<double, std::string>& value):Node(results::detail::encode(value)) {
     }
     inline AuthoredDecide& AuthoredDecide::set_batch(const std::variant<std::string, uint64_t>& value) {
-        set_member("batch",results::encode(value));
+        set_member("batch",results::detail::encode(value));
         return *this;
     }
     inline AuthoredDecide& AuthoredDecide::set_context_schema(const AuthoredInputDeclaration& value) {
-        set_member("context_schema",results::encode(value));
+        set_member("context_schema",results::detail::encode(value));
         return *this;
     }
     inline AuthoredDecide& AuthoredDecide::set_decide(const AuthoredQuestionText& value) {
-        set_member("decide",results::encode(value));
+        set_member("decide",results::detail::encode(value));
         return *this;
     }
     inline AuthoredDecide& AuthoredDecide::set_false(const AuthoredCriterion& value) {
-        set_member("false",results::encode(value));
+        set_member("false",results::detail::encode(value));
         return *this;
     }
     inline AuthoredDecide& AuthoredDecide::set_item_schema(const AuthoredInputDeclaration& value) {
-        set_member("item_schema",results::encode(value));
+        set_member("item_schema",results::detail::encode(value));
         return *this;
     }
     inline AuthoredDecide& AuthoredDecide::set_model(const AuthoredName& value) {
-        set_member("model",results::encode(value));
+        set_member("model",results::detail::encode(value));
         return *this;
     }
     inline AuthoredDecide& AuthoredDecide::set_name(const std::string& value) {
-        set_member("name",results::encode(value));
+        set_member("name",results::detail::encode(value));
         return *this;
     }
     inline AuthoredDecide& AuthoredDecide::set_on(const AuthoredPointers& value) {
-        set_member("on",results::encode(value));
+        set_member("on",results::detail::encode(value));
         return *this;
     }
     inline AuthoredDecide& AuthoredDecide::set_profile(const AuthoredProfile& value) {
-        set_member("profile",results::encode(value));
+        set_member("profile",results::detail::encode(value));
         return *this;
     }
     inline AuthoredDecide& AuthoredDecide::set_threshold(const AuthoredThreshold& value) {
-        set_member("threshold",results::encode(value));
+        set_member("threshold",results::detail::encode(value));
         return *this;
     }
     inline AuthoredDecide& AuthoredDecide::set_true(const AuthoredCriterion& value) {
-        set_member("true",results::encode(value));
+        set_member("true",results::detail::encode(value));
         return *this;
     }
     inline AuthoredDecide& AuthoredDecide::set_wording_version(const uint64_t& value) {
-        set_member("wording_version",results::encode(value));
+        set_member("wording_version",results::detail::encode(value));
         return *this;
     }
-    inline AuthoredDescription::AuthoredDescription(const std::variant<std::string, Json, std::vector<Json>,
-    std::nullptr_t>& value):Node(results::encode(value)) {
+    inline AuthoredDescription::AuthoredDescription(const std::variant<std::string, Data, std::vector<Data>,
+    std::nullptr_t>& value):Node(results::detail::encode(value)) {
     }
     inline AuthoredFind& AuthoredFind::set_context_schema(const AuthoredInputDeclaration& value) {
-        set_member("context_schema",results::encode(value));
+        set_member("context_schema",results::detail::encode(value));
         return *this;
     }
     inline AuthoredFind& AuthoredFind::set_find(const AuthoredQuestionText& value) {
-        set_member("find",results::encode(value));
+        set_member("find",results::detail::encode(value));
         return *this;
     }
     inline AuthoredFind& AuthoredFind::set_item_schema(const AuthoredInputDeclaration& value) {
-        set_member("item_schema",results::encode(value));
+        set_member("item_schema",results::detail::encode(value));
         return *this;
     }
     inline AuthoredFind& AuthoredFind::set_model(const AuthoredName& value) {
-        set_member("model",results::encode(value));
+        set_member("model",results::detail::encode(value));
         return *this;
     }
     inline AuthoredFind& AuthoredFind::set_name(const std::string& value) {
-        set_member("name",results::encode(value));
+        set_member("name",results::detail::encode(value));
         return *this;
     }
     inline AuthoredFind& AuthoredFind::set_on(const AuthoredPointers& value) {
-        set_member("on",results::encode(value));
+        set_member("on",results::detail::encode(value));
         return *this;
     }
     inline AuthoredFind& AuthoredFind::set_profile(const AuthoredProfile& value) {
-        set_member("profile",results::encode(value));
+        set_member("profile",results::detail::encode(value));
         return *this;
     }
     inline AuthoredFind& AuthoredFind::set_wording_version(const uint64_t& value) {
-        set_member("wording_version",results::encode(value));
+        set_member("wording_version",results::detail::encode(value));
         return *this;
     }
-    inline AuthoredInputDeclaration::AuthoredInputDeclaration(const AuthoredInputDeclarationString& value):Node(value.document()) {
+    inline AuthoredInputDeclaration::AuthoredInputDeclaration(const AuthoredInputDeclarationString& value):Node(::tt::results::detail::document(value)) {
     }
-    inline AuthoredInputDeclaration::AuthoredInputDeclaration(const AuthoredInputDeclarationObject& value):Node(value.document()) {
+    inline AuthoredInputDeclaration::AuthoredInputDeclaration(const AuthoredInputDeclarationObject& value):Node(::tt::results::detail::document(value)) {
     }
     inline AuthoredInputDeclarationObject& AuthoredInputDeclarationObject::set_properties(const std::vector<std::pair<std::string,
     AuthoredInputProperty>>& value) {
-        set_member("properties",results::encode(value));
+        set_member("properties",results::detail::encode(value));
         return *this;
     }
     inline AuthoredInputDeclarationObject& AuthoredInputDeclarationObject::set_required(const std::vector<std::string>& value) {
-        set_member("required",results::encode(value));
+        set_member("required",results::detail::encode(value));
         return *this;
     }
-    inline AuthoredInputProperty::AuthoredInputProperty(const AuthoredInputPropertyString& value):Node(value.document()) {
+    inline AuthoredInputProperty::AuthoredInputProperty(const AuthoredInputPropertyString& value):Node(::tt::results::detail::document(value)) {
     }
-    inline AuthoredInputProperty::AuthoredInputProperty(const AuthoredInputPropertyNumber& value):Node(value.document()) {
+    inline AuthoredInputProperty::AuthoredInputProperty(const AuthoredInputPropertyNumber& value):Node(::tt::results::detail::document(value)) {
     }
-    inline AuthoredInputProperty::AuthoredInputProperty(const AuthoredInputPropertyBoolean& value):Node(value.document()) {
+    inline AuthoredInputProperty::AuthoredInputProperty(const AuthoredInputPropertyBoolean& value):Node(::tt::results::detail::document(value)) {
     }
-    inline AuthoredInputProperty::AuthoredInputProperty(const AuthoredInputPropertyArray& value):Node(value.document()) {
+    inline AuthoredInputProperty::AuthoredInputProperty(const AuthoredInputPropertyArray& value):Node(::tt::results::detail::document(value)) {
     }
-    inline AuthoredInputPropertyArray& AuthoredInputPropertyArray::set_items(const Json& value) {
-        set_member("items",results::encode(value));
+    inline AuthoredInputPropertyArray& AuthoredInputPropertyArray::set_items(const Data& value) {
+        set_member("items",results::detail::encode(value));
         return *this;
     }
     inline AuthoredLabels::AuthoredLabels(const std::variant<std::vector<AuthoredName>, std::vector<std::pair<std::string,
-    AuthoredDescription>>>& value):Node(results::encode(value)) {
+    AuthoredDescription>>>& value):Node(results::detail::encode(value)) {
     }
     inline AuthoredLevels::AuthoredLevels(const std::variant<std::vector<AuthoredName>, std::vector<std::pair<std::string,
-    AuthoredCriterion>>>& value):Node(results::encode(value)) {
+    AuthoredCriterion>>>& value):Node(results::detail::encode(value)) {
     }
-    inline AuthoredName::AuthoredName(const std::string& value):Node(results::encode(value)) {
+    inline AuthoredName::AuthoredName(const std::string& value):Node(results::detail::encode(value)) {
     }
     inline AuthoredOptions::AuthoredOptions(const std::variant<std::vector<AuthoredName>, std::vector<std::pair<std::string,
-    AuthoredDescription>>>& value):Node(results::encode(value)) {
+    AuthoredDescription>>>& value):Node(results::detail::encode(value)) {
     }
-    inline AuthoredPointers::AuthoredPointers(const std::variant<std::string, std::vector<std::string>>& value):Node(results::encode(value)) {
+    inline AuthoredPointers::AuthoredPointers(const std::variant<std::string, std::vector<std::string>>& value):Node(results::detail::encode(value)) {
     }
-    inline AuthoredProfile::AuthoredProfile(const std::string& value):Node(results::encode(value)) {
+    inline AuthoredProfile::AuthoredProfile(const std::string& value):Node(results::detail::encode(value)) {
     }
-    inline AuthoredQuestionText::AuthoredQuestionText(const std::variant<std::string, Json, std::vector<Json>>& value):Node(results::encode(value)) {
+    inline AuthoredQuestionText::AuthoredQuestionText(const std::variant<std::string, Data, std::vector<Data>>& value):Node(results::detail::encode(value)) {
     }
     inline AuthoredRelate& AuthoredRelate::set_context_schema(const AuthoredInputDeclaration& value) {
-        set_member("context_schema",results::encode(value));
+        set_member("context_schema",results::detail::encode(value));
         return *this;
     }
     inline AuthoredRelate& AuthoredRelate::set_item_schema(const AuthoredInputDeclaration& value) {
-        set_member("item_schema",results::encode(value));
+        set_member("item_schema",results::detail::encode(value));
         return *this;
     }
     inline AuthoredRelate& AuthoredRelate::set_model(const AuthoredName& value) {
-        set_member("model",results::encode(value));
+        set_member("model",results::detail::encode(value));
         return *this;
     }
     inline AuthoredRelate& AuthoredRelate::set_name(const std::string& value) {
-        set_member("name",results::encode(value));
+        set_member("name",results::detail::encode(value));
         return *this;
     }
     inline AuthoredRelate& AuthoredRelate::set_profile(const AuthoredProfile& value) {
-        set_member("profile",results::encode(value));
+        set_member("profile",results::detail::encode(value));
         return *this;
     }
     inline AuthoredRelate& AuthoredRelate::set_relate(const RelateQuestion& value) {
-        set_member("relate",results::encode(value));
+        set_member("relate",results::detail::encode(value));
         return *this;
     }
     inline AuthoredRelate& AuthoredRelate::set_threshold(const AuthoredCut& value) {
-        set_member("threshold",results::encode(value));
+        set_member("threshold",results::detail::encode(value));
         return *this;
     }
     inline AuthoredRelate& AuthoredRelate::set_wording_version(const uint64_t& value) {
-        set_member("wording_version",results::encode(value));
+        set_member("wording_version",results::detail::encode(value));
         return *this;
     }
     inline AuthoredRelation& AuthoredRelation::set_either(const bool& value) {
-        set_member("either",results::encode(value));
+        set_member("either",results::detail::encode(value));
         return *this;
     }
     inline AuthoredRelation& AuthoredRelation::set_name(const AuthoredName& value) {
-        set_member("name",results::encode(value));
+        set_member("name",results::detail::encode(value));
         return *this;
     }
     inline AuthoredRelation& AuthoredRelation::set_reads(const AuthoredName& value) {
-        set_member("reads",results::encode(value));
+        set_member("reads",results::detail::encode(value));
         return *this;
     }
     inline AuthoredRelation& AuthoredRelation::set_single(const bool& value) {
-        set_member("single",results::encode(value));
+        set_member("single",results::detail::encode(value));
         return *this;
     }
     inline AuthoredRelation& AuthoredRelation::set_source(const AuthoredName& value) {
-        set_member("source",results::encode(value));
+        set_member("source",results::detail::encode(value));
         return *this;
     }
     inline AuthoredRelation& AuthoredRelation::set_target(const AuthoredName& value) {
-        set_member("target",results::encode(value));
+        set_member("target",results::detail::encode(value));
         return *this;
     }
     inline AuthoredScore& AuthoredScore::set_batch(const std::variant<std::string, uint64_t>& value) {
-        set_member("batch",results::encode(value));
+        set_member("batch",results::detail::encode(value));
         return *this;
     }
     inline AuthoredScore& AuthoredScore::set_context_schema(const AuthoredInputDeclaration& value) {
-        set_member("context_schema",results::encode(value));
+        set_member("context_schema",results::detail::encode(value));
         return *this;
     }
     inline AuthoredScore& AuthoredScore::set_item_schema(const AuthoredInputDeclaration& value) {
-        set_member("item_schema",results::encode(value));
+        set_member("item_schema",results::detail::encode(value));
         return *this;
     }
     inline AuthoredScore& AuthoredScore::set_levels(const AuthoredLevels& value) {
-        set_member("levels",results::encode(value));
+        set_member("levels",results::detail::encode(value));
         return *this;
     }
     inline AuthoredScore& AuthoredScore::set_model(const AuthoredName& value) {
-        set_member("model",results::encode(value));
+        set_member("model",results::detail::encode(value));
         return *this;
     }
     inline AuthoredScore& AuthoredScore::set_name(const std::string& value) {
-        set_member("name",results::encode(value));
+        set_member("name",results::detail::encode(value));
         return *this;
     }
     inline AuthoredScore& AuthoredScore::set_on(const AuthoredPointers& value) {
-        set_member("on",results::encode(value));
+        set_member("on",results::detail::encode(value));
         return *this;
     }
     inline AuthoredScore& AuthoredScore::set_profile(const AuthoredProfile& value) {
-        set_member("profile",results::encode(value));
+        set_member("profile",results::detail::encode(value));
         return *this;
     }
     inline AuthoredScore& AuthoredScore::set_score(const AuthoredQuestionText& value) {
-        set_member("score",results::encode(value));
+        set_member("score",results::detail::encode(value));
         return *this;
     }
     inline AuthoredScore& AuthoredScore::set_wording_version(const uint64_t& value) {
-        set_member("wording_version",results::encode(value));
+        set_member("wording_version",results::detail::encode(value));
         return *this;
     }
     inline AuthoredTag& AuthoredTag::set_batch(const std::variant<std::string, uint64_t>& value) {
-        set_member("batch",results::encode(value));
+        set_member("batch",results::detail::encode(value));
         return *this;
     }
     inline AuthoredTag& AuthoredTag::set_context_schema(const AuthoredInputDeclaration& value) {
-        set_member("context_schema",results::encode(value));
+        set_member("context_schema",results::detail::encode(value));
         return *this;
     }
     inline AuthoredTag& AuthoredTag::set_item_schema(const AuthoredInputDeclaration& value) {
-        set_member("item_schema",results::encode(value));
+        set_member("item_schema",results::detail::encode(value));
         return *this;
     }
     inline AuthoredTag& AuthoredTag::set_labels(const AuthoredLabels& value) {
-        set_member("labels",results::encode(value));
+        set_member("labels",results::detail::encode(value));
         return *this;
     }
     inline AuthoredTag& AuthoredTag::set_model(const AuthoredName& value) {
-        set_member("model",results::encode(value));
+        set_member("model",results::detail::encode(value));
         return *this;
     }
     inline AuthoredTag& AuthoredTag::set_name(const std::string& value) {
-        set_member("name",results::encode(value));
+        set_member("name",results::detail::encode(value));
         return *this;
     }
     inline AuthoredTag& AuthoredTag::set_on(const AuthoredPointers& value) {
-        set_member("on",results::encode(value));
+        set_member("on",results::detail::encode(value));
         return *this;
     }
     inline AuthoredTag& AuthoredTag::set_profile(const AuthoredProfile& value) {
-        set_member("profile",results::encode(value));
+        set_member("profile",results::detail::encode(value));
         return *this;
     }
     inline AuthoredTag& AuthoredTag::set_tag(const AuthoredQuestionText& value) {
-        set_member("tag",results::encode(value));
+        set_member("tag",results::detail::encode(value));
         return *this;
     }
     inline AuthoredTag& AuthoredTag::set_threshold(const AuthoredCut& value) {
-        set_member("threshold",results::encode(value));
+        set_member("threshold",results::detail::encode(value));
         return *this;
     }
     inline AuthoredTag& AuthoredTag::set_wording_version(const uint64_t& value) {
-        set_member("wording_version",results::encode(value));
+        set_member("wording_version",results::detail::encode(value));
         return *this;
     }
-    inline AuthoredThreshold::AuthoredThreshold(const std::variant<double, std::string>& value):Node(results::encode(value)) {
+    inline AuthoredThreshold::AuthoredThreshold(const std::variant<double, std::string>& value):Node(results::detail::encode(value)) {
     }
-    inline CacheDocument::CacheDocument(const std::variant<std::string, DisabledCache>& value):Node(results::encode(value)) {
+    inline CacheDocument::CacheDocument(const std::variant<std::string, DisabledCache>& value):Node(results::detail::encode(value)) {
     }
-    inline ContextSchema::ContextSchema(const std::variant<std::string, Json>& value):Node(results::encode(value)) {
+    inline ContextSchema::ContextSchema(const std::variant<std::string, Data>& value):Node(results::detail::encode(value)) {
     }
-    inline DisabledCache::DisabledCache(const bool& value):Node(results::encode(value)) {
+    inline DisabledCache::DisabledCache(const bool& value):Node(results::detail::encode(value)) {
     }
     inline EngineSettings& EngineSettings::set_backend(const std::string& value) {
-        set_member("backend",results::encode(value));
+        set_member("backend",results::detail::encode(value));
         return *this;
     }
     inline EngineSettings& EngineSettings::set_base_url(const std::string& value) {
-        set_member("base_url",results::encode(value));
+        set_member("base_url",results::detail::encode(value));
         return *this;
     }
     inline EngineSettings& EngineSettings::set_batch(const RequestBatch& value) {
-        set_member("batch",results::encode(value));
+        set_member("batch",results::detail::encode(value));
         return *this;
     }
     inline EngineSettings& EngineSettings::set_cache(const CacheDocument& value) {
-        set_member("cache",results::encode(value));
+        set_member("cache",results::detail::encode(value));
         return *this;
     }
     inline EngineSettings& EngineSettings::set_max_estimated_input_tokens_total(const std::variant<uint64_t,
     std::nullptr_t>& value) {
-        set_member("max_estimated_input_tokens_total",results::encode(value));
+        set_member("max_estimated_input_tokens_total",results::detail::encode(value));
         return *this;
     }
     inline EngineSettings& EngineSettings::set_max_request_bytes(const uint64_t& value) {
-        set_member("max_request_bytes",results::encode(value));
+        set_member("max_request_bytes",results::detail::encode(value));
         return *this;
     }
     inline EngineSettings& EngineSettings::set_max_requests(const std::variant<uint64_t, std::nullptr_t>& value) {
-        set_member("max_requests",results::encode(value));
+        set_member("max_requests",results::detail::encode(value));
         return *this;
     }
     inline EngineSettings& EngineSettings::set_max_requests_total(const std::variant<uint64_t, std::nullptr_t>& value) {
-        set_member("max_requests_total",results::encode(value));
+        set_member("max_requests_total",results::detail::encode(value));
         return *this;
     }
     inline EngineSettings& EngineSettings::set_max_retries(const uint64_t& value) {
-        set_member("max_retries",results::encode(value));
+        set_member("max_retries",results::detail::encode(value));
         return *this;
     }
     inline EngineSettings& EngineSettings::set_model(const std::string& value) {
-        set_member("model",results::encode(value));
+        set_member("model",results::detail::encode(value));
         return *this;
     }
     inline EngineSettings& EngineSettings::set_profile(const std::string& value) {
-        set_member("profile",results::encode(value));
+        set_member("profile",results::detail::encode(value));
         return *this;
     }
-    inline EngineSettings& EngineSettings::set_proxy(const Json& value) {
-        set_member("proxy",results::encode(value));
+    inline EngineSettings& EngineSettings::set_proxy(const Data& value) {
+        set_member("proxy",results::detail::encode(value));
         return *this;
     }
     inline EngineSettings& EngineSettings::set_record(const std::string& value) {
-        set_member("record",results::encode(value));
+        set_member("record",results::detail::encode(value));
         return *this;
     }
     inline EngineSettings& EngineSettings::set_refresh_cache(const bool& value) {
-        set_member("refresh_cache",results::encode(value));
+        set_member("refresh_cache",results::detail::encode(value));
         return *this;
     }
     inline EngineSettings& EngineSettings::set_replay(const std::string& value) {
-        set_member("replay",results::encode(value));
+        set_member("replay",results::detail::encode(value));
         return *this;
     }
     inline EngineSettings& EngineSettings::set_throttle(const uint8_t& value) {
-        set_member("throttle",results::encode(value));
+        set_member("throttle",results::detail::encode(value));
         return *this;
     }
     inline EngineSettings& EngineSettings::set_timeout(const uint64_t& value) {
-        set_member("timeout",results::encode(value));
+        set_member("timeout",results::detail::encode(value));
         return *this;
     }
     inline EngineSettings& EngineSettings::set_usd_per_million_input(const std::string& value) {
-        set_member("usd_per_million_input",results::encode(value));
+        set_member("usd_per_million_input",results::detail::encode(value));
         return *this;
     }
     inline EngineSettings& EngineSettings::set_usd_per_million_output(const std::string& value) {
-        set_member("usd_per_million_output",results::encode(value));
+        set_member("usd_per_million_output",results::detail::encode(value));
         return *this;
     }
-    inline ImageMedia::ImageMedia(const std::string& value):Node(results::encode(value)) {
+    inline ImageMedia::ImageMedia(const std::string& value):Node(results::detail::encode(value)) {
     }
-    inline OptionSchema& OptionSchema::set_description(const Json& value) {
-        set_member("description",results::encode(value));
+    inline OptionSchema& OptionSchema::set_description(const Data& value) {
+        set_member("description",results::detail::encode(value));
         return *this;
     }
     inline OptionSchema& OptionSchema::set_name(const std::string& value) {
-        set_member("name",results::encode(value));
+        set_member("name",results::detail::encode(value));
         return *this;
     }
-    inline ReaderMedia::ReaderMedia(const std::string& value):Node(results::encode(value)) {
+    inline ReaderMedia::ReaderMedia(const std::string& value):Node(results::detail::encode(value)) {
     }
-    inline RecognitionExample::RecognitionExample(const std::variant<std::string, RecognitionExampleText>& value):Node(results::encode(value)) {
+    inline RecognitionExample::RecognitionExample(const std::variant<std::string, RecognitionExampleText>& value):Node(results::detail::encode(value)) {
     }
     inline RecognitionExampleEntity& RecognitionExampleEntity::set_end(const uint64_t& value) {
-        set_member("end",results::encode(value));
+        set_member("end",results::detail::encode(value));
         return *this;
     }
     inline RecognitionExampleEntity& RecognitionExampleEntity::set_kind(const std::string& value) {
-        set_member("kind",results::encode(value));
+        set_member("kind",results::detail::encode(value));
         return *this;
     }
     inline RecognitionExampleEntity& RecognitionExampleEntity::set_start(const uint64_t& value) {
-        set_member("start",results::encode(value));
+        set_member("start",results::detail::encode(value));
         return *this;
     }
     inline RecognitionExampleText& RecognitionExampleText::set_entities(const std::vector<RecognitionExampleEntity>& value) {
-        set_member("entities",results::encode(value));
+        set_member("entities",results::detail::encode(value));
         return *this;
     }
     inline RecognitionExampleText& RecognitionExampleText::set_kinds(const std::vector<std::string>& value) {
-        set_member("kinds",results::encode(value));
+        set_member("kinds",results::detail::encode(value));
         return *this;
     }
     inline RecognitionExampleText& RecognitionExampleText::set_text(const std::string& value) {
-        set_member("text",results::encode(value));
+        set_member("text",results::detail::encode(value));
         return *this;
     }
-    inline RecognitionMode::RecognitionMode(const std::string& value):Node(results::encode(value)) {
+    inline RecognitionMode::RecognitionMode(const std::string& value):Node(results::detail::encode(value)) {
     }
     inline RecognitionSeedSpan& RecognitionSeedSpan::set_end(const uint64_t& value) {
-        set_member("end",results::encode(value));
+        set_member("end",results::detail::encode(value));
         return *this;
     }
     inline RecognitionSeedSpan& RecognitionSeedSpan::set_kind(const std::string& value) {
-        set_member("kind",results::encode(value));
+        set_member("kind",results::detail::encode(value));
         return *this;
     }
     inline RecognitionSeedSpan& RecognitionSeedSpan::set_start(const uint64_t& value) {
-        set_member("start",results::encode(value));
+        set_member("start",results::detail::encode(value));
         return *this;
     }
     inline RecognitionStageContext& RecognitionStageContext::set_boundary(const std::string& value) {
-        set_member("boundary",results::encode(value));
+        set_member("boundary",results::detail::encode(value));
         return *this;
     }
     inline RecognitionStageContext& RecognitionStageContext::set_kind_edge(const std::string& value) {
-        set_member("kind_edge",results::encode(value));
+        set_member("kind_edge",results::detail::encode(value));
         return *this;
     }
     inline RecognitionStageContext& RecognitionStageContext::set_relation(const std::string& value) {
-        set_member("relation",results::encode(value));
+        set_member("relation",results::detail::encode(value));
         return *this;
     }
     inline RecognizeDefinition& RecognizeDefinition::set_context_schema(const AuthoredInputDeclaration& value) {
-        set_member("context_schema",results::encode(value));
+        set_member("context_schema",results::detail::encode(value));
         return *this;
     }
     inline RecognizeDefinition& RecognizeDefinition::set_item_schema(const AuthoredInputDeclaration& value) {
-        set_member("item_schema",results::encode(value));
+        set_member("item_schema",results::detail::encode(value));
         return *this;
     }
     inline RecognizeDefinition& RecognizeDefinition::set_model(const AuthoredName& value) {
-        set_member("model",results::encode(value));
+        set_member("model",results::detail::encode(value));
         return *this;
     }
     inline RecognizeDefinition& RecognizeDefinition::set_name(const std::string& value) {
-        set_member("name",results::encode(value));
+        set_member("name",results::detail::encode(value));
         return *this;
     }
     inline RecognizeDefinition& RecognizeDefinition::set_on(const AuthoredPointers& value) {
-        set_member("on",results::encode(value));
+        set_member("on",results::detail::encode(value));
         return *this;
     }
     inline RecognizeDefinition& RecognizeDefinition::set_profile(const AuthoredProfile& value) {
-        set_member("profile",results::encode(value));
+        set_member("profile",results::detail::encode(value));
         return *this;
     }
     inline RecognizeDefinition& RecognizeDefinition::set_recognize(const RecognizeQuestion& value) {
-        set_member("recognize",results::encode(value));
+        set_member("recognize",results::detail::encode(value));
         return *this;
     }
     inline RecognizeDefinition& RecognizeDefinition::set_relation_threshold(const AuthoredCut& value) {
-        set_member("relation_threshold",results::encode(value));
+        set_member("relation_threshold",results::detail::encode(value));
         return *this;
     }
     inline RecognizeDefinition& RecognizeDefinition::set_threshold(const AuthoredCut& value) {
-        set_member("threshold",results::encode(value));
+        set_member("threshold",results::detail::encode(value));
         return *this;
     }
     inline RecognizeDefinition& RecognizeDefinition::set_wording_version(const uint64_t& value) {
-        set_member("wording_version",results::encode(value));
+        set_member("wording_version",results::detail::encode(value));
         return *this;
     }
     inline RecognizeQuestion& RecognizeQuestion::set_entity_definition(const AuthoredQuestionText& value) {
-        set_member("entity_definition",results::encode(value));
+        set_member("entity_definition",results::detail::encode(value));
         return *this;
     }
     inline RecognizeQuestion& RecognizeQuestion::set_instructions(const AuthoredQuestionText& value) {
-        set_member("instructions",results::encode(value));
+        set_member("instructions",results::detail::encode(value));
         return *this;
     }
     inline RecognizeQuestion& RecognizeQuestion::set_kinds(const std::vector<std::pair<std::string,
     AuthoredDescription>>& value) {
-        set_member("kinds",results::encode(value));
+        set_member("kinds",results::detail::encode(value));
         return *this;
     }
     inline RecognizeQuestion& RecognizeQuestion::set_mode(const RecognitionMode& value) {
-        set_member("mode",results::encode(value));
+        set_member("mode",results::detail::encode(value));
         return *this;
     }
     inline RecognizeQuestion& RecognizeQuestion::set_relations(const std::vector<AuthoredRelation>& value) {
-        set_member("relations",results::encode(value));
+        set_member("relations",results::detail::encode(value));
         return *this;
     }
     inline RecognizeQuestion& RecognizeQuestion::set_snippet_pieces(const uint32_t& value) {
-        set_member("snippet_pieces",results::encode(value));
+        set_member("snippet_pieces",results::detail::encode(value));
         return *this;
     }
     inline RecognizeQuestion& RecognizeQuestion::set_stage_context(const RecognitionStageContext& value) {
-        set_member("stage_context",results::encode(value));
+        set_member("stage_context",results::detail::encode(value));
         return *this;
     }
     inline RelateFields& RelateFields::set_kind(const std::string& value) {
-        set_member("kind",results::encode(value));
+        set_member("kind",results::detail::encode(value));
         return *this;
     }
     inline RelateFields& RelateFields::set_name(const std::string& value) {
-        set_member("name",results::encode(value));
+        set_member("name",results::detail::encode(value));
         return *this;
     }
     inline RelateQuestion& RelateQuestion::set_fields(const RelateFields& value) {
-        set_member("fields",results::encode(value));
+        set_member("fields",results::detail::encode(value));
         return *this;
     }
     inline RelateQuestion& RelateQuestion::set_relations(const std::vector<AuthoredRelation>& value) {
-        set_member("relations",results::encode(value));
+        set_member("relations",results::detail::encode(value));
         return *this;
     }
     inline Request& Request::set_call(const RequestCall& value) {
-        set_member("call",results::encode(value));
+        set_member("call",results::detail::encode(value));
         return *this;
     }
     inline Request& Request::set_schema(const RequestVersion& value) {
-        set_member("schema",results::encode(value));
+        set_member("schema",results::detail::encode(value));
         return *this;
     }
-    inline RequestBatch::RequestBatch(const std::variant<uint64_t, std::string>& value):Node(results::encode(value)) {
+    inline RequestBatch::RequestBatch(const std::variant<uint64_t, std::string>& value):Node(results::detail::encode(value)) {
     }
     inline RequestCall& RequestCall::set_function(const RequestFunction& value) {
-        set_member("function",results::encode(value));
+        set_member("function",results::detail::encode(value));
         return *this;
     }
     inline RequestCall& RequestCall::set_input(const RequestInput& value) {
-        set_member("input",results::encode(value));
+        set_member("input",results::detail::encode(value));
         return *this;
     }
     inline RequestCall& RequestCall::set_options(const RequestOptions& value) {
-        set_member("options",results::encode(value));
+        set_member("options",results::detail::encode(value));
         return *this;
     }
     inline RequestCall& RequestCall::set_question(const RequestQuestion& value) {
-        set_member("question",results::encode(value));
+        set_member("question",results::detail::encode(value));
         return *this;
     }
-    inline RequestDefinition::RequestDefinition(const RequestDefinitionAuthoredDecide& value):Node(value.document()) {
+    inline RequestDefinition::RequestDefinition(const RequestDefinitionAuthoredDecide& value):Node(::tt::results::detail::document(value)) {
     }
-    inline RequestDefinition::RequestDefinition(const RequestDefinitionAuthoredChoose& value):Node(value.document()) {
+    inline RequestDefinition::RequestDefinition(const RequestDefinitionAuthoredChoose& value):Node(::tt::results::detail::document(value)) {
     }
-    inline RequestDefinition::RequestDefinition(const RequestDefinitionAuthoredTag& value):Node(value.document()) {
+    inline RequestDefinition::RequestDefinition(const RequestDefinitionAuthoredTag& value):Node(::tt::results::detail::document(value)) {
     }
-    inline RequestDefinition::RequestDefinition(const RequestDefinitionAuthoredScore& value):Node(value.document()) {
+    inline RequestDefinition::RequestDefinition(const RequestDefinitionAuthoredScore& value):Node(::tt::results::detail::document(value)) {
     }
-    inline RequestDefinition::RequestDefinition(const RequestDefinitionAuthoredRelate& value):Node(value.document()) {
+    inline RequestDefinition::RequestDefinition(const RequestDefinitionAuthoredRelate& value):Node(::tt::results::detail::document(value)) {
     }
-    inline RequestDefinition::RequestDefinition(const RequestDefinitionAuthoredFind& value):Node(value.document()) {
+    inline RequestDefinition::RequestDefinition(const RequestDefinitionAuthoredFind& value):Node(::tt::results::detail::document(value)) {
     }
-    inline RequestDefinition::RequestDefinition(const RequestDefinitionRecognizeDefinition& value):Node(value.document()) {
+    inline RequestDefinition::RequestDefinition(const RequestDefinitionRecognizeDefinition& value):Node(::tt::results::detail::document(value)) {
     }
-    inline RequestDefinition::RequestDefinition(const RequestDefinitionAnnotateDefinition& value):Node(value.document()) {
+    inline RequestDefinition::RequestDefinition(const RequestDefinitionAnnotateDefinition& value):Node(::tt::results::detail::document(value)) {
     }
-    inline RequestDefinitionAnnotateDefinition& RequestDefinitionAnnotateDefinition::set_batch(const Json& value) {
-        set_member("batch",results::encode(value));
+    inline RequestDefinitionAnnotateDefinition& RequestDefinitionAnnotateDefinition::set_batch(const Data& value) {
+        set_member("batch",results::detail::encode(value));
         return *this;
     }
     inline RequestDefinitionAnnotateDefinition& RequestDefinitionAnnotateDefinition::set_profile(const AuthoredProfile& value) {
-        set_member("profile",results::encode(value));
+        set_member("profile",results::detail::encode(value));
         return *this;
     }
     inline RequestDefinitionAnnotateDefinition& RequestDefinitionAnnotateDefinition::set_questions(const std::vector<std::pair<std::string,
     AnnotateQuestion>>& value) {
-        set_member("questions",results::encode(value));
+        set_member("questions",results::detail::encode(value));
         return *this;
     }
     inline RequestDefinitionAnnotateDefinition& RequestDefinitionAnnotateDefinition::set_threshold(const AuthoredThreshold& value) {
-        set_member("threshold",results::encode(value));
+        set_member("threshold",results::detail::encode(value));
         return *this;
     }
     inline RequestDefinitionAuthoredChoose& RequestDefinitionAuthoredChoose::set_batch(const std::variant<std::string,
     uint64_t>& value) {
-        set_member("batch",results::encode(value));
+        set_member("batch",results::detail::encode(value));
         return *this;
     }
     inline RequestDefinitionAuthoredChoose& RequestDefinitionAuthoredChoose::set_choose(const AuthoredQuestionText& value) {
-        set_member("choose",results::encode(value));
+        set_member("choose",results::detail::encode(value));
         return *this;
     }
     inline RequestDefinitionAuthoredChoose& RequestDefinitionAuthoredChoose::set_context_schema(const AuthoredInputDeclaration& value) {
-        set_member("context_schema",results::encode(value));
+        set_member("context_schema",results::detail::encode(value));
         return *this;
     }
     inline RequestDefinitionAuthoredChoose& RequestDefinitionAuthoredChoose::set_item_schema(const AuthoredInputDeclaration& value) {
-        set_member("item_schema",results::encode(value));
+        set_member("item_schema",results::detail::encode(value));
         return *this;
     }
     inline RequestDefinitionAuthoredChoose& RequestDefinitionAuthoredChoose::set_model(const AuthoredName& value) {
-        set_member("model",results::encode(value));
+        set_member("model",results::detail::encode(value));
         return *this;
     }
     inline RequestDefinitionAuthoredChoose& RequestDefinitionAuthoredChoose::set_name(const std::string& value) {
-        set_member("name",results::encode(value));
+        set_member("name",results::detail::encode(value));
         return *this;
     }
     inline RequestDefinitionAuthoredChoose& RequestDefinitionAuthoredChoose::set_on(const AuthoredPointers& value) {
-        set_member("on",results::encode(value));
+        set_member("on",results::detail::encode(value));
         return *this;
     }
     inline RequestDefinitionAuthoredChoose& RequestDefinitionAuthoredChoose::set_options(const AuthoredOptions& value) {
-        set_member("options",results::encode(value));
+        set_member("options",results::detail::encode(value));
         return *this;
     }
     inline RequestDefinitionAuthoredChoose& RequestDefinitionAuthoredChoose::set_profile(const AuthoredProfile& value) {
-        set_member("profile",results::encode(value));
+        set_member("profile",results::detail::encode(value));
         return *this;
     }
     inline RequestDefinitionAuthoredChoose& RequestDefinitionAuthoredChoose::set_threshold(const AuthoredCut& value) {
-        set_member("threshold",results::encode(value));
+        set_member("threshold",results::detail::encode(value));
         return *this;
     }
     inline RequestDefinitionAuthoredChoose& RequestDefinitionAuthoredChoose::set_wording_version(const uint64_t& value) {
-        set_member("wording_version",results::encode(value));
+        set_member("wording_version",results::detail::encode(value));
         return *this;
     }
     inline RequestDefinitionAuthoredDecide& RequestDefinitionAuthoredDecide::set_batch(const std::variant<std::string,
     uint64_t>& value) {
-        set_member("batch",results::encode(value));
+        set_member("batch",results::detail::encode(value));
         return *this;
     }
     inline RequestDefinitionAuthoredDecide& RequestDefinitionAuthoredDecide::set_context_schema(const AuthoredInputDeclaration& value) {
-        set_member("context_schema",results::encode(value));
+        set_member("context_schema",results::detail::encode(value));
         return *this;
     }
     inline RequestDefinitionAuthoredDecide& RequestDefinitionAuthoredDecide::set_decide(const AuthoredQuestionText& value) {
-        set_member("decide",results::encode(value));
+        set_member("decide",results::detail::encode(value));
         return *this;
     }
     inline RequestDefinitionAuthoredDecide& RequestDefinitionAuthoredDecide::set_false(const AuthoredCriterion& value) {
-        set_member("false",results::encode(value));
+        set_member("false",results::detail::encode(value));
         return *this;
     }
     inline RequestDefinitionAuthoredDecide& RequestDefinitionAuthoredDecide::set_item_schema(const AuthoredInputDeclaration& value) {
-        set_member("item_schema",results::encode(value));
+        set_member("item_schema",results::detail::encode(value));
         return *this;
     }
     inline RequestDefinitionAuthoredDecide& RequestDefinitionAuthoredDecide::set_model(const AuthoredName& value) {
-        set_member("model",results::encode(value));
+        set_member("model",results::detail::encode(value));
         return *this;
     }
     inline RequestDefinitionAuthoredDecide& RequestDefinitionAuthoredDecide::set_name(const std::string& value) {
-        set_member("name",results::encode(value));
+        set_member("name",results::detail::encode(value));
         return *this;
     }
     inline RequestDefinitionAuthoredDecide& RequestDefinitionAuthoredDecide::set_on(const AuthoredPointers& value) {
-        set_member("on",results::encode(value));
+        set_member("on",results::detail::encode(value));
         return *this;
     }
     inline RequestDefinitionAuthoredDecide& RequestDefinitionAuthoredDecide::set_profile(const AuthoredProfile& value) {
-        set_member("profile",results::encode(value));
+        set_member("profile",results::detail::encode(value));
         return *this;
     }
     inline RequestDefinitionAuthoredDecide& RequestDefinitionAuthoredDecide::set_threshold(const AuthoredThreshold& value) {
-        set_member("threshold",results::encode(value));
+        set_member("threshold",results::detail::encode(value));
         return *this;
     }
     inline RequestDefinitionAuthoredDecide& RequestDefinitionAuthoredDecide::set_true(const AuthoredCriterion& value) {
-        set_member("true",results::encode(value));
+        set_member("true",results::detail::encode(value));
         return *this;
     }
     inline RequestDefinitionAuthoredDecide& RequestDefinitionAuthoredDecide::set_wording_version(const uint64_t& value) {
-        set_member("wording_version",results::encode(value));
+        set_member("wording_version",results::detail::encode(value));
         return *this;
     }
     inline RequestDefinitionAuthoredFind& RequestDefinitionAuthoredFind::set_context_schema(const AuthoredInputDeclaration& value) {
-        set_member("context_schema",results::encode(value));
+        set_member("context_schema",results::detail::encode(value));
         return *this;
     }
     inline RequestDefinitionAuthoredFind& RequestDefinitionAuthoredFind::set_find(const AuthoredQuestionText& value) {
-        set_member("find",results::encode(value));
+        set_member("find",results::detail::encode(value));
         return *this;
     }
     inline RequestDefinitionAuthoredFind& RequestDefinitionAuthoredFind::set_item_schema(const AuthoredInputDeclaration& value) {
-        set_member("item_schema",results::encode(value));
+        set_member("item_schema",results::detail::encode(value));
         return *this;
     }
     inline RequestDefinitionAuthoredFind& RequestDefinitionAuthoredFind::set_model(const AuthoredName& value) {
-        set_member("model",results::encode(value));
+        set_member("model",results::detail::encode(value));
         return *this;
     }
     inline RequestDefinitionAuthoredFind& RequestDefinitionAuthoredFind::set_name(const std::string& value) {
-        set_member("name",results::encode(value));
+        set_member("name",results::detail::encode(value));
         return *this;
     }
     inline RequestDefinitionAuthoredFind& RequestDefinitionAuthoredFind::set_on(const AuthoredPointers& value) {
-        set_member("on",results::encode(value));
+        set_member("on",results::detail::encode(value));
         return *this;
     }
     inline RequestDefinitionAuthoredFind& RequestDefinitionAuthoredFind::set_profile(const AuthoredProfile& value) {
-        set_member("profile",results::encode(value));
+        set_member("profile",results::detail::encode(value));
         return *this;
     }
     inline RequestDefinitionAuthoredFind& RequestDefinitionAuthoredFind::set_wording_version(const uint64_t& value) {
-        set_member("wording_version",results::encode(value));
+        set_member("wording_version",results::detail::encode(value));
         return *this;
     }
     inline RequestDefinitionAuthoredRelate& RequestDefinitionAuthoredRelate::set_context_schema(const AuthoredInputDeclaration& value) {
-        set_member("context_schema",results::encode(value));
+        set_member("context_schema",results::detail::encode(value));
         return *this;
     }
     inline RequestDefinitionAuthoredRelate& RequestDefinitionAuthoredRelate::set_item_schema(const AuthoredInputDeclaration& value) {
-        set_member("item_schema",results::encode(value));
+        set_member("item_schema",results::detail::encode(value));
         return *this;
     }
     inline RequestDefinitionAuthoredRelate& RequestDefinitionAuthoredRelate::set_model(const AuthoredName& value) {
-        set_member("model",results::encode(value));
+        set_member("model",results::detail::encode(value));
         return *this;
     }
     inline RequestDefinitionAuthoredRelate& RequestDefinitionAuthoredRelate::set_name(const std::string& value) {
-        set_member("name",results::encode(value));
+        set_member("name",results::detail::encode(value));
         return *this;
     }
     inline RequestDefinitionAuthoredRelate& RequestDefinitionAuthoredRelate::set_profile(const AuthoredProfile& value) {
-        set_member("profile",results::encode(value));
+        set_member("profile",results::detail::encode(value));
         return *this;
     }
     inline RequestDefinitionAuthoredRelate& RequestDefinitionAuthoredRelate::set_relate(const RelateQuestion& value) {
-        set_member("relate",results::encode(value));
+        set_member("relate",results::detail::encode(value));
         return *this;
     }
     inline RequestDefinitionAuthoredRelate& RequestDefinitionAuthoredRelate::set_threshold(const AuthoredCut& value) {
-        set_member("threshold",results::encode(value));
+        set_member("threshold",results::detail::encode(value));
         return *this;
     }
     inline RequestDefinitionAuthoredRelate& RequestDefinitionAuthoredRelate::set_wording_version(const uint64_t& value) {
-        set_member("wording_version",results::encode(value));
+        set_member("wording_version",results::detail::encode(value));
         return *this;
     }
     inline RequestDefinitionAuthoredScore& RequestDefinitionAuthoredScore::set_batch(const std::variant<std::string,
     uint64_t>& value) {
-        set_member("batch",results::encode(value));
+        set_member("batch",results::detail::encode(value));
         return *this;
     }
     inline RequestDefinitionAuthoredScore& RequestDefinitionAuthoredScore::set_context_schema(const AuthoredInputDeclaration& value) {
-        set_member("context_schema",results::encode(value));
+        set_member("context_schema",results::detail::encode(value));
         return *this;
     }
     inline RequestDefinitionAuthoredScore& RequestDefinitionAuthoredScore::set_item_schema(const AuthoredInputDeclaration& value) {
-        set_member("item_schema",results::encode(value));
+        set_member("item_schema",results::detail::encode(value));
         return *this;
     }
     inline RequestDefinitionAuthoredScore& RequestDefinitionAuthoredScore::set_levels(const AuthoredLevels& value) {
-        set_member("levels",results::encode(value));
+        set_member("levels",results::detail::encode(value));
         return *this;
     }
     inline RequestDefinitionAuthoredScore& RequestDefinitionAuthoredScore::set_model(const AuthoredName& value) {
-        set_member("model",results::encode(value));
+        set_member("model",results::detail::encode(value));
         return *this;
     }
     inline RequestDefinitionAuthoredScore& RequestDefinitionAuthoredScore::set_name(const std::string& value) {
-        set_member("name",results::encode(value));
+        set_member("name",results::detail::encode(value));
         return *this;
     }
     inline RequestDefinitionAuthoredScore& RequestDefinitionAuthoredScore::set_on(const AuthoredPointers& value) {
-        set_member("on",results::encode(value));
+        set_member("on",results::detail::encode(value));
         return *this;
     }
     inline RequestDefinitionAuthoredScore& RequestDefinitionAuthoredScore::set_profile(const AuthoredProfile& value) {
-        set_member("profile",results::encode(value));
+        set_member("profile",results::detail::encode(value));
         return *this;
     }
     inline RequestDefinitionAuthoredScore& RequestDefinitionAuthoredScore::set_score(const AuthoredQuestionText& value) {
-        set_member("score",results::encode(value));
+        set_member("score",results::detail::encode(value));
         return *this;
     }
     inline RequestDefinitionAuthoredScore& RequestDefinitionAuthoredScore::set_wording_version(const uint64_t& value) {
-        set_member("wording_version",results::encode(value));
+        set_member("wording_version",results::detail::encode(value));
         return *this;
     }
     inline RequestDefinitionAuthoredTag& RequestDefinitionAuthoredTag::set_batch(const std::variant<std::string,
     uint64_t>& value) {
-        set_member("batch",results::encode(value));
+        set_member("batch",results::detail::encode(value));
         return *this;
     }
     inline RequestDefinitionAuthoredTag& RequestDefinitionAuthoredTag::set_context_schema(const AuthoredInputDeclaration& value) {
-        set_member("context_schema",results::encode(value));
+        set_member("context_schema",results::detail::encode(value));
         return *this;
     }
     inline RequestDefinitionAuthoredTag& RequestDefinitionAuthoredTag::set_item_schema(const AuthoredInputDeclaration& value) {
-        set_member("item_schema",results::encode(value));
+        set_member("item_schema",results::detail::encode(value));
         return *this;
     }
     inline RequestDefinitionAuthoredTag& RequestDefinitionAuthoredTag::set_labels(const AuthoredLabels& value) {
-        set_member("labels",results::encode(value));
+        set_member("labels",results::detail::encode(value));
         return *this;
     }
     inline RequestDefinitionAuthoredTag& RequestDefinitionAuthoredTag::set_model(const AuthoredName& value) {
-        set_member("model",results::encode(value));
+        set_member("model",results::detail::encode(value));
         return *this;
     }
     inline RequestDefinitionAuthoredTag& RequestDefinitionAuthoredTag::set_name(const std::string& value) {
-        set_member("name",results::encode(value));
+        set_member("name",results::detail::encode(value));
         return *this;
     }
     inline RequestDefinitionAuthoredTag& RequestDefinitionAuthoredTag::set_on(const AuthoredPointers& value) {
-        set_member("on",results::encode(value));
+        set_member("on",results::detail::encode(value));
         return *this;
     }
     inline RequestDefinitionAuthoredTag& RequestDefinitionAuthoredTag::set_profile(const AuthoredProfile& value) {
-        set_member("profile",results::encode(value));
+        set_member("profile",results::detail::encode(value));
         return *this;
     }
     inline RequestDefinitionAuthoredTag& RequestDefinitionAuthoredTag::set_tag(const AuthoredQuestionText& value) {
-        set_member("tag",results::encode(value));
+        set_member("tag",results::detail::encode(value));
         return *this;
     }
     inline RequestDefinitionAuthoredTag& RequestDefinitionAuthoredTag::set_threshold(const AuthoredCut& value) {
-        set_member("threshold",results::encode(value));
+        set_member("threshold",results::detail::encode(value));
         return *this;
     }
     inline RequestDefinitionAuthoredTag& RequestDefinitionAuthoredTag::set_wording_version(const uint64_t& value) {
-        set_member("wording_version",results::encode(value));
+        set_member("wording_version",results::detail::encode(value));
         return *this;
     }
     inline RequestDefinitionRecognizeDefinition& RequestDefinitionRecognizeDefinition::set_context_schema(const AuthoredInputDeclaration& value) {
-        set_member("context_schema",results::encode(value));
+        set_member("context_schema",results::detail::encode(value));
         return *this;
     }
     inline RequestDefinitionRecognizeDefinition& RequestDefinitionRecognizeDefinition::set_item_schema(const AuthoredInputDeclaration& value) {
-        set_member("item_schema",results::encode(value));
+        set_member("item_schema",results::detail::encode(value));
         return *this;
     }
     inline RequestDefinitionRecognizeDefinition& RequestDefinitionRecognizeDefinition::set_model(const AuthoredName& value) {
-        set_member("model",results::encode(value));
+        set_member("model",results::detail::encode(value));
         return *this;
     }
     inline RequestDefinitionRecognizeDefinition& RequestDefinitionRecognizeDefinition::set_name(const std::string& value) {
-        set_member("name",results::encode(value));
+        set_member("name",results::detail::encode(value));
         return *this;
     }
     inline RequestDefinitionRecognizeDefinition& RequestDefinitionRecognizeDefinition::set_on(const AuthoredPointers& value) {
-        set_member("on",results::encode(value));
+        set_member("on",results::detail::encode(value));
         return *this;
     }
     inline RequestDefinitionRecognizeDefinition& RequestDefinitionRecognizeDefinition::set_profile(const AuthoredProfile& value) {
-        set_member("profile",results::encode(value));
+        set_member("profile",results::detail::encode(value));
         return *this;
     }
     inline RequestDefinitionRecognizeDefinition& RequestDefinitionRecognizeDefinition::set_recognize(const RecognizeQuestion& value) {
-        set_member("recognize",results::encode(value));
+        set_member("recognize",results::detail::encode(value));
         return *this;
     }
     inline RequestDefinitionRecognizeDefinition& RequestDefinitionRecognizeDefinition::set_relation_threshold(const AuthoredCut& value) {
-        set_member("relation_threshold",results::encode(value));
+        set_member("relation_threshold",results::detail::encode(value));
         return *this;
     }
     inline RequestDefinitionRecognizeDefinition& RequestDefinitionRecognizeDefinition::set_threshold(const AuthoredCut& value) {
-        set_member("threshold",results::encode(value));
+        set_member("threshold",results::detail::encode(value));
         return *this;
     }
     inline RequestDefinitionRecognizeDefinition& RequestDefinitionRecognizeDefinition::set_wording_version(const uint64_t& value) {
-        set_member("wording_version",results::encode(value));
+        set_member("wording_version",results::detail::encode(value));
         return *this;
     }
-    inline RequestFraming::RequestFraming(const std::string& value):Node(results::encode(value)) {
+    inline RequestFraming::RequestFraming(const std::string& value):Node(results::detail::encode(value)) {
     }
-    inline RequestFunction::RequestFunction(const std::string& value):Node(results::encode(value)) {
+    inline RequestFunction::RequestFunction(const std::string& value):Node(results::detail::encode(value)) {
     }
-    inline RequestImage::RequestImage(const RequestImageFile& value):Node(value.document()) {
+    inline RequestImage::RequestImage(const RequestImageFile& value):Node(::tt::results::detail::document(value)) {
     }
-    inline RequestImage::RequestImage(const RequestImageBytes& value):Node(value.document()) {
+    inline RequestImage::RequestImage(const RequestImageBytes& value):Node(::tt::results::detail::document(value)) {
     }
     inline RequestImageBytes& RequestImageBytes::set_bytes(const std::string& value) {
-        set_member("bytes",results::encode(value));
+        set_member("bytes",results::detail::encode(value));
         return *this;
     }
     inline RequestImageBytes& RequestImageBytes::set_media(const ImageMedia& value) {
-        set_member("media",results::encode(value));
+        set_member("media",results::detail::encode(value));
         return *this;
     }
     inline RequestImageFile& RequestImageFile::set_media(const ImageMedia& value) {
-        set_member("media",results::encode(value));
+        set_member("media",results::detail::encode(value));
         return *this;
     }
     inline RequestImageFile& RequestImageFile::set_path(const std::string& value) {
-        set_member("path",results::encode(value));
+        set_member("path",results::detail::encode(value));
         return *this;
     }
-    inline RequestInput::RequestInput(const RequestInputText& value):Node(value.document()) {
+    inline RequestInput::RequestInput(const RequestInputText& value):Node(::tt::results::detail::document(value)) {
     }
-    inline RequestInput::RequestInput(const RequestInputJson& value):Node(value.document()) {
+    inline RequestInput::RequestInput(const RequestInputJson& value):Node(::tt::results::detail::document(value)) {
     }
-    inline RequestInput::RequestInput(const RequestInputRecords& value):Node(value.document()) {
+    inline RequestInput::RequestInput(const RequestInputRecords& value):Node(::tt::results::detail::document(value)) {
     }
-    inline RequestInput::RequestInput(const RequestInputUnits& value):Node(value.document()) {
+    inline RequestInput::RequestInput(const RequestInputUnits& value):Node(::tt::results::detail::document(value)) {
     }
-    inline RequestInput::RequestInput(const RequestInputEntities& value):Node(value.document()) {
+    inline RequestInput::RequestInput(const RequestInputEntities& value):Node(::tt::results::detail::document(value)) {
     }
-    inline RequestInput::RequestInput(const RequestInputSource& value):Node(value.document()) {
+    inline RequestInput::RequestInput(const RequestInputSource& value):Node(::tt::results::detail::document(value)) {
     }
-    inline RequestInput::RequestInput(const RequestInputFeed& value):Node(value.document()) {
+    inline RequestInput::RequestInput(const RequestInputFeed& value):Node(::tt::results::detail::document(value)) {
     }
     inline RequestInputEntities& RequestInputEntities::set_items(const std::vector<RequestItem>& value) {
-        set_member("items",results::encode(value));
+        set_member("items",results::detail::encode(value));
         return *this;
     }
     inline RequestInputFeed& RequestInputFeed::set_framing(const RequestFraming& value) {
-        set_member("framing",results::encode(value));
+        set_member("framing",results::detail::encode(value));
         return *this;
     }
     inline RequestInputFeed& RequestInputFeed::set_images(const std::vector<RequestImage>& value) {
-        set_member("images",results::encode(value));
+        set_member("images",results::detail::encode(value));
         return *this;
     }
     inline RequestInputFeed& RequestInputFeed::set_name(const std::string& value) {
-        set_member("name",results::encode(value));
+        set_member("name",results::detail::encode(value));
         return *this;
     }
     inline RequestInputFeed& RequestInputFeed::set_reading(const RequestReader& value) {
-        set_member("reading",results::encode(value));
+        set_member("reading",results::detail::encode(value));
         return *this;
     }
     inline RequestInputJson& RequestInputJson::set_images(const std::vector<RequestImage>& value) {
-        set_member("images",results::encode(value));
+        set_member("images",results::detail::encode(value));
         return *this;
     }
-    inline RequestInputJson& RequestInputJson::set_value(const Json& value) {
-        set_member("value",results::encode(value));
+    inline RequestInputJson& RequestInputJson::set_value(const Data& value) {
+        set_member("value",results::detail::encode(value));
         return *this;
     }
     inline RequestInputRecords& RequestInputRecords::set_items(const std::vector<RequestItem>& value) {
-        set_member("items",results::encode(value));
+        set_member("items",results::detail::encode(value));
         return *this;
     }
     inline RequestInputSource& RequestInputSource::set_source(const RequestSource& value) {
-        set_member("source",results::encode(value));
+        set_member("source",results::detail::encode(value));
         return *this;
     }
     inline RequestInputText& RequestInputText::set_images(const std::vector<RequestImage>& value) {
-        set_member("images",results::encode(value));
+        set_member("images",results::detail::encode(value));
         return *this;
     }
     inline RequestInputText& RequestInputText::set_text(const std::string& value) {
-        set_member("text",results::encode(value));
+        set_member("text",results::detail::encode(value));
         return *this;
     }
     inline RequestInputUnits& RequestInputUnits::set_items(const std::vector<RequestItem>& value) {
-        set_member("items",results::encode(value));
+        set_member("items",results::detail::encode(value));
         return *this;
     }
     inline RequestItem& RequestItem::set_context(const ContextSchema& value) {
-        set_member("context",results::encode(value));
+        set_member("context",results::detail::encode(value));
         return *this;
     }
     inline RequestItem& RequestItem::set_examples(const std::vector<RecognitionExample>& value) {
-        set_member("examples",results::encode(value));
+        set_member("examples",results::detail::encode(value));
         return *this;
     }
     inline RequestItem& RequestItem::set_images(const std::vector<RequestImage>& value) {
-        set_member("images",results::encode(value));
+        set_member("images",results::detail::encode(value));
         return *this;
     }
     inline RequestItem& RequestItem::set_options(const std::vector<OptionSchema>& value) {
-        set_member("options",results::encode(value));
+        set_member("options",results::detail::encode(value));
         return *this;
     }
     inline RequestItem& RequestItem::set_original(const RequestOriginal& value) {
-        set_member("original",results::encode(value));
+        set_member("original",results::detail::encode(value));
         return *this;
     }
     inline RequestItem& RequestItem::set_seed_spans(const std::vector<RecognitionSeedSpan>& value) {
-        set_member("seed_spans",results::encode(value));
+        set_member("seed_spans",results::detail::encode(value));
         return *this;
     }
     inline RequestOptions& RequestOptions::set_attempts(const bool& value) {
-        set_member("attempts",results::encode(value));
+        set_member("attempts",results::detail::encode(value));
         return *this;
     }
     inline RequestOptions& RequestOptions::set_batch(const RequestBatch& value) {
-        set_member("batch",results::encode(value));
+        set_member("batch",results::detail::encode(value));
         return *this;
     }
     inline RequestOptions& RequestOptions::set_context(const std::string& value) {
-        set_member("context",results::encode(value));
+        set_member("context",results::detail::encode(value));
         return *this;
     }
     inline RequestOptions& RequestOptions::set_context_field(const std::string& value) {
-        set_member("context_field",results::encode(value));
+        set_member("context_field",results::detail::encode(value));
         return *this;
     }
     inline RequestOptions& RequestOptions::set_deadline_ms(const int64_t& value) {
-        set_member("deadline_ms",results::encode(value));
+        set_member("deadline_ms",results::detail::encode(value));
         return *this;
     }
     inline RequestOptions& RequestOptions::set_details(const bool& value) {
-        set_member("details",results::encode(value));
+        set_member("details",results::detail::encode(value));
         return *this;
     }
     inline RequestOptions& RequestOptions::set_examples(const std::vector<RecognitionExample>& value) {
-        set_member("examples",results::encode(value));
+        set_member("examples",results::detail::encode(value));
         return *this;
     }
     inline RequestOptions& RequestOptions::set_examples_field(const std::string& value) {
-        set_member("examples_field",results::encode(value));
+        set_member("examples_field",results::detail::encode(value));
         return *this;
     }
     inline RequestOptions& RequestOptions::set_field(const std::vector<std::string>& value) {
-        set_member("field",results::encode(value));
+        set_member("field",results::detail::encode(value));
         return *this;
     }
     inline RequestOptions& RequestOptions::set_files_only(const bool& value) {
-        set_member("files_only",results::encode(value));
+        set_member("files_only",results::detail::encode(value));
         return *this;
     }
     inline RequestOptions& RequestOptions::set_max_requests_total(const uint64_t& value) {
-        set_member("max_requests_total",results::encode(value));
+        set_member("max_requests_total",results::detail::encode(value));
         return *this;
     }
     inline RequestOptions& RequestOptions::set_mode(const RecognitionMode& value) {
-        set_member("mode",results::encode(value));
+        set_member("mode",results::detail::encode(value));
         return *this;
     }
     inline RequestOptions& RequestOptions::set_model(const std::string& value) {
-        set_member("model",results::encode(value));
+        set_member("model",results::detail::encode(value));
         return *this;
     }
     inline RequestOptions& RequestOptions::set_none(const bool& value) {
-        set_member("none",results::encode(value));
+        set_member("none",results::detail::encode(value));
         return *this;
     }
     inline RequestOptions& RequestOptions::set_options_field(const std::string& value) {
-        set_member("options_field",results::encode(value));
+        set_member("options_field",results::detail::encode(value));
         return *this;
     }
     inline RequestOptions& RequestOptions::set_relation_threshold(const RequestThreshold& value) {
-        set_member("relation_threshold",results::encode(value));
+        set_member("relation_threshold",results::detail::encode(value));
         return *this;
     }
     inline RequestOptions& RequestOptions::set_seed_spans(const std::vector<RecognitionSeedSpan>& value) {
-        set_member("seed_spans",results::encode(value));
+        set_member("seed_spans",results::detail::encode(value));
         return *this;
     }
     inline RequestOptions& RequestOptions::set_seed_spans_field(const std::string& value) {
-        set_member("seed_spans_field",results::encode(value));
+        set_member("seed_spans_field",results::detail::encode(value));
         return *this;
     }
     inline RequestOptions& RequestOptions::set_snippet_pieces(const uint32_t& value) {
-        set_member("snippet_pieces",results::encode(value));
+        set_member("snippet_pieces",results::detail::encode(value));
         return *this;
     }
     inline RequestOptions& RequestOptions::set_stage_context(const RecognitionStageContext& value) {
-        set_member("stage_context",results::encode(value));
+        set_member("stage_context",results::detail::encode(value));
         return *this;
     }
     inline RequestOptions& RequestOptions::set_threshold(const RequestThreshold& value) {
-        set_member("threshold",results::encode(value));
+        set_member("threshold",results::detail::encode(value));
         return *this;
     }
     inline RequestOptions& RequestOptions::set_top(const uint64_t& value) {
-        set_member("top",results::encode(value));
+        set_member("top",results::detail::encode(value));
         return *this;
     }
-    inline RequestOriginal::RequestOriginal(const RequestOriginalText& value):Node(value.document()) {
+    inline RequestOriginal::RequestOriginal(const RequestOriginalText& value):Node(::tt::results::detail::document(value)) {
     }
-    inline RequestOriginal::RequestOriginal(const RequestOriginalJson& value):Node(value.document()) {
+    inline RequestOriginal::RequestOriginal(const RequestOriginalJson& value):Node(::tt::results::detail::document(value)) {
     }
-    inline RequestOriginalJson& RequestOriginalJson::set_value(const Json& value) {
-        set_member("value",results::encode(value));
+    inline RequestOriginalJson& RequestOriginalJson::set_value(const Data& value) {
+        set_member("value",results::detail::encode(value));
         return *this;
     }
     inline RequestOriginalText& RequestOriginalText::set_text(const std::string& value) {
-        set_member("text",results::encode(value));
+        set_member("text",results::detail::encode(value));
         return *this;
     }
-    inline RequestQuestion::RequestQuestion(const RequestQuestionText& value):Node(value.document()) {
+    inline RequestQuestion::RequestQuestion(const RequestQuestionText& value):Node(::tt::results::detail::document(value)) {
     }
-    inline RequestQuestion::RequestQuestion(const RequestQuestionDefinition& value):Node(value.document()) {
+    inline RequestQuestion::RequestQuestion(const RequestQuestionDefinition& value):Node(::tt::results::detail::document(value)) {
     }
-    inline RequestQuestion::RequestQuestion(const RequestQuestionFile& value):Node(value.document()) {
+    inline RequestQuestion::RequestQuestion(const RequestQuestionFile& value):Node(::tt::results::detail::document(value)) {
     }
-    inline RequestQuestion::RequestQuestion(const RequestQuestionName& value):Node(value.document()) {
+    inline RequestQuestion::RequestQuestion(const RequestQuestionName& value):Node(::tt::results::detail::document(value)) {
     }
-    inline RequestQuestion::RequestQuestion(const RequestQuestionReference& value):Node(value.document()) {
+    inline RequestQuestion::RequestQuestion(const RequestQuestionReference& value):Node(::tt::results::detail::document(value)) {
     }
     inline RequestQuestionDefinition& RequestQuestionDefinition::set_value(const RequestDefinition& value) {
-        set_member("value",results::encode(value));
+        set_member("value",results::detail::encode(value));
         return *this;
     }
     inline RequestQuestionFile& RequestQuestionFile::set_path(const std::string& value) {
-        set_member("path",results::encode(value));
+        set_member("path",results::detail::encode(value));
         return *this;
     }
     inline RequestQuestionName& RequestQuestionName::set_name(const std::string& value) {
-        set_member("name",results::encode(value));
+        set_member("name",results::detail::encode(value));
         return *this;
     }
     inline RequestQuestionReference& RequestQuestionReference::set_reference(const std::string& value) {
-        set_member("reference",results::encode(value));
+        set_member("reference",results::detail::encode(value));
         return *this;
     }
     inline RequestQuestionText& RequestQuestionText::set_text(const std::string& value) {
-        set_member("text",results::encode(value));
+        set_member("text",results::detail::encode(value));
         return *this;
     }
     inline RequestReader& RequestReader::set_unit(const SourceUnit& value) {
-        set_member("unit",results::encode(value));
+        set_member("unit",results::detail::encode(value));
         return *this;
     }
     inline RequestReader& RequestReader::set_window(const uint64_t& value) {
-        set_member("window",results::encode(value));
+        set_member("window",results::detail::encode(value));
         return *this;
     }
     inline RequestSessionDescriptor& RequestSessionDescriptor::set_item(const RequestItem& value) {
-        set_member("item",results::encode(value));
+        set_member("item",results::detail::encode(value));
         return *this;
     }
     inline RequestSessionDescriptor& RequestSessionDescriptor::set_location(const SessionSourceLocation& value) {
-        set_member("location",results::encode(value));
+        set_member("location",results::detail::encode(value));
         return *this;
     }
     inline RequestSource& RequestSource::set_framing(const RequestFraming& value) {
-        set_member("framing",results::encode(value));
+        set_member("framing",results::detail::encode(value));
         return *this;
     }
     inline RequestSource& RequestSource::set_media(const ReaderMedia& value) {
-        set_member("media",results::encode(value));
+        set_member("media",results::detail::encode(value));
         return *this;
     }
     inline RequestSource& RequestSource::set_paths(const std::vector<std::string>& value) {
-        set_member("paths",results::encode(value));
+        set_member("paths",results::detail::encode(value));
         return *this;
     }
     inline RequestSource& RequestSource::set_reading(const RequestReader& value) {
-        set_member("reading",results::encode(value));
+        set_member("reading",results::detail::encode(value));
         return *this;
     }
-    inline RequestThreshold::RequestThreshold(const std::variant<double, std::string>& value):Node(results::encode(value)) {
+    inline RequestThreshold::RequestThreshold(const std::variant<double, std::string>& value):Node(results::detail::encode(value)) {
     }
-    inline RequestVersion::RequestVersion(const std::string& value):Node(results::encode(value)) {
+    inline RequestVersion::RequestVersion(const std::string& value):Node(results::detail::encode(value)) {
     }
     inline SessionSourceLocation& SessionSourceLocation::set_file(const std::string& value) {
-        set_member("file",results::encode(value));
+        set_member("file",results::detail::encode(value));
         return *this;
     }
     inline SessionSourceLocation& SessionSourceLocation::set_first_line(const uint64_t& value) {
-        set_member("first_line",results::encode(value));
+        set_member("first_line",results::detail::encode(value));
         return *this;
     }
     inline SessionSourceLocation& SessionSourceLocation::set_last_line(const uint64_t& value) {
-        set_member("last_line",results::encode(value));
+        set_member("last_line",results::detail::encode(value));
         return *this;
     }
-    inline SourceUnit::SourceUnit(const std::string& value):Node(results::encode(value)) {
+    inline SourceUnit::SourceUnit(const std::string& value):Node(results::detail::encode(value)) {
     }
     inline RequestQuestion question_file(const std::string& path) {
         return RequestQuestionFile().set_path(path);
