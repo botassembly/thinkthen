@@ -9,9 +9,9 @@ The surgical writer approach passed the bounded generated corpus. This supports 
 
 ## Identity and scope
 
-Owner: thinkthen/0588. Beelink. ThinkThen base revision: 0e46dc2daf53bba7ad40165e67068948607f7bec. The read-only checkout was /home/ian/workspace/worktrees/thinkthen-03-experiments.
+Owner: thinkthen/0588. Beelink. ThinkThen base revision: 0e46dc2daf53bba7ad40165e67068948607f7bec. The read-only checkout was worktrees/thinkthen-03-experiments.
 
-Evidence folder: /home/ian/workspace/experiments/484-spreadsheet-writer. The final corpus is corpus2/, not the earlier originals/, outputs/ or rust-outputs/ attempts. Sources were PRD 08, the ThinkThen ideal state, experiment 229, and the CSV/TSV reader source. Earlier experiment 229 investigated add-ins and did not supply workbook round-trip evidence.
+Evidence folder: experiments/484-spreadsheet-writer. The final corpus is corpus2/, not the earlier originals/, outputs/ or rust-outputs/ attempts. Sources were PRD 08, the ThinkThen ideal state, experiment 229, and the CSV/TSV reader source. Earlier experiment 229 investigated add-ins and did not supply workbook round-trip evidence.
 
 The final Rust prototype uses Rust 1.95.0, zip 0.6.6 and quick-xml 0.39.4, resolved offline from cached crates. Cargo.lock records the complete versions. Open XML SDK 3.3.0 and its dependencies were fetched into tool-cache/nuget. LibreOffice Calc 24.2.7.2, Ubuntu package 4:24.2.7-0ubuntu0.24.04.7, was installed only in disposable Ubuntu containers. Every container had --rm and labels pm.repo=thinkthen and pm.ticket=0588. Offline prototype/SDK checks had no network, one CPU, 768 MiB memory and 128 processes. Disposable package-install/Calc containers had one CPU, 1 GiB memory and 192 processes. No global packages were installed.
 

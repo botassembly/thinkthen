@@ -68,7 +68,7 @@ Relate pair questions contain generated IDs. Menus embed the source's name/kind 
 
 # Checks, attempts and limits
 
-Final command: `python3 /home/ian/workspace/experiments/482-thinkthen-parts-0586/probe.py`. Exit 0; `attempt-5.log` has 81/81 exact question/state comparisons, 81 evidence mutation checks, exact context-body/context-only checks, three dependency counterexamples and 137/137 original key/state validations.
+Final command: `python3 experiments/482-thinkthen-parts-0586/probe.py`. Exit 0; `attempt-5.log` has 81/81 exact question/state comparisons, 81 evidence mutation checks, exact context-body/context-only checks, three dependency counterexamples and 137/137 original key/state validations.
 
 Attempt 1 exposed erroneous trimming of raw text inputs; the independent recording comparison caught the lost final newline in ten cases. Attempt 2 exposed the prototype's incorrect one-token entity description in six custom boundary questions. Attempts 3 through 5 correct those prototype errors and add menu/dependency/key checks. Logs retain each attempt's standard output; attempt 2's assertion traceback appeared on the tool stream because stderr was not redirected then. No product defect is inferred from these failures.
 
