@@ -38,7 +38,7 @@ module ThinkThen
         project(values, spec)
       end
       private def project(values, spec)
-        return values.freeze if spec.fetch("collection")
+        return values.freeze if spec.fetch("call_shape") == "collection"
         @scalar ? values.first : values.freeze
       end
       private def read_path(row, path)
@@ -46,6 +46,7 @@ module ThinkThen
       end
       private def item_probabilities(row)
         return row.answer.probability if row.answer.respond_to?(:probability)
+        return nil if CALL_RESULTS.fetch(@verb).fetch("call_shape") == "collection"
         return row.value.map(&:probability).freeze if row.value.is_a?(Array)
         return row.value.proposals.map(&:probability).freeze if row.value.key?("proposals")
         proposals = row.answer.proposals.select(&:kept).to_h do |proposal|
@@ -123,7 +124,6 @@ module ThinkThen
     end
     def plan(verb, question, input, **options)
       raise UsageError.new("client is closed", "usage") if @closed
-      reject_details(options)
       @native.plan(verb, question, input, [options, false])
     end
     FUNCTIONS.each do |verb|
@@ -138,7 +138,6 @@ module ThinkThen
     end
     def start(verb, question, input, cancel: nil, **options)
       raise UsageError.new("client is closed", "usage") if @closed
-      reject_details(options)
       operation = Operation.new(@native, verb, question, input, cancel, options) { |o| @operations.delete(o) }
       @operations << operation
       return operation unless block_given?
@@ -147,9 +146,6 @@ module ThinkThen
       ensure
         Client.send(:cleanup, operation)
       end
-    end
-    private def reject_details(options)
-      raise UsageError.new("details is not a call option", "usage") if options.key?(:details)
     end
     def close
       @closed = true
@@ -186,7 +182,7 @@ module ThinkThen
           @producer = input.to_enum
           @owner = input
         end
-        @scalar = !Results::CALL_RESULTS.fetch(verb).fetch("collection") && (verb == "find" || verb == "relate" || !(input.is_a?(Array) || input.is_a?(Source) || @producer))
+        @scalar = Results::CALL_RESULTS.fetch(verb).fetch("call_shape") == "aggregate" || !(input.is_a?(Array) || input.is_a?(Source) || @producer)
         if token&.cancelled?
           raise CancelledError.new("the call was cancelled", "cancelled")
         end

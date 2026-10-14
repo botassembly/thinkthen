@@ -120,12 +120,14 @@ def render(definitions, name):
         payload = spec['receipt_payload']
         receipt = schema_type(payload.get('items', payload), public_type)
         value_schema = spec['scalar_value'] or spec['aggregate_value']
+        if spec['call_shape'] == 'input' and spec['scalar_value'] is None:
+            value_schema = value_schema['items']
         value = schema_type(value_schema, public_type)
         mode = spec['probability_mode']
-        probability = 'nil' if mode == 'null' else ('Array[Integer | Float]' if mode == 'items' and function != 'rank' else 'Integer | Float | nil')
-        if payload.get('type') == 'array' and spec['scalar_kind'] is None:
+        probability = 'nil' if mode == 'null' else ('Array[Integer | Float]' if mode == 'items' and spec['value_projection'] == 'value' else 'Integer | Float | nil')
+        if spec['call_shape'] == 'collection':
             if mode != 'null': probability = f'Array[{probability}]'
-        elif spec['scalar_kind'] is not None:
+        elif spec['call_shape'] == 'input':
             value = f'{value} | Array[{value}]'
             if mode != 'null': probability = f'{probability} | Array[{probability}]'
         lines.append(f'    def {function}: ({args}, ?cancel: Cancel?, {options}) -> Results::Completed[{value}, {probability}, {receipt}]')

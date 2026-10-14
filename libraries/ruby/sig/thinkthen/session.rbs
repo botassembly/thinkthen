@@ -33,7 +33,7 @@ module ThinkThen
       private
       def project: (Array[untyped] values, Hash[String, untyped] spec) -> untyped
       def read_path: (Native::Result row, Array[String] path) -> untyped
-      def item_probabilities: (Native::Result row) -> (Integer | Float | Array[Integer | Float])
+      def item_probabilities: (Native::Result row) -> (Integer | Float | nil | Array[Integer | Float])
       public
       def inspect: () -> String
     end
@@ -55,7 +55,6 @@ module ThinkThen
     def self.original: (untyped value) -> Hash[Symbol, untyped]
     def self.descriptor: (untyped value) -> Hash[Symbol, untyped]
     # Close the owner, keeping any exception already in flight.
-    def reject_details: (Hash[Symbol, untyped] options) -> void
     def self.cleanup: (Client | Client::Operation owner) -> void
     public
 

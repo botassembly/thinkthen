@@ -22,6 +22,13 @@ class TestOwnedSession < Minitest::Test
       rescue T::UsageError => error
         raise "native admission changed" unless error.message == "the question declaration uses an unsupported feature"
       end
+      %i[decide plan].each do |method|
+        begin
+          method == :plan ? client.plan("decide", "Is it?", "unreachable", details: true) : client.decide("Is it?", "unreachable", details: true)
+          raise "details admitted"
+        rescue T::UsageError
+        end
+      end
       client.close
       say true
     RUBY
@@ -90,6 +97,22 @@ class TestOwnedSession < Minitest::Test
       status, errors = child.finish
       assert status.success?, errors
       assert_operator backend.count, :>=, 10
+    end
+  end
+
+  def test_one_record_collections_keep_probability_arrays
+    TestBackend.with(<<~RUBY) do |backend, child|
+      T::Client.open(cache: false) do |client|
+        path = File.join(ENV.fetch("HOME"), "records.jsonl")
+        File.write(path, JSON.generate(note: "first") + 10.chr)
+        inputs = ["first", ["first"], ["first"].each, T::Client.files([path], framing: "jsonl")]
+        say inputs.map { |input| result = client.decide("Is it urgent?", input); [result.value, result.probability] }
+      end
+    RUBY
+      assert_equal [[true, 0.9], [[true], [0.9]], [[true], [0.9]], [[true], [0.9]]], child.hear
+      status, errors = child.finish
+      assert status.success?, errors
+      assert_equal 4, backend.count
     end
   end
 
