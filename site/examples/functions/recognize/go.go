@@ -26,25 +26,24 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	rows, err := call.RecognizeAnswer()
-	if err != nil {
-		log.Fatal(err)
-	}
+	recognition := call.Value.(map[string]any)
 	var names [][2]string
-	for _, row := range rows {
-		facts, _ := row.Value().Value.AsRecognizeEntities()
-		for _, one := range facts.Entities().Value {
-			names = append(names, [2]string{
-				one.Text().Value, one.Kind().Value,
-			})
-		}
+	for _, one := range recognition["entities"].([]any) {
+		entity := one.(map[string]any)
+		names = append(names, [2]string{entity["text"].(string), entity["kind"].(string)})
 	}
-	want := [][2]string{
-		{"Sam Patel", "person"},
-		{"Kindle", "product"},
-		{"Denver", "place"},
-	}
+	want := [][2]string{{"Sam Patel", "person"}, {"Kindle", "product"}, {"Denver", "place"}}
 	if !slices.Equal(names, want) {
 		log.Fatal("expected three names")
+	}
+	probabilities := call.Probability.(tt.ProbabilityList)
+	wantProbabilities := []float64{0.9963502281449241, 0.9899999999980199, 0.9899999797949085}
+	if len(probabilities) != len(wantProbabilities) {
+		log.Fatal("expected aligned probabilities")
+	}
+	for i, probability := range probabilities {
+		if probability == nil || *probability != wantProbabilities[i] {
+			log.Fatal("unexpected recorded probability")
+		}
 	}
 }

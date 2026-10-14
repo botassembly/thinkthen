@@ -24,12 +24,8 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	refund, err := call.DecideAnswer()
-	if err != nil {
-		log.Fatal(err)
-	}
-	isRefund := refund != nil && *refund
-	if !isRefund {
-		log.Fatal("expected yes")
+	isRefund, probability := call.Value.(bool), float64(call.Probability.(tt.ProbabilityScalar))
+	if !isRefund || probability != 0.99 {
+		log.Fatal("expected yes with probability 0.99")
 	}
 }

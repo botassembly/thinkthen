@@ -5,12 +5,11 @@ ThinkThen is ten functions on top of Jev, TypeSafe's decision model, or any mode
 ```sh
 go get github.com/botassembly/thinkthen/libraries/go@v0.2.0
 ```
-
 Set your hosted backend key: `export THINKTHEN_API_KEY=...`. Backends include Jev, SystemOne, OpenAI and local models.
 
 ```go
 package main
-import ("context"; "encoding/json"; "log"; "os"; tt "github.com/botassembly/thinkthen/libraries/go")
+import ("context"; "fmt"; "log"; tt "github.com/botassembly/thinkthen/libraries/go")
 func main() {
     client, err := tt.NewClient(tt.EngineSettings{}); if err != nil { log.Fatal(err) }
     defer client.Close()
@@ -19,19 +18,22 @@ func main() {
         {Key: "account", Value: tt.AuthoredDescriptionString("Logins and passwords.")}}
     teamQuestion := tt.DefinedQuestion(tt.RequestDefinitionAuthoredChoose{
         Choose: tt.AuthoredQuestionTextString("Which team owns this?"), Options: tt.Ptr[tt.AuthoredOptions](teams)})
-    for _, text := range []string{"Please refund my order. It arrived broken.", "Thanks for the quick help yesterday!", "I want to send this back."} {
+    for i, text := range []string{"Please refund my order. It arrived broken.", "Thanks for the quick help yesterday!", "I want to send this back."} {
         refund, err := client.Decide(context.Background(), tt.TextQuestion("Does the customer ask for a refund?"), tt.TextInput(text), nil)
         if err != nil { log.Fatal(err) }
-        if err := json.NewEncoder(os.Stdout).Encode(refund.Value); err != nil { log.Fatal(err) }
+        value, probability := refund.Value.(bool), float64(refund.Probability.(tt.ProbabilityScalar))
+        if value != []bool{true, false, true}[i] || probability != []float64{0.99, 0.01, 0.54}[i] { log.Fatal("unexpected refund answer") }
+        fmt.Printf("%t %.2f\n", value, probability)
     }
-    for _, text := range []string{"Please refund the extra fee on my invoice.", "My parcel went to the wrong address.", "I cannot reset my password."} {
+    for i, text := range []string{"Please refund the extra fee on my invoice.", "My parcel went to the wrong address.", "I cannot reset my password."} {
         team, err := client.Choose(context.Background(), teamQuestion, tt.TextInput(text), nil)
         if err != nil { log.Fatal(err) }
-        if err := json.NewEncoder(os.Stdout).Encode(team.Value); err != nil { log.Fatal(err) }
+        value, probability := team.Value.(string), float64(team.Probability.(tt.ProbabilityScalar))
+        if value != []string{"billing", "shipping", "account"}[i] || probability != []float64{1, 1, 1}[i] { log.Fatal("unexpected team answer") }
+        fmt.Printf("%s %.2f\n", value, probability)
     }
 }
 ```
 
 The library is free and MIT licensed. Hosted models charge per token. Local models are free to use; you supply the computer that runs them.
-
 [Backend setup](https://thinkthen.dev/install/backends/) · [ThinkThen documentation](https://thinkthen.dev)

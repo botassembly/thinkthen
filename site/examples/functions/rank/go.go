@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"log"
 	"slices"
 
@@ -32,11 +33,19 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	order, err := call.RankAnswer()
-	if err != nil {
-		log.Fatal(err)
-	}
-	if !slices.Equal(order, []uint64{1, 3, 2, 0}) {
+	order := call.Value.([]any)
+	want := []any{json.Number("1"), json.Number("3"), json.Number("2"), json.Number("0")}
+	if !slices.Equal(order, want) {
 		log.Fatal("expected the outage first")
+	}
+	probabilities := call.Probability.(tt.ProbabilityList)
+	wantProbabilities := []float64{0.97, 0.92, 0.19, 0.03}
+	if len(probabilities) != len(wantProbabilities) {
+		log.Fatal("expected aligned probabilities")
+	}
+	for i, probability := range probabilities {
+		if probability == nil || *probability != wantProbabilities[i] {
+			log.Fatal("unexpected recorded probability")
+		}
 	}
 }
