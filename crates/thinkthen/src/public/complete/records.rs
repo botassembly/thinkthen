@@ -287,3 +287,9 @@ pub(super) fn complete_row<T>(
     canonical.images = held.images.clone();
     Ok(canonical)
 }
+
+pub(super) fn recovery_cause(row: &pull::Row<Records>) -> Option<crate::FailureCause> {
+    let Err(pipeline::Failed::Asker(Miss::Failed(decided))) = row else { return None; };
+    let core::AnswerOutcome::Failed(failure) = &decided.outcome else { return None; };
+    Some(crate::public::annotated::cause(core::FailedValue::new(failure.clone()).cause()))
+}

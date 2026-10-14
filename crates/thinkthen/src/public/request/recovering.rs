@@ -71,6 +71,7 @@ impl Engine {
                 vec![RequestRecoveredRow {
                     ordinal: 0,
                     outcome: Ok(value),
+                    cause: None,
                 }]
             })),
             Ok(RequestOutcome::Failed { error, .. }) | Err(error) => aggregate_failure(self, error),
@@ -121,7 +122,8 @@ fn aggregate_failure(
         return Ok(Call::new(
             vec![RequestRecoveredRow {
                 ordinal: 0,
-                outcome: Err(error),
+                outcome: Err(error.normalize_recovery_budget()),
+                cause: None,
             }],
             facts,
         ));
@@ -131,7 +133,8 @@ fn aggregate_failure(
     stop.run_call(0, |_| {
         Ok(vec![RequestRecoveredRow {
             ordinal: 0,
-            outcome: Err(error),
+            outcome: Err(error.normalize_recovery_budget()),
+            cause: None,
         }])
     })
 }
