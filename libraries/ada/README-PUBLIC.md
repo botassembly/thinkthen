@@ -22,7 +22,7 @@ procedure Registry_Example is
 begin
    for Text of Refunds loop
       declare Refund : constant Decide_Result := Thinkthen.Inputs.Calls.Decide (Text_Question ("Does the customer ask for a refund?"), Text_Input (To_String (Text))); begin
-         pragma Assert (Refund.Record_Count = 1 and then Long_Float'Value (Thinkthen.Values.As_Number (Thinkthen.Values.Field_Value (Thinkthen.Values.Field_Value (Record_Value (Refund.Results (1)), "answer"), "probability"))) = Expected_Probability (I)); pragma Assert (if I = 3 then Thinkthen.Values.Kind (Refund.Value) = Thinkthen.Values.Null_Value and then Refund.Probability.State = Null_Field else Thinkthen.Values.Kind (Refund.Value) = Thinkthen.Values.Boolean_Value and then Thinkthen.Values.As_Boolean (Refund.Value) = (I = 1) and then Refund.Probability.State = Present_Field and then Refund.Probability.Value = Expected_Probability (I));
+         pragma Assert (Refund.Record_Count = 1 and then Long_Float'Value (Thinkthen.Values.As_Number (Thinkthen.Values.Field_Value (Thinkthen.Values.Field_Value (Record_Value (Refund.Results (1)), "answer"), "probability"))) = Expected_Probability (I)); pragma Assert (Thinkthen.Values.Kind (Refund.Value) = Thinkthen.Values.Boolean_Value and then Thinkthen.Values.As_Boolean (Refund.Value) = (I /= 2) and then Refund.Probability.State = Present_Field and then Refund.Probability.Value = Expected_Probability (I));
          Ada.Text_IO.Put_Line (if Thinkthen.Values.Kind (Refund.Value) = Thinkthen.Values.Null_Value then "not sure" else (if Thinkthen.Values.As_Boolean (Refund.Value) then "TRUE" else "FALSE"));
       end; I := I + 1;
    end loop; I := 1;
