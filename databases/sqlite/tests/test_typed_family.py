@@ -207,7 +207,7 @@ def test_empty_sql_frame_rejects_nonempty_and_malformed_claims():
         try: project(marker,'filter')
         except AssertionError: pass
         else: raise AssertionError(marker)
-    failure={'error':{'kind':'usage','message':'unsafe answer','retryable':False,'cause':'missing_answer','stopped':{'cause':'reply','retryable':False,'at':0}}}}
+    failure={'error':{'kind':'usage','message':'unsafe answer','retryable':False,'cause':'missing_answer','stopped':{'cause':'reply','retryable':False,'at':0}}}
     from jsonschema.exceptions import ValidationError
     NATIVE.validate(failure)
     assert project({'native':failure},'decide')['message']=='unsafe answer'
