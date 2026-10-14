@@ -129,6 +129,7 @@ CREATE TYPE thinkthen_session_question_detail_threshold AS ("number_value" doubl
 CREATE TYPE thinkthen_session_question_detail_usage AS ("input_tokens" numeric, "output_tokens" numeric);
 CREATE TYPE thinkthen_session_question_detail_value AS ("array_value" text[], "boolean_value" boolean, "number_value" double precision, "string_value" text);
 CREATE TYPE thinkthen_question_detail AS ("answer_id" text, "cached" boolean, "confidence" double precision, "failed_questions" numeric, "failure" thinkthen_session_question_detail_failure, "failure_id" text, "input" jsonb, "input_present" boolean, "input_source" thinkthen_session_question_detail_input_source, "input_sources" thinkthen_session_input_source[], "inputs" jsonb[], "model" text, "observations" thinkthen_observation[], "probabilities" thinkthen_session_question_detail_probabilities, "question" thinkthen_question_document, "question_sha256" text, "question_sources" thinkthen_question_source[], "raw_pick" text, "reported_usage" thinkthen_session_question_detail_reported_usage, "requests" text[], "requests_sent" numeric, "threshold" thinkthen_session_question_detail_threshold, "url" text, "usage" thinkthen_session_question_detail_usage, "value" thinkthen_session_question_detail_value);
+CREATE TYPE thinkthen_observed_input AS ("images" thinkthen_image[], "input" jsonb, "input_present" boolean, "source" thinkthen_physical_source);
 CREATE TYPE thinkthen_entity_document AS ("kind" text, "name" text);
 CREATE TYPE thinkthen_annotation_value_value_object_value AS ("cause" text, "kind" text);
 CREATE TYPE thinkthen_annotation_value_value AS ("array_value" text[], "boolean_value" boolean, "number_value" double precision, "object_value" thinkthen_annotation_value_value_object_value, "string_value" text);
@@ -139,7 +140,7 @@ CREATE TYPE thinkthen_session_observed_row_value_object_value_value AS ("array_v
 CREATE TYPE thinkthen_session_observed_row_value_object_value AS ("entities" thinkthen_entity[], "kind" text, "mode" text, "proposals" thinkthen_boundary_proposal[], "relations" thinkthen_recognition_edge_document[], "value" thinkthen_session_observed_row_value_object_value_value);
 CREATE TYPE thinkthen_session_observed_row_value AS ("array_value" thinkthen_session_observed_row_value_array_value_item[], "integer_value" numeric, "object_value" thinkthen_session_observed_row_value_object_value);
 CREATE TYPE thinkthen_observed_row AS ("kind" text, "value" thinkthen_session_observed_row_value);
-CREATE TYPE thinkthen_event AS ("detail" thinkthen_question_detail, "index" numeric, "kind" text, "member" text, "position" numeric, "stage" text, "value" thinkthen_observed_row);
+CREATE TYPE thinkthen_event AS ("detail" thinkthen_question_detail, "index" numeric, "inputs" thinkthen_observed_input[], "kind" text, "member" text, "position" numeric, "stage" text, "value" thinkthen_observed_row);
 "#,
     name = "native_generated_types"
 );
@@ -6633,6 +6634,54 @@ pub(super) fn convert(
             }
             Ok(tuple)
         }
+        "thinkthen_observed_input" => {
+            let mut tuple = super::output::tuple(kind);
+            let held = value.get("images");
+            let converted: Option<Array<'static, PgHeapTuple<'static, AllocatedByRust>>> = held
+                .and_then(Value::as_array)
+                .map(|values| {
+                    crate::ffi::composite_array(
+                        "thinkthen_image",
+                        values
+                            .iter()
+                            .map(|value| {
+                                Some(value)
+                                    .filter(|value| !value.is_null())
+                                    .map(|value| convert("thinkthen_image", value))
+                                    .transpose()
+                            })
+                            .collect::<Result<Vec<_>, thinkthen::Error>>()?,
+                    )
+                })
+                .transpose()?;
+            if let Some(converted) = converted {
+                tuple
+                    .set_by_name("images", converted)
+                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
+            }
+            let held = value.get("input");
+            tuple
+                .set_by_name("input_present", held.is_some())
+                .map_err(|_| crate::call::defect("generated result presence is unavailable"))?;
+            let converted: Option<pgrx::datum::JsonB> =
+                held.map(|value| pgrx::datum::JsonB(value.clone()));
+            if let Some(converted) = converted {
+                tuple
+                    .set_by_name("input", converted)
+                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
+            }
+            let held = value.get("source");
+            let converted: Option<PgHeapTuple<'static, AllocatedByRust>> = held
+                .filter(|value| !value.is_null())
+                .map(|value| convert("thinkthen_physical_source", value))
+                .transpose()?;
+            if let Some(converted) = converted {
+                tuple
+                    .set_by_name("source", converted)
+                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
+            }
+            Ok(tuple)
+        }
         "thinkthen_entity_document" => {
             let mut tuple = super::output::tuple(kind);
             let held = value.get("kind");
@@ -7080,6 +7129,29 @@ pub(super) fn convert(
             if let Some(converted) = converted {
                 tuple
                     .set_by_name("index", converted)
+                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
+            }
+            let held = value.get("inputs");
+            let converted: Option<Array<'static, PgHeapTuple<'static, AllocatedByRust>>> = held
+                .and_then(Value::as_array)
+                .map(|values| {
+                    crate::ffi::composite_array(
+                        "thinkthen_observed_input",
+                        values
+                            .iter()
+                            .map(|value| {
+                                Some(value)
+                                    .filter(|value| !value.is_null())
+                                    .map(|value| convert("thinkthen_observed_input", value))
+                                    .transpose()
+                            })
+                            .collect::<Result<Vec<_>, thinkthen::Error>>()?,
+                    )
+                })
+                .transpose()?;
+            if let Some(converted) = converted {
+                tuple
+                    .set_by_name("inputs", converted)
                     .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
             }
             let held = value.get("kind");

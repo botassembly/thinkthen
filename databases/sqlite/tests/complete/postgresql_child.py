@@ -4,7 +4,7 @@ from pathlib import Path
 sys.path.insert(0,str(Path(__file__).resolve().parents[4]/'conformance/children'))
 from children import child_env, read_process_line
 sys.path.insert(0,str(Path(__file__).resolve().parents[3]/'postgresql/tests'))
-from native_inputs import query as native_query
+from native_inputs import query as native_query, AdmissionError
 from typed_results import native
 payload=json.loads(sys.stdin.readline())
 def lit(value):return "'"+str(value).replace("'","''")+"'"
@@ -15,7 +15,11 @@ for key,value in payload['engine_settings'].items():
     if key in ('max_requests','max_requests_total','max_request_bytes') and value is None:value=-1
     if key=='refresh_cache':value='on' if value else 'off'
     settings.append('SET thinkthen.'+key+'='+lit(value)+';')
-query=native_query(payload)
+try:
+    query=native_query(payload)
+except AdmissionError as error:
+    print(json.dumps({'native':{'error':error.error}}),flush=True)
+    raise SystemExit(0)
 script='\n'.join(settings)+'\nSELECT pg_backend_pid();\nSELECT to_jsonb(r) FROM '+query+' r;\n'
 running=subprocess.Popen(command,env=child_env(keep=('HOME','LANG','LC_ALL')),stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True)
 running.stdin.write(script);running.stdin.close();running.stdin=None

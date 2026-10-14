@@ -4,6 +4,10 @@ import os
 from pathlib import Path
 import subprocess
 
+class AdmissionError(Exception):
+    def __init__(self, error):
+        self.error = error
+
 ROOT = Path(__file__).resolve().parents[3]
 
 def literal(value):
@@ -78,6 +82,8 @@ def query(payload):
     profile = 'release' if os.environ.get('THINKTHEN_TEST_PROFILE') == 'full' else 'debug'
     reader = subprocess.run([str(target / profile / 'thinkthen_read_inputs')], input=json.dumps(payload['inputs']), text=True, capture_output=True, check=True)
     inputs = json.loads(reader.stdout)
+    if 'admission_error' in inputs:
+        raise AdmissionError(inputs['admission_error']['error'])
     reading = {**payload.get('controls', {})}
     pointers = {'fields': 'field', 'context': 'context_field', 'options': 'options_field', 'examples': 'examples_field', 'seed_spans': 'seed_spans_field'}
     reading.update({pointers.get(key, key): value for key, value in inputs.get('reading', {}).items()})

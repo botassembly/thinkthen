@@ -5,7 +5,7 @@ import re
 ROOTS = ('completeDecide', 'completeChoose', 'completeTag', 'completeScore',
          'completeFilter', 'completeRank', 'completeAnnotation', 'completeRecognition',
          'completeFind', 'completeRelation', 'completeFacts', 'completeplan', 'completeError', 'completesessionObservation')
-NAMES = {'completeplan': 'plan', 'completesessionObservation': 'event',
+NAMES = {'postgresqlObservedInput': 'observed_input', 'completeplan': 'plan', 'completesessionObservation': 'event',
          'completesessionQuestionDetail': 'question_detail',
          'completesessionObservedRow': 'observed_row',
          'completeDecide': 'decision', 'completeChoose': 'choice',
@@ -269,6 +269,13 @@ def main():
     args = parser.parse_args()
     root = Path(__file__).resolve().parents[4]
     schema = json.loads((root / 'crates/thinkthen/src/public/results/complete.schema.json').read_text())
+    # Generic original-value serialization omits ancillary image metadata. SQL
+    # retains real native detail.inputs() metadata in the existing observation.
+    schema['$defs']['postgresqlObservedInput'] = {'type': 'object', 'properties': {
+        'input': True, 'source': {'$ref': '#/$defs/completePhysicalSource'},
+        'images': {'type': 'array', 'items': {'$ref': '#/$defs/completeImage'}}}, 'required': ['input', 'images']}
+    schema['$defs']['completesessionObservation']['oneOf'][0]['properties']['inputs'] = {
+        'type': 'array', 'items': {'$ref': '#/$defs/postgresqlObservedInput'}}
     outputs = {'results_generated.rs': render(schema), 'functions_generated.rs': render_functions()}
     for name, source in outputs.items():
         target = root / 'databases/postgresql/src/native' / name

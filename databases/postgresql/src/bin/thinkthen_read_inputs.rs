@@ -79,7 +79,7 @@ fn checked_records(
 ) -> Result<serde_json::Value, Box<dyn std::error::Error>> {
     let inputs = match thinkthen_host::complete_native::Inputs::parse_request(source) {
         Ok(inputs) => inputs,
-        Err(error) => return Ok(serde_json::json!({"records":[{"read_error":error.complete()}]})),
+        Err(error) => return Ok(serde_json::json!({"admission_error":error.complete()})),
     };
     let records = value
         .get_mut("records")

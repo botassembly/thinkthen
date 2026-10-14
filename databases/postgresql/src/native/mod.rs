@@ -120,14 +120,7 @@ pub(super) fn execute(
         };
         let events = std::sync::Mutex::new(Vec::new());
         let observer = |event: thinkthen::RecordObservation<'_>| {
-            let packet = thinkthen::RequestSessionResult::Observation {
-                function,
-                value: event.to_owned(),
-            };
-            let value = packet.to_json().and_then(|text| {
-                serde_json::from_str::<serde_json::Value>(&text)
-                    .map_err(|_| call::defect("native observation could not be projected"))
-            });
+            let value = observation(function, event);
             events
                 .lock()
                 .unwrap_or_else(std::sync::PoisonError::into_inner)
@@ -178,4 +171,17 @@ fn composed_request(verb: &str, request: &thinkthen::AdmittedRequest) -> Result<
     args.options.seed_spans_field = None;
     args.options.examples_field = None;
     Request::named(verb, args)?.admit()
+}
+
+fn observation(function: thinkthen::RequestFunction, event: thinkthen::RecordObservation<'_>) -> Result<serde_json::Value, Error> {
+    let inputs = complete_native::observations::event(&event)?.get("inputs").cloned();
+    let packet = thinkthen::RequestSessionResult::Observation { function, value: event.to_owned() };
+    let mut value: serde_json::Value = serde_json::from_str(&packet.to_json()?)
+        .map_err(|_| call::defect("native observation could not be projected"))?;
+    if let Some(inputs) = inputs {
+        value.get_mut("value").and_then(serde_json::Value::as_object_mut)
+            .ok_or_else(|| call::defect("native observation is invalid"))?
+            .insert("inputs".to_owned(), inputs);
+    }
+    Ok(value)
 }

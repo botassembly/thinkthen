@@ -33,6 +33,11 @@ def main():
                 return out
 
             record = "thinkthen_record(text=>'Alpha.')"
+            before = int(backend.read('count'))
+            out, err = sql(host.socket, "SELECT thinkthen_reading(proxy=>'{}'::json)")
+            assert '42883' in err and 'does not exist' in err, (out, err)
+            assert int(backend.read('count')) == before
+
             query("SELECT count(*) FROM thinkthen_decide(NULL,ARRAY[NULL]::thinkthen_record[],thinkthen_reading(batch=>'bad'))")
             query("SELECT count(*) FROM thinkthen_decide('@not-read',NULL::thinkthen_record[],thinkthen_reading(batch=>'bad'))")
             failed = json.loads(query("SELECT to_jsonb(r) FROM thinkthen_decide('Fits?',ARRAY[" + record + ",NULL]) r"))

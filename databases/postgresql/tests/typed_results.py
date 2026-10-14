@@ -86,9 +86,10 @@ def native(rows, verb):
     values = [decode(row['result'], DEFINITIONS[roots[verb]]) for row in rows if row['result'] is not None]
     facts = next((decode(row['facts'], DEFINITIONS['completeFacts']) for row in rows if row['facts'] is not None), None)
     failure = next((decode(row['failure'], DEFINITIONS['completeError']) for row in rows if row['failure'] is not None), None)
-    events = [decode(event, DEFINITIONS['completesessionObservation']) for event in (rows[0].get('observations', []) if rows else [])]
+    raw_events = rows[0].get('observations', []) if rows else []
+    events = [decode(event, DEFINITIONS['completesessionObservation']) for event in raw_events]
     observations = []
-    for event in events:
+    for raw_event, event in zip(raw_events, events):
         if event['kind'] != 'question':
             observations.append(event)
             continue
@@ -103,6 +104,8 @@ def native(rows, verb):
                 item['images'] = original['images']
                 item['input'] = original.get('text')
             inputs.append(item)
+        if raw_event.get('inputs') is not None:
+            inputs = [{key: value for key, value in item.items() if key != 'input_present' and (value is not None or key == 'input')} for item in raw_event['inputs']]
         observations.append({**event, 'inputs': inputs, 'answer_id': detail.get('answer_id'),
                              'failure_id': detail.get('failure_id'), 'question_sources': detail['question_sources'],
                              'observations': detail['observations'], 'raw_pick': detail.get('raw_pick'),

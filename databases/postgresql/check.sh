@@ -172,7 +172,7 @@ echo "== package"
 	runtime_install "$RUN/artifact/lib" "$RUN/artifact/extension"
 	PACKAGE_LIB=$RUN/artifact/lib
 	PACKAGE_SQL=$RUN/artifact/extension/thinkthen--$EXT_VERSION.sql
-	if [ "$profile" != full ]; then STEPS=${STEPS:-shipped_lacks_probe no_home_in_library examples slide_sample plain_question_contract portable_batch_identity recognize_and_relate_as_drawn complete_question_resolution_keeps_privilege_and_content_boundaries client_reader_validates_file_formats complete_cases complete_request_contract_cases conformance find_inputs find_proxy_cases find_cancel find_signatures_are_owned_and_private the_fake_key_stays_in_the_environment token_variable_refuses_before_sending}; fi
+	if [ "$profile" != full ]; then STEPS=${STEPS:-shipped_lacks_probe no_home_in_library examples slide_sample plain_question_contract portable_batch_identity recognize_and_relate_as_drawn complete_question_resolution_keeps_privilege_and_content_boundaries client_reader_validates_file_formats complete_cases complete_request_contract_cases native_record_contract_cases conformance find_inputs find_proxy_cases find_cancel find_signatures_are_owned_and_private the_fake_key_stays_in_the_environment token_variable_refuses_before_sending}; fi
 }
 [ -n "${THINKTHEN_ARTIFACT:-}" ] || {
 	./pgrx-package-locked.sh --pg-config "$PG_CONFIG" >/dev/null
@@ -185,7 +185,7 @@ echo "== package"
 	PACKAGE_SQL=$SHIPPED$("$PG_CONFIG" --sharedir)/extension/thinkthen--$EXT_VERSION.sql
 }
 if [ "$profile" = full ]; then
-    STEPS=${STEPS:-shipped_lacks_probe no_home_in_library start_refuses_other_hosts examples slide_sample plain_question_contract portable_batch_identity recognize_and_relate_as_drawn complete_question_resolution_keeps_privilege_and_content_boundaries client_reader_validates_file_formats complete_cases complete_request_contract_cases complete_image_contract_cases find_inputs find_proxy_cases find_cancel find_signatures_are_owned_and_private the_fake_key_stays_in_the_environment token_variable_refuses_before_sending public_holds_nothing batch_signatures_are_extension_owned_and_private the_grant_reaches_the_extension_alone a_deliberate_grant_survives an_update_cannot_grant_public usage_persistence_status a_cancelled_send_counts_toward_the_total keyed_answers_reuse_without_sending keyed_banded_file_reuses single_cancel batch_cancel preload_forks_cleanly signal_masks single_statement_timeout a_timed_out_batch_leaves_the_session_working benign_interrupt_finishes single_deadline batch_deadline}
+    STEPS=${STEPS:-shipped_lacks_probe no_home_in_library start_refuses_other_hosts examples slide_sample plain_question_contract portable_batch_identity recognize_and_relate_as_drawn complete_question_resolution_keeps_privilege_and_content_boundaries client_reader_validates_file_formats complete_cases complete_request_contract_cases native_record_contract_cases complete_image_contract_cases find_inputs find_proxy_cases find_cancel find_signatures_are_owned_and_private the_fake_key_stays_in_the_environment token_variable_refuses_before_sending public_holds_nothing batch_signatures_are_extension_owned_and_private the_grant_reaches_the_extension_alone a_deliberate_grant_survives an_update_cannot_grant_public usage_persistence_status a_cancelled_send_counts_toward_the_total keyed_answers_reuse_without_sending keyed_banded_file_reuses single_cancel batch_cancel preload_forks_cleanly signal_masks single_statement_timeout a_timed_out_batch_leaves_the_session_working benign_interrupt_finishes single_deadline batch_deadline}
 fi
 cp fixtures/*.json "$DATA/"
 fresh generic
@@ -787,33 +787,34 @@ complete_question_resolution_keeps_privilege_and_content_boundaries() {
 	printf '{"decide":"private-complete-evidence"' >"$allowed/broken.json"
 	printf '{"decide":"Refund?","threshold":0.6}' >"$allowed/context.json"
 	fresh generic
-	q -c 'CREATE ROLE tt_complete LOGIN' -c 'GRANT EXECUTE ON FUNCTION thinkthen_decide_complete(text,text,text) TO tt_complete' >/dev/null
-	same "$(q -c "SELECT count(*) FROM pg_proc WHERE proname ~ '^thinkthen_(decide|choose|tag|score|filter|rank|find|annotate|recognize|relate)_complete$' AND pronargdefaults = 1 AND proparallel = 'r' AND NOT has_function_privilege('public', oid, 'EXECUTE')")" 10
+	q -c 'CREATE ROLE tt_complete LOGIN' -c 'GRANT EXECUTE ON FUNCTION thinkthen_decide(text,thinkthen_record[],thinkthen_reading) TO tt_complete' >/dev/null
+	q -c "$(q -c "SELECT 'GRANT EXECUTE ON FUNCTION ' || oid::regprocedure || ' TO tt_complete' FROM pg_proc WHERE proname = 'thinkthen_reading'")" >/dev/null
+	same "$(q -c "SELECT count(*) FROM pg_proc WHERE proname ~ '^thinkthen_(decide|choose|tag|score|filter|rank|find|annotate|recognize|relate)$' AND proargtypes[1] = 'thinkthen_record[]'::regtype AND pronargdefaults = 1 AND proparallel = 'r' AND NOT has_function_privilege('public', oid, 'EXECUTE')")" 10
 	# Metadata selection cannot disclose a missing/invalid catalog to an unauthorized role.
 	for name in '@@bad/name' '@@absent' '@missing.json'; do
-		has "$(PGUSER_AS=tt_complete q -c "SELECT thinkthen_decide_complete('$name','{\"records\":[]}')->'native'->'error'->>'message'")" "a named file needs pg_read_server_files"
+		has "$(PGUSER_AS=tt_complete q -c "SELECT (failure).message FROM thinkthen_decide('$name',ARRAY[]::thinkthen_record[])")" "a named file needs pg_read_server_files"
 	done
-	same "$(q -c "SELECT thinkthen_decide_complete('@@refund','{\"records\":[]}')->'native'->'error' IS NOT NULL")" f
-	same "$(q -c "SELECT thinkthen_decide_complete('@@bad/name','{\"records\":[]}')->'native'->'error'->>'kind'")" usage
+	same "$(q -c "SELECT failure IS NOT NULL FROM thinkthen_decide('@@refund',ARRAY[]::thinkthen_record[])")" f
+	same "$(q -c "SELECT (failure).kind FROM thinkthen_decide('@@bad/name',ARRAY[]::thinkthen_record[])")" usage
 	same "$(bcount)" 0
 	fresh generic "thinkthen.file_directory = '$allowed'"
-	same "$(PGUSER_AS=tt_complete q -c "SELECT thinkthen_decide_complete('@refund.json','{\"records\":[]}')->'native'->'error' IS NOT NULL")" f
-	same "$(PGUSER_AS=tt_complete q -c "SELECT thinkthen_decide_complete('@@refund','{\"records\":[]}')->'native'->'error'->>'kind'")" local
+	same "$(PGUSER_AS=tt_complete q -c "SELECT failure IS NOT NULL FROM thinkthen_decide('@refund.json',ARRAY[]::thinkthen_record[])")" f
+	same "$(PGUSER_AS=tt_complete q -c "SELECT (failure).kind FROM thinkthen_decide('@@refund',ARRAY[]::thinkthen_record[])")" local
 	ln -s refund.json "$allowed/symlink.json"
 	ln "$allowed/refund.json" "$allowed/hardlink.json"
 	ln -s "$catalog" "$allowed/hop"
 	mkfifo "$allowed/fifo"
 	python3 -c 'import pathlib,sys; pathlib.Path(sys.argv[1]).write_bytes(b" " * 1048577)' "$allowed/big.json"
 	for name in symlink.json hardlink.json hop/refund.json fifo big.json duplicate.json broken.json ../complete-questions/refund.json; do
-		kind=$(PGUSER_AS=tt_complete q -c "SELECT thinkthen_decide_complete('@$name','{\"records\":[]}')->'native'->'error'->>'kind'")
+		kind=$(PGUSER_AS=tt_complete q -c "SELECT (failure).kind FROM thinkthen_decide('@$name',ARRAY[]::thinkthen_record[])")
 		same "$kind" local
 	done
-	same "$(PGUSER_AS=tt_complete q -c "SELECT thinkthen_decide_complete('@wrong.json','{\"records\":[]}')->'native'->'error'->>'kind'")" usage
-	same "$(PGUSER_AS=tt_complete q -c "SELECT thinkthen_decide_complete('@context.json','{\"records\":[]}','{\"threshold\":0.7}')->'native'->'error'->>'kind'")" usage
-	same "$(PGUSER_AS=tt_complete q -c "SELECT thinkthen_decide_complete('@context.json','{\"records\":[]}','{\"context\":\" \"}')->'native'->'error'->>'kind'")" usage
+	same "$(PGUSER_AS=tt_complete q -c "SELECT (failure).kind FROM thinkthen_decide('@wrong.json',ARRAY[]::thinkthen_record[])")" usage
+	same "$(PGUSER_AS=tt_complete q -c "SELECT failure IS NOT NULL FROM thinkthen_decide('@context.json',ARRAY[]::thinkthen_record[],thinkthen_reading(threshold=>'0.7'))")" f
+	same "$(PGUSER_AS=tt_complete q -c "SELECT failure IS NOT NULL FROM thinkthen_decide('@context.json',ARRAY[]::thinkthen_record[],thinkthen_reading(context=>''))")" f
 	same "$(bcount)" 0
 	q -c 'GRANT pg_read_server_files TO tt_complete' >/dev/null
-	same "$(PGUSER_AS=tt_complete q -c "SELECT thinkthen_decide_complete('@@refund','{\"records\":[]}')->'native'->'error' IS NOT NULL")" f
+	same "$(PGUSER_AS=tt_complete q -c "SELECT failure IS NOT NULL FROM thinkthen_decide('@@refund',ARRAY[]::thinkthen_record[])")" f
 	same "$(bcount)" 0
 }
 check complete_question_resolution_keeps_privilege_and_content_boundaries
