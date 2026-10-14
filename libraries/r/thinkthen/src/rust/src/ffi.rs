@@ -205,10 +205,18 @@ fn tt_complete_error_native(error: Robj) -> Crossed<Robj> {
 
 #[extendr]
 fn tt_usage_counters() -> Crossed<Robj> {
-    crate::native_results::plain(
-        &serde_json::to_value(crate::engine()?.usage())
-            .map_err(|_| crate::defect("usage could not be converted"))?,
+    fn count(value: u64) -> Robj {
+        i32::try_from(value).map_or_else(|_| (value as f64).into(), Robj::from)
+    }
+    let usage = crate::engine()?.usage();
+    Ok(list!(
+        requests_sent = count(usage.requests_sent()),
+        retries = count(usage.retries()),
+        input_tokens = count(usage.input_tokens()),
+        output_tokens = count(usage.output_tokens()),
+        cache_answers = count(usage.cache_answers())
     )
+    .into())
 }
 
 #[extendr]

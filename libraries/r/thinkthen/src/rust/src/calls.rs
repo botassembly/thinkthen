@@ -169,6 +169,9 @@ impl State {
                     .get("value")
                     .ok_or_else(|| defect("session packet has no payload"))?
                     .clone();
+                if detail.get("kind").and_then(Value::as_str) != Some("question") {
+                    return Ok(false);
+                }
                 if let Some(index) = detail.get("index").and_then(Value::as_u64)
                     && let Some(position) = self
                         .positions
