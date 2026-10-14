@@ -462,3 +462,61 @@ fn lazy_dynamic_choices_recover_in_one_pack_with_each_records_actual_candidates(
         json!({"d":null,"c":null})
     );
 }
+
+#[test]
+fn declared_file_source_yields_located_prefix_before_reading_invalid_utf8_suffix() {
+    let path = std::path::PathBuf::from(env!("CARGO_TARGET_TMPDIR"))
+        .join(format!("recovering-source-{}.txt", std::process::id()));
+    std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+    std::fs::write(&path, b"first\n\xff\nunread\n").unwrap();
+    let listener = Listener::answering(response).unwrap();
+    let engine = api::loopback(listener.base(), "sk-source-recovery");
+    let request = Request::for_function(
+        RequestFunction::Decide,
+        RequestArguments {
+            question: RequestQuestion::Definition {
+                value: Question::decide("Does it pass?").unwrap().cut().into(),
+            },
+            input: RequestInput::Source {
+                source: thinkthen::RequestSource {
+                    paths: vec![path.clone()],
+                    reading: ReaderOptions {
+                        unit: thinkthen::SourceUnit::Line,
+                        window: None,
+                    },
+                    framing: None,
+                    media: thinkthen::ReaderMedia::Text,
+                },
+            },
+            options: RequestOptions::default(),
+        },
+    )
+    .admit()
+    .unwrap();
+    let rows = RefCell::new(Vec::new());
+    let error = engine
+        .execute_request_recovering_sink(
+            &request,
+            RequestEnvironment {
+                controls: api::dynamic_one(),
+                feed: None,
+            },
+            &|row| rows.borrow_mut().push(row),
+        )
+        .unwrap_err();
+    std::fs::remove_file(&path).unwrap();
+    assert_eq!(error.kind(), ErrorKind::Local);
+    assert_eq!(rows.borrow().len(), 1);
+    let rows = rows.into_inner();
+    let RequestValue::Decisions(values) = rows[0].outcome().unwrap() else {
+        panic!("located source decision");
+    };
+    let QuestionInput::Record(original) = values[0].original() else {
+        panic!("located source original");
+    };
+    assert_eq!(original.location().unwrap().file(), path.to_str().unwrap());
+    assert_eq!(original.location().unwrap().first_line(), Some(1));
+    assert_eq!(error.facts().unwrap().records(), 1);
+    assert_eq!(error.facts().unwrap().requests_sent(), 1);
+    assert_eq!(listener.count(), 1);
+}
