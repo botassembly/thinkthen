@@ -1,3 +1,4 @@
+//! Stays: the private rank_set_complete_with, execute_relate_records_complete_with, try_find_complete_with, decide_input_complete_with and try_choose_dynamic_records_complete_with primitives preserve opaque caller ownership that public carriers cannot show.
 //! Complete ownership contracts that require opaque caller originals.
 use crate::{
     CallOptions, Engine, ErrorKind, InputEvidence, Question, QuestionInput, RankSet, RawRecord,
