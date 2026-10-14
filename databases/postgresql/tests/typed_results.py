@@ -92,9 +92,12 @@ def native(rows, verb):
     completed = [row for row in rows if row['result'] is not None]
     if verb == 'rank':
         completed.sort(key=lambda row: row['result']['value'])
-    if verb == 'relate':
-        completed = list({json.dumps(row['result'], sort_keys=True): row for row in completed}.values())
     values = [decode(row['result'], DEFINITIONS[roots[verb]]) for row in completed]
+    if verb == 'relate' and values:
+        retained = {key: child for key, child in values[0].items() if key != 'value'}
+        assert all({key: child for key, child in value.items() if key != 'value'} == retained for value in values), values
+        assert all(len(value['value']) == 1 for value in values), values
+        values = [{**retained, 'value': [value['value'][0] for value in values]}]
     facts = next((decode(row['facts'], DEFINITIONS['completeFacts']) for row in rows if row['facts'] is not None), None)
     failure = next((decode(row['failure'], DEFINITIONS['completeError']) for row in rows if row['failure'] is not None), None)
     raw_events = list({json.dumps(event, sort_keys=True): event for row in rows for event in row.get('observations', [])}.values())
