@@ -329,11 +329,12 @@ def answer_helpers(definitions):
                       'if (terminal.failure.state == TTPresenceValue) { if (error) *error = TTFailureForCall(terminal.failure.value, call); return nil; }',
                       'NSMutableArray *values = [NSMutableArray array];',
                       'if (terminal) for (TTSessionPacket *packet in packets) { NSDictionary *fields = packet.rawFields; if (![fields[@"function"] isEqual:function]) continue; id value;',
-                      'if ([function isEqual:@"filter"]) { if ([fields[@"kind"] isEqual:@"row"]) [values addObject:fields[@"value"]]; continue; }',
+                      'BOOL rowAnswer = [function isEqual:@"filter"] || [function isEqual:@"annotate"];',
+                      'if (rowAnswer) { if ([fields[@"kind"] isEqual:@"row"]) [values addObject:fields[@"value"]]; continue; }',
                       'if (!judgment.length) { if (![fields[@"kind"] isEqual:@"aggregate"]) continue; value = fields[@"value"]; } else {',
                       'if (!(' + checks + ')) continue; NSDictionary *carrier = ' + at(route) + '; if (![carrier[@"kind"] isEqual:judgment]) continue; value = carrier[@"value"];',
                       '} if (value) [values addObject:value]; }',
-                      'if ([function isEqual:@"filter"] && [((TTCall *)call).function isEqual:function]) return [values copy];',
+                      'if (([function isEqual:@"filter"] || [function isEqual:@"annotate"]) && [((TTCall *)call).function isEqual:function]) return [values copy];',
                       'if (values.count != 1) { if (error) *error = [NSError errorWithDomain:TTAnswerErrorDomain code:1 userInfo:@{NSLocalizedDescriptionKey:@"Expected exactly one successful answer", @"ThinkThenFunction":function, @"ThinkThenAnswerCount":@(values.count), @"ThinkThenCall":call}]; return nil; }',
                       'return values[0];', '}']
     answers = {function: (payload, '') for function, _, payload in aggregate_answers(definitions)}
