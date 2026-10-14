@@ -840,3 +840,93 @@ fn records_column_refuses_original_fields_missing_from_the_typed_column() {
         "no original field is silently dropped before sending"
     );
 }
+
+#[test]
+fn relation_records_keep_generated_member_question_text_and_whole_set_probabilities() {
+    use thinkthen::polars::prelude::IntoSeries;
+    use thinkthen::{RawRecord, RecordReading, RequestDefinition, RequestFunction};
+    let listener = Listener::answering(|_| Canned::ok(r#"{"model":"jev-latest","answers":{"q1":{"type":"noul","noul":0.9},"q2":{"type":"noul","noul":0.8}}}"#)).expect("listener");
+    let engine = common::builder(listener.base())
+        .no_cache()
+        .build()
+        .expect("engine");
+    let question = Relate::from_json(r#"{"version":1,"relate":{"relations":[{"name":"knows","source":"person","target":"person"}]}}"#).expect("relation");
+    let reading = RecordReading::new(&[], None, None).expect("reading");
+    let inputs = ["Ada", "Bo"]
+        .into_iter()
+        .map(|name| {
+            let original =
+                RawRecord::json(&serde_json::json!({"name":name,"kind":"person"}).to_string())
+                    .expect("original");
+            Some(reading.compose(original).expect("record"))
+        })
+        .collect();
+    let column = DataFrame::new(
+        2,
+        vec![
+            Series::new("name".into(), ["Ada", "Bo"]).into(),
+            Series::new("kind".into(), ["person", "person"]).into(),
+        ],
+    )
+    .expect("originals")
+    .into_struct("original".into())
+    .into_series();
+    let call = engine
+        .records_column(
+            RequestFunction::Relate,
+            &RequestDefinition::from(question),
+            &column,
+            inputs,
+            CallOptions::new(),
+        )
+        .expect("records");
+    let records = call
+        .value()
+        .column("records")
+        .expect("records")
+        .struct_()
+        .expect("Struct");
+    assert_eq!(records.len(), 1);
+    let answer = records.field_by_name("answer").expect("answer");
+    let relations = answer
+        .struct_()
+        .expect("answer Struct")
+        .field_by_name("relations")
+        .expect("relations");
+    let members = relations
+        .list()
+        .expect("members List")
+        .get_as_series(0)
+        .expect("members");
+    let questions = members
+        .struct_()
+        .expect("members Struct")
+        .field_by_name("question")
+        .expect("questions");
+    let text = questions
+        .struct_()
+        .expect("question Struct")
+        .field_by_name("text")
+        .expect("text");
+    assert_eq!(
+        text.str().expect("String").into_iter().collect::<Vec<_>>(),
+        [
+            Some("Is it true that i1 knows i2?"),
+            Some("Is it true that i2 knows i1?")
+        ]
+    );
+    assert_eq!(
+        call.probability()
+            .list()
+            .expect("probability List")
+            .get_as_series(0)
+            .expect("edge probabilities")
+            .f64()
+            .expect("Float64")
+            .into_iter()
+            .collect::<Vec<_>>(),
+        [Some(0.9), Some(0.8)]
+    );
+    assert_eq!(call.facts().requests_sent(), 1);
+    assert_eq!(listener.count(), 1);
+}
