@@ -67,8 +67,8 @@ func (v OwnedAnnotationMemberAnswerId) AnswerId() Presence[OwnedAnswerId] {
 func (v OwnedAnnotationMemberAnswerId) Observations() Presence[[]OwnedObservation] {
 	return ownedMember[[]OwnedObservation](v.raw, "observations")
 }
-func (v OwnedAnnotationMemberAnswerId) Question() Presence[OwnedReadableQuestion] {
-	return ownedMember[OwnedReadableQuestion](v.raw, "question")
+func (v OwnedAnnotationMemberAnswerId) Question() Presence[OwnedQuestionDocument] {
+	return ownedMember[OwnedQuestionDocument](v.raw, "question")
 }
 func (v OwnedAnnotationMemberAnswerId) QuestionSources() Presence[[]OwnedQuestionSource] {
 	return ownedMember[[]OwnedQuestionSource](v.raw, "question_sources")
@@ -97,8 +97,8 @@ func (v OwnedAnnotationMemberFailureId) FailureId() Presence[OwnedFailureId] {
 func (v OwnedAnnotationMemberFailureId) Observations() Presence[[]OwnedObservation] {
 	return ownedMember[[]OwnedObservation](v.raw, "observations")
 }
-func (v OwnedAnnotationMemberFailureId) Question() Presence[OwnedReadableQuestion] {
-	return ownedMember[OwnedReadableQuestion](v.raw, "question")
+func (v OwnedAnnotationMemberFailureId) Question() Presence[OwnedQuestionDocument] {
+	return ownedMember[OwnedQuestionDocument](v.raw, "question")
 }
 func (v OwnedAnnotationMemberFailureId) QuestionSources() Presence[[]OwnedQuestionSource] {
 	return ownedMember[[]OwnedQuestionSource](v.raw, "question_sources")
@@ -218,8 +218,8 @@ func (v OwnedAtomicArrayOfString) Members() Presence[[]OwnedRankMember] {
 func (v OwnedAtomicArrayOfString) Meta() Presence[OwnedMeta] {
 	return ownedMember[OwnedMeta](v.raw, "meta")
 }
-func (v OwnedAtomicArrayOfString) Question() Presence[OwnedReadableQuestion] {
-	return ownedMember[OwnedReadableQuestion](v.raw, "question")
+func (v OwnedAtomicArrayOfString) Question() Presence[OwnedQuestionDocument] {
+	return ownedMember[OwnedQuestionDocument](v.raw, "question")
 }
 func (v OwnedAtomicArrayOfString) QuestionName() Presence[string] {
 	return ownedMember[string](v.raw, "question_name")
@@ -258,8 +258,8 @@ func (v OwnedAtomicDecideValue) Members() Presence[[]OwnedRankMember] {
 func (v OwnedAtomicDecideValue) Meta() Presence[OwnedMeta] {
 	return ownedMember[OwnedMeta](v.raw, "meta")
 }
-func (v OwnedAtomicDecideValue) Question() Presence[OwnedReadableQuestion] {
-	return ownedMember[OwnedReadableQuestion](v.raw, "question")
+func (v OwnedAtomicDecideValue) Question() Presence[OwnedQuestionDocument] {
+	return ownedMember[OwnedQuestionDocument](v.raw, "question")
 }
 func (v OwnedAtomicDecideValue) QuestionName() Presence[string] {
 	return ownedMember[string](v.raw, "question_name")
@@ -298,8 +298,8 @@ func (v OwnedAtomicNonZeroUsize) Members() Presence[[]OwnedRankMember] {
 func (v OwnedAtomicNonZeroUsize) Meta() Presence[OwnedMeta] {
 	return ownedMember[OwnedMeta](v.raw, "meta")
 }
-func (v OwnedAtomicNonZeroUsize) Question() Presence[OwnedReadableQuestion] {
-	return ownedMember[OwnedReadableQuestion](v.raw, "question")
+func (v OwnedAtomicNonZeroUsize) Question() Presence[OwnedQuestionDocument] {
+	return ownedMember[OwnedQuestionDocument](v.raw, "question")
 }
 func (v OwnedAtomicNonZeroUsize) QuestionName() Presence[string] {
 	return ownedMember[string](v.raw, "question_name")
@@ -338,8 +338,8 @@ func (v OwnedAtomicNullableString) Members() Presence[[]OwnedRankMember] {
 func (v OwnedAtomicNullableString) Meta() Presence[OwnedMeta] {
 	return ownedMember[OwnedMeta](v.raw, "meta")
 }
-func (v OwnedAtomicNullableString) Question() Presence[OwnedReadableQuestion] {
-	return ownedMember[OwnedReadableQuestion](v.raw, "question")
+func (v OwnedAtomicNullableString) Question() Presence[OwnedQuestionDocument] {
+	return ownedMember[OwnedQuestionDocument](v.raw, "question")
 }
 func (v OwnedAtomicNullableString) QuestionName() Presence[string] {
 	return ownedMember[string](v.raw, "question_name")
@@ -376,8 +376,8 @@ func (v OwnedAtomicBoolean) Members() Presence[[]OwnedRankMember] {
 	return ownedMember[[]OwnedRankMember](v.raw, "members")
 }
 func (v OwnedAtomicBoolean) Meta() Presence[OwnedMeta] { return ownedMember[OwnedMeta](v.raw, "meta") }
-func (v OwnedAtomicBoolean) Question() Presence[OwnedReadableQuestion] {
-	return ownedMember[OwnedReadableQuestion](v.raw, "question")
+func (v OwnedAtomicBoolean) Question() Presence[OwnedQuestionDocument] {
+	return ownedMember[OwnedQuestionDocument](v.raw, "question")
 }
 func (v OwnedAtomicBoolean) QuestionName() Presence[string] {
 	return ownedMember[string](v.raw, "question_name")
@@ -412,8 +412,8 @@ func (v OwnedAtomicDouble) Members() Presence[[]OwnedRankMember] {
 	return ownedMember[[]OwnedRankMember](v.raw, "members")
 }
 func (v OwnedAtomicDouble) Meta() Presence[OwnedMeta] { return ownedMember[OwnedMeta](v.raw, "meta") }
-func (v OwnedAtomicDouble) Question() Presence[OwnedReadableQuestion] {
-	return ownedMember[OwnedReadableQuestion](v.raw, "question")
+func (v OwnedAtomicDouble) Question() Presence[OwnedQuestionDocument] {
+	return ownedMember[OwnedQuestionDocument](v.raw, "question")
 }
 func (v OwnedAtomicDouble) QuestionName() Presence[string] {
 	return ownedMember[string](v.raw, "question_name")
@@ -640,8 +640,8 @@ func (v OwnedFind) Meta() Presence[OwnedMeta] { return ownedMember[OwnedMeta](v.
 func (v OwnedFind) Position() Presence[OwnedPosition] {
 	return ownedMember[OwnedPosition](v.raw, "position")
 }
-func (v OwnedFind) Question() Presence[OwnedReadableQuestion2] {
-	return ownedMember[OwnedReadableQuestion2](v.raw, "question")
+func (v OwnedFind) Question() Presence[OwnedFindQuestionDocument] {
+	return ownedMember[OwnedFindQuestionDocument](v.raw, "question")
 }
 func (v OwnedFind) Schema() Presence[OwnedVersion] { return ownedMember[OwnedVersion](v.raw, "schema") }
 func (v OwnedFind) Threshold() Presence[any]       { return ownedMember[any](v.raw, "threshold") }
@@ -920,8 +920,8 @@ func (v OwnedRankMemberResult) Images() Presence[[]OwnedImage] {
 func (v OwnedRankMemberResult) Meta() Presence[OwnedMeta] {
 	return ownedMember[OwnedMeta](v.raw, "meta")
 }
-func (v OwnedRankMemberResult) Question() Presence[OwnedReadableQuestion] {
-	return ownedMember[OwnedReadableQuestion](v.raw, "question")
+func (v OwnedRankMemberResult) Question() Presence[OwnedQuestionDocument] {
+	return ownedMember[OwnedQuestionDocument](v.raw, "question")
 }
 func (v OwnedRankMemberResult) Schema() Presence[OwnedVersion] {
 	return ownedMember[OwnedVersion](v.raw, "schema")
@@ -933,297 +933,6 @@ func (v OwnedRankMemberResult) Threshold() Presence[any] { return ownedMember[an
 func (v OwnedRankMemberResult) Value() Presence[json.Number] {
 	return ownedMember[json.Number](v.raw, "value")
 }
-
-type OwnedReadableQuestion struct{ ownedJSON }
-
-func (v OwnedReadableQuestion) AsReadableQuestionDecide() (OwnedReadableQuestionDecide, error) {
-	if !(ownedLiteral(v.raw, "verb", "decide")) {
-		return OwnedReadableQuestionDecide{}, errOwnedAlternative
-	}
-	return ownedDecode[OwnedReadableQuestionDecide](v.raw)
-}
-func (v OwnedReadableQuestion) AsReadableQuestionChoose() (OwnedReadableQuestionChoose, error) {
-	if !(ownedLiteral(v.raw, "verb", "choose")) {
-		return OwnedReadableQuestionChoose{}, errOwnedAlternative
-	}
-	return ownedDecode[OwnedReadableQuestionChoose](v.raw)
-}
-func (v OwnedReadableQuestion) AsReadableQuestionTag() (OwnedReadableQuestionTag, error) {
-	if !(ownedLiteral(v.raw, "verb", "tag")) {
-		return OwnedReadableQuestionTag{}, errOwnedAlternative
-	}
-	return ownedDecode[OwnedReadableQuestionTag](v.raw)
-}
-func (v OwnedReadableQuestion) AsReadableQuestionScore() (OwnedReadableQuestionScore, error) {
-	if !(ownedLiteral(v.raw, "verb", "score")) {
-		return OwnedReadableQuestionScore{}, errOwnedAlternative
-	}
-	return ownedDecode[OwnedReadableQuestionScore](v.raw)
-}
-
-type OwnedReadableQuestion2 struct{ ownedJSON }
-
-func (v OwnedReadableQuestion2) Batch() Presence[OwnedBatch] {
-	return ownedMember[OwnedBatch](v.raw, "batch")
-}
-func (v OwnedReadableQuestion2) ContextSchema() Presence[OwnedInputDeclaration] {
-	return ownedMember[OwnedInputDeclaration](v.raw, "context_schema")
-}
-func (v OwnedReadableQuestion2) ItemSchema() Presence[OwnedInputDeclaration] {
-	return ownedMember[OwnedInputDeclaration](v.raw, "item_schema")
-}
-func (v OwnedReadableQuestion2) LabelDetails() Presence[[]OwnedLabel] {
-	return ownedMember[[]OwnedLabel](v.raw, "label_details")
-}
-func (v OwnedReadableQuestion2) Model() Presence[string] { return ownedMember[string](v.raw, "model") }
-func (v OwnedReadableQuestion2) Name() Presence[OwnedQuestionName] {
-	return ownedMember[OwnedQuestionName](v.raw, "name")
-}
-func (v OwnedReadableQuestion2) None() Presence[bool]   { return ownedMember[bool](v.raw, "none") }
-func (v OwnedReadableQuestion2) On() Presence[[]string] { return ownedMember[[]string](v.raw, "on") }
-func (v OwnedReadableQuestion2) Profile() Presence[string] {
-	return ownedMember[string](v.raw, "profile")
-}
-func (v OwnedReadableQuestion2) Text() Presence[any] { return ownedMember[any](v.raw, "text") }
-func (v OwnedReadableQuestion2) Verb() Presence[any] { return ownedMember[any](v.raw, "verb") }
-func (v OwnedReadableQuestion2) WordingVersion() Presence[OwnedWordingVersion] {
-	return ownedMember[OwnedWordingVersion](v.raw, "wording_version")
-}
-
-type OwnedReadableQuestion3 struct{ ownedJSON }
-
-func (v OwnedReadableQuestion3) Batch() Presence[OwnedBatch] {
-	return ownedMember[OwnedBatch](v.raw, "batch")
-}
-func (v OwnedReadableQuestion3) ContextSchema() Presence[OwnedInputDeclaration] {
-	return ownedMember[OwnedInputDeclaration](v.raw, "context_schema")
-}
-func (v OwnedReadableQuestion3) EntityDefinition() Presence[any] {
-	return ownedMember[any](v.raw, "entity_definition")
-}
-func (v OwnedReadableQuestion3) Instructions() Presence[any] {
-	return ownedMember[any](v.raw, "instructions")
-}
-func (v OwnedReadableQuestion3) ItemSchema() Presence[OwnedInputDeclaration] {
-	return ownedMember[OwnedInputDeclaration](v.raw, "item_schema")
-}
-func (v OwnedReadableQuestion3) Kinds() Presence[map[string]any] {
-	return ownedMember[map[string]any](v.raw, "kinds")
-}
-func (v OwnedReadableQuestion3) LabelDetails() Presence[[]OwnedLabel] {
-	return ownedMember[[]OwnedLabel](v.raw, "label_details")
-}
-func (v OwnedReadableQuestion3) Mode() Presence[OwnedRecognitionMode] {
-	return ownedMember[OwnedRecognitionMode](v.raw, "mode")
-}
-func (v OwnedReadableQuestion3) Model() Presence[string] { return ownedMember[string](v.raw, "model") }
-func (v OwnedReadableQuestion3) Name() Presence[OwnedQuestionName] {
-	return ownedMember[OwnedQuestionName](v.raw, "name")
-}
-func (v OwnedReadableQuestion3) On() Presence[[]string] { return ownedMember[[]string](v.raw, "on") }
-func (v OwnedReadableQuestion3) Profile() Presence[string] {
-	return ownedMember[string](v.raw, "profile")
-}
-func (v OwnedReadableQuestion3) RelationThreshold() Presence[OwnedThreshold] {
-	return ownedMember[OwnedThreshold](v.raw, "relation_threshold")
-}
-func (v OwnedReadableQuestion3) Relations() Presence[[]OwnedRelationRule] {
-	return ownedMember[[]OwnedRelationRule](v.raw, "relations")
-}
-func (v OwnedReadableQuestion3) SnippetPieces() Presence[json.Number] {
-	return ownedMember[json.Number](v.raw, "snippet_pieces")
-}
-func (v OwnedReadableQuestion3) StageContext() Presence[OwnedRecognitionStageContext] {
-	return ownedMember[OwnedRecognitionStageContext](v.raw, "stage_context")
-}
-func (v OwnedReadableQuestion3) Threshold() Presence[OwnedThreshold] {
-	return ownedMember[OwnedThreshold](v.raw, "threshold")
-}
-func (v OwnedReadableQuestion3) Verb() Presence[OwnedVerb] {
-	return ownedMember[OwnedVerb](v.raw, "verb")
-}
-func (v OwnedReadableQuestion3) WordingVersion() Presence[OwnedWordingVersion] {
-	return ownedMember[OwnedWordingVersion](v.raw, "wording_version")
-}
-
-type OwnedReadableQuestion4 struct{ ownedJSON }
-
-func (v OwnedReadableQuestion4) Batch() Presence[OwnedBatch] {
-	return ownedMember[OwnedBatch](v.raw, "batch")
-}
-func (v OwnedReadableQuestion4) ContextSchema() Presence[OwnedInputDeclaration] {
-	return ownedMember[OwnedInputDeclaration](v.raw, "context_schema")
-}
-func (v OwnedReadableQuestion4) Fields() Presence[OwnedRelateFields] {
-	return ownedMember[OwnedRelateFields](v.raw, "fields")
-}
-func (v OwnedReadableQuestion4) ItemSchema() Presence[OwnedInputDeclaration] {
-	return ownedMember[OwnedInputDeclaration](v.raw, "item_schema")
-}
-func (v OwnedReadableQuestion4) LabelDetails() Presence[[]OwnedLabel] {
-	return ownedMember[[]OwnedLabel](v.raw, "label_details")
-}
-func (v OwnedReadableQuestion4) Model() Presence[string] { return ownedMember[string](v.raw, "model") }
-func (v OwnedReadableQuestion4) Name() Presence[OwnedQuestionName] {
-	return ownedMember[OwnedQuestionName](v.raw, "name")
-}
-func (v OwnedReadableQuestion4) On() Presence[[]string] { return ownedMember[[]string](v.raw, "on") }
-func (v OwnedReadableQuestion4) Profile() Presence[string] {
-	return ownedMember[string](v.raw, "profile")
-}
-func (v OwnedReadableQuestion4) Relations() Presence[[]OwnedRelationRule] {
-	return ownedMember[[]OwnedRelationRule](v.raw, "relations")
-}
-func (v OwnedReadableQuestion4) Threshold() Presence[OwnedThreshold] {
-	return ownedMember[OwnedThreshold](v.raw, "threshold")
-}
-func (v OwnedReadableQuestion4) Verb() Presence[any] { return ownedMember[any](v.raw, "verb") }
-func (v OwnedReadableQuestion4) WordingVersion() Presence[OwnedWordingVersion] {
-	return ownedMember[OwnedWordingVersion](v.raw, "wording_version")
-}
-
-type OwnedReadableQuestionChoose struct{ ownedJSON }
-
-func (v OwnedReadableQuestionChoose) Batch() Presence[OwnedBatch] {
-	return ownedMember[OwnedBatch](v.raw, "batch")
-}
-func (v OwnedReadableQuestionChoose) ContextSchema() Presence[OwnedInputDeclaration] {
-	return ownedMember[OwnedInputDeclaration](v.raw, "context_schema")
-}
-func (v OwnedReadableQuestionChoose) ItemSchema() Presence[OwnedInputDeclaration] {
-	return ownedMember[OwnedInputDeclaration](v.raw, "item_schema")
-}
-func (v OwnedReadableQuestionChoose) LabelDetails() Presence[[]OwnedLabel] {
-	return ownedMember[[]OwnedLabel](v.raw, "label_details")
-}
-func (v OwnedReadableQuestionChoose) Model() Presence[string] {
-	return ownedMember[string](v.raw, "model")
-}
-func (v OwnedReadableQuestionChoose) Name() Presence[OwnedQuestionName] {
-	return ownedMember[OwnedQuestionName](v.raw, "name")
-}
-func (v OwnedReadableQuestionChoose) On() Presence[[]string] {
-	return ownedMember[[]string](v.raw, "on")
-}
-func (v OwnedReadableQuestionChoose) Profile() Presence[string] {
-	return ownedMember[string](v.raw, "profile")
-}
-func (v OwnedReadableQuestionChoose) WordingVersion() Presence[OwnedWordingVersion] {
-	return ownedMember[OwnedWordingVersion](v.raw, "wording_version")
-}
-func (v OwnedReadableQuestionChoose) Options() Presence[[]string] {
-	return ownedMember[[]string](v.raw, "options")
-}
-func (v OwnedReadableQuestionChoose) Text() Presence[any] { return ownedMember[any](v.raw, "text") }
-func (v OwnedReadableQuestionChoose) Verb() Presence[string] {
-	return ownedMember[string](v.raw, "verb")
-}
-
-type OwnedReadableQuestionDecide struct{ ownedJSON }
-
-func (v OwnedReadableQuestionDecide) Batch() Presence[OwnedBatch] {
-	return ownedMember[OwnedBatch](v.raw, "batch")
-}
-func (v OwnedReadableQuestionDecide) ContextSchema() Presence[OwnedInputDeclaration] {
-	return ownedMember[OwnedInputDeclaration](v.raw, "context_schema")
-}
-func (v OwnedReadableQuestionDecide) ItemSchema() Presence[OwnedInputDeclaration] {
-	return ownedMember[OwnedInputDeclaration](v.raw, "item_schema")
-}
-func (v OwnedReadableQuestionDecide) LabelDetails() Presence[[]OwnedLabel] {
-	return ownedMember[[]OwnedLabel](v.raw, "label_details")
-}
-func (v OwnedReadableQuestionDecide) Model() Presence[string] {
-	return ownedMember[string](v.raw, "model")
-}
-func (v OwnedReadableQuestionDecide) Name() Presence[OwnedQuestionName] {
-	return ownedMember[OwnedQuestionName](v.raw, "name")
-}
-func (v OwnedReadableQuestionDecide) On() Presence[[]string] {
-	return ownedMember[[]string](v.raw, "on")
-}
-func (v OwnedReadableQuestionDecide) Profile() Presence[string] {
-	return ownedMember[string](v.raw, "profile")
-}
-func (v OwnedReadableQuestionDecide) WordingVersion() Presence[OwnedWordingVersion] {
-	return ownedMember[OwnedWordingVersion](v.raw, "wording_version")
-}
-func (v OwnedReadableQuestionDecide) False() Presence[any] { return ownedMember[any](v.raw, "false") }
-func (v OwnedReadableQuestionDecide) Text() Presence[any]  { return ownedMember[any](v.raw, "text") }
-func (v OwnedReadableQuestionDecide) True() Presence[any]  { return ownedMember[any](v.raw, "true") }
-func (v OwnedReadableQuestionDecide) Verb() Presence[string] {
-	return ownedMember[string](v.raw, "verb")
-}
-
-type OwnedReadableQuestionScore struct{ ownedJSON }
-
-func (v OwnedReadableQuestionScore) Batch() Presence[OwnedBatch] {
-	return ownedMember[OwnedBatch](v.raw, "batch")
-}
-func (v OwnedReadableQuestionScore) ContextSchema() Presence[OwnedInputDeclaration] {
-	return ownedMember[OwnedInputDeclaration](v.raw, "context_schema")
-}
-func (v OwnedReadableQuestionScore) ItemSchema() Presence[OwnedInputDeclaration] {
-	return ownedMember[OwnedInputDeclaration](v.raw, "item_schema")
-}
-func (v OwnedReadableQuestionScore) LabelDetails() Presence[[]OwnedLabel] {
-	return ownedMember[[]OwnedLabel](v.raw, "label_details")
-}
-func (v OwnedReadableQuestionScore) Model() Presence[string] {
-	return ownedMember[string](v.raw, "model")
-}
-func (v OwnedReadableQuestionScore) Name() Presence[OwnedQuestionName] {
-	return ownedMember[OwnedQuestionName](v.raw, "name")
-}
-func (v OwnedReadableQuestionScore) On() Presence[[]string] {
-	return ownedMember[[]string](v.raw, "on")
-}
-func (v OwnedReadableQuestionScore) Profile() Presence[string] {
-	return ownedMember[string](v.raw, "profile")
-}
-func (v OwnedReadableQuestionScore) WordingVersion() Presence[OwnedWordingVersion] {
-	return ownedMember[OwnedWordingVersion](v.raw, "wording_version")
-}
-func (v OwnedReadableQuestionScore) Levels() Presence[[]string] {
-	return ownedMember[[]string](v.raw, "levels")
-}
-func (v OwnedReadableQuestionScore) Text() Presence[any] { return ownedMember[any](v.raw, "text") }
-func (v OwnedReadableQuestionScore) Verb() Presence[string] {
-	return ownedMember[string](v.raw, "verb")
-}
-
-type OwnedReadableQuestionTag struct{ ownedJSON }
-
-func (v OwnedReadableQuestionTag) Batch() Presence[OwnedBatch] {
-	return ownedMember[OwnedBatch](v.raw, "batch")
-}
-func (v OwnedReadableQuestionTag) ContextSchema() Presence[OwnedInputDeclaration] {
-	return ownedMember[OwnedInputDeclaration](v.raw, "context_schema")
-}
-func (v OwnedReadableQuestionTag) ItemSchema() Presence[OwnedInputDeclaration] {
-	return ownedMember[OwnedInputDeclaration](v.raw, "item_schema")
-}
-func (v OwnedReadableQuestionTag) LabelDetails() Presence[[]OwnedLabel] {
-	return ownedMember[[]OwnedLabel](v.raw, "label_details")
-}
-func (v OwnedReadableQuestionTag) Model() Presence[string] {
-	return ownedMember[string](v.raw, "model")
-}
-func (v OwnedReadableQuestionTag) Name() Presence[OwnedQuestionName] {
-	return ownedMember[OwnedQuestionName](v.raw, "name")
-}
-func (v OwnedReadableQuestionTag) On() Presence[[]string] { return ownedMember[[]string](v.raw, "on") }
-func (v OwnedReadableQuestionTag) Profile() Presence[string] {
-	return ownedMember[string](v.raw, "profile")
-}
-func (v OwnedReadableQuestionTag) WordingVersion() Presence[OwnedWordingVersion] {
-	return ownedMember[OwnedWordingVersion](v.raw, "wording_version")
-}
-func (v OwnedReadableQuestionTag) Labels() Presence[[]string] {
-	return ownedMember[[]string](v.raw, "labels")
-}
-func (v OwnedReadableQuestionTag) Text() Presence[any]    { return ownedMember[any](v.raw, "text") }
-func (v OwnedReadableQuestionTag) Verb() Presence[string] { return ownedMember[string](v.raw, "verb") }
 
 type OwnedRecognition struct{ ownedJSON }
 
@@ -1248,8 +957,8 @@ func (v OwnedRecognition) Meta() Presence[OwnedMeta] { return ownedMember[OwnedM
 func (v OwnedRecognition) Position() Presence[OwnedPosition] {
 	return ownedMember[OwnedPosition](v.raw, "position")
 }
-func (v OwnedRecognition) Question() Presence[OwnedReadableQuestion3] {
-	return ownedMember[OwnedReadableQuestion3](v.raw, "question")
+func (v OwnedRecognition) Question() Presence[OwnedRecognizeQuestionDocument] {
+	return ownedMember[OwnedRecognizeQuestionDocument](v.raw, "question")
 }
 func (v OwnedRecognition) Schema() Presence[OwnedVersion] {
 	return ownedMember[OwnedVersion](v.raw, "schema")
@@ -1375,8 +1084,8 @@ func (v OwnedRelation) Meta() Presence[OwnedMeta] { return ownedMember[OwnedMeta
 func (v OwnedRelation) Position() Presence[OwnedPosition] {
 	return ownedMember[OwnedPosition](v.raw, "position")
 }
-func (v OwnedRelation) Question() Presence[OwnedReadableQuestion4] {
-	return ownedMember[OwnedReadableQuestion4](v.raw, "question")
+func (v OwnedRelation) Question() Presence[OwnedRelateQuestionDocument] {
+	return ownedMember[OwnedRelateQuestionDocument](v.raw, "question")
 }
 func (v OwnedRelation) Schema() Presence[OwnedVersion] {
 	return ownedMember[OwnedVersion](v.raw, "schema")
@@ -1458,8 +1167,8 @@ func (v OwnedRelationMemberAnswerId) Method() Presence[OwnedRelationMethod] {
 func (v OwnedRelationMemberAnswerId) Observations() Presence[[]OwnedObservation] {
 	return ownedMember[[]OwnedObservation](v.raw, "observations")
 }
-func (v OwnedRelationMemberAnswerId) Question() Presence[OwnedReadableQuestion] {
-	return ownedMember[OwnedReadableQuestion](v.raw, "question")
+func (v OwnedRelationMemberAnswerId) Question() Presence[OwnedQuestionDocument] {
+	return ownedMember[OwnedQuestionDocument](v.raw, "question")
 }
 func (v OwnedRelationMemberAnswerId) QuestionSources() Presence[[]OwnedQuestionSource] {
 	return ownedMember[[]OwnedQuestionSource](v.raw, "question_sources")
@@ -1516,8 +1225,8 @@ func (v OwnedRelationMemberFailureId) Method() Presence[OwnedRelationMethod] {
 func (v OwnedRelationMemberFailureId) Observations() Presence[[]OwnedObservation] {
 	return ownedMember[[]OwnedObservation](v.raw, "observations")
 }
-func (v OwnedRelationMemberFailureId) Question() Presence[OwnedReadableQuestion] {
-	return ownedMember[OwnedReadableQuestion](v.raw, "question")
+func (v OwnedRelationMemberFailureId) Question() Presence[OwnedQuestionDocument] {
+	return ownedMember[OwnedQuestionDocument](v.raw, "question")
 }
 func (v OwnedRelationMemberFailureId) QuestionSources() Presence[[]OwnedQuestionSource] {
 	return ownedMember[[]OwnedQuestionSource](v.raw, "question_sources")
@@ -1783,6 +1492,37 @@ func (v OwnedFindAnswer) Probabilities() Presence[map[string]json.Number] {
 	return ownedMember[map[string]json.Number](v.raw, "probabilities")
 }
 
+type OwnedFindQuestionDocument struct{ ownedJSON }
+
+func (v OwnedFindQuestionDocument) Batch() Presence[OwnedBatch] {
+	return ownedMember[OwnedBatch](v.raw, "batch")
+}
+func (v OwnedFindQuestionDocument) ContextSchema() Presence[OwnedInputDeclaration] {
+	return ownedMember[OwnedInputDeclaration](v.raw, "context_schema")
+}
+func (v OwnedFindQuestionDocument) ItemSchema() Presence[OwnedInputDeclaration] {
+	return ownedMember[OwnedInputDeclaration](v.raw, "item_schema")
+}
+func (v OwnedFindQuestionDocument) LabelDetails() Presence[[]OwnedLabel] {
+	return ownedMember[[]OwnedLabel](v.raw, "label_details")
+}
+func (v OwnedFindQuestionDocument) Model() Presence[string] {
+	return ownedMember[string](v.raw, "model")
+}
+func (v OwnedFindQuestionDocument) Name() Presence[OwnedQuestionName] {
+	return ownedMember[OwnedQuestionName](v.raw, "name")
+}
+func (v OwnedFindQuestionDocument) None() Presence[bool]   { return ownedMember[bool](v.raw, "none") }
+func (v OwnedFindQuestionDocument) On() Presence[[]string] { return ownedMember[[]string](v.raw, "on") }
+func (v OwnedFindQuestionDocument) Profile() Presence[string] {
+	return ownedMember[string](v.raw, "profile")
+}
+func (v OwnedFindQuestionDocument) Text() Presence[any] { return ownedMember[any](v.raw, "text") }
+func (v OwnedFindQuestionDocument) Verb() Presence[any] { return ownedMember[any](v.raw, "verb") }
+func (v OwnedFindQuestionDocument) WordingVersion() Presence[OwnedWordingVersion] {
+	return ownedMember[OwnedWordingVersion](v.raw, "wording_version")
+}
+
 type OwnedNameOdds struct{ ownedJSON }
 
 func (v OwnedNameOdds) Edges() Presence[map[string]json.Number] {
@@ -1851,6 +1591,176 @@ func (v OwnedProfileWarning) TunedFor() Presence[string] {
 	return ownedMember[string](v.raw, "tuned_for")
 }
 
+type OwnedQuestionDocument struct{ ownedJSON }
+
+func (v OwnedQuestionDocument) AsQuestionDocumentDecide() (OwnedQuestionDocumentDecide, error) {
+	if !(ownedLiteral(v.raw, "verb", "decide")) {
+		return OwnedQuestionDocumentDecide{}, errOwnedAlternative
+	}
+	return ownedDecode[OwnedQuestionDocumentDecide](v.raw)
+}
+func (v OwnedQuestionDocument) AsQuestionDocumentChoose() (OwnedQuestionDocumentChoose, error) {
+	if !(ownedLiteral(v.raw, "verb", "choose")) {
+		return OwnedQuestionDocumentChoose{}, errOwnedAlternative
+	}
+	return ownedDecode[OwnedQuestionDocumentChoose](v.raw)
+}
+func (v OwnedQuestionDocument) AsQuestionDocumentTag() (OwnedQuestionDocumentTag, error) {
+	if !(ownedLiteral(v.raw, "verb", "tag")) {
+		return OwnedQuestionDocumentTag{}, errOwnedAlternative
+	}
+	return ownedDecode[OwnedQuestionDocumentTag](v.raw)
+}
+func (v OwnedQuestionDocument) AsQuestionDocumentScore() (OwnedQuestionDocumentScore, error) {
+	if !(ownedLiteral(v.raw, "verb", "score")) {
+		return OwnedQuestionDocumentScore{}, errOwnedAlternative
+	}
+	return ownedDecode[OwnedQuestionDocumentScore](v.raw)
+}
+
+type OwnedQuestionDocumentChoose struct{ ownedJSON }
+
+func (v OwnedQuestionDocumentChoose) Batch() Presence[OwnedBatch] {
+	return ownedMember[OwnedBatch](v.raw, "batch")
+}
+func (v OwnedQuestionDocumentChoose) ContextSchema() Presence[OwnedInputDeclaration] {
+	return ownedMember[OwnedInputDeclaration](v.raw, "context_schema")
+}
+func (v OwnedQuestionDocumentChoose) ItemSchema() Presence[OwnedInputDeclaration] {
+	return ownedMember[OwnedInputDeclaration](v.raw, "item_schema")
+}
+func (v OwnedQuestionDocumentChoose) LabelDetails() Presence[[]OwnedLabel] {
+	return ownedMember[[]OwnedLabel](v.raw, "label_details")
+}
+func (v OwnedQuestionDocumentChoose) Model() Presence[string] {
+	return ownedMember[string](v.raw, "model")
+}
+func (v OwnedQuestionDocumentChoose) Name() Presence[OwnedQuestionName] {
+	return ownedMember[OwnedQuestionName](v.raw, "name")
+}
+func (v OwnedQuestionDocumentChoose) On() Presence[[]string] {
+	return ownedMember[[]string](v.raw, "on")
+}
+func (v OwnedQuestionDocumentChoose) Profile() Presence[string] {
+	return ownedMember[string](v.raw, "profile")
+}
+func (v OwnedQuestionDocumentChoose) WordingVersion() Presence[OwnedWordingVersion] {
+	return ownedMember[OwnedWordingVersion](v.raw, "wording_version")
+}
+func (v OwnedQuestionDocumentChoose) Options() Presence[[]string] {
+	return ownedMember[[]string](v.raw, "options")
+}
+func (v OwnedQuestionDocumentChoose) Text() Presence[any] { return ownedMember[any](v.raw, "text") }
+func (v OwnedQuestionDocumentChoose) Verb() Presence[string] {
+	return ownedMember[string](v.raw, "verb")
+}
+
+type OwnedQuestionDocumentDecide struct{ ownedJSON }
+
+func (v OwnedQuestionDocumentDecide) Batch() Presence[OwnedBatch] {
+	return ownedMember[OwnedBatch](v.raw, "batch")
+}
+func (v OwnedQuestionDocumentDecide) ContextSchema() Presence[OwnedInputDeclaration] {
+	return ownedMember[OwnedInputDeclaration](v.raw, "context_schema")
+}
+func (v OwnedQuestionDocumentDecide) ItemSchema() Presence[OwnedInputDeclaration] {
+	return ownedMember[OwnedInputDeclaration](v.raw, "item_schema")
+}
+func (v OwnedQuestionDocumentDecide) LabelDetails() Presence[[]OwnedLabel] {
+	return ownedMember[[]OwnedLabel](v.raw, "label_details")
+}
+func (v OwnedQuestionDocumentDecide) Model() Presence[string] {
+	return ownedMember[string](v.raw, "model")
+}
+func (v OwnedQuestionDocumentDecide) Name() Presence[OwnedQuestionName] {
+	return ownedMember[OwnedQuestionName](v.raw, "name")
+}
+func (v OwnedQuestionDocumentDecide) On() Presence[[]string] {
+	return ownedMember[[]string](v.raw, "on")
+}
+func (v OwnedQuestionDocumentDecide) Profile() Presence[string] {
+	return ownedMember[string](v.raw, "profile")
+}
+func (v OwnedQuestionDocumentDecide) WordingVersion() Presence[OwnedWordingVersion] {
+	return ownedMember[OwnedWordingVersion](v.raw, "wording_version")
+}
+func (v OwnedQuestionDocumentDecide) False() Presence[any] { return ownedMember[any](v.raw, "false") }
+func (v OwnedQuestionDocumentDecide) Text() Presence[any]  { return ownedMember[any](v.raw, "text") }
+func (v OwnedQuestionDocumentDecide) True() Presence[any]  { return ownedMember[any](v.raw, "true") }
+func (v OwnedQuestionDocumentDecide) Verb() Presence[string] {
+	return ownedMember[string](v.raw, "verb")
+}
+
+type OwnedQuestionDocumentScore struct{ ownedJSON }
+
+func (v OwnedQuestionDocumentScore) Batch() Presence[OwnedBatch] {
+	return ownedMember[OwnedBatch](v.raw, "batch")
+}
+func (v OwnedQuestionDocumentScore) ContextSchema() Presence[OwnedInputDeclaration] {
+	return ownedMember[OwnedInputDeclaration](v.raw, "context_schema")
+}
+func (v OwnedQuestionDocumentScore) ItemSchema() Presence[OwnedInputDeclaration] {
+	return ownedMember[OwnedInputDeclaration](v.raw, "item_schema")
+}
+func (v OwnedQuestionDocumentScore) LabelDetails() Presence[[]OwnedLabel] {
+	return ownedMember[[]OwnedLabel](v.raw, "label_details")
+}
+func (v OwnedQuestionDocumentScore) Model() Presence[string] {
+	return ownedMember[string](v.raw, "model")
+}
+func (v OwnedQuestionDocumentScore) Name() Presence[OwnedQuestionName] {
+	return ownedMember[OwnedQuestionName](v.raw, "name")
+}
+func (v OwnedQuestionDocumentScore) On() Presence[[]string] {
+	return ownedMember[[]string](v.raw, "on")
+}
+func (v OwnedQuestionDocumentScore) Profile() Presence[string] {
+	return ownedMember[string](v.raw, "profile")
+}
+func (v OwnedQuestionDocumentScore) WordingVersion() Presence[OwnedWordingVersion] {
+	return ownedMember[OwnedWordingVersion](v.raw, "wording_version")
+}
+func (v OwnedQuestionDocumentScore) Levels() Presence[[]string] {
+	return ownedMember[[]string](v.raw, "levels")
+}
+func (v OwnedQuestionDocumentScore) Text() Presence[any] { return ownedMember[any](v.raw, "text") }
+func (v OwnedQuestionDocumentScore) Verb() Presence[string] {
+	return ownedMember[string](v.raw, "verb")
+}
+
+type OwnedQuestionDocumentTag struct{ ownedJSON }
+
+func (v OwnedQuestionDocumentTag) Batch() Presence[OwnedBatch] {
+	return ownedMember[OwnedBatch](v.raw, "batch")
+}
+func (v OwnedQuestionDocumentTag) ContextSchema() Presence[OwnedInputDeclaration] {
+	return ownedMember[OwnedInputDeclaration](v.raw, "context_schema")
+}
+func (v OwnedQuestionDocumentTag) ItemSchema() Presence[OwnedInputDeclaration] {
+	return ownedMember[OwnedInputDeclaration](v.raw, "item_schema")
+}
+func (v OwnedQuestionDocumentTag) LabelDetails() Presence[[]OwnedLabel] {
+	return ownedMember[[]OwnedLabel](v.raw, "label_details")
+}
+func (v OwnedQuestionDocumentTag) Model() Presence[string] {
+	return ownedMember[string](v.raw, "model")
+}
+func (v OwnedQuestionDocumentTag) Name() Presence[OwnedQuestionName] {
+	return ownedMember[OwnedQuestionName](v.raw, "name")
+}
+func (v OwnedQuestionDocumentTag) On() Presence[[]string] { return ownedMember[[]string](v.raw, "on") }
+func (v OwnedQuestionDocumentTag) Profile() Presence[string] {
+	return ownedMember[string](v.raw, "profile")
+}
+func (v OwnedQuestionDocumentTag) WordingVersion() Presence[OwnedWordingVersion] {
+	return ownedMember[OwnedWordingVersion](v.raw, "wording_version")
+}
+func (v OwnedQuestionDocumentTag) Labels() Presence[[]string] {
+	return ownedMember[[]string](v.raw, "labels")
+}
+func (v OwnedQuestionDocumentTag) Text() Presence[any]    { return ownedMember[any](v.raw, "text") }
+func (v OwnedQuestionDocumentTag) Verb() Presence[string] { return ownedMember[string](v.raw, "verb") }
+
 type OwnedRecognize struct{ ownedJSON }
 
 func (v OwnedRecognize) AsRecognizeEntities() (OwnedRecognizeEntities, error) {
@@ -1881,6 +1791,66 @@ func (v OwnedRecognizeAnswer) Proposals() Presence[[]OwnedRecognitionProposal] {
 	return ownedMember[[]OwnedRecognitionProposal](v.raw, "proposals")
 }
 
+type OwnedRecognizeQuestionDocument struct{ ownedJSON }
+
+func (v OwnedRecognizeQuestionDocument) Batch() Presence[OwnedBatch] {
+	return ownedMember[OwnedBatch](v.raw, "batch")
+}
+func (v OwnedRecognizeQuestionDocument) ContextSchema() Presence[OwnedInputDeclaration] {
+	return ownedMember[OwnedInputDeclaration](v.raw, "context_schema")
+}
+func (v OwnedRecognizeQuestionDocument) EntityDefinition() Presence[any] {
+	return ownedMember[any](v.raw, "entity_definition")
+}
+func (v OwnedRecognizeQuestionDocument) Instructions() Presence[any] {
+	return ownedMember[any](v.raw, "instructions")
+}
+func (v OwnedRecognizeQuestionDocument) ItemSchema() Presence[OwnedInputDeclaration] {
+	return ownedMember[OwnedInputDeclaration](v.raw, "item_schema")
+}
+func (v OwnedRecognizeQuestionDocument) Kinds() Presence[map[string]any] {
+	return ownedMember[map[string]any](v.raw, "kinds")
+}
+func (v OwnedRecognizeQuestionDocument) LabelDetails() Presence[[]OwnedLabel] {
+	return ownedMember[[]OwnedLabel](v.raw, "label_details")
+}
+func (v OwnedRecognizeQuestionDocument) Mode() Presence[OwnedRecognitionMode] {
+	return ownedMember[OwnedRecognitionMode](v.raw, "mode")
+}
+func (v OwnedRecognizeQuestionDocument) Model() Presence[string] {
+	return ownedMember[string](v.raw, "model")
+}
+func (v OwnedRecognizeQuestionDocument) Name() Presence[OwnedQuestionName] {
+	return ownedMember[OwnedQuestionName](v.raw, "name")
+}
+func (v OwnedRecognizeQuestionDocument) On() Presence[[]string] {
+	return ownedMember[[]string](v.raw, "on")
+}
+func (v OwnedRecognizeQuestionDocument) Profile() Presence[string] {
+	return ownedMember[string](v.raw, "profile")
+}
+func (v OwnedRecognizeQuestionDocument) RelationThreshold() Presence[OwnedThreshold] {
+	return ownedMember[OwnedThreshold](v.raw, "relation_threshold")
+}
+func (v OwnedRecognizeQuestionDocument) Relations() Presence[[]OwnedRelationRule] {
+	return ownedMember[[]OwnedRelationRule](v.raw, "relations")
+}
+func (v OwnedRecognizeQuestionDocument) SnippetPieces() Presence[json.Number] {
+	return ownedMember[json.Number](v.raw, "snippet_pieces")
+}
+func (v OwnedRecognizeQuestionDocument) StageContext() Presence[OwnedRecognitionStageContext] {
+	return ownedMember[OwnedRecognitionStageContext](v.raw, "stage_context")
+}
+func (v OwnedRecognizeQuestionDocument) Threshold() Presence[OwnedThreshold] {
+	return ownedMember[OwnedThreshold](v.raw, "threshold")
+}
+func (v OwnedRecognizeQuestionDocument) Verb() Presence[OwnedVerb] {
+	return ownedMember[OwnedVerb](v.raw, "verb")
+}
+func (v OwnedRecognizeQuestionDocument) WordingVersion() Presence[OwnedWordingVersion] {
+	return ownedMember[OwnedWordingVersion](v.raw, "wording_version")
+}
+
 type OwnedRecognizeEntities struct{ ownedJSON }
 
 func (v OwnedRecognizeEntities) Entities() Presence[[]OwnedEntity] {
@@ -1903,6 +1873,46 @@ type OwnedRelateFields struct{ ownedJSON }
 
 func (v OwnedRelateFields) Kind() Presence[string] { return ownedMember[string](v.raw, "kind") }
 func (v OwnedRelateFields) Name() Presence[string] { return ownedMember[string](v.raw, "name") }
+
+type OwnedRelateQuestionDocument struct{ ownedJSON }
+
+func (v OwnedRelateQuestionDocument) Batch() Presence[OwnedBatch] {
+	return ownedMember[OwnedBatch](v.raw, "batch")
+}
+func (v OwnedRelateQuestionDocument) ContextSchema() Presence[OwnedInputDeclaration] {
+	return ownedMember[OwnedInputDeclaration](v.raw, "context_schema")
+}
+func (v OwnedRelateQuestionDocument) Fields() Presence[OwnedRelateFields] {
+	return ownedMember[OwnedRelateFields](v.raw, "fields")
+}
+func (v OwnedRelateQuestionDocument) ItemSchema() Presence[OwnedInputDeclaration] {
+	return ownedMember[OwnedInputDeclaration](v.raw, "item_schema")
+}
+func (v OwnedRelateQuestionDocument) LabelDetails() Presence[[]OwnedLabel] {
+	return ownedMember[[]OwnedLabel](v.raw, "label_details")
+}
+func (v OwnedRelateQuestionDocument) Model() Presence[string] {
+	return ownedMember[string](v.raw, "model")
+}
+func (v OwnedRelateQuestionDocument) Name() Presence[OwnedQuestionName] {
+	return ownedMember[OwnedQuestionName](v.raw, "name")
+}
+func (v OwnedRelateQuestionDocument) On() Presence[[]string] {
+	return ownedMember[[]string](v.raw, "on")
+}
+func (v OwnedRelateQuestionDocument) Profile() Presence[string] {
+	return ownedMember[string](v.raw, "profile")
+}
+func (v OwnedRelateQuestionDocument) Relations() Presence[[]OwnedRelationRule] {
+	return ownedMember[[]OwnedRelationRule](v.raw, "relations")
+}
+func (v OwnedRelateQuestionDocument) Threshold() Presence[OwnedThreshold] {
+	return ownedMember[OwnedThreshold](v.raw, "threshold")
+}
+func (v OwnedRelateQuestionDocument) Verb() Presence[any] { return ownedMember[any](v.raw, "verb") }
+func (v OwnedRelateQuestionDocument) WordingVersion() Presence[OwnedWordingVersion] {
+	return ownedMember[OwnedWordingVersion](v.raw, "wording_version")
+}
 
 type OwnedRelatedEntity struct{ ownedJSON }
 
@@ -2555,8 +2565,8 @@ func (v OwnedSessionQuestionDetail) Observations() Presence[[]OwnedObservation] 
 func (v OwnedSessionQuestionDetail) Probabilities() Presence[OwnedSessionProbabilities] {
 	return ownedMember[OwnedSessionProbabilities](v.raw, "probabilities")
 }
-func (v OwnedSessionQuestionDetail) Question() Presence[OwnedReadableQuestion] {
-	return ownedMember[OwnedReadableQuestion](v.raw, "question")
+func (v OwnedSessionQuestionDetail) Question() Presence[OwnedQuestionDocument] {
+	return ownedMember[OwnedQuestionDocument](v.raw, "question")
 }
 func (v OwnedSessionQuestionDetail) QuestionSha256() Presence[string] {
 	return ownedMember[string](v.raw, "question_sha256")
