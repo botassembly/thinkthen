@@ -182,11 +182,11 @@ module ThinkThen
           @producer = input.to_enum
           @owner = input
         end
-        @scalar = Results::CALL_RESULTS.fetch(verb).fetch("call_shape") == "aggregate" || !(input.is_a?(Array) || input.is_a?(Source) || @producer)
         if token&.cancelled?
           raise CancelledError.new("the call was cancelled", "cancelled")
         end
         @session = engine.request_session(verb, question, input, [options, !@producer.nil?])
+        @scalar = Results::CALL_RESULTS.fetch(verb).fetch("call_shape") == "aggregate" || !(input.is_a?(Array) || input.is_a?(Source) || @producer)
       rescue Exception => error
         begin
           close_producer

@@ -29,6 +29,11 @@ class TestOwnedSession < Minitest::Test
         rescue T::UsageError
         end
       end
+      begin
+        client.start("unknown", "Is it?", "unreachable")
+        raise "unknown function admitted"
+      rescue T::UsageError
+      end
       client.close
       say true
     RUBY
