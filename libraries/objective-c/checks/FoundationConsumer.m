@@ -83,7 +83,7 @@ int main(int argc, const char *argv[]) {
         TTTextInput *unselected = [TTTextInput new]; unselected.text = @"no";
         for (TTInput *filterInput in @[unselected, multiple, empty]) {
             __block TTCall *filterCall = nil;
-            task = [client filter:filterQuestion input:filterInput options:filterOptions feed:nil completion:^(TTCall *call, NSError *failure) {
+            task = [client filter:filterQuestion input:filterInput options:filterInput == multiple ? filterOptions : nil feed:nil completion:^(TTCall *call, NSError *failure) {
                 require(call != nil && failure == nil); filterCall = call; dispatch_semaphore_signal(completed);
             } error:&error];
             require(task != nil && error == nil);
