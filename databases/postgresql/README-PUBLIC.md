@@ -14,14 +14,16 @@ Set your hosted backend key: `export THINKTHEN_API_KEY=...`. Backends include Je
 WITH refunds(body) AS (VALUES
     ('Please refund my order. It arrived broken.'),
     ('Thanks for the quick help yesterday!'), ('I want to send this back.'))
-SELECT body, thinkthen_decide('Does the customer ask for a refund?', body) AS refund
-FROM refunds;
+SELECT refund.value AS is_refund, refund.probability
+FROM refunds, LATERAL thinkthen_decide_details(
+    'Does the customer ask for a refund?', body) AS refund;
 WITH messages(body) AS (VALUES
     ('Please refund the extra fee on my invoice.'),
     ('My parcel went to the wrong address.'), ('I cannot reset my password.'))
-SELECT body, thinkthen_choose(
+SELECT owner.value AS team, owner.probability
+FROM messages, LATERAL thinkthen_choose_details(
     '{"choose":"Which team owns this?","options":{"billing":"Invoices, fees, and refunds.","shipping":"Parcels and delivery.","account":"Logins and passwords."}}',
-    body) AS team FROM messages;
+    body) AS owner;
 ```
 
 The library is free and MIT licensed. Hosted models charge per token. Local models are free to use; you supply the computer that runs them.

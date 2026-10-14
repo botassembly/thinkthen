@@ -1,6 +1,6 @@
 # The PostgreSQL surface
 
-`CREATE EXTENSION thinkthen` adds the engine's verbs to SQL. The extension is the unpublished crate `thinkthen-postgresql`, built with pgrx 0.17 over the public `thinkthen` API (ticket 0111, ADR 0047). Every call reaches the real engine. `WHERE` and `ORDER BY` do the work of filter and rank. An ordered array gives find one complete set.
+`CREATE EXTENSION thinkthen` adds the engine's verbs to SQL. The extension uses the public ThinkThen engine. Every call reaches the real engine. `WHERE` selects scalar decisions. Filter and rank can also judge one whole set. An ordered array gives find one complete set.
 
 ## Functions
 
@@ -41,7 +41,7 @@ ORDER BY refund.rank;
 
 A judgment question is plain text, JSON text starting with `{` after leading white space, or a file named with the first-byte `'@refund.json'` spelling. Bare text, including `refund.json`, is a question and never a path. A question set or recognize/relation spec remains JSON or `@file`. To ask a literal question beginning with `@` or `{`, use a JSON question or named file.
 
-Find's question is nonblank literal text, including a literal `@`. Its ordered `text[]` is one set, not independent records; use `array_agg(unit ORDER BY ordinal)` to preserve positions and duplicates. Settings `{"none":true}` offers a final none candidate. An empty array or SQL NULL argument returns SQL NULL without a send. A selected none returns a non-NULL object with null index and value. A NULL array member, blank text, one unit, more than 255 units (254 with none), or more than 16 MiB of combined unit text raises usage before a send. `deadline_ms` in settings overrides the existing `thinkthen.deadline_ms` GUC for that call. PostgreSQL statement cancellation still applies.
+Find's question is nonblank literal text, including a literal `@`. Its ordered `text[]` is one set, not independent records; use `array_agg(unit ORDER BY ordinal)` to preserve positions and duplicates. Settings `{"none":true}` offers a final none candidate. An empty array or SQL NULL argument returns SQL NULL without a send. A selected none returns SQL NULL from the plain call. The details call retains its unresolved selection and candidate probabilities. A NULL array member, blank text, one unit, more than 255 units (254 with none), or more than 16 MiB of combined unit text raises usage before a send. `deadline_ms` in settings overrides the existing `thinkthen.deadline_ms` GUC for that call. PostgreSQL statement cancellation still applies.
 
 `start`, `end`, and `length` count characters, so `substring(body from start + 1 for length)` is the name. The relate query returns `(id, name)` or `(id, name, kind)`. A two-column query takes bare relation names. Inline rules read `NAME` or `NAME=SOURCE:TARGET`, as the command's `--relation` does. The query may return at most 255 rows.
 
@@ -54,8 +54,6 @@ SELECT id FROM (
 SELECT id, triage->>'team', (triage->>'urgency')::float AS urgency
 FROM tickets, thinkthen_annotate('@form.json', body) AS triage ORDER BY urgency DESC;
 ```
-
-The old `thinkthen_warm`, `thinkthen_probability`, positional context, find's positional `none`, and decide array forms raise `usage` with replacement advice. `thinkthen_probability` points to `thinkthen_rank`. They do not silently send.
 
 ## Constrain a stored answer
 
@@ -74,9 +72,31 @@ SELECT id, team FROM judged WHERE team = 'billing';
 
 The domain rejects a different non-`NULL` label. A stored `NULL` can represent a choice below the cut or an exact tie. The domain permits `NULL`. A required `NULL` question or evidence returns SQL `NULL` before inspecting partners, reading files or sending. A failed ThinkThen call raises its named error; do not replace the error with `NULL` merely to pass the domain. The constraint belongs to the stored column, and the function keeps its existing `text` result.
 
-## Run facts
+## Full records
 
-`thinkthen_decide_details(question, evidence)` returns the typed result and receipt columns. An unresolved answer retains its probability and result while its value is SQL NULL. The record-list route takes `thinkthen_record[]` and optional `thinkthen_reading` controls. The details functions use the same argument conventions as their ordinary functions.
+Every function has one full-record route, `thinkthen_<function>_details`. The ten function names are decide, choose, tag, score, filter, rank, find, annotate, recognize and relate. Plain calls return their plain values. Details calls return typed columns: `ordinal`, `value`, `probability`, `result`, `failure`, `facts` and `observations`.
+
+Decide and filter expose the probability of yes. Choose and find expose the selected probability. Rank and relate expose one probability per row. Recognize exposes an ordered probability array. Score, tag and annotate expose SQL NULL for probability.
+
+A scalar text call retains its familiar arguments. Read a value and its probability directly:
+
+```sql
+SELECT refund.value AS is_refund, refund.probability
+FROM thinkthen_decide_details(
+    'Does the customer ask for a refund?',
+    'Please refund my order. It arrived broken.'
+) AS refund;
+```
+
+The same function accepts an explicit `thinkthen_record[]`, with an optional `thinkthen_reading` composite. Construct each record with `thinkthen_record(text => body)` or `thinkthen_record(value => original_json)`. Reading controls select fields, context and other admitted native options. A record list belongs only on the details route.
+
+Rank, find and relate receive one whole set. Do not call them independently for each row. Rank accepts an ordered record array or a keyed JSON object; find accepts an ordered record array or a text array. Relate accepts an ordered record array and relation specification, or a query and its rules. Original ordinals start at zero. Rank's value starts at one and gives the selected order. A keyed object sorts by key before assigning ordinals; join through the retained input or keep an explicit ordered record array when positions matter.
+
+Recoverable failures retain a row with a typed `failure` and no completed `result`. Cancellation, deadline and defects raise. An unresolved judgment has SQL NULL `value` and retains its completed result and probability. Required SQL NULL operands return no rows without reading partners, opening files or sending.
+
+Each relate details row holds one typed edge in `value`. Its `result` is the canonical Related record, with exactly that one edge in `result.value`. Shared run facts may repeat across rows. Rank and relate observations appear only on the first emitted row, whose ordinal is zero; later rows hold empty observation arrays. Read these observations once. Do not sum repeated run facts.
+
+The [result contract](../../specification/result.md) describes the native facts and observations. PostgreSQL exposes those fields through SQL composites, including typed errors and authored input. Question observations preserve the original input independently from the selected evidence.
 
 ## Price and elapsed time
 
@@ -118,7 +138,7 @@ The throttle holds for the whole backend process. The first explicit throttle st
 
 ## Function descriptions
 
-The extension registers PostgreSQL comments on every installed function, including overloads that explain a removed interface. Read them through `pg_description`, `obj_description`, or psql `\df+`. This discovery query uses extension ownership and preserves each full signature:
+The extension registers PostgreSQL comments on every installed function, including each admitted overload. Read them through `pg_description`, `obj_description`, or psql `\df+`. This discovery query uses extension ownership and preserves each full signature:
 
 ```sql
 SELECT p.oid::regprocedure::text AS signature,
@@ -198,65 +218,7 @@ The checked [Rust client consumer](examples/client_files.rs) demonstrates duplic
 
 `thinkthen_question_file(path text) RETURNS text` is the explicit privileged question/set loader. NULL returns NULL. It reads a literal path, including a leading `@` in the filename, validates with the existing native question/set parsers, and preserves the original JSON bytes, order and duplicate detection. It retains the existing 1 MiB regular-file, role, descriptor/link and administrator confinement rules and has PUBLIC execution revoked. It does not interpret pending 0456 named inputs.
 
-
-`thinkthen_rank_set(questions, keyed_json[, settings])` is the explicit additive
-rank-set route. It takes the native version-one ordered set of named decide
-questions, returns `key, rank, probability, question_name, facts`, and preserves
-each original keyed identity even when several keys have equal text. Each
-member sorts with the host's existing input-order ties; native turns visits
-each depth in authored member order, consumes duplicate visits, and emits
-each original once. `probability` and `question_name` belong to the selecting
-member. Use `ORDER BY rank` after a join and `LIMIT` for the merged prefix;
-every member still judges every record. The literal `thinkthen_rank` route
-retains its existing signatures and behavior.
-
-Settings take `batch`, `context` and `deadline_ms`; model/backend selection
-uses the existing host configuration. Per-call model, cuts, pointers and
-score members refuse before sending. One-member sets preserve the plain
-question's wire/cache identity. Recording each member individually supports
-strict set replay with zero sends. Described decide members retain their
-authored true/false meanings. The record-list route of `thinkthen_rank_details` also accepts described decide and saved score questions.
-
-`facts` comes directly from the same completed native call, counts original
-records and combined member requests, and repeats on every output row. It
-is the compatibility count-facts shape. Use the record-list route of `thinkthen_rank_details` for typed full observations, call and answer IDs, and started failure facts. An empty object yields
-no rows. Set JSON and files use native RankSet admission, preserving member
-order and rejecting duplicates, authored thresholds/on and non-decide kinds.
-
-Questions are text, keyed input is jsonb and settings is json; facts is jsonb.
-Preserve the authored set as text, including text returned by
-`thinkthen_question_file(path)`, rather than converting the set to jsonb.
-The existing privileged/confined `@file` door also applies. NULL questions or keyed input yields no rows before inspecting partners, reading files or sending; NULL settings uses defaults.
-PUBLIC execution is revoked by the extension default.
-
 ## Native records and readings
-
-Each details function accepts an ordered `thinkthen_record[]` and an optional `thinkthen_reading` alongside its question. Construct both with named SQL arguments. The returned `value` has the function's ordinary SQL type. The `result`, `facts`, `failure` and `observations` columns carry typed complete readings and final call facts. Observations retain the actual input image and source metadata separately from the generic original-value serialization.
-
-```sql
-SELECT attention.value AS needs_attention, (attention.facts).requests_sent, (attention.result).answer_id
-FROM thinkthen_decide_details(
-  'Does this need attention?',
-  ARRAY[thinkthen_record(text => 'A short note.')],
-  thinkthen_reading(threshold => '0.9', context => 'Use this policy note.')
-) AS attention;
-```
-
-Read a named choice from `value` and its confidence from the same typed receipt:
-
-```sql
-SELECT ownership.value AS team, ((ownership.result).answer).confidence AS confidence
-FROM thinkthen_choose_details(
-  'Which team owns this?',
-  ARRAY[thinkthen_record(text => 'Please refund the duplicate charge.')],
-  thinkthen_reading(options => ARRAY[
-    ROW('billing', NULL)::thinkthen_option,
-    ROW('shipping', NULL)::thinkthen_option
-  ])
-) AS ownership;
-```
-
-`team` is the selected option name. SQL `NULL` represents an unresolved choice. The receipt retains the resolved question, option order, answer identity, confidence and named probability distribution.
 
 `thinkthen_record(value => 'null'::json)` holds authored JSON null. Omitting `value` leaves the original absent. The `context_value` argument accepts an object context. Typed option, image, seed and example arrays retain their order. Examples accept bracket text or explicit entity spans through `thinkthen_example` composites.
 
@@ -267,10 +229,3 @@ Rank exposes the one-based rank in `value` and the zero-based original index in 
 For filter, `files_only => true` returns the first selected record from each physical file in input order. Each record needs a `thinkthen_source` location. Every record still contributes to the call's final facts. The default rejects any missing location before sending; incremental reading retains an already completed prefix.
 
 `thinkthen_plan(question, records, reading)` returns record and request counts, byte estimates and token bounds without sending. Its typed `result` includes all nine canonical plan fields and the prepared first body. The default infers a judgment function. The optional named `function` selects `decide`, `choose`, `tag`, `score`, `filter` or `rank` through the native request constructor; other functions retain the native no-send refusal. Questions retain privileged and confined file references. Evidence and image files must be read by the client. Attach their explicit location with a `thinkthen_source` composite; PostgreSQL never opens an evidence path. Cache, replay, recording and engine settings retain their session scopes and privileges.
-
-
-Development SQL details use `thinkthen_<function>_details` for each of the ten functions. Pass the ordinary arguments or an ordered `thinkthen_record[]` with optional `thinkthen_reading` controls. Each typed row carries `ordinal`, `value`, `probability`, `result`, `failure`, `facts` and `observations`. Decide and filter expose the probability of yes; choose and find expose the selected probability. Score, tag and annotate expose SQL NULL. Rank returns each ranked record with its scalar probability. Find returns the picked record; relate returns one row per edge with its scalar probability. Each relate row's canonical `result.value` holds only that edge and retains the question, original input, metadata and answer identity. Recognize exposes an ordered probability array. Rank, find and relate consume a record list as one whole-set call. A recoverable failed row retains its ordinal and later rows complete. Cancellation, deadline and defect failures raise SQL errors. Images enter through `thinkthen_record(images=>...)`.
-
-Rank and relate place all call observations on the first details row, whose ordinal is zero. Later rows carry an empty observation array. Each row retains its own result and the final call facts.
-
-The old `thinkthen_details`, `thinkthen_try_details`, `thinkthen_details_images`, `_complete`, native-record function names and record-list overloads of ordinary functions are absent. PostgreSQL reports an unknown function when callers use those names. Ordinary scalar calls return their values; `thinkthen_find` returns selected text or NULL. The existing keyed and aggregate function signatures remain available.
