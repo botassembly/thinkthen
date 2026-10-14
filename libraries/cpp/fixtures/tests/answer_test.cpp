@@ -2,9 +2,9 @@
 #include <cassert>
 using namespace tt;
 using namespace tt::results;
-static SessionPacket packet(const char* value) { return SessionPacket(::tt::detail::parse_original(value)); }
+static SessionPacket packet(const char* value) { return ::tt::results::detail::Loader::input<SessionPacket>(::tt::detail::parse_original(value)); }
 static SessionPacket judgment(const char* kind, Data value) {
-    return SessionPacket(Data{{"kind","observation"},{"value",Data{{"kind","row"},{"value",Data{{"kind","judgment"},{"value",Data{{"kind",kind},{"value",std::move(value)}}}}}}}});
+    return ::tt::results::detail::Loader::input<SessionPacket>(Data{{"kind","observation"},{"value",Data{{"kind","row"},{"value",Data{{"kind","judgment"},{"value",Data{{"kind",kind},{"value",std::move(value)}}}}}}}});
 }
 int main() {
     const auto terminal=packet(R"({"kind":"terminal"})");
@@ -35,6 +35,6 @@ int main() {
     assert(read_rank({ranking,terminal})==std::vector<uint64_t>({7,3}));
     auto annotated=read_annotate({packet(R"({"kind":"row","function":"annotate","value":{"input":"note","value":{"a":null},"extension":false}})"),terminal});
     assert(annotated.size()==1 && !::tt::results::detail::document(annotated[0]).at("extension").get<bool>());
-    SessionRelationEdge edge(Data{{"source",Data{{"name","one"}}},{"target",Data{{"name","two"}}}});
+    auto edge=::tt::results::detail::Loader::input<SessionRelationEdge>(Data{{"source",Data{{"name","one"}}},{"target",Data{{"name","two"}}}});
     assert(edge.source_name()=="one" && edge.target_name()=="two");
 }

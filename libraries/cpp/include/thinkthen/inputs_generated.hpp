@@ -29,6 +29,7 @@ namespace tt::inputs {
     class AuthoredOptions;
     class AuthoredPointers;
     class AuthoredProfile;
+    class AuthoredQuestionBatch;
     class AuthoredQuestionText;
     class AuthoredRelate;
     class AuthoredRelation;
@@ -197,7 +198,7 @@ namespace tt::inputs {
         AuthoredChoose():Node(Data(Data::Object{
         })) {
         }
-        AuthoredChoose& set_batch(const std::variant<std::string, uint64_t>& value);
+        AuthoredChoose& set_batch(const AuthoredQuestionBatch& value);
         AuthoredChoose& set_choose(const AuthoredQuestionText& value);
         AuthoredChoose& set_context_schema(const AuthoredInputDeclaration& value);
         AuthoredChoose& set_item_schema(const AuthoredInputDeclaration& value);
@@ -231,7 +232,7 @@ namespace tt::inputs {
         AuthoredDecide():Node(Data(Data::Object{
         })) {
         }
-        AuthoredDecide& set_batch(const std::variant<std::string, uint64_t>& value);
+        AuthoredDecide& set_batch(const AuthoredQuestionBatch& value);
         AuthoredDecide& set_context_schema(const AuthoredInputDeclaration& value);
         AuthoredDecide& set_decide(const AuthoredQuestionText& value);
         AuthoredDecide& set_false(const AuthoredCriterion& value);
@@ -407,6 +408,13 @@ namespace tt::inputs {
         public:
         explicit AuthoredProfile(const std::string& value);
     };
+    class AuthoredQuestionBatch : public Node {
+        AuthoredQuestionBatch(const Data& value, int):Node(value) {
+        }
+        friend struct ::tt::results::detail::Loader;
+        public:
+        explicit AuthoredQuestionBatch(const std::variant<std::string, uint64_t>& value);
+    };
     class AuthoredQuestionText : public Node {
         AuthoredQuestionText(const Data& value, int):Node(value) {
         }
@@ -457,7 +465,7 @@ namespace tt::inputs {
         AuthoredScore():Node(Data(Data::Object{
         })) {
         }
-        AuthoredScore& set_batch(const std::variant<std::string, uint64_t>& value);
+        AuthoredScore& set_batch(const AuthoredQuestionBatch& value);
         AuthoredScore& set_context_schema(const AuthoredInputDeclaration& value);
         AuthoredScore& set_item_schema(const AuthoredInputDeclaration& value);
         AuthoredScore& set_levels(const AuthoredLevels& value);
@@ -476,7 +484,7 @@ namespace tt::inputs {
         AuthoredTag():Node(Data(Data::Object{
         })) {
         }
-        AuthoredTag& set_batch(const std::variant<std::string, uint64_t>& value);
+        AuthoredTag& set_batch(const AuthoredQuestionBatch& value);
         AuthoredTag& set_context_schema(const AuthoredInputDeclaration& value);
         AuthoredTag& set_item_schema(const AuthoredInputDeclaration& value);
         AuthoredTag& set_labels(const AuthoredLabels& value);
@@ -764,7 +772,7 @@ namespace tt::inputs {
         RequestDefinitionAuthoredChoose():Node(Data(Data::Object{
         })) {
         }
-        RequestDefinitionAuthoredChoose& set_batch(const std::variant<std::string, uint64_t>& value);
+        RequestDefinitionAuthoredChoose& set_batch(const AuthoredQuestionBatch& value);
         RequestDefinitionAuthoredChoose& set_choose(const AuthoredQuestionText& value);
         RequestDefinitionAuthoredChoose& set_context_schema(const AuthoredInputDeclaration& value);
         RequestDefinitionAuthoredChoose& set_item_schema(const AuthoredInputDeclaration& value);
@@ -784,7 +792,7 @@ namespace tt::inputs {
         RequestDefinitionAuthoredDecide():Node(Data(Data::Object{
         })) {
         }
-        RequestDefinitionAuthoredDecide& set_batch(const std::variant<std::string, uint64_t>& value);
+        RequestDefinitionAuthoredDecide& set_batch(const AuthoredQuestionBatch& value);
         RequestDefinitionAuthoredDecide& set_context_schema(const AuthoredInputDeclaration& value);
         RequestDefinitionAuthoredDecide& set_decide(const AuthoredQuestionText& value);
         RequestDefinitionAuthoredDecide& set_false(const AuthoredCriterion& value);
@@ -842,7 +850,7 @@ namespace tt::inputs {
         RequestDefinitionAuthoredScore():Node(Data(Data::Object{
         })) {
         }
-        RequestDefinitionAuthoredScore& set_batch(const std::variant<std::string, uint64_t>& value);
+        RequestDefinitionAuthoredScore& set_batch(const AuthoredQuestionBatch& value);
         RequestDefinitionAuthoredScore& set_context_schema(const AuthoredInputDeclaration& value);
         RequestDefinitionAuthoredScore& set_item_schema(const AuthoredInputDeclaration& value);
         RequestDefinitionAuthoredScore& set_levels(const AuthoredLevels& value);
@@ -861,7 +869,7 @@ namespace tt::inputs {
         RequestDefinitionAuthoredTag():Node(Data(Data::Object{
         })) {
         }
-        RequestDefinitionAuthoredTag& set_batch(const std::variant<std::string, uint64_t>& value);
+        RequestDefinitionAuthoredTag& set_batch(const AuthoredQuestionBatch& value);
         RequestDefinitionAuthoredTag& set_context_schema(const AuthoredInputDeclaration& value);
         RequestDefinitionAuthoredTag& set_item_schema(const AuthoredInputDeclaration& value);
         RequestDefinitionAuthoredTag& set_labels(const AuthoredLabels& value);
@@ -1431,7 +1439,7 @@ namespace tt::inputs {
         set_member("wording_version",results::detail::encode(value));
         return *this;
     }
-    inline AuthoredChoose& AuthoredChoose::set_batch(const std::variant<std::string, uint64_t>& value) {
+    inline AuthoredChoose& AuthoredChoose::set_batch(const AuthoredQuestionBatch& value) {
         set_member("batch",results::detail::encode(value));
         return *this;
     }
@@ -1480,7 +1488,7 @@ namespace tt::inputs {
     }
     inline AuthoredCut::AuthoredCut(const std::variant<double, std::string>& value):Node(results::detail::encode(value)) {
     }
-    inline AuthoredDecide& AuthoredDecide::set_batch(const std::variant<std::string, uint64_t>& value) {
+    inline AuthoredDecide& AuthoredDecide::set_batch(const AuthoredQuestionBatch& value) {
         set_member("batch",results::detail::encode(value));
         return *this;
     }
@@ -1603,6 +1611,8 @@ namespace tt::inputs {
     }
     inline AuthoredProfile::AuthoredProfile(const std::string& value):Node(results::detail::encode(value)) {
     }
+    inline AuthoredQuestionBatch::AuthoredQuestionBatch(const std::variant<std::string, uint64_t>& value):Node(results::detail::encode(value)) {
+    }
     inline AuthoredQuestionText::AuthoredQuestionText(const std::variant<std::string, Data, std::vector<Data>>& value):Node(results::detail::encode(value)) {
     }
     inline AuthoredRelate& AuthoredRelate::set_context_schema(const AuthoredInputDeclaration& value) {
@@ -1661,7 +1671,7 @@ namespace tt::inputs {
         set_member("target",results::detail::encode(value));
         return *this;
     }
-    inline AuthoredScore& AuthoredScore::set_batch(const std::variant<std::string, uint64_t>& value) {
+    inline AuthoredScore& AuthoredScore::set_batch(const AuthoredQuestionBatch& value) {
         set_member("batch",results::detail::encode(value));
         return *this;
     }
@@ -1701,7 +1711,7 @@ namespace tt::inputs {
         set_member("wording_version",results::detail::encode(value));
         return *this;
     }
-    inline AuthoredTag& AuthoredTag::set_batch(const std::variant<std::string, uint64_t>& value) {
+    inline AuthoredTag& AuthoredTag::set_batch(const AuthoredQuestionBatch& value) {
         set_member("batch",results::detail::encode(value));
         return *this;
     }
@@ -2038,8 +2048,7 @@ namespace tt::inputs {
         set_member("threshold",results::detail::encode(value));
         return *this;
     }
-    inline RequestDefinitionAuthoredChoose& RequestDefinitionAuthoredChoose::set_batch(const std::variant<std::string,
-    uint64_t>& value) {
+    inline RequestDefinitionAuthoredChoose& RequestDefinitionAuthoredChoose::set_batch(const AuthoredQuestionBatch& value) {
         set_member("batch",results::detail::encode(value));
         return *this;
     }
@@ -2083,8 +2092,7 @@ namespace tt::inputs {
         set_member("wording_version",results::detail::encode(value));
         return *this;
     }
-    inline RequestDefinitionAuthoredDecide& RequestDefinitionAuthoredDecide::set_batch(const std::variant<std::string,
-    uint64_t>& value) {
+    inline RequestDefinitionAuthoredDecide& RequestDefinitionAuthoredDecide::set_batch(const AuthoredQuestionBatch& value) {
         set_member("batch",results::detail::encode(value));
         return *this;
     }
@@ -2196,8 +2204,7 @@ namespace tt::inputs {
         set_member("wording_version",results::detail::encode(value));
         return *this;
     }
-    inline RequestDefinitionAuthoredScore& RequestDefinitionAuthoredScore::set_batch(const std::variant<std::string,
-    uint64_t>& value) {
+    inline RequestDefinitionAuthoredScore& RequestDefinitionAuthoredScore::set_batch(const AuthoredQuestionBatch& value) {
         set_member("batch",results::detail::encode(value));
         return *this;
     }
@@ -2237,8 +2244,7 @@ namespace tt::inputs {
         set_member("wording_version",results::detail::encode(value));
         return *this;
     }
-    inline RequestDefinitionAuthoredTag& RequestDefinitionAuthoredTag::set_batch(const std::variant<std::string,
-    uint64_t>& value) {
+    inline RequestDefinitionAuthoredTag& RequestDefinitionAuthoredTag::set_batch(const AuthoredQuestionBatch& value) {
         set_member("batch",results::detail::encode(value));
         return *this;
     }
