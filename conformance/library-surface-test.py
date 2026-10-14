@@ -87,7 +87,21 @@ class PublicSurface(unittest.TestCase):
                 'RequestSessionDescriptor': {'type': 'object', 'properties': {}},
             }
             request = {'$ref': '#/$defs/RequestCall', '$defs': definitions}
-            result = {'$ref': '#/$defs/completesessionPacket', '$defs': {'completesessionPacket': {'type': 'object', 'properties': {'payload': {'type': 'string'}}}}}
+            definitions['RequestDefinition'] = definitions['RequestCall']
+            result = {'$ref': '#/$defs/completesessionPacket', '$defs': {
+                'completesessionPacket': {'oneOf': [
+                    {'type': 'object', 'properties': {'kind': {'const': 'aggregate'},
+                        'function': {'const': 'decide'}, 'value': {'type': 'boolean'}},
+                     'required': ['kind', 'function', 'value']},
+                    {'type': 'object', 'properties': {'kind': {'const': 'observation'},
+                        'payload': {'type': 'string'},
+                        'judgment': {'$ref': '#/$defs/completesessionJudgment'}},
+                     'required': ['kind', 'judgment']}]},
+                'completesessionJudgment': {'oneOf': [
+                    {'type': 'object', 'x-request-function': function,
+                     'properties': {'kind': {'const': function}, 'value': {'type': 'boolean'}},
+                     'required': ['kind', 'value']} for function in ('decide', 'choose')]},
+                'completeplan': {'type': 'object', 'properties': {}}}}
             write('request.json', json.dumps(request))
             write('result.json', json.dumps(result))
             manifest = json.loads((ROOT / 'conformance/library-surface.json').read_text())
@@ -106,8 +120,14 @@ class PublicSurface(unittest.TestCase):
             # Produce the remaining native declarations through the same renderer.
             spec = importlib.util.spec_from_file_location('fixture_typescript', ROOT / 'sdlc/generators/results/templates/typescript.py')
             template = importlib.util.module_from_spec(spec)
-            spec.loader.exec_module(template)
-            generated = template.declarations(result['$defs'])
+            original_path = sys.path[:]
+            sys.path[:0] = [str(Path(spec.origin).parent), str(Path(spec.origin).parent.parent)]
+            try:
+                spec.loader.exec_module(template)
+                import generate
+            finally:
+                sys.path[:] = original_path
+            generated = template.declarations(generate.prepare(generate.graph(result, template.ROOTS)))
             write('libraries/typescript/results_generated.d.ts', generated)
             declarations = ('export interface Controls { readonly context?: string; readonly [key:string]: unknown; }\n'
                             'export interface Settings { readonly backend?: string; }\n'
