@@ -633,7 +633,7 @@ pub(crate) const PROJECTIONS: &[Projection] = &[
             },
             Field {
                 name: "value",
-                shape: Shape::Object("observed_row"),
+                shape: Shape::Scalar(Scalar::Data),
             },
         ],
     },
@@ -1086,54 +1086,6 @@ pub(crate) const PROJECTIONS: &[Projection] = &[
         }],
     },
     Projection {
-        name: "judgment",
-        union: false,
-        fields: &[
-            Field {
-                name: "kind",
-                shape: Shape::Scalar(Scalar::Text),
-            },
-            Field {
-                name: "value",
-                shape: Shape::Object("judgment_value"),
-            },
-        ],
-    },
-    Projection {
-        name: "judgment_value",
-        union: true,
-        fields: &[
-            Field {
-                name: "array_value",
-                shape: Shape::Array("judgment_value_array_value"),
-            },
-            Field {
-                name: "boolean_value",
-                shape: Shape::Scalar(Scalar::Boolean),
-            },
-            Field {
-                name: "number_value",
-                shape: Shape::Scalar(Scalar::Real),
-            },
-            Field {
-                name: "object_value",
-                shape: Shape::Object("failure"),
-            },
-            Field {
-                name: "string_value",
-                shape: Shape::Scalar(Scalar::Text),
-            },
-        ],
-    },
-    Projection {
-        name: "judgment_value_array_value",
-        union: true,
-        fields: &[Field {
-            name: "value",
-            shape: Shape::Scalar(Scalar::Text),
-        }],
-    },
-    Projection {
         name: "kind_description",
         union: false,
         fields: &[
@@ -1400,40 +1352,6 @@ pub(crate) const PROJECTIONS: &[Projection] = &[
         ],
     },
     Projection {
-        name: "observed_member",
-        union: false,
-        fields: &[
-            Field {
-                name: "either",
-                shape: Shape::Scalar(Scalar::Boolean),
-            },
-            Field {
-                name: "name",
-                shape: Shape::Scalar(Scalar::Text),
-            },
-            Field {
-                name: "probability",
-                shape: Shape::Scalar(Scalar::Real),
-            },
-            Field {
-                name: "relation",
-                shape: Shape::Scalar(Scalar::Text),
-            },
-            Field {
-                name: "source",
-                shape: Shape::Object("relation_endpoint"),
-            },
-            Field {
-                name: "target",
-                shape: Shape::Object("relation_endpoint"),
-            },
-            Field {
-                name: "value",
-                shape: Shape::Object("judgment"),
-            },
-        ],
-    },
-    Projection {
         name: "observed_probability",
         union: false,
         fields: &[
@@ -1444,68 +1362,6 @@ pub(crate) const PROJECTIONS: &[Projection] = &[
             Field {
                 name: "probability",
                 shape: Shape::Scalar(Scalar::Real),
-            },
-        ],
-    },
-    Projection {
-        name: "observed_record",
-        union: false,
-        fields: &[
-            Field {
-                name: "entities",
-                shape: Shape::Array("entity"),
-            },
-            Field {
-                name: "kind",
-                shape: Shape::Scalar(Scalar::Text),
-            },
-            Field {
-                name: "mode",
-                shape: Shape::Scalar(Scalar::Text),
-            },
-            Field {
-                name: "proposals",
-                shape: Shape::Array("boundary_proposal"),
-            },
-            Field {
-                name: "relations",
-                shape: Shape::Array("entity_edge"),
-            },
-            Field {
-                name: "value",
-                shape: Shape::Object("answer_value"),
-            },
-        ],
-    },
-    Projection {
-        name: "observed_row",
-        union: false,
-        fields: &[
-            Field {
-                name: "kind",
-                shape: Shape::Scalar(Scalar::Text),
-            },
-            Field {
-                name: "value",
-                shape: Shape::Object("observed_value"),
-            },
-        ],
-    },
-    Projection {
-        name: "observed_value",
-        union: true,
-        fields: &[
-            Field {
-                name: "array_value",
-                shape: Shape::Array("observed_member"),
-            },
-            Field {
-                name: "integer_value",
-                shape: Shape::Scalar(Scalar::Unsigned),
-            },
-            Field {
-                name: "object_value",
-                shape: Shape::Object("observed_record"),
             },
         ],
     },
@@ -2866,4 +2722,4 @@ pub(crate) const PROJECTIONS: &[Projection] = &[
         ],
     },
 ];
-pub(crate) const COLUMN_COUNT: usize = 1336;
+pub(crate) const COLUMN_COUNT: usize = 1273;

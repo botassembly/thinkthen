@@ -28,7 +28,8 @@ assert len(catalog) == len(scalars) + len(tables), 'duplicate catalog rows'
 assert all(row['description'].strip() and '\\n' not in row['description'] for row in catalog)
 assert ('thinkthen_functions', 0) in scalars
 for name, row in tables.items():
-        hidden = connection.execute('SELECT count(*) FROM pragma_table_xinfo(?) WHERE hidden=1', (name,)).fetchone()[0]
+        visible = connection.execute('SELECT count(*) FROM pragma_table_xinfo(?) WHERE hidden=0', (name,)).fetchone()[0]
+        hidden = connection.execute('SELECT count(*) FROM pragma_table_xinfo(?) WHERE hidden=1 AND cid<?', (name,visible+row['max_arity'])).fetchone()[0]
         assert row['max_arity'] == hidden, (name, row, hidden)
         assert 0 <= row['min_arity'] <= row['max_arity']
 assert json.loads(connection.execute('SELECT thinkthen_functions()').fetchone()[0]) == catalog

@@ -13,6 +13,7 @@ SCHEMA['$defs']['postgresqlObservedInput'] = {'type': 'object', 'properties': {
     'images': {'type': 'array', 'items': {'$ref': '#/$defs/completeImage'}}}}
 SCHEMA['$defs']['completesessionObservation']['oneOf'][0]['properties']['inputs'] = {
     'type': 'array', 'items': {'$ref': '#/$defs/postgresqlObservedInput'}}
+SCHEMA['$defs']['completesessionObservation']['oneOf'][1]['properties']['value'] = True
 MODEL = Composite(SCHEMA['$defs'])
 for name in (*ROOTS, 'completesessionQuestionDetail'):
     MODEL.shape({'$ref': '#/$defs/' + name}, name)
@@ -168,6 +169,6 @@ def ordinary(db, question, text, settings=None):
         return None
     detail = reader.object('question_detail', details[0]['question_detail_receipt_index'])
     question = detail['question']
-    kind = next((ROOT_KIND[verb] for verb in ('choose', 'tag', 'score') if verb in question), 'decision')
+    kind = ROOT_KIND.get(question.get('verb'), 'decision')
     rows = reader.rows(kind)
     return reader.object(kind, rows[0][kind + '_receipt_index'])

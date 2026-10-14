@@ -37,15 +37,11 @@ pub(super) fn source(args: &Arguments) -> Result<String, Failure> {
             return Ok(source);
         }
     }
-    if let Some(source) = args.text("kinds")? {
-        if source.starts_with('{') || source.starts_with('@') {
-            return Ok(source);
-        }
-        let kinds = source.split(',').map(str::trim).collect::<Vec<_>>();
-        return Ok(serde_json::json!({"recognize":{"kinds":kinds}}).to_string());
-    }
     if args.names.iter().any(|name| name == "body") {
-        return Ok("{}".into());
+        return Ok(args.text("kinds")?.unwrap_or_else(|| "{}".into()));
+    }
+    if let Some(rules) = args.text("rules")? {
+        return Ok(rules);
     }
     Err(Failure::usage("the native table needs a question"))
 }
@@ -70,7 +66,7 @@ pub(super) fn settings(args: &Arguments) -> Result<thinkthen::Settings, Failure>
     question::call_settings(ValueRef::Text(&settings))
 }
 
-pub(super) fn inputs(args: &Arguments) -> Result<complete_native::Inputs, Failure> {
+pub(super) fn inputs(args: &Arguments) -> Result<complete_native::Inputs, thinkthen::Error> {
     let image = match args.value("images") {
         ValueRef::Null => args.value("text"),
         value => value,
@@ -86,7 +82,7 @@ pub(super) fn inputs(args: &Arguments) -> Result<complete_native::Inputs, Failur
         return Ok(inputs);
     }
     let records = args.text("records")?;
-    let paths = args.text("request_paths")?;
+    let paths = args.text("request_paths")?.or(args.text("paths")?);
     let mut fields = Vec::new();
     if let Some(records) = records {
         fields.push(format!("\"records\":{records}"));
@@ -94,12 +90,20 @@ pub(super) fn inputs(args: &Arguments) -> Result<complete_native::Inputs, Failur
     if let Some(paths) = paths {
         let mut file = vec![format!("\"paths\":{paths}")];
         let mut reading = Vec::new();
-        text_field(args, "request_unit", "unit", &mut reading)?;
-        integer_field(args, "request_window", "window", &mut reading)?;
+        for name in ["request_unit", "unit"] {
+            text_field(args, name, "unit", &mut reading)?;
+        }
+        for name in ["request_window", "window"] {
+            integer_field(args, name, "window", &mut reading)?;
+        }
         let mut options = vec![format!("\"reading\":{{{}}}", reading.join(","))];
-        text_field(args, "request_media", "media", &mut options)?;
+        for name in ["request_media", "media"] {
+            text_field(args, name, "media", &mut options)?;
+        }
         file.push(format!("\"options\":{{{}}}", options.join(",")));
-        text_field(args, "request_format", "format", &mut file)?;
+        for name in ["request_format", "format"] {
+            text_field(args, name, "format", &mut file)?;
+        }
         fields.push(format!("\"files\":{{{}}}", file.join(",")));
     }
     if fields.is_empty() {
@@ -116,7 +120,7 @@ pub(super) fn inputs(args: &Arguments) -> Result<complete_native::Inputs, Failur
             fields.push(format!("\"files\":{{\"paths\":{paths}}}"));
             String::new()
         } else {
-            return Err(Failure::usage("supply native records, text or file paths"));
+            return Err(Failure::usage("supply native records, text or file paths").into());
         };
         if fields.is_empty() {
             fields.push(format!("\"records\":{records}"));
@@ -145,7 +149,6 @@ pub(super) fn inputs(args: &Arguments) -> Result<complete_native::Inputs, Failur
         fields.push(format!("\"{name}\":{}", args.flag(name)?));
     }
     complete_native::Inputs::parse_request(&format!("{{{}}}", fields.join(",")))
-        .map_err(Failure::from)
 }
 
 fn text_field(
@@ -197,8 +200,12 @@ pub(super) fn options(args: &Arguments) -> Result<thinkthen::RequestOptions, Fai
     }
     fields.push(format!(
         "\"files_only\":{}",
-        args.flag("request_files_only")?
+        args.flag("request_files_only")? || args.flag("files_only")?
     ));
+    if let Some(fields_data) = args.text("fields")? {
+        fields.push(format!("\"field\":{fields_data}"));
+    }
+    text_field(args, "context_field", "context_field", &mut fields)?;
     fields.push(format!("\"attempts\":{}", args.flag("attempts")?));
     serde_json::from_str(&format!("{{{}}}", fields.join(",")))
         .map_err(|error| Failure::usage(format!("invalid named request options: {error}")))
@@ -211,4 +218,15 @@ pub(super) fn keys(args: &Arguments) -> Result<Vec<String>, Failure> {
         })
         .transpose()
         .map(Option::unwrap_or_default)
+}
+
+pub(super) fn query_arguments(args: &Arguments, entities: &[thinkthen::Entity]) -> Arguments {
+    let records = entities
+        .iter()
+        .map(|entity| serde_json::json!({"json":{"name":entity.name(),"kind":entity.kind()}}))
+        .collect::<Vec<_>>();
+    args.with_value(
+        "records",
+        rusqlite::types::Value::Text(serde_json::Value::Array(records).to_string()),
+    )
 }

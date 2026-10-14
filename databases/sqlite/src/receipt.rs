@@ -2,7 +2,9 @@
 use crate::{Failure, receipt_generated::PROJECTIONS};
 use rusqlite::types::Value;
 use serde_json::Value as Json;
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
+
+pub(crate) type Cells = BTreeMap<usize, Value>;
 
 #[derive(Clone, Copy, Debug)]
 pub(crate) enum Scalar {
@@ -86,6 +88,7 @@ pub(crate) struct Receipt {
     rows: HashMap<&'static str, Vec<Vec<Value>>>,
     pub(super) carrier: Json,
     pub(super) keys: Vec<String>,
+    pub(super) ids: crate::tables::Ids,
 }
 
 impl Receipt {
@@ -152,9 +155,8 @@ impl Receipt {
         count(start)
     }
 
-    pub(crate) fn projected(&self, kind: &str, leading: usize) -> Result<Vec<Vec<Value>>, Failure> {
+    pub(crate) fn projected(&self, kind: &str, leading: usize) -> Result<Vec<Cells>, Failure> {
         let shape = projection(kind)?;
-        let columns = columns();
         let start = PROJECTIONS
             .iter()
             .take_while(|item| item.name != shape.name)
@@ -165,13 +167,12 @@ impl Receipt {
             .into_iter()
             .flatten()
             .map(|held| {
-                let mut row = vec![Value::Null; leading + columns.len()];
-                for (at, value) in held.iter().enumerate() {
-                    let slot = row
-                        .get_mut(leading + start + at)
-                        .ok_or_else(|| Failure::defect("a receipt projection lost its column"))?;
-                    *slot = value.clone();
-                }
+                let row = held
+                    .iter()
+                    .enumerate()
+                    .filter(|(_, value)| !matches!(value, Value::Null))
+                    .map(|(at, value)| (leading + start + at, value.clone()))
+                    .collect::<Cells>();
                 Ok(row)
             })
             .collect()

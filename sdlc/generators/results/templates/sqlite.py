@@ -12,6 +12,7 @@ def render(schema):
         'images': {'type': 'array', 'items': {'$ref': '#/$defs/completeImage'}}}}
     schema['$defs']['completesessionObservation']['oneOf'][0]['properties']['inputs'] = {
         'type': 'array', 'items': {'$ref': '#/$defs/postgresqlObservedInput'}}
+    schema['$defs']['completesessionObservation']['oneOf'][1]['properties']['value'] = True
     model = Composite(schema['$defs'])
     for root in (*ROOTS, 'completesessionQuestionDetail'):
         model.shape({'$ref': '#/$defs/' + root}, root)

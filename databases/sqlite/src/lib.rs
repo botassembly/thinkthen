@@ -102,6 +102,12 @@ impl Failure {
     }
 }
 
+impl From<Failure> for thinkthen::Error {
+    fn from(failure: Failure) -> Self {
+        Self::new(failure.kind, failure.message)
+    }
+}
+
 impl From<thinkthen::Error> for Failure {
     fn from(error: thinkthen::Error) -> Self {
         if matches!(

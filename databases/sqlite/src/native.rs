@@ -1,8 +1,8 @@
 //! Same-name tables retain ordinary answers and add typed receipt projections.
+use crate::Failure;
 use crate::many::Store;
-use crate::receipt::Receipt;
+use crate::receipt::{Cells, Receipt};
 use crate::tables::{Scan, Table};
-use crate::{Failure, receipt_generated};
 use rusqlite::ffi::sqlite3;
 use rusqlite::types::{Value, ValueRef};
 use rusqlite::vtab::Filters;
@@ -12,6 +12,7 @@ use std::ffi::{CStr, CString};
 use std::marker::PhantomData;
 use std::sync::{Arc, Mutex};
 
+mod answers;
 mod input;
 mod run;
 
@@ -77,11 +78,16 @@ fn hidden<T: Table>() -> Result<Vec<String>, Failure> {
 impl<T: Verb> Table for Native<T> {
     const NAME: &'static str = T::NAME;
     const SCHEMA: &'static CStr = T::SCHEMA;
-    const FIRST_HIDDEN: usize = T::FIRST_HIDDEN + receipt_generated::COLUMN_COUNT;
-    const COLUMNS: usize = T::COLUMNS + receipt_generated::COLUMN_COUNT + FIELDS.len();
+    const FIRST_HIDDEN: usize = T::FIRST_HIDDEN;
+    const COLUMNS: usize = T::COLUMNS + FIELDS.len();
     const REQUIRED: usize = 0;
 
     fn schema() -> Result<Cow<'static, CStr>, Failure> {
+        if Self::COLUMNS + crate::receipt_generated::COLUMN_COUNT > 2000 {
+            return Err(Failure::defect(
+                "a receipt table exceeds SQLite's column limit",
+            ));
+        }
         let base = T::schema()?;
         let base = base
             .to_str()
@@ -97,13 +103,13 @@ impl<T: Verb> Table for Native<T> {
         let visible = columns.iter().take(T::FIRST_HIDDEN).cloned();
         let receipt = crate::receipt::columns()
             .into_iter()
-            .map(|(name, kind)| format!("{name} {kind}"));
+            .map(|(name, kind)| format!("{name} {kind} HIDDEN"));
         let arguments = columns.iter().skip(T::FIRST_HIDDEN).cloned();
         let extra = FIELDS.iter().map(|field| format!("{field} HIDDEN"));
         let text = visible
-            .chain(receipt)
             .chain(arguments)
             .chain(extra)
+            .chain(receipt)
             .collect::<Vec<_>>()
             .join(",");
         Ok(Cow::Owned(
@@ -132,27 +138,12 @@ impl<T: Verb> Table for Native<T> {
             return Ok(Scan {
                 rows: Arc::new(Vec::new()),
                 selected: None,
+                projections: None,
             });
         }
         let legacy_count = T::COLUMNS - T::FIRST_HIDDEN;
         let extra = arguments.get(legacy_count..).unwrap_or_default();
         let legacy = extra.iter().all(|value| matches!(value, Value::Null));
-        if extra.iter().all(|value| matches!(value, Value::Null)) && !run::always_native(T::VERB) {
-            let scan = T::scan(db, mask, filters, store)?;
-            let rows = scan
-                .rows
-                .iter()
-                .map(|row| {
-                    let mut row = row.clone();
-                    row.resize(Self::FIRST_HIDDEN, Value::Null);
-                    row
-                })
-                .collect();
-            return Ok(Scan {
-                rows: Arc::new(rows),
-                selected: scan.selected,
-            });
-        }
         let mut names = hidden::<T>()?;
         names.extend(FIELDS.iter().map(|field| (*field).to_owned()));
         let args = Arguments {
@@ -163,57 +154,56 @@ impl<T: Verb> Table for Native<T> {
         let selection = args.text("projection")?;
         let kind = selection.as_deref().unwrap_or_else(|| run::root(T::VERB));
         crate::receipt::projection(kind)?;
-        let identity = input::identity(T::VERB, &args)?;
-        let receipt = if T::FRESH_ANSWER && selection.is_none() {
-            None
-        } else {
-            store
-                .lock()
-                .unwrap_or_else(std::sync::PoisonError::into_inner)
-                .receipts
-                .get(&identity)
-        };
-        let receipt = if let Some(receipt) = receipt {
-            receipt
-        } else {
-            let receipt = Arc::new(run::execute(db, T::VERB, &args)?);
-            store
-                .lock()
-                .unwrap_or_else(std::sync::PoisonError::into_inner)
-                .receipts
-                .put(identity, Arc::clone(&receipt));
-            receipt
+        let receipt = match run::prepare(db, T::VERB, &args) {
+            Err(error)
+                if matches!(
+                    error.kind(),
+                    thinkthen::ErrorKind::Cancelled | thinkthen::ErrorKind::Deadline
+                ) =>
+            {
+                return Err(error.into());
+            }
+            Err(error) => Arc::new(run::admission(&error)?),
+            Ok(invocation) => cached::<T>(db, invocation, selection.is_none(), store)?,
         };
         if T::STRICT_ANSWER && selection.is_none() && legacy {
             run::legacy_error(&receipt)?;
         }
-        let mut rows = receipt.projected(kind, T::FIRST_HIDDEN)?;
+        let mut rows = receipt.projected(kind, Self::COLUMNS)?;
         if selection.is_none() {
-            run::answers(T::VERB, &receipt, &mut rows)?;
-            let facts = receipt.projected("facts", T::FIRST_HIDDEN)?;
-            let errors = receipt.projected("error", T::FIRST_HIDDEN)?;
-            if rows.is_empty()
-                && !(T::STRICT_ANSWER && legacy)
-                && (!facts.is_empty() || !errors.is_empty())
-            {
-                rows.push(vec![Value::Null; Self::FIRST_HIDDEN]);
+            answers::rows(T::VERB, &receipt, &mut rows)?;
+            let facts = receipt.projected("facts", Self::COLUMNS)?;
+            let errors = receipt.projected("error", Self::COLUMNS)?;
+            if rows.is_empty() && !(T::STRICT_ANSWER && legacy) {
+                rows.push(Cells::new());
             }
             overlay(&mut rows, &facts, &errors);
         }
         Ok(Scan {
-            rows: Arc::new(rows),
+            rows: Arc::new(vec![Vec::new(); rows.len()]),
             selected: None,
+            projections: Some(Arc::new(rows)),
         })
     }
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub(super) struct Arguments {
     names: Vec<String>,
     values: Vec<Value>,
     bound: u64,
 }
 impl Arguments {
+    fn with_value(&self, name: &str, value: Value) -> Self {
+        let mut args = self.clone();
+        if let Some(at) = args.names.iter().position(|field| field == name) {
+            if let Some(slot) = args.values.get_mut(at) {
+                *slot = value;
+            }
+            args.bound |= 1 << at;
+        }
+        args
+    }
     fn value(&self, name: &str) -> ValueRef<'_> {
         self.names
             .iter()
@@ -353,29 +343,54 @@ impl Verb for crate::many::RankSetTable {
     const STRICT_ANSWER: bool = true;
 }
 impl Verb for crate::many::Rank {
+    const STRICT_ANSWER: bool = true;
     const VERB: &'static str = "rank";
 }
 impl Verb for crate::source_filter::Filter {
+    const STRICT_ANSWER: bool = true;
     const VERB: &'static str = "filter";
 }
 impl Verb for crate::tables::Recognizer {
+    const STRICT_ANSWER: bool = true;
     const VERB: &'static str = "recognize";
 }
 impl Verb for crate::tables::Relater {
+    const STRICT_ANSWER: bool = true;
     const VERB: &'static str = "relate";
 }
 
-fn overlay(rows: &mut [Vec<Value>], facts: &[Vec<Value>], errors: &[Vec<Value>]) {
-    let values = facts.first().into_iter().chain(errors.first());
-    for held in values {
+fn overlay(rows: &mut [Cells], facts: &[Cells], errors: &[Cells]) {
+    for held in facts.first().into_iter().chain(errors.first()) {
         for row in &mut *rows {
-            for (slot, value) in row
-                .iter_mut()
-                .zip(held)
-                .filter(|(_, value)| !matches!(value, Value::Null))
-            {
-                *slot = value.clone();
-            }
+            row.extend(held.clone());
         }
     }
+}
+
+fn cached<T: Verb>(
+    db: *mut sqlite3,
+    invocation: run::Invocation,
+    answer: bool,
+    store: &Mutex<Store>,
+) -> Result<Arc<Receipt>, Failure> {
+    let identity = invocation.identity.clone();
+    let held = if T::FRESH_ANSWER && answer {
+        None
+    } else {
+        store
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+            .receipts
+            .get(&identity)
+    };
+    if let Some(held) = held {
+        return Ok(held);
+    }
+    let receipt = Arc::new(run::execute(db, invocation)?);
+    store
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner)
+        .receipts
+        .put(identity, Arc::clone(&receipt));
+    Ok(receipt)
 }

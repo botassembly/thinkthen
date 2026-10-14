@@ -378,6 +378,7 @@ struct Cursor<T> {
     store: Arc<Mutex<Store>>,
     rows: Arc<Vec<Vec<Value>>>,
     selected: Option<usize>,
+    projections: Option<Arc<Vec<crate::receipt::Cells>>>,
     row: usize,
     kind: PhantomData<T>,
 }
@@ -424,6 +425,7 @@ unsafe impl<'vtab, T: Table + 'static> VTab<'vtab> for Tab<T> {
             store: Arc::clone(&self.store),
             rows: Arc::new(Vec::new()),
             selected: None,
+            projections: None,
             row: 0,
             kind: PhantomData,
         })
@@ -445,6 +447,7 @@ unsafe impl<T: Table> VTabCursor for Cursor<T> {
         let scan = guard(T::NAME, || T::scan(db, mask, filters, &self.store))?;
         self.rows = scan.rows;
         self.selected = scan.selected;
+        self.projections = scan.projections;
         self.row = 0;
         Ok(())
     }
@@ -463,10 +466,14 @@ unsafe impl<T: Table> VTabCursor for Cursor<T> {
     }
 
     fn column(&self, cell: &mut Cell, at: c_int) -> rusqlite::Result<()> {
+        let position = self.selected.unwrap_or(self.row);
+        let at = usize::try_from(at).map_err(|_| rusqlite::Error::InvalidQuery)?;
         let value = self
-            .rows
-            .get(self.selected.unwrap_or(self.row))
-            .and_then(|row| usize::try_from(at).ok().and_then(|at| row.get(at)))
+            .projections
+            .as_ref()
+            .and_then(|rows| rows.get(position))
+            .and_then(|row| row.get(&at))
+            .or_else(|| self.rows.get(position).and_then(|row| row.get(at)))
             .unwrap_or(&Value::Null);
         cell.set_result(value)
     }

@@ -165,6 +165,7 @@ pub(crate) fn keyed(source: &str) -> Result<Vec<(String, String)>, Failure> {
 fn selected(rows: Rows, positions: Arc<HashMap<String, usize>>, lookup: Option<String>) -> Scan {
     Scan {
         rows,
+        projections: None,
         selected: lookup.map(|key| positions.get(&key).copied().unwrap_or(usize::MAX)),
     }
 }

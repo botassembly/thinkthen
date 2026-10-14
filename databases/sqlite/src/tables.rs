@@ -21,6 +21,7 @@ use crate::{Failure, ffi, worker};
 pub(crate) struct Scan {
     pub(crate) rows: Arc<Vec<Vec<Value>>>,
     pub(crate) selected: Option<usize>,
+    pub(crate) projections: Option<Arc<Vec<crate::receipt::Cells>>>,
 }
 
 /// One table-valued function: its schema, its hidden arguments, and its rows.
@@ -61,6 +62,7 @@ pub(crate) trait Table {
         Ok(Scan {
             rows: Arc::new(rows),
             selected: None,
+            projections: None,
         })
     }
 }
@@ -199,7 +201,7 @@ pub(crate) struct Recognizer;
 
 impl Recognizer {
     /// Kinds as a comma list, a JSON recognize section or file, or `'@name'`.
-    fn ask(kinds: Option<&str>) -> Result<Recognize, Failure> {
+    pub(crate) fn ask(kinds: Option<&str>) -> Result<Recognize, Failure> {
         let kinds = kinds.map(str::trim).unwrap_or_default();
         if kinds.starts_with('[') {
             return Err(Failure::usage(
@@ -321,11 +323,12 @@ fn named(row: &rusqlite::Row<'_>, at: usize, what: &str, id: &Value) -> Result<S
 pub(crate) struct Relater;
 
 /// The distinct entities in first-seen order, and the ids that hold each.
-type Read = (Vec<Entity>, HashMap<(String, String), Vec<Value>>);
+pub(crate) type Ids = HashMap<(String, String), Vec<Value>>;
+type Read = (Vec<Entity>, Ids);
 
 impl Relater {
     /// Inline rules, or one JSON relate section, file, or `'@name'`.
-    fn ask(argument: &str) -> Result<Relate, Failure> {
+    pub(crate) fn ask(argument: &str) -> Result<Relate, Failure> {
         if argument.starts_with('{') || argument.starts_with('@') {
             let (whole, file) = file_json(argument, "relate")?;
             return read(&whole, file, Relate::from_json);
@@ -348,7 +351,7 @@ impl Relater {
     }
 
     /// Read exactly id, name and optional kind from the caller's read-only SELECT.
-    fn entities(db: *mut sqlite3, query: &str) -> Result<Read, Failure> {
+    pub(crate) fn entities(db: *mut sqlite3, query: &str) -> Result<Read, Failure> {
         if !query
             .trim_start()
             .to_ascii_uppercase()
