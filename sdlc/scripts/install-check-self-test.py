@@ -167,6 +167,7 @@ class RefusalTable(unittest.TestCase):
         stable = duckdb_versions()[0]
         preview = duckdb_versions()[1]
         table = [(stable, 'linux_amd64', None), (preview, 'linux_amd64', None),
+                 (stable, 'linux_amd64', 'short source identity'),
                  ('v0.0.0', 'linux_amd64', 'supported version'), (stable, 'osx_arm64', 'native target'),
                  (stable, 'linux_amd64', 'source identity'), (stable, 'linux_amd64', 'version identity'),
                  (stable, 'linux_amd64', 'missing'), (stable, 'linux_amd64', 'footer'),
@@ -209,6 +210,7 @@ class RefusalTable(unittest.TestCase):
                         reported = {'version': host if host != preview else 'v2.0.0-dev1',
                                     'source_id': identity['source_commit'][:10]}
                         if failure == 'source identity': reported['source_id'] = '0000000000'
+                        if failure == 'short source identity': reported['source_id'] = identity['source_commit'][:8]
                         if failure == 'version identity': reported['version'] = 'v0.0.0'
                         return json.dumps(reported) + '\n' + platform
                     self.assertIn(matching, sql)
@@ -219,7 +221,7 @@ class RefusalTable(unittest.TestCase):
                     self.assertIn(') AS d);', sql)
                     return '0.2.0\n{"value":true,"requests_sent":0}'
                 check.run = run
-                if failure:
+                if failure and failure != 'short source identity':
                     with patch.object(check, 'unpack', wraps=check.unpack) as unpack, self.assertRaises(Failure) as error:
                         duckdb(check)
                     wanted = {'missing': matching,

@@ -294,7 +294,7 @@ def duckdb(check):
     if not isinstance(reported, dict) or not isinstance(reported.get('version'), str) or not reported['version']:
         raise Failure('DuckDB host must report one supported version and platform')
     identities = [selected(version, TARGET) for version in versions()]
-    matching = [item for item in identities if reported.get('source_id') == item['source_commit'][:10]
+    matching = [item for item in identities if reported.get('source_id') in (item['source_commit'][:8], item['source_commit'][:10])
                 and (item['metadata_version'] != item['version'] or reported.get('version') == item['version'])]
     if len(matching) != 1:
         raise Failure('DuckDB host must report one supported version and platform')
