@@ -260,7 +260,7 @@ pub(super) fn caught<T>(call: impl FnOnce() -> Result<T, PolarsError>) -> Result
 
 #[cfg(test)]
 mod tests {
-    //! Stays because public lazy collection cannot inject a panic inside the private Polars callback that protects provider, chunk, null, and schema evaluation.
+    //! Stays: public lazy collection cannot inject a panic inside the private Polars callback that protects provider, chunk, null, and schema evaluation.
     #[test]
     fn a_panic_stays_inside_the_polars_compute_boundary() {
         let stopped = super::caught::<()>(|| panic!("private callback content"))

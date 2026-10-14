@@ -110,7 +110,7 @@ def asked(steps: list, env: dict, setup: str = "", held: Backend | None = None) 
 
     With `held`, the child reads its standard-input line once that backend
     counts one request, so a setup can act on a send it knows is held."""
-    code = f"db = connect()\n{setup}\nsay(results=[run(db, sql, tuple(parameters)) for sql, parameters in {steps!r}])\n"
+    code = f"db = connect()\n{setup}\nsay(results=[[[ordinary(db, *parameters)]] if sql == 'typed_details' else run(db, sql, tuple(parameters)) for sql, parameters in {steps!r}])\n"
     if held is None:
         return child(code, env)["results"]
     running = Child(code, env)
@@ -195,10 +195,10 @@ def check(case: dict, backend: Backend) -> None:
     elif kind == "single":
         calls = success.get("counters", {}).get("calls", 1)
         verb = next(name for name in TYPED if name in case["question"])
-        steps = [["SELECT thinkthen_usage()", []]] + [["SELECT thinkthen_details(?, ?)", [question, texts[0]]]] * calls
+        steps = [["SELECT thinkthen_usage()", []]] + [["typed_details", [question, texts[0]]]] * calls
         steps += [["SELECT thinkthen_usage()", []], [f"SELECT {TYPED[verb]}(?, ?)", [question, texts[0]]]]
         results = asked(steps, env)
-        details, typed = json.loads(results[1][0][0]), results[-1][0][0]
+        details, typed = results[1][0][0], results[-1][0][0]
         expected = answers[0]
         same("value", details["value"], expected["bare"])
         same("answer", details["answer"], expected["details"]["answer"])

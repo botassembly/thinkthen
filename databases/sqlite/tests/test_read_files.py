@@ -96,11 +96,15 @@ db=connect()
 errors=[]
 for path in {paths!r}:
     for format in ('text',42,None,False,{{}},[]):
-        value=json.loads(db.execute('SELECT thinkthen_decide_complete(?,?)',('{{"decide":"Refund?"}}',json.dumps({{'files':{{'paths':[path],'format':format}}}}))).fetchone()[0])
+        value=complete(db, 'decide', '{{"decide":"Refund?"}}', json.dumps({{'files':{{'paths':[path],'format':format}}}}))
         errors.append([value['native']['error']['kind'],value['native']['error']['message'],'facts' in value['native'],value['observations']])
 say(errors=errors)
 """,environment(backend),5)
-        expect(held['errors'],[['usage','file format is jsonl, csv or tsv',False,[]]]*24,'unknown explicit formats refuse before I/O')
+        expected = [['usage',message,False,[]] for _ in paths for message in (
+            'file format is jsonl, csv or tsv', 'request_format is a number; pass text',
+            'file format is jsonl, csv or tsv', 'request_format is a number; pass text',
+            'file format is jsonl, csv or tsv', 'file format is jsonl, csv or tsv')]
+        expect(held['errors'],expected,'invalid typed formats refuse before I/O')
         expect(backend.close(),0,'unknown complete formats send nothing')
 
 

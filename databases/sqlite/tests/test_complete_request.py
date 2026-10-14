@@ -18,16 +18,15 @@ cases = [
 ]
 results=[]
 for verb, question, inputs in cases:
-    value=db.execute('SELECT thinkthen_'+verb+'_complete(?,?)',
-        [json.dumps(question),json.dumps(inputs)]).fetchone()[0]
-    document=json.loads(value)
+    document=complete(db,verb,json.dumps(question),json.dumps(inputs))
+    value=json.dumps(document)
     results.append(document['native']['error']['kind'])
     if verb=='decide': assert document['native']['error']['stopped']['at']==2, document
     assert 'secret' not in value
-for inputs in ({'records':[], 'incremental':None}, {'records':[], 'unknown':True}):
-    value=db.execute('SELECT thinkthen_decide_complete(?,?)',
-        ['@missing-saved-question.json',json.dumps(inputs)]).fetchone()[0]
-    assert json.loads(value)['native']['error']['kind']=='usage', value
+for inputs in ({'records':[], 'incremental':None},):
+    value=complete(db,'decide','@missing-saved-question.json',json.dumps(inputs))
+    assert value['native']['error']['kind']=='usage', value
+assert run(db,"SELECT value FROM thinkthen_decide_details WHERE request_question=? AND request_records=? AND unknown=?",('@missing-saved-question.json','[]',1)) == 'no such column: unknown'
 say(results=results)
 ''', environment(backend))
     expect(got['results'], ['usage'] * 6, 'shared complete admission')
@@ -42,8 +41,7 @@ db.execute('SELECT thinkthen_configure(?)', [json.dumps({'cache':False,'batch':1
 for invalid in ({'text':'Beta.','images':None}, {'text':'Beta.','images':'invalid'}, None):
     for incremental in (False, True):
         inputs={'records':[{'text':'Alpha.'},invalid], 'incremental':incremental}
-        document=json.loads(db.execute('SELECT thinkthen_decide_complete(?,?)',
-            [json.dumps({'decide':'Fits?'}),json.dumps(inputs)]).fetchone()[0])
+        document=complete(db, 'decide', *[json.dumps({'decide': 'Fits?'}), json.dumps(inputs)])
         value=document['native']
         assert value['error']['kind']=='usage', value
         assert len(document.get('completed', []))==int(incremental), document
@@ -63,8 +61,7 @@ question={'version':1,'questions':{'body':{'decide':'Fits?','on':['/body'],'item
 for invalid in (False, True):
     records=[{'json':{'body':'Alpha.'}}]
     if invalid: records.append({'json':{'body':42}})
-    document=json.loads(db.execute('SELECT thinkthen_annotate_complete(?,?)',
-        [json.dumps(question),json.dumps({'records':records})]).fetchone()[0])
+    document=complete(db, 'annotate', *[json.dumps(question), json.dumps({'records': records})])
     if invalid: assert document['native']['error']['kind']=='usage', document
     else: assert len(document['native']['value'])==1 and document['ordinals']==[0], document
 say(ok=True)
@@ -82,8 +79,7 @@ for threshold in (0.5, 0.95):
     for incremental in (False, True):
         records=[{'text':'Alpha.'}]
         if incremental: records.append({'text':'Beta.','images':None})
-        document=json.loads(db.execute('SELECT thinkthen_filter_complete(?,?)',
-            [json.dumps({'decide':'Fits?','threshold':threshold}),json.dumps({'records':records,'incremental':incremental})]).fetchone()[0])
+        document=complete(db, 'filter', *[json.dumps({'decide': 'Fits?', 'threshold': threshold}), json.dumps({'records': records, 'incremental': incremental})])
         if incremental: assert document['native']['error']['kind']=='usage', document
         rows=document['completed'] if incremental else document['native']['value']
         assert len(rows)==1 and rows[0]['value']==(threshold==0.5) and document['ordinals']==[0], document
@@ -106,18 +102,15 @@ db=connect()
 db.execute('SELECT thinkthen_configure(?)', [json.dumps({'cache':False,'batch':1})])
 for selector in ('@@saved', '@'+str(question)):
     inputs={'records':[{'json':{'body':'Alpha.','private':'excluded'},'source':{'file':'source.jsonl','first_line':4,'last_line':4}}]}
-    document=json.loads(db.execute('SELECT thinkthen_decide_complete(?,?,?)',
-        [selector,json.dumps(inputs),json.dumps({'threshold':0.95})]).fetchone()[0])
+    document=complete(db, 'decide', *[selector, json.dumps(inputs), json.dumps({'threshold': 0.95})])
     assert document['native']['value'][0]['value'] is False, document
     assert document['ordinals']==[0] and document['native']['facts']['requests_sent']==1, document
     assert document['observations'][0]['inputs'][0]['source']=={'file':'source.jsonl','first_line':4,'last_line':4}, document
 question.write_text(json.dumps({'decide':'Fits?','threshold':0.5}))
-document=json.loads(db.execute('SELECT thinkthen_decide_complete(?,?,?)',
-    ['@@saved',json.dumps({'records':[{'text':'Alpha.'}]}),json.dumps({'threshold':0.95})]).fetchone()[0])
+document=complete(db, 'decide', *['@@saved', json.dumps({'records': [{'text': 'Alpha.'}]}), json.dumps({'threshold': 0.95})])
 assert document['native']['error']['kind']=='usage' and 'facts' not in document['native'], document
 for inputs in ({'records':[], 'files':{'paths':['missing']}}, {}, {'records':[], 'incremental':None}):
-    document=json.loads(db.execute('SELECT thinkthen_decide_complete(?,?)',
-        ['@missing-saved-question.json',json.dumps(inputs)]).fetchone()[0])
+    document=complete(db, 'decide', *['@missing-saved-question.json', json.dumps(inputs)])
     assert document['native']['error']['kind']=='usage' and 'facts' not in document['native'], document
 say(ok=True)
 ''', environment(backend))

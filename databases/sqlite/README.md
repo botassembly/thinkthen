@@ -76,7 +76,7 @@ FROM thinkthen_choose_many('Which team?', '{"7":"Please track my parcel."}')
 WHERE options = '{"shipping":"Parcel questions","billing":"Money questions"}';
 ```
 
-Named `model`, `context`, `threshold`, `true_reading` and `false_reading` take SQL text. `batch` and `deadline_ms` take SQL integers. `options`, `levels` and `labels` take ordered JSON label arrays or description maps as SQL text; their entries retain the native member grammar and authored order. `none` takes the SQL integers 0 and 1. Each function still applies its own allowed settings grammar. Named NULL values omit that setting. Supplying the same field by name and in the settings object raises usage before sending. Required NULL inputs still return no rows before inspecting these parameters.
+Named `model`, `context`, `true_reading` and `false_reading` take SQL text. `threshold` takes a SQL number or native text band. `batch` takes a SQL integer or `'max'`; `deadline_ms` takes a SQL integer. `options`, `levels` and `labels` take ordered JSON label arrays or description maps as SQL text; their entries retain the native member grammar and authored order. `none` takes the SQL integers 0 and 1. Each function still applies its own allowed settings grammar. Named NULL values omit that setting. Supplying the same field by name and in the settings object raises usage before sending. Required NULL inputs still return no rows before inspecting these parameters.
 
 Names and positions appear in `pragma_table_xinfo('thinkthen_decide_many')` and the discovery catalog reports the expanded argument range. Named parameters merge into the same native settings object before the connection cache lookup. The effective settings participate in cache identity, so changing context cannot reuse a previous context's rows. Existing positional settings retain their original bytes and behavior.
 
@@ -91,7 +91,7 @@ WHERE unit = 'file' AND files_only = 1 AND batch = 16;
 
 `thinkthen_filter(question, paths)` takes an ordered JSON array of file paths and returns selected rows with SQL text, integer and real columns. `files_only = 1` keeps the first passing occurrence for each file in input order. Omission returns every passing occurrence. Repeated paths retain their native occurrence ordinals and contribute to the owning call's record count. `value` is 1 for a selected row; `probability` retains its actual yes probability. The answer and call identities, request and cache counts, optional reported tokens and elapsed seconds come from the same native evaluation.
 
-Named `unit`, `window`, `media` and `format` select the existing native reader. `format` admits `jsonl`, `csv` and `tsv`. `fields` takes an ordered JSON array of evidence pointers; `context_field` selects separate per-record context. The keyed-call settings above also apply through named parameters or `settings`. These calls use the existing Source reader and native admission, including physical row coordinates, file rules and image refusals. An empty path list raises the native Source usage error. A required NULL question or paths value returns no rows before inspecting other parameters. Source failures raise ordinary SQL errors. The existing completion calls retain eager/incremental Feed behavior and full observations while their wider migration continues.
+Named `unit`, `window`, `media` and `format` select the existing native reader. `format` admits `jsonl`, `csv` and `tsv`. `fields` takes an ordered JSON array of evidence pointers; `context_field` selects separate per-record context. The keyed-call settings above also apply through named parameters or `settings`. These calls use the existing Source reader and native admission, including physical row coordinates, file rules and image refusals. An empty path list raises the native Source usage error. A required NULL question or paths value returns no rows before inspecting other parameters. Source failures raise ordinary SQL errors. The same table accepts `request_records` for composed input records and typed receipt projections described below.
 
 ## Rank a table once
 
@@ -114,7 +114,7 @@ ORDER BY abbey_road.rank;
 | `thinkthen_choose(question, input[, settings])` | chosen label or SQL NULL |
 | `thinkthen_score(question, input[, settings])` | position on the named levels |
 | `thinkthen_tag(question, input[, settings])` | JSON array text of labels |
-| `thinkthen_details`, `thinkthen_try_details` with the same slots | result JSON, or an answered/failed envelope |
+| `thinkthen_<function>_details` as a table | value, probability, typed result, failure, facts and observations for each row |
 | `thinkthen_find(question, units_json[, settings])` | selected index, value and probabilities as JSON text |
 | `thinkthen_annotate(questions, input[, settings])` | named judgments as JSON text |
 | `thinkthen_recognize(input, kinds[, settings])` | rows of names, offsets, kinds and strengths |
@@ -133,7 +133,7 @@ The optional settings slot is JSON text in the shared `thinkthen.settings/1` gra
 
 `thinkthen_configure` replaces the individual setters. Its closed object supports `backend`, `model`, `batch`, `cache`, `throttle`, `timeout`, `max_retries`, `max_request_bytes`, `max_requests`, `max_requests_total`, `profile`, `record` and `replay`. The whole object is checked before it replaces the previous selection, and the engine must not already have built. `thinkthen_usage()` does not build it; a plan does build the engine so configure before planning. `"backend":"typesafe"` selects a built-in or configured name. Its address and key variable come from Rust configuration. SQL accepts no address or key. Omit `backend` to retain environment selection. Configure validation reads the environment but retains no credentials. The first engine build captures them. Every connection then uses that process engine. A failed build allows a later configuration and build to recover. `max_requests_total` reserves each live attempt against the shared process count, including later packed requests and retries. Cache hits and plans send nothing.
 
-The old `thinkthen_warm`, `thinkthen_probability`, `thinkthen_recognize_document`, individual setters and positional deadline/context forms refuse with migration guidance. Read probability from the same decide or choose `_many` row as its value, and order records with `thinkthen_rank`. A required NULL scalar operand returns SQL NULL; a required NULL table or set operand produces no rows. These calls return before inspecting other operands, reading files or sending. A NULL optional setting means the setting is omitted. Malformed types and settings raise `thinkthen usage` before a send. Ordinary errors read `thinkthen <kind>: <message> (retryable: yes|no)` with kinds `usage`, `local`, `backend`, `cancelled`, `deadline` and `defect`; removed calls keep plain migration messages. `thinkthen_try_details` returns fixed safe advice for a recoverable row failure; cancellation and deadlines still raise errors.
+The old `thinkthen_warm`, `thinkthen_probability`, `thinkthen_recognize_document`, individual setters and positional deadline/context forms refuse with migration guidance. Read probability from the same decide or choose `_many` row as its value, and order records with `thinkthen_rank`. A required NULL scalar operand returns SQL NULL; a required NULL table or set operand produces no rows. These calls return before inspecting other operands, reading files or sending. A NULL optional setting means the setting is omitted. Malformed types and settings raise `thinkthen usage` before a send. Ordinary errors read `thinkthen <kind>: <message> (retryable: yes|no)` with kinds `usage`, `local`, `backend`, `cancelled`, `deadline` and `defect`; removed calls keep plain migration messages. The details tables retain recoverable row failures and continue later rows; cancellation, deadlines and defects raise errors.
 
 `thinkthen_find` accepts an ordered JSON array of 2–255 nonblank text units, or 2–254 with `{"none":true}`. Duplicates retain separate zero-based positions. Empty input and SQL NULL return SQL NULL. `thinkthen_recognize` keeps the `text, start, end, length, kind, strength` row shape, with character offsets matching SQLite `substr`. `thinkthen_relations` accepts a full or bare recognize spec or an `@file`.
 
@@ -178,183 +178,82 @@ Files use the caller's native filesystem permissions. The reader remains DIRECTO
 
 `thinkthen_image(bytes BLOB, mime TEXT)` returns a versioned tagged BLOB. `thinkthen_images(image, ...)` packs 1–8 values in authored order into another persistent tagged BLOB. Tags survive storage; every judgment revalidates them. MIME is exactly `image/png` or `image/jpeg`; the native reader/decoder validates original compressed pixels. Each question takes 1–8 images and at most 24 MiB of compressed bytes. Order and duplicates are preserved. Source file names stay outside model evidence and cache identity.
 
-`thinkthen_decide_images(question, images, text, settings)`, `thinkthen_choose_images`, `thinkthen_score_images` and `thinkthen_details_images` use the existing native image engine. The first three return their ordinary scalar value; the last returns native detailed JSON. Questions and settings use the existing text/JSON/question-file grammar. Choose options and score levels belong in question JSON or settings. Ancillary text is optional. Scalar image details omit the original evidence with or without separate context.
+`thinkthen_decide_images(question, images, text, settings)`, `thinkthen_choose_images`, `thinkthen_score_images` use the existing native image engine. These calls return their ordinary scalar value. The function's details table accepts images inside a record and retains typed image receipts. Questions and settings use the existing text/JSON/question-file grammar. Choose options and score levels belong in question JSON or settings. Ancillary text is optional. Typed image receipt projections retain the original evidence and source metadata.
 
 NULL constructor operands return NULL. NULL question or collection returns NULL without sending; NULL ancillary text means absent text and NULL settings means defaults. A NULL member inside a collection, empty collection, invalid media/pixels/tag or exceeded limit is Usage before sending. Unsure decide/choose is NULL; failures remain errors. Arbitrary BLOB/bytea, text, paths, URLs and generic JSON never become images implicitly. Other functions retain their text input contract.
 
 SQLite accepts image judgments with 2, 3 or 4 arguments; omitted trailing arguments mean NULL. `thinkthen_image_file(path)` explicitly selects one local regular image through the native reader. `thinkthen_image_file_name(image)` returns its retained source name, or NULL for a byte constructor. No text line positions are invented.
 
 
-`thinkthen_rank_set(questions, keyed_json[, settings])` is the explicit additive
-rank-set route. It takes the native version-one ordered set of named decide
-questions, returns `key, rank, probability, question_name, facts`, and preserves
-each original keyed identity even when several keys have equal text. Each
-member sorts with the host's existing input-order ties; native turns visits
-each depth in authored member order, consumes duplicate visits, and emits
-each original once. `probability` and `question_name` belong to the selecting
-member. Use `ORDER BY rank` after a join and `LIMIT` for the merged prefix;
-every member still judges every record. The literal `thinkthen_rank` route
-retains its existing signatures and behavior.
+## Rank an ordered question set
 
-Settings take `batch`, `context` and `deadline_ms`; model/backend selection
-uses the existing host configuration. Per-call model, cuts, pointers and
-score members refuse before sending. One-member sets preserve the plain
-question's wire/cache identity. Recording each member individually supports
-strict set replay with zero sends. Described decide members retain their
-authored true/false meanings. The additive `thinkthen_rank_complete` route also accepts described decide and
-saved score questions through the native complete rank API.
+`thinkthen_rank_set(questions, keyed_json[, settings])` takes the native version-one ordered set of named decide questions. `SELECT *` returns `key, rank, probability, question_name`. Equal text keeps each original key. Native turns visit each depth in authored member order and emit each original once. The selecting member supplies probability and question name. `ORDER BY rank` and `LIMIT` operate on the merged result; every member still judges every record.
 
-`facts` comes directly from the same completed native call, counts original
-records and combined member requests, and repeats on every output row. It
-is the compatibility count-facts shape. Use `thinkthen_rank_complete` for full
-observations, call/answer IDs and started-failure envelopes. An empty object yields
-no rows. Set JSON and files use native RankSet admission, preserving member
-order and rejecting duplicates, authored thresholds/on and non-decide kinds.
+Settings take batch, context and deadline. Engine configuration supplies model/backend selection. Described decide members retain authored true/false meanings. An empty keyed object and required NULL operands return no rows before sending. Question files use the existing native reader. Typed `facts_*` columns replace the previous JSON facts column and repeat the owning call facts on each answer row. Full member judgments and observations use the same typed projections below.
 
-Questions/keyed input and facts are TEXT JSON. Questions may name an explicit
-`@file` through the existing question reader. NULL questions or keyed input
-produce no rows without reading question files or sending; NULL settings uses defaults.
+## Read typed answers and receipts
 
-## Complete native calls (0.2 development)
+Each of the ten functions has one `thinkthen_<function>_details` table. Plain calls retain their ordinary value. The retired `thinkthen_details`, `thinkthen_try_details`, `thinkthen_details_images`, `_complete` functions and record-list forms of plain calls are absent.
 
-`thinkthen_decide_complete`, `thinkthen_choose_complete`,
-`thinkthen_tag_complete`, `thinkthen_score_complete`,
-`thinkthen_filter_complete`, `thinkthen_rank_complete`,
-`thinkthen_find_complete`, `thinkthen_annotate_complete`,
-`thinkthen_recognize_complete` and `thinkthen_relate_complete` take
-`(question TEXT, inputs TEXT, settings TEXT := NULL)` and return JSON text.
-Complete calls and ordinary scalar/table calls form the current SQL function family. Ordinary calls and usage totals keep their signatures. PostgreSQL returns `json` for the same three arguments;
-DuckDB returns JSON text. Each complete invocation evaluates once.
+Each details row exposes `ordinal, value, probability, result, failure, facts, observations`. Result, failure, facts and observation references select the named typed projections from the same evaluation. Decide and filter expose yes probability; choose and find expose the selected option's probability. Score, tag and annotate expose null probability. Rank exposes one row per ranked record with its rank and probability. Recognition retains probabilities for each span. Relate exposes one row per edge with its probability. Rank, find and relate consume the supplied records as one whole set. A failed aggregate returns one failure row.
 
-Use native saved-question JSON, including authored descriptions, declarations,
-metadata and reading, or plain wording for an atomic question. Rank accepts
-native saved decide/score questions or an ordered rank set. Annotation takes a
-native question set; find, recognize and relate take their native saved grammar.
-`@reference` selects native reference loading and `@@NAME` explicitly selects
-named loading. DuckDB retains the native selection while its executing session
-authorizes and reads the selected path. PostgreSQL authorizes before resolution
-and checks the same opened descriptor against its allowed directory and the
-captured named root before reading content. Native parsing receives the original
-bytes; resolution grants no read permission.
+Rank and relate retain the call's observations on the first details row, whose ordinal is zero. Later rows expose an empty observation list. Read the first row to inspect the whole call. A single failure row retains all observations.
 
-SQLite also accepts the persistent BLOB from `thinkthen_images` as the input to `thinkthen_decide_complete`. It evaluates the collection as one image-only record and returns the same complete envelope. For example, with `photos.image` holding values built by `thinkthen_image`:
+For one ordinary receipt:
 
 ```sql
-SELECT thinkthen_decide_complete('Is red visible?', thinkthen_images(image))
-FROM photos;
+SELECT ordinal, value, probability, decision_answer_id, facts_requests_sent
+FROM thinkthen_decide_details('Does this ask for a refund?', 'Refund me.');
 ```
 
-The tagged collection reuses native image decoding, admission and request execution. NULL question or collection returns NULL before inspecting partners; NULL settings uses defaults. Existing text descriptors remain valid.
-
-The ordered input descriptor is explicit:
+For an ordered collection, use named inputs:
 
 ```sql
-SELECT thinkthen_decide_complete(
-  'Does this ask for a refund?',
-  '{"records":[{"text":"Refund me."}],"attempts":true}');
+SELECT decision_index, decision_value, decision_value_type,
+       decision_answer_id, facts_requests_sent, error_kind
+FROM thinkthen_decide_details
+WHERE request_question = '{"decide":"Does this ask for a refund?"}'
+  AND request_records = '[{"text":"Refund me."},{"text":"Track my parcel."}]'
+  AND batch = 2 AND attempts = 1;
 ```
 
-A text/JSON record contains one of `text`, `json`, `json_text` or `document`, optionally
-`context`, `options`, `images` and `source`. `json` retains the original authored
-JSON. `json_text` admits a JSON line when the native iterator consumes it;
-`document` uses annotation document semantics. Options are an ordered array of
-names or `{ "name": ..., "description": ... }` objects. Images are an explicit
-ordered array of `{ "media": "image/png", "bytes": [137,80,...] }` or JPEG with
-its complete original compressed bytes. Image-only records contain only the explicit image collection. Paths, strings and
-JSON never imply images. Native media, pixel, count, size, profile and function admission apply.
-A source carries `file` and paired `first_line`/`last_line`; locations stay outside
-model evidence and answer-cache identity.
+`request_question` takes plain atomic wording or the native saved grammar for the selected function. It accepts explicit `@reference` and named `@@NAME` selectors through the authorized SQLite reader. `request_records` takes an ordered JSON array of native record DATA. A record contains one of text, json, json_text or document, with optional context, options, images and source. JSON arrays/maps carry collection data because SQLite has no array type. They do not contain a request or response envelope. Original member order, duplicate occurrences and source coordinates are preserved. The name `request_records` avoids the existing `thinkthen_filter.records` answer column.
 
-`reading` contains native `fields`, `context`/`options` pointers and optional
-`context_schema`. SQLite also admits per-record `seed_spans` and `examples`, with
-matching projection pointers under `reading`. Null lists refuse; an explicit empty
-list clears the question fallback. Other database adapters retain their own admitted grammar.
-Per-record context and options retain false, empty and missing distinctions. `incremental: true` selects native fallible admission. Decide, choose, tag, score, filter and annotate retain their completed rows on a later failure. Rank, find, recognize and relate still admit their complete input set before sending, including under `incremental: true`. Recognition produces rows but does not stream input admission through this SQL door. `cancelled: true` pre-cancels a native token. NULL question or inputs returns NULL; NULL settings uses defaults. Empty records use native semantics.
+Use `request_paths` instead of `request_records` for an ordered JSON path array. `request_unit`, `request_window`, `request_media` and `request_format` select the native reader; format admits jsonl, csv or tsv. `request_files_only` keeps the first passing occurrence of each file. Existing filter input names retain their positions and meanings.
 
-SQLite and DuckDB additionally accept `files` instead of `records`, with `paths`,
-native reader `options` and optional `format: "jsonl"`, `"csv"` or `"tsv"`. DuckDB opens only handles
-authorized by its own filesystem settings. PostgreSQL accepts only client-read
-records. Its native client reader transports actual Local/Usage read failures as
-a terminal `{ "read_error": <native Error::complete envelope> }` record. This
-bounded descriptor admits no caller facts, IDs or started stops. The consuming
-native SQL iterator supplies its own terminal facts. PostgreSQL question files
-retain the privileged descriptor loader and all confinement/link/size rules.
+`record_fields` takes an ordered JSON array of evidence pointers. `record_context_field`, `record_options_field`, `record_seed_spans_field` and `record_examples_field` select per-record controls. `record_context_schema` takes a native JSON context declaration for composed records or file Feed input. Explicit Source selection uses the canonical Request option grammar, which rejects a caller context-schema override; a saved question can supply its context declaration. These fields replace question fallback reading. Explicit empty lists retain their native clearing behavior. Additional named request controls are top, mode, snippet_pieces, relation_threshold, seed_spans, examples, max_requests_total and stage_context. Integers and booleans use SQL integer values; booleans admit 0 and 1. Recognition seeds/examples and stage context use native collection DATA. The shared Request owner applies every function's option grammar and admission rules.
 
-SQLite accepts exactly one input collection, `records` or `files`. Supplying both or neither refuses before question-file resolution and sends nothing. A `reading` descriptor composes the selected collection once; it does not add another input collection. Unknown input fields and nonboolean flags also refuse before resolution.
+Exactly one collection is admitted before question resolution. Invalid known inputs refuse before a send; SQLite rejects unknown SQL parameter names. `incremental = 1` permits native prefix retention for decide, choose, tag, score, filter and annotate. Other functions admit their full input set before sending. `cancelled = 1` pre-cancels. `attempts = 1` retains native attempt facts. Required NULL legacy operands return no rows before inspecting partners; NULL optional settings use defaults.
 
-| SQLite input combination | Admission and execution |
-| --- | --- |
-| `records` with optional `reading` | Compose explicit records and preserve their originals and locations. |
-| `files` with optional `reading` | Read selected files with native reader options; preserve file and line locations. |
-| `files` with `format: "jsonl"`, `"csv"` or `"tsv"` | Require text media and line units without a window; compose each JSON line or table row through the selected reading. |
-| Text or JSON records with explicit `images` | Decide, choose and score admit actual image media and the configured image route before sending; the other functions refuse. |
-| Image-only records or image file media | Decide, choose and score admit native image inputs; images never follow implicitly from text or JSON. |
-| Per-record `options`, or a `reading.options` pointer | Choose admits ordered candidates; the other functions refuse a row with candidates. |
-| Per-record `examples` or `seed_spans`, or their `reading` pointers | Recognize admits these controls; the other functions refuse a row carrying them. |
-| Per-record context, or a `reading.context` pointer | Find and relate require shared call context instead; other functions retain native per-record context admission. |
-| Either collection with `incremental: true` | Decide, choose, tag, score, filter and annotate retain their completed prefix; rank, find, recognize and relate admit the complete input set. |
+Default details queries return the seven visible columns. Nested receipt outputs remain hidden. Inspect the schema with `pragma_table_xinfo('thinkthen_decide_details')`. True input columns appear before hidden receipt outputs. Extra positional arguments that reach receipt output positions are ordinary SQLite data predicates; they do not change the admitted call or its identity.
 
-`files.format` accepts `"jsonl"`, `"csv"` and `"tsv"`; omission uses the native text or image reader directly. Unknown format names refuse before question-file resolution or source access. Explicit formats require text media and line units without a window. CSV and TSV retain string cells in header order and physical multiline coordinates. Omission retains native file, line or window units before SQL composes rows. The SQL `reading` descriptor selects fields and per-record controls; it does not accept framing, unit, window or shared attachment fields. An explicit SQL reading replaces the fallback reading derived from the question.
+Select `projection` to read a nested receipt collection from the same retained evaluation:
 
-SQLite supplies already composed rows to `RequestFeed::from_records`. That native feed owns framing, projections and attachments. Additional canonical Request framing, projection pointers or shared attachments refuse before the iterator advances. Native source readers supply the same bounded CSV/TSV grammar used by Session feeds.
+```sql
+SELECT question_detail_model, question_detail_requests_sent,
+       question_detail_question_index, question_detail_usage_index
+FROM thinkthen_decide_details('Does this ask for a refund?', 'Refund me.')
+WHERE projection = 'question_detail';
 
-Eager admission checks every composed row before sending. Incremental admission may send for earlier valid rows before a later row refusal in the six streaming functions above. Caller-known image descriptors still require function and route admission before any reader advances, including incremental calls. Malformed image descriptors retain ordinary row-failure behavior; they do not authorize an image route. Cancellation, declarations, request-size limits and native result facts continue to apply.
+SELECT usage_input_tokens, usage_output_tokens
+FROM thinkthen_decide_details('Does this ask for a refund?', 'Refund me.')
+WHERE projection = 'usage';
+```
 
-The `native` member contains the strict native `Call::complete()` envelope: `value` contains complete
-result/2 rows (or the native find/relation object), and `facts` contains the owning
-call ID, records, requests, cache answers, reported tokens, elapsed time, optional
-caller-priced cost and requested attempts. Result rows retain full probabilities,
-authors, answer IDs, reading, question sources and observation identities. The
-separate ordered `observations` array snapshots that same native observer. `ordinals`
-uses native occurrence getters; find adds its native `selection`. No SQL
-wrapper subtracts cumulative usage or evaluates again to obtain details.
+Caller-facing projections include facts, error, question_detail, question, usage, event, record_order and the native result kinds decision, choice, tags, score, filtered, ranked, found, annotation, recognized and related. Their columns follow canonical semantic field names. The question's name field is `question_definition_name`, with matching presence column, to preserve rank_set's `question_name` answer column.
 
-On failure, `native` contains strict `Error::complete()`, with all six kinds, safe diagnostic,
-retryability and structured stopping information. Facts are absent before the
-native call starts and final after its workers join. Incremental row failures add
-actual canonical `completed` rows and their ordinals outside `native`. SQL interrupts keep host
-cancellation behavior. Existing ordinary calls continue raising their errors.
+Each projection has its own `<projection>_receipt_index`. Object references use `<field>_index`; arrays and maps use `<field>_first_index` and `<field>_count` into the named child projection. `<field>_present` distinguishes omission from explicit null. Open answer DATA adds `<field>_type`; its primitive values are native SQL values and its arrays/objects are JSON collection data. Unsigned counts above SQLite's signed integer range use exact decimal text. Every canonical receipt field remains accessible, including probabilities, authored questions, input sources, attempts, pricing, diagnostic facts and failure stops.
 
-Per-call settings use native context, batch and deadline controls and atomic
-literal fields. Duplicate authorship/settings refuse before transport. Rank/find
-accept model selection; set/recognize/relation model selection uses existing host
-engine settings. Engine settings also admit `base_url`, `refresh_cache` and the
-paired decimal strings `usd_per_million_input`/`usd_per_million_output`. Costs
-use exact native combined rounding and are estimates, never provider bills.
-Missing/overflowed usage omits cost; cache and replay have zero sends and cost.
-The existing cache/record/replay and backend/key selection remain native.
+Projection reads reuse the connection's retained evaluation and send nothing extra. Default details invocations preserve their fresh-call behavior, with the engine's own cache/record/replay counters. Following projection reads see that retained invocation. Different arguments select different retained receipts; changed question/source files invalidate their result. The connection retains eight most recently used results and releases them at close. Output predicates only filter projected host data and do not change call identity. Failure projections contain canonical safe errors, final facts and completed prefixes; facts are absent when admission failed before a call started. SQL interruption and ordinary errors keep their host behavior.
 
-SQLite translates these named complete calls directly into Rust `Request` values.
-The native feed preserves composed originals and locations. Eager input validates every row before sending; incremental streaming calls retain their actual completed prefix.
-Caller-known image descriptors require route and function admission before reader
-access. An omitted image declaration never waives validation of actual image rows.
-Authored projections use the admitted native reading before declaration validation.
-Annotation declarations validate each member's selected evidence. Complete filter
-calls retain both passing and rejected observations and their original ordinals,
-including completed rows before an incremental failure. Ordinary native Request
-filtering retains its passing-row behavior; SQL explicitly selects all results.
-Top-level input descriptors validate before SQL resolves a saved question. Request admits the canonical saved selector before SQLite runs its authorized file reader. SQLite supplies the resolved native definition for Request admission without granting Request filesystem permission. Its ordinary scalar and table judgments also execute through Request. The `thinkthen-host` crate owns shared SQL preparation, native descriptors, result envelopes and the Request adapter. SQLite keeps registration, value conversion, file authority, interruption and SQL projections. PostgreSQL and DuckDB depend on that crate directly.
+For tagged stored images:
 
-The existing surface checks execute all applicable shared cases through these
-named calls against counted owned loopback, check known JSON fields using SQL
-types, and repeat them against the installed extension package. They also retain
-ordinary compatibility, secrecy, cancellation and wrong-model regressions.
+```sql
+SELECT value, decision_answer_id, facts_requests_sent
+FROM thinkthen_decide_details(
+  'Is red visible?', (SELECT thinkthen_images(image) FROM photos));
+```
 
-## Request migration and SQL compatibility
+The native tagged BLOB preserves original image order, duplicates, compressed bytes and source metadata. Images never follow implicitly from text or paths.
 
-The Request migration changes execution inside the extension. It preserves SQL function names and arguments. Ordinary SQL calls project Rust-owned results into their established SQL values; complete calls return the same evaluation with complete observations. Callers can choose the result shape they need:
-
-| Existing SQL call | Complete result call |
-| --- | --- |
-| `thinkthen_decide`, `thinkthen_decide_images`, `thinkthen_decide_many` | `thinkthen_decide_complete` |
-| `thinkthen_choose`, `thinkthen_choose_images`, `thinkthen_choose_many` | `thinkthen_choose_complete` |
-| `thinkthen_tag`, `thinkthen_tag_many` | `thinkthen_tag_complete` |
-| `thinkthen_score`, `thinkthen_score_images`, `thinkthen_score_many` | `thinkthen_score_complete` |
-| Passing-row selection from `thinkthen_decide_many` | `thinkthen_filter_complete` |
-| `thinkthen_rank`, `thinkthen_rank_set` | `thinkthen_rank_complete` |
-| `thinkthen_find` | `thinkthen_find_complete` |
-| `thinkthen_annotate` | `thinkthen_annotate_complete` |
-| `thinkthen_recognize` | `thinkthen_recognize_complete` |
-| `thinkthen_relate` | `thinkthen_relate_complete` |
-
-The complete input descriptor above differs from ordinary call arguments. No caller needs to rename an existing SQL call. `thinkthen_details`, `thinkthen_try_details` and image details retain their documented ordinary result and error behavior. Existing removed-spelling migration errors remain part of the SQL contract. No old SQLite execution dispatcher or result-generation template remains; reachable question preparation, image conversion, reader, keyed-row and SQL result helpers support this function family.
+All table forms execute through shared native Request admission and the same evaluation owns answers, observer details and facts. SQLite keeps registration, typed projection, file authority and interruption. Installed checks cover all ten function families, complete typed receipts, mixed reading, caller order, settings, source changes, failures and absent retired registrations.

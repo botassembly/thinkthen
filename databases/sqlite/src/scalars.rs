@@ -73,7 +73,7 @@ fn scalar_details(
 fn only(held: &LoadedQuestion, name: &str, kind: QuestionKind) -> Result<(), Failure> {
     if matches!(held, LoadedQuestion::Banded(_)) {
         return Err(Failure::usage(format!(
-            "{name} does not take a banded question; use thinkthen_decide or thinkthen_details"
+            "{name} does not take a banded question; use thinkthen_decide or thinkthen_decide_details"
         )));
     }
     if held.kind() == kind {
@@ -199,57 +199,6 @@ fn score(context: &Context<'_>) -> rusqlite::Result<Option<f64>> {
     })?)
 }
 
-fn details(context: &Context<'_>) -> rusqlite::Result<Option<String>> {
-    Ok(guard("thinkthen_details", || {
-        let Some((held, evidence, settings, shared)) = inputs(context, None)? else {
-            return Ok(None);
-        };
-        let details =
-            worker::run_settings(ffi::handle_of(context), settings, move |engine, options| {
-                let options = if let Some(shared) = &shared {
-                    options.context(shared)
-                } else {
-                    options
-                };
-                Ok(scalar_details(engine, &held, &evidence, options)?.json)
-            })?;
-        Ok(Some(details))
-    })?)
-}
-
-fn try_details(context: &Context<'_>) -> rusqlite::Result<Option<String>> {
-    if matches!(context.get_raw(0), ValueRef::Null) || matches!(context.get_raw(1), ValueRef::Null)
-    {
-        return Ok(None);
-    }
-    let result = guard("thinkthen_try_details", || {
-        let Some((held, evidence, settings, shared)) = inputs(context, None)? else {
-            return Ok(None);
-        };
-        let details =
-            worker::run_settings(ffi::handle_of(context), settings, move |engine, options| {
-                let options = if let Some(shared) = &shared {
-                    options.context(shared)
-                } else {
-                    options
-                };
-                Ok(scalar_details(engine, &held, &evidence, options)?.json)
-            })?;
-        let details: serde_json::Value =
-            serde_json::from_str(&details).map_err(|_| Failure::defect("a result is not JSON"))?;
-        Ok(Some(
-            serde_json::json!({"status":"answered","details":details}).to_string(),
-        ))
-    });
-    match result {
-        Ok(value) => Ok(value),
-        Err(failure) => match failure.value() {
-            Some(value) => Ok(Some(value.to_string())),
-            None => Err(failure.into()),
-        },
-    }
-}
-
 fn annotate(context: &Context<'_>) -> rusqlite::Result<Option<String>> {
     Ok(guard("thinkthen_annotate", || {
         if (0..2).any(|slot| matches!(context.get_raw(slot), ValueRef::Null)) {
@@ -349,8 +298,6 @@ fn register_removed(connection: &Catalog<'_>, volatile: FunctionFlags) -> rusqli
         "thinkthen_choose",
         "thinkthen_score",
         "thinkthen_tag",
-        "thinkthen_details",
-        "thinkthen_try_details",
         "thinkthen_annotate",
         "thinkthen_find",
     ] {
@@ -452,20 +399,6 @@ fn register_judgments(connection: &Catalog<'_>, judgment: FunctionFlags) -> rusq
             annotate,
         )?;
         connection.create_scalar_function(
-            "thinkthen_details",
-            arity,
-            judgment,
-            "Return a complete judgment envelope as JSON.",
-            details,
-        )?;
-        connection.create_scalar_function(
-            "thinkthen_try_details",
-            arity,
-            judgment,
-            "Return a judgment envelope or a recoverable failure envelope as JSON.",
-            try_details,
-        )?;
-        connection.create_scalar_function(
             "thinkthen_find",
             arity,
             judgment,
@@ -478,7 +411,6 @@ fn register_judgments(connection: &Catalog<'_>, judgment: FunctionFlags) -> rusq
 
 /// Register judgments under the initial connection policy, without harmless flags.
 pub(crate) fn register(connection: &Catalog<'_>, mode: Registration) -> rusqlite::Result<()> {
-    crate::complete::register(connection)?;
     let volatile = FunctionFlags::SQLITE_UTF8 | FunctionFlags::SQLITE_DIRECTONLY;
     let judgment = match mode {
         Registration::DirectOnly => volatile,
