@@ -200,8 +200,17 @@ class Admission(unittest.TestCase):
         self.load.write_text(str((os.cpu_count() or 1) + 1))
         self.launch('waiting', 'high')
         self.wait_for(lambda: bool(list(Path(str(self.lock) + '.priority').glob('wait-*'))))
-        time.sleep(.1)
-        self.assert_resources_available()
+
+        def resources_released():
+            try:
+                self.assert_resources_available()
+                return True
+            except BlockingIOError:
+                # A waiter briefly probes admission before releasing to sleep.
+                return False
+
+        self.wait_for(resources_released)
+        self.assertFalse(self.started('waiting'))
         with self.lock.open('a+b') as legacy:
             fcntl.flock(legacy, fcntl.LOCK_EX | fcntl.LOCK_NB)
             self.load.write_text('0')
