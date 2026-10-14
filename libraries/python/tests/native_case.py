@@ -65,6 +65,15 @@ def main():
                     done = getattr(source.tt, verb)(question, engine=engine, **controls)
                 else: done = getattr(engine, verb)(question, source, **controls)
                 results, facts = done.results, done.facts
+            call_result = None
+            if document.get('kind') == 'call-result':
+                value, probability = done.value, done.probability
+                if LIBRARY is not None:
+                    value = value.to_list()[0]
+                    probability = probability.to_list()[0]
+                call_result = {'value': value, 'probability': probability,
+                               'results': [result._to_dict() for result in done.results],
+                               'facts': done.facts._to_dict()}
             assert facts is not None and len(facts.call_id)==64
             assert isinstance(facts.requests_sent,int)
             for result in results:
@@ -82,7 +91,7 @@ def main():
                     elif 'proposals' in result.value:
                         for entity in result.value.proposals:
                             assert isinstance(entity.start,int) and isinstance(entity.name,str)
-            print(json.dumps({'native':True,'results':[result._to_dict() for result in results], 'facts':facts._to_dict()},ensure_ascii=False))
+            print(json.dumps({'native':True,'results':[result._to_dict() for result in results], 'facts':facts._to_dict(), **({'call_result': call_result} if call_result is not None else {})},ensure_ascii=False))
     except tt.ThinkThenError as error:
         failure=getattr(error,'complete',None)
         facts=getattr(error,'facts',None)

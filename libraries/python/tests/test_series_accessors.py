@@ -178,19 +178,16 @@ def test_named_and_async_series_calls_keep_owned_rows_and_original_positions(bac
             assert [row.index for row in done.results] == [0, 1]
             if shape == "pandas": assert done.value.index.tolist() == [9, 9, 9]
             assert done.value.to_list() == [True, None, True]
-            assert done.probability.to_list() == [.9, None, .9]
+            assert [None if value is pd.NA else value for value in done.probability.to_list()] == [.9, None, .9]
             if shape == "polars":
                 assert done.value.dtype == pl.Boolean
                 assert done.probability.dtype == pl.Float64
             assert done.facts.requests_sent == 2
             assert pickle.loads(pickle.dumps(done)).value.to_list() == done.value.to_list()
-            detailed = engine.decide('Late?', source, details=True)
-            assert cell(detailed.value, 0) is detailed.results[0]
-            assert cell(detailed.value, 1) is None
             async_done = asyncio.run(engine.asyncio.decide('Late?', source))
             assert async_done.value.to_list() == done.value.to_list()
             ranked = engine.rank('Late?', source)
-            assert [row['index'] for row in ranked.value] == [0, 2]
+            assert list(ranked.value) == [0, 2]
             assert ranked.facts.requests_sent == 2
             kept = source.tt.filter('Late?', engine=engine)
             assert kept.value.to_list() == ["first", "second"]
@@ -267,9 +264,9 @@ def test_ten_series_functions_preserve_null_duplicate_and_whole_set_identity(bac
         print("filter", kept.value.to_list(), kept.value.name)
         if shape == "pandas": assert kept.value.index.to_list() == [9, 2]
         ranked = call("rank", "Relevant?")
-        print("rank", [(row["index"], row["record"], row["probability"]) for row in (ranked.value.to_list() if shape == "polars" else ranked.value)])
+        print("rank", ranked.value.to_list() if shape == "polars" else ranked.value)
         found = call("find", "Which?")
-        print("find", dict(found.value[0] if shape == "polars" else found.value), [list(row.answer.probabilities.items()) for row in found.details])
+        print("find", found.value[0] if shape == "polars" else found.value, [list(row.answer.probabilities.items()) for row in found.results])
         form = {{"version": 1, "questions": {{"late": {{"decide": "Late?"}}}}}}
         annotated = call("annotate", form)
         print("annotate", list(annotated.value.to_list()[0]), annotated.facts["records"])
@@ -282,8 +279,8 @@ def test_ten_series_functions_preserve_null_duplicate_and_whole_set_identity(bac
             assert recognized.value.dtype.to_schema()["entities"].base_type() == pl.List
             assert recognized.value.dtype.to_schema()["entities"].inner.base_type() == pl.Struct
             assert annotated.value.dtype == pl.Struct({{"late": pl.Boolean}})
-            assert ranked.value.dtype == pl.Struct({{"index": pl.Int64, "record": pl.String, "probability": pl.Float64}})
-            assert found.value.dtype == pl.Struct({{"index": pl.Int64, "unit": pl.String, "probability": pl.Float64}})
+            assert ranked.value.dtype == pl.Int64
+            assert found.value.dtype == pl.String
             assert kept.value.dtype == texts.dtype
             rows = [None] * len(texts)
             for at, row in zip(recognized.positions, recognized.results): rows[at] = row.value
@@ -314,10 +311,6 @@ def test_ten_series_functions_preserve_null_duplicate_and_whole_set_identity(bac
                 assert second.value.to_list() == first.value.to_list()
                 assert second.facts.requests_sent == 0
                 assert all(type(row) is type(original) for row, original in zip(second.results, first.results))
-                detailed = getattr(replay, verb)(*args, details=True, **controls)
-                assert detailed.facts.requests_sent == 0
-                detailed_rows = detailed.value if isinstance(detailed.value, list) else detailed.value.to_list()
-                assert detailed_rows[0] is detailed.results[0]
                 frame = pl.DataFrame({{"body": entities if verb == "relate" else texts}})
                 framed_args = [frame] if verb in ("recognize", "relate") else [args[0], frame]
                 framed = getattr(replay, verb)(*framed_args, on="body", **controls)
@@ -338,8 +331,8 @@ def test_ten_series_functions_preserve_null_duplicate_and_whole_set_identity(bac
         'decide [true, null, true]', 'choose ["billing", null, "billing"]',
         'score [0.15, null, 0.15]', 'tag [["bill", "ship"], null, ["bill", "ship"]]',
         "filter ['one note', 'one note'] body",
-        "rank [(0, 'one note', 0.9), (2, 'one note', 0.9)]",
-        "find {'index': 0, 'unit': 'one note', 'probability': 0.9} [[('u001', 0.9), ('u002', 0.1)]]",
+        "rank [0, 2]",
+        "find one note [[('u001', 0.9), ('u002', 0.1)]]",
         "annotate ['late'] 2",
         "recognize [[('one note', 0, 8, 'note')], None, [('one note', 0, 8, 'note')]]",
         "relate [('knows', 'Ada', 'Bo'), ('knows', 'Bo', 'Ada')]",
@@ -388,11 +381,11 @@ def test_series_find_reads_the_whole_candidate_set_and_keeps_original_positions(
                           index=[9, 9, 2, 2], name='body')
         call = units.tt.find('Which passage answers the question?', none=True,
                              engine=tt.Engine(cache=False))
-        print(dict(call.value))
-        print([list(row.answer.probabilities.items()) for row in call.details])
+        print(call.value)
+        print([list(row.answer.probabilities.items()) for row in call.results])
     """, child_env(backend, tmp_path, "case/18-find-second"))
     assert printed.splitlines() == [
-        "{'index': 2, 'unit': 'Second passage.', 'probability': 0.8}",
+        "Second passage.",
         "[[('none', 0.05), ('u001', 0.1), ('u002', 0.8), ('u003', 0.05)]]",
     ]
     assert backend.count() == 1

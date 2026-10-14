@@ -34,7 +34,7 @@
       "expected": "0.15"
     },
     "details": {
-      "python": "tt.decide(\"Is this a complaint?\", \"I demand a refund today\", details=True).value.answer.probability",
+      "python": "tt.decide(\"Is this a complaint?\", \"I demand a refund today\").probability",
       "expected": "0.9"
     },
     "filter": {

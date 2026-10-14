@@ -13,7 +13,7 @@ def controls() -> None:
                        max_requests_total=0, max_estimated_input_tokens_total=5000,
                        backend=None, model=None, batch="max")
     done: tt.Result[object] = engine.decide("Late?", "text", attempts=True, batch=2,
-                                          deadline_ms=-1, details=True, model="local",
+                                          deadline_ms=-1, model="local",
                                           context="", threshold=.5, max_requests_total=0)
     engine.choose("Team?", "text", options=["a", "b"], options_field="/options")
     engine.choose("Team?", "text", options=Literal["billing", "shipping"])

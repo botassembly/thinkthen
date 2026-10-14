@@ -84,53 +84,47 @@ def _source(verb, value):
     return value, None, not isinstance(value, (list, tuple))
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class Result(Generic[T]):
     """Owned typed results and actual final native settlement."""
     results: tuple
     terminal: object
     function: str
     scalar: bool
-    detailed: bool = False
     @property
     def value(self):
-        if self.detailed: return self.results[0] if self.scalar else list(self.results)
-        return _bare(self.function, self.results, self.scalar)
+        from ._native_results import _CALL_RESULTS
+        projection = _CALL_RESULTS[self.function]['value_projection']
+        if projection:
+            return [getattr(row, projection) for row in self.results]
+        if self.function == 'relate': return self.results[0].value if self.results else []
+        if self.function == 'find': return self.results[0].value if self.results else None
+        values = [row.value for row in self.results]
+        return values[0] if self.scalar and values else values
     @property
     def probability(self):
+        from ._native_results import _CALL_RESULTS
+        mode = _CALL_RESULTS[self.function]['probability_mode']
+        if mode == 'null': return None
         values = []
         for row in self.results:
             answer = getattr(row, 'answer', None)
-            chance = getattr(answer, 'probability', None)
-            if self.function == 'choose' and row.value is not None:
+            if mode == 'picked':
                 chance = answer.probabilities.get(answer.pick)
+            elif self.function == 'recognize':
+                chance = [entity.strength for entity in getattr(row.value, 'entities', ())]
+            elif self.function == 'relate':
+                chance = [edge.probability for edge in row.value]
+            else:
+                chance = getattr(answer, 'probability', None)
             values.append(chance)
+        if self.function in ('find', 'relate'): return values[0] if values else None
         return values[0] if self.scalar and values else values
-    @property
-    def details(self): return self.results
-    def __bool__(self): return bool(self.value)
-    def __eq__(self, other):
-        if isinstance(other, Result): return self._to_dict() == other._to_dict()
-        return self.value == other
     def __repr__(self): return '<Result: content withheld>'
     @property
     def facts(self): return getattr(self.terminal, 'facts', None)
     def _to_dict(self):
         return {'results': [row._to_dict() for row in self.results], 'terminal': self.terminal._to_dict()}
-
-
-def _bare(verb, results, scalar):
-    if verb == 'relate': return results[0].value if results else []
-    if verb == 'filter': return [row.input for row in results]
-    if verb == 'rank':
-        return [{'index': row.index, 'record': row.input, 'probability': getattr(row.answer, 'probability', None)}
-                for row in results]
-    if verb == 'find':
-        row = results[0]
-        if row.index is None: return None
-        return {'index': row.index, 'unit': row.value, 'probability': row.answer.probabilities[row.answer.pick]}
-    values = [row.value for row in results]
-    return values[0] if scalar and values else values
 
 
 def _cancelled():
@@ -164,7 +158,6 @@ class Operation:
                 else:
                     from ._polars_calls import records
                 value, self.present = records(self.frame, verb)
-            self.details = fields.pop('details', False)
             self.token = fields.pop('token', None)
             if 'on' in fields:
                 on = fields.pop('on')
@@ -272,15 +265,15 @@ class Operation:
             from ._frame_calls import FrameResult, PolarsFrameResult
             Frame = FrameResult if self.surface == 'pandas' else PolarsFrameResult
             return Frame(tuple(self.results), self.terminal, self.verb, self.scalar,
-                         self.details, self.frame, self.present, self.on, self.members)
+                         self.frame, self.present, self.on, self.members)
         if self.frame is not None:
             if self.surface == 'pandas':
                 from ._pandas_calls import PandasResult as ColumnResult
             else:
                 from ._polars_calls import PolarsResult as ColumnResult
             return ColumnResult(tuple(self.results), self.terminal, self.verb, self.scalar,
-                                self.details, self.frame, self.present)
-        return Result(tuple(self.results), self.terminal, self.verb, self.scalar, self.details)
+                                self.frame, self.present)
+        return Result(tuple(self.results), self.terminal, self.verb, self.scalar)
 
 
 def call(engine, verb, question, value, controls):

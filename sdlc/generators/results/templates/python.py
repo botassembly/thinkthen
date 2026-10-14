@@ -1,5 +1,6 @@
 """Python result carriers and native conversion from the shared result graph."""
 import json
+from host_answers import call_results
 
 ROOTS = ('completesessionPacket', 'completeplan')
 
@@ -134,7 +135,8 @@ def types(definitions, stubs=False):
                  '    def keys(self) -> list[str]: ...',
                  '    def _to_dict(self) -> dict[str, Any]: ...']
     if not stubs:
-        lines += ['', '_COLUMN_SCHEMAS = ' + repr({key: column_schema(source) for key, source in definitions.items()})]
+        lines += ['', '_COLUMN_SCHEMAS = ' + repr({key: column_schema(source) for key, source in definitions.items()}),
+                  '_CALL_RESULTS = ' + repr(call_results(definitions))]
     for key, source in definitions.items():
         if 'properties' in source:
             lines += ['', f'class {name(key)}(_NativeResult):', '    __slots__ = ()']
@@ -194,6 +196,7 @@ def option_types(schema):
             if not optional:
                 lines.append('    pass')
             for field, value in optional.items():
+                if key == 'RequestOptions' and field == 'details': continue
                 typed = request_annotation(value)
                 if key == 'EngineSettings':
                     if field in ('record', 'replay', 'profile', 'cache'):
@@ -241,7 +244,7 @@ def option_types(schema):
 def named_calls(schema):
     """Derive the named family and native control inventory from RequestFunction."""
     definitions = schema['$defs']
-    controls = list(definitions['RequestOptions']['properties'])
+    controls = [field for field in definitions['RequestOptions']['properties'] if field != 'details']
     lines = ['# Generated from the canonical request schema; do not edit.',
              *option_types(schema), 'MISSING = object()', 'class NamedCalls:', '    __slots__ = ()']
     settings = list(definitions['EngineSettings']['properties'])

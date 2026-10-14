@@ -21,11 +21,13 @@ def test_named_calls_use_owned_typed_results_for_the_ten_functions(backend, tmp_
                 ('relate', {'version': 1, 'relate': {'relations': [{'name': 'knows', 'source': 'person', 'target': 'person'}]}}, [('A', 'person'), ('B', 'person')], {}),
             ]
             for verb, question, evidence, options in calls:
-                options['details'] = True
                 if verb == 'recognize': done = engine.recognize(evidence, question, **options)
                 elif verb == 'relate': done = engine.relate(evidence, question, **options)
                 else: done = getattr(engine, verb)(question, evidence, **options)
-                assert done.value == (done.results[0] if isinstance(evidence, str) else list(done.results)), verb
+                assert not hasattr(done, 'details') and not hasattr(type(done), '__bool__'), verb
+                assert '__eq__' not in tt.Result.__dict__, verb
+                assert done != done.value, verb
+                if verb in ('tag', 'score', 'annotate'): assert done.probability is None, verb
                 assert len(done.facts.call_id) == 64, verb
                 assert done.facts.requests_sent >= 0, verb
                 for row in done.results:
@@ -45,10 +47,10 @@ def test_named_calls_use_owned_typed_results_for_the_ten_functions(backend, tmp_
             empty = engine.relate([], relations=relations)
             assert empty.value == []
             assert empty.facts.requests_sent == 0
-            detailed = engine.decide({'decide': 'Late?'}, 'note', details=True)
-            assert detailed.value is detailed.results[0]
-            assert detailed.value.input == 'note'
-            assert detailed.value.index == 0
+            detailed = engine.decide({'decide': 'Late?'}, 'note')
+            assert detailed.value is True
+            assert detailed.results[0].input == 'note'
+            assert detailed.results[0].index == 0
             context = engine.decide({'decide': 'Late?'}, c.Records((c.Item(value='note', text=True, context='policy'),)))
             assert len(context.results[0].meta.context_sha256) == 64
             item = engine.decide('Late?', c.Records((c.Item(value='note', text=True, context='policy'),)))
@@ -58,14 +60,14 @@ def test_named_calls_use_owned_typed_results_for_the_ten_functions(backend, tmp_
             assert engine.choose('Team?', 'note', options=['bill', 'ship']).probability == .9
             import asyncio
             assert asyncio.run(engine.asyncio.decide('Late?', 'note')).value is True
-            assert engine.rank('Late?', ['first', 'second']).value[0]['index'] == 0
+            assert engine.rank('Late?', ['first', 'second']).value[0] == 0
             source = c.Files(paths=(str(__import__('pathlib').Path(__import__('os').environ['XDG_CONFIG_HOME']) / 'source.txt'),), unit='line')
             __import__('pathlib').Path(source.paths[0]).parent.mkdir(parents=True, exist_ok=True)
             __import__('pathlib').Path(source.paths[0]).write_text('\\nfirst\\nsecond\\n')
             selection = tt.read_files(source.paths, unit='line')
             assert engine.decide('Late?', selection).value == [True, True]
-            located = engine.decide('Late?', selection, details=True)
-            assert located.value[0] is located.results[0]
+            located = engine.decide('Late?', selection)
+            assert located.value == [True, True]
             assert located.results[0].source.first_line == 2
             assert located.results[1].source.first_line == 3
             assert [row.index for row in located.results] == [0, 1]

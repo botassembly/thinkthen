@@ -41,14 +41,10 @@ class PandasResult(Result):
     @property
     def value(self):
         if self.function == 'filter':
-            if self.detailed:
-                return self._column(self.results, self.positions)
             return self._selected()
         value = super().value
-        if self.function == 'rank' and not self.detailed:
-            return [dict(row, index=self.present[row['index']]) for row in value]
-        if self.function == 'find' and not self.detailed:
-            return None if value is None else dict(value, index=self.present[value['index']])
+        if self.function == 'rank':
+            return [self.present[index] for index in value]
         if self.function in ('rank', 'find', 'relate'):
             return value
         rows = [None] * len(self.source)
@@ -56,12 +52,30 @@ class PandasResult(Result):
             rows[at] = item
         return self._column(rows)
 
-    @property
-    def probability(self):
-        values = super().probability
-        if self.function in ('find', 'rank', 'relate'):
-            return values
+    def _probability_rows(self):
+        values = Result.probability.fget(self)
         rows = [None] * len(self.source)
+        if self.function == 'relate':
+            # Every admitted row belongs to the same whole-set ordered edge answer.
+            for at in self.present:
+                rows[at] = list(values or ())
+            return rows
+        if self.function == 'find':
+            for row in self.results:
+                if row.index is not None: rows[self.present[row.index]] = values
+            return rows
+        if values is None: values = [None] * len(self.results)
         for at, value in zip(self.positions, values, strict=True):
             rows[at] = value
-        return self._column(rows)
+        return rows
+
+    @property
+    def probability(self):
+        import pandas as pd
+        rows = self._probability_rows()
+        name = getattr(self.source, 'name', getattr(self, 'on', None))
+        if self.function in ('recognize', 'relate'):
+            import pyarrow as pa
+            return pd.Series(rows, index=self.source.index, name=name,
+                             dtype=pd.ArrowDtype(pa.list_(pa.float64())))
+        return pd.Series(rows, index=self.source.index, name=name, dtype='Float64')
