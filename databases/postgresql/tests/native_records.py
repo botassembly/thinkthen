@@ -102,10 +102,12 @@ def main():
             failed = json.loads(query("SELECT to_jsonb(r) FROM thinkthen_filter('Fits?',ARRAY[" + sourced + "," + record + "],thinkthen_reading(files_only=>true)) r"))
             assert failed['failure']['kind'] == 'usage' and failed['facts'] is None, failed
             assert failed['failure']['message'] == 'files_only requires filter source input', failed
-            other = "thinkthen_record(text=>'Alpha.',source=>ROW('other.txt',1,1)::thinkthen_source)"
-            rows = [json.loads(row) for row in query("SELECT to_jsonb(r) FROM thinkthen_filter('Fits?',ARRAY[" + sourced + "," + sourced + "," + other + "],thinkthen_reading(files_only=>true,attempts=>true)) r", 3).splitlines()]
+            same_file = "thinkthen_record(text=>'Beta.',source=>ROW('caller-read.txt',2,2)::thinkthen_source)"
+            other = "thinkthen_record(text=>'Gamma.',source=>ROW('other.txt',1,1)::thinkthen_source)"
+            rows = [json.loads(row) for row in query("SELECT to_jsonb(r) FROM thinkthen_filter('Fits?',ARRAY[" + sourced + "," + same_file + "," + other + "],thinkthen_reading(files_only=>true,attempts=>true)) r", 3).splitlines()]
             assert [row['result']['source']['file'] for row in rows] == ['caller-read.txt', 'other.txt'], rows
-            assert all(row['value'] == 'Alpha.' and row['facts']['requests_sent'] == 3 for row in rows), rows
+            assert [row['value'] for row in rows] == ['Alpha.', 'Gamma.'], rows
+            assert all(row['facts']['records'] == 3 and row['facts']['requests_sent'] == 3 for row in rows), rows
             assert all(len(row['facts']['attempts']) == 3 for row in rows), rows
             rows = [json.loads(row) for row in query("SELECT to_jsonb(r) FROM thinkthen_filter('Fits?',ARRAY[" + sourced + "," + record + "],thinkthen_reading(files_only=>true,incremental=>true)) r", 1).splitlines()]
             assert rows[0]['result']['source']['file'] == 'caller-read.txt', rows
