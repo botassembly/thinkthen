@@ -142,6 +142,12 @@ Outcome: the docs and site sell one idea after 0.2 ships: put Jev-class decision
 
 Outcome: ThinkThen owns your answers. One answer database, designed from the start with the full schema that 0.4's curation and evals need. A toolbox and a `run` command. MCP as one tool. Publishing. Spreadsheets join only if the writer prototype passes. Libraries gain only the ten functions and `run`; the toolbox, answers and admin stay in Rust and the command line. Ruling: [three releases after 0.2](../decisions/2026-10-14-three-releases-after-0-2.md).
 
+Experiments before 0.3 product tickets. A dedicated build coordinator drives them with experiment agents, apart from the 0.2 team. None changes product code, spends model money or publishes; each lands record-only, and all run on the Beelink.
+
+1. [0583](../tickets/0583-experiment-duckdb-one-build-across-versions.md) first: DuckDB 2.0 is due about 2026-10-21, and the result may also help 0577.
+2. [0584](../tickets/0584-experiment-answer-schema-covers-0-4.md), [0585](../tickets/0585-experiment-many-writers-one-sqlite-file.md), [0586](../tickets/0586-experiment-split-wording-evidence-context.md), [0587](../tickets/0587-experiment-command-inside-python-and-npm.md) and [0588](../tickets/0588-experiment-spreadsheet-writer-round-trip.md) in parallel. 0585 uses 0584's tables when they are ready and a minimal table before then. 0584 and 0586 set the database ticket; 0587 and 0588 answer Ian's decisions 16 and 7.
+3. Filed later, when their decision lands: the agent-connection trial (Ian's go on agent token spend), agents learning tools from help (decision 8), and the BANKING77 evals and ranking experiments (the caps in decisions 12 and 13).
+
 ## 0.4
 
 Outcome: ThinkThen grades and improves your answers. Curation fixes data: with labels, it finds where models and labels disagree; without labels, it queues likely-wrong first answers, lowest confidence first, then disagreement between models. Evals and the ranking setting run over the 0.3 answer database. Agents and notebooks curate through the command line; a web UI comes later.
