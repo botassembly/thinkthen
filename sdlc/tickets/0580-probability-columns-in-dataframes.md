@@ -26,3 +26,5 @@ Rust Polars returns a value-and-probability struct and a records column for all 
 ## Proof
 
 The Rust Polars nextest reads the `{value, probability}` struct and `records_column` for decide and rank on a column with a null. `tests/polars/plan_probability.rs` and the `probability_frame`, `input_details_column` and `_complete` tests go. `sdlc/scripts/test` passes.
+
+PM amendment, 2026-10-14. `records_column` carries each original input in the supplied Series' own typed dtype. An original that does not fit one supported dtype is refused before any send. `Call.results` keeps every record unchanged. No JSON text column and no new tagged format.
