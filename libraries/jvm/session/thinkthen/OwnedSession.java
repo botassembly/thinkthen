@@ -6,7 +6,6 @@ import java.lang.foreign.*;
 public final class OwnedSession implements AutoCloseable {
     private MemorySegment pointer;
     private int waiters;
-    private Read buffered;
     private boolean closed;
     private java.util.concurrent.CompletableFuture<Void> inputWait, resultWait;
     private final SessionWorkers workers;
@@ -41,7 +40,6 @@ public final class OwnedSession implements AutoCloseable {
     public record Read(Results.SessionPacket packet, boolean ended) {}
     public synchronized Read tryRead() {
         live();
-        if (buffered != null) { var read = buffered; buffered = null; return read; }
         NativeSession.check((int)NativeSession.call("thinkthen_session_try_read", ValueLayout.JAVA_INT,
             new MemoryLayout[]{ValueLayout.ADDRESS, ValueLayout.ADDRESS, ValueLayout.ADDRESS}, pointer, status, output));
         return readPacket(status, output);
@@ -61,7 +59,6 @@ public final class OwnedSession implements AutoCloseable {
         final MemorySegment retained;
         synchronized (this) {
             live();
-            if (buffered != null) { var read = buffered; buffered = null; return read; }
             retained = pointer; waiters++;
         }
         try (Arena outputs = Arena.ofConfined()) {
@@ -119,16 +116,20 @@ public final class OwnedSession implements AutoCloseable {
         return result;
     }
     void waitNative(boolean input) {
-        if (!input) {
-            var read = nextPacket(true);
-            synchronized (this) { buffered = read; }
-            return;
-        }
         final MemorySegment retained;
         synchronized (this) { live(); retained = pointer; waiters++; }
         try (Arena outputs = Arena.ofConfined()) {
             var ready = outputs.allocate(ValueLayout.JAVA_INT);
-            NativeSession.check(NativeWait.waitReady(retained, NativeWait.INPUT, -1, ready));
+            if (!input) NativeSession.check(NativeWait.waitReady(retained, NativeWait.SETTLEMENT_ARM, 0, ready));
+            while (true) {
+                synchronized (this) {
+                    var pending = input ? inputWait : resultWait;
+                    if (closed || pending == null || pending.isCancelled()) return;
+                }
+                NativeSession.check(NativeWait.waitReady(retained,
+                    input ? NativeWait.INPUT : NativeWait.INTERRUPTIBLE_SETTLEMENT, 50, ready));
+                if (ready.get(ValueLayout.JAVA_INT, 0) != NativeWait.READY_TIMEOUT) return;
+            }
         } finally { completedWait(); }
     }
     private void release() {

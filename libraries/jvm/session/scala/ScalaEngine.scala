@@ -17,7 +17,7 @@ final class ScalaEngine private (private val engine: Engine) extends ScalaNamedC
   def plan(request: Inputs.Request): Results.Plan = try engine.plan(request) catch { case error: Throwable => throw ScalaEngine.failure(error) }
   def startSession(request: Inputs.Request): OwnedSession = ScalaEngine.native(new OwnedSession(engine.startSession(request)))
   def execute(request: Inputs.Request): Call = run(engine.execute(request))
-  def execute(request: Inputs.Request, feed: java.lang.Iterable[Inputs.RequestSessionDescriptor]): Call = run(engine.execute(request, feed))
+  def execute(request: Inputs.Request, feed: Iterable[Inputs.RequestSessionDescriptor]): Call = run(engine.execute(request, feed.asJava))
   def usagePersistence(): UsagePersistence = ScalaEngine.native(UsagePersistence.read(engine.usagePersistence()))
   def finishUsageStatus(): UsagePersistence = ScalaEngine.native(UsagePersistence.read(engine.finishUsageStatus()))
   override def close(): Unit = engine.close()

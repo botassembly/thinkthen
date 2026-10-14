@@ -60,6 +60,8 @@ def outputs(root):
     for name, value in native['constants'].items():
         if name.startswith('THINKTHEN_SESSION_WAIT_'):
             waits += ['static final int ' + name.removeprefix('THINKTHEN_SESSION_WAIT_').removesuffix('_V1') + ' = ' + str(value) + ';']
+        if name.startswith('THINKTHEN_SESSION_READY_'):
+            waits += ['static final int ' + name.removeprefix('THINKTHEN_SESSION_').removesuffix('_V1') + ' = ' + str(value) + ';']
     layouts_by_type = {'const thinkthen_session *': 'ValueLayout.ADDRESS', 'uint32_t': 'ValueLayout.JAVA_INT', 'uint32_t *': 'ValueLayout.ADDRESS'}
     prototype = native['functions']['thinkthen_session_wait']
     carriers = ', '.join(layouts_by_type[typ] for typ in prototype['arguments'])
