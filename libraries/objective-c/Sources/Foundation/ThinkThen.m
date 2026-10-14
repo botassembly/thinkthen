@@ -123,17 +123,19 @@ static NSData *TTEncode(id object, NSError **error) {
 @interface TTCall ()
 @property(nonatomic, copy) NSArray<TTSessionPacket *> *packets;
 @property(nonatomic, strong) TTSessionPacketTerminal *terminal;
-- (instancetype)initWithPackets:(NSArray *)packets terminal:(TTSessionPacketTerminal *)terminal;
+@property(nonatomic, copy) NSString *function;
+- (instancetype)initWithPackets:(NSArray *)packets terminal:(TTSessionPacketTerminal *)terminal function:(NSString *)function;
 @end
 @implementation TTCall
 - (TTPresence<TTFacts *> *)facts { return self.terminal.facts; }
-- (instancetype)initWithPackets:(NSArray *)packets terminal:(TTSessionPacketTerminal *)terminal {
-    if ((self = [super init])) { _packets = [packets copy]; _terminal = terminal; }
+- (instancetype)initWithPackets:(NSArray *)packets terminal:(TTSessionPacketTerminal *)terminal function:(NSString *)function {
+    if ((self = [super init])) { _packets = [packets copy]; _terminal = terminal; _function = [function copy]; }
     return self;
 }
 @end
 @interface TTTask () {
     TTSession *_session;
+    NSString *_function;
     TTFeed _feed;
     TTCompletion _completion;
     dispatch_queue_t _queue;
@@ -142,14 +144,14 @@ static NSData *TTEncode(id object, NSError **error) {
     TTSessionPacketTerminal *_terminal;
     BOOL _finished;
 }
-- (instancetype)initWithSession:(TTSession *)session feed:(nullable TTFeed)feed completion:(TTCompletion)completion;
+- (instancetype)initWithSession:(TTSession *)session function:(NSString *)function feed:(nullable TTFeed)feed completion:(TTCompletion)completion;
 @property(atomic) BOOL cancelled;
 - (void)tick;
 @end
 @implementation TTTask
-- (instancetype)initWithSession:(TTSession *)session feed:(TTFeed)feed completion:(TTCompletion)completion {
+- (instancetype)initWithSession:(TTSession *)session function:(NSString *)function feed:(TTFeed)feed completion:(TTCompletion)completion {
     if ((self = [super init])) {
-        _session = session; _feed = [feed copy]; _completion = [completion copy];
+        _session = session; _function = [function copy]; _feed = [feed copy]; _completion = [completion copy];
         _packets = [NSMutableArray array]; _queue = dispatch_queue_create("thinkthen.foundation.callback", DISPATCH_QUEUE_SERIAL);
         dispatch_async(_queue, ^{
             while (!self->_finished) {
@@ -196,7 +198,7 @@ static NSData *TTEncode(id object, NSError **error) {
         if (packet) { [_packets addObject:packet]; if ([packet isKindOfClass:TTSessionPacketTerminal.class]) _terminal = (id)packet; }
         if (ended) {
             if (!_terminal) { [self settle:TTNativeFailure(NULL, TTErrorDefect, @"Native session ended without terminal") call:nil]; return; }
-            TTCall *call = [[TTCall alloc] initWithPackets:_packets terminal:_terminal];
+            TTCall *call = [[TTCall alloc] initWithPackets:_packets terminal:_terminal function:_function];
             if (_terminal.failure.state == TTPresenceValue) {
                 TTCallError *failure = _terminal.failure.value;
                 error = TTFailureForCall(failure, call);
@@ -272,6 +274,6 @@ static NSData *TTEncode(id object, NSError **error) {
     TTSession *session = [self startRequest:request error:error];
     if (!session) return nil;
     if (!feed && ![session finish:nil error:error]) { [session close]; return nil; }
-    return [[TTTask alloc] initWithSession:session feed:feed completion:completion];
+    return [[TTTask alloc] initWithSession:session function:verb feed:feed completion:completion];
 }
 @end

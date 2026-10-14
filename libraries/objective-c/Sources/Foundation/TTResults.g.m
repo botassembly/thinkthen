@@ -6547,7 +6547,7 @@ NSString *judgment, id call, NSError **error) {
             value = carrier[@"value"];
         } if (value) [values addObject:value];
     }
-    if ([function isEqual:@"filter"]) return [values copy];
+    if ([function isEqual:@"filter"] && [((TTCall *)call).function isEqual:function]) return [values copy];
     if (values.count != 1) {
         if (error) *error = [NSError errorWithDomain:TTAnswerErrorDomain code:1 userInfo:@{
             NSLocalizedDescriptionKey:@"Expected exactly one successful answer", @"ThinkThenFunction":function,

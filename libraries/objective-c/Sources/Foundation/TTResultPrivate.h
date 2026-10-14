@@ -29,6 +29,7 @@ FOUNDATION_EXPORT TTPresence *TTAnswerPresence(id payload, id (^convert)(id));
 @end
 
 @interface TTCall (Transport)
+@property(nonatomic, copy, readonly) NSString *function;
 @property(nonatomic, copy, readonly) NSArray<TTSessionPacket *> *packets;
 @property(nonatomic, strong, readonly) TTSessionPacketTerminal *terminal;
 @end
