@@ -90,7 +90,9 @@ def carrier(receipt, verb, json_text=False):
 def row_observations(rows, verb):
     """Retain native event order and refuse ownership shared between rows."""
     if verb in ('rank', 'relate') and all(row['failure'] is None for row in rows):
-        owner = next(row for row in rows if row['ordinal'] == 0)
+        owners = [row for row in rows if row['ordinal'] == 0]
+        assert len(owners) == 1, 'native set requires exactly one observation owner'
+        owner = owners[0]
         assert all(row['observations'] == [] for row in rows if row['ordinal'] != 0)
         return owner['observations']
     events, previous = [], set()

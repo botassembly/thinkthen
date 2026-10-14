@@ -72,12 +72,13 @@ def duplicate_entities(run):
     event = {'kind':'row','index':0}
     owned = {'ordinal':0,'failure':None,'observations':[event,event]}
     expect(row_observations([owned], 'decide'), [event,event], 'native duplicate events retain their order')
-    try:
-        row_observations([owned, {**owned,'ordinal':1}], 'decide')
-    except AssertionError:
-        pass
-    else:
-        raise AssertionError('duplicate observation ownership must fail')
+    for verb, duplicate in [('decide',{**owned,'ordinal':1}),('rank',owned)]:
+        try:
+            row_observations([owned,duplicate], verb)
+        except AssertionError:
+            pass
+        else:
+            raise AssertionError('duplicate observation ownership must fail')
 
 
 def source_rank(run):
