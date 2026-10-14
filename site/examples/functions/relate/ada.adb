@@ -1,46 +1,30 @@
 with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
 with Interfaces; use Interfaces;
-with Thinkthen.Values;
-with Thinkthen.Requests; use Thinkthen.Requests;
+with Thinkthen.Inputs; use Thinkthen.Inputs;
+with Thinkthen.Inputs.Calls;
 with Thinkthen.Sessions; use Thinkthen.Sessions;
-with Thinkthen.Sessions.Calls;
-use Thinkthen.Sessions.Calls;
 with Thinkthen.Answers; use Thinkthen.Answers;
+with Thinkthen.Values;
 
 procedure Sample is
-   function Name (Text, Kind : String)
-     return T_RequestItem is
-     (T_original =>
-        (True,
-         (T_RequestOriginal_arm_json,
-          (T_kind => <>,
-           T_value => Thinkthen.Values.Object_Item
-             ([Thinkthen.Values.Named
-                ("name",
-                 Thinkthen.Values.String_Item (Text)),
-               Thinkthen.Values.Named
-                ("kind",
-                 Thinkthen.Values.String_Item (Kind))])))),
-      others => <>);
-   Names : T_RequestItem_List;
-   Request : T_RequestCall;
+   package V renames Thinkthen.Values;
    Owner : Session;
    Completed : Completion;
-   package V renames Thinkthen.Values;
-
+   function Entity (Name, Kind : String) return Item is
+     (With_Original (Make_Item,
+       Original_From_Original_json
+         (Make_Original_json (V.Object_Item
+           ([V.Named ("name", V.String_Item (Name)),
+             V.Named ("kind", V.String_Item (Kind))])))));
+   Records : constant Item_List :=
+     [Entity ("Apple", "company"),
+      Entity ("Amazon", "company"),
+      Entity ("iPhone", "product"),
+      Entity ("Kindle", "product")];
 begin
-   Names.Append (Name ("Apple", "company"));
-   Names.Append (Name ("Amazon", "company"));
-   Names.Append (Name ("iPhone", "product"));
-   Names.Append (Name ("Kindle", "product"));
-   Request.T_question :=
-     (T_RequestQuestion_arm_file,
-      (T_kind => <>,
-       T_path => To_Unbounded_String ("makes.json")));
-   Request.T_input :=
-     (T_RequestInput_arm_entities,
-      (T_items => Names, T_kind => <>));
-   Relate (Owner, Request);
+   Thinkthen.Inputs.Calls.Relate (Owner,
+     File_Question ("makes.json"),
+     Entities_Input (Records));
    Finish (Owner);
    declare
       Related : constant Relation :=

@@ -1,29 +1,21 @@
-with Thinkthen.Values;
 with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
 with Interfaces; use Interfaces;
-with Interfaces.C; use Interfaces.C;
-with Thinkthen.Requests; use Thinkthen.Requests;
+with Thinkthen.Inputs; use Thinkthen.Inputs;
+with Thinkthen.Inputs.Calls;
 with Thinkthen.Sessions; use Thinkthen.Sessions;
-with Thinkthen.Sessions.Calls;
-use Thinkthen.Sessions.Calls;
 with Thinkthen.Answers; use Thinkthen.Answers;
+with Thinkthen.Values;
 
 procedure Sample is
-   Report : constant String :=
-     "Steps: click Log in. Nobody gets in.";
-   Request : T_RequestCall;
+   package V renames Thinkthen.Values;
    Owner : Session;
    Completed : Completion;
-   package V renames Thinkthen.Values;
-
+   Evidence : constant String :=
+     "Steps: click Log in. Nobody gets in.";
 begin
-   Request.T_question :=
-     (T_RequestQuestion_arm_file,
-      (T_kind => <>,
-       T_path => To_Unbounded_String ("form.json")));
-   Request.T_input.V_0.T_text :=
-     To_Unbounded_String (Report);
-   Annotate (Owner, Request);
+   Thinkthen.Inputs.Calls.Annotate (Owner,
+     File_Question ("form.json"),
+     Text_Input (Evidence));
    Finish (Owner);
    declare
       Rows : constant Annotation_List :=

@@ -1,43 +1,25 @@
-with Thinkthen.Values;
 with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
 with Interfaces; use Interfaces;
-with Thinkthen.Requests; use Thinkthen.Requests;
+with Thinkthen.Inputs; use Thinkthen.Inputs;
+with Thinkthen.Inputs.Calls;
 with Thinkthen.Sessions; use Thinkthen.Sessions;
-with Thinkthen.Sessions.Calls;
-use Thinkthen.Sessions.Calls;
 with Thinkthen.Answers; use Thinkthen.Answers;
+with Thinkthen.Values;
 
 procedure Sample is
-   Question : constant String := "Is this a complaint?";
-   function Review (Text : String) return T_RequestItem is
-     (T_original =>
-        (True,
-         (T_RequestOriginal_arm_text,
-          (T_kind => <>,
-           T_text => To_Unbounded_String (Text)))),
-      others => <>);
-   Reviews : T_RequestItem_List;
-   Request : T_RequestCall;
+   package V renames Thinkthen.Values;
    Owner : Session;
    Completed : Completion;
-   package V renames Thinkthen.Values;
-
+   Records : constant Item_List :=
+     [Text_Item ("Arrived a day early. Thank you!"),
+      Text_Item (
+        "The zipper broke the first time I used it."),
+      Text_Item ("Does this come in blue?"),
+      Text_Item ("The strap snapped on day two.")];
 begin
-   Reviews.Append
-     (Review ("Arrived a day early. Thank you!"));
-   Reviews.Append
-     (Review
-        ("The zipper broke the first time I used it."));
-   Reviews.Append
-     (Review ("Does this come in blue?"));
-   Reviews.Append
-     (Review ("The strap snapped on day two."));
-   Request.T_question.V_0.T_text :=
-     To_Unbounded_String (Question);
-   Request.T_input :=
-     (T_RequestInput_arm_records,
-      (T_items => Reviews, T_kind => <>));
-   Filter (Owner, Request);
+   Thinkthen.Inputs.Calls.Filter (Owner,
+     Text_Question ("Is this a complaint?"),
+     Records_Input (Records));
    Finish (Owner);
    declare
       Complaints : constant V.Value_List :=
