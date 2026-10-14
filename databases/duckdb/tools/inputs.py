@@ -92,16 +92,25 @@ def canonical(version: str | None = None, target: str | None = None) -> Path:
     return HERE.parent / 'build/artifacts/cpp' / identity['version'] / identity['target'] / 'thinkthen.duckdb_extension'
 
 
+def abi_override() -> str:
+    pins = authority()
+    if os.environ.get('DUCKDB_VERSION') != pins['DUCKDB_ROUTINE_PREVIEW_SOURCE']:
+        return ''
+    return selected(pins['DUCKDB_ROUTINE_PREVIEW'])['metadata_version']
+
+
 if __name__ == '__main__':
     try:
         action = sys.argv[1]
         if action == 'versions' and len(sys.argv) == 2:
             print(' '.join(versions()))
+        elif action == 'abi-override' and len(sys.argv) == 2:
+            print(abi_override())
         elif action == 'select' and len(sys.argv) == 4:
             item = selected(sys.argv[2] or None, sys.argv[3])
             print(' '.join(item[name] for name in ('version', 'target', 'platform', 'source_commit', 'tools_commit', 'python_commit', 'metadata_version', 'requirements')))
         else:
-            raise ValueError('usage: inputs.py versions | select VERSION TARGET')
+            raise ValueError('usage: inputs.py versions | abi-override | select VERSION TARGET')
     except LookupError as error:
         raise SystemExit(f'setup: {error}') from error
     except (OSError, ValueError) as error:

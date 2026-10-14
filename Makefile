@@ -2,6 +2,15 @@ PROJ_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 EXT_NAME=thinkthen
 EXT_CONFIG=${PROJ_DIR}extension_config.cmake
 
+# The immutable source ref differs from the native ABI's short source identifier.
+# Upstream 2.0 forwards its checkout ref as DUCKDB_VERSION; use its supported
+# explicit version input only for the authority's approved full source ref.
+THINKTHEN_INPUTS := $(dir $(abspath $(firstword $(MAKEFILE_LIST))))databases/duckdb/tools/inputs.py
+THINKTHEN_ABI_OVERRIDE := $(shell python3 "$(THINKTHEN_INPUTS)" abi-override)
+ifneq ($(THINKTHEN_ABI_OVERRIDE),)
+EXT_FLAGS += -DDUCKDB_EXPLICIT_VERSION=$(THINKTHEN_ABI_OVERRIDE)
+endif
+
 # Community Linux preparation and compilation run in separate containers.
 # Keep fetched crates and the pinned toolchain in their shared mounted checkout.
 ifeq ($(LINUX_CI_IN_DOCKER),1)
