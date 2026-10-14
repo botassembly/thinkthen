@@ -220,7 +220,9 @@ func main() {
 		return client.Annotate(ctx, q, fixtureInput(input), o)
 	}, "recognize": func(ctx context.Context, q tt.RequestQuestion, input any, o *tt.RequestOptions) (tt.Call, error) {
 		return client.Recognize(ctx, q, fixtureInput(input), o)
-	}, "relate": client.Relate}
+	}, "relate": func(ctx context.Context, q tt.RequestQuestion, input any, o *tt.RequestOptions) (tt.Call, error) {
+		return client.Relate(ctx, q, fixtureInput(input), o)
+	}}
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	if raw := fixture["cancel"]; raw != nil && scalar[bool](raw) {

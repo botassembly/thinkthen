@@ -357,7 +357,9 @@ func main() {
 		return client.Annotate(ctx, q, fixtureInput(input), o)
 	}, "recognize": func(ctx context.Context, q tt.RequestQuestion, input any, o *tt.RequestOptions) (tt.Call, error) {
 		return client.Recognize(ctx, q, fixtureInput(input), o)
-	}, "relate": client.Relate}
+	}, "relate": func(ctx context.Context, q tt.RequestQuestion, input any, o *tt.RequestOptions) (tt.Call, error) {
+		return client.Relate(ctx, q, fixtureInput(input), o)
+	}}
 	retained := []tt.Call{}
 	expectedRequests := int64(0)
 	for _, a := range asks {
