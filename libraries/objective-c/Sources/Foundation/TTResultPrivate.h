@@ -25,6 +25,7 @@ FOUNDATION_EXPORT id _Nullable TTAnswerPayload(NSArray *packets, id terminal, NS
 FOUNDATION_EXPORT TTPresence *TTAnswerPresence(id payload, id (^convert)(id));
 
 @interface TTFoundationClient (Scheduling)
+- (nullable TTCall *)complete:(NSString *)verb question:(TTQuestion *)question input:(TTInput *)input options:(TTControls *)options feed:(TTFeed)feed error:(NSError * _Nullable * _Nullable)error;
 - (nullable TTTask *)start:(NSString *)verb question:(TTQuestion *)question input:(TTInput *)input options:(TTControls *)options feed:(TTFeed)feed completion:(TTCompletion)completion error:(NSError * _Nullable * _Nullable)error;
 @end
 

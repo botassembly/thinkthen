@@ -144,27 +144,29 @@ static NSData *TTEncode(id object, NSError **error) {
     TTSessionPacketTerminal *_terminal;
     BOOL _finished;
 }
-- (instancetype)initWithSession:(TTSession *)session function:(NSString *)function feed:(nullable TTFeed)feed completion:(TTCompletion)completion;
+- (instancetype)initWithSession:(TTSession *)session function:(NSString *)function feed:(nullable TTFeed)feed completion:(TTCompletion)completion asynchronous:(BOOL)asynchronous;
+- (void)run;
 @property(atomic) BOOL cancelled;
 - (void)tick;
 @end
 @implementation TTTask
-- (instancetype)initWithSession:(TTSession *)session function:(NSString *)function feed:(TTFeed)feed completion:(TTCompletion)completion {
+- (instancetype)initWithSession:(TTSession *)session function:(NSString *)function feed:(TTFeed)feed completion:(TTCompletion)completion asynchronous:(BOOL)asynchronous {
     if ((self = [super init])) {
         _session = session; _function = [function copy]; _feed = [feed copy]; _completion = [completion copy];
         _packets = [NSMutableArray array]; _queue = dispatch_queue_create("thinkthen.foundation.callback", DISPATCH_QUEUE_SERIAL);
-        dispatch_async(_queue, ^{
-            while (!self->_finished) {
-                if (self.cancelled) { [self settle:TTNativeFailure(NULL, TTErrorCancelled, @"Cancelled") call:nil]; break; }
-                [self tick];
-                if (self->_finished) break;
-                if (self->_feed && !self->_pending) continue;
-                NSError *error = nil;
-                if (![self->_session waitInput:self->_pending != nil error:&error]) [self settle:error call:nil];
-            }
-        });
+        if (asynchronous) dispatch_async(_queue, ^{ [self run]; });
     }
     return self;
+}
+- (void)run {
+    while (!_finished) {
+        if (self.cancelled) { [self settle:TTNativeFailure(NULL, TTErrorCancelled, @"Cancelled") call:nil]; break; }
+        [self tick];
+        if (_finished) break;
+        if (_feed && !_pending) continue;
+        NSError *error = nil;
+        if (![_session waitInput:_pending != nil error:&error]) [self settle:error call:nil];
+    }
 }
 - (void)settle:(NSError *)error call:(TTCall *)call {
     if (_finished) return;
@@ -268,12 +270,31 @@ static NSData *TTEncode(id object, NSError **error) {
     return [[TTSession alloc] initWithNative:session];
 }
 - (TTTask *)start:(NSString *)verb question:(TTQuestion *)question input:(TTInput *)input options:(TTControls *)options feed:(TTFeed)feed completion:(TTCompletion)completion error:(NSError **)error {
-    NSMutableDictionary *call = [@{@"function":verb, @"question":question, @"input":input} mutableCopy];
-    if (options) call[@"options"] = options;
-    TTRequest *request = [TTRequest new]; request.requestFields[@"schema"] = TTRequestVersion; request.requestFields[@"call"] = call;
-    TTSession *session = [self startRequest:request error:error];
-    if (!session) return nil;
+    TTSession *session = [self namedSession:verb question:question input:input options:options feed:feed error:error];
+    return session ? [[TTTask alloc] initWithSession:session function:verb feed:feed completion:completion asynchronous:YES] : nil;
+}
+- (TTSession *)namedSession:(NSString *)verb question:(TTQuestion *)question input:(TTInput *)input options:(TTControls *)options feed:(TTFeed)feed error:(NSError **)error {
+    NSData *questionBytes = TTEncode(question, error); if (!questionBytes) return nil;
+    NSData *inputBytes = TTEncode(input, error); if (!inputBytes) return nil;
+    NSData *optionBytes = TTEncode(options ?: @{}, error); if (!optionBytes) return nil;
+    NSData *functionBytes = [verb dataUsingEncoding:NSUTF8StringEncoding];
+    struct thinkthen_named_request_v1 request = {
+        {functionBytes.bytes, functionBytes.length}, {questionBytes.bytes, questionBytes.length},
+        {inputBytes.bytes, inputBytes.length}, {optionBytes.bytes, optionBytes.length}};
+    struct thinkthen_session *native = NULL;
+    if (!TTCheck(thinkthen_session_new_named_with_surface(_native, &request, (struct thinkthen_complete_utf8_v1){"objective-c", 11}, &native), error)) return nil;
+    TTSession *session = [[TTSession alloc] initWithNative:native];
     if (!feed && ![session finish:nil error:error]) { [session close]; return nil; }
-    return [[TTTask alloc] initWithSession:session function:verb feed:feed completion:completion];
+    return session;
+}
+- (TTCall *)complete:(NSString *)verb question:(TTQuestion *)question input:(TTInput *)input options:(TTControls *)options feed:(TTFeed)feed error:(NSError **)error {
+    TTSession *session = [self namedSession:verb question:question input:input options:options feed:feed error:error];
+    if (!session) return nil;
+    __block TTCall *result = nil;
+    __block NSError *failure = nil;
+    TTTask *task = [[TTTask alloc] initWithSession:session function:verb feed:feed completion:^(TTCall *call, NSError *problem) { result = call; failure = problem; } asynchronous:NO];
+    [task run];
+    if (failure && error) *error = failure;
+    return result;
 }
 @end

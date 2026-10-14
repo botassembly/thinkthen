@@ -124,7 +124,9 @@ fixture = json.loads(source.read_text())
 fixture["ordered"] = {key:ordered(fixture[key]) for key in ("question", "input", "options", "feed_items") if key in fixture}
 source.write_text(json.dumps(fixture, ensure_ascii=False, separators=(",", ":")))
 binary = Path(__file__).parent / ".build/debug/Cases"
-os.execve(str(binary), [str(binary), *sys.argv[1:]], os.environ)
+os.execve(str(binary), [str(binary), *sys.argv[1:], *[]], os.environ)
 ''')
         adapter.chmod(0o700)
+        native_cases(adapter, consumer="objective-c")
+        adapter.write_text(adapter.read_text().replace("*[]", '*["blocking"]'))
         native_cases(adapter, consumer="objective-c")

@@ -142,7 +142,7 @@ def outputs(definitions, version, input_definitions=None, abi=None):
     input_header, input_implementation = inputs(input_definitions)
     header += input_header
     implementation += input_implementation
-    calls = named_calls(input_definitions)
+    calls = named_calls(input_definitions, definitions)
     answer_header, answer_implementation = answer_helpers(definitions)
     implementation += answer_implementation
     declarations = lambda macro, lines: next(line.split(' ', 2)[2] for line in lines if line.startswith('#define ' + macro + ' '))
@@ -292,7 +292,7 @@ def inputs(definitions):
     return header, implementation
 
 
-def named_calls(definitions):
+def named_calls(definitions, result_definitions):
     """Expand inside the existing class and scheduler implementation."""
     declarations, implementations = [], []
     for item in definitions['RequestFunction']['oneOf']:
@@ -300,6 +300,16 @@ def named_calls(definitions):
         signature = f'- (nullable TTTask *){function}:(TTQuestion *)question input:(TTInput *)input options:(nullable TTInputRequestOptions *)options feed:(nullable TTFeed)feed completion:(TTCompletion)completion error:(NSError **)error'
         declarations += [signature + ';']
         implementations += [signature + ' { return [self start:' + literal(function) + ' question:question input:input options:options feed:feed completion:completion error:error]; }']
+        from host_answers import scalar_answers
+        answers = {verb: payload for verb, _, payload in aggregate_answers(result_definitions)}
+        answers.update({verb: payload for verb, _, payload in scalar_answers(result_definitions)})
+        target, _ = conversion(answers[function], result_definitions)
+        if function == 'rank': target = 'NSArray<NSNumber *> *'
+        if function == 'filter': target = 'NSArray *'
+        result = target if function in ('rank', 'filter') else f'TTPresence<{target}> *'
+        blocking = f'- (nullable {result}){function}Answer:(TTQuestion *)question input:(TTInput *)input options:(nullable TTInputRequestOptions *)options feed:(nullable TTFeed)feed call:(TTCall * _Nullable * _Nullable)call error:(NSError **)error'
+        declarations += [blocking + ';']
+        implementations += [blocking + ' { TTCall *completed = [self complete:' + literal(function) + ' question:question input:input options:options feed:feed error:error]; if (call) *call = completed; return completed ? [completed ' + function + 'Answer:error] : nil; }']
     return ['#define TT_GENERATED_NAMED_DECLARATIONS ' + ' '.join(declarations), '#define TT_GENERATED_NAMED_IMPLEMENTATIONS ' + ' '.join(implementations)]
 
 

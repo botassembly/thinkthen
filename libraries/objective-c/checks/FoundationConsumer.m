@@ -60,14 +60,8 @@ int main(int argc, const char *argv[]) {
             TTPlan *numericPlan = [client plan:request error:&error];
             require(numericPlan != nil && error == nil && numericPlan.records.value.unsignedIntegerValue == 1);
             require(numericPlan.requests.value.unsignedIntegerValue == 1 && numericPlan.firstBodyUtf8.state == TTPresenceValue);
-            __block TTCall *numericCall = nil;
-            task = [client filter:question input:numericInput options:nil feed:nil completion:^(TTCall *call, NSError *failure) {
-                require(call != nil && failure == nil); numericCall = call; dispatch_semaphore_signal(completed);
-            } error:&error];
-            require(task != nil && error == nil);
-            require(dispatch_semaphore_wait(completed, dispatch_time(DISPATCH_TIME_NOW, 4 * NSEC_PER_SEC)) == 0);
-            task = nil;
-            NSArray *answer = [numericCall filterAnswer:&error];
+            TTCall *numericCall = nil;
+            NSArray *answer = [client filterAnswer:question input:numericInput options:nil feed:nil call:&numericCall error:&error];
             require(error == nil && answer.count == 1);
             if ([answer[0] doubleValue] != number.doubleValue) fprintf(stderr, "Filtered number %.17g became %.17g\n", number.doubleValue, [answer[0] doubleValue]);
             require([answer[0] doubleValue] == number.doubleValue);
@@ -82,14 +76,8 @@ int main(int argc, const char *argv[]) {
         multiple.items = records;
         TTTextInput *unselected = [TTTextInput new]; unselected.text = @"no";
         for (TTInput *filterInput in @[unselected, multiple, empty]) {
-            __block TTCall *filterCall = nil;
-            task = [client filter:filterQuestion input:filterInput options:filterInput == multiple ? filterOptions : nil feed:nil completion:^(TTCall *call, NSError *failure) {
-                require(call != nil && failure == nil); filterCall = call; dispatch_semaphore_signal(completed);
-            } error:&error];
-            require(task != nil && error == nil);
-            require(dispatch_semaphore_wait(completed, dispatch_time(DISPATCH_TIME_NOW, 4 * NSEC_PER_SEC)) == 0);
-            task = nil;
-            NSArray *answer = [filterCall filterAnswer:&error];
+            TTCall *filterCall = nil;
+            NSArray *answer = [client filterAnswer:filterQuestion input:filterInput options:filterInput == multiple ? filterOptions : nil feed:nil call:&filterCall error:&error];
             require(answer != nil && error == nil);
             require([answer isEqual:filterInput == multiple ? originals : @[]]);
             require(filterCall.facts.value.requestsSent.value.unsignedIntegerValue == (filterInput == multiple ? 4 : filterInput == empty ? 0 : 1));

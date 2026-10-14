@@ -50,7 +50,8 @@ static void typed(NSArray<TTSessionPacket *> *packets, TTSessionPacketTerminal *
 }
 int main(int argc, const char *argv[]) {
     @autoreleasepool {
-        require(argc == 3);
+        require(argc == 3 || argc == 4);
+        BOOL blocking = argc == 4;
         NSDictionary *fixture = readFixture([NSData dataWithContentsOfFile:[NSString stringWithUTF8String:argv[1]]]);
         NSDictionary *question = orderedFields(fixture[@"ordered"][@"question"]);
         NSDictionary *input = orderedFields(fixture[@"ordered"][@"input"]);
@@ -107,7 +108,7 @@ int main(int argc, const char *argv[]) {
                     return [[TTDescriptor alloc] initWithFields:@{@"item":items[index++]}];
                 };
             }
-#define NAMED(name) if ([verb isEqual:@#name]) task = [client name:[[TTQuestion alloc] initWithFields:question] input:[[TTInput alloc] initWithFields:input] options:[[TTControls alloc] initWithFields:options] feed:feed completion:completion error:&error];
+#define NAMED(name) if ([verb isEqual:@#name]) { if (blocking) { id answer = [client name##Answer:[[TTQuestion alloc] initWithFields:question] input:[[TTInput alloc] initWithFields:input] options:[[TTControls alloc] initWithFields:options] feed:feed call:&retained error:&error]; require(answer != nil || error != nil); } else task = [client name:[[TTQuestion alloc] initWithFields:question] input:[[TTInput alloc] initWithFields:input] options:[[TTControls alloc] initWithFields:options] feed:feed completion:completion error:&error]; }
         NAMED(decide) NAMED(choose) NAMED(tag) NAMED(score) NAMED(filter)
         NAMED(rank) NAMED(find) NAMED(annotate) NAMED(recognize) NAMED(relate)
 #undef NAMED
