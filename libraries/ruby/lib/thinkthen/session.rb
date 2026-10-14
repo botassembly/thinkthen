@@ -30,15 +30,19 @@ module ThinkThen
   # One family of named calls over the owned native engine.
   class Client
     FUNCTIONS = %w[decide choose tag score filter rank find annotate recognize relate].freeze
-    Source = Struct.new(:source) do
-      def inspect = "<ThinkThen::Client::Source: content withheld>"
+    class Carrier
+      private attr_reader :payload
+      def initialize(payload)
+        @payload = payload
+        freeze
+      end
+      private_class_method :new, :allocate
+      def inspect = "<#{self.class.name}: content withheld>"
     end
-    Question = Struct.new(:selector) do
-      def inspect = "<ThinkThen::Client::Question: content withheld>"
-    end
-    Item = Struct.new(:descriptor) do
-      def inspect = "<ThinkThen::Client::Item: content withheld>"
-    end
+    private_constant :Carrier
+    Source = Class.new(Carrier) { alias_method :source, :payload }
+    Question = Class.new(Carrier) { alias_method :selector, :payload }
+    Item = Class.new(Carrier) { alias_method :descriptor, :payload }
     def self.open(**settings)
       client = new(**settings)
       return client unless block_given?
@@ -61,22 +65,19 @@ module ThinkThen
     rescue JSON::GeneratorError, TypeError
       raise UsageError.new("settings cannot be converted to native JSON", "usage")
     end
-    def self.question_file(path)
-      Question.new({kind: "file", path: path}).freeze
-    end
-    def self.question_name(name)
-      Question.new({kind: "name", name: name}).freeze
-    end
-    def self.question_reference(reference)
-      Question.new({kind: "reference", reference: reference}).freeze
+    %w[file name reference].each do |kind|
+      field = kind == "file" ? :path : kind.to_sym
+      define_singleton_method("question_#{kind}") do |value|
+        Question.send(:new, {kind: kind, field => value})
+      end
     end
     def self.files(paths, framing: nil, media: "text", **reading)
       source = {paths: Array(paths), reading: reading, media: media}
       source[:framing] = framing unless framing.nil?
-      Source.new(source).freeze
+      Source.send(:new, source)
     end
     def self.item(value, **fields)
-      Item.new({original: original(value), **fields}).freeze
+      Item.send(:new, {original: original(value), **fields})
     end
     def self.dump(value)
       JSON.generate(value)
@@ -88,7 +89,7 @@ module ThinkThen
       value.is_a?(String) ? {kind: "text", text: value} : {kind: "json", value: value}
     end
     private_class_method def self.descriptor(value)
-      value.is_a?(Item) ? value.descriptor : {original: original(value)}
+      value.is_a?(Item) ? value.send(:descriptor) : {original: original(value)}
     end
     def plan(verb, question, input, **options)
       raise UsageError.new("client is closed", "usage") if @closed

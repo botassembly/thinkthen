@@ -60,25 +60,31 @@ module ThinkThen
     def finish_usage_status: () -> UsageStatus
 
     # A file or reference question selector.
-    class Question < Struct[untyped]
-      attr_reader selector: Hash[Symbol, untyped]
-
-      def initialize: (Hash[Symbol, untyped] selector) -> void
+    class Question
       def inspect: () -> String
+      private
+      attr_reader selector: Hash[Symbol, untyped]
+      def initialize: (Hash[Symbol, untyped] selector) -> void
+      def self.new: (Hash[Symbol, untyped] selector) -> Question
+      def self.allocate: () -> Question
     end
     # Files read natively, from Client.files.
-    class Source < Struct[untyped]
-      attr_reader source: Hash[Symbol, untyped]
-
-      def initialize: (Hash[Symbol, untyped] source) -> void
+    class Source
       def inspect: () -> String
+      private
+      attr_reader source: Hash[Symbol, untyped]
+      def initialize: (Hash[Symbol, untyped] source) -> void
+      def self.new: (Hash[Symbol, untyped] source) -> Source
+      def self.allocate: () -> Source
     end
     # One record with its original and per-record fields, from Client.item.
-    class Item < Struct[untyped]
-      attr_reader descriptor: Hash[Symbol, untyped]
-
-      def initialize: (Hash[Symbol, untyped] descriptor) -> void
+    class Item
       def inspect: () -> String
+      private
+      attr_reader descriptor: Hash[Symbol, untyped]
+      def initialize: (Hash[Symbol, untyped] descriptor) -> void
+      def self.new: (Hash[Symbol, untyped] descriptor) -> Item
+      def self.allocate: () -> Item
     end
 
     # One named call in flight; start returns one and the named calls wait.

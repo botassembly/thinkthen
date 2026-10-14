@@ -103,7 +103,7 @@ class TestOwnedSession < Minitest::Test
   def test_find_keeps_the_selected_original_hash_and_wide_integer
     TestBackend.with(<<~RUBY) do |backend, child|
       retained = T::Client.open(cache: false) do |client|
-        client.find("Which record?", [{body: "first", extra: 18446744073709551615}, {body: "second"}], field: ["/body"])
+        client.find("Which record?", [T::Client.item({body: "first", extra: 18446744073709551615}), {body: "second"}], field: ["/body"])
       end
       say retained.value
       say [retained.value.is_a?(Hash), retained.value.frozen?, retained.value["extra"].is_a?(Integer)]
@@ -115,6 +115,42 @@ class TestOwnedSession < Minitest::Test
       status, errors = child.finish
       assert status.success?, errors
       assert_equal 1, backend.count
+    end
+  end
+
+  def test_input_helpers_hide_native_envelopes_and_constructors
+    TestBackend.with(<<~RUBY) do |backend, child|
+      helpers = [[T::Client.item({body: "private marker"}, context: {tag: "private context"}), :descriptor],
+        [T::Client.question_file("private path"), :selector],
+        [T::Client.files(["private path"]), :source]]
+      helpers.each do |helper, accessor|
+        [accessor, :to_h, :[], :[]=].each do |method|
+          raise "public envelope \#{method}" if helper.respond_to?(method)
+          begin
+            helper.public_send(method, *([:[], :[]=].include?(method) ? [0] : []))
+            raise "public envelope invoked"
+          rescue NoMethodError => error
+            raise "wrong missing method" unless error.name == method
+          end
+        end
+        %i[new allocate].each do |method|
+          raise "public constructor" if helper.class.respond_to?(method)
+          begin
+            helper.class.public_send(method, * (method == :new ? [{original: {kind: "text", text: "private marker"}}] : []))
+            raise "public constructor invoked"
+          rescue NoMethodError => error
+            raise "wrong missing constructor" unless error.name == method
+          end
+        end
+        raise "inspect leak" if helper.inspect.include?("private")
+        raise "mutable carrier" unless helper.frozen?
+      end
+      say true
+    RUBY
+      assert_equal true, child.hear
+      status, errors = child.finish
+      assert status.success?, errors
+      assert_equal 0, backend.count
     end
   end
 
@@ -209,7 +245,7 @@ class TestOwnedSession < Minitest::Test
         File.write(path, JSON.generate(decide: "File wording?"))
         File.write("refund", JSON.generate(decide: "Local wording?"))
         selectors = [T::Client.question_file(path), T::Client.question_name("refund"), T::Client.question_reference("@refund")]
-        say selectors.map { |selector| selector.selector }
+        say selectors.map { |selector| [selector.is_a?(T::Client::Question), selector.respond_to?(:selector)] }
         raise "selector leak" unless selectors.all? { |selector| selector.inspect == "<ThinkThen::Client::Question: content withheld>" }
         T::Client.open(cache: false) do |client|
           results = selectors.map { |selector| client.decide(selector, "text") }
@@ -221,7 +257,7 @@ class TestOwnedSession < Minitest::Test
         end
       end
     RUBY
-      assert_equal [{"kind" => "file", "path" => "@literal.json"}, {"kind" => "name", "name" => "refund"}, {"kind" => "reference", "reference" => "@refund"}], child.hear
+      assert_equal [[true, false], [true, false], [true, false]], child.hear
       assert_equal ["File wording?", "Saved wording?", "Local wording?", "Saved wording?", "@refund"], child.hear
       assert_equal [1, 1, 1, 1, 1], child.hear
       status, errors = child.finish
