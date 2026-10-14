@@ -425,10 +425,6 @@
 
 #define THINKTHEN_REQUEST_DEFINITION_ARM_8_V1 8
 
-#define THINKTHEN_REQUEST_DEFINITION_AUTHORED_SCORE_BATCH_ARM_1_V1 1
-
-#define THINKTHEN_REQUEST_DEFINITION_AUTHORED_SCORE_BATCH_ARM_2_V1 2
-
 #define THINKTHEN_REQUEST_DESCRIPTION_ARM_1_V1 1
 
 #define THINKTHEN_REQUEST_DESCRIPTION_ARM_2_V1 2
@@ -508,6 +504,10 @@
 #define THINKTHEN_REQUEST_POINTERS_ARM_1_V1 1
 
 #define THINKTHEN_REQUEST_POINTERS_ARM_2_V1 2
+
+#define THINKTHEN_REQUEST_QUESTION_BATCH_ARM_1_V1 1
+
+#define THINKTHEN_REQUEST_QUESTION_BATCH_ARM_2_V1 2
 
 #define THINKTHEN_REQUEST_QUESTION_SELECTOR_ARM_1_V1 1
 
@@ -1616,15 +1616,15 @@ typedef struct thinkthen_request_literal_max_v1 {
   uint32_t reserved;
 } thinkthen_request_literal_max_v1;
 
-typedef union thinkthen_request_definition_authored_score_batch_data_v1 {
+typedef union thinkthen_request_question_batch_data_v1 {
   const struct thinkthen_request_literal_max_v1 *arm_1;
   const struct thinkthen_request_integer_v1 *arm_2;
-} thinkthen_request_definition_authored_score_batch_data_v1;
+} thinkthen_request_question_batch_data_v1;
 
-typedef struct thinkthen_request_definition_authored_score_batch_v1 {
+typedef struct thinkthen_request_question_batch_v1 {
   uint32_t kind;
-  union thinkthen_request_definition_authored_score_batch_data_v1 data;
-} thinkthen_request_definition_authored_score_batch_v1;
+  union thinkthen_request_question_batch_data_v1 data;
+} thinkthen_request_question_batch_v1;
 
 typedef struct thinkthen_request_input_declaration_string_v1 {
   uint32_t reserved;
@@ -1744,7 +1744,7 @@ typedef struct thinkthen_request_threshold_v1 {
 } thinkthen_request_threshold_v1;
 
 typedef struct thinkthen_request_definition_authored_decide_v1 {
-  const struct thinkthen_request_definition_authored_score_batch_v1 *m_batch;
+  const struct thinkthen_request_question_batch_v1 *m_batch;
   const struct thinkthen_request_input_declaration_v1 *m_context_schema;
   const struct thinkthen_request_question_text_v1 *m_decide;
   const struct thinkthen_request_criterion_v1 *m_false;
@@ -1806,7 +1806,7 @@ typedef struct thinkthen_request_cut_v1 {
 } thinkthen_request_cut_v1;
 
 typedef struct thinkthen_request_definition_authored_choose_v1 {
-  const struct thinkthen_request_definition_authored_score_batch_v1 *m_batch;
+  const struct thinkthen_request_question_batch_v1 *m_batch;
   const struct thinkthen_request_question_text_v1 *m_choose;
   const struct thinkthen_request_input_declaration_v1 *m_context_schema;
   const struct thinkthen_request_input_declaration_v1 *m_item_schema;
@@ -1830,7 +1830,7 @@ typedef struct thinkthen_request_labels_v1 {
 } thinkthen_request_labels_v1;
 
 typedef struct thinkthen_request_definition_authored_tag_v1 {
-  const struct thinkthen_request_definition_authored_score_batch_v1 *m_batch;
+  const struct thinkthen_request_question_batch_v1 *m_batch;
   const struct thinkthen_request_input_declaration_v1 *m_context_schema;
   const struct thinkthen_request_input_declaration_v1 *m_item_schema;
   const struct thinkthen_request_labels_v1 *m_labels;
@@ -1864,7 +1864,7 @@ typedef struct thinkthen_request_levels_v1 {
 } thinkthen_request_levels_v1;
 
 typedef struct thinkthen_request_definition_authored_score_v1 {
-  const struct thinkthen_request_definition_authored_score_batch_v1 *m_batch;
+  const struct thinkthen_request_question_batch_v1 *m_batch;
   const struct thinkthen_request_input_declaration_v1 *m_context_schema;
   const struct thinkthen_request_input_declaration_v1 *m_item_schema;
   const struct thinkthen_request_levels_v1 *m_levels;
