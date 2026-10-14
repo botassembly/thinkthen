@@ -33,6 +33,9 @@ usage_home
 . ./runtime.sh
 runtime_ready
 REPO=$(cd ../.. && pwd)
+if [ "$profile" = routine ]; then
+	export THINKTHEN_CONFORMANCE_IDS=${THINKTHEN_CONFORMANCE_IDS:-$REPO/conformance/routine-ids.txt}
+fi
 if [ "$profile" = full ]; then . "$REPO/sdlc/scripts/full-compiler"; fi
 # macOS has no `timeout` (ticket 0128). runtime.sh uses it too.
 LIMIT=$REPO/sdlc/scripts/time-limit
@@ -1588,7 +1591,14 @@ complete_environment() {
 }
 complete_cases() {
     complete_environment
-    sh "$LIMIT" 1800 python3 ../sqlite/tests/complete/parity.py postgresql
+    if [ "$profile" = routine ]; then
+        python3 tests/runner.py plan >"$RUN/complete.plan"
+        while IFS=$'\t' read -r id _; do
+            sh "$LIMIT" 300 python3 ../sqlite/tests/complete/parity.py postgresql "$id"
+        done <"$RUN/complete.plan"
+    else
+        sh "$LIMIT" 1800 python3 ../sqlite/tests/complete/parity.py postgresql
+    fi
     sh "$LIMIT" 300 python3 ../sqlite/tests/complete/facts.py postgresql
 }
 check complete_cases
