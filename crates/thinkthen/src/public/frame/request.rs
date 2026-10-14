@@ -72,10 +72,20 @@ fn execute_feed(
     feed: RequestFeed<'_>,
     complete: bool,
 ) -> Result<Call<RequestValue>, Error> {
+    let none = match &definition {
+        RequestDefinition::Atomic(crate::LoadedQuestion::Question(question)) => {
+            matches!(question.kind, crate::public::question::Kind::FindNone)
+        }
+        RequestDefinition::Find(find) => {
+            matches!(
+                find.question().kind,
+                crate::public::question::Kind::FindNone
+            )
+        }
+        _ => false,
+    };
     let options = RequestOptions {
-        none: matches!(&definition,
-            RequestDefinition::Atomic(crate::LoadedQuestion::Question(question))
-                if matches!(question.kind, crate::public::question::Kind::FindNone)),
+        none,
         ..RequestOptions::default()
     };
     let call = RequestCall::new(

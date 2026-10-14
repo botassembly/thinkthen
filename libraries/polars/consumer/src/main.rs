@@ -91,6 +91,10 @@ fn run(f: Fixture) -> Result<String, Error> {
         Asked::Atomic(LoadedQuestion::Question(question)) if f.verb == "find" && f.options.none => {
             Asked::from(question.offering_none()?)
         }
+        Asked::Find(find) if f.options.none => {
+            let (question, reading) = find.into_parts();
+            Asked::from((question.offering_none()?, reading))
+        }
         asked => asked,
     };
     let options = if let Some(context) = f.shared_context.as_deref() {
