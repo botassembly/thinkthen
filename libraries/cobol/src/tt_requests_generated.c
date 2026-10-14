@@ -9234,8 +9234,11 @@ thinkthen_cobol_AnswerTable *out) {
             for(size_t i=0;
             i<list.len;
             i++) if(list.data[i]->value) {
-                if(list.data[i]->input.presence!=THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) return THINKTHEN_COBOL_REPRESENTATION;
-                rows[out->count++].original=answer_original(a,list.data[i]->input.value);
+                if(list.data[i]->input.presence==THINKTHEN_COMPLETE_PRESENCE_MISSING_V1) return THINKTHEN_COBOL_REPRESENTATION;
+                const thinkthen_complete_json_v1 null_value={
+                    .kind=THINKTHEN_COMPLETE_JSON_NULL_V1
+                };
+                rows[out->count++].original=answer_original(a,list.data[i]->input.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? list.data[i]->input.value : &null_value);
             }
             break;
         }
@@ -9314,6 +9317,9 @@ thinkthen_cobol_AnswerTable *out) {
             if(row->present) row->index=value->index.value;
             if(value->value.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) row->original=answer_original(a,
             value->value.value);
+            else if(row->present) row->original=answer_original(a,&(thinkthen_complete_json_v1){
+                .kind=THINKTHEN_COMPLETE_JSON_NULL_V1
+            });
             break;
         }
         case THINKTHEN_COMPLETE_REQUEST_FUNCTION_RECOGNIZE_V1: {

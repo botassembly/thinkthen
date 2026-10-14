@@ -42,6 +42,28 @@ procedure division using engine input-record session-owner.
  goback.
 end program COBOL_{verb.upper()}.
 ''')
+    for verb in enum_values(definitions['RequestFunction']):
+        programs.append(f'''identification division.
+program-id. COBOL_BLOCK_{verb.upper()}.
+data division.
+working-storage section.
+copy "tt-native-generated.cpy".
+linkage section.
+01 engine usage pointer.
+01 question usage pointer.
+01 input-record usage pointer.
+01 options usage pointer.
+01 answer usage pointer.
+01 status-record usage pointer.
+procedure division using engine question input-record options answer status-record.
+ set address of tt-n-cobol-Answer{verb.title()}Result to answer
+ set address of tt-n-cobol-AnswerStatus to status-record
+ call "TT_{verb.upper()}" using by value engine question input-record options
+    by reference tt-n-cobol-Answer{verb.title()}Result tt-n-cobol-AnswerStatus
+    returning return-code
+ goback.
+end program COBOL_BLOCK_{verb.upper()}.
+''')
     programs.append('''identification division.
 program-id. COBOL_PUSH.
 data division.

@@ -20,31 +20,8 @@ BACKEND_BINARY = Path(os.environ.get('CARGO_TARGET_DIR', ROOT / 'target')) / 'de
 
 class Text(ct.Structure):
     _fields_ = [('length', ct.c_uint64), ('text', ct.c_char * 8192)]
-def status_type():
-    with tempfile.TemporaryDirectory(prefix='cobol-status-abi-') as temporary:
-        header = Path(temporary) / 'status.h'
-        header.write_text('#include ' + json.dumps(str(HEADER)) + '\n#include ' + json.dumps(str(PACKAGE / 'src/tt_requests_generated.h')) + '\n')
-        facts = template.abi_module(ROOT).header_abi(header)
-    records, types = facts['records'], {}
-    def record(name):
-        if name in types: return types[name]
-        cls = type(name, (ct.Structure,), {})
-        types[name] = cls
-        fields = []
-        for member, field in records[name]['fields'].items():
-            if '.' in member: continue
-            kind = field['type']
-            nested = kind.removeprefix('struct ')
-            if '*' in kind: typ = ct.c_void_p
-            elif kind.startswith('char['): typ = ct.c_char * field['width']
-            elif nested in records: typ = record(nested)
-            else: typ = {'uint32_t': ct.c_uint32, 'uint64_t': ct.c_uint64, 'int64_t': ct.c_int64, 'size_t': ct.c_size_t, 'double': ct.c_double}[kind]
-            fields.append((member, typ))
-        cls._fields_ = fields
-        assert ct.sizeof(cls) == records[name]['size'], name
-        return cls
-    return record
-record_type = status_type()
+from owned_reader import record_types, Reader
+record_type = record_types(PACKAGE, HEADER)
 Status = record_type('thinkthen_cobol_AnswerStatus')
 class Table(ct.Structure):
     _fields_ = [('owner', ct.c_void_p), ('rows', ct.c_void_p), ('count', ct.c_uint64)]
@@ -148,7 +125,6 @@ end program BLOCK_PLAN.
         engine = engine_slot.value; assert engine
         records.owners.clear()
         def invoke(function, originals=None, options=None, preview=False, preview_function=None, question_override=None, input_override=None):
-            print('calling', function, preview, options, flush=True)
             records = Records(PACKAGE)
             question = {'kind': 'definition', 'value': question_override or questions[function]}
             kind = {'find': 'units', 'relate': 'entities'}.get(function, 'records')
@@ -168,35 +144,8 @@ end program BLOCK_PLAN.
             code = call(*(ct.byref(v) for v in pointers))
             records.owners.clear()
             return code, answer, status
-        def value_json(address):
-            kind = ct.c_uint32()
-            bridge.TT_VALUE_KIND.argtypes = [ct.c_void_p, ct.c_void_p]
-            assert bridge.TT_VALUE_KIND(address, ct.byref(kind)) == 0
-            constants = Records(PACKAGE).constants
-            if kind.value == constants['THINKTHEN_COMPLETE_JSON_NULL_V1']: return None
-            if kind.value == constants['THINKTHEN_COMPLETE_JSON_BOOLEAN_V1']:
-                boolean = ct.c_uint32(); bridge.TT_VALUE_BOOLEAN.argtypes = [ct.c_void_p, ct.c_void_p]
-                assert bridge.TT_VALUE_BOOLEAN(address, ct.byref(boolean)) == 0
-                return bool(boolean.value)
-            output, length = ct.create_string_buffer(8192), ct.c_uint64()
-            if kind.value in (constants['THINKTHEN_COMPLETE_JSON_STRING_V1'], constants['THINKTHEN_COMPLETE_JSON_NUMBER_V1']):
-                assert bridge.TT_VALUE_TEXT(address, output, ct.byref(length)) == 0
-                text = output.raw[:length.value].decode()
-                return text if kind.value == constants['THINKTHEN_COMPLETE_JSON_STRING_V1'] else json.loads(text)
-            length = ct.c_uint64(); bridge.TT_VALUE_LENGTH.argtypes = [ct.c_void_p, ct.c_void_p]
-            assert bridge.TT_VALUE_LENGTH(address, ct.byref(length)) == 0
-            result = [] if kind.value == constants['THINKTHEN_COMPLETE_JSON_ARRAY_V1'] else {}
-            bridge.TT_VALUE_ELEMENT.argtypes = [ct.c_void_p, ct.c_uint64, ct.c_void_p]
-            bridge.TT_VALUE_NAME.argtypes = [ct.c_void_p, ct.c_uint64, ct.c_void_p, ct.c_void_p]
-            bridge.TT_VALUE_FREE.argtypes = [ct.c_void_p]
-            for index in range(1, length.value + 1):
-                child = ct.c_void_p(); assert bridge.TT_VALUE_ELEMENT(address, index, ct.byref(child)) == 0
-                projected = value_json(child.value); bridge.TT_VALUE_FREE(child)
-                if isinstance(result, list): result.append(projected)
-                else:
-                    size = ct.c_uint64(); assert bridge.TT_VALUE_NAME(address, index, output, ct.byref(size)) == 0
-                    result[output.raw[:size.value].decode()] = projected
-            return result
+        reader = Reader(bridge, record_type)
+        value_json = reader.json_value
         def native_plan(function):
             request = {'schema': 'thinkthen.request/1', 'call': {'function': function, 'question': {'kind': 'definition', 'value': questions[function]}, 'input': {'kind': 'records', 'items': [{'original': {'kind': 'text', 'text': 'yes'}}]}, 'options': {}}}
             data = json.dumps(request).encode()

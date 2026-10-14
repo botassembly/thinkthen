@@ -56,12 +56,14 @@ def render(facts, roots=None, prefix="Answer"):
                 output.append(('const ' + typ + ' *' if '*' in kind else typ + ' ') + member + ';')
                 if member == 'data' and 'len' in fields:
                     output[-1] = 'const ' + typ + ' *data;'
-                    clone += [f'{typ} *items=allocate(a,input->len,sizeof(*items));', 'out->data=items; out->len=input->len;', 'if(!items) return a->code;', 'for(size_t i=0;i<input->len && !code;i++) {']
+                    item_type = 'const tt_value *' if nested == 'thinkthen_complete_json_v1' else typ
+                    if nested == 'thinkthen_complete_json_v1': output[-1] = 'const tt_value *const *data;'
+                    clone += [f'{item_type} *items=allocate(a,input->len,sizeof(*items));', 'out->data=items; out->len=input->len;', 'if(!items) return a->code;', 'for(size_t i=0;i<input->len && !code;i++) {']
                     source = 'input->data[i]' if kind.count('*') == 2 else '&input->data[i]'
                     if nested == 'thinkthen_complete_utf8_v1':
                         clone.append(f'code=answer_text(*({source}),items+i);')
                     elif nested == 'thinkthen_complete_json_v1':
-                        clone.append(f'items[i].value=copy_value(a,{source}); code=a->code;')
+                        clone.append(f'items[i]=answer_original(a,{source}); code=a->code;')
                     else:
                         clone.append(f'code=copy_{typ}(a,{source},items+i);')
                     clone.append('}')
