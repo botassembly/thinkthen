@@ -233,6 +233,33 @@ pub fn run_records_recovering<'a>(
     controls: CallOptions<'_>,
     surface: Surface,
 ) -> Result<Value, Error> {
+    let name = match &request.request().call.arguments().input {
+        RequestInput::Feed { name, .. } => name.as_str(),
+        _ => "sql",
+    };
+    let feed = RequestFeed::from_records(name, records).eager();
+    let feed = if matches!(prepared, Prepared::Filter(_)) {
+        feed.with_all_filter_results()
+    } else {
+        feed
+    };
+    run_feed_recovering(engine, prepared, request, feed, controls, surface)
+}
+
+/// Execute a feed with descriptor-only image admission and native reader controls.
+pub fn run_feed_recovering(
+    engine: &Engine,
+    prepared: &Prepared,
+    request: &AdmittedRequest,
+    feed: RequestFeed<'_>,
+    controls: CallOptions<'_>,
+    surface: Surface,
+) -> Result<Value, Error> {
+    let feed = if matches!(prepared, Prepared::Filter(_)) {
+        feed.with_all_filter_results()
+    } else {
+        feed
+    };
     let events = Mutex::new(Vec::new());
     let observer = |event: RecordObservation<'_>| {
         events
@@ -242,26 +269,6 @@ pub fn run_records_recovering<'a>(
                 observation(&event, request.request().call.function())
                     .unwrap_or_else(|error| crate::complete_native::failure(&error)),
             );
-    };
-    let records = records.collect::<Vec<_>>();
-    let image_inputs = records
-        .iter()
-        .filter_map(|row| row.as_ref().ok())
-        .any(|row| matches!(row.original, thinkthen::QuestionInput::Images(_)));
-    let name = match &request.request().call.arguments().input {
-        RequestInput::Feed { name, .. } => name.as_str(),
-        _ => "sql",
-    };
-    let feed = RequestFeed::from_records(name, records.into_iter()).eager();
-    let feed = if matches!(prepared, Prepared::Filter(_)) {
-        feed.with_all_filter_results()
-    } else {
-        feed
-    };
-    let feed = if image_inputs {
-        feed.with_image_inputs()
-    } else {
-        feed
     };
     let call = engine.execute_request_recovering(
         request,
@@ -323,12 +330,23 @@ pub fn run_recovering(
         controls
     };
     let reading = request.record_reading()?;
-    run_records_recovering(
-        engine,
-        prepared,
-        request,
+    let name = match &request.request().call.arguments().input {
+        RequestInput::Feed { name, .. } => name.as_str(),
+        _ => "sql",
+    };
+    let feed = RequestFeed::from_records(
+        name,
         inputs.deferred_records(prepared.reading().or(Some(&reading))),
-        controls,
-        surface,
-    )
+    );
+    let feed = if inputs.image_inputs()? {
+        feed.with_image_inputs()
+    } else {
+        feed
+    };
+    let feed = if inputs.incremental {
+        feed
+    } else {
+        feed.eager()
+    };
+    run_feed_recovering(engine, prepared, request, feed, controls, surface)
 }

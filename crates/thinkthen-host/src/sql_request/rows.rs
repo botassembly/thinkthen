@@ -17,6 +17,11 @@ pub(super) fn complete(
             .get("index")
             .and_then(Value::as_u64)
             .unwrap_or(ordinal as u64);
+        let ordinal = if function == F::Find {
+            result.get("index").cloned().unwrap_or(Value::Null)
+        } else {
+            json!(ordinal)
+        };
         if function == F::Relate {
             for edge in result
                 .get("value")
