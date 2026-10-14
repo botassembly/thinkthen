@@ -128,6 +128,7 @@ impl RowUsage {
 
 #[cfg(test)]
 mod tests {
+    //! Stays: usage-share summation needs a direct arithmetic invariant before row serialization.
     use super::*;
 
     /// One edge row: the shares, then the usage, or `Err` for the overflow.

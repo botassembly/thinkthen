@@ -1,3 +1,4 @@
+//! Stays: provider response parsing must preserve valid partial answers and withhold rejected payload values.
 //! The evidence-backed System One distribution boundary.
 
 use super::decode;

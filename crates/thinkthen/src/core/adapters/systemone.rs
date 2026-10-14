@@ -187,6 +187,7 @@ pub(crate) fn wire_place(name: &str) -> Option<usize> {
 
 #[cfg(test)]
 pub(crate) mod tests {
+    //! Stays: model-name diagnostics must expose only admitted safe names.
     use super::diagnostic_model;
     use crate::core::plan::Plan;
     use crate::core::question::{Labels, Question};

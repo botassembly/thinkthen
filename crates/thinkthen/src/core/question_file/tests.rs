@@ -1,3 +1,4 @@
+//! Stays: saved question parsing and resolution need direct closed-grammar, conflict and secrecy checks.
 //! Every refusal the question-file grammar makes, and the key it names.
 
 use super::{QuestionFile, QuestionFileError as Refused, Source, Verb};

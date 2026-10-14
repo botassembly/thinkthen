@@ -1,3 +1,4 @@
+//! Stays: relation definition parsing needs direct malformed-field and ordering tables.
 use super::{EntitySetError, RelateSpec};
 
 #[test]

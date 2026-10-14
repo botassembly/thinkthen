@@ -1,3 +1,4 @@
+//! Stays: file identity, replacement races and protected creation permissions need direct platform durability checks.
 //! Native identities are checked through independently opened distinct files.
 use std::fs;
 use std::sync::atomic::{AtomicUsize, Ordering};

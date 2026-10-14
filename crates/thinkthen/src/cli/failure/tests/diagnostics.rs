@@ -1,3 +1,4 @@
+//! Stays: private diagnostic and signal mappings must withhold secrets and preserve cancellation counts.
 //! Failure messages and exit status retain their fixed safe forms.
 
 use super::*;

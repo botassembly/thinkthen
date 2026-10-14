@@ -1,3 +1,4 @@
+//! Stays: image dimension rounding and patch arithmetic need exact numeric boundary tables.
 //! Documented geometric boundaries, independent of encoded-body admission.
 use super::{ImageLimit, ImageRoute};
 use crate::core::Json;

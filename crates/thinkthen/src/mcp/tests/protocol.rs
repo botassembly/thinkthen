@@ -1,3 +1,4 @@
+//! Stays: framing, cancellation, reader ownership and native admission faults need direct private transport checks.
 use super::super::{
     output::{NativeObject, tool_result},
     protocol::{self, Fault, Id},

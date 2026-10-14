@@ -1,3 +1,4 @@
+//! Stays: fork ownership, held transport and cache isolation require direct process and secrecy fault checks.
 //! The facade's contract checks against the shared cases and key secrecy.
 
 use conformance_backend::{Backend as Loopback, Canned, Listener};

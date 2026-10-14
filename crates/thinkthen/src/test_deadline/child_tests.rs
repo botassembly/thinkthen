@@ -1,3 +1,4 @@
+//! Stays: child environment isolation needs direct checks that no unapproved parent values cross the process boundary.
 use super::child::command;
 
 #[test]

@@ -1,3 +1,4 @@
+//! Stays: global width selection, permit refunds and cancellation races need direct concurrency checks.
 //! Process width proofs: selection, the attempt gate, and its transitions.
 //! The command setup and combined-path proofs live beside the command.
 

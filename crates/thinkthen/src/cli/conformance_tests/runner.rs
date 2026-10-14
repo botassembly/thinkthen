@@ -1,3 +1,4 @@
+//! Stays: saved-response parser and fault tables exercise private command preparation without provider calls.
 //! Direct fault injection stays because CLI callers cannot request an invariant failure,
 //! a native cancellation token, or an expired native deadline.
 

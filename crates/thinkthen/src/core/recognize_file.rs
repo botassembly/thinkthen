@@ -502,6 +502,7 @@ fn declaration(value: &Json) -> Result<&Json, RecognizeConfigError> {
 
 #[cfg(test)]
 mod tests {
+    //! Stays: recognition examples and authored rule parsing need direct closed-grammar boundaries.
     use super::{RecognizeSpec, recognize_sha256};
 
     #[test]

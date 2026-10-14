@@ -72,6 +72,7 @@ impl<'de> Deserialize<'de> for Surface {
 
 #[cfg(test)]
 mod tests {
+    //! Stays: surface-token grammar must refuse unknown, padded and inferred values.
     use super::Surface;
 
     #[test]

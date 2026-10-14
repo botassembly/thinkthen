@@ -1,3 +1,4 @@
+//! Stays: counter overflow, unsafe paths and interrupted writes need direct persistence fault and concurrency checks.
 //! A usage folder without `.lock` (tickets 0360 and 0367).
 
 use std::fs;

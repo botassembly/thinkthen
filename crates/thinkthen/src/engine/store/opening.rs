@@ -37,6 +37,7 @@ pub(super) fn create(path: &Path) -> Result<Connection, Error> {
 
 #[cfg(test)]
 mod tests {
+    //! Stays: cache locking, private creation permissions and corruption/conflict handling need direct durability faults.
     use std::sync::mpsc;
     use std::time::Duration;
 

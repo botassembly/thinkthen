@@ -284,6 +284,7 @@ pub(super) fn ollama_address(url: &str) -> bool {
 
 #[cfg(test)]
 mod tests {
+    //! Stays: transport retry timing, cancellation and address diagnostics need direct fault and secrecy checks.
     #[test]
     fn ollama_address_matches_only_the_host_or_port() {
         for (url, expected) in [

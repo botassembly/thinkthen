@@ -1,3 +1,4 @@
+//! Stays: file identity, replacement races and protected creation permissions need direct platform durability checks.
 //! Public API work pauses with the actual writer's directory or temporary file alive.
 use super::{OBSERVER, Point};
 use crate::test_deadline::child;

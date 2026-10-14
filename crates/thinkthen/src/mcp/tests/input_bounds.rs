@@ -1,3 +1,4 @@
+//! Stays: framing, cancellation, reader ownership and native admission faults need direct private transport checks.
 //! Retained original admission through current native MCP carriers.
 use super::super::protocol::MAX_MESSAGE;
 use crate::{InputReaderOptions, ReaderMedia, ReaderOptions, SourceItems, SourceUnit};

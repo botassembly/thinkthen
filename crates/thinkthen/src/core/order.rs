@@ -59,6 +59,7 @@ pub(crate) fn turns(lists: &[Vec<usize>], top: Option<usize>) -> Vec<(usize, usi
 
 #[cfg(test)]
 mod tests {
+    //! Stays: permutation, duplicate attribution and stable tie ordering need direct numeric invariants.
     use super::ranking;
     use proptest::collection::vec;
     use proptest::option;
