@@ -89,6 +89,29 @@ class Admission(unittest.TestCase):
         except ProcessLookupError:
             return False
 
+    def wait_entry(self, child, timeout=3):
+        try:
+            return child.wait(timeout=timeout)
+        except subprocess.TimeoutExpired:
+            # The caller owns this session. Its supervisors receive TERM and
+            # finish their compiler cleanup before fixture locks disappear.
+            os.killpg(child.pid, signal.SIGTERM)
+            child.wait(timeout=2)
+            def group_finished():
+                if sys.platform == 'linux':
+                    try:
+                        while os.waitpid(-child.pid, os.WNOHANG)[0]:
+                            pass
+                    except ChildProcessError:
+                        pass
+                try:
+                    os.killpg(child.pid, 0)
+                    return False
+                except ProcessLookupError:
+                    return True
+            self.wait_for(group_finished)
+            raise
+
     def assert_resources_available(self):
         with ExitStack() as stack:
             legacy = stack.enter_context(self.lock.open('a+b'))
@@ -295,8 +318,9 @@ exit 23
                'CARGO_TARGET_DIR': str(self.root / 'target'),
                'THINKTHEN_TEST_PROFILE': 'full', 'THINKTHEN_ARTIFACT': 'owned archive',
                'THINKTHEN_API_KEY': 'fake-library-boundary'}
-        result = subprocess.run(['/bin/bash', str(caller), str(scripts), str(output), 'two words'], env=env, timeout=3)
-        self.assertEqual(result.returncode, 23)
+        child = subprocess.Popen(['/bin/bash', str(caller), str(scripts), str(output), 'two words'], env=env, start_new_session=True)
+        self.children.append(child)
+        self.assertEqual(self.wait_entry(child), 23)
         self.assertTrue(os.access(self.root / 'target/probe', os.X_OK))
         self.assertEqual(json.loads(output.read_text()), ['two words', env['CARGO_TARGET_DIR'], 'full', 'owned archive'])
         # The existing standalone shell entry still passes through admission.
@@ -312,6 +336,24 @@ assert 'THINKTHEN_ARTIFACT' not in os.environ
 BOUNDARY
 ''')
         self.assertEqual(subprocess.run(['/bin/sh', str(rung)], env=env, timeout=3).returncode, 0)
+
+    def test_shell_caller_timeout_cleans_owned_supervisor_and_compiler(self):
+        scripts = self.entry_scripts()
+        caller = self.root / 'timeout-check.sh'
+        caller.write_text('set -eu\nheavy_scripts=$1\nshift\n. "$heavy_scripts/heavy-compile"\nheavy_compile "$@"\n')
+        release = self.root / 'blocked'
+        code = 'import os,pathlib,sys; pathlib.Path(sys.argv[1]+".pid").write_text(str(os.getpid())); ' + COMPILER
+        env = {'PATH': os.environ['PATH'], 'THINKTHEN_HEAVY_LOCK': str(self.lock)}
+        child = subprocess.Popen(['/bin/bash', str(caller), str(scripts), sys.executable, '-c', code, str(release)],
+                                 env=env, start_new_session=True)
+        self.children.append(child)
+        self.wait_for(lambda: self.started('blocked'))
+        pid = int((self.root / 'blocked.pid').read_text())
+        self.descendants.append(pid)
+        with self.assertRaises(subprocess.TimeoutExpired):
+            self.wait_entry(child, timeout=.1)
+        self.wait_for(lambda: not self.process_alive(pid))
+        self.assert_resources_available()
 
     def test_rungs_ignore_inherited_library_mode_and_script_path(self):
         scripts = self.entry_scripts()
