@@ -1145,24 +1145,23 @@
         "Dictionary",
         "Double",
         "Int64",
-        "JSONValue",
+        "DataValue",
         "Optional",
         "String",
         "UInt64",
         "Image",
-        "JSONKind",
-        "JSONMember",
-        "JSONNumber",
+        "ValueKind",
+        "ValueMember",
+        "NumberLiteral",
         "UsagePersistenceState"
       ],
       "representation_types": [
         "Call",
         "FeedReadFailure",
-        "JSONConversionError",
-        "JSONKind",
-        "JSONMember",
-        "JSONNumber",
-        "JSONValue",
+        "ValueKind",
+        "ValueMember",
+        "NumberLiteral",
+        "DataValue",
         "SessionBoundaryFailure",
         "UsagePersistenceState",
         "UsagePersistenceStatus"
@@ -1176,7 +1175,7 @@
         "Image": [
           "bytes"
         ],
-        "JSONValue": [
+        "DataValue": [
           "array",
           "bool",
           "number",
@@ -1189,10 +1188,7 @@
         "FeedReadFailure": [
           "failure"
         ],
-        "JSONConversionError": [
-          "description"
-        ],
-        "JSONKind": [
+        "ValueKind": [
           "array",
           "bool",
           "null",
@@ -1201,13 +1197,13 @@
           "orderedObject",
           "string"
         ],
-        "JSONMember": [
+        "ValueMember": [
           "key"
         ],
-        "JSONNumber": [
+        "NumberLiteral": [
           "rawValue"
         ],
-        "JSONValue": [
+        "DataValue": [
           "null"
         ],
         "Presence": [
