@@ -315,28 +315,6 @@ def main():
         expect(run(sys.executable, cpp_guard, str(native)), "PRIVATE_PACKAGE_PASS", success=True)
         private_cpp = base / "private-cpp"
         private_cpp.mkdir()
-        for removed in ("CallProjection.swift", "CallResult.swift", None):
-            altered = base / ("swift-inventory-" + (removed or "unknown"))
-            shutil.copytree(base / "paired", altered)
-            swift_name = f"thinkthen-swift-{version}-{host}.tar.gz"
-            damaged = altered / swift_name
-            replacement = altered / "replacement.tar.gz"
-            with tarfile.open(damaged) as packed, tarfile.open(replacement, "w:gz") as output:
-                for member in packed:
-                    if removed and member.name == "./Sources/ThinkThen/" + removed:
-                        continue
-                    payload = packed.extractfile(member) if member.isfile() else None
-                    output.addfile(member, payload)
-                if removed is None:
-                    member = tarfile.TarInfo("./Sources/ThinkThen/Unknown.swift")
-                    member.size = 1
-                    output.addfile(member, io.BytesIO(b"x"))
-            replacement.replace(damaged)
-            damaged.with_name(damaged.name + ".sha256").write_text(
-                f"{hashlib.sha256(damaged.read_bytes()).hexdigest()}  {damaged.name}\n")
-            expect(run("sh", str(REPO / "sdlc/scripts/release-go-cpp-pair"), str(altered),
-                       "swift-zig"), "source members differ for " + swift_name)
-        print("release-archive: complete Swift source package passes; missing or unknown sources refuse", flush=True)
         for private_bytes in (b"/home/synthetic-private-location", b"/Users/synthetic-private-location",
                               b"/build/home/workspace/source.rs",
                               b"auth.json", b"-----BEGIN PRIVATE KEY-----", b"tt-canary-273",
@@ -417,6 +395,28 @@ def main():
                    "ada-objective-c-cobol"), "source members differ for " + cobol_name)
         print("release-archive: complete COBOL source package passes; missing blocking example refuses", flush=True)
         expect(run("sh", gate, "swift-zig-gate", str(base / "paired"), host, commit), "", success=True)
+        for removed in ("CallProjection.swift", "CallResult.swift", None):
+            altered = base / ("swift-inventory-" + (removed or "unknown"))
+            shutil.copytree(base / "paired", altered)
+            swift_name = f"thinkthen-swift-{version}-{host}.tar.gz"
+            damaged = altered / swift_name
+            replacement = altered / "replacement.tar.gz"
+            with tarfile.open(damaged) as packed, tarfile.open(replacement, "w:gz") as output:
+                for member in packed:
+                    if removed and member.name == "./Sources/ThinkThen/" + removed:
+                        continue
+                    payload = packed.extractfile(member) if member.isfile() else None
+                    output.addfile(member, payload)
+                if removed is None:
+                    member = tarfile.TarInfo("./Sources/ThinkThen/Unknown.swift")
+                    member.size = 1
+                    output.addfile(member, io.BytesIO(b"x"))
+            replacement.replace(damaged)
+            damaged.with_name(damaged.name + ".sha256").write_text(
+                f"{hashlib.sha256(damaged.read_bytes()).hexdigest()}  {damaged.name}\n")
+            expect(run("sh", str(REPO / "sdlc/scripts/release-go-cpp-pair"), str(altered),
+                       "swift-zig"), "source members differ for " + swift_name)
+        print("release-archive: complete Swift source package passes; missing or unknown sources refuse", flush=True)
         for private_bytes in (b"/home/synthetic-private-location", b"/Users/synthetic-private-location",
                               b"/build/home/workspace/source.rs",
                               b"tt-canary-273", b"/build/home/home/private",
