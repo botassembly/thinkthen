@@ -4,8 +4,6 @@ Status: OPEN.
 
 Milestone: 0.2
 
-Depends on: 0576
-
 ## Outcome
 
 SQLite, DuckDB and PostgreSQL each return the full record for all ten functions through `thinkthen_<function>_details`, and the plain calls return only the plain value.
@@ -40,3 +38,5 @@ Each database runs one `_details` query per function over its saved recordings a
 The DuckDB listing (0577), registry pages (0578) and website (0575) follow after this lands.
 
 PM amendment, 2026-10-14. Rank, find and relate judge one whole set. Their record-list `_details` treats the whole list as that one set and makes one call: rank returns one row per record with its rank and probability, find returns the picked record, relate returns one row per edge. A failure of that call returns one failure row. No nested sets: a caller with several sets calls once per set, such as with a lateral join over groups.
+
+PM amendment, 2026-10-14. The SQLite part runs inside the 0576 SQLite lane, so this ticket has no prerequisite.

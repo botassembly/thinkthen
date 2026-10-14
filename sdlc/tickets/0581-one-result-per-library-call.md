@@ -4,8 +4,6 @@ Status: OPEN.
 
 Milestone: 0.2
 
-Depends on: 0574
-
 Reviews: revision 3f0c285, reject
 
 Reviews: revision 0043787, accept

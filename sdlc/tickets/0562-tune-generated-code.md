@@ -62,3 +62,4 @@ PM amendment, 2026-10-13. Remaining work. One generator developer owns `sdlc/gen
 
 - 2026-10-13 started
 - 2026-10-13 next: Merged reviewed released-generator coherence as 73558a3e89f0bd76b5c69d72f7afbcbfc2aad747 with installed Dart and PHP checks passing; remaining language outputs stay with their owners.
+PM amendment, 2026-10-14. 0581 supersedes item (5): generate no per-function answer accessors. Still open here: the public C header's `arm_1` and `arm_2` field names and the unused `thinkthen_request_plan_named_value` export.
