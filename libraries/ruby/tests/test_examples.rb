@@ -4,7 +4,8 @@ require_relative "backend"
 
 class TestExamples < Minitest::Test
   def test_public_readme_example_runs_through_the_installed_gem
-    sample = File.read(File.expand_path("../README.md", __dir__)).match(/```ruby\n(.*?)```/m)[1]
+    fence = Regexp.escape("`" * 3)
+    sample = File.read(File.expand_path("../README.md", __dir__)).match(/#{fence}ruby\n(.*?)#{fence}/m)[1]
     TestBackend.with(<<~CODE) do |backend, child|
       require "stringio"
       capture = StringIO.new
