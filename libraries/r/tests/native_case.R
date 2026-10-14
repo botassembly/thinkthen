@@ -11,6 +11,10 @@ tryCatch({
     name = tt_question(name = selector$name), reference = tt_question(reference = selector$reference),
     tt_question(selector$value))
   input <- do.call(tt_input, document$input)
+  if (isTRUE(document$call_result_contract)) {
+    stopifnot(identical(document$input$kind, "records"), length(document$input$items) == 1L)
+    input <- do.call(tt_input, document$input$items[[1L]]$original)
+  }
   producer_items <- document$producer_items
   if (isTRUE(document$incremental) && identical(document$input$kind, "records"))
     producer_items <- document$input$items

@@ -1,16 +1,23 @@
 # Read typed answers from the installed 0.2 family.
 library(thinkthen)
-stopifnot(identical(tt_decide("A complaint?", "Refund please")$value, TRUE))
-stopifnot(identical(tt_choose(list(choose = "Which team?", options = c("billing", "shipping")), "Refund please")$value, "billing"))
-stopifnot(identical(tt_tag(list(tag = "Which labels?", labels = c("refund", "shipping")), "Refund shipping")$value[[1]], c("refund", "shipping")))
-stopifnot(tt_score(list(score = "How urgent?", levels = c("low", "soon", "high")), "Later")$value == 0.15)
-stopifnot(tt_filter("A complaint?", c("first", "second"))$value[[1]] == "first")
-stopifnot(tt_rank("A complaint?", c("first", "second"))$value[[1]] == 0)
-stopifnot(tt_find("Which line?", c("first", "second"))$value == "first")
-stopifnot(isTRUE(tt_annotate(list(version = 1L, questions = list(approved = list(decide = "Approved?"))), "Yes")$value[[1]]$approved))
+result <- function(call) {
+  stopifnot(inherits(call, "thinkthen_Call"),
+            all(c("value", "probability", "results", "facts") %in% names(call)),
+            !"answer" %in% names(call), is.list(call$results),
+            inherits(call$facts, "thinkthen_Facts"))
+  call
+}
+stopifnot(identical(result(tt_decide("A complaint?", "Refund please"))$value, TRUE))
+stopifnot(identical(result(tt_choose(list(choose = "Which team?", options = c("billing", "shipping")), "Refund please"))$value, "billing"))
+stopifnot(identical(result(tt_tag(list(tag = "Which labels?", labels = c("refund", "shipping")), "Refund shipping"))$value[[1]], c("refund", "shipping")))
+stopifnot(result(tt_score(list(score = "How urgent?", levels = c("low", "soon", "high")), "Later"))$value == 0.15)
+stopifnot(result(tt_filter("A complaint?", c("first", "second")))$value[[1]] == "first")
+stopifnot(result(tt_rank("A complaint?", c("first", "second")))$value[[1]] == 0)
+stopifnot(result(tt_find("Which line?", c("first", "second")))$value == "first")
+stopifnot(isTRUE(result(tt_annotate(list(version = 1L, questions = list(approved = list(decide = "Approved?"))), "Yes"))$value[[1]]$approved))
 recognition <- tt_recognize_question(kinds = list(person = NULL, organization = NULL))
-stopifnot(tt_recognize(recognition, "Maria Chen joined Northwind Freight.")$value$entities[[1]]$text == "Maria Chen")
+stopifnot(result(tt_recognize(recognition, "Maria Chen joined Northwind Freight."))$value$entities[[1]]$text == "Maria Chen")
 relation <- tt_relate_question(relations = list(list(name = "knows", source = "person", target = "person")))
-edges <- tt_relate(relation, list(list(name = "Ada", kind = "person"), list(name = "Bo", kind = "person")))$value
+edges <- result(tt_relate(relation, list(list(name = "Ada", kind = "person"), list(name = "Bo", kind = "person"))))$value
 stopifnot(edges[[1]]$source$name == "Ada", edges[[1]]$target$name == "Bo")
 cat("ten typed answers\n")

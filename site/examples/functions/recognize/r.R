@@ -12,7 +12,7 @@ text <- paste0(
 facts <- tt_recognize(
   list(version = 1, recognize = list(kinds = kinds)),
   text
-)$value[[1]]
+)$value
 entity_names <- vapply(facts$entities, `[[`, "", "text")
 found_kinds <- vapply(facts$entities, `[[`, "", "kind")
 stopifnot(

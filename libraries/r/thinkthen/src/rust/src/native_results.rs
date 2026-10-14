@@ -156,13 +156,7 @@ pub(crate) fn request_packet(
     let name = function
         .as_str()
         .ok_or_else(|| crate::defect("native function has no name"))?;
-    let answer = crate::results_generated::call_value(
-        function
-            .as_str()
-            .ok_or_else(|| crate::defect("native function has no name"))?,
-        rows,
-        scalar,
-    )?;
+    let answer = crate::results_generated::call_value(name, rows, scalar)?;
     let probability = crate::results_generated::call_probability(name, rows, observations, scalar)?;
     let mut fields = vec![
         ("value", answer),
