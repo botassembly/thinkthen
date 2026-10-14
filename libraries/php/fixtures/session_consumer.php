@@ -2,7 +2,7 @@
 declare(strict_types=1);
 require getenv('TT_AUTOLOAD');
 use ThinkThen\Client;
-use ThinkThen\Inputs\{Settings, Options, ChooseQuestion, RecognitionSpec, RecognizeQuestion, RelationRule, RelationSpec, RelateQuestion};
+use ThinkThen\Inputs\{Settings, Options, ChooseQuestion, RecognitionSpec, RecognitionStageContext, RecognizeQuestion, RelationRule, RelationSpec, RelateQuestion};
 
 /** Test adapter serialization is not a public library operation. */
 function fixtureValue(mixed $value): mixed
@@ -29,7 +29,7 @@ $asks = [
     'rank' => ['Is it urgent?', ['rank-yes', 'no']],
     'find' => ['Which line?', ['find-first', 'find-second']],
     'annotate' => [['version' => 1, 'questions' => ['ok' => ['decide' => 'Is it urgent?']]], ['text']],
-    'recognize' => [new RecognizeQuestion(new RecognitionSpec(kinds: ['person' => null])), 'Maria Chen'],
+    'recognize' => [new RecognizeQuestion(new RecognitionSpec(kinds: ['person' => null], stage_context: new RecognitionStageContext(boundary: '', kind_edge: '', relation: ''))), 'Maria Chen'],
     'relate' => [new RelateQuestion(new RelationSpec([new RelationRule(name: 'knows', source: 'person', target: 'person', either: false)])),
         [['name' => 'Ana', 'kind' => 'person'], ['name' => 'Bob', 'kind' => 'person']]],
 ];
@@ -126,7 +126,7 @@ if ($mode === 'usage-written' || $mode === 'usage-failed') {
     check($row->answers->ok instanceof ThinkThen\Results\AnnotationMemberAnswerId, 'typed map answer member');
     check($row->value->ok === true, 'map decision value');
     check(is_array($row->value->tags) && in_array('first', $row->value->tags, true), 'nested tags must remain an array');
-    $false = $client->decide(['decide' => 'Is it?', 'threshold' => 0.95], 'text');
+    $false = $client->decide('Is it?', 'text', new Options(threshold: 0.95, context: ''));
     $null = $client->decide(['decide' => 'Is it?', 'true' => null], 'text');
     check($false->results[0]->value()->present && $false->results[0]->value === false, 'false confused with absence');
     check(!$false->results[0]->question->field('true')->present, 'absent author field');
