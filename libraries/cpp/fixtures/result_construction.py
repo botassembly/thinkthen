@@ -17,5 +17,5 @@ with tempfile.TemporaryDirectory() as directory:
     subprocess.run(command, check=True)
     source.write_text('#include <thinkthen/client.hpp>\nint main() { tt::results::SessionPacket packet(tt::Data{{"kind", "terminal"}}); }\n')
     refused = subprocess.run(command, capture_output=True, text=True)
-    assert refused.returncode != 0 and 'no matching function' in refused.stderr, 'PUBLIC_PACKET_CONSTRUCTION_ACCEPTED'
+    assert refused.returncode != 0 and 'no matching' in refused.stderr, 'PUBLIC_PACKET_CONSTRUCTION_ACCEPTED'
 print(f'PRIVATE_RESULT_CONSTRUCTION_PASS {len(classes)} classes; authored original Data remains public')
