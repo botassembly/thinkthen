@@ -20,6 +20,8 @@ Reviews: revision db1c253, accept
 
 Reviews: revision 08ab2f9, accept
 
+Reviews: revision 2e52b33, accept
+
 ## Outcome
 
 thinkthen.dev and every public text that ships with 0.2 sell one idea: put Jev-class decision models in your code, whatever model, language or database you use. ThinkThen is ten functions on top of Jev, TypeSafe's decision model, or any model like it. A first-time Python developer, DuckDB analyst or agent builder can say in one minute what they get, whether it works in their setup and what to paste. Every sample runs on the 0.2 release. Nothing goes live on thinkthen.dev, any registry or the DuckDB PR before Ian approves it.

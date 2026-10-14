@@ -2,9 +2,8 @@
 
 ThinkThen is ten functions on top of Jev, TypeSafe's decision model, or any model like it. It puts these decision models in your code, whatever model, language or database you use. Use Jev, OpenAI or a local model. Ask a typed question and get back `true`, `false`, a label or a number. Your code branches on the answer. A model can say not sure, and a failed call never looks like an answer. ThinkThen packs many records into few requests, saves each answer for reuse, and lets tests replay saved answers with no key and no network.
 
-Unpack the matching release archive: `tar -xzf thinkthen-zig-0.2.0-TARGET.tar.gz`. Replace `TARGET` with your platform. Use Zig 0.15.2 and the packaged `build.zig` to link your program. Set your hosted backend key: `export THINKTHEN_API_KEY=...`. Backends include Jev, SystemOne, OpenAI and local models.
+Download the matching archive from the [release downloads](https://github.com/botassembly/thinkthen/releases), then unpack it: `tar -xzf thinkthen-zig-0.2.0-TARGET.tar.gz`. Replace `TARGET` with your platform. Use Zig 0.15.2 and the packaged `build.zig` to link your program. Set your hosted backend key: `export THINKTHEN_API_KEY=...`. Backends include Jev, SystemOne, OpenAI and local models. Judgment calls can send your question and text to the selected backend; the default is TypeSafe.
 
-This recorded example reads `value` and `probability` directly; live model answers can differ.
 ```zig
 const std = @import("std");
 const tt = @import("thinkthen");
@@ -36,4 +35,4 @@ pub fn main() !void {
     std.debug.assert(selected.probability[0].? == 0.99 and selected.probability[1].? == 0.54);
 }
 ```
-The library is free and MIT licensed. Hosted models charge per token. Local models are free to use; you supply the computer that runs them.
+The library is free and MIT licensed. Hosted models charge per token. Local models are free to use; you supply the computer that runs them. These examples were checked with saved answers; live answers and probabilities can differ. See the [package guide](https://thinkthen.dev/languages/zig/) for results, failures, record inputs and offline replay.

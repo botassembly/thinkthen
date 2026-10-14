@@ -5,7 +5,7 @@ ThinkThen is ten functions on top of Jev, TypeSafe's decision model, or any mode
 ```sh
 flutter pub add thinkthen_flutter
 ```
-Set your hosted backend key: `export THINKTHEN_API_KEY=...`. Backends include Jev, SystemOne, OpenAI and local models.
+Set your hosted backend key: `export THINKTHEN_API_KEY=...`. Backends include Jev, SystemOne, OpenAI and local models. Judgment calls can send your question and text to the selected backend; the default is TypeSafe.
 ```dart
 import 'package:thinkthen_flutter/thinkthen_flutter.dart';
 Future<void> main() async {
@@ -32,8 +32,8 @@ Future<void> main() async {
 }
 ```
 
-`value` is the answer. `probability` is null or a `ScalarProbability`, `ListProbability` or `GroupProbability` with typed numeric values. `results` keeps each record and `facts` keeps call observations. Not sure is null.
+`value` is the answer. `probability` is null or a `ScalarProbability`, `ListProbability` or `GroupProbability` with typed numeric values. `results` keeps each record and `facts` keeps call observations. Not sure has a null probability. An authored JSON null answer can have a numeric probability.
 
-The library is free and MIT licensed. Hosted models charge per token. Local models are free to use; you supply the computer that runs them.
+The library is free and MIT licensed. Hosted models charge per token. Local models are free to use; you supply the computer that runs them. These examples were checked with saved answers; live answers and probabilities can differ. See the [package guide](https://thinkthen.dev/languages/flutter/) for results, failures, record inputs and offline replay.
 
 [Backend setup](https://thinkthen.dev/install/backends/) · [ThinkThen documentation](https://thinkthen.dev)

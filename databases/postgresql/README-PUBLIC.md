@@ -8,7 +8,7 @@ Download and unpack the release archive for your platform. Install the extension
 CREATE EXTENSION thinkthen;
 ```
 
-Set your hosted backend key in the PostgreSQL server's environment before starting the server: `export THINKTHEN_API_KEY=...`. Backends include Jev, SystemOne, OpenAI and local models. An administrator must grant the application role access to the ThinkThen functions.
+Set your hosted backend key in the PostgreSQL server's environment before starting the server: `export THINKTHEN_API_KEY=...`. Backends include Jev, SystemOne, OpenAI and local models. An administrator must grant the application role access to the ThinkThen functions. Judgment calls can send your question and text to the selected backend; the default is TypeSafe.
 
 ```sql
 WITH refunds(body) AS (VALUES
@@ -26,6 +26,6 @@ FROM messages, LATERAL thinkthen_choose_details(
     body) AS owner;
 ```
 
-The library is free and MIT licensed. Hosted models charge per token. Local models are free to use; you supply the computer that runs them.
+The library is free and MIT licensed. Hosted models charge per token. Local models are free to use; you supply the computer that runs them. These examples were checked with saved answers; live answers and probabilities can differ. See the [package guide](https://thinkthen.dev/databases/postgresql/) for results, failures, record inputs and offline replay.
 
 [Backend setup](https://thinkthen.dev/install/backends/) · [ThinkThen documentation](https://thinkthen.dev)

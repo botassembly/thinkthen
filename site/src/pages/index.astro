@@ -24,6 +24,8 @@ const callMs = Math.round(overhead.head.live.median);
   <InstallLine line={shell.install[0][0]} caption="Install the command" />
   <p>It fits your setup. Start in <a href="/languages/bash/">Bash</a>, then call the same functions from <a href="/languages/python/">Python</a>, <a href="/languages/typescript/">TypeScript</a> and <a href="/languages/">every other language</a>. Ask them in SQL inside <a href="/databases/duckdb/">DuckDB</a>, <a href="/databases/sqlite/">SQLite</a> and <a href="/databases/postgresql/">PostgreSQL</a>. Point them at TypeSafe's Jev, another SystemOne server, OpenAI Decisions or a model on your own machine with <a href="/models/">one backend option</a>. <a href="/start/">Start</a> gives Homebrew, Windows and a try with no API key.</p>
 
+  <p>ThinkThen is free and MIT licensed. Hosted models charge per token. Local models run on your own computer. A live judgment sends your question and text to the selected backend. The default is TypeSafe. Set <code>THINKTHEN_API_KEY</code> before a hosted call; <a href="/models/#the-key">Models</a> explains each backend's key.</p>
+
   <Terminal run={refund} caption={refund.see} />
 
   <h2>Why not call the model yourself?</h2>

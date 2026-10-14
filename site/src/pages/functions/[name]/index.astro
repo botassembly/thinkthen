@@ -72,7 +72,7 @@ const jobsScope = name === 'annotate'
   ) : (
     <p class="lede">You give it {fn.takes}. You get back {fn.gives}.</p>
   )}
-  {isFn && <p>{fn.requests}</p>}
+  {isFn && <><p>{fn.requests}</p><p><a href="/start/">Install the command</a> before running the example. A live judgment sends your question and evidence to the selected backend. The default is TypeSafe. Set <code>THINKTHEN_API_KEY</code> before a hosted call. ThinkThen is free and MIT licensed; hosted models charge per token. <a href="/models/">Models</a> explains Jev, SystemOne, OpenAI and local setup. <a href="/start/replay/">Replay</a> runs saved answers with no key and no model request.</p></>}
   {name === 'question-file' && (
     <>
       <p>A question file can also carry an author name, a wording version, and declarations for each record and its context. <code>--context-field</code> sends each record's own context apart from its evidence. The <a href="#more-examples">records example</a> shows a file and the request it plans. The <a href="https://github.com/botassembly/thinkthen/blob/main/specification/question-file.md">question-file specification</a> gives the full grammar.</p>
