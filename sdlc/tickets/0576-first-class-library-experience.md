@@ -80,6 +80,8 @@ Reviews: revision 4001d49, accept
 
 Reviews: revision 281cba6, accept
 
+Reviews: revision 16ae7ce, accept
+
 ## Outcome
 
 Every language library, database extension and the MCP server feels native to a senior developer on that platform and grades B or better on the library rubric below. The public API of each exposes no transport JSON, no schema-path names and no raw C layouts.
@@ -151,3 +153,4 @@ Stage 2 starts when G1 and G2 land. One lane per language owns `libraries/<lang>
 - 2026-10-13 next: Merged reviewed Zig native helpers and strengthened find receipt as 1d9fb9ccccb047b8a3d1717fd959fde8831c05ab with installed ownership and all forty-two routine cases passing; continue remaining language quality work.
 
 PM amendment, 2026-10-14. Ordinary `thinkthen_details` returns the existing typed receipt projection, not JSON. This supersedes the 0538 retention of ordinary details JSON. The approved packed try-details recovery envelope stays as it is.
+- 2026-10-14 next: Merged the accepted PHP typed-library slice at 4d4cab9ae after installed parity, answer ownership and shipped example checks passed; continue remaining library migrations before the candidate.

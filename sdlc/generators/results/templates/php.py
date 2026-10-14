@@ -15,7 +15,7 @@ def name(key):
 
 
 def input_name(key):
-    semantic = {'RecognizeQuestion': 'RecognitionSpec', 'RecognizeDefinition': 'RecognitionDefinition', 'RequestDefinition_RecognizeDefinition': 'RecognizeQuestion', 'RequestDefinition_Authored_relate': 'RelateQuestion', 'RelateQuestion': 'RelationSpec', 'Authored_relation': 'RelationRule', 'RequestOptions': 'Options', 'EngineSettings': 'Settings'}
+    semantic = {'RecognizeQuestion': 'RecognitionSpec', 'RecognizeDefinition': 'RecognitionDefinition', 'RequestDefinition_RecognizeDefinition': 'RecognizeQuestion', 'RequestDefinition_Authored_relate': 'RelateQuestion', 'RelateQuestion': 'RelationSpec', 'Authored_relation': 'RelationRule', 'RequestDefinition_Authored_choose': 'ChooseQuestion', 'RequestOptions': 'Options', 'EngineSettings': 'Settings'}
     return semantic.get(key, ''.join(part[:1].upper() + part[1:] for part in key.removeprefix('Request').split('_')))
 
 
@@ -86,11 +86,11 @@ def inputs(definitions):
     selected = set(INPUT_ROOTS)
     # The adapter accepts common records and preserves selector descriptors.
     # Emit only the tagged constructors it instantiates.
-    selected.update(('RecognizeQuestion', 'RelateQuestion', 'Authored_relation', 'RequestDefinition_RecognizeDefinition', 'RequestDefinition_Authored_relate', 'RequestInput_records', 'RequestInput_units', 'RequestInput_entities', 'RequestInput_source', 'RequestInput_feed',
+    selected.update(('RecognizeQuestion', 'RelateQuestion', 'Authored_relation', 'RequestDefinition_RecognizeDefinition', 'RequestDefinition_Authored_choose', 'RequestDefinition_Authored_relate', 'RequestInput_records', 'RequestInput_units', 'RequestInput_entities', 'RequestInput_source', 'RequestInput_feed',
                      'RequestQuestion_text', 'RequestQuestion_definition', 'RequestQuestion_file', 'RequestQuestion_name', 'RequestQuestion_reference',
-                     'RequestReaderFailure_producer'))
+                     'RequestReaderFailure_producer', 'RecognitionStageContext', 'RecognitionExample', 'RecognitionSeedSpan'))
     lines = ['<?php', '// Generated from the shared Rust request graph; do not edit.',
-             'declare(strict_types=1);', 'namespace ThinkThen\\Inputs;', 'enum Omitted { case Value; }', 'interface QuestionSource extends \\JsonSerializable {}']
+             'declare(strict_types=1);', 'namespace ThinkThen\\Inputs;', 'enum Omitted { case Value; }', 'interface QuestionSource {}', 'interface QuestionDefinition {}']
     for key, source in definitions.items():
         if key not in selected:
             continue
@@ -99,22 +99,30 @@ def inputs(definitions):
         fields = source['properties']
         defaults = {member: field['const'] for member, field in fields.items() if isinstance(field, dict) and 'const' in field}
         required = [member for member in source.get('required', []) if member not in defaults]
-        def parameter(member):
-            field = fields[member]
-            if not isinstance(field, dict): return 'mixed'
-            source = definitions[field['$ref'].removeprefix('#/$defs/')] if '$ref' in field else field
-            alternatives = source.get('oneOf', [])
-            if len(alternatives) == 1:
-                source = alternatives[0]
+        def native_type(source):
+            if not isinstance(source, dict): return 'mixed'
+            if '$ref' in source:
+                key = source['$ref'].removeprefix('#/$defs/')
+                return input_name(key) if key in selected and 'properties' in definitions[key] else native_type(definitions[key])
+            alternatives = source.get('anyOf', source.get('oneOf', []))
+            if alternatives:
+                types = [native_type(child) for child in alternatives]
+                return 'mixed' if 'mixed' in types else '|'.join(dict.fromkeys('|'.join(types).split('|')))
             kind = source.get('type')
-            native = {'string': 'string', 'array': 'array', 'boolean': 'bool', 'integer': 'int', 'number': 'int|float'}
-            return native.get(kind, 'mixed') if isinstance(kind, str) else 'mixed'
+            if isinstance(kind, list):
+                return '|'.join(dict.fromkeys(native_type({**source, 'type': child}) for child in kind))
+            if 'const' in source:
+                kind = {str: 'string', bool: 'boolean', int: 'integer', type(None): 'null'}.get(type(source['const']))
+            return {'string': 'string', 'array': 'array', 'object': 'array|\\stdClass', 'boolean': 'bool',
+                    'integer': 'int', 'number': 'int|float', 'null': 'null'}.get(kind, 'mixed')
+        def parameter(member):
+            return native_type(fields[member])
         parameters = ', '.join(parameter(member) + ' $' + member for member in required)
         values = ', '.join(repr(member) + ' => $' + member for member in required)
         tags = ', '.join(repr(k) + ' => ' + repr(v) for k, v in defaults.items())
-        public = key in {'RequestQuestion_file', 'RequestQuestion_name', 'RequestQuestion_reference', 'RequestOptions', 'EngineSettings', 'RecognizeQuestion', 'RecognizeDefinition', 'RequestDefinition_RecognizeDefinition', 'RequestDefinition_Authored_relate', 'RelateQuestion', 'Authored_relation'}
+        public = key in {'RequestQuestion_file', 'RequestQuestion_name', 'RequestQuestion_reference', 'RequestOptions', 'EngineSettings', 'RecognitionStageContext', 'RecognitionExample', 'RecognitionSeedSpan', 'RecognizeQuestion', 'RecognizeDefinition', 'RequestDefinition_RecognizeDefinition', 'RequestDefinition_Authored_choose', 'RequestDefinition_Authored_relate', 'RelateQuestion', 'Authored_relation'}
         namespace = 'ThinkThen\\Inputs' if public else 'ThinkThen\\Internal\\Requests'
-        lines += ['namespace ' + namespace + ';', 'final class ' + input_name(key) + ' extends \\ThinkThen\\Inputs\\Document' + (' implements QuestionSource' if key in {'RequestQuestion_file', 'RequestQuestion_name', 'RequestQuestion_reference'} else ''), '{', *([('    private const TAGS = [' if public else '    public const TAGS = [') + tags + '];'] if tags else [])]
+        lines += ['namespace ' + namespace + ';', 'final class ' + input_name(key) + ' extends \\ThinkThen\\Internal\\Document' + (' implements QuestionSource' if key in {'RequestQuestion_file', 'RequestQuestion_name', 'RequestQuestion_reference'} else (' implements \\ThinkThen\\Inputs\\QuestionDefinition' if key.startswith('RequestDefinition_') else '')), '{', *([('    private const TAGS = [' if public else '    public const TAGS = [') + tags + '];'] if tags else [])]
         if public:
             args, entries = [], []
             for member, field in fields.items():
@@ -133,7 +141,7 @@ def inputs(definitions):
     lines += ['namespace ThinkThen;', 'trait NamedCalls', '{']
     for function in definitions['RequestFunction']['oneOf']:
         value = function['const']
-        lines += [f"    public function {value}(string|array|\\stdClass|\\ThinkThen\\Inputs\\Document|\\ThinkThen\\Inputs\\QuestionSource $question, mixed $input, array|\\ThinkThen\\Inputs\\Options $options = [], ?Cancellation $cancel = null): \\ThinkThen\\Results\\Completed {{ return $this->call('{value}', $question, $input, $options, $cancel); }}"]
+        lines += [f"    public function {value}(string|array|\\stdClass|\\ThinkThen\\Inputs\\QuestionDefinition|\\ThinkThen\\Inputs\\QuestionSource $question, mixed $input, \\ThinkThen\\Inputs\\Options $options = new \\ThinkThen\\Inputs\\Options(), ?Cancellation $cancel = null): \\ThinkThen\\Results\\Completed {{ return $this->call('{value}', $question, $input, $options, $cancel); }}"]
     lines += ['}']
     return '\n'.join(lines) + '\n'
 

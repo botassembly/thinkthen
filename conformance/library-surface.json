@@ -1300,7 +1300,6 @@
       "representation_types": [
         "CallFailure",
         "Cancellation",
-        "Document",
         "Node"
       ],
       "wrapper_members": {
@@ -1330,9 +1329,6 @@
         ],
         "Cancellation": [
           "cancelled"
-        ],
-        "Document": [
-          "jsonSerialize"
         ]
       },
       "field_adapters": {
