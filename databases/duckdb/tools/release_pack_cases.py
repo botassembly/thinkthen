@@ -15,6 +15,7 @@ from inputs import canonical, selected, versions
 REPO = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(REPO / 'conformance/children'))
 from children import CARGO, child_env  # noqa: E402
+from portable import cache_question_keys  # noqa: E402
 
 WRONG_PLATFORM = {
     'x86_64-unknown-linux-gnu': 'osx_amd64',
@@ -81,8 +82,9 @@ def published_consumer(archive: Path, target: str, release: str, root: Path, too
                 if 'key' not in item:
                     continue
                 def key(url):
-                    parts = ['systemone', url, json.dumps(item['model']), states[item['state']], item['question']]
-                    return hashlib.sha256('\n'.join(parts).encode()).hexdigest()
+                    return cache_question_keys(url, json.loads(states[item['state']]),
+                                               item['model'], item['answered_by'],
+                                               [json.loads(item['question'])])[0]
                 assert item['key'] == key(item['url']), 'saved recording identity differs'
                 item['url'] = backend.base() + '/systemone'
                 item['key'] = key(item['url'])
