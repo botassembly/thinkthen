@@ -14,10 +14,9 @@ struct native_functions {
     const char * (*thinkthen_error_facts_json)(const thinkthen_engine *);
     const char * (*thinkthen_error_message)(const thinkthen_engine *);
     int (*thinkthen_error_retryable)(const thinkthen_engine *);
-    void (*thinkthen_free_string)(char *);
     void (*thinkthen_question_free)(thinkthen_question *);
     int (*thinkthen_question_parse)(const thinkthen_engine *, uint32_t, thinkthen_string_v1, thinkthen_question **);
-    int (*thinkthen_request_plan_json)(const thinkthen_engine *, const char *, size_t, char **, size_t *);
+    int (*thinkthen_request_plan_value)(const thinkthen_engine *, const char *, size_t, thinkthen_value **);
     void (*thinkthen_session_cancel)(thinkthen_session *);
     const char * (*thinkthen_session_error_facts_json)(void);
     const char * (*thinkthen_session_error_message)(void);
@@ -29,6 +28,9 @@ struct native_functions {
     int (*thinkthen_session_push)(thinkthen_session *, const char *, size_t, uint32_t *);
     void (*thinkthen_session_result_free)(thinkthen_session_result *);
     int (*thinkthen_session_result_json)(const thinkthen_session_result *, const char **, size_t *);
+    void (*thinkthen_value_free)(thinkthen_value *);
+    int (*thinkthen_value_parse)(const char *, size_t, thinkthen_value **);
+    int (*thinkthen_value_view)(const thinkthen_value *, const thinkthen_complete_json_v1 **);
 };
 static struct native_functions native;
 static pthread_mutex_t loading = PTHREAD_MUTEX_INITIALIZER;
@@ -74,10 +76,6 @@ int thinkthen_swift_load(const char *path) {
             if (!symbol) goto failed;
             _Static_assert(sizeof(candidate.thinkthen_error_retryable) == sizeof(symbol), "function pointer width");
             memcpy(&candidate.thinkthen_error_retryable, &symbol, sizeof(symbol));
-            symbol = dlsym(handle, "thinkthen_free_string");
-            if (!symbol) goto failed;
-            _Static_assert(sizeof(candidate.thinkthen_free_string) == sizeof(symbol), "function pointer width");
-            memcpy(&candidate.thinkthen_free_string, &symbol, sizeof(symbol));
             symbol = dlsym(handle, "thinkthen_question_free");
             if (!symbol) goto failed;
             _Static_assert(sizeof(candidate.thinkthen_question_free) == sizeof(symbol), "function pointer width");
@@ -86,10 +84,10 @@ int thinkthen_swift_load(const char *path) {
             if (!symbol) goto failed;
             _Static_assert(sizeof(candidate.thinkthen_question_parse) == sizeof(symbol), "function pointer width");
             memcpy(&candidate.thinkthen_question_parse, &symbol, sizeof(symbol));
-            symbol = dlsym(handle, "thinkthen_request_plan_json");
+            symbol = dlsym(handle, "thinkthen_request_plan_value");
             if (!symbol) goto failed;
-            _Static_assert(sizeof(candidate.thinkthen_request_plan_json) == sizeof(symbol), "function pointer width");
-            memcpy(&candidate.thinkthen_request_plan_json, &symbol, sizeof(symbol));
+            _Static_assert(sizeof(candidate.thinkthen_request_plan_value) == sizeof(symbol), "function pointer width");
+            memcpy(&candidate.thinkthen_request_plan_value, &symbol, sizeof(symbol));
             symbol = dlsym(handle, "thinkthen_session_cancel");
             if (!symbol) goto failed;
             _Static_assert(sizeof(candidate.thinkthen_session_cancel) == sizeof(symbol), "function pointer width");
@@ -134,6 +132,18 @@ int thinkthen_swift_load(const char *path) {
             if (!symbol) goto failed;
             _Static_assert(sizeof(candidate.thinkthen_session_result_json) == sizeof(symbol), "function pointer width");
             memcpy(&candidate.thinkthen_session_result_json, &symbol, sizeof(symbol));
+            symbol = dlsym(handle, "thinkthen_value_free");
+            if (!symbol) goto failed;
+            _Static_assert(sizeof(candidate.thinkthen_value_free) == sizeof(symbol), "function pointer width");
+            memcpy(&candidate.thinkthen_value_free, &symbol, sizeof(symbol));
+            symbol = dlsym(handle, "thinkthen_value_parse");
+            if (!symbol) goto failed;
+            _Static_assert(sizeof(candidate.thinkthen_value_parse) == sizeof(symbol), "function pointer width");
+            memcpy(&candidate.thinkthen_value_parse, &symbol, sizeof(symbol));
+            symbol = dlsym(handle, "thinkthen_value_view");
+            if (!symbol) goto failed;
+            _Static_assert(sizeof(candidate.thinkthen_value_view) == sizeof(symbol), "function pointer width");
+            memcpy(&candidate.thinkthen_value_view, &symbol, sizeof(symbol));
             native = candidate;
             native_handle = handle; // Workers may outlive Swift owners; retain until process exit.
             state = 1;
@@ -179,10 +189,6 @@ int thinkthen_error_retryable(const thinkthen_engine * arg0) {
     if (!native.thinkthen_error_retryable) abort();
     return native.thinkthen_error_retryable(arg0);
 }
-void thinkthen_free_string(char * arg0) {
-    if (!native.thinkthen_free_string) abort();
-    native.thinkthen_free_string(arg0);
-}
 void thinkthen_question_free(thinkthen_question * arg0) {
     if (!native.thinkthen_question_free) abort();
     native.thinkthen_question_free(arg0);
@@ -191,9 +197,9 @@ int thinkthen_question_parse(const thinkthen_engine * arg0, uint32_t arg1, think
     if (!native.thinkthen_question_parse) abort();
     return native.thinkthen_question_parse(arg0, arg1, arg2, arg3);
 }
-int thinkthen_request_plan_json(const thinkthen_engine * arg0, const char * arg1, size_t arg2, char ** arg3, size_t * arg4) {
-    if (!native.thinkthen_request_plan_json) abort();
-    return native.thinkthen_request_plan_json(arg0, arg1, arg2, arg3, arg4);
+int thinkthen_request_plan_value(const thinkthen_engine * arg0, const char * arg1, size_t arg2, thinkthen_value ** arg3) {
+    if (!native.thinkthen_request_plan_value) abort();
+    return native.thinkthen_request_plan_value(arg0, arg1, arg2, arg3);
 }
 void thinkthen_session_cancel(thinkthen_session * arg0) {
     if (!native.thinkthen_session_cancel) abort();
@@ -238,5 +244,17 @@ void thinkthen_session_result_free(thinkthen_session_result * arg0) {
 int thinkthen_session_result_json(const thinkthen_session_result * arg0, const char ** arg1, size_t * arg2) {
     if (!native.thinkthen_session_result_json) abort();
     return native.thinkthen_session_result_json(arg0, arg1, arg2);
+}
+void thinkthen_value_free(thinkthen_value * arg0) {
+    if (!native.thinkthen_value_free) abort();
+    native.thinkthen_value_free(arg0);
+}
+int thinkthen_value_parse(const char * arg0, size_t arg1, thinkthen_value ** arg2) {
+    if (!native.thinkthen_value_parse) abort();
+    return native.thinkthen_value_parse(arg0, arg1, arg2);
+}
+int thinkthen_value_view(const thinkthen_value * arg0, const thinkthen_complete_json_v1 ** arg1) {
+    if (!native.thinkthen_value_view) abort();
+    return native.thinkthen_value_view(arg0, arg1);
 }
 #pragma GCC visibility pop

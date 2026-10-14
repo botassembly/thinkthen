@@ -1,4 +1,5 @@
 import Foundation
+import CThinkThen
 
 public struct JSONConversionError: Error, Sendable, CustomStringConvertible {
     public let description: String
@@ -48,11 +49,15 @@ public struct JSONValue: JSONRepresentable, Equatable {
     public static func read(_ json: JSONValue) throws -> JSONValue { json }
     public var json: JSONValue { self }
     public static func parse(_ data: Data) throws -> JSONValue {
-        var parser = JSONParser(bytes: Array(data))
-        let value = try parser.value()
-        parser.space()
-        guard parser.index == parser.bytes.count else { throw JSONConversionError("Trailing JSON content") }
-        return JSONValue(value.kind, original: data)
+        try requireNativePackage()
+        var owner: OpaquePointer?
+        try data.withUnsafeBytes { raw in
+            try sessionCheck(thinkthen_value_parse(raw.bindMemory(to: CChar.self).baseAddress, raw.count, &owner))
+        }
+        guard let owner else { throw JSONConversionError("Missing native value") }
+        defer { thinkthen_value_free(owner) }
+        let copied = try nativeValue(owner)
+        return JSONValue(copied.kind, original: data)
     }
     public func data() throws -> Data {
         func text(_ value: JSONValue) throws -> String {
@@ -77,83 +82,38 @@ public struct JSONValue: JSONRepresentable, Equatable {
     }
 }
 
-private struct JSONParser {
-    let bytes: [UInt8]
-    var index = 0
-    mutating func space() { while index < bytes.count && [9, 10, 13, 32].contains(bytes[index]) { index += 1 } }
-    mutating func consume(_ byte: UInt8) -> Bool {
-        space()
-        if index < bytes.count && bytes[index] == byte { index += 1; return true }
-        return false
-    }
-    mutating func string() throws -> String {
-        space()
-        let start = index
-        guard index < bytes.count && bytes[index] == 34 else { throw JSONConversionError("Expected JSON string") }
-        index += 1
-        while index < bytes.count {
-            let byte = bytes[index]
-            index += 1
-            if byte == 34 { return try JSONDecoder().decode(String.self, from: Data(bytes[start..<index])) }
-            if byte == 92 { index += 1 }
-        }
-        throw JSONConversionError("Unterminated JSON string")
-    }
-    mutating func value() throws -> JSONValue {
-        space()
-        guard index < bytes.count else { throw JSONConversionError("Missing JSON value") }
-        switch bytes[index] {
-        case 34: return .string(try string())
-        case 91:
-            index += 1
-            var values: [JSONValue] = []
-            if consume(93) { return .array(values) }
-            repeat { values.append(try value()) } while consume(44)
-            guard consume(93) else { throw JSONConversionError("Expected JSON array end") }
-            return .array(values)
-        case 123:
-            index += 1
-            var values: [JSONMember] = []
-            if consume(125) { return .orderedObject(values) }
-            repeat {
-                let key = try string()
-                guard consume(58) else { throw JSONConversionError("Expected JSON colon") }
-                values.append(JSONMember(key, try value()))
-            } while consume(44)
-            guard consume(125) else { throw JSONConversionError("Expected JSON object end") }
-            return .orderedObject(values)
-        case 110, 116, 102:
-            for (literal, value) in [("null", JSONValue.null), ("true", .bool(true)), ("false", .bool(false))] {
-                let token = Array(literal.utf8)
-                if index + token.count <= bytes.count && Array(bytes[index..<index + token.count]) == token {
-                    index += token.count
-                    return value
-                }
-            }
-            throw JSONConversionError("Invalid JSON literal")
-        default:
-            let start = index
-            if bytes[index] == 45 { index += 1 }
-            guard index < bytes.count else { throw JSONConversionError("Invalid JSON number") }
-            if bytes[index] == 48 { index += 1 }
-            else {
-                guard (49...57).contains(bytes[index]) else { throw JSONConversionError("Invalid JSON number") }
-                while index < bytes.count && (48...57).contains(bytes[index]) { index += 1 }
-            }
-            if index < bytes.count && bytes[index] == 46 {
-                index += 1
-                let fraction = index
-                while index < bytes.count && (48...57).contains(bytes[index]) { index += 1 }
-                guard index > fraction else { throw JSONConversionError("Invalid JSON fraction") }
-            }
-            if index < bytes.count && [69, 101].contains(bytes[index]) {
-                index += 1
-                if index < bytes.count && [43, 45].contains(bytes[index]) { index += 1 }
-                let exponent = index
-                while index < bytes.count && (48...57).contains(bytes[index]) { index += 1 }
-                guard index > exponent else { throw JSONConversionError("Invalid JSON exponent") }
-            }
-            return .number(JSONNumber(unchecked: String(decoding: bytes[start..<index], as: UTF8.self)))
+func nativeString(_ value: thinkthen_complete_utf8_v1) -> String {
+    String(decoding: UnsafeRawBufferPointer(start: value.data, count: value.len), as: UTF8.self)
+}
+
+func nativeValue(_ owner: OpaquePointer) throws -> JSONValue {
+    var view: UnsafePointer<thinkthen_complete_json_v1>?
+    try sessionCheck(thinkthen_value_view(owner, &view))
+    guard let view else { throw JSONConversionError("Missing native value view") }
+    return try JSONValue.copyNative(view)
+}
+
+extension JSONValue {
+    static func copyNative(_ pointer: UnsafePointer<thinkthen_complete_json_v1>) throws -> JSONValue {
+        let value = pointer.pointee
+        switch value.kind {
+        case UInt32(THINKTHEN_COMPLETE_JSON_NULL_V1): return .null
+        case UInt32(THINKTHEN_COMPLETE_JSON_BOOLEAN_V1): return .bool(value.data.boolean != 0)
+        case UInt32(THINKTHEN_COMPLETE_JSON_NUMBER_V1): return .number(JSONNumber(unchecked: nativeString(value.data.number)))
+        case UInt32(THINKTHEN_COMPLETE_JSON_STRING_V1): return .string(nativeString(value.data.string))
+        case UInt32(THINKTHEN_COMPLETE_JSON_ARRAY_V1):
+            let values = value.data.array
+            return .array(try (0..<values.len).map {
+                guard let child = values.data?[$0] else { throw JSONConversionError("Missing native array value") }
+                return try copyNative(child)
+            })
+        case UInt32(THINKTHEN_COMPLETE_JSON_OBJECT_V1):
+            let values = value.data.object
+            return .orderedObject(try (0..<values.len).map {
+                guard let member = values.data?[$0], let child = member.value else { throw JSONConversionError("Missing native object value") }
+                return JSONMember(nativeString(member.name), try copyNative(child))
+            })
+        default: throw JSONConversionError("Unknown native value kind")
         }
     }
 }

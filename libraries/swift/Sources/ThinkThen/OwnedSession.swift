@@ -5,14 +5,14 @@ public struct SessionBoundaryFailure: Error, Sendable, CustomStringConvertible {
     public let code: Int32
     public let message: String
     public var retryable = false
-    public var facts: String? = nil
+    public var facts: JSONValue? = nil
     public var description: String { message }
     public var kind: OwnedFailureKind { nativeFailureKind(code) }
 
 }
 
 func sessionCheck(_ code: Int32) throws {
-    if code != 0 { throw SessionBoundaryFailure(code: code, message: String(cString: thinkthen_session_error_message()), retryable: thinkthen_session_error_retryable() != 0, facts: thinkthen_session_error_facts_json().map { String(cString: $0) }) }
+    if code != 0 { throw SessionBoundaryFailure(code: code, message: String(cString: thinkthen_session_error_message()), retryable: thinkthen_session_error_retryable() != 0, facts: try thinkthen_session_error_facts_json().map { try JSONValue.parse(Data(String(cString: $0).utf8)) }) }
 }
 
 private final class SessionOwner: @unchecked Sendable {
@@ -168,7 +168,7 @@ public final class Client: @unchecked Sendable {
         let handle = Array(bytes).map { CChar(bitPattern: $0) } + [0]
         let pointer = handle.withUnsafeBufferPointer { thinkthen_engine_new_with($0.baseAddress) }
         guard let pointer else {
-            throw SessionBoundaryFailure(code: thinkthen_error_code(nil), message: thinkthen_error_message(nil).map { String(cString: $0) } ?? "Native constructor failed", retryable: thinkthen_error_retryable(nil) != 0, facts: thinkthen_error_facts_json(nil).map { String(cString: $0) })
+            throw SessionBoundaryFailure(code: thinkthen_error_code(nil), message: thinkthen_error_message(nil).map { String(cString: $0) } ?? "Native constructor failed", retryable: thinkthen_error_retryable(nil) != 0, facts: try thinkthen_error_facts_json(nil).map { try JSONValue.parse(Data(String(cString: $0).utf8)) })
         }
         owner = ClientOwner(pointer)
     }
@@ -201,14 +201,13 @@ public final class Client: @unchecked Sendable {
     public func plan(_ request: InputRequest) throws -> OwnedPlan {
         let bytes = try request.json.data()
         return try live { handle in
-            var pointer: UnsafeMutablePointer<CChar>?
-            var length = 0
+            var pointer: OpaquePointer?
             try bytes.withUnsafeBytes { raw in
-                try sessionCheck(thinkthen_request_plan_json(handle, raw.bindMemory(to: CChar.self).baseAddress, raw.count, &pointer, &length))
+                try sessionCheck(thinkthen_request_plan_value(handle, raw.bindMemory(to: CChar.self).baseAddress, raw.count, &pointer))
             }
             guard let pointer else { throw JSONConversionError("Missing native plan") }
-            defer { thinkthen_free_string(pointer) }
-            return try OwnedPlan.read(JSONValue.parse(Data(bytes: pointer, count: length)))
+            defer { thinkthen_value_free(pointer) }
+            return try OwnedPlan.read(nativeValue(pointer))
         }
     }
     public func parseQuestion(_ grammar: QuestionGrammar, authored: JSONValue) throws -> InputRequestQuestion {
@@ -219,7 +218,7 @@ public final class Client: @unchecked Sendable {
                 try bytes.withUnsafeBytes { raw in
                     let code = thinkthen_question_parse(handle, grammar.rawValue, thinkthen_string_v1(data: raw.bindMemory(to: CChar.self).baseAddress, len: raw.count), &question)
                     if code != 0 {
-                        throw SessionBoundaryFailure(code: code, message: thinkthen_error_message(handle).map { String(cString: $0) } ?? "Native question admission failed", retryable: thinkthen_error_retryable(handle) != 0, facts: thinkthen_error_facts_json(handle).map { String(cString: $0) })
+                        throw SessionBoundaryFailure(code: code, message: thinkthen_error_message(handle).map { String(cString: $0) } ?? "Native question admission failed", retryable: thinkthen_error_retryable(handle) != 0, facts: try thinkthen_error_facts_json(handle).map { try JSONValue.parse(Data(String(cString: $0).utf8)) })
                     }
                 }
             }
