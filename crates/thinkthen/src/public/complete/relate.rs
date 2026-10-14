@@ -20,11 +20,7 @@ impl Engine {
             engine
                 .relate_admitted_complete(ask, entities, options, (false, true), &[])?
                 .project(|result| {
-                    let probability = result
-                        .value
-                        .iter()
-                        .map(|edge| Some(edge.probability()))
-                        .collect();
+                    let probability = result.probability();
                     Ok((result.value.clone(), vec![result], probability))
                 })
         })
