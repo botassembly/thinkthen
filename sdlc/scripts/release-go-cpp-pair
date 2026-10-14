@@ -104,7 +104,7 @@ if [ "$mode" = swift-zig ]; then
 				./Sources/CThinkThen/bridge.c \
 				./Sources/ThinkThen/ \
 				./Sources/ThinkThen/ABIGenerated.swift ./Sources/ThinkThen/InputsGenerated.swift ./Sources/ThinkThen/ResultsGenerated.swift \
-				./Sources/ThinkThen/NativePackage.swift ./Sources/ThinkThen/OwnedJSON.swift ./Sources/ThinkThen/OwnedSession.swift ./Sources/ThinkThen/OwnedInputs.swift \
+				./Sources/ThinkThen/NativePackage.swift ./Sources/ThinkThen/DataValue.swift ./Sources/ThinkThen/OwnedSession.swift ./Sources/ThinkThen/OwnedInputs.swift \
 				./Sources/ThinkThen/Native/ ./Sources/ThinkThen/Native/README.txt "./Sources/ThinkThen/Native/$target/" "./Sources/ThinkThen/Native/$target/libthinkthen.so" ./Tests/ ./Tests/TypeCase/ \
 				./Tests/TypeCase/main.swift ./THINKTHEN-PACKAGE-INPUTS | LC_ALL=C sort >"$work/expected-members" ;;
 		"$second")

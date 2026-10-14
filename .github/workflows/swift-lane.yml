@@ -1,11 +1,5 @@
 name: Check Swift branch package
 on:
-  push:
-    branches: [ticket/0576-swift]
-    paths:
-      - 'libraries/swift/**'
-      - 'sdlc/generators/results/templates/swift*'
-      - '.github/workflows/swift-lane.yml'
   workflow_dispatch:
     inputs:
       native_run:

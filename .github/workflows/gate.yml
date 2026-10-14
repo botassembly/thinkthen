@@ -14,9 +14,17 @@
 # checked against the SHA-256 the jq project publishes beside the release.
 
 name: gate
+run-name: gate ${{ inputs.language || 'none' }} on ${{ github.ref_name }}
 
 on:
   workflow_dispatch:
+    inputs:
+      language:
+        description: Installed package to check; none runs the existing gate ladder
+        type: choice
+        required: false
+        default: none
+        options: [none, go, cpp]
 
 permissions:
   contents: read
@@ -32,6 +40,7 @@ env:
 
 jobs:
   ladder:
+    if: inputs.language == '' || inputs.language == 'none'
     name: install, lint, test, spec
     runs-on: ubuntu-24.04
 
@@ -104,3 +113,56 @@ jobs:
 
       - name: Rung 3, spec
         run: sdlc/scripts/spec
+
+  language:
+    name: Installed ${{ inputs.language }} package
+    if: inputs.language != '' && inputs.language != 'none'
+    runs-on: ubuntu-24.04
+    defaults: {run: {shell: bash}}
+    env:
+      LANGUAGE: ${{ inputs.language }}
+      CARGO_BUILD_JOBS: '2'
+      CARGO_PROFILE_DEV_DEBUG: '0'
+      CARGO_INCREMENTAL: '0'
+      THINKTHEN_TEST_PROFILE: routine
+    steps:
+      - name: Check out the selected commit
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with: {ref: "${{ github.sha }}", persist-credentials: false}
+      - name: Require a named language and the dispatched branch commit
+        env: {REF: "${{ github.ref }}", SHA: "${{ github.sha }}"}
+        run: |
+          set -eu
+          case "$LANGUAGE" in go|cpp) ;; *) exit 2 ;; esac
+          case "$REF" in refs/heads/*) ;; *) exit 2 ;; esac
+          [ "$(git rev-parse HEAD)" = "$SHA" ]
+          echo "Checking $LANGUAGE at $SHA"
+      - uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6.0.0
+        with: {python-version: '3.13'}
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with: {node-version: '22.22.3'}
+      - name: Install the repository's pinned Rust toolchain and test dependencies
+        run: |
+          set -eu
+          rustup show active-toolchain || rustup toolchain install
+          python3 -m pip install 'jsonschema==4.25.1'
+          cargo fetch --locked --manifest-path libraries/c/Cargo.toml
+          cargo fetch --locked
+          echo "CARGO_TARGET_DIR=$RUNNER_TEMP/thinkthen-language-target" >> "$GITHUB_ENV"
+      - name: Check C++ source
+        if: inputs.language == 'cpp'
+        run: |
+          set -eu
+          (cd libraries/cpp && node ../../sdlc/scripts/ratchet.mjs ratchet.hpp.json)
+          python3 sdlc/generators/results/generate.py --target cpp --check
+          python3 sdlc/generators/results/generate.py --target cpp --inputs --check
+      - name: Pack and check only the selected installed language
+        run: |
+          set -eu
+          target=$(rustc -vV | sed -n 's/^host: //p')
+          version=$(sed -n 's/^version = "\(.*\)"$/\1/p' crates/thinkthen/Cargo.toml | head -n 1)
+          out="$RUNNER_TEMP/thinkthen-language-packages"
+          CARGO_NET_OFFLINE=true sdlc/scripts/release-pack "$target" "$out" c "$LANGUAGE"
+          export THINKTHEN_ARTIFACT="$out/thinkthen-$LANGUAGE-$version-$target.tar.gz"
+          export THINKTHEN_C_ARTIFACT="$out/thinkthen-c-$version-$target.tar.gz"
+          sh "libraries/$LANGUAGE/check.sh"
