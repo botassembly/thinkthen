@@ -580,8 +580,9 @@ def run_example(family, packages, work, root=REPO, selected=None, sample_index=0
         pin = re.search(r'(?m)^VERSION=(.*)$', (root / 'databases/postgresql/runtime.sh').read_text()).group(1)
         tree = work / 'server'
         shutil.copytree(Path(os.environ.get('THINKTHEN_TOOLCHAINS', str(Path.home() / '.cache/thinkthen-toolchains'))) / 'postgresql' / pin, tree, symlinks=True)
-        for suffix in ('usr/lib/postgresql/16/lib', 'usr/share/postgresql/16/extension'):
-            shutil.copytree(package / suffix, tree / suffix, dirs_exist_ok=True)
+        for member, suffix in (('lib', 'usr/lib/postgresql/16/lib'),
+                               ('extension', 'usr/share/postgresql/16/extension')):
+            shutil.copytree(package / member, tree / suffix, dirs_exist_ok=True)
         binaries = tree / 'usr/lib/postgresql/16/bin'
         data = work / 'data'; socket = work / 'socket'; socket.mkdir()
         run([str(binaries / 'initdb'), '-D', str(data), '--auth=trust', '-U', 'postgres'])
