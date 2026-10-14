@@ -175,7 +175,7 @@ if ($mode === 'usage-written' || $mode === 'usage-failed') {
     }
     foreach (array_slice($asks, 6, null, true) as $verb => [$question, $input]) {
         try { $client->plan($verb, $question, $input); throw new RuntimeException('specialized preview admitted '.$verb); }
-        catch (ThinkThen\UsageFailure $error) { check($error->getMessage() === 'plan requires an atomic or rank question', 'specialized preview refusal changed'); }
+        catch (ThinkThen\UsageFailure $error) { check($error->getMessage() === 'invalid session arguments or input', 'specialized preview refusal changed'); }
     }
     $questionFolder = getenv('XDG_CONFIG_HOME').'/thinkthen/questions';
     mkdir($questionFolder, recursive: true);
