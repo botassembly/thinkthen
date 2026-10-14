@@ -16,6 +16,62 @@ from conformance.children.children import child_env
 
 
 class PublicSurface(unittest.TestCase):
+    def test_r_namespace_and_nested_formal_defaults(self):
+        with tempfile.TemporaryDirectory(prefix='library-surface-r-') as folder:
+            root = Path(folder)
+            for name in ['sdlc', 'specification', 'conformance']:
+                (root / name).symlink_to(ROOT / name, target_is_directory=True)
+            shutil.copytree(ROOT / 'libraries/r/thinkthen/R', root / 'libraries/r/thinkthen/R')
+            namespace = root / 'libraries/r/thinkthen/NAMESPACE'
+            namespace.write_text((ROOT / 'libraries/r/thinkthen/NAMESPACE').read_text())
+            header = root / 'libraries/c/include/thinkthen.h'
+            header.parent.mkdir(parents=True)
+            shutil.copyfile(ROOT / 'libraries/c/include/thinkthen.h', header)
+            source = root / 'libraries/r/thinkthen/R/surface-fixture.R'
+            source.write_text('''# export(fakeCommentExport)
+export(fakeSourceExport)
+.tt_decide <- function(hidden = NULL) {}
+extraPublicExport <- function(context = NULL, enabled = FALSE,
+    close = function() invisible(NULL), later = list(a = 1, b = 2), ...) {}
+''')
+            def invoke():
+                run = subprocess.run(['python3', str(CHECK), '--root', str(root), '--library', 'r', '--json'],
+                                     capture_output=True, text=True, env=child_env(home=folder))
+                self.assertIn(run.returncode, (0, 1), run.stderr)
+                return json.loads(run.stdout)['libraries']['r']
+            baseline = invoke()
+            self.assertFalse(any(error.endswith(('.NULL', '.FALSE', '.hidden')) for error in baseline))
+            self.assertFalse(any('fake' in error or 'extraPublicExport' in error for error in baseline))
+            generated = root / 'libraries/r/thinkthen/R/inputs-generated.R'
+            original = generated.read_text()
+            generated.write_text(original.replace('function(attempts = NULL', 'function(extra_option = NULL', 1))
+            self.assertIn('missing option: attempts in tt_options', invoke())
+            generated.write_text(original.replace('function(entity_definition = NULL', 'function(extra_field = NULL', 1))
+            self.assertIn('unlisted public field: tt_recognize_question.extra_field', invoke())
+            generated.write_text(original)
+            feed = root / 'libraries/r/thinkthen/R/feeds.R'
+            original_feed = feed.read_text()
+            for default in ['"records"', '"#"', "'#'", '"escaped\\\"#,)]}"']:
+                with self.subTest(default=default):
+                    feed.write_text(original_feed.replace('name = "records",', 'name = ' + default + ',', 1))
+                    self.assertEqual(invoke(), baseline)
+                    for extra in ['NULL', 'list(a = c(1, 2), b = function() { "#" })']:
+                        feed.write_text(original_feed.replace('name = "records",',
+                            'name = ' + default + ', # Ignore extra_hidden = NULL, )\n'
+                            '                    extra_option = ' + extra + ',', 1))
+                        self.assertEqual(set(invoke()) - set(baseline),
+                                         {'unlisted public field: tt_feed.extra_option'})
+            feed.write_text(original_feed)
+            namespace.write_text(namespace.read_text() + '\nexport(extraPublicExport)\n')
+            errors = invoke()
+            self.assertIn('unlisted public call/export: .extraPublicExport', errors)
+            for name in ['context', 'enabled', 'close', 'later']:
+                self.assertIn('unlisted public field: extraPublicExport.' + name, errors)
+            namespace.write_text(namespace.read_text().replace('export(tt_decide)', ''))
+            self.assertIn('missing function: decide', invoke())
+            namespace.write_text(namespace.read_text().replace('export(tt_plan)', ''))
+            self.assertIn('missing helper: plan', invoke())
+
     def test_cpp_public_inheritance_and_accessibility(self):
         with tempfile.TemporaryDirectory(prefix='library-surface-cpp-') as folder:
             root = Path(folder)

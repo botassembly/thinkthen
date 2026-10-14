@@ -44,6 +44,7 @@ class NativeInstallation(unittest.TestCase):
                             'printf "%s" "$CARGO_TARGET_DIR" > "$NATIVE_BUILD_LOG"\n'
                             'printf "%s" "$CARGO_ENCODED_RUSTFLAGS" > "$NATIVE_FLAGS_LOG"\n'
                             'printf "%s" "$CFLAGS" > "$NATIVE_C_FLAGS_LOG"\n'
+                            'printf "%s" "$CXXFLAGS" > "$NATIVE_CXX_FLAGS_LOG"\n'
                             'mkdir -p "$CARGO_TARGET_DIR/debug"\n'
                             '[ ! -f "$NATIVE_SHARED" ] || cp "$NATIVE_SHARED" "$CARGO_TARGET_DIR/debug/libthinkthen_c.so"\n'
                             'printf "fixture static" > "$CARGO_TARGET_DIR/debug/libthinkthen_c.a"\n'
@@ -53,7 +54,7 @@ class NativeInstallation(unittest.TestCase):
                                    str(Path(shutil.which(tool)).parent) for tool in ('sh', 'bash', 'jq', 'cp', 'mkdir', 'ln'))),
                                'HOME': str(root / 'home'), 'CARGO_HOME': str(root / 'home/.cargo'),
                                'RUSTC': rustc, 'NATIVE_CARGO': cargo, 'CARGO_NET_OFFLINE': 'true', 'LC_ALL': 'C.UTF-8',
-                               'RUSTFLAGS': '--cfg native_fixture', 'CFLAGS': '-O1'}
+                               'RUSTFLAGS': '--cfg native_fixture', 'CFLAGS': '-O1', 'CXXFLAGS': '-O2'}
                         target = native / 'target'
                         if setting in ('relative', 'spaces'):
                             value = '../relative output' if setting == 'spaces' else '../relative-output'
@@ -69,7 +70,8 @@ class NativeInstallation(unittest.TestCase):
                             target = caller / '../configured output'
                         artifact = target / 'debug/libthinkthen_c.so'
                         env.update(NATIVE_SHARED=str(artifact), NATIVE_BUILD_LOG=str(root / 'build.log'),
-                                   NATIVE_FLAGS_LOG=str(root / 'flags.log'), NATIVE_C_FLAGS_LOG=str(root / 'c-flags.log'))
+                                   NATIVE_FLAGS_LOG=str(root / 'flags.log'), NATIVE_C_FLAGS_LOG=str(root / 'c-flags.log'),
+                                   NATIVE_CXX_FLAGS_LOG=str(root / 'cxx-flags.log'))
                         artifact.parent.mkdir(parents=True)
                         if not missing:
                             artifact.write_bytes(b'selected native library')
@@ -88,7 +90,11 @@ class NativeInstallation(unittest.TestCase):
                         flags = (root / 'flags.log').read_text().split('\x1f')
                         self.assertEqual(flags[:2], ['--cfg', 'encoded_fixture' if setting == 'absolute' else 'native_fixture'])
                         self.assertIn(f'--remap-path-prefix={repo}=/build/thinkthen', flags)
-                        self.assertEqual((root / 'c-flags.log').read_text(), '-O1 -ffile-prefix-map=/home=/build/home -ffile-prefix-map=/Users=/build/users')
+                        self.assertIn('--remap-path-prefix=/home=/build/host', flags)
+                        self.assertIn('--remap-path-prefix=/Users=/build/users', flags)
+                        for prefix, name in [('-O1', 'c-flags.log'), ('-O2', 'cxx-flags.log')]:
+                            self.assertEqual((root / name).read_text(), prefix +
+                                             ' -ffile-prefix-map=/home=/build/host -ffile-prefix-map=/Users=/build/users')
                         if missing:
                             self.assertEqual(done.returncode, 1)
                             self.assertEqual(done.stderr, f'native_install: missing native artifact: {owned}/debug/libthinkthen_c.so\n')

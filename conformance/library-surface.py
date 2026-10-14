@@ -146,6 +146,8 @@ def check(root, manifest, name):
             source_files[relative] = path
             try:
                 found = READ.declarations(path.read_text(), language(path, config['language']))
+                if config['language'] == 'r' and path.name != 'NAMESPACE':
+                    found = {d for d in found if d.kind != 'export'}
                 declared.update(exported(found, exports[path.resolve()]) if exports is not None else found)
             except (SyntaxError, ValueError) as error:
                 errors.append(f'{relative}: declaration parse failed: {error}')
@@ -253,7 +255,7 @@ def check(root, manifest, name):
                 field = adapter.get('aliases', {}).get(item.name, canonical(item.name))
                 contract = request if adapter['contract'] == 'request' else result
                 types = adapter['type'] if isinstance(adapter['type'], list) else [adapter['type']]
-                if any(field in SCHEMA.properties(contract, key) for key in types):
+                if any(field in SCHEMA.properties(contract, key, adapter.get('path', ())) for key in types):
                     continue
             if item.name in config.get('wrapper_members', {}).get(item.owner, []):
                 continue

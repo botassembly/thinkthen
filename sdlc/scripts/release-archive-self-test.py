@@ -308,7 +308,7 @@ def main():
         (native / "libthinkthen_c.so").write_bytes(b"fixture shared")
         # release-pack localizes the static library, so the fixture is a real one-function archive.
         (base / "fixture.c").write_text(
-            'const char *thinkthen_fixture(void) { return "/build/home/.rustup/library/std/src/lib.rs"; }\n')
+            'const char *thinkthen_fixture(void) { return "/build/host/.rustup/library/std/src/lib.rs"; }\n')
         subprocess.run(["cc", "-c", "-o", str(base / "fixture.o"), str(base / "fixture.c")], check=True)
         subprocess.run(["ar", "rcs", str(native / "libthinkthen_c.a"), str(base / "fixture.o")], check=True)
         cpp_guard = str(REPO / "libraries/cpp/fixtures/guard.py")
@@ -316,6 +316,7 @@ def main():
         private_cpp = base / "private-cpp"
         private_cpp.mkdir()
         for private_bytes in (b"/home/synthetic-private-location", b"/Users/synthetic-private-location",
+                              b"/build/home/workspace/source.rs",
                               b"auth.json", b"-----BEGIN PRIVATE KEY-----", b"tt-canary-273",
                               b"/build/home/home/private", b"/build/home/Users/private",
                               b"/build/home/auth.json", b"/build/home/tt-canary-273"):
@@ -373,6 +374,7 @@ def main():
                 assert go_package.extractfile(f"./native/{host}/{member}").read() == c_package.extractfile(f"./{member}").read(), "Go bundled native input differs from C package"
         expect(run("sh", gate, "swift-zig-gate", str(base / "paired"), host, commit), "", success=True)
         for private_bytes in (b"/home/synthetic-private-location", b"/Users/synthetic-private-location",
+                              b"/build/home/workspace/source.rs",
                               b"tt-canary-273", b"/build/home/home/private",
                               b"/build/home/Users/private", b"/build/home/tt-canary-273"):
             private_zig = base / "private-zig"

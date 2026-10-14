@@ -425,7 +425,239 @@
         "question_file": "tt_question.file",
         "question_name": "tt_question.name",
         "question_reference": "tt_question.reference",
-        "files": "tt_files"
+        "files": "tt_files",
+        "item": "tt_item"
+      },
+      "lifecycle_members": {
+        "": [
+          "tt_batch",
+          "tt_completion",
+          "tt_completion_read",
+          "tt_engine",
+          "tt_usage"
+        ]
+      },
+      "representation_calls": [
+        "tt_feed",
+        "tt_input",
+        "tt_options",
+        "tt_question",
+        "tt_reader_failure",
+        "tt_recognize_question",
+        "tt_record",
+        "tt_relate_question"
+      ],
+      "field_adapters": {
+        "tt_decide": {
+          "contract": "request",
+          "type": [
+            "RequestCall",
+            "RequestOptions"
+          ],
+          "aliases": {
+            "function_name": "function"
+          }
+        },
+        "tt_choose": {
+          "contract": "request",
+          "type": [
+            "RequestCall",
+            "RequestOptions"
+          ],
+          "aliases": {
+            "function_name": "function"
+          }
+        },
+        "tt_tag": {
+          "contract": "request",
+          "type": [
+            "RequestCall",
+            "RequestOptions"
+          ],
+          "aliases": {
+            "function_name": "function"
+          }
+        },
+        "tt_score": {
+          "contract": "request",
+          "type": [
+            "RequestCall",
+            "RequestOptions"
+          ],
+          "aliases": {
+            "function_name": "function"
+          }
+        },
+        "tt_filter": {
+          "contract": "request",
+          "type": [
+            "RequestCall",
+            "RequestOptions"
+          ],
+          "aliases": {
+            "function_name": "function"
+          }
+        },
+        "tt_rank": {
+          "contract": "request",
+          "type": [
+            "RequestCall",
+            "RequestOptions"
+          ],
+          "aliases": {
+            "function_name": "function"
+          }
+        },
+        "tt_find": {
+          "contract": "request",
+          "type": [
+            "RequestCall",
+            "RequestOptions"
+          ],
+          "aliases": {
+            "function_name": "function"
+          }
+        },
+        "tt_annotate": {
+          "contract": "request",
+          "type": [
+            "RequestCall",
+            "RequestOptions"
+          ],
+          "aliases": {
+            "function_name": "function"
+          }
+        },
+        "tt_recognize": {
+          "contract": "request",
+          "type": [
+            "RequestCall",
+            "RequestOptions"
+          ],
+          "aliases": {
+            "function_name": "function"
+          }
+        },
+        "tt_relate": {
+          "contract": "request",
+          "type": [
+            "RequestCall",
+            "RequestOptions"
+          ],
+          "aliases": {
+            "function_name": "function"
+          }
+        },
+        "tt_plan": {
+          "contract": "request",
+          "type": [
+            "RequestCall",
+            "RequestOptions"
+          ],
+          "aliases": {
+            "function_name": "function"
+          }
+        },
+        "tt_batch": {
+          "contract": "request",
+          "type": [
+            "RequestCall",
+            "RequestOptions"
+          ],
+          "aliases": {
+            "function_name": "function"
+          }
+        },
+        "tt_files": {
+          "contract": "request",
+          "type": [
+            "RequestSource",
+            "RequestReader"
+          ]
+        },
+        "tt_question": {
+          "contract": "request",
+          "type": "RequestQuestion",
+          "aliases": {
+            "file": "path"
+          }
+        },
+        "tt_input": {
+          "contract": "request",
+          "type": "RequestInput"
+        },
+        "tt_item": {
+          "contract": "request",
+          "type": "RequestItem"
+        },
+        "tt_feed": {
+          "contract": "request",
+          "type": "RequestInput"
+        },
+        "tt_record": {
+          "contract": "request",
+          "type": [
+            "RequestItem",
+            "RequestSessionDescriptor"
+          ]
+        },
+        "tt_reader_failure": {
+          "contract": "request",
+          "type": "RequestReaderFailure"
+        },
+        "tt_recognize_question": {
+          "contract": "request",
+          "type": "RequestDefinition",
+          "path": [
+            "recognize"
+          ]
+        },
+        "tt_relate_question": {
+          "contract": "request",
+          "type": "Authored_relate",
+          "path": [
+            "relate"
+          ]
+        }
+      },
+      "wrapper_members": {
+        "tt_decide": [
+          "completion"
+        ],
+        "tt_choose": [
+          "completion"
+        ],
+        "tt_tag": [
+          "completion"
+        ],
+        "tt_score": [
+          "completion"
+        ],
+        "tt_filter": [
+          "completion"
+        ],
+        "tt_rank": [
+          "completion"
+        ],
+        "tt_find": [
+          "completion"
+        ],
+        "tt_annotate": [
+          "completion"
+        ],
+        "tt_recognize": [
+          "completion"
+        ],
+        "tt_relate": [
+          "completion"
+        ],
+        "tt_completion_read": [
+          "handle"
+        ],
+        "tt_feed": [
+          "next_item",
+          "close"
+        ]
       }
     },
     "c": {
