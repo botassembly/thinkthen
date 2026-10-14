@@ -1,7 +1,7 @@
 //! SQLite host arguments enter the native shared Request without serialization.
 use crate::complete_native::{Inputs, Prepared, defect};
 mod rows;
-pub use rows::{project_carrier, project_outcome, project_value};
+pub use rows::{project_carrier, project_outcome, project_value, typed_values};
 use serde_json::{Value, json};
 use std::sync::Mutex;
 use thinkthen::{
@@ -326,7 +326,7 @@ fn recover(
                     &facts,
                     &observed,
                 );
-                rows::plain_decisions(result, &mut recovered)?;
+                rows::typed_values(result, &mut recovered)?;
                 rows.extend(recovered);
             }
             Err(error) => rows.push(rows::failed(
@@ -341,6 +341,15 @@ fn recover(
                 &facts,
                 &observed,
             )),
+        }
+    }
+    for row in &recovered {
+        if let Ok(RequestValue::Found(found)) = row.outcome() {
+            let selection = match found.selection() {
+                thinkthen::FindSelection::None => None,
+                thinkthen::FindSelection::Unit(index) => Some(index),
+            };
+            crate::complete_native::put(&mut carrier, "selection", json!(selection))?;
         }
     }
     if let Some(failed) = carrier.get("rows").and_then(Value::as_array) {

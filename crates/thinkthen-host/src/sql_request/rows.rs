@@ -69,10 +69,27 @@ pub(super) fn failed(
         "failure":failure,"facts":facts,"observations":observations})
 }
 
-pub(super) fn plain_decisions(
-    result: &thinkthen::RequestValue,
-    rows: &mut [Value],
-) -> Result<(), Error> {
+/// Restore decisions and aligned probabilities from authoritative native results.
+pub fn typed_values(result: &thinkthen::RequestValue, rows: &mut [Value]) -> Result<(), Error> {
+    if let thinkthen::RequestValue::Choices(choices) = result {
+        for (row, choice) in rows.iter_mut().zip(choices) {
+            crate::complete_native::put(row, "probability", json!(choice.result().probability()))?;
+        }
+    }
+    if let thinkthen::RequestValue::Recognized(recognized) = result {
+        for (row, recognized) in rows.iter_mut().zip(recognized) {
+            crate::complete_native::put(
+                row,
+                "probability",
+                json!(recognized.result().probability()),
+            )?;
+        }
+    }
+    if let thinkthen::RequestValue::Found(found) = result {
+        for row in rows.iter_mut() {
+            crate::complete_native::put(row, "probability", json!(found.probability()))?;
+        }
+    }
     if let thinkthen::RequestValue::Decisions(decisions) = result {
         for (row, decision) in rows.iter_mut().zip(decisions) {
             let value = match decision.result().value() {
@@ -94,6 +111,8 @@ pub fn project_value(function: F, row: &Value) -> (Value, Value) {
             .pointer("/answer/probability")
             .cloned()
             .unwrap_or(Value::Null),
+        F::Find if row.get("index").is_none_or(Value::is_null) => Value::Null,
+        F::Choose if answer.is_null() => Value::Null,
         F::Choose | F::Find => row
             .pointer("/answer/pick")
             .and_then(Value::as_str)
@@ -159,7 +178,7 @@ pub fn project_outcome(
         &facts,
         &observations,
     );
-    plain_decisions(&result, &mut rows)?;
+    typed_values(&result, &mut rows)?;
     if let Some(failure) = failure {
         if matches!(function, F::Rank | F::Find | F::Relate) {
             rows.clear();

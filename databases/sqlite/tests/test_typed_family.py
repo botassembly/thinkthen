@@ -105,14 +105,14 @@ db=connect();db.execute('SELECT thinkthen_configure(?)',('{"cache":false}',))
 args=('Fits?','red door')
 first=run(db,'SELECT value,probability FROM thinkthen_decide_details(?,?)',args)
 identity=run(db,"SELECT facts_call_id FROM thinkthen_decide_details(?,?) WHERE projection='facts'",args)
-filtered=run(db,"SELECT value FROM thinkthen_decide_details(?,?) WHERE projection='decision' AND facts_requests_sent=0",args)
-kept=run(db,"SELECT value FROM thinkthen_decide_details(?,?) WHERE projection='decision' AND facts_requests_sent=1",args)
+filtered=run(db,"SELECT decision_value FROM thinkthen_decide_details(?,?) WHERE projection='decision' AND facts_requests_sent=0",args)
+kept=run(db,"SELECT decision_value FROM thinkthen_decide_details(?,?) WHERE projection='decision' AND facts_requests_sent=1",args)
 again=run(db,"SELECT facts_call_id FROM thinkthen_decide_details(?,?) WHERE projection='facts' AND facts_requests_sent=1",args)
 schema=db.execute("SELECT cid,name FROM pragma_table_xinfo('thinkthen_decide_details') WHERE name='facts_call_id'").fetchone()
 # A positional operand in an output slot is a SQLite predicate, outside input admission.
 visible=7;count=schema[0]-visible+1
 parameters=[None]*count;parameters[:2]=args;parameters[-1]='different-call-id'
-position=run(db,"SELECT value FROM thinkthen_decide_details("+','.join('?' for _ in parameters)+") WHERE projection='decision'",parameters)
+position=run(db,"SELECT decision_value FROM thinkthen_decide_details("+','.join('?' for _ in parameters)+") WHERE projection='decision'",parameters)
 say(first=first,filtered=filtered,kept=kept,identity=identity,again=again,position=position)
 ''', environment(backend))
     expect(got['first'], [[1,.9]], 'compact default answer columns')
@@ -172,8 +172,9 @@ for verb,question in questions.items():
     records=[{'text':'first valid row'},{'text':'private evidence'},{'text':'last valid row'}]
     if verb=='annotate': records=[{'json':{'body':record['text']}} for record in records]
     question=json.dumps(question);items=json.dumps(records)
-    rows=db.execute('SELECT ordinal,value,probability,result,failure,facts FROM thinkthen_'+verb+'_details WHERE request_question=? AND request_records=?',(question,items)).fetchall()
+    rows=db.execute('SELECT ordinal,value,probability,result,failure,facts,error_kind FROM thinkthen_'+verb+'_details WHERE request_question=? AND request_records=?',(question,items)).fetchall()
     assert [row[0] for row in rows]==[0,1,2],rows
+    assert [row[6] for row in rows]==[None,'backend',None],rows
     assert rows[0][3] is not None and rows[2][3] is not None,rows
     assert rows[1][1] is None and rows[1][3] is None and rows[1][4] is not None,rows
     reader=Read(db,verb,question,{'records':records},None)
@@ -192,6 +193,28 @@ say(results=results)
         expect(proxy.count(),18,'one request for each valid row, including six failures')
     expect(all(got['results'].values()),True,'row failure preserves later answers and owning call facts')
     expect(backend.close(),12,'only the twelve successful rows reached the generic backend')
+
+
+def test_empty_sql_frame_rejects_nonempty_and_malformed_claims():
+    import sys
+    from pathlib import Path
+    sys.path.insert(0,str(Path(__file__).parent/'complete'))
+    from project import project,assert_empty_sql
+    for marker in ({'empty_sql_rows':[1],'details_rows':[]},
+                   {'empty_sql_rows':[],'details_rows':[{}]},
+                   {'empty_sql_rows':[],'details_rows':[],'native':{}},
+                   {'empty_sql_rows':None,'details_rows':[]}):
+        try: project(marker,'filter')
+        except AssertionError: pass
+        else: raise AssertionError(marker)
+    frame=project({'empty_sql_rows':[],'details_rows':[]},'filter')
+    valid={'verb':'filter','items':[],'expect':{'success':{'kind':'filter','answers':[],'operation':{'indexes':[]}}}}
+    assert_empty_sql(valid,frame,0)
+    for bad,count in ((valid,1),({**valid,'items':['refund']},0),
+                      ({**valid,'expect':{'success':{'kind':'filter','answers':[True],'operation':{'indexes':[0]}}}},0)):
+        try: assert_empty_sql(bad,frame,count)
+        except AssertionError: pass
+        else: raise AssertionError((bad,count))
 
 
 if __name__=='__main__':

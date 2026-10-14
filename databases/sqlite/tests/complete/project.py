@@ -55,6 +55,10 @@ def project(doc,verb):
         kind=next((k for k in ERRORS if 'thinkthen '+k+':' in message),None)
         assert kind is not None,message
         return {'code':ERRORS[kind],'message':message}
+    if 'empty_sql_rows' in doc:
+        assert doc == {'empty_sql_rows': [], 'details_rows': []}, doc
+        return {'code':0,'schema':'thinkthen.result/2','rows':[],
+                'observations':0,'empty_sql_rows':[]}
     wrapper=doc
     doc=wrapper['native']
     NATIVE.validate(doc)
@@ -73,3 +77,17 @@ def project(doc,verb):
     out['rows']=[projected(row,verb,(doc.get('ordinals') or list(range(len(values))))[at],events) for at,row in enumerate(values)]
     if verb=='find':out['rows'][0]['index']=doc['selection']
     return out
+
+
+def assert_empty_sql(value, got, count):
+    """An empty SQL set owns no public receipt; measure sends at the backend."""
+    assert got == {'code':0,'schema':'thinkthen.result/2','rows':[],
+                   'observations':0,'empty_sql_rows':[]}, got
+    assert count == 0, count
+    if value.get('zero_observations'):
+        assert value['verb'] == 'relate' and value['expect'] == {}, value
+    else:
+        success=value['expect']['success']
+        assert value['verb'] == success['kind'] == 'filter', value
+        assert success['answers'] == [] and success['operation']['indexes'] == [], value
+        assert value.get('items',[]) == [], value

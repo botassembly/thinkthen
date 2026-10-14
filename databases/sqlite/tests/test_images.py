@@ -87,7 +87,10 @@ db.execute('SELECT thinkthen_configure(?)', ('{"model":"d1","cache":false,"max_r
 say(value=complete(db, 'decide', *('Is red visible?', packed)))
 ''', env)['value']
         expect(failed['native']['error']['kind'], 'backend', 'backend failure keeps its complete kind')
-        assert 'private-backend-body' not in json.dumps(failed)
+        expect(failed['native']['error']['message'], 'the backend answered with status 503; provider message: private-backend-body', 'bounded provider diagnostic survives')
+        expect(failed['native']['error']['retryable'], True, '503 remains retryable')
+        expect(failed['native']['facts']['requests_sent'], 1, 'failure retains its actual attempt')
+        assert 'fake-sql-image-key' not in json.dumps(failed)
         expect(backend.count(), 2, 'one failing attempt follows one successful call')
 
 

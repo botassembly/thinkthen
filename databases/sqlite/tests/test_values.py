@@ -435,7 +435,7 @@ calls = ["SELECT thinkthen_configure('{}')", "SELECT count(*) FROM thinkthen_dec
          "SELECT thinkthen_max_requests(NULL)", "SELECT thinkthen_max_requests_total(1000)",
          "SELECT thinkthen_cache('" + os.environ["SCRATCH"] + "/cache')"]
 calls += [f"SELECT {name}('Is it red?', 'a red door'{deadline})" for name in ("thinkthen_decide", "thinkthen_warm") for deadline in ("", ", 0")]
-calls += ["SELECT value FROM thinkthen_decide_details('Is it red?','a red door'"+deadline+")" for deadline in ("", ", 0")]
+calls += ["SELECT CASE WHEN failure IS NOT NULL THEN 'thinkthen ' || error_kind || ': ' || error_message || ' (retryable: ' || CASE error_retryable WHEN 1 THEN 'yes' ELSE 'no' END || ')' ELSE value END FROM thinkthen_decide_details('Is it red?','a red door'"+deadline+")" for deadline in ("", ", 0")]
 calls += ["SELECT thinkthen_choose('{\\"choose\\":\\"Which?\\",\\"options\\":[\\"a\\",\\"b\\"]}', 'x')",
           "SELECT thinkthen_score('{\\"score\\":\\"How?\\",\\"levels\\":[\\"l\\",\\"h\\"]}', 'x')",
           "SELECT thinkthen_tag('{\\"tag\\":\\"Which?\\",\\"labels\\":[\\"a\\",\\"b\\"]}', 'x')",

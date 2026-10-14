@@ -153,6 +153,11 @@ def call(db, verb, question, inputs, settings=None):
         selection = reader.rows('find_selection')
         if selection:
             result['selection'] = reader.object('find_selection', selection[0]['find_selection_receipt_index'])['selected']
+    if not facts and not errors and not values:
+        sql='SELECT ordinal FROM thinkthen_'+reader.verb+' WHERE '+ ' AND '.join(name+'=?' for name in reader.fields)
+        actual=reader.db.execute(sql,list(reader.fields.values())).fetchall()
+        assert actual == [],actual
+        return {'empty_sql_rows': [], 'details_rows': []}
     return result
 
 

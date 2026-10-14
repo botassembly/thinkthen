@@ -10,7 +10,7 @@ BACKEND=Path(os.environ.get('THINKTHEN_BACKEND_BIN',os.environ.get('THINKTHEN_BA
 sys.path.insert(0,str(ROOT/'conformance'))
 import parity as inventory
 from c_parity import document,prepare,assertions,compact,Backend
-from project import project
+from project import project,assert_empty_sql
 from jsonschema.exceptions import ValidationError
 
 sys.path.insert(0,str(ROOT/'databases/duckdb/tools'))
@@ -155,7 +155,10 @@ def main():
                             path=home/'saved/thinkthen.sqlite'
                             if path.exists():
                                 with sqlite3.connect(path) as db:assert db.execute('SELECT count(*) FROM answers').fetchone()[0]==0
-                        assertions(row,step,got,int(backend.read('count'))-(before if step.get('count_delta') else 0))
+                        if 'empty_sql_rows' in got:
+                            assert_empty_sql(step,got,int(backend.read('count'))-before)
+                        else:
+                            assertions(row,step,got,int(backend.read('count'))-(before if step.get('count_delta') else 0))
                         if row['kind'] in ('images','image-location'):
                             replay={k:v for k,v in engine.items() if k!='record'};replay['replay']=str(home/'recorded')
                             saved=execute(consumer,{**frame,'engine_settings':replay},env,home,backend)

@@ -1,3 +1,4 @@
+//! Stays: This crate boundary owns SQLite registration policy and native failure translation.
 //! The SQLite surface of thinkthen: eight judgment functions, four engine
 //! settings, and two table-valued functions over the public Rust API.
 //!

@@ -1,3 +1,4 @@
+//! Stays: This boundary keeps SQLite handles on the calling thread and owns worker cancellation and result channels.
 //! Every call that can send runs on a detachable worker (ticket 0109
 //! decisions 6 and 7).
 //!

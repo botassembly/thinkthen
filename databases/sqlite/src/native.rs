@@ -133,7 +133,7 @@ impl<T: Verb> Table for Native<T> {
         store: &Mutex<Store>,
     ) -> Result<Scan, Failure> {
         let arguments = crate::tables::arguments::<Self>(mask, filters)?;
-        let required = if T::DETAILS { 2 } else { T::REQUIRED };
+        let required = T::REQUIRED;
         if (0..required).any(|at| {
             mask & (1 << at) != 0
                 && arguments
@@ -157,7 +157,7 @@ impl<T: Verb> Table for Native<T> {
             bound: mask,
         };
         if T::DETAILS {
-            args = record_arguments(args)?;
+            args = record_arguments(args, T::VERB)?;
         }
         if !T::DETAILS && args.supplied("request_records") {
             return Err(Failure::usage(
@@ -195,13 +195,11 @@ impl<T: Verb> Table for Native<T> {
             }
             let facts = receipt.projected("facts", Self::COLUMNS)?;
             let errors = receipt.projected("error", Self::COLUMNS)?;
-            if rows.is_empty() && !(T::STRICT_ANSWER && legacy) {
+            if rows.is_empty() && !T::DETAILS && !(T::STRICT_ANSWER && legacy) {
                 rows.push(Cells::new());
             }
-            overlay(&mut rows, &facts, &errors);
-            if T::DETAILS {
-                let detail = receipt.projected("question_detail", Self::COLUMNS)?;
-                overlay(&mut rows, &detail, &[]);
+            if !T::DETAILS {
+                overlay(&mut rows, &facts, &errors);
             }
         }
         if selection.is_some() {
@@ -411,7 +409,7 @@ fn cached<T: Verb>(
     Ok(receipt)
 }
 
-fn record_arguments(mut args: Arguments) -> Result<Arguments, Failure> {
+fn record_arguments(mut args: Arguments, verb: &str) -> Result<Arguments, Failure> {
     if args.supplied("request_records") {
         return Ok(args);
     }
@@ -422,19 +420,18 @@ fn record_arguments(mut args: Arguments) -> Result<Arguments, Failure> {
         let Some(value) = args.text(field)? else {
             continue;
         };
-        let list = serde_json::from_str::<serde_json::Value>(&value)
-            .ok()
-            .and_then(|value| {
-                value
-                    .as_array()
-                    .map(|rows| rows.iter().all(serde_json::Value::is_object))
-            })
-            .unwrap_or(false);
-        if list {
-            args = args.with_value("request_records", Value::Text(value));
-            args = args.with_value(field, Value::Null);
-            break;
+        let Ok(serde_json::Value::Array(rows)) = serde_json::from_str::<serde_json::Value>(&value)
+        else {
+            continue;
+        };
+        if rows.iter().all(serde_json::Value::is_string)
+            && (field == "paths" || (verb == "find" && field == "text"))
+        {
+            continue;
         }
+        args = args.with_value("request_records", Value::Text(value));
+        args = args.with_value(field, Value::Null);
+        break;
     }
     Ok(args)
 }

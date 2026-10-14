@@ -327,19 +327,9 @@ fn details_carrier(verb: &str, mut carrier: Json) -> Result<Json, Failure> {
         return Ok(carrier);
     }
     let error = carrier.pointer("/native/error").cloned();
-    let function = match verb {
-        "decide" => thinkthen::RequestFunction::Decide,
-        "choose" => thinkthen::RequestFunction::Choose,
-        "tag" => thinkthen::RequestFunction::Tag,
-        "score" => thinkthen::RequestFunction::Score,
-        "filter" => thinkthen::RequestFunction::Filter,
-        "rank" => thinkthen::RequestFunction::Rank,
-        "find" => thinkthen::RequestFunction::Find,
-        "annotate" => thinkthen::RequestFunction::Annotate,
-        "recognize" => thinkthen::RequestFunction::Recognize,
-        "relate" => thinkthen::RequestFunction::Relate,
-        _ => return Err(Failure::defect("unknown details function")),
-    };
+    let function = verb
+        .parse::<thinkthen::RequestFunction>()
+        .map_err(|_| Failure::defect("unknown details function"))?;
     if matches!(
         error
             .as_ref()

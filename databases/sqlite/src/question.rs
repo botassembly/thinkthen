@@ -1,3 +1,4 @@
+//! Stays: SQL arguments, authorized question readers and parsed-question caches share this admission boundary.
 //! Arguments: text read from SQL, questions and question sets parsed once,
 //! and the `'@name'` file door.
 

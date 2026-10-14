@@ -196,7 +196,7 @@ fn collection(shape: Shape, held: Option<&Json>) -> Option<Vec<Json>> {
     }
 }
 
-fn scalar(kind: Scalar, held: Option<&Json>) -> Result<Value, Failure> {
+pub(crate) fn scalar(kind: Scalar, held: Option<&Json>) -> Result<Value, Failure> {
     let Some(value) = held.filter(|value| !value.is_null()) else {
         return Ok(Value::Null);
     };

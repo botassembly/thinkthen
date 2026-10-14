@@ -1,3 +1,4 @@
+//! Stays: This ABI leaf owns SQLite host pointers and virtual table callbacks.
 //! Every `unsafe` block of the binding (ADR 0047 item 3): the entry point,
 //! the host's API table, the library pin, the connection handle, the
 //! virtual-table glue, and the exit hook that flushes the usage totals.

@@ -17,7 +17,7 @@ macro_rules! details {
             const SCHEMA: &'static CStr = c"CREATE TABLE x()";
             const FIRST_HIDDEN: usize = 7;
             const COLUMNS: usize = 7 + <$base>::COLUMNS - <$base>::FIRST_HIDDEN;
-            const REQUIRED: usize = 0;
+            const REQUIRED: usize = <$base>::REQUIRED;
             fn schema() -> Result<Cow<'static, CStr>, Failure> {
                 let fields = hidden::<$base>()?.into_iter()
                     .map(|name| format!("{name} HIDDEN"))
@@ -63,6 +63,16 @@ pub(super) fn rows(receipt: &Receipt, kind: &str, columns: usize) -> Result<Vec<
         .and_then(serde_json::Value::as_array)
         .ok_or_else(|| Failure::defect("a details receipt lost its rows"))?;
     let projected = receipt.projected(kind, columns)?;
+    let metadata = [
+        ("failure", receipt.projected("error", columns)?),
+        ("facts", receipt.projected("facts", columns)?),
+    ];
+    let details = receipt.projected("question_detail", columns)?;
+    let events = receipt
+        .carrier
+        .get("observations")
+        .and_then(serde_json::Value::as_array);
+
     rows.iter()
         .map(|row| {
             let mut cells = row
@@ -72,6 +82,28 @@ pub(super) fn rows(receipt: &Receipt, kind: &str, columns: usize) -> Result<Vec<
                 .and_then(|index| projected.get(index))
                 .cloned()
                 .unwrap_or_else(Cells::new);
+            for (field, values) in &metadata {
+                if let Some(held) = row
+                    .get(field)
+                    .and_then(serde_json::Value::as_u64)
+                    .and_then(|index| usize::try_from(index).ok())
+                    .and_then(|index| values.get(index))
+                {
+                    cells.extend(held.clone());
+                }
+            }
+            let detail = events
+                .into_iter()
+                .flatten()
+                .filter(|event| {
+                    event
+                        .get("detail")
+                        .is_some_and(serde_json::Value::is_object)
+                })
+                .position(|event| event.get("index") == row.get("ordinal"));
+            if let Some(held) = detail.and_then(|index| details.get(index)) {
+                cells.extend(held.clone());
+            }
             for (at, field) in [
                 "ordinal",
                 "value",
@@ -84,20 +116,9 @@ pub(super) fn rows(receipt: &Receipt, kind: &str, columns: usize) -> Result<Vec<
             .into_iter()
             .enumerate()
             {
-                let value = row.get(field).unwrap_or(&serde_json::Value::Null);
                 cells.insert(
                     at,
-                    match value {
-                        serde_json::Value::Null => Value::Null,
-                        serde_json::Value::Bool(value) => Value::Integer(i64::from(*value)),
-                        serde_json::Value::String(value) => Value::Text(value.clone()),
-                        serde_json::Value::Number(value) => value
-                            .as_i64()
-                            .map(Value::Integer)
-                            .or_else(|| value.as_f64().map(Value::Real))
-                            .unwrap_or(Value::Null),
-                        _ => Value::Text(value.to_string()),
-                    },
+                    crate::receipt::scalar(crate::receipt::Scalar::Data, row.get(field))?,
                 );
             }
             Ok(cells)
