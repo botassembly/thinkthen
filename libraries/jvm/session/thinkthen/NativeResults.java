@@ -7,6 +7,7 @@ private NativeResults() {}
 @SuppressWarnings("restricted") static MemorySegment pointer(MemorySegment p) { return p.get(ValueLayout.ADDRESS, 0).reinterpret(Long.MAX_VALUE); }
 static String text(MemorySegment p) { long length = p.get(NativeSession.SIZE, 8); if (length < 0 || length > Integer.MAX_VALUE) throw new IllegalStateException("Invalid native string length"); return new String(pointer(p).asSlice(0, length).toArray(ValueLayout.JAVA_BYTE), java.nio.charset.StandardCharsets.UTF_8); }
 static Object packet(MemorySegment owner) { try (Arena arena = Arena.ofConfined()) { var out = arena.allocate(ValueLayout.ADDRESS); NativeSession.check((int)NativeSession.call("thinkthen_session_result_view", ValueLayout.JAVA_INT, new MemoryLayout[]{ValueLayout.ADDRESS, ValueLayout.ADDRESS}, owner, out)); return thinkthen_complete_session_packet_v1(pointer(out)); } }
+static Object value(MemorySegment owner) { try (Arena arena = Arena.ofConfined()) { var out = arena.allocate(ValueLayout.ADDRESS); NativeSession.check((int)NativeSession.call("thinkthen_value_view", ValueLayout.JAVA_INT, new MemoryLayout[]{ValueLayout.ADDRESS, ValueLayout.ADDRESS}, owner, out)); return json(pointer(out)); } }
 static Object json(MemorySegment p) { var data = p.asSlice(8); switch (p.get(ValueLayout.JAVA_INT, 0)) {
 case 1: return null;
 case 2: return data.get(ValueLayout.JAVA_INT, 0) != 0;

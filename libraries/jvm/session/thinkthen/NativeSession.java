@@ -58,9 +58,4 @@ final class NativeSession {
             return new UsagePersistence(UsagePersistence.State.read(state.get(ValueLayout.JAVA_INT, NativeUsageLayouts.STATE_KIND)), copied);
         }
     }
-    @SuppressWarnings("restricted") // Native-owned pointers satisfy the C ABI lifetime contract.
-    static Object copied(MemorySegment pointer, long length) {
-        if (length > Integer.MAX_VALUE) throw new IllegalStateException("Result exceeds Java array size");
-        return Json.parseOwned(new String(pointer.reinterpret(length).toArray(ValueLayout.JAVA_BYTE), StandardCharsets.UTF_8));
-    }
 }

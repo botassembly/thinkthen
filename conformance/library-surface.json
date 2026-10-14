@@ -783,7 +783,8 @@
         "UsagePersistence",
         "Values",
         "Builder",
-        "View"
+        "View",
+        "Options"
       ],
       "lifecycle_members": {
         "Engine": [
@@ -830,7 +831,9 @@
         "Surface",
         "Values",
         "Builder",
-        "View"
+        "View",
+        "Questions",
+        "Options"
       ],
       "representation_members": {
         "Values": [
@@ -847,6 +850,9 @@
         ],
         "View": [
           "json"
+        ],
+        "Options": [
+          "option"
         ]
       },
       "wrapper_members": {
