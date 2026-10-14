@@ -310,6 +310,8 @@ def unpack_example_package(family, packages, destination, selected=None):
             library = destination / 'lib' / filename
             if library.is_file() and not (library.parent / alias).exists():
                 (library.parent / alias).symlink_to(library.name)
+    if family == 'r':
+        return destination / 'thinkthen'
     pages = list(destination.rglob('README.md'))
     return pages[0].parent if len(pages) == 1 else destination
 

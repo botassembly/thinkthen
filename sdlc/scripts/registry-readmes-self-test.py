@@ -129,6 +129,17 @@ class PackageText(unittest.TestCase):
             with self.assertRaisesRegex(readmes.Refusal, 'example-needs-two-functions: python'):
                 readmes.example('python', root)
 
+    def test_r_replay_installs_package_root_with_vendored_readmes(self):
+        with tempfile.TemporaryDirectory() as scratch:
+            tree = Path(scratch); packages = tree / 'packages'; packages.mkdir()
+            archive(packages / 'thinkthen_0.2.0.tar.gz', {
+                'thinkthen/README.md': readmes.source('r').read_bytes(),
+                'thinkthen/src/rust/vendor/dependency/README.md': b'Vendored dependency',
+                'thinkthen/DESCRIPTION': (readmes.REPO / 'libraries/r/thinkthen/DESCRIPTION').read_bytes()})
+            installed = readmes.unpack_example_package('r', packages, tree / 'installed')
+            self.assertTrue((installed / 'DESCRIPTION').is_file())
+            self.assertEqual(installed, tree / 'installed/thinkthen')
+
     def test_all_usage_blocks_are_selected_in_order(self):
         with tempfile.TemporaryDirectory() as scratch:
             root = Path(scratch)
