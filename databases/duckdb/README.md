@@ -1,5 +1,7 @@
 # The DuckDB surface
 
+The current source build supports DuckDB v1.5.6 and v2.0-cyanoptera. These targets use the native C++ source route. The archive instructions below describe the earlier unsigned release.
+
 Unsigned loadable extensions for DuckDB v1.5.5 and v1.5.4 that put the `thinkthen` engine behind SQL. The Linux x86_64, Linux ARM64, Apple Silicon and Intel macOS release routes use DuckDB's C++ API and a Rust bridge to `thinkthen`'s public API (tickets 0201 and 0231). The Intel package has focused installed proof under Rosetta on macOS 26; native Intel hardware, macOS 15 and release-runner proof remain open.
 
 The archive uses DuckDB's repository layout: `v1.5.5/<platform>/thinkthen.duckdb_extension` and `v1.5.4/<platform>/thinkthen.duckdb_extension`. From its unpacked directory, run DuckDB with unsigned extensions allowed at startup:
