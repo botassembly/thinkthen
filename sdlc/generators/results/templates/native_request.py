@@ -191,7 +191,7 @@ def render(definitions, metadata=None):
                     raise ValueError('duplicate canonical request union field: ' + key + '.' + arm)
                 if metadata is not None:
                     metadata.setdefault('arms', {})[(key, index)] = arm
-                symbol = typ.removesuffix('_v1').upper() + '_ARM_' + str(index) + '_V1'
+                symbol = typ.removesuffix('_v1').upper() + '_' + arm.upper() + '_V1'
                 declarations.append('pub const ' + symbol + ': u32 = ' + str(index) + ';')
                 arms.append('    pub ' + arm + ': *const ' + name(target) + ',')
                 body.append(symbol + ' => ' + read(target, 'input.data.' + arm) + ',')

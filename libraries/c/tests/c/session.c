@@ -17,12 +17,12 @@ static thinkthen_session *open_session(thinkthen_engine *engine, const char *jso
         char words[] = "Does it pass?", evidence[] = "Evidence.", name[] = "records";
         thinkthen_request_text_v1 wording = {counted(words)}, content = {counted(evidence)}, feed_name = {counted(name)};
         thinkthen_request_question_selector_text_v1 question = {.m_text=&wording};
-        thinkthen_request_question_selector_v1 selector = {THINKTHEN_REQUEST_QUESTION_SELECTOR_ARM_1_V1, {.text=&question}};
+        thinkthen_request_question_selector_v1 selector = {THINKTHEN_REQUEST_QUESTION_SELECTOR_TEXT_V1, {.text=&question}};
         thinkthen_request_input_text_v1 text = {.m_text=&content};
         thinkthen_request_input_feed_v1 producer = {.m_name=&feed_name};
         thinkthen_request_input_v1 input = {0};
-        if (json == feed) { input.kind=THINKTHEN_REQUEST_INPUT_ARM_7_V1; input.data.feed=&producer; }
-        else { input.kind=THINKTHEN_REQUEST_INPUT_ARM_1_V1; input.data.text=&text; }
+        if (json == feed) { input.kind=THINKTHEN_REQUEST_INPUT_FEED_V1; input.data.feed=&producer; }
+        else { input.kind=THINKTHEN_REQUEST_INPUT_TEXT_V1; input.data.text=&text; }
         thinkthen_request_arguments_v1 arguments = {.m_input=&input,.m_question=&selector};
         thinkthen_session *owner = NULL;
         check(thinkthen_session_new_typed_with_surface(engine, counted("decide"), &arguments, counted("c"), &owner) == THINKTHEN_OK, "typed constructor owns every carrier");
@@ -48,7 +48,7 @@ static int push_owned(thinkthen_session *session, char *json, uint32_t *status) 
     thinkthen_request_text_v1 text = {counted(bytes)}, filename = {counted(file)};
     thinkthen_request_unsigned_v1 line = {1};
     thinkthen_request_original_text_v1 original_text = {.m_text=&text};
-    thinkthen_request_original_v1 original = {THINKTHEN_REQUEST_ORIGINAL_ARM_1_V1, {.text=&original_text}};
+    thinkthen_request_original_v1 original = {THINKTHEN_REQUEST_ORIGINAL_TEXT_V1, {.text=&original_text}};
     thinkthen_request_item_v1 item = {.m_original=&original};
     thinkthen_request_session_source_location_v1 location = {.m_file=&filename,.m_first_line=&line,.m_last_line=&line};
     thinkthen_request_session_descriptor_v1 descriptor = {.m_item=&item,.m_location=&location};
@@ -59,7 +59,7 @@ static int push_owned(thinkthen_session *session, char *json, uint32_t *status) 
 static int finish_owned(thinkthen_session *session, int failed_input) {
     if (!getenv("SESSION_TYPED")) return thinkthen_session_finish(session, failed_input ? "{\"kind\":\"io\"}" : NULL, failed_input ? 13 : 0);
     thinkthen_request_reader_failure_io_v1 io = {0};
-    thinkthen_request_reader_failure_v1 failure = {THINKTHEN_REQUEST_READER_FAILURE_ARM_2_V1, {.io=&io}};
+    thinkthen_request_reader_failure_v1 failure = {THINKTHEN_REQUEST_READER_FAILURE_IO_V1, {.io=&io}};
     return thinkthen_session_finish_typed(session, failed_input ? &failure : NULL);
 }
 static int same_text(thinkthen_complete_utf8_v1 text, const char *expected) {

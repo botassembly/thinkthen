@@ -617,19 +617,19 @@ static void *convert_RequestInput_RequestInput(arena *a,const void *input) {
     }
     out->kind=(uint32_t)p->kind;
     switch(p->kind) {
-        case 1: out->data.arm_1=convert_RequestInput_text_RequestInput_text(a,p->value);
+        case 1: out->data.text=convert_RequestInput_text_RequestInput_text(a,p->value);
         break;
-        case 2: out->data.arm_2=convert_RequestInput_json_RequestInput_json(a,p->value);
+        case 2: out->data.json=convert_RequestInput_json_RequestInput_json(a,p->value);
         break;
-        case 3: out->data.arm_3=convert_RequestInput_records_RequestInput_records(a,p->value);
+        case 3: out->data.records=convert_RequestInput_records_RequestInput_records(a,p->value);
         break;
-        case 4: out->data.arm_4=convert_RequestInput_units_RequestInput_units(a,p->value);
+        case 4: out->data.units=convert_RequestInput_units_RequestInput_units(a,p->value);
         break;
-        case 5: out->data.arm_5=convert_RequestInput_entities_RequestInput_entities(a,p->value);
+        case 5: out->data.entities=convert_RequestInput_entities_RequestInput_entities(a,p->value);
         break;
-        case 6: out->data.arm_6=convert_RequestInput_source_RequestInput_source(a,p->value);
+        case 6: out->data.source=convert_RequestInput_source_RequestInput_source(a,p->value);
         break;
-        case 7: out->data.arm_7=convert_RequestInput_feed_RequestInput_feed(a,p->value);
+        case 7: out->data.feed=convert_RequestInput_feed_RequestInput_feed(a,p->value);
         break;
         default: a->code=THINKTHEN_COBOL_REPRESENTATION;
         break;
@@ -689,15 +689,16 @@ static void *convert_RequestQuestion_RequestQuestion(arena *a,const void *input)
     }
     out->kind=(uint32_t)p->kind;
     switch(p->kind) {
-        case 1: out->data.arm_1=convert_RequestQuestion_text_RequestQuestion_text(a,p->value);
+        case 1: out->data.text=convert_RequestQuestion_text_RequestQuestion_text(a,p->value);
         break;
-        case 2: out->data.arm_2=convert_RequestQuestion_definition_RequestQuestion_definition(a,p->value);
+        case 2: out->data.definition=convert_RequestQuestion_definition_RequestQuestion_definition(a,
+        p->value);
         break;
-        case 3: out->data.arm_3=convert_RequestQuestion_file_RequestQuestion_file(a,p->value);
+        case 3: out->data.file=convert_RequestQuestion_file_RequestQuestion_file(a,p->value);
         break;
-        case 4: out->data.arm_4=convert_RequestQuestion_name_RequestQuestion_name(a,p->value);
+        case 4: out->data.name=convert_RequestQuestion_name_RequestQuestion_name(a,p->value);
         break;
-        case 5: out->data.arm_5=convert_RequestQuestion_reference_RequestQuestion_reference(a,p->value);
+        case 5: out->data.reference=convert_RequestQuestion_reference_RequestQuestion_reference(a,p->value);
         break;
         default: a->code=THINKTHEN_COBOL_REPRESENTATION;
         break;
@@ -773,9 +774,9 @@ static void *convert_RequestBatch_RequestBatch(arena *a,const void *input) {
     }
     out->kind=(uint32_t)p->kind;
     switch(p->kind) {
-        case 1: out->data.arm_1=convert_RequestBatch_arm_1_Unsigned(a,p->value);
+        case 1: out->data.unsigned_value=convert_RequestBatch_arm_1_Unsigned(a,p->value);
         break;
-        case 2: out->data.arm_2=convert_RequestBatch_arm_2_Text(a,p->value);
+        case 2: out->data.text=convert_RequestBatch_arm_2_Text(a,p->value);
         break;
         default: a->code=THINKTHEN_COBOL_REPRESENTATION;
         break;
@@ -792,9 +793,9 @@ static void *convert_CacheDocument_CacheDocument(arena *a,const void *input) {
     }
     out->kind=(uint32_t)p->kind;
     switch(p->kind) {
-        case 1: out->data.arm_1=convert_CacheDocument_arm_1_Text(a,p->value);
+        case 1: out->data.text=convert_CacheDocument_arm_1_Text(a,p->value);
         break;
-        case 2: out->data.arm_2=convert_DisabledCache_DisabledCache(a,p->value);
+        case 2: out->data.disabled_cache=convert_DisabledCache_DisabledCache(a,p->value);
         break;
         default: a->code=THINKTHEN_COBOL_REPRESENTATION;
         break;
@@ -812,10 +813,10 @@ const void *input) {
     }
     out->kind=(uint32_t)p->kind;
     switch(p->kind) {
-        case 1: out->data.arm_1=convert_EngineSettings_member_max_estimated_input_tokens_total_arm_1_Unsigned(a,
+        case 1: out->data.unsigned_value=convert_EngineSettings_member_max_estimated_input_tokens_total_arm_1_Unsigned(a,
         p->value);
         break;
-        case 2: out->data.arm_2=convert_EngineSettings_member_max_estimated_input_tokens_total_arm_2_Null(a,
+        case 2: out->data.null=convert_EngineSettings_member_max_estimated_input_tokens_total_arm_2_Null(a,
         p->value);
         break;
         default: a->code=THINKTHEN_COBOL_REPRESENTATION;
@@ -845,9 +846,10 @@ const void *input) {
     }
     out->kind=(uint32_t)p->kind;
     switch(p->kind) {
-        case 1: out->data.arm_1=convert_EngineSettings_member_max_requests_arm_1_Unsigned(a,p->value);
+        case 1: out->data.unsigned_value=convert_EngineSettings_member_max_requests_arm_1_Unsigned(a,
+        p->value);
         break;
-        case 2: out->data.arm_2=convert_EngineSettings_member_max_requests_arm_2_Null(a,p->value);
+        case 2: out->data.null=convert_EngineSettings_member_max_requests_arm_2_Null(a,p->value);
         break;
         default: a->code=THINKTHEN_COBOL_REPRESENTATION;
         break;
@@ -865,9 +867,10 @@ const void *input) {
     }
     out->kind=(uint32_t)p->kind;
     switch(p->kind) {
-        case 1: out->data.arm_1=convert_EngineSettings_member_max_requests_total_arm_1_Unsigned(a,p->value);
+        case 1: out->data.unsigned_value=convert_EngineSettings_member_max_requests_total_arm_1_Unsigned(a,
+        p->value);
         break;
-        case 2: out->data.arm_2=convert_EngineSettings_member_max_requests_total_arm_2_Null(a,p->value);
+        case 2: out->data.null=convert_EngineSettings_member_max_requests_total_arm_2_Null(a,p->value);
         break;
         default: a->code=THINKTHEN_COBOL_REPRESENTATION;
         break;
@@ -1238,9 +1241,10 @@ static void *convert_RecognitionMode_RecognitionMode(arena *a,const void *input)
     }
     out->kind=(uint32_t)p->kind;
     switch(p->kind) {
-        case 1: out->data.arm_1=convert_RecognitionMode_arm_1_Literal_whole(a,p->value);
+        case 1: out->data.literal_whole=convert_RecognitionMode_arm_1_Literal_whole(a,p->value);
         break;
-        case 2: out->data.arm_2=convert_RecognitionMode_arm_2_Literal_boundary_only(a,p->value);
+        case 2: out->data.literal_boundary_only=convert_RecognitionMode_arm_2_Literal_boundary_only(a,
+        p->value);
         break;
         default: a->code=THINKTHEN_COBOL_REPRESENTATION;
         break;
@@ -1295,9 +1299,9 @@ static void *convert_RequestThreshold_RequestThreshold(arena *a,const void *inpu
     }
     out->kind=(uint32_t)p->kind;
     switch(p->kind) {
-        case 1: out->data.arm_1=convert_RequestThreshold_arm_1_Number(a,p->value);
+        case 1: out->data.number=convert_RequestThreshold_arm_1_Number(a,p->value);
         break;
-        case 2: out->data.arm_2=convert_RequestThreshold_arm_2_Text(a,p->value);
+        case 2: out->data.text=convert_RequestThreshold_arm_2_Text(a,p->value);
         break;
         default: a->code=THINKTHEN_COBOL_REPRESENTATION;
         break;
@@ -1439,9 +1443,9 @@ static void *convert_ContextSchema_ContextSchema(arena *a,const void *input) {
     }
     out->kind=(uint32_t)p->kind;
     switch(p->kind) {
-        case 1: out->data.arm_1=convert_ContextSchema_arm_1_Text(a,p->value);
+        case 1: out->data.text=convert_ContextSchema_arm_1_Text(a,p->value);
         break;
-        case 2: out->data.arm_2=convert_ContextSchema_arm_2_JsonValue_map(a,p->value);
+        case 2: out->data.json_value_map=convert_ContextSchema_arm_2_JsonValue_map(a,p->value);
         break;
         default: a->code=THINKTHEN_COBOL_REPRESENTATION;
         break;
@@ -1518,9 +1522,9 @@ static void *convert_RequestOriginal_RequestOriginal(arena *a,const void *input)
     }
     out->kind=(uint32_t)p->kind;
     switch(p->kind) {
-        case 1: out->data.arm_1=convert_RequestOriginal_text_RequestOriginal_text(a,p->value);
+        case 1: out->data.text=convert_RequestOriginal_text_RequestOriginal_text(a,p->value);
         break;
-        case 2: out->data.arm_2=convert_RequestOriginal_json_RequestOriginal_json(a,p->value);
+        case 2: out->data.json=convert_RequestOriginal_json_RequestOriginal_json(a,p->value);
         break;
         default: a->code=THINKTHEN_COBOL_REPRESENTATION;
         break;
@@ -1830,15 +1834,15 @@ static void *convert_RequestFraming_RequestFraming(arena *a,const void *input) {
     }
     out->kind=(uint32_t)p->kind;
     switch(p->kind) {
-        case 1: out->data.arm_1=convert_RequestFraming_arm_1_Literal_document(a,p->value);
+        case 1: out->data.literal_document=convert_RequestFraming_arm_1_Literal_document(a,p->value);
         break;
-        case 2: out->data.arm_2=convert_RequestFraming_arm_2_Literal_lines(a,p->value);
+        case 2: out->data.literal_lines=convert_RequestFraming_arm_2_Literal_lines(a,p->value);
         break;
-        case 3: out->data.arm_3=convert_RequestFraming_arm_3_Literal_jsonl(a,p->value);
+        case 3: out->data.literal_jsonl=convert_RequestFraming_arm_3_Literal_jsonl(a,p->value);
         break;
-        case 4: out->data.arm_4=convert_RequestFraming_arm_4_Literal_csv(a,p->value);
+        case 4: out->data.literal_csv=convert_RequestFraming_arm_4_Literal_csv(a,p->value);
         break;
-        case 5: out->data.arm_5=convert_RequestFraming_arm_5_Literal_tsv(a,p->value);
+        case 5: out->data.literal_tsv=convert_RequestFraming_arm_5_Literal_tsv(a,p->value);
         break;
         default: a->code=THINKTHEN_COBOL_REPRESENTATION;
         break;
@@ -1900,9 +1904,10 @@ static void *convert_RecognitionExample_RecognitionExample(arena *a,const void *
     }
     out->kind=(uint32_t)p->kind;
     switch(p->kind) {
-        case 1: out->data.arm_1=convert_RecognitionExample_arm_1_Text(a,p->value);
+        case 1: out->data.text=convert_RecognitionExample_arm_1_Text(a,p->value);
         break;
-        case 2: out->data.arm_2=convert_RecognitionExampleText_RecognitionExampleText(a,p->value);
+        case 2: out->data.recognition_example_text=convert_RecognitionExampleText_RecognitionExampleText(a,
+        p->value);
         break;
         default: a->code=THINKTHEN_COBOL_REPRESENTATION;
         break;
@@ -2035,28 +2040,28 @@ static void *convert_RequestDefinition_RequestDefinition(arena *a,const void *in
     }
     out->kind=(uint32_t)p->kind;
     switch(p->kind) {
-        case 1: out->data.arm_1=convert_RequestDefinition_Authored_decide_RequestDefinition_Authored_decide(a,
+        case 1: out->data.authored_decide=convert_RequestDefinition_Authored_decide_RequestDefinition_Authored_decide(a,
         p->value);
         break;
-        case 2: out->data.arm_2=convert_RequestDefinition_Authored_choose_RequestDefinition_Authored_choose(a,
+        case 2: out->data.authored_choose=convert_RequestDefinition_Authored_choose_RequestDefinition_Authored_choose(a,
         p->value);
         break;
-        case 3: out->data.arm_3=convert_RequestDefinition_Authored_tag_RequestDefinition_Authored_tag(a,
+        case 3: out->data.authored_tag=convert_RequestDefinition_Authored_tag_RequestDefinition_Authored_tag(a,
         p->value);
         break;
-        case 4: out->data.arm_4=convert_RequestDefinition_Authored_score_RequestDefinition_Authored_score(a,
+        case 4: out->data.authored_score=convert_RequestDefinition_Authored_score_RequestDefinition_Authored_score(a,
         p->value);
         break;
-        case 5: out->data.arm_5=convert_RequestDefinition_Authored_relate_RequestDefinition_Authored_relate(a,
+        case 5: out->data.authored_relate=convert_RequestDefinition_Authored_relate_RequestDefinition_Authored_relate(a,
         p->value);
         break;
-        case 6: out->data.arm_6=convert_RequestDefinition_Authored_find_RequestDefinition_Authored_find(a,
+        case 6: out->data.authored_find=convert_RequestDefinition_Authored_find_RequestDefinition_Authored_find(a,
         p->value);
         break;
-        case 7: out->data.arm_7=convert_RequestDefinition_RecognizeDefinition_RequestDefinition_RecognizeDefinition(a,
+        case 7: out->data.recognize_definition=convert_RequestDefinition_RecognizeDefinition_RequestDefinition_RecognizeDefinition(a,
         p->value);
         break;
-        case 8: out->data.arm_8=convert_RequestDefinition_AnnotateDefinition_RequestDefinition_AnnotateDefinition(a,
+        case 8: out->data.annotate_definition=convert_RequestDefinition_AnnotateDefinition_RequestDefinition_AnnotateDefinition(a,
         p->value);
         break;
         default: a->code=THINKTHEN_COBOL_REPRESENTATION;
@@ -2151,9 +2156,9 @@ static void *convert_RequestImage_RequestImage(arena *a,const void *input) {
     }
     out->kind=(uint32_t)p->kind;
     switch(p->kind) {
-        case 1: out->data.arm_1=convert_RequestImage_file_RequestImage_file(a,p->value);
+        case 1: out->data.file=convert_RequestImage_file_RequestImage_file(a,p->value);
         break;
-        case 2: out->data.arm_2=convert_RequestImage_bytes_RequestImage_bytes(a,p->value);
+        case 2: out->data.bytes=convert_RequestImage_bytes_RequestImage_bytes(a,p->value);
         break;
         default: a->code=THINKTHEN_COBOL_REPRESENTATION;
         break;
@@ -2206,9 +2211,9 @@ static void *convert_ReaderMedia_ReaderMedia(arena *a,const void *input) {
     }
     out->kind=(uint32_t)p->kind;
     switch(p->kind) {
-        case 1: out->data.arm_1=convert_ReaderMedia_arm_1_Literal_text(a,p->value);
+        case 1: out->data.literal_text=convert_ReaderMedia_arm_1_Literal_text(a,p->value);
         break;
-        case 2: out->data.arm_2=convert_ReaderMedia_arm_2_Literal_image(a,p->value);
+        case 2: out->data.literal_image=convert_ReaderMedia_arm_2_Literal_image(a,p->value);
         break;
         default: a->code=THINKTHEN_COBOL_REPRESENTATION;
         break;
@@ -2280,11 +2285,11 @@ static void *convert_SourceUnit_SourceUnit(arena *a,const void *input) {
     }
     out->kind=(uint32_t)p->kind;
     switch(p->kind) {
-        case 1: out->data.arm_1=convert_SourceUnit_arm_1_Literal_line(a,p->value);
+        case 1: out->data.literal_line=convert_SourceUnit_arm_1_Literal_line(a,p->value);
         break;
-        case 2: out->data.arm_2=convert_SourceUnit_arm_2_Literal_window(a,p->value);
+        case 2: out->data.literal_window=convert_SourceUnit_arm_2_Literal_window(a,p->value);
         break;
-        case 3: out->data.arm_3=convert_SourceUnit_arm_3_Literal_file(a,p->value);
+        case 3: out->data.literal_file=convert_SourceUnit_arm_3_Literal_file(a,p->value);
         break;
         default: a->code=THINKTHEN_COBOL_REPRESENTATION;
         break;
@@ -2746,9 +2751,9 @@ static void *convert_Authored_questionBatch_Authored_questionBatch(arena *a,cons
     }
     out->kind=(uint32_t)p->kind;
     switch(p->kind) {
-        case 1: out->data.arm_1=convert_Authored_questionBatch_arm_1_Literal_max(a,p->value);
+        case 1: out->data.literal_max=convert_Authored_questionBatch_arm_1_Literal_max(a,p->value);
         break;
-        case 2: out->data.arm_2=convert_Authored_questionBatch_arm_2_Integer(a,p->value);
+        case 2: out->data.integer=convert_Authored_questionBatch_arm_2_Integer(a,p->value);
         break;
         default: a->code=THINKTHEN_COBOL_REPRESENTATION;
         break;
@@ -2765,10 +2770,10 @@ static void *convert_Authored_inputDeclaration_Authored_inputDeclaration(arena *
     }
     out->kind=(uint32_t)p->kind;
     switch(p->kind) {
-        case 1: out->data.arm_1=convert_Authored_inputDeclaration_string_Authored_inputDeclaration_string(a,
+        case 1: out->data.string=convert_Authored_inputDeclaration_string_Authored_inputDeclaration_string(a,
         p->value);
         break;
-        case 2: out->data.arm_2=convert_Authored_inputDeclaration_object_Authored_inputDeclaration_object(a,
+        case 2: out->data.object=convert_Authored_inputDeclaration_object_Authored_inputDeclaration_object(a,
         p->value);
         break;
         default: a->code=THINKTHEN_COBOL_REPRESENTATION;
@@ -2786,11 +2791,11 @@ static void *convert_Authored_questionText_Authored_questionText(arena *a,const 
     }
     out->kind=(uint32_t)p->kind;
     switch(p->kind) {
-        case 1: out->data.arm_1=convert_Authored_questionText_arm_1_Text(a,p->value);
+        case 1: out->data.text=convert_Authored_questionText_arm_1_Text(a,p->value);
         break;
-        case 2: out->data.arm_2=convert_Authored_questionText_arm_2_JsonValue_map(a,p->value);
+        case 2: out->data.json_value_map=convert_Authored_questionText_arm_2_JsonValue_map(a,p->value);
         break;
-        case 3: out->data.arm_3=convert_Authored_questionText_arm_3_JsonValue_list(a,p->value);
+        case 3: out->data.json_value_list=convert_Authored_questionText_arm_3_JsonValue_list(a,p->value);
         break;
         default: a->code=THINKTHEN_COBOL_REPRESENTATION;
         break;
@@ -2807,13 +2812,13 @@ static void *convert_Authored_criterion_Authored_criterion(arena *a,const void *
     }
     out->kind=(uint32_t)p->kind;
     switch(p->kind) {
-        case 1: out->data.arm_1=convert_Authored_criterion_arm_1_Text(a,p->value);
+        case 1: out->data.text=convert_Authored_criterion_arm_1_Text(a,p->value);
         break;
-        case 2: out->data.arm_2=convert_Authored_criterion_arm_2_JsonValue_map(a,p->value);
+        case 2: out->data.json_value_map=convert_Authored_criterion_arm_2_JsonValue_map(a,p->value);
         break;
-        case 3: out->data.arm_3=convert_Authored_criterion_arm_3_JsonValue_list(a,p->value);
+        case 3: out->data.json_value_list=convert_Authored_criterion_arm_3_JsonValue_list(a,p->value);
         break;
-        case 4: out->data.arm_4=convert_Authored_criterion_arm_4_Null(a,p->value);
+        case 4: out->data.null=convert_Authored_criterion_arm_4_Null(a,p->value);
         break;
         default: a->code=THINKTHEN_COBOL_REPRESENTATION;
         break;
@@ -2856,9 +2861,9 @@ static void *convert_Authored_pointers_Authored_pointers(arena *a,const void *in
     }
     out->kind=(uint32_t)p->kind;
     switch(p->kind) {
-        case 1: out->data.arm_1=convert_Authored_pointers_arm_1_Text(a,p->value);
+        case 1: out->data.text=convert_Authored_pointers_arm_1_Text(a,p->value);
         break;
-        case 2: out->data.arm_2=convert_Authored_pointers_arm_2_Text_list(a,p->value);
+        case 2: out->data.text_list=convert_Authored_pointers_arm_2_Text_list(a,p->value);
         break;
         default: a->code=THINKTHEN_COBOL_REPRESENTATION;
         break;
@@ -2888,9 +2893,9 @@ static void *convert_Authored_threshold_Authored_threshold(arena *a,const void *
     }
     out->kind=(uint32_t)p->kind;
     switch(p->kind) {
-        case 1: out->data.arm_1=convert_Authored_threshold_arm_1_Number(a,p->value);
+        case 1: out->data.number=convert_Authored_threshold_arm_1_Number(a,p->value);
         break;
-        case 2: out->data.arm_2=convert_Authored_threshold_arm_2_Text(a,p->value);
+        case 2: out->data.text=convert_Authored_threshold_arm_2_Text(a,p->value);
         break;
         default: a->code=THINKTHEN_COBOL_REPRESENTATION;
         break;
@@ -2932,9 +2937,10 @@ static void *convert_Authored_options_Authored_options(arena *a,const void *inpu
     }
     out->kind=(uint32_t)p->kind;
     switch(p->kind) {
-        case 1: out->data.arm_1=convert_Authored_options_arm_1_Authored_name_list(a,p->value);
+        case 1: out->data.name_list=convert_Authored_options_arm_1_Authored_name_list(a,p->value);
         break;
-        case 2: out->data.arm_2=convert_Authored_options_arm_2_Authored_description_map(a,p->value);
+        case 2: out->data.description_map=convert_Authored_options_arm_2_Authored_description_map(a,
+        p->value);
         break;
         default: a->code=THINKTHEN_COBOL_REPRESENTATION;
         break;
@@ -2951,9 +2957,9 @@ static void *convert_Authored_cut_Authored_cut(arena *a,const void *input) {
     }
     out->kind=(uint32_t)p->kind;
     switch(p->kind) {
-        case 1: out->data.arm_1=convert_Authored_cut_arm_1_Number(a,p->value);
+        case 1: out->data.number=convert_Authored_cut_arm_1_Number(a,p->value);
         break;
-        case 2: out->data.arm_2=convert_Authored_cut_arm_2_Text(a,p->value);
+        case 2: out->data.text=convert_Authored_cut_arm_2_Text(a,p->value);
         break;
         default: a->code=THINKTHEN_COBOL_REPRESENTATION;
         break;
@@ -2982,9 +2988,10 @@ static void *convert_Authored_labels_Authored_labels(arena *a,const void *input)
     }
     out->kind=(uint32_t)p->kind;
     switch(p->kind) {
-        case 1: out->data.arm_1=convert_Authored_labels_arm_1_Authored_name_list(a,p->value);
+        case 1: out->data.name_list=convert_Authored_labels_arm_1_Authored_name_list(a,p->value);
         break;
-        case 2: out->data.arm_2=convert_Authored_labels_arm_2_Authored_description_map(a,p->value);
+        case 2: out->data.description_map=convert_Authored_labels_arm_2_Authored_description_map(a,
+        p->value);
         break;
         default: a->code=THINKTHEN_COBOL_REPRESENTATION;
         break;
@@ -3026,9 +3033,9 @@ static void *convert_Authored_levels_Authored_levels(arena *a,const void *input)
     }
     out->kind=(uint32_t)p->kind;
     switch(p->kind) {
-        case 1: out->data.arm_1=convert_Authored_levels_arm_1_Authored_name_list(a,p->value);
+        case 1: out->data.name_list=convert_Authored_levels_arm_1_Authored_name_list(a,p->value);
         break;
-        case 2: out->data.arm_2=convert_Authored_levels_arm_2_Authored_criterion_map(a,p->value);
+        case 2: out->data.criterion_map=convert_Authored_levels_arm_2_Authored_criterion_map(a,p->value);
         break;
         default: a->code=THINKTHEN_COBOL_REPRESENTATION;
         break;
@@ -3218,9 +3225,9 @@ static void *convert_ImageMedia_ImageMedia(arena *a,const void *input) {
     }
     out->kind=(uint32_t)p->kind;
     switch(p->kind) {
-        case 1: out->data.arm_1=convert_ImageMedia_arm_1_Literal_image_jpeg(a,p->value);
+        case 1: out->data.literal_image_jpeg=convert_ImageMedia_arm_1_Literal_image_jpeg(a,p->value);
         break;
-        case 2: out->data.arm_2=convert_ImageMedia_arm_2_Literal_image_png(a,p->value);
+        case 2: out->data.literal_image_png=convert_ImageMedia_arm_2_Literal_image_png(a,p->value);
         break;
         default: a->code=THINKTHEN_COBOL_REPRESENTATION;
         break;
@@ -3760,13 +3767,13 @@ static void *convert_AnnotateQuestion_AnnotateQuestion(arena *a,const void *inpu
     }
     out->kind=(uint32_t)p->kind;
     switch(p->kind) {
-        case 1: out->data.arm_1=convert_AnnotateQuestion_decide_AnnotateQuestion_decide(a,p->value);
+        case 1: out->data.decide=convert_AnnotateQuestion_decide_AnnotateQuestion_decide(a,p->value);
         break;
-        case 2: out->data.arm_2=convert_AnnotateQuestion_choose_AnnotateQuestion_choose(a,p->value);
+        case 2: out->data.choose=convert_AnnotateQuestion_choose_AnnotateQuestion_choose(a,p->value);
         break;
-        case 3: out->data.arm_3=convert_AnnotateQuestion_tag_AnnotateQuestion_tag(a,p->value);
+        case 3: out->data.tag=convert_AnnotateQuestion_tag_AnnotateQuestion_tag(a,p->value);
         break;
-        case 4: out->data.arm_4=convert_AnnotateQuestion_score_AnnotateQuestion_score(a,p->value);
+        case 4: out->data.score=convert_AnnotateQuestion_score_AnnotateQuestion_score(a,p->value);
         break;
         default: a->code=THINKTHEN_COBOL_REPRESENTATION;
         break;
@@ -3935,13 +3942,13 @@ static void *convert_Authored_description_Authored_description(arena *a,const vo
     }
     out->kind=(uint32_t)p->kind;
     switch(p->kind) {
-        case 1: out->data.arm_1=convert_Authored_description_arm_1_Text(a,p->value);
+        case 1: out->data.text=convert_Authored_description_arm_1_Text(a,p->value);
         break;
-        case 2: out->data.arm_2=convert_Authored_description_arm_2_JsonValue_map(a,p->value);
+        case 2: out->data.json_value_map=convert_Authored_description_arm_2_JsonValue_map(a,p->value);
         break;
-        case 3: out->data.arm_3=convert_Authored_description_arm_3_JsonValue_list(a,p->value);
+        case 3: out->data.json_value_list=convert_Authored_description_arm_3_JsonValue_list(a,p->value);
         break;
-        case 4: out->data.arm_4=convert_Authored_description_arm_4_Null(a,p->value);
+        case 4: out->data.null=convert_Authored_description_arm_4_Null(a,p->value);
         break;
         default: a->code=THINKTHEN_COBOL_REPRESENTATION;
         break;
@@ -4084,16 +4091,16 @@ static void *convert_Authored_inputProperty_Authored_inputProperty(arena *a,cons
     }
     out->kind=(uint32_t)p->kind;
     switch(p->kind) {
-        case 1: out->data.arm_1=convert_Authored_inputProperty_string_Authored_inputProperty_string(a,
+        case 1: out->data.string=convert_Authored_inputProperty_string_Authored_inputProperty_string(a,
         p->value);
         break;
-        case 2: out->data.arm_2=convert_Authored_inputProperty_number_Authored_inputProperty_number(a,
+        case 2: out->data.number=convert_Authored_inputProperty_number_Authored_inputProperty_number(a,
         p->value);
         break;
-        case 3: out->data.arm_3=convert_Authored_inputProperty_boolean_Authored_inputProperty_boolean(a,
+        case 3: out->data.boolean=convert_Authored_inputProperty_boolean_Authored_inputProperty_boolean(a,
         p->value);
         break;
-        case 4: out->data.arm_4=convert_Authored_inputProperty_array_Authored_inputProperty_array(a,
+        case 4: out->data.array=convert_Authored_inputProperty_array_Authored_inputProperty_array(a,
         p->value);
         break;
         default: a->code=THINKTHEN_COBOL_REPRESENTATION;

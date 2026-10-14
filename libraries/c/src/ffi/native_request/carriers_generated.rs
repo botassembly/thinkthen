@@ -37,8 +37,8 @@ pub struct thinkthen_request_engine_settings_v1 {
     pub m_usd_per_million_input: *const thinkthen_request_text_v1,
     pub m_usd_per_million_output: *const thinkthen_request_text_v1,
 }
-pub const THINKTHEN_REQUEST_CACHE_DOCUMENT_ARM_1_V1: u32 = 1;
-pub const THINKTHEN_REQUEST_CACHE_DOCUMENT_ARM_2_V1: u32 = 2;
+pub const THINKTHEN_REQUEST_CACHE_DOCUMENT_TEXT_V1: u32 = 1;
+pub const THINKTHEN_REQUEST_CACHE_DOCUMENT_DISABLED_CACHE_V1: u32 = 2;
 #[repr(C)]
 #[derive(Clone, Copy)]
 pub union thinkthen_request_cache_document_data_v1 {
@@ -61,8 +61,8 @@ pub struct thinkthen_request_cache_document_v1 {
 pub struct thinkthen_request_disabled_cache_v1 {
     pub reserved: u32,
 }
-pub const THINKTHEN_REQUEST_BATCH_ARM_1_V1: u32 = 1;
-pub const THINKTHEN_REQUEST_BATCH_ARM_2_V1: u32 = 2;
+pub const THINKTHEN_REQUEST_BATCH_UNSIGNED_VALUE_V1: u32 = 1;
+pub const THINKTHEN_REQUEST_BATCH_TEXT_V1: u32 = 2;
 #[repr(C)]
 #[derive(Clone, Copy)]
 pub union thinkthen_request_batch_data_v1 {
@@ -80,10 +80,10 @@ pub struct thinkthen_request_batch_v1 {
     pub kind: u32,
     pub data: thinkthen_request_batch_data_v1,
 }
-pub const THINKTHEN_REQUEST_READER_FAILURE_ARM_1_V1: u32 = 1;
-pub const THINKTHEN_REQUEST_READER_FAILURE_ARM_2_V1: u32 = 2;
-pub const THINKTHEN_REQUEST_READER_FAILURE_ARM_3_V1: u32 = 3;
-pub const THINKTHEN_REQUEST_READER_FAILURE_ARM_4_V1: u32 = 4;
+pub const THINKTHEN_REQUEST_READER_FAILURE_PRODUCER_V1: u32 = 1;
+pub const THINKTHEN_REQUEST_READER_FAILURE_IO_V1: u32 = 2;
+pub const THINKTHEN_REQUEST_READER_FAILURE_UTF_8_V1: u32 = 3;
+pub const THINKTHEN_REQUEST_READER_FAILURE_INVALID_INPUT_V1: u32 = 4;
 #[repr(C)]
 #[derive(Clone, Copy)]
 pub union thinkthen_request_reader_failure_data_v1 {
@@ -153,8 +153,8 @@ pub struct thinkthen_request_recognition_seed_span_v1 {
     pub m_kind: *const thinkthen_request_text_v1,
     pub m_start: *const thinkthen_request_unsigned_v1,
 }
-pub const THINKTHEN_REQUEST_ORIGINAL_ARM_1_V1: u32 = 1;
-pub const THINKTHEN_REQUEST_ORIGINAL_ARM_2_V1: u32 = 2;
+pub const THINKTHEN_REQUEST_ORIGINAL_TEXT_V1: u32 = 1;
+pub const THINKTHEN_REQUEST_ORIGINAL_JSON_V1: u32 = 2;
 #[repr(C)]
 #[derive(Clone, Copy)]
 pub union thinkthen_request_original_data_v1 {
@@ -188,8 +188,8 @@ pub struct thinkthen_request_option_schema_v1 {
     pub m_description: *const thinkthen_request_json_value_v1,
     pub m_name: *const thinkthen_request_text_v1,
 }
-pub const THINKTHEN_REQUEST_IMAGE_ARM_1_V1: u32 = 1;
-pub const THINKTHEN_REQUEST_IMAGE_ARM_2_V1: u32 = 2;
+pub const THINKTHEN_REQUEST_IMAGE_FILE_V1: u32 = 1;
+pub const THINKTHEN_REQUEST_IMAGE_BYTES_V1: u32 = 2;
 #[repr(C)]
 #[derive(Clone, Copy)]
 pub union thinkthen_request_image_data_v1 {
@@ -213,8 +213,8 @@ pub struct thinkthen_request_image_bytes_v1 {
     pub m_bytes: *const thinkthen_request_text_v1,
     pub m_media: *const thinkthen_request_image_media_v1,
 }
-pub const THINKTHEN_REQUEST_IMAGE_MEDIA_ARM_1_V1: u32 = 1;
-pub const THINKTHEN_REQUEST_IMAGE_MEDIA_ARM_2_V1: u32 = 2;
+pub const THINKTHEN_REQUEST_IMAGE_MEDIA_LITERAL_IMAGE_JPEG_V1: u32 = 1;
+pub const THINKTHEN_REQUEST_IMAGE_MEDIA_LITERAL_IMAGE_PNG_V1: u32 = 2;
 #[repr(C)]
 #[derive(Clone, Copy)]
 pub union thinkthen_request_image_media_data_v1 {
@@ -238,8 +238,8 @@ pub struct thinkthen_request_image_file_v1 {
     pub m_media: *const thinkthen_request_image_media_v1,
     pub m_path: *const thinkthen_request_text_v1,
 }
-pub const THINKTHEN_REQUEST_RECOGNITION_EXAMPLE_ARM_1_V1: u32 = 1;
-pub const THINKTHEN_REQUEST_RECOGNITION_EXAMPLE_ARM_2_V1: u32 = 2;
+pub const THINKTHEN_REQUEST_RECOGNITION_EXAMPLE_TEXT_V1: u32 = 1;
+pub const THINKTHEN_REQUEST_RECOGNITION_EXAMPLE_RECOGNITION_EXAMPLE_TEXT_V1: u32 = 2;
 #[repr(C)]
 #[derive(Clone, Copy)]
 pub union thinkthen_request_recognition_example_data_v1 {
@@ -271,8 +271,8 @@ pub struct thinkthen_request_recognition_example_entity_v1 {
     pub m_kind: *const thinkthen_request_text_v1,
     pub m_start: *const thinkthen_request_unsigned_v1,
 }
-pub const THINKTHEN_REQUEST_CONTEXT_SCHEMA_ARM_1_V1: u32 = 1;
-pub const THINKTHEN_REQUEST_CONTEXT_SCHEMA_ARM_2_V1: u32 = 2;
+pub const THINKTHEN_REQUEST_CONTEXT_SCHEMA_TEXT_V1: u32 = 1;
+pub const THINKTHEN_REQUEST_CONTEXT_SCHEMA_JSON_VALUE_MAP_V1: u32 = 2;
 #[repr(C)]
 #[derive(Clone, Copy)]
 pub union thinkthen_request_context_schema_data_v1 {
@@ -297,11 +297,11 @@ pub struct thinkthen_request_arguments_v1 {
     pub m_options: *const thinkthen_request_call_options_v1,
     pub m_question: *const thinkthen_request_question_selector_v1,
 }
-pub const THINKTHEN_REQUEST_QUESTION_SELECTOR_ARM_1_V1: u32 = 1;
-pub const THINKTHEN_REQUEST_QUESTION_SELECTOR_ARM_2_V1: u32 = 2;
-pub const THINKTHEN_REQUEST_QUESTION_SELECTOR_ARM_3_V1: u32 = 3;
-pub const THINKTHEN_REQUEST_QUESTION_SELECTOR_ARM_4_V1: u32 = 4;
-pub const THINKTHEN_REQUEST_QUESTION_SELECTOR_ARM_5_V1: u32 = 5;
+pub const THINKTHEN_REQUEST_QUESTION_SELECTOR_TEXT_V1: u32 = 1;
+pub const THINKTHEN_REQUEST_QUESTION_SELECTOR_DEFINITION_V1: u32 = 2;
+pub const THINKTHEN_REQUEST_QUESTION_SELECTOR_FILE_V1: u32 = 3;
+pub const THINKTHEN_REQUEST_QUESTION_SELECTOR_NAME_V1: u32 = 4;
+pub const THINKTHEN_REQUEST_QUESTION_SELECTOR_REFERENCE_V1: u32 = 5;
 #[repr(C)]
 #[derive(Clone, Copy)]
 pub union thinkthen_request_question_selector_data_v1 {
@@ -342,14 +342,14 @@ pub struct thinkthen_request_question_selector_file_v1 {
 pub struct thinkthen_request_question_selector_definition_v1 {
     pub m_value: *const thinkthen_request_definition_v1,
 }
-pub const THINKTHEN_REQUEST_DEFINITION_ARM_1_V1: u32 = 1;
-pub const THINKTHEN_REQUEST_DEFINITION_ARM_2_V1: u32 = 2;
-pub const THINKTHEN_REQUEST_DEFINITION_ARM_3_V1: u32 = 3;
-pub const THINKTHEN_REQUEST_DEFINITION_ARM_4_V1: u32 = 4;
-pub const THINKTHEN_REQUEST_DEFINITION_ARM_5_V1: u32 = 5;
-pub const THINKTHEN_REQUEST_DEFINITION_ARM_6_V1: u32 = 6;
-pub const THINKTHEN_REQUEST_DEFINITION_ARM_7_V1: u32 = 7;
-pub const THINKTHEN_REQUEST_DEFINITION_ARM_8_V1: u32 = 8;
+pub const THINKTHEN_REQUEST_DEFINITION_AUTHORED_DECIDE_V1: u32 = 1;
+pub const THINKTHEN_REQUEST_DEFINITION_AUTHORED_CHOOSE_V1: u32 = 2;
+pub const THINKTHEN_REQUEST_DEFINITION_AUTHORED_TAG_V1: u32 = 3;
+pub const THINKTHEN_REQUEST_DEFINITION_AUTHORED_SCORE_V1: u32 = 4;
+pub const THINKTHEN_REQUEST_DEFINITION_AUTHORED_RELATE_V1: u32 = 5;
+pub const THINKTHEN_REQUEST_DEFINITION_AUTHORED_FIND_V1: u32 = 6;
+pub const THINKTHEN_REQUEST_DEFINITION_RECOGNIZE_DEFINITION_V1: u32 = 7;
+pub const THINKTHEN_REQUEST_DEFINITION_ANNOTATE_DEFINITION_V1: u32 = 8;
 #[repr(C)]
 #[derive(Clone, Copy)]
 pub union thinkthen_request_definition_data_v1 {
@@ -381,8 +381,8 @@ pub struct thinkthen_request_definition_annotate_definition_v1 {
     pub m_questions: *const thinkthen_request_annotate_question_map_v1,
     pub m_threshold: *const thinkthen_request_threshold_v1,
 }
-pub const THINKTHEN_REQUEST_THRESHOLD_ARM_1_V1: u32 = 1;
-pub const THINKTHEN_REQUEST_THRESHOLD_ARM_2_V1: u32 = 2;
+pub const THINKTHEN_REQUEST_THRESHOLD_NUMBER_V1: u32 = 1;
+pub const THINKTHEN_REQUEST_THRESHOLD_TEXT_V1: u32 = 2;
 #[repr(C)]
 #[derive(Clone, Copy)]
 pub union thinkthen_request_threshold_data_v1 {
@@ -400,10 +400,10 @@ pub struct thinkthen_request_threshold_v1 {
     pub kind: u32,
     pub data: thinkthen_request_threshold_data_v1,
 }
-pub const THINKTHEN_REQUEST_ANNOTATE_QUESTION_ARM_1_V1: u32 = 1;
-pub const THINKTHEN_REQUEST_ANNOTATE_QUESTION_ARM_2_V1: u32 = 2;
-pub const THINKTHEN_REQUEST_ANNOTATE_QUESTION_ARM_3_V1: u32 = 3;
-pub const THINKTHEN_REQUEST_ANNOTATE_QUESTION_ARM_4_V1: u32 = 4;
+pub const THINKTHEN_REQUEST_ANNOTATE_QUESTION_DECIDE_V1: u32 = 1;
+pub const THINKTHEN_REQUEST_ANNOTATE_QUESTION_CHOOSE_V1: u32 = 2;
+pub const THINKTHEN_REQUEST_ANNOTATE_QUESTION_TAG_V1: u32 = 3;
+pub const THINKTHEN_REQUEST_ANNOTATE_QUESTION_SCORE_V1: u32 = 4;
 #[repr(C)]
 #[derive(Clone, Copy)]
 pub union thinkthen_request_annotate_question_data_v1 {
@@ -434,9 +434,9 @@ pub struct thinkthen_request_annotate_question_score_v1 {
     pub m_score: *const thinkthen_request_question_text_v1,
     pub m_wording_version: *const thinkthen_request_integer_v1,
 }
-pub const THINKTHEN_REQUEST_QUESTION_TEXT_ARM_1_V1: u32 = 1;
-pub const THINKTHEN_REQUEST_QUESTION_TEXT_ARM_2_V1: u32 = 2;
-pub const THINKTHEN_REQUEST_QUESTION_TEXT_ARM_3_V1: u32 = 3;
+pub const THINKTHEN_REQUEST_QUESTION_TEXT_TEXT_V1: u32 = 1;
+pub const THINKTHEN_REQUEST_QUESTION_TEXT_JSON_VALUE_MAP_V1: u32 = 2;
+pub const THINKTHEN_REQUEST_QUESTION_TEXT_JSON_VALUE_LIST_V1: u32 = 3;
 #[repr(C)]
 #[derive(Clone, Copy)]
 pub union thinkthen_request_question_text_data_v1 {
@@ -455,8 +455,8 @@ pub struct thinkthen_request_question_text_v1 {
     pub kind: u32,
     pub data: thinkthen_request_question_text_data_v1,
 }
-pub const THINKTHEN_REQUEST_POINTERS_ARM_1_V1: u32 = 1;
-pub const THINKTHEN_REQUEST_POINTERS_ARM_2_V1: u32 = 2;
+pub const THINKTHEN_REQUEST_POINTERS_TEXT_V1: u32 = 1;
+pub const THINKTHEN_REQUEST_POINTERS_TEXT_LIST_V1: u32 = 2;
 #[repr(C)]
 #[derive(Clone, Copy)]
 pub union thinkthen_request_pointers_data_v1 {
@@ -474,8 +474,8 @@ pub struct thinkthen_request_pointers_v1 {
     pub kind: u32,
     pub data: thinkthen_request_pointers_data_v1,
 }
-pub const THINKTHEN_REQUEST_LEVELS_ARM_1_V1: u32 = 1;
-pub const THINKTHEN_REQUEST_LEVELS_ARM_2_V1: u32 = 2;
+pub const THINKTHEN_REQUEST_LEVELS_NAME_LIST_V1: u32 = 1;
+pub const THINKTHEN_REQUEST_LEVELS_CRITERION_MAP_V1: u32 = 2;
 #[repr(C)]
 #[derive(Clone, Copy)]
 pub union thinkthen_request_levels_data_v1 {
@@ -498,10 +498,10 @@ pub struct thinkthen_request_levels_v1 {
 pub struct thinkthen_request_name_v1 {
     pub text: thinkthen_complete_utf8_v1,
 }
-pub const THINKTHEN_REQUEST_CRITERION_ARM_1_V1: u32 = 1;
-pub const THINKTHEN_REQUEST_CRITERION_ARM_2_V1: u32 = 2;
-pub const THINKTHEN_REQUEST_CRITERION_ARM_3_V1: u32 = 3;
-pub const THINKTHEN_REQUEST_CRITERION_ARM_4_V1: u32 = 4;
+pub const THINKTHEN_REQUEST_CRITERION_TEXT_V1: u32 = 1;
+pub const THINKTHEN_REQUEST_CRITERION_JSON_VALUE_MAP_V1: u32 = 2;
+pub const THINKTHEN_REQUEST_CRITERION_JSON_VALUE_LIST_V1: u32 = 3;
+pub const THINKTHEN_REQUEST_CRITERION_NULL_V1: u32 = 4;
 #[repr(C)]
 #[derive(Clone, Copy)]
 pub union thinkthen_request_criterion_data_v1 {
@@ -521,8 +521,8 @@ pub struct thinkthen_request_criterion_v1 {
     pub kind: u32,
     pub data: thinkthen_request_criterion_data_v1,
 }
-pub const THINKTHEN_REQUEST_INPUT_DECLARATION_ARM_1_V1: u32 = 1;
-pub const THINKTHEN_REQUEST_INPUT_DECLARATION_ARM_2_V1: u32 = 2;
+pub const THINKTHEN_REQUEST_INPUT_DECLARATION_STRING_V1: u32 = 1;
+pub const THINKTHEN_REQUEST_INPUT_DECLARATION_OBJECT_V1: u32 = 2;
 #[repr(C)]
 #[derive(Clone, Copy)]
 pub union thinkthen_request_input_declaration_data_v1 {
@@ -546,10 +546,10 @@ pub struct thinkthen_request_input_declaration_object_v1 {
     pub m_properties: *const thinkthen_request_input_property_map_v1,
     pub m_required: *const thinkthen_request_text_list_v1,
 }
-pub const THINKTHEN_REQUEST_INPUT_PROPERTY_ARM_1_V1: u32 = 1;
-pub const THINKTHEN_REQUEST_INPUT_PROPERTY_ARM_2_V1: u32 = 2;
-pub const THINKTHEN_REQUEST_INPUT_PROPERTY_ARM_3_V1: u32 = 3;
-pub const THINKTHEN_REQUEST_INPUT_PROPERTY_ARM_4_V1: u32 = 4;
+pub const THINKTHEN_REQUEST_INPUT_PROPERTY_STRING_V1: u32 = 1;
+pub const THINKTHEN_REQUEST_INPUT_PROPERTY_NUMBER_V1: u32 = 2;
+pub const THINKTHEN_REQUEST_INPUT_PROPERTY_BOOLEAN_V1: u32 = 3;
+pub const THINKTHEN_REQUEST_INPUT_PROPERTY_ARRAY_V1: u32 = 4;
 #[repr(C)]
 #[derive(Clone, Copy)]
 pub union thinkthen_request_input_property_data_v1 {
@@ -606,8 +606,8 @@ pub struct thinkthen_request_annotate_question_tag_v1 {
     pub m_threshold: *const thinkthen_request_cut_v1,
     pub m_wording_version: *const thinkthen_request_integer_v1,
 }
-pub const THINKTHEN_REQUEST_CUT_ARM_1_V1: u32 = 1;
-pub const THINKTHEN_REQUEST_CUT_ARM_2_V1: u32 = 2;
+pub const THINKTHEN_REQUEST_CUT_NUMBER_V1: u32 = 1;
+pub const THINKTHEN_REQUEST_CUT_TEXT_V1: u32 = 2;
 #[repr(C)]
 #[derive(Clone, Copy)]
 pub union thinkthen_request_cut_data_v1 {
@@ -625,8 +625,8 @@ pub struct thinkthen_request_cut_v1 {
     pub kind: u32,
     pub data: thinkthen_request_cut_data_v1,
 }
-pub const THINKTHEN_REQUEST_LABELS_ARM_1_V1: u32 = 1;
-pub const THINKTHEN_REQUEST_LABELS_ARM_2_V1: u32 = 2;
+pub const THINKTHEN_REQUEST_LABELS_NAME_LIST_V1: u32 = 1;
+pub const THINKTHEN_REQUEST_LABELS_DESCRIPTION_MAP_V1: u32 = 2;
 #[repr(C)]
 #[derive(Clone, Copy)]
 pub union thinkthen_request_labels_data_v1 {
@@ -644,10 +644,10 @@ pub struct thinkthen_request_labels_v1 {
     pub kind: u32,
     pub data: thinkthen_request_labels_data_v1,
 }
-pub const THINKTHEN_REQUEST_DESCRIPTION_ARM_1_V1: u32 = 1;
-pub const THINKTHEN_REQUEST_DESCRIPTION_ARM_2_V1: u32 = 2;
-pub const THINKTHEN_REQUEST_DESCRIPTION_ARM_3_V1: u32 = 3;
-pub const THINKTHEN_REQUEST_DESCRIPTION_ARM_4_V1: u32 = 4;
+pub const THINKTHEN_REQUEST_DESCRIPTION_TEXT_V1: u32 = 1;
+pub const THINKTHEN_REQUEST_DESCRIPTION_JSON_VALUE_MAP_V1: u32 = 2;
+pub const THINKTHEN_REQUEST_DESCRIPTION_JSON_VALUE_LIST_V1: u32 = 3;
+pub const THINKTHEN_REQUEST_DESCRIPTION_NULL_V1: u32 = 4;
 #[repr(C)]
 #[derive(Clone, Copy)]
 pub union thinkthen_request_description_data_v1 {
@@ -679,8 +679,8 @@ pub struct thinkthen_request_annotate_question_choose_v1 {
     pub m_threshold: *const thinkthen_request_cut_v1,
     pub m_wording_version: *const thinkthen_request_integer_v1,
 }
-pub const THINKTHEN_REQUEST_OPTIONS_ARM_1_V1: u32 = 1;
-pub const THINKTHEN_REQUEST_OPTIONS_ARM_2_V1: u32 = 2;
+pub const THINKTHEN_REQUEST_OPTIONS_NAME_LIST_V1: u32 = 1;
+pub const THINKTHEN_REQUEST_OPTIONS_DESCRIPTION_MAP_V1: u32 = 2;
 #[repr(C)]
 #[derive(Clone, Copy)]
 pub union thinkthen_request_options_data_v1 {
@@ -758,8 +758,8 @@ pub struct thinkthen_request_relation_v1 {
     pub m_source: *const thinkthen_request_name_v1,
     pub m_target: *const thinkthen_request_name_v1,
 }
-pub const THINKTHEN_REQUEST_RECOGNITION_MODE_ARM_1_V1: u32 = 1;
-pub const THINKTHEN_REQUEST_RECOGNITION_MODE_ARM_2_V1: u32 = 2;
+pub const THINKTHEN_REQUEST_RECOGNITION_MODE_LITERAL_WHOLE_V1: u32 = 1;
+pub const THINKTHEN_REQUEST_RECOGNITION_MODE_LITERAL_BOUNDARY_ONLY_V1: u32 = 2;
 #[repr(C)]
 #[derive(Clone, Copy)]
 pub union thinkthen_request_recognition_mode_data_v1 {
@@ -827,8 +827,8 @@ pub struct thinkthen_request_definition_authored_score_v1 {
     pub m_score: *const thinkthen_request_question_text_v1,
     pub m_wording_version: *const thinkthen_request_integer_v1,
 }
-pub const THINKTHEN_REQUEST_QUESTION_BATCH_ARM_1_V1: u32 = 1;
-pub const THINKTHEN_REQUEST_QUESTION_BATCH_ARM_2_V1: u32 = 2;
+pub const THINKTHEN_REQUEST_QUESTION_BATCH_LITERAL_MAX_V1: u32 = 1;
+pub const THINKTHEN_REQUEST_QUESTION_BATCH_INTEGER_V1: u32 = 2;
 #[repr(C)]
 #[derive(Clone, Copy)]
 pub union thinkthen_request_question_batch_data_v1 {
@@ -923,8 +923,8 @@ pub struct thinkthen_request_call_options_v1 {
     pub m_threshold: *const thinkthen_request_call_threshold_v1,
     pub m_top: *const thinkthen_request_unsigned_v1,
 }
-pub const THINKTHEN_REQUEST_CALL_THRESHOLD_ARM_1_V1: u32 = 1;
-pub const THINKTHEN_REQUEST_CALL_THRESHOLD_ARM_2_V1: u32 = 2;
+pub const THINKTHEN_REQUEST_CALL_THRESHOLD_NUMBER_V1: u32 = 1;
+pub const THINKTHEN_REQUEST_CALL_THRESHOLD_TEXT_V1: u32 = 2;
 #[repr(C)]
 #[derive(Clone, Copy)]
 pub union thinkthen_request_call_threshold_data_v1 {
@@ -942,13 +942,13 @@ pub struct thinkthen_request_call_threshold_v1 {
     pub kind: u32,
     pub data: thinkthen_request_call_threshold_data_v1,
 }
-pub const THINKTHEN_REQUEST_INPUT_ARM_1_V1: u32 = 1;
-pub const THINKTHEN_REQUEST_INPUT_ARM_2_V1: u32 = 2;
-pub const THINKTHEN_REQUEST_INPUT_ARM_3_V1: u32 = 3;
-pub const THINKTHEN_REQUEST_INPUT_ARM_4_V1: u32 = 4;
-pub const THINKTHEN_REQUEST_INPUT_ARM_5_V1: u32 = 5;
-pub const THINKTHEN_REQUEST_INPUT_ARM_6_V1: u32 = 6;
-pub const THINKTHEN_REQUEST_INPUT_ARM_7_V1: u32 = 7;
+pub const THINKTHEN_REQUEST_INPUT_TEXT_V1: u32 = 1;
+pub const THINKTHEN_REQUEST_INPUT_JSON_V1: u32 = 2;
+pub const THINKTHEN_REQUEST_INPUT_RECORDS_V1: u32 = 3;
+pub const THINKTHEN_REQUEST_INPUT_UNITS_V1: u32 = 4;
+pub const THINKTHEN_REQUEST_INPUT_ENTITIES_V1: u32 = 5;
+pub const THINKTHEN_REQUEST_INPUT_SOURCE_V1: u32 = 6;
+pub const THINKTHEN_REQUEST_INPUT_FEED_V1: u32 = 7;
 #[repr(C)]
 #[derive(Clone, Copy)]
 pub union thinkthen_request_input_data_v1 {
@@ -985,9 +985,9 @@ pub struct thinkthen_request_reader_v1 {
     pub m_unit: *const thinkthen_request_source_unit_v1,
     pub m_window: *const thinkthen_request_unsigned_v1,
 }
-pub const THINKTHEN_REQUEST_SOURCE_UNIT_ARM_1_V1: u32 = 1;
-pub const THINKTHEN_REQUEST_SOURCE_UNIT_ARM_2_V1: u32 = 2;
-pub const THINKTHEN_REQUEST_SOURCE_UNIT_ARM_3_V1: u32 = 3;
+pub const THINKTHEN_REQUEST_SOURCE_UNIT_LITERAL_LINE_V1: u32 = 1;
+pub const THINKTHEN_REQUEST_SOURCE_UNIT_LITERAL_WINDOW_V1: u32 = 2;
+pub const THINKTHEN_REQUEST_SOURCE_UNIT_LITERAL_FILE_V1: u32 = 3;
 #[repr(C)]
 #[derive(Clone, Copy)]
 pub union thinkthen_request_source_unit_data_v1 {
@@ -1006,11 +1006,11 @@ pub struct thinkthen_request_source_unit_v1 {
     pub kind: u32,
     pub data: thinkthen_request_source_unit_data_v1,
 }
-pub const THINKTHEN_REQUEST_FRAMING_ARM_1_V1: u32 = 1;
-pub const THINKTHEN_REQUEST_FRAMING_ARM_2_V1: u32 = 2;
-pub const THINKTHEN_REQUEST_FRAMING_ARM_3_V1: u32 = 3;
-pub const THINKTHEN_REQUEST_FRAMING_ARM_4_V1: u32 = 4;
-pub const THINKTHEN_REQUEST_FRAMING_ARM_5_V1: u32 = 5;
+pub const THINKTHEN_REQUEST_FRAMING_LITERAL_DOCUMENT_V1: u32 = 1;
+pub const THINKTHEN_REQUEST_FRAMING_LITERAL_LINES_V1: u32 = 2;
+pub const THINKTHEN_REQUEST_FRAMING_LITERAL_JSONL_V1: u32 = 3;
+pub const THINKTHEN_REQUEST_FRAMING_LITERAL_CSV_V1: u32 = 4;
+pub const THINKTHEN_REQUEST_FRAMING_LITERAL_TSV_V1: u32 = 5;
 #[repr(C)]
 #[derive(Clone, Copy)]
 pub union thinkthen_request_framing_data_v1 {
@@ -1044,8 +1044,8 @@ pub struct thinkthen_request_source_v1 {
     pub m_paths: *const thinkthen_request_text_list_v1,
     pub m_reading: *const thinkthen_request_reader_v1,
 }
-pub const THINKTHEN_REQUEST_READER_MEDIA_ARM_1_V1: u32 = 1;
-pub const THINKTHEN_REQUEST_READER_MEDIA_ARM_2_V1: u32 = 2;
+pub const THINKTHEN_REQUEST_READER_MEDIA_LITERAL_TEXT_V1: u32 = 1;
+pub const THINKTHEN_REQUEST_READER_MEDIA_LITERAL_IMAGE_V1: u32 = 2;
 #[repr(C)]
 #[derive(Clone, Copy)]
 pub union thinkthen_request_reader_media_data_v1 {
@@ -1095,8 +1095,9 @@ pub struct thinkthen_request_input_text_v1 {
 pub struct thinkthen_request_text_v1 {
     pub text: thinkthen_complete_utf8_v1,
 }
-pub const THINKTHEN_REQUEST_ENGINE_SETTINGS_MAX_ESTIMATED_INPUT_TOKENS_TOTAL_ARM_1_V1: u32 = 1;
-pub const THINKTHEN_REQUEST_ENGINE_SETTINGS_MAX_ESTIMATED_INPUT_TOKENS_TOTAL_ARM_2_V1: u32 = 2;
+pub const THINKTHEN_REQUEST_ENGINE_SETTINGS_MAX_ESTIMATED_INPUT_TOKENS_TOTAL_UNSIGNED_VALUE_V1:
+    u32 = 1;
+pub const THINKTHEN_REQUEST_ENGINE_SETTINGS_MAX_ESTIMATED_INPUT_TOKENS_TOTAL_NULL_V1: u32 = 2;
 #[repr(C)]
 #[derive(Clone, Copy)]
 pub union thinkthen_request_engine_settings_max_estimated_input_tokens_total_data_v1 {
@@ -1121,8 +1122,8 @@ pub struct thinkthen_request_engine_settings_max_estimated_input_tokens_total_v1
 pub struct thinkthen_request_unsigned_v1 {
     pub value: u64,
 }
-pub const THINKTHEN_REQUEST_ENGINE_SETTINGS_MAX_REQUESTS_ARM_1_V1: u32 = 1;
-pub const THINKTHEN_REQUEST_ENGINE_SETTINGS_MAX_REQUESTS_ARM_2_V1: u32 = 2;
+pub const THINKTHEN_REQUEST_ENGINE_SETTINGS_MAX_REQUESTS_UNSIGNED_VALUE_V1: u32 = 1;
+pub const THINKTHEN_REQUEST_ENGINE_SETTINGS_MAX_REQUESTS_NULL_V1: u32 = 2;
 #[repr(C)]
 #[derive(Clone, Copy)]
 pub union thinkthen_request_engine_settings_max_requests_data_v1 {
@@ -1586,10 +1587,10 @@ pub(super) unsafe fn read_thinkthen_request_cache_document_v1(
         // SAFETY: nested pointers retain the caller's live counted carrier graph.
         unsafe {
             Ok(match input.kind {
-                THINKTHEN_REQUEST_CACHE_DOCUMENT_ARM_1_V1 => {
+                THINKTHEN_REQUEST_CACHE_DOCUMENT_TEXT_V1 => {
                     read_thinkthen_request_text_v1(input.data.text, context)?
                 }
-                THINKTHEN_REQUEST_CACHE_DOCUMENT_ARM_2_V1 => {
+                THINKTHEN_REQUEST_CACHE_DOCUMENT_DISABLED_CACHE_V1 => {
                     read_thinkthen_request_disabled_cache_v1(input.data.disabled_cache, context)?
                 }
                 _ => return Err(CarrierError::Invalid),
@@ -1616,10 +1617,10 @@ pub(super) unsafe fn read_thinkthen_request_batch_v1(
         // SAFETY: nested pointers retain the caller's live counted carrier graph.
         unsafe {
             Ok(match input.kind {
-                THINKTHEN_REQUEST_BATCH_ARM_1_V1 => {
+                THINKTHEN_REQUEST_BATCH_UNSIGNED_VALUE_V1 => {
                     read_thinkthen_request_unsigned_v1(input.data.unsigned_value, context)?
                 }
-                THINKTHEN_REQUEST_BATCH_ARM_2_V1 => {
+                THINKTHEN_REQUEST_BATCH_TEXT_V1 => {
                     read_thinkthen_request_text_v1(input.data.text, context)?
                 }
                 _ => return Err(CarrierError::Invalid),
@@ -1637,16 +1638,16 @@ pub(super) unsafe fn read_thinkthen_request_reader_failure_v1(
         // SAFETY: nested pointers retain the caller's live counted carrier graph.
         unsafe {
             Ok(match input.kind {
-                THINKTHEN_REQUEST_READER_FAILURE_ARM_1_V1 => {
+                THINKTHEN_REQUEST_READER_FAILURE_PRODUCER_V1 => {
                     read_thinkthen_request_reader_failure_producer_v1(input.data.producer, context)?
                 }
-                THINKTHEN_REQUEST_READER_FAILURE_ARM_2_V1 => {
+                THINKTHEN_REQUEST_READER_FAILURE_IO_V1 => {
                     read_thinkthen_request_reader_failure_io_v1(input.data.io, context)?
                 }
-                THINKTHEN_REQUEST_READER_FAILURE_ARM_3_V1 => {
+                THINKTHEN_REQUEST_READER_FAILURE_UTF_8_V1 => {
                     read_thinkthen_request_reader_failure_utf_8_v1(input.data.utf_8, context)?
                 }
-                THINKTHEN_REQUEST_READER_FAILURE_ARM_4_V1 => {
+                THINKTHEN_REQUEST_READER_FAILURE_INVALID_INPUT_V1 => {
                     read_thinkthen_request_reader_failure_invalid_input_v1(
                         input.data.invalid_input,
                         context,
@@ -1898,10 +1899,10 @@ pub(super) unsafe fn read_thinkthen_request_original_v1(
         // SAFETY: nested pointers retain the caller's live counted carrier graph.
         unsafe {
             Ok(match input.kind {
-                THINKTHEN_REQUEST_ORIGINAL_ARM_1_V1 => {
+                THINKTHEN_REQUEST_ORIGINAL_TEXT_V1 => {
                     read_thinkthen_request_original_text_v1(input.data.text, context)?
                 }
-                THINKTHEN_REQUEST_ORIGINAL_ARM_2_V1 => {
+                THINKTHEN_REQUEST_ORIGINAL_JSON_V1 => {
                     read_thinkthen_request_original_json_v1(input.data.json, context)?
                 }
                 _ => return Err(CarrierError::Invalid),
@@ -1989,10 +1990,10 @@ pub(super) unsafe fn read_thinkthen_request_image_v1(
         // SAFETY: nested pointers retain the caller's live counted carrier graph.
         unsafe {
             Ok(match input.kind {
-                THINKTHEN_REQUEST_IMAGE_ARM_1_V1 => {
+                THINKTHEN_REQUEST_IMAGE_FILE_V1 => {
                     read_thinkthen_request_image_file_v1(input.data.file, context)?
                 }
-                THINKTHEN_REQUEST_IMAGE_ARM_2_V1 => {
+                THINKTHEN_REQUEST_IMAGE_BYTES_V1 => {
                     read_thinkthen_request_image_bytes_v1(input.data.bytes, context)?
                 }
                 _ => return Err(CarrierError::Invalid),
@@ -2036,13 +2037,13 @@ pub(super) unsafe fn read_thinkthen_request_image_media_v1(
         // SAFETY: nested pointers retain the caller's live counted carrier graph.
         unsafe {
             Ok(match input.kind {
-                THINKTHEN_REQUEST_IMAGE_MEDIA_ARM_1_V1 => {
+                THINKTHEN_REQUEST_IMAGE_MEDIA_LITERAL_IMAGE_JPEG_V1 => {
                     read_thinkthen_request_literal_image_jpeg_v1(
                         input.data.literal_image_jpeg,
                         context,
                     )?
                 }
-                THINKTHEN_REQUEST_IMAGE_MEDIA_ARM_2_V1 => {
+                THINKTHEN_REQUEST_IMAGE_MEDIA_LITERAL_IMAGE_PNG_V1 => {
                     read_thinkthen_request_literal_image_png_v1(
                         input.data.literal_image_png,
                         context,
@@ -2092,10 +2093,10 @@ pub(super) unsafe fn read_thinkthen_request_recognition_example_v1(
         // SAFETY: nested pointers retain the caller's live counted carrier graph.
         unsafe {
             Ok(match input.kind {
-                THINKTHEN_REQUEST_RECOGNITION_EXAMPLE_ARM_1_V1 => {
+                THINKTHEN_REQUEST_RECOGNITION_EXAMPLE_TEXT_V1 => {
                     read_thinkthen_request_text_v1(input.data.text, context)?
                 }
-                THINKTHEN_REQUEST_RECOGNITION_EXAMPLE_ARM_2_V1 => {
+                THINKTHEN_REQUEST_RECOGNITION_EXAMPLE_RECOGNITION_EXAMPLE_TEXT_V1 => {
                     read_thinkthen_request_recognition_example_text_v1(
                         input.data.recognition_example_text,
                         context,
@@ -2180,10 +2181,10 @@ pub(super) unsafe fn read_thinkthen_request_context_schema_v1(
         // SAFETY: nested pointers retain the caller's live counted carrier graph.
         unsafe {
             Ok(match input.kind {
-                THINKTHEN_REQUEST_CONTEXT_SCHEMA_ARM_1_V1 => {
+                THINKTHEN_REQUEST_CONTEXT_SCHEMA_TEXT_V1 => {
                     read_thinkthen_request_text_v1(input.data.text, context)?
                 }
-                THINKTHEN_REQUEST_CONTEXT_SCHEMA_ARM_2_V1 => {
+                THINKTHEN_REQUEST_CONTEXT_SCHEMA_JSON_VALUE_MAP_V1 => {
                     read_thinkthen_request_json_value_map_v1(input.data.json_value_map, context)?
                 }
                 _ => return Err(CarrierError::Invalid),
@@ -2233,22 +2234,22 @@ pub(super) unsafe fn read_thinkthen_request_question_selector_v1(
         // SAFETY: nested pointers retain the caller's live counted carrier graph.
         unsafe {
             Ok(match input.kind {
-                THINKTHEN_REQUEST_QUESTION_SELECTOR_ARM_1_V1 => {
+                THINKTHEN_REQUEST_QUESTION_SELECTOR_TEXT_V1 => {
                     read_thinkthen_request_question_selector_text_v1(input.data.text, context)?
                 }
-                THINKTHEN_REQUEST_QUESTION_SELECTOR_ARM_2_V1 => {
+                THINKTHEN_REQUEST_QUESTION_SELECTOR_DEFINITION_V1 => {
                     read_thinkthen_request_question_selector_definition_v1(
                         input.data.definition,
                         context,
                     )?
                 }
-                THINKTHEN_REQUEST_QUESTION_SELECTOR_ARM_3_V1 => {
+                THINKTHEN_REQUEST_QUESTION_SELECTOR_FILE_V1 => {
                     read_thinkthen_request_question_selector_file_v1(input.data.file, context)?
                 }
-                THINKTHEN_REQUEST_QUESTION_SELECTOR_ARM_4_V1 => {
+                THINKTHEN_REQUEST_QUESTION_SELECTOR_NAME_V1 => {
                     read_thinkthen_request_question_selector_name_v1(input.data.name, context)?
                 }
-                THINKTHEN_REQUEST_QUESTION_SELECTOR_ARM_5_V1 => {
+                THINKTHEN_REQUEST_QUESTION_SELECTOR_REFERENCE_V1 => {
                     read_thinkthen_request_question_selector_reference_v1(
                         input.data.reference,
                         context,
@@ -2357,49 +2358,49 @@ pub(super) unsafe fn read_thinkthen_request_definition_v1(
         // SAFETY: nested pointers retain the caller's live counted carrier graph.
         unsafe {
             Ok(match input.kind {
-                THINKTHEN_REQUEST_DEFINITION_ARM_1_V1 => {
+                THINKTHEN_REQUEST_DEFINITION_AUTHORED_DECIDE_V1 => {
                     read_thinkthen_request_definition_authored_decide_v1(
                         input.data.authored_decide,
                         context,
                     )?
                 }
-                THINKTHEN_REQUEST_DEFINITION_ARM_2_V1 => {
+                THINKTHEN_REQUEST_DEFINITION_AUTHORED_CHOOSE_V1 => {
                     read_thinkthen_request_definition_authored_choose_v1(
                         input.data.authored_choose,
                         context,
                     )?
                 }
-                THINKTHEN_REQUEST_DEFINITION_ARM_3_V1 => {
+                THINKTHEN_REQUEST_DEFINITION_AUTHORED_TAG_V1 => {
                     read_thinkthen_request_definition_authored_tag_v1(
                         input.data.authored_tag,
                         context,
                     )?
                 }
-                THINKTHEN_REQUEST_DEFINITION_ARM_4_V1 => {
+                THINKTHEN_REQUEST_DEFINITION_AUTHORED_SCORE_V1 => {
                     read_thinkthen_request_definition_authored_score_v1(
                         input.data.authored_score,
                         context,
                     )?
                 }
-                THINKTHEN_REQUEST_DEFINITION_ARM_5_V1 => {
+                THINKTHEN_REQUEST_DEFINITION_AUTHORED_RELATE_V1 => {
                     read_thinkthen_request_definition_authored_relate_v1(
                         input.data.authored_relate,
                         context,
                     )?
                 }
-                THINKTHEN_REQUEST_DEFINITION_ARM_6_V1 => {
+                THINKTHEN_REQUEST_DEFINITION_AUTHORED_FIND_V1 => {
                     read_thinkthen_request_definition_authored_find_v1(
                         input.data.authored_find,
                         context,
                     )?
                 }
-                THINKTHEN_REQUEST_DEFINITION_ARM_7_V1 => {
+                THINKTHEN_REQUEST_DEFINITION_RECOGNIZE_DEFINITION_V1 => {
                     read_thinkthen_request_definition_recognize_definition_v1(
                         input.data.recognize_definition,
                         context,
                     )?
                 }
-                THINKTHEN_REQUEST_DEFINITION_ARM_8_V1 => {
+                THINKTHEN_REQUEST_DEFINITION_ANNOTATE_DEFINITION_V1 => {
                     read_thinkthen_request_definition_annotate_definition_v1(
                         input.data.annotate_definition,
                         context,
@@ -2466,10 +2467,10 @@ pub(super) unsafe fn read_thinkthen_request_threshold_v1(
         // SAFETY: nested pointers retain the caller's live counted carrier graph.
         unsafe {
             Ok(match input.kind {
-                THINKTHEN_REQUEST_THRESHOLD_ARM_1_V1 => {
+                THINKTHEN_REQUEST_THRESHOLD_NUMBER_V1 => {
                     read_thinkthen_request_number_v1(input.data.number, context)?
                 }
-                THINKTHEN_REQUEST_THRESHOLD_ARM_2_V1 => {
+                THINKTHEN_REQUEST_THRESHOLD_TEXT_V1 => {
                     read_thinkthen_request_text_v1(input.data.text, context)?
                 }
                 _ => return Err(CarrierError::Invalid),
@@ -2487,16 +2488,16 @@ pub(super) unsafe fn read_thinkthen_request_annotate_question_v1(
         // SAFETY: nested pointers retain the caller's live counted carrier graph.
         unsafe {
             Ok(match input.kind {
-                THINKTHEN_REQUEST_ANNOTATE_QUESTION_ARM_1_V1 => {
+                THINKTHEN_REQUEST_ANNOTATE_QUESTION_DECIDE_V1 => {
                     read_thinkthen_request_annotate_question_decide_v1(input.data.decide, context)?
                 }
-                THINKTHEN_REQUEST_ANNOTATE_QUESTION_ARM_2_V1 => {
+                THINKTHEN_REQUEST_ANNOTATE_QUESTION_CHOOSE_V1 => {
                     read_thinkthen_request_annotate_question_choose_v1(input.data.choose, context)?
                 }
-                THINKTHEN_REQUEST_ANNOTATE_QUESTION_ARM_3_V1 => {
+                THINKTHEN_REQUEST_ANNOTATE_QUESTION_TAG_V1 => {
                     read_thinkthen_request_annotate_question_tag_v1(input.data.tag, context)?
                 }
-                THINKTHEN_REQUEST_ANNOTATE_QUESTION_ARM_4_V1 => {
+                THINKTHEN_REQUEST_ANNOTATE_QUESTION_SCORE_V1 => {
                     read_thinkthen_request_annotate_question_score_v1(input.data.score, context)?
                 }
                 _ => return Err(CarrierError::Invalid),
@@ -2575,13 +2576,13 @@ pub(super) unsafe fn read_thinkthen_request_question_text_v1(
         // SAFETY: nested pointers retain the caller's live counted carrier graph.
         unsafe {
             Ok(match input.kind {
-                THINKTHEN_REQUEST_QUESTION_TEXT_ARM_1_V1 => {
+                THINKTHEN_REQUEST_QUESTION_TEXT_TEXT_V1 => {
                     read_thinkthen_request_text_v1(input.data.text, context)?
                 }
-                THINKTHEN_REQUEST_QUESTION_TEXT_ARM_2_V1 => {
+                THINKTHEN_REQUEST_QUESTION_TEXT_JSON_VALUE_MAP_V1 => {
                     read_thinkthen_request_json_value_map_v1(input.data.json_value_map, context)?
                 }
-                THINKTHEN_REQUEST_QUESTION_TEXT_ARM_3_V1 => {
+                THINKTHEN_REQUEST_QUESTION_TEXT_JSON_VALUE_LIST_V1 => {
                     read_thinkthen_request_json_value_list_v1(input.data.json_value_list, context)?
                 }
                 _ => return Err(CarrierError::Invalid),
@@ -2599,10 +2600,10 @@ pub(super) unsafe fn read_thinkthen_request_pointers_v1(
         // SAFETY: nested pointers retain the caller's live counted carrier graph.
         unsafe {
             Ok(match input.kind {
-                THINKTHEN_REQUEST_POINTERS_ARM_1_V1 => {
+                THINKTHEN_REQUEST_POINTERS_TEXT_V1 => {
                     read_thinkthen_request_text_v1(input.data.text, context)?
                 }
-                THINKTHEN_REQUEST_POINTERS_ARM_2_V1 => {
+                THINKTHEN_REQUEST_POINTERS_TEXT_LIST_V1 => {
                     read_thinkthen_request_text_list_v1(input.data.text_list, context)?
                 }
                 _ => return Err(CarrierError::Invalid),
@@ -2620,10 +2621,10 @@ pub(super) unsafe fn read_thinkthen_request_levels_v1(
         // SAFETY: nested pointers retain the caller's live counted carrier graph.
         unsafe {
             Ok(match input.kind {
-                THINKTHEN_REQUEST_LEVELS_ARM_1_V1 => {
+                THINKTHEN_REQUEST_LEVELS_NAME_LIST_V1 => {
                     read_thinkthen_request_name_list_v1(input.data.name_list, context)?
                 }
-                THINKTHEN_REQUEST_LEVELS_ARM_2_V1 => {
+                THINKTHEN_REQUEST_LEVELS_CRITERION_MAP_V1 => {
                     read_thinkthen_request_criterion_map_v1(input.data.criterion_map, context)?
                 }
                 _ => return Err(CarrierError::Invalid),
@@ -2652,16 +2653,16 @@ pub(super) unsafe fn read_thinkthen_request_criterion_v1(
         // SAFETY: nested pointers retain the caller's live counted carrier graph.
         unsafe {
             Ok(match input.kind {
-                THINKTHEN_REQUEST_CRITERION_ARM_1_V1 => {
+                THINKTHEN_REQUEST_CRITERION_TEXT_V1 => {
                     read_thinkthen_request_text_v1(input.data.text, context)?
                 }
-                THINKTHEN_REQUEST_CRITERION_ARM_2_V1 => {
+                THINKTHEN_REQUEST_CRITERION_JSON_VALUE_MAP_V1 => {
                     read_thinkthen_request_json_value_map_v1(input.data.json_value_map, context)?
                 }
-                THINKTHEN_REQUEST_CRITERION_ARM_3_V1 => {
+                THINKTHEN_REQUEST_CRITERION_JSON_VALUE_LIST_V1 => {
                     read_thinkthen_request_json_value_list_v1(input.data.json_value_list, context)?
                 }
-                THINKTHEN_REQUEST_CRITERION_ARM_4_V1 => {
+                THINKTHEN_REQUEST_CRITERION_NULL_V1 => {
                     read_thinkthen_request_null_v1(input.data.null, context)?
                 }
                 _ => return Err(CarrierError::Invalid),
@@ -2679,10 +2680,10 @@ pub(super) unsafe fn read_thinkthen_request_input_declaration_v1(
         // SAFETY: nested pointers retain the caller's live counted carrier graph.
         unsafe {
             Ok(match input.kind {
-                THINKTHEN_REQUEST_INPUT_DECLARATION_ARM_1_V1 => {
+                THINKTHEN_REQUEST_INPUT_DECLARATION_STRING_V1 => {
                     read_thinkthen_request_input_declaration_string_v1(input.data.string, context)?
                 }
-                THINKTHEN_REQUEST_INPUT_DECLARATION_ARM_2_V1 => {
+                THINKTHEN_REQUEST_INPUT_DECLARATION_OBJECT_V1 => {
                     read_thinkthen_request_input_declaration_object_v1(input.data.object, context)?
                 }
                 _ => return Err(CarrierError::Invalid),
@@ -2729,16 +2730,16 @@ pub(super) unsafe fn read_thinkthen_request_input_property_v1(
         // SAFETY: nested pointers retain the caller's live counted carrier graph.
         unsafe {
             Ok(match input.kind {
-                THINKTHEN_REQUEST_INPUT_PROPERTY_ARM_1_V1 => {
+                THINKTHEN_REQUEST_INPUT_PROPERTY_STRING_V1 => {
                     read_thinkthen_request_input_property_string_v1(input.data.string, context)?
                 }
-                THINKTHEN_REQUEST_INPUT_PROPERTY_ARM_2_V1 => {
+                THINKTHEN_REQUEST_INPUT_PROPERTY_NUMBER_V1 => {
                     read_thinkthen_request_input_property_number_v1(input.data.number, context)?
                 }
-                THINKTHEN_REQUEST_INPUT_PROPERTY_ARM_3_V1 => {
+                THINKTHEN_REQUEST_INPUT_PROPERTY_BOOLEAN_V1 => {
                     read_thinkthen_request_input_property_boolean_v1(input.data.boolean, context)?
                 }
-                THINKTHEN_REQUEST_INPUT_PROPERTY_ARM_4_V1 => {
+                THINKTHEN_REQUEST_INPUT_PROPERTY_ARRAY_V1 => {
                     read_thinkthen_request_input_property_array_v1(input.data.array, context)?
                 }
                 _ => return Err(CarrierError::Invalid),
@@ -2901,10 +2902,10 @@ pub(super) unsafe fn read_thinkthen_request_cut_v1(
         // SAFETY: nested pointers retain the caller's live counted carrier graph.
         unsafe {
             Ok(match input.kind {
-                THINKTHEN_REQUEST_CUT_ARM_1_V1 => {
+                THINKTHEN_REQUEST_CUT_NUMBER_V1 => {
                     read_thinkthen_request_number_v1(input.data.number, context)?
                 }
-                THINKTHEN_REQUEST_CUT_ARM_2_V1 => {
+                THINKTHEN_REQUEST_CUT_TEXT_V1 => {
                     read_thinkthen_request_text_v1(input.data.text, context)?
                 }
                 _ => return Err(CarrierError::Invalid),
@@ -2922,10 +2923,10 @@ pub(super) unsafe fn read_thinkthen_request_labels_v1(
         // SAFETY: nested pointers retain the caller's live counted carrier graph.
         unsafe {
             Ok(match input.kind {
-                THINKTHEN_REQUEST_LABELS_ARM_1_V1 => {
+                THINKTHEN_REQUEST_LABELS_NAME_LIST_V1 => {
                     read_thinkthen_request_name_list_v1(input.data.name_list, context)?
                 }
-                THINKTHEN_REQUEST_LABELS_ARM_2_V1 => {
+                THINKTHEN_REQUEST_LABELS_DESCRIPTION_MAP_V1 => {
                     read_thinkthen_request_description_map_v1(input.data.description_map, context)?
                 }
                 _ => return Err(CarrierError::Invalid),
@@ -2943,16 +2944,16 @@ pub(super) unsafe fn read_thinkthen_request_description_v1(
         // SAFETY: nested pointers retain the caller's live counted carrier graph.
         unsafe {
             Ok(match input.kind {
-                THINKTHEN_REQUEST_DESCRIPTION_ARM_1_V1 => {
+                THINKTHEN_REQUEST_DESCRIPTION_TEXT_V1 => {
                     read_thinkthen_request_text_v1(input.data.text, context)?
                 }
-                THINKTHEN_REQUEST_DESCRIPTION_ARM_2_V1 => {
+                THINKTHEN_REQUEST_DESCRIPTION_JSON_VALUE_MAP_V1 => {
                     read_thinkthen_request_json_value_map_v1(input.data.json_value_map, context)?
                 }
-                THINKTHEN_REQUEST_DESCRIPTION_ARM_3_V1 => {
+                THINKTHEN_REQUEST_DESCRIPTION_JSON_VALUE_LIST_V1 => {
                     read_thinkthen_request_json_value_list_v1(input.data.json_value_list, context)?
                 }
-                THINKTHEN_REQUEST_DESCRIPTION_ARM_4_V1 => {
+                THINKTHEN_REQUEST_DESCRIPTION_NULL_V1 => {
                     read_thinkthen_request_null_v1(input.data.null, context)?
                 }
                 _ => return Err(CarrierError::Invalid),
@@ -3038,10 +3039,10 @@ pub(super) unsafe fn read_thinkthen_request_options_v1(
         // SAFETY: nested pointers retain the caller's live counted carrier graph.
         unsafe {
             Ok(match input.kind {
-                THINKTHEN_REQUEST_OPTIONS_ARM_1_V1 => {
+                THINKTHEN_REQUEST_OPTIONS_NAME_LIST_V1 => {
                     read_thinkthen_request_name_list_v1(input.data.name_list, context)?
                 }
-                THINKTHEN_REQUEST_OPTIONS_ARM_2_V1 => {
+                THINKTHEN_REQUEST_OPTIONS_DESCRIPTION_MAP_V1 => {
                     read_thinkthen_request_description_map_v1(input.data.description_map, context)?
                 }
                 _ => return Err(CarrierError::Invalid),
@@ -3386,10 +3387,10 @@ pub(super) unsafe fn read_thinkthen_request_recognition_mode_v1(
         // SAFETY: nested pointers retain the caller's live counted carrier graph.
         unsafe {
             Ok(match input.kind {
-                THINKTHEN_REQUEST_RECOGNITION_MODE_ARM_1_V1 => {
+                THINKTHEN_REQUEST_RECOGNITION_MODE_LITERAL_WHOLE_V1 => {
                     read_thinkthen_request_literal_whole_v1(input.data.literal_whole, context)?
                 }
-                THINKTHEN_REQUEST_RECOGNITION_MODE_ARM_2_V1 => {
+                THINKTHEN_REQUEST_RECOGNITION_MODE_LITERAL_BOUNDARY_ONLY_V1 => {
                     read_thinkthen_request_literal_boundary_only_v1(
                         input.data.literal_boundary_only,
                         context,
@@ -3682,10 +3683,10 @@ pub(super) unsafe fn read_thinkthen_request_question_batch_v1(
         // SAFETY: nested pointers retain the caller's live counted carrier graph.
         unsafe {
             Ok(match input.kind {
-                THINKTHEN_REQUEST_QUESTION_BATCH_ARM_1_V1 => {
+                THINKTHEN_REQUEST_QUESTION_BATCH_LITERAL_MAX_V1 => {
                     read_thinkthen_request_literal_max_v1(input.data.literal_max, context)?
                 }
-                THINKTHEN_REQUEST_QUESTION_BATCH_ARM_2_V1 => {
+                THINKTHEN_REQUEST_QUESTION_BATCH_INTEGER_V1 => {
                     read_thinkthen_request_integer_v1(input.data.integer, context)?
                 }
                 _ => return Err(CarrierError::Invalid),
@@ -4169,10 +4170,10 @@ pub(super) unsafe fn read_thinkthen_request_call_threshold_v1(
         // SAFETY: nested pointers retain the caller's live counted carrier graph.
         unsafe {
             Ok(match input.kind {
-                THINKTHEN_REQUEST_CALL_THRESHOLD_ARM_1_V1 => {
+                THINKTHEN_REQUEST_CALL_THRESHOLD_NUMBER_V1 => {
                     read_thinkthen_request_number_v1(input.data.number, context)?
                 }
-                THINKTHEN_REQUEST_CALL_THRESHOLD_ARM_2_V1 => {
+                THINKTHEN_REQUEST_CALL_THRESHOLD_TEXT_V1 => {
                     read_thinkthen_request_text_v1(input.data.text, context)?
                 }
                 _ => return Err(CarrierError::Invalid),
@@ -4190,25 +4191,25 @@ pub(super) unsafe fn read_thinkthen_request_input_v1(
         // SAFETY: nested pointers retain the caller's live counted carrier graph.
         unsafe {
             Ok(match input.kind {
-                THINKTHEN_REQUEST_INPUT_ARM_1_V1 => {
+                THINKTHEN_REQUEST_INPUT_TEXT_V1 => {
                     read_thinkthen_request_input_text_v1(input.data.text, context)?
                 }
-                THINKTHEN_REQUEST_INPUT_ARM_2_V1 => {
+                THINKTHEN_REQUEST_INPUT_JSON_V1 => {
                     read_thinkthen_request_input_json_v1(input.data.json, context)?
                 }
-                THINKTHEN_REQUEST_INPUT_ARM_3_V1 => {
+                THINKTHEN_REQUEST_INPUT_RECORDS_V1 => {
                     read_thinkthen_request_input_records_v1(input.data.records, context)?
                 }
-                THINKTHEN_REQUEST_INPUT_ARM_4_V1 => {
+                THINKTHEN_REQUEST_INPUT_UNITS_V1 => {
                     read_thinkthen_request_input_units_v1(input.data.units, context)?
                 }
-                THINKTHEN_REQUEST_INPUT_ARM_5_V1 => {
+                THINKTHEN_REQUEST_INPUT_ENTITIES_V1 => {
                     read_thinkthen_request_input_entities_v1(input.data.entities, context)?
                 }
-                THINKTHEN_REQUEST_INPUT_ARM_6_V1 => {
+                THINKTHEN_REQUEST_INPUT_SOURCE_V1 => {
                     read_thinkthen_request_input_source_v1(input.data.source, context)?
                 }
-                THINKTHEN_REQUEST_INPUT_ARM_7_V1 => {
+                THINKTHEN_REQUEST_INPUT_FEED_V1 => {
                     read_thinkthen_request_input_feed_v1(input.data.feed, context)?
                 }
                 _ => return Err(CarrierError::Invalid),
@@ -4299,13 +4300,13 @@ pub(super) unsafe fn read_thinkthen_request_source_unit_v1(
         // SAFETY: nested pointers retain the caller's live counted carrier graph.
         unsafe {
             Ok(match input.kind {
-                THINKTHEN_REQUEST_SOURCE_UNIT_ARM_1_V1 => {
+                THINKTHEN_REQUEST_SOURCE_UNIT_LITERAL_LINE_V1 => {
                     read_thinkthen_request_literal_line_v1(input.data.literal_line, context)?
                 }
-                THINKTHEN_REQUEST_SOURCE_UNIT_ARM_2_V1 => {
+                THINKTHEN_REQUEST_SOURCE_UNIT_LITERAL_WINDOW_V1 => {
                     read_thinkthen_request_literal_window_v1(input.data.literal_window, context)?
                 }
-                THINKTHEN_REQUEST_SOURCE_UNIT_ARM_3_V1 => {
+                THINKTHEN_REQUEST_SOURCE_UNIT_LITERAL_FILE_V1 => {
                     read_thinkthen_request_literal_file_v1(input.data.literal_file, context)?
                 }
                 _ => return Err(CarrierError::Invalid),
@@ -4323,20 +4324,22 @@ pub(super) unsafe fn read_thinkthen_request_framing_v1(
         // SAFETY: nested pointers retain the caller's live counted carrier graph.
         unsafe {
             Ok(match input.kind {
-                THINKTHEN_REQUEST_FRAMING_ARM_1_V1 => read_thinkthen_request_literal_document_v1(
-                    input.data.literal_document,
-                    context,
-                )?,
-                THINKTHEN_REQUEST_FRAMING_ARM_2_V1 => {
+                THINKTHEN_REQUEST_FRAMING_LITERAL_DOCUMENT_V1 => {
+                    read_thinkthen_request_literal_document_v1(
+                        input.data.literal_document,
+                        context,
+                    )?
+                }
+                THINKTHEN_REQUEST_FRAMING_LITERAL_LINES_V1 => {
                     read_thinkthen_request_literal_lines_v1(input.data.literal_lines, context)?
                 }
-                THINKTHEN_REQUEST_FRAMING_ARM_3_V1 => {
+                THINKTHEN_REQUEST_FRAMING_LITERAL_JSONL_V1 => {
                     read_thinkthen_request_literal_jsonl_v1(input.data.literal_jsonl, context)?
                 }
-                THINKTHEN_REQUEST_FRAMING_ARM_4_V1 => {
+                THINKTHEN_REQUEST_FRAMING_LITERAL_CSV_V1 => {
                     read_thinkthen_request_literal_csv_v1(input.data.literal_csv, context)?
                 }
-                THINKTHEN_REQUEST_FRAMING_ARM_5_V1 => {
+                THINKTHEN_REQUEST_FRAMING_LITERAL_TSV_V1 => {
                     read_thinkthen_request_literal_tsv_v1(input.data.literal_tsv, context)?
                 }
                 _ => return Err(CarrierError::Invalid),
@@ -4416,10 +4419,10 @@ pub(super) unsafe fn read_thinkthen_request_reader_media_v1(
         // SAFETY: nested pointers retain the caller's live counted carrier graph.
         unsafe {
             Ok(match input.kind {
-                THINKTHEN_REQUEST_READER_MEDIA_ARM_1_V1 => {
+                THINKTHEN_REQUEST_READER_MEDIA_LITERAL_TEXT_V1 => {
                     read_thinkthen_request_literal_text_v1(input.data.literal_text, context)?
                 }
-                THINKTHEN_REQUEST_READER_MEDIA_ARM_2_V1 => {
+                THINKTHEN_REQUEST_READER_MEDIA_LITERAL_IMAGE_V1 => {
                     read_thinkthen_request_literal_image_v1(input.data.literal_image, context)?
                 }
                 _ => return Err(CarrierError::Invalid),
@@ -4569,19 +4572,13 @@ pub(super) unsafe fn read_thinkthen_request_engine_settings_max_estimated_input_
     // SAFETY: the caller retains every referenced aligned carrier and counted extent.
     let input = unsafe { borrow(pointer)? };
     context.enter(|context| {
-        // SAFETY: nested pointers retain the caller's live counted carrier graph.
-        unsafe {
-            Ok(match input.kind {
-                THINKTHEN_REQUEST_ENGINE_SETTINGS_MAX_ESTIMATED_INPUT_TOKENS_TOTAL_ARM_1_V1 => {
-                    read_thinkthen_request_unsigned_v1(input.data.unsigned_value, context)?
-                }
-                THINKTHEN_REQUEST_ENGINE_SETTINGS_MAX_ESTIMATED_INPUT_TOKENS_TOTAL_ARM_2_V1 => {
-                    read_thinkthen_request_null_v1(input.data.null, context)?
-                }
-                _ => return Err(CarrierError::Invalid),
-            })
-        }
-    })
+// SAFETY: nested pointers retain the caller's live counted carrier graph.
+unsafe { Ok(match input.kind {
+THINKTHEN_REQUEST_ENGINE_SETTINGS_MAX_ESTIMATED_INPUT_TOKENS_TOTAL_UNSIGNED_VALUE_V1 => read_thinkthen_request_unsigned_v1(input.data.unsigned_value, context)?,
+THINKTHEN_REQUEST_ENGINE_SETTINGS_MAX_ESTIMATED_INPUT_TOKENS_TOTAL_NULL_V1 => read_thinkthen_request_null_v1(input.data.null, context)?,
+_ => return Err(CarrierError::Invalid),
+}) }
+})
 }
 pub(super) unsafe fn read_thinkthen_request_unsigned_v1(
     pointer: *const thinkthen_request_unsigned_v1,
@@ -4601,10 +4598,10 @@ pub(super) unsafe fn read_thinkthen_request_engine_settings_max_requests_v1(
         // SAFETY: nested pointers retain the caller's live counted carrier graph.
         unsafe {
             Ok(match input.kind {
-                THINKTHEN_REQUEST_ENGINE_SETTINGS_MAX_REQUESTS_ARM_1_V1 => {
+                THINKTHEN_REQUEST_ENGINE_SETTINGS_MAX_REQUESTS_UNSIGNED_VALUE_V1 => {
                     read_thinkthen_request_unsigned_v1(input.data.unsigned_value, context)?
                 }
-                THINKTHEN_REQUEST_ENGINE_SETTINGS_MAX_REQUESTS_ARM_2_V1 => {
+                THINKTHEN_REQUEST_ENGINE_SETTINGS_MAX_REQUESTS_NULL_V1 => {
                     read_thinkthen_request_null_v1(input.data.null, context)?
                 }
                 _ => return Err(CarrierError::Invalid),

@@ -53,7 +53,7 @@ def render(definitions, names, schemas):
                 for index, value in enumerate(values):
                     child_type = name(metadata['children'][(native, native + '_arm_' + str(index + 1))])
                     pointers.add(child_type)
-                    body += [f'when {identifier(host + "_" + value)} =>', f'Result.data := (discr => {index}, arm_{index + 1} => P_{child_type} (Store_{child_type} ((reserved => 0), Storage)));']
+                    body += [f'when {identifier(host + "_" + value)} =>', f'Result.data := (discr => {index}, {metadata['arms'][(native, index + 1)]} => P_{child_type} (Store_{child_type} ((reserved => 0), Storage)));']
                 body.append('end case;')
         elif source.get('variants') or source.get('oneOf') or source.get('anyOf') or isinstance(source.get('type'), list):
             alternatives = source.get('oneOf', source.get('anyOf', []))
@@ -67,7 +67,7 @@ def render(definitions, names, schemas):
             body = ['case Value.Kind is']
             for index, (tag, alternative) in enumerate(zip(tags, alternatives)):
                 function, child_type = child(alternative, native + '_arm_' + str(index + 1), host + '_value_' + tag)
-                body += [f'when {identifier(host + "_arm_" + tag)} =>', f'Result.kind := {index + 1};', f'Result.data := (discr => {index}, arm_{index + 1} => P_{child_type} ({function} (Value.V_{index}, Storage)));']
+                body += [f'when {identifier(host + "_arm_" + tag)} =>', f'Result.kind := {index + 1};', f'Result.data := (discr => {index}, {metadata['arms'][(native, index + 1)]} => P_{child_type} ({function} (Value.V_{index}, Storage)));']
             body.append('end case;')
         elif source.get('type') == 'array' or source.get('type') == 'object':
             mapping = source['type'] == 'object'

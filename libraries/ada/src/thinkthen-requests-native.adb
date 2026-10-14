@@ -749,16 +749,16 @@ begin
 case Value.Kind is
 when T_RequestReaderFailure_arm_producer =>
 Result.kind := 1;
-Result.data := (discr => 0, arm_1 => P_thinkthen_request_reader_failure_producer_v1 (Convert_RequestReaderFailure_producer_RequestReaderFailure_producer (Value.V_0, Storage)));
+Result.data := (discr => 0, producer => P_thinkthen_request_reader_failure_producer_v1 (Convert_RequestReaderFailure_producer_RequestReaderFailure_producer (Value.V_0, Storage)));
 when T_RequestReaderFailure_arm_io =>
 Result.kind := 2;
-Result.data := (discr => 1, arm_2 => P_thinkthen_request_reader_failure_io_v1 (Convert_RequestReaderFailure_io_RequestReaderFailure_io (Value.V_1, Storage)));
+Result.data := (discr => 1, io => P_thinkthen_request_reader_failure_io_v1 (Convert_RequestReaderFailure_io_RequestReaderFailure_io (Value.V_1, Storage)));
 when T_RequestReaderFailure_arm_utf8 =>
 Result.kind := 3;
-Result.data := (discr => 2, arm_3 => P_thinkthen_request_reader_failure_utf_8_v1 (Convert_RequestReaderFailure_utf8_RequestReaderFailure_utf8 (Value.V_2, Storage)));
+Result.data := (discr => 2, utf_8 => P_thinkthen_request_reader_failure_utf_8_v1 (Convert_RequestReaderFailure_utf8_RequestReaderFailure_utf8 (Value.V_2, Storage)));
 when T_RequestReaderFailure_arm_invalid_input =>
 Result.kind := 4;
-Result.data := (discr => 3, arm_4 => P_thinkthen_request_reader_failure_invalid_input_v1 (Convert_RequestReaderFailure_invalid_input_RequestReaderFailure_invalid_input (Value.V_3, Storage)));
+Result.data := (discr => 3, invalid_input => P_thinkthen_request_reader_failure_invalid_input_v1 (Convert_RequestReaderFailure_invalid_input_RequestReaderFailure_invalid_input (Value.V_3, Storage)));
 end case;
 return Store_thinkthen_request_reader_failure_v1 (Result, Storage);
 end Convert_RequestReaderFailure_RequestReaderFailure;
@@ -792,25 +792,25 @@ begin
 case Value.Kind is
 when T_RequestInput_arm_text =>
 Result.kind := 1;
-Result.data := (discr => 0, arm_1 => P_thinkthen_request_input_text_v1 (Convert_RequestInput_text_RequestInput_text (Value.V_0, Storage)));
+Result.data := (discr => 0, text => P_thinkthen_request_input_text_v1 (Convert_RequestInput_text_RequestInput_text (Value.V_0, Storage)));
 when T_RequestInput_arm_json =>
 Result.kind := 2;
-Result.data := (discr => 1, arm_2 => P_thinkthen_request_input_json_v1 (Convert_RequestInput_json_RequestInput_json (Value.V_1, Storage)));
+Result.data := (discr => 1, json => P_thinkthen_request_input_json_v1 (Convert_RequestInput_json_RequestInput_json (Value.V_1, Storage)));
 when T_RequestInput_arm_records =>
 Result.kind := 3;
-Result.data := (discr => 2, arm_3 => P_thinkthen_request_input_records_v1 (Convert_RequestInput_records_RequestInput_records (Value.V_2, Storage)));
+Result.data := (discr => 2, records => P_thinkthen_request_input_records_v1 (Convert_RequestInput_records_RequestInput_records (Value.V_2, Storage)));
 when T_RequestInput_arm_units =>
 Result.kind := 4;
-Result.data := (discr => 3, arm_4 => P_thinkthen_request_input_units_v1 (Convert_RequestInput_units_RequestInput_units (Value.V_3, Storage)));
+Result.data := (discr => 3, units => P_thinkthen_request_input_units_v1 (Convert_RequestInput_units_RequestInput_units (Value.V_3, Storage)));
 when T_RequestInput_arm_entities =>
 Result.kind := 5;
-Result.data := (discr => 4, arm_5 => P_thinkthen_request_input_entities_v1 (Convert_RequestInput_entities_RequestInput_entities (Value.V_4, Storage)));
+Result.data := (discr => 4, entities => P_thinkthen_request_input_entities_v1 (Convert_RequestInput_entities_RequestInput_entities (Value.V_4, Storage)));
 when T_RequestInput_arm_source =>
 Result.kind := 6;
-Result.data := (discr => 5, arm_6 => P_thinkthen_request_input_source_v1 (Convert_RequestInput_source_RequestInput_source (Value.V_5, Storage)));
+Result.data := (discr => 5, source => P_thinkthen_request_input_source_v1 (Convert_RequestInput_source_RequestInput_source (Value.V_5, Storage)));
 when T_RequestInput_arm_feed =>
 Result.kind := 7;
-Result.data := (discr => 6, arm_7 => P_thinkthen_request_input_feed_v1 (Convert_RequestInput_feed_RequestInput_feed (Value.V_6, Storage)));
+Result.data := (discr => 6, feed => P_thinkthen_request_input_feed_v1 (Convert_RequestInput_feed_RequestInput_feed (Value.V_6, Storage)));
 end case;
 return Store_thinkthen_request_input_v1 (Result, Storage);
 end Convert_RequestInput_RequestInput;
@@ -847,19 +847,19 @@ begin
 case Value.Kind is
 when T_RequestQuestion_arm_text =>
 Result.kind := 1;
-Result.data := (discr => 0, arm_1 => P_thinkthen_request_question_selector_text_v1 (Convert_RequestQuestion_text_RequestQuestion_text (Value.V_0, Storage)));
+Result.data := (discr => 0, text => P_thinkthen_request_question_selector_text_v1 (Convert_RequestQuestion_text_RequestQuestion_text (Value.V_0, Storage)));
 when T_RequestQuestion_arm_definition =>
 Result.kind := 2;
-Result.data := (discr => 1, arm_2 => P_thinkthen_request_question_selector_definition_v1 (Convert_RequestQuestion_definition_RequestQuestion_definition (Value.V_1, Storage)));
+Result.data := (discr => 1, definition => P_thinkthen_request_question_selector_definition_v1 (Convert_RequestQuestion_definition_RequestQuestion_definition (Value.V_1, Storage)));
 when T_RequestQuestion_arm_file =>
 Result.kind := 3;
-Result.data := (discr => 2, arm_3 => P_thinkthen_request_question_selector_file_v1 (Convert_RequestQuestion_file_RequestQuestion_file (Value.V_2, Storage)));
+Result.data := (discr => 2, file => P_thinkthen_request_question_selector_file_v1 (Convert_RequestQuestion_file_RequestQuestion_file (Value.V_2, Storage)));
 when T_RequestQuestion_arm_name =>
 Result.kind := 4;
-Result.data := (discr => 3, arm_4 => P_thinkthen_request_question_selector_name_v1 (Convert_RequestQuestion_name_RequestQuestion_name (Value.V_3, Storage)));
+Result.data := (discr => 3, name => P_thinkthen_request_question_selector_name_v1 (Convert_RequestQuestion_name_RequestQuestion_name (Value.V_3, Storage)));
 when T_RequestQuestion_arm_reference =>
 Result.kind := 5;
-Result.data := (discr => 4, arm_5 => P_thinkthen_request_question_selector_reference_v1 (Convert_RequestQuestion_reference_RequestQuestion_reference (Value.V_4, Storage)));
+Result.data := (discr => 4, reference => P_thinkthen_request_question_selector_reference_v1 (Convert_RequestQuestion_reference_RequestQuestion_reference (Value.V_4, Storage)));
 end case;
 return Store_thinkthen_request_question_selector_v1 (Result, Storage);
 end Convert_RequestQuestion_RequestQuestion;
@@ -925,10 +925,10 @@ begin
 case Value.Kind is
 when T_RequestBatch_arm_0 =>
 Result.kind := 1;
-Result.data := (discr => 0, arm_1 => P_thinkthen_request_unsigned_v1 (Convert_RequestBatch_value_0_Unsigned (Value.V_0, Storage)));
+Result.data := (discr => 0, unsigned_value => P_thinkthen_request_unsigned_v1 (Convert_RequestBatch_value_0_Unsigned (Value.V_0, Storage)));
 when T_RequestBatch_arm_1 =>
 Result.kind := 2;
-Result.data := (discr => 1, arm_2 => P_thinkthen_request_text_v1 (Convert_RequestBatch_value_1_Text (Value.V_1, Storage)));
+Result.data := (discr => 1, text => P_thinkthen_request_text_v1 (Convert_RequestBatch_value_1_Text (Value.V_1, Storage)));
 end case;
 return Store_thinkthen_request_batch_v1 (Result, Storage);
 end Convert_RequestBatch_RequestBatch;
@@ -938,10 +938,10 @@ begin
 case Value.Kind is
 when T_CacheDocument_arm_0 =>
 Result.kind := 1;
-Result.data := (discr => 0, arm_1 => P_thinkthen_request_text_v1 (Convert_CacheDocument_value_0_Text (Value.V_0, Storage)));
+Result.data := (discr => 0, text => P_thinkthen_request_text_v1 (Convert_CacheDocument_value_0_Text (Value.V_0, Storage)));
 when T_CacheDocument_arm_1 =>
 Result.kind := 2;
-Result.data := (discr => 1, arm_2 => P_thinkthen_request_disabled_cache_v1 (Convert_DisabledCache_DisabledCache (Value.V_1, Storage)));
+Result.data := (discr => 1, disabled_cache => P_thinkthen_request_disabled_cache_v1 (Convert_DisabledCache_DisabledCache (Value.V_1, Storage)));
 end case;
 return Store_thinkthen_request_cache_document_v1 (Result, Storage);
 end Convert_CacheDocument_CacheDocument;
@@ -951,10 +951,10 @@ begin
 case Value.Kind is
 when T_EngineSettings_field_max_estimated_input_tokens_total_arm_0 =>
 Result.kind := 1;
-Result.data := (discr => 0, arm_1 => P_thinkthen_request_unsigned_v1 (Convert_EngineSettings_field_max_estimated_input_tokens_total_value_0_Unsigned (Value.V_0, Storage)));
+Result.data := (discr => 0, unsigned_value => P_thinkthen_request_unsigned_v1 (Convert_EngineSettings_field_max_estimated_input_tokens_total_value_0_Unsigned (Value.V_0, Storage)));
 when T_EngineSettings_field_max_estimated_input_tokens_total_arm_1 =>
 Result.kind := 2;
-Result.data := (discr => 1, arm_2 => P_thinkthen_request_null_v1 (Convert_EngineSettings_field_max_estimated_input_tokens_total_value_1_Null (Value.V_1, Storage)));
+Result.data := (discr => 1, null => P_thinkthen_request_null_v1 (Convert_EngineSettings_field_max_estimated_input_tokens_total_value_1_Null (Value.V_1, Storage)));
 end case;
 return Store_thinkthen_request_engine_settings_max_estimated_input_tokens_total_v1 (Result, Storage);
 end Convert_EngineSettings_field_max_estimated_input_tokens_total_EngineSettings_max_estimated_input_tokens_total;
@@ -970,10 +970,10 @@ begin
 case Value.Kind is
 when T_EngineSettings_field_max_requests_arm_0 =>
 Result.kind := 1;
-Result.data := (discr => 0, arm_1 => P_thinkthen_request_unsigned_v1 (Convert_EngineSettings_field_max_requests_value_0_Unsigned (Value.V_0, Storage)));
+Result.data := (discr => 0, unsigned_value => P_thinkthen_request_unsigned_v1 (Convert_EngineSettings_field_max_requests_value_0_Unsigned (Value.V_0, Storage)));
 when T_EngineSettings_field_max_requests_arm_1 =>
 Result.kind := 2;
-Result.data := (discr => 1, arm_2 => P_thinkthen_request_null_v1 (Convert_EngineSettings_field_max_requests_value_1_Null (Value.V_1, Storage)));
+Result.data := (discr => 1, null => P_thinkthen_request_null_v1 (Convert_EngineSettings_field_max_requests_value_1_Null (Value.V_1, Storage)));
 end case;
 return Store_thinkthen_request_engine_settings_max_requests_v1 (Result, Storage);
 end Convert_EngineSettings_field_max_requests_EngineSettings_max_requests;
@@ -983,10 +983,10 @@ begin
 case Value.Kind is
 when T_EngineSettings_field_max_requests_total_arm_0 =>
 Result.kind := 1;
-Result.data := (discr => 0, arm_1 => P_thinkthen_request_unsigned_v1 (Convert_EngineSettings_field_max_requests_total_value_0_Unsigned (Value.V_0, Storage)));
+Result.data := (discr => 0, unsigned_value => P_thinkthen_request_unsigned_v1 (Convert_EngineSettings_field_max_requests_total_value_0_Unsigned (Value.V_0, Storage)));
 when T_EngineSettings_field_max_requests_total_arm_1 =>
 Result.kind := 2;
-Result.data := (discr => 1, arm_2 => P_thinkthen_request_null_v1 (Convert_EngineSettings_field_max_requests_total_value_1_Null (Value.V_1, Storage)));
+Result.data := (discr => 1, null => P_thinkthen_request_null_v1 (Convert_EngineSettings_field_max_requests_total_value_1_Null (Value.V_1, Storage)));
 end case;
 return Store_thinkthen_request_engine_settings_max_estimated_input_tokens_total_v1 (Result, Storage);
 end Convert_EngineSettings_field_max_requests_total_EngineSettings_max_estimated_input_tokens_total;
@@ -1189,9 +1189,9 @@ begin
 Result.kind := T_RecognitionMode'Pos (Value) + 1;
 case Value is
 when T_RecognitionMode_whole =>
-Result.data := (discr => 0, arm_1 => P_thinkthen_request_literal_whole_v1 (Store_thinkthen_request_literal_whole_v1 ((reserved => 0), Storage)));
+Result.data := (discr => 0, literal_whole => P_thinkthen_request_literal_whole_v1 (Store_thinkthen_request_literal_whole_v1 ((reserved => 0), Storage)));
 when T_RecognitionMode_boundary_only =>
-Result.data := (discr => 1, arm_2 => P_thinkthen_request_literal_boundary_only_v1 (Store_thinkthen_request_literal_boundary_only_v1 ((reserved => 0), Storage)));
+Result.data := (discr => 1, literal_boundary_only => P_thinkthen_request_literal_boundary_only_v1 (Store_thinkthen_request_literal_boundary_only_v1 ((reserved => 0), Storage)));
 end case;
 return Store_thinkthen_request_recognition_mode_v1 (Result, Storage);
 end Convert_RecognitionMode_RecognitionMode;
@@ -1219,10 +1219,10 @@ begin
 case Value.Kind is
 when T_RequestThreshold_arm_0 =>
 Result.kind := 1;
-Result.data := (discr => 0, arm_1 => P_thinkthen_request_number_v1 (Convert_RequestThreshold_value_0_Number (Value.V_0, Storage)));
+Result.data := (discr => 0, number => P_thinkthen_request_number_v1 (Convert_RequestThreshold_value_0_Number (Value.V_0, Storage)));
 when T_RequestThreshold_arm_1 =>
 Result.kind := 2;
-Result.data := (discr => 1, arm_2 => P_thinkthen_request_text_v1 (Convert_RequestThreshold_value_1_Text (Value.V_1, Storage)));
+Result.data := (discr => 1, text => P_thinkthen_request_text_v1 (Convert_RequestThreshold_value_1_Text (Value.V_1, Storage)));
 end case;
 return Store_thinkthen_request_call_threshold_v1 (Result, Storage);
 end Convert_RequestThreshold_RequestThreshold;
@@ -1304,10 +1304,10 @@ begin
 case Value.Kind is
 when T_ContextSchema_arm_0 =>
 Result.kind := 1;
-Result.data := (discr => 0, arm_1 => P_thinkthen_request_text_v1 (Convert_ContextSchema_value_0_Text (Value.V_0, Storage)));
+Result.data := (discr => 0, text => P_thinkthen_request_text_v1 (Convert_ContextSchema_value_0_Text (Value.V_0, Storage)));
 when T_ContextSchema_arm_1 =>
 Result.kind := 2;
-Result.data := (discr => 1, arm_2 => P_thinkthen_request_json_value_map_v1 (Convert_ContextSchema_value_1_JsonValue_map (Value.V_1, Storage)));
+Result.data := (discr => 1, json_value_map => P_thinkthen_request_json_value_map_v1 (Convert_ContextSchema_value_1_JsonValue_map (Value.V_1, Storage)));
 end case;
 return Store_thinkthen_request_context_schema_v1 (Result, Storage);
 end Convert_ContextSchema_ContextSchema;
@@ -1365,10 +1365,10 @@ begin
 case Value.Kind is
 when T_RequestOriginal_arm_text =>
 Result.kind := 1;
-Result.data := (discr => 0, arm_1 => P_thinkthen_request_original_text_v1 (Convert_RequestOriginal_text_RequestOriginal_text (Value.V_0, Storage)));
+Result.data := (discr => 0, text => P_thinkthen_request_original_text_v1 (Convert_RequestOriginal_text_RequestOriginal_text (Value.V_0, Storage)));
 when T_RequestOriginal_arm_json =>
 Result.kind := 2;
-Result.data := (discr => 1, arm_2 => P_thinkthen_request_original_json_v1 (Convert_RequestOriginal_json_RequestOriginal_json (Value.V_1, Storage)));
+Result.data := (discr => 1, json => P_thinkthen_request_original_json_v1 (Convert_RequestOriginal_json_RequestOriginal_json (Value.V_1, Storage)));
 end case;
 return Store_thinkthen_request_original_v1 (Result, Storage);
 end Convert_RequestOriginal_RequestOriginal;
@@ -1577,15 +1577,15 @@ begin
 Result.kind := T_RequestFraming'Pos (Value) + 1;
 case Value is
 when T_RequestFraming_document =>
-Result.data := (discr => 0, arm_1 => P_thinkthen_request_literal_document_v1 (Store_thinkthen_request_literal_document_v1 ((reserved => 0), Storage)));
+Result.data := (discr => 0, literal_document => P_thinkthen_request_literal_document_v1 (Store_thinkthen_request_literal_document_v1 ((reserved => 0), Storage)));
 when T_RequestFraming_lines =>
-Result.data := (discr => 1, arm_2 => P_thinkthen_request_literal_lines_v1 (Store_thinkthen_request_literal_lines_v1 ((reserved => 0), Storage)));
+Result.data := (discr => 1, literal_lines => P_thinkthen_request_literal_lines_v1 (Store_thinkthen_request_literal_lines_v1 ((reserved => 0), Storage)));
 when T_RequestFraming_jsonl =>
-Result.data := (discr => 2, arm_3 => P_thinkthen_request_literal_jsonl_v1 (Store_thinkthen_request_literal_jsonl_v1 ((reserved => 0), Storage)));
+Result.data := (discr => 2, literal_jsonl => P_thinkthen_request_literal_jsonl_v1 (Store_thinkthen_request_literal_jsonl_v1 ((reserved => 0), Storage)));
 when T_RequestFraming_csv =>
-Result.data := (discr => 3, arm_4 => P_thinkthen_request_literal_csv_v1 (Store_thinkthen_request_literal_csv_v1 ((reserved => 0), Storage)));
+Result.data := (discr => 3, literal_csv => P_thinkthen_request_literal_csv_v1 (Store_thinkthen_request_literal_csv_v1 ((reserved => 0), Storage)));
 when T_RequestFraming_tsv =>
-Result.data := (discr => 4, arm_5 => P_thinkthen_request_literal_tsv_v1 (Store_thinkthen_request_literal_tsv_v1 ((reserved => 0), Storage)));
+Result.data := (discr => 4, literal_tsv => P_thinkthen_request_literal_tsv_v1 (Store_thinkthen_request_literal_tsv_v1 ((reserved => 0), Storage)));
 end case;
 return Store_thinkthen_request_framing_v1 (Result, Storage);
 end Convert_RequestFraming_RequestFraming;
@@ -1624,10 +1624,10 @@ begin
 case Value.Kind is
 when T_RecognitionExample_arm_0 =>
 Result.kind := 1;
-Result.data := (discr => 0, arm_1 => P_thinkthen_request_text_v1 (Convert_RecognitionExample_value_0_Text (Value.V_0, Storage)));
+Result.data := (discr => 0, text => P_thinkthen_request_text_v1 (Convert_RecognitionExample_value_0_Text (Value.V_0, Storage)));
 when T_RecognitionExample_arm_1 =>
 Result.kind := 2;
-Result.data := (discr => 1, arm_2 => P_thinkthen_request_recognition_example_text_v1 (Convert_RecognitionExampleText_RecognitionExampleText (Value.V_1, Storage)));
+Result.data := (discr => 1, recognition_example_text => P_thinkthen_request_recognition_example_text_v1 (Convert_RecognitionExampleText_RecognitionExampleText (Value.V_1, Storage)));
 end case;
 return Store_thinkthen_request_recognition_example_v1 (Result, Storage);
 end Convert_RecognitionExample_RecognitionExample;
@@ -1687,28 +1687,28 @@ begin
 case Value.Kind is
 when T_RequestDefinition_arm_Authored_decide =>
 Result.kind := 1;
-Result.data := (discr => 0, arm_1 => P_thinkthen_request_definition_authored_decide_v1 (Convert_RequestDefinition_Authored_decide_RequestDefinition_Authored_decide (Value.V_0, Storage)));
+Result.data := (discr => 0, authored_decide => P_thinkthen_request_definition_authored_decide_v1 (Convert_RequestDefinition_Authored_decide_RequestDefinition_Authored_decide (Value.V_0, Storage)));
 when T_RequestDefinition_arm_Authored_choose =>
 Result.kind := 2;
-Result.data := (discr => 1, arm_2 => P_thinkthen_request_definition_authored_choose_v1 (Convert_RequestDefinition_Authored_choose_RequestDefinition_Authored_choose (Value.V_1, Storage)));
+Result.data := (discr => 1, authored_choose => P_thinkthen_request_definition_authored_choose_v1 (Convert_RequestDefinition_Authored_choose_RequestDefinition_Authored_choose (Value.V_1, Storage)));
 when T_RequestDefinition_arm_Authored_tag =>
 Result.kind := 3;
-Result.data := (discr => 2, arm_3 => P_thinkthen_request_definition_authored_tag_v1 (Convert_RequestDefinition_Authored_tag_RequestDefinition_Authored_tag (Value.V_2, Storage)));
+Result.data := (discr => 2, authored_tag => P_thinkthen_request_definition_authored_tag_v1 (Convert_RequestDefinition_Authored_tag_RequestDefinition_Authored_tag (Value.V_2, Storage)));
 when T_RequestDefinition_arm_Authored_score =>
 Result.kind := 4;
-Result.data := (discr => 3, arm_4 => P_thinkthen_request_definition_authored_score_v1 (Convert_RequestDefinition_Authored_score_RequestDefinition_Authored_score (Value.V_3, Storage)));
+Result.data := (discr => 3, authored_score => P_thinkthen_request_definition_authored_score_v1 (Convert_RequestDefinition_Authored_score_RequestDefinition_Authored_score (Value.V_3, Storage)));
 when T_RequestDefinition_arm_Authored_relate =>
 Result.kind := 5;
-Result.data := (discr => 4, arm_5 => P_thinkthen_request_definition_authored_relate_v1 (Convert_RequestDefinition_Authored_relate_RequestDefinition_Authored_relate (Value.V_4, Storage)));
+Result.data := (discr => 4, authored_relate => P_thinkthen_request_definition_authored_relate_v1 (Convert_RequestDefinition_Authored_relate_RequestDefinition_Authored_relate (Value.V_4, Storage)));
 when T_RequestDefinition_arm_Authored_find =>
 Result.kind := 6;
-Result.data := (discr => 5, arm_6 => P_thinkthen_request_definition_authored_find_v1 (Convert_RequestDefinition_Authored_find_RequestDefinition_Authored_find (Value.V_5, Storage)));
+Result.data := (discr => 5, authored_find => P_thinkthen_request_definition_authored_find_v1 (Convert_RequestDefinition_Authored_find_RequestDefinition_Authored_find (Value.V_5, Storage)));
 when T_RequestDefinition_arm_RecognizeDefinition =>
 Result.kind := 7;
-Result.data := (discr => 6, arm_7 => P_thinkthen_request_definition_recognize_definition_v1 (Convert_RequestDefinition_RecognizeDefinition_RequestDefinition_RecognizeDefinition (Value.V_6, Storage)));
+Result.data := (discr => 6, recognize_definition => P_thinkthen_request_definition_recognize_definition_v1 (Convert_RequestDefinition_RecognizeDefinition_RequestDefinition_RecognizeDefinition (Value.V_6, Storage)));
 when T_RequestDefinition_arm_AnnotateDefinition =>
 Result.kind := 8;
-Result.data := (discr => 7, arm_8 => P_thinkthen_request_definition_annotate_definition_v1 (Convert_RequestDefinition_AnnotateDefinition_RequestDefinition_AnnotateDefinition (Value.V_7, Storage)));
+Result.data := (discr => 7, annotate_definition => P_thinkthen_request_definition_annotate_definition_v1 (Convert_RequestDefinition_AnnotateDefinition_RequestDefinition_AnnotateDefinition (Value.V_7, Storage)));
 end case;
 return Store_thinkthen_request_definition_v1 (Result, Storage);
 end Convert_RequestDefinition_RequestDefinition;
@@ -1758,10 +1758,10 @@ begin
 case Value.Kind is
 when T_RequestImage_arm_file =>
 Result.kind := 1;
-Result.data := (discr => 0, arm_1 => P_thinkthen_request_image_file_v1 (Convert_RequestImage_file_RequestImage_file (Value.V_0, Storage)));
+Result.data := (discr => 0, file => P_thinkthen_request_image_file_v1 (Convert_RequestImage_file_RequestImage_file (Value.V_0, Storage)));
 when T_RequestImage_arm_bytes =>
 Result.kind := 2;
-Result.data := (discr => 1, arm_2 => P_thinkthen_request_image_bytes_v1 (Convert_RequestImage_bytes_RequestImage_bytes (Value.V_1, Storage)));
+Result.data := (discr => 1, bytes => P_thinkthen_request_image_bytes_v1 (Convert_RequestImage_bytes_RequestImage_bytes (Value.V_1, Storage)));
 end case;
 return Store_thinkthen_request_image_v1 (Result, Storage);
 end Convert_RequestImage_RequestImage;
@@ -1790,9 +1790,9 @@ begin
 Result.kind := T_ReaderMedia'Pos (Value) + 1;
 case Value is
 when T_ReaderMedia_text =>
-Result.data := (discr => 0, arm_1 => P_thinkthen_request_literal_text_v1 (Store_thinkthen_request_literal_text_v1 ((reserved => 0), Storage)));
+Result.data := (discr => 0, literal_text => P_thinkthen_request_literal_text_v1 (Store_thinkthen_request_literal_text_v1 ((reserved => 0), Storage)));
 when T_ReaderMedia_image =>
-Result.data := (discr => 1, arm_2 => P_thinkthen_request_literal_image_v1 (Store_thinkthen_request_literal_image_v1 ((reserved => 0), Storage)));
+Result.data := (discr => 1, literal_image => P_thinkthen_request_literal_image_v1 (Store_thinkthen_request_literal_image_v1 ((reserved => 0), Storage)));
 end case;
 return Store_thinkthen_request_reader_media_v1 (Result, Storage);
 end Convert_ReaderMedia_ReaderMedia;
@@ -1818,11 +1818,11 @@ begin
 Result.kind := T_SourceUnit'Pos (Value) + 1;
 case Value is
 when T_SourceUnit_line =>
-Result.data := (discr => 0, arm_1 => P_thinkthen_request_literal_line_v1 (Store_thinkthen_request_literal_line_v1 ((reserved => 0), Storage)));
+Result.data := (discr => 0, literal_line => P_thinkthen_request_literal_line_v1 (Store_thinkthen_request_literal_line_v1 ((reserved => 0), Storage)));
 when T_SourceUnit_window =>
-Result.data := (discr => 1, arm_2 => P_thinkthen_request_literal_window_v1 (Store_thinkthen_request_literal_window_v1 ((reserved => 0), Storage)));
+Result.data := (discr => 1, literal_window => P_thinkthen_request_literal_window_v1 (Store_thinkthen_request_literal_window_v1 ((reserved => 0), Storage)));
 when T_SourceUnit_file =>
-Result.data := (discr => 2, arm_3 => P_thinkthen_request_literal_file_v1 (Store_thinkthen_request_literal_file_v1 ((reserved => 0), Storage)));
+Result.data := (discr => 2, literal_file => P_thinkthen_request_literal_file_v1 (Store_thinkthen_request_literal_file_v1 ((reserved => 0), Storage)));
 end case;
 return Store_thinkthen_request_source_unit_v1 (Result, Storage);
 end Convert_SourceUnit_SourceUnit;
@@ -2072,10 +2072,10 @@ begin
 case Value.Kind is
 when T_Authored_questionBatch_arm_0 =>
 Result.kind := 1;
-Result.data := (discr => 0, arm_1 => P_thinkthen_request_literal_max_v1 (Convert_Authored_questionBatch_value_0_Literal_max (Value.V_0, Storage)));
+Result.data := (discr => 0, literal_max => P_thinkthen_request_literal_max_v1 (Convert_Authored_questionBatch_value_0_Literal_max (Value.V_0, Storage)));
 when T_Authored_questionBatch_arm_1 =>
 Result.kind := 2;
-Result.data := (discr => 1, arm_2 => P_thinkthen_request_integer_v1 (Convert_Authored_questionBatch_value_1_Integer (Value.V_1, Storage)));
+Result.data := (discr => 1, integer => P_thinkthen_request_integer_v1 (Convert_Authored_questionBatch_value_1_Integer (Value.V_1, Storage)));
 end case;
 return Store_thinkthen_request_question_batch_v1 (Result, Storage);
 end Convert_Authored_questionBatch_Authored_questionBatch;
@@ -2085,10 +2085,10 @@ begin
 case Value.Kind is
 when T_Authored_inputDeclaration_arm_string =>
 Result.kind := 1;
-Result.data := (discr => 0, arm_1 => P_thinkthen_request_input_declaration_string_v1 (Convert_Authored_inputDeclaration_string_Authored_inputDeclaration_string (Value.V_0, Storage)));
+Result.data := (discr => 0, string => P_thinkthen_request_input_declaration_string_v1 (Convert_Authored_inputDeclaration_string_Authored_inputDeclaration_string (Value.V_0, Storage)));
 when T_Authored_inputDeclaration_arm_object =>
 Result.kind := 2;
-Result.data := (discr => 1, arm_2 => P_thinkthen_request_input_declaration_object_v1 (Convert_Authored_inputDeclaration_object_Authored_inputDeclaration_object (Value.V_1, Storage)));
+Result.data := (discr => 1, object => P_thinkthen_request_input_declaration_object_v1 (Convert_Authored_inputDeclaration_object_Authored_inputDeclaration_object (Value.V_1, Storage)));
 end case;
 return Store_thinkthen_request_input_declaration_v1 (Result, Storage);
 end Convert_Authored_inputDeclaration_Authored_inputDeclaration;
@@ -2098,13 +2098,13 @@ begin
 case Value.Kind is
 when T_Authored_questionText_arm_0 =>
 Result.kind := 1;
-Result.data := (discr => 0, arm_1 => P_thinkthen_request_text_v1 (Convert_Authored_questionText_value_0_Text (Value.V_0, Storage)));
+Result.data := (discr => 0, text => P_thinkthen_request_text_v1 (Convert_Authored_questionText_value_0_Text (Value.V_0, Storage)));
 when T_Authored_questionText_arm_1 =>
 Result.kind := 2;
-Result.data := (discr => 1, arm_2 => P_thinkthen_request_json_value_map_v1 (Convert_Authored_questionText_value_1_JsonValue_map (Value.V_1, Storage)));
+Result.data := (discr => 1, json_value_map => P_thinkthen_request_json_value_map_v1 (Convert_Authored_questionText_value_1_JsonValue_map (Value.V_1, Storage)));
 when T_Authored_questionText_arm_2 =>
 Result.kind := 3;
-Result.data := (discr => 2, arm_3 => P_thinkthen_request_json_value_list_v1 (Convert_Authored_questionText_value_2_JsonValue_list (Value.V_2, Storage)));
+Result.data := (discr => 2, json_value_list => P_thinkthen_request_json_value_list_v1 (Convert_Authored_questionText_value_2_JsonValue_list (Value.V_2, Storage)));
 end case;
 return Store_thinkthen_request_question_text_v1 (Result, Storage);
 end Convert_Authored_questionText_Authored_questionText;
@@ -2114,16 +2114,16 @@ begin
 case Value.Kind is
 when T_Authored_criterion_arm_0 =>
 Result.kind := 1;
-Result.data := (discr => 0, arm_1 => P_thinkthen_request_text_v1 (Convert_Authored_criterion_value_0_Text (Value.V_0, Storage)));
+Result.data := (discr => 0, text => P_thinkthen_request_text_v1 (Convert_Authored_criterion_value_0_Text (Value.V_0, Storage)));
 when T_Authored_criterion_arm_1 =>
 Result.kind := 2;
-Result.data := (discr => 1, arm_2 => P_thinkthen_request_json_value_map_v1 (Convert_Authored_criterion_value_1_JsonValue_map (Value.V_1, Storage)));
+Result.data := (discr => 1, json_value_map => P_thinkthen_request_json_value_map_v1 (Convert_Authored_criterion_value_1_JsonValue_map (Value.V_1, Storage)));
 when T_Authored_criterion_arm_2 =>
 Result.kind := 3;
-Result.data := (discr => 2, arm_3 => P_thinkthen_request_json_value_list_v1 (Convert_Authored_criterion_value_2_JsonValue_list (Value.V_2, Storage)));
+Result.data := (discr => 2, json_value_list => P_thinkthen_request_json_value_list_v1 (Convert_Authored_criterion_value_2_JsonValue_list (Value.V_2, Storage)));
 when T_Authored_criterion_arm_3 =>
 Result.kind := 4;
-Result.data := (discr => 3, arm_4 => P_thinkthen_request_null_v1 (Convert_Authored_criterion_value_3_Null (Value.V_3, Storage)));
+Result.data := (discr => 3, null => P_thinkthen_request_null_v1 (Convert_Authored_criterion_value_3_Null (Value.V_3, Storage)));
 end case;
 return Store_thinkthen_request_criterion_v1 (Result, Storage);
 end Convert_Authored_criterion_Authored_criterion;
@@ -2145,10 +2145,10 @@ begin
 case Value.Kind is
 when T_Authored_pointers_arm_0 =>
 Result.kind := 1;
-Result.data := (discr => 0, arm_1 => P_thinkthen_request_text_v1 (Convert_Authored_pointers_value_0_Text (Value.V_0, Storage)));
+Result.data := (discr => 0, text => P_thinkthen_request_text_v1 (Convert_Authored_pointers_value_0_Text (Value.V_0, Storage)));
 when T_Authored_pointers_arm_1 =>
 Result.kind := 2;
-Result.data := (discr => 1, arm_2 => P_thinkthen_request_text_list_v1 (Convert_Authored_pointers_value_1_Text_list (Value.V_1, Storage)));
+Result.data := (discr => 1, text_list => P_thinkthen_request_text_list_v1 (Convert_Authored_pointers_value_1_Text_list (Value.V_1, Storage)));
 end case;
 return Store_thinkthen_request_pointers_v1 (Result, Storage);
 end Convert_Authored_pointers_Authored_pointers;
@@ -2164,10 +2164,10 @@ begin
 case Value.Kind is
 when T_Authored_threshold_arm_0 =>
 Result.kind := 1;
-Result.data := (discr => 0, arm_1 => P_thinkthen_request_number_v1 (Convert_Authored_threshold_value_0_Number (Value.V_0, Storage)));
+Result.data := (discr => 0, number => P_thinkthen_request_number_v1 (Convert_Authored_threshold_value_0_Number (Value.V_0, Storage)));
 when T_Authored_threshold_arm_1 =>
 Result.kind := 2;
-Result.data := (discr => 1, arm_2 => P_thinkthen_request_text_v1 (Convert_Authored_threshold_value_1_Text (Value.V_1, Storage)));
+Result.data := (discr => 1, text => P_thinkthen_request_text_v1 (Convert_Authored_threshold_value_1_Text (Value.V_1, Storage)));
 end case;
 return Store_thinkthen_request_threshold_v1 (Result, Storage);
 end Convert_Authored_threshold_Authored_threshold;
@@ -2189,10 +2189,10 @@ begin
 case Value.Kind is
 when T_Authored_options_arm_0 =>
 Result.kind := 1;
-Result.data := (discr => 0, arm_1 => P_thinkthen_request_name_list_v1 (Convert_Authored_options_value_0_Authored_name_list (Value.V_0, Storage)));
+Result.data := (discr => 0, name_list => P_thinkthen_request_name_list_v1 (Convert_Authored_options_value_0_Authored_name_list (Value.V_0, Storage)));
 when T_Authored_options_arm_1 =>
 Result.kind := 2;
-Result.data := (discr => 1, arm_2 => P_thinkthen_request_description_map_v1 (Convert_Authored_options_value_1_Authored_description_map (Value.V_1, Storage)));
+Result.data := (discr => 1, description_map => P_thinkthen_request_description_map_v1 (Convert_Authored_options_value_1_Authored_description_map (Value.V_1, Storage)));
 end case;
 return Store_thinkthen_request_options_v1 (Result, Storage);
 end Convert_Authored_options_Authored_options;
@@ -2202,10 +2202,10 @@ begin
 case Value.Kind is
 when T_Authored_cut_arm_0 =>
 Result.kind := 1;
-Result.data := (discr => 0, arm_1 => P_thinkthen_request_number_v1 (Convert_Authored_cut_value_0_Number (Value.V_0, Storage)));
+Result.data := (discr => 0, number => P_thinkthen_request_number_v1 (Convert_Authored_cut_value_0_Number (Value.V_0, Storage)));
 when T_Authored_cut_arm_1 =>
 Result.kind := 2;
-Result.data := (discr => 1, arm_2 => P_thinkthen_request_text_v1 (Convert_Authored_cut_value_1_Text (Value.V_1, Storage)));
+Result.data := (discr => 1, text => P_thinkthen_request_text_v1 (Convert_Authored_cut_value_1_Text (Value.V_1, Storage)));
 end case;
 return Store_thinkthen_request_cut_v1 (Result, Storage);
 end Convert_Authored_cut_Authored_cut;
@@ -2221,10 +2221,10 @@ begin
 case Value.Kind is
 when T_Authored_labels_arm_0 =>
 Result.kind := 1;
-Result.data := (discr => 0, arm_1 => P_thinkthen_request_name_list_v1 (Convert_Authored_labels_value_0_Authored_name_list (Value.V_0, Storage)));
+Result.data := (discr => 0, name_list => P_thinkthen_request_name_list_v1 (Convert_Authored_labels_value_0_Authored_name_list (Value.V_0, Storage)));
 when T_Authored_labels_arm_1 =>
 Result.kind := 2;
-Result.data := (discr => 1, arm_2 => P_thinkthen_request_description_map_v1 (Convert_Authored_labels_value_1_Authored_description_map (Value.V_1, Storage)));
+Result.data := (discr => 1, description_map => P_thinkthen_request_description_map_v1 (Convert_Authored_labels_value_1_Authored_description_map (Value.V_1, Storage)));
 end case;
 return Store_thinkthen_request_labels_v1 (Result, Storage);
 end Convert_Authored_labels_Authored_labels;
@@ -2246,10 +2246,10 @@ begin
 case Value.Kind is
 when T_Authored_levels_arm_0 =>
 Result.kind := 1;
-Result.data := (discr => 0, arm_1 => P_thinkthen_request_name_list_v1 (Convert_Authored_levels_value_0_Authored_name_list (Value.V_0, Storage)));
+Result.data := (discr => 0, name_list => P_thinkthen_request_name_list_v1 (Convert_Authored_levels_value_0_Authored_name_list (Value.V_0, Storage)));
 when T_Authored_levels_arm_1 =>
 Result.kind := 2;
-Result.data := (discr => 1, arm_2 => P_thinkthen_request_criterion_map_v1 (Convert_Authored_levels_value_1_Authored_criterion_map (Value.V_1, Storage)));
+Result.data := (discr => 1, criterion_map => P_thinkthen_request_criterion_map_v1 (Convert_Authored_levels_value_1_Authored_criterion_map (Value.V_1, Storage)));
 end case;
 return Store_thinkthen_request_levels_v1 (Result, Storage);
 end Convert_Authored_levels_Authored_levels;
@@ -2348,9 +2348,9 @@ begin
 Result.kind := T_ImageMedia'Pos (Value) + 1;
 case Value is
 when T_ImageMedia_image_jpeg =>
-Result.data := (discr => 0, arm_1 => P_thinkthen_request_literal_image_jpeg_v1 (Store_thinkthen_request_literal_image_jpeg_v1 ((reserved => 0), Storage)));
+Result.data := (discr => 0, literal_image_jpeg => P_thinkthen_request_literal_image_jpeg_v1 (Store_thinkthen_request_literal_image_jpeg_v1 ((reserved => 0), Storage)));
 when T_ImageMedia_image_png =>
-Result.data := (discr => 1, arm_2 => P_thinkthen_request_literal_image_png_v1 (Store_thinkthen_request_literal_image_png_v1 ((reserved => 0), Storage)));
+Result.data := (discr => 1, literal_image_png => P_thinkthen_request_literal_image_png_v1 (Store_thinkthen_request_literal_image_png_v1 ((reserved => 0), Storage)));
 end case;
 return Store_thinkthen_request_image_media_v1 (Result, Storage);
 end Convert_ImageMedia_ImageMedia;
@@ -2699,16 +2699,16 @@ begin
 case Value.Kind is
 when T_AnnotateQuestion_arm_decide =>
 Result.kind := 1;
-Result.data := (discr => 0, arm_1 => P_thinkthen_request_annotate_question_decide_v1 (Convert_AnnotateQuestion_decide_AnnotateQuestion_decide (Value.V_0, Storage)));
+Result.data := (discr => 0, decide => P_thinkthen_request_annotate_question_decide_v1 (Convert_AnnotateQuestion_decide_AnnotateQuestion_decide (Value.V_0, Storage)));
 when T_AnnotateQuestion_arm_choose =>
 Result.kind := 2;
-Result.data := (discr => 1, arm_2 => P_thinkthen_request_annotate_question_choose_v1 (Convert_AnnotateQuestion_choose_AnnotateQuestion_choose (Value.V_1, Storage)));
+Result.data := (discr => 1, choose => P_thinkthen_request_annotate_question_choose_v1 (Convert_AnnotateQuestion_choose_AnnotateQuestion_choose (Value.V_1, Storage)));
 when T_AnnotateQuestion_arm_tag =>
 Result.kind := 3;
-Result.data := (discr => 2, arm_3 => P_thinkthen_request_annotate_question_tag_v1 (Convert_AnnotateQuestion_tag_AnnotateQuestion_tag (Value.V_2, Storage)));
+Result.data := (discr => 2, tag => P_thinkthen_request_annotate_question_tag_v1 (Convert_AnnotateQuestion_tag_AnnotateQuestion_tag (Value.V_2, Storage)));
 when T_AnnotateQuestion_arm_score =>
 Result.kind := 4;
-Result.data := (discr => 3, arm_4 => P_thinkthen_request_annotate_question_score_v1 (Convert_AnnotateQuestion_score_AnnotateQuestion_score (Value.V_3, Storage)));
+Result.data := (discr => 3, score => P_thinkthen_request_annotate_question_score_v1 (Convert_AnnotateQuestion_score_AnnotateQuestion_score (Value.V_3, Storage)));
 end case;
 return Store_thinkthen_request_annotate_question_v1 (Result, Storage);
 end Convert_AnnotateQuestion_AnnotateQuestion;
@@ -2798,16 +2798,16 @@ begin
 case Value.Kind is
 when T_Authored_description_arm_0 =>
 Result.kind := 1;
-Result.data := (discr => 0, arm_1 => P_thinkthen_request_text_v1 (Convert_Authored_description_value_0_Text (Value.V_0, Storage)));
+Result.data := (discr => 0, text => P_thinkthen_request_text_v1 (Convert_Authored_description_value_0_Text (Value.V_0, Storage)));
 when T_Authored_description_arm_1 =>
 Result.kind := 2;
-Result.data := (discr => 1, arm_2 => P_thinkthen_request_json_value_map_v1 (Convert_Authored_description_value_1_JsonValue_map (Value.V_1, Storage)));
+Result.data := (discr => 1, json_value_map => P_thinkthen_request_json_value_map_v1 (Convert_Authored_description_value_1_JsonValue_map (Value.V_1, Storage)));
 when T_Authored_description_arm_2 =>
 Result.kind := 3;
-Result.data := (discr => 2, arm_3 => P_thinkthen_request_json_value_list_v1 (Convert_Authored_description_value_2_JsonValue_list (Value.V_2, Storage)));
+Result.data := (discr => 2, json_value_list => P_thinkthen_request_json_value_list_v1 (Convert_Authored_description_value_2_JsonValue_list (Value.V_2, Storage)));
 when T_Authored_description_arm_3 =>
 Result.kind := 4;
-Result.data := (discr => 3, arm_4 => P_thinkthen_request_null_v1 (Convert_Authored_description_value_3_Null (Value.V_3, Storage)));
+Result.data := (discr => 3, null => P_thinkthen_request_null_v1 (Convert_Authored_description_value_3_Null (Value.V_3, Storage)));
 end case;
 return Store_thinkthen_request_description_v1 (Result, Storage);
 end Convert_Authored_description_Authored_description;
@@ -2892,16 +2892,16 @@ begin
 case Value.Kind is
 when T_Authored_inputProperty_arm_string =>
 Result.kind := 1;
-Result.data := (discr => 0, arm_1 => P_thinkthen_request_input_property_string_v1 (Convert_Authored_inputProperty_string_Authored_inputProperty_string (Value.V_0, Storage)));
+Result.data := (discr => 0, string => P_thinkthen_request_input_property_string_v1 (Convert_Authored_inputProperty_string_Authored_inputProperty_string (Value.V_0, Storage)));
 when T_Authored_inputProperty_arm_number =>
 Result.kind := 2;
-Result.data := (discr => 1, arm_2 => P_thinkthen_request_input_property_number_v1 (Convert_Authored_inputProperty_number_Authored_inputProperty_number (Value.V_1, Storage)));
+Result.data := (discr => 1, number => P_thinkthen_request_input_property_number_v1 (Convert_Authored_inputProperty_number_Authored_inputProperty_number (Value.V_1, Storage)));
 when T_Authored_inputProperty_arm_boolean =>
 Result.kind := 3;
-Result.data := (discr => 2, arm_3 => P_thinkthen_request_input_property_boolean_v1 (Convert_Authored_inputProperty_boolean_Authored_inputProperty_boolean (Value.V_2, Storage)));
+Result.data := (discr => 2, boolean => P_thinkthen_request_input_property_boolean_v1 (Convert_Authored_inputProperty_boolean_Authored_inputProperty_boolean (Value.V_2, Storage)));
 when T_Authored_inputProperty_arm_array =>
 Result.kind := 4;
-Result.data := (discr => 3, arm_4 => P_thinkthen_request_input_property_array_v1 (Convert_Authored_inputProperty_array_Authored_inputProperty_array (Value.V_3, Storage)));
+Result.data := (discr => 3, array => P_thinkthen_request_input_property_array_v1 (Convert_Authored_inputProperty_array_Authored_inputProperty_array (Value.V_3, Storage)));
 end case;
 return Store_thinkthen_request_input_property_v1 (Result, Storage);
 end Convert_Authored_inputProperty_Authored_inputProperty;
