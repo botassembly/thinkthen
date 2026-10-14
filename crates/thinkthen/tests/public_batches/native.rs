@@ -42,11 +42,7 @@ fn native_recovery_continues_after_one_failed_left_member_but_stopping_rows_do_n
         (4, 3)
     );
     assert!(result.value()[0].outcome().is_ok());
-    assert_failed(
-        &result.value()[1],
-        ErrorKind::Backend,
-        thinkthen::StopCause::Reply,
-    );
+    assert_failed(&result.value()[1], ErrorKind::Backend, true);
     assert!(result.value()[2].outcome().is_ok());
     assert!(result.value()[3].outcome().is_ok());
     let requests = listener.requests();
@@ -129,11 +125,7 @@ fn native_recovery_continues_after_one_failed_left_member_but_stopping_rows_do_n
         (4, 3)
     );
     for place in [0, 1] {
-        assert_failed(
-            &result.value()[place],
-            ErrorKind::Backend,
-            thinkthen::StopCause::Status,
-        );
+        assert_failed(&result.value()[place], ErrorKind::Backend, false);
     }
     assert!(result.value()[2..].iter().all(|row| row.outcome().is_ok()));
     let requests = listener.requests();
@@ -191,7 +183,7 @@ fn native_denied_left_fills_unsent_half_and_keeps_stopping_stream_terminal() {
         (4, 1)
     );
     for row in result.value().iter() {
-        assert_failed(row, ErrorKind::Usage, thinkthen::StopCause::Usage);
+        assert_failed(row, ErrorKind::Usage, false);
     }
     let requests = listener.requests();
     assert_eq!(requests.len(), 1);
@@ -265,7 +257,7 @@ fn native_denied_right_keeps_answered_left_with_its_question_keys() {
         );
     }
     for row in result.value()[2..].iter() {
-        assert_failed(row, ErrorKind::Usage, thinkthen::StopCause::Usage);
+        assert_failed(row, ErrorKind::Usage, false);
     }
 }
 
@@ -287,11 +279,7 @@ fn native_denied_retry_is_usage_without_a_second_send() {
         (result.facts().records(), result.facts().requests_sent()),
         (1, 1)
     );
-    assert_failed(
-        &result.value()[0],
-        ErrorKind::Usage,
-        thinkthen::StopCause::Usage,
-    );
+    assert_failed(&result.value()[0], ErrorKind::Usage, false);
     assert_eq!(listener.requests().len(), 1);
 }
 
@@ -348,48 +336,36 @@ fn native_denied_retry_keeps_a_later_request_answered_first() {
         .collect();
     assert_eq!(answered, [false, false, true, true]);
     for row in result.value()[..2].iter() {
-        assert_failed(row, ErrorKind::Usage, thinkthen::StopCause::Usage);
+        assert_failed(row, ErrorKind::Usage, false);
     }
     assert_eq!(listener.requests().len(), 2);
 }
 
 #[test]
-fn native_recovery_keeps_one_invalid_member_out_of_one_request() {
+fn native_recovery_refuses_an_invalid_eager_member_before_any_send() {
     let _serial = serial();
     let listener = Listener::serving(vec![Canned::ok(
         r#"{"model":"jev-latest","answers":{"q1":{"type":"noul","noul":0.9},"q2":{"type":"noul","noul":0.9}}}"#,
-    )])
-    .expect("listener");
+    )]).expect("listener");
     let engine = engine(listener.base());
-    let result = crate::api::recover_decisions(
+    let error = crate::api::recover_decisions(
         &engine,
         &question(),
         &["alpha".to_owned(), " ".to_owned(), "beta".to_owned()],
         CallOptions::new(),
     )
-    .expect("recoverable rows");
-    assert!(result.value()[0].outcome().is_ok());
-    assert_failed(
-        &result.value()[1],
-        ErrorKind::Usage,
-        thinkthen::StopCause::Usage,
-    );
-    assert!(result.value()[2].outcome().is_ok());
-    assert_eq!(
-        (result.facts().records(), result.facts().requests_sent()),
-        (3, 1)
-    );
-    assert_eq!(listener.requests().len(), 1);
+    .expect_err("invalid eager producer refuses the entire call");
+    assert_eq!(error.kind(), ErrorKind::Usage);
+    assert_eq!(error.to_string(), "evidence is text, not white space");
+    assert!(error.facts().is_none());
+    assert_eq!(listener.count(), 0);
+    assert!(listener.requests().is_empty());
 }
 
 #[cfg(test)]
-fn assert_failed(
-    row: &thinkthen::RequestRecoveredRow,
-    kind: ErrorKind,
-    cause: thinkthen::StopCause,
-) {
+fn assert_failed(row: &thinkthen::RequestRecoveredRow, kind: ErrorKind, logical_failure: bool) {
     let error = row.outcome().expect_err("failed row");
     assert_eq!(error.kind(), kind);
     assert!(!error.retryable());
-    assert_eq!(error.stopped().cause(), cause);
+    assert_eq!(row.cause().is_some(), logical_failure);
 }
