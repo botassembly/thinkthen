@@ -14,6 +14,7 @@ from children import child_env
 from find_cases import sql, quoted
 sys.path.insert(0, str(ROOT / 'databases/sqlite/tests'))
 from conditional_backend import ConditionalBackend
+from typed_results import native
 
 
 def main():
@@ -80,6 +81,26 @@ def main():
                     assert len(row['result']['value']) == 1, row
                 else:
                     assert row['probability'] == probability, (function, row)
+
+            aggregates = [
+                ('rank', '{"decide":"Fits?"}', record + ",thinkthen_record(text=>'Beta.')", 2),
+                ('relate', checks[-1][1], checks[-1][2] +
+                 ",thinkthen_record(value=>'{\"name\":\"Beta\",\"kind\":\"organization\"}'::json)", 1),
+            ]
+            for function, question, items, sends in aggregates:
+                got = rows('SELECT to_jsonb(r) FROM thinkthen_' + function + '_details(' +
+                           quoted(question) + ',ARRAY[' + items + ']) r', sends)
+                assert [row['ordinal'] for row in got] == [0, 1], (function, got)
+                assert got[0]['observations'] and got[1]['observations'] == [], (function, got)
+                observed_sends = sum(event['detail']['requests_sent'] for event in got[0]['observations']
+                                     if event['kind'] == 'question')
+                assert observed_sends == sends, (function, got)
+                assert sum(event['kind'] == 'question' for event in got[0]['observations']) == 2, got
+                assert all(row['facts']['requests_sent'] == sends for row in got), (function, got)
+                restored = native(got, function)
+                assert len(restored['observations']) == len(got[0]['observations']), restored
+                values = restored['native']['value']
+                assert len(values if function == 'rank' else values['value']) == 2, restored
 
             for function in ('decide', 'rank'):
                 for incremental in ('false', 'true'):
