@@ -2,6 +2,15 @@
 set -eu
 here=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 root=$(CDPATH= cd -- "$here/../.." && pwd)
+case $(uname -s) in
+Darwin)
+    [ -f "${THINKTHEN_ARTIFACT:-}" ] || { echo 'Swift Apple checks require the final installed package; no native build is started' >&2; exit 1; }
+    . "$root/sdlc/scripts/installed.sh"
+    . "$root/sdlc/scripts/scratch.sh"
+    installed_unpack
+    [ -f "$scratch/CThinkThen.xcframework/Info.plist" ] || { echo 'Swift Apple package is missing its XCFramework' >&2; exit 1; }
+    ;;
+esac
 swift=${THINKTHEN_SWIFT:-$(command -v swift || true)}
 [ -x "$swift" ] || exit 77
 node "$root/sdlc/scripts/ratchet.mjs" "$here/ratchet.swift.json"
@@ -10,11 +19,6 @@ for mode in '' --inputs --bridge; do
 done
 case $(uname -s) in
 Darwin)
-    [ -f "${THINKTHEN_ARTIFACT:-}" ] || { echo 'Swift Apple checks require the final installed package; no native build is started' >&2; exit 1; }
-    . "$root/sdlc/scripts/installed.sh"
-    . "$root/sdlc/scripts/scratch.sh"
-    installed_unpack
-    [ -f "$scratch/CThinkThen.xcframework/Info.plist" ] || { echo 'Swift Apple package is missing its XCFramework' >&2; exit 1; }
     if [ -n "${THINKTHEN_COVERAGE_STAGE:-}" ]; then
         apple_consumer=$THINKTHEN_COVERAGE_STAGE
         mkdir -p "$apple_consumer"
