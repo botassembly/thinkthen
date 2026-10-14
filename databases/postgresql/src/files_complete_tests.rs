@@ -1,3 +1,4 @@
+//! Stays: descriptor authority races require controlled root replacement and captured paths that public SQL cannot expose deterministically.
 //! Captured named authority is an additional predicate on the one opened descriptor.
 use super::{CheckedReadError, read_checked};
 #[test]

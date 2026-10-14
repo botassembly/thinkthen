@@ -1,3 +1,4 @@
+//! Stays: private worker-channel and panic tests pin cleanup, suppressed panic output and every error SQLSTATE before PostgreSQL raises it.
 //! One call: the error table, the setter plan, the engine each backend
 //! keeps, and the worker every call runs on (ticket 0111 decisions 3, 7,
 //! and 11; ADR 0043 as amended).

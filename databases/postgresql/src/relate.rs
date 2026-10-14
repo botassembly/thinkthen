@@ -1,3 +1,4 @@
+//! Stays: private relation-rule admission tables distinguish wildcard kinds and queries without kinds before SPI executes a query.
 //! `thinkthen_relate(query, rules)`: relations among the rows a query
 //! returns (decision 10, ADR 0047 item 9).
 

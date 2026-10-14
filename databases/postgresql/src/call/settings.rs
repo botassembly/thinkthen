@@ -1,3 +1,4 @@
+//! Stays: private GUC admission tests pin omitted/default distinctions and invalid batch spellings without starting a PostgreSQL server.
 //! PostgreSQL GUC registration and the one validated engine-setting snapshot.
 
 use std::ffi::CString;
