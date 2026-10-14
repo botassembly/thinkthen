@@ -48,7 +48,10 @@ def outputs(definitions):
             lines = [signature + ' is', f'Rows : constant Value_List := Receipts (Call, "{function}", {str(array)});', f'Result : {name} (' + count + ');', 'begin']
             if scalar_value:
                 lines.append('if Rows\'Length /= 1 then raise Answer_Cardinality_Error with "expected one result"; end if;')
-            lines += ['Result.Facts := Call_Facts (Call);', "for I in Rows'Range loop", 'Result.Results (I) := (Data => Rows (I));']
+            lines += ['Result.Facts := Call_Facts (Call);']
+            if mode == 'null':
+                lines.append('Result.Probability := (State => Null_Field);')
+            lines += ["for I in Rows'Range loop", 'Result.Results (I) := (Data => Rows (I));']
             projection = f'Field_Value (Rows (I), "{spec["value_projection"]}")'
             conversion = {'choice': 'Read_Choice (' + projection + ')',
                           'score': "Long_Float'Value (As_Number (" + projection + '))',
@@ -64,8 +67,6 @@ def outputs(definitions):
             elif mode != 'null':
                 expr = number_expression(spec, function)
                 lines.append(('Result.Probability' if scalar_value else 'Result.Probability (I)') + ' := ' + expr + ';')
-            else:
-                lines.append('Result.Probability := (State => Null_Field);')
             lines += ['end loop;', 'return Result;', 'end ' + function.title() + ';']
             bodies.append('\n'.join(lines))
     return '\n'.join(declarations), '\n'.join(bodies), 'type Receipt is record Data : Thinkthen.Values.Value; end record;'

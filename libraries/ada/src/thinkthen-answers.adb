@@ -5881,10 +5881,10 @@ Result : Tag_Result (Value_Count => (if Rows'Length = 1 then Length (Field_Value
 begin
 if Rows'Length /= 1 then raise Answer_Cardinality_Error with "expected one result"; end if;
 Result.Facts := Call_Facts (Call);
+Result.Probability := (State => Null_Field);
 for I in Rows'Range loop
 Result.Results (I) := (Data => Rows (I));
 Result.Value := Texts (Field_Value (Rows (I), "value"));
-Result.Probability := (State => Null_Field);
 end loop;
 return Result;
 end Tag;
@@ -5893,10 +5893,10 @@ Rows : constant Value_List := Receipts (Call, "tag", True);
 Result : Tag_List_Result (Rows'Length, Rows'Length);
 begin
 Result.Facts := Call_Facts (Call);
+Result.Probability := (State => Null_Field);
 for I in Rows'Range loop
 Result.Results (I) := (Data => Rows (I));
 Result.Value.Append (Texts (Field_Value (Rows (I), "value")));
-Result.Probability := (State => Null_Field);
 end loop;
 return Result;
 end Tag;
@@ -5906,10 +5906,10 @@ Result : Score_Result (Rows'Length);
 begin
 if Rows'Length /= 1 then raise Answer_Cardinality_Error with "expected one result"; end if;
 Result.Facts := Call_Facts (Call);
+Result.Probability := (State => Null_Field);
 for I in Rows'Range loop
 Result.Results (I) := (Data => Rows (I));
 Result.Value := Long_Float'Value (As_Number (Field_Value (Rows (I), "value")));
-Result.Probability := (State => Null_Field);
 end loop;
 return Result;
 end Score;
@@ -5918,10 +5918,10 @@ Rows : constant Value_List := Receipts (Call, "score", True);
 Result : Score_List_Result (Rows'Length, Rows'Length);
 begin
 Result.Facts := Call_Facts (Call);
+Result.Probability := (State => Null_Field);
 for I in Rows'Range loop
 Result.Results (I) := (Data => Rows (I));
 Result.Value (I) := Long_Float'Value (As_Number (Field_Value (Rows (I), "value")));
-Result.Probability := (State => Null_Field);
 end loop;
 return Result;
 end Score;
@@ -5968,10 +5968,10 @@ Result : Annotate_Result (Rows'Length);
 begin
 if Rows'Length /= 1 then raise Answer_Cardinality_Error with "expected one result"; end if;
 Result.Facts := Call_Facts (Call);
+Result.Probability := (State => Null_Field);
 for I in Rows'Range loop
 Result.Results (I) := (Data => Rows (I));
 Result.Value := Field_Value (Rows (I), "value");
-Result.Probability := (State => Null_Field);
 end loop;
 return Result;
 end Annotate;
@@ -5980,10 +5980,10 @@ Rows : constant Value_List := Receipts (Call, "annotate", True);
 Result : Annotate_List_Result (Rows'Length, Rows'Length);
 begin
 Result.Facts := Call_Facts (Call);
+Result.Probability := (State => Null_Field);
 for I in Rows'Range loop
 Result.Results (I) := (Data => Rows (I));
 Result.Value (I) := Field_Value (Rows (I), "value");
-Result.Probability := (State => Null_Field);
 end loop;
 return Result;
 end Annotate;
