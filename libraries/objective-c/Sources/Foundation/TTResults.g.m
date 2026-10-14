@@ -6845,8 +6845,9 @@ id TTNative_thinkthen_complete_json_v1(const struct thinkthen_complete_json_v1 *
             NSDecimalNumber *number = [NSDecimalNumber decimalNumberWithString:text locale:@{
                 NSLocaleDecimalSeparator:@"."
             }];
-            if (![number isEqual:NSDecimalNumber.notANumber]) return number;
             double floating = text.doubleValue;
+            if (![number isEqual:NSDecimalNumber.notANumber] &&
+            !([number isEqual:NSDecimalNumber.zero] && floating != 0)) return number;
             if (!isfinite(floating)) TTInvalidResult();
             return @(floating);
         }

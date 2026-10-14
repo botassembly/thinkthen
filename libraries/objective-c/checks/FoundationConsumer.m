@@ -61,7 +61,9 @@ int main(int argc, const char *argv[]) {
             require(dispatch_semaphore_wait(completed, dispatch_time(DISPATCH_TIME_NOW, 4 * NSEC_PER_SEC)) == 0);
             task = nil;
             NSArray *answer = [numericCall filterAnswer:&error];
-            require(error == nil && answer.count == 1 && [answer[0] doubleValue] == number.doubleValue);
+            require(error == nil && answer.count == 1);
+            if ([answer[0] doubleValue] != number.doubleValue) fprintf(stderr, "Filtered number %.17g became %.17g\n", number.doubleValue, [answer[0] doubleValue]);
+            require([answer[0] doubleValue] == number.doubleValue);
             require(numericCall.facts.value.requestsSent.value.unsignedIntegerValue == 1);
         }
         client = nil;
