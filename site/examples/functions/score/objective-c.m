@@ -29,7 +29,7 @@ int main(void) { @autoreleasepool {
         input:outage
         options:nil feed:nil error:&error];
     assert(judgment && !error);
-    urgency = judgment.value.scalar.doubleValue;
+    urgency = [judgment.value.scalar doubleValue];
     assert(urgency == 2.0);
     return 0;
 } }
