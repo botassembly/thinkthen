@@ -1,8 +1,10 @@
 # 0587: Experiment: the command inside the Python and npm packages
 
-Status: OPEN.
+Status: COMPLETE.
 
 Milestone: 0.3
+
+Reviews: revision 0e46dc2, accept
 
 ## Outcome
 
@@ -18,3 +20,7 @@ Learn whether the Python wheel and the npm package can carry the `thinkthen` com
 - Decision it changes: Ian's decision 16 and PRD 09's MCP Registry entry.
 - Machine: the Beelink.
 - Defers: other platforms and publishing go to the 0.3 publishing ticket.
+
+## Progress
+
+- 2026-10-14 started
