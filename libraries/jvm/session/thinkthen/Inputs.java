@@ -5,26 +5,20 @@ import java.util.*;
 public final class Inputs {
     private Inputs() {
     }
-    public sealed interface AnnotateQuestion extends Values.Value permits AnnotateQuestionDecide,
-    AnnotateQuestionChoose,AnnotateQuestionTag,AnnotateQuestionScore {
+    public abstract static class Builder<T extends Builder<T>> extends Values.Builder<T> {
+    }
+    public sealed interface AnnotateQuestion permits AnnotateQuestionDecide,AnnotateQuestionChoose,
+    AnnotateQuestionTag,AnnotateQuestionScore {
         AnnotateQuestion contextSchema(AuthoredInputDeclaration value);
         AnnotateQuestion itemSchema(AuthoredInputDeclaration value);
         AnnotateQuestion name(String value);
         AnnotateQuestion on(AuthoredPointers value);
         AnnotateQuestion wordingVersion(Number value);
-        static AnnotateQuestion fromJson(Object value) {
-            Map<String,Object> object = Values.object(value);
-            if (object.containsKey("decide") && !object.containsKey("choose") && !object.containsKey("score") && !object.containsKey("tag")) return AnnotateQuestionDecide.fromJson(value);
-            if (object.containsKey("choose") && !object.containsKey("decide") && !object.containsKey("score") && !object.containsKey("tag")) return AnnotateQuestionChoose.fromJson(value);
-            if (object.containsKey("tag") && !object.containsKey("choose") && !object.containsKey("decide") && !object.containsKey("score")) return AnnotateQuestionTag.fromJson(value);
-            if (object.containsKey("score") && !object.containsKey("choose") && !object.containsKey("decide") && !object.containsKey("tag")) return AnnotateQuestionScore.fromJson(value);
-            return AnnotateQuestionDecide.fromJson(value);
-        }
     }
-    public static final class AnnotateQuestionChoose extends Values.Builder<AnnotateQuestionChoose> implements AnnotateQuestion {
+    public static final class AnnotateQuestionChoose extends Builder<AnnotateQuestionChoose> implements AnnotateQuestion {
         public AnnotateQuestionChoose() {
         }
-        public static AnnotateQuestionChoose fromJson(Object value) {
+        static AnnotateQuestionChoose fromJson(Object value) {
             AnnotateQuestionChoose result = new AnnotateQuestionChoose();
             result.omit("choose");
             result.omit("context_schema");
@@ -113,10 +107,10 @@ public final class Inputs {
             return omit("wording_version");
         }
     }
-    public static final class AnnotateQuestionDecide extends Values.Builder<AnnotateQuestionDecide> implements AnnotateQuestion {
+    public static final class AnnotateQuestionDecide extends Builder<AnnotateQuestionDecide> implements AnnotateQuestion {
         public AnnotateQuestionDecide() {
         }
-        public static AnnotateQuestionDecide fromJson(Object value) {
+        static AnnotateQuestionDecide fromJson(Object value) {
             AnnotateQuestionDecide result = new AnnotateQuestionDecide();
             result.omit("context_schema");
             result.omit("decide");
@@ -215,10 +209,10 @@ public final class Inputs {
             return omit("wording_version");
         }
     }
-    public static final class AnnotateQuestionScore extends Values.Builder<AnnotateQuestionScore> implements AnnotateQuestion {
+    public static final class AnnotateQuestionScore extends Builder<AnnotateQuestionScore> implements AnnotateQuestion {
         public AnnotateQuestionScore() {
         }
-        public static AnnotateQuestionScore fromJson(Object value) {
+        static AnnotateQuestionScore fromJson(Object value) {
             AnnotateQuestionScore result = new AnnotateQuestionScore();
             result.omit("context_schema");
             result.omit("item_schema");
@@ -297,10 +291,10 @@ public final class Inputs {
             return omit("wording_version");
         }
     }
-    public static final class AnnotateQuestionTag extends Values.Builder<AnnotateQuestionTag> implements AnnotateQuestion {
+    public static final class AnnotateQuestionTag extends Builder<AnnotateQuestionTag> implements AnnotateQuestion {
         public AnnotateQuestionTag() {
         }
-        public static AnnotateQuestionTag fromJson(Object value) {
+        static AnnotateQuestionTag fromJson(Object value) {
             AnnotateQuestionTag result = new AnnotateQuestionTag();
             result.omit("context_schema");
             result.omit("item_schema");
@@ -389,7 +383,7 @@ public final class Inputs {
             return omit("wording_version");
         }
     }
-    public static final class AuthoredCriterion implements Values.Value {
+    public static final class AuthoredCriterion {
         private final Object value;
         public AuthoredCriterion(String value) {
             this.value = Values.freeze(value);
@@ -400,11 +394,11 @@ public final class Inputs {
         public AuthoredCriterion(List<? extends Object> value) {
             this.value = Values.freeze(value);
         }
-        public Object json() {
+        Object json() {
             return value;
         }
     }
-    public static final class AuthoredCut implements Values.Value {
+    public static final class AuthoredCut {
         private final Object value;
         public AuthoredCut(Number value) {
             this.value = Values.freeze(value);
@@ -412,11 +406,11 @@ public final class Inputs {
         public AuthoredCut(String value) {
             this.value = Values.freeze(value);
         }
-        public Object json() {
+        Object json() {
             return value;
         }
     }
-    public static final class AuthoredDescription implements Values.Value {
+    public static final class AuthoredDescription {
         private final Object value;
         public AuthoredDescription(String value) {
             this.value = Values.freeze(value);
@@ -427,24 +421,17 @@ public final class Inputs {
         public AuthoredDescription(List<? extends Object> value) {
             this.value = Values.freeze(value);
         }
-        public Object json() {
+        Object json() {
             return value;
         }
     }
-    public sealed interface AuthoredInputDeclaration extends Values.Value permits AuthoredInputDeclarationString,
-    AuthoredInputDeclarationObject {
-        static AuthoredInputDeclaration fromJson(Object value) {
-            Map<String,Object> object = Values.object(value);
-            if ("string".equals(object.get("type"))) return AuthoredInputDeclarationString.fromJson(value);
-            if ("object".equals(object.get("type"))) return AuthoredInputDeclarationObject.fromJson(value);
-            return AuthoredInputDeclarationString.fromJson(value);
-        }
+    public sealed interface AuthoredInputDeclaration permits AuthoredInputDeclarationString,AuthoredInputDeclarationObject {
     }
-    public static final class AuthoredInputDeclarationObject extends Values.Builder<AuthoredInputDeclarationObject> implements AuthoredInputDeclaration {
+    public static final class AuthoredInputDeclarationObject extends Builder<AuthoredInputDeclarationObject> implements AuthoredInputDeclaration {
         public AuthoredInputDeclarationObject() {
             put("type", "object");
         }
-        public static AuthoredInputDeclarationObject fromJson(Object value) {
+        static AuthoredInputDeclarationObject fromJson(Object value) {
             AuthoredInputDeclarationObject result = new AuthoredInputDeclarationObject();
             result.omit("properties");
             result.omit("required");
@@ -474,11 +461,11 @@ public final class Inputs {
             return omit("required");
         }
     }
-    public static final class AuthoredInputDeclarationString extends Values.Builder<AuthoredInputDeclarationString> implements AuthoredInputDeclaration {
+    public static final class AuthoredInputDeclarationString extends Builder<AuthoredInputDeclarationString> implements AuthoredInputDeclaration {
         public AuthoredInputDeclarationString() {
             put("type", "string");
         }
-        public static AuthoredInputDeclarationString fromJson(Object value) {
+        static AuthoredInputDeclarationString fromJson(Object value) {
             AuthoredInputDeclarationString result = new AuthoredInputDeclarationString();
             result.omit("type");
             Values.object(value).forEach(result::extension);
@@ -488,22 +475,14 @@ public final class Inputs {
             return this;
         }
     }
-    public sealed interface AuthoredInputProperty extends Values.Value permits AuthoredInputPropertyString,
-    AuthoredInputPropertyNumber,AuthoredInputPropertyBoolean,AuthoredInputPropertyArray {
-        static AuthoredInputProperty fromJson(Object value) {
-            Map<String,Object> object = Values.object(value);
-            if ("string".equals(object.get("type"))) return AuthoredInputPropertyString.fromJson(value);
-            if ("number".equals(object.get("type"))) return AuthoredInputPropertyNumber.fromJson(value);
-            if ("boolean".equals(object.get("type"))) return AuthoredInputPropertyBoolean.fromJson(value);
-            if ("array".equals(object.get("type"))) return AuthoredInputPropertyArray.fromJson(value);
-            return AuthoredInputPropertyString.fromJson(value);
-        }
+    public sealed interface AuthoredInputProperty permits AuthoredInputPropertyString,AuthoredInputPropertyNumber,
+    AuthoredInputPropertyBoolean,AuthoredInputPropertyArray {
     }
-    public static final class AuthoredInputPropertyArray extends Values.Builder<AuthoredInputPropertyArray> implements AuthoredInputProperty {
+    public static final class AuthoredInputPropertyArray extends Builder<AuthoredInputPropertyArray> implements AuthoredInputProperty {
         public AuthoredInputPropertyArray() {
             put("type", "array");
         }
-        public static AuthoredInputPropertyArray fromJson(Object value) {
+        static AuthoredInputPropertyArray fromJson(Object value) {
             AuthoredInputPropertyArray result = new AuthoredInputPropertyArray();
             result.omit("items");
             result.omit("type");
@@ -523,11 +502,11 @@ public final class Inputs {
             return omit("items");
         }
     }
-    public static final class AuthoredInputPropertyArrayPropertiesItems extends Values.Builder<AuthoredInputPropertyArrayPropertiesItems> {
+    public static final class AuthoredInputPropertyArrayPropertiesItems extends Builder<AuthoredInputPropertyArrayPropertiesItems> {
         public AuthoredInputPropertyArrayPropertiesItems() {
             put("type", "string");
         }
-        public static AuthoredInputPropertyArrayPropertiesItems fromJson(Object value) {
+        static AuthoredInputPropertyArrayPropertiesItems fromJson(Object value) {
             AuthoredInputPropertyArrayPropertiesItems result = new AuthoredInputPropertyArrayPropertiesItems();
             result.omit("type");
             Values.object(value).forEach(result::extension);
@@ -537,11 +516,11 @@ public final class Inputs {
             return this;
         }
     }
-    public static final class AuthoredInputPropertyBoolean extends Values.Builder<AuthoredInputPropertyBoolean> implements AuthoredInputProperty {
+    public static final class AuthoredInputPropertyBoolean extends Builder<AuthoredInputPropertyBoolean> implements AuthoredInputProperty {
         public AuthoredInputPropertyBoolean() {
             put("type", "boolean");
         }
-        public static AuthoredInputPropertyBoolean fromJson(Object value) {
+        static AuthoredInputPropertyBoolean fromJson(Object value) {
             AuthoredInputPropertyBoolean result = new AuthoredInputPropertyBoolean();
             result.omit("type");
             Values.object(value).forEach(result::extension);
@@ -551,11 +530,11 @@ public final class Inputs {
             return this;
         }
     }
-    public static final class AuthoredInputPropertyNumber extends Values.Builder<AuthoredInputPropertyNumber> implements AuthoredInputProperty {
+    public static final class AuthoredInputPropertyNumber extends Builder<AuthoredInputPropertyNumber> implements AuthoredInputProperty {
         public AuthoredInputPropertyNumber() {
             put("type", "number");
         }
-        public static AuthoredInputPropertyNumber fromJson(Object value) {
+        static AuthoredInputPropertyNumber fromJson(Object value) {
             AuthoredInputPropertyNumber result = new AuthoredInputPropertyNumber();
             result.omit("type");
             Values.object(value).forEach(result::extension);
@@ -565,11 +544,11 @@ public final class Inputs {
             return this;
         }
     }
-    public static final class AuthoredInputPropertyString extends Values.Builder<AuthoredInputPropertyString> implements AuthoredInputProperty {
+    public static final class AuthoredInputPropertyString extends Builder<AuthoredInputPropertyString> implements AuthoredInputProperty {
         public AuthoredInputPropertyString() {
             put("type", "string");
         }
-        public static AuthoredInputPropertyString fromJson(Object value) {
+        static AuthoredInputPropertyString fromJson(Object value) {
             AuthoredInputPropertyString result = new AuthoredInputPropertyString();
             result.omit("type");
             Values.object(value).forEach(result::extension);
@@ -579,7 +558,7 @@ public final class Inputs {
             return this;
         }
     }
-    public static final class AuthoredLabels implements Values.Value {
+    public static final class AuthoredLabels {
         private final Object value;
         public AuthoredLabels(List<? extends String> value) {
             this.value = Values.freeze(value);
@@ -587,11 +566,11 @@ public final class Inputs {
         public AuthoredLabels(Map<String,? extends AuthoredDescription> value) {
             this.value = Values.freeze(value);
         }
-        public Object json() {
+        Object json() {
             return value;
         }
     }
-    public static final class AuthoredLevels implements Values.Value {
+    public static final class AuthoredLevels {
         private final Object value;
         public AuthoredLevels(List<? extends String> value) {
             this.value = Values.freeze(value);
@@ -599,11 +578,11 @@ public final class Inputs {
         public AuthoredLevels(Map<String,? extends AuthoredCriterion> value) {
             this.value = Values.freeze(value);
         }
-        public Object json() {
+        Object json() {
             return value;
         }
     }
-    public static final class AuthoredOptions implements Values.Value {
+    public static final class AuthoredOptions {
         private final Object value;
         public AuthoredOptions(List<? extends String> value) {
             this.value = Values.freeze(value);
@@ -611,11 +590,11 @@ public final class Inputs {
         public AuthoredOptions(Map<String,? extends AuthoredDescription> value) {
             this.value = Values.freeze(value);
         }
-        public Object json() {
+        Object json() {
             return value;
         }
     }
-    public static final class AuthoredPointers implements Values.Value {
+    public static final class AuthoredPointers {
         private final Object value;
         public AuthoredPointers(String value) {
             this.value = Values.freeze(value);
@@ -623,11 +602,11 @@ public final class Inputs {
         public AuthoredPointers(List<? extends String> value) {
             this.value = Values.freeze(value);
         }
-        public Object json() {
+        Object json() {
             return value;
         }
     }
-    public static final class AuthoredQuestionText implements Values.Value {
+    public static final class AuthoredQuestionText {
         private final Object value;
         public AuthoredQuestionText(String value) {
             this.value = Values.freeze(value);
@@ -638,14 +617,14 @@ public final class Inputs {
         public AuthoredQuestionText(List<? extends Object> value) {
             this.value = Values.freeze(value);
         }
-        public Object json() {
+        Object json() {
             return value;
         }
     }
-    public static final class AuthoredRelation extends Values.Builder<AuthoredRelation> {
+    public static final class AuthoredRelation extends Builder<AuthoredRelation> {
         public AuthoredRelation() {
         }
-        public static AuthoredRelation fromJson(Object value) {
+        static AuthoredRelation fromJson(Object value) {
             AuthoredRelation result = new AuthoredRelation();
             result.omit("either");
             result.omit("name");
@@ -714,7 +693,7 @@ public final class Inputs {
             return omit("target");
         }
     }
-    public static final class AuthoredThreshold implements Values.Value {
+    public static final class AuthoredThreshold {
         private final Object value;
         public AuthoredThreshold(Number value) {
             this.value = Values.freeze(value);
@@ -722,11 +701,11 @@ public final class Inputs {
         public AuthoredThreshold(String value) {
             this.value = Values.freeze(value);
         }
-        public Object json() {
+        Object json() {
             return value;
         }
     }
-    public static final class CacheDocument implements Values.Value {
+    public static final class CacheDocument {
         private final Object value;
         public CacheDocument(String value) {
             this.value = Values.freeze(value);
@@ -734,11 +713,11 @@ public final class Inputs {
         public CacheDocument(Boolean value) {
             this.value = Values.freeze(value);
         }
-        public Object json() {
+        Object json() {
             return value;
         }
     }
-    public static final class ContextSchema implements Values.Value {
+    public static final class ContextSchema {
         private final Object value;
         public ContextSchema(String value) {
             this.value = Values.freeze(value);
@@ -746,14 +725,14 @@ public final class Inputs {
         public ContextSchema(Map<String,? extends Object> value) {
             this.value = Values.freeze(value);
         }
-        public Object json() {
+        Object json() {
             return value;
         }
     }
-    public static final class EngineSettings extends Values.Builder<EngineSettings> {
+    public static final class EngineSettings extends Builder<EngineSettings> {
         public EngineSettings() {
         }
-        public static EngineSettings fromJson(Object value) {
+        static EngineSettings fromJson(Object value) {
             EngineSettings result = new EngineSettings();
             result.omit("backend");
             result.omit("base_url");
@@ -952,20 +931,20 @@ public final class Inputs {
             return omit("usd_per_million_output");
         }
     }
-    public enum ImageMedia implements Values.Value {
+    public enum ImageMedia {
         IMAGEJPEG("image/jpeg"),IMAGEPNG("image/png");
         private final String value;
         ImageMedia(String value) {
             this.value = value;
         }
-        public Object json() {
+        Object json() {
             return value;
         }
     }
-    public static final class OptionSchema extends Values.Builder<OptionSchema> {
+    public static final class OptionSchema extends Builder<OptionSchema> {
         public OptionSchema() {
         }
-        public static OptionSchema fromJson(Object value) {
+        static OptionSchema fromJson(Object value) {
             OptionSchema result = new OptionSchema();
             result.omit("description");
             result.omit("name");
@@ -994,17 +973,17 @@ public final class Inputs {
             return omit("name");
         }
     }
-    public enum ReaderMedia implements Values.Value {
+    public enum ReaderMedia {
         TEXT("text"),IMAGE("image");
         private final String value;
         ReaderMedia(String value) {
             this.value = value;
         }
-        public Object json() {
+        Object json() {
             return value;
         }
     }
-    public static final class RecognitionExample implements Values.Value {
+    public static final class RecognitionExample {
         private final Object value;
         public RecognitionExample(String value) {
             this.value = Values.freeze(value);
@@ -1012,14 +991,14 @@ public final class Inputs {
         public RecognitionExample(RecognitionExampleText value) {
             this.value = Values.freeze(value);
         }
-        public Object json() {
+        Object json() {
             return value;
         }
     }
-    public static final class RecognitionExampleEntity extends Values.Builder<RecognitionExampleEntity> {
+    public static final class RecognitionExampleEntity extends Builder<RecognitionExampleEntity> {
         public RecognitionExampleEntity() {
         }
-        public static RecognitionExampleEntity fromJson(Object value) {
+        static RecognitionExampleEntity fromJson(Object value) {
             RecognitionExampleEntity result = new RecognitionExampleEntity();
             result.omit("end");
             result.omit("kind");
@@ -1058,10 +1037,10 @@ public final class Inputs {
             return omit("start");
         }
     }
-    public static final class RecognitionExampleText extends Values.Builder<RecognitionExampleText> {
+    public static final class RecognitionExampleText extends Builder<RecognitionExampleText> {
         public RecognitionExampleText() {
         }
-        public static RecognitionExampleText fromJson(Object value) {
+        static RecognitionExampleText fromJson(Object value) {
             RecognitionExampleText result = new RecognitionExampleText();
             result.omit("entities");
             result.omit("kinds");
@@ -1100,20 +1079,20 @@ public final class Inputs {
             return omit("text");
         }
     }
-    public enum RecognitionMode implements Values.Value {
+    public enum RecognitionMode {
         WHOLE("whole"),BOUNDARYONLY("boundary_only");
         private final String value;
         RecognitionMode(String value) {
             this.value = value;
         }
-        public Object json() {
+        Object json() {
             return value;
         }
     }
-    public static final class RecognitionSeedSpan extends Values.Builder<RecognitionSeedSpan> {
+    public static final class RecognitionSeedSpan extends Builder<RecognitionSeedSpan> {
         public RecognitionSeedSpan() {
         }
-        public static RecognitionSeedSpan fromJson(Object value) {
+        static RecognitionSeedSpan fromJson(Object value) {
             RecognitionSeedSpan result = new RecognitionSeedSpan();
             result.omit("end");
             result.omit("kind");
@@ -1152,10 +1131,10 @@ public final class Inputs {
             return omit("start");
         }
     }
-    public static final class RecognitionStageContext extends Values.Builder<RecognitionStageContext> {
+    public static final class RecognitionStageContext extends Builder<RecognitionStageContext> {
         public RecognitionStageContext() {
         }
-        public static RecognitionStageContext fromJson(Object value) {
+        static RecognitionStageContext fromJson(Object value) {
             RecognitionStageContext result = new RecognitionStageContext();
             result.omit("boundary");
             result.omit("kind_edge");
@@ -1194,10 +1173,10 @@ public final class Inputs {
             return omit("relation");
         }
     }
-    public static final class RecognizeQuestion extends Values.Builder<RecognizeQuestion> {
+    public static final class RecognizeQuestion extends Builder<RecognizeQuestion> {
         public RecognizeQuestion() {
         }
-        public static RecognizeQuestion fromJson(Object value) {
+        static RecognizeQuestion fromJson(Object value) {
             RecognizeQuestion result = new RecognizeQuestion();
             result.omit("entity_definition");
             result.omit("instructions");
@@ -1276,10 +1255,10 @@ public final class Inputs {
             return omit("stage_context");
         }
     }
-    public static final class RelateFields extends Values.Builder<RelateFields> {
+    public static final class RelateFields extends Builder<RelateFields> {
         public RelateFields() {
         }
-        public static RelateFields fromJson(Object value) {
+        static RelateFields fromJson(Object value) {
             RelateFields result = new RelateFields();
             result.omit("kind");
             result.omit("name");
@@ -1308,10 +1287,10 @@ public final class Inputs {
             return omit("name");
         }
     }
-    public static final class RelateQuestion extends Values.Builder<RelateQuestion> {
+    public static final class RelateQuestion extends Builder<RelateQuestion> {
         public RelateQuestion() {
         }
-        public static RelateQuestion fromJson(Object value) {
+        static RelateQuestion fromJson(Object value) {
             RelateQuestion result = new RelateQuestion();
             result.omit("fields");
             result.omit("relations");
@@ -1340,11 +1319,11 @@ public final class Inputs {
             return omit("relations");
         }
     }
-    public static final class Request extends Values.Builder<Request> {
+    public static final class Request extends Builder<Request> {
         public Request() {
             put("schema", "thinkthen.request/1");
         }
-        public static Request fromJson(Object value) {
+        static Request fromJson(Object value) {
             Request result = new Request();
             result.omit("call");
             result.omit("schema");
@@ -1373,7 +1352,7 @@ public final class Inputs {
             return omit("schema");
         }
     }
-    public static final class RequestBatch implements Values.Value {
+    public static final class RequestBatch {
         private final Object value;
         public RequestBatch(Number value) {
             this.value = Values.freeze(value);
@@ -1381,14 +1360,14 @@ public final class Inputs {
         public RequestBatch(String value) {
             this.value = Values.freeze(value);
         }
-        public Object json() {
+        Object json() {
             return value;
         }
     }
-    public static final class RequestCall extends Values.Builder<RequestCall> {
+    public static final class RequestCall extends Builder<RequestCall> {
         public RequestCall() {
         }
-        public static RequestCall fromJson(Object value) {
+        static RequestCall fromJson(Object value) {
             RequestCall result = new RequestCall();
             result.omit("function");
             result.omit("input");
@@ -1437,29 +1416,16 @@ public final class Inputs {
             return omit("question");
         }
     }
-    public sealed interface RequestDefinition extends Values.Value permits RequestDefinitionAuthoredDecide,
-    RequestDefinitionAuthoredChoose,RequestDefinitionAuthoredTag,RequestDefinitionAuthoredScore,
-    RequestDefinitionAuthoredRelate,RequestDefinitionAuthoredFind,RequestDefinitionRecognizeDefinition,
-    RequestDefinitionAnnotateDefinition {
+    public sealed interface RequestDefinition permits RequestDefinitionAuthoredDecide,RequestDefinitionAuthoredChoose,
+    RequestDefinitionAuthoredTag,RequestDefinitionAuthoredScore,RequestDefinitionAuthoredRelate,
+    RequestDefinitionAuthoredFind,RequestDefinitionRecognizeDefinition,RequestDefinitionAnnotateDefinition {
         RequestDefinition profile(String value);
-        static RequestDefinition fromJson(Object value) {
-            Map<String,Object> object = Values.object(value);
-            if (object.containsKey("decide") && !object.containsKey("choose") && !object.containsKey("find") && !object.containsKey("questions") && !object.containsKey("recognize") && !object.containsKey("relate") && !object.containsKey("score") && !object.containsKey("tag") && !object.containsKey("version")) return RequestDefinitionAuthoredDecide.fromJson(value);
-            if (object.containsKey("choose") && !object.containsKey("decide") && !object.containsKey("find") && !object.containsKey("questions") && !object.containsKey("recognize") && !object.containsKey("relate") && !object.containsKey("score") && !object.containsKey("tag") && !object.containsKey("version")) return RequestDefinitionAuthoredChoose.fromJson(value);
-            if (object.containsKey("tag") && !object.containsKey("choose") && !object.containsKey("decide") && !object.containsKey("find") && !object.containsKey("questions") && !object.containsKey("recognize") && !object.containsKey("relate") && !object.containsKey("score") && !object.containsKey("version")) return RequestDefinitionAuthoredTag.fromJson(value);
-            if (object.containsKey("score") && !object.containsKey("choose") && !object.containsKey("decide") && !object.containsKey("find") && !object.containsKey("questions") && !object.containsKey("recognize") && !object.containsKey("relate") && !object.containsKey("tag") && !object.containsKey("version")) return RequestDefinitionAuthoredScore.fromJson(value);
-            if (object.containsKey("relate") && object.containsKey("version") && !object.containsKey("choose") && !object.containsKey("decide") && !object.containsKey("find") && !object.containsKey("questions") && !object.containsKey("recognize") && !object.containsKey("score") && !object.containsKey("tag")) return RequestDefinitionAuthoredRelate.fromJson(value);
-            if (object.containsKey("find") && !object.containsKey("choose") && !object.containsKey("decide") && !object.containsKey("questions") && !object.containsKey("recognize") && !object.containsKey("relate") && !object.containsKey("score") && !object.containsKey("tag") && !object.containsKey("version")) return RequestDefinitionAuthoredFind.fromJson(value);
-            if (object.containsKey("recognize") && object.containsKey("version") && !object.containsKey("choose") && !object.containsKey("decide") && !object.containsKey("find") && !object.containsKey("questions") && !object.containsKey("relate") && !object.containsKey("score") && !object.containsKey("tag")) return RequestDefinitionRecognizeDefinition.fromJson(value);
-            if (object.containsKey("questions") && object.containsKey("version") && !object.containsKey("choose") && !object.containsKey("decide") && !object.containsKey("find") && !object.containsKey("recognize") && !object.containsKey("relate") && !object.containsKey("score") && !object.containsKey("tag")) return RequestDefinitionAnnotateDefinition.fromJson(value);
-            return RequestDefinitionAuthoredDecide.fromJson(value);
-        }
     }
-    public static final class RequestDefinitionAnnotateDefinition extends Values.Builder<RequestDefinitionAnnotateDefinition> implements RequestDefinition {
+    public static final class RequestDefinitionAnnotateDefinition extends Builder<RequestDefinitionAnnotateDefinition> implements RequestDefinition {
         public RequestDefinitionAnnotateDefinition() {
             put("version", 1);
         }
-        public static RequestDefinitionAnnotateDefinition fromJson(Object value) {
+        static RequestDefinitionAnnotateDefinition fromJson(Object value) {
             RequestDefinitionAnnotateDefinition result = new RequestDefinitionAnnotateDefinition();
             result.omit("batch");
             result.omit("profile");
@@ -1509,10 +1475,10 @@ public final class Inputs {
             return omit("threshold");
         }
     }
-    public static final class RequestDefinitionAuthoredChoose extends Values.Builder<RequestDefinitionAuthoredChoose> implements RequestDefinition {
+    public static final class RequestDefinitionAuthoredChoose extends Builder<RequestDefinitionAuthoredChoose> implements RequestDefinition {
         public RequestDefinitionAuthoredChoose() {
         }
-        public static RequestDefinitionAuthoredChoose fromJson(Object value) {
+        static RequestDefinitionAuthoredChoose fromJson(Object value) {
             RequestDefinitionAuthoredChoose result = new RequestDefinitionAuthoredChoose();
             result.omit("batch");
             result.omit("choose");
@@ -1631,7 +1597,7 @@ public final class Inputs {
             return omit("wording_version");
         }
     }
-    public static final class RequestDefinitionAuthoredChoosePropertiesBatch implements Values.Value {
+    public static final class RequestDefinitionAuthoredChoosePropertiesBatch {
         private final Object value;
         public RequestDefinitionAuthoredChoosePropertiesBatch(String value) {
             this.value = Values.freeze(value);
@@ -1639,14 +1605,14 @@ public final class Inputs {
         public RequestDefinitionAuthoredChoosePropertiesBatch(Number value) {
             this.value = Values.freeze(value);
         }
-        public Object json() {
+        Object json() {
             return value;
         }
     }
-    public static final class RequestDefinitionAuthoredDecide extends Values.Builder<RequestDefinitionAuthoredDecide> implements RequestDefinition {
+    public static final class RequestDefinitionAuthoredDecide extends Builder<RequestDefinitionAuthoredDecide> implements RequestDefinition {
         public RequestDefinitionAuthoredDecide() {
         }
-        public static RequestDefinitionAuthoredDecide fromJson(Object value) {
+        static RequestDefinitionAuthoredDecide fromJson(Object value) {
             RequestDefinitionAuthoredDecide result = new RequestDefinitionAuthoredDecide();
             result.omit("batch");
             result.omit("context_schema");
@@ -1775,7 +1741,7 @@ public final class Inputs {
             return omit("wording_version");
         }
     }
-    public static final class RequestDefinitionAuthoredDecidePropertiesBatch implements Values.Value {
+    public static final class RequestDefinitionAuthoredDecidePropertiesBatch {
         private final Object value;
         public RequestDefinitionAuthoredDecidePropertiesBatch(String value) {
             this.value = Values.freeze(value);
@@ -1783,14 +1749,14 @@ public final class Inputs {
         public RequestDefinitionAuthoredDecidePropertiesBatch(Number value) {
             this.value = Values.freeze(value);
         }
-        public Object json() {
+        Object json() {
             return value;
         }
     }
-    public static final class RequestDefinitionAuthoredFind extends Values.Builder<RequestDefinitionAuthoredFind> implements RequestDefinition {
+    public static final class RequestDefinitionAuthoredFind extends Builder<RequestDefinitionAuthoredFind> implements RequestDefinition {
         public RequestDefinitionAuthoredFind() {
         }
-        public static RequestDefinitionAuthoredFind fromJson(Object value) {
+        static RequestDefinitionAuthoredFind fromJson(Object value) {
             RequestDefinitionAuthoredFind result = new RequestDefinitionAuthoredFind();
             result.omit("context_schema");
             result.omit("find");
@@ -1879,11 +1845,11 @@ public final class Inputs {
             return omit("wording_version");
         }
     }
-    public static final class RequestDefinitionAuthoredRelate extends Values.Builder<RequestDefinitionAuthoredRelate> implements RequestDefinition {
+    public static final class RequestDefinitionAuthoredRelate extends Builder<RequestDefinitionAuthoredRelate> implements RequestDefinition {
         public RequestDefinitionAuthoredRelate() {
             put("version", 1);
         }
-        public static RequestDefinitionAuthoredRelate fromJson(Object value) {
+        static RequestDefinitionAuthoredRelate fromJson(Object value) {
             RequestDefinitionAuthoredRelate result = new RequestDefinitionAuthoredRelate();
             result.omit("context_schema");
             result.omit("item_schema");
@@ -1973,10 +1939,10 @@ public final class Inputs {
             return omit("wording_version");
         }
     }
-    public static final class RequestDefinitionAuthoredScore extends Values.Builder<RequestDefinitionAuthoredScore> implements RequestDefinition {
+    public static final class RequestDefinitionAuthoredScore extends Builder<RequestDefinitionAuthoredScore> implements RequestDefinition {
         public RequestDefinitionAuthoredScore() {
         }
-        public static RequestDefinitionAuthoredScore fromJson(Object value) {
+        static RequestDefinitionAuthoredScore fromJson(Object value) {
             RequestDefinitionAuthoredScore result = new RequestDefinitionAuthoredScore();
             result.omit("batch");
             result.omit("context_schema");
@@ -2085,7 +2051,7 @@ public final class Inputs {
             return omit("wording_version");
         }
     }
-    public static final class RequestDefinitionAuthoredScorePropertiesBatch implements Values.Value {
+    public static final class RequestDefinitionAuthoredScorePropertiesBatch {
         private final Object value;
         public RequestDefinitionAuthoredScorePropertiesBatch(String value) {
             this.value = Values.freeze(value);
@@ -2093,14 +2059,14 @@ public final class Inputs {
         public RequestDefinitionAuthoredScorePropertiesBatch(Number value) {
             this.value = Values.freeze(value);
         }
-        public Object json() {
+        Object json() {
             return value;
         }
     }
-    public static final class RequestDefinitionAuthoredTag extends Values.Builder<RequestDefinitionAuthoredTag> implements RequestDefinition {
+    public static final class RequestDefinitionAuthoredTag extends Builder<RequestDefinitionAuthoredTag> implements RequestDefinition {
         public RequestDefinitionAuthoredTag() {
         }
-        public static RequestDefinitionAuthoredTag fromJson(Object value) {
+        static RequestDefinitionAuthoredTag fromJson(Object value) {
             RequestDefinitionAuthoredTag result = new RequestDefinitionAuthoredTag();
             result.omit("batch");
             result.omit("context_schema");
@@ -2219,7 +2185,7 @@ public final class Inputs {
             return omit("wording_version");
         }
     }
-    public static final class RequestDefinitionAuthoredTagPropertiesBatch implements Values.Value {
+    public static final class RequestDefinitionAuthoredTagPropertiesBatch {
         private final Object value;
         public RequestDefinitionAuthoredTagPropertiesBatch(String value) {
             this.value = Values.freeze(value);
@@ -2227,15 +2193,15 @@ public final class Inputs {
         public RequestDefinitionAuthoredTagPropertiesBatch(Number value) {
             this.value = Values.freeze(value);
         }
-        public Object json() {
+        Object json() {
             return value;
         }
     }
-    public static final class RequestDefinitionRecognizeDefinition extends Values.Builder<RequestDefinitionRecognizeDefinition> implements RequestDefinition {
+    public static final class RequestDefinitionRecognizeDefinition extends Builder<RequestDefinitionRecognizeDefinition> implements RequestDefinition {
         public RequestDefinitionRecognizeDefinition() {
             put("version", 1);
         }
-        public static RequestDefinitionRecognizeDefinition fromJson(Object value) {
+        static RequestDefinitionRecognizeDefinition fromJson(Object value) {
             RequestDefinitionRecognizeDefinition result = new RequestDefinitionRecognizeDefinition();
             result.omit("context_schema");
             result.omit("item_schema");
@@ -2345,40 +2311,34 @@ public final class Inputs {
             return omit("wording_version");
         }
     }
-    public enum RequestFraming implements Values.Value {
+    public enum RequestFraming {
         DOCUMENT("document"),LINES("lines"),JSONL("jsonl"),CSV("csv"),TSV("tsv");
         private final String value;
         RequestFraming(String value) {
             this.value = value;
         }
-        public Object json() {
+        Object json() {
             return value;
         }
     }
-    public enum RequestFunction implements Values.Value {
+    public enum RequestFunction {
         DECIDE("decide"),CHOOSE("choose"),TAG("tag"),SCORE("score"),FILTER("filter"),RANK("rank"),
         FIND("find"),ANNOTATE("annotate"),RECOGNIZE("recognize"),RELATE("relate");
         private final String value;
         RequestFunction(String value) {
             this.value = value;
         }
-        public Object json() {
+        Object json() {
             return value;
         }
     }
-    public sealed interface RequestImage extends Values.Value permits RequestImageFile,RequestImageBytes {
-        static RequestImage fromJson(Object value) {
-            Map<String,Object> object = Values.object(value);
-            if ("file".equals(object.get("kind"))) return RequestImageFile.fromJson(value);
-            if ("bytes".equals(object.get("kind"))) return RequestImageBytes.fromJson(value);
-            return RequestImageFile.fromJson(value);
-        }
+    public sealed interface RequestImage permits RequestImageFile,RequestImageBytes {
     }
-    public static final class RequestImageBytes extends Values.Builder<RequestImageBytes> implements RequestImage {
+    public static final class RequestImageBytes extends Builder<RequestImageBytes> implements RequestImage {
         public RequestImageBytes() {
             put("kind", "bytes");
         }
-        public static RequestImageBytes fromJson(Object value) {
+        static RequestImageBytes fromJson(Object value) {
             RequestImageBytes result = new RequestImageBytes();
             result.omit("bytes");
             result.omit("kind");
@@ -2408,11 +2368,11 @@ public final class Inputs {
             return omit("media");
         }
     }
-    public static final class RequestImageFile extends Values.Builder<RequestImageFile> implements RequestImage {
+    public static final class RequestImageFile extends Builder<RequestImageFile> implements RequestImage {
         public RequestImageFile() {
             put("kind", "file");
         }
-        public static RequestImageFile fromJson(Object value) {
+        static RequestImageFile fromJson(Object value) {
             RequestImageFile result = new RequestImageFile();
             result.omit("kind");
             result.omit("media");
@@ -2442,25 +2402,14 @@ public final class Inputs {
             return omit("path");
         }
     }
-    public sealed interface RequestInput extends Values.Value permits RequestInputText,RequestInputJson,
-    RequestInputRecords,RequestInputUnits,RequestInputEntities,RequestInputSource,RequestInputFeed {
-        static RequestInput fromJson(Object value) {
-            Map<String,Object> object = Values.object(value);
-            if ("text".equals(object.get("kind"))) return RequestInputText.fromJson(value);
-            if ("json".equals(object.get("kind"))) return RequestInputJson.fromJson(value);
-            if ("records".equals(object.get("kind"))) return RequestInputRecords.fromJson(value);
-            if ("units".equals(object.get("kind"))) return RequestInputUnits.fromJson(value);
-            if ("entities".equals(object.get("kind"))) return RequestInputEntities.fromJson(value);
-            if ("source".equals(object.get("kind"))) return RequestInputSource.fromJson(value);
-            if ("feed".equals(object.get("kind"))) return RequestInputFeed.fromJson(value);
-            return RequestInputText.fromJson(value);
-        }
+    public sealed interface RequestInput permits RequestInputText,RequestInputJson,RequestInputRecords,
+    RequestInputUnits,RequestInputEntities,RequestInputSource,RequestInputFeed {
     }
-    public static final class RequestInputEntities extends Values.Builder<RequestInputEntities> implements RequestInput {
+    public static final class RequestInputEntities extends Builder<RequestInputEntities> implements RequestInput {
         public RequestInputEntities() {
             put("kind", "entities");
         }
-        public static RequestInputEntities fromJson(Object value) {
+        static RequestInputEntities fromJson(Object value) {
             RequestInputEntities result = new RequestInputEntities();
             result.omit("items");
             result.omit("kind");
@@ -2480,11 +2429,11 @@ public final class Inputs {
             return omit("items");
         }
     }
-    public static final class RequestInputFeed extends Values.Builder<RequestInputFeed> implements RequestInput {
+    public static final class RequestInputFeed extends Builder<RequestInputFeed> implements RequestInput {
         public RequestInputFeed() {
             put("kind", "feed");
         }
-        public static RequestInputFeed fromJson(Object value) {
+        static RequestInputFeed fromJson(Object value) {
             RequestInputFeed result = new RequestInputFeed();
             result.omit("framing");
             result.omit("images");
@@ -2534,11 +2483,11 @@ public final class Inputs {
             return omit("reading");
         }
     }
-    public static final class RequestInputJson extends Values.Builder<RequestInputJson> implements RequestInput {
+    public static final class RequestInputJson extends Builder<RequestInputJson> implements RequestInput {
         public RequestInputJson() {
             put("kind", "json");
         }
-        public static RequestInputJson fromJson(Object value) {
+        static RequestInputJson fromJson(Object value) {
             RequestInputJson result = new RequestInputJson();
             result.omit("images");
             result.omit("kind");
@@ -2568,11 +2517,11 @@ public final class Inputs {
             return omit("value");
         }
     }
-    public static final class RequestInputRecords extends Values.Builder<RequestInputRecords> implements RequestInput {
+    public static final class RequestInputRecords extends Builder<RequestInputRecords> implements RequestInput {
         public RequestInputRecords() {
             put("kind", "records");
         }
-        public static RequestInputRecords fromJson(Object value) {
+        static RequestInputRecords fromJson(Object value) {
             RequestInputRecords result = new RequestInputRecords();
             result.omit("items");
             result.omit("kind");
@@ -2592,11 +2541,11 @@ public final class Inputs {
             return omit("items");
         }
     }
-    public static final class RequestInputSource extends Values.Builder<RequestInputSource> implements RequestInput {
+    public static final class RequestInputSource extends Builder<RequestInputSource> implements RequestInput {
         public RequestInputSource() {
             put("kind", "source");
         }
-        public static RequestInputSource fromJson(Object value) {
+        static RequestInputSource fromJson(Object value) {
             RequestInputSource result = new RequestInputSource();
             result.omit("kind");
             result.omit("source");
@@ -2616,11 +2565,11 @@ public final class Inputs {
             return omit("source");
         }
     }
-    public static final class RequestInputText extends Values.Builder<RequestInputText> implements RequestInput {
+    public static final class RequestInputText extends Builder<RequestInputText> implements RequestInput {
         public RequestInputText() {
             put("kind", "text");
         }
-        public static RequestInputText fromJson(Object value) {
+        static RequestInputText fromJson(Object value) {
             RequestInputText result = new RequestInputText();
             result.omit("images");
             result.omit("kind");
@@ -2650,11 +2599,11 @@ public final class Inputs {
             return omit("text");
         }
     }
-    public static final class RequestInputUnits extends Values.Builder<RequestInputUnits> implements RequestInput {
+    public static final class RequestInputUnits extends Builder<RequestInputUnits> implements RequestInput {
         public RequestInputUnits() {
             put("kind", "units");
         }
-        public static RequestInputUnits fromJson(Object value) {
+        static RequestInputUnits fromJson(Object value) {
             RequestInputUnits result = new RequestInputUnits();
             result.omit("items");
             result.omit("kind");
@@ -2674,10 +2623,10 @@ public final class Inputs {
             return omit("items");
         }
     }
-    public static final class RequestItem extends Values.Builder<RequestItem> {
+    public static final class RequestItem extends Builder<RequestItem> {
         public RequestItem() {
         }
-        public static RequestItem fromJson(Object value) {
+        static RequestItem fromJson(Object value) {
             RequestItem result = new RequestItem();
             result.omit("context");
             result.omit("examples");
@@ -2746,10 +2695,10 @@ public final class Inputs {
             return omit("seed_spans");
         }
     }
-    public static final class RequestOptions extends Values.Builder<RequestOptions> {
+    public static final class RequestOptions extends Builder<RequestOptions> {
         public RequestOptions() {
         }
-        public static RequestOptions fromJson(Object value) {
+        static RequestOptions fromJson(Object value) {
             RequestOptions result = new RequestOptions();
             result.omit("attempts");
             result.omit("batch");
@@ -2978,19 +2927,13 @@ public final class Inputs {
             return omit("top");
         }
     }
-    public sealed interface RequestOriginal extends Values.Value permits RequestOriginalText,RequestOriginalJson {
-        static RequestOriginal fromJson(Object value) {
-            Map<String,Object> object = Values.object(value);
-            if ("text".equals(object.get("kind"))) return RequestOriginalText.fromJson(value);
-            if ("json".equals(object.get("kind"))) return RequestOriginalJson.fromJson(value);
-            return RequestOriginalText.fromJson(value);
-        }
+    public sealed interface RequestOriginal permits RequestOriginalText,RequestOriginalJson {
     }
-    public static final class RequestOriginalJson extends Values.Builder<RequestOriginalJson> implements RequestOriginal {
+    public static final class RequestOriginalJson extends Builder<RequestOriginalJson> implements RequestOriginal {
         public RequestOriginalJson() {
             put("kind", "json");
         }
-        public static RequestOriginalJson fromJson(Object value) {
+        static RequestOriginalJson fromJson(Object value) {
             RequestOriginalJson result = new RequestOriginalJson();
             result.omit("kind");
             result.omit("value");
@@ -3010,11 +2953,11 @@ public final class Inputs {
             return omit("value");
         }
     }
-    public static final class RequestOriginalText extends Values.Builder<RequestOriginalText> implements RequestOriginal {
+    public static final class RequestOriginalText extends Builder<RequestOriginalText> implements RequestOriginal {
         public RequestOriginalText() {
             put("kind", "text");
         }
-        public static RequestOriginalText fromJson(Object value) {
+        static RequestOriginalText fromJson(Object value) {
             RequestOriginalText result = new RequestOriginalText();
             result.omit("kind");
             result.omit("text");
@@ -3034,23 +2977,14 @@ public final class Inputs {
             return omit("text");
         }
     }
-    public sealed interface RequestQuestion extends Values.Value permits RequestQuestionText,RequestQuestionDefinition,
+    public sealed interface RequestQuestion permits RequestQuestionText,RequestQuestionDefinition,
     RequestQuestionFile,RequestQuestionName,RequestQuestionReference {
-        static RequestQuestion fromJson(Object value) {
-            Map<String,Object> object = Values.object(value);
-            if ("text".equals(object.get("kind"))) return RequestQuestionText.fromJson(value);
-            if ("definition".equals(object.get("kind"))) return RequestQuestionDefinition.fromJson(value);
-            if ("file".equals(object.get("kind"))) return RequestQuestionFile.fromJson(value);
-            if ("name".equals(object.get("kind"))) return RequestQuestionName.fromJson(value);
-            if ("reference".equals(object.get("kind"))) return RequestQuestionReference.fromJson(value);
-            return RequestQuestionText.fromJson(value);
-        }
     }
-    public static final class RequestQuestionDefinition extends Values.Builder<RequestQuestionDefinition> implements RequestQuestion {
+    public static final class RequestQuestionDefinition extends Builder<RequestQuestionDefinition> implements RequestQuestion {
         public RequestQuestionDefinition() {
             put("kind", "definition");
         }
-        public static RequestQuestionDefinition fromJson(Object value) {
+        static RequestQuestionDefinition fromJson(Object value) {
             RequestQuestionDefinition result = new RequestQuestionDefinition();
             result.omit("kind");
             result.omit("value");
@@ -3070,11 +3004,11 @@ public final class Inputs {
             return omit("value");
         }
     }
-    public static final class RequestQuestionFile extends Values.Builder<RequestQuestionFile> implements RequestQuestion {
+    public static final class RequestQuestionFile extends Builder<RequestQuestionFile> implements RequestQuestion {
         public RequestQuestionFile() {
             put("kind", "file");
         }
-        public static RequestQuestionFile fromJson(Object value) {
+        static RequestQuestionFile fromJson(Object value) {
             RequestQuestionFile result = new RequestQuestionFile();
             result.omit("kind");
             result.omit("path");
@@ -3094,11 +3028,11 @@ public final class Inputs {
             return omit("path");
         }
     }
-    public static final class RequestQuestionName extends Values.Builder<RequestQuestionName> implements RequestQuestion {
+    public static final class RequestQuestionName extends Builder<RequestQuestionName> implements RequestQuestion {
         public RequestQuestionName() {
             put("kind", "name");
         }
-        public static RequestQuestionName fromJson(Object value) {
+        static RequestQuestionName fromJson(Object value) {
             RequestQuestionName result = new RequestQuestionName();
             result.omit("kind");
             result.omit("name");
@@ -3118,11 +3052,11 @@ public final class Inputs {
             return omit("name");
         }
     }
-    public static final class RequestQuestionReference extends Values.Builder<RequestQuestionReference> implements RequestQuestion {
+    public static final class RequestQuestionReference extends Builder<RequestQuestionReference> implements RequestQuestion {
         public RequestQuestionReference() {
             put("kind", "reference");
         }
-        public static RequestQuestionReference fromJson(Object value) {
+        static RequestQuestionReference fromJson(Object value) {
             RequestQuestionReference result = new RequestQuestionReference();
             result.omit("kind");
             result.omit("reference");
@@ -3142,11 +3076,11 @@ public final class Inputs {
             return omit("reference");
         }
     }
-    public static final class RequestQuestionText extends Values.Builder<RequestQuestionText> implements RequestQuestion {
+    public static final class RequestQuestionText extends Builder<RequestQuestionText> implements RequestQuestion {
         public RequestQuestionText() {
             put("kind", "text");
         }
-        public static RequestQuestionText fromJson(Object value) {
+        static RequestQuestionText fromJson(Object value) {
             RequestQuestionText result = new RequestQuestionText();
             result.omit("kind");
             result.omit("text");
@@ -3166,10 +3100,10 @@ public final class Inputs {
             return omit("text");
         }
     }
-    public static final class RequestReader extends Values.Builder<RequestReader> {
+    public static final class RequestReader extends Builder<RequestReader> {
         public RequestReader() {
         }
-        public static RequestReader fromJson(Object value) {
+        static RequestReader fromJson(Object value) {
             RequestReader result = new RequestReader();
             result.omit("unit");
             result.omit("window");
@@ -3198,22 +3132,14 @@ public final class Inputs {
             return omit("window");
         }
     }
-    public sealed interface RequestReaderFailure extends Values.Value permits RequestReaderFailureProducer,
-    RequestReaderFailureIo,RequestReaderFailureUtf8,RequestReaderFailureInvalidInput {
-        static RequestReaderFailure fromJson(Object value) {
-            Map<String,Object> object = Values.object(value);
-            if ("producer".equals(object.get("kind"))) return RequestReaderFailureProducer.fromJson(value);
-            if ("io".equals(object.get("kind"))) return RequestReaderFailureIo.fromJson(value);
-            if ("utf8".equals(object.get("kind"))) return RequestReaderFailureUtf8.fromJson(value);
-            if ("invalid_input".equals(object.get("kind"))) return RequestReaderFailureInvalidInput.fromJson(value);
-            return RequestReaderFailureProducer.fromJson(value);
-        }
+    public sealed interface RequestReaderFailure permits RequestReaderFailureProducer,RequestReaderFailureIo,
+    RequestReaderFailureUtf8,RequestReaderFailureInvalidInput {
     }
-    public static final class RequestReaderFailureInvalidInput extends Values.Builder<RequestReaderFailureInvalidInput> implements RequestReaderFailure {
+    public static final class RequestReaderFailureInvalidInput extends Builder<RequestReaderFailureInvalidInput> implements RequestReaderFailure {
         public RequestReaderFailureInvalidInput() {
             put("kind", "invalid_input");
         }
-        public static RequestReaderFailureInvalidInput fromJson(Object value) {
+        static RequestReaderFailureInvalidInput fromJson(Object value) {
             RequestReaderFailureInvalidInput result = new RequestReaderFailureInvalidInput();
             result.omit("kind");
             result.omit("location");
@@ -3233,11 +3159,11 @@ public final class Inputs {
             return omit("location");
         }
     }
-    public static final class RequestReaderFailureIo extends Values.Builder<RequestReaderFailureIo> implements RequestReaderFailure {
+    public static final class RequestReaderFailureIo extends Builder<RequestReaderFailureIo> implements RequestReaderFailure {
         public RequestReaderFailureIo() {
             put("kind", "io");
         }
-        public static RequestReaderFailureIo fromJson(Object value) {
+        static RequestReaderFailureIo fromJson(Object value) {
             RequestReaderFailureIo result = new RequestReaderFailureIo();
             result.omit("kind");
             result.omit("location");
@@ -3257,11 +3183,11 @@ public final class Inputs {
             return omit("location");
         }
     }
-    public static final class RequestReaderFailureProducer extends Values.Builder<RequestReaderFailureProducer> implements RequestReaderFailure {
+    public static final class RequestReaderFailureProducer extends Builder<RequestReaderFailureProducer> implements RequestReaderFailure {
         public RequestReaderFailureProducer() {
             put("kind", "producer");
         }
-        public static RequestReaderFailureProducer fromJson(Object value) {
+        static RequestReaderFailureProducer fromJson(Object value) {
             RequestReaderFailureProducer result = new RequestReaderFailureProducer();
             result.omit("kind");
             Values.object(value).forEach(result::extension);
@@ -3271,11 +3197,11 @@ public final class Inputs {
             return this;
         }
     }
-    public static final class RequestReaderFailureUtf8 extends Values.Builder<RequestReaderFailureUtf8> implements RequestReaderFailure {
+    public static final class RequestReaderFailureUtf8 extends Builder<RequestReaderFailureUtf8> implements RequestReaderFailure {
         public RequestReaderFailureUtf8() {
             put("kind", "utf8");
         }
-        public static RequestReaderFailureUtf8 fromJson(Object value) {
+        static RequestReaderFailureUtf8 fromJson(Object value) {
             RequestReaderFailureUtf8 result = new RequestReaderFailureUtf8();
             result.omit("kind");
             result.omit("location");
@@ -3295,10 +3221,10 @@ public final class Inputs {
             return omit("location");
         }
     }
-    public static final class RequestSessionDescriptor extends Values.Builder<RequestSessionDescriptor> {
+    public static final class RequestSessionDescriptor extends Builder<RequestSessionDescriptor> {
         public RequestSessionDescriptor() {
         }
-        public static RequestSessionDescriptor fromJson(Object value) {
+        static RequestSessionDescriptor fromJson(Object value) {
             RequestSessionDescriptor result = new RequestSessionDescriptor();
             result.omit("item");
             result.omit("location");
@@ -3327,10 +3253,10 @@ public final class Inputs {
             return omit("location");
         }
     }
-    public static final class RequestSource extends Values.Builder<RequestSource> {
+    public static final class RequestSource extends Builder<RequestSource> {
         public RequestSource() {
         }
-        public static RequestSource fromJson(Object value) {
+        static RequestSource fromJson(Object value) {
             RequestSource result = new RequestSource();
             result.omit("framing");
             result.omit("media");
@@ -3379,7 +3305,7 @@ public final class Inputs {
             return omit("reading");
         }
     }
-    public static final class RequestThreshold implements Values.Value {
+    public static final class RequestThreshold {
         private final Object value;
         public RequestThreshold(Number value) {
             this.value = Values.freeze(value);
@@ -3387,24 +3313,24 @@ public final class Inputs {
         public RequestThreshold(String value) {
             this.value = Values.freeze(value);
         }
-        public Object json() {
+        Object json() {
             return value;
         }
     }
-    public enum RequestVersion implements Values.Value {
+    public enum RequestVersion {
         THINKTHENREQUEST1("thinkthen.request/1");
         private final String value;
         RequestVersion(String value) {
             this.value = value;
         }
-        public Object json() {
+        Object json() {
             return value;
         }
     }
-    public static final class SessionSourceLocation extends Values.Builder<SessionSourceLocation> {
+    public static final class SessionSourceLocation extends Builder<SessionSourceLocation> {
         public SessionSourceLocation() {
         }
-        public static SessionSourceLocation fromJson(Object value) {
+        static SessionSourceLocation fromJson(Object value) {
             SessionSourceLocation result = new SessionSourceLocation();
             result.omit("file");
             result.omit("first_line");
@@ -3443,14 +3369,116 @@ public final class Inputs {
             return omit("last_line");
         }
     }
-    public enum SourceUnit implements Values.Value {
+    public enum SourceUnit {
         LINE("line"),WINDOW("window"),FILE("file");
         private final String value;
         SourceUnit(String value) {
             this.value = value;
         }
-        public Object json() {
+        Object json() {
             return value;
         }
+    }
+    static AnnotateQuestion readAnnotateQuestion(Object value) {
+        Map<String,Object> object = Values.object(value);
+        if (object.containsKey("decide") && !object.containsKey("choose") && !object.containsKey("score") && !object.containsKey("tag")) return AnnotateQuestionDecide.fromJson(value);
+        if (object.containsKey("choose") && !object.containsKey("decide") && !object.containsKey("score") && !object.containsKey("tag")) return AnnotateQuestionChoose.fromJson(value);
+        if (object.containsKey("tag") && !object.containsKey("choose") && !object.containsKey("decide") && !object.containsKey("score")) return AnnotateQuestionTag.fromJson(value);
+        if (object.containsKey("score") && !object.containsKey("choose") && !object.containsKey("decide") && !object.containsKey("tag")) return AnnotateQuestionScore.fromJson(value);
+        return AnnotateQuestionDecide.fromJson(value);
+    }
+    static AuthoredInputDeclaration readAuthoredInputDeclaration(Object value) {
+        Map<String,Object> object = Values.object(value);
+        if ("string".equals(object.get("type"))) return AuthoredInputDeclarationString.fromJson(value);
+        if ("object".equals(object.get("type"))) return AuthoredInputDeclarationObject.fromJson(value);
+        return AuthoredInputDeclarationString.fromJson(value);
+    }
+    static AuthoredInputProperty readAuthoredInputProperty(Object value) {
+        Map<String,Object> object = Values.object(value);
+        if ("string".equals(object.get("type"))) return AuthoredInputPropertyString.fromJson(value);
+        if ("number".equals(object.get("type"))) return AuthoredInputPropertyNumber.fromJson(value);
+        if ("boolean".equals(object.get("type"))) return AuthoredInputPropertyBoolean.fromJson(value);
+        if ("array".equals(object.get("type"))) return AuthoredInputPropertyArray.fromJson(value);
+        return AuthoredInputPropertyString.fromJson(value);
+    }
+    static RequestDefinition readRequestDefinition(Object value) {
+        Map<String,Object> object = Values.object(value);
+        if (object.containsKey("decide") && !object.containsKey("choose") && !object.containsKey("find") && !object.containsKey("questions") && !object.containsKey("recognize") && !object.containsKey("relate") && !object.containsKey("score") && !object.containsKey("tag") && !object.containsKey("version")) return RequestDefinitionAuthoredDecide.fromJson(value);
+        if (object.containsKey("choose") && !object.containsKey("decide") && !object.containsKey("find") && !object.containsKey("questions") && !object.containsKey("recognize") && !object.containsKey("relate") && !object.containsKey("score") && !object.containsKey("tag") && !object.containsKey("version")) return RequestDefinitionAuthoredChoose.fromJson(value);
+        if (object.containsKey("tag") && !object.containsKey("choose") && !object.containsKey("decide") && !object.containsKey("find") && !object.containsKey("questions") && !object.containsKey("recognize") && !object.containsKey("relate") && !object.containsKey("score") && !object.containsKey("version")) return RequestDefinitionAuthoredTag.fromJson(value);
+        if (object.containsKey("score") && !object.containsKey("choose") && !object.containsKey("decide") && !object.containsKey("find") && !object.containsKey("questions") && !object.containsKey("recognize") && !object.containsKey("relate") && !object.containsKey("tag") && !object.containsKey("version")) return RequestDefinitionAuthoredScore.fromJson(value);
+        if (object.containsKey("relate") && object.containsKey("version") && !object.containsKey("choose") && !object.containsKey("decide") && !object.containsKey("find") && !object.containsKey("questions") && !object.containsKey("recognize") && !object.containsKey("score") && !object.containsKey("tag")) return RequestDefinitionAuthoredRelate.fromJson(value);
+        if (object.containsKey("find") && !object.containsKey("choose") && !object.containsKey("decide") && !object.containsKey("questions") && !object.containsKey("recognize") && !object.containsKey("relate") && !object.containsKey("score") && !object.containsKey("tag") && !object.containsKey("version")) return RequestDefinitionAuthoredFind.fromJson(value);
+        if (object.containsKey("recognize") && object.containsKey("version") && !object.containsKey("choose") && !object.containsKey("decide") && !object.containsKey("find") && !object.containsKey("questions") && !object.containsKey("relate") && !object.containsKey("score") && !object.containsKey("tag")) return RequestDefinitionRecognizeDefinition.fromJson(value);
+        if (object.containsKey("questions") && object.containsKey("version") && !object.containsKey("choose") && !object.containsKey("decide") && !object.containsKey("find") && !object.containsKey("recognize") && !object.containsKey("relate") && !object.containsKey("score") && !object.containsKey("tag")) return RequestDefinitionAnnotateDefinition.fromJson(value);
+        return RequestDefinitionAuthoredDecide.fromJson(value);
+    }
+    static RequestImage readRequestImage(Object value) {
+        Map<String,Object> object = Values.object(value);
+        if ("file".equals(object.get("kind"))) return RequestImageFile.fromJson(value);
+        if ("bytes".equals(object.get("kind"))) return RequestImageBytes.fromJson(value);
+        return RequestImageFile.fromJson(value);
+    }
+    static RequestInput readRequestInput(Object value) {
+        Map<String,Object> object = Values.object(value);
+        if ("text".equals(object.get("kind"))) return RequestInputText.fromJson(value);
+        if ("json".equals(object.get("kind"))) return RequestInputJson.fromJson(value);
+        if ("records".equals(object.get("kind"))) return RequestInputRecords.fromJson(value);
+        if ("units".equals(object.get("kind"))) return RequestInputUnits.fromJson(value);
+        if ("entities".equals(object.get("kind"))) return RequestInputEntities.fromJson(value);
+        if ("source".equals(object.get("kind"))) return RequestInputSource.fromJson(value);
+        if ("feed".equals(object.get("kind"))) return RequestInputFeed.fromJson(value);
+        return RequestInputText.fromJson(value);
+    }
+    static RequestOriginal readRequestOriginal(Object value) {
+        Map<String,Object> object = Values.object(value);
+        if ("text".equals(object.get("kind"))) return RequestOriginalText.fromJson(value);
+        if ("json".equals(object.get("kind"))) return RequestOriginalJson.fromJson(value);
+        return RequestOriginalText.fromJson(value);
+    }
+    static RequestQuestion readRequestQuestion(Object value) {
+        Map<String,Object> object = Values.object(value);
+        if ("text".equals(object.get("kind"))) return RequestQuestionText.fromJson(value);
+        if ("definition".equals(object.get("kind"))) return RequestQuestionDefinition.fromJson(value);
+        if ("file".equals(object.get("kind"))) return RequestQuestionFile.fromJson(value);
+        if ("name".equals(object.get("kind"))) return RequestQuestionName.fromJson(value);
+        if ("reference".equals(object.get("kind"))) return RequestQuestionReference.fromJson(value);
+        return RequestQuestionText.fromJson(value);
+    }
+    static RequestReaderFailure readRequestReaderFailure(Object value) {
+        Map<String,Object> object = Values.object(value);
+        if ("producer".equals(object.get("kind"))) return RequestReaderFailureProducer.fromJson(value);
+        if ("io".equals(object.get("kind"))) return RequestReaderFailureIo.fromJson(value);
+        if ("utf8".equals(object.get("kind"))) return RequestReaderFailureUtf8.fromJson(value);
+        if ("invalid_input".equals(object.get("kind"))) return RequestReaderFailureInvalidInput.fromJson(value);
+        return RequestReaderFailureProducer.fromJson(value);
+    }
+    static Object tree(Object value) {
+        if (value instanceof AuthoredCriterion item) return item.json();
+        if (value instanceof AuthoredCut item) return item.json();
+        if (value instanceof AuthoredDescription item) return item.json();
+        if (value instanceof AuthoredLabels item) return item.json();
+        if (value instanceof AuthoredLevels item) return item.json();
+        if (value instanceof AuthoredOptions item) return item.json();
+        if (value instanceof AuthoredPointers item) return item.json();
+        if (value instanceof AuthoredQuestionText item) return item.json();
+        if (value instanceof AuthoredThreshold item) return item.json();
+        if (value instanceof CacheDocument item) return item.json();
+        if (value instanceof ContextSchema item) return item.json();
+        if (value instanceof ImageMedia item) return item.json();
+        if (value instanceof ReaderMedia item) return item.json();
+        if (value instanceof RecognitionExample item) return item.json();
+        if (value instanceof RecognitionMode item) return item.json();
+        if (value instanceof RequestBatch item) return item.json();
+        if (value instanceof RequestDefinitionAuthoredChoosePropertiesBatch item) return item.json();
+        if (value instanceof RequestDefinitionAuthoredDecidePropertiesBatch item) return item.json();
+        if (value instanceof RequestDefinitionAuthoredScorePropertiesBatch item) return item.json();
+        if (value instanceof RequestDefinitionAuthoredTagPropertiesBatch item) return item.json();
+        if (value instanceof RequestFraming item) return item.json();
+        if (value instanceof RequestFunction item) return item.json();
+        if (value instanceof RequestThreshold item) return item.json();
+        if (value instanceof RequestVersion item) return item.json();
+        if (value instanceof SourceUnit item) return item.json();
+        return value;
     }
 }

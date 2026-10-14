@@ -86,8 +86,8 @@ public final class SessionConsumer {
             var score = done(engine.score(authored(new Inputs.RequestDefinitionAuthoredScore().score(wording("Which?")).levels(new Inputs.AuthoredLevels(List.of("Low.","High.")))),records("session-score"),options()));
             check(score.score() != null, "normalized score answer");
             check(score.packets().stream().anyMatch(Results.SessionPacketScoreRow.class::isInstance),"score row");
-            check(done(engine.filter(authored(new Inputs.RequestDefinitionAuthoredDecide().decide(wording("Is it?")).threshold(new Inputs.AuthoredThreshold(0.5))),records("session-filter"),options())).packets().stream().anyMatch(Results.SessionPacketFilterRow.class::isInstance),"filter row");
-            check(done(engine.rank(authored(new Inputs.RequestDefinitionAuthoredDecide().decide(wording("Is it?"))),records("session-rank"),options())).packets().stream().anyMatch(Results.SessionPacketRankAggregate.class::isInstance),"rank aggregate");
+            check(done(engine.filter(authored(new Inputs.RequestDefinitionAuthoredDecide().decide(wording("Is it?")).threshold(new Inputs.AuthoredThreshold(0.5))),records("session-filter"),options())).filter().equals(List.of("session-filter")),"filter returns original inputs");
+            check(done(engine.rank(authored(new Inputs.RequestDefinitionAuthoredDecide().decide(wording("Is it?"))),records("session-rank"),options())).rank().equals(List.of(java.math.BigInteger.ZERO)),"rank returns original zero-based indexes");
             check(done(engine.find(authored(new Inputs.RequestDefinitionAuthoredFind().find(wording("Which?"))),records("session-find","session-find-two"),options())).packets().stream().anyMatch(Results.SessionPacketFindAggregate.class::isInstance),"find aggregate");
             check(done(engine.annotate(authored(new Inputs.RequestDefinitionAnnotateDefinition().questions(Map.of("check",new Inputs.AnnotateQuestionDecide().decide(wording("Is it?"))))),records("session-annotate"),options())).packets().stream().anyMatch(Results.SessionPacketAnnotateRow.class::isInstance),"annotate row");
             check(done(engine.recognize(authored(new Inputs.RequestDefinitionRecognizeDefinition().recognize(new Inputs.RecognizeQuestion().kinds(Map.of("person",new Inputs.AuthoredDescription("A person's name."))))),records("Maria Chen"),options())).packets().stream().anyMatch(Results.SessionPacketRecognizeAggregate.class::isInstance),"recognize aggregate");
@@ -105,10 +105,10 @@ public final class SessionConsumer {
             var shortlist = new Inputs.RequestItem().original(new Inputs.RequestOriginalText().text("shortlist-preview")).options(List.of(new Inputs.OptionSchema().name("first"),new Inputs.OptionSchema().name("second")));
             check(engine.plan(new Inputs.Request().call(new Inputs.RequestCall().function(Inputs.RequestFunction.CHOOSE).question(authored(new Inputs.RequestDefinitionAuthoredChoose().choose(wording("Which?")).options(new Inputs.AuthoredOptions(List.of("first","second"))))).input(new Inputs.RequestInputRecords().items(List.of(shortlist))))).requests().intValueExact() == 1,"typed replacement shortlist");
             var states = new Inputs.RequestOptions().contextNull();
-            check(Values.object(states.json()).containsKey("context") && Values.object(states.json()).get("context") == null,"input null collapsed");
+            check(((Map<?,?>)thinkthen.SessionCases.tree(states)).containsKey("context") && ((Map<?,?>)thinkthen.SessionCases.tree(states)).get("context") == null,"input null collapsed");
             refuse(engine.decide(question,records("null-refusal"),states));
             states.omitContext();
-            check(!Values.object(states.json()).containsKey("context"),"input omission collapsed");
+            check(!((Map<?,?>)thinkthen.SessionCases.tree(states)).containsKey("context"),"input omission collapsed");
             var badDefinition = new Inputs.RequestDefinitionAuthoredDecide().decide(wording("Is it?")).extension("unknown_authored_member",false);
             refuse(engine.decide(authored(badDefinition),records("unknown-refusal"),options()));
             refuse(engine.decide(question,new Inputs.RequestInputText().text("image-refusal").images(List.of(new Inputs.RequestImageBytes().media(Inputs.ImageMedia.IMAGEPNG).bytes("iVBORw0KGgo="))),options()));
@@ -163,7 +163,7 @@ public final class SessionConsumer {
         catch (IllegalStateException expected) { }
         var nullMap = new LinkedHashMap<String,Object>(); nullMap.put("first_body_utf8",null); nullMap.put("future",false);
         var explicitNull = new Results.Plan(nullMap); nullMap.clear();
-        check(explicitNull.firstBodyUtf8().state() == Presence.State.NULL && Boolean.FALSE.equals(Values.object(explicitNull.json()).get("future")),"null/false ownership");
+        check(explicitNull.firstBodyUtf8().state() == Presence.State.NULL && Boolean.FALSE.equals(((Map<?,?>)thinkthen.SessionCases.tree(explicitNull)).get("future")),"null/false ownership");
         System.out.println("INSTALLED_JVM_SESSION_PASS");
     }
 }

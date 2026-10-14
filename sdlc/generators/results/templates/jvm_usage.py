@@ -43,6 +43,8 @@ def outputs(root):
         for name, field in record['fields'].items():
             layouts.append(f'static final long {label}_{name.upper()} = {field["offset"]};')
     layouts += ['}']
+    from jvm_native import render as native_results
+    result_reader = native_results(root, native)
     kotlin = ['// Generated from the C header constants. Do not edit.', 'package thinkthen.kotlin',
               'data class UsagePersistence(val state: State, val advice: String?) {',
               'enum class State { ' + ', '.join(name for name, _ in states) + ' }',
@@ -93,6 +95,9 @@ def outputs(root):
             'thinkthen_complete_utf8_v1', 'thinkthen_session **']:
         raise ValueError('JVM named constructor signature changed')
     request_schema = json.loads((root / 'specification/request.schema.json').read_text())
+    from generate import graph, prepare
+    from jvm import ROOTS
+    result_definitions = prepare(graph(json.loads((root / 'crates/thinkthen/src/public/results/complete.schema.json').read_text()), ROOTS))
     named = native['records']['thinkthen_named_request_v1']
     named_lines = ['// Generated from compiler-derived C carriers. Do not edit.',
                    'package thinkthen;', 'import java.lang.foreign.*;',
@@ -105,8 +110,8 @@ def outputs(root):
                    'static MemorySegment create(MemorySegment engine, Engine.Surface surface, Inputs.RequestFunction function, Inputs.RequestQuestion question, Inputs.RequestInput input, Inputs.RequestOptions options) {',
                    'try (Arena arena = Arena.ofConfined()) {', 'var request = arena.allocate(REQUEST);']
     for field in named['fields']:
-        value = {'function': '(String)function.json()', 'question_json': 'Json.write(question.json())',
-                 'input_json': 'Json.write(input.json())', 'options_json': 'options == null ? "{}" : Json.write(options.json())'}[field]
+        value = {'function': '(String)Values.json(function)', 'question_json': 'Json.write(Values.json(question))',
+                 'input_json': 'Json.write(Values.json(input))', 'options_json': 'options == null ? "{}" : Json.write(options.json())'}[field]
         named_lines += [f'text(arena, request.asSlice({named["fields"][field]["offset"]}, {advice["size"]}), {value});']
     named_lines += [f'var token = arena.allocate(NativeUsageLayouts.ADVICE);',
                     'text(arena, token, surface.name().toLowerCase(java.util.Locale.ROOT));',
@@ -114,5 +119,5 @@ def outputs(root):
                     'NativeSession.check((int)NativeSession.call("thinkthen_session_new_named_with_surface", ValueLayout.JAVA_INT,',
                     'new MemoryLayout[]{ValueLayout.ADDRESS, ValueLayout.ADDRESS, MemoryLayout.structLayout(ValueLayout.ADDRESS, NativeSession.SIZE), ValueLayout.ADDRESS}, engine, request, token, output));',
                     'return output.get(ValueLayout.ADDRESS, 0);', '}', '}', '}']
-    return {'kotlin/KotlinNamedCalls.kt': facade_calls(request_schema['$defs'], 'kotlin'), 'scala/ScalaNamedCalls.scala': facade_calls(request_schema['$defs'], 'scala'), 'thinkthen/ErrorKind.java': errors, 'thinkthen/NamedCalls.java': named_calls(request_schema['$defs']), 'thinkthen/NativeNamed.java': named_lines, 'thinkthen/NativeWait.java': waits, 'thinkthen/UsagePersistence.java': java, 'thinkthen/NativeUsageLayouts.java': layouts,
+    return {'thinkthen/NativeResults.java': result_reader, 'kotlin/KotlinNamedCalls.kt': facade_calls(request_schema['$defs'], 'kotlin', result_definitions), 'scala/ScalaNamedCalls.scala': facade_calls(request_schema['$defs'], 'scala', result_definitions), 'thinkthen/ErrorKind.java': errors, 'thinkthen/NamedCalls.java': named_calls(request_schema['$defs']), 'thinkthen/NativeNamed.java': named_lines, 'thinkthen/NativeWait.java': waits, 'thinkthen/UsagePersistence.java': java, 'thinkthen/NativeUsageLayouts.java': layouts,
             'kotlin/UsagePersistence.kt': kotlin, 'scala/UsagePersistence.scala': scala}

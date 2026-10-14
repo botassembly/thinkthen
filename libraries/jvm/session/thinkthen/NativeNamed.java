@@ -12,9 +12,9 @@ view.set(NativeSession.SIZE, 8, data.byteSize());
 static MemorySegment create(MemorySegment engine, Engine.Surface surface, Inputs.RequestFunction function, Inputs.RequestQuestion question, Inputs.RequestInput input, Inputs.RequestOptions options) {
 try (Arena arena = Arena.ofConfined()) {
 var request = arena.allocate(REQUEST);
-text(arena, request.asSlice(0, 16), (String)function.json());
-text(arena, request.asSlice(16, 16), Json.write(question.json()));
-text(arena, request.asSlice(32, 16), Json.write(input.json()));
+text(arena, request.asSlice(0, 16), (String)Values.json(function));
+text(arena, request.asSlice(16, 16), Json.write(Values.json(question)));
+text(arena, request.asSlice(32, 16), Json.write(Values.json(input)));
 text(arena, request.asSlice(48, 16), options == null ? "{}" : Json.write(options.json()));
 var token = arena.allocate(NativeUsageLayouts.ADVICE);
 text(arena, token, surface.name().toLowerCase(java.util.Locale.ROOT));

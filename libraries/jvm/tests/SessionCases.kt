@@ -6,7 +6,7 @@ fun main(args: Array<String>): Unit = runBlocking {
     if(thinkthen.CaseBatch.run(args) { data -> main(arrayOf("complete", thinkthen.SessionCases.write(data))) }) return@runBlocking
     val data = SessionCases.frame(args)
     try {
-        KotlinEngine(Inputs.EngineSettings.fromJson(thinkthen.SessionCases.parse(data["engine_settings"] as String))).use { engine ->
+        KotlinEngine(thinkthen.SessionCases.settings(thinkthen.SessionCases.parse(data["engine_settings"] as String))).use { engine ->
             val question=SessionCases.question(data); val input=SessionCases.input(data); val options=SessionCases.options(data)
             if(SessionCases.manual(data)) {
                 val session=engine.startSession(SessionCases.request(data,question,SessionCases.sessionInput(data,input),options))
@@ -31,7 +31,7 @@ fun main(args: Array<String>): Unit = runBlocking {
             } } catch(failure: SessionFailure) { failure.call() }
             // Read the owning language's facts before projecting the shared fixture shape.
             call.terminal().facts().state()
-            println(thinkthen.SessionCases.write(SessionCases.normalize(SessionCases.javaCall(call.packets().map { it.json() },call.terminal().json()),data)))
+            println(thinkthen.SessionCases.write(SessionCases.normalize(SessionCases.javaCall(call.packets().map { thinkthen.SessionCases.tree(it) },thinkthen.SessionCases.tree(call.terminal())),data)))
         }
     } catch(failure: NativeFailure) { println(SessionCases.failure(failure.code,failure.message ?: "")) }
 }

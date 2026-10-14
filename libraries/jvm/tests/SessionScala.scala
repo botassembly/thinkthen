@@ -39,14 +39,14 @@ object SessionScala {
       val original = Map("body" -> "session-scala-nested", "metadata" -> List(Map("present" -> null).asJava).asJava)
       val records = new Inputs.RequestInputRecords().items(List(new Inputs.RequestItem().original(new Inputs.RequestOriginalJson().value(original.asJava))).asJava)
       val nested = Await.result(engine.decide(authored, records, new Inputs.RequestOptions().field(List("/body").asJava).details(true)).result, 10.seconds)
-      val row = nested.packets().asScala.collectFirst { case value: Results.SessionPacketDecideRow => value }.get
-      val reading = row.value().value().json().asInstanceOf[java.util.Map[String, Any]]
+      val row = nested.packets().collectFirst { case value: Results.SessionPacketDecideRow => value }.get
+      val reading = row.value().value().value().asInstanceOf[java.util.Map[String, Any]]
       assert(reading.get("ok") == false && reading.get("number") == new java.math.BigDecimal("7.5"))
       assert(reading.get("values").asInstanceOf[java.util.List[Any]].get(1) == null)
       val retained = row.value().input().value().asInstanceOf[java.util.Map[String, Any]]
       assert(retained.get("metadata").asInstanceOf[java.util.List[Any]].get(0).asInstanceOf[java.util.Map[String, Any]].containsKey("present"))
       assert(nested.terminal().facts().value().requestsSent().intValueExact() == 1)
-      assert(nested.decide() == true, "normalized answer remains separate from authored JSON")
+      assert(nested.decide().contains(true), "normalized answer remains separate from authored JSON")
       try { Await.result(engine.decide(authored, records, new Inputs.RequestOptions().extension("field", List(7).asJava)).result, 10.seconds); throw new AssertionError("invalid field admitted") }
       catch { case _: thinkthen.scala.NativeFailure => () }
       retainedCall = independent

@@ -8,7 +8,7 @@ object SessionCases {
     if(thinkthen.CaseBatch.run(args, data => main(Array("complete", thinkthen.SessionCases.write(data))))) return
     val data=Fixtures.frame(args)
     try {
-      val engine=new ScalaEngine(Inputs.EngineSettings.fromJson(thinkthen.SessionCases.parse(data.get("engine_settings").asInstanceOf[String])))
+      val engine=new ScalaEngine(thinkthen.SessionCases.settings(thinkthen.SessionCases.parse(data.get("engine_settings").asInstanceOf[String])))
       try {
         val question=Fixtures.question(data);val input=Fixtures.input(data);val options=Fixtures.options(data)
         if(Fixtures.manual(data)) {
@@ -33,7 +33,7 @@ object SessionCases {
         }
         val call=try Await.result(pending.result,30.seconds) catch {case failure:SessionFailure=>failure.call()}
         call.terminal().facts().state()
-        println(thinkthen.SessionCases.write(Fixtures.normalize(Fixtures.javaCall(call.packets().asScala.map(_.json()).asJava,call.terminal().json()),data)))
+        println(thinkthen.SessionCases.write(Fixtures.normalize(Fixtures.javaCall(call.packets().map(thinkthen.SessionCases.tree(_)).asJava,thinkthen.SessionCases.tree(call.terminal())),data)))
       } finally engine.close()
     } catch {case failure:NativeFailure=>println(Fixtures.failure(failure.code,failure.getMessage))}
   }

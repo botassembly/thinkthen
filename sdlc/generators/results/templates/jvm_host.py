@@ -1,6 +1,6 @@
 """JVM host helpers derived from request functions and normalized packets."""
 import json
-from host_answers import aggregate_answers, judgment_route, scalar_answers
+from host_answers import aggregate_answers, aggregate_projection, judgment_route, scalar_answers
 
 
 def named_calls(definitions):
@@ -66,7 +66,7 @@ def answers(definitions):
              'throw new Engine.SessionFailure(call);', '}', '}',
              'private static Object scalar(Engine.OwnedCall call, String function, String kind, boolean nullable) {',
              'terminal(call); Object answer = null; int count = 0;',
-             'for (SessionPacket item : call.packets()) { Map<String,Object> packet = Values.object(item.json());',
+             'for (SessionPacket item : call.packets()) { Map<String,Object> packet = Values.object(Values.json(item));',
              f'if (!function.equals(packet.get("function")) || !({guard})) continue;',
              f'Object raw = path(packet, {path(route)});',
              'if (!(raw instanceof Map<?,?> judgment) || !kind.equals(judgment.get("kind"))) continue;',
@@ -75,7 +75,7 @@ def answers(definitions):
              'if (count != 1) throw new CardinalityFailure(call); return answer;', '}',
              'private static Object collection(Engine.OwnedCall call, String function, boolean array, boolean rows) {',
              'terminal(call); List<Object> values = new ArrayList<>(); Object answer = null; int count = 0;',
-             'for (SessionPacket item : call.packets()) { Map<String,Object> packet = Values.object(item.json());',
+             'for (SessionPacket item : call.packets()) { Map<String,Object> packet = Values.object(Values.json(item));',
              'if (!function.equals(packet.get("function"))) continue;',
              'boolean row = rows && "row".equals(packet.get("kind"));',
              'if (!row && !"aggregate".equals(packet.get("kind"))) continue;',
@@ -99,30 +99,73 @@ def answers(definitions):
                   f'return {decode};', '}']
     for function, _, payload in aggregate_answers(definitions):
         if function in scalar_functions: continue
-        typ, decode = conversion(payload, definitions)
+        projected, projection = aggregate_projection(function, payload, definitions)
+        typ, decode = conversion(projected, definitions)
         array = payload.get('type') == 'array'
         rows = any(source.get('properties', {}).get('function', {}).get('const') == function and
                    source.get('properties', {}).get('kind', {}).get('const') == 'row' for source in definitions.values())
         lines += [f'public static {typ} {function}(Engine.OwnedCall call) {{',
                   f'Object value = collection(call, {json.dumps(function)}, {str(array).lower()}, {str(rows).lower()});',
+                  *([f'List<Object> projected = new ArrayList<>(); for (Object item : (List<?>)value) {{ var receipt = Values.object(item); if (!receipt.containsKey({json.dumps(projection)})) throw new CardinalityFailure(call); projected.add(receipt.get({json.dumps(projection)})); }} value = projected;'] if projection else []),
                   f'return {decode};', '}']
     return '\n'.join(line for line in lines + ['}'] if line)
 
 
-def facade_calls(definitions, language):
+def facade_calls(definitions, language, results):
     from csharp import enum_values
     lines = ['// Generated from the shared Rust request graph. Do not edit.',
              f'package thinkthen.{language}', 'import thinkthen.Engine', 'import thinkthen.Inputs',
              'import java.util.concurrent.CompletableFuture']
+    if language == 'scala': lines += ['import scala.jdk.CollectionConverters.*']
     if language == 'kotlin':
         lines += ['abstract class KotlinNamedCalls(protected val namedEngine: Engine) {',
-                  'protected abstract suspend fun await(start: () -> CompletableFuture<Engine.OwnedCall>): Engine.OwnedCall']
+                  'protected abstract suspend fun await(start: () -> CompletableFuture<Engine.OwnedCall>): OwnedCall']
         for function in enum_values(definitions['RequestFunction']):
-            lines.append(f'suspend fun {function}(question: Inputs.RequestQuestion, input: Inputs.RequestInput, options: Inputs.RequestOptions? = null): Engine.OwnedCall = await {{ namedEngine.{function}(question, input, options) }}')
+            lines.append(f'suspend fun {function}(question: Inputs.RequestQuestion, input: Inputs.RequestInput, options: Inputs.RequestOptions? = null): OwnedCall = await {{ namedEngine.{function}(question, input, options) }}')
     else:
         lines += ['abstract class ScalaNamedCalls(protected val namedEngine: Engine) {',
                   'protected def run(native: CompletableFuture[Engine.OwnedCall]): Call']
         for function in enum_values(definitions['RequestFunction']):
-            lines += [f'final def {function}(question: Inputs.RequestQuestion, input: Inputs.RequestInput): Call = {function}(question, input, null)',
+            lines += [f'final def {function}(question: Inputs.RequestQuestion, input: Inputs.RequestInput, options: Option[Inputs.RequestOptions] = None): Call = run(namedEngine.{function}(question, input, options.orNull))',
                       f'final def {function}(question: Inputs.RequestQuestion, input: Inputs.RequestInput, options: Inputs.RequestOptions): Call = run(namedEngine.{function}(question, input, options))']
+    lines += ['}']
+    from jvm import conversion
+    methods = {}
+    for function, _, payload in scalar_answers(results):
+        source = dict(payload)
+        kinds = source.get('type')
+        nil = isinstance(kinds, list) and 'null' in kinds
+        if isinstance(kinds, list): source['type'] = next(kind for kind in kinds if kind != 'null')
+        methods[function] = (*conversion(source, results)[:1], nil)
+    for function, _, payload in aggregate_answers(results):
+        if function not in methods: methods[function] = (conversion(aggregate_projection(function, payload, results)[0], results)[0], False)
+    if language == 'kotlin':
+        lines += ['class OwnedCall internal constructor(private val native: Engine.OwnedCall) {',
+                  'val packets: List<thinkthen.Results.SessionPacket> get() = native.packets().toList()',
+                  'val terminal: thinkthen.Results.SessionPacketTerminal get() = native.terminal()',
+                  'fun packets() = packets', 'fun terminal() = terminal']
+        for function, (typ, nil) in methods.items():
+            collection = typ.startswith('List<')
+            host = typ.replace('BigDecimal', 'java.math.BigDecimal').replace('BigInteger', 'java.math.BigInteger')
+            if collection:
+                child = host[5:-1]
+                if child not in ('String', 'Object', 'java.math.BigInteger', 'java.math.BigDecimal', 'Boolean'): child = 'thinkthen.Results.' + child
+                host = 'List<' + child.replace('Object', 'Any?') + '>'
+            elif typ not in ('String', 'Boolean', 'Object', 'BigDecimal', 'BigInteger'): host = 'thinkthen.Results.' + typ
+            lines.append(f'fun {function}(): {host}{"?" if nil else ""} = native.{function}(){".toList()" if collection else ""}')
+    else:
+        lines += ['final class OwnedCall private[scala](private val native: Engine.OwnedCall) {',
+                  'def packets(): List[thinkthen.Results.SessionPacket] = native.packets().asScala.toList',
+                  'def terminal(): thinkthen.Results.SessionPacketTerminal = native.terminal()']
+        for function, (typ, nil) in methods.items():
+            collection = typ.startswith('List<')
+            host = typ.replace('BigDecimal', 'java.math.BigDecimal').replace('BigInteger', 'java.math.BigInteger')
+            if collection:
+                child = host[5:-1]
+                if child not in ('String', 'Object', 'java.math.BigInteger', 'java.math.BigDecimal', 'Boolean'): child = 'thinkthen.Results.' + child
+                host = 'List[' + child.replace('Object', 'Any') + ']'
+            elif typ not in ('String', 'Boolean', 'Object', 'BigDecimal', 'BigInteger'): host = 'thinkthen.Results.' + typ
+            expression = f'native.{function}()' + ('.asScala.toList' if collection else '')
+            if nil: host, expression = f'Option[{host}]', f'Option({expression})'
+            lines.append(f'def {function}(): {host} = {expression}')
     return lines + ['}']

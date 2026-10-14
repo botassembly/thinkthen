@@ -1,9 +1,9 @@
 import examples.SampleInputs as S
 import thinkthen.kotlin.KotlinEngine
-/** Coroutine calls return the shared owned Java result. */
+/** Coroutine calls return native Kotlin answers. */
 suspend fun runKotlinExamples(engine: KotlinEngine): List<Any?> {
     val answers = listOf(
-    engine.decide(S.decide(), S.input("session-decide"), S.options()).decide(),
+    engine.decide(question = S.decide(), input = S.input("session-decide"), options = S.options()).decide(),
     engine.choose(S.choose(), S.input("session-choose"), S.options()).choose(),
     engine.tag(S.tag(), S.input("session-tag"), S.options()).tag(),
     engine.score(S.score(), S.input("session-score"), S.options()).score(),

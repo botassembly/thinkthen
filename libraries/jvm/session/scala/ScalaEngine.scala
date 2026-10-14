@@ -11,7 +11,7 @@ final class ScalaEngine private (private val engine: Engine) extends ScalaNamedC
   def this() = this(new Inputs.EngineSettings())
   protected override def run(native: java.util.concurrent.CompletableFuture[Engine.OwnedCall]): Call = {
     val result = Promise[OwnedCall]()
-    native.whenComplete((value, error) => { try { if (error == null) result.trySuccess(value) else result.tryFailure(ScalaEngine.failure(error)) } catch { case error: Throwable => result.tryFailure(ScalaEngine.failure(error)) }; () })
+    native.whenComplete((value, error) => { try { if (error == null) result.trySuccess(new OwnedCall(value)) else result.tryFailure(ScalaEngine.failure(error)) } catch { case error: Throwable => result.tryFailure(ScalaEngine.failure(error)) }; () })
     Call(result.future, () => native.cancel(false))
   }
   def plan(request: Inputs.Request): Results.Plan = try engine.plan(request) catch { case error: Throwable => throw ScalaEngine.failure(error) }
@@ -23,11 +23,10 @@ final class ScalaEngine private (private val engine: Engine) extends ScalaNamedC
   override def close(): Unit = engine.close()
 }
 
-type OwnedCall = Engine.OwnedCall
 type SessionFailure = Engine.SessionFailure
 object ScalaEngine {
   private[scala] def native[T](action: => T): T = try action catch { case error: Throwable => throw failure(error) }
-  private def failure(error: Throwable): Throwable = error match {
+  private[scala] def failure(error: Throwable): Throwable = error match {
     case wrapped: java.util.concurrent.CompletionException if wrapped.getCause != null => failure(wrapped.getCause)
     case native: Engine.SessionFailure => native
     case native: thinkthen.NativeFailure => new NativeFailure(native)
@@ -37,26 +36,25 @@ object ScalaEngine {
 }
 
 final class NativeFailure private[scala](error: thinkthen.NativeFailure) extends RuntimeException(error.getMessage, error) {
+  val kind: thinkthen.ErrorKind = error.kind()
   val code: Int = error.code()
   val retryable: Boolean = error.retryable()
-  val facts: Option[Any] = Option(error.facts())
+  val facts: Option[Results.ImmediateFacts] = Option(error.facts())
 }
 
 /** One producer and one reader over the shared owner. */
 final class OwnedSession private[scala] (private val native: thinkthen.OwnedSession) extends AutoCloseable {
   def tryPush(descriptor: Inputs.RequestSessionDescriptor): Int = ScalaEngine.native(native.tryPush(descriptor))
-  def push(descriptor: Inputs.RequestSessionDescriptor): java.util.concurrent.CompletableFuture[Integer] = native.push(descriptor)
-  def nextPacket(settlement: Boolean = false): Future[OwnedSession.Read] = {
-    val result = Promise[OwnedSession.Read]()
-    native.nextPacketAsync(settlement).whenComplete((read, error) => {
-      if (error == null) result.trySuccess(OwnedSession.Read(Option(read.packet()), read.ended())) else result.tryFailure(error)
-      ()
-    })
+  private def future[A,B](pending: java.util.concurrent.CompletableFuture[A])(convert: A => B): Future[B] = {
+    val result = Promise[B]()
+    pending.whenComplete((value, error) => { if (error == null) result.trySuccess(convert(value)) else result.tryFailure(ScalaEngine.failure(error)); () })
     result.future
   }
-  def finish(failure: Inputs.RequestReaderFailure = null): Unit = ScalaEngine.native(native.finish(if (failure == null) null else failure))
+  def push(descriptor: Inputs.RequestSessionDescriptor): Future[Int] = future(native.push(descriptor))(_.intValue())
+  def nextPacket(settlement: Boolean = false): Future[OwnedSession.Read] = future(native.nextPacketAsync(settlement))(read => OwnedSession.Read(Option(read.packet()), read.ended()))
+  def finish(failure: Option[Inputs.RequestReaderFailure] = None): Unit = ScalaEngine.native(native.finish(failure.orNull))
   def cancel(): Unit = native.cancel()
-  def waitReady(input: Boolean): java.util.concurrent.CompletableFuture[Void] = native.waitReady(input)
+  def waitReady(input: Boolean): Future[Unit] = future(native.waitReady(input))(_ => ())
   def tryRead(): OwnedSession.Read = ScalaEngine.native { val read = native.tryRead(); OwnedSession.Read(Option(read.packet()), read.ended()) }
   override def close(): Unit = native.close()
 }
