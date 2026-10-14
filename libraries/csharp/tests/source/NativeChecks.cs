@@ -39,8 +39,6 @@ static class NativeChecks
         var unknownChoose = await engine.ChooseAsync(Choose, new RequestInputRecords { Items = new[] { Item("text"), Item("other") } }, new RequestOptions { Threshold = new RequestThresholdNumber { Value = .95 } });
         Check(unknownChoose.Value.All(value => value is null) && unknownChoose.Probability.All(chance => chance is null), "unresolved choice probability");
         var findQuestionForNull = Define(new RequestDefinitionAuthoredFind { Find = Text("Which?") });
-        var absentFind = await engine.FindAsync(findQuestionForNull, new RequestInputRecords { Items = new[] { Item("text"), Item("other") } }, new RequestOptions { None = true, Threshold = new RequestThresholdNumber { Value = .95 } });
-        Check(absentFind.Value.ValueKind == JsonValueKind.Null && absentFind.Probability is null, "unresolved find probability");
         var nullFind = await engine.FindAsync(findQuestionForNull, new RequestInputRecords { Items = new[] { new RequestItem { Original = new RequestOriginalJson { Value = JsonSerializer.SerializeToElement((string?)null) } }, Item("other") } }, new RequestOptions { None = true });
         Check(nullFind.Value.ValueKind == JsonValueKind.Null && nullFind.Probability == .9 && nullFind.Results.Single().Index.State == R.PresenceState.Value && nullFind.Results.Single().Index.Value == 0, "selected null original probability");
         var controls = new RequestOptions { Attempts = true };

@@ -67,8 +67,6 @@ def test_named_calls_use_owned_typed_results_for_the_ten_functions(backend, tmp_
             assert authored_null.value is None and authored_null.probability == .9
             unsure_choice = engine.choose('Team?', ['first', 'second'], options=['bill', 'ship'], threshold=.95)
             assert unsure_choice.value == [None, None] and unsure_choice.probability == [None, None]
-            not_found = engine.find('Best?', ['first', 'second'], none=True, threshold=.95)
-            assert not_found.value is None and not_found.probability is None
             selected_null = engine.find('Best?', [None, 'other'], none=True)
             assert selected_null.value is None and selected_null.probability == .9 and selected_null.results[0].index == 0
 

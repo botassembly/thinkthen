@@ -584,7 +584,7 @@ func main() {
 	require(err == nil, "uncertain choice requests missing")
 	expectedRequests += n
 	require(uncertainChoice.Value == nil && uncertainChoice.Probability == nil, "nullable choice judgment changed")
-	nullableChoice, err := client.Choose(context.Background(), tt.DefinedQuestion(tt.RequestDefinitionAuthoredChoose{Choose: tt.AuthoredQuestionTextString("Which?"), Options: tt.Ptr[tt.AuthoredOptions](tt.AuthoredOptionsArray{"a", "b"}), Threshold: tt.Ptr[tt.AuthoredCut](tt.AuthoredCutNumber(.95))}), tt.TextRecordsInput("uncertain-choice", "text"), nil)
+	nullableChoice, err := client.Choose(context.Background(), tt.DefinedQuestion(tt.RequestDefinitionAuthoredChoose{Choose: tt.AuthoredQuestionTextString("Which?"), Options: tt.Ptr[tt.AuthoredOptions](tt.AuthoredOptionsArray{"a", "b"}), Threshold: tt.Ptr[tt.AuthoredCut](tt.AuthoredCutNumber(.95))}), tt.TextRecordsInput("uncertain-choice", "text"), &tt.RequestOptions{Batch: tt.Ptr[tt.RequestBatch](tt.RequestBatchInteger(1))})
 	require(err == nil, "nullable choice list failed")
 	nullableValues := nullableChoice.Value.([]any)
 	nullableProbabilities := nullableChoice.Probability.(tt.ProbabilityList)

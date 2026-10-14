@@ -22,6 +22,7 @@ try {
  if(document.batch_probe){console.log('ready');line();}
  const controls={...document.options,signal:controller.signal};
  const done=document.call_result_contract?await client[document.verb](question,input,controls):await client.start(document.verb,question,document.incremental && Array.isArray(input)?input.values():input,controls).result();
+ if(document.verb==='find' && done.results[0]?.index==null && done.probability!==null)throw Error('unresolved find probability');
  console.log(JSON.stringify({native:true,results:done.results,facts:done.facts,...(document.call_result_contract?{call_result:{value:done.value,probability:done.probability,results:done.results,facts:done.facts}}:{})}));
 } catch(error) {
  if(!(error instanceof tt.ClientError))throw error;

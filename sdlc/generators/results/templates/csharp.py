@@ -638,7 +638,7 @@ def answer_helpers(definitions):
                 value_schema = definitions[arm]['properties'].get('value', {})
                 key = value_schema.get('$ref', '').removeprefix('#/$defs/')
             lines += ['private static bool Resolved' + function.title() + '(OwnedCall call, ' + receipt_type + ' row, int ordinal) =>',
-                      'call.Packets.OfType<' + classes[0] + '>().Any(packet => packet.Function == RequestFunction.' + function.title() + ' &&',
+                      'call.Packets.OfType<' + classes[0] + '>().Any(packet => packet.Function == ThinkThen.Results.RequestFunction.' + function.title() + ' &&',
                       'packet.Value is ' + classes[1] + ' observation && observation.Index == (row.Index.State == PresenceState.Value ? row.Index.Value : (ulong)ordinal) &&',
                       'observation.Value is ' + classes[2] + ' judgment && judgment.Value is ' + classes[3] + ' settled && settled.Value.State == PresenceState.Value);']
         single_aggregate = spec['call_shape'] == 'aggregate'

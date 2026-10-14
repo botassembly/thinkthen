@@ -65,6 +65,8 @@ def main():
                     done = getattr(source.tt, verb)(question, engine=engine, **controls)
                 else: done = getattr(engine, verb)(question, source, **controls)
                 results, facts = done.results, done.facts
+                if verb == 'find' and LIBRARY is None and getattr(results[0], 'index', None) is None:
+                    assert done.probability is None, 'unresolved find probability'
             call_result = None
             if document.get('call_result_contract'):
                 value, probability = done.value, done.probability

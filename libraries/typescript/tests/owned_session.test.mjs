@@ -150,9 +150,8 @@ test('Client retains false, null, missing, exact numbers and physical positions'
     const nil=await client.decide({decide:'Question?',true:null},'text');
     const uncertain=await client.decide({decide:'Question?',threshold:'0.2:0.95'},'text');
     const unsureChoice=await client.choose({choose:'Question?',options:['a','b'],threshold:.95},['text','other']);
-    const notFound=await client.find('Question?',['first','second'],{none:true,threshold:.95});
     const selectedNull=await client.find('Question?',[null,'other'],{none:true});
-    if(nil.probability!==.9 || uncertain.probability!==null || JSON.stringify(unsureChoice.probability)!=='[null,null]' || notFound.probability!==null || selectedNull.probability!==.9 || selectedNull.results[0].index!==0)throw Error('unresolved and authored null probabilities conflated');
+    if(nil.probability!==.9 || uncertain.probability!==null || JSON.stringify(unsureChoice.probability)!=='[null,null]' || selectedNull.probability!==.9 || selectedNull.results[0].index!==0)throw Error('unresolved and authored null probabilities conflated');
 
     const {writeFileSync}=await import('node:fs');
     const path=process.env.HOME+'/input.txt';writeFileSync(path,'first\\n\\nthird\\n');

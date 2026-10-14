@@ -41,6 +41,7 @@ begin
     Thread.new { STDIN.gets; cancel.cancel; puts "cancel-fired"; STDOUT.flush }
   end
   done = client.public_send(doc.fetch("verb"), question, input, cancel: cancel, **doc.fetch("options").transform_keys(&:to_sym))
+  raise "unresolved find probability" if doc.fetch("verb") == "find" && done.results.first.index.nil? && !done.probability.nil?
   raise "untyped facts" unless done.facts.is_a?(ThinkThen::Results::NativeFacts)
   done.results.each { |row| raise "untyped result" unless row.class.name.start_with?("ThinkThen::Results::Native") }
   call_result = doc["call_result_contract"] ? {call_result: {value: json_value(done.value), probability: json_value(done.probability), results: json_value(done.results), facts: json_value(done.facts)}} : {}

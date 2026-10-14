@@ -84,7 +84,7 @@ public sealed partial class Engine {
         return ProjectDecide(call);
     }
     private static bool ResolvedDecide(OwnedCall call, AtomicDecideValue row, int ordinal) =>
-    call.Packets.OfType<SessionPacketObservation>().Any(packet => packet.Function == RequestFunction.Decide &&
+    call.Packets.OfType<SessionPacketObservation>().Any(packet => packet.Function == ThinkThen.Results.RequestFunction.Decide &&
     packet.Value is SessionObservationRow observation && observation.Index == (row.Index.State == PresenceState.Value ? row.Index.Value : (ulong)ordinal) &&
     observation.Value is SessionObservedRowJudgment judgment && judgment.Value is SessionJudgmentDecision settled && settled.Value.State == PresenceState.Value);
     private static CallResult<IReadOnlyList<JsonElement>, IReadOnlyList<double?>, IReadOnlyList<AtomicDecideValue>> ProjectDecide(OwnedCall call) {
@@ -161,7 +161,7 @@ public sealed partial class Engine {
         return ProjectChoose(call);
     }
     private static bool ResolvedChoose(OwnedCall call, AtomicNullableString row, int ordinal) =>
-    call.Packets.OfType<SessionPacketObservation>().Any(packet => packet.Function == RequestFunction.Choose &&
+    call.Packets.OfType<SessionPacketObservation>().Any(packet => packet.Function == ThinkThen.Results.RequestFunction.Choose &&
     packet.Value is SessionObservationRow observation && observation.Index == (row.Index.State == PresenceState.Value ? row.Index.Value : (ulong)ordinal) &&
     observation.Value is SessionObservedRowJudgment judgment && judgment.Value is SessionJudgmentChoice settled && settled.Value.State == PresenceState.Value);
     private static CallResult<IReadOnlyList<string?>, IReadOnlyList<double?>, IReadOnlyList<AtomicNullableString>> ProjectChoose(OwnedCall call) {
