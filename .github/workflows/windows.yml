@@ -49,6 +49,7 @@ jobs:
           persist-credentials: false
 
       - name: Require the exact candidate commit
+        id: candidate
         env: {CANDIDATE_SHA: "${{ inputs.candidate_sha }}", DISPATCH_SHA: "${{ github.sha }}"}
         run: python3 sdlc/scripts/hosted-candidate.py checkout "$CANDIDATE_SHA" "$DISPATCH_SHA"
 
@@ -104,29 +105,29 @@ jobs:
       # every result, and `--keep-going` checks every crate past a failing one.
       # The job still fails if any check fails.
       - name: Clippy, root workspace
-        if: ${{ !cancelled() }}
+        if: ${{ !cancelled() && steps.candidate.outcome == 'success' }}
         run: cargo clippy --locked --offline --keep-going --workspace --all-targets -- -D warnings
 
       - name: Tests, root workspace
-        if: ${{ !cancelled() }}
+        if: ${{ !cancelled() && steps.candidate.outcome == 'success' }}
         run: cargo test --locked --offline --no-fail-fast --workspace --all-targets
 
       - name: Clippy, libraries/c
-        if: ${{ !cancelled() }}
+        if: ${{ !cancelled() && steps.candidate.outcome == 'success' }}
         working-directory: libraries/c
         run: cargo clippy --locked --offline --keep-going --all-targets -- -D warnings
 
       - name: Tests, libraries/c
-        if: ${{ !cancelled() }}
+        if: ${{ !cancelled() && steps.candidate.outcome == 'success' }}
         working-directory: libraries/c
         run: cargo test --locked --offline --no-fail-fast
 
       - name: Build and test the installed Windows Python wheel
-        if: ${{ !cancelled() }}
+        if: ${{ !cancelled() && steps.candidate.outcome == 'success' }}
         run: python3 libraries/python/check-windows.py --packages "$RUNNER_TEMP/python-packages"
 
       - name: Pack the Windows core and consume the native C archive
-        if: ${{ !cancelled() }}
+        if: ${{ !cancelled() && steps.candidate.outcome == 'success' }}
         run: |
           set -eu
           export CARGO_NET_OFFLINE=true
@@ -138,7 +139,7 @@ jobs:
           python3 sdlc/scripts/release-windows-smoke.py target/native-platform --crate-dir target/native-crate
 
       - name: Save the cargo registry and the build directories
-        if: ${{ always() && steps.cache.outputs.cache-hit != 'true' }}
+        if: ${{ always() && steps.candidate.outcome == 'success' && steps.cache.outputs.cache-hit != 'true' }}
         uses: actions/cache/save@caa296126883cff596d87d8935842f9db880ef25 # v5.1.0
         with:
           path: |

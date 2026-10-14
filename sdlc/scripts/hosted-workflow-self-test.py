@@ -3,7 +3,6 @@
 from copy import deepcopy
 import os
 from pathlib import Path
-import runpy
 import subprocess
 import sys
 import tempfile
@@ -11,15 +10,38 @@ import tempfile
 import yaml
 
 REPO = Path(__file__).resolve().parents[2]
-rules = runpy.run_path(str(REPO / 'sdlc/scripts/hosted-workflow.py'))['rules']
+def workflow_command(name, doc):
+    # Run the public gate against an isolated workflow tree, with its real scripts.
+    with tempfile.TemporaryDirectory(prefix='thinkthen-hosted-gate-') as temporary:
+        root = Path(temporary)
+        for source in REPO.iterdir():
+            if source.name not in ('.github', 'sdlc'):
+                (root / source.name).symlink_to(source)
+        scripts = root / 'sdlc/scripts'
+        scripts.mkdir(parents=True)
+        for source in (REPO / 'sdlc/scripts').iterdir():
+            target = scripts / source.name
+            if source.name == 'workflows':
+                target.write_bytes(source.read_bytes())
+            else:
+                target.symlink_to(source)
+        workflows = root / '.github/workflows'
+        workflows.mkdir(parents=True)
+        for source in (REPO / '.github/workflows').glob('*.y*ml'):
+            (workflows / source.name).write_bytes(source.read_bytes())
+        original = (REPO / '.github/workflows' / name).read_text()
+        (workflows / name).write_text(original if doc == yaml.safe_load(original) else yaml.safe_dump(doc))
+        result = subprocess.run([sys.executable, str(scripts / 'workflows')],
+                                cwd=REPO, capture_output=True, text=True, timeout=30)
+        return result.returncode, result.stdout + result.stderr
 
 
 def workflow_cases():
     release = yaml.safe_load((REPO / '.github/workflows/release.yml').read_text())
     windows = yaml.safe_load((REPO / '.github/workflows/windows.yml').read_text())
-    assert rules('release.yml', release) == []
-    assert rules('windows.yml', windows) == []
-    for defect in ('paid', 'matrix-paid', 'skip-apple', 'mask-apple', 'wrong-sha', 'missing-language'):
+    assert workflow_command('release.yml', release)[0] == 0
+    assert workflow_command('windows.yml', windows)[0] == 0
+    for defect in ('paid', 'matrix-paid', 'skip-apple', 'mask-apple', 'wrong-sha', 'missing-language', 'mixed-paid', 'job-mask', 'upload-always'):
         doc = deepcopy(release)
         apple = doc['jobs']['apple-packages']
         proof = next(step for step in apple['steps'] if step.get('name') == 'Qualify installed Swift and Objective-C Foundation')
@@ -33,10 +55,18 @@ def workflow_cases():
             proof['continue-on-error'] = True
         elif defect == 'wrong-sha':
             proof['env']['SHA'] = '${{ github.sha }}'
+        elif defect == 'job-mask':
+            apple['continue-on-error'] = True
+        elif defect == 'upload-always':
+            next(step for step in apple['steps'] if (step.get('with') or {}).get('name') == 'apple-packages-${{ matrix.target }}')['if'] = '${{ always() }}'
+        elif defect == 'mixed-paid':
+            apple['strategy']['matrix']['runner'] = ['macos-15']
+            apple['strategy']['matrix']['include'][0]['runner'] = 'macos-15-large'
         else:
             proof['run'] = '\n'.join(proof['run'].splitlines()[:-1])
-        assert rules('release.yml', doc), defect
-    for defect in ('skip', 'mask', 'wrong-sha', 'late'):
+        code, output = workflow_command('release.yml', doc)
+        assert code == 1 and ('standard free hosted runners' if 'paid' in defect else 'both installed Apple languages') in output, (defect, output)
+    for defect in ('skip', 'mask', 'wrong-sha', 'late', 'guard-bypass', 'missing-input'):
         doc = deepcopy(windows)
         steps = doc['jobs']['stage-0']['steps']
         guard = next(step for step in steps if step.get('name') == 'Require the exact candidate commit')
@@ -46,10 +76,15 @@ def workflow_cases():
             guard['continue-on-error'] = True
         elif defect == 'wrong-sha':
             guard['env']['CANDIDATE_SHA'] = '${{ github.sha }}'
+        elif defect == 'guard-bypass':
+            next(step for step in steps if 'cargo test' in step.get('run', ''))['if'] = '${{ !cancelled() }}'
+        elif defect == 'missing-input':
+            doc.get('on', doc.get(True))['workflow_dispatch']['inputs'].pop('candidate_sha')
         else:
             steps.remove(guard)
             steps.append(guard)
-        assert rules('windows.yml', doc), defect
+        code, output = workflow_command('windows.yml', doc)
+        assert code == 1 and 'candidate SHA' in output, (defect, output)
 
 
 def parameter_cases():
