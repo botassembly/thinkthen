@@ -65,6 +65,27 @@ def braces(source):
     return pairs, depths
 
 
+def include_guard(text):
+    """Identify a paired empty outer guard, never an ordinary public macro."""
+    lines = [line.strip() for line in text.splitlines() if line.strip()]
+    if len(lines) < 3:
+        return None
+    opening = re.fullmatch(r'#\s*ifndef\s+([A-Za-z_]\w*)', lines[0])
+    if not opening or not re.fullmatch(r'#\s*define\s+' + re.escape(opening[1]), lines[1]):
+        return None
+    if any(re.fullmatch(r'#\s*undef\s+' + re.escape(opening[1]), line) for line in lines):
+        return None
+    depth = 0
+    for index, line in enumerate(lines):
+        directive = re.match(r'#\s*(if|ifdef|ifndef|endif)\b', line)
+        if not directive:
+            continue
+        depth += -1 if directive[1] == 'endif' else 1
+        if depth < 0 or depth == 0 and index != len(lines) - 1:
+            return None
+    return opening[1] if depth == 0 and re.fullmatch(r'#\s*endif', lines[-1]) else None
+
+
 def cstyle(source, language):
     if language == 'typescript':
         source = re.sub(r'(\breadonly\s+)"(\w+)"(?=\??\s*:)', lambda m: m[1] + ' ' + m[2] + ' ', source)
@@ -233,7 +254,11 @@ def cstyle(source, language):
             if container == '' or container and match[1]:
                 result.add(Declaration(container, match[2], 'field' if container else 'export'))
     if language in ('c', 'cpp'):
-        for name in re.findall(r'(?m)^\s*#define\s+([A-Za-z_]\w*)', text):
+        guard = include_guard(text)
+        for name in re.findall(r'(?m)^\s*#\s*define\s+([A-Za-z_]\w*)', text):
+            if name == guard:
+                guard = None
+                continue
             result.add(Declaration('', name, 'export'))
     if language == 'swift':
         for match in re.finditer(r'\bcase\s+`?(\w+)`?', text):

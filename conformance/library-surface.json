@@ -1535,7 +1535,7 @@
         "tt-n-cobol-RequestOptions"
       ],
       "setting_containers": [
-        "tt-n-cobol-EngineSettings"
+        "tt-n-cobol-Settings"
       ],
       "function_prefix": "TT_SESSION_",
       "test_folders": [
@@ -1543,13 +1543,14 @@
         "examples"
       ],
       "helper_names": {
+        "plan": "TT_PREVIEW",
         "usage_persistence": "TT_ENGINE_USAGE_PERSISTENCE",
         "finish_usage_status": "TT_ENGINE_FINISH_USAGE_STATUS",
-        "question_file": "tt-n-cobol-RequestQuestion-file",
-        "question_name": "tt-n-cobol-RequestQuestion-name",
-        "question_reference": "tt-n-cobol-RequestQuestion-reference",
-        "item": "tt-n-cobol-RequestItem",
-        "files": "tt-n-cobol-RequestSource"
+        "question_file": "thinkthen_cobol_RequestQuestionFile",
+        "question_name": "thinkthen_cobol_RequestQuestionName",
+        "question_reference": "thinkthen_cobol_RequestQuestionReference",
+        "item": "thinkthen_cobol_RequestItem",
+        "files": "thinkthen_cobol_RequestSource"
       },
       "function_containers": [
         ""
@@ -1558,7 +1559,11 @@
       "lifecycle_owners": [
         ""
       ],
-      "representation_owners": []
+      "representation_owners": [],
+      "representation_calls": [
+        "TT_SESSION_NEXT",
+        "TT_SESSION_TEXT"
+      ]
     }
   },
   "databases": {

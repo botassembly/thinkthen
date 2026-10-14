@@ -8,7 +8,7 @@ def render(definitions, old_nodes):
     metadata = {}
     native_render(definitions, metadata)
     nodes = metadata['nodes']
-    pending, bodies, done = [('RequestCall', 'RequestArguments'), ('RequestSessionDescriptor', 'RequestSessionDescriptor')], [], set()
+    pending, bodies, done = [('RequestCall', 'RequestArguments'), ('RequestSessionDescriptor', 'RequestSessionDescriptor'), ('EngineSettings', 'EngineSettings')], [], set()
     def converter(old, native):
         identity = old, native
         if identity not in done and identity not in pending:
@@ -103,7 +103,7 @@ def render(definitions, old_nodes):
              'release(&a); return code;', '}']
     for function in functions:
         code += [f'int TT_SESSION_{function.upper()}(const void *engine,const thinkthen_cobol_RequestCall *input,void **out) {{', f'return start(engine,input,out,"{function}",{len(function)});', '}']
-    code += [PLAN]
+    code += [ENGINE_NEW, PLAN]
     code += [NEXT_PACKET, USAGE_STATUS]
     return '\n'.join(code) + '\n'
 
@@ -205,3 +205,13 @@ def builders(definitions):
                '*arm=(thinkthen_cobol_RequestInput_source){.m_source=source};',
                f'*selector=(thinkthen_cobol_RequestInput){{.kind={source_index},.value=arm}};', 'return 0;', '}']
     return declarations, '\n'.join(bodies)
+
+ENGINE_NEW = r"""int TT_ENGINE_NEW(const thinkthen_cobol_EngineSettings *input,void **out) {
+    if(!input || !out) return THINKTHEN_COBOL_REPRESENTATION;
+    arena a={0};
+    const thinkthen_request_engine_settings_v1 *settings=convert_EngineSettings_EngineSettings(&a,input);
+    thinkthen_engine *engine=a.code ? NULL : thinkthen_engine_new_typed(settings);
+    int code=a.code ? a.code : engine ? 0 : thinkthen_error_code(NULL);
+    release(&a); if(!code) *out=engine; return code;
+}
+"""
