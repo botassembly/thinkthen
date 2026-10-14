@@ -362,7 +362,7 @@ def bridge():
         lines += [' public ' + types[field['type']] + ' ' + name + ';'
                   for name, field in native['records'][carrier]['fields'].items()]
         lines += ['}']
-    for enum, prefix, suffix, underlying in [('AuthoredQuestionKind', 'THINKTHEN_LOAD_', '_V1', 'uint'), ('FailureKind', 'THINKTHEN_E', '', 'int'), ('UsagePersistenceState', 'THINKTHEN_COMPLETE_USAGE_PERSISTENCE_', '_V1', 'uint')]:
+    for enum, prefix, suffix, underlying in [('FailureKind', 'THINKTHEN_E', '', 'int'), ('UsagePersistenceState', 'THINKTHEN_COMPLETE_USAGE_PERSISTENCE_', '_V1', 'uint')]:
         members = [(name.removeprefix(prefix).removesuffix(suffix), value) for name, value in native['constants'].items()
                    if name.startswith(prefix) and (name.endswith(suffix) if suffix else not name.endswith('_V1'))]
         lines += ['public enum ' + enum + ' : ' + underlying + ' { ' + ', '.join(''.join(word.title() for word in name.split('_')) + ' = ' + str(value) for name, value in members) + ' }']
@@ -386,7 +386,11 @@ def bridge():
               '}', 'internal static class NativeWait {']
     for name, value in native['constants'].items():
         if name.startswith('THINKTHEN_SESSION_WAIT_'):
-            lines += [' internal const uint ' + name.removeprefix('THINKTHEN_SESSION_WAIT_').removesuffix('_V1').title() + ' = ' + str(value) + ';']
+            lines += [' internal const uint ' + ''.join(part.title() for part in name.removeprefix('THINKTHEN_SESSION_WAIT_').removesuffix('_V1').split('_')) + ' = ' + str(value) + ';']
+    for name, value in native['constants'].items():
+        if name.startswith('THINKTHEN_SESSION_READY_'):
+            suffix = ''.join(part.title() for part in name.removeprefix('THINKTHEN_SESSION_READY_').removesuffix('_V1').split('_'))
+            lines += [' internal const uint Ready' + suffix + ' = ' + str(value) + ';']
     prototype = native['functions']['thinkthen_session_wait']
     parameters = {'const thinkthen_session *': 'SessionHandle session', 'uint32_t': 'uint', 'uint32_t *': 'out uint ready'}
     arguments = [parameters[typ] + (' interest' if at == 1 else ' timeoutMilliseconds' if at == 2 else '') for at, typ in enumerate(prototype['arguments'])]

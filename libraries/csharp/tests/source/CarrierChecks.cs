@@ -1,24 +1,35 @@
-using System.Text.Json;
+using ThinkThen;
 using ThinkThen.Inputs;
-using ThinkThen.Results;
+using PresenceState = ThinkThen.Results.PresenceState;
+using Plan = ThinkThen.Results.Plan;
 static class CarrierChecks
 {
- static void Check(bool value) {if(!value)throw new Exception("owned generated carrier contract");}
- static void Refuses(Action action) {try{action();}catch(Exception e) when(e is JsonException or KeyNotFoundException or InvalidOperationException or NotSupportedException){return;}throw new Exception("invalid field accepted");}
  public static void Run() {
-  using var doc=JsonDocument.Parse("{\"call_id\":\"owned\",\"cache_answers\":0,\"records\":0,\"requests_sent\":0,\"seconds\":0,\"input_tokens\":0,\"estimated_cost_usd\":\"0.000000\",\"largest_request_bytes\":0,\"largest_request_estimated_input_tokens\":null,\"token_estimate_method\":\"native\",\"future\":{\"n\":1}}");
-  var facts=new Facts(doc.RootElement);Check(facts.CallId=="owned"&&facts.InputTokens.State==PresenceState.Value&&facts.InputTokens.Value==0&&facts.OutputTokens.State==PresenceState.Missing&&facts.EstimatedCostUsd.Value=="0.000000"&&facts.LargestRequestEstimatedInputTokens.State==PresenceState.Null);
-  Check(facts.ToJson().GetProperty("future").GetProperty("n").GetInt32()==1);
-  using var missing=JsonDocument.Parse("{}");Refuses(()=>_=new Facts(missing.RootElement).CallId);Refuses(()=>_=new Facts(missing.RootElement).LargestRequestEstimatedInputTokens);
-  using var odds=JsonDocument.Parse("{\"kind\":\"choice\",\"pick\":\"β\",\"probabilities\":{\"β\":0.7,\"a\":0.3},\"confidence\":0}");
-  var choice=(AnswerChoice)Answer.Read(odds.RootElement);Check(choice.Probabilities.Keys.First()=="β"&&choice.Confidence.State==PresenceState.Value&&choice.Confidence.Value==0);
-  Refuses(()=>((IDictionary<string,double>)choice.Probabilities).Clear());
-  using var unknown=JsonDocument.Parse("{\"kind\":\"other\"}");Refuses(()=>Answer.Read(unknown.RootElement));
-  using var nullOdds=JsonDocument.Parse("{\"kind\":\"yes_no\",\"probability\":null}");Refuses(()=>_=((AnswerYesNo)Answer.Read(nullOdds.RootElement)).Probability);
-  var question=new InputRequestQuestionFile {Path="β.json"};var source=new InputRequestInputSource {Source=new InputRequestSource {Paths=new[]{"β.png","β.png"},Media=new InputReaderMediaImage(),Reading=new InputRequestReader {Unit=new InputSourceUnitFile()}}};
-  var request=new InputRequest {Schema=new InputRequestVersionThinkthenRequest1(),Call=new InputRequestCall { Function = new InputRequestFunctionDecide(),Question=question,Input=source,Options=new InputRequestOptions {None=false}}};
-  using var stream=new MemoryStream();using(var writer=new Utf8JsonWriter(stream))request.Write(writer);using var input=JsonDocument.Parse(stream.ToArray());
-  Check(input.RootElement.GetProperty("call").GetProperty("input").GetProperty("source").GetProperty("paths").GetArrayLength()==2);
-  foreach(string member in new[]{"true","null","\"billing\"","[\"billing\",\"urgent\"]","1.2","{\"failed\":{\"kind\":\"backend\",\"cause\":\"missing_probability\",\"later\":1}}"}){using var value=JsonDocument.Parse(member);Check(AnnotatedField.Read(value.RootElement).ToJsonString()==member);}
+  using var engine=Engine.Open();
+  var input=new RequestInputRecords {Items=new[] {new RequestItem {Original=new RequestOriginalText {Text="first"}},new RequestItem {Original=new RequestOriginalText {Text="second"}}}};
+  var decide=new RequestQuestionText {Text="Is it?"};
+  var calls=new (RequestFunction,RequestQuestion)[] {
+   (new RequestFunctionDecide(),decide),
+   (new RequestFunctionChoose(),FixtureQuestions.Parse(AuthoredQuestionKind.Atomic,"{\"choose\":\"Which?\",\"options\":[\"first\",\"second\"]}")),
+   (new RequestFunctionTag(),FixtureQuestions.Parse(AuthoredQuestionKind.Atomic,"{\"tag\":\"Which?\",\"labels\":[\"first\",\"second\"]}")),
+   (new RequestFunctionScore(),FixtureQuestions.Parse(AuthoredQuestionKind.Atomic,"{\"score\":\"What level?\",\"levels\":[\"Low.\",\"High.\"]}")),
+   (new RequestFunctionFilter(),decide),
+   (new RequestFunctionRank(),decide)
+  };
+  var retained=new List<(Plan Value,bool Upper)>();
+  foreach(var (function,question) in calls) {
+   var options=new RequestOptions {None=false,Batch=new RequestBatchInteger {Value=1}};
+   var plan=engine.Plan(new Request {Schema=new RequestVersionThinkthenRequest1(),Call=new RequestCall {Function=function,Question=question,Input=input,Options=options}});
+   if(plan.Records!=2 || plan.Requests==0 || plan.EstimatedBytes==0 || plan.LargestRequestBytes>plan.EstimatedBytes || plan.EstimatedInputTokens.Lower>plan.EstimatedInputTokens.Upper || plan.LargestRequestEstimatedInputTokens==0 || plan.TokenEstimateMethod.Length==0 || plan.FirstBodyUtf8.State!=PresenceState.Value || !options.None.IsPresent || options.None.Value) throw new Exception("typed canonical plan fields or explicit false changed: " + function.GetType().Name + " records=" + plan.Records + " requests=" + plan.Requests + " bytes=" + plan.EstimatedBytes + " largest=" + plan.LargestRequestBytes + " tokens=" + plan.LargestRequestEstimatedInputTokens + " body=" + plan.FirstBodyUtf8.State + " upper=" + plan.UpperBound);
+   retained.Add((plan,plan.UpperBound));
+  }
+  foreach(RequestFunction function in new RequestFunction[] {new RequestFunctionFind(),new RequestFunctionAnnotate(),new RequestFunctionRecognize(),new RequestFunctionRelate()}) {
+   try {engine.Plan(new Request {Schema=new RequestVersionThinkthenRequest1(),Call=new RequestCall {Function=function,Question=decide,Input=input}});throw new Exception("unsupported plan admitted");}
+   catch(Failure failure) when(failure.Kind==FailureKind.Usage && failure.Code==1 && !failure.Retryable && failure.Facts is null) { }
+  }
+  var empty=engine.Plan(new Request {Schema=new RequestVersionThinkthenRequest1(),Call=new RequestCall {Function=new RequestFunctionDecide(),Question=decide,Input=new RequestInputRecords {Items=Array.Empty<RequestItem>()}}});
+  if(empty.Records!=0 || empty.Requests!=0 || empty.FirstBodyUtf8.State!=PresenceState.Null) throw new Exception("empty plan lost nullable body");
+  engine.Dispose();
+  if(retained.Any(snapshot=>snapshot.Value.Records!=2 || snapshot.Value.EstimatedInputTokens.Lower>snapshot.Value.EstimatedInputTokens.Upper || snapshot.Value.UpperBound!=snapshot.Upper)) throw new Exception("owned typed plan changed");
  }
 }

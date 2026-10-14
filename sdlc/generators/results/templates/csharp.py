@@ -166,22 +166,22 @@ public readonly struct Presence<T>
 public abstract class ResultObject
 {
     private readonly JsonElement document;
-    protected ResultObject(JsonElement document) { this.document = document.Clone(); }
-    protected JsonElement RequiredElement(string name) => document.GetProperty(name);
-    protected Presence<T> Optional<T>(string name, Func<JsonElement, T> read)
+    private protected ResultObject(JsonElement document) { this.document = document.Clone(); }
+    private protected JsonElement RequiredElement(string name) => document.GetProperty(name);
+    private protected Presence<T> Optional<T>(string name, Func<JsonElement, T> read)
     {
         if (!document.TryGetProperty(name, out var member)) return default;
         return member.ValueKind == JsonValueKind.Null ? Presence<T>.Null : Presence<T>.Present(read(member));
     }
-    protected Presence<T> RequiredNullable<T>(string name, Func<JsonElement, T> read)
+    private protected Presence<T> RequiredNullable<T>(string name, Func<JsonElement, T> read)
     {
         var member = RequiredElement(name);
         return member.ValueKind == JsonValueKind.Null ? Presence<T>.Null : Presence<T>.Present(read(member));
     }
     // Cloning and plain conversion retain every JSON member, including unknown nested data.
-    public JsonElement ToJson() => document.Clone();
-    public JsonObject ToPlain() => JsonNode.Parse(document.GetRawText(), documentOptions: new JsonDocumentOptions { MaxDepth = int.MaxValue })!.AsObject();
-    public string ToJsonString() => document.GetRawText();
+    internal JsonElement ToJson() => document.Clone();
+    internal JsonObject ToPlain() => JsonNode.Parse(document.GetRawText(), documentOptions: new JsonDocumentOptions { MaxDepth = int.MaxValue })!.AsObject();
+    internal string ToJsonString() => document.GetRawText();
 }
 '''
 
@@ -212,7 +212,7 @@ def render(definitions):
             chunks.append('}\n\n')
         elif 'properties' in schema:
             chunks.append(f'public sealed class {kind} : {parents.get(key, "ResultObject")}\n{{\n'
-                          f'    public {kind}(JsonElement document) : base(document) {{ }}\n')
+                          f'    internal {kind}(JsonElement document) : base(document) {{ }}\n')
             for member, field in schema['properties'].items():
                 optional = member not in schema.get('required', []) or nullable(field, definitions)
                 field_type, decode = conversion(field, definitions)
@@ -246,12 +246,12 @@ def render(definitions):
 def render_primitive_union(kind, variants, definitions, schemas):
     chunks = [f'public abstract class {kind}\n{{\n'
               '    private readonly JsonElement document;\n'
-              f'    protected {kind}(JsonElement document) {{ this.document = document.Clone(); }}\n'
-              '    protected JsonElement Document => document;\n'
-              '    public JsonElement ToJson() => document.Clone();\n'
-              '    public JsonNode ToPlain() => JsonNode.Parse(document.GetRawText(), documentOptions: new JsonDocumentOptions { MaxDepth = int.MaxValue })!;\n'
-              '    public string ToJsonString() => document.GetRawText();\n'
-              f'    public static {kind} Read(JsonElement document) => document.ValueKind switch\n    {{\n']
+              f'    private protected {kind}(JsonElement document) {{ this.document = document.Clone(); }}\n'
+              '    private protected JsonElement Document => document;\n'
+              '    internal JsonElement ToJson() => document.Clone();\n'
+              '    internal JsonNode ToPlain() => JsonNode.Parse(document.GetRawText(), documentOptions: new JsonDocumentOptions { MaxDepth = int.MaxValue })!;\n'
+              '    internal string ToJsonString() => document.GetRawText();\n'
+              f'    internal static {kind} Read(JsonElement document) => document.ValueKind switch\n    {{\n']
     for variant in variants:
         tokens = {'number': ('Number',), 'integer': ('Number',), 'string': ('String',),
                   'boolean': ('True', 'False'), 'array': ('Array',),
@@ -263,7 +263,7 @@ def render_primitive_union(kind, variants, definitions, schemas):
     for variant in variants:
         native, decode = conversion(schemas.get(variant, {'type': variant}), definitions, 'Document')
         chunks.append(f'public sealed class {kind}{name(variant)} : {kind}\n{{\n'
-                      f'    public {kind}{name(variant)}(JsonElement document) : base(document) {{ }}\n'
+                      f'    internal {kind}{name(variant)}(JsonElement document) : base(document) {{ }}\n'
                       f'    public {native} Value => {decode};\n}}\n\n')
     return ''.join(chunks)
 
@@ -285,8 +285,8 @@ def kind_test(schema, definitions, expression):
 
 def render_union(kind, variants, definitions):
     chunks = [f'public abstract class {kind} : ResultObject\n{{\n'
-              f'    protected {kind}(JsonElement document) : base(document) {{ }}\n'
-              f'    public static {kind} Read(JsonElement document)\n    {{\n'
+              f'    private protected {kind}(JsonElement document) : base(document) {{ }}\n'
+              f'    internal static {kind} Read(JsonElement document)\n    {{\n'
               f'        {kind}? result = null;\n']
     for variant, (mode, member, value) in variants:
         test = f'document.TryGetProperty({quote(member)}, out var tag{name(variant)})'
@@ -334,7 +334,7 @@ def render_inputs(schema, prepare, graph):
             definitions[key] = {'oneOf': [definitions[child] for child in names], '_variant_names': names}
     nodes = {}
     def cname(key):
-        return 'Input' + name(key)
+        return name(key)
     def cs_type(value, path):
         if isinstance(value, bool):
             return 'JsonElement'
@@ -355,15 +355,17 @@ def render_inputs(schema, prepare, graph):
             nodes.setdefault(path, value)
             return cname(path)
         if kind == 'object' and isinstance(value.get('additionalProperties'), dict):
-            return 'IReadOnlyDictionary<string, ' + cs_type(value['additionalProperties'], path + '_Entry') + '>'
+            return 'IReadOnlyList<KeyValuePair<string, ' + cs_type(value['additionalProperties'], path + '_Entry') + '>>'
         return {'string': 'string', 'boolean': 'bool', 'integer': 'long',
                 'number': 'double'}.get(kind, 'JsonElement') if kind != 'integer' else {'uint64':'ulong', 'uint32':'uint', 'uint':'ulong'}.get(value.get('format'), 'long')
     def type_of_literal(value):
         return 'string' if isinstance(value, str) else 'bool' if isinstance(value, bool) else 'long'
     def emit(value, expr, path):
         typ = cs_type(value, path)
-        if typ.startswith('Input'):
+        if typ in {cname(key) for key in nodes}:
             return 'if (' + expr + ' is null) writer.WriteNullValue(); else ' + expr + '.Write(writer);'
+        if typ.startswith('IReadOnlyList<KeyValuePair'):
+            return 'writer.WriteStartObject(); foreach (var entry in ' + expr + ') { WriteName(writer, entry.Key); ' + emit(value['additionalProperties'], 'entry.Value', path + '_Entry') + ' } writer.WriteEndObject();'
         if typ.startswith('IReadOnlyList'):
             return 'writer.WriteStartArray(); foreach (var item in ' + expr + ') { ' + emit(value.get('items', {}), 'item', path + '_Item') + ' } writer.WriteEndArray();'
         if typ.startswith('IReadOnlyDictionary'):
@@ -410,8 +412,12 @@ def render_inputs(schema, prepare, graph):
     mark_read({'$ref': '#/$defs/RequestDefinition'}, 'RequestDefinition')
     def read(value, expr, path, depth=0):
         typ = cs_type(value, path)
-        if typ.startswith('Input'):
+        if typ in {cname(key) for key in nodes}:
             return typ + '.Read(' + expr + ')'
+        if typ.startswith('IReadOnlyList<KeyValuePair'):
+            item = 'entry' + str(depth)
+            element = cs_type(value['additionalProperties'], path + '_Entry')
+            return 'Array.AsReadOnly(' + expr + '.EnumerateObject().Select(' + item + ' => new KeyValuePair<string, ' + element + '>(' + item + '.Name, ' + read(value['additionalProperties'], item + '.Value', path + '_Entry', depth + 1) + ')).ToArray())'
         if typ.startswith('IReadOnlyList'):
             item = 'item' + str(depth)
             return 'Array.AsReadOnly(' + expr + '.EnumerateArray().Select(' + item + ' => ' + read(value.get('items', {}), item, path + '_Item', depth + 1) + ').ToArray())'
@@ -455,19 +461,20 @@ using System.IO;
 using System.Linq;
 using System.Text.Json;
 namespace ThinkThen.Inputs;
-public readonly struct InputPresence<T> {
+public readonly struct AuthoredPresence<T> {
     public bool IsPresent { get; }
     public T Value { get; }
-    private InputPresence(T value) { Value = value; IsPresent = true; }
-    public static implicit operator InputPresence<T>(T value) => new(value);
+    private AuthoredPresence(T value) { Value = value; IsPresent = true; }
+    public static implicit operator AuthoredPresence<T>(T value) => new(value);
 }
-public abstract class InputDocument {
+public abstract class AuthoredDocument {
+    private protected AuthoredDocument() {}
     private static readonly System.Text.Encoding StrictUtf8 = new System.Text.UTF8Encoding(false, true);
-    protected static void WriteText(Utf8JsonWriter writer, string? value) { if (value is not null) _ = StrictUtf8.GetByteCount(value); writer.WriteStringValue(value); }
-    protected static void WriteName(Utf8JsonWriter writer, string value) { _ = StrictUtf8.GetByteCount(value); writer.WritePropertyName(value); }
+    private protected static void WriteText(Utf8JsonWriter writer, string? value) { if (value is not null) _ = StrictUtf8.GetByteCount(value); writer.WriteStringValue(value); }
+    private protected static void WriteName(Utf8JsonWriter writer, string value) { _ = StrictUtf8.GetByteCount(value); writer.WritePropertyName(value); }
     // Only internal readers retain native-admitted JSON; raw writes bypass host depth validation.
     private protected JsonElement? ParsedDocument { get; init; }
-    public abstract void Write(Utf8JsonWriter writer);
+    internal abstract void Write(Utf8JsonWriter writer);
     internal byte[] ToBytes() { using var stream = new MemoryStream(); using (var writer = new Utf8JsonWriter(stream, new JsonWriterOptions { MaxDepth = int.MaxValue })) Write(writer); return stream.ToArray(); }
 }
 '''
@@ -481,7 +488,7 @@ public abstract class InputDocument {
         typ = cname(key)
         alternatives = value.get('oneOf', value.get('anyOf'))
         if alternatives and 'properties' not in value:
-            declaration = 'public abstract class ' + typ + ' : InputDocument { private protected ' + typ + '() {}'
+            declaration = 'public abstract class ' + typ + ' : AuthoredDocument { private protected ' + typ + '() {}'
             if key in reading:
                 declaration += ' internal static ' + typ + ' Read(JsonElement value) { '
                 for index, alt in enumerate(alternatives):
@@ -492,7 +499,7 @@ public abstract class InputDocument {
                 child = child_key(key, index, alt)
                 nodes[child] = {**alt, '_base': typ}
             continue
-        base = value.get('_base', 'InputDocument')
+        base = value.get('_base', 'AuthoredDocument')
         lines = ['public sealed class ' + typ + ' : ' + base + ' {']
         properties = value.get('properties')
         if properties is not None:
@@ -507,7 +514,7 @@ public abstract class InputDocument {
                 ptype = cs_type(prop, key + '_' + member)
                 pname = name(member)
                 mandatory = member in required
-                lines.append('public ' + ('required ' + ptype if mandatory else 'InputPresence<' + ptype + '>') + ' ' + pname + ' { get; init; }')
+                lines.append('public ' + ('required ' + ptype if mandatory else 'AuthoredPresence<' + ptype + '>') + ' ' + pname + ' { get; init; }')
                 body = 'writer.WritePropertyName(' + quote(member) + '); ' + emit(prop, pname if mandatory else pname + '.Value', key + '_' + member)
                 writes.append(body if mandatory else 'if (' + pname + '.IsPresent) { ' + body + ' }')
             writes.append('writer.WriteEndObject();')
@@ -531,12 +538,12 @@ public abstract class InputDocument {
                     pname = name(member)
                     expr = read(prop, 'value.GetProperty(' + quote(member) + ')', key + '_' + member)
                     if member not in required:
-                        expr = 'value.TryGetProperty(' + quote(member) + ', out _) ? (InputPresence<' + ptype + '>)(' + expr + ') : default'
+                        expr = 'value.TryGetProperty(' + quote(member) + ', out _) ? (AuthoredPresence<' + ptype + '>)(' + expr + ') : default'
                     assignments.append(pname + ' = ' + expr)
             elif value.get('type') != 'null' and 'const' not in value:
                 assignments.append('Value = ' + read(stripped, 'value', key + '_Value'))
             lines.append('internal ' + ('new ' if '_base' in value else '') + 'static ' + typ + ' Read(JsonElement value) => new() { ' + ', '.join(assignments) + ' };')
-        lines.append('public override void Write(Utf8JsonWriter writer) { if (ParsedDocument is {} parsed) { writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true); return; } ' + ' '.join(writes) + ' }')
+        lines.append('internal override void Write(Utf8JsonWriter writer) { if (ParsedDocument is {} parsed) { writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true); return; } ' + ' '.join(writes) + ' }')
         lines.append('}')
         output.append('\n'.join(lines))
     builders = ['public static class QuestionBuilders {']
@@ -547,24 +554,24 @@ public abstract class InputDocument {
             key = value['$ref'].split('/')[-1]
             target = definitions[key]
             if not target.get('title', '').endswith('Question') or 'properties' not in target: continue
-            builders += ['public static InputRequestQuestionDefinition ' + name(field) + '(' + cname(key) + ' question) {',
+            builders += ['public static RequestQuestionDefinition ' + name(field) + '(' + cname(key) + ' question) {',
                          'ArgumentNullException.ThrowIfNull(question);',
-                         'return new InputRequestQuestionDefinition { Value = new ' + cname(child) + ' { ' + name(field) + ' = question } };', '}']
+                         'return new RequestQuestionDefinition { Value = new ' + cname(child) + ' { ' + name(field) + ' = question } };', '}']
     return header + '\n\n'.join(output) + '\n' + '\n'.join(builders + ['}']) + '\n'
 
 
 def named_calls(functions):
     """Generate public named operations over one shared session construction."""
     lines = ['// Generated from canonical RequestFunction; do not edit.', '#nullable enable',
-             'using ThinkThen.Inputs;', 'using ThinkThen.Results;', 'namespace ThinkThen;',
+             'using ThinkThen.Inputs;', 'using ThinkThen.Results;', 'using System.Text.Json;', 'namespace ThinkThen;',
              'public sealed partial class Engine {']
     for function in functions:
         title = function.title()
-        lines += [f'public Task<OwnedCall> {title}Async(InputRequestQuestion question, InputRequestInput input,',
-                  'InputRequestOptions? options = null, CancellationToken cancellation = default) =>',
+        lines += [f'public Task<OwnedCall> {title}Async(RequestQuestion question, RequestInput input,',
+                  'RequestOptions? options = null, CancellationToken cancellation = default) =>',
                   f'ExecuteSessionAsync(() => StartNamedSession({quote(function)}, question, input, options), null, cancellation);',
-                  f'public Task<OwnedCall> {title}Async(InputRequestQuestion question, IAsyncEnumerable<InputRequestSessionDescriptor> feed,',
-                  'InputRequestOptions? options = null, CancellationToken cancellation = default) {',
+                  f'public Task<OwnedCall> {title}Async(RequestQuestion question, IAsyncEnumerable<RequestSessionDescriptor> feed,',
+                  'RequestOptions? options = null, CancellationToken cancellation = default) {',
                   'ArgumentNullException.ThrowIfNull(feed);',
                   f'return ExecuteSessionAsync(() => StartNamedSession({quote(function)}, question, FeedInput, options), feed, cancellation);',
                   '}']
@@ -615,11 +622,16 @@ def answer_helpers(definitions):
                   'foreach (var packet in call.Packets) if (packet is ' + pattern + ' && ((ThinkThen.Results.' + name(route[0][0]) + ')packet).Function.Value == ' + quote(function) + ') values.Add(' + value + ');',
                   'if (values.Count != 1) throw new AnswerCardinalityFailure(' + quote(function) + ', call);',
                   'return values[0];', '}']
-    from host_answers import aggregate_answers
+    from host_answers import aggregate_answers, aggregate_projection
     scalars = {function for function, _, _ in scalar_answers(definitions)}
     for function, child, payload in aggregate_answers(definitions):
         if function in scalars: continue
-        typ, _ = conversion(payload, definitions)
+        projected, projection = aggregate_projection(function, payload, definitions)
+        if projection:
+            item_type, _ = conversion(projected['items'], definitions)
+            typ = 'IReadOnlyList<' + item_type + '>'
+        else:
+            typ, _ = conversion(payload, definitions)
         method = function.title()
         methods.append((function, method, typ))
         lines += ['public static ' + typ + ' ' + method + '(this OwnedCall call) {', 'Successful(call);']
@@ -633,14 +645,21 @@ def answer_helpers(definitions):
                 if (fields.get('kind', {}).get('const') == 'row' and
                     fields.get('function', {}).get('const') == function and fields.get('value') == payload['items']):
                     lines += ['else if (packet is ThinkThen.Results.' + name(row) + ' row) values.Add(row.Value);']
-            lines += ['}', 'return values.AsReadOnly();', '}']
+            result = 'values.AsReadOnly()'
+            if projection:
+                member = name(projection)
+                projected_value = 'value.' + member + '.Value'
+                if nullable(projected['items'], definitions):
+                    projected_value = 'value.' + member + '.State == ThinkThen.Results.PresenceState.Null ? System.Text.Json.JsonSerializer.SerializeToElement<object?>(null) : ' + projected_value
+                result = 'Array.AsReadOnly(values.Select(value => ' + projected_value + ').ToArray())'
+            lines += ['}', 'return ' + result + ';', '}']
         else:
             lines += ['var values = call.Packets.OfType<ThinkThen.Results.' + name(child) + '>().Select(packet => packet.Value).ToArray();',
                       'if (values.Length != 1) throw new AnswerCardinalityFailure(' + quote(function) + ', call);',
                       'return values[0];', '}']
     lines += ['}', 'public sealed partial class Engine {']
     for function, method, typ in methods:
-        lines += ['public async Task<' + typ + '> ' + function.title() + 'ValueAsync(InputRequestQuestion question, InputRequestInput input,',
-                  'InputRequestOptions? options = null, CancellationToken cancellation = default) =>',
+        lines += ['public async Task<' + typ + '> ' + function.title() + 'ValueAsync(RequestQuestion question, RequestInput input,',
+                  'RequestOptions? options = null, CancellationToken cancellation = default) =>',
                   '(await ' + function.title() + 'Async(question, input, options, cancellation).ConfigureAwait(false)).' + method + '();']
     return '\n'.join(lines + ['}']) + '\n'

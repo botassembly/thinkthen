@@ -2,94 +2,95 @@
 #nullable enable
 using ThinkThen.Inputs;
 using ThinkThen.Results;
+using System.Text.Json;
 namespace ThinkThen;
 public sealed partial class Engine {
-    public Task<OwnedCall> DecideAsync(InputRequestQuestion question, InputRequestInput input,
-    InputRequestOptions? options = null, CancellationToken cancellation = default) =>
+    public Task<OwnedCall> DecideAsync(RequestQuestion question, RequestInput input,
+    RequestOptions? options = null, CancellationToken cancellation = default) =>
     ExecuteSessionAsync(() => StartNamedSession("decide", question, input, options), null, cancellation);
-    public Task<OwnedCall> DecideAsync(InputRequestQuestion question, IAsyncEnumerable<InputRequestSessionDescriptor> feed,
-    InputRequestOptions? options = null, CancellationToken cancellation = default) {
+    public Task<OwnedCall> DecideAsync(RequestQuestion question, IAsyncEnumerable<RequestSessionDescriptor> feed,
+    RequestOptions? options = null, CancellationToken cancellation = default) {
         ArgumentNullException.ThrowIfNull(feed);
         return ExecuteSessionAsync(() => StartNamedSession("decide", question, FeedInput, options),
         feed, cancellation);
     }
-    public Task<OwnedCall> ChooseAsync(InputRequestQuestion question, InputRequestInput input,
-    InputRequestOptions? options = null, CancellationToken cancellation = default) =>
+    public Task<OwnedCall> ChooseAsync(RequestQuestion question, RequestInput input,
+    RequestOptions? options = null, CancellationToken cancellation = default) =>
     ExecuteSessionAsync(() => StartNamedSession("choose", question, input, options), null, cancellation);
-    public Task<OwnedCall> ChooseAsync(InputRequestQuestion question, IAsyncEnumerable<InputRequestSessionDescriptor> feed,
-    InputRequestOptions? options = null, CancellationToken cancellation = default) {
+    public Task<OwnedCall> ChooseAsync(RequestQuestion question, IAsyncEnumerable<RequestSessionDescriptor> feed,
+    RequestOptions? options = null, CancellationToken cancellation = default) {
         ArgumentNullException.ThrowIfNull(feed);
         return ExecuteSessionAsync(() => StartNamedSession("choose", question, FeedInput, options),
         feed, cancellation);
     }
-    public Task<OwnedCall> TagAsync(InputRequestQuestion question, InputRequestInput input,
-    InputRequestOptions? options = null, CancellationToken cancellation = default) =>
+    public Task<OwnedCall> TagAsync(RequestQuestion question, RequestInput input,
+    RequestOptions? options = null, CancellationToken cancellation = default) =>
     ExecuteSessionAsync(() => StartNamedSession("tag", question, input, options), null, cancellation);
-    public Task<OwnedCall> TagAsync(InputRequestQuestion question, IAsyncEnumerable<InputRequestSessionDescriptor> feed,
-    InputRequestOptions? options = null, CancellationToken cancellation = default) {
+    public Task<OwnedCall> TagAsync(RequestQuestion question, IAsyncEnumerable<RequestSessionDescriptor> feed,
+    RequestOptions? options = null, CancellationToken cancellation = default) {
         ArgumentNullException.ThrowIfNull(feed);
         return ExecuteSessionAsync(() => StartNamedSession("tag", question, FeedInput, options), feed,
         cancellation);
     }
-    public Task<OwnedCall> ScoreAsync(InputRequestQuestion question, InputRequestInput input,
-    InputRequestOptions? options = null, CancellationToken cancellation = default) =>
+    public Task<OwnedCall> ScoreAsync(RequestQuestion question, RequestInput input,
+    RequestOptions? options = null, CancellationToken cancellation = default) =>
     ExecuteSessionAsync(() => StartNamedSession("score", question, input, options), null, cancellation);
-    public Task<OwnedCall> ScoreAsync(InputRequestQuestion question, IAsyncEnumerable<InputRequestSessionDescriptor> feed,
-    InputRequestOptions? options = null, CancellationToken cancellation = default) {
+    public Task<OwnedCall> ScoreAsync(RequestQuestion question, IAsyncEnumerable<RequestSessionDescriptor> feed,
+    RequestOptions? options = null, CancellationToken cancellation = default) {
         ArgumentNullException.ThrowIfNull(feed);
         return ExecuteSessionAsync(() => StartNamedSession("score", question, FeedInput, options), feed,
         cancellation);
     }
-    public Task<OwnedCall> FilterAsync(InputRequestQuestion question, InputRequestInput input,
-    InputRequestOptions? options = null, CancellationToken cancellation = default) =>
+    public Task<OwnedCall> FilterAsync(RequestQuestion question, RequestInput input,
+    RequestOptions? options = null, CancellationToken cancellation = default) =>
     ExecuteSessionAsync(() => StartNamedSession("filter", question, input, options), null, cancellation);
-    public Task<OwnedCall> FilterAsync(InputRequestQuestion question, IAsyncEnumerable<InputRequestSessionDescriptor> feed,
-    InputRequestOptions? options = null, CancellationToken cancellation = default) {
+    public Task<OwnedCall> FilterAsync(RequestQuestion question, IAsyncEnumerable<RequestSessionDescriptor> feed,
+    RequestOptions? options = null, CancellationToken cancellation = default) {
         ArgumentNullException.ThrowIfNull(feed);
         return ExecuteSessionAsync(() => StartNamedSession("filter", question, FeedInput, options),
         feed, cancellation);
     }
-    public Task<OwnedCall> RankAsync(InputRequestQuestion question, InputRequestInput input,
-    InputRequestOptions? options = null, CancellationToken cancellation = default) =>
+    public Task<OwnedCall> RankAsync(RequestQuestion question, RequestInput input,
+    RequestOptions? options = null, CancellationToken cancellation = default) =>
     ExecuteSessionAsync(() => StartNamedSession("rank", question, input, options), null, cancellation);
-    public Task<OwnedCall> RankAsync(InputRequestQuestion question, IAsyncEnumerable<InputRequestSessionDescriptor> feed,
-    InputRequestOptions? options = null, CancellationToken cancellation = default) {
+    public Task<OwnedCall> RankAsync(RequestQuestion question, IAsyncEnumerable<RequestSessionDescriptor> feed,
+    RequestOptions? options = null, CancellationToken cancellation = default) {
         ArgumentNullException.ThrowIfNull(feed);
         return ExecuteSessionAsync(() => StartNamedSession("rank", question, FeedInput, options), feed,
         cancellation);
     }
-    public Task<OwnedCall> FindAsync(InputRequestQuestion question, InputRequestInput input,
-    InputRequestOptions? options = null, CancellationToken cancellation = default) =>
+    public Task<OwnedCall> FindAsync(RequestQuestion question, RequestInput input,
+    RequestOptions? options = null, CancellationToken cancellation = default) =>
     ExecuteSessionAsync(() => StartNamedSession("find", question, input, options), null, cancellation);
-    public Task<OwnedCall> FindAsync(InputRequestQuestion question, IAsyncEnumerable<InputRequestSessionDescriptor> feed,
-    InputRequestOptions? options = null, CancellationToken cancellation = default) {
+    public Task<OwnedCall> FindAsync(RequestQuestion question, IAsyncEnumerable<RequestSessionDescriptor> feed,
+    RequestOptions? options = null, CancellationToken cancellation = default) {
         ArgumentNullException.ThrowIfNull(feed);
         return ExecuteSessionAsync(() => StartNamedSession("find", question, FeedInput, options), feed,
         cancellation);
     }
-    public Task<OwnedCall> AnnotateAsync(InputRequestQuestion question, InputRequestInput input,
-    InputRequestOptions? options = null, CancellationToken cancellation = default) =>
+    public Task<OwnedCall> AnnotateAsync(RequestQuestion question, RequestInput input,
+    RequestOptions? options = null, CancellationToken cancellation = default) =>
     ExecuteSessionAsync(() => StartNamedSession("annotate", question, input, options), null, cancellation);
-    public Task<OwnedCall> AnnotateAsync(InputRequestQuestion question, IAsyncEnumerable<InputRequestSessionDescriptor> feed,
-    InputRequestOptions? options = null, CancellationToken cancellation = default) {
+    public Task<OwnedCall> AnnotateAsync(RequestQuestion question, IAsyncEnumerable<RequestSessionDescriptor> feed,
+    RequestOptions? options = null, CancellationToken cancellation = default) {
         ArgumentNullException.ThrowIfNull(feed);
         return ExecuteSessionAsync(() => StartNamedSession("annotate", question, FeedInput, options),
         feed, cancellation);
     }
-    public Task<OwnedCall> RecognizeAsync(InputRequestQuestion question, InputRequestInput input,
-    InputRequestOptions? options = null, CancellationToken cancellation = default) =>
+    public Task<OwnedCall> RecognizeAsync(RequestQuestion question, RequestInput input,
+    RequestOptions? options = null, CancellationToken cancellation = default) =>
     ExecuteSessionAsync(() => StartNamedSession("recognize", question, input, options), null, cancellation);
-    public Task<OwnedCall> RecognizeAsync(InputRequestQuestion question, IAsyncEnumerable<InputRequestSessionDescriptor> feed,
-    InputRequestOptions? options = null, CancellationToken cancellation = default) {
+    public Task<OwnedCall> RecognizeAsync(RequestQuestion question, IAsyncEnumerable<RequestSessionDescriptor> feed,
+    RequestOptions? options = null, CancellationToken cancellation = default) {
         ArgumentNullException.ThrowIfNull(feed);
         return ExecuteSessionAsync(() => StartNamedSession("recognize", question, FeedInput, options),
         feed, cancellation);
     }
-    public Task<OwnedCall> RelateAsync(InputRequestQuestion question, InputRequestInput input,
-    InputRequestOptions? options = null, CancellationToken cancellation = default) =>
+    public Task<OwnedCall> RelateAsync(RequestQuestion question, RequestInput input,
+    RequestOptions? options = null, CancellationToken cancellation = default) =>
     ExecuteSessionAsync(() => StartNamedSession("relate", question, input, options), null, cancellation);
-    public Task<OwnedCall> RelateAsync(InputRequestQuestion question, IAsyncEnumerable<InputRequestSessionDescriptor> feed,
-    InputRequestOptions? options = null, CancellationToken cancellation = default) {
+    public Task<OwnedCall> RelateAsync(RequestQuestion question, IAsyncEnumerable<RequestSessionDescriptor> feed,
+    RequestOptions? options = null, CancellationToken cancellation = default) {
         ArgumentNullException.ThrowIfNull(feed);
         return ExecuteSessionAsync(() => StartNamedSession("relate", question, FeedInput, options),
         feed, cancellation);
@@ -164,22 +165,22 @@ public static class AnswerAccessors {
         if (values.Count != 1) throw new AnswerCardinalityFailure("tag", call);
         return values[0];
     }
-    public static IReadOnlyList<AtomicBoolean> Filter(this OwnedCall call) {
+    public static IReadOnlyList<JsonElement> Filter(this OwnedCall call) {
         Successful(call);
         var values = new List<AtomicBoolean>();
         foreach (var packet in call.Packets) {
             if (packet is ThinkThen.Results.SessionPacketFilterAggregate aggregate) values.AddRange(aggregate.Value);
             else if (packet is ThinkThen.Results.SessionPacketFilterRow row) values.Add(row.Value);
         }
-        return values.AsReadOnly();
+        return Array.AsReadOnly(values.Select(value => value.Input.State == ThinkThen.Results.PresenceState.Null ? System.Text.Json.JsonSerializer.SerializeToElement<object?>(null) : value.Input.Value).ToArray());
     }
-    public static IReadOnlyList<AtomicNonZeroUsize> Rank(this OwnedCall call) {
+    public static IReadOnlyList<ulong> Rank(this OwnedCall call) {
         Successful(call);
         var values = new List<AtomicNonZeroUsize>();
         foreach (var packet in call.Packets) {
             if (packet is ThinkThen.Results.SessionPacketRankAggregate aggregate) values.AddRange(aggregate.Value);
         }
-        return values.AsReadOnly();
+        return Array.AsReadOnly(values.Select(value => value.Index.Value).ToArray());
     }
     public static Find Find(this OwnedCall call) {
         Successful(call);
@@ -212,38 +213,35 @@ public static class AnswerAccessors {
     }
 }
 public sealed partial class Engine {
-    public async Task<bool?> DecideValueAsync(InputRequestQuestion question, InputRequestInput input,
-    InputRequestOptions? options = null, CancellationToken cancellation = default) =>
+    public async Task<bool?> DecideValueAsync(RequestQuestion question, RequestInput input,
+    RequestOptions? options = null, CancellationToken cancellation = default) =>
     (await DecideAsync(question, input, options, cancellation).ConfigureAwait(false)).Decision();
-    public async Task<string?> ChooseValueAsync(InputRequestQuestion question, InputRequestInput input,
-    InputRequestOptions? options = null, CancellationToken cancellation = default) =>
+    public async Task<string?> ChooseValueAsync(RequestQuestion question, RequestInput input,
+    RequestOptions? options = null, CancellationToken cancellation = default) =>
     (await ChooseAsync(question, input, options, cancellation).ConfigureAwait(false)).Choice();
-    public async Task<double> ScoreValueAsync(InputRequestQuestion question, InputRequestInput input,
-    InputRequestOptions? options = null, CancellationToken cancellation = default) =>
+    public async Task<double> ScoreValueAsync(RequestQuestion question, RequestInput input,
+    RequestOptions? options = null, CancellationToken cancellation = default) =>
     (await ScoreAsync(question, input, options, cancellation).ConfigureAwait(false)).Score();
-    public async Task<IReadOnlyList<string>> TagValueAsync(InputRequestQuestion question, InputRequestInput input,
-    InputRequestOptions? options = null, CancellationToken cancellation = default) =>
+    public async Task<IReadOnlyList<string>> TagValueAsync(RequestQuestion question, RequestInput input,
+    RequestOptions? options = null, CancellationToken cancellation = default) =>
     (await TagAsync(question, input, options, cancellation).ConfigureAwait(false)).Tags();
-    public async Task<IReadOnlyList<AtomicBoolean>> FilterValueAsync(InputRequestQuestion question,
-    InputRequestInput input,
-    InputRequestOptions? options = null, CancellationToken cancellation = default) =>
+    public async Task<IReadOnlyList<JsonElement>> FilterValueAsync(RequestQuestion question, RequestInput input,
+    RequestOptions? options = null, CancellationToken cancellation = default) =>
     (await FilterAsync(question, input, options, cancellation).ConfigureAwait(false)).Filter();
-    public async Task<IReadOnlyList<AtomicNonZeroUsize>> RankValueAsync(InputRequestQuestion question,
-    InputRequestInput input,
-    InputRequestOptions? options = null, CancellationToken cancellation = default) =>
+    public async Task<IReadOnlyList<ulong>> RankValueAsync(RequestQuestion question, RequestInput input,
+    RequestOptions? options = null, CancellationToken cancellation = default) =>
     (await RankAsync(question, input, options, cancellation).ConfigureAwait(false)).Rank();
-    public async Task<Find> FindValueAsync(InputRequestQuestion question, InputRequestInput input,
-    InputRequestOptions? options = null, CancellationToken cancellation = default) =>
+    public async Task<Find> FindValueAsync(RequestQuestion question, RequestInput input,
+    RequestOptions? options = null, CancellationToken cancellation = default) =>
     (await FindAsync(question, input, options, cancellation).ConfigureAwait(false)).Find();
-    public async Task<IReadOnlyList<Annotation>> AnnotateValueAsync(InputRequestQuestion question,
-    InputRequestInput input,
-    InputRequestOptions? options = null, CancellationToken cancellation = default) =>
+    public async Task<IReadOnlyList<Annotation>> AnnotateValueAsync(RequestQuestion question, RequestInput input,
+    RequestOptions? options = null, CancellationToken cancellation = default) =>
     (await AnnotateAsync(question, input, options, cancellation).ConfigureAwait(false)).Annotate();
-    public async Task<IReadOnlyList<Recognition>> RecognizeValueAsync(InputRequestQuestion question,
-    InputRequestInput input,
-    InputRequestOptions? options = null, CancellationToken cancellation = default) =>
+    public async Task<IReadOnlyList<Recognition>> RecognizeValueAsync(RequestQuestion question,
+    RequestInput input,
+    RequestOptions? options = null, CancellationToken cancellation = default) =>
     (await RecognizeAsync(question, input, options, cancellation).ConfigureAwait(false)).Recognize();
-    public async Task<Relation> RelateValueAsync(InputRequestQuestion question, InputRequestInput input,
-    InputRequestOptions? options = null, CancellationToken cancellation = default) =>
+    public async Task<Relation> RelateValueAsync(RequestQuestion question, RequestInput input,
+    RequestOptions? options = null, CancellationToken cancellation = default) =>
     (await RelateAsync(question, input, options, cancellation).ConfigureAwait(false)).Relate();
 }

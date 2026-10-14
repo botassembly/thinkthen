@@ -12,7 +12,7 @@ public sealed class SessionFailure : Exception
 }
 public sealed partial class Engine
 {
-    public OwnedSession StartSession(InputRequest request)
+    public OwnedSession StartSession(Request request)
     {
         ArgumentNullException.ThrowIfNull(request);
         byte[] bytes = request.ToBytes();
@@ -22,11 +22,11 @@ public sealed partial class Engine
         });
     }
     /// <summary>Run intake and output concurrently so neither bounded queue stalls the other.</summary>
-    public Task<OwnedCall> ExecuteAsync(InputRequest request,
-        IAsyncEnumerable<InputRequestSessionDescriptor>? feed = null, CancellationToken cancellation = default) =>
+    public Task<OwnedCall> ExecuteAsync(Request request,
+        IAsyncEnumerable<RequestSessionDescriptor>? feed = null, CancellationToken cancellation = default) =>
         ExecuteSessionAsync(() => StartSession(request), feed, cancellation);
     private async Task<OwnedCall> ExecuteSessionAsync(Func<OwnedSession> start,
-        IAsyncEnumerable<InputRequestSessionDescriptor>? feed, CancellationToken cancellation)
+        IAsyncEnumerable<RequestSessionDescriptor>? feed, CancellationToken cancellation)
     {
         cancellation.ThrowIfCancellationRequested();
         using var session = start();
@@ -74,19 +74,19 @@ public sealed partial class Engine
                 }
                 session.Finish();
             }
-            catch (IOException) when (!stop.IsCancellationRequested) { session.Finish(new InputRequestReaderFailureIo()); }
-            catch (System.Text.DecoderFallbackException) when (!stop.IsCancellationRequested) { session.Finish(new InputRequestReaderFailureUtf8()); }
-            catch (System.Text.Json.JsonException) when (!stop.IsCancellationRequested) { session.Finish(new InputRequestReaderFailureInvalidInput()); }
-            catch (InvalidDataException) when (!stop.IsCancellationRequested) { session.Finish(new InputRequestReaderFailureInvalidInput()); }
+            catch (IOException) when (!stop.IsCancellationRequested) { session.Finish(new RequestReaderFailureIo()); }
+            catch (System.Text.DecoderFallbackException) when (!stop.IsCancellationRequested) { session.Finish(new RequestReaderFailureUtf8()); }
+            catch (System.Text.Json.JsonException) when (!stop.IsCancellationRequested) { session.Finish(new RequestReaderFailureInvalidInput()); }
+            catch (InvalidDataException) when (!stop.IsCancellationRequested) { session.Finish(new RequestReaderFailureInvalidInput()); }
             catch { session.Cancel(); stop.Cancel(); throw; }
         }
     }
-    private static readonly InputRequestInput FeedInput = new InputRequestInputFeed { Name = "input" };
-    private OwnedSession StartNamedSession(string function, InputRequestQuestion question,
-        InputRequestInput input, InputRequestOptions? options)
+    private static readonly RequestInput FeedInput = new RequestInputFeed { Name = "input" };
+    private OwnedSession StartNamedSession(string function, RequestQuestion question,
+        RequestInput input, RequestOptions? options)
     {
         byte[][] values = [Text(function), question?.ToBytes() ?? "null"u8.ToArray(),
-            input?.ToBytes() ?? "null"u8.ToArray(), (options ?? new InputRequestOptions()).ToBytes(), "csharp"u8.ToArray()];
+            input?.ToBytes() ?? "null"u8.ToArray(), (options ?? new RequestOptions()).ToBytes(), "csharp"u8.ToArray()];
         var pinned = new GCHandle[values.Length];
         try
         {

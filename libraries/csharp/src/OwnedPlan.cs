@@ -4,7 +4,7 @@ namespace ThinkThen;
 public sealed partial class Engine
 {
     /// <summary>Preview a canonical atomic request without key or cache reads or sends.</summary>
-    public Plan Plan(InputRequest request)
+    public Plan Plan(Request request)
     {
         ArgumentNullException.ThrowIfNull(request);
         byte[] bytes = request.ToBytes();

@@ -2,6 +2,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.Json;
 using ThinkThen.Inputs;
+using ThinkThen.Results;
 namespace ThinkThen;
 internal static class Native
 {
@@ -13,19 +14,18 @@ internal static class Native
  [DllImport(Library,CallingConvention=CallingConvention.Cdecl)] internal static extern IntPtr thinkthen_error_message(IntPtr engine);
  [DllImport(Library,CallingConvention=CallingConvention.Cdecl)] internal static extern IntPtr thinkthen_error_facts_json(IntPtr engine);
  [DllImport(Library,CallingConvention=CallingConvention.Cdecl)] internal static extern void thinkthen_free_string(IntPtr value);
- [DllImport(Library,CallingConvention=CallingConvention.Cdecl)] internal static extern int thinkthen_question_parse(IntPtr engine,uint role,StringV1 value,out IntPtr question);
- [DllImport(Library,CallingConvention=CallingConvention.Cdecl)] internal static extern void thinkthen_question_free(IntPtr question);
 }
 public sealed class Failure : Exception
 {
  public int Code {get;}
  public FailureKind Kind {get;}
  public bool Retryable {get;}
- public string? FactsJson {get;}
- public Failure(int code,bool retryable,string message,string? factsJson):base(message) {
+ public Facts? Facts {get;}
+ internal Failure(int code,bool retryable,string message,string? factsJson):base(message) {
   if(!Enum.IsDefined(typeof(FailureKind),code))throw new InvalidOperationException("invalid native failure kind");
-  Code=code;Kind=(FailureKind)code;Retryable=retryable;FactsJson=factsJson;
+  Code=code;Kind=(FailureKind)code;Retryable=retryable;Facts=factsJson is null ? null : DecodeFacts(factsJson);
  }
+ private static Facts DecodeFacts(string json) { using var document=JsonDocument.Parse(json, new JsonDocumentOptions { MaxDepth = int.MaxValue }); return new Facts(document.RootElement); }
 }
 public sealed partial class Engine : IDisposable
 {
@@ -34,8 +34,8 @@ public sealed partial class Engine : IDisposable
  private readonly EngineHandle ownedEngine;
  private static readonly Encoding StrictUtf8=new UTF8Encoding(false,true);
  private Engine(IntPtr pointer){engine=pointer;ownedEngine=new(pointer);}
- public static Engine Open(InputEngineSettings? settings=null) {
-  byte[] bytes=(settings??new InputEngineSettings()).ToBytes();Array.Resize(ref bytes,bytes.Length+1);
+ public static Engine Open(EngineSettings? settings=null) {
+  byte[] bytes=(settings??new EngineSettings()).ToBytes();Array.Resize(ref bytes,bytes.Length+1);
   IntPtr pointer=Native.thinkthen_engine_new_with(bytes);
   if(pointer==IntPtr.Zero)throw ReadFailure(pointer,Native.thinkthen_error_code(pointer));
   return new Engine(pointer);

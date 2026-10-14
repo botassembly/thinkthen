@@ -6,27 +6,29 @@ using System.IO;
 using System.Linq;
 using System.Text.Json;
 namespace ThinkThen.Inputs;
-public readonly struct InputPresence<T> {
+public readonly struct AuthoredPresence<T> {
     public bool IsPresent {
         get;
     }
     public T Value {
         get;
     }
-    private InputPresence(T value) {
+    private AuthoredPresence(T value) {
         Value = value;
         IsPresent = true;
     }
-    public static implicit operator InputPresence<T>(T value) => new(value);
+    public static implicit operator AuthoredPresence<T>(T value) => new(value);
 }
-public abstract class InputDocument {
+public abstract class AuthoredDocument {
+    private protected AuthoredDocument() {
+    }
     private static readonly System.Text.Encoding StrictUtf8 = new System.Text.UTF8Encoding(false,
     true);
-    protected static void WriteText(Utf8JsonWriter writer, string? value) {
+    private protected static void WriteText(Utf8JsonWriter writer, string? value) {
         if (value is not null) _ = StrictUtf8.GetByteCount(value);
         writer.WriteStringValue(value);
     }
-    protected static void WriteName(Utf8JsonWriter writer, string value) {
+    private protected static void WriteName(Utf8JsonWriter writer, string value) {
         _ = StrictUtf8.GetByteCount(value);
         writer.WritePropertyName(value);
     }
@@ -35,7 +37,7 @@ public abstract class InputDocument {
         get;
         init;
     }
-    public abstract void Write(Utf8JsonWriter writer);
+    internal abstract void Write(Utf8JsonWriter writer);
     internal byte[] ToBytes() {
         using var stream = new MemoryStream();
         using (var writer = new Utf8JsonWriter(stream, new JsonWriterOptions {
@@ -44,24 +46,24 @@ public abstract class InputDocument {
         return stream.ToArray();
     }
 }
-public sealed class InputAnnotateDefinition : InputDocument {
-    public InputPresence<JsonElement> Batch {
+public sealed class AnnotateDefinition : AuthoredDocument {
+    public AuthoredPresence<JsonElement> Batch {
         get;
         init;
     }
-    public InputPresence<InputAuthoredProfile> Profile {
+    public AuthoredPresence<AuthoredProfile> Profile {
         get;
         init;
     }
-    public required IReadOnlyDictionary<string, InputAnnotateQuestion> Questions {
+    public required IReadOnlyList<KeyValuePair<string, AnnotateQuestion>> Questions {
         get;
         init;
     }
-    public InputPresence<InputAuthoredThreshold> Threshold {
+    public AuthoredPresence<AuthoredThreshold> Threshold {
         get;
         init;
     }
-    public override void Write(Utf8JsonWriter writer) {
+    internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
@@ -90,64 +92,64 @@ public sealed class InputAnnotateDefinition : InputDocument {
         writer.WriteEndObject();
     }
 }
-public abstract class InputAnnotateQuestion : InputDocument {
-    private protected InputAnnotateQuestion() {
-    } internal static InputAnnotateQuestion Read(JsonElement value) {
+public abstract class AnnotateQuestion : AuthoredDocument {
+    private protected AnnotateQuestion() {
+    } internal static AnnotateQuestion Read(JsonElement value) {
         if ((value.ValueKind == JsonValueKind.Object) && value.ValueKind == JsonValueKind.Object && value.TryGetProperty("decide",
-        out _)) return InputAnnotateQuestionDecide.Read(value);
+        out _)) return AnnotateQuestionDecide.Read(value);
         if ((value.ValueKind == JsonValueKind.Object) && value.ValueKind == JsonValueKind.Object && value.TryGetProperty("choose",
-        out _)) return InputAnnotateQuestionChoose.Read(value);
+        out _)) return AnnotateQuestionChoose.Read(value);
         if ((value.ValueKind == JsonValueKind.Object) && value.ValueKind == JsonValueKind.Object && value.TryGetProperty("tag",
-        out _)) return InputAnnotateQuestionTag.Read(value);
+        out _)) return AnnotateQuestionTag.Read(value);
         if ((value.ValueKind == JsonValueKind.Object) && value.ValueKind == JsonValueKind.Object && value.TryGetProperty("score",
-        out _)) return InputAnnotateQuestionScore.Read(value);
+        out _)) return AnnotateQuestionScore.Read(value);
         throw new JsonException("Authored data does not match the native Request schema.");
     }
 }
-public sealed class InputAnnotateQuestionChoose : InputAnnotateQuestion {
-    public required InputAuthoredQuestionText Choose {
+public sealed class AnnotateQuestionChoose : AnnotateQuestion {
+    public required AuthoredQuestionText Choose {
         get;
         init;
     }
-    public InputPresence<InputAuthoredInputDeclaration> ContextSchema {
+    public AuthoredPresence<AuthoredInputDeclaration> ContextSchema {
         get;
         init;
     }
-    public InputPresence<InputAuthoredInputDeclaration> ItemSchema {
+    public AuthoredPresence<AuthoredInputDeclaration> ItemSchema {
         get;
         init;
     }
-    public InputPresence<string> Name {
+    public AuthoredPresence<string> Name {
         get;
         init;
     }
-    public InputPresence<InputAuthoredPointers> On {
+    public AuthoredPresence<AuthoredPointers> On {
         get;
         init;
     }
-    public InputPresence<InputAuthoredOptions> Options {
+    public AuthoredPresence<AuthoredOptions> Options {
         get;
         init;
     }
-    public InputPresence<InputAuthoredCut> Threshold {
+    public AuthoredPresence<AuthoredCut> Threshold {
         get;
         init;
     }
-    public InputPresence<long> WordingVersion {
+    public AuthoredPresence<long> WordingVersion {
         get;
         init;
     }
-    internal new static InputAnnotateQuestionChoose Read(JsonElement value) => new() {
-        ParsedDocument = value.Clone(), Choose = InputAuthoredQuestionText.Read(value.GetProperty("choose")),
-        ContextSchema = value.TryGetProperty("context_schema", out _) ? (InputPresence<InputAuthoredInputDeclaration>)(InputAuthoredInputDeclaration.Read(value.GetProperty("context_schema"))) : default,
-        ItemSchema = value.TryGetProperty("item_schema", out _) ? (InputPresence<InputAuthoredInputDeclaration>)(InputAuthoredInputDeclaration.Read(value.GetProperty("item_schema"))) : default,
-        Name = value.TryGetProperty("name", out _) ? (InputPresence<string>)(value.GetProperty("name").GetString()!) : default,
-        On = value.TryGetProperty("on", out _) ? (InputPresence<InputAuthoredPointers>)(InputAuthoredPointers.Read(value.GetProperty("on"))) : default,
-        Options = value.TryGetProperty("options", out _) ? (InputPresence<InputAuthoredOptions>)(InputAuthoredOptions.Read(value.GetProperty("options"))) : default,
-        Threshold = value.TryGetProperty("threshold", out _) ? (InputPresence<InputAuthoredCut>)(InputAuthoredCut.Read(value.GetProperty("threshold"))) : default,
-        WordingVersion = value.TryGetProperty("wording_version", out _) ? (InputPresence<long>)(value.GetProperty("wording_version").GetInt64()) : default
+    internal new static AnnotateQuestionChoose Read(JsonElement value) => new() {
+        ParsedDocument = value.Clone(), Choose = AuthoredQuestionText.Read(value.GetProperty("choose")),
+        ContextSchema = value.TryGetProperty("context_schema", out _) ? (AuthoredPresence<AuthoredInputDeclaration>)(AuthoredInputDeclaration.Read(value.GetProperty("context_schema"))) : default,
+        ItemSchema = value.TryGetProperty("item_schema", out _) ? (AuthoredPresence<AuthoredInputDeclaration>)(AuthoredInputDeclaration.Read(value.GetProperty("item_schema"))) : default,
+        Name = value.TryGetProperty("name", out _) ? (AuthoredPresence<string>)(value.GetProperty("name").GetString()!) : default,
+        On = value.TryGetProperty("on", out _) ? (AuthoredPresence<AuthoredPointers>)(AuthoredPointers.Read(value.GetProperty("on"))) : default,
+        Options = value.TryGetProperty("options", out _) ? (AuthoredPresence<AuthoredOptions>)(AuthoredOptions.Read(value.GetProperty("options"))) : default,
+        Threshold = value.TryGetProperty("threshold", out _) ? (AuthoredPresence<AuthoredCut>)(AuthoredCut.Read(value.GetProperty("threshold"))) : default,
+        WordingVersion = value.TryGetProperty("wording_version", out _) ? (AuthoredPresence<long>)(value.GetProperty("wording_version").GetInt64()) : default
     };
-    public override void Write(Utf8JsonWriter writer) {
+    internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
@@ -185,55 +187,55 @@ public sealed class InputAnnotateQuestionChoose : InputAnnotateQuestion {
         } writer.WriteEndObject();
     }
 }
-public sealed class InputAnnotateQuestionDecide : InputAnnotateQuestion {
-    public InputPresence<InputAuthoredInputDeclaration> ContextSchema {
+public sealed class AnnotateQuestionDecide : AnnotateQuestion {
+    public AuthoredPresence<AuthoredInputDeclaration> ContextSchema {
         get;
         init;
     }
-    public required InputAuthoredQuestionText Decide {
+    public required AuthoredQuestionText Decide {
         get;
         init;
     }
-    public InputPresence<InputAuthoredCriterion> False {
+    public AuthoredPresence<AuthoredCriterion> False {
         get;
         init;
     }
-    public InputPresence<InputAuthoredInputDeclaration> ItemSchema {
+    public AuthoredPresence<AuthoredInputDeclaration> ItemSchema {
         get;
         init;
     }
-    public InputPresence<string> Name {
+    public AuthoredPresence<string> Name {
         get;
         init;
     }
-    public InputPresence<InputAuthoredPointers> On {
+    public AuthoredPresence<AuthoredPointers> On {
         get;
         init;
     }
-    public InputPresence<InputAuthoredThreshold> Threshold {
+    public AuthoredPresence<AuthoredThreshold> Threshold {
         get;
         init;
     }
-    public InputPresence<InputAuthoredCriterion> True {
+    public AuthoredPresence<AuthoredCriterion> True {
         get;
         init;
     }
-    public InputPresence<long> WordingVersion {
+    public AuthoredPresence<long> WordingVersion {
         get;
         init;
     }
-    internal new static InputAnnotateQuestionDecide Read(JsonElement value) => new() {
-        ParsedDocument = value.Clone(), ContextSchema = value.TryGetProperty("context_schema", out _) ? (InputPresence<InputAuthoredInputDeclaration>)(InputAuthoredInputDeclaration.Read(value.GetProperty("context_schema"))) : default,
-        Decide = InputAuthoredQuestionText.Read(value.GetProperty("decide")), False = value.TryGetProperty("false",
-        out _) ? (InputPresence<InputAuthoredCriterion>)(InputAuthoredCriterion.Read(value.GetProperty("false"))) : default,
-        ItemSchema = value.TryGetProperty("item_schema", out _) ? (InputPresence<InputAuthoredInputDeclaration>)(InputAuthoredInputDeclaration.Read(value.GetProperty("item_schema"))) : default,
-        Name = value.TryGetProperty("name", out _) ? (InputPresence<string>)(value.GetProperty("name").GetString()!) : default,
-        On = value.TryGetProperty("on", out _) ? (InputPresence<InputAuthoredPointers>)(InputAuthoredPointers.Read(value.GetProperty("on"))) : default,
-        Threshold = value.TryGetProperty("threshold", out _) ? (InputPresence<InputAuthoredThreshold>)(InputAuthoredThreshold.Read(value.GetProperty("threshold"))) : default,
-        True = value.TryGetProperty("true", out _) ? (InputPresence<InputAuthoredCriterion>)(InputAuthoredCriterion.Read(value.GetProperty("true"))) : default,
-        WordingVersion = value.TryGetProperty("wording_version", out _) ? (InputPresence<long>)(value.GetProperty("wording_version").GetInt64()) : default
+    internal new static AnnotateQuestionDecide Read(JsonElement value) => new() {
+        ParsedDocument = value.Clone(), ContextSchema = value.TryGetProperty("context_schema", out _) ? (AuthoredPresence<AuthoredInputDeclaration>)(AuthoredInputDeclaration.Read(value.GetProperty("context_schema"))) : default,
+        Decide = AuthoredQuestionText.Read(value.GetProperty("decide")), False = value.TryGetProperty("false",
+        out _) ? (AuthoredPresence<AuthoredCriterion>)(AuthoredCriterion.Read(value.GetProperty("false"))) : default,
+        ItemSchema = value.TryGetProperty("item_schema", out _) ? (AuthoredPresence<AuthoredInputDeclaration>)(AuthoredInputDeclaration.Read(value.GetProperty("item_schema"))) : default,
+        Name = value.TryGetProperty("name", out _) ? (AuthoredPresence<string>)(value.GetProperty("name").GetString()!) : default,
+        On = value.TryGetProperty("on", out _) ? (AuthoredPresence<AuthoredPointers>)(AuthoredPointers.Read(value.GetProperty("on"))) : default,
+        Threshold = value.TryGetProperty("threshold", out _) ? (AuthoredPresence<AuthoredThreshold>)(AuthoredThreshold.Read(value.GetProperty("threshold"))) : default,
+        True = value.TryGetProperty("true", out _) ? (AuthoredPresence<AuthoredCriterion>)(AuthoredCriterion.Read(value.GetProperty("true"))) : default,
+        WordingVersion = value.TryGetProperty("wording_version", out _) ? (AuthoredPresence<long>)(value.GetProperty("wording_version").GetInt64()) : default
     };
-    public override void Write(Utf8JsonWriter writer) {
+    internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
@@ -275,45 +277,45 @@ public sealed class InputAnnotateQuestionDecide : InputAnnotateQuestion {
         } writer.WriteEndObject();
     }
 }
-public sealed class InputAnnotateQuestionScore : InputAnnotateQuestion {
-    public InputPresence<InputAuthoredInputDeclaration> ContextSchema {
+public sealed class AnnotateQuestionScore : AnnotateQuestion {
+    public AuthoredPresence<AuthoredInputDeclaration> ContextSchema {
         get;
         init;
     }
-    public InputPresence<InputAuthoredInputDeclaration> ItemSchema {
+    public AuthoredPresence<AuthoredInputDeclaration> ItemSchema {
         get;
         init;
     }
-    public InputPresence<InputAuthoredLevels> Levels {
+    public AuthoredPresence<AuthoredLevels> Levels {
         get;
         init;
     }
-    public InputPresence<string> Name {
+    public AuthoredPresence<string> Name {
         get;
         init;
     }
-    public InputPresence<InputAuthoredPointers> On {
+    public AuthoredPresence<AuthoredPointers> On {
         get;
         init;
     }
-    public required InputAuthoredQuestionText Score {
+    public required AuthoredQuestionText Score {
         get;
         init;
     }
-    public InputPresence<long> WordingVersion {
+    public AuthoredPresence<long> WordingVersion {
         get;
         init;
     }
-    internal new static InputAnnotateQuestionScore Read(JsonElement value) => new() {
-        ParsedDocument = value.Clone(), ContextSchema = value.TryGetProperty("context_schema", out _) ? (InputPresence<InputAuthoredInputDeclaration>)(InputAuthoredInputDeclaration.Read(value.GetProperty("context_schema"))) : default,
-        ItemSchema = value.TryGetProperty("item_schema", out _) ? (InputPresence<InputAuthoredInputDeclaration>)(InputAuthoredInputDeclaration.Read(value.GetProperty("item_schema"))) : default,
-        Levels = value.TryGetProperty("levels", out _) ? (InputPresence<InputAuthoredLevels>)(InputAuthoredLevels.Read(value.GetProperty("levels"))) : default,
-        Name = value.TryGetProperty("name", out _) ? (InputPresence<string>)(value.GetProperty("name").GetString()!) : default,
-        On = value.TryGetProperty("on", out _) ? (InputPresence<InputAuthoredPointers>)(InputAuthoredPointers.Read(value.GetProperty("on"))) : default,
-        Score = InputAuthoredQuestionText.Read(value.GetProperty("score")), WordingVersion = value.TryGetProperty("wording_version",
-        out _) ? (InputPresence<long>)(value.GetProperty("wording_version").GetInt64()) : default
+    internal new static AnnotateQuestionScore Read(JsonElement value) => new() {
+        ParsedDocument = value.Clone(), ContextSchema = value.TryGetProperty("context_schema", out _) ? (AuthoredPresence<AuthoredInputDeclaration>)(AuthoredInputDeclaration.Read(value.GetProperty("context_schema"))) : default,
+        ItemSchema = value.TryGetProperty("item_schema", out _) ? (AuthoredPresence<AuthoredInputDeclaration>)(AuthoredInputDeclaration.Read(value.GetProperty("item_schema"))) : default,
+        Levels = value.TryGetProperty("levels", out _) ? (AuthoredPresence<AuthoredLevels>)(AuthoredLevels.Read(value.GetProperty("levels"))) : default,
+        Name = value.TryGetProperty("name", out _) ? (AuthoredPresence<string>)(value.GetProperty("name").GetString()!) : default,
+        On = value.TryGetProperty("on", out _) ? (AuthoredPresence<AuthoredPointers>)(AuthoredPointers.Read(value.GetProperty("on"))) : default,
+        Score = AuthoredQuestionText.Read(value.GetProperty("score")), WordingVersion = value.TryGetProperty("wording_version",
+        out _) ? (AuthoredPresence<long>)(value.GetProperty("wording_version").GetInt64()) : default
     };
-    public override void Write(Utf8JsonWriter writer) {
+    internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
@@ -347,50 +349,50 @@ public sealed class InputAnnotateQuestionScore : InputAnnotateQuestion {
         } writer.WriteEndObject();
     }
 }
-public sealed class InputAnnotateQuestionTag : InputAnnotateQuestion {
-    public InputPresence<InputAuthoredInputDeclaration> ContextSchema {
+public sealed class AnnotateQuestionTag : AnnotateQuestion {
+    public AuthoredPresence<AuthoredInputDeclaration> ContextSchema {
         get;
         init;
     }
-    public InputPresence<InputAuthoredInputDeclaration> ItemSchema {
+    public AuthoredPresence<AuthoredInputDeclaration> ItemSchema {
         get;
         init;
     }
-    public InputPresence<InputAuthoredLabels> Labels {
+    public AuthoredPresence<AuthoredLabels> Labels {
         get;
         init;
     }
-    public InputPresence<string> Name {
+    public AuthoredPresence<string> Name {
         get;
         init;
     }
-    public InputPresence<InputAuthoredPointers> On {
+    public AuthoredPresence<AuthoredPointers> On {
         get;
         init;
     }
-    public required InputAuthoredQuestionText Tag {
+    public required AuthoredQuestionText Tag {
         get;
         init;
     }
-    public InputPresence<InputAuthoredCut> Threshold {
+    public AuthoredPresence<AuthoredCut> Threshold {
         get;
         init;
     }
-    public InputPresence<long> WordingVersion {
+    public AuthoredPresence<long> WordingVersion {
         get;
         init;
     }
-    internal new static InputAnnotateQuestionTag Read(JsonElement value) => new() {
-        ParsedDocument = value.Clone(), ContextSchema = value.TryGetProperty("context_schema", out _) ? (InputPresence<InputAuthoredInputDeclaration>)(InputAuthoredInputDeclaration.Read(value.GetProperty("context_schema"))) : default,
-        ItemSchema = value.TryGetProperty("item_schema", out _) ? (InputPresence<InputAuthoredInputDeclaration>)(InputAuthoredInputDeclaration.Read(value.GetProperty("item_schema"))) : default,
-        Labels = value.TryGetProperty("labels", out _) ? (InputPresence<InputAuthoredLabels>)(InputAuthoredLabels.Read(value.GetProperty("labels"))) : default,
-        Name = value.TryGetProperty("name", out _) ? (InputPresence<string>)(value.GetProperty("name").GetString()!) : default,
-        On = value.TryGetProperty("on", out _) ? (InputPresence<InputAuthoredPointers>)(InputAuthoredPointers.Read(value.GetProperty("on"))) : default,
-        Tag = InputAuthoredQuestionText.Read(value.GetProperty("tag")), Threshold = value.TryGetProperty("threshold",
-        out _) ? (InputPresence<InputAuthoredCut>)(InputAuthoredCut.Read(value.GetProperty("threshold"))) : default,
-        WordingVersion = value.TryGetProperty("wording_version", out _) ? (InputPresence<long>)(value.GetProperty("wording_version").GetInt64()) : default
+    internal new static AnnotateQuestionTag Read(JsonElement value) => new() {
+        ParsedDocument = value.Clone(), ContextSchema = value.TryGetProperty("context_schema", out _) ? (AuthoredPresence<AuthoredInputDeclaration>)(AuthoredInputDeclaration.Read(value.GetProperty("context_schema"))) : default,
+        ItemSchema = value.TryGetProperty("item_schema", out _) ? (AuthoredPresence<AuthoredInputDeclaration>)(AuthoredInputDeclaration.Read(value.GetProperty("item_schema"))) : default,
+        Labels = value.TryGetProperty("labels", out _) ? (AuthoredPresence<AuthoredLabels>)(AuthoredLabels.Read(value.GetProperty("labels"))) : default,
+        Name = value.TryGetProperty("name", out _) ? (AuthoredPresence<string>)(value.GetProperty("name").GetString()!) : default,
+        On = value.TryGetProperty("on", out _) ? (AuthoredPresence<AuthoredPointers>)(AuthoredPointers.Read(value.GetProperty("on"))) : default,
+        Tag = AuthoredQuestionText.Read(value.GetProperty("tag")), Threshold = value.TryGetProperty("threshold",
+        out _) ? (AuthoredPresence<AuthoredCut>)(AuthoredCut.Read(value.GetProperty("threshold"))) : default,
+        WordingVersion = value.TryGetProperty("wording_version", out _) ? (AuthoredPresence<long>)(value.GetProperty("wording_version").GetInt64()) : default
     };
-    public override void Write(Utf8JsonWriter writer) {
+    internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
@@ -428,52 +430,52 @@ public sealed class InputAnnotateQuestionTag : InputAnnotateQuestion {
         } writer.WriteEndObject();
     }
 }
-public sealed class InputAuthoredChoose : InputDocument {
-    public InputPresence<InputAuthoredChooseBatch> Batch {
+public sealed class AuthoredChoose : AuthoredDocument {
+    public AuthoredPresence<AuthoredChooseBatch> Batch {
         get;
         init;
     }
-    public required InputAuthoredQuestionText Choose {
+    public required AuthoredQuestionText Choose {
         get;
         init;
     }
-    public InputPresence<InputAuthoredInputDeclaration> ContextSchema {
+    public AuthoredPresence<AuthoredInputDeclaration> ContextSchema {
         get;
         init;
     }
-    public InputPresence<InputAuthoredInputDeclaration> ItemSchema {
+    public AuthoredPresence<AuthoredInputDeclaration> ItemSchema {
         get;
         init;
     }
-    public InputPresence<InputAuthoredName> Model {
+    public AuthoredPresence<AuthoredName> Model {
         get;
         init;
     }
-    public InputPresence<string> Name {
+    public AuthoredPresence<string> Name {
         get;
         init;
     }
-    public InputPresence<InputAuthoredPointers> On {
+    public AuthoredPresence<AuthoredPointers> On {
         get;
         init;
     }
-    public InputPresence<InputAuthoredOptions> Options {
+    public AuthoredPresence<AuthoredOptions> Options {
         get;
         init;
     }
-    public InputPresence<InputAuthoredProfile> Profile {
+    public AuthoredPresence<AuthoredProfile> Profile {
         get;
         init;
     }
-    public InputPresence<InputAuthoredCut> Threshold {
+    public AuthoredPresence<AuthoredCut> Threshold {
         get;
         init;
     }
-    public InputPresence<long> WordingVersion {
+    public AuthoredPresence<long> WordingVersion {
         get;
         init;
     }
-    public override void Write(Utf8JsonWriter writer) {
+    internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
@@ -523,16 +525,16 @@ public sealed class InputAuthoredChoose : InputDocument {
         } writer.WriteEndObject();
     }
 }
-public abstract class InputAuthoredChooseBatch : InputDocument {
-    private protected InputAuthoredChooseBatch() {
+public abstract class AuthoredChooseBatch : AuthoredDocument {
+    private protected AuthoredChooseBatch() {
     }
 }
-public sealed class InputAuthoredChooseBatchInteger : InputAuthoredChooseBatch {
+public sealed class AuthoredChooseBatchInteger : AuthoredChooseBatch {
     public required long Value {
         get;
         init;
     }
-    public override void Write(Utf8JsonWriter writer) {
+    internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
@@ -540,8 +542,8 @@ public sealed class InputAuthoredChooseBatchInteger : InputAuthoredChooseBatch {
         } writer.WriteNumberValue(Value);
     }
 }
-public sealed class InputAuthoredChooseBatchMax : InputAuthoredChooseBatch {
-    public override void Write(Utf8JsonWriter writer) {
+public sealed class AuthoredChooseBatchMax : AuthoredChooseBatch {
+    internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
@@ -549,25 +551,25 @@ public sealed class InputAuthoredChooseBatchMax : InputAuthoredChooseBatch {
         } WriteText(writer, "max");
     }
 }
-public abstract class InputAuthoredCriterion : InputDocument {
-    private protected InputAuthoredCriterion() {
-    } internal static InputAuthoredCriterion Read(JsonElement value) {
-        if ((value.ValueKind == JsonValueKind.String)) return InputAuthoredCriterionString.Read(value);
-        if ((value.ValueKind == JsonValueKind.Object)) return InputAuthoredCriterionObject.Read(value);
-        if ((value.ValueKind == JsonValueKind.Array)) return InputAuthoredCriterionList.Read(value);
-        if ((value.ValueKind == JsonValueKind.Null)) return InputAuthoredCriterionNull.Read(value);
+public abstract class AuthoredCriterion : AuthoredDocument {
+    private protected AuthoredCriterion() {
+    } internal static AuthoredCriterion Read(JsonElement value) {
+        if ((value.ValueKind == JsonValueKind.String)) return AuthoredCriterionString.Read(value);
+        if ((value.ValueKind == JsonValueKind.Object)) return AuthoredCriterionObject.Read(value);
+        if ((value.ValueKind == JsonValueKind.Array)) return AuthoredCriterionList.Read(value);
+        if ((value.ValueKind == JsonValueKind.Null)) return AuthoredCriterionNull.Read(value);
         throw new JsonException("Authored data does not match the native Request schema.");
     }
 }
-public sealed class InputAuthoredCriterionList : InputAuthoredCriterion {
+public sealed class AuthoredCriterionList : AuthoredCriterion {
     public required IReadOnlyList<JsonElement> Value {
         get;
         init;
     }
-    internal new static InputAuthoredCriterionList Read(JsonElement value) => new() {
+    internal new static AuthoredCriterionList Read(JsonElement value) => new() {
         ParsedDocument = value.Clone(), Value = Array.AsReadOnly(value.EnumerateArray().Select(item0 => item0.Clone()).ToArray())
     };
-    public override void Write(Utf8JsonWriter writer) {
+    internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
@@ -578,11 +580,11 @@ public sealed class InputAuthoredCriterionList : InputAuthoredCriterion {
         } writer.WriteEndArray();
     }
 }
-public sealed class InputAuthoredCriterionNull : InputAuthoredCriterion {
-    internal new static InputAuthoredCriterionNull Read(JsonElement value) => new() {
+public sealed class AuthoredCriterionNull : AuthoredCriterion {
+    internal new static AuthoredCriterionNull Read(JsonElement value) => new() {
         ParsedDocument = value.Clone()
     };
-    public override void Write(Utf8JsonWriter writer) {
+    internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
@@ -590,15 +592,15 @@ public sealed class InputAuthoredCriterionNull : InputAuthoredCriterion {
         } writer.WriteNullValue();
     }
 }
-public sealed class InputAuthoredCriterionObject : InputAuthoredCriterion {
+public sealed class AuthoredCriterionObject : AuthoredCriterion {
     public required JsonElement Value {
         get;
         init;
     }
-    internal new static InputAuthoredCriterionObject Read(JsonElement value) => new() {
+    internal new static AuthoredCriterionObject Read(JsonElement value) => new() {
         ParsedDocument = value.Clone(), Value = value.Clone()
     };
-    public override void Write(Utf8JsonWriter writer) {
+    internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
@@ -606,15 +608,15 @@ public sealed class InputAuthoredCriterionObject : InputAuthoredCriterion {
         } Value.WriteTo(writer);
     }
 }
-public sealed class InputAuthoredCriterionString : InputAuthoredCriterion {
+public sealed class AuthoredCriterionString : AuthoredCriterion {
     public required string Value {
         get;
         init;
     }
-    internal new static InputAuthoredCriterionString Read(JsonElement value) => new() {
+    internal new static AuthoredCriterionString Read(JsonElement value) => new() {
         ParsedDocument = value.Clone(), Value = value.GetString()!
     };
-    public override void Write(Utf8JsonWriter writer) {
+    internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
@@ -622,23 +624,23 @@ public sealed class InputAuthoredCriterionString : InputAuthoredCriterion {
         } WriteText(writer, Value);
     }
 }
-public abstract class InputAuthoredCut : InputDocument {
-    private protected InputAuthoredCut() {
-    } internal static InputAuthoredCut Read(JsonElement value) {
-        if ((value.ValueKind == JsonValueKind.Number)) return InputAuthoredCutNumber.Read(value);
-        if ((value.ValueKind == JsonValueKind.String)) return InputAuthoredCutString.Read(value);
+public abstract class AuthoredCut : AuthoredDocument {
+    private protected AuthoredCut() {
+    } internal static AuthoredCut Read(JsonElement value) {
+        if ((value.ValueKind == JsonValueKind.Number)) return AuthoredCutNumber.Read(value);
+        if ((value.ValueKind == JsonValueKind.String)) return AuthoredCutString.Read(value);
         throw new JsonException("Authored data does not match the native Request schema.");
     }
 }
-public sealed class InputAuthoredCutNumber : InputAuthoredCut {
+public sealed class AuthoredCutNumber : AuthoredCut {
     public required double Value {
         get;
         init;
     }
-    internal new static InputAuthoredCutNumber Read(JsonElement value) => new() {
+    internal new static AuthoredCutNumber Read(JsonElement value) => new() {
         ParsedDocument = value.Clone(), Value = value.GetDouble()
     };
-    public override void Write(Utf8JsonWriter writer) {
+    internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
@@ -646,15 +648,15 @@ public sealed class InputAuthoredCutNumber : InputAuthoredCut {
         } writer.WriteNumberValue(Value);
     }
 }
-public sealed class InputAuthoredCutString : InputAuthoredCut {
+public sealed class AuthoredCutString : AuthoredCut {
     public required string Value {
         get;
         init;
     }
-    internal new static InputAuthoredCutString Read(JsonElement value) => new() {
+    internal new static AuthoredCutString Read(JsonElement value) => new() {
         ParsedDocument = value.Clone(), Value = value.GetString()!
     };
-    public override void Write(Utf8JsonWriter writer) {
+    internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
@@ -662,56 +664,56 @@ public sealed class InputAuthoredCutString : InputAuthoredCut {
         } WriteText(writer, Value);
     }
 }
-public sealed class InputAuthoredDecide : InputDocument {
-    public InputPresence<InputAuthoredDecideBatch> Batch {
+public sealed class AuthoredDecide : AuthoredDocument {
+    public AuthoredPresence<AuthoredDecideBatch> Batch {
         get;
         init;
     }
-    public InputPresence<InputAuthoredInputDeclaration> ContextSchema {
+    public AuthoredPresence<AuthoredInputDeclaration> ContextSchema {
         get;
         init;
     }
-    public required InputAuthoredQuestionText Decide {
+    public required AuthoredQuestionText Decide {
         get;
         init;
     }
-    public InputPresence<InputAuthoredCriterion> False {
+    public AuthoredPresence<AuthoredCriterion> False {
         get;
         init;
     }
-    public InputPresence<InputAuthoredInputDeclaration> ItemSchema {
+    public AuthoredPresence<AuthoredInputDeclaration> ItemSchema {
         get;
         init;
     }
-    public InputPresence<InputAuthoredName> Model {
+    public AuthoredPresence<AuthoredName> Model {
         get;
         init;
     }
-    public InputPresence<string> Name {
+    public AuthoredPresence<string> Name {
         get;
         init;
     }
-    public InputPresence<InputAuthoredPointers> On {
+    public AuthoredPresence<AuthoredPointers> On {
         get;
         init;
     }
-    public InputPresence<InputAuthoredProfile> Profile {
+    public AuthoredPresence<AuthoredProfile> Profile {
         get;
         init;
     }
-    public InputPresence<InputAuthoredThreshold> Threshold {
+    public AuthoredPresence<AuthoredThreshold> Threshold {
         get;
         init;
     }
-    public InputPresence<InputAuthoredCriterion> True {
+    public AuthoredPresence<AuthoredCriterion> True {
         get;
         init;
     }
-    public InputPresence<long> WordingVersion {
+    public AuthoredPresence<long> WordingVersion {
         get;
         init;
     }
-    public override void Write(Utf8JsonWriter writer) {
+    internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
@@ -765,16 +767,16 @@ public sealed class InputAuthoredDecide : InputDocument {
         } writer.WriteEndObject();
     }
 }
-public abstract class InputAuthoredDecideBatch : InputDocument {
-    private protected InputAuthoredDecideBatch() {
+public abstract class AuthoredDecideBatch : AuthoredDocument {
+    private protected AuthoredDecideBatch() {
     }
 }
-public sealed class InputAuthoredDecideBatchInteger : InputAuthoredDecideBatch {
+public sealed class AuthoredDecideBatchInteger : AuthoredDecideBatch {
     public required long Value {
         get;
         init;
     }
-    public override void Write(Utf8JsonWriter writer) {
+    internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
@@ -782,8 +784,8 @@ public sealed class InputAuthoredDecideBatchInteger : InputAuthoredDecideBatch {
         } writer.WriteNumberValue(Value);
     }
 }
-public sealed class InputAuthoredDecideBatchMax : InputAuthoredDecideBatch {
-    public override void Write(Utf8JsonWriter writer) {
+public sealed class AuthoredDecideBatchMax : AuthoredDecideBatch {
+    internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
@@ -791,15 +793,15 @@ public sealed class InputAuthoredDecideBatchMax : InputAuthoredDecideBatch {
         } WriteText(writer, "max");
     }
 }
-public sealed class InputAuthoredDescription : InputDocument {
-    public required InputAuthoredDescriptionValue Value {
+public sealed class AuthoredDescription : AuthoredDocument {
+    public required AuthoredDescriptionValue Value {
         get;
         init;
     }
-    internal static InputAuthoredDescription Read(JsonElement value) => new() {
-        ParsedDocument = value.Clone(), Value = InputAuthoredDescriptionValue.Read(value)
+    internal static AuthoredDescription Read(JsonElement value) => new() {
+        ParsedDocument = value.Clone(), Value = AuthoredDescriptionValue.Read(value)
     };
-    public override void Write(Utf8JsonWriter writer) {
+    internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
@@ -808,25 +810,25 @@ public sealed class InputAuthoredDescription : InputDocument {
         else Value.Write(writer);
     }
 }
-public abstract class InputAuthoredDescriptionValue : InputDocument {
-    private protected InputAuthoredDescriptionValue() {
-    } internal static InputAuthoredDescriptionValue Read(JsonElement value) {
-        if ((value.ValueKind == JsonValueKind.String)) return InputAuthoredDescriptionValueString.Read(value);
-        if ((value.ValueKind == JsonValueKind.Object)) return InputAuthoredDescriptionValueObject.Read(value);
-        if ((value.ValueKind == JsonValueKind.Array)) return InputAuthoredDescriptionValueList.Read(value);
-        if ((value.ValueKind == JsonValueKind.Null)) return InputAuthoredDescriptionValueNull.Read(value);
+public abstract class AuthoredDescriptionValue : AuthoredDocument {
+    private protected AuthoredDescriptionValue() {
+    } internal static AuthoredDescriptionValue Read(JsonElement value) {
+        if ((value.ValueKind == JsonValueKind.String)) return AuthoredDescriptionValueString.Read(value);
+        if ((value.ValueKind == JsonValueKind.Object)) return AuthoredDescriptionValueObject.Read(value);
+        if ((value.ValueKind == JsonValueKind.Array)) return AuthoredDescriptionValueList.Read(value);
+        if ((value.ValueKind == JsonValueKind.Null)) return AuthoredDescriptionValueNull.Read(value);
         throw new JsonException("Authored data does not match the native Request schema.");
     }
 }
-public sealed class InputAuthoredDescriptionValueList : InputAuthoredDescriptionValue {
+public sealed class AuthoredDescriptionValueList : AuthoredDescriptionValue {
     public required IReadOnlyList<JsonElement> Value {
         get;
         init;
     }
-    internal new static InputAuthoredDescriptionValueList Read(JsonElement value) => new() {
+    internal new static AuthoredDescriptionValueList Read(JsonElement value) => new() {
         ParsedDocument = value.Clone(), Value = Array.AsReadOnly(value.EnumerateArray().Select(item0 => item0.Clone()).ToArray())
     };
-    public override void Write(Utf8JsonWriter writer) {
+    internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
@@ -837,11 +839,11 @@ public sealed class InputAuthoredDescriptionValueList : InputAuthoredDescription
         } writer.WriteEndArray();
     }
 }
-public sealed class InputAuthoredDescriptionValueNull : InputAuthoredDescriptionValue {
-    internal new static InputAuthoredDescriptionValueNull Read(JsonElement value) => new() {
+public sealed class AuthoredDescriptionValueNull : AuthoredDescriptionValue {
+    internal new static AuthoredDescriptionValueNull Read(JsonElement value) => new() {
         ParsedDocument = value.Clone()
     };
-    public override void Write(Utf8JsonWriter writer) {
+    internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
@@ -849,15 +851,15 @@ public sealed class InputAuthoredDescriptionValueNull : InputAuthoredDescription
         } writer.WriteNullValue();
     }
 }
-public sealed class InputAuthoredDescriptionValueObject : InputAuthoredDescriptionValue {
+public sealed class AuthoredDescriptionValueObject : AuthoredDescriptionValue {
     public required JsonElement Value {
         get;
         init;
     }
-    internal new static InputAuthoredDescriptionValueObject Read(JsonElement value) => new() {
+    internal new static AuthoredDescriptionValueObject Read(JsonElement value) => new() {
         ParsedDocument = value.Clone(), Value = value.Clone()
     };
-    public override void Write(Utf8JsonWriter writer) {
+    internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
@@ -865,15 +867,15 @@ public sealed class InputAuthoredDescriptionValueObject : InputAuthoredDescripti
         } Value.WriteTo(writer);
     }
 }
-public sealed class InputAuthoredDescriptionValueString : InputAuthoredDescriptionValue {
+public sealed class AuthoredDescriptionValueString : AuthoredDescriptionValue {
     public required string Value {
         get;
         init;
     }
-    internal new static InputAuthoredDescriptionValueString Read(JsonElement value) => new() {
+    internal new static AuthoredDescriptionValueString Read(JsonElement value) => new() {
         ParsedDocument = value.Clone(), Value = value.GetString()!
     };
-    public override void Write(Utf8JsonWriter writer) {
+    internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
@@ -881,40 +883,40 @@ public sealed class InputAuthoredDescriptionValueString : InputAuthoredDescripti
         } WriteText(writer, Value);
     }
 }
-public sealed class InputAuthoredFind : InputDocument {
-    public InputPresence<InputAuthoredInputDeclaration> ContextSchema {
+public sealed class AuthoredFind : AuthoredDocument {
+    public AuthoredPresence<AuthoredInputDeclaration> ContextSchema {
         get;
         init;
     }
-    public required InputAuthoredQuestionText Find {
+    public required AuthoredQuestionText Find {
         get;
         init;
     }
-    public InputPresence<InputAuthoredInputDeclaration> ItemSchema {
+    public AuthoredPresence<AuthoredInputDeclaration> ItemSchema {
         get;
         init;
     }
-    public InputPresence<InputAuthoredName> Model {
+    public AuthoredPresence<AuthoredName> Model {
         get;
         init;
     }
-    public InputPresence<string> Name {
+    public AuthoredPresence<string> Name {
         get;
         init;
     }
-    public InputPresence<InputAuthoredPointers> On {
+    public AuthoredPresence<AuthoredPointers> On {
         get;
         init;
     }
-    public InputPresence<InputAuthoredProfile> Profile {
+    public AuthoredPresence<AuthoredProfile> Profile {
         get;
         init;
     }
-    public InputPresence<long> WordingVersion {
+    public AuthoredPresence<long> WordingVersion {
         get;
         init;
     }
-    public override void Write(Utf8JsonWriter writer) {
+    internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
@@ -952,32 +954,31 @@ public sealed class InputAuthoredFind : InputDocument {
         } writer.WriteEndObject();
     }
 }
-public abstract class InputAuthoredInputDeclaration : InputDocument {
-    private protected InputAuthoredInputDeclaration() {
-    } internal static InputAuthoredInputDeclaration Read(JsonElement value) {
+public abstract class AuthoredInputDeclaration : AuthoredDocument {
+    private protected AuthoredInputDeclaration() {
+    } internal static AuthoredInputDeclaration Read(JsonElement value) {
         if ((value.ValueKind == JsonValueKind.Object) && value.ValueKind == JsonValueKind.Object && value.TryGetProperty("type",
-        out _) && (value.GetProperty("type").ValueKind == JsonValueKind.String && value.GetProperty("type").GetString() == "string")) return InputAuthoredInputDeclarationString.Read(value);
+        out _) && (value.GetProperty("type").ValueKind == JsonValueKind.String && value.GetProperty("type").GetString() == "string")) return AuthoredInputDeclarationString.Read(value);
         if ((value.ValueKind == JsonValueKind.Object) && value.ValueKind == JsonValueKind.Object && value.TryGetProperty("type",
-        out _) && value.TryGetProperty("properties", out _) && (value.GetProperty("type").ValueKind == JsonValueKind.String && value.GetProperty("type").GetString() == "object")) return InputAuthoredInputDeclarationObject.Read(value);
+        out _) && value.TryGetProperty("properties", out _) && (value.GetProperty("type").ValueKind == JsonValueKind.String && value.GetProperty("type").GetString() == "object")) return AuthoredInputDeclarationObject.Read(value);
         throw new JsonException("Authored data does not match the native Request schema.");
     }
 }
-public sealed class InputAuthoredInputDeclarationObject : InputAuthoredInputDeclaration {
-    public required IReadOnlyDictionary<string, InputAuthoredInputProperty> Properties {
+public sealed class AuthoredInputDeclarationObject : AuthoredInputDeclaration {
+    public required IReadOnlyList<KeyValuePair<string, AuthoredInputProperty>> Properties {
         get;
         init;
     }
-    public InputPresence<IReadOnlyList<string>> Required {
+    public AuthoredPresence<IReadOnlyList<string>> Required {
         get;
         init;
     }
-    internal new static InputAuthoredInputDeclarationObject Read(JsonElement value) => new() {
-        ParsedDocument = value.Clone(), Properties = new System.Collections.ObjectModel.ReadOnlyDictionary<string,
-        InputAuthoredInputProperty>(value.GetProperty("properties").EnumerateObject().ToDictionary(entry0 => entry0.Name,
-        entry0 => InputAuthoredInputProperty.Read(entry0.Value))), Required = value.TryGetProperty("required",
-        out _) ? (InputPresence<IReadOnlyList<string>>)(Array.AsReadOnly(value.GetProperty("required").EnumerateArray().Select(item0 => item0.GetString()!).ToArray())) : default
+    internal new static AuthoredInputDeclarationObject Read(JsonElement value) => new() {
+        ParsedDocument = value.Clone(), Properties = Array.AsReadOnly(value.GetProperty("properties").EnumerateObject().Select(entry0 => new KeyValuePair<string,
+        AuthoredInputProperty>(entry0.Name, AuthoredInputProperty.Read(entry0.Value))).ToArray()),
+        Required = value.TryGetProperty("required", out _) ? (AuthoredPresence<IReadOnlyList<string>>)(Array.AsReadOnly(value.GetProperty("required").EnumerateArray().Select(item0 => item0.GetString()!).ToArray())) : default
     };
-    public override void Write(Utf8JsonWriter writer) {
+    internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
@@ -1001,11 +1002,11 @@ public sealed class InputAuthoredInputDeclarationObject : InputAuthoredInputDecl
         writer.WriteEndObject();
     }
 }
-public sealed class InputAuthoredInputDeclarationString : InputAuthoredInputDeclaration {
-    internal new static InputAuthoredInputDeclarationString Read(JsonElement value) => new() {
+public sealed class AuthoredInputDeclarationString : AuthoredInputDeclaration {
+    internal new static AuthoredInputDeclarationString Read(JsonElement value) => new() {
         ParsedDocument = value.Clone()
     };
-    public override void Write(Utf8JsonWriter writer) {
+    internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
@@ -1016,29 +1017,29 @@ public sealed class InputAuthoredInputDeclarationString : InputAuthoredInputDecl
         writer.WriteEndObject();
     }
 }
-public abstract class InputAuthoredInputProperty : InputDocument {
-    private protected InputAuthoredInputProperty() {
-    } internal static InputAuthoredInputProperty Read(JsonElement value) {
+public abstract class AuthoredInputProperty : AuthoredDocument {
+    private protected AuthoredInputProperty() {
+    } internal static AuthoredInputProperty Read(JsonElement value) {
         if ((value.ValueKind == JsonValueKind.Object) && value.ValueKind == JsonValueKind.Object && value.TryGetProperty("type",
-        out _) && (value.GetProperty("type").ValueKind == JsonValueKind.String && value.GetProperty("type").GetString() == "string")) return InputAuthoredInputPropertyString.Read(value);
+        out _) && (value.GetProperty("type").ValueKind == JsonValueKind.String && value.GetProperty("type").GetString() == "string")) return AuthoredInputPropertyString.Read(value);
         if ((value.ValueKind == JsonValueKind.Object) && value.ValueKind == JsonValueKind.Object && value.TryGetProperty("type",
-        out _) && (value.GetProperty("type").ValueKind == JsonValueKind.String && value.GetProperty("type").GetString() == "number")) return InputAuthoredInputPropertyNumber.Read(value);
+        out _) && (value.GetProperty("type").ValueKind == JsonValueKind.String && value.GetProperty("type").GetString() == "number")) return AuthoredInputPropertyNumber.Read(value);
         if ((value.ValueKind == JsonValueKind.Object) && value.ValueKind == JsonValueKind.Object && value.TryGetProperty("type",
-        out _) && (value.GetProperty("type").ValueKind == JsonValueKind.String && value.GetProperty("type").GetString() == "boolean")) return InputAuthoredInputPropertyBoolean.Read(value);
+        out _) && (value.GetProperty("type").ValueKind == JsonValueKind.String && value.GetProperty("type").GetString() == "boolean")) return AuthoredInputPropertyBoolean.Read(value);
         if ((value.ValueKind == JsonValueKind.Object) && value.ValueKind == JsonValueKind.Object && value.TryGetProperty("type",
-        out _) && value.TryGetProperty("items", out _) && (value.GetProperty("type").ValueKind == JsonValueKind.String && value.GetProperty("type").GetString() == "array")) return InputAuthoredInputPropertyArray.Read(value);
+        out _) && value.TryGetProperty("items", out _) && (value.GetProperty("type").ValueKind == JsonValueKind.String && value.GetProperty("type").GetString() == "array")) return AuthoredInputPropertyArray.Read(value);
         throw new JsonException("Authored data does not match the native Request schema.");
     }
 }
-public sealed class InputAuthoredInputPropertyArray : InputAuthoredInputProperty {
-    public required InputAuthoredInputPropertyArrayItems Items {
+public sealed class AuthoredInputPropertyArray : AuthoredInputProperty {
+    public required AuthoredInputPropertyArrayItems Items {
         get;
         init;
     }
-    internal new static InputAuthoredInputPropertyArray Read(JsonElement value) => new() {
-        ParsedDocument = value.Clone(), Items = InputAuthoredInputPropertyArrayItems.Read(value.GetProperty("items"))
+    internal new static AuthoredInputPropertyArray Read(JsonElement value) => new() {
+        ParsedDocument = value.Clone(), Items = AuthoredInputPropertyArrayItems.Read(value.GetProperty("items"))
     };
-    public override void Write(Utf8JsonWriter writer) {
+    internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
@@ -1052,11 +1053,11 @@ public sealed class InputAuthoredInputPropertyArray : InputAuthoredInputProperty
         writer.WriteEndObject();
     }
 }
-public sealed class InputAuthoredInputPropertyArrayItems : InputDocument {
-    internal static InputAuthoredInputPropertyArrayItems Read(JsonElement value) => new() {
+public sealed class AuthoredInputPropertyArrayItems : AuthoredDocument {
+    internal static AuthoredInputPropertyArrayItems Read(JsonElement value) => new() {
         ParsedDocument = value.Clone()
     };
-    public override void Write(Utf8JsonWriter writer) {
+    internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
@@ -1067,11 +1068,11 @@ public sealed class InputAuthoredInputPropertyArrayItems : InputDocument {
         writer.WriteEndObject();
     }
 }
-public sealed class InputAuthoredInputPropertyBoolean : InputAuthoredInputProperty {
-    internal new static InputAuthoredInputPropertyBoolean Read(JsonElement value) => new() {
+public sealed class AuthoredInputPropertyBoolean : AuthoredInputProperty {
+    internal new static AuthoredInputPropertyBoolean Read(JsonElement value) => new() {
         ParsedDocument = value.Clone()
     };
-    public override void Write(Utf8JsonWriter writer) {
+    internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
@@ -1082,11 +1083,11 @@ public sealed class InputAuthoredInputPropertyBoolean : InputAuthoredInputProper
         writer.WriteEndObject();
     }
 }
-public sealed class InputAuthoredInputPropertyNumber : InputAuthoredInputProperty {
-    internal new static InputAuthoredInputPropertyNumber Read(JsonElement value) => new() {
+public sealed class AuthoredInputPropertyNumber : AuthoredInputProperty {
+    internal new static AuthoredInputPropertyNumber Read(JsonElement value) => new() {
         ParsedDocument = value.Clone()
     };
-    public override void Write(Utf8JsonWriter writer) {
+    internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
@@ -1097,11 +1098,11 @@ public sealed class InputAuthoredInputPropertyNumber : InputAuthoredInputPropert
         writer.WriteEndObject();
     }
 }
-public sealed class InputAuthoredInputPropertyString : InputAuthoredInputProperty {
-    internal new static InputAuthoredInputPropertyString Read(JsonElement value) => new() {
+public sealed class AuthoredInputPropertyString : AuthoredInputProperty {
+    internal new static AuthoredInputPropertyString Read(JsonElement value) => new() {
         ParsedDocument = value.Clone()
     };
-    public override void Write(Utf8JsonWriter writer) {
+    internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
@@ -1112,23 +1113,23 @@ public sealed class InputAuthoredInputPropertyString : InputAuthoredInputPropert
         writer.WriteEndObject();
     }
 }
-public abstract class InputAuthoredLabels : InputDocument {
-    private protected InputAuthoredLabels() {
-    } internal static InputAuthoredLabels Read(JsonElement value) {
-        if ((value.ValueKind == JsonValueKind.Array)) return InputAuthoredLabelsList.Read(value);
-        if ((value.ValueKind == JsonValueKind.Object)) return InputAuthoredLabelsObject.Read(value);
+public abstract class AuthoredLabels : AuthoredDocument {
+    private protected AuthoredLabels() {
+    } internal static AuthoredLabels Read(JsonElement value) {
+        if ((value.ValueKind == JsonValueKind.Array)) return AuthoredLabelsList.Read(value);
+        if ((value.ValueKind == JsonValueKind.Object)) return AuthoredLabelsObject.Read(value);
         throw new JsonException("Authored data does not match the native Request schema.");
     }
 }
-public sealed class InputAuthoredLabelsList : InputAuthoredLabels {
-    public required IReadOnlyList<InputAuthoredName> Value {
+public sealed class AuthoredLabelsList : AuthoredLabels {
+    public required IReadOnlyList<AuthoredName> Value {
         get;
         init;
     }
-    internal new static InputAuthoredLabelsList Read(JsonElement value) => new() {
-        ParsedDocument = value.Clone(), Value = Array.AsReadOnly(value.EnumerateArray().Select(item0 => InputAuthoredName.Read(item0)).ToArray())
+    internal new static AuthoredLabelsList Read(JsonElement value) => new() {
+        ParsedDocument = value.Clone(), Value = Array.AsReadOnly(value.EnumerateArray().Select(item0 => AuthoredName.Read(item0)).ToArray())
     };
-    public override void Write(Utf8JsonWriter writer) {
+    internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
@@ -1140,16 +1141,16 @@ public sealed class InputAuthoredLabelsList : InputAuthoredLabels {
         } writer.WriteEndArray();
     }
 }
-public sealed class InputAuthoredLabelsObject : InputAuthoredLabels {
-    public required IReadOnlyDictionary<string, InputAuthoredDescription> Value {
+public sealed class AuthoredLabelsObject : AuthoredLabels {
+    public required IReadOnlyList<KeyValuePair<string, AuthoredDescription>> Value {
         get;
         init;
     }
-    internal new static InputAuthoredLabelsObject Read(JsonElement value) => new() {
-        ParsedDocument = value.Clone(), Value = new System.Collections.ObjectModel.ReadOnlyDictionary<string,
-        InputAuthoredDescription>(value.EnumerateObject().ToDictionary(entry0 => entry0.Name, entry0 => InputAuthoredDescription.Read(entry0.Value)))
+    internal new static AuthoredLabelsObject Read(JsonElement value) => new() {
+        ParsedDocument = value.Clone(), Value = Array.AsReadOnly(value.EnumerateObject().Select(entry0 => new KeyValuePair<string,
+        AuthoredDescription>(entry0.Name, AuthoredDescription.Read(entry0.Value))).ToArray())
     };
-    public override void Write(Utf8JsonWriter writer) {
+    internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
@@ -1162,23 +1163,23 @@ public sealed class InputAuthoredLabelsObject : InputAuthoredLabels {
         } writer.WriteEndObject();
     }
 }
-public abstract class InputAuthoredLevels : InputDocument {
-    private protected InputAuthoredLevels() {
-    } internal static InputAuthoredLevels Read(JsonElement value) {
-        if ((value.ValueKind == JsonValueKind.Array)) return InputAuthoredLevelsList.Read(value);
-        if ((value.ValueKind == JsonValueKind.Object)) return InputAuthoredLevelsObject.Read(value);
+public abstract class AuthoredLevels : AuthoredDocument {
+    private protected AuthoredLevels() {
+    } internal static AuthoredLevels Read(JsonElement value) {
+        if ((value.ValueKind == JsonValueKind.Array)) return AuthoredLevelsList.Read(value);
+        if ((value.ValueKind == JsonValueKind.Object)) return AuthoredLevelsObject.Read(value);
         throw new JsonException("Authored data does not match the native Request schema.");
     }
 }
-public sealed class InputAuthoredLevelsList : InputAuthoredLevels {
-    public required IReadOnlyList<InputAuthoredName> Value {
+public sealed class AuthoredLevelsList : AuthoredLevels {
+    public required IReadOnlyList<AuthoredName> Value {
         get;
         init;
     }
-    internal new static InputAuthoredLevelsList Read(JsonElement value) => new() {
-        ParsedDocument = value.Clone(), Value = Array.AsReadOnly(value.EnumerateArray().Select(item0 => InputAuthoredName.Read(item0)).ToArray())
+    internal new static AuthoredLevelsList Read(JsonElement value) => new() {
+        ParsedDocument = value.Clone(), Value = Array.AsReadOnly(value.EnumerateArray().Select(item0 => AuthoredName.Read(item0)).ToArray())
     };
-    public override void Write(Utf8JsonWriter writer) {
+    internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
@@ -1190,16 +1191,16 @@ public sealed class InputAuthoredLevelsList : InputAuthoredLevels {
         } writer.WriteEndArray();
     }
 }
-public sealed class InputAuthoredLevelsObject : InputAuthoredLevels {
-    public required IReadOnlyDictionary<string, InputAuthoredCriterion> Value {
+public sealed class AuthoredLevelsObject : AuthoredLevels {
+    public required IReadOnlyList<KeyValuePair<string, AuthoredCriterion>> Value {
         get;
         init;
     }
-    internal new static InputAuthoredLevelsObject Read(JsonElement value) => new() {
-        ParsedDocument = value.Clone(), Value = new System.Collections.ObjectModel.ReadOnlyDictionary<string,
-        InputAuthoredCriterion>(value.EnumerateObject().ToDictionary(entry0 => entry0.Name, entry0 => InputAuthoredCriterion.Read(entry0.Value)))
+    internal new static AuthoredLevelsObject Read(JsonElement value) => new() {
+        ParsedDocument = value.Clone(), Value = Array.AsReadOnly(value.EnumerateObject().Select(entry0 => new KeyValuePair<string,
+        AuthoredCriterion>(entry0.Name, AuthoredCriterion.Read(entry0.Value))).ToArray())
     };
-    public override void Write(Utf8JsonWriter writer) {
+    internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
@@ -1212,15 +1213,15 @@ public sealed class InputAuthoredLevelsObject : InputAuthoredLevels {
         } writer.WriteEndObject();
     }
 }
-public sealed class InputAuthoredName : InputDocument {
+public sealed class AuthoredName : AuthoredDocument {
     public required string Value {
         get;
         init;
     }
-    internal static InputAuthoredName Read(JsonElement value) => new() {
+    internal static AuthoredName Read(JsonElement value) => new() {
         ParsedDocument = value.Clone(), Value = value.GetString()!
     };
-    public override void Write(Utf8JsonWriter writer) {
+    internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
@@ -1228,23 +1229,23 @@ public sealed class InputAuthoredName : InputDocument {
         } WriteText(writer, Value);
     }
 }
-public abstract class InputAuthoredOptions : InputDocument {
-    private protected InputAuthoredOptions() {
-    } internal static InputAuthoredOptions Read(JsonElement value) {
-        if ((value.ValueKind == JsonValueKind.Array)) return InputAuthoredOptionsList.Read(value);
-        if ((value.ValueKind == JsonValueKind.Object)) return InputAuthoredOptionsObject.Read(value);
+public abstract class AuthoredOptions : AuthoredDocument {
+    private protected AuthoredOptions() {
+    } internal static AuthoredOptions Read(JsonElement value) {
+        if ((value.ValueKind == JsonValueKind.Array)) return AuthoredOptionsList.Read(value);
+        if ((value.ValueKind == JsonValueKind.Object)) return AuthoredOptionsObject.Read(value);
         throw new JsonException("Authored data does not match the native Request schema.");
     }
 }
-public sealed class InputAuthoredOptionsList : InputAuthoredOptions {
-    public required IReadOnlyList<InputAuthoredName> Value {
+public sealed class AuthoredOptionsList : AuthoredOptions {
+    public required IReadOnlyList<AuthoredName> Value {
         get;
         init;
     }
-    internal new static InputAuthoredOptionsList Read(JsonElement value) => new() {
-        ParsedDocument = value.Clone(), Value = Array.AsReadOnly(value.EnumerateArray().Select(item0 => InputAuthoredName.Read(item0)).ToArray())
+    internal new static AuthoredOptionsList Read(JsonElement value) => new() {
+        ParsedDocument = value.Clone(), Value = Array.AsReadOnly(value.EnumerateArray().Select(item0 => AuthoredName.Read(item0)).ToArray())
     };
-    public override void Write(Utf8JsonWriter writer) {
+    internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
@@ -1256,16 +1257,16 @@ public sealed class InputAuthoredOptionsList : InputAuthoredOptions {
         } writer.WriteEndArray();
     }
 }
-public sealed class InputAuthoredOptionsObject : InputAuthoredOptions {
-    public required IReadOnlyDictionary<string, InputAuthoredDescription> Value {
+public sealed class AuthoredOptionsObject : AuthoredOptions {
+    public required IReadOnlyList<KeyValuePair<string, AuthoredDescription>> Value {
         get;
         init;
     }
-    internal new static InputAuthoredOptionsObject Read(JsonElement value) => new() {
-        ParsedDocument = value.Clone(), Value = new System.Collections.ObjectModel.ReadOnlyDictionary<string,
-        InputAuthoredDescription>(value.EnumerateObject().ToDictionary(entry0 => entry0.Name, entry0 => InputAuthoredDescription.Read(entry0.Value)))
+    internal new static AuthoredOptionsObject Read(JsonElement value) => new() {
+        ParsedDocument = value.Clone(), Value = Array.AsReadOnly(value.EnumerateObject().Select(entry0 => new KeyValuePair<string,
+        AuthoredDescription>(entry0.Name, AuthoredDescription.Read(entry0.Value))).ToArray())
     };
-    public override void Write(Utf8JsonWriter writer) {
+    internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
@@ -1278,23 +1279,23 @@ public sealed class InputAuthoredOptionsObject : InputAuthoredOptions {
         } writer.WriteEndObject();
     }
 }
-public abstract class InputAuthoredPointers : InputDocument {
-    private protected InputAuthoredPointers() {
-    } internal static InputAuthoredPointers Read(JsonElement value) {
-        if ((value.ValueKind == JsonValueKind.String)) return InputAuthoredPointersString.Read(value);
-        if ((value.ValueKind == JsonValueKind.Array)) return InputAuthoredPointersList.Read(value);
+public abstract class AuthoredPointers : AuthoredDocument {
+    private protected AuthoredPointers() {
+    } internal static AuthoredPointers Read(JsonElement value) {
+        if ((value.ValueKind == JsonValueKind.String)) return AuthoredPointersString.Read(value);
+        if ((value.ValueKind == JsonValueKind.Array)) return AuthoredPointersList.Read(value);
         throw new JsonException("Authored data does not match the native Request schema.");
     }
 }
-public sealed class InputAuthoredPointersList : InputAuthoredPointers {
+public sealed class AuthoredPointersList : AuthoredPointers {
     public required IReadOnlyList<string> Value {
         get;
         init;
     }
-    internal new static InputAuthoredPointersList Read(JsonElement value) => new() {
+    internal new static AuthoredPointersList Read(JsonElement value) => new() {
         ParsedDocument = value.Clone(), Value = Array.AsReadOnly(value.EnumerateArray().Select(item0 => item0.GetString()!).ToArray())
     };
-    public override void Write(Utf8JsonWriter writer) {
+    internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
@@ -1305,15 +1306,15 @@ public sealed class InputAuthoredPointersList : InputAuthoredPointers {
         } writer.WriteEndArray();
     }
 }
-public sealed class InputAuthoredPointersString : InputAuthoredPointers {
+public sealed class AuthoredPointersString : AuthoredPointers {
     public required string Value {
         get;
         init;
     }
-    internal new static InputAuthoredPointersString Read(JsonElement value) => new() {
+    internal new static AuthoredPointersString Read(JsonElement value) => new() {
         ParsedDocument = value.Clone(), Value = value.GetString()!
     };
-    public override void Write(Utf8JsonWriter writer) {
+    internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
@@ -1321,15 +1322,15 @@ public sealed class InputAuthoredPointersString : InputAuthoredPointers {
         } WriteText(writer, Value);
     }
 }
-public sealed class InputAuthoredProfile : InputDocument {
+public sealed class AuthoredProfile : AuthoredDocument {
     public required string Value {
         get;
         init;
     }
-    internal static InputAuthoredProfile Read(JsonElement value) => new() {
+    internal static AuthoredProfile Read(JsonElement value) => new() {
         ParsedDocument = value.Clone(), Value = value.GetString()!
     };
-    public override void Write(Utf8JsonWriter writer) {
+    internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
@@ -1337,24 +1338,24 @@ public sealed class InputAuthoredProfile : InputDocument {
         } WriteText(writer, Value);
     }
 }
-public abstract class InputAuthoredQuestionText : InputDocument {
-    private protected InputAuthoredQuestionText() {
-    } internal static InputAuthoredQuestionText Read(JsonElement value) {
-        if ((value.ValueKind == JsonValueKind.String)) return InputAuthoredQuestionTextString.Read(value);
-        if ((value.ValueKind == JsonValueKind.Object)) return InputAuthoredQuestionTextObject.Read(value);
-        if ((value.ValueKind == JsonValueKind.Array)) return InputAuthoredQuestionTextList.Read(value);
+public abstract class AuthoredQuestionText : AuthoredDocument {
+    private protected AuthoredQuestionText() {
+    } internal static AuthoredQuestionText Read(JsonElement value) {
+        if ((value.ValueKind == JsonValueKind.String)) return AuthoredQuestionTextString.Read(value);
+        if ((value.ValueKind == JsonValueKind.Object)) return AuthoredQuestionTextObject.Read(value);
+        if ((value.ValueKind == JsonValueKind.Array)) return AuthoredQuestionTextList.Read(value);
         throw new JsonException("Authored data does not match the native Request schema.");
     }
 }
-public sealed class InputAuthoredQuestionTextList : InputAuthoredQuestionText {
+public sealed class AuthoredQuestionTextList : AuthoredQuestionText {
     public required IReadOnlyList<JsonElement> Value {
         get;
         init;
     }
-    internal new static InputAuthoredQuestionTextList Read(JsonElement value) => new() {
+    internal new static AuthoredQuestionTextList Read(JsonElement value) => new() {
         ParsedDocument = value.Clone(), Value = Array.AsReadOnly(value.EnumerateArray().Select(item0 => item0.Clone()).ToArray())
     };
-    public override void Write(Utf8JsonWriter writer) {
+    internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
@@ -1365,15 +1366,15 @@ public sealed class InputAuthoredQuestionTextList : InputAuthoredQuestionText {
         } writer.WriteEndArray();
     }
 }
-public sealed class InputAuthoredQuestionTextObject : InputAuthoredQuestionText {
+public sealed class AuthoredQuestionTextObject : AuthoredQuestionText {
     public required JsonElement Value {
         get;
         init;
     }
-    internal new static InputAuthoredQuestionTextObject Read(JsonElement value) => new() {
+    internal new static AuthoredQuestionTextObject Read(JsonElement value) => new() {
         ParsedDocument = value.Clone(), Value = value.Clone()
     };
-    public override void Write(Utf8JsonWriter writer) {
+    internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
@@ -1381,15 +1382,15 @@ public sealed class InputAuthoredQuestionTextObject : InputAuthoredQuestionText 
         } Value.WriteTo(writer);
     }
 }
-public sealed class InputAuthoredQuestionTextString : InputAuthoredQuestionText {
+public sealed class AuthoredQuestionTextString : AuthoredQuestionText {
     public required string Value {
         get;
         init;
     }
-    internal new static InputAuthoredQuestionTextString Read(JsonElement value) => new() {
+    internal new static AuthoredQuestionTextString Read(JsonElement value) => new() {
         ParsedDocument = value.Clone(), Value = value.GetString()!
     };
-    public override void Write(Utf8JsonWriter writer) {
+    internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
@@ -1397,40 +1398,40 @@ public sealed class InputAuthoredQuestionTextString : InputAuthoredQuestionText 
         } WriteText(writer, Value);
     }
 }
-public sealed class InputAuthoredRelate : InputDocument {
-    public InputPresence<InputAuthoredInputDeclaration> ContextSchema {
+public sealed class AuthoredRelate : AuthoredDocument {
+    public AuthoredPresence<AuthoredInputDeclaration> ContextSchema {
         get;
         init;
     }
-    public InputPresence<InputAuthoredInputDeclaration> ItemSchema {
+    public AuthoredPresence<AuthoredInputDeclaration> ItemSchema {
         get;
         init;
     }
-    public InputPresence<InputAuthoredName> Model {
+    public AuthoredPresence<AuthoredName> Model {
         get;
         init;
     }
-    public InputPresence<string> Name {
+    public AuthoredPresence<string> Name {
         get;
         init;
     }
-    public InputPresence<InputAuthoredProfile> Profile {
+    public AuthoredPresence<AuthoredProfile> Profile {
         get;
         init;
     }
-    public required InputRelateQuestion Relate {
+    public required RelateQuestion Relate {
         get;
         init;
     }
-    public InputPresence<InputAuthoredCut> Threshold {
+    public AuthoredPresence<AuthoredCut> Threshold {
         get;
         init;
     }
-    public InputPresence<long> WordingVersion {
+    public AuthoredPresence<long> WordingVersion {
         get;
         init;
     }
-    public override void Write(Utf8JsonWriter writer) {
+    internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
@@ -1470,40 +1471,40 @@ public sealed class InputAuthoredRelate : InputDocument {
         } writer.WriteEndObject();
     }
 }
-public sealed class InputAuthoredRelation : InputDocument {
-    public InputPresence<bool> Either {
+public sealed class AuthoredRelation : AuthoredDocument {
+    public AuthoredPresence<bool> Either {
         get;
         init;
     }
-    public required InputAuthoredName Name {
+    public required AuthoredName Name {
         get;
         init;
     }
-    public InputPresence<InputAuthoredName> Reads {
+    public AuthoredPresence<AuthoredName> Reads {
         get;
         init;
     }
-    public InputPresence<bool> Single {
+    public AuthoredPresence<bool> Single {
         get;
         init;
     }
-    public InputPresence<InputAuthoredName> Source {
+    public AuthoredPresence<AuthoredName> Source {
         get;
         init;
     }
-    public InputPresence<InputAuthoredName> Target {
+    public AuthoredPresence<AuthoredName> Target {
         get;
         init;
     }
-    internal static InputAuthoredRelation Read(JsonElement value) => new() {
-        ParsedDocument = value.Clone(), Either = value.TryGetProperty("either", out _) ? (InputPresence<bool>)(value.GetProperty("either").GetBoolean()) : default,
-        Name = InputAuthoredName.Read(value.GetProperty("name")), Reads = value.TryGetProperty("reads",
-        out _) ? (InputPresence<InputAuthoredName>)(InputAuthoredName.Read(value.GetProperty("reads"))) : default,
-        Single = value.TryGetProperty("single", out _) ? (InputPresence<bool>)(value.GetProperty("single").GetBoolean()) : default,
-        Source = value.TryGetProperty("source", out _) ? (InputPresence<InputAuthoredName>)(InputAuthoredName.Read(value.GetProperty("source"))) : default,
-        Target = value.TryGetProperty("target", out _) ? (InputPresence<InputAuthoredName>)(InputAuthoredName.Read(value.GetProperty("target"))) : default
+    internal static AuthoredRelation Read(JsonElement value) => new() {
+        ParsedDocument = value.Clone(), Either = value.TryGetProperty("either", out _) ? (AuthoredPresence<bool>)(value.GetProperty("either").GetBoolean()) : default,
+        Name = AuthoredName.Read(value.GetProperty("name")), Reads = value.TryGetProperty("reads",
+        out _) ? (AuthoredPresence<AuthoredName>)(AuthoredName.Read(value.GetProperty("reads"))) : default,
+        Single = value.TryGetProperty("single", out _) ? (AuthoredPresence<bool>)(value.GetProperty("single").GetBoolean()) : default,
+        Source = value.TryGetProperty("source", out _) ? (AuthoredPresence<AuthoredName>)(AuthoredName.Read(value.GetProperty("source"))) : default,
+        Target = value.TryGetProperty("target", out _) ? (AuthoredPresence<AuthoredName>)(AuthoredName.Read(value.GetProperty("target"))) : default
     };
-    public override void Write(Utf8JsonWriter writer) {
+    internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
@@ -1533,48 +1534,48 @@ public sealed class InputAuthoredRelation : InputDocument {
         } writer.WriteEndObject();
     }
 }
-public sealed class InputAuthoredScore : InputDocument {
-    public InputPresence<InputAuthoredScoreBatch> Batch {
+public sealed class AuthoredScore : AuthoredDocument {
+    public AuthoredPresence<AuthoredScoreBatch> Batch {
         get;
         init;
     }
-    public InputPresence<InputAuthoredInputDeclaration> ContextSchema {
+    public AuthoredPresence<AuthoredInputDeclaration> ContextSchema {
         get;
         init;
     }
-    public InputPresence<InputAuthoredInputDeclaration> ItemSchema {
+    public AuthoredPresence<AuthoredInputDeclaration> ItemSchema {
         get;
         init;
     }
-    public InputPresence<InputAuthoredLevels> Levels {
+    public AuthoredPresence<AuthoredLevels> Levels {
         get;
         init;
     }
-    public InputPresence<InputAuthoredName> Model {
+    public AuthoredPresence<AuthoredName> Model {
         get;
         init;
     }
-    public InputPresence<string> Name {
+    public AuthoredPresence<string> Name {
         get;
         init;
     }
-    public InputPresence<InputAuthoredPointers> On {
+    public AuthoredPresence<AuthoredPointers> On {
         get;
         init;
     }
-    public InputPresence<InputAuthoredProfile> Profile {
+    public AuthoredPresence<AuthoredProfile> Profile {
         get;
         init;
     }
-    public required InputAuthoredQuestionText Score {
+    public required AuthoredQuestionText Score {
         get;
         init;
     }
-    public InputPresence<long> WordingVersion {
+    public AuthoredPresence<long> WordingVersion {
         get;
         init;
     }
-    public override void Write(Utf8JsonWriter writer) {
+    internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
@@ -1620,16 +1621,16 @@ public sealed class InputAuthoredScore : InputDocument {
         } writer.WriteEndObject();
     }
 }
-public abstract class InputAuthoredScoreBatch : InputDocument {
-    private protected InputAuthoredScoreBatch() {
+public abstract class AuthoredScoreBatch : AuthoredDocument {
+    private protected AuthoredScoreBatch() {
     }
 }
-public sealed class InputAuthoredScoreBatchInteger : InputAuthoredScoreBatch {
+public sealed class AuthoredScoreBatchInteger : AuthoredScoreBatch {
     public required long Value {
         get;
         init;
     }
-    public override void Write(Utf8JsonWriter writer) {
+    internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
@@ -1637,8 +1638,8 @@ public sealed class InputAuthoredScoreBatchInteger : InputAuthoredScoreBatch {
         } writer.WriteNumberValue(Value);
     }
 }
-public sealed class InputAuthoredScoreBatchMax : InputAuthoredScoreBatch {
-    public override void Write(Utf8JsonWriter writer) {
+public sealed class AuthoredScoreBatchMax : AuthoredScoreBatch {
+    internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
@@ -1646,52 +1647,52 @@ public sealed class InputAuthoredScoreBatchMax : InputAuthoredScoreBatch {
         } WriteText(writer, "max");
     }
 }
-public sealed class InputAuthoredTag : InputDocument {
-    public InputPresence<InputAuthoredTagBatch> Batch {
+public sealed class AuthoredTag : AuthoredDocument {
+    public AuthoredPresence<AuthoredTagBatch> Batch {
         get;
         init;
     }
-    public InputPresence<InputAuthoredInputDeclaration> ContextSchema {
+    public AuthoredPresence<AuthoredInputDeclaration> ContextSchema {
         get;
         init;
     }
-    public InputPresence<InputAuthoredInputDeclaration> ItemSchema {
+    public AuthoredPresence<AuthoredInputDeclaration> ItemSchema {
         get;
         init;
     }
-    public InputPresence<InputAuthoredLabels> Labels {
+    public AuthoredPresence<AuthoredLabels> Labels {
         get;
         init;
     }
-    public InputPresence<InputAuthoredName> Model {
+    public AuthoredPresence<AuthoredName> Model {
         get;
         init;
     }
-    public InputPresence<string> Name {
+    public AuthoredPresence<string> Name {
         get;
         init;
     }
-    public InputPresence<InputAuthoredPointers> On {
+    public AuthoredPresence<AuthoredPointers> On {
         get;
         init;
     }
-    public InputPresence<InputAuthoredProfile> Profile {
+    public AuthoredPresence<AuthoredProfile> Profile {
         get;
         init;
     }
-    public required InputAuthoredQuestionText Tag {
+    public required AuthoredQuestionText Tag {
         get;
         init;
     }
-    public InputPresence<InputAuthoredCut> Threshold {
+    public AuthoredPresence<AuthoredCut> Threshold {
         get;
         init;
     }
-    public InputPresence<long> WordingVersion {
+    public AuthoredPresence<long> WordingVersion {
         get;
         init;
     }
-    public override void Write(Utf8JsonWriter writer) {
+    internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
@@ -1741,16 +1742,16 @@ public sealed class InputAuthoredTag : InputDocument {
         } writer.WriteEndObject();
     }
 }
-public abstract class InputAuthoredTagBatch : InputDocument {
-    private protected InputAuthoredTagBatch() {
+public abstract class AuthoredTagBatch : AuthoredDocument {
+    private protected AuthoredTagBatch() {
     }
 }
-public sealed class InputAuthoredTagBatchInteger : InputAuthoredTagBatch {
+public sealed class AuthoredTagBatchInteger : AuthoredTagBatch {
     public required long Value {
         get;
         init;
     }
-    public override void Write(Utf8JsonWriter writer) {
+    internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
@@ -1758,8 +1759,8 @@ public sealed class InputAuthoredTagBatchInteger : InputAuthoredTagBatch {
         } writer.WriteNumberValue(Value);
     }
 }
-public sealed class InputAuthoredTagBatchMax : InputAuthoredTagBatch {
-    public override void Write(Utf8JsonWriter writer) {
+public sealed class AuthoredTagBatchMax : AuthoredTagBatch {
+    internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
@@ -1767,23 +1768,23 @@ public sealed class InputAuthoredTagBatchMax : InputAuthoredTagBatch {
         } WriteText(writer, "max");
     }
 }
-public abstract class InputAuthoredThreshold : InputDocument {
-    private protected InputAuthoredThreshold() {
-    } internal static InputAuthoredThreshold Read(JsonElement value) {
-        if ((value.ValueKind == JsonValueKind.Number)) return InputAuthoredThresholdNumber.Read(value);
-        if ((value.ValueKind == JsonValueKind.String)) return InputAuthoredThresholdString.Read(value);
+public abstract class AuthoredThreshold : AuthoredDocument {
+    private protected AuthoredThreshold() {
+    } internal static AuthoredThreshold Read(JsonElement value) {
+        if ((value.ValueKind == JsonValueKind.Number)) return AuthoredThresholdNumber.Read(value);
+        if ((value.ValueKind == JsonValueKind.String)) return AuthoredThresholdString.Read(value);
         throw new JsonException("Authored data does not match the native Request schema.");
     }
 }
-public sealed class InputAuthoredThresholdNumber : InputAuthoredThreshold {
+public sealed class AuthoredThresholdNumber : AuthoredThreshold {
     public required double Value {
         get;
         init;
     }
-    internal new static InputAuthoredThresholdNumber Read(JsonElement value) => new() {
+    internal new static AuthoredThresholdNumber Read(JsonElement value) => new() {
         ParsedDocument = value.Clone(), Value = value.GetDouble()
     };
-    public override void Write(Utf8JsonWriter writer) {
+    internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
@@ -1791,15 +1792,15 @@ public sealed class InputAuthoredThresholdNumber : InputAuthoredThreshold {
         } writer.WriteNumberValue(Value);
     }
 }
-public sealed class InputAuthoredThresholdString : InputAuthoredThreshold {
+public sealed class AuthoredThresholdString : AuthoredThreshold {
     public required string Value {
         get;
         init;
     }
-    internal new static InputAuthoredThresholdString Read(JsonElement value) => new() {
+    internal new static AuthoredThresholdString Read(JsonElement value) => new() {
         ParsedDocument = value.Clone(), Value = value.GetString()!
     };
-    public override void Write(Utf8JsonWriter writer) {
+    internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
@@ -1807,16 +1808,16 @@ public sealed class InputAuthoredThresholdString : InputAuthoredThreshold {
         } WriteText(writer, Value);
     }
 }
-public abstract class InputCacheDocument : InputDocument {
-    private protected InputCacheDocument() {
+public abstract class CacheDocument : AuthoredDocument {
+    private protected CacheDocument() {
     }
 }
-public sealed class InputCacheDocumentDisabledCache : InputCacheDocument {
-    public required InputDisabledCache Value {
+public sealed class CacheDocumentDisabledCache : CacheDocument {
+    public required DisabledCache Value {
         get;
         init;
     }
-    public override void Write(Utf8JsonWriter writer) {
+    internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
@@ -1825,12 +1826,12 @@ public sealed class InputCacheDocumentDisabledCache : InputCacheDocument {
         else Value.Write(writer);
     }
 }
-public sealed class InputCacheDocumentString : InputCacheDocument {
+public sealed class CacheDocumentString : CacheDocument {
     public required string Value {
         get;
         init;
     }
-    public override void Write(Utf8JsonWriter writer) {
+    internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
@@ -1838,16 +1839,16 @@ public sealed class InputCacheDocumentString : InputCacheDocument {
         } WriteText(writer, Value);
     }
 }
-public abstract class InputContextSchema : InputDocument {
-    private protected InputContextSchema() {
+public abstract class ContextSchema : AuthoredDocument {
+    private protected ContextSchema() {
     }
 }
-public sealed class InputContextSchemaObject : InputContextSchema {
+public sealed class ContextSchemaObject : ContextSchema {
     public required JsonElement Value {
         get;
         init;
     }
-    public override void Write(Utf8JsonWriter writer) {
+    internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
@@ -1855,12 +1856,12 @@ public sealed class InputContextSchemaObject : InputContextSchema {
         } Value.WriteTo(writer);
     }
 }
-public sealed class InputContextSchemaString : InputContextSchema {
+public sealed class ContextSchemaString : ContextSchema {
     public required string Value {
         get;
         init;
     }
-    public override void Write(Utf8JsonWriter writer) {
+    internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
@@ -1868,8 +1869,8 @@ public sealed class InputContextSchemaString : InputContextSchema {
         } WriteText(writer, Value);
     }
 }
-public sealed class InputDisabledCache : InputDocument {
-    public override void Write(Utf8JsonWriter writer) {
+public sealed class DisabledCache : AuthoredDocument {
+    internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
@@ -1877,84 +1878,84 @@ public sealed class InputDisabledCache : InputDocument {
         } writer.WriteBooleanValue(false);
     }
 }
-public sealed class InputEngineSettings : InputDocument {
-    public InputPresence<string> Backend {
+public sealed class EngineSettings : AuthoredDocument {
+    public AuthoredPresence<string> Backend {
         get;
         init;
     }
-    public InputPresence<string> BaseUrl {
+    public AuthoredPresence<string> BaseUrl {
         get;
         init;
     }
-    public InputPresence<InputRequestBatch> Batch {
+    public AuthoredPresence<RequestBatch> Batch {
         get;
         init;
     }
-    public InputPresence<InputCacheDocument> Cache {
+    public AuthoredPresence<CacheDocument> Cache {
         get;
         init;
     }
-    public InputPresence<InputEngineSettingsMaxEstimatedInputTokensTotal> MaxEstimatedInputTokensTotal {
+    public AuthoredPresence<EngineSettingsMaxEstimatedInputTokensTotal> MaxEstimatedInputTokensTotal {
         get;
         init;
     }
-    public InputPresence<ulong> MaxRequestBytes {
+    public AuthoredPresence<ulong> MaxRequestBytes {
         get;
         init;
     }
-    public InputPresence<InputEngineSettingsMaxRequests> MaxRequests {
+    public AuthoredPresence<EngineSettingsMaxRequests> MaxRequests {
         get;
         init;
     }
-    public InputPresence<InputEngineSettingsMaxRequestsTotal> MaxRequestsTotal {
+    public AuthoredPresence<EngineSettingsMaxRequestsTotal> MaxRequestsTotal {
         get;
         init;
     }
-    public InputPresence<uint> MaxRetries {
+    public AuthoredPresence<uint> MaxRetries {
         get;
         init;
     }
-    public InputPresence<string> Model {
+    public AuthoredPresence<string> Model {
         get;
         init;
     }
-    public InputPresence<string> Profile {
+    public AuthoredPresence<string> Profile {
         get;
         init;
     }
-    public InputPresence<JsonElement> Proxy {
+    public AuthoredPresence<JsonElement> Proxy {
         get;
         init;
     }
-    public InputPresence<string> Record {
+    public AuthoredPresence<string> Record {
         get;
         init;
     }
-    public InputPresence<bool> RefreshCache {
+    public AuthoredPresence<bool> RefreshCache {
         get;
         init;
     }
-    public InputPresence<string> Replay {
+    public AuthoredPresence<string> Replay {
         get;
         init;
     }
-    public InputPresence<long> Throttle {
+    public AuthoredPresence<long> Throttle {
         get;
         init;
     }
-    public InputPresence<ulong> Timeout {
+    public AuthoredPresence<ulong> Timeout {
         get;
         init;
     }
-    public InputPresence<string> UsdPerMillionInput {
+    public AuthoredPresence<string> UsdPerMillionInput {
         get;
         init;
     }
-    public InputPresence<string> UsdPerMillionOutput {
+    public AuthoredPresence<string> UsdPerMillionOutput {
         get;
         init;
     }
-    public override void Write(Utf8JsonWriter writer) {
+    internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
@@ -2025,16 +2026,16 @@ public sealed class InputEngineSettings : InputDocument {
         } writer.WriteEndObject();
     }
 }
-public abstract class InputEngineSettingsMaxEstimatedInputTokensTotal : InputDocument {
-    private protected InputEngineSettingsMaxEstimatedInputTokensTotal() {
+public abstract class EngineSettingsMaxEstimatedInputTokensTotal : AuthoredDocument {
+    private protected EngineSettingsMaxEstimatedInputTokensTotal() {
     }
 }
-public sealed class InputEngineSettingsMaxEstimatedInputTokensTotalInteger : InputEngineSettingsMaxEstimatedInputTokensTotal {
+public sealed class EngineSettingsMaxEstimatedInputTokensTotalInteger : EngineSettingsMaxEstimatedInputTokensTotal {
     public required ulong Value {
         get;
         init;
     }
-    public override void Write(Utf8JsonWriter writer) {
+    internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
@@ -2042,8 +2043,8 @@ public sealed class InputEngineSettingsMaxEstimatedInputTokensTotalInteger : Inp
         } writer.WriteNumberValue(Value);
     }
 }
-public sealed class InputEngineSettingsMaxEstimatedInputTokensTotalNull : InputEngineSettingsMaxEstimatedInputTokensTotal {
-    public override void Write(Utf8JsonWriter writer) {
+public sealed class EngineSettingsMaxEstimatedInputTokensTotalNull : EngineSettingsMaxEstimatedInputTokensTotal {
+    internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
@@ -2051,16 +2052,16 @@ public sealed class InputEngineSettingsMaxEstimatedInputTokensTotalNull : InputE
         } writer.WriteNullValue();
     }
 }
-public abstract class InputEngineSettingsMaxRequests : InputDocument {
-    private protected InputEngineSettingsMaxRequests() {
+public abstract class EngineSettingsMaxRequests : AuthoredDocument {
+    private protected EngineSettingsMaxRequests() {
     }
 }
-public sealed class InputEngineSettingsMaxRequestsInteger : InputEngineSettingsMaxRequests {
+public sealed class EngineSettingsMaxRequestsInteger : EngineSettingsMaxRequests {
     public required ulong Value {
         get;
         init;
     }
-    public override void Write(Utf8JsonWriter writer) {
+    internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
@@ -2068,8 +2069,8 @@ public sealed class InputEngineSettingsMaxRequestsInteger : InputEngineSettingsM
         } writer.WriteNumberValue(Value);
     }
 }
-public sealed class InputEngineSettingsMaxRequestsNull : InputEngineSettingsMaxRequests {
-    public override void Write(Utf8JsonWriter writer) {
+public sealed class EngineSettingsMaxRequestsNull : EngineSettingsMaxRequests {
+    internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
@@ -2077,16 +2078,16 @@ public sealed class InputEngineSettingsMaxRequestsNull : InputEngineSettingsMaxR
         } writer.WriteNullValue();
     }
 }
-public abstract class InputEngineSettingsMaxRequestsTotal : InputDocument {
-    private protected InputEngineSettingsMaxRequestsTotal() {
+public abstract class EngineSettingsMaxRequestsTotal : AuthoredDocument {
+    private protected EngineSettingsMaxRequestsTotal() {
     }
 }
-public sealed class InputEngineSettingsMaxRequestsTotalInteger : InputEngineSettingsMaxRequestsTotal {
+public sealed class EngineSettingsMaxRequestsTotalInteger : EngineSettingsMaxRequestsTotal {
     public required ulong Value {
         get;
         init;
     }
-    public override void Write(Utf8JsonWriter writer) {
+    internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
@@ -2094,8 +2095,8 @@ public sealed class InputEngineSettingsMaxRequestsTotalInteger : InputEngineSett
         } writer.WriteNumberValue(Value);
     }
 }
-public sealed class InputEngineSettingsMaxRequestsTotalNull : InputEngineSettingsMaxRequestsTotal {
-    public override void Write(Utf8JsonWriter writer) {
+public sealed class EngineSettingsMaxRequestsTotalNull : EngineSettingsMaxRequestsTotal {
+    internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
@@ -2103,12 +2104,12 @@ public sealed class InputEngineSettingsMaxRequestsTotalNull : InputEngineSetting
         } writer.WriteNullValue();
     }
 }
-public abstract class InputImageMedia : InputDocument {
-    private protected InputImageMedia() {
+public abstract class ImageMedia : AuthoredDocument {
+    private protected ImageMedia() {
     }
 }
-public sealed class InputImageMediaImageJpeg : InputImageMedia {
-    public override void Write(Utf8JsonWriter writer) {
+public sealed class ImageMediaImageJpeg : ImageMedia {
+    internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
@@ -2116,8 +2117,8 @@ public sealed class InputImageMediaImageJpeg : InputImageMedia {
         } WriteText(writer, "image/jpeg");
     }
 }
-public sealed class InputImageMediaImagePng : InputImageMedia {
-    public override void Write(Utf8JsonWriter writer) {
+public sealed class ImageMediaImagePng : ImageMedia {
+    internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
@@ -2125,8 +2126,8 @@ public sealed class InputImageMediaImagePng : InputImageMedia {
         } WriteText(writer, "image/png");
     }
 }
-public sealed class InputOptionSchema : InputDocument {
-    public InputPresence<JsonElement> Description {
+public sealed class OptionSchema : AuthoredDocument {
+    public AuthoredPresence<JsonElement> Description {
         get;
         init;
     }
@@ -2134,7 +2135,7 @@ public sealed class InputOptionSchema : InputDocument {
         get;
         init;
     }
-    public override void Write(Utf8JsonWriter writer) {
+    internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
@@ -2148,12 +2149,12 @@ public sealed class InputOptionSchema : InputDocument {
         writer.WriteEndObject();
     }
 }
-public abstract class InputReaderMedia : InputDocument {
-    private protected InputReaderMedia() {
+public abstract class ReaderMedia : AuthoredDocument {
+    private protected ReaderMedia() {
     }
 }
-public sealed class InputReaderMediaImage : InputReaderMedia {
-    public override void Write(Utf8JsonWriter writer) {
+public sealed class ReaderMediaImage : ReaderMedia {
+    internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
@@ -2161,8 +2162,8 @@ public sealed class InputReaderMediaImage : InputReaderMedia {
         } WriteText(writer, "image");
     }
 }
-public sealed class InputReaderMediaText : InputReaderMedia {
-    public override void Write(Utf8JsonWriter writer) {
+public sealed class ReaderMediaText : ReaderMedia {
+    internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
@@ -2170,11 +2171,11 @@ public sealed class InputReaderMediaText : InputReaderMedia {
         } WriteText(writer, "text");
     }
 }
-public abstract class InputRecognitionExample : InputDocument {
-    private protected InputRecognitionExample() {
+public abstract class RecognitionExample : AuthoredDocument {
+    private protected RecognitionExample() {
     }
 }
-public sealed class InputRecognitionExampleEntity : InputDocument {
+public sealed class RecognitionExampleEntity : AuthoredDocument {
     public required ulong End {
         get;
         init;
@@ -2187,7 +2188,7 @@ public sealed class InputRecognitionExampleEntity : InputDocument {
         get;
         init;
     }
-    public override void Write(Utf8JsonWriter writer) {
+    internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
@@ -2202,12 +2203,12 @@ public sealed class InputRecognitionExampleEntity : InputDocument {
         writer.WriteEndObject();
     }
 }
-public sealed class InputRecognitionExampleText : InputDocument {
-    public required IReadOnlyList<InputRecognitionExampleEntity> Entities {
+public sealed class RecognitionExampleText : AuthoredDocument {
+    public required IReadOnlyList<RecognitionExampleEntity> Entities {
         get;
         init;
     }
-    public InputPresence<IReadOnlyList<string>> Kinds {
+    public AuthoredPresence<IReadOnlyList<string>> Kinds {
         get;
         init;
     }
@@ -2215,7 +2216,7 @@ public sealed class InputRecognitionExampleText : InputDocument {
         get;
         init;
     }
-    public override void Write(Utf8JsonWriter writer) {
+    internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
@@ -2238,12 +2239,12 @@ public sealed class InputRecognitionExampleText : InputDocument {
         writer.WriteEndObject();
     }
 }
-public sealed class InputRecognitionExampleRecognitionExampleText : InputRecognitionExample {
-    public required InputRecognitionExampleText Value {
+public sealed class RecognitionExampleRecognitionExampleText : RecognitionExample {
+    public required RecognitionExampleText Value {
         get;
         init;
     }
-    public override void Write(Utf8JsonWriter writer) {
+    internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
@@ -2252,12 +2253,12 @@ public sealed class InputRecognitionExampleRecognitionExampleText : InputRecogni
         else Value.Write(writer);
     }
 }
-public sealed class InputRecognitionExampleString : InputRecognitionExample {
+public sealed class RecognitionExampleString : RecognitionExample {
     public required string Value {
         get;
         init;
     }
-    public override void Write(Utf8JsonWriter writer) {
+    internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
@@ -2265,19 +2266,19 @@ public sealed class InputRecognitionExampleString : InputRecognitionExample {
         } WriteText(writer, Value);
     }
 }
-public abstract class InputRecognitionMode : InputDocument {
-    private protected InputRecognitionMode() {
-    } internal static InputRecognitionMode Read(JsonElement value) {
-        if ((value.ValueKind == JsonValueKind.String) && (value.ValueKind == JsonValueKind.String && value.GetString() == "whole")) return InputRecognitionModeWhole.Read(value);
-        if ((value.ValueKind == JsonValueKind.String) && (value.ValueKind == JsonValueKind.String && value.GetString() == "boundary_only")) return InputRecognitionModeBoundaryOnly.Read(value);
+public abstract class RecognitionMode : AuthoredDocument {
+    private protected RecognitionMode() {
+    } internal static RecognitionMode Read(JsonElement value) {
+        if ((value.ValueKind == JsonValueKind.String) && (value.ValueKind == JsonValueKind.String && value.GetString() == "whole")) return RecognitionModeWhole.Read(value);
+        if ((value.ValueKind == JsonValueKind.String) && (value.ValueKind == JsonValueKind.String && value.GetString() == "boundary_only")) return RecognitionModeBoundaryOnly.Read(value);
         throw new JsonException("Authored data does not match the native Request schema.");
     }
 }
-public sealed class InputRecognitionModeBoundaryOnly : InputRecognitionMode {
-    internal new static InputRecognitionModeBoundaryOnly Read(JsonElement value) => new() {
+public sealed class RecognitionModeBoundaryOnly : RecognitionMode {
+    internal new static RecognitionModeBoundaryOnly Read(JsonElement value) => new() {
         ParsedDocument = value.Clone()
     };
-    public override void Write(Utf8JsonWriter writer) {
+    internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
@@ -2285,11 +2286,11 @@ public sealed class InputRecognitionModeBoundaryOnly : InputRecognitionMode {
         } WriteText(writer, "boundary_only");
     }
 }
-public sealed class InputRecognitionModeWhole : InputRecognitionMode {
-    internal new static InputRecognitionModeWhole Read(JsonElement value) => new() {
+public sealed class RecognitionModeWhole : RecognitionMode {
+    internal new static RecognitionModeWhole Read(JsonElement value) => new() {
         ParsedDocument = value.Clone()
     };
-    public override void Write(Utf8JsonWriter writer) {
+    internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
@@ -2297,12 +2298,12 @@ public sealed class InputRecognitionModeWhole : InputRecognitionMode {
         } WriteText(writer, "whole");
     }
 }
-public sealed class InputRecognitionSeedSpan : InputDocument {
+public sealed class RecognitionSeedSpan : AuthoredDocument {
     public required ulong End {
         get;
         init;
     }
-    public InputPresence<string> Kind {
+    public AuthoredPresence<string> Kind {
         get;
         init;
     }
@@ -2310,7 +2311,7 @@ public sealed class InputRecognitionSeedSpan : InputDocument {
         get;
         init;
     }
-    public override void Write(Utf8JsonWriter writer) {
+    internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
@@ -2326,25 +2327,25 @@ public sealed class InputRecognitionSeedSpan : InputDocument {
         writer.WriteEndObject();
     }
 }
-public sealed class InputRecognitionStageContext : InputDocument {
-    public InputPresence<string> Boundary {
+public sealed class RecognitionStageContext : AuthoredDocument {
+    public AuthoredPresence<string> Boundary {
         get;
         init;
     }
-    public InputPresence<string> KindEdge {
+    public AuthoredPresence<string> KindEdge {
         get;
         init;
     }
-    public InputPresence<string> Relation {
+    public AuthoredPresence<string> Relation {
         get;
         init;
     }
-    internal static InputRecognitionStageContext Read(JsonElement value) => new() {
-        ParsedDocument = value.Clone(), Boundary = value.TryGetProperty("boundary", out _) ? (InputPresence<string>)(value.GetProperty("boundary").GetString()!) : default,
-        KindEdge = value.TryGetProperty("kind_edge", out _) ? (InputPresence<string>)(value.GetProperty("kind_edge").GetString()!) : default,
-        Relation = value.TryGetProperty("relation", out _) ? (InputPresence<string>)(value.GetProperty("relation").GetString()!) : default
+    internal static RecognitionStageContext Read(JsonElement value) => new() {
+        ParsedDocument = value.Clone(), Boundary = value.TryGetProperty("boundary", out _) ? (AuthoredPresence<string>)(value.GetProperty("boundary").GetString()!) : default,
+        KindEdge = value.TryGetProperty("kind_edge", out _) ? (AuthoredPresence<string>)(value.GetProperty("kind_edge").GetString()!) : default,
+        Relation = value.TryGetProperty("relation", out _) ? (AuthoredPresence<string>)(value.GetProperty("relation").GetString()!) : default
     };
-    public override void Write(Utf8JsonWriter writer) {
+    internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
@@ -2362,48 +2363,48 @@ public sealed class InputRecognitionStageContext : InputDocument {
         } writer.WriteEndObject();
     }
 }
-public sealed class InputRecognizeDefinition : InputDocument {
-    public InputPresence<InputAuthoredInputDeclaration> ContextSchema {
+public sealed class RecognizeDefinition : AuthoredDocument {
+    public AuthoredPresence<AuthoredInputDeclaration> ContextSchema {
         get;
         init;
     }
-    public InputPresence<InputAuthoredInputDeclaration> ItemSchema {
+    public AuthoredPresence<AuthoredInputDeclaration> ItemSchema {
         get;
         init;
     }
-    public InputPresence<InputAuthoredName> Model {
+    public AuthoredPresence<AuthoredName> Model {
         get;
         init;
     }
-    public InputPresence<string> Name {
+    public AuthoredPresence<string> Name {
         get;
         init;
     }
-    public InputPresence<InputAuthoredPointers> On {
+    public AuthoredPresence<AuthoredPointers> On {
         get;
         init;
     }
-    public InputPresence<InputAuthoredProfile> Profile {
+    public AuthoredPresence<AuthoredProfile> Profile {
         get;
         init;
     }
-    public required InputRecognizeQuestion Recognize {
+    public required RecognizeQuestion Recognize {
         get;
         init;
     }
-    public InputPresence<InputAuthoredCut> RelationThreshold {
+    public AuthoredPresence<AuthoredCut> RelationThreshold {
         get;
         init;
     }
-    public InputPresence<InputAuthoredCut> Threshold {
+    public AuthoredPresence<AuthoredCut> Threshold {
         get;
         init;
     }
-    public InputPresence<long> WordingVersion {
+    public AuthoredPresence<long> WordingVersion {
         get;
         init;
     }
-    public override void Write(Utf8JsonWriter writer) {
+    internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
@@ -2451,48 +2452,48 @@ public sealed class InputRecognizeDefinition : InputDocument {
         } writer.WriteEndObject();
     }
 }
-public sealed class InputRecognizeQuestion : InputDocument {
-    public InputPresence<InputAuthoredQuestionText> EntityDefinition {
+public sealed class RecognizeQuestion : AuthoredDocument {
+    public AuthoredPresence<AuthoredQuestionText> EntityDefinition {
         get;
         init;
     }
-    public InputPresence<InputAuthoredQuestionText> Instructions {
+    public AuthoredPresence<AuthoredQuestionText> Instructions {
         get;
         init;
     }
-    public InputPresence<IReadOnlyDictionary<string, InputAuthoredDescription>> Kinds {
+    public AuthoredPresence<IReadOnlyList<KeyValuePair<string, AuthoredDescription>>> Kinds {
         get;
         init;
     }
-    public InputPresence<InputRecognitionMode> Mode {
+    public AuthoredPresence<RecognitionMode> Mode {
         get;
         init;
     }
-    public InputPresence<IReadOnlyList<InputAuthoredRelation>> Relations {
+    public AuthoredPresence<IReadOnlyList<AuthoredRelation>> Relations {
         get;
         init;
     }
-    public InputPresence<uint> SnippetPieces {
+    public AuthoredPresence<uint> SnippetPieces {
         get;
         init;
     }
-    public InputPresence<InputRecognitionStageContext> StageContext {
+    public AuthoredPresence<RecognitionStageContext> StageContext {
         get;
         init;
     }
-    internal static InputRecognizeQuestion Read(JsonElement value) => new() {
+    internal static RecognizeQuestion Read(JsonElement value) => new() {
         ParsedDocument = value.Clone(), EntityDefinition = value.TryGetProperty("entity_definition",
-        out _) ? (InputPresence<InputAuthoredQuestionText>)(InputAuthoredQuestionText.Read(value.GetProperty("entity_definition"))) : default,
-        Instructions = value.TryGetProperty("instructions", out _) ? (InputPresence<InputAuthoredQuestionText>)(InputAuthoredQuestionText.Read(value.GetProperty("instructions"))) : default,
-        Kinds = value.TryGetProperty("kinds", out _) ? (InputPresence<IReadOnlyDictionary<string, InputAuthoredDescription>>)(new System.Collections.ObjectModel.ReadOnlyDictionary<string,
-        InputAuthoredDescription>(value.GetProperty("kinds").EnumerateObject().ToDictionary(entry0 => entry0.Name,
-        entry0 => InputAuthoredDescription.Read(entry0.Value)))) : default, Mode = value.TryGetProperty("mode",
-        out _) ? (InputPresence<InputRecognitionMode>)(InputRecognitionMode.Read(value.GetProperty("mode"))) : default,
-        Relations = value.TryGetProperty("relations", out _) ? (InputPresence<IReadOnlyList<InputAuthoredRelation>>)(Array.AsReadOnly(value.GetProperty("relations").EnumerateArray().Select(item0 => InputAuthoredRelation.Read(item0)).ToArray())) : default,
-        SnippetPieces = value.TryGetProperty("snippet_pieces", out _) ? (InputPresence<uint>)(value.GetProperty("snippet_pieces").GetUInt32()) : default,
-        StageContext = value.TryGetProperty("stage_context", out _) ? (InputPresence<InputRecognitionStageContext>)(InputRecognitionStageContext.Read(value.GetProperty("stage_context"))) : default
+        out _) ? (AuthoredPresence<AuthoredQuestionText>)(AuthoredQuestionText.Read(value.GetProperty("entity_definition"))) : default,
+        Instructions = value.TryGetProperty("instructions", out _) ? (AuthoredPresence<AuthoredQuestionText>)(AuthoredQuestionText.Read(value.GetProperty("instructions"))) : default,
+        Kinds = value.TryGetProperty("kinds", out _) ? (AuthoredPresence<IReadOnlyList<KeyValuePair<string,
+        AuthoredDescription>>>)(Array.AsReadOnly(value.GetProperty("kinds").EnumerateObject().Select(entry0 => new KeyValuePair<string,
+        AuthoredDescription>(entry0.Name, AuthoredDescription.Read(entry0.Value))).ToArray())) : default,
+        Mode = value.TryGetProperty("mode", out _) ? (AuthoredPresence<RecognitionMode>)(RecognitionMode.Read(value.GetProperty("mode"))) : default,
+        Relations = value.TryGetProperty("relations", out _) ? (AuthoredPresence<IReadOnlyList<AuthoredRelation>>)(Array.AsReadOnly(value.GetProperty("relations").EnumerateArray().Select(item0 => AuthoredRelation.Read(item0)).ToArray())) : default,
+        SnippetPieces = value.TryGetProperty("snippet_pieces", out _) ? (AuthoredPresence<uint>)(value.GetProperty("snippet_pieces").GetUInt32()) : default,
+        StageContext = value.TryGetProperty("stage_context", out _) ? (AuthoredPresence<RecognitionStageContext>)(RecognitionStageContext.Read(value.GetProperty("stage_context"))) : default
     };
-    public override void Write(Utf8JsonWriter writer) {
+    internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
@@ -2535,7 +2536,7 @@ public sealed class InputRecognizeQuestion : InputDocument {
         } writer.WriteEndObject();
     }
 }
-public sealed class InputRelateFields : InputDocument {
+public sealed class RelateFields : AuthoredDocument {
     public required string Kind {
         get;
         init;
@@ -2544,10 +2545,10 @@ public sealed class InputRelateFields : InputDocument {
         get;
         init;
     }
-    internal static InputRelateFields Read(JsonElement value) => new() {
+    internal static RelateFields Read(JsonElement value) => new() {
         ParsedDocument = value.Clone(), Kind = value.GetProperty("kind").GetString()!, Name = value.GetProperty("name").GetString()!
     };
-    public override void Write(Utf8JsonWriter writer) {
+    internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
@@ -2560,20 +2561,20 @@ public sealed class InputRelateFields : InputDocument {
         writer.WriteEndObject();
     }
 }
-public sealed class InputRelateQuestion : InputDocument {
-    public InputPresence<InputRelateFields> Fields {
+public sealed class RelateQuestion : AuthoredDocument {
+    public AuthoredPresence<RelateFields> Fields {
         get;
         init;
     }
-    public required IReadOnlyList<InputAuthoredRelation> Relations {
+    public required IReadOnlyList<AuthoredRelation> Relations {
         get;
         init;
     }
-    internal static InputRelateQuestion Read(JsonElement value) => new() {
-        ParsedDocument = value.Clone(), Fields = value.TryGetProperty("fields", out _) ? (InputPresence<InputRelateFields>)(InputRelateFields.Read(value.GetProperty("fields"))) : default,
-        Relations = Array.AsReadOnly(value.GetProperty("relations").EnumerateArray().Select(item0 => InputAuthoredRelation.Read(item0)).ToArray())
+    internal static RelateQuestion Read(JsonElement value) => new() {
+        ParsedDocument = value.Clone(), Fields = value.TryGetProperty("fields", out _) ? (AuthoredPresence<RelateFields>)(RelateFields.Read(value.GetProperty("fields"))) : default,
+        Relations = Array.AsReadOnly(value.GetProperty("relations").EnumerateArray().Select(item0 => AuthoredRelation.Read(item0)).ToArray())
     };
-    public override void Write(Utf8JsonWriter writer) {
+    internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
@@ -2592,16 +2593,16 @@ public sealed class InputRelateQuestion : InputDocument {
         writer.WriteEndObject();
     }
 }
-public sealed class InputRequest : InputDocument {
-    public required InputRequestCall Call {
+public sealed class Request : AuthoredDocument {
+    public required RequestCall Call {
         get;
         init;
     }
-    public required InputRequestVersion Schema {
+    public required RequestVersion Schema {
         get;
         init;
     }
-    public override void Write(Utf8JsonWriter writer) {
+    internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
@@ -2616,16 +2617,16 @@ public sealed class InputRequest : InputDocument {
         writer.WriteEndObject();
     }
 }
-public abstract class InputRequestBatch : InputDocument {
-    private protected InputRequestBatch() {
+public abstract class RequestBatch : AuthoredDocument {
+    private protected RequestBatch() {
     }
 }
-public sealed class InputRequestBatchInteger : InputRequestBatch {
+public sealed class RequestBatchInteger : RequestBatch {
     public required ulong Value {
         get;
         init;
     }
-    public override void Write(Utf8JsonWriter writer) {
+    internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
@@ -2633,12 +2634,12 @@ public sealed class InputRequestBatchInteger : InputRequestBatch {
         } writer.WriteNumberValue(Value);
     }
 }
-public sealed class InputRequestBatchString : InputRequestBatch {
+public sealed class RequestBatchString : RequestBatch {
     public required string Value {
         get;
         init;
     }
-    public override void Write(Utf8JsonWriter writer) {
+    internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
@@ -2646,24 +2647,24 @@ public sealed class InputRequestBatchString : InputRequestBatch {
         } WriteText(writer, Value);
     }
 }
-public sealed class InputRequestCall : InputDocument {
-    public required InputRequestFunction Function {
+public sealed class RequestCall : AuthoredDocument {
+    public required RequestFunction Function {
         get;
         init;
     }
-    public required InputRequestInput Input {
+    public required RequestInput Input {
         get;
         init;
     }
-    public InputPresence<InputRequestOptions> Options {
+    public AuthoredPresence<RequestOptions> Options {
         get;
         init;
     }
-    public required InputRequestQuestion Question {
+    public required RequestQuestion Question {
         get;
         init;
     }
-    public override void Write(Utf8JsonWriter writer) {
+    internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
@@ -2685,53 +2686,53 @@ public sealed class InputRequestCall : InputDocument {
         writer.WriteEndObject();
     }
 }
-public abstract class InputRequestDefinition : InputDocument {
-    private protected InputRequestDefinition() {
-    } internal static InputRequestDefinition Read(JsonElement value) {
+public abstract class RequestDefinition : AuthoredDocument {
+    private protected RequestDefinition() {
+    } internal static RequestDefinition Read(JsonElement value) {
         if ((value.ValueKind == JsonValueKind.Object) && value.ValueKind == JsonValueKind.Object && value.TryGetProperty("decide",
-        out _)) return InputRequestDefinitionAuthoredDecide.Read(value);
+        out _)) return RequestDefinitionAuthoredDecide.Read(value);
         if ((value.ValueKind == JsonValueKind.Object) && value.ValueKind == JsonValueKind.Object && value.TryGetProperty("choose",
-        out _)) return InputRequestDefinitionAuthoredChoose.Read(value);
+        out _)) return RequestDefinitionAuthoredChoose.Read(value);
         if ((value.ValueKind == JsonValueKind.Object) && value.ValueKind == JsonValueKind.Object && value.TryGetProperty("tag",
-        out _)) return InputRequestDefinitionAuthoredTag.Read(value);
+        out _)) return RequestDefinitionAuthoredTag.Read(value);
         if ((value.ValueKind == JsonValueKind.Object) && value.ValueKind == JsonValueKind.Object && value.TryGetProperty("score",
-        out _)) return InputRequestDefinitionAuthoredScore.Read(value);
+        out _)) return RequestDefinitionAuthoredScore.Read(value);
         if ((value.ValueKind == JsonValueKind.Object) && value.ValueKind == JsonValueKind.Object && value.TryGetProperty("version",
-        out _) && value.TryGetProperty("relate", out _) && (value.GetProperty("version").ValueKind == JsonValueKind.Number && value.GetProperty("version").GetInt64() == 1)) return InputRequestDefinitionAuthoredRelate.Read(value);
+        out _) && value.TryGetProperty("relate", out _) && (value.GetProperty("version").ValueKind == JsonValueKind.Number && value.GetProperty("version").GetInt64() == 1)) return RequestDefinitionAuthoredRelate.Read(value);
         if ((value.ValueKind == JsonValueKind.Object) && value.ValueKind == JsonValueKind.Object && value.TryGetProperty("find",
-        out _)) return InputRequestDefinitionAuthoredFind.Read(value);
+        out _)) return RequestDefinitionAuthoredFind.Read(value);
         if ((value.ValueKind == JsonValueKind.Object) && value.ValueKind == JsonValueKind.Object && value.TryGetProperty("version",
-        out _) && value.TryGetProperty("recognize", out _) && (value.GetProperty("version").ValueKind == JsonValueKind.Number && value.GetProperty("version").GetInt64() == 1)) return InputRequestDefinitionRecognizeDefinition.Read(value);
+        out _) && value.TryGetProperty("recognize", out _) && (value.GetProperty("version").ValueKind == JsonValueKind.Number && value.GetProperty("version").GetInt64() == 1)) return RequestDefinitionRecognizeDefinition.Read(value);
         if ((value.ValueKind == JsonValueKind.Object) && value.ValueKind == JsonValueKind.Object && value.TryGetProperty("version",
-        out _) && value.TryGetProperty("questions", out _) && (value.GetProperty("version").ValueKind == JsonValueKind.Number && value.GetProperty("version").GetInt64() == 1)) return InputRequestDefinitionAnnotateDefinition.Read(value);
+        out _) && value.TryGetProperty("questions", out _) && (value.GetProperty("version").ValueKind == JsonValueKind.Number && value.GetProperty("version").GetInt64() == 1)) return RequestDefinitionAnnotateDefinition.Read(value);
         throw new JsonException("Authored data does not match the native Request schema.");
     }
 }
-public sealed class InputRequestDefinitionAnnotateDefinition : InputRequestDefinition {
-    public InputPresence<JsonElement> Batch {
+public sealed class RequestDefinitionAnnotateDefinition : RequestDefinition {
+    public AuthoredPresence<JsonElement> Batch {
         get;
         init;
     }
-    public InputPresence<InputAuthoredProfile> Profile {
+    public AuthoredPresence<AuthoredProfile> Profile {
         get;
         init;
     }
-    public required IReadOnlyDictionary<string, InputAnnotateQuestion> Questions {
+    public required IReadOnlyList<KeyValuePair<string, AnnotateQuestion>> Questions {
         get;
         init;
     }
-    public InputPresence<InputAuthoredThreshold> Threshold {
+    public AuthoredPresence<AuthoredThreshold> Threshold {
         get;
         init;
     }
-    internal new static InputRequestDefinitionAnnotateDefinition Read(JsonElement value) => new() {
-        ParsedDocument = value.Clone(), Batch = value.TryGetProperty("batch", out _) ? (InputPresence<JsonElement>)(value.GetProperty("batch").Clone()) : default,
-        Profile = value.TryGetProperty("profile", out _) ? (InputPresence<InputAuthoredProfile>)(InputAuthoredProfile.Read(value.GetProperty("profile"))) : default,
-        Questions = new System.Collections.ObjectModel.ReadOnlyDictionary<string, InputAnnotateQuestion>(value.GetProperty("questions").EnumerateObject().ToDictionary(entry0 => entry0.Name,
-        entry0 => InputAnnotateQuestion.Read(entry0.Value))), Threshold = value.TryGetProperty("threshold",
-        out _) ? (InputPresence<InputAuthoredThreshold>)(InputAuthoredThreshold.Read(value.GetProperty("threshold"))) : default
+    internal new static RequestDefinitionAnnotateDefinition Read(JsonElement value) => new() {
+        ParsedDocument = value.Clone(), Batch = value.TryGetProperty("batch", out _) ? (AuthoredPresence<JsonElement>)(value.GetProperty("batch").Clone()) : default,
+        Profile = value.TryGetProperty("profile", out _) ? (AuthoredPresence<AuthoredProfile>)(AuthoredProfile.Read(value.GetProperty("profile"))) : default,
+        Questions = Array.AsReadOnly(value.GetProperty("questions").EnumerateObject().Select(entry0 => new KeyValuePair<string,
+        AnnotateQuestion>(entry0.Name, AnnotateQuestion.Read(entry0.Value))).ToArray()), Threshold = value.TryGetProperty("threshold",
+        out _) ? (AuthoredPresence<AuthoredThreshold>)(AuthoredThreshold.Read(value.GetProperty("threshold"))) : default
     };
-    public override void Write(Utf8JsonWriter writer) {
+    internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
@@ -2760,65 +2761,65 @@ public sealed class InputRequestDefinitionAnnotateDefinition : InputRequestDefin
         writer.WriteEndObject();
     }
 }
-public sealed class InputRequestDefinitionAuthoredChoose : InputRequestDefinition {
-    public InputPresence<InputRequestDefinitionAuthoredChooseBatch> Batch {
+public sealed class RequestDefinitionAuthoredChoose : RequestDefinition {
+    public AuthoredPresence<RequestDefinitionAuthoredChooseBatch> Batch {
         get;
         init;
     }
-    public required InputAuthoredQuestionText Choose {
+    public required AuthoredQuestionText Choose {
         get;
         init;
     }
-    public InputPresence<InputAuthoredInputDeclaration> ContextSchema {
+    public AuthoredPresence<AuthoredInputDeclaration> ContextSchema {
         get;
         init;
     }
-    public InputPresence<InputAuthoredInputDeclaration> ItemSchema {
+    public AuthoredPresence<AuthoredInputDeclaration> ItemSchema {
         get;
         init;
     }
-    public InputPresence<InputAuthoredName> Model {
+    public AuthoredPresence<AuthoredName> Model {
         get;
         init;
     }
-    public InputPresence<string> Name {
+    public AuthoredPresence<string> Name {
         get;
         init;
     }
-    public InputPresence<InputAuthoredPointers> On {
+    public AuthoredPresence<AuthoredPointers> On {
         get;
         init;
     }
-    public InputPresence<InputAuthoredOptions> Options {
+    public AuthoredPresence<AuthoredOptions> Options {
         get;
         init;
     }
-    public InputPresence<InputAuthoredProfile> Profile {
+    public AuthoredPresence<AuthoredProfile> Profile {
         get;
         init;
     }
-    public InputPresence<InputAuthoredCut> Threshold {
+    public AuthoredPresence<AuthoredCut> Threshold {
         get;
         init;
     }
-    public InputPresence<long> WordingVersion {
+    public AuthoredPresence<long> WordingVersion {
         get;
         init;
     }
-    internal new static InputRequestDefinitionAuthoredChoose Read(JsonElement value) => new() {
-        ParsedDocument = value.Clone(), Batch = value.TryGetProperty("batch", out _) ? (InputPresence<InputRequestDefinitionAuthoredChooseBatch>)(InputRequestDefinitionAuthoredChooseBatch.Read(value.GetProperty("batch"))) : default,
-        Choose = InputAuthoredQuestionText.Read(value.GetProperty("choose")), ContextSchema = value.TryGetProperty("context_schema",
-        out _) ? (InputPresence<InputAuthoredInputDeclaration>)(InputAuthoredInputDeclaration.Read(value.GetProperty("context_schema"))) : default,
-        ItemSchema = value.TryGetProperty("item_schema", out _) ? (InputPresence<InputAuthoredInputDeclaration>)(InputAuthoredInputDeclaration.Read(value.GetProperty("item_schema"))) : default,
-        Model = value.TryGetProperty("model", out _) ? (InputPresence<InputAuthoredName>)(InputAuthoredName.Read(value.GetProperty("model"))) : default,
-        Name = value.TryGetProperty("name", out _) ? (InputPresence<string>)(value.GetProperty("name").GetString()!) : default,
-        On = value.TryGetProperty("on", out _) ? (InputPresence<InputAuthoredPointers>)(InputAuthoredPointers.Read(value.GetProperty("on"))) : default,
-        Options = value.TryGetProperty("options", out _) ? (InputPresence<InputAuthoredOptions>)(InputAuthoredOptions.Read(value.GetProperty("options"))) : default,
-        Profile = value.TryGetProperty("profile", out _) ? (InputPresence<InputAuthoredProfile>)(InputAuthoredProfile.Read(value.GetProperty("profile"))) : default,
-        Threshold = value.TryGetProperty("threshold", out _) ? (InputPresence<InputAuthoredCut>)(InputAuthoredCut.Read(value.GetProperty("threshold"))) : default,
-        WordingVersion = value.TryGetProperty("wording_version", out _) ? (InputPresence<long>)(value.GetProperty("wording_version").GetInt64()) : default
+    internal new static RequestDefinitionAuthoredChoose Read(JsonElement value) => new() {
+        ParsedDocument = value.Clone(), Batch = value.TryGetProperty("batch", out _) ? (AuthoredPresence<RequestDefinitionAuthoredChooseBatch>)(RequestDefinitionAuthoredChooseBatch.Read(value.GetProperty("batch"))) : default,
+        Choose = AuthoredQuestionText.Read(value.GetProperty("choose")), ContextSchema = value.TryGetProperty("context_schema",
+        out _) ? (AuthoredPresence<AuthoredInputDeclaration>)(AuthoredInputDeclaration.Read(value.GetProperty("context_schema"))) : default,
+        ItemSchema = value.TryGetProperty("item_schema", out _) ? (AuthoredPresence<AuthoredInputDeclaration>)(AuthoredInputDeclaration.Read(value.GetProperty("item_schema"))) : default,
+        Model = value.TryGetProperty("model", out _) ? (AuthoredPresence<AuthoredName>)(AuthoredName.Read(value.GetProperty("model"))) : default,
+        Name = value.TryGetProperty("name", out _) ? (AuthoredPresence<string>)(value.GetProperty("name").GetString()!) : default,
+        On = value.TryGetProperty("on", out _) ? (AuthoredPresence<AuthoredPointers>)(AuthoredPointers.Read(value.GetProperty("on"))) : default,
+        Options = value.TryGetProperty("options", out _) ? (AuthoredPresence<AuthoredOptions>)(AuthoredOptions.Read(value.GetProperty("options"))) : default,
+        Profile = value.TryGetProperty("profile", out _) ? (AuthoredPresence<AuthoredProfile>)(AuthoredProfile.Read(value.GetProperty("profile"))) : default,
+        Threshold = value.TryGetProperty("threshold", out _) ? (AuthoredPresence<AuthoredCut>)(AuthoredCut.Read(value.GetProperty("threshold"))) : default,
+        WordingVersion = value.TryGetProperty("wording_version", out _) ? (AuthoredPresence<long>)(value.GetProperty("wording_version").GetInt64()) : default
     };
-    public override void Write(Utf8JsonWriter writer) {
+    internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
@@ -2868,23 +2869,23 @@ public sealed class InputRequestDefinitionAuthoredChoose : InputRequestDefinitio
         } writer.WriteEndObject();
     }
 }
-public abstract class InputRequestDefinitionAuthoredChooseBatch : InputDocument {
-    private protected InputRequestDefinitionAuthoredChooseBatch() {
-    } internal static InputRequestDefinitionAuthoredChooseBatch Read(JsonElement value) {
-        if ((value.ValueKind == JsonValueKind.String && value.GetString() == "max")) return InputRequestDefinitionAuthoredChooseBatchMax.Read(value);
-        if ((value.ValueKind == JsonValueKind.Number)) return InputRequestDefinitionAuthoredChooseBatchInteger.Read(value);
+public abstract class RequestDefinitionAuthoredChooseBatch : AuthoredDocument {
+    private protected RequestDefinitionAuthoredChooseBatch() {
+    } internal static RequestDefinitionAuthoredChooseBatch Read(JsonElement value) {
+        if ((value.ValueKind == JsonValueKind.String && value.GetString() == "max")) return RequestDefinitionAuthoredChooseBatchMax.Read(value);
+        if ((value.ValueKind == JsonValueKind.Number)) return RequestDefinitionAuthoredChooseBatchInteger.Read(value);
         throw new JsonException("Authored data does not match the native Request schema.");
     }
 }
-public sealed class InputRequestDefinitionAuthoredChooseBatchInteger : InputRequestDefinitionAuthoredChooseBatch {
+public sealed class RequestDefinitionAuthoredChooseBatchInteger : RequestDefinitionAuthoredChooseBatch {
     public required long Value {
         get;
         init;
     }
-    internal new static InputRequestDefinitionAuthoredChooseBatchInteger Read(JsonElement value) => new() {
+    internal new static RequestDefinitionAuthoredChooseBatchInteger Read(JsonElement value) => new() {
         ParsedDocument = value.Clone(), Value = value.GetInt64()
     };
-    public override void Write(Utf8JsonWriter writer) {
+    internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
@@ -2892,11 +2893,11 @@ public sealed class InputRequestDefinitionAuthoredChooseBatchInteger : InputRequ
         } writer.WriteNumberValue(Value);
     }
 }
-public sealed class InputRequestDefinitionAuthoredChooseBatchMax : InputRequestDefinitionAuthoredChooseBatch {
-    internal new static InputRequestDefinitionAuthoredChooseBatchMax Read(JsonElement value) => new() {
+public sealed class RequestDefinitionAuthoredChooseBatchMax : RequestDefinitionAuthoredChooseBatch {
+    internal new static RequestDefinitionAuthoredChooseBatchMax Read(JsonElement value) => new() {
         ParsedDocument = value.Clone()
     };
-    public override void Write(Utf8JsonWriter writer) {
+    internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
@@ -2904,70 +2905,70 @@ public sealed class InputRequestDefinitionAuthoredChooseBatchMax : InputRequestD
         } WriteText(writer, "max");
     }
 }
-public sealed class InputRequestDefinitionAuthoredDecide : InputRequestDefinition {
-    public InputPresence<InputRequestDefinitionAuthoredDecideBatch> Batch {
+public sealed class RequestDefinitionAuthoredDecide : RequestDefinition {
+    public AuthoredPresence<RequestDefinitionAuthoredDecideBatch> Batch {
         get;
         init;
     }
-    public InputPresence<InputAuthoredInputDeclaration> ContextSchema {
+    public AuthoredPresence<AuthoredInputDeclaration> ContextSchema {
         get;
         init;
     }
-    public required InputAuthoredQuestionText Decide {
+    public required AuthoredQuestionText Decide {
         get;
         init;
     }
-    public InputPresence<InputAuthoredCriterion> False {
+    public AuthoredPresence<AuthoredCriterion> False {
         get;
         init;
     }
-    public InputPresence<InputAuthoredInputDeclaration> ItemSchema {
+    public AuthoredPresence<AuthoredInputDeclaration> ItemSchema {
         get;
         init;
     }
-    public InputPresence<InputAuthoredName> Model {
+    public AuthoredPresence<AuthoredName> Model {
         get;
         init;
     }
-    public InputPresence<string> Name {
+    public AuthoredPresence<string> Name {
         get;
         init;
     }
-    public InputPresence<InputAuthoredPointers> On {
+    public AuthoredPresence<AuthoredPointers> On {
         get;
         init;
     }
-    public InputPresence<InputAuthoredProfile> Profile {
+    public AuthoredPresence<AuthoredProfile> Profile {
         get;
         init;
     }
-    public InputPresence<InputAuthoredThreshold> Threshold {
+    public AuthoredPresence<AuthoredThreshold> Threshold {
         get;
         init;
     }
-    public InputPresence<InputAuthoredCriterion> True {
+    public AuthoredPresence<AuthoredCriterion> True {
         get;
         init;
     }
-    public InputPresence<long> WordingVersion {
+    public AuthoredPresence<long> WordingVersion {
         get;
         init;
     }
-    internal new static InputRequestDefinitionAuthoredDecide Read(JsonElement value) => new() {
-        ParsedDocument = value.Clone(), Batch = value.TryGetProperty("batch", out _) ? (InputPresence<InputRequestDefinitionAuthoredDecideBatch>)(InputRequestDefinitionAuthoredDecideBatch.Read(value.GetProperty("batch"))) : default,
-        ContextSchema = value.TryGetProperty("context_schema", out _) ? (InputPresence<InputAuthoredInputDeclaration>)(InputAuthoredInputDeclaration.Read(value.GetProperty("context_schema"))) : default,
-        Decide = InputAuthoredQuestionText.Read(value.GetProperty("decide")), False = value.TryGetProperty("false",
-        out _) ? (InputPresence<InputAuthoredCriterion>)(InputAuthoredCriterion.Read(value.GetProperty("false"))) : default,
-        ItemSchema = value.TryGetProperty("item_schema", out _) ? (InputPresence<InputAuthoredInputDeclaration>)(InputAuthoredInputDeclaration.Read(value.GetProperty("item_schema"))) : default,
-        Model = value.TryGetProperty("model", out _) ? (InputPresence<InputAuthoredName>)(InputAuthoredName.Read(value.GetProperty("model"))) : default,
-        Name = value.TryGetProperty("name", out _) ? (InputPresence<string>)(value.GetProperty("name").GetString()!) : default,
-        On = value.TryGetProperty("on", out _) ? (InputPresence<InputAuthoredPointers>)(InputAuthoredPointers.Read(value.GetProperty("on"))) : default,
-        Profile = value.TryGetProperty("profile", out _) ? (InputPresence<InputAuthoredProfile>)(InputAuthoredProfile.Read(value.GetProperty("profile"))) : default,
-        Threshold = value.TryGetProperty("threshold", out _) ? (InputPresence<InputAuthoredThreshold>)(InputAuthoredThreshold.Read(value.GetProperty("threshold"))) : default,
-        True = value.TryGetProperty("true", out _) ? (InputPresence<InputAuthoredCriterion>)(InputAuthoredCriterion.Read(value.GetProperty("true"))) : default,
-        WordingVersion = value.TryGetProperty("wording_version", out _) ? (InputPresence<long>)(value.GetProperty("wording_version").GetInt64()) : default
+    internal new static RequestDefinitionAuthoredDecide Read(JsonElement value) => new() {
+        ParsedDocument = value.Clone(), Batch = value.TryGetProperty("batch", out _) ? (AuthoredPresence<RequestDefinitionAuthoredDecideBatch>)(RequestDefinitionAuthoredDecideBatch.Read(value.GetProperty("batch"))) : default,
+        ContextSchema = value.TryGetProperty("context_schema", out _) ? (AuthoredPresence<AuthoredInputDeclaration>)(AuthoredInputDeclaration.Read(value.GetProperty("context_schema"))) : default,
+        Decide = AuthoredQuestionText.Read(value.GetProperty("decide")), False = value.TryGetProperty("false",
+        out _) ? (AuthoredPresence<AuthoredCriterion>)(AuthoredCriterion.Read(value.GetProperty("false"))) : default,
+        ItemSchema = value.TryGetProperty("item_schema", out _) ? (AuthoredPresence<AuthoredInputDeclaration>)(AuthoredInputDeclaration.Read(value.GetProperty("item_schema"))) : default,
+        Model = value.TryGetProperty("model", out _) ? (AuthoredPresence<AuthoredName>)(AuthoredName.Read(value.GetProperty("model"))) : default,
+        Name = value.TryGetProperty("name", out _) ? (AuthoredPresence<string>)(value.GetProperty("name").GetString()!) : default,
+        On = value.TryGetProperty("on", out _) ? (AuthoredPresence<AuthoredPointers>)(AuthoredPointers.Read(value.GetProperty("on"))) : default,
+        Profile = value.TryGetProperty("profile", out _) ? (AuthoredPresence<AuthoredProfile>)(AuthoredProfile.Read(value.GetProperty("profile"))) : default,
+        Threshold = value.TryGetProperty("threshold", out _) ? (AuthoredPresence<AuthoredThreshold>)(AuthoredThreshold.Read(value.GetProperty("threshold"))) : default,
+        True = value.TryGetProperty("true", out _) ? (AuthoredPresence<AuthoredCriterion>)(AuthoredCriterion.Read(value.GetProperty("true"))) : default,
+        WordingVersion = value.TryGetProperty("wording_version", out _) ? (AuthoredPresence<long>)(value.GetProperty("wording_version").GetInt64()) : default
     };
-    public override void Write(Utf8JsonWriter writer) {
+    internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
@@ -3021,23 +3022,23 @@ public sealed class InputRequestDefinitionAuthoredDecide : InputRequestDefinitio
         } writer.WriteEndObject();
     }
 }
-public abstract class InputRequestDefinitionAuthoredDecideBatch : InputDocument {
-    private protected InputRequestDefinitionAuthoredDecideBatch() {
-    } internal static InputRequestDefinitionAuthoredDecideBatch Read(JsonElement value) {
-        if ((value.ValueKind == JsonValueKind.String && value.GetString() == "max")) return InputRequestDefinitionAuthoredDecideBatchMax.Read(value);
-        if ((value.ValueKind == JsonValueKind.Number)) return InputRequestDefinitionAuthoredDecideBatchInteger.Read(value);
+public abstract class RequestDefinitionAuthoredDecideBatch : AuthoredDocument {
+    private protected RequestDefinitionAuthoredDecideBatch() {
+    } internal static RequestDefinitionAuthoredDecideBatch Read(JsonElement value) {
+        if ((value.ValueKind == JsonValueKind.String && value.GetString() == "max")) return RequestDefinitionAuthoredDecideBatchMax.Read(value);
+        if ((value.ValueKind == JsonValueKind.Number)) return RequestDefinitionAuthoredDecideBatchInteger.Read(value);
         throw new JsonException("Authored data does not match the native Request schema.");
     }
 }
-public sealed class InputRequestDefinitionAuthoredDecideBatchInteger : InputRequestDefinitionAuthoredDecideBatch {
+public sealed class RequestDefinitionAuthoredDecideBatchInteger : RequestDefinitionAuthoredDecideBatch {
     public required long Value {
         get;
         init;
     }
-    internal new static InputRequestDefinitionAuthoredDecideBatchInteger Read(JsonElement value) => new() {
+    internal new static RequestDefinitionAuthoredDecideBatchInteger Read(JsonElement value) => new() {
         ParsedDocument = value.Clone(), Value = value.GetInt64()
     };
-    public override void Write(Utf8JsonWriter writer) {
+    internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
@@ -3045,11 +3046,11 @@ public sealed class InputRequestDefinitionAuthoredDecideBatchInteger : InputRequ
         } writer.WriteNumberValue(Value);
     }
 }
-public sealed class InputRequestDefinitionAuthoredDecideBatchMax : InputRequestDefinitionAuthoredDecideBatch {
-    internal new static InputRequestDefinitionAuthoredDecideBatchMax Read(JsonElement value) => new() {
+public sealed class RequestDefinitionAuthoredDecideBatchMax : RequestDefinitionAuthoredDecideBatch {
+    internal new static RequestDefinitionAuthoredDecideBatchMax Read(JsonElement value) => new() {
         ParsedDocument = value.Clone()
     };
-    public override void Write(Utf8JsonWriter writer) {
+    internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
@@ -3057,50 +3058,50 @@ public sealed class InputRequestDefinitionAuthoredDecideBatchMax : InputRequestD
         } WriteText(writer, "max");
     }
 }
-public sealed class InputRequestDefinitionAuthoredFind : InputRequestDefinition {
-    public InputPresence<InputAuthoredInputDeclaration> ContextSchema {
+public sealed class RequestDefinitionAuthoredFind : RequestDefinition {
+    public AuthoredPresence<AuthoredInputDeclaration> ContextSchema {
         get;
         init;
     }
-    public required InputAuthoredQuestionText Find {
+    public required AuthoredQuestionText Find {
         get;
         init;
     }
-    public InputPresence<InputAuthoredInputDeclaration> ItemSchema {
+    public AuthoredPresence<AuthoredInputDeclaration> ItemSchema {
         get;
         init;
     }
-    public InputPresence<InputAuthoredName> Model {
+    public AuthoredPresence<AuthoredName> Model {
         get;
         init;
     }
-    public InputPresence<string> Name {
+    public AuthoredPresence<string> Name {
         get;
         init;
     }
-    public InputPresence<InputAuthoredPointers> On {
+    public AuthoredPresence<AuthoredPointers> On {
         get;
         init;
     }
-    public InputPresence<InputAuthoredProfile> Profile {
+    public AuthoredPresence<AuthoredProfile> Profile {
         get;
         init;
     }
-    public InputPresence<long> WordingVersion {
+    public AuthoredPresence<long> WordingVersion {
         get;
         init;
     }
-    internal new static InputRequestDefinitionAuthoredFind Read(JsonElement value) => new() {
-        ParsedDocument = value.Clone(), ContextSchema = value.TryGetProperty("context_schema", out _) ? (InputPresence<InputAuthoredInputDeclaration>)(InputAuthoredInputDeclaration.Read(value.GetProperty("context_schema"))) : default,
-        Find = InputAuthoredQuestionText.Read(value.GetProperty("find")), ItemSchema = value.TryGetProperty("item_schema",
-        out _) ? (InputPresence<InputAuthoredInputDeclaration>)(InputAuthoredInputDeclaration.Read(value.GetProperty("item_schema"))) : default,
-        Model = value.TryGetProperty("model", out _) ? (InputPresence<InputAuthoredName>)(InputAuthoredName.Read(value.GetProperty("model"))) : default,
-        Name = value.TryGetProperty("name", out _) ? (InputPresence<string>)(value.GetProperty("name").GetString()!) : default,
-        On = value.TryGetProperty("on", out _) ? (InputPresence<InputAuthoredPointers>)(InputAuthoredPointers.Read(value.GetProperty("on"))) : default,
-        Profile = value.TryGetProperty("profile", out _) ? (InputPresence<InputAuthoredProfile>)(InputAuthoredProfile.Read(value.GetProperty("profile"))) : default,
-        WordingVersion = value.TryGetProperty("wording_version", out _) ? (InputPresence<long>)(value.GetProperty("wording_version").GetInt64()) : default
+    internal new static RequestDefinitionAuthoredFind Read(JsonElement value) => new() {
+        ParsedDocument = value.Clone(), ContextSchema = value.TryGetProperty("context_schema", out _) ? (AuthoredPresence<AuthoredInputDeclaration>)(AuthoredInputDeclaration.Read(value.GetProperty("context_schema"))) : default,
+        Find = AuthoredQuestionText.Read(value.GetProperty("find")), ItemSchema = value.TryGetProperty("item_schema",
+        out _) ? (AuthoredPresence<AuthoredInputDeclaration>)(AuthoredInputDeclaration.Read(value.GetProperty("item_schema"))) : default,
+        Model = value.TryGetProperty("model", out _) ? (AuthoredPresence<AuthoredName>)(AuthoredName.Read(value.GetProperty("model"))) : default,
+        Name = value.TryGetProperty("name", out _) ? (AuthoredPresence<string>)(value.GetProperty("name").GetString()!) : default,
+        On = value.TryGetProperty("on", out _) ? (AuthoredPresence<AuthoredPointers>)(AuthoredPointers.Read(value.GetProperty("on"))) : default,
+        Profile = value.TryGetProperty("profile", out _) ? (AuthoredPresence<AuthoredProfile>)(AuthoredProfile.Read(value.GetProperty("profile"))) : default,
+        WordingVersion = value.TryGetProperty("wording_version", out _) ? (AuthoredPresence<long>)(value.GetProperty("wording_version").GetInt64()) : default
     };
-    public override void Write(Utf8JsonWriter writer) {
+    internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
@@ -3138,50 +3139,50 @@ public sealed class InputRequestDefinitionAuthoredFind : InputRequestDefinition 
         } writer.WriteEndObject();
     }
 }
-public sealed class InputRequestDefinitionAuthoredRelate : InputRequestDefinition {
-    public InputPresence<InputAuthoredInputDeclaration> ContextSchema {
+public sealed class RequestDefinitionAuthoredRelate : RequestDefinition {
+    public AuthoredPresence<AuthoredInputDeclaration> ContextSchema {
         get;
         init;
     }
-    public InputPresence<InputAuthoredInputDeclaration> ItemSchema {
+    public AuthoredPresence<AuthoredInputDeclaration> ItemSchema {
         get;
         init;
     }
-    public InputPresence<InputAuthoredName> Model {
+    public AuthoredPresence<AuthoredName> Model {
         get;
         init;
     }
-    public InputPresence<string> Name {
+    public AuthoredPresence<string> Name {
         get;
         init;
     }
-    public InputPresence<InputAuthoredProfile> Profile {
+    public AuthoredPresence<AuthoredProfile> Profile {
         get;
         init;
     }
-    public required InputRelateQuestion Relate {
+    public required RelateQuestion Relate {
         get;
         init;
     }
-    public InputPresence<InputAuthoredCut> Threshold {
+    public AuthoredPresence<AuthoredCut> Threshold {
         get;
         init;
     }
-    public InputPresence<long> WordingVersion {
+    public AuthoredPresence<long> WordingVersion {
         get;
         init;
     }
-    internal new static InputRequestDefinitionAuthoredRelate Read(JsonElement value) => new() {
-        ParsedDocument = value.Clone(), ContextSchema = value.TryGetProperty("context_schema", out _) ? (InputPresence<InputAuthoredInputDeclaration>)(InputAuthoredInputDeclaration.Read(value.GetProperty("context_schema"))) : default,
-        ItemSchema = value.TryGetProperty("item_schema", out _) ? (InputPresence<InputAuthoredInputDeclaration>)(InputAuthoredInputDeclaration.Read(value.GetProperty("item_schema"))) : default,
-        Model = value.TryGetProperty("model", out _) ? (InputPresence<InputAuthoredName>)(InputAuthoredName.Read(value.GetProperty("model"))) : default,
-        Name = value.TryGetProperty("name", out _) ? (InputPresence<string>)(value.GetProperty("name").GetString()!) : default,
-        Profile = value.TryGetProperty("profile", out _) ? (InputPresence<InputAuthoredProfile>)(InputAuthoredProfile.Read(value.GetProperty("profile"))) : default,
-        Relate = InputRelateQuestion.Read(value.GetProperty("relate")), Threshold = value.TryGetProperty("threshold",
-        out _) ? (InputPresence<InputAuthoredCut>)(InputAuthoredCut.Read(value.GetProperty("threshold"))) : default,
-        WordingVersion = value.TryGetProperty("wording_version", out _) ? (InputPresence<long>)(value.GetProperty("wording_version").GetInt64()) : default
+    internal new static RequestDefinitionAuthoredRelate Read(JsonElement value) => new() {
+        ParsedDocument = value.Clone(), ContextSchema = value.TryGetProperty("context_schema", out _) ? (AuthoredPresence<AuthoredInputDeclaration>)(AuthoredInputDeclaration.Read(value.GetProperty("context_schema"))) : default,
+        ItemSchema = value.TryGetProperty("item_schema", out _) ? (AuthoredPresence<AuthoredInputDeclaration>)(AuthoredInputDeclaration.Read(value.GetProperty("item_schema"))) : default,
+        Model = value.TryGetProperty("model", out _) ? (AuthoredPresence<AuthoredName>)(AuthoredName.Read(value.GetProperty("model"))) : default,
+        Name = value.TryGetProperty("name", out _) ? (AuthoredPresence<string>)(value.GetProperty("name").GetString()!) : default,
+        Profile = value.TryGetProperty("profile", out _) ? (AuthoredPresence<AuthoredProfile>)(AuthoredProfile.Read(value.GetProperty("profile"))) : default,
+        Relate = RelateQuestion.Read(value.GetProperty("relate")), Threshold = value.TryGetProperty("threshold",
+        out _) ? (AuthoredPresence<AuthoredCut>)(AuthoredCut.Read(value.GetProperty("threshold"))) : default,
+        WordingVersion = value.TryGetProperty("wording_version", out _) ? (AuthoredPresence<long>)(value.GetProperty("wording_version").GetInt64()) : default
     };
-    public override void Write(Utf8JsonWriter writer) {
+    internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
@@ -3221,60 +3222,60 @@ public sealed class InputRequestDefinitionAuthoredRelate : InputRequestDefinitio
         } writer.WriteEndObject();
     }
 }
-public sealed class InputRequestDefinitionAuthoredScore : InputRequestDefinition {
-    public InputPresence<InputRequestDefinitionAuthoredScoreBatch> Batch {
+public sealed class RequestDefinitionAuthoredScore : RequestDefinition {
+    public AuthoredPresence<RequestDefinitionAuthoredScoreBatch> Batch {
         get;
         init;
     }
-    public InputPresence<InputAuthoredInputDeclaration> ContextSchema {
+    public AuthoredPresence<AuthoredInputDeclaration> ContextSchema {
         get;
         init;
     }
-    public InputPresence<InputAuthoredInputDeclaration> ItemSchema {
+    public AuthoredPresence<AuthoredInputDeclaration> ItemSchema {
         get;
         init;
     }
-    public InputPresence<InputAuthoredLevels> Levels {
+    public AuthoredPresence<AuthoredLevels> Levels {
         get;
         init;
     }
-    public InputPresence<InputAuthoredName> Model {
+    public AuthoredPresence<AuthoredName> Model {
         get;
         init;
     }
-    public InputPresence<string> Name {
+    public AuthoredPresence<string> Name {
         get;
         init;
     }
-    public InputPresence<InputAuthoredPointers> On {
+    public AuthoredPresence<AuthoredPointers> On {
         get;
         init;
     }
-    public InputPresence<InputAuthoredProfile> Profile {
+    public AuthoredPresence<AuthoredProfile> Profile {
         get;
         init;
     }
-    public required InputAuthoredQuestionText Score {
+    public required AuthoredQuestionText Score {
         get;
         init;
     }
-    public InputPresence<long> WordingVersion {
+    public AuthoredPresence<long> WordingVersion {
         get;
         init;
     }
-    internal new static InputRequestDefinitionAuthoredScore Read(JsonElement value) => new() {
-        ParsedDocument = value.Clone(), Batch = value.TryGetProperty("batch", out _) ? (InputPresence<InputRequestDefinitionAuthoredScoreBatch>)(InputRequestDefinitionAuthoredScoreBatch.Read(value.GetProperty("batch"))) : default,
-        ContextSchema = value.TryGetProperty("context_schema", out _) ? (InputPresence<InputAuthoredInputDeclaration>)(InputAuthoredInputDeclaration.Read(value.GetProperty("context_schema"))) : default,
-        ItemSchema = value.TryGetProperty("item_schema", out _) ? (InputPresence<InputAuthoredInputDeclaration>)(InputAuthoredInputDeclaration.Read(value.GetProperty("item_schema"))) : default,
-        Levels = value.TryGetProperty("levels", out _) ? (InputPresence<InputAuthoredLevels>)(InputAuthoredLevels.Read(value.GetProperty("levels"))) : default,
-        Model = value.TryGetProperty("model", out _) ? (InputPresence<InputAuthoredName>)(InputAuthoredName.Read(value.GetProperty("model"))) : default,
-        Name = value.TryGetProperty("name", out _) ? (InputPresence<string>)(value.GetProperty("name").GetString()!) : default,
-        On = value.TryGetProperty("on", out _) ? (InputPresence<InputAuthoredPointers>)(InputAuthoredPointers.Read(value.GetProperty("on"))) : default,
-        Profile = value.TryGetProperty("profile", out _) ? (InputPresence<InputAuthoredProfile>)(InputAuthoredProfile.Read(value.GetProperty("profile"))) : default,
-        Score = InputAuthoredQuestionText.Read(value.GetProperty("score")), WordingVersion = value.TryGetProperty("wording_version",
-        out _) ? (InputPresence<long>)(value.GetProperty("wording_version").GetInt64()) : default
+    internal new static RequestDefinitionAuthoredScore Read(JsonElement value) => new() {
+        ParsedDocument = value.Clone(), Batch = value.TryGetProperty("batch", out _) ? (AuthoredPresence<RequestDefinitionAuthoredScoreBatch>)(RequestDefinitionAuthoredScoreBatch.Read(value.GetProperty("batch"))) : default,
+        ContextSchema = value.TryGetProperty("context_schema", out _) ? (AuthoredPresence<AuthoredInputDeclaration>)(AuthoredInputDeclaration.Read(value.GetProperty("context_schema"))) : default,
+        ItemSchema = value.TryGetProperty("item_schema", out _) ? (AuthoredPresence<AuthoredInputDeclaration>)(AuthoredInputDeclaration.Read(value.GetProperty("item_schema"))) : default,
+        Levels = value.TryGetProperty("levels", out _) ? (AuthoredPresence<AuthoredLevels>)(AuthoredLevels.Read(value.GetProperty("levels"))) : default,
+        Model = value.TryGetProperty("model", out _) ? (AuthoredPresence<AuthoredName>)(AuthoredName.Read(value.GetProperty("model"))) : default,
+        Name = value.TryGetProperty("name", out _) ? (AuthoredPresence<string>)(value.GetProperty("name").GetString()!) : default,
+        On = value.TryGetProperty("on", out _) ? (AuthoredPresence<AuthoredPointers>)(AuthoredPointers.Read(value.GetProperty("on"))) : default,
+        Profile = value.TryGetProperty("profile", out _) ? (AuthoredPresence<AuthoredProfile>)(AuthoredProfile.Read(value.GetProperty("profile"))) : default,
+        Score = AuthoredQuestionText.Read(value.GetProperty("score")), WordingVersion = value.TryGetProperty("wording_version",
+        out _) ? (AuthoredPresence<long>)(value.GetProperty("wording_version").GetInt64()) : default
     };
-    public override void Write(Utf8JsonWriter writer) {
+    internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
@@ -3320,23 +3321,23 @@ public sealed class InputRequestDefinitionAuthoredScore : InputRequestDefinition
         } writer.WriteEndObject();
     }
 }
-public abstract class InputRequestDefinitionAuthoredScoreBatch : InputDocument {
-    private protected InputRequestDefinitionAuthoredScoreBatch() {
-    } internal static InputRequestDefinitionAuthoredScoreBatch Read(JsonElement value) {
-        if ((value.ValueKind == JsonValueKind.String && value.GetString() == "max")) return InputRequestDefinitionAuthoredScoreBatchMax.Read(value);
-        if ((value.ValueKind == JsonValueKind.Number)) return InputRequestDefinitionAuthoredScoreBatchInteger.Read(value);
+public abstract class RequestDefinitionAuthoredScoreBatch : AuthoredDocument {
+    private protected RequestDefinitionAuthoredScoreBatch() {
+    } internal static RequestDefinitionAuthoredScoreBatch Read(JsonElement value) {
+        if ((value.ValueKind == JsonValueKind.String && value.GetString() == "max")) return RequestDefinitionAuthoredScoreBatchMax.Read(value);
+        if ((value.ValueKind == JsonValueKind.Number)) return RequestDefinitionAuthoredScoreBatchInteger.Read(value);
         throw new JsonException("Authored data does not match the native Request schema.");
     }
 }
-public sealed class InputRequestDefinitionAuthoredScoreBatchInteger : InputRequestDefinitionAuthoredScoreBatch {
+public sealed class RequestDefinitionAuthoredScoreBatchInteger : RequestDefinitionAuthoredScoreBatch {
     public required long Value {
         get;
         init;
     }
-    internal new static InputRequestDefinitionAuthoredScoreBatchInteger Read(JsonElement value) => new() {
+    internal new static RequestDefinitionAuthoredScoreBatchInteger Read(JsonElement value) => new() {
         ParsedDocument = value.Clone(), Value = value.GetInt64()
     };
-    public override void Write(Utf8JsonWriter writer) {
+    internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
@@ -3344,11 +3345,11 @@ public sealed class InputRequestDefinitionAuthoredScoreBatchInteger : InputReque
         } writer.WriteNumberValue(Value);
     }
 }
-public sealed class InputRequestDefinitionAuthoredScoreBatchMax : InputRequestDefinitionAuthoredScoreBatch {
-    internal new static InputRequestDefinitionAuthoredScoreBatchMax Read(JsonElement value) => new() {
+public sealed class RequestDefinitionAuthoredScoreBatchMax : RequestDefinitionAuthoredScoreBatch {
+    internal new static RequestDefinitionAuthoredScoreBatchMax Read(JsonElement value) => new() {
         ParsedDocument = value.Clone()
     };
-    public override void Write(Utf8JsonWriter writer) {
+    internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
@@ -3356,65 +3357,65 @@ public sealed class InputRequestDefinitionAuthoredScoreBatchMax : InputRequestDe
         } WriteText(writer, "max");
     }
 }
-public sealed class InputRequestDefinitionAuthoredTag : InputRequestDefinition {
-    public InputPresence<InputRequestDefinitionAuthoredTagBatch> Batch {
+public sealed class RequestDefinitionAuthoredTag : RequestDefinition {
+    public AuthoredPresence<RequestDefinitionAuthoredTagBatch> Batch {
         get;
         init;
     }
-    public InputPresence<InputAuthoredInputDeclaration> ContextSchema {
+    public AuthoredPresence<AuthoredInputDeclaration> ContextSchema {
         get;
         init;
     }
-    public InputPresence<InputAuthoredInputDeclaration> ItemSchema {
+    public AuthoredPresence<AuthoredInputDeclaration> ItemSchema {
         get;
         init;
     }
-    public InputPresence<InputAuthoredLabels> Labels {
+    public AuthoredPresence<AuthoredLabels> Labels {
         get;
         init;
     }
-    public InputPresence<InputAuthoredName> Model {
+    public AuthoredPresence<AuthoredName> Model {
         get;
         init;
     }
-    public InputPresence<string> Name {
+    public AuthoredPresence<string> Name {
         get;
         init;
     }
-    public InputPresence<InputAuthoredPointers> On {
+    public AuthoredPresence<AuthoredPointers> On {
         get;
         init;
     }
-    public InputPresence<InputAuthoredProfile> Profile {
+    public AuthoredPresence<AuthoredProfile> Profile {
         get;
         init;
     }
-    public required InputAuthoredQuestionText Tag {
+    public required AuthoredQuestionText Tag {
         get;
         init;
     }
-    public InputPresence<InputAuthoredCut> Threshold {
+    public AuthoredPresence<AuthoredCut> Threshold {
         get;
         init;
     }
-    public InputPresence<long> WordingVersion {
+    public AuthoredPresence<long> WordingVersion {
         get;
         init;
     }
-    internal new static InputRequestDefinitionAuthoredTag Read(JsonElement value) => new() {
-        ParsedDocument = value.Clone(), Batch = value.TryGetProperty("batch", out _) ? (InputPresence<InputRequestDefinitionAuthoredTagBatch>)(InputRequestDefinitionAuthoredTagBatch.Read(value.GetProperty("batch"))) : default,
-        ContextSchema = value.TryGetProperty("context_schema", out _) ? (InputPresence<InputAuthoredInputDeclaration>)(InputAuthoredInputDeclaration.Read(value.GetProperty("context_schema"))) : default,
-        ItemSchema = value.TryGetProperty("item_schema", out _) ? (InputPresence<InputAuthoredInputDeclaration>)(InputAuthoredInputDeclaration.Read(value.GetProperty("item_schema"))) : default,
-        Labels = value.TryGetProperty("labels", out _) ? (InputPresence<InputAuthoredLabels>)(InputAuthoredLabels.Read(value.GetProperty("labels"))) : default,
-        Model = value.TryGetProperty("model", out _) ? (InputPresence<InputAuthoredName>)(InputAuthoredName.Read(value.GetProperty("model"))) : default,
-        Name = value.TryGetProperty("name", out _) ? (InputPresence<string>)(value.GetProperty("name").GetString()!) : default,
-        On = value.TryGetProperty("on", out _) ? (InputPresence<InputAuthoredPointers>)(InputAuthoredPointers.Read(value.GetProperty("on"))) : default,
-        Profile = value.TryGetProperty("profile", out _) ? (InputPresence<InputAuthoredProfile>)(InputAuthoredProfile.Read(value.GetProperty("profile"))) : default,
-        Tag = InputAuthoredQuestionText.Read(value.GetProperty("tag")), Threshold = value.TryGetProperty("threshold",
-        out _) ? (InputPresence<InputAuthoredCut>)(InputAuthoredCut.Read(value.GetProperty("threshold"))) : default,
-        WordingVersion = value.TryGetProperty("wording_version", out _) ? (InputPresence<long>)(value.GetProperty("wording_version").GetInt64()) : default
+    internal new static RequestDefinitionAuthoredTag Read(JsonElement value) => new() {
+        ParsedDocument = value.Clone(), Batch = value.TryGetProperty("batch", out _) ? (AuthoredPresence<RequestDefinitionAuthoredTagBatch>)(RequestDefinitionAuthoredTagBatch.Read(value.GetProperty("batch"))) : default,
+        ContextSchema = value.TryGetProperty("context_schema", out _) ? (AuthoredPresence<AuthoredInputDeclaration>)(AuthoredInputDeclaration.Read(value.GetProperty("context_schema"))) : default,
+        ItemSchema = value.TryGetProperty("item_schema", out _) ? (AuthoredPresence<AuthoredInputDeclaration>)(AuthoredInputDeclaration.Read(value.GetProperty("item_schema"))) : default,
+        Labels = value.TryGetProperty("labels", out _) ? (AuthoredPresence<AuthoredLabels>)(AuthoredLabels.Read(value.GetProperty("labels"))) : default,
+        Model = value.TryGetProperty("model", out _) ? (AuthoredPresence<AuthoredName>)(AuthoredName.Read(value.GetProperty("model"))) : default,
+        Name = value.TryGetProperty("name", out _) ? (AuthoredPresence<string>)(value.GetProperty("name").GetString()!) : default,
+        On = value.TryGetProperty("on", out _) ? (AuthoredPresence<AuthoredPointers>)(AuthoredPointers.Read(value.GetProperty("on"))) : default,
+        Profile = value.TryGetProperty("profile", out _) ? (AuthoredPresence<AuthoredProfile>)(AuthoredProfile.Read(value.GetProperty("profile"))) : default,
+        Tag = AuthoredQuestionText.Read(value.GetProperty("tag")), Threshold = value.TryGetProperty("threshold",
+        out _) ? (AuthoredPresence<AuthoredCut>)(AuthoredCut.Read(value.GetProperty("threshold"))) : default,
+        WordingVersion = value.TryGetProperty("wording_version", out _) ? (AuthoredPresence<long>)(value.GetProperty("wording_version").GetInt64()) : default
     };
-    public override void Write(Utf8JsonWriter writer) {
+    internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
@@ -3464,23 +3465,23 @@ public sealed class InputRequestDefinitionAuthoredTag : InputRequestDefinition {
         } writer.WriteEndObject();
     }
 }
-public abstract class InputRequestDefinitionAuthoredTagBatch : InputDocument {
-    private protected InputRequestDefinitionAuthoredTagBatch() {
-    } internal static InputRequestDefinitionAuthoredTagBatch Read(JsonElement value) {
-        if ((value.ValueKind == JsonValueKind.String && value.GetString() == "max")) return InputRequestDefinitionAuthoredTagBatchMax.Read(value);
-        if ((value.ValueKind == JsonValueKind.Number)) return InputRequestDefinitionAuthoredTagBatchInteger.Read(value);
+public abstract class RequestDefinitionAuthoredTagBatch : AuthoredDocument {
+    private protected RequestDefinitionAuthoredTagBatch() {
+    } internal static RequestDefinitionAuthoredTagBatch Read(JsonElement value) {
+        if ((value.ValueKind == JsonValueKind.String && value.GetString() == "max")) return RequestDefinitionAuthoredTagBatchMax.Read(value);
+        if ((value.ValueKind == JsonValueKind.Number)) return RequestDefinitionAuthoredTagBatchInteger.Read(value);
         throw new JsonException("Authored data does not match the native Request schema.");
     }
 }
-public sealed class InputRequestDefinitionAuthoredTagBatchInteger : InputRequestDefinitionAuthoredTagBatch {
+public sealed class RequestDefinitionAuthoredTagBatchInteger : RequestDefinitionAuthoredTagBatch {
     public required long Value {
         get;
         init;
     }
-    internal new static InputRequestDefinitionAuthoredTagBatchInteger Read(JsonElement value) => new() {
+    internal new static RequestDefinitionAuthoredTagBatchInteger Read(JsonElement value) => new() {
         ParsedDocument = value.Clone(), Value = value.GetInt64()
     };
-    public override void Write(Utf8JsonWriter writer) {
+    internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
@@ -3488,11 +3489,11 @@ public sealed class InputRequestDefinitionAuthoredTagBatchInteger : InputRequest
         } writer.WriteNumberValue(Value);
     }
 }
-public sealed class InputRequestDefinitionAuthoredTagBatchMax : InputRequestDefinitionAuthoredTagBatch {
-    internal new static InputRequestDefinitionAuthoredTagBatchMax Read(JsonElement value) => new() {
+public sealed class RequestDefinitionAuthoredTagBatchMax : RequestDefinitionAuthoredTagBatch {
+    internal new static RequestDefinitionAuthoredTagBatchMax Read(JsonElement value) => new() {
         ParsedDocument = value.Clone()
     };
-    public override void Write(Utf8JsonWriter writer) {
+    internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
@@ -3500,60 +3501,60 @@ public sealed class InputRequestDefinitionAuthoredTagBatchMax : InputRequestDefi
         } WriteText(writer, "max");
     }
 }
-public sealed class InputRequestDefinitionRecognizeDefinition : InputRequestDefinition {
-    public InputPresence<InputAuthoredInputDeclaration> ContextSchema {
+public sealed class RequestDefinitionRecognizeDefinition : RequestDefinition {
+    public AuthoredPresence<AuthoredInputDeclaration> ContextSchema {
         get;
         init;
     }
-    public InputPresence<InputAuthoredInputDeclaration> ItemSchema {
+    public AuthoredPresence<AuthoredInputDeclaration> ItemSchema {
         get;
         init;
     }
-    public InputPresence<InputAuthoredName> Model {
+    public AuthoredPresence<AuthoredName> Model {
         get;
         init;
     }
-    public InputPresence<string> Name {
+    public AuthoredPresence<string> Name {
         get;
         init;
     }
-    public InputPresence<InputAuthoredPointers> On {
+    public AuthoredPresence<AuthoredPointers> On {
         get;
         init;
     }
-    public InputPresence<InputAuthoredProfile> Profile {
+    public AuthoredPresence<AuthoredProfile> Profile {
         get;
         init;
     }
-    public required InputRecognizeQuestion Recognize {
+    public required RecognizeQuestion Recognize {
         get;
         init;
     }
-    public InputPresence<InputAuthoredCut> RelationThreshold {
+    public AuthoredPresence<AuthoredCut> RelationThreshold {
         get;
         init;
     }
-    public InputPresence<InputAuthoredCut> Threshold {
+    public AuthoredPresence<AuthoredCut> Threshold {
         get;
         init;
     }
-    public InputPresence<long> WordingVersion {
+    public AuthoredPresence<long> WordingVersion {
         get;
         init;
     }
-    internal new static InputRequestDefinitionRecognizeDefinition Read(JsonElement value) => new() {
-        ParsedDocument = value.Clone(), ContextSchema = value.TryGetProperty("context_schema", out _) ? (InputPresence<InputAuthoredInputDeclaration>)(InputAuthoredInputDeclaration.Read(value.GetProperty("context_schema"))) : default,
-        ItemSchema = value.TryGetProperty("item_schema", out _) ? (InputPresence<InputAuthoredInputDeclaration>)(InputAuthoredInputDeclaration.Read(value.GetProperty("item_schema"))) : default,
-        Model = value.TryGetProperty("model", out _) ? (InputPresence<InputAuthoredName>)(InputAuthoredName.Read(value.GetProperty("model"))) : default,
-        Name = value.TryGetProperty("name", out _) ? (InputPresence<string>)(value.GetProperty("name").GetString()!) : default,
-        On = value.TryGetProperty("on", out _) ? (InputPresence<InputAuthoredPointers>)(InputAuthoredPointers.Read(value.GetProperty("on"))) : default,
-        Profile = value.TryGetProperty("profile", out _) ? (InputPresence<InputAuthoredProfile>)(InputAuthoredProfile.Read(value.GetProperty("profile"))) : default,
-        Recognize = InputRecognizeQuestion.Read(value.GetProperty("recognize")), RelationThreshold = value.TryGetProperty("relation_threshold",
-        out _) ? (InputPresence<InputAuthoredCut>)(InputAuthoredCut.Read(value.GetProperty("relation_threshold"))) : default,
-        Threshold = value.TryGetProperty("threshold", out _) ? (InputPresence<InputAuthoredCut>)(InputAuthoredCut.Read(value.GetProperty("threshold"))) : default,
-        WordingVersion = value.TryGetProperty("wording_version", out _) ? (InputPresence<long>)(value.GetProperty("wording_version").GetInt64()) : default
+    internal new static RequestDefinitionRecognizeDefinition Read(JsonElement value) => new() {
+        ParsedDocument = value.Clone(), ContextSchema = value.TryGetProperty("context_schema", out _) ? (AuthoredPresence<AuthoredInputDeclaration>)(AuthoredInputDeclaration.Read(value.GetProperty("context_schema"))) : default,
+        ItemSchema = value.TryGetProperty("item_schema", out _) ? (AuthoredPresence<AuthoredInputDeclaration>)(AuthoredInputDeclaration.Read(value.GetProperty("item_schema"))) : default,
+        Model = value.TryGetProperty("model", out _) ? (AuthoredPresence<AuthoredName>)(AuthoredName.Read(value.GetProperty("model"))) : default,
+        Name = value.TryGetProperty("name", out _) ? (AuthoredPresence<string>)(value.GetProperty("name").GetString()!) : default,
+        On = value.TryGetProperty("on", out _) ? (AuthoredPresence<AuthoredPointers>)(AuthoredPointers.Read(value.GetProperty("on"))) : default,
+        Profile = value.TryGetProperty("profile", out _) ? (AuthoredPresence<AuthoredProfile>)(AuthoredProfile.Read(value.GetProperty("profile"))) : default,
+        Recognize = RecognizeQuestion.Read(value.GetProperty("recognize")), RelationThreshold = value.TryGetProperty("relation_threshold",
+        out _) ? (AuthoredPresence<AuthoredCut>)(AuthoredCut.Read(value.GetProperty("relation_threshold"))) : default,
+        Threshold = value.TryGetProperty("threshold", out _) ? (AuthoredPresence<AuthoredCut>)(AuthoredCut.Read(value.GetProperty("threshold"))) : default,
+        WordingVersion = value.TryGetProperty("wording_version", out _) ? (AuthoredPresence<long>)(value.GetProperty("wording_version").GetInt64()) : default
     };
-    public override void Write(Utf8JsonWriter writer) {
+    internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
@@ -3601,12 +3602,12 @@ public sealed class InputRequestDefinitionRecognizeDefinition : InputRequestDefi
         } writer.WriteEndObject();
     }
 }
-public abstract class InputRequestFraming : InputDocument {
-    private protected InputRequestFraming() {
+public abstract class RequestFraming : AuthoredDocument {
+    private protected RequestFraming() {
     }
 }
-public sealed class InputRequestFramingCsv : InputRequestFraming {
-    public override void Write(Utf8JsonWriter writer) {
+public sealed class RequestFramingCsv : RequestFraming {
+    internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
@@ -3614,8 +3615,8 @@ public sealed class InputRequestFramingCsv : InputRequestFraming {
         } WriteText(writer, "csv");
     }
 }
-public sealed class InputRequestFramingDocument : InputRequestFraming {
-    public override void Write(Utf8JsonWriter writer) {
+public sealed class RequestFramingDocument : RequestFraming {
+    internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
@@ -3623,8 +3624,8 @@ public sealed class InputRequestFramingDocument : InputRequestFraming {
         } WriteText(writer, "document");
     }
 }
-public sealed class InputRequestFramingJsonl : InputRequestFraming {
-    public override void Write(Utf8JsonWriter writer) {
+public sealed class RequestFramingJsonl : RequestFraming {
+    internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
@@ -3632,8 +3633,8 @@ public sealed class InputRequestFramingJsonl : InputRequestFraming {
         } WriteText(writer, "jsonl");
     }
 }
-public sealed class InputRequestFramingLines : InputRequestFraming {
-    public override void Write(Utf8JsonWriter writer) {
+public sealed class RequestFramingLines : RequestFraming {
+    internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
@@ -3641,8 +3642,8 @@ public sealed class InputRequestFramingLines : InputRequestFraming {
         } WriteText(writer, "lines");
     }
 }
-public sealed class InputRequestFramingTsv : InputRequestFraming {
-    public override void Write(Utf8JsonWriter writer) {
+public sealed class RequestFramingTsv : RequestFraming {
+    internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
@@ -3650,12 +3651,12 @@ public sealed class InputRequestFramingTsv : InputRequestFraming {
         } WriteText(writer, "tsv");
     }
 }
-public abstract class InputRequestFunction : InputDocument {
-    private protected InputRequestFunction() {
+public abstract class RequestFunction : AuthoredDocument {
+    private protected RequestFunction() {
     }
 }
-public sealed class InputRequestFunctionAnnotate : InputRequestFunction {
-    public override void Write(Utf8JsonWriter writer) {
+public sealed class RequestFunctionAnnotate : RequestFunction {
+    internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
@@ -3663,8 +3664,8 @@ public sealed class InputRequestFunctionAnnotate : InputRequestFunction {
         } WriteText(writer, "annotate");
     }
 }
-public sealed class InputRequestFunctionChoose : InputRequestFunction {
-    public override void Write(Utf8JsonWriter writer) {
+public sealed class RequestFunctionChoose : RequestFunction {
+    internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
@@ -3672,8 +3673,8 @@ public sealed class InputRequestFunctionChoose : InputRequestFunction {
         } WriteText(writer, "choose");
     }
 }
-public sealed class InputRequestFunctionDecide : InputRequestFunction {
-    public override void Write(Utf8JsonWriter writer) {
+public sealed class RequestFunctionDecide : RequestFunction {
+    internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
@@ -3681,8 +3682,8 @@ public sealed class InputRequestFunctionDecide : InputRequestFunction {
         } WriteText(writer, "decide");
     }
 }
-public sealed class InputRequestFunctionFilter : InputRequestFunction {
-    public override void Write(Utf8JsonWriter writer) {
+public sealed class RequestFunctionFilter : RequestFunction {
+    internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
@@ -3690,8 +3691,8 @@ public sealed class InputRequestFunctionFilter : InputRequestFunction {
         } WriteText(writer, "filter");
     }
 }
-public sealed class InputRequestFunctionFind : InputRequestFunction {
-    public override void Write(Utf8JsonWriter writer) {
+public sealed class RequestFunctionFind : RequestFunction {
+    internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
@@ -3699,8 +3700,8 @@ public sealed class InputRequestFunctionFind : InputRequestFunction {
         } WriteText(writer, "find");
     }
 }
-public sealed class InputRequestFunctionRank : InputRequestFunction {
-    public override void Write(Utf8JsonWriter writer) {
+public sealed class RequestFunctionRank : RequestFunction {
+    internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
@@ -3708,8 +3709,8 @@ public sealed class InputRequestFunctionRank : InputRequestFunction {
         } WriteText(writer, "rank");
     }
 }
-public sealed class InputRequestFunctionRecognize : InputRequestFunction {
-    public override void Write(Utf8JsonWriter writer) {
+public sealed class RequestFunctionRecognize : RequestFunction {
+    internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
@@ -3717,8 +3718,8 @@ public sealed class InputRequestFunctionRecognize : InputRequestFunction {
         } WriteText(writer, "recognize");
     }
 }
-public sealed class InputRequestFunctionRelate : InputRequestFunction {
-    public override void Write(Utf8JsonWriter writer) {
+public sealed class RequestFunctionRelate : RequestFunction {
+    internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
@@ -3726,8 +3727,8 @@ public sealed class InputRequestFunctionRelate : InputRequestFunction {
         } WriteText(writer, "relate");
     }
 }
-public sealed class InputRequestFunctionScore : InputRequestFunction {
-    public override void Write(Utf8JsonWriter writer) {
+public sealed class RequestFunctionScore : RequestFunction {
+    internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
@@ -3735,8 +3736,8 @@ public sealed class InputRequestFunctionScore : InputRequestFunction {
         } WriteText(writer, "score");
     }
 }
-public sealed class InputRequestFunctionTag : InputRequestFunction {
-    public override void Write(Utf8JsonWriter writer) {
+public sealed class RequestFunctionTag : RequestFunction {
+    internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
@@ -3744,20 +3745,20 @@ public sealed class InputRequestFunctionTag : InputRequestFunction {
         } WriteText(writer, "tag");
     }
 }
-public abstract class InputRequestImage : InputDocument {
-    private protected InputRequestImage() {
+public abstract class RequestImage : AuthoredDocument {
+    private protected RequestImage() {
     }
 }
-public sealed class InputRequestImageBytes : InputRequestImage {
+public sealed class RequestImageBytes : RequestImage {
     public required string Bytes {
         get;
         init;
     }
-    public required InputImageMedia Media {
+    public required ImageMedia Media {
         get;
         init;
     }
-    public override void Write(Utf8JsonWriter writer) {
+    internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
@@ -3773,8 +3774,8 @@ public sealed class InputRequestImageBytes : InputRequestImage {
         writer.WriteEndObject();
     }
 }
-public sealed class InputRequestImageFile : InputRequestImage {
-    public InputPresence<InputImageMedia> Media {
+public sealed class RequestImageFile : RequestImage {
+    public AuthoredPresence<ImageMedia> Media {
         get;
         init;
     }
@@ -3782,7 +3783,7 @@ public sealed class InputRequestImageFile : InputRequestImage {
         get;
         init;
     }
-    public override void Write(Utf8JsonWriter writer) {
+    internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
@@ -3799,16 +3800,16 @@ public sealed class InputRequestImageFile : InputRequestImage {
         writer.WriteEndObject();
     }
 }
-public abstract class InputRequestInput : InputDocument {
-    private protected InputRequestInput() {
+public abstract class RequestInput : AuthoredDocument {
+    private protected RequestInput() {
     }
 }
-public sealed class InputRequestInputEntities : InputRequestInput {
-    public required IReadOnlyList<InputRequestItem> Items {
+public sealed class RequestInputEntities : RequestInput {
+    public required IReadOnlyList<RequestItem> Items {
         get;
         init;
     }
-    public override void Write(Utf8JsonWriter writer) {
+    internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
@@ -3825,12 +3826,12 @@ public sealed class InputRequestInputEntities : InputRequestInput {
         writer.WriteEndObject();
     }
 }
-public sealed class InputRequestInputFeed : InputRequestInput {
-    public InputPresence<InputRequestFraming> Framing {
+public sealed class RequestInputFeed : RequestInput {
+    public AuthoredPresence<RequestFraming> Framing {
         get;
         init;
     }
-    public InputPresence<IReadOnlyList<InputRequestImage>> Images {
+    public AuthoredPresence<IReadOnlyList<RequestImage>> Images {
         get;
         init;
     }
@@ -3838,11 +3839,11 @@ public sealed class InputRequestInputFeed : InputRequestInput {
         get;
         init;
     }
-    public InputPresence<InputRequestReader> Reading {
+    public AuthoredPresence<RequestReader> Reading {
         get;
         init;
     }
-    public override void Write(Utf8JsonWriter writer) {
+    internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
@@ -3870,8 +3871,8 @@ public sealed class InputRequestInputFeed : InputRequestInput {
         } writer.WriteEndObject();
     }
 }
-public sealed class InputRequestInputJson : InputRequestInput {
-    public InputPresence<IReadOnlyList<InputRequestImage>> Images {
+public sealed class RequestInputJson : RequestInput {
+    public AuthoredPresence<IReadOnlyList<RequestImage>> Images {
         get;
         init;
     }
@@ -3879,7 +3880,7 @@ public sealed class InputRequestInputJson : InputRequestInput {
         get;
         init;
     }
-    public override void Write(Utf8JsonWriter writer) {
+    internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
@@ -3899,12 +3900,12 @@ public sealed class InputRequestInputJson : InputRequestInput {
         writer.WriteEndObject();
     }
 }
-public sealed class InputRequestInputRecords : InputRequestInput {
-    public required IReadOnlyList<InputRequestItem> Items {
+public sealed class RequestInputRecords : RequestInput {
+    public required IReadOnlyList<RequestItem> Items {
         get;
         init;
     }
-    public override void Write(Utf8JsonWriter writer) {
+    internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
@@ -3921,12 +3922,12 @@ public sealed class InputRequestInputRecords : InputRequestInput {
         writer.WriteEndObject();
     }
 }
-public sealed class InputRequestInputSource : InputRequestInput {
-    public required InputRequestSource Source {
+public sealed class RequestInputSource : RequestInput {
+    public required RequestSource Source {
         get;
         init;
     }
-    public override void Write(Utf8JsonWriter writer) {
+    internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
@@ -3940,8 +3941,8 @@ public sealed class InputRequestInputSource : InputRequestInput {
         writer.WriteEndObject();
     }
 }
-public sealed class InputRequestInputText : InputRequestInput {
-    public InputPresence<IReadOnlyList<InputRequestImage>> Images {
+public sealed class RequestInputText : RequestInput {
+    public AuthoredPresence<IReadOnlyList<RequestImage>> Images {
         get;
         init;
     }
@@ -3949,7 +3950,7 @@ public sealed class InputRequestInputText : InputRequestInput {
         get;
         init;
     }
-    public override void Write(Utf8JsonWriter writer) {
+    internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
@@ -3969,12 +3970,12 @@ public sealed class InputRequestInputText : InputRequestInput {
         writer.WriteEndObject();
     }
 }
-public sealed class InputRequestInputUnits : InputRequestInput {
-    public required IReadOnlyList<InputRequestItem> Items {
+public sealed class RequestInputUnits : RequestInput {
+    public required IReadOnlyList<RequestItem> Items {
         get;
         init;
     }
-    public override void Write(Utf8JsonWriter writer) {
+    internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
@@ -3991,32 +3992,32 @@ public sealed class InputRequestInputUnits : InputRequestInput {
         writer.WriteEndObject();
     }
 }
-public sealed class InputRequestItem : InputDocument {
-    public InputPresence<InputContextSchema> Context {
+public sealed class RequestItem : AuthoredDocument {
+    public AuthoredPresence<ContextSchema> Context {
         get;
         init;
     }
-    public InputPresence<IReadOnlyList<InputRecognitionExample>> Examples {
+    public AuthoredPresence<IReadOnlyList<RecognitionExample>> Examples {
         get;
         init;
     }
-    public InputPresence<IReadOnlyList<InputRequestImage>> Images {
+    public AuthoredPresence<IReadOnlyList<RequestImage>> Images {
         get;
         init;
     }
-    public InputPresence<IReadOnlyList<InputOptionSchema>> Options {
+    public AuthoredPresence<IReadOnlyList<OptionSchema>> Options {
         get;
         init;
     }
-    public InputPresence<InputRequestOriginal> Original {
+    public AuthoredPresence<RequestOriginal> Original {
         get;
         init;
     }
-    public InputPresence<IReadOnlyList<InputRecognitionSeedSpan>> SeedSpans {
+    public AuthoredPresence<IReadOnlyList<RecognitionSeedSpan>> SeedSpans {
         get;
         init;
     }
-    public override void Write(Utf8JsonWriter writer) {
+    internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
@@ -4061,96 +4062,96 @@ public sealed class InputRequestItem : InputDocument {
         } writer.WriteEndObject();
     }
 }
-public sealed class InputRequestOptions : InputDocument {
-    public InputPresence<bool> Attempts {
+public sealed class RequestOptions : AuthoredDocument {
+    public AuthoredPresence<bool> Attempts {
         get;
         init;
     }
-    public InputPresence<InputRequestBatch> Batch {
+    public AuthoredPresence<RequestBatch> Batch {
         get;
         init;
     }
-    public InputPresence<string> Context {
+    public AuthoredPresence<string> Context {
         get;
         init;
     }
-    public InputPresence<string> ContextField {
+    public AuthoredPresence<string> ContextField {
         get;
         init;
     }
-    public InputPresence<long> DeadlineMs {
+    public AuthoredPresence<long> DeadlineMs {
         get;
         init;
     }
-    public InputPresence<bool> Details {
+    public AuthoredPresence<bool> Details {
         get;
         init;
     }
-    public InputPresence<IReadOnlyList<InputRecognitionExample>> Examples {
+    public AuthoredPresence<IReadOnlyList<RecognitionExample>> Examples {
         get;
         init;
     }
-    public InputPresence<string> ExamplesField {
+    public AuthoredPresence<string> ExamplesField {
         get;
         init;
     }
-    public InputPresence<IReadOnlyList<string>> Field {
+    public AuthoredPresence<IReadOnlyList<string>> Field {
         get;
         init;
     }
-    public InputPresence<bool> FilesOnly {
+    public AuthoredPresence<bool> FilesOnly {
         get;
         init;
     }
-    public InputPresence<ulong> MaxRequestsTotal {
+    public AuthoredPresence<ulong> MaxRequestsTotal {
         get;
         init;
     }
-    public InputPresence<InputRecognitionMode> Mode {
+    public AuthoredPresence<RecognitionMode> Mode {
         get;
         init;
     }
-    public InputPresence<string> Model {
+    public AuthoredPresence<string> Model {
         get;
         init;
     }
-    public InputPresence<bool> None {
+    public AuthoredPresence<bool> None {
         get;
         init;
     }
-    public InputPresence<string> OptionsField {
+    public AuthoredPresence<string> OptionsField {
         get;
         init;
     }
-    public InputPresence<InputRequestThreshold> RelationThreshold {
+    public AuthoredPresence<RequestThreshold> RelationThreshold {
         get;
         init;
     }
-    public InputPresence<IReadOnlyList<InputRecognitionSeedSpan>> SeedSpans {
+    public AuthoredPresence<IReadOnlyList<RecognitionSeedSpan>> SeedSpans {
         get;
         init;
     }
-    public InputPresence<string> SeedSpansField {
+    public AuthoredPresence<string> SeedSpansField {
         get;
         init;
     }
-    public InputPresence<uint> SnippetPieces {
+    public AuthoredPresence<uint> SnippetPieces {
         get;
         init;
     }
-    public InputPresence<InputRecognitionStageContext> StageContext {
+    public AuthoredPresence<RecognitionStageContext> StageContext {
         get;
         init;
     }
-    public InputPresence<InputRequestThreshold> Threshold {
+    public AuthoredPresence<RequestThreshold> Threshold {
         get;
         init;
     }
-    public InputPresence<ulong> Top {
+    public AuthoredPresence<ulong> Top {
         get;
         init;
     }
-    public override void Write(Utf8JsonWriter writer) {
+    internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
@@ -4241,16 +4242,16 @@ public sealed class InputRequestOptions : InputDocument {
         } writer.WriteEndObject();
     }
 }
-public abstract class InputRequestOriginal : InputDocument {
-    private protected InputRequestOriginal() {
+public abstract class RequestOriginal : AuthoredDocument {
+    private protected RequestOriginal() {
     }
 }
-public sealed class InputRequestOriginalJson : InputRequestOriginal {
+public sealed class RequestOriginalJson : RequestOriginal {
     public required JsonElement Value {
         get;
         init;
     }
-    public override void Write(Utf8JsonWriter writer) {
+    internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
@@ -4263,12 +4264,12 @@ public sealed class InputRequestOriginalJson : InputRequestOriginal {
         writer.WriteEndObject();
     }
 }
-public sealed class InputRequestOriginalText : InputRequestOriginal {
+public sealed class RequestOriginalText : RequestOriginal {
     public required string Text {
         get;
         init;
     }
-    public override void Write(Utf8JsonWriter writer) {
+    internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
@@ -4281,16 +4282,16 @@ public sealed class InputRequestOriginalText : InputRequestOriginal {
         writer.WriteEndObject();
     }
 }
-public abstract class InputRequestQuestion : InputDocument {
-    private protected InputRequestQuestion() {
+public abstract class RequestQuestion : AuthoredDocument {
+    private protected RequestQuestion() {
     }
 }
-public sealed class InputRequestQuestionDefinition : InputRequestQuestion {
-    public required InputRequestDefinition Value {
+public sealed class RequestQuestionDefinition : RequestQuestion {
+    public required RequestDefinition Value {
         get;
         init;
     }
-    public override void Write(Utf8JsonWriter writer) {
+    internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
@@ -4304,12 +4305,12 @@ public sealed class InputRequestQuestionDefinition : InputRequestQuestion {
         writer.WriteEndObject();
     }
 }
-public sealed class InputRequestQuestionFile : InputRequestQuestion {
+public sealed class RequestQuestionFile : RequestQuestion {
     public required string Path {
         get;
         init;
     }
-    public override void Write(Utf8JsonWriter writer) {
+    internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
@@ -4322,12 +4323,12 @@ public sealed class InputRequestQuestionFile : InputRequestQuestion {
         writer.WriteEndObject();
     }
 }
-public sealed class InputRequestQuestionName : InputRequestQuestion {
+public sealed class RequestQuestionName : RequestQuestion {
     public required string Name {
         get;
         init;
     }
-    public override void Write(Utf8JsonWriter writer) {
+    internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
@@ -4340,12 +4341,12 @@ public sealed class InputRequestQuestionName : InputRequestQuestion {
         writer.WriteEndObject();
     }
 }
-public sealed class InputRequestQuestionReference : InputRequestQuestion {
+public sealed class RequestQuestionReference : RequestQuestion {
     public required string Reference {
         get;
         init;
     }
-    public override void Write(Utf8JsonWriter writer) {
+    internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
@@ -4358,12 +4359,12 @@ public sealed class InputRequestQuestionReference : InputRequestQuestion {
         writer.WriteEndObject();
     }
 }
-public sealed class InputRequestQuestionText : InputRequestQuestion {
+public sealed class RequestQuestionText : RequestQuestion {
     public required string Text {
         get;
         init;
     }
-    public override void Write(Utf8JsonWriter writer) {
+    internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
@@ -4376,16 +4377,16 @@ public sealed class InputRequestQuestionText : InputRequestQuestion {
         writer.WriteEndObject();
     }
 }
-public sealed class InputRequestReader : InputDocument {
-    public InputPresence<InputSourceUnit> Unit {
+public sealed class RequestReader : AuthoredDocument {
+    public AuthoredPresence<SourceUnit> Unit {
         get;
         init;
     }
-    public InputPresence<ulong> Window {
+    public AuthoredPresence<ulong> Window {
         get;
         init;
     }
-    public override void Write(Utf8JsonWriter writer) {
+    internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
@@ -4401,16 +4402,16 @@ public sealed class InputRequestReader : InputDocument {
         } writer.WriteEndObject();
     }
 }
-public abstract class InputRequestReaderFailure : InputDocument {
-    private protected InputRequestReaderFailure() {
+public abstract class RequestReaderFailure : AuthoredDocument {
+    private protected RequestReaderFailure() {
     }
 }
-public sealed class InputRequestReaderFailureInvalidInput : InputRequestReaderFailure {
-    public InputPresence<InputSessionSourceLocation> Location {
+public sealed class RequestReaderFailureInvalidInput : RequestReaderFailure {
+    public AuthoredPresence<SessionSourceLocation> Location {
         get;
         init;
     }
-    public override void Write(Utf8JsonWriter writer) {
+    internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
@@ -4425,12 +4426,12 @@ public sealed class InputRequestReaderFailureInvalidInput : InputRequestReaderFa
         } writer.WriteEndObject();
     }
 }
-public sealed class InputRequestReaderFailureIo : InputRequestReaderFailure {
-    public InputPresence<InputSessionSourceLocation> Location {
+public sealed class RequestReaderFailureIo : RequestReaderFailure {
+    public AuthoredPresence<SessionSourceLocation> Location {
         get;
         init;
     }
-    public override void Write(Utf8JsonWriter writer) {
+    internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
@@ -4445,8 +4446,8 @@ public sealed class InputRequestReaderFailureIo : InputRequestReaderFailure {
         } writer.WriteEndObject();
     }
 }
-public sealed class InputRequestReaderFailureProducer : InputRequestReaderFailure {
-    public override void Write(Utf8JsonWriter writer) {
+public sealed class RequestReaderFailureProducer : RequestReaderFailure {
+    internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
@@ -4457,12 +4458,12 @@ public sealed class InputRequestReaderFailureProducer : InputRequestReaderFailur
         writer.WriteEndObject();
     }
 }
-public sealed class InputRequestReaderFailureUtf8 : InputRequestReaderFailure {
-    public InputPresence<InputSessionSourceLocation> Location {
+public sealed class RequestReaderFailureUtf8 : RequestReaderFailure {
+    public AuthoredPresence<SessionSourceLocation> Location {
         get;
         init;
     }
-    public override void Write(Utf8JsonWriter writer) {
+    internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
@@ -4477,16 +4478,16 @@ public sealed class InputRequestReaderFailureUtf8 : InputRequestReaderFailure {
         } writer.WriteEndObject();
     }
 }
-public sealed class InputRequestSessionDescriptor : InputDocument {
-    public required InputRequestItem Item {
+public sealed class RequestSessionDescriptor : AuthoredDocument {
+    public required RequestItem Item {
         get;
         init;
     }
-    public InputPresence<InputSessionSourceLocation> Location {
+    public AuthoredPresence<SessionSourceLocation> Location {
         get;
         init;
     }
-    public override void Write(Utf8JsonWriter writer) {
+    internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
@@ -4502,12 +4503,12 @@ public sealed class InputRequestSessionDescriptor : InputDocument {
         } writer.WriteEndObject();
     }
 }
-public sealed class InputRequestSource : InputDocument {
-    public InputPresence<InputRequestFraming> Framing {
+public sealed class RequestSource : AuthoredDocument {
+    public AuthoredPresence<RequestFraming> Framing {
         get;
         init;
     }
-    public InputPresence<InputReaderMedia> Media {
+    public AuthoredPresence<ReaderMedia> Media {
         get;
         init;
     }
@@ -4515,11 +4516,11 @@ public sealed class InputRequestSource : InputDocument {
         get;
         init;
     }
-    public InputPresence<InputRequestReader> Reading {
+    public AuthoredPresence<RequestReader> Reading {
         get;
         init;
     }
-    public override void Write(Utf8JsonWriter writer) {
+    internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
@@ -4545,16 +4546,16 @@ public sealed class InputRequestSource : InputDocument {
         } writer.WriteEndObject();
     }
 }
-public abstract class InputRequestThreshold : InputDocument {
-    private protected InputRequestThreshold() {
+public abstract class RequestThreshold : AuthoredDocument {
+    private protected RequestThreshold() {
     }
 }
-public sealed class InputRequestThresholdNumber : InputRequestThreshold {
+public sealed class RequestThresholdNumber : RequestThreshold {
     public required double Value {
         get;
         init;
     }
-    public override void Write(Utf8JsonWriter writer) {
+    internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
@@ -4562,12 +4563,12 @@ public sealed class InputRequestThresholdNumber : InputRequestThreshold {
         } writer.WriteNumberValue(Value);
     }
 }
-public sealed class InputRequestThresholdString : InputRequestThreshold {
+public sealed class RequestThresholdString : RequestThreshold {
     public required string Value {
         get;
         init;
     }
-    public override void Write(Utf8JsonWriter writer) {
+    internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
@@ -4575,12 +4576,12 @@ public sealed class InputRequestThresholdString : InputRequestThreshold {
         } WriteText(writer, Value);
     }
 }
-public abstract class InputRequestVersion : InputDocument {
-    private protected InputRequestVersion() {
+public abstract class RequestVersion : AuthoredDocument {
+    private protected RequestVersion() {
     }
 }
-public sealed class InputRequestVersionThinkthenRequest1 : InputRequestVersion {
-    public override void Write(Utf8JsonWriter writer) {
+public sealed class RequestVersionThinkthenRequest1 : RequestVersion {
+    internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
@@ -4588,20 +4589,20 @@ public sealed class InputRequestVersionThinkthenRequest1 : InputRequestVersion {
         } WriteText(writer, "thinkthen.request/1");
     }
 }
-public sealed class InputSessionSourceLocation : InputDocument {
+public sealed class SessionSourceLocation : AuthoredDocument {
     public required string File {
         get;
         init;
     }
-    public InputPresence<ulong> FirstLine {
+    public AuthoredPresence<ulong> FirstLine {
         get;
         init;
     }
-    public InputPresence<ulong> LastLine {
+    public AuthoredPresence<ulong> LastLine {
         get;
         init;
     }
-    public override void Write(Utf8JsonWriter writer) {
+    internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
@@ -4618,12 +4619,12 @@ public sealed class InputSessionSourceLocation : InputDocument {
         } writer.WriteEndObject();
     }
 }
-public abstract class InputSourceUnit : InputDocument {
-    private protected InputSourceUnit() {
+public abstract class SourceUnit : AuthoredDocument {
+    private protected SourceUnit() {
     }
 }
-public sealed class InputSourceUnitFile : InputSourceUnit {
-    public override void Write(Utf8JsonWriter writer) {
+public sealed class SourceUnitFile : SourceUnit {
+    internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
@@ -4631,8 +4632,8 @@ public sealed class InputSourceUnitFile : InputSourceUnit {
         } WriteText(writer, "file");
     }
 }
-public sealed class InputSourceUnitLine : InputSourceUnit {
-    public override void Write(Utf8JsonWriter writer) {
+public sealed class SourceUnitLine : SourceUnit {
+    internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
@@ -4640,8 +4641,8 @@ public sealed class InputSourceUnitLine : InputSourceUnit {
         } WriteText(writer, "line");
     }
 }
-public sealed class InputSourceUnitWindow : InputSourceUnit {
-    public override void Write(Utf8JsonWriter writer) {
+public sealed class SourceUnitWindow : SourceUnit {
+    internal override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
@@ -4650,18 +4651,18 @@ public sealed class InputSourceUnitWindow : InputSourceUnit {
     }
 }
 public static class QuestionBuilders {
-    public static InputRequestQuestionDefinition Relate(InputRelateQuestion question) {
+    public static RequestQuestionDefinition Relate(RelateQuestion question) {
         ArgumentNullException.ThrowIfNull(question);
-        return new InputRequestQuestionDefinition {
-            Value = new InputRequestDefinitionAuthoredRelate {
+        return new RequestQuestionDefinition {
+            Value = new RequestDefinitionAuthoredRelate {
                 Relate = question
             }
         };
     }
-    public static InputRequestQuestionDefinition Recognize(InputRecognizeQuestion question) {
+    public static RequestQuestionDefinition Recognize(RecognizeQuestion question) {
         ArgumentNullException.ThrowIfNull(question);
-        return new InputRequestQuestionDefinition {
-            Value = new InputRequestDefinitionRecognizeDefinition {
+        return new RequestQuestionDefinition {
+            Value = new RequestDefinitionRecognizeDefinition {
                 Recognize = question
             }
         };
