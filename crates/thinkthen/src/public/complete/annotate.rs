@@ -10,6 +10,7 @@ use crate::public::{
 };
 use crate::public::{asking::Text, bulk::annotation::Annotating, options::Stop, pull};
 use std::sync::Arc;
+mod recovering;
 mod render;
 mod streaming;
 

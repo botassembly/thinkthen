@@ -578,10 +578,7 @@ impl Engine {
         &self,
         ask: &Recognize,
         evidence: &str,
-    ) -> Result<
-        crate::public::Call<Recognized, Vec<crate::CompleteRecognized>, Vec<Option<f64>>>,
-        Error,
-    > {
+    ) -> Result<crate::RecognitionCall, Error> {
         self.recognize_with(ask, evidence, CallOptions::new())
     }
 
@@ -595,10 +592,7 @@ impl Engine {
         ask: &Recognize,
         evidence: &str,
         options: CallOptions<'_>,
-    ) -> Result<
-        crate::public::Call<Recognized, Vec<crate::CompleteRecognized>, Vec<Option<f64>>>,
-        Error,
-    > {
+    ) -> Result<crate::RecognitionCall, Error> {
         let wrong = || Error::defect("a complete answer has another function's value");
         crate::public::request::native(
             self,

@@ -8,7 +8,7 @@ use crate::public::engine::{Engine, Evidence};
 use crate::public::error::Error;
 use crate::public::options::{CallOptions, Stop};
 use crate::public::question::{Kind, Question};
-use crate::public::results::{self, Call, ObservedRow, QuestionDetail, RecordObservation};
+use crate::public::results::{self, ObservedRow, QuestionDetail, RecordObservation};
 
 /// An ordered saved set of decide questions for rank. Authored thresholds,
 /// pointers and other question kinds are refused before normalization.
@@ -54,22 +54,11 @@ impl Engine {
     /// # Errors
     /// Returns a preflight refusal before sends for blank or excessive input,
     /// or the whole call's error if any member, transport or control fails.
-    #[expect(
-        clippy::type_complexity,
-        reason = "the additive result carries original items and shared facts"
-    )]
     pub fn rank_set<I>(
         &self,
         questions: &RankSet,
         records: I,
-    ) -> Result<
-        Call<
-            Vec<usize>,
-            Vec<crate::CompleteRecord<I::Item, crate::CompleteSetRank>>,
-            Vec<Option<f64>>,
-        >,
-        Error,
-    >
+    ) -> Result<crate::SetRankCall<I::Item>, Error>
     where
         I: IntoIterator,
         I::Item: Evidence,
@@ -82,23 +71,12 @@ impl Engine {
     ///
     /// # Errors
     /// As [`Engine::rank_set`].
-    #[expect(
-        clippy::type_complexity,
-        reason = "the additive result carries original items and shared facts"
-    )]
     pub fn rank_set_with<I>(
         &self,
         questions: &RankSet,
         records: I,
         options: CallOptions<'_>,
-    ) -> Result<
-        Call<
-            Vec<usize>,
-            Vec<crate::CompleteRecord<I::Item, crate::CompleteSetRank>>,
-            Vec<Option<f64>>,
-        >,
-        Error,
-    >
+    ) -> Result<crate::SetRankCall<I::Item>, Error>
     where
         I: IntoIterator,
         I::Item: Evidence,

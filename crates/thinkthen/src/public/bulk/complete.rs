@@ -5,7 +5,6 @@ use crate::public::engine::{Engine, Evidence, evidence, evidence_error, only};
 use crate::public::error::Error;
 use crate::public::options::CallOptions;
 use crate::public::question::{Kind, Question};
-use crate::public::results::{Call, CompleteFound, CompleteRank, CompleteRecord};
 type PreparedFind<T> = (Vec<T>, Find, std::sync::Arc<crate::engine::facade::Engine>);
 
 impl Engine {
@@ -15,15 +14,11 @@ impl Engine {
     ///
     /// The first record's [`Error`], and [`Error::Usage`] for another kind of
     /// question or more records than the engine's request limit.
-    #[allow(
-        clippy::type_complexity,
-        reason = "the public return carries ranked rows and facts"
-    )]
     pub fn rank<I>(
         &self,
         question: &Question,
         records: I,
-    ) -> Result<Call<Vec<usize>, Vec<CompleteRecord<I::Item, CompleteRank>>, Vec<Option<f64>>>, Error>
+    ) -> Result<crate::RankCall<I::Item>, Error>
     where
         I: IntoIterator,
         I::Item: Evidence,
@@ -36,16 +31,12 @@ impl Engine {
     /// # Errors
     ///
     /// As [`Engine::rank`].
-    #[allow(
-        clippy::type_complexity,
-        reason = "the public return carries ranked rows and facts"
-    )]
     pub fn rank_with<I>(
         &self,
         question: &Question,
         records: I,
         options: CallOptions<'_>,
-    ) -> Result<Call<Vec<usize>, Vec<CompleteRecord<I::Item, CompleteRank>>, Vec<Option<f64>>>, Error>
+    ) -> Result<crate::RankCall<I::Item>, Error>
     where
         I: IntoIterator,
         I::Item: Evidence,
@@ -73,11 +64,7 @@ impl Engine {
     ///
     /// As [`Engine::decide`], and [`Error::Usage`] for another kind of
     /// question or a unit count outside its range.
-    pub fn find<I>(
-        &self,
-        question: &Question,
-        units: I,
-    ) -> Result<Call<Option<I::Item>, CompleteFound<I::Item>>, Error>
+    pub fn find<I>(&self, question: &Question, units: I) -> Result<crate::FindCall<I::Item>, Error>
     where
         I: IntoIterator,
         I::Item: Evidence + Clone,
@@ -95,7 +82,7 @@ impl Engine {
         question: &Question,
         units: I,
         options: CallOptions<'_>,
-    ) -> Result<Call<Option<I::Item>, CompleteFound<I::Item>>, Error>
+    ) -> Result<crate::FindCall<I::Item>, Error>
     where
         I: IntoIterator,
         I::Item: Evidence + Clone,

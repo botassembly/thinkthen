@@ -299,11 +299,7 @@ impl Engine {
     ///
     /// Returns [`Error::Usage`] for a repeated entity or more than 255, before
     /// any send, and [`Error::Backend`] when the backend fails any question.
-    pub fn relate<I>(
-        &self,
-        ask: &Relate,
-        entities: I,
-    ) -> Result<crate::public::Call<Vec<Edge>, Vec<crate::CompleteRelated>, Vec<Option<f64>>>, Error>
+    pub fn relate<I>(&self, ask: &Relate, entities: I) -> Result<crate::RelationCall, Error>
     where
         I: IntoIterator<Item = Entity>,
     {
@@ -320,7 +316,7 @@ impl Engine {
         ask: &Relate,
         entities: I,
         options: CallOptions<'_>,
-    ) -> Result<crate::public::Call<Vec<Edge>, Vec<crate::CompleteRelated>, Vec<Option<f64>>>, Error>
+    ) -> Result<crate::RelationCall, Error>
     where
         I: IntoIterator<Item = Entity>,
     {

@@ -3,6 +3,7 @@
 //! and groups pack together, and each row gathers its questions back.
 
 use super::Values;
+use crate::CompleteRecord;
 use crate::core::{self, pack, pack::Ask, quoted_plan};
 use crate::engine::facade::{self, Annotation, GroupAnswer, QuestionAnswer};
 use crate::engine::pipeline::{Answered, Asker};
@@ -13,7 +14,6 @@ use crate::public::error::Error;
 use crate::public::options::CallOptions;
 use crate::public::results::ObservedQuestion;
 use crate::public::set::QuestionSet;
-use crate::{Call, CompleteAnnotated, CompleteRecord};
 
 /// What one question set needs of each text beside the text.
 pub(crate) struct Annotating {
@@ -226,10 +226,7 @@ impl Engine {
         &'a self,
         questions: &'a QuestionSet,
         records: I,
-    ) -> Result<
-        Call<Vec<Vec<NamedAnnotation>>, Vec<CompleteRecord<I::Item, CompleteAnnotated>>>,
-        Error,
-    >
+    ) -> Result<crate::AnnotationCall<I::Item>, Error>
     where
         I: IntoIterator + 'a,
         I::Item: Evidence,
@@ -243,10 +240,7 @@ impl Engine {
         questions: &'a QuestionSet,
         records: I,
         options: CallOptions<'a>,
-    ) -> Result<
-        Call<Vec<Vec<NamedAnnotation>>, Vec<CompleteRecord<I::Item, CompleteAnnotated>>>,
-        Error,
-    >
+    ) -> Result<crate::AnnotationCall<I::Item>, Error>
     where
         I: IntoIterator + 'a,
         I::Item: Evidence,
