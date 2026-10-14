@@ -66,6 +66,13 @@ CORE_SAMPLE = {
 REFERENCE_CONSUMERS = {'cli', 'rust', 'c'}
 
 
+def call_result_consumers(parity):
+    """The library result contract excludes packet, command and database doors."""
+    return [row['id'] for row in all_consumers(parity)
+            if row['surface'].startswith('libraries/')
+            and row['id'] not in ('c', 'mcp', 'rust-polars')]
+
+
 def required_cases(parity, consumer):
     """Resolve the assertions at a public door without changing shared SDK cases."""
     contract = next(row for row in all_consumers(parity) if row['id'] == consumer)
@@ -196,7 +203,11 @@ def inventory():
     for case in cases:
         if case['verb'] not in parity['functions'] or not case['expect']:
             raise ValueError(f"{case['id']}: unknown verb or empty expectation")
-        if 'consumers' in case and (not case['id'].startswith('mcp-question-') or case['consumers'] != ['mcp']):
+        library_result = (case['id'] == 'library-call-result'
+                          and case['kind'] == 'call-result'
+                          and case.get('consumers') == call_result_consumers(parity))
+        if ('consumers' in case and not library_result
+                and (not case['id'].startswith('mcp-question-') or case['consumers'] != ['mcp'])):
             raise ValueError(f"{case['id']}: shared cases cannot exclude public variants")
         if set(case.get('consumers', [])) - {row['id'] for row in all_consumers(parity)}:
             raise ValueError(f"{case['id']}: unknown public variant")
@@ -204,6 +215,10 @@ def inventory():
         if len(checks) != len(set(checks)) or set(checks) - {'named', 'compile', 'runtime'} or not {'named', 'runtime'} <= set(checks):
             raise ValueError(f"{case['id']}: invalid required checks")
         given = case['input']
+        if case['kind'] == 'call-result':
+            references = given.get('case_refs', [])
+            if not library_result or len(references) != len(case['expect'].get('calls', [])) or any(source not in canonical for source in references):
+                raise ValueError(f"{case['id']}: invalid library result calls")
         if 'scenarios_ref' in given:
             scenarios = parity['image_admission_scenarios'].get(given['scenarios_ref'])
             if not scenarios or any(row['profile_ref'] not in parity['image_profiles'] for row in scenarios):

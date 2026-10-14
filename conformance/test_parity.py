@@ -570,10 +570,18 @@ class CliApplicability(unittest.TestCase):
         parity.validate_consumer_contracts(self.contract)
         cli = parity.required_cases(self.contract, 'cli')
         self.assertEqual(len(cli), 244)
-        self.assertEqual(len(parity.required_cases(self.contract, 'rust')), 255)
+        self.assertEqual(set(parity.required_cases(self.contract, 'rust')),
+                         {row['id'] for row in original
+                          if 'rust' in row.get('consumers', ['rust'])})
         self.assertEqual(set(parity.required_cases(self.contract, 'mcp')),
-                         {row['id'] for row in original if row['tier'] == 'binding'
-                          or row['id'] in parity.CORE_SAMPLE})
+                         {row['id'] for row in original
+                          if 'mcp' in row.get('consumers', ['mcp'])
+                          and (row['tier'] == 'binding' or row['id'] in parity.CORE_SAMPLE)})
+        result_case = 'library-call-result'
+        self.assertIn(result_case, parity.required_cases(self.contract, 'rust'))
+        self.assertIn(result_case, parity.required_cases(self.contract, 'python'))
+        for consumer in ('cli', 'c', 'mcp', 'sqlite', 'rust-polars'):
+            self.assertNotIn(result_case, parity.required_cases(self.contract, consumer))
         self.assertTrue(all(case['checks'] == ['named', 'runtime'] for case in cli.values()))
         self.assertEqual(cli['declaration-null']['expect']['error'], 'local')
         self.assertEqual(cli['cancellation-held-call']['cli_boundary'], 'signal-drain')
