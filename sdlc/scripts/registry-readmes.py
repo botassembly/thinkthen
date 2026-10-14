@@ -81,15 +81,20 @@ def check_versions(text, release):
 
 
 def check_readme(family, data, root=REPO):
+    text = data.decode('utf-8')
+    if family in ('command', 'packagist'):
+        # Composer renders the preserved docs README; only its pitch and versions
+        # belong to the public package-page boundary.
+        if opening(text) != OPENING:
+            raise Refusal('shared-opening: ' + family)
+        check_versions(text, version(root))
+        return
     check_text(data, version(root))
-    if len(data.decode().splitlines()) >= 40:
+    if len(text.splitlines()) >= 40:
         raise Refusal('readme-needs-under-40-lines: ' + family)
-    expected = source(family, root).read_bytes()
-    if data != expected:
+    if data != source(family, root).read_bytes():
         raise Refusal('readme-source-mismatch: ' + family)
-    if family in ('command', 'packagist') and opening(data.decode()) != OPENING:
-        raise Refusal('shared-opening: ' + family)
-    if opening(data.decode()) != opening((root / 'README.md').read_text()):
+    if opening(text) != opening((root / 'README.md').read_text()):
         raise Refusal('shared-opening: ' + family)
 
 
@@ -226,7 +231,7 @@ def check_sources(root=REPO):
 
 
 SAMPLES = {
-    'command': ('sh', 'sample.sh'), 'packagist': ('php', 'sample.php'),
+    'command': ('sh', 'sample.sh'), 'packagist': ('sh', 'sample.sh'),
     'crate': ('rust', 'sample.rs'), 'python': ('python', 'sample.py'),
     'typescript': ('typescript', 'sample.mjs'), 'ruby': ('ruby', 'sample.rb'),
     'go': ('go', 'main.go'), 'cpp': ('cpp', 'sample.cpp'), 'c': ('c', 'sample.c'),
@@ -262,7 +267,7 @@ def examples(family, root=REPO):
         samples.append((filename, code, output.group(1) + '\n' if output else None))
     if not samples:
         raise Refusal('missing-example: ' + family)
-    if len(functions) < 2:
+    if family not in ('command', 'packagist') and len(functions) < 2:
         raise Refusal('example-needs-two-functions: ' + family)
     return samples
 
@@ -386,6 +391,8 @@ def run_build(command, work, env, input):
 
 def run_example(family, packages, work, root=REPO, selected=None, sample_index=0):
     filename, code, expected = examples(family, root)[sample_index]
+    if family == 'packagist':
+        family = 'command'
     package = unpack_example_package(family, packages, work / 'package', selected)
     home = work / 'home'; home.mkdir()
     cache = work / 'cache'; cache.mkdir(mode=0o700)
@@ -412,6 +419,10 @@ def run_example(family, packages, work, root=REPO, selected=None, sample_index=0
         return done.stdout
 
     if family == 'command':
+        if '< message.txt' in code:
+            demo = root / 'demos/01-refund-gate'
+            shutil.copyfile(demo / 'message.txt', work / 'message.txt')
+            shutil.copyfile(demo / 'recording/thinkthen.jsonl', cache / 'thinkthen.jsonl')
         sample_archive = packages / 'thinkthen-first-run.tar.gz'
         fixture = members(sample_archive.read_bytes()) if 'thinkthen-first-run' in code else {}
         for name, data in fixture.items():

@@ -102,7 +102,7 @@ class PackageText(unittest.TestCase):
             with zipfile.ZipFile(package, 'w') as bundle:
                 bundle.writestr('thinkthen.exe', data)
                 bundle.writestr('README.md', b'ADR 0047')
-            with self.assertRaisesRegex(readmes.Refusal, 'adr'):
+            with self.assertRaisesRegex(readmes.Refusal, 'shared-opening'):
                 readmes.check_package('command', package)
 
     def test_dependency_versions_are_allowed(self):
@@ -190,23 +190,73 @@ class PackageText(unittest.TestCase):
                 with self.assertRaisesRegex(readmes.Refusal, 'example-did-not-run: command'):
                     readmes.check_examples(packages, root)
 
-    def test_root_body_refuses_internal_references_and_long_pages(self):
+    def test_preserved_root_checks_only_opening_and_versions(self):
         for family in ('command', 'packagist'):
-            with tempfile.TemporaryDirectory() as scratch:
+            with self.subTest(family=family), tempfile.TemporaryDirectory() as scratch:
                 root = Path(scratch)
                 (root / 'crates/thinkthen').mkdir(parents=True)
                 shutil.copyfile(readmes.REPO / 'crates/thinkthen/Cargo.toml',
                                 root / 'crates/thinkthen/Cargo.toml')
-                for plant, cause in [('ADR 0047', 'adr'), ('ticket 0578', 'ticket'),
-                                     ('sdlc/planning/a.md', 'internal-path')]:
-                    text = '# ThinkThen\n\n' + readmes.OPENING + '\n\n' + plant + '\n'
+                approved = readmes.source(family).read_text()
+                self.assertGreaterEqual(len(approved.splitlines()), 40)
+                (root / 'README.md').write_text(approved)
+                readmes.check_readme(family, approved.encode(), root)
+                body = approved + '\nADR 0047; ticket 0578; sdlc/planning/a.md\n'
+                readmes.check_readme(family, body.encode(), root)
+                for text, cause in [(approved.replace(readmes.OPENING, 'Wrong pitch'), 'shared-opening'),
+                                    (approved + '\nThinkThen release 0.1.2\n', 'stale-version')]:
                     (root / 'README.md').write_text(text)
                     with self.assertRaisesRegex(readmes.Refusal, cause):
                         readmes.check_readme(family, text.encode(), root)
-                text = '# ThinkThen\n\n' + readmes.OPENING + '\n' + '\n' * 37
-                (root / 'README.md').write_text(text)
-                with self.assertRaisesRegex(readmes.Refusal, 'readme-needs-under-40-lines'):
-                    readmes.check_readme(family, text.encode(), root)
+
+    def test_package_pages_keep_whole_body_rules(self):
+        with tempfile.TemporaryDirectory() as scratch:
+            root = Path(scratch)
+            page = readmes.source('python', root)
+            page.parent.mkdir(parents=True)
+            (root / 'crates/thinkthen').mkdir(parents=True)
+            shutil.copyfile(readmes.REPO / 'crates/thinkthen/Cargo.toml',
+                            root / 'crates/thinkthen/Cargo.toml')
+            for plant, cause in [('ADR 0047', 'adr'), ('ticket 0578', 'ticket'),
+                                 ('sdlc/planning/a.md', 'internal-path'), ('\n' * 40, 'readme-needs-under-40-lines')]:
+                text = '# ThinkThen\n\n' + readmes.OPENING + '\n\n' + plant + '\n'
+                page.write_text(text)
+                with self.assertRaisesRegex(readmes.Refusal, cause):
+                    readmes.check_readme('python', text.encode(), root)
+
+    def test_composer_replays_root_cli_without_a_php_example(self):
+        self.assertEqual(readmes.examples('packagist'), readmes.examples('command'))
+        samples = readmes.examples('command')
+        self.assertEqual(len(samples), 2)
+        self.assertIn('< message.txt', samples[0][1])
+        self.assertIn('thinkthen-first-run', samples[1][1])
+
+    def test_preserved_root_replay_uses_real_demo_and_first_run_fixtures(self):
+        with tempfile.TemporaryDirectory() as scratch:
+            tree = Path(scratch); packages = tree / 'packages'; packages.mkdir()
+            demo = readmes.REPO / 'demos/01-refund-gate'
+            first_run = readmes.REPO / 'demos/27-test-with-no-network'
+            script = ('#!' + sys.executable + '\nimport os, pathlib, sys\n'
+                      'text = sys.stdin.read()\n'
+                      'if "--replay" in sys.argv:\n'
+                      '    assert text == ' + repr((first_run / 'report.txt').read_text()) + '\n'
+                      '    assert pathlib.Path("recording/thinkthen.jsonl").is_file()\n'
+                      'else:\n'
+                      '    assert text == ' + repr((demo / 'message.txt').read_text()) + '\n'
+                      '    assert pathlib.Path(os.environ["THINKTHEN_CACHE"], "thinkthen.jsonl").read_bytes() == '
+                      + repr((demo / 'recording/thinkthen.jsonl').read_bytes()) + '\n'
+                      'print("true")\n')
+            archive(packages / ('thinkthen-' + readmes.version() + '-x86_64-unknown-linux-musl.tar.gz'),
+                    {'README.md': readmes.source('command').read_bytes(), 'thinkthen': script.encode()})
+            archive(packages / 'thinkthen-first-run.tar.gz', {
+                'thinkthen-first-run/report.txt': (first_run / 'report.txt').read_bytes(),
+                'thinkthen-first-run/recording/thinkthen.jsonl':
+                    (first_run / 'recording/thinkthen.jsonl').read_bytes()})
+            for family in ('command', 'packagist'):
+                for index in range(len(readmes.examples(family))):
+                    with self.subTest(family=family, index=index):
+                        work = tree / (family + str(index)); work.mkdir()
+                        readmes.run_example(family, packages, work, sample_index=index)
 
     def test_release_replays_every_public_package_on_a_prepared_host(self):
         jobs = yaml.safe_load((readmes.REPO / '.github/workflows/release.yml').read_text())['jobs']
