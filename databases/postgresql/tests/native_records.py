@@ -36,9 +36,9 @@ def main():
             assert query("SELECT prorettype::regtype FROM pg_proc WHERE oid=" +
                          quoted(signature) + "::regprocedure") == 'thinkthen_question_detail'
             receipt = "thinkthen_details('Fits?','Alpha.')"
-            assert query("SELECT (d.value).boolean_value, (d.probabilities).kind, "
-                         "((d.probabilities).value).number_value, length(d.answer_id), "
-                         "d.model, d.requests_sent, d.cached FROM " + receipt + " d", 1) == 't|yes_no|0.9|64|jev-1.13.0|1|f'
+            assert query("SELECT ((d).value).boolean_value, ((d).probabilities).kind, "
+                         "(((d).probabilities).value).number_value, length((d).answer_id), "
+                         "(d).model, (d).requests_sent, (d).cached FROM (SELECT " + receipt + " AS d) s", 1) == 't|yes_no|0.9|64|jev-1.13.0|1|f'
             assert query("SELECT (d.value).boolean_value IS NULL, d.answer_id IS NOT NULL "
                          "FROM thinkthen_details('Fits?','Alpha.',threshold=>'0.1:0.95') d", 1) == 't|t'
             assert query("SELECT thinkthen_details(NULL,'Alpha.',threshold=>'bad') IS NULL, "
