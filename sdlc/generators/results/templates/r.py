@@ -161,7 +161,15 @@ def answer_helpers(definitions):
               'pub(crate) fn call_probability(function: &str, rows: &Value, observations: &[Value], scalar: bool) -> Crossed<Robj> {', 'match function {']
     for function, contract in contracts.items():
         mode = contract['probability_mode']
-        if mode not in ('yes', 'picked'):
+        if mode == 'items':
+            read = 'probability_' + function + '(row)'
+            if function == 'relate':
+                body = '{ let row = rows; ' + read + ' }'
+            else:
+                body = 'array(rows, |row| ' + read + ')'
+                if contract['call_shape'] == 'input':
+                    body = 'if scalar { match rows.as_array().and_then(|rows| rows.first()) { Some(row) => ' + read + ', None => plain(&Value::Null) } } else { ' + body + ' }'
+        elif mode == 'null':
             body = 'plain(&Value::Null)'
         else:
             odds = at(contract['probability_path'])
@@ -188,4 +196,34 @@ def answer_helpers(definitions):
                 body = '{ let row = rows; ' + read + ' }'
         lines.append(json.dumps(function) + ' => ' + body + ',')
     lines += ['_ => Err(crate::defect("native result has no named probability")),', '}', '}']
-    return '\n'.join(lines + helpers) + '\n'
+    return '\n'.join(lines + helpers) + ITEM_PROBABILITIES + '\n'
+
+
+ITEM_PROBABILITIES = r"""
+fn probability_rank(row: &Value) -> Crossed<Robj> {
+    plain(member(row, &["answer", "probability"]).unwrap_or(&Value::Null))
+}
+fn probability_relate(row: &Value) -> Crossed<Robj> {
+    array(member(row, &["value"]).ok_or_else(|| crate::defect("native relation has no edges"))?,
+          |edge| plain(member(edge, &["probability"]).unwrap_or(&Value::Null)))
+}
+fn probability_recognize(row: &Value) -> Crossed<Robj> {
+    if let Some(entities) = member(row, &["value", "entities"]) {
+        return array(entities, |entity| {
+            let proposal = member(row, &["answer", "proposals"])
+                .and_then(Value::as_array)
+                .and_then(|proposals| proposals.iter().find(|proposal| {
+                    proposal.get("kept").and_then(Value::as_bool) == Some(true)
+                    && member(proposal, &["selected", "start"]) == entity.get("start")
+                    && member(proposal, &["selected", "end"]) == entity.get("end")
+                    && proposal.get("kind") == entity.get("kind")
+                }))
+                .ok_or_else(|| crate::defect("native entity has no kept proposal"))?;
+            plain(member(proposal, &["span_probability"]).unwrap_or(&Value::Null))
+        });
+    }
+    array(member(row, &["value", "proposals"])
+          .ok_or_else(|| crate::defect("native recognition has no proposals"))?,
+          |proposal| plain(member(proposal, &["probability"]).unwrap_or(&Value::Null)))
+}
+"""
