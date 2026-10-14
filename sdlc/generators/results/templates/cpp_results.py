@@ -53,17 +53,21 @@ def render(definitions, typ, name):
             result_probability = 'std::conditional_t<Single,' + probability_type + ',std::vector<' + probability_type + '>>' if mode != 'null' else 'std::optional<double>'
         else:
             result_value, result_probability = value_type, probability_type
+        rows = [key for key, source in definitions.items() if source.get('properties', {}).get('kind', {}).get('const') == 'row' and source.get('properties', {}).get('function', {}).get('const') == function]
         lines += (["template<bool Single>"] if shape == 'input' else []) + [f'using {function.title()}Result = CallResult<{result_value},{result_probability},{receipt_type}>;',
                   ('namespace detail {\n' + ('template<bool Single>\n' if shape == 'input' else '') + f'inline {function.title()}Result' + ('<Single>' if shape == 'input' else '') + f' project_{function}(const std::vector<SessionPacket>& packets) {{'),
                   'detail::successful_result(packets);', f'std::optional<{aggregate_type}> aggregate;',
                   f'for(const auto& packet:packets) if(auto carrier=packet.as_{name(descriptor["carrier"])}()) {{',
                   'if(aggregate) throw ::tt::Failure("multiple matching aggregates",packets); aggregate.emplace(*carrier->value().value); }',
-                  'if(!aggregate) throw ::tt::Failure("no matching aggregate",packets);',
                   f'std::vector<{receipt_type}> records;']
         if descriptor['receipt_payload'].get('type') == 'array':
-            lines += ['records=std::move(*aggregate);']
+            lines += ['if(aggregate) records=std::move(*aggregate);']
+            if rows:
+                lines += [f'else for(const auto& packet:packets) if(auto row=packet.as_{name(rows[0])}()) records.push_back(*row->value().value);']
+            else:
+                lines += ['else throw ::tt::Failure("no matching aggregate",packets);']
         else:
-            lines += ['records.push_back(std::move(*aggregate));']
+            lines += ['if(!aggregate) throw ::tt::Failure("no matching aggregate",packets);', 'records.push_back(std::move(*aggregate));']
         lines += [f'std::vector<{value_type}> values;', f'std::vector<{probability_type}> probabilities;',
                   'for(size_t i=0;i<records.size();++i) { const auto& row=detail::document(records[i]);']
         member = descriptor['value_projection']
@@ -110,7 +114,6 @@ def render(definitions, typ, name):
                       'return {std::move(values.front()),' + ('std::optional<double>{}' if mode=='null' else 'std::move(probabilities.front())') + ',std::move(records),std::move(facts)}; } else {',
                       'return {std::move(values),' + ('std::optional<double>{}' if mode=='null' else 'std::move(probabilities)') + ',std::move(records),std::move(facts)}; }']
         elif shape == 'collection':
-            lines += []
             odds = 'probabilities' if mode != 'items' else 'odds'
             if mode == 'items':
                 lines += ['std::vector<std::optional<double>> odds; for(auto& item:probabilities) odds.push_back(item.front());']

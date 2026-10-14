@@ -105,8 +105,12 @@ try:
         elif verb == 'rank':
             assert sampled_value == [0], (verb, sampled_value)
         elif verb == 'recognize':
-            assert len(sampled_value) == 1 and sampled_value[0]['text'] == 'Maria Chen', sampled_value
+            recognition = next(packet['value'][0] for packet in packets if packet['kind'] == 'aggregate')
+            assert sampled_value == recognition['value']['entities'], sampled_value
             assert len(sampled_result['probability']) == len(sampled_value), sampled_result
+            for entity, probability in zip(sampled_value, sampled_result['probability'], strict=True):
+                proposal = next(p for p in recognition['answer']['proposals'] if p['kept'] and p.get('kind') == entity['kind'] and p.get('selected', {}).get('start') == entity['start'] and p.get('selected', {}).get('end') == entity['end'])
+                assert probability == proposal['span_probability'], (probability, proposal)
         elif verb == 'annotate':
             assert isinstance(sampled_value, dict), sampled_value
         print('CPP_INSTALLED_EXAMPLE_PASS', verb)

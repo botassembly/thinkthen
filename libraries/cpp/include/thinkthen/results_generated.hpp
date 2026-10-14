@@ -8707,9 +8707,9 @@ namespace tt::results {
                 if(aggregate) throw ::tt::Failure("multiple matching aggregates",packets);
                 aggregate.emplace(*carrier->value().value);
             }
-            if(!aggregate) throw ::tt::Failure("no matching aggregate",packets);
             std::vector<AtomicDecideValue> records;
-            records=std::move(*aggregate);
+            if(aggregate) records=std::move(*aggregate);
+            else for(const auto& packet:packets) if(auto row=packet.as_SessionPacketDecideRow()) records.push_back(*row->value().value);
             std::vector<Data> values;
             std::vector<std::optional<double>> probabilities;
             for(size_t i=0;
@@ -8759,9 +8759,9 @@ namespace tt::results {
                 if(aggregate) throw ::tt::Failure("multiple matching aggregates",packets);
                 aggregate.emplace(*carrier->value().value);
             }
-            if(!aggregate) throw ::tt::Failure("no matching aggregate",packets);
             std::vector<AtomicNullableString> records;
-            records=std::move(*aggregate);
+            if(aggregate) records=std::move(*aggregate);
+            else for(const auto& packet:packets) if(auto row=packet.as_SessionPacketChooseRow()) records.push_back(*row->value().value);
             std::vector<std::optional<std::string>> values;
             std::vector<std::optional<double>> probabilities;
             for(size_t i=0;
@@ -8811,9 +8811,9 @@ namespace tt::results {
                 if(aggregate) throw ::tt::Failure("multiple matching aggregates",packets);
                 aggregate.emplace(*carrier->value().value);
             }
-            if(!aggregate) throw ::tt::Failure("no matching aggregate",packets);
             std::vector<AtomicArrayOfString> records;
-            records=std::move(*aggregate);
+            if(aggregate) records=std::move(*aggregate);
+            else for(const auto& packet:packets) if(auto row=packet.as_SessionPacketTagRow()) records.push_back(*row->value().value);
             std::vector<std::vector<std::string>> values;
             std::vector<std::optional<double>> probabilities;
             for(size_t i=0;
@@ -8850,9 +8850,9 @@ namespace tt::results {
                 if(aggregate) throw ::tt::Failure("multiple matching aggregates",packets);
                 aggregate.emplace(*carrier->value().value);
             }
-            if(!aggregate) throw ::tt::Failure("no matching aggregate",packets);
             std::vector<AtomicDouble> records;
-            records=std::move(*aggregate);
+            if(aggregate) records=std::move(*aggregate);
+            else for(const auto& packet:packets) if(auto row=packet.as_SessionPacketScoreRow()) records.push_back(*row->value().value);
             std::vector<double> values;
             std::vector<std::optional<double>> probabilities;
             for(size_t i=0;
@@ -8886,9 +8886,9 @@ namespace tt::results {
                 if(aggregate) throw ::tt::Failure("multiple matching aggregates",packets);
                 aggregate.emplace(*carrier->value().value);
             }
-            if(!aggregate) throw ::tt::Failure("no matching aggregate",packets);
             std::vector<AtomicBoolean> records;
-            records=std::move(*aggregate);
+            if(aggregate) records=std::move(*aggregate);
+            else for(const auto& packet:packets) if(auto row=packet.as_SessionPacketFilterRow()) records.push_back(*row->value().value);
             std::vector<Data> values;
             std::vector<std::optional<double>> probabilities;
             for(size_t i=0;
@@ -8916,9 +8916,9 @@ namespace tt::results {
                 if(aggregate) throw ::tt::Failure("multiple matching aggregates",packets);
                 aggregate.emplace(*carrier->value().value);
             }
-            if(!aggregate) throw ::tt::Failure("no matching aggregate",packets);
             std::vector<AtomicNonZeroUsize> records;
-            records=std::move(*aggregate);
+            if(aggregate) records=std::move(*aggregate);
+            else throw ::tt::Failure("no matching aggregate",packets);
             std::vector<uint64_t> values;
             std::vector<std::vector<std::optional<double>>> probabilities;
             for(size_t i=0;
@@ -8950,8 +8950,8 @@ namespace tt::results {
                 if(aggregate) throw ::tt::Failure("multiple matching aggregates",packets);
                 aggregate.emplace(*carrier->value().value);
             }
-            if(!aggregate) throw ::tt::Failure("no matching aggregate",packets);
             std::vector<Find> records;
+            if(!aggregate) throw ::tt::Failure("no matching aggregate",packets);
             records.push_back(std::move(*aggregate));
             std::vector<Data> values;
             std::vector<std::optional<double>> probabilities;
@@ -8986,9 +8986,9 @@ namespace tt::results {
                 if(aggregate) throw ::tt::Failure("multiple matching aggregates",packets);
                 aggregate.emplace(*carrier->value().value);
             }
-            if(!aggregate) throw ::tt::Failure("no matching aggregate",packets);
             std::vector<Annotation> records;
-            records=std::move(*aggregate);
+            if(aggregate) records=std::move(*aggregate);
+            else for(const auto& packet:packets) if(auto row=packet.as_SessionPacketAnnotateRow()) records.push_back(*row->value().value);
             std::vector<std::vector<std::pair<std::string, AnnotatedField>>> values;
             std::vector<std::optional<double>> probabilities;
             for(size_t i=0;
@@ -9027,9 +9027,9 @@ namespace tt::results {
                 if(aggregate) throw ::tt::Failure("multiple matching aggregates",packets);
                 aggregate.emplace(*carrier->value().value);
             }
-            if(!aggregate) throw ::tt::Failure("no matching aggregate",packets);
             std::vector<Recognition> records;
-            records=std::move(*aggregate);
+            if(aggregate) records=std::move(*aggregate);
+            else throw ::tt::Failure("no matching aggregate",packets);
             std::vector<std::variant<std::vector<Entity>,std::vector<BoundaryProposal>>> values;
             std::vector<std::vector<std::optional<double>>> probabilities;
             for(size_t i=0;
@@ -9063,8 +9063,8 @@ namespace tt::results {
                 if(aggregate) throw ::tt::Failure("multiple matching aggregates",packets);
                 aggregate.emplace(*carrier->value().value);
             }
-            if(!aggregate) throw ::tt::Failure("no matching aggregate",packets);
             std::vector<Relation> records;
+            if(!aggregate) throw ::tt::Failure("no matching aggregate",packets);
             records.push_back(std::move(*aggregate));
             std::vector<std::vector<RelatedEntityEdge>> values;
             std::vector<std::vector<std::optional<double>>> probabilities;
