@@ -94,3 +94,4 @@ Stage 2 starts when G1 and G2 land. One lane per language owns `libraries/<lang>
 - Ada (adb ≤200, ads ≤80): `T_EngineSettings`; make `Thinkthen_Session_C` and `Requests` private.
 - COBOL (c ≤12, h ≤12): settings record; one `CALL` per answer; rank and filter tables; the session check uses the blocking call; correct the README.
 - 2026-10-13 started
+- 2026-10-13 next: Merged the reviewed native helper slice as 8b2a47981a416a324514920e8b72197a89b263e5 after installed C ownership, all 42 shared cases, fourteen ASan door checks and unchanged Ada prerequisite passed; continue the language slices and combined checkpoint.
