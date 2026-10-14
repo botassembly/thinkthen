@@ -64,6 +64,15 @@ def masked(source, comments=r'//[^\n]*|/\*[\s\S]*?\*/'):
     return re.sub(pattern, lambda m: ''.join('\n' if c == '\n' else ' ' for c in m[0]), source)
 
 
+def normalized_annotation(source):
+    """Normalize type syntax while preserving quoted literal content."""
+    quoted = r'("(?:\\.|[^"\\])*"|\'(?:\\.|[^\'\\])*\'|`(?:\\.|[^`\\])*`)'
+    parts = re.split(quoted, source)
+    for index in range(0, len(parts), 2):
+        parts[index] = re.sub(r'\(([\w.]+)\)', r'\1', re.sub(r'\s+', '', parts[index]))
+    return ''.join(parts).lstrip('|')
+
+
 def braces(source):
     stack, pairs, depths = [], {}, []
     for pos, char in enumerate(source):
@@ -267,8 +276,7 @@ def cstyle(source, language):
                         break
                     nesting += (char in '([{<') - (char in ')]}>')
                     end += 1
-                annotation = re.sub(r'\s+', '', source[colon + 1:end])
-                annotation = re.sub(r'\(([\w.]+)\)', r'\1', annotation).lstrip('|')
+                annotation = normalized_annotation(source[colon + 1:end])
                 result.add(Declaration(container + '.' + name, annotation, 'annotation'))
     # Enum constants form the public contract even without a field declaration.
     for start, end, container in scopes:

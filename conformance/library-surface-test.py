@@ -333,6 +333,11 @@ extraPublicExport <- function(context = NULL, enabled = FALSE,
             self.assertTrue(any('missing generated declaration:' in error and '.payload' in error for error in errors))
             code, errors = invoke(graph=generated.replace(' readonly "payload"?: string;', ' readonly "payload"?: number;'))
             self.assertTrue(any('missing generated declaration:' in error and '.payload.' in error for error in errors), errors)
+            self.assertIn('"choose"', generated)
+            code, errors = invoke(graph=generated.replace('"choose"', '"cho ose"', 1))
+            self.assertEqual(code, 1)
+            self.assertTrue(any('unlisted generated declaration:' in error and '"cho ose"' in error
+                                for error in errors), errors)
             inherited = declarations.replace('decide(): void;', '') + '\nexport interface Client extends R.TypedCalls {}\nexport interface TypedCalls { decide(): void; }\n'
             self.assertNotIn('missing function: decide', invoke(inherited)[1])
             self.assertIn('missing function: decide', invoke(inherited.replace(' extends R.TypedCalls', ''))[1])
