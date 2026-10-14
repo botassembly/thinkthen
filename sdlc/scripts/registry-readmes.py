@@ -544,7 +544,9 @@ def run_example(family, packages, work, root=REPO, selected=None, sample_index=0
         if len(assets) != 1:
             raise Refusal('dart-example-native-target-mismatch')
         asset = assets[0]
-        binary = native / 'lib' / asset['file']
+        binary = packages / ('libthinkthen-dart.so' if asset['file'] == 'libthinkthen.so' else asset['file'])
+        if not binary.is_file():
+            binary = native / 'lib' / asset['file']
         if hashlib.sha256(binary.read_bytes()).hexdigest() != asset['sha256']:
             raise Refusal('dart-example-native-asset-mismatch')
         assets_cache = work / 'assets'; assets_cache.mkdir()
