@@ -62,7 +62,7 @@ func ownedLiteral(data []byte, key, value string) bool {
 
 // Boolean reads an authored decision only when its value is actually Boolean.
 func (v ownedJSON) Boolean() (bool, error)  { return ownedDecode[bool](v.raw) }
-func (v ownedJSON) JSONValue() (any, error) { return ownedDecode[any](v.raw) }
+func (v ownedJSON) jsonValue() (any, error) { return ownedDecode[any](v.raw) }
 
 func (v ownedJSON) String() string   { return "<ThinkThen owned result>" }
 func (v ownedJSON) GoString() string { return v.String() }

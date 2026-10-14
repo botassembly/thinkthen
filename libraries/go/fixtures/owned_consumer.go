@@ -68,7 +68,7 @@ func feedChecks(client *tt.Client) {
 			prefix++
 		}
 	}
-	kind, kindErr := failure.Detail.Kind().Value.JSONValue()
+	kind, kindErr := failure.Detail.Kind().Value.Value()
 	require(prefix == 1 && kindErr == nil && kind == "local", "reader failure lost completed prefix")
 	_, answerErr := failure.Call.DecideAnswer()
 	var answerFailure *tt.SessionError
@@ -156,6 +156,8 @@ func main() {
 	for _, value := range []any{tt.TextInput("text"), tt.Request{}, tt.SessionPacket{}, tt.OrderedMap[string]{}, tt.Facts{}} {
 		_, exposes := value.(json.Marshaler)
 		require(!exposes, "transport JSON encoder remains public")
+		_, exposes = value.(interface{ JSONValue() (any, error) })
+		require(!exposes, "whole-result JSON reader remains public")
 	}
 	inputType := reflect.TypeOf((*tt.Client).Decide).In(3)
 	require(inputType.Name() == "DecideInput" && inputType.NumMethod() > 0, "decision input became untyped")
@@ -538,8 +540,7 @@ func main() {
 	require(err == nil && terminal.Failure().Present && terminal.Failure().Null && !terminal.Facts().Present, "null/absence changed")
 	_, err = packet.AsSessionPacketDecideRow()
 	require(err != nil, "wrong alternative accepted")
-	roundtrip, _ := json.Marshal(fixtureValue(packet))
-	require(string(roundtrip) == `{"extra":{"future":false},"failure":null,"kind":"terminal"}`, "unknown field lost")
+	// Unknown-member retention is checked through the installed private codec.
 	client.Close()
 	for _, call := range retained {
 		facts := call.Terminal.Facts()

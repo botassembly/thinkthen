@@ -665,7 +665,6 @@
         "PresenceState",
         "UsagePersistenceState",
         "OwnedPresence",
-        "JSONValue",
         "Producer",
         "FeedInput",
         "AnswerCardinalityError",
@@ -693,7 +692,6 @@
         "Present",
         "Null",
         "GoString",
-        "JSONValue",
         "Ptr",
         "TextInput",
         "RecordsInput",
@@ -710,7 +708,6 @@
       "representation_owners": [
         "Presence",
         "OwnedPresence",
-        "JSONValue",
         "UsageStatus",
         "Error",
         "ErrorKind",
@@ -721,7 +718,6 @@
       "representation_embedded_members": {
         "ownedJSON": [
           "Boolean",
-          "JSONValue",
           "String",
           "GoString",
           "UnmarshalJSON"

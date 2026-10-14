@@ -32,6 +32,14 @@ def render(definitions, input_definitions):
         lines += [f'type {n} struct {{ ownedJSON }}']
         if s.get('type') in ('string','boolean','integer','number'):
             lines += [f'func (v {n}) Value() ({typ(s)}, error) {{ return ownedDecode[{typ(s)}](v.raw) }}']
+        if not s.get('properties') and not s.get('variants') and s.get('type') not in ('string', 'boolean', 'integer', 'number'):
+            alternatives = s.get('oneOf', s.get('anyOf', []))
+            if alternatives and all(a.get('type') == 'string' for a in alternatives):
+                lines += [f'func (v {n}) Value() (string,error) {{ return ownedDecode[string](v.raw) }}']
+            elif s.get('type') == 'object':
+                lines += [f'func (v {n}) Value() ({typ(s)},error) {{ return ownedDecode[{typ(s)}](v.raw) }}']
+            else:
+                lines += [f'func (v {n}) Value() (any,error) {{ return v.jsonValue() }}']
         if 'properties' in s:
             for member,field in s['properties'].items():
                 method=name(member)
