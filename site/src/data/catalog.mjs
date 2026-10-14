@@ -758,7 +758,7 @@ export const SURFACES = [
       ['duckdb -unsigned', 'The `-unsigned` flag lets DuckDB load a local extension file. The query loads that file first.'],
     ],
     supportedVersions: ['v1.5.6', 'v2.0-cyanoptera'],
-    particular: ['Use dbt v1 with duckdb 1.5.5. dbt v2 requires signed extensions; this unsigned archive does not enable ThinkThen in dbt v2.', 'To load by path, choose the member under your DuckDB version and platform, then pass its path to LOAD.', 'DuckDB hands the extension up to 2,048 rows at a time. One call judges those rows together, and `SET thinkthen_max_requests` caps that call.'],
+    particular: ['dbt v2 requires signed extensions; this unsigned archive does not enable ThinkThen in dbt v2.', 'To load by path, choose the member under your DuckDB version and platform, then pass its path to LOAD.', 'DuckDB hands the extension up to 2,048 rows at a time. One call judges those rows together, and `SET thinkthen_max_requests` caps that call.'],
   },
   {
     slug: 'sqlite', backends: 'sql', name: 'SQLite', deckHeading: 'SQLite',
