@@ -278,8 +278,9 @@ def host_functions(code, family):
         literals = r'"(?:""|[^"])*"|\'[^\n]\''
     elif family == 'crate':
         # Lifetimes remain code. Rust characters and raw strings remain literals.
+        comments = r'//[^\n]*|/\*'
         literals = (r'(?:br|r)(?P<hashes>\#*)"[\s\S]*?"(?P=hashes)|'
-                    r'"(?:\\.|[^"\\])*"|\'(?:\\(?:u\{[0-9a-fA-F_]+\}|x[0-9a-fA-F]{2}|.)|[^\'\\\n])\'')
+                    r'"(?:\\[\s\S]|[^"\\])*"|\'(?:\\(?:u\{[0-9a-fA-F_]+\}|x[0-9a-fA-F]{2}|.)|[^\'\\\n])\'')
     functions = set()
     if family == 'cobol':
         # Match CALL operands before masking other literals, including DISPLAY text.
@@ -300,7 +301,28 @@ def host_functions(code, family):
             except (ValueError, TypeError, KeyError):
                 pass
         return ' '
-    code = re.sub(literals + '|' + comments, mask, code)
+    if family == 'crate':
+        # Rust block comments nest, and their contents are never string tokens.
+        tokens = re.compile(literals + '|' + comments)
+        pieces, pos = [], 0
+        while token := tokens.search(code, pos):
+            pieces.append(code[pos:token.start()])
+            end = token.end()
+            if token[0] == '/*':
+                depth = 1
+                for delimiter in re.finditer(r'/\*|\*/', code[end:]):
+                    depth += 1 if delimiter[0] == '/*' else -1
+                    if not depth:
+                        end += delimiter.end()
+                        break
+                else:
+                    end = len(code)
+            pieces.append(' ')
+            pos = end
+        pieces.append(code[pos:])
+        code = ''.join(pieces)
+    else:
+        code = re.sub(literals + '|' + comments, mask, code)
     suffix = 'Async' if family == 'csharp' else ''
     # Rust turbofish and typed host arguments remain part of the same named call.
     generic = r'(?:\s*(?:::)?\s*<[\w\s.:,<>\[\]&?\']+>)?' if family in ('crate', 'cpp', 'typescript', 'csharp') else ''

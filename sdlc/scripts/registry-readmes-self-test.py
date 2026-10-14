@@ -230,6 +230,8 @@ class PackageText(unittest.TestCase):
                         "Inputs.Calls.Choose(q, i); Put_Line(Long_Float'Image(p)); end loop;", True),
                 ('ada', "C := 'x'; Inputs.Calls.Decide(q, i); C := '''; Inputs.Calls.Choose(q, i);", True),
                 ('crate', "fn sample<'a, 'b>() { Question::decide(q); Question::choose::<&'a Team>(q); }", True),
+                ('crate', 'Question::decide(q); /* outer /* inner */ " */ Question::choose(q);', True),
+                ('crate', 'Question::decide(q); "continued \\\nnot a call"; Question::choose(q);', True),
             ])
             for family, current, decoys in (
                     ('ada', 'Inputs.Calls.Decide(q, i);', (
@@ -240,7 +242,10 @@ class PackageText(unittest.TestCase):
                     ('crate', 'Question::decide(q);', (
                         'Question::decide(q);', 'Question::chooseUnknown(q);',
                         '// Question::choose(q);', '/* Question::choose(q); */',
+                        '/* outer /* inner */ Question::choose(q); */',
+                        '/* outer /* middle /* inner */ */ Question::choose(q); */',
                         '"Question::choose(q)"', 'r#"Question::choose(q)"#',
+                        '"continued \\\nQuestion::choose(q)"',
                         'br##"Question::choose(q)"##', "'x'", "'\\u{27}'"))):
                 cases.extend((family, current + '\n' + decoy, False) for decoy in decoys)
             for function in functions:
