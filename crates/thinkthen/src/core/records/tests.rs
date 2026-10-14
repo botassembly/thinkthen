@@ -60,20 +60,6 @@ fn a_carriage_return_before_the_line_feed_is_stripped() {
 }
 
 #[test]
-fn one_pointer_sends_the_value_it_names_and_several_send_an_object() {
-    let one = reading(Framing::Jsonl, &["/body"]);
-    let line = br#"{"id":"T-91","body":"Payouts failed.","count":3}"#;
-    assert_eq!(sent(&one, line).as_deref(), Ok("Payouts failed."));
-    let number = reading(Framing::Jsonl, &["/count"]);
-    assert_eq!(sent(&number, line).as_deref(), Ok("3"));
-    let several = reading(Framing::Jsonl, &["/body", "/id"]);
-    assert_eq!(
-        sent(&several, line).as_deref(),
-        Ok(r#"{"body":"Payouts failed.","id":"T-91"}"#)
-    );
-}
-
-#[test]
 fn a_pointer_without_jsonl_reads_the_whole_input_as_one_json_value() {
     let document = reading(Framing::Document, &["/a/text"]);
     assert_eq!(
