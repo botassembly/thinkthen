@@ -136,9 +136,10 @@ func fixtureCall(call tt.Call) any {
 	for i, packet := range call.Packets {
 		packets[i] = fixtureValue(packet)
 	}
-	var terminal any
+	var terminal, facts any
 	if call.Terminal != nil {
 		terminal = fixtureValue(call.Terminal)
+		facts = fixtureValue(call.Facts)
 	}
-	return map[string]any{"Packets": packets, "Terminal": terminal, "Value": fixtureValue(call.Value), "Probability": fixtureValue(call.Probability), "Results": fixtureValue(call.Results), "Facts": fixtureValue(call.Facts)}
+	return map[string]any{"Packets": packets, "Terminal": terminal, "Value": fixtureValue(call.Value), "Probability": fixtureValue(call.Probability), "Results": fixtureValue(call.Results), "Facts": facts}
 }
