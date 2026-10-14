@@ -268,7 +268,9 @@ package Thinkthen_Session_C is
    K_THINKTHEN_SESSION_READY_TIMEOUT_V1 : constant := 5;
    K_THINKTHEN_SESSION_RESULT_V1 : constant := 0;
    K_THINKTHEN_SESSION_WAIT_INPUT_V1 : constant := 1;
+   K_THINKTHEN_SESSION_WAIT_INTERRUPTIBLE_SETTLEMENT_V1 : constant := 4;
    K_THINKTHEN_SESSION_WAIT_RESULT_V1 : constant := 0;
+   K_THINKTHEN_SESSION_WAIT_SETTLEMENT_ARM_V1 : constant := 3;
    K_THINKTHEN_SESSION_WAIT_SETTLEMENT_V1 : constant := 2;
    type thinkthen_engine is null record;
    type thinkthen_question is null record;
