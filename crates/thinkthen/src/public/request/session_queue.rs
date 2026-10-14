@@ -21,6 +21,7 @@ struct State {
     terminal: Option<RequestSessionTerminal>,
     settled: bool,
     receiver_closed: bool,
+    settlement_interrupted: bool,
 }
 
 #[derive(Debug, Default)]
@@ -48,6 +49,9 @@ impl Queue {
         use super::{RequestSessionReady as Ready, RequestSessionWaitInterest as Interest};
         let started = std::time::Instant::now();
         let mut state = self.lock();
+        if interest == Interest::SettlementArm {
+            state.settlement_interrupted = false;
+        }
         loop {
             if state.output.is_some() || state.terminal.is_some() {
                 return Ready::Result;
@@ -55,8 +59,14 @@ impl Queue {
             if state.settled || state.receiver_closed {
                 return Ready::End;
             }
-            if interest != Interest::Settlement && self.cancel.is_cancelled() {
+            if (interest == Interest::InterruptibleSettlement && state.settlement_interrupted)
+                || (matches!(interest, Interest::Result | Interest::Input)
+                    && self.cancel.is_cancelled())
+            {
                 return Ready::Cancelled;
+            }
+            if interest == Interest::SettlementArm {
+                return Ready::Timeout;
             }
             if interest == Interest::Input
                 && feed
@@ -215,7 +225,7 @@ impl Queue {
         interest: super::RequestSessionWaitInterest,
     ) -> Result<RequestSessionRead, crate::Error> {
         use super::RequestSessionWaitInterest as Interest;
-        if interest == Interest::Input {
+        if !matches!(interest, Interest::Result | Interest::Settlement) {
             return Err(crate::Error::usage(
                 "packet reads require result or settlement interest",
             ));
@@ -254,6 +264,7 @@ impl Queue {
     pub(super) fn stop(&self, drop_receiver: bool) {
         let mut state = self.lock();
         self.cancel.cancel();
+        state.settlement_interrupted = true;
         state.intake_closed = true;
         state.input = None;
         if drop_receiver {

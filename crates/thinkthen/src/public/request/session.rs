@@ -195,6 +195,12 @@ pub enum RequestSessionWaitInterest {
     Input,
     /// Drain final output after cancellation without repeatedly waking for cancel.
     Settlement,
+    /// Arm one exclusive settlement reader; return readiness without waiting.
+    /// Discard earlier cancellation notifications. The timeout is ignored.
+    SettlementArm,
+    /// Wait for final output or cancellation requested after SettlementArm.
+    /// Arm before checking the caller's cancellation/disposal state, then wait.
+    InterruptibleSettlement,
 }
 
 /// Readiness does not consume a packet or transfer an input descriptor.
@@ -306,7 +312,7 @@ impl RequestSession {
     /// Result interest wakes promptly on cancellation; Settlement drains final facts.
     /// Queued output takes priority over cancellation. No provider work is joined.
     /// # Errors
-    /// Refuses Input interest and returns cancellation when settlement is pending.
+    /// Refuses all interests except Result/Settlement; Result can return cancellation.
     pub fn next_packet(
         &self,
         interest: RequestSessionWaitInterest,
@@ -317,6 +323,8 @@ impl RequestSession {
     /// Result waits ignore input room. Settlement waits ignore cancellation so
     /// callers can drain final facts after a cancellation wake. Cancellation
     /// wakes Result/Input waits immediately and never joins provider work.
+    /// An exclusive settlement reader arms before checking caller cancellation,
+    /// then waits with InterruptibleSettlement; a later cancel interrupts that wait.
     #[must_use]
     pub fn wait(
         &self,

@@ -303,7 +303,7 @@ int main(void) {
             thinkthen_session_result *packet = (thinkthen_session_result *)(uintptr_t)7;
             uint32_t state = 99, ready = 99;
             check(thinkthen_session_wait(session, THINKTHEN_SESSION_WAIT_SETTLEMENT_V1, 5000, &ready) == THINKTHEN_OK && ready == THINKTHEN_SESSION_READY_RESULT_V1, "hold an unread post-cancel packet");
-            uint32_t invalid[] = {THINKTHEN_SESSION_WAIT_INPUT_V1, 99};
+            uint32_t invalid[] = {THINKTHEN_SESSION_WAIT_INPUT_V1, THINKTHEN_SESSION_WAIT_SETTLEMENT_ARM_V1, THINKTHEN_SESSION_WAIT_INTERRUPTIBLE_SETTLEMENT_V1, 99};
             for (size_t i = 0; i < sizeof invalid / sizeof invalid[0]; ++i) {
                 check(thinkthen_session_next_packet(session, invalid[i], &state, &packet) == THINKTHEN_EUSAGE, "packet read refuses invalid interest");
                 check(state == 99 && packet == (thinkthen_session_result *)(uintptr_t)7, "invalid interest preserves both outputs and queued packet");

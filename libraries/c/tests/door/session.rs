@@ -288,3 +288,76 @@ fn cancelled_terminal(
         }
     }
 }
+
+#[test]
+fn settlement_wait_interrupts_without_changing_legacy_drain_or_losing_final_facts() {
+    let gate = std::sync::Arc::new(conformance_backend::Rendezvous::new(2));
+    let held = gate.clone();
+    let (arrived, arrival) = std::sync::mpsc::channel();
+    let backend = conformance_backend::Listener::answering(move |_| {
+        arrived.send(()).expect("arrival signal");
+        conformance_backend::Canned::ok(
+            r#"{"model":"fixed","answers":{"q1":{"type":"noul","noul":0.9}}}"#,
+        )
+        .after_release(held.clone())
+    })
+    .expect("owned held listener");
+    let mut child = start_with(
+        &compile(&crate_dir().join("tests/c/settlement_interrupt.c")),
+        backend.base(),
+        &[("SESSION_NEXT", Path::new("1"))],
+    );
+    let mut input = child.stdin.take().expect("input");
+    let output = child.stdout.take().expect("output");
+    let (lines, received) = std::sync::mpsc::channel();
+    let reader = std::thread::spawn(move || {
+        for line in BufReader::new(output).lines() {
+            lines
+                .send(line.expect("consumer output"))
+                .expect("line receiver");
+        }
+    });
+    arrival
+        .recv_timeout(Duration::from_secs(60))
+        .expect("provider holds request");
+    input.write_all(b"s").expect("start drain");
+    assert_eq!(
+        received
+            .recv_timeout(Duration::from_secs(5))
+            .expect("armed drain"),
+        "waiting"
+    );
+    input.write_all(b"c").expect("interrupt drain");
+    assert_eq!(
+        received
+            .recv_timeout(Duration::from_secs(5))
+            .expect("prompt interruption"),
+        "interrupted"
+    );
+    assert!(
+        matches!(
+            received.recv_timeout(Duration::from_millis(30)),
+            Err(std::sync::mpsc::RecvTimeoutError::Timeout)
+        ),
+        "legacy settlement must keep waiting for provider"
+    );
+    gate.wait();
+    let mut terminal = None;
+    while let Ok(line) = received.recv_timeout(Duration::from_secs(5)) {
+        if line == "freed" {
+            break;
+        }
+        let packet: serde_json::Value = serde_json::from_str(&line).expect("packet");
+        if packet["kind"] == "terminal" {
+            terminal = Some(packet);
+        }
+    }
+    drop(input);
+    let result = finished(child);
+    reader.join().expect("retire owned output reader");
+    super::successful(&result);
+    let terminal = terminal.expect("final terminal survives interrupt");
+    assert_eq!(terminal["failure"]["error"]["kind"], "cancelled");
+    assert_eq!(terminal["facts"]["requests_sent"], 1);
+    assert_eq!(backend.count(), 1, "interruption starts no request");
+}
