@@ -37,7 +37,9 @@ def classification(path, name, manifest, generated):
         return None
     config = source_owners(manifest)[name]
     parts = Path(path).parts
-    if Path(path).name == 'tests.rs' or any(folder in parts for folder in config['test_folders']):
+    relative = str(Path(path).relative_to(config['root']))
+    if (relative in config.get('test_files', []) or Path(path).name == 'tests.rs'
+            or any(folder in parts for folder in config['test_folders'])):
         return 'test'
     return 'handwritten'
 
