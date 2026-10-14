@@ -5,7 +5,7 @@ ThinkThen::Client.open do |client|
   money_back =
     "I would like to return this and get my money back." \
     "\n"
-  is_refund = client.decide(refund, money_back).value
+  refund_reading = client.decide(refund, money_back).value
   expected = "The customer asks for money back."
-  raise unless is_refund == expected
+  raise unless refund_reading == expected
 end
