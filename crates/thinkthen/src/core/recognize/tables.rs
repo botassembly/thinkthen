@@ -1,3 +1,4 @@
+//! Stays: recognition examples and authored rule parsing need direct closed-grammar boundaries.
 //! Ticket 0147's five edge-case tables: pieces, decode, score, edge options
 //! and requests. Each row is an input and its exact output.
 

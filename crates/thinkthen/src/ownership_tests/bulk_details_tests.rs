@@ -1,3 +1,4 @@
+//! Stays: private bulk primitives retain original values and packed request ownership that public carriers cannot show.
 //! Exact Details ownership and packed serialization on the shipped frame primitive.
 use crate::{BatchSetting, CallOptions, Engine, Question, QuestionSet};
 use conformance_backend::{Canned, Listener};

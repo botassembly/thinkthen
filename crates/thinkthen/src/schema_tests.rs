@@ -1,3 +1,4 @@
+//! Stays: Rust-derived schema declarations must match committed public parser contracts.
 //! The result schema, derived from the Rust types that serialize each result.
 //!
 //! ADR 0112: `specification/result.schema.json` is this test's output. On a

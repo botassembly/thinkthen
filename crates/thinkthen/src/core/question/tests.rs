@@ -1,3 +1,4 @@
+//! Stays: question normalization, structured values and candidate grammar need direct parser/property checks.
 use super::{Labels, LabelsError, Question};
 use crate::core::json::Json;
 use crate::core::text::{Description, Meaning, QuestionText};

@@ -1360,7 +1360,6 @@ TTDescriptor, TTFiles, TTSessionSourceLocationBuilder;
 @property(nonatomic, strong, nullable) NSString * context;
 @property(nonatomic, strong, nullable) NSString * contextField;
 @property(nonatomic, strong, nullable) NSNumber * deadlineMs;
-@property(nonatomic, strong, nullable) NSNumber * details;
 @property(nonatomic, strong, nullable) NSArray * examples;
 @property(nonatomic, strong, nullable) NSString * examplesField;
 @property(nonatomic, strong, nullable) NSArray * field;

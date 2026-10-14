@@ -1,3 +1,4 @@
+//! Stays: deadline and cancellation ordering must count attempted sends and stop held transport or retry work.
 //! Whole-call deadline proofs for the transport. The pipeline's proofs live
 //! in `pipeline/tests.rs`, and the ordered runner's in `cli/schedule/ordered`.
 

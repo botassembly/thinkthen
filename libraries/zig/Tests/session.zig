@@ -83,7 +83,7 @@ pub fn main() !void {
         };
         typed.deinit();
     }
-    const request = try tt.Request.init(a, "decide", .{ .text = .{ .text = "Does it pass?" } }, .{ .text = .{ .text = "Evidence." } }, .{ .details = false });
+    const request = try tt.Request.init(a, "decide", .{ .text = .{ .text = "Does it pass?" } }, .{ .text = .{ .text = "Evidence." } }, .{});
     var plan = try request.plan(&engine);
     request.deinit();
     defer plan.deinit();

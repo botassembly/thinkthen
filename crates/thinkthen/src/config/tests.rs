@@ -1,3 +1,4 @@
+//! Stays: configuration parsing and permission refusals must withhold values and obey platform ownership rules.
 use std::path::PathBuf;
 
 use super::{Config, Platform, resolve_cache, resolve_config, resolve_usage};

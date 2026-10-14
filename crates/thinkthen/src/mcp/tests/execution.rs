@@ -1,3 +1,4 @@
+//! Stays: framing, cancellation, reader ownership and native admission faults need direct private transport checks.
 //! Actual adapter execution checks disclosure, controls and native transport identity.
 use super::super::{
     admission::{CallParams, Invocation},

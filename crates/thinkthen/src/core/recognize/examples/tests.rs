@@ -1,3 +1,4 @@
+//! Stays: recognition examples and authored rule parsing need direct closed-grammar boundaries.
 use super::{ExampleError, RecognitionExample, render_examples};
 use crate::core::RecognizeSpec;
 use proptest::prelude::*;

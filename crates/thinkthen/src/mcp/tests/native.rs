@@ -1,3 +1,4 @@
+//! Stays: framing, cancellation, reader ownership and native admission faults need direct private transport checks.
 //! Real native control/error serialization checks, not complete-result parity.
 use super::super::{
     admission::{CallParams, Invocation},

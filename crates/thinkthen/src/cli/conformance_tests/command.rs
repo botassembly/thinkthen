@@ -1,3 +1,4 @@
+//! Stays: saved-response parser and fault tables exercise private command preparation without provider calls.
 //! Direct question-form and child environment regressions stay to pin exact diagnostics
 //! and prove refusal sends nothing even when the parent has a key and address.
 

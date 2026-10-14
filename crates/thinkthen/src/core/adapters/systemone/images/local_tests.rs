@@ -1,3 +1,4 @@
+//! Stays: closed image declarations and decoded byte/pixel arithmetic need direct parser and limit checks.
 //! Closed profile and decoded-original edge tables; transport tests live outside core.
 use super::{ImageLimit, ImageRoute, named};
 use crate::core::image::ImageState;

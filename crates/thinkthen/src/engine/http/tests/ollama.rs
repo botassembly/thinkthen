@@ -1,3 +1,4 @@
+//! Stays: transport retry timing, cancellation and address diagnostics need direct fault and secrecy checks.
 //! The refusal advice uses the posting address while the resolver owns its socket.
 
 use conformance_backend::{Canned, Listener};

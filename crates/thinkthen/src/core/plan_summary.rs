@@ -186,6 +186,7 @@ pub(crate) struct TokenBand {
 
 #[cfg(test)]
 mod tests {
+    //! Stays: conservative token and byte arithmetic needs an independent exact-body accounting vector.
     use super::PlanSummary;
 
     #[test]

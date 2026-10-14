@@ -40,6 +40,8 @@ Reviews: revision f8005a6, accept
 
 Reviews: revision 2c83b76, accept
 
+Reviews: revision f718e5d, accept
+
 ## Outcome
 
 One reviewed commit on `ticket/0543-final`, tagged `rc/0.2.0-rc.13`, passes the local release suite, the coverage comparison and the nonpublishing hosted runs on Linux, macOS and Windows, and publishes nothing.
@@ -115,3 +117,4 @@ Release QA, publication and after-publication checks stay with 0425, 0393 and 03
 - 2026-10-14 next: Merged the freshly accepted ordered JVM inputs, event-based waits and generated bootstrap metadata at 399fd2a50 with Java, Kotlin, Scala and changed examples passing; the SQLite typed-family migration and Ruby declaration guard repair remain active before freeze.
 - 2026-10-14 next: Integrated the 0580–0582 rulings at fba349c8a after the completed af3661d5 checkpoint passed routine tests and every available library build; seven developers now implement the shared result, generator, three SQL families, Rust Polars and Python before example rewrites and freeze.
 - 2026-10-14 next: Python one-result API and shared paired-case generation are merged with fresh acceptance; repair reviewed Rust recovery defects and complete SQL and remaining language result migrations before the next checkpoint.
+- 2026-10-14 next: Accepted Rust core, TypeScript, Ruby, Polars, C#, PostgreSQL, DuckDB and shared closure checks are merged through b591d6ded; eight developer lanes cover five language examples, Go and its shared probability guard, SQLite integration and hosted candidate preparation, with database examples and Rust caller review next.

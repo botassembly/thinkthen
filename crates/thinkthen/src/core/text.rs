@@ -376,6 +376,7 @@ impl Serialize for Description {
 
 #[cfg(test)]
 mod tests {
+    //! Stays: private text and URL wrappers need direct secrecy and invalid-shape admission checks.
     use super::{
         BlankTextError, Evidence, EvidenceShapeError, Meaning, ModelName, QuestionText, Url,
     };

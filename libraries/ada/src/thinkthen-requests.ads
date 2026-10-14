@@ -719,7 +719,6 @@ T_batch : T_RequestBatch_Optional;
 T_context : T_Text_Optional;
 T_context_field : T_Text_Optional;
 T_deadline_ms : T_Integer_Optional;
-T_details : T_Boolean_Optional;
 T_examples : T_RecognitionExample_List_Optional;
 T_examples_field : T_Text_Optional;
 T_field : T_Text_List_Optional;

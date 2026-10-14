@@ -70,6 +70,7 @@ impl<'a> Exchange<'a> {
 
 #[cfg(test)]
 mod tests {
+    //! Stays: recording identities and replay bytes require direct private serialization contract checks.
     use super::Exchange;
     use crate::core::adapters::built_in;
     use crate::core::plan::Plan;

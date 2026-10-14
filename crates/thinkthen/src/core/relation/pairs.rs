@@ -219,6 +219,7 @@ pub(crate) fn pair_edges<E: RelationEntityView>(
 
 #[cfg(test)]
 mod count_tests {
+    //! Stays: pair generation, endpoint order and count arithmetic need direct numeric invariants.
     use super::{Lead, PairCount, RelationRule, count_pairs, plan_pairs};
     use crate::core::relation::RelationEntity;
 

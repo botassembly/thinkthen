@@ -22,6 +22,7 @@ impl<T> RecordValue<T> {
 
 #[cfg(test)]
 mod tests {
+    //! Stays: the private typed serializer must preserve the shared value-shape contract.
     use serde::Deserialize;
 
     use super::RecordValue;

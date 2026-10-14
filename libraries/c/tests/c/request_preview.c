@@ -78,11 +78,11 @@ static thinkthen_value *owned_plan(thinkthen_engine *engine) {
 static char *typed_preview(thinkthen_engine *engine) {
     thinkthen_request_text_v1 question_text={.text=text("asks for a refund")};
     thinkthen_request_question_selector_text_v1 question_value={.m_text=&question_text};
-    thinkthen_request_question_selector_v1 question={.kind=THINKTHEN_REQUEST_QUESTION_SELECTOR_ARM_1_V1,
-        .data.arm_1=&question_value};
+    thinkthen_request_question_selector_v1 question={.kind=THINKTHEN_REQUEST_QUESTION_SELECTOR_TEXT_V1,
+        .data.text=&question_value};
     thinkthen_request_text_v1 evidence={.text=text("Refund me please.")};
     thinkthen_request_input_text_v1 input_value={.m_text=&evidence};
-    thinkthen_request_input_v1 input={.kind=THINKTHEN_REQUEST_INPUT_ARM_1_V1,.data.arm_1=&input_value};
+    thinkthen_request_input_v1 input={.kind=THINKTHEN_REQUEST_INPUT_TEXT_V1,.data.text=&input_value};
     thinkthen_request_unsigned_v1 limit={.value=0};
     thinkthen_request_call_options_v1 options={.m_max_requests_total=&limit};
     thinkthen_request_arguments_v1 arguments={.m_question=&question,.m_input=&input,.m_options=&options};
@@ -147,7 +147,7 @@ static void json_refusal(thinkthen_engine *engine, thinkthen_request_arguments_v
 static void typed_json_preview(thinkthen_engine *engine) {
     thinkthen_request_text_v1 wording={.text=text("asks for a refund")};
     thinkthen_request_question_selector_text_v1 question_text={.m_text=&wording};
-    thinkthen_request_question_selector_v1 question={.kind=THINKTHEN_REQUEST_QUESTION_SELECTOR_ARM_1_V1,.data.arm_1=&question_text};
+    thinkthen_request_question_selector_v1 question={.kind=THINKTHEN_REQUEST_QUESTION_SELECTOR_TEXT_V1,.data.text=&question_text};
     char wide[]="1.2500e+1", negative[]="-0", original[]="kept";
     thinkthen_complete_json_v1 number={.kind=THINKTHEN_COMPLETE_JSON_NUMBER_V1,.data.number=text(wide)};
     thinkthen_complete_json_v1 zero={.kind=THINKTHEN_COMPLETE_JSON_NUMBER_V1,.data.number=text(negative)};
@@ -160,7 +160,7 @@ static void typed_json_preview(thinkthen_engine *engine) {
     thinkthen_complete_json_v1 object={.kind=THINKTHEN_COMPLETE_JSON_OBJECT_V1,.data.object={members,3}};
     thinkthen_request_input_json_value_v1 value={.value=&object};
     thinkthen_request_input_json_v1 json={.m_value=&value};
-    thinkthen_request_input_v1 input={.kind=THINKTHEN_REQUEST_INPUT_ARM_2_V1,.data.arm_2=&json};
+    thinkthen_request_input_v1 input={.kind=THINKTHEN_REQUEST_INPUT_JSON_V1,.data.json=&json};
     thinkthen_request_unsigned_v1 limit={.value=0};
     thinkthen_request_call_options_v1 options={.m_max_requests_total=&limit};
     thinkthen_request_arguments_v1 arguments={.m_question=&question,.m_input=&input,.m_options=&options};

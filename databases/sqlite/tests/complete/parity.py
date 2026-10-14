@@ -11,7 +11,7 @@ BACKEND=Path(os.environ.get('THINKTHEN_BACKEND_BIN',os.environ.get('THINKTHEN_BA
 sys.path.insert(0,str(ROOT/'conformance'))
 import parity as inventory
 from c_parity import document,prepare,assertions,compact,Backend
-from project import project,assert_empty_sql
+from project import project
 from jsonschema.exceptions import ValidationError
 
 sys.path.insert(0,str(ROOT/'databases/duckdb/tools'))
@@ -90,9 +90,9 @@ def main():
     contract=inventory.inventory()
     rows=list(inventory.required_cases(contract,consumer).values())
     try:
+        if os.environ.get('THINKTHEN_TEST_PROFILE')=='full' and (selected is not None or len(sys.argv)>2):
+            raise ValueError('full SQL parity refuses a case selector')
         if selected is not None:
-            if os.environ.get('THINKTHEN_TEST_PROFILE')=='full':
-                raise ValueError('full SQL parity refuses a case selector')
             if len(sys.argv)>2:
                 raise ValueError('conflicting SQL case selectors')
             ids=selected_case_ids(selected)
@@ -123,8 +123,6 @@ def main():
                 env=child_env(home=tmp,
                               PATH=os.environ['PATH'],
                               LANG='C.UTF-8',
-                              CARGO_TARGET_DIR=os.environ.get('CARGO_TARGET_DIR',str(ROOT/'target')),
-                              THINKTHEN_TEST_PROFILE=os.environ.get('THINKTHEN_TEST_PROFILE','routine'),
                               LD_LIBRARY_PATH=os.environ.get('LD_LIBRARY_PATH',''))
                 if consumer=='postgresql':env['THINKTHEN_POSTGRESQL_SOCKET']=os.environ['THINKTHEN_POSTGRESQL_SOCKET']
                 backend=Backend(BACKEND,env)
@@ -174,10 +172,7 @@ def main():
                             path=home/'saved/thinkthen.sqlite'
                             if path.exists():
                                 with sqlite3.connect(path) as db:assert db.execute('SELECT count(*) FROM answers').fetchone()[0]==0
-                        if 'empty_sql_rows' in got:
-                            assert_empty_sql(step,got,int(backend.read('count'))-before)
-                        else:
-                            assertions(row,step,got,int(backend.read('count'))-(before if step.get('count_delta') else 0))
+                        assertions(row,step,got,int(backend.read('count'))-(before if step.get('count_delta') else 0))
                         if row['kind'] in ('images','image-location'):
                             replay={k:v for k,v in engine.items() if k!='record'};replay['replay']=str(home/'recorded')
                             saved=execute(consumer,{**frame,'engine_settings':replay},env,home,backend)

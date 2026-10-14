@@ -656,7 +656,6 @@ typedef struct thinkthen_cobol_RequestOptions {
     const void * m_context;
     const void * m_context_field;
     const void * m_deadline_ms;
-    const void * m_details;
     const void * m_examples;
     const void * m_examples_field;
     const void * m_field;
@@ -1395,9 +1394,6 @@ typedef struct thinkthen_cobol_RequestOptionsContextField {
 typedef struct thinkthen_cobol_RequestOptionsDeadlineMs {
     int64_t value;
 } thinkthen_cobol_RequestOptionsDeadlineMs;
-typedef struct thinkthen_cobol_RequestOptionsDetails {
-    uint64_t value;
-} thinkthen_cobol_RequestOptionsDetails;
 typedef struct thinkthen_cobol_RequestOptionsExamples {
     const void *const * data;
     uint64_t len;

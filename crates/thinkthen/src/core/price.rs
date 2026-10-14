@@ -64,6 +64,7 @@ fn decimal_micro(value: &str) -> Option<u64> {
 
 #[cfg(test)]
 mod tests {
+    //! Stays: decimal price grammar must reject invalid spellings without rounding admitted values.
     use super::Prices;
 
     #[test]

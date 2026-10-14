@@ -1,3 +1,4 @@
+//! Stays: framing, cancellation, reader ownership and native admission faults need direct private transport checks.
 use super::super::admission::{CallParams, Invocation};
 use conformance_backend::Backend;
 use serde_json::{Value, json};

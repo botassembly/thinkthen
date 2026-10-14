@@ -1,3 +1,4 @@
+//! Stays: process-local counters must start fresh after fork without sharing parent charges.
 //! One process-scoped send count across SQL engines and retries. The
 //! public API re-exports [`SendBudget`].
 

@@ -4191,7 +4191,6 @@ type RequestOptions struct {
 	Context           *string                  `json:"context,omitempty"`
 	ContextField      *string                  `json:"context_field,omitempty"`
 	DeadlineMs        *int64                   `json:"deadline_ms,omitempty"`
-	Details           *bool                    `json:"details,omitempty"`
 	Examples          *[]RecognitionExample    `json:"examples,omitempty"`
 	ExamplesField     *string                  `json:"examples_field,omitempty"`
 	Field             *[]string                `json:"field,omitempty"`
@@ -4234,11 +4233,6 @@ func (v RequestOptions) marshalJSON() ([]byte, error) {
 	}
 	if v.DeadlineMs != nil {
 		if err := transportMember(object, "deadline_ms", *v.DeadlineMs); err != nil {
-			return nil, err
-		}
-	}
-	if v.Details != nil {
-		if err := transportMember(object, "details", *v.Details); err != nil {
 			return nil, err
 		}
 	}

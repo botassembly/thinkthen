@@ -1,3 +1,4 @@
+//! Stays: deadline and cancellation faults must stop input reads and queued work before dispatch.
 //! Whole-call stops through the question pipeline, held against a counted
 //! loopback listener.
 

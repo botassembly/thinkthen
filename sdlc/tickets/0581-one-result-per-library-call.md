@@ -57,3 +57,7 @@ Registry pages (0578), the website (0575) and docs examples follow after this la
 PM amendment, 2026-10-14. In pandas and Polars `.tt` results, `.probability` for recognize and relate is a typed list of Float64 per original row, one per item. Decide, filter, choose, find and rank stay nullable Float64; score, tag and annotate stay null.
 
 PM amendment, 2026-10-14. A recognize item's probability is its kept proposal's `span_probability`, matched by the selected bounds and kind; boundary-only recognition uses `proposal.probability`. Entity strength is not a probability and is not exposed as one. No wire or diagnostic change.
+
+PM amendment, 2026-10-14. In C#, a function whose authored values may be any JSON types `Result.Value` and its list variants with the existing generated `JsonElement` authored-value leaf. The result envelope JSON stays private. No new recursive union type.
+
+PM amendment, 2026-10-14. Probability belongs to the settled value. When a call leaves its value unresolved (null), its probability is null in every host, as Rust reports today.

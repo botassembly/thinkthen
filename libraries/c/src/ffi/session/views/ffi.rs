@@ -1,4 +1,4 @@
-//! Generated packet conversion preserves extension bytes and arbitrary JSON order.
+//! Stays: owned raw-pointer views must retain extension bytes, JSON order and exact numeric tokens after input drops.
 #![allow(
     unsafe_code,
     clippy::expect_used,

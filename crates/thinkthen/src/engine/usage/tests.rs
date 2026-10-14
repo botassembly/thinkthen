@@ -1,3 +1,4 @@
+//! Stays: counter overflow, unsafe paths and interrupted writes need direct persistence fault and concurrency checks.
 use std::fs;
 use std::io::ErrorKind;
 use std::net::TcpListener;

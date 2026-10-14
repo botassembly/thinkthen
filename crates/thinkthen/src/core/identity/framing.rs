@@ -16,6 +16,7 @@ pub(crate) fn digest(tag: &str, parts: &[&[u8]]) -> [u8; 32] {
 
 #[cfg(test)]
 mod tests {
+    //! Stays: identity grammar, hash domain framing and invalid-value secrecy need direct parser tables.
     use super::digest;
 
     #[test]

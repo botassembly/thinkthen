@@ -349,10 +349,10 @@ end program BLOCK_PLAN.
             fixture_backend.close()
             os.environ['THINKTHEN_API_KEY'] = 'tt-cobol-blocking'
             engine = saved_engine
-        page = (PACKAGE / 'README-PUBLIC.md').read_text(encoding='utf-8').split('```cobol\n')[1].split('```')[0]
-        assert len(page.splitlines()) < 40
-        example = (PACKAGE / 'examples/blocking.cob').read_text(encoding='utf-8')
-        assert all(line.strip() in example for line in page.splitlines() if line.strip())
+        page = (PACKAGE / 'README.md').read_text(encoding='utf-8')
+        assert '`examples/blocking.cob`' in page, 'installed guide must identify the blocking caller'
+        example = (PACKAGE / 'examples/blocking.cob').read_bytes()
+        assert example == (ROOT / 'libraries/cobol/examples/blocking.cob').read_bytes(), 'installed blocking example differs from its owned source'
         executable = work / 'public-example'
         subprocess.run(['cobc', '-x', '-free', '-fstatic-call', '-fno-gen-c-decl-static-call', '-I', str(PACKAGE / 'copybooks'), '-A', '-include ' + str(PACKAGE / 'src/tt_session.h') + ' -I' + str(HEADER.parent) + ' -Wno-incompatible-pointer-types', '-o', str(executable), str(PACKAGE / 'examples/blocking.cob'), str(PACKAGE / 'src/tt_session.c'), str(PACKAGE / 'src/tt_requests_generated.c'), '-Q', str(NATIVE) + ' -Wl,-rpath,' + str(NATIVE.parent)], env=child_env(LC_ALL='C.UTF-8'), check=True)
         decide_file, choose_file = work / 'decide.json', work / 'choose.json'

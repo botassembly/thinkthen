@@ -127,6 +127,7 @@ fn quoted_byte(byte: u8) -> bool {
 
 #[cfg(test)]
 mod tests {
+    //! Stays: cache directive grammar and aggregate byte/count limits need direct parser boundaries.
     use super::permits;
 
     #[test]

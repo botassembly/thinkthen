@@ -1,3 +1,4 @@
+//! Stays: private complete-result serialization must preserve partial failures and exclusive typed identities.
 use super::{Atomic, Observation, Origin, QuestionSource, ResultIdentity};
 use crate::core::probability::Probability;
 use crate::core::{

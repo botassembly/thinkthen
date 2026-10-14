@@ -1,3 +1,4 @@
+//! Stays: saved-response parser and fault tables exercise private command preparation without provider calls.
 use super::{asked, conformance_support::Document};
 use crate::core::{
     Backend, BackendProfile, BatchError, DEFAULT_MODEL, ProfileName, ProfileWarning, quoted_plan,

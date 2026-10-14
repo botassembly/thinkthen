@@ -1,3 +1,4 @@
+//! Stays: process-wide width selection and cancellation races require direct scheduling checks.
 //! The command's width setup and the one cap every live path shares.
 //!
 //! Width state belongs to the process, so each proof runs in a child copy of

@@ -1,3 +1,4 @@
+//! Stays: private diagnostic and signal mappings must withhold secrets and preserve cancellation counts.
 use super::{Failure, report};
 use crate::core::recording::Exchange as Recorded;
 use crate::core::{

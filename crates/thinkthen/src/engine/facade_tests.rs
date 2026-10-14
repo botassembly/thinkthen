@@ -1,3 +1,4 @@
+//! Stays: fork ownership, held transport and cache isolation require direct process and secrecy fault checks.
 //! The facade's controls, each held against a counted loopback listener.
 //!
 //! The shared-case runner proves each function's result through the facade
