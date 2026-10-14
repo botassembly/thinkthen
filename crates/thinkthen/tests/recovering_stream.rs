@@ -358,9 +358,19 @@ fn cancelled_session_publishes_final_facts_only_after_held_attempt_settles() {
     );
     assert_eq!(terminal.facts.as_ref().unwrap().requests_sent(), 1);
     assert_eq!(listener.count(), 1);
+    let rows = packets
+        .iter()
+        .filter_map(|packet| match packet {
+            RequestRecoveringResult::Row(row) => Some(row),
+            _ => None,
+        })
+        .collect::<Vec<_>>();
     assert!(
-        !packets
-            .iter()
-            .any(|packet| matches!(packet, RequestRecoveringResult::Row(_)))
+        rows.iter()
+            .all(|row| row.outcome().is_ok() && row.ordinal() == 0)
+    );
+    assert_eq!(
+        terminal.facts.as_ref().unwrap().records(),
+        rows.len() as u64
     );
 }
