@@ -80,7 +80,12 @@ try:
         for packet in owners:
             data, length = ct.c_void_p(), ct.c_size_t()
             assert native.thinkthen_session_result_json(packet,ct.byref(data),ct.byref(length)) == 0
-            packets.append(json.loads(ct.string_at(data,length.value)))
+            packet = json.loads(ct.string_at(data,length.value))
+            if packet['kind'] == 'aggregate' and packet['function'] == 'rank':
+                rows = packet['value']
+                assert [row['value'] for row in rows] == list(range(1, len(rows) + 1))
+                assert len({row['index'] for row in rows}) == len(rows)
+            packets.append(packet)
         print(json.dumps({'packets':packets},ensure_ascii=False))
 finally:
     for packet in owners: native.thinkthen_session_result_free(packet)
