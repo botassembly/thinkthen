@@ -153,6 +153,7 @@ fn wait<T>(
 
 #[cfg(test)]
 mod tests {
+    //! Stays: private worker and channel failures permit panic-payload and abandoned-caller checks that SQL cannot inject.
     use std::io::Write;
     use std::thread;
     use std::time::Duration;

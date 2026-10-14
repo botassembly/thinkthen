@@ -153,6 +153,7 @@ pub(crate) fn guard<T>(
 
 #[cfg(test)]
 mod tests {
+    //! Stays: private failure conversion and injected panics verify SQLite result codes and fixed diagnostics without exposing test entry points.
     use super::{Failure, guard};
     use rusqlite::ffi::{SQLITE_CANTOPEN, SQLITE_CONSTRAINT, SQLITE_ERROR, SQLITE_INTERRUPT};
     use thinkthen::ErrorKind;

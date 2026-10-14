@@ -344,6 +344,7 @@ pub(crate) fn set(argument: &str) -> Result<Arc<QuestionSet>, Failure> {
 
 #[cfg(test)]
 mod tests {
+    //! Stays: private cache entries expose bounded eviction directly without thousands of repeated SQL calls.
     use std::sync::Arc;
 
     use super::{CACHE_CAP, Parsed};

@@ -556,6 +556,7 @@ pub(crate) fn path_of(file: &std::fs::File) -> Option<std::path::PathBuf> {
 
 #[cfg(test)]
 mod tests {
+    //! Stays: the private host-version guard must refuse boundary versions before SQLite permits extension registration.
     use super::version_refusal;
 
     /// R2-1: an old host is refused by name, and the floor passes.
