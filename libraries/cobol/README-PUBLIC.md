@@ -1,14 +1,8 @@
 # ThinkThen for COBOL
 
-ThinkThen answers typed questions about text. Use it to decide yes or no, choose a label, score an answer, or filter and rank records. ThinkThen gives code typed answers to branch on, caches each question so you pay once, and replays recorded answers offline for tests. Backends include Jev, SystemOne, OpenAI and local models.
+ThinkThen is ten functions on top of Jev, TypeSafe's decision model, or any model like it. It puts these decision models in your code, whatever model, language or database you use. Use Jev, OpenAI or a local model. Ask a typed question and get back `true`, `false`, a label or a number. Your code branches on the answer. A model can say not sure, and a failed call never looks like an answer. ThinkThen packs many records into few requests, saves each answer for reuse, and lets tests replay saved answers with no key and no network.
 
-Download the matching release archive, then unpack it:
-
-```sh
-tar -xzf thinkthen-cobol-0.2.0-TARGET.tar.gz
-```
-
-Replace `TARGET` with the platform name on your downloaded archive. Set your hosted backend key: `export THINKTHEN_API_KEY=...`.
+Unpack the matching archive: `tar -xzf thinkthen-cobol-0.2.0-TARGET.tar.gz`. Replace `TARGET` with your platform. Set your hosted backend key: `export THINKTHEN_API_KEY=...`.
 
 The packaged `examples/blocking.cob` builds two generated question selectors and three text records. Each call blocks until the native result settles and returns an owned typed table. This excerpt reads the first yes-or-no answer and label:
 
@@ -42,5 +36,4 @@ call "TT_ANSWER_FREE" using
 Use the decision and choice first-answer presence indicators when a question permits an unresolved answer. Free the status owner once after reading the answer and diagnostic facts. The answer table shares that owner.
 
 The library is free and MIT licensed. Hosted models charge per token. Local models are free to use; you supply the computer that runs them.
-
 [Backend setup](https://thinkthen.dev/install/backends/) · [ThinkThen documentation](https://thinkthen.dev)
