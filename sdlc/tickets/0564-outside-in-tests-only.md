@@ -61,3 +61,4 @@ PM amendment, 2026-10-13. Remaining work. 0564 keeps only Rust, in `crates/think
 ## Progress
 
 - 2026-10-13 started
+- 2026-10-13 next: Merged the freshly accepted record-test cuts and parent-owned signal-folder cleanup into final at 39700e21b; preserve distinct checks and continue remaining test cleanup before the candidate.
