@@ -161,3 +161,49 @@ fn lazy_recognition_schema_refusal_is_terminal_before_sending() {
     assert_eq!(listener.count(), 0);
     assert!(!format!("{error:?}").contains("sk-schema-recovery"));
 }
+
+#[test]
+fn recovery_record_limit_stops_the_second_record_before_another_send() {
+    for eager in [false, true] {
+        let listener = Listener::answering(response).unwrap();
+        let engine = api::fixed(listener.base(), "sk-limit-recovery")
+            .no_cache()
+            .max_retries(0)
+            .max_requests(Some(1))
+            .unwrap()
+            .build()
+            .unwrap();
+        let request = request().admit().unwrap();
+        let feed = RequestFeed::from_records(
+            "records",
+            api::plain_records([
+                QuestionInput::Text("first".into()),
+                QuestionInput::Text("second".into()),
+            ]),
+        );
+        let feed = if eager { feed.eager() } else { feed };
+        let rows = RefCell::new(Vec::new());
+        let error = engine
+            .execute_request_recovering_sink(
+                &request,
+                RequestEnvironment {
+                    controls: api::dynamic_one(),
+                    feed: Some(feed),
+                },
+                &|row| rows.borrow_mut().push(row),
+            )
+            .unwrap_err();
+        assert_eq!(error.kind(), ErrorKind::Usage);
+        assert_eq!(
+            error.detail().message(),
+            "this engine answers at most 1 records in one call"
+        );
+        assert_eq!(rows.borrow().len(), usize::from(!eager));
+        assert_eq!(listener.count(), usize::from(!eager));
+        if !eager {
+            assert_eq!(error.facts().unwrap().requests_sent(), 1);
+            assert_eq!(error.facts().unwrap().records(), 1);
+        }
+        assert!(!format!("{error:?}").contains("sk-limit-recovery"));
+    }
+}
