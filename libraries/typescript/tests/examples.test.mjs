@@ -15,7 +15,7 @@ test('every function example answers as the file says', async (t) => {
     const out = {};
     for (const [name, { arm, ts }] of Object.entries(${JSON.stringify(examples)})) {
       const engine = new tt.Client({ base_url: ${JSON.stringify(`http://127.0.0.1:${backend.port}/`)} + arm + '/v1', cache: false });
-      try {out[name] = JSON.stringify(await new Function('tt', 'return ' + ts)(engine));}
+      try {out[name] = JSON.stringify(await new Function('tt', 'Client', 'return ' + ts)(engine, tt.Client));}
       finally {engine.close();}
     }
     return out;`);

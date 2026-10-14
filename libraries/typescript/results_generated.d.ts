@@ -1,4 +1,5 @@
 // Generated from the shared Rust result graph; do not edit.
+import type { Question, Input, Controls, Completed } from "./native.js";
 export type JsonValue =
   | null
   | boolean
@@ -1382,8 +1383,84 @@ export interface AnswerReaders {
   recognizeAnswer(): readonly NativeRecognition[];
   relateAnswer(): NativeRelation;
 }
-export function packet(value: JsonValue): NativeSessionPacket;
-export function parse(text: string): JsonValue;
+export interface NamedCalls {
+  decide(
+    q: Question,
+    i: Input,
+    c?: Controls,
+  ): Promise<Completed<NativeDecideResult>>;
+  decideAnswer(q: Question, i: Input, c?: Controls): Promise<boolean | null>;
+  choose(
+    q: Question,
+    i: Input,
+    c?: Controls,
+  ): Promise<Completed<NativeChooseResult>>;
+  chooseAnswer(q: Question, i: Input, c?: Controls): Promise<string | null>;
+  tag(q: Question, i: Input, c?: Controls): Promise<Completed<NativeTagResult>>;
+  tagAnswer(q: Question, i: Input, c?: Controls): Promise<readonly string[]>;
+  score(
+    q: Question,
+    i: Input,
+    c?: Controls,
+  ): Promise<Completed<NativeScoreResult>>;
+  scoreAnswer(
+    q: Question,
+    i: Input,
+    c?: Controls,
+  ): Promise<number | NativeNumber>;
+  filter(
+    q: Question,
+    i: Input,
+    c?: Controls,
+  ): Promise<Completed<NativeFilterResult>>;
+  filterAnswer(
+    q: Question,
+    i: Input,
+    c?: Controls,
+  ): Promise<readonly JsonValue[]>;
+  rank(
+    q: Question,
+    i: Input,
+    c?: Controls,
+  ): Promise<Completed<NativeRankResult>>;
+  rankAnswer(
+    q: Question,
+    i: Input,
+    c?: Controls,
+  ): Promise<readonly (number | NativeNumber)[]>;
+  find(
+    q: Question,
+    i: Input,
+    c?: Controls,
+  ): Promise<Completed<NativeFindResult>>;
+  findAnswer(q: Question, i: Input, c?: Controls): Promise<NativeFind>;
+  annotate(
+    q: Question,
+    i: Input,
+    c?: Controls,
+  ): Promise<Completed<NativeAnnotateResult>>;
+  annotateAnswer(
+    q: Question,
+    i: Input,
+    c?: Controls,
+  ): Promise<readonly NativeAnnotation[]>;
+  recognize(
+    q: Question,
+    i: Input,
+    c?: Controls,
+  ): Promise<Completed<NativeRecognizeResult>>;
+  recognizeAnswer(
+    q: Question,
+    i: Input,
+    c?: Controls,
+  ): Promise<readonly NativeRecognition[]>;
+  relate(
+    q: Question,
+    i: Input,
+    c?: Controls,
+  ): Promise<Completed<NativeRelateResult>>;
+  relateAnswer(q: Question, i: Input, c?: Controls): Promise<NativeRelation>;
+}
 export const REQUEST_VERSION: string;
 export interface AnnotateDefinition {
   readonly batch?: JsonValue;

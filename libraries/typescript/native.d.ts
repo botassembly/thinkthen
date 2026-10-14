@@ -29,40 +29,22 @@ export class Operation implements AsyncIterableIterator<R.NativeSessionPacket> {
  return():Promise<IteratorResult<R.NativeSessionPacket>>;
  [Symbol.asyncIterator]():AsyncIterableIterator<R.NativeSessionPacket>;
 }
-export interface Client {
- decideAnswer(q:Question,i:Input,c?:Controls):Promise<ReturnType<R.AnswerReaders["decideAnswer"]>>;
- chooseAnswer(q:Question,i:Input,c?:Controls):Promise<ReturnType<R.AnswerReaders["chooseAnswer"]>>;
- tagAnswer(q:Question,i:Input,c?:Controls):Promise<ReturnType<R.AnswerReaders["tagAnswer"]>>;
- scoreAnswer(q:Question,i:Input,c?:Controls):Promise<ReturnType<R.AnswerReaders["scoreAnswer"]>>;
- filterAnswer(q:Question,i:Input,c?:Controls):Promise<ReturnType<R.AnswerReaders["filterAnswer"]>>;
- rankAnswer(q:Question,i:Input,c?:Controls):Promise<ReturnType<R.AnswerReaders["rankAnswer"]>>;
- findAnswer(q:Question,i:Input,c?:Controls):Promise<ReturnType<R.AnswerReaders["findAnswer"]>>;
- annotateAnswer(q:Question,i:Input,c?:Controls):Promise<ReturnType<R.AnswerReaders["annotateAnswer"]>>;
- recognizeAnswer(q:Question,i:Input,c?:Controls):Promise<ReturnType<R.AnswerReaders["recognizeAnswer"]>>;
- relateAnswer(q:Question,i:Input,c?:Controls):Promise<ReturnType<R.AnswerReaders["relateAnswer"]>>;
-}
+export interface Client extends R.NamedCalls {}
 export class Client {
  constructor(settings?:R.EngineSettings);
  usagePersistence():UsageStatus;
  finishUsageStatus():UsageStatus;
  static files(paths:readonly string[],reading?:Readonly<Record<string,R.JsonValue>>,media?:string,framing?:string):Source;
  static item(value:R.JsonValue|undefined,fields?:ItemFields):Item;
+ static recognizeQuestion(kinds:NonNullable<R.RecognizeQuestion["kinds"]>,options?:Omit<R.RecognizeQuestion,"kinds">):R.RecognizeRequestDefinition;
+ static relateQuestion(relations:R.RelateQuestion["relations"],options?:Omit<R.RelateQuestion,"relations">):R.RelateDefinition;
  static questionFile(path:string):QuestionFile;
  static questionName(name:string):QuestionFile;
  static questionReference(reference:string):QuestionFile;
  plan(verb:string,question:Question,input:CompleteInput,controls?:Controls):R.NativePlan;
  start(verb:string,question:Question,input:Input,controls?:Controls):Operation;
  close():void;
- decide(q:Question,i:Input,c?:Controls):Promise<Completed<R.NativeDecideResult>>;
- choose(q:Question,i:Input,c?:Controls):Promise<Completed<R.NativeChooseResult>>;
- tag(q:Question,i:Input,c?:Controls):Promise<Completed<R.NativeTagResult>>;
- score(q:Question,i:Input,c?:Controls):Promise<Completed<R.NativeScoreResult>>;
- filter(q:Question,i:Input,c?:Controls):Promise<Completed<R.NativeFilterResult>>;
- rank(q:Question,i:Input,c?:Controls):Promise<Completed<R.NativeRankResult>>;
- find(q:Question,i:Input,c?:Controls):Promise<Completed<R.NativeFindResult>>;
- annotate(q:Question,i:Input,c?:Controls):Promise<Completed<R.NativeAnnotateResult>>;
- recognize(q:Question,i:Input,c?:Controls):Promise<Completed<R.NativeRecognizeResult>>;
- relate(q:Question,i:Input,c?:Controls):Promise<Completed<R.NativeRelateResult>>;
+
 }
 
 export class ClientError extends Error {

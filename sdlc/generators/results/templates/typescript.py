@@ -31,7 +31,7 @@ def typ(source, inputs=False):
     return {'string':'string','integer':numeric,'number':numeric,'boolean':'boolean','null':'null'}.get(kind,'JsonValue')
 
 def declarations(definitions, input_definitions=None):
-    lines=['// Generated from the shared Rust result graph; do not edit.', 'export type JsonValue = null | boolean | number | NativeNumber | string | readonly JsonValue[] | { readonly [key: string]: JsonValue };']
+    lines=['// Generated from the shared Rust result graph; do not edit.', "import type {Question, Input, Controls, Completed} from './native.js';", 'export type JsonValue = null | boolean | number | NativeNumber | string | readonly JsonValue[] | { readonly [key: string]: JsonValue };']
     lines += ['export class NativeNumber { readonly raw: string; private constructor(); }']
     for key,source in definitions.items():
         if 'properties' in source:
@@ -54,7 +54,12 @@ def declarations(definitions, input_definitions=None):
     for function, payload, _, _ in answers(definitions):
         lines += [f' {function}Answer(): {typ(payload)};']
     lines += ['}']
-    lines += ['export function packet(value: JsonValue): NativeSessionPacket;', 'export function parse(text: string): JsonValue;', 'export const REQUEST_VERSION: string;']
+    lines += ['export interface NamedCalls {']
+    for function, payload, _, _ in answers(definitions):
+        lines += [f' {function}(q:Question,i:Input,c?:Controls):Promise<Completed<Native{function.title()}Result>>;',
+                  f' {function}Answer(q:Question,i:Input,c?:Controls):Promise<{typ(payload)}>;']
+    lines += ['}']
+    lines += ['export const REQUEST_VERSION: string;']
     lines += input_declarations(input_definitions or {})
     return '\n'.join(lines)+'\n'
 

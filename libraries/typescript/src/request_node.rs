@@ -7,52 +7,15 @@ use napi_derive::napi;
 use thinkthen::{
     Request, RequestReaderFailure, RequestSession, RequestSessionPushStatus, RequestSessionRead,
 };
-fn plain(env: Env, value: &serde_json::Value) -> Result<JsUnknown> {
-    Ok(match value {
-        serde_json::Value::Null => env.get_null()?.into_unknown(),
-        serde_json::Value::Bool(value) => env.get_boolean(*value)?.into_unknown(),
-        serde_json::Value::String(value) => env.create_string(value)?.into_unknown(),
-        serde_json::Value::Number(value) => env
-            .create_double(value.as_f64().ok_or_else(|| {
-                napi::Error::from_reason("native error number could not be represented")
-            })?)?
-            .into_unknown(),
-        serde_json::Value::Array(values) => {
-            let mut array = env.create_array_with_length(values.len())?;
-            for (at, value) in values.iter().enumerate() {
-                array.set_element(
-                    u32::try_from(at)
-                        .map_err(|_| napi::Error::from_reason("native error array is too long"))?,
-                    plain(env, value)?,
-                )?;
-            }
-            array.into_unknown()
-        }
-        serde_json::Value::Object(values) => {
-            let mut object = env.create_object()?;
-            for (name, value) in values {
-                object.set_named_property(name, plain(env, value)?)?;
-            }
-            object.into_unknown()
-        }
-    })
-}
 fn failure(env: Env, error: thinkthen::Error) -> napi::Error {
     let built = (|| -> Result<JsUnknown> {
         let mut value = env.create_error(napi::Error::from_reason(error.to_string()))?;
         value.set_named_property("name", env.create_string("ClientError")?)?;
         value.set_named_property("kind", env.create_string(error.kind().name())?)?;
         value.set_named_property("retryable", env.get_boolean(error.retryable())?)?;
-        let complete = serde_json::to_value(error.complete())
-            .map_err(|_| napi::Error::from_reason("native error could not be converted"))?;
-        value.set_named_property("complete", plain(env, &complete)?)?;
-        value.set_named_property(
-            "facts",
-            plain(
-                env,
-                complete.get("facts").unwrap_or(&serde_json::Value::Null),
-            )?,
-        )?;
+        let complete = error.complete();
+        value.set_named_property("complete", env.to_js_value(&complete)?)?;
+        value.set_named_property("facts", env.to_js_value(&complete.facts())?)?;
         Ok(value.into_unknown())
     })();
     match built {

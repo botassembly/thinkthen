@@ -74,8 +74,8 @@ function typedControls() {
  const file:import('thinkthen').QuestionFile={};
  // @ts-expect-error one authored question selects one function
  const mixed:Question={decide:'Question?',choose:'Which?'};
- const recognize:Question={version:1,recognize:{kinds:{person:null}}};
- const relate:Question={version:1,relate:{relations:[{name:'knows',source:'person',target:'person',either:false}]}};
+ const recognize:Question=Client.recognizeQuestion({person:null},{mode:"whole"});
+ const relate:Question=Client.relateQuestion([{name:'knows',source:'person',target:'person',either:false}]);
  void [settings,invalid,file,mixed,recognize,relate];client.close();
 }
 void typedControls;
@@ -89,3 +89,8 @@ function typedPlan(client:Client) {
  void [records,body];
 }
 void typedPlan;
+
+// @ts-expect-error transport decoding stays inside the bridge
+const privateParse:typeof Results.parse=undefined;
+// @ts-expect-error callers receive typed packets from operations
+const privatePacket:typeof Results.packet=undefined;
