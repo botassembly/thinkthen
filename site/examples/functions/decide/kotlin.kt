@@ -7,6 +7,6 @@ suspend fun main() = KotlinEngine().use { tt ->
         .text("Does the customer ask for a refund?")
     val broken = RequestInputText().text(
         "Please refund my order. It arrived broken.")
-    val isRefund = tt.decide(question, broken).decide()
+    val isRefund = tt.decide(question, broken).value
     check(isRefund == true)
 }

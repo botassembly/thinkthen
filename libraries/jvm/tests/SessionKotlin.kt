@@ -24,7 +24,8 @@ fun main() = runBlocking {
         val held = launch { engine.decide(question, input("hold-jvm-kotlin")) }
         withTimeout(10000) { while (!Files.exists(Path.of("barrier/arrived-hold-jvm-kotlin"))) delay(5) }
         val independent = withTimeout(10000) { engine.decide(question, input("session-kotlin-independent")) }
-        check(independent.terminal().facts().state() == Presence.State.VALUE)
+        check(independent.value == true && independent.probability == java.math.BigDecimal("0.9"))
+        check(independent.results.size == 1 && independent.facts.requestsSent().intValueExact() == 1)
         withTimeout(2000) { held.cancelAndJoin() }
         check(!Files.exists(Path.of("barrier/release-hold-jvm-kotlin")))
         retained = independent

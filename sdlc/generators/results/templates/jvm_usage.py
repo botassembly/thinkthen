@@ -99,6 +99,7 @@ def outputs(root):
     request_schema = json.loads((root / 'specification/request.schema.json').read_text())
     from generate import graph, prepare
     from jvm import ROOTS
+    request_definitions = prepare(graph(request_schema, ('RequestInput', 'RequestFunction')))
     result_definitions = prepare(graph(json.loads((root / 'crates/thinkthen/src/public/results/complete.schema.json').read_text()), ROOTS))
     named = native['records']['thinkthen_named_request_v1']
     named_lines = ['// Generated from compiler-derived C carriers. Do not edit.',
@@ -121,5 +122,5 @@ def outputs(root):
                     'NativeSession.check((int)NativeSession.call("thinkthen_session_new_named_with_surface", ValueLayout.JAVA_INT,',
                     'new MemoryLayout[]{ValueLayout.ADDRESS, ValueLayout.ADDRESS, MemoryLayout.structLayout(ValueLayout.ADDRESS, NativeSession.SIZE), ValueLayout.ADDRESS}, engine, request, token, output));',
                     'return output.get(ValueLayout.ADDRESS, 0);', '}', '}', '}']
-    return {'thinkthen/NativeResults.java': result_reader, 'kotlin/KotlinNamedCalls.kt': facade_calls(request_schema['$defs'], 'kotlin', result_definitions), 'scala/ScalaNamedCalls.scala': facade_calls(request_schema['$defs'], 'scala', result_definitions), 'thinkthen/ErrorKind.java': errors, 'thinkthen/NamedCalls.java': named_calls(request_schema['$defs']), 'thinkthen/NativeNamed.java': named_lines, 'thinkthen/NativeWait.java': waits, 'thinkthen/UsagePersistence.java': java, 'thinkthen/NativeUsageLayouts.java': layouts,
+    return {'thinkthen/NativeResults.java': result_reader, 'kotlin/KotlinNamedCalls.kt': facade_calls(request_definitions, 'kotlin', result_definitions), 'scala/ScalaNamedCalls.scala': facade_calls(request_definitions, 'scala', result_definitions), 'thinkthen/ErrorKind.java': errors, 'thinkthen/NamedCalls.java': named_calls(request_definitions, result_definitions), 'thinkthen/NativeNamed.java': named_lines, 'thinkthen/NativeWait.java': waits, 'thinkthen/UsagePersistence.java': java, 'thinkthen/NativeUsageLayouts.java': layouts,
             'kotlin/UsagePersistence.kt': kotlin, 'scala/UsagePersistence.scala': scala}

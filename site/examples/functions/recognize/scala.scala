@@ -24,7 +24,7 @@ import thinkthen.scala.ScalaEngine
         "in Denver.")
     val call = tt.recognize(ask, text)
     val facts = Await.result(call.result, 10.seconds)
-      .recognize().head.value()
+      .value
       .asInstanceOf[RecognizeEntities]
     val names = facts.entities().asScala.toList
       .map(one => one.text() -> one.kind())

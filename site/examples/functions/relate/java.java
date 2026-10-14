@@ -32,7 +32,7 @@ public class Relate {
 
         try (var tt = new Engine()) {
             var whoMakes = tt.relate(ask, names)
-                .join().relate().value();
+                .join().value();
             var pairs = whoMakes.stream()
                 .map(edge -> List.of(
                     edge.sourceName(), edge.targetName()))

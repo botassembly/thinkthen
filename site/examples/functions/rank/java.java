@@ -23,7 +23,7 @@ public class Rank {
                 .toList());
         try (var tt = new Engine()) {
             var order = tt.rank(question, records)
-                .join().rank().stream()
+                .join().value().stream()
                 .map(one -> one.intValue()).toList();
             assert order.equals(List.of(1, 3, 2, 0));
         }

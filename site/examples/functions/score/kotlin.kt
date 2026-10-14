@@ -15,6 +15,6 @@ suspend fun main() = KotlinEngine().use { tt ->
     val outage = RequestInputText().text(
         "Our checkout page is down " +
             "and customers cannot pay.\n")
-    val urgency = tt.score(scale, outage).score().toDouble()
+    val urgency = tt.score(scale, outage).value.toDouble()
     check(urgency == 2.0)
 }

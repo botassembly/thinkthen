@@ -13,7 +13,7 @@ import thinkthen.scala.ScalaEngine
       .text("Steps: click Log in. Nobody gets in.")
     val call = tt.annotate(form, report)
     val triage = Await.result(call.result, 10.seconds)
-      .annotate().head.value().value()
+      .value.value()
     assert(triage == Map(
       "steps" -> AnnotatedFieldBoolean(true),
       "area" -> AnnotatedFieldString("login"),

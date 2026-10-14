@@ -7,7 +7,9 @@ import thinkthen.Results.RecognizeEntities
 
 suspend fun main() = KotlinEngine().use { tt ->
     val kinds = listOf("person", "product", "place")
-        .fold(Inputs.Ordered<Inputs.AuthoredDescription>()) { values, name ->
+        .fold(Inputs.Ordered<
+            Inputs.AuthoredDescription>()) {
+            values, name ->
             values.entry(name, null)
         }
     val ask = RequestQuestionDefinition().value(
@@ -17,8 +19,7 @@ suspend fun main() = KotlinEngine().use { tt ->
     val text = RequestInputText().text(
         "Sam Patel says his Kindle arrived broken " +
             "in Denver.")
-    val facts = tt.recognize(ask, text).recognize()
-        .first().value()
+    val facts = tt.recognize(ask, text).value
         as RecognizeEntities
     val names = facts.entities().map { one ->
         one.text() to one.kind()

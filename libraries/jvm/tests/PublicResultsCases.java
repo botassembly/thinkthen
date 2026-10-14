@@ -11,11 +11,6 @@ public final class PublicResultsCases {
     public static void run() {
         for (var type : java.util.List.<Class<?>>of(Results.Plan.class, Inputs.Request.class, Inputs.RequestQuestion.class))
             for (var method : type.getMethods()) check(!method.getName().equals("json") && !method.getName().equals("fromJson"));
-        var original = new HashMap<String,Object>(); original.put("input", null);
-        var kept = new Results.SessionPacketFilterRow(Map.of("function", "filter", "kind", "row", "value", original));
-        var call = new thinkthen.Engine.OwnedCall(java.util.List.of(kept), new Results.SessionPacketTerminal(Map.of("kind", "terminal")));
-        check(call.filter().size() == 1 && call.filter().getFirst() == null);
-
         var missing = new Results.AnnotationValueDecision(Map.of("kind", "decision"));
         check(!((Map<?,?>)SessionCases.tree(missing)).containsKey("value"));
         try { missing.value(); throw new AssertionError("missing nullable member admitted"); } catch (IllegalStateException expected) { }

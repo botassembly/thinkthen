@@ -20,7 +20,7 @@ suspend fun main() = KotlinEngine().use { tt ->
             RequestItem().original(
                 RequestOriginalText().text(text))
         })
-    val order = tt.rank(question, records).rank()
+    val order = tt.rank(question, records).value
         .map { it.toInt() }
     check(order == listOf(1, 3, 2, 0))
 }

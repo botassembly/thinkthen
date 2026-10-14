@@ -4199,145 +4199,264 @@ public final class Results {
         if (value instanceof ValueNumber item) return Values.json(item.value());
         return value;
     }
-    public static final class CallAnswers {
-        private CallAnswers() {
+    public static final class CallResult<V,P,R> extends Engine.OwnedCall {
+        private final V value;
+        private final P probability;
+        private final List<R> results;
+        private final Facts facts;
+        private CallResult(Engine.OwnedCall call, V value, P probability, List<R> results) {
+            super(call.packets(), call.terminal());
+            this.value = value;
+            this.probability = probability;
+            this.results = Collections.unmodifiableList(new ArrayList<>(results));
+            this.facts = call.terminal().facts().value();
         }
-        public static final class CardinalityFailure extends IllegalStateException {
-            private static final long serialVersionUID = 1L;
-            private final transient Engine.OwnedCall call;
-            CardinalityFailure(Engine.OwnedCall call) {
-                super("Expected exactly one successful matching answer");
-                this.call = call;
-            }
-            public Engine.OwnedCall call() {
-                return call;
-            }
+        public V value() {
+            return value;
         }
-        private static Object path(Object value, String[] members) {
-            for (String member : members) {
-                if (!(value instanceof Map<?,?> object)) return null;
-                value = object.get(member);
-            } return value;
+        public P probability() {
+            return probability;
         }
-        private static void terminal(Engine.OwnedCall call) {
-            Map<String,Object> terminal = Values.object(call.terminal().json());
-            if (!"terminal".equals(terminal.get("kind"))) throw new CardinalityFailure(call);
-            if (terminal.containsKey("failure")) {
-                if (!(terminal.get("failure") instanceof Map<?,?> failure) || !(failure.get("error") instanceof Map<?,
-                ?> object0 && ("usage".equals(object0.get("kind")) || "backend".equals(object0.get("kind")) || "local".equals(object0.get("kind")) || "cancelled".equals(object0.get("kind")) || "deadline".equals(object0.get("kind")) || "defect".equals(object0.get("kind"))) && object0.get("message") instanceof String && object0.get("retryable") instanceof Boolean && (object0.get("stopped") instanceof Map<?,
-                ?> object1 && ("usage".equals(object1.get("cause")) || "local".equals(object1.get("cause")) || "no_key".equals(object1.get("cause")) || "transport".equals(object1.get("cause")) || "status".equals(object1.get("cause")) || "too_large".equals(object1.get("cause")) || "reply".equals(object1.get("cause")) || "backend".equals(object1.get("cause")) || "cancelled".equals(object1.get("cause")) || "deadline".equals(object1.get("cause")) || "defect".equals(object1.get("cause"))) && object1.get("retryable") instanceof Boolean))) throw new CardinalityFailure(call);
-                throw new Engine.SessionFailure(call);
-            }
+        public List<R> results() {
+            return results;
         }
-        private static Object scalar(Engine.OwnedCall call, String function, String kind, boolean nullable) {
-            terminal(call);
-            Object answer = null;
-            int count = 0;
-            for (SessionPacket item : call.packets()) {
-                Map<String,Object> packet = Values.object(Values.json(item));
-                if (!function.equals(packet.get("function")) || !("observation".equals(path(packet, new String[]{
-                    "kind"
-                })) && "row".equals(path(packet, new String[]{
-                    "value", "kind"
-                })) && "judgment".equals(path(packet, new String[]{
-                    "value", "value", "kind"
-                })))) continue;
-                Object raw = path(packet, new String[]{
-                    "value", "value", "value"
-                });
-                if (!(raw instanceof Map<?,?> judgment) || !kind.equals(judgment.get("kind"))) continue;
-                if (!judgment.containsKey("value") || (!nullable && judgment.get("value") == null)) throw new CardinalityFailure(call);
-                answer = judgment.get("value");
-                count++;
-            }
-            if (count != 1) throw new CardinalityFailure(call);
-            return answer;
+        public Facts facts() {
+            return facts;
         }
-        private static Object collection(Engine.OwnedCall call, String function, boolean array, boolean rows) {
-            terminal(call);
-            List<Object> values = new ArrayList<>();
-            Object answer = null;
-            int count = 0;
-            for (SessionPacket item : call.packets()) {
-                Map<String,Object> packet = Values.object(Values.json(item));
-                if (!function.equals(packet.get("function"))) continue;
-                boolean row = rows && "row".equals(packet.get("kind"));
-                if (!row && !"aggregate".equals(packet.get("kind"))) continue;
-                if (!packet.containsKey("value") || packet.get("value") == null) throw new CardinalityFailure(call);
-                answer = packet.get("value");
-                count++;
-                if (array) {
-                    if (row) values.add(answer);
-                    else {
-                        if (!(answer instanceof List<?> list)) throw new CardinalityFailure(call);
-                        values.addAll(list);
-                    }
+    }
+    private static <T> T optional(Presence<T> value) {
+        return value.state() == Presence.State.VALUE ? value.value() : null;
+    }
+    private static <T> List<T> immutable(List<T> values) {
+        return Collections.unmodifiableList(values);
+    }
+    static CallResult<List<Object>,List<BigDecimal>,AtomicDecideValue> projectDecide(Engine.OwnedCall call) {
+        var results = new ArrayList<AtomicDecideValue>();
+        for (SessionPacket packet : call.packets()) {
+            if (packet instanceof SessionPacketDecideAggregate aggregate) results.addAll(aggregate.value());
+            else if (packet instanceof SessionPacketDecideRow row) results.add(row.value());
+        }
+        var values = new ArrayList<Object>();
+        var probabilities = new ArrayList<BigDecimal>();
+        for (AtomicDecideValue row : results) {
+            values.add(row.value().value());
+            probabilities.add(resolved(call, "decide", optional(row.index())) ? (row.answer() instanceof AnswerYesNo odds ? odds.probability() : null) : null);
+        }
+        return new CallResult<>(call, immutable(values), immutable(probabilities), results);
+    }
+    static CallResult<Object,BigDecimal,AtomicDecideValue> projectDecideScalar(Engine.OwnedCall call) {
+        var result = projectDecide(call);
+        if (result.results().size() != 1) throw new IllegalStateException("Expected one input result");
+        return new CallResult<>(call, result.value().getFirst(), result.probability().getFirst(), result.results());
+    }
+    static CallResult<List<String>,List<BigDecimal>,AtomicNullableString> projectChoose(Engine.OwnedCall call) {
+        var results = new ArrayList<AtomicNullableString>();
+        for (SessionPacket packet : call.packets()) {
+            if (packet instanceof SessionPacketChooseAggregate aggregate) results.addAll(aggregate.value());
+            else if (packet instanceof SessionPacketChooseRow row) results.add(row.value());
+        }
+        var values = new ArrayList<String>();
+        var probabilities = new ArrayList<BigDecimal>();
+        for (AtomicNullableString row : results) {
+            values.add(optional(row.value()));
+            probabilities.add(resolved(call, "choose", optional(row.index())) ? (row.answer() instanceof AnswerChoice odds ? odds.probabilities().get(odds.pick()) : null) : null);
+        }
+        return new CallResult<>(call, immutable(values), immutable(probabilities), results);
+    }
+    static CallResult<String,BigDecimal,AtomicNullableString> projectChooseScalar(Engine.OwnedCall call) {
+        var result = projectChoose(call);
+        if (result.results().size() != 1) throw new IllegalStateException("Expected one input result");
+        return new CallResult<>(call, result.value().getFirst(), result.probability().getFirst(), result.results());
+    }
+    static CallResult<List<List<String>>,Void,AtomicArrayOfString> projectTag(Engine.OwnedCall call) {
+        var results = new ArrayList<AtomicArrayOfString>();
+        for (SessionPacket packet : call.packets()) {
+            if (packet instanceof SessionPacketTagAggregate aggregate) results.addAll(aggregate.value());
+            else if (packet instanceof SessionPacketTagRow row) results.add(row.value());
+        }
+        var values = new ArrayList<List<String>>();
+        for (AtomicArrayOfString row : results) {
+            values.add(row.value());
+        }
+        return new CallResult<>(call, immutable(values), null, results);
+    }
+    static CallResult<List<String>,Void,AtomicArrayOfString> projectTagScalar(Engine.OwnedCall call) {
+        var result = projectTag(call);
+        if (result.results().size() != 1) throw new IllegalStateException("Expected one input result");
+        return new CallResult<>(call, result.value().getFirst(), null, result.results());
+    }
+    static CallResult<List<BigDecimal>,Void,AtomicDouble> projectScore(Engine.OwnedCall call) {
+        var results = new ArrayList<AtomicDouble>();
+        for (SessionPacket packet : call.packets()) {
+            if (packet instanceof SessionPacketScoreAggregate aggregate) results.addAll(aggregate.value());
+            else if (packet instanceof SessionPacketScoreRow row) results.add(row.value());
+        }
+        var values = new ArrayList<BigDecimal>();
+        for (AtomicDouble row : results) {
+            values.add(row.value());
+        }
+        return new CallResult<>(call, immutable(values), null, results);
+    }
+    static CallResult<BigDecimal,Void,AtomicDouble> projectScoreScalar(Engine.OwnedCall call) {
+        var result = projectScore(call);
+        if (result.results().size() != 1) throw new IllegalStateException("Expected one input result");
+        return new CallResult<>(call, result.value().getFirst(), null, result.results());
+    }
+    static CallResult<List<Object>,List<BigDecimal>,AtomicBoolean> projectFilter(Engine.OwnedCall call) {
+        var results = new ArrayList<AtomicBoolean>();
+        for (SessionPacket packet : call.packets()) {
+            if (packet instanceof SessionPacketFilterAggregate aggregate) results.addAll(aggregate.value());
+            else if (packet instanceof SessionPacketFilterRow row) results.add(row.value());
+        }
+        var values = new ArrayList<Object>();
+        var probabilities = new ArrayList<BigDecimal>();
+        for (AtomicBoolean row : results) {
+            values.add(optional(row.input()));
+            probabilities.add(row.answer() instanceof AnswerYesNo odds ? odds.probability() : null);
+        }
+        return new CallResult<>(call, immutable(values), immutable(probabilities), results);
+    }
+    static CallResult<List<BigInteger>,List<BigDecimal>,AtomicNonZeroUsize> projectRank(Engine.OwnedCall call) {
+        var results = new ArrayList<AtomicNonZeroUsize>();
+        for (SessionPacket packet : call.packets()) {
+            if (packet instanceof SessionPacketRankAggregate aggregate) results.addAll(aggregate.value());
+        }
+        results.sort(Comparator.comparing(AtomicNonZeroUsize::value));
+        var values = new ArrayList<BigInteger>();
+        var probabilities = new ArrayList<BigDecimal>();
+        for (AtomicNonZeroUsize row : results) {
+            values.add(optional(row.index()));
+            probabilities.add(row.answer() instanceof AnswerYesNo odds ? odds.probability() : null);
+        }
+        return new CallResult<>(call, immutable(values), immutable(probabilities), results);
+    }
+    static CallResult<Object,BigDecimal,Find> projectFind(Engine.OwnedCall call) {
+        var results = new ArrayList<Find>();
+        for (SessionPacket packet : call.packets()) {
+            if (packet instanceof SessionPacketFindAggregate aggregate) results.add(aggregate.value());
+        }
+        if (results.size() != 1) throw new IllegalStateException("Expected one aggregate result");
+        var row = results.getFirst();
+        return new CallResult<>(call, optional(row.value()), optional(row.index()) == null ? null : (row.answer() instanceof FindAnswer odds ? odds.probabilities().get(odds.pick()) : null),
+        results);
+    }
+    static CallResult<List<AnnotatedRow>,Void,Annotation> projectAnnotate(Engine.OwnedCall call) {
+        var results = new ArrayList<Annotation>();
+        for (SessionPacket packet : call.packets()) {
+            if (packet instanceof SessionPacketAnnotateAggregate aggregate) results.addAll(aggregate.value());
+            else if (packet instanceof SessionPacketAnnotateRow row) results.add(row.value());
+        }
+        var values = new ArrayList<AnnotatedRow>();
+        for (Annotation row : results) {
+            values.add(row.value());
+        }
+        return new CallResult<>(call, immutable(values), null, results);
+    }
+    static CallResult<AnnotatedRow,Void,Annotation> projectAnnotateScalar(Engine.OwnedCall call) {
+        var result = projectAnnotate(call);
+        if (result.results().size() != 1) throw new IllegalStateException("Expected one input result");
+        return new CallResult<>(call, result.value().getFirst(), null, result.results());
+    }
+    static CallResult<List<Recognize>,List<List<BigDecimal>>,Recognition> projectRecognize(Engine.OwnedCall call) {
+        var results = new ArrayList<Recognition>();
+        for (SessionPacket packet : call.packets()) {
+            if (packet instanceof SessionPacketRecognizeAggregate aggregate) results.addAll(aggregate.value());
+        }
+        var values = new ArrayList<Recognize>();
+        var probabilities = new ArrayList<List<BigDecimal>>();
+        for (Recognition row : results) {
+            values.add(row.value());
+            probabilities.add(recognitionProbabilities(row));
+        }
+        return new CallResult<>(call, immutable(values), immutable(probabilities), results);
+    }
+    static CallResult<Recognize,List<BigDecimal>,Recognition> projectRecognizeScalar(Engine.OwnedCall call) {
+        var result = projectRecognize(call);
+        if (result.results().size() != 1) throw new IllegalStateException("Expected one input result");
+        return new CallResult<>(call, result.value().getFirst(), result.probability().getFirst(), result.results());
+    }
+    static CallResult<List<RelatedEntityEdge>,List<BigDecimal>,Relation> projectRelate(Engine.OwnedCall call) {
+        var results = new ArrayList<Relation>();
+        for (SessionPacket packet : call.packets()) {
+            if (packet instanceof SessionPacketRelateAggregate aggregate) results.add(aggregate.value());
+        }
+        if (results.size() != 1) throw new IllegalStateException("Expected one aggregate result");
+        var row = results.getFirst();
+        return new CallResult<>(call, row.value(), row.value().stream().map(RelatedEntityEdge::probability).toList(),
+        results);
+    }
+    private static List<BigDecimal> recognitionProbabilities(Recognition row) {
+        if (row.value() instanceof RecognizeModeProposals boundary) return boundary.proposals().stream().map(BoundaryProposal::probability).toList();
+        var entities = ((RecognizeEntities)row.value()).entities();
+        var proposals = row.answer() instanceof RecognitionOddsRecognizeAnswer odds ? odds.proposals() : List.<RecognitionProposal>of();
+        var probabilities = new ArrayList<BigDecimal>();
+        for (var entity : entities) {
+            BigDecimal probability = null;
+            for (var proposal : proposals) {
+                var selected = optional(proposal.selected());
+                if (proposal.kept() && selected != null && selected.start().equals(entity.start()) && selected.end().equals(entity.end()) && Objects.equals(optional(proposal.kind()),
+                entity.kind())) {
+                    probability = proposal.spanProbability();
+                    break;
                 }
             }
-            if (array) {
-                if (!rows && count != 1) throw new CardinalityFailure(call);
-                return Collections.unmodifiableList(values);
+            probabilities.add(probability);
+        }
+        return immutable(probabilities);
+    }
+    private static Object path(Object value, String[] members) {
+        for (String member : members) {
+            if (!(value instanceof Map<?,?> object)) return null;
+            value = object.get(member);
+        } return value;
+    }
+    private static boolean resolved(Engine.OwnedCall call, String function, BigInteger index) {
+        for (var item : call.packets()) {
+            var packet = Values.object(Values.json(item));
+            if (!function.equals(packet.get("function"))) continue;
+            switch (function) {
+                case "decide" -> {
+                    if (!("observation".equals(path(packet, new String[]{
+                        "kind"
+                    })) && "row".equals(path(packet, new String[]{
+                        "value", "kind"
+                    })) && "judgment".equals(path(packet, new String[]{
+                        "value", "value", "kind"
+                    })) && "decision".equals(path(packet, new String[]{
+                        "value", "value", "value", "kind"
+                    })))) continue;
+                    Object nativeIndex = path(packet, new String[]{
+                        "value", "index"
+                    });
+                    BigInteger actual = nativeIndex instanceof BigDecimal number ? number.toBigIntegerExact() : BigInteger.ZERO;
+                    if (!actual.equals(index == null ? BigInteger.ZERO : index)) continue;
+                    return path(packet, new String[]{
+                        "value", "value", "value", "value"
+                    }) != null;
+                }
+                case "choose" -> {
+                    if (!("observation".equals(path(packet, new String[]{
+                        "kind"
+                    })) && "row".equals(path(packet, new String[]{
+                        "value", "kind"
+                    })) && "judgment".equals(path(packet, new String[]{
+                        "value", "value", "kind"
+                    })) && "choice".equals(path(packet, new String[]{
+                        "value", "value", "value", "kind"
+                    })))) continue;
+                    Object nativeIndex = path(packet, new String[]{
+                        "value", "index"
+                    });
+                    BigInteger actual = nativeIndex instanceof BigDecimal number ? number.toBigIntegerExact() : BigInteger.ZERO;
+                    if (!actual.equals(index == null ? BigInteger.ZERO : index)) continue;
+                    return path(packet, new String[]{
+                        "value", "value", "value", "value"
+                    }) != null;
+                }
+                default -> {
+                }
             }
-            if (count != 1) throw new CardinalityFailure(call);
-            return answer;
         }
-        public static Boolean decide(Engine.OwnedCall call) {
-            Object value = scalar(call, "decide", "decision", true);
-            if (value == null) return null;
-            if (!(value instanceof Boolean)) throw new CardinalityFailure(call);
-            return (Boolean)value;
-        }
-        public static String choose(Engine.OwnedCall call) {
-            Object value = scalar(call, "choose", "choice", true);
-            if (value == null) return null;
-            if (!(value instanceof String)) throw new CardinalityFailure(call);
-            return (String)value;
-        }
-        public static BigDecimal score(Engine.OwnedCall call) {
-            Object value = scalar(call, "score", "score", false);
-            if (!(value instanceof BigDecimal)) throw new CardinalityFailure(call);
-            return (BigDecimal)value;
-        }
-        public static List<String> tag(Engine.OwnedCall call) {
-            Object value = scalar(call, "tag", "tags", false);
-            if (!((value instanceof List<?> list0 && list0.stream().allMatch(element0 -> element0 instanceof String)))) throw new CardinalityFailure(call);
-            return Values.list(value, item0 -> (String)item0);
-        }
-        public static List<Object> filter(Engine.OwnedCall call) {
-            Object value = collection(call, "filter", true, true);
-            List<Object> projected = new ArrayList<>();
-            for (Object item : (List<?>)value) {
-                var receipt = Values.object(item);
-                if (!receipt.containsKey("input")) throw new CardinalityFailure(call);
-                projected.add(receipt.get("input"));
-            } value = projected;
-            return Values.list(value, item0 -> Values.freeze(item0));
-        }
-        public static List<BigInteger> rank(Engine.OwnedCall call) {
-            Object value = collection(call, "rank", true, false);
-            List<Object> projected = new ArrayList<>();
-            for (Object item : (List<?>)value) {
-                var receipt = Values.object(item);
-                if (!receipt.containsKey("index")) throw new CardinalityFailure(call);
-                projected.add(receipt.get("index"));
-            } value = projected;
-            return Values.list(value, item0 -> Values.integer(item0));
-        }
-        public static Find find(Engine.OwnedCall call) {
-            Object value = collection(call, "find", false, false);
-            return Find.read(value);
-        }
-        public static List<Annotation> annotate(Engine.OwnedCall call) {
-            Object value = collection(call, "annotate", true, true);
-            return Values.list(value, item0 -> Annotation.read(item0));
-        }
-        public static List<Recognition> recognize(Engine.OwnedCall call) {
-            Object value = collection(call, "recognize", true, false);
-            return Values.list(value, item0 -> Recognition.read(item0));
-        }
-        public static Relation relate(Engine.OwnedCall call) {
-            Object value = collection(call, "relate", false, false);
-            return Relation.read(value);
-        }
+        return false;
     }
 }

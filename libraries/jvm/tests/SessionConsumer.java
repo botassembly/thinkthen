@@ -13,13 +13,13 @@ public final class SessionConsumer {
     }
     static Inputs.RequestOptions options() { return new Inputs.RequestOptions().batch(new Inputs.RequestBatch(1)); }
     static void check(boolean value, String message) { if (!value) throw new AssertionError(message); }
-    static Engine.OwnedCall done(CompletableFuture<Engine.OwnedCall> future) throws Exception {
+    static <T extends Engine.OwnedCall> T done(CompletableFuture<T> future) throws Exception {
         var call = future.get(10,TimeUnit.SECONDS);
         check(call.terminal().facts().state() == Presence.State.VALUE,"final facts missing");
         check(call.terminal().failure().state() != Presence.State.VALUE,"unexpected native failure");
         return call;
     }
-    static void refuse(CompletableFuture<Engine.OwnedCall> call) {
+    static void refuse(CompletableFuture<? extends Engine.OwnedCall> call) {
         try { call.join(); throw new AssertionError("invalid typed input admitted"); }
         catch (CompletionException error) { check(error.getCause() instanceof NativeFailure,"native admission failure");
                 var failure = (NativeFailure)error.getCause(); check(!failure.retryable() && failure.facts() == null, "native admission retryability and facts"); }
@@ -135,20 +135,20 @@ public final class SessionConsumer {
             var decide = done(engine.decide(new Inputs.RequestQuestionFile().path("saved.json"),source,options()));
             var row = (Results.SessionPacketDecideRow)decide.packets().stream().filter(Results.SessionPacketDecideRow.class::isInstance).findFirst().orElseThrow();
             check(Boolean.TRUE.equals(row.value().value().value()),"typed decide reading");
-            check(Boolean.TRUE.equals(decide.decide()), "normalized decide answer");
-            try { new Engine.OwnedCall(List.of(), decide.terminal()).decide(); throw new AssertionError("empty call answered"); }
-            catch (Results.CallAnswers.CardinalityFailure expected) { check(expected.call().packets().isEmpty(), "cardinality refusal retains call"); }
+            check(decide.value().equals(List.of(true)), "one input source keeps list cardinality");
+            check(decide.probability().equals(List.of(new java.math.BigDecimal("0.9"))), "settled yes probability");
+            check(decide.results().size() == 1 && decide.facts().requestsSent().intValueExact() == 1, "one result exposes receipts and facts");
             var choose = done(engine.choose(authored(new Inputs.RequestDefinitionAuthoredChoose().choose(wording("Which?")).options(new Inputs.AuthoredOptions(List.of("first","second")))),records("session-choose"),options()));
-            check(choose.choose() != null, "normalized choose answer");
+            check(choose.value() != null, "normalized choose answer");
             check(choose.packets().stream().anyMatch(Results.SessionPacketChooseRow.class::isInstance),"choose row");
             var tag = done(engine.tag(authored(new Inputs.RequestDefinitionAuthoredTag().tag(wording("Which?")).labels(new Inputs.AuthoredLabels(List.of("first","second")))),records("session-tag"),options()));
-            check(!tag.tag().isEmpty(), "normalized tag answer");
+            check(!tag.value().isEmpty(), "normalized tag answer");
             check(tag.packets().stream().anyMatch(Results.SessionPacketTagRow.class::isInstance),"tag row");
             var score = done(engine.score(authored(new Inputs.RequestDefinitionAuthoredScore().score(wording("Which?")).levels(new Inputs.AuthoredLevels(List.of("Low.","High.")))),records("session-score"),options()));
-            check(score.score() != null, "normalized score answer");
+            check(score.value() != null, "normalized score answer");
             check(score.packets().stream().anyMatch(Results.SessionPacketScoreRow.class::isInstance),"score row");
-            check(done(engine.filter(authored(new Inputs.RequestDefinitionAuthoredDecide().decide(wording("Is it?")).threshold(new Inputs.AuthoredThreshold(0.5))),records("session-filter"),options())).filter().equals(List.of("session-filter")),"filter returns original inputs");
-            check(done(engine.rank(authored(new Inputs.RequestDefinitionAuthoredDecide().decide(wording("Is it?"))),records("session-rank"),options())).rank().equals(List.of(java.math.BigInteger.ZERO)),"rank returns original zero-based indexes");
+            check(done(engine.filter(authored(new Inputs.RequestDefinitionAuthoredDecide().decide(wording("Is it?")).threshold(new Inputs.AuthoredThreshold(0.5))),records("session-filter"),options())).value().equals(List.of("session-filter")),"filter returns original inputs");
+            check(done(engine.rank(authored(new Inputs.RequestDefinitionAuthoredDecide().decide(wording("Is it?"))),records("session-rank"),options())).value().equals(List.of(java.math.BigInteger.ZERO)),"rank returns original zero-based indexes");
             check(done(engine.find(authored(new Inputs.RequestDefinitionAuthoredFind().find(wording("Which?"))),records("session-find","session-find-two"),options())).packets().stream().anyMatch(Results.SessionPacketFindAggregate.class::isInstance),"find aggregate");
             check(done(engine.annotate(authored(new Inputs.RequestDefinitionAnnotateDefinition().questions(new Inputs.Ordered<Inputs.AnnotateQuestion>().entry("check",new Inputs.AnnotateQuestionDecide().decide(wording("Is it?"))))),records("session-annotate"),options())).packets().stream().anyMatch(Results.SessionPacketAnnotateRow.class::isInstance),"annotate row");
             check(done(engine.recognize(authored(new Inputs.RequestDefinitionRecognizeDefinition().recognize(new Inputs.RecognizeQuestion().kinds(new Inputs.Ordered<Inputs.AuthoredDescription>().entry("person",new Inputs.AuthoredDescription("A person's name."))))),records("Maria Chen"),options())).packets().stream().anyMatch(Results.SessionPacketRecognizeAggregate.class::isInstance),"recognize aggregate");
@@ -199,12 +199,13 @@ public final class SessionConsumer {
             check(held.isCancelled() && System.nanoTime() - started < TimeUnit.SECONDS.toNanos(2),"cancellation waited for provider");
             check(!Files.exists(Path.of("barrier/release-hold-jvm-java")),"provider was released early");
             var multiple = done(engine.decide(question, records("multiple-first", "multiple-second"), options()));
-            try { multiple.decide(); throw new AssertionError("multiple judgments answered as one"); }
-            catch (Results.CallAnswers.CardinalityFailure expected) { check(expected.call() == multiple, "cardinality refusal retains actual multirow call"); }
+            check(multiple.value().equals(List.of(true, true)), "list answers retain input cardinality");
+            check(multiple.probability().size() == 2 && multiple.results().size() == 2, "list odds and receipts align");
             var sampleAnswers = examples.JavaExamples.run(engine);
             check(sampleAnswers.size() == 10, "ten shipped Java examples");
-            var relation = (Results.Relation)sampleAnswers.get(9);
-            check(relation.value().getFirst().sourceName().equals("First") && relation.value().getFirst().targetName().equals("Second"), "direct relation endpoint names");
+            var relation = (List<?>)sampleAnswers.get(9);
+            check(((Results.RelatedEntityEdge)relation.getFirst()).sourceName().equals("First") && ((Results.RelatedEntityEdge)relation.getFirst()).targetName().equals("Second"), "direct relation endpoint names");
+            ResultValuesCases.run(engine);
             retained = decide;
             try (var session = engine.startSession(new Inputs.Request().call(new Inputs.RequestCall().function(Inputs.RequestFunction.DECIDE).question(question).input(new Inputs.RequestInputFeed().name("input"))))) {
                 session.finish(new Inputs.RequestReaderFailureIo());
@@ -222,8 +223,6 @@ public final class SessionConsumer {
         check(retainedPlan.records().intValueExact() == 1 && retainedPlan.firstBodyUtf8().value().contains("preview"),"plan died with native owner or engine");
         check(retained.terminal().facts().value().records().intValueExact() == 1,"result died with engine");
         check(retainedFailure.call().terminal().facts().value().requestsSent().intValueExact() == 1,"failure facts died with engine");
-        try { retainedFailure.call().decide(); throw new AssertionError("failed call answered"); }
-        catch (Engine.SessionFailure expected) { check(expected.call() == retainedFailure.call(), "answer helper retains actual failed prefix"); }
         check(retainedFailure.failure().error().message() != null,"typed failure died with engine");
         var missing = new Results.Facts(Map.of());
         check(missing.model().state() == Presence.State.MISSING,"missing presence");

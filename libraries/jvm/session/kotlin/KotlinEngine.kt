@@ -11,13 +11,11 @@ import kotlin.coroutines.resumeWithException
 /** Coroutine facade over the shared owned JVM sessions. */
 class KotlinEngine private constructor(private val engine: Engine) : KotlinNamedCalls(engine), AutoCloseable {
     constructor(settings: Inputs.EngineSettings = Inputs.EngineSettings()) : this(nativeResult { Engine(settings, Engine.Surface.KOTLIN) })
-    protected override suspend fun await(start: () -> CompletableFuture<Engine.OwnedCall>): OwnedCall {
-        return OwnedCall(awaitNative(start))
-    }
+    protected override suspend fun <T> await(start: () -> CompletableFuture<T>): T = awaitNative(start)
     fun plan(request: Inputs.Request): Results.Plan = try { engine.plan(request) } catch (error: Throwable) { throw convertFailure(error) }
     fun startSession(request: Inputs.Request): OwnedSession = nativeResult { OwnedSession(engine.startSession(request)) }
-    suspend fun execute(request: Inputs.Request): OwnedCall = await { engine.execute(request) }
-    suspend fun execute(request: Inputs.Request, feed: Iterable<Inputs.RequestSessionDescriptor>): OwnedCall = await { engine.execute(request, feed) }
+    suspend fun execute(request: Inputs.Request): OwnedCall = OwnedCall(await { engine.execute(request) })
+    suspend fun execute(request: Inputs.Request, feed: Iterable<Inputs.RequestSessionDescriptor>): OwnedCall = OwnedCall(await { engine.execute(request, feed) })
     fun usagePersistence(): UsagePersistence = nativeResult { UsagePersistence.read(engine.usagePersistence()) }
     fun finishUsageStatus(): UsagePersistence = nativeResult { UsagePersistence.read(engine.finishUsageStatus()) }
     override fun close() = engine.close()

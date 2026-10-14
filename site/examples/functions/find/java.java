@@ -23,7 +23,7 @@ public class Find {
 
         try (var tt = new Engine()) {
             var refundDeadline = tt.find(question, records)
-                .join().find().value().value();
+                .join().value();
             assert refundDeadline.equals(policy.get(1));
         }
     }

@@ -23,6 +23,6 @@ import thinkthen.scala.ScalaEngine
     val call = tt.find(question, records)
     val refundDeadline =
       Await.result(call.result, 10.seconds)
-      .find().value().value()
-    assert(refundDeadline == policy(1))
+      .value
+    assert(refundDeadline.contains(policy(1)))
   }

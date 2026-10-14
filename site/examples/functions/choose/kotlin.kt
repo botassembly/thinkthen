@@ -13,7 +13,8 @@ suspend fun main() = KotlinEngine().use { tt ->
         "billing" to "Invoices, fees, and refunds.",
         "shipping" to "Parcels and delivery.",
         "account" to "Logins and passwords.",
-    ).fold(Ordered<AuthoredDescription>()) { values, (name, text) ->
+    ).fold(Ordered<AuthoredDescription>()) {
+        values, (name, text) ->
         values.entry(name, AuthoredDescription(text))
     }
     val owner = RequestQuestionDefinition().value(
@@ -22,6 +23,6 @@ suspend fun main() = KotlinEngine().use { tt ->
             .options(AuthoredOptions(teams)))
     val parcel = RequestInputText().text(
         "My parcel went to the wrong address.")
-    val team = tt.choose(owner, parcel).choose()
+    val team = tt.choose(owner, parcel).value
     check(team == "shipping")
 }

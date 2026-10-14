@@ -16,6 +16,6 @@ suspend fun main() = KotlinEngine().use { tt ->
         "Love the new dashboard, " +
             "but export crashes the app,\n" +
             "and I was charged twice.\n")
-    val fittingLabels = tt.tag(fits, message).tag()
+    val fittingLabels = tt.tag(fits, message).value
     check(fittingLabels == labels)
 }

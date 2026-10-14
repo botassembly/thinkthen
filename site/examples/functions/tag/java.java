@@ -21,7 +21,7 @@ public class Tag {
 
         try (var tt = new Engine()) {
             var fittingLabels = tt.tag(fits, message)
-                .join().tag();
+                .join().value();
             assert fittingLabels.equals(labels);
         }
     }

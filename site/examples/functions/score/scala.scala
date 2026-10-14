@@ -18,6 +18,6 @@ import thinkthen.scala.ScalaEngine
         "and customers cannot pay.\n")
     val call = tt.score(scale, outage)
     val urgency = Await.result(call.result, 10.seconds)
-      .score().doubleValue()
+      .value.doubleValue()
     assert(urgency == 2.0)
   }

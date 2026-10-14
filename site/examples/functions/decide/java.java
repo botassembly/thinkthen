@@ -11,7 +11,7 @@ public class Decide {
 
         try (var tt = new Engine()) {
             var isRefund = tt.decide(question, broken)
-                .join().decide();
+                .join().value();
             assert Boolean.TRUE.equals(isRefund);
         }
     }
