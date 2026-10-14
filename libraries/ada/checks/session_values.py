@@ -161,7 +161,6 @@ def cases():
         value = {'function': verb, 'question': {'kind': 'definition', 'value': question}, 'input': original,
                  'options': {'batch': 1}}
         if verb in ('decide', 'choose', 'tag', 'score'):
-            value['options']['details'] = True
         if none is not None:
             value['options']['none'] = none
         key = 'RequestCall'

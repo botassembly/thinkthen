@@ -43,7 +43,7 @@ object SessionScala {
       val authored = new Inputs.RequestQuestionDefinition().value(new Inputs.RequestDefinitionAuthoredDecide().decide(new Inputs.AuthoredQuestionText("Is it?")).trueValue(new Inputs.AuthoredCriterion(Map[String, Any]("ok" -> false, "number" -> new java.math.BigDecimal("7.5"), "values" -> List("nested", null).asJava).asJava)).falseValueNull())
       val original = Map("body" -> "session-scala-nested", "metadata" -> List(Map("present" -> null).asJava).asJava)
       val records = new Inputs.RequestInputRecords().items(List(new Inputs.RequestItem().original(new Inputs.RequestOriginalJson().value(original.asJava))).asJava)
-      val nested = Await.result(engine.decide(authored, records, new Inputs.RequestOptions().field(List("/body").asJava).details(true)).result, 10.seconds)
+      val nested = Await.result(engine.decide(authored, records, new Inputs.RequestOptions().field(List("/body").asJava)).result, 10.seconds)
       val row = nested.packets().collectFirst { case value: Results.SessionPacketDecideRow => value }.get
       val reading = row.value().value().value().asInstanceOf[java.util.Map[String, Any]]
       assert(reading.get("ok") == false && reading.get("number") == new java.math.BigDecimal("7.5"))
