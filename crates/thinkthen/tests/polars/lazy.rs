@@ -338,6 +338,17 @@ fn a_cached_lazy_frame_collected_twice_sends_nothing_the_second_time() {
     );
 }
 
+fn saved_listener(case: &Value) -> Listener {
+    let responses = case["exchanges"]
+        .as_array()
+        .expect("exchanges")
+        .iter()
+        .map(|exchange| Canned::ok(&exchange["response"].to_string()))
+        .collect();
+    let listener = Listener::serving(responses).expect("saved listener");
+    listener
+}
+
 #[test]
 fn annotation_and_recognition_expressions_keep_generated_nested_types_and_null_rows() {
     let corpus: Value =
@@ -345,13 +356,7 @@ fn annotation_and_recognition_expressions_keep_generated_nested_types_and_null_r
     let cases = corpus["cases"].as_array().expect("cases");
     for id in ["17-annotate-mixed", "42-recognize-C01-relations"] {
         let case = cases.iter().find(|case| case["id"] == id).expect("case");
-        let responses = case["exchanges"]
-            .as_array()
-            .expect("exchanges")
-            .iter()
-            .map(|exchange| Canned::ok(&exchange["response"].to_string()))
-            .collect();
-        let listener = Listener::serving(responses).expect("saved listener");
+        let listener = saved_listener(case);
         let engine = engine(listener.base());
         let text = case
             .get("text")

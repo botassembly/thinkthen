@@ -13,6 +13,7 @@ use fixture::{Fixture, Original};
 mod columns;
 use std::io::Write;
 use thinkthen::RequestDefinition as Asked;
+use thinkthen::polars::prelude::{NamedFrom, Series};
 
 use thinkthen::{CallOptions, CancelToken, CompleteRecord, Error, LoadedQuestion};
 
@@ -92,15 +93,19 @@ fn run(f: Fixture) -> Result<String, Error> {
         options
     };
     let inputs = fixture::inputs(&admitted)?.collect::<Result<Vec<_>, _>>()?;
-    let column = columns::originals(
-        &inputs
-            .iter()
-            .map(|input| {
-                serde_json::to_value(&input.original)
-                    .map_err(|_| fixture::usage("invalid original frame value"))
-            })
-            .collect::<Result<Vec<_>, Error>>()?,
-    )?;
+    let column = if f.incremental {
+        Series::new("presentation".into(), vec!["present"; inputs.len()])
+    } else {
+        columns::originals(
+            &inputs
+                .iter()
+                .map(|input| {
+                    serde_json::to_value(&input.original)
+                        .map_err(|_| fixture::usage("invalid original frame value"))
+                })
+                .collect::<Result<Vec<_>, Error>>()?,
+        )?
+    };
     let inputs = inputs.into_iter().map(Some).collect();
     if f.incremental {
         return match (f.verb.as_str(), asked) {

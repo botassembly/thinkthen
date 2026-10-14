@@ -231,23 +231,27 @@ fn rowwise(function: RequestFunction) -> bool {
             | RequestFunction::Relate
     )
 }
-fn check_originals<T: InputEvidence + Serialize>(
+fn original_rows<T: InputEvidence + Serialize>(
     column: &Series,
-    records: &[Option<RecordInput<T>>],
-) -> Result<(), Error> {
+    records: Vec<Option<RecordInput<T>>>,
+) -> Result<Vec<Option<RecordInput<crate::QuestionInput>>>, Error> {
     let mut originals = Vec::with_capacity(records.len());
+    let mut rows = Vec::with_capacity(records.len());
     for record in records {
         let Some(record) = record else {
             originals.push(Value::Null);
+            rows.push(None);
             continue;
         };
         let original = json(&record.original)?;
-        if original != json(&record.original.question_input())? {
+        let input = record.original.question_input();
+        if original != json(&input)? {
             return Err(Error::usage(
                 "the original column differs from its admitted input",
             ));
         }
         originals.push(original);
+        rows.push(Some(record.map_original(|_| input)));
     }
     let checked = schema::series(column.name().as_str(), &originals, column.dtype())
         .map_err(|_| Error::usage("the originals do not fit the supplied column type"))?;
@@ -256,7 +260,7 @@ fn check_originals<T: InputEvidence + Serialize>(
             "the original column differs from its admitted input",
         ));
     }
-    Ok(())
+    Ok(rows)
 }
 fn map_index(row: &mut Value, positions: &[usize]) -> Result<(), Error> {
     let Some(at) = row
@@ -315,13 +319,11 @@ impl Engine {
         records: Vec<Option<RecordInput<T>>>,
         options: CallOptions<'_>,
     ) -> Result<Call<DataFrame, RequestValue, Series>, Error> {
-        check_originals(column, &records)?;
+        let records = original_rows(column, records)?;
         let (records, positions) = present(column, records)?;
         let (schema, _) = types(function, definition, column.dtype())?;
         schema.named(schema::record_name(function))?;
-        let rows = records
-            .into_iter()
-            .map(|record| Ok(record.map_original(|original| original.question_input())));
+        let rows = records.into_iter().map(Ok);
         let call = request::execute_records(self, definition.clone(), function, options, rows)?;
         enrich_mode(call, function, column, true, |value| {
             records_frame(value, function, column, &positions, &schema)
