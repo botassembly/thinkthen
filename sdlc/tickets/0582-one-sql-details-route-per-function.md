@@ -49,3 +49,5 @@ PM amendment, 2026-10-14. Rank, find and relate judge one whole set. Their recor
 PM amendment, 2026-10-14. The SQLite part runs inside the 0576 SQLite lane, so this ticket has no prerequisite.
 
 PM amendment, 2026-10-14. A relate `_details` row carries only its own edge. Its `result` is the canonical Related record with `value` holding that one edge, and it keeps the question, original input, meta and answer_id. No row repeats the whole edge set. Rows grow linearly with edges. The native `Call.results` keeps the full set unchanged.
+
+PM amendment, 2026-10-14. In a set function's `_details` rows (rank, relate), the call-wide observations appear once, on the first row, and later rows carry empty arrays. The first row is the one whose existing ordinal or index field is zero, so a caller finds it after reordering, and the reference docs say so. Every observation appears exactly once. Native output stays unchanged. One shared projection fix serves all three databases, each with a regression.

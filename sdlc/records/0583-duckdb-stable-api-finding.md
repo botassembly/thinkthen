@@ -29,7 +29,7 @@ This does not prove a complete migration is viable for 1.5.6 and 2.0. Query life
 
 Six public upstream files were downloaded from raw.githubusercontent.com/duckdb/duckdb: duckdb.h and duckdb_extension.h at v1.4.5, v1.5.6 and v2.0-cyanoptera. upstream-manifest.json contains exact URLs, byte counts and SHA-256 digests. The prerelease branch is mutable; retained bytes and hashes identify this observation, not a final 2.0 release. Source rights: public DuckDB source, MIT. No clinical, production, licensed or model data was used.
 
-Run `python3 /home/ian/workspace/experiments/479-thinkthen-duckdb-c-api/check_api.py` to reproduce the five syntax-only compiler checks from retained headers. compile-results.json contains every exact command, exit code and elapsed value; each case folder has its probe source and compile.log.
+Run `python3 experiments/479-thinkthen-duckdb-c-api/check_api.py` to reproduce the five syntax-only compiler checks from retained headers. compile-results.json contains every exact command, exit code and elapsed value; each case folder has its probe source and compile.log.
 
 | Header revision | Target stable API | Result |
 | --- | --- | --- |

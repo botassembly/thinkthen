@@ -1,6 +1,6 @@
 # 0588: Experiment: the one-sheet spreadsheet writer keeps workbooks intact
 
-Status: OPEN.
+Status: COMPLETE.
 
 Milestone: 0.3
 
@@ -26,3 +26,5 @@ Learn whether a writer that copies every part of an `.xlsx` or `.xlsm` file byte
 
 - 2026-10-14 started
 - 2026-10-14 next: Await Ian opening the delivered workbooks in Excel for the web and reporting any repair prompt or missing values; local finding passed fresh review.
+
+Ian ruling, 2026-10-14. Ian opened the three most complex outputs (the macro, chart and pivot workbook; the chart and merged-cells workbook; the other-sheet table workbook) in Google Sheets, and all three looked right. That check replaces the Excel for the web opening for this experiment: the writer passes, and spreadsheets stay in 0.3. The product writer is opened in Excel for the web before the 0.3 release.

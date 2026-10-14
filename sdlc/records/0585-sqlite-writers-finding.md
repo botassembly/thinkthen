@@ -346,7 +346,7 @@ The experiment folder is `experiments/481-thinkthen-writers-0585`. The coordinat
         "requested": 100000,
         "committed": 3410,
         "retries": 4949,
-        "error": "Traceback (most recent call last):\n  File \"/home/ian/workspace/experiments/481-thinkthen-writers-0585/run_full.py\", line 41, in writer\n    _,rr,ss=wait(c,sql,args);r2+=rr;s2+=ss\n            ^^^^^^^^^^^^^^^^\n  File \"/home/ian/workspace/experiments/481-thinkthen-writers-0585/run_full.py\", line 8, in wait\n    try:return c.execute(sql,args),retries,slept\n               ^^^^^^^^^^^^^^^^^^^\nsqlite3.IntegrityError: coordinator requested stop after measured p99 exceeded 1 second\n",
+        "error": "Traceback (most recent call last):\n  File \"experiments/481-thinkthen-writers-0585/run_full.py\", line 41, in writer\n    _,rr,ss=wait(c,sql,args);r2+=rr;s2+=ss\n            ^^^^^^^^^^^^^^^^\n  File \"experiments/481-thinkthen-writers-0585/run_full.py\", line 8, in wait\n    try:return c.execute(sql,args),retries,slept\n               ^^^^^^^^^^^^^^^^^^^\nsqlite3.IntegrityError: coordinator requested stop after measured p99 exceeded 1 second\n",
         "settings": {
           "journal_mode": "wal",
           "synchronous": 2,
@@ -361,7 +361,7 @@ The experiment folder is `experiments/481-thinkthen-writers-0585`. The coordinat
         "requested": 100000,
         "committed": 2869,
         "retries": 4725,
-        "error": "Traceback (most recent call last):\n  File \"/home/ian/workspace/experiments/481-thinkthen-writers-0585/run_full.py\", line 41, in writer\n    _,rr,ss=wait(c,sql,args);r2+=rr;s2+=ss\n            ^^^^^^^^^^^^^^^^\n  File \"/home/ian/workspace/experiments/481-thinkthen-writers-0585/run_full.py\", line 8, in wait\n    try:return c.execute(sql,args),retries,slept\n               ^^^^^^^^^^^^^^^^^^^\nsqlite3.IntegrityError: coordinator requested stop after measured p99 exceeded 1 second\n",
+        "error": "Traceback (most recent call last):\n  File \"experiments/481-thinkthen-writers-0585/run_full.py\", line 41, in writer\n    _,rr,ss=wait(c,sql,args);r2+=rr;s2+=ss\n            ^^^^^^^^^^^^^^^^\n  File \"experiments/481-thinkthen-writers-0585/run_full.py\", line 8, in wait\n    try:return c.execute(sql,args),retries,slept\n               ^^^^^^^^^^^^^^^^^^^\nsqlite3.IntegrityError: coordinator requested stop after measured p99 exceeded 1 second\n",
         "settings": {
           "journal_mode": "wal",
           "synchronous": 2,
@@ -376,7 +376,7 @@ The experiment folder is `experiments/481-thinkthen-writers-0585`. The coordinat
         "requested": 100000,
         "committed": 2717,
         "retries": 4762,
-        "error": "Traceback (most recent call last):\n  File \"/home/ian/workspace/experiments/481-thinkthen-writers-0585/run_full.py\", line 41, in writer\n    _,rr,ss=wait(c,sql,args);r2+=rr;s2+=ss\n            ^^^^^^^^^^^^^^^^\n  File \"/home/ian/workspace/experiments/481-thinkthen-writers-0585/run_full.py\", line 8, in wait\n    try:return c.execute(sql,args),retries,slept\n               ^^^^^^^^^^^^^^^^^^^\nsqlite3.IntegrityError: coordinator requested stop after measured p99 exceeded 1 second\n",
+        "error": "Traceback (most recent call last):\n  File \"experiments/481-thinkthen-writers-0585/run_full.py\", line 41, in writer\n    _,rr,ss=wait(c,sql,args);r2+=rr;s2+=ss\n            ^^^^^^^^^^^^^^^^\n  File \"experiments/481-thinkthen-writers-0585/run_full.py\", line 8, in wait\n    try:return c.execute(sql,args),retries,slept\n               ^^^^^^^^^^^^^^^^^^^\nsqlite3.IntegrityError: coordinator requested stop after measured p99 exceeded 1 second\n",
         "settings": {
           "journal_mode": "wal",
           "synchronous": 2,
@@ -391,7 +391,7 @@ The experiment folder is `experiments/481-thinkthen-writers-0585`. The coordinat
         "requested": 100000,
         "committed": 2804,
         "retries": 4992,
-        "error": "Traceback (most recent call last):\n  File \"/home/ian/workspace/experiments/481-thinkthen-writers-0585/run_full.py\", line 41, in writer\n    _,rr,ss=wait(c,sql,args);r2+=rr;s2+=ss\n            ^^^^^^^^^^^^^^^^\n  File \"/home/ian/workspace/experiments/481-thinkthen-writers-0585/run_full.py\", line 8, in wait\n    try:return c.execute(sql,args),retries,slept\n               ^^^^^^^^^^^^^^^^^^^\nsqlite3.IntegrityError: coordinator requested stop after measured p99 exceeded 1 second\n",
+        "error": "Traceback (most recent call last):\n  File \"experiments/481-thinkthen-writers-0585/run_full.py\", line 41, in writer\n    _,rr,ss=wait(c,sql,args);r2+=rr;s2+=ss\n            ^^^^^^^^^^^^^^^^\n  File \"experiments/481-thinkthen-writers-0585/run_full.py\", line 8, in wait\n    try:return c.execute(sql,args),retries,slept\n               ^^^^^^^^^^^^^^^^^^^\nsqlite3.IntegrityError: coordinator requested stop after measured p99 exceeded 1 second\n",
         "settings": {
           "journal_mode": "wal",
           "synchronous": 2,
@@ -406,7 +406,7 @@ The experiment folder is `experiments/481-thinkthen-writers-0585`. The coordinat
         "requested": 100000,
         "committed": 2839,
         "retries": 4843,
-        "error": "Traceback (most recent call last):\n  File \"/home/ian/workspace/experiments/481-thinkthen-writers-0585/run_full.py\", line 41, in writer\n    _,rr,ss=wait(c,sql,args);r2+=rr;s2+=ss\n            ^^^^^^^^^^^^^^^^\n  File \"/home/ian/workspace/experiments/481-thinkthen-writers-0585/run_full.py\", line 8, in wait\n    try:return c.execute(sql,args),retries,slept\n               ^^^^^^^^^^^^^^^^^^^\nsqlite3.IntegrityError: coordinator requested stop after measured p99 exceeded 1 second\n",
+        "error": "Traceback (most recent call last):\n  File \"experiments/481-thinkthen-writers-0585/run_full.py\", line 41, in writer\n    _,rr,ss=wait(c,sql,args);r2+=rr;s2+=ss\n            ^^^^^^^^^^^^^^^^\n  File \"experiments/481-thinkthen-writers-0585/run_full.py\", line 8, in wait\n    try:return c.execute(sql,args),retries,slept\n               ^^^^^^^^^^^^^^^^^^^\nsqlite3.IntegrityError: coordinator requested stop after measured p99 exceeded 1 second\n",
         "settings": {
           "journal_mode": "wal",
           "synchronous": 2,
@@ -421,7 +421,7 @@ The experiment folder is `experiments/481-thinkthen-writers-0585`. The coordinat
         "requested": 100000,
         "committed": 2488,
         "retries": 4601,
-        "error": "Traceback (most recent call last):\n  File \"/home/ian/workspace/experiments/481-thinkthen-writers-0585/run_full.py\", line 41, in writer\n    _,rr,ss=wait(c,sql,args);r2+=rr;s2+=ss\n            ^^^^^^^^^^^^^^^^\n  File \"/home/ian/workspace/experiments/481-thinkthen-writers-0585/run_full.py\", line 8, in wait\n    try:return c.execute(sql,args),retries,slept\n               ^^^^^^^^^^^^^^^^^^^\nsqlite3.IntegrityError: coordinator requested stop after measured p99 exceeded 1 second\n",
+        "error": "Traceback (most recent call last):\n  File \"experiments/481-thinkthen-writers-0585/run_full.py\", line 41, in writer\n    _,rr,ss=wait(c,sql,args);r2+=rr;s2+=ss\n            ^^^^^^^^^^^^^^^^\n  File \"experiments/481-thinkthen-writers-0585/run_full.py\", line 8, in wait\n    try:return c.execute(sql,args),retries,slept\n               ^^^^^^^^^^^^^^^^^^^\nsqlite3.IntegrityError: coordinator requested stop after measured p99 exceeded 1 second\n",
         "settings": {
           "journal_mode": "wal",
           "synchronous": 2,
@@ -436,7 +436,7 @@ The experiment folder is `experiments/481-thinkthen-writers-0585`. The coordinat
         "requested": 100000,
         "committed": 2972,
         "retries": 5003,
-        "error": "Traceback (most recent call last):\n  File \"/home/ian/workspace/experiments/481-thinkthen-writers-0585/run_full.py\", line 41, in writer\n    _,rr,ss=wait(c,sql,args);r2+=rr;s2+=ss\n            ^^^^^^^^^^^^^^^^\n  File \"/home/ian/workspace/experiments/481-thinkthen-writers-0585/run_full.py\", line 8, in wait\n    try:return c.execute(sql,args),retries,slept\n               ^^^^^^^^^^^^^^^^^^^\nsqlite3.IntegrityError: coordinator requested stop after measured p99 exceeded 1 second\n",
+        "error": "Traceback (most recent call last):\n  File \"experiments/481-thinkthen-writers-0585/run_full.py\", line 41, in writer\n    _,rr,ss=wait(c,sql,args);r2+=rr;s2+=ss\n            ^^^^^^^^^^^^^^^^\n  File \"experiments/481-thinkthen-writers-0585/run_full.py\", line 8, in wait\n    try:return c.execute(sql,args),retries,slept\n               ^^^^^^^^^^^^^^^^^^^\nsqlite3.IntegrityError: coordinator requested stop after measured p99 exceeded 1 second\n",
         "settings": {
           "journal_mode": "wal",
           "synchronous": 2,
@@ -451,7 +451,7 @@ The experiment folder is `experiments/481-thinkthen-writers-0585`. The coordinat
         "requested": 100000,
         "committed": 2601,
         "retries": 4871,
-        "error": "Traceback (most recent call last):\n  File \"/home/ian/workspace/experiments/481-thinkthen-writers-0585/run_full.py\", line 41, in writer\n    _,rr,ss=wait(c,sql,args);r2+=rr;s2+=ss\n            ^^^^^^^^^^^^^^^^\n  File \"/home/ian/workspace/experiments/481-thinkthen-writers-0585/run_full.py\", line 8, in wait\n    try:return c.execute(sql,args),retries,slept\n               ^^^^^^^^^^^^^^^^^^^\nsqlite3.IntegrityError: coordinator requested stop after measured p99 exceeded 1 second\n",
+        "error": "Traceback (most recent call last):\n  File \"experiments/481-thinkthen-writers-0585/run_full.py\", line 41, in writer\n    _,rr,ss=wait(c,sql,args);r2+=rr;s2+=ss\n            ^^^^^^^^^^^^^^^^\n  File \"experiments/481-thinkthen-writers-0585/run_full.py\", line 8, in wait\n    try:return c.execute(sql,args),retries,slept\n               ^^^^^^^^^^^^^^^^^^^\nsqlite3.IntegrityError: coordinator requested stop after measured p99 exceeded 1 second\n",
         "settings": {
           "journal_mode": "wal",
           "synchronous": 2,
@@ -466,7 +466,7 @@ The experiment folder is `experiments/481-thinkthen-writers-0585`. The coordinat
         "requested": 100000,
         "committed": 3022,
         "retries": 4876,
-        "error": "Traceback (most recent call last):\n  File \"/home/ian/workspace/experiments/481-thinkthen-writers-0585/run_full.py\", line 41, in writer\n    _,rr,ss=wait(c,sql,args);r2+=rr;s2+=ss\n            ^^^^^^^^^^^^^^^^\n  File \"/home/ian/workspace/experiments/481-thinkthen-writers-0585/run_full.py\", line 8, in wait\n    try:return c.execute(sql,args),retries,slept\n               ^^^^^^^^^^^^^^^^^^^\nsqlite3.IntegrityError: coordinator requested stop after measured p99 exceeded 1 second\n",
+        "error": "Traceback (most recent call last):\n  File \"experiments/481-thinkthen-writers-0585/run_full.py\", line 41, in writer\n    _,rr,ss=wait(c,sql,args);r2+=rr;s2+=ss\n            ^^^^^^^^^^^^^^^^\n  File \"experiments/481-thinkthen-writers-0585/run_full.py\", line 8, in wait\n    try:return c.execute(sql,args),retries,slept\n               ^^^^^^^^^^^^^^^^^^^\nsqlite3.IntegrityError: coordinator requested stop after measured p99 exceeded 1 second\n",
         "settings": {
           "journal_mode": "wal",
           "synchronous": 2,
@@ -481,7 +481,7 @@ The experiment folder is `experiments/481-thinkthen-writers-0585`. The coordinat
         "requested": 100000,
         "committed": 2976,
         "retries": 4698,
-        "error": "Traceback (most recent call last):\n  File \"/home/ian/workspace/experiments/481-thinkthen-writers-0585/run_full.py\", line 41, in writer\n    _,rr,ss=wait(c,sql,args);r2+=rr;s2+=ss\n            ^^^^^^^^^^^^^^^^\n  File \"/home/ian/workspace/experiments/481-thinkthen-writers-0585/run_full.py\", line 8, in wait\n    try:return c.execute(sql,args),retries,slept\n               ^^^^^^^^^^^^^^^^^^^\nsqlite3.IntegrityError: coordinator requested stop after measured p99 exceeded 1 second\n",
+        "error": "Traceback (most recent call last):\n  File \"experiments/481-thinkthen-writers-0585/run_full.py\", line 41, in writer\n    _,rr,ss=wait(c,sql,args);r2+=rr;s2+=ss\n            ^^^^^^^^^^^^^^^^\n  File \"experiments/481-thinkthen-writers-0585/run_full.py\", line 8, in wait\n    try:return c.execute(sql,args),retries,slept\n               ^^^^^^^^^^^^^^^^^^^\nsqlite3.IntegrityError: coordinator requested stop after measured p99 exceeded 1 second\n",
         "settings": {
           "journal_mode": "wal",
           "synchronous": 2,
@@ -496,7 +496,7 @@ The experiment folder is `experiments/481-thinkthen-writers-0585`. The coordinat
         "requested": 100000,
         "committed": 2450,
         "retries": 4617,
-        "error": "Traceback (most recent call last):\n  File \"/home/ian/workspace/experiments/481-thinkthen-writers-0585/run_full.py\", line 41, in writer\n    _,rr,ss=wait(c,sql,args);r2+=rr;s2+=ss\n            ^^^^^^^^^^^^^^^^\n  File \"/home/ian/workspace/experiments/481-thinkthen-writers-0585/run_full.py\", line 8, in wait\n    try:return c.execute(sql,args),retries,slept\n               ^^^^^^^^^^^^^^^^^^^\nsqlite3.IntegrityError: coordinator requested stop after measured p99 exceeded 1 second\n",
+        "error": "Traceback (most recent call last):\n  File \"experiments/481-thinkthen-writers-0585/run_full.py\", line 41, in writer\n    _,rr,ss=wait(c,sql,args);r2+=rr;s2+=ss\n            ^^^^^^^^^^^^^^^^\n  File \"experiments/481-thinkthen-writers-0585/run_full.py\", line 8, in wait\n    try:return c.execute(sql,args),retries,slept\n               ^^^^^^^^^^^^^^^^^^^\nsqlite3.IntegrityError: coordinator requested stop after measured p99 exceeded 1 second\n",
         "settings": {
           "journal_mode": "wal",
           "synchronous": 2,
