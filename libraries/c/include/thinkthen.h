@@ -4231,6 +4231,22 @@ int thinkthen_request_plan_typed_value(const struct thinkthen_engine *engine,
                                        struct thinkthen_value **out);
 
 /*
+ Preview a full canonical Request through existing Rust admission and Plan serialization.
+ Sends nothing and reads no key or cache. Unknown fields and unsupported previews refuse.
+ Success transfers an immutable independent owner; free once with value_free.
+ Source bytes and engine may be freed on return. Failures preserve out and occupy
+ only the calling thread immediate session diagnostic, independently of engine/constructor slots.
+ # Safety
+ engine is live; request_json has request_len readable UTF-8 bytes. NULL requires
+ zero, which is invalid Request JSON. Extents fit Rust slices; out is nonnull
+ aligned writable pointer storage.
+ */
+int thinkthen_request_plan_value(const struct thinkthen_engine *engine,
+                                 const char *request_json,
+                                 size_t request_len,
+                                 struct thinkthen_value **out);
+
+/*
  Signal cancellation without waiting for a provider or final facts. NULL is ignored.
  # Safety
  session is NULL or live throughout the call.
@@ -4496,6 +4512,19 @@ int thinkthen_session_wait(const struct thinkthen_session *session,
  owner is NULL or unfreed, after every operation and borrowed view finishes.
  */
 void thinkthen_value_free(struct thinkthen_value *owner);
+
+/*
+ Parse one arbitrary JSON value through the existing Rust parser.
+ Numbers retain their original decimal bytes, including large integers and exponents;
+ object keys, null and false are preserved without request-shape admission.
+ Success transfers an immutable independent owner; free once with value_free.
+ Input bytes may be freed on return. Malformed JSON, UTF-8 or extents return EUSAGE,
+ preserve out and occupy only the calling thread immediate session diagnostic.
+ # Safety
+ json has len readable UTF-8 bytes; NULL requires zero, which is invalid JSON.
+ Extents fit Rust slices; out is nonnull aligned writable pointer storage.
+ */
+int thinkthen_value_parse(const char *json, size_t len, struct thinkthen_value **out);
 
 /*
  Borrow the immutable canonical value root and nested backing until value_free.
