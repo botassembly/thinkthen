@@ -69,9 +69,9 @@ procedure division.
        by reference tt-n-cobol-AnswerTagResult
        tt-n-cobol-AnswerStatus returning status-code
     if status-code not = 0 stop run returning 1 end-if
-    set row-at to v-first-rows of tt-n-cobol-AnswerTagResult
+    set row-at to v-value-first-rows of tt-n-cobol-AnswerTagResult
     perform varying row-number from 1 by 1 until
-       row-number > v-first-count of
+       row-number > v-value-first-count of
           tt-n-cobol-AnswerTagResult
        set address of tt-n-cobol-AnswerText to row-at
        string v-text of tt-n-cobol-AnswerText

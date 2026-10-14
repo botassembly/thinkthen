@@ -49,7 +49,7 @@ Status = record_type('thinkthen_cobol_AnswerStatus')
 class Table(ct.Structure):
     _fields_ = [('owner', ct.c_void_p), ('rows', ct.c_void_p), ('count', ct.c_uint64)]
 class Decision(ct.Structure):
-    _fields_ = [('present', ct.c_uint64), ('value', ct.c_uint64)]
+    _fields_ = [('present', ct.c_uint64), ('value', ct.c_void_p)]
 class Choice(ct.Structure):
     _fields_ = [('present', ct.c_uint64), ('value', Text)]
 class Find(ct.Structure):
@@ -148,6 +148,7 @@ end program BLOCK_PLAN.
         engine = engine_slot.value; assert engine
         records.owners.clear()
         def invoke(function, originals=None, options=None, preview=False, preview_function=None, question_override=None, input_override=None):
+            print('calling', function, preview, options, flush=True)
             records = Records(PACKAGE)
             question = {'kind': 'definition', 'value': question_override or questions[function]}
             kind = {'find': 'units', 'relate': 'entities'}.get(function, 'records')
@@ -167,6 +168,35 @@ end program BLOCK_PLAN.
             code = call(*(ct.byref(v) for v in pointers))
             records.owners.clear()
             return code, answer, status
+        def value_json(address):
+            kind = ct.c_uint32()
+            bridge.TT_VALUE_KIND.argtypes = [ct.c_void_p, ct.c_void_p]
+            assert bridge.TT_VALUE_KIND(address, ct.byref(kind)) == 0
+            constants = Records(PACKAGE).constants
+            if kind.value == constants['THINKTHEN_COMPLETE_JSON_NULL_V1']: return None
+            if kind.value == constants['THINKTHEN_COMPLETE_JSON_BOOLEAN_V1']:
+                boolean = ct.c_uint32(); bridge.TT_VALUE_BOOLEAN.argtypes = [ct.c_void_p, ct.c_void_p]
+                assert bridge.TT_VALUE_BOOLEAN(address, ct.byref(boolean)) == 0
+                return bool(boolean.value)
+            output, length = ct.create_string_buffer(8192), ct.c_uint64()
+            if kind.value in (constants['THINKTHEN_COMPLETE_JSON_STRING_V1'], constants['THINKTHEN_COMPLETE_JSON_NUMBER_V1']):
+                assert bridge.TT_VALUE_TEXT(address, output, ct.byref(length)) == 0
+                text = output.raw[:length.value].decode()
+                return text if kind.value == constants['THINKTHEN_COMPLETE_JSON_STRING_V1'] else json.loads(text)
+            length = ct.c_uint64(); bridge.TT_VALUE_LENGTH.argtypes = [ct.c_void_p, ct.c_void_p]
+            assert bridge.TT_VALUE_LENGTH(address, ct.byref(length)) == 0
+            result = [] if kind.value == constants['THINKTHEN_COMPLETE_JSON_ARRAY_V1'] else {}
+            bridge.TT_VALUE_ELEMENT.argtypes = [ct.c_void_p, ct.c_uint64, ct.c_void_p]
+            bridge.TT_VALUE_NAME.argtypes = [ct.c_void_p, ct.c_uint64, ct.c_void_p, ct.c_void_p]
+            bridge.TT_VALUE_FREE.argtypes = [ct.c_void_p]
+            for index in range(1, length.value + 1):
+                child = ct.c_void_p(); assert bridge.TT_VALUE_ELEMENT(address, index, ct.byref(child)) == 0
+                projected = value_json(child.value); bridge.TT_VALUE_FREE(child)
+                if isinstance(result, list): result.append(projected)
+                else:
+                    size = ct.c_uint64(); assert bridge.TT_VALUE_NAME(address, index, output, ct.byref(size)) == 0
+                    result[output.raw[:size.value].decode()] = projected
+            return result
         def native_plan(function):
             request = {'schema': 'thinkthen.request/1', 'call': {'function': function, 'question': {'kind': 'definition', 'value': questions[function]}, 'input': {'kind': 'records', 'items': [{'original': {'kind': 'text', 'text': 'yes'}}]}, 'options': {}}}
             data = json.dumps(request).encode()
@@ -214,8 +244,8 @@ end program BLOCK_PLAN.
         before = backend.attempts
         code, answer, status = invoke('rank', ['second', 'first', 'third', 'first'])
         try:
-            assert code == 0 and answer.owner and answer.count == 4
-            indexes = list((ct.c_uint64 * answer.count).from_address(answer.rows))
+            assert code == 0 and answer.owner and answer.value.count == 4
+            indexes = list((ct.c_uint64 * answer.value.count).from_address(answer.value.rows))
             assert indexes == [1, 3, 2, 0], indexes
             assert status.facts_present and status.facts.records == 4
             assert backend.attempts - before == status.facts.requests_sent > 0
@@ -225,35 +255,50 @@ end program BLOCK_PLAN.
         for function in questions:
             code, answer, status = invoke(function, options={'attempts': True})
             assert code == 0, (function, code, bytes(status.message.text[:status.message.length]))
-            assert answer.owner and answer.count, (function, answer.count)
-            assert status.facts_present and (status.facts.requests_sent + status.facts.cache_answers) > 0, function
+            assert answer.owner and answer.value.count, (function, answer.value.count)
+            assert answer.facts_present and (answer.facts.requests_sent + answer.facts.cache_answers) > 0, function
+            assert answer.results.len > 0, function
             if function == 'decide':
-                assert Decision.from_address(answer.rows).value == 1
+                assert value_json(Decision.from_address(answer.value.rows).value) is True
                 assert status.facts.attempts.presence == 2 and status.facts.attempts.value.len == 1
                 attempt = record_type('thinkthen_cobol_AnswerAttempt').from_address(status.facts.attempts.value.data)
                 assert attempt.request_sha256.length == 64 and attempt.sdk_request_id
                 assert status.facts.call_id
                 assert record_type('thinkthen_cobol_AnswerCallId').from_address(status.facts.call_id).value.length == 64
-            if function == 'choose': assert Choice.from_address(answer.rows).value.text[:1] == b'a'
+            if function == 'choose': assert Choice.from_address(answer.value.rows).value.text[:1] == b'a'
             if function == 'tag':
-                tags = Table.from_address(answer.rows); assert tags.count == 2
+                tags = Table.from_address(answer.value.rows); assert tags.count == 2
                 assert Text.from_address(tags.rows).text[:1] == b'a'
                 assert Text.from_address(tags.rows + ct.sizeof(Text)).text[:1] == b'b'
-            if function == 'score': assert abs(ct.c_double.from_address(answer.rows).value - .1) < 1e-12
-            if function == 'rank': assert ct.c_uint64.from_address(answer.rows).value == 0
-            if function == 'find': assert Find.from_address(answer.rows).present == 1
-            if function == 'annotate': assert Annotation.from_address(answer.rows).boolean == 1
-            if function == 'recognize': assert Recognition.from_address(answer.rows).text.text[:10] == b'John Smith'
-            if function == 'relate': assert Relation.from_address(answer.rows).source.text[:3] == b'Sam'
+            if function == 'score': assert abs(ct.c_double.from_address(answer.value.rows).value - .1) < 1e-12
+            if function == 'rank': assert ct.c_uint64.from_address(answer.value.rows).value == 0
+            if function == 'find': assert Find.from_address(answer.value.rows).present == 1
+            if function == 'annotate': assert Annotation.from_address(answer.value.rows).boolean == 1
+            if function == 'recognize': assert Recognition.from_address(answer.value.rows).text.text[:10] == b'John Smith'
+            if function == 'relate': assert Relation.from_address(answer.value.rows).source.text[:3] == b'Sam'
             if function == 'filter':
-                value = ct.c_void_p.from_address(answer.rows).value; output = ct.create_string_buffer(8192); length = ct.c_uint64()
+                value = ct.c_void_p.from_address(answer.value.rows).value; output = ct.create_string_buffer(8192); length = ct.c_uint64()
                 assert bridge.TT_VALUE_TEXT(value, output, ct.byref(length)) == 0
                 assert output.raw[:length.value] == b'yes'
             bridge.TT_ANSWER_FREE(answer.owner)
         for original, present, value in [('no', 1, 0), ('unsure', 0, 0)]:
             code, answer, status = invoke('decide', [original], {'threshold': '0.4:0.6'} if original == 'unsure' else {}); assert code == 0
-            row = Decision.from_address(answer.rows); assert (row.present, row.value) == (present, value)
+            row = Decision.from_address(answer.value.rows); assert (row.present, value_json(row.value) if row.present else None) == (present, bool(value) if present else None)
+            assert answer.probability.count == 1 and bool(answer.probability.first.present) == bool(present)
             bridge.TT_ANSWER_FREE(answer.owner)
+        for authored in (None, False, {'decision': [None, False, {'label': 'accepted'}]}, [False, None, 'yes']):
+            code, answer, status = invoke('decide', ['yes'], question_override={'decide': 'Authored?', 'true': authored}, input_override={'kind': 'text', 'text': 'yes'})
+            assert code == 0 and answer.value.first.present == 1, ('authored-decide', authored, code)
+            assert value_json(answer.value.first.value) == authored, ('authored-decide-value', authored)
+            assert answer.probability.first.present and abs(answer.probability.first.value - .9) < 1e-12, ('authored-decide-probability', authored)
+            bridge.TT_ANSWER_FREE(answer.owner)
+        code, answer, status = invoke('decide', ['yes', 'no', 'unsure'], {'threshold': '0.4:0.6'})
+        assert code == 0 and answer.value.scalar == 0 and answer.value.count == 3 and answer.results.len == 3
+        assert [value_json(Decision.from_address(answer.value.rows + index * ct.sizeof(Decision)).value) for index in range(3)] == [True, False, None]
+        number = record_type('thinkthen_cobol_AnswerNumber')
+        probabilities = [number.from_address(answer.probability.data + index * ct.sizeof(number)) for index in range(3)]
+        assert [(item.present, round(item.value, 2) if item.present else None) for item in probabilities] == [(1, .9), (1, .1), (0, None)]
+        bridge.TT_ANSWER_FREE(answer.owner)
         before = backend.attempts
         code, answer, status = invoke('decide', ['yes']); assert code == 0
         assert status.facts.cache_answers == 1 and backend.attempts == before
@@ -292,19 +337,35 @@ end program BLOCK_PLAN.
         fixture_backend = FixtureBackend(BACKEND_BINARY, child_env(home=work / 'recognition-home'))
         try:
             os.environ['THINKTHEN_API_KEY'] = 'sk-conformance-loopback'
+            cases = {case['id']: case for case in json.loads((ROOT / 'conformance/cases.json').read_text())['cases']}
+            for identity, expected in [('01-decide-yes-captured', (True, .99)), ('06-choose-billing', ('billing', .7))]:
+                case = cases[identity]; function = case['verb']; evidence = case['exchanges'][0]['evidence']
+                settings = {'cache': False, 'batch': 1, 'model': 'jev-1.13.0', 'max_retries': 0, 'base_url': f'http://127.0.0.1:{fixture_backend.port}/case/library-call-result/v1'}
+                engine = native.thinkthen_engine_new_with(json.dumps(settings).encode()); assert engine
+                before = int(fixture_backend.read('count'))
+                code, answer, status = invoke(function, [evidence], question_override=case['question'], input_override={'kind': 'text', 'text': evidence})
+                assert code == 0, ('canonical-call-result', function, code)
+                row = answer.value.first
+                actual = value_json(row.value) if function == 'decide' else row.value.text[:row.value.length].decode()
+                assert actual == expected[0] and answer.value.scalar == 1, ('canonical-call-value', function, actual)
+                assert answer.probability.scalar == 1 and answer.probability.first.present and abs(answer.probability.first.value - expected[1]) < 1e-12, ('canonical-call-probability', function)
+                assert answer.results.len == 1 and answer.facts_present and answer.facts.requests_sent == 1, ('canonical-call-records-facts', function)
+                assert int(fixture_backend.read('count')) - before == 1, ('canonical-call-send-count', function)
+                bridge.TT_ANSWER_FREE(answer.owner); native.thinkthen_engine_free(engine)
+                engine = saved_engine
             settings = {'cache': False, 'batch': 1, 'model': 'jev-1.13.0', 'max_retries': 0, 'base_url': f'http://127.0.0.1:{fixture_backend.port}/case/42-recognize-C01-relations/v1'}
             engine = native.thinkthen_engine_new_with(json.dumps(settings).encode()); assert engine
             code, answer, status = invoke('recognize', [fixture['text']], question_override=fixture['question'])
             assert code == 0, (code, status.message.text[:status.message.length])
             native.thinkthen_engine_free(engine); engine = saved_engine
             expected = fixture['expect']['success']['answers'][0]['bare']
-            assert answer.count == len(expected['entities']) and answer.edge_count == len(expected['relations'])
+            assert answer.value.count == len(expected['entities']) and answer.value.edge_count == len(expected['relations'])
             def entity(row):
-                return {'text': bytes(row.text.text[:row.text.length]).decode(), 'kind': bytes(row.kind.text[:row.kind.length]).decode(), 'start': row.start, 'end': row.end, 'length': row.length, 'strength': row.probability}
+                return {'text': bytes(row.text.text[:row.text.length]).decode(), 'kind': bytes(row.kind.text[:row.kind.length]).decode(), 'start': row.start, 'end': row.end, 'length': row.length, 'strength': row.strength}
             for index, value in enumerate(expected['entities']):
-                assert entity(Recognition.from_address(answer.rows + index * ct.sizeof(Recognition))) == value
+                assert entity(Recognition.from_address(answer.value.rows + index * ct.sizeof(Recognition))) == value
             for index, value in enumerate(expected['relations']):
-                row = RecognitionEdge.from_address(answer.edges + index * ct.sizeof(RecognitionEdge))
+                row = RecognitionEdge.from_address(answer.value.edges + index * ct.sizeof(RecognitionEdge))
                 assert entity(row.source) == value['source'] and entity(row.target) == value['target']
                 assert row.relation.text[:row.relation.length].decode() == value['relation'] and abs(row.probability - value['probability']) < 1e-12
             bridge.TT_ANSWER_FREE(answer.owner)
@@ -312,13 +373,16 @@ end program BLOCK_PLAN.
             boundary_question = {key: value for key, value in fixture['question'].items() if key != 'relation_threshold'}
             boundary_question['recognize'] = {key: value for key, value in fixture['question']['recognize'].items() if key != 'relations'}
             code, answer, status = invoke('recognize', [fixture['text']], options={'mode': 'boundary_only'}, question_override=boundary_question)
-            assert code == 0 and answer.count > 0 and answer.edge_count == 0, (code, answer.count, answer.edge_count, bytes(status.message.text[:status.message.length]))
+            assert code == 0 and answer.value.count > 0 and answer.value.edge_count == 0, (code, answer.value.count, answer.value.edge_count, bytes(status.message.text[:status.message.length]))
             native.thinkthen_engine_free(engine); engine = saved_engine
-            for index in range(answer.count):
-                row = Recognition.from_address(answer.rows + index * ct.sizeof(Recognition))
+            for index in range(answer.value.count):
+                row = Recognition.from_address(answer.value.rows + index * ct.sizeof(Recognition))
                 assert row.proposal == 1 and row.mode == 1 and row.length == row.end - row.start
                 assert row.text.text[:row.text.length].decode() == fixture['text'][row.start:row.end]
-                assert 0 <= row.probability <= 1 and row.extensions
+                numbers = record_type('thinkthen_cobol_AnswerNumber')
+                probability_list = record_type('thinkthen_cobol_AnswerProbabilityList').from_address(answer.probability.lists)
+                probability = numbers.from_address(probability_list.data + index * ct.sizeof(numbers))
+                assert probability.present and 0 <= probability.value <= 1 and row.extensions
             bridge.TT_ANSWER_FREE(answer.owner)
             for name in ('17-annotate-mixed', '17-annotate-partial'):
                 case = next(case for case in json.loads((ROOT / 'conformance/cases.json').read_text(encoding='utf-8'))['cases'] if case['id'] == name)
@@ -328,10 +392,10 @@ end program BLOCK_PLAN.
                 assert code == 0
                 native.thinkthen_engine_free(engine); engine = saved_engine
                 expected = {value['name']: value['bare'] for value in case['expect']['success']['answers']}
-                assert answer.count == len(expected)
+                assert answer.value.count == len(expected)
                 constants = Records(PACKAGE).constants
-                for index in range(answer.count):
-                    row = Annotation.from_address(answer.rows + index * ct.sizeof(Annotation))
+                for index in range(answer.value.count):
+                    row = Annotation.from_address(answer.value.rows + index * ct.sizeof(Annotation))
                     want = expected[row.name.text[:row.name.length].decode()]
                     if want is None: assert row.kind == constants['THINKTHEN_COMPLETE_ANNOTATED_FIELD_NULL_V1']
                     elif type(want) is bool: assert row.boolean == want
@@ -359,14 +423,14 @@ end program BLOCK_PLAN.
         decide_file.write_text(json.dumps(questions['decide'])); choose_file.write_text(json.dumps(questions['choose']))
         env = child_env(home=work / 'public-home', THINKTHEN_BASE_URL=f'http://127.0.0.1:{backend.server_port}/generic/v1', THINKTHEN_API_KEY='tt-cobol-blocking', TT_SESSION_QUESTION_FILE=str(decide_file), TT_PUBLIC_CHOOSE_FILE=str(choose_file), TT_SESSION_EVIDENCE='yes', TT_SESSION_EXPECT_FAILURE='N')
         result = subprocess.run([str(executable)], env=env, capture_output=True, text=True, timeout=5)
-        assert result.returncode == 0 and result.stdout.splitlines() == ['00000000000000000001', 'a'], (result.returncode, result.stdout, result.stderr)
+        assert result.returncode == 0 and result.stdout.splitlines() == ['0000000001', 'a'], (result.returncode, result.stdout, result.stderr)
         decide_file.write_text(json.dumps({'decide': 'Refund?', 'threshold': '0.4:0.6'}))
         result = subprocess.run([str(executable)], env=dict(env, TT_SESSION_EVIDENCE='unsure'), capture_output=True, text=True, timeout=5)
         assert result.returncode == 0 and result.stdout.splitlines() == ['a'], (result.returncode, result.stdout, result.stderr)
         decide_file.write_text(json.dumps(questions['decide']))
         choose_file.write_text(json.dumps({**questions['choose'], 'threshold': .95}))
         result = subprocess.run([str(executable)], env=env, capture_output=True, text=True, timeout=5)
-        assert result.returncode == 0 and result.stdout.splitlines() == ['00000000000000000001'], (result.returncode, result.stdout, result.stderr)
+        assert result.returncode == 0 and result.stdout.splitlines() == ['0000000001'], (result.returncode, result.stdout, result.stderr)
         native.thinkthen_engine_free(engine)
     finally:
         backend.close()

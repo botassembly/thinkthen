@@ -29,6 +29,7 @@ copy "tt-native-generated.cpy".
 01 decide-path usage pointer.
 01 choose-text pic x(8192).
 01 input-rows usage pointer.
+01 boolean-answer usage binary-long unsigned.
 01 no-controls usage pointer value null.
 procedure division.
     accept question-text from environment "TT_SESSION_QUESTION_FILE"
@@ -101,11 +102,15 @@ procedure division.
     call "TT_DECIDE" using by value engine decide-question input-rows no-controls
        by reference tt-n-cobol-AnswerDecideResult tt-n-cobol-AnswerStatus
        returning status-code
-    if status-code = 0 and v-count of tt-n-cobol-AnswerDecideResult not = 3
+    if status-code = 0 and v-value-count of tt-n-cobol-AnswerDecideResult not = 3
        move 2 to return-code goback
     end-if
-    if status-code = 0 and v-first-present of tt-n-cobol-AnswerDecideResult = 1
-       display v-first-value of tt-n-cobol-AnswerDecideResult
+    if status-code = 0 and v-value-first-present of tt-n-cobol-AnswerDecideResult = 1
+       call "TT_VALUE_BOOLEAN" using
+          by value v-value-first-value of tt-n-cobol-AnswerDecideResult
+          by reference boolean-answer returning status-code
+       if status-code not = 0 move 3 to return-code goback end-if
+       display boolean-answer
     end-if
     call "TT_ANSWER_FREE" using
        by value v-owner of tt-n-cobol-AnswerStatus returning omitted
@@ -113,12 +118,12 @@ procedure division.
     call "TT_CHOOSE" using by value engine choose-question input-rows no-controls
        by reference tt-n-cobol-AnswerChooseResult tt-n-cobol-AnswerStatus
        returning status-code
-    if status-code = 0 and v-count of tt-n-cobol-AnswerChooseResult not = 3
+    if status-code = 0 and v-value-count of tt-n-cobol-AnswerChooseResult not = 3
        move 2 to return-code goback
     end-if
-    if status-code = 0 and v-first-present of tt-n-cobol-AnswerChooseResult = 1
-       display v-first-value-text of tt-n-cobol-AnswerChooseResult
-          (1:v-first-value-length of tt-n-cobol-AnswerChooseResult)
+    if status-code = 0 and v-value-first-present of tt-n-cobol-AnswerChooseResult = 1
+       display v-value-first-value-text of tt-n-cobol-AnswerChooseResult
+          (1:v-value-first-value-length of tt-n-cobol-AnswerChooseResult)
     end-if
     call "TT_ANSWER_FREE" using
        by value v-owner of tt-n-cobol-AnswerStatus returning omitted

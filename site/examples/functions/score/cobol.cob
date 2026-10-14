@@ -63,7 +63,7 @@ procedure division.
        by reference tt-n-cobol-AnswerScoreResult
        tt-n-cobol-AnswerStatus returning status-code
     if status-code not = 0 stop run returning 1 end-if
-    move v-first-value of tt-n-cobol-AnswerScoreResult
+    move v-value-first-value of tt-n-cobol-AnswerScoreResult
        to urgency
     call "TT_ANSWER_FREE" using by value
        v-owner of tt-n-cobol-AnswerStatus returning omitted

@@ -4654,19 +4654,55 @@ struct tt_answer_owner {
     void *edges;
     size_t edge_count;
     size_t edge_capacity;
+    void *receipts;
+    size_t receipt_count;
+    thinkthen_cobol_AnswerNumber *probabilities;
+    size_t probability_count;
+    thinkthen_cobol_AnswerProbabilityList *probability_lists;
+    size_t probability_list_count;
+    unsigned char *resolved;
+    size_t resolved_count;
 };
 void TT_ANSWER_FREE(tt_answer_owner *owner) {
     if(owner) {
         release(&owner->storage);
         free(owner->rows);
         free(owner->edges);
+        free(owner->receipts);
+        free(owner->probabilities);
+        free(owner->probability_lists);
+        free(owner->resolved);
         free(owner);
     }
 }
 static int answer_text(thinkthen_complete_utf8_v1 input,thinkthen_cobol_AnswerText *out) {
     return TT_SESSION_TEXT(&input,out->text,&out->length);
 }
+static int original_limit(const thinkthen_complete_json_v1 *input) {
+    if(!input) return THINKTHEN_COBOL_REPRESENTATION;
+    if(input->kind==THINKTHEN_COMPLETE_JSON_STRING_V1 && input->data.string.len>THINKTHEN_COBOL_TEXT_CAPACITY) return THINKTHEN_COBOL_OVERFLOW;
+    if(input->kind==THINKTHEN_COMPLETE_JSON_NUMBER_V1 && input->data.number.len>THINKTHEN_COBOL_TEXT_CAPACITY) return THINKTHEN_COBOL_OVERFLOW;
+    if(input->kind==THINKTHEN_COMPLETE_JSON_ARRAY_V1) for(size_t i=0;
+    i<input->data.array.len;
+    i++) {
+        int code=original_limit(input->data.array.data[i]);
+        if(code) return code;
+    }
+    if(input->kind==THINKTHEN_COMPLETE_JSON_OBJECT_V1) for(size_t i=0;
+    i<input->data.object.len;
+    i++) {
+        if(input->data.object.data[i].name.len>THINKTHEN_COBOL_TEXT_CAPACITY) return THINKTHEN_COBOL_OVERFLOW;
+        int code=original_limit(input->data.object.data[i].value);
+        if(code) return code;
+    }
+    return 0;
+}
 static const tt_value *answer_original(arena *storage,const thinkthen_complete_json_v1 *input) {
+    int code=original_limit(input);
+    if(code) {
+        storage->code=code;
+        return NULL;
+    }
     tt_value *out=allocate(storage,1,sizeof(*out));
     if(out) out->value=copy_value(storage,input);
     return out;
@@ -5179,11 +5215,3846 @@ thinkthen_cobol_AnswerImmediateFacts *out) {
     if(!code) code=copy_thinkthen_cobol_AnswerExtensions(a,&input->extensions,&out->extensions);
     return code ? code : a->code;
 }
+static int copy_thinkthen_cobol_ReceiptRelation(arena *,const thinkthen_complete_relation_v1 *,
+thinkthen_cobol_ReceiptRelation *);
+static int copy_thinkthen_cobol_ReceiptExtensions(arena *,const thinkthen_complete_extensions_v1 *,
+thinkthen_cobol_ReceiptExtensions *);
+static int copy_thinkthen_cobol_ReceiptExtension(arena *,const thinkthen_complete_extension_v1 *,
+thinkthen_cobol_ReceiptExtension *);
+static int copy_thinkthen_cobol_ReceiptRelatedEntityEdgeList(arena *,const thinkthen_complete_related_entity_edge_list_v1 *,
+thinkthen_cobol_ReceiptRelatedEntityEdgeList *);
+static int copy_thinkthen_cobol_ReceiptRelatedEntityEdge(arena *,const thinkthen_complete_related_entity_edge_v1 *,
+thinkthen_cobol_ReceiptRelatedEntityEdge *);
+static int copy_thinkthen_cobol_ReceiptRelationEndpoint(arena *,const thinkthen_complete_relation_endpoint_v1 *,
+thinkthen_cobol_ReceiptRelationEndpoint *);
+static int copy_thinkthen_cobol_ReceiptRelationEndpointData(arena *,const thinkthen_complete_relation_endpoint_data_v1 *,
+thinkthen_cobol_ReceiptRelationEndpointData *,uint32_t);
+static int copy_thinkthen_cobol_ReceiptRelationEndpointSource(arena *,const thinkthen_complete_relation_endpoint_source_v1 *,
+thinkthen_cobol_ReceiptRelationEndpointSource *);
+static int copy_thinkthen_cobol_ReceiptJsonPresence(arena *,const thinkthen_complete_json_presence_v1 *,
+thinkthen_cobol_ReceiptJsonPresence *);
+static int copy_thinkthen_cobol_ReceiptU64Presence(arena *,const thinkthen_complete_u64_presence_v1 *,
+thinkthen_cobol_ReceiptU64Presence *);
+static int copy_thinkthen_cobol_ReceiptUtf8Presence(arena *,const thinkthen_complete_utf8_presence_v1 *,
+thinkthen_cobol_ReceiptUtf8Presence *);
+static int copy_thinkthen_cobol_ReceiptRelationEndpointRelatedEntity(arena *,const thinkthen_complete_relation_endpoint_related_entity_v1 *,
+thinkthen_cobol_ReceiptRelationEndpointRelatedEntity *);
+static int copy_thinkthen_cobol_ReceiptU32Presence(arena *,const thinkthen_complete_u32_presence_v1 *,
+thinkthen_cobol_ReceiptU32Presence *);
+static int copy_thinkthen_cobol_ReceiptVersion(arena *,const thinkthen_complete_version_v1 *,
+thinkthen_cobol_ReceiptVersion *);
+static int copy_thinkthen_cobol_ReceiptRelateQuestionDocument(arena *,const thinkthen_complete_relate_question_document_v1 *,
+thinkthen_cobol_ReceiptRelateQuestionDocument *);
+static int copy_thinkthen_cobol_ReceiptWordingVersionPresence(arena *,const thinkthen_complete_wording_version_presence_v1 *,
+thinkthen_cobol_ReceiptWordingVersionPresence *);
+static int copy_thinkthen_cobol_ReceiptWordingVersion(arena *,const thinkthen_complete_wording_version_v1 *,
+thinkthen_cobol_ReceiptWordingVersion *);
+static int copy_thinkthen_cobol_ReceiptThreshold(arena *,const thinkthen_complete_threshold_v1 *,
+thinkthen_cobol_ReceiptThreshold *);
+static int copy_thinkthen_cobol_ReceiptThresholdData(arena *,const thinkthen_complete_threshold_data_v1 *,
+thinkthen_cobol_ReceiptThresholdData *,uint32_t);
+static int copy_thinkthen_cobol_ReceiptRelationRuleList(arena *,const thinkthen_complete_relation_rule_list_v1 *,
+thinkthen_cobol_ReceiptRelationRuleList *);
+static int copy_thinkthen_cobol_ReceiptRelationRule(arena *,const thinkthen_complete_relation_rule_v1 *,
+thinkthen_cobol_ReceiptRelationRule *);
+static int copy_thinkthen_cobol_ReceiptStringListPresence(arena *,const thinkthen_complete_string_list_presence_v1 *,
+thinkthen_cobol_ReceiptStringListPresence *);
+static int copy_thinkthen_cobol_ReceiptStringList(arena *,const thinkthen_complete_string_list_v1 *,
+thinkthen_cobol_ReceiptStringList *);
+static int copy_thinkthen_cobol_ReceiptQuestionNamePresence(arena *,const thinkthen_complete_question_name_presence_v1 *,
+thinkthen_cobol_ReceiptQuestionNamePresence *);
+static int copy_thinkthen_cobol_ReceiptQuestionName(arena *,const thinkthen_complete_question_name_v1 *,
+thinkthen_cobol_ReceiptQuestionName *);
+static int copy_thinkthen_cobol_ReceiptLabelListPresence(arena *,const thinkthen_complete_label_list_presence_v1 *,
+thinkthen_cobol_ReceiptLabelListPresence *);
+static int copy_thinkthen_cobol_ReceiptLabelList(arena *,const thinkthen_complete_label_list_v1 *,
+thinkthen_cobol_ReceiptLabelList *);
+static int copy_thinkthen_cobol_ReceiptLabel(arena *,const thinkthen_complete_label_v1 *,thinkthen_cobol_ReceiptLabel *);
+static int copy_thinkthen_cobol_ReceiptInputDeclarationPresence(arena *,const thinkthen_complete_input_declaration_presence_v1 *,
+thinkthen_cobol_ReceiptInputDeclarationPresence *);
+static int copy_thinkthen_cobol_ReceiptInputDeclaration(arena *,const thinkthen_complete_input_declaration_v1 *,
+thinkthen_cobol_ReceiptInputDeclaration *);
+static int copy_thinkthen_cobol_ReceiptInputDeclarationData(arena *,const thinkthen_complete_input_declaration_data_v1 *,
+thinkthen_cobol_ReceiptInputDeclarationData *,uint32_t);
+static int copy_thinkthen_cobol_ReceiptInputDeclarationObjectRoot(arena *,const thinkthen_complete_input_declaration_object_root_v1 *,
+thinkthen_cobol_ReceiptInputDeclarationObjectRoot *);
+static int copy_thinkthen_cobol_ReceiptObjectType(arena *,const thinkthen_complete_object_type_v1 *,
+thinkthen_cobol_ReceiptObjectType *);
+static int copy_thinkthen_cobol_ReceiptInputPropertyTypeMap(arena *,const thinkthen_complete_input_property_type_map_v1 *,
+thinkthen_cobol_ReceiptInputPropertyTypeMap *);
+static int copy_thinkthen_cobol_ReceiptInputPropertyTypeMapEntry(arena *,const thinkthen_complete_input_property_type_map_entry_v1 *,
+thinkthen_cobol_ReceiptInputPropertyTypeMapEntry *);
+static int copy_thinkthen_cobol_ReceiptInputPropertyType(arena *,const thinkthen_complete_input_property_type_v1 *,
+thinkthen_cobol_ReceiptInputPropertyType *);
+static int copy_thinkthen_cobol_ReceiptInputPropertyTypeData(arena *,const thinkthen_complete_input_property_type_data_v1 *,
+thinkthen_cobol_ReceiptInputPropertyTypeData *,uint32_t);
+static int copy_thinkthen_cobol_ReceiptInputPropertyTypeArray(arena *,const thinkthen_complete_input_property_type_array_v1 *,
+thinkthen_cobol_ReceiptInputPropertyTypeArray *);
+static int copy_thinkthen_cobol_ReceiptStringRoot(arena *,const thinkthen_complete_string_root_v1 *,
+thinkthen_cobol_ReceiptStringRoot *);
+static int copy_thinkthen_cobol_ReceiptStringType(arena *,const thinkthen_complete_string_type_v1 *,
+thinkthen_cobol_ReceiptStringType *);
+static int copy_thinkthen_cobol_ReceiptInputPropertyTypeBoolean(arena *,const thinkthen_complete_input_property_type_boolean_v1 *,
+thinkthen_cobol_ReceiptInputPropertyTypeBoolean *);
+static int copy_thinkthen_cobol_ReceiptInputPropertyTypeNumber(arena *,const thinkthen_complete_input_property_type_number_v1 *,
+thinkthen_cobol_ReceiptInputPropertyTypeNumber *);
+static int copy_thinkthen_cobol_ReceiptInputPropertyTypeString(arena *,const thinkthen_complete_input_property_type_string_v1 *,
+thinkthen_cobol_ReceiptInputPropertyTypeString *);
+static int copy_thinkthen_cobol_ReceiptInputDeclarationStringRoot(arena *,const thinkthen_complete_input_declaration_string_root_v1 *,
+thinkthen_cobol_ReceiptInputDeclarationStringRoot *);
+static int copy_thinkthen_cobol_ReceiptRelateFieldsPresence(arena *,const thinkthen_complete_relate_fields_presence_v1 *,
+thinkthen_cobol_ReceiptRelateFieldsPresence *);
+static int copy_thinkthen_cobol_ReceiptRelateFields(arena *,const thinkthen_complete_relate_fields_v1 *,
+thinkthen_cobol_ReceiptRelateFields *);
+static int copy_thinkthen_cobol_ReceiptBatchPresence(arena *,const thinkthen_complete_batch_presence_v1 *,
+thinkthen_cobol_ReceiptBatchPresence *);
+static int copy_thinkthen_cobol_ReceiptBatch(arena *,const thinkthen_complete_batch_v1 *,thinkthen_cobol_ReceiptBatch *);
+static int copy_thinkthen_cobol_ReceiptBatchData(arena *,const thinkthen_complete_batch_data_v1 *,
+thinkthen_cobol_ReceiptBatchData *,uint32_t);
+static int copy_thinkthen_cobol_ReceiptBatchString(arena *,const thinkthen_complete_batch_string_v1 *,
+thinkthen_cobol_ReceiptBatchString *);
+static int copy_thinkthen_cobol_ReceiptPositionPresence(arena *,const thinkthen_complete_position_presence_v1 *,
+thinkthen_cobol_ReceiptPositionPresence *);
+static int copy_thinkthen_cobol_ReceiptPosition(arena *,const thinkthen_complete_position_v1 *,
+thinkthen_cobol_ReceiptPosition *);
+static int copy_thinkthen_cobol_ReceiptMeta(arena *,const thinkthen_complete_meta_v1 *,thinkthen_cobol_ReceiptMeta *);
+static int copy_thinkthen_cobol_ReceiptUsagePresence(arena *,const thinkthen_complete_usage_presence_v1 *,
+thinkthen_cobol_ReceiptUsagePresence *);
+static int copy_thinkthen_cobol_ReceiptUsage(arena *,const thinkthen_complete_usage_v1 *,thinkthen_cobol_ReceiptUsage *);
+static int copy_thinkthen_cobol_ReceiptQuestionSourceList(arena *,const thinkthen_complete_question_source_list_v1 *,
+thinkthen_cobol_ReceiptQuestionSourceList *);
+static int copy_thinkthen_cobol_ReceiptQuestionSource(arena *,const thinkthen_complete_question_source_v1 *,
+thinkthen_cobol_ReceiptQuestionSource *);
+static int copy_thinkthen_cobol_ReceiptOrigin(arena *,const thinkthen_complete_origin_v1 *,
+thinkthen_cobol_ReceiptOrigin *);
+static int copy_thinkthen_cobol_ReceiptProfileWarningPresence(arena *,const thinkthen_complete_profile_warning_presence_v1 *,
+thinkthen_cobol_ReceiptProfileWarningPresence *);
+static int copy_thinkthen_cobol_ReceiptProfileWarning(arena *,const thinkthen_complete_profile_warning_v1 *,
+thinkthen_cobol_ReceiptProfileWarning *);
+static int copy_thinkthen_cobol_ReceiptOriginPresence(arena *,const thinkthen_complete_origin_presence_v1 *,
+thinkthen_cobol_ReceiptOriginPresence *);
+static int copy_thinkthen_cobol_ReceiptObservationList(arena *,const thinkthen_complete_observation_list_v1 *,
+thinkthen_cobol_ReceiptObservationList *);
+static int copy_thinkthen_cobol_ReceiptObservation(arena *,const thinkthen_complete_observation_v1 *,
+thinkthen_cobol_ReceiptObservation *);
+static int copy_thinkthen_cobol_ReceiptObservationData(arena *,const thinkthen_complete_observation_data_v1 *,
+thinkthen_cobol_ReceiptObservationData *,uint32_t);
+static int copy_thinkthen_cobol_ReceiptObservationFailureId(arena *,const thinkthen_complete_observation_failure_id_v1 *,
+thinkthen_cobol_ReceiptObservationFailureId *);
+static int copy_thinkthen_cobol_ReceiptFailureId(arena *,const thinkthen_complete_failure_id_v1 *,
+thinkthen_cobol_ReceiptFailureId *);
+static int copy_thinkthen_cobol_ReceiptObservationObservationId(arena *,const thinkthen_complete_observation_observation_id_v1 *,
+thinkthen_cobol_ReceiptObservationObservationId *);
+static int copy_thinkthen_cobol_ReceiptObservationId(arena *,const thinkthen_complete_observation_id_v1 *,
+thinkthen_cobol_ReceiptObservationId *);
+static int copy_thinkthen_cobol_ReceiptBatchWarningPresence(arena *,const thinkthen_complete_batch_warning_presence_v1 *,
+thinkthen_cobol_ReceiptBatchWarningPresence *);
+static int copy_thinkthen_cobol_ReceiptBatchWarning(arena *,const thinkthen_complete_batch_warning_v1 *,
+thinkthen_cobol_ReceiptBatchWarning *);
+static int copy_thinkthen_cobol_ReceiptBatchSetting(arena *,const thinkthen_complete_batch_setting_v1 *,
+thinkthen_cobol_ReceiptBatchSetting *);
+static int copy_thinkthen_cobol_ReceiptBatchSettingData(arena *,const thinkthen_complete_batch_setting_data_v1 *,
+thinkthen_cobol_ReceiptBatchSettingData *,uint32_t);
+static int copy_thinkthen_cobol_ReceiptBatchSettingPresence(arena *,const thinkthen_complete_batch_setting_presence_v1 *,
+thinkthen_cobol_ReceiptBatchSettingPresence *);
+static int copy_thinkthen_cobol_ReceiptAttemptListPresence(arena *,const thinkthen_complete_attempt_list_presence_v1 *,
+thinkthen_cobol_ReceiptAttemptListPresence *);
+static int copy_thinkthen_cobol_ReceiptAttemptList(arena *,const thinkthen_complete_attempt_list_v1 *,
+thinkthen_cobol_ReceiptAttemptList *);
+static int copy_thinkthen_cobol_ReceiptAttempt(arena *,const thinkthen_complete_attempt_v1 *,
+thinkthen_cobol_ReceiptAttempt *);
+static int copy_thinkthen_cobol_ReceiptSdkRequestId(arena *,const thinkthen_complete_sdk_request_id_v1 *,
+thinkthen_cobol_ReceiptSdkRequestId *);
+static int copy_thinkthen_cobol_ReceiptAttemptOutcome(arena *,const thinkthen_complete_attempt_outcome_v1 *,
+thinkthen_cobol_ReceiptAttemptOutcome *);
+static int copy_thinkthen_cobol_ReceiptSessionInputSourceListPresence(arena *,const thinkthen_complete_session_input_source_list_presence_v1 *,
+thinkthen_cobol_ReceiptSessionInputSourceListPresence *);
+static int copy_thinkthen_cobol_ReceiptSessionInputSourceList(arena *,const thinkthen_complete_session_input_source_list_v1 *,
+thinkthen_cobol_ReceiptSessionInputSourceList *);
+static int copy_thinkthen_cobol_ReceiptSessionInputSource(arena *,const thinkthen_complete_session_input_source_v1 *,
+thinkthen_cobol_ReceiptSessionInputSource *);
+static int copy_thinkthen_cobol_ReceiptPhysicalSource(arena *,const thinkthen_complete_physical_source_v1 *,
+thinkthen_cobol_ReceiptPhysicalSource *);
+static int copy_thinkthen_cobol_ReceiptAnswerId(arena *,const thinkthen_complete_answer_id_v1 *,
+thinkthen_cobol_ReceiptAnswerId *);
+static int copy_thinkthen_cobol_ReceiptAnswers(arena *,const thinkthen_complete_answers_v1 *,
+thinkthen_cobol_ReceiptAnswers *);
+static int copy_thinkthen_cobol_ReceiptRelationMemberList(arena *,const thinkthen_complete_relation_member_list_v1 *,
+thinkthen_cobol_ReceiptRelationMemberList *);
+static int copy_thinkthen_cobol_ReceiptRelationMember(arena *,const thinkthen_complete_relation_member_v1 *,
+thinkthen_cobol_ReceiptRelationMember *);
+static int copy_thinkthen_cobol_ReceiptRelationMemberData(arena *,const thinkthen_complete_relation_member_data_v1 *,
+thinkthen_cobol_ReceiptRelationMemberData *,uint32_t);
+static int copy_thinkthen_cobol_ReceiptRelationMemberFailureId(arena *,const thinkthen_complete_relation_member_failure_id_v1 *,
+thinkthen_cobol_ReceiptRelationMemberFailureId *);
+static int copy_thinkthen_cobol_ReceiptFailure(arena *,const thinkthen_complete_failure_v1 *,
+thinkthen_cobol_ReceiptFailure *);
+static int copy_thinkthen_cobol_ReceiptFailureFieldKind(arena *,const thinkthen_complete_failure_field_kind_v1 *,
+thinkthen_cobol_ReceiptFailureFieldKind *);
+static int copy_thinkthen_cobol_ReceiptFailureCause(arena *,const thinkthen_complete_failure_cause_v1 *,
+thinkthen_cobol_ReceiptFailureCause *);
+static int copy_thinkthen_cobol_ReceiptRelatedEntityPresence(arena *,const thinkthen_complete_related_entity_presence_v1 *,
+thinkthen_cobol_ReceiptRelatedEntityPresence *);
+static int copy_thinkthen_cobol_ReceiptRelatedEntity(arena *,const thinkthen_complete_related_entity_v1 *,
+thinkthen_cobol_ReceiptRelatedEntity *);
+static int copy_thinkthen_cobol_ReceiptQuestionDocument(arena *,const thinkthen_complete_question_document_v1 *,
+thinkthen_cobol_ReceiptQuestionDocument *);
+static int copy_thinkthen_cobol_ReceiptQuestionDocumentData(arena *,const thinkthen_complete_question_document_data_v1 *,
+thinkthen_cobol_ReceiptQuestionDocumentData *,uint32_t);
+static int copy_thinkthen_cobol_ReceiptQuestionDocumentScore(arena *,const thinkthen_complete_question_document_score_v1 *,
+thinkthen_cobol_ReceiptQuestionDocumentScore *);
+static int copy_thinkthen_cobol_ReceiptQuestionDocumentTag(arena *,const thinkthen_complete_question_document_tag_v1 *,
+thinkthen_cobol_ReceiptQuestionDocumentTag *);
+static int copy_thinkthen_cobol_ReceiptQuestionDocumentChoose(arena *,const thinkthen_complete_question_document_choose_v1 *,
+thinkthen_cobol_ReceiptQuestionDocumentChoose *);
+static int copy_thinkthen_cobol_ReceiptQuestionDocumentDecide(arena *,const thinkthen_complete_question_document_decide_v1 *,
+thinkthen_cobol_ReceiptQuestionDocumentDecide *);
+static int copy_thinkthen_cobol_ReceiptRelationMethod(arena *,const thinkthen_complete_relation_method_v1 *,
+thinkthen_cobol_ReceiptRelationMethod *);
+static int copy_thinkthen_cobol_ReceiptRelationDirection(arena *,const thinkthen_complete_relation_direction_v1 *,
+thinkthen_cobol_ReceiptRelationDirection *);
+static int copy_thinkthen_cobol_ReceiptRelationMemberAnswerId(arena *,const thinkthen_complete_relation_member_answer_id_v1 *,
+thinkthen_cobol_ReceiptRelationMemberAnswerId *);
+static int copy_thinkthen_cobol_ReceiptAnswer(arena *,const thinkthen_complete_answer_v1 *,
+thinkthen_cobol_ReceiptAnswer *);
+static int copy_thinkthen_cobol_ReceiptAnswerData(arena *,const thinkthen_complete_answer_data_v1 *,
+thinkthen_cobol_ReceiptAnswerData *,uint32_t);
+static int copy_thinkthen_cobol_ReceiptAnswerScore(arena *,const thinkthen_complete_answer_score_v1 *,
+thinkthen_cobol_ReceiptAnswerScore *);
+static int copy_thinkthen_cobol_ReceiptNumberMap(arena *,const thinkthen_complete_number_map_v1 *,
+thinkthen_cobol_ReceiptNumberMap *);
+static int copy_thinkthen_cobol_ReceiptNumberMapEntry(arena *,const thinkthen_complete_number_map_entry_v1 *,
+thinkthen_cobol_ReceiptNumberMapEntry *);
+static int copy_thinkthen_cobol_ReceiptF64Presence(arena *,const thinkthen_complete_f64_presence_v1 *,
+thinkthen_cobol_ReceiptF64Presence *);
+static int copy_thinkthen_cobol_ReceiptAnswerTag(arena *,const thinkthen_complete_answer_tag_v1 *,
+thinkthen_cobol_ReceiptAnswerTag *);
+static int copy_thinkthen_cobol_ReceiptAnswerChoice(arena *,const thinkthen_complete_answer_choice_v1 *,
+thinkthen_cobol_ReceiptAnswerChoice *);
+static int copy_thinkthen_cobol_ReceiptAnswerYesNo(arena *,const thinkthen_complete_answer_yes_no_v1 *,
+thinkthen_cobol_ReceiptAnswerYesNo *);
+static int copy_thinkthen_cobol_ReceiptRecognitionList(arena *,const thinkthen_complete_recognition_list_v1 *,
+thinkthen_cobol_ReceiptRecognitionList *);
+static int copy_thinkthen_cobol_ReceiptRecognition(arena *,const thinkthen_complete_recognition_v1 *,
+thinkthen_cobol_ReceiptRecognition *);
+static int copy_thinkthen_cobol_ReceiptRecognize(arena *,const thinkthen_complete_recognize_v1 *,
+thinkthen_cobol_ReceiptRecognize *);
+static int copy_thinkthen_cobol_ReceiptRecognizeData(arena *,const thinkthen_complete_recognize_data_v1 *,
+thinkthen_cobol_ReceiptRecognizeData *,uint32_t);
+static int copy_thinkthen_cobol_ReceiptRecognizeModeProposals(arena *,const thinkthen_complete_recognize_mode_proposals_v1 *,
+thinkthen_cobol_ReceiptRecognizeModeProposals *);
+static int copy_thinkthen_cobol_ReceiptBoundaryProposalList(arena *,const thinkthen_complete_boundary_proposal_list_v1 *,
+thinkthen_cobol_ReceiptBoundaryProposalList *);
+static int copy_thinkthen_cobol_ReceiptBoundaryProposal(arena *,const thinkthen_complete_boundary_proposal_v1 *,
+thinkthen_cobol_ReceiptBoundaryProposal *);
+static int copy_thinkthen_cobol_ReceiptBoundaryMode(arena *,const thinkthen_complete_boundary_mode_v1 *,
+thinkthen_cobol_ReceiptBoundaryMode *);
+static int copy_thinkthen_cobol_ReceiptRecognizeEntities(arena *,const thinkthen_complete_recognize_entities_v1 *,
+thinkthen_cobol_ReceiptRecognizeEntities *);
+static int copy_thinkthen_cobol_ReceiptEntityEdgeListPresence(arena *,const thinkthen_complete_entity_edge_list_presence_v1 *,
+thinkthen_cobol_ReceiptEntityEdgeListPresence *);
+static int copy_thinkthen_cobol_ReceiptEntityEdgeList(arena *,const thinkthen_complete_entity_edge_list_v1 *,
+thinkthen_cobol_ReceiptEntityEdgeList *);
+static int copy_thinkthen_cobol_ReceiptEntityEdge(arena *,const thinkthen_complete_entity_edge_v1 *,
+thinkthen_cobol_ReceiptEntityEdge *);
+static int copy_thinkthen_cobol_ReceiptEntity(arena *,const thinkthen_complete_entity_v1 *,
+thinkthen_cobol_ReceiptEntity *);
+static int copy_thinkthen_cobol_ReceiptEntityList(arena *,const thinkthen_complete_entity_list_v1 *,
+thinkthen_cobol_ReceiptEntityList *);
+static int copy_thinkthen_cobol_ReceiptPhysicalSourcePresence(arena *,const thinkthen_complete_physical_source_presence_v1 *,
+thinkthen_cobol_ReceiptPhysicalSourcePresence *);
+static int copy_thinkthen_cobol_ReceiptRecognizeQuestionDocument(arena *,const thinkthen_complete_recognize_question_document_v1 *,
+thinkthen_cobol_ReceiptRecognizeQuestionDocument *);
+static int copy_thinkthen_cobol_ReceiptVerb(arena *,const thinkthen_complete_verb_v1 *,thinkthen_cobol_ReceiptVerb *);
+static int copy_thinkthen_cobol_ReceiptRecognitionStageContextPresence(arena *,const thinkthen_complete_recognition_stage_context_presence_v1 *,
+thinkthen_cobol_ReceiptRecognitionStageContextPresence *);
+static int copy_thinkthen_cobol_ReceiptRecognitionStageContext(arena *,const thinkthen_complete_recognition_stage_context_v1 *,
+thinkthen_cobol_ReceiptRecognitionStageContext *);
+static int copy_thinkthen_cobol_ReceiptRelationRuleListPresence(arena *,const thinkthen_complete_relation_rule_list_presence_v1 *,
+thinkthen_cobol_ReceiptRelationRuleListPresence *);
+static int copy_thinkthen_cobol_ReceiptThresholdPresence(arena *,const thinkthen_complete_threshold_presence_v1 *,
+thinkthen_cobol_ReceiptThresholdPresence *);
+static int copy_thinkthen_cobol_ReceiptRecognitionModePresence(arena *,const thinkthen_complete_recognition_mode_presence_v1 *,
+thinkthen_cobol_ReceiptRecognitionModePresence *);
+static int copy_thinkthen_cobol_ReceiptRecognitionMode(arena *,const thinkthen_complete_recognition_mode_v1 *,
+thinkthen_cobol_ReceiptRecognitionMode *);
+static int copy_thinkthen_cobol_ReceiptJsonMap(arena *,const thinkthen_complete_json_map_v1 *,
+thinkthen_cobol_ReceiptJsonMap *);
+static int copy_thinkthen_cobol_ReceiptJsonMapEntry(arena *,const thinkthen_complete_json_map_entry_v1 *,
+thinkthen_cobol_ReceiptJsonMapEntry *);
+static int copy_thinkthen_cobol_ReceiptRecognitionOdds(arena *,const thinkthen_complete_recognition_odds_v1 *,
+thinkthen_cobol_ReceiptRecognitionOdds *);
+static int copy_thinkthen_cobol_ReceiptRecognitionOddsData(arena *,const thinkthen_complete_recognition_odds_data_v1 *,
+thinkthen_cobol_ReceiptRecognitionOddsData *,uint32_t);
+static int copy_thinkthen_cobol_ReceiptRecognitionOddsBoundaryOdds(arena *,const thinkthen_complete_recognition_odds_boundary_odds_v1 *,
+thinkthen_cobol_ReceiptRecognitionOddsBoundaryOdds *);
+static int copy_thinkthen_cobol_ReceiptPieceOddsList(arena *,const thinkthen_complete_piece_odds_list_v1 *,
+thinkthen_cobol_ReceiptPieceOddsList *);
+static int copy_thinkthen_cobol_ReceiptPieceOdds(arena *,const thinkthen_complete_piece_odds_v1 *,
+thinkthen_cobol_ReceiptPieceOdds *);
+static int copy_thinkthen_cobol_ReceiptRecognitionOddsRecognizeAnswer(arena *,const thinkthen_complete_recognition_odds_recognize_answer_v1 *,
+thinkthen_cobol_ReceiptRecognitionOddsRecognizeAnswer *);
+static int copy_thinkthen_cobol_ReceiptRecognitionProposalList(arena *,const thinkthen_complete_recognition_proposal_list_v1 *,
+thinkthen_cobol_ReceiptRecognitionProposalList *);
+static int copy_thinkthen_cobol_ReceiptRecognitionProposal(arena *,const thinkthen_complete_recognition_proposal_v1 *,
+thinkthen_cobol_ReceiptRecognitionProposal *);
+static int copy_thinkthen_cobol_ReceiptPlacePresence(arena *,const thinkthen_complete_place_presence_v1 *,
+thinkthen_cobol_ReceiptPlacePresence *);
+static int copy_thinkthen_cobol_ReceiptPlace(arena *,const thinkthen_complete_place_v1 *,thinkthen_cobol_ReceiptPlace *);
+static int copy_thinkthen_cobol_ReceiptPairOddsList(arena *,const thinkthen_complete_pair_odds_list_v1 *,
+thinkthen_cobol_ReceiptPairOddsList *);
+static int copy_thinkthen_cobol_ReceiptPairOdds(arena *,const thinkthen_complete_pair_odds_v1 *,
+thinkthen_cobol_ReceiptPairOdds *);
+static int copy_thinkthen_cobol_ReceiptNameOddsList(arena *,const thinkthen_complete_name_odds_list_v1 *,
+thinkthen_cobol_ReceiptNameOddsList *);
+static int copy_thinkthen_cobol_ReceiptNameOdds(arena *,const thinkthen_complete_name_odds_v1 *,
+thinkthen_cobol_ReceiptNameOdds *);
+static int copy_thinkthen_cobol_ReceiptNumberMapPresence(arena *,const thinkthen_complete_number_map_presence_v1 *,
+thinkthen_cobol_ReceiptNumberMapPresence *);
+static int copy_thinkthen_cobol_ReceiptAnnotationList(arena *,const thinkthen_complete_annotation_list_v1 *,
+thinkthen_cobol_ReceiptAnnotationList *);
+static int copy_thinkthen_cobol_ReceiptAnnotation(arena *,const thinkthen_complete_annotation_v1 *,
+thinkthen_cobol_ReceiptAnnotation *);
+static int copy_thinkthen_cobol_ReceiptAnnotatedRow(arena *,const thinkthen_complete_annotated_row_v1 *,
+thinkthen_cobol_ReceiptAnnotatedRow *);
+static int copy_thinkthen_cobol_ReceiptAnnotatedFieldMap(arena *,const thinkthen_complete_annotated_field_map_v1 *,
+thinkthen_cobol_ReceiptAnnotatedFieldMap *);
+static int copy_thinkthen_cobol_ReceiptAnnotatedFieldMapEntry(arena *,const thinkthen_complete_annotated_field_map_entry_v1 *,
+thinkthen_cobol_ReceiptAnnotatedFieldMapEntry *);
+static int copy_thinkthen_cobol_ReceiptAnnotatedField(arena *,const thinkthen_complete_annotated_field_v1 *,
+thinkthen_cobol_ReceiptAnnotatedField *);
+static int copy_thinkthen_cobol_ReceiptAnnotatedFieldData(arena *,const thinkthen_complete_annotated_field_data_v1 *,
+thinkthen_cobol_ReceiptAnnotatedFieldData *,uint32_t);
+static int copy_thinkthen_cobol_ReceiptFailed(arena *,const thinkthen_complete_failed_v1 *,
+thinkthen_cobol_ReceiptFailed *);
+static int copy_thinkthen_cobol_ReceiptAnnotationMemberMap(arena *,const thinkthen_complete_annotation_member_map_v1 *,
+thinkthen_cobol_ReceiptAnnotationMemberMap *);
+static int copy_thinkthen_cobol_ReceiptAnnotationMemberMapEntry(arena *,const thinkthen_complete_annotation_member_map_entry_v1 *,
+thinkthen_cobol_ReceiptAnnotationMemberMapEntry *);
+static int copy_thinkthen_cobol_ReceiptAnnotationMember(arena *,const thinkthen_complete_annotation_member_v1 *,
+thinkthen_cobol_ReceiptAnnotationMember *);
+static int copy_thinkthen_cobol_ReceiptAnnotationMemberData(arena *,const thinkthen_complete_annotation_member_data_v1 *,
+thinkthen_cobol_ReceiptAnnotationMemberData *,uint32_t);
+static int copy_thinkthen_cobol_ReceiptAnnotationMemberFailureId(arena *,const thinkthen_complete_annotation_member_failure_id_v1 *,
+thinkthen_cobol_ReceiptAnnotationMemberFailureId *);
+static int copy_thinkthen_cobol_ReceiptAnnotationMemberAnswerId(arena *,const thinkthen_complete_annotation_member_answer_id_v1 *,
+thinkthen_cobol_ReceiptAnnotationMemberAnswerId *);
+static int copy_thinkthen_cobol_ReceiptValuePresence(arena *,const thinkthen_complete_value_presence_v1 *,
+thinkthen_cobol_ReceiptValuePresence *);
+static int copy_thinkthen_cobol_ReceiptValue(arena *,const thinkthen_complete_value_v1 *,thinkthen_cobol_ReceiptValue *);
+static int copy_thinkthen_cobol_ReceiptValueData(arena *,const thinkthen_complete_value_data_v1 *,
+thinkthen_cobol_ReceiptValueData *,uint32_t);
+static int copy_thinkthen_cobol_ReceiptFind(arena *,const thinkthen_complete_find_v1 *,thinkthen_cobol_ReceiptFind *);
+static int copy_thinkthen_cobol_ReceiptFindQuestionDocument(arena *,const thinkthen_complete_find_question_document_v1 *,
+thinkthen_cobol_ReceiptFindQuestionDocument *);
+static int copy_thinkthen_cobol_ReceiptFindCandidateListPresence(arena *,const thinkthen_complete_find_candidate_list_presence_v1 *,
+thinkthen_cobol_ReceiptFindCandidateListPresence *);
+static int copy_thinkthen_cobol_ReceiptFindCandidateList(arena *,const thinkthen_complete_find_candidate_list_v1 *,
+thinkthen_cobol_ReceiptFindCandidateList *);
+static int copy_thinkthen_cobol_ReceiptFindCandidate(arena *,const thinkthen_complete_find_candidate_v1 *,
+thinkthen_cobol_ReceiptFindCandidate *);
+static int copy_thinkthen_cobol_ReceiptFindAnswer(arena *,const thinkthen_complete_find_answer_v1 *,
+thinkthen_cobol_ReceiptFindAnswer *);
+static int copy_thinkthen_cobol_ReceiptAtomicNonZeroUsizeList(arena *,const thinkthen_complete_atomic_non_zero_usize_list_v1 *,
+thinkthen_cobol_ReceiptAtomicNonZeroUsizeList *);
+static int copy_thinkthen_cobol_ReceiptAtomicNonZeroUsize(arena *,const thinkthen_complete_atomic_non_zero_usize_v1 *,
+thinkthen_cobol_ReceiptAtomicNonZeroUsize *);
+static int copy_thinkthen_cobol_ReceiptRankMemberListPresence(arena *,const thinkthen_complete_rank_member_list_presence_v1 *,
+thinkthen_cobol_ReceiptRankMemberListPresence *);
+static int copy_thinkthen_cobol_ReceiptRankMemberList(arena *,const thinkthen_complete_rank_member_list_v1 *,
+thinkthen_cobol_ReceiptRankMemberList *);
+static int copy_thinkthen_cobol_ReceiptRankMember(arena *,const thinkthen_complete_rank_member_v1 *,
+thinkthen_cobol_ReceiptRankMember *);
+static int copy_thinkthen_cobol_ReceiptRankMemberResult(arena *,const thinkthen_complete_rank_member_result_v1 *,
+thinkthen_cobol_ReceiptRankMemberResult *);
+static int copy_thinkthen_cobol_ReceiptImageListPresence(arena *,const thinkthen_complete_image_list_presence_v1 *,
+thinkthen_cobol_ReceiptImageListPresence *);
+static int copy_thinkthen_cobol_ReceiptImageList(arena *,const thinkthen_complete_image_list_v1 *,
+thinkthen_cobol_ReceiptImageList *);
+static int copy_thinkthen_cobol_ReceiptImage(arena *,const thinkthen_complete_image_v1 *,thinkthen_cobol_ReceiptImage *);
+static int copy_thinkthen_cobol_ReceiptImageMedia(arena *,const thinkthen_complete_image_media_v1 *,
+thinkthen_cobol_ReceiptImageMedia *);
+static int copy_thinkthen_cobol_ReceiptAtomicBooleanList(arena *,const thinkthen_complete_atomic_boolean_list_v1 *,
+thinkthen_cobol_ReceiptAtomicBooleanList *);
+static int copy_thinkthen_cobol_ReceiptAtomicBoolean(arena *,const thinkthen_complete_atomic_boolean_v1 *,
+thinkthen_cobol_ReceiptAtomicBoolean *);
+static int copy_thinkthen_cobol_ReceiptAtomicDoubleList(arena *,const thinkthen_complete_atomic_double_list_v1 *,
+thinkthen_cobol_ReceiptAtomicDoubleList *);
+static int copy_thinkthen_cobol_ReceiptAtomicDouble(arena *,const thinkthen_complete_atomic_double_v1 *,
+thinkthen_cobol_ReceiptAtomicDouble *);
+static int copy_thinkthen_cobol_ReceiptAtomicArrayOfStringList(arena *,const thinkthen_complete_atomic_array_of_string_list_v1 *,
+thinkthen_cobol_ReceiptAtomicArrayOfStringList *);
+static int copy_thinkthen_cobol_ReceiptAtomicArrayOfString(arena *,const thinkthen_complete_atomic_array_of_string_v1 *,
+thinkthen_cobol_ReceiptAtomicArrayOfString *);
+static int copy_thinkthen_cobol_ReceiptAtomicNullableStringList(arena *,const thinkthen_complete_atomic_nullable_string_list_v1 *,
+thinkthen_cobol_ReceiptAtomicNullableStringList *);
+static int copy_thinkthen_cobol_ReceiptAtomicNullableString(arena *,const thinkthen_complete_atomic_nullable_string_v1 *,
+thinkthen_cobol_ReceiptAtomicNullableString *);
+static int copy_thinkthen_cobol_ReceiptAtomicDecideValueList(arena *,const thinkthen_complete_atomic_decide_value_list_v1 *,
+thinkthen_cobol_ReceiptAtomicDecideValueList *);
+static int copy_thinkthen_cobol_ReceiptAtomicDecideValue(arena *,const thinkthen_complete_atomic_decide_value_v1 *,
+thinkthen_cobol_ReceiptAtomicDecideValue *);
+static int copy_thinkthen_cobol_ReceiptDecideValuePresence(arena *,const thinkthen_complete_decide_value_presence_v1 *,
+thinkthen_cobol_ReceiptDecideValuePresence *);
+static int copy_thinkthen_cobol_ReceiptDecideValue(arena *,const thinkthen_complete_decide_value_v1 *,
+thinkthen_cobol_ReceiptDecideValue *);
+static int copy_thinkthen_cobol_ReceiptExtensions(arena *a,const thinkthen_complete_extensions_v1 *input,
+thinkthen_cobol_ReceiptExtensions *out) {
+    int code=0;
+    (void)a;
+    thinkthen_cobol_ReceiptExtension *items=allocate(a,input->len,sizeof(*items));
+    out->data=items;
+    out->len=input->len;
+    if(!items) return a->code;
+    for(size_t i=0;
+    i<input->len && !code;
+    i++) {
+        code=copy_thinkthen_cobol_ReceiptExtension(a,&input->data[i],items+i);
+    }
+    out->len=input->len;
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptExtension(arena *a,const thinkthen_complete_extension_v1 *input,
+thinkthen_cobol_ReceiptExtension *out) {
+    int code=0;
+    (void)a;
+    if(!code) code=answer_text(input->name,&out->name);
+    if(input->value) out->value=answer_original(a,input->value);
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptRelatedEntityEdgeList(arena *a,const thinkthen_complete_related_entity_edge_list_v1 *input,
+thinkthen_cobol_ReceiptRelatedEntityEdgeList *out) {
+    int code=0;
+    (void)a;
+    thinkthen_cobol_ReceiptRelatedEntityEdge *items=allocate(a,input->len,sizeof(*items));
+    out->data=items;
+    out->len=input->len;
+    if(!items) return a->code;
+    for(size_t i=0;
+    i<input->len && !code;
+    i++) {
+        code=copy_thinkthen_cobol_ReceiptRelatedEntityEdge(a,input->data[i],items+i);
+    }
+    out->len=input->len;
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptRelationEndpointData(arena *a,const thinkthen_complete_relation_endpoint_data_v1 *input,
+thinkthen_cobol_ReceiptRelationEndpointData *out,uint32_t kind) {
+    int code=0;
+    (void)a;
+    if(kind==THINKTHEN_COMPLETE_RELATION_ENDPOINT_RELATED_ENTITY_V1) {
+        if(input->related_entity) {
+            thinkthen_cobol_ReceiptRelationEndpointRelatedEntity *value=allocate(a,1,sizeof(*value));
+            if(!value) return a->code;
+            if(!code) code=copy_thinkthen_cobol_ReceiptRelationEndpointRelatedEntity(a,input->related_entity,
+            value);
+            out->related_entity=value;
+        }
+    }
+    if(kind==THINKTHEN_COMPLETE_RELATION_ENDPOINT_SOURCE_V1) {
+        if(input->source) {
+            thinkthen_cobol_ReceiptRelationEndpointSource *value=allocate(a,1,sizeof(*value));
+            if(!value) return a->code;
+            if(!code) code=copy_thinkthen_cobol_ReceiptRelationEndpointSource(a,input->source,value);
+            out->source=value;
+        }
+    }
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptJsonPresence(arena *a,const thinkthen_complete_json_presence_v1 *input,
+thinkthen_cobol_ReceiptJsonPresence *out) {
+    int code=0;
+    (void)a;
+    out->presence=input->presence;
+    if(input->value) out->value=answer_original(a,input->value);
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptU64Presence(arena *a,const thinkthen_complete_u64_presence_v1 *input,
+thinkthen_cobol_ReceiptU64Presence *out) {
+    int code=0;
+    (void)a;
+    out->presence=input->presence;
+    out->value=input->value;
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptUtf8Presence(arena *a,const thinkthen_complete_utf8_presence_v1 *input,
+thinkthen_cobol_ReceiptUtf8Presence *out) {
+    int code=0;
+    (void)a;
+    out->presence=input->presence;
+    if(!code) code=answer_text(input->value,&out->value);
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptRelationEndpointRelatedEntity(arena *a,const thinkthen_complete_relation_endpoint_related_entity_v1 *input,
+thinkthen_cobol_ReceiptRelationEndpointRelatedEntity *out) {
+    int code=0;
+    (void)a;
+    if(!code) code=answer_text(input->kind,&out->kind);
+    if(!code) code=answer_text(input->name,&out->name);
+    if(!code) code=copy_thinkthen_cobol_ReceiptExtensions(a,&input->extensions,&out->extensions);
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptU32Presence(arena *a,const thinkthen_complete_u32_presence_v1 *input,
+thinkthen_cobol_ReceiptU32Presence *out) {
+    int code=0;
+    (void)a;
+    out->presence=input->presence;
+    out->value=input->value;
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptVersion(arena *a,const thinkthen_complete_version_v1 *input,
+thinkthen_cobol_ReceiptVersion *out) {
+    int code=0;
+    (void)a;
+    out->kind=input->kind;
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptWordingVersionPresence(arena *a,const thinkthen_complete_wording_version_presence_v1 *input,
+thinkthen_cobol_ReceiptWordingVersionPresence *out) {
+    int code=0;
+    (void)a;
+    out->presence=input->presence;
+    if(input->value) {
+        thinkthen_cobol_ReceiptWordingVersion *value=allocate(a,1,sizeof(*value));
+        if(!value) return a->code;
+        if(!code) code=copy_thinkthen_cobol_ReceiptWordingVersion(a,input->value,value);
+        out->value=value;
+    }
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptWordingVersion(arena *a,const thinkthen_complete_wording_version_v1 *input,
+thinkthen_cobol_ReceiptWordingVersion *out) {
+    int code=0;
+    (void)a;
+    out->value=input->value;
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptThresholdData(arena *a,const thinkthen_complete_threshold_data_v1 *input,
+thinkthen_cobol_ReceiptThresholdData *out,uint32_t kind) {
+    int code=0;
+    (void)a;
+    if(kind==THINKTHEN_COMPLETE_THRESHOLD_NUMBER_V1) {
+        out->number=input->number;
+    }
+    if(kind==THINKTHEN_COMPLETE_THRESHOLD_STRING_V1) {
+        if(!code) code=answer_text(input->string,&out->string);
+    }
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptRelationRuleList(arena *a,const thinkthen_complete_relation_rule_list_v1 *input,
+thinkthen_cobol_ReceiptRelationRuleList *out) {
+    int code=0;
+    (void)a;
+    thinkthen_cobol_ReceiptRelationRule *items=allocate(a,input->len,sizeof(*items));
+    out->data=items;
+    out->len=input->len;
+    if(!items) return a->code;
+    for(size_t i=0;
+    i<input->len && !code;
+    i++) {
+        code=copy_thinkthen_cobol_ReceiptRelationRule(a,input->data[i],items+i);
+    }
+    out->len=input->len;
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptRelationRule(arena *a,const thinkthen_complete_relation_rule_v1 *input,
+thinkthen_cobol_ReceiptRelationRule *out) {
+    int code=0;
+    (void)a;
+    out->either=input->either;
+    if(!code) code=answer_text(input->name,&out->name);
+    if(!code) code=answer_text(input->reads,&out->reads);
+    if(!code) code=copy_thinkthen_cobol_ReceiptU32Presence(a,&input->single,&out->single);
+    if(!code) code=answer_text(input->source,&out->source);
+    if(!code) code=answer_text(input->target,&out->target);
+    if(!code) code=copy_thinkthen_cobol_ReceiptExtensions(a,&input->extensions,&out->extensions);
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptStringList(arena *a,const thinkthen_complete_string_list_v1 *input,
+thinkthen_cobol_ReceiptStringList *out) {
+    int code=0;
+    (void)a;
+    thinkthen_cobol_AnswerText *items=allocate(a,input->len,sizeof(*items));
+    out->data=items;
+    out->len=input->len;
+    if(!items) return a->code;
+    for(size_t i=0;
+    i<input->len && !code;
+    i++) {
+        code=answer_text(*(&input->data[i]),items+i);
+    }
+    out->len=input->len;
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptQuestionNamePresence(arena *a,const thinkthen_complete_question_name_presence_v1 *input,
+thinkthen_cobol_ReceiptQuestionNamePresence *out) {
+    int code=0;
+    (void)a;
+    out->presence=input->presence;
+    if(input->value) {
+        thinkthen_cobol_ReceiptQuestionName *value=allocate(a,1,sizeof(*value));
+        if(!value) return a->code;
+        if(!code) code=copy_thinkthen_cobol_ReceiptQuestionName(a,input->value,value);
+        out->value=value;
+    }
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptQuestionName(arena *a,const thinkthen_complete_question_name_v1 *input,
+thinkthen_cobol_ReceiptQuestionName *out) {
+    int code=0;
+    (void)a;
+    if(!code) code=answer_text(input->value,&out->value);
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptLabelList(arena *a,const thinkthen_complete_label_list_v1 *input,
+thinkthen_cobol_ReceiptLabelList *out) {
+    int code=0;
+    (void)a;
+    thinkthen_cobol_ReceiptLabel *items=allocate(a,input->len,sizeof(*items));
+    out->data=items;
+    out->len=input->len;
+    if(!items) return a->code;
+    for(size_t i=0;
+    i<input->len && !code;
+    i++) {
+        code=copy_thinkthen_cobol_ReceiptLabel(a,input->data[i],items+i);
+    }
+    out->len=input->len;
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptLabel(arena *a,const thinkthen_complete_label_v1 *input,
+thinkthen_cobol_ReceiptLabel *out) {
+    int code=0;
+    (void)a;
+    if(!code) code=copy_thinkthen_cobol_ReceiptJsonPresence(a,&input->description,&out->description);
+    if(!code) code=answer_text(input->name,&out->name);
+    if(!code) code=copy_thinkthen_cobol_ReceiptExtensions(a,&input->extensions,&out->extensions);
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptInputDeclarationPresence(arena *a,const thinkthen_complete_input_declaration_presence_v1 *input,
+thinkthen_cobol_ReceiptInputDeclarationPresence *out) {
+    int code=0;
+    (void)a;
+    out->presence=input->presence;
+    if(input->value) {
+        thinkthen_cobol_ReceiptInputDeclaration *value=allocate(a,1,sizeof(*value));
+        if(!value) return a->code;
+        if(!code) code=copy_thinkthen_cobol_ReceiptInputDeclaration(a,input->value,value);
+        out->value=value;
+    }
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptInputDeclarationData(arena *a,const thinkthen_complete_input_declaration_data_v1 *input,
+thinkthen_cobol_ReceiptInputDeclarationData *out,uint32_t kind) {
+    int code=0;
+    (void)a;
+    if(kind==THINKTHEN_COMPLETE_INPUT_DECLARATION_STRING_ROOT_V1) {
+        if(input->string_root) {
+            thinkthen_cobol_ReceiptInputDeclarationStringRoot *value=allocate(a,1,sizeof(*value));
+            if(!value) return a->code;
+            if(!code) code=copy_thinkthen_cobol_ReceiptInputDeclarationStringRoot(a,input->string_root,
+            value);
+            out->string_root=value;
+        }
+    }
+    if(kind==THINKTHEN_COMPLETE_INPUT_DECLARATION_OBJECT_ROOT_V1) {
+        if(input->object_root) {
+            thinkthen_cobol_ReceiptInputDeclarationObjectRoot *value=allocate(a,1,sizeof(*value));
+            if(!value) return a->code;
+            if(!code) code=copy_thinkthen_cobol_ReceiptInputDeclarationObjectRoot(a,input->object_root,
+            value);
+            out->object_root=value;
+        }
+    }
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptObjectType(arena *a,const thinkthen_complete_object_type_v1 *input,
+thinkthen_cobol_ReceiptObjectType *out) {
+    int code=0;
+    (void)a;
+    out->kind=input->kind;
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptInputPropertyTypeMap(arena *a,const thinkthen_complete_input_property_type_map_v1 *input,
+thinkthen_cobol_ReceiptInputPropertyTypeMap *out) {
+    int code=0;
+    (void)a;
+    thinkthen_cobol_ReceiptInputPropertyTypeMapEntry *items=allocate(a,input->len,sizeof(*items));
+    out->data=items;
+    out->len=input->len;
+    if(!items) return a->code;
+    for(size_t i=0;
+    i<input->len && !code;
+    i++) {
+        code=copy_thinkthen_cobol_ReceiptInputPropertyTypeMapEntry(a,&input->data[i],items+i);
+    }
+    out->len=input->len;
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptInputPropertyTypeMapEntry(arena *a,const thinkthen_complete_input_property_type_map_entry_v1 *input,
+thinkthen_cobol_ReceiptInputPropertyTypeMapEntry *out) {
+    int code=0;
+    (void)a;
+    if(!code) code=answer_text(input->name,&out->name);
+    if(input->value) {
+        thinkthen_cobol_ReceiptInputPropertyType *value=allocate(a,1,sizeof(*value));
+        if(!value) return a->code;
+        if(!code) code=copy_thinkthen_cobol_ReceiptInputPropertyType(a,input->value,value);
+        out->value=value;
+    }
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptInputPropertyTypeData(arena *a,const thinkthen_complete_input_property_type_data_v1 *input,
+thinkthen_cobol_ReceiptInputPropertyTypeData *out,uint32_t kind) {
+    int code=0;
+    (void)a;
+    if(kind==THINKTHEN_COMPLETE_INPUT_PROPERTY_TYPE_STRING_V1) {
+        if(input->string) {
+            thinkthen_cobol_ReceiptInputPropertyTypeString *value=allocate(a,1,sizeof(*value));
+            if(!value) return a->code;
+            if(!code) code=copy_thinkthen_cobol_ReceiptInputPropertyTypeString(a,input->string,value);
+            out->string=value;
+        }
+    }
+    if(kind==THINKTHEN_COMPLETE_INPUT_PROPERTY_TYPE_NUMBER_V1) {
+        if(input->number) {
+            thinkthen_cobol_ReceiptInputPropertyTypeNumber *value=allocate(a,1,sizeof(*value));
+            if(!value) return a->code;
+            if(!code) code=copy_thinkthen_cobol_ReceiptInputPropertyTypeNumber(a,input->number,value);
+            out->number=value;
+        }
+    }
+    if(kind==THINKTHEN_COMPLETE_INPUT_PROPERTY_TYPE_BOOLEAN_V1) {
+        if(input->boolean) {
+            thinkthen_cobol_ReceiptInputPropertyTypeBoolean *value=allocate(a,1,sizeof(*value));
+            if(!value) return a->code;
+            if(!code) code=copy_thinkthen_cobol_ReceiptInputPropertyTypeBoolean(a,input->boolean,value);
+            out->boolean=value;
+        }
+    }
+    if(kind==THINKTHEN_COMPLETE_INPUT_PROPERTY_TYPE_ARRAY_V1) {
+        if(input->array) {
+            thinkthen_cobol_ReceiptInputPropertyTypeArray *value=allocate(a,1,sizeof(*value));
+            if(!value) return a->code;
+            if(!code) code=copy_thinkthen_cobol_ReceiptInputPropertyTypeArray(a,input->array,value);
+            out->array=value;
+        }
+    }
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptInputPropertyTypeArray(arena *a,const thinkthen_complete_input_property_type_array_v1 *input,
+thinkthen_cobol_ReceiptInputPropertyTypeArray *out) {
+    int code=0;
+    (void)a;
+    if(input->items) {
+        thinkthen_cobol_ReceiptStringRoot *value=allocate(a,1,sizeof(*value));
+        if(!value) return a->code;
+        if(!code) code=copy_thinkthen_cobol_ReceiptStringRoot(a,input->items,value);
+        out->items=value;
+    }
+    if(!code) code=answer_text(input->type,&out->type);
+    if(!code) code=copy_thinkthen_cobol_ReceiptExtensions(a,&input->extensions,&out->extensions);
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptStringRoot(arena *a,const thinkthen_complete_string_root_v1 *input,
+thinkthen_cobol_ReceiptStringRoot *out) {
+    int code=0;
+    (void)a;
+    if(input->type) {
+        thinkthen_cobol_ReceiptStringType *value=allocate(a,1,sizeof(*value));
+        if(!value) return a->code;
+        if(!code) code=copy_thinkthen_cobol_ReceiptStringType(a,input->type,value);
+        out->type=value;
+    }
+    if(!code) code=copy_thinkthen_cobol_ReceiptExtensions(a,&input->extensions,&out->extensions);
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptStringType(arena *a,const thinkthen_complete_string_type_v1 *input,
+thinkthen_cobol_ReceiptStringType *out) {
+    int code=0;
+    (void)a;
+    out->kind=input->kind;
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptInputPropertyTypeBoolean(arena *a,const thinkthen_complete_input_property_type_boolean_v1 *input,
+thinkthen_cobol_ReceiptInputPropertyTypeBoolean *out) {
+    int code=0;
+    (void)a;
+    if(!code) code=answer_text(input->type,&out->type);
+    if(!code) code=copy_thinkthen_cobol_ReceiptExtensions(a,&input->extensions,&out->extensions);
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptInputPropertyTypeNumber(arena *a,const thinkthen_complete_input_property_type_number_v1 *input,
+thinkthen_cobol_ReceiptInputPropertyTypeNumber *out) {
+    int code=0;
+    (void)a;
+    if(!code) code=answer_text(input->type,&out->type);
+    if(!code) code=copy_thinkthen_cobol_ReceiptExtensions(a,&input->extensions,&out->extensions);
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptInputPropertyTypeString(arena *a,const thinkthen_complete_input_property_type_string_v1 *input,
+thinkthen_cobol_ReceiptInputPropertyTypeString *out) {
+    int code=0;
+    (void)a;
+    if(!code) code=answer_text(input->type,&out->type);
+    if(!code) code=copy_thinkthen_cobol_ReceiptExtensions(a,&input->extensions,&out->extensions);
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptInputDeclarationStringRoot(arena *a,const thinkthen_complete_input_declaration_string_root_v1 *input,
+thinkthen_cobol_ReceiptInputDeclarationStringRoot *out) {
+    int code=0;
+    (void)a;
+    if(input->type) {
+        thinkthen_cobol_ReceiptStringType *value=allocate(a,1,sizeof(*value));
+        if(!value) return a->code;
+        if(!code) code=copy_thinkthen_cobol_ReceiptStringType(a,input->type,value);
+        out->type=value;
+    }
+    if(!code) code=copy_thinkthen_cobol_ReceiptExtensions(a,&input->extensions,&out->extensions);
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptRelateFieldsPresence(arena *a,const thinkthen_complete_relate_fields_presence_v1 *input,
+thinkthen_cobol_ReceiptRelateFieldsPresence *out) {
+    int code=0;
+    (void)a;
+    out->presence=input->presence;
+    if(input->value) {
+        thinkthen_cobol_ReceiptRelateFields *value=allocate(a,1,sizeof(*value));
+        if(!value) return a->code;
+        if(!code) code=copy_thinkthen_cobol_ReceiptRelateFields(a,input->value,value);
+        out->value=value;
+    }
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptRelateFields(arena *a,const thinkthen_complete_relate_fields_v1 *input,
+thinkthen_cobol_ReceiptRelateFields *out) {
+    int code=0;
+    (void)a;
+    if(!code) code=answer_text(input->kind,&out->kind);
+    if(!code) code=answer_text(input->name,&out->name);
+    if(!code) code=copy_thinkthen_cobol_ReceiptExtensions(a,&input->extensions,&out->extensions);
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptBatchPresence(arena *a,const thinkthen_complete_batch_presence_v1 *input,
+thinkthen_cobol_ReceiptBatchPresence *out) {
+    int code=0;
+    (void)a;
+    out->presence=input->presence;
+    if(input->value) {
+        thinkthen_cobol_ReceiptBatch *value=allocate(a,1,sizeof(*value));
+        if(!value) return a->code;
+        if(!code) code=copy_thinkthen_cobol_ReceiptBatch(a,input->value,value);
+        out->value=value;
+    }
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptBatchData(arena *a,const thinkthen_complete_batch_data_v1 *input,
+thinkthen_cobol_ReceiptBatchData *out,uint32_t kind) {
+    int code=0;
+    (void)a;
+    if(kind==THINKTHEN_COMPLETE_BATCH_INTEGER_V1) {
+        out->integer=input->integer;
+    }
+    if(kind==THINKTHEN_COMPLETE_BATCH_STRING_V1) {
+        if(input->string) {
+            thinkthen_cobol_ReceiptBatchString *value=allocate(a,1,sizeof(*value));
+            if(!value) return a->code;
+            if(!code) code=copy_thinkthen_cobol_ReceiptBatchString(a,input->string,value);
+            out->string=value;
+        }
+    }
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptBatchString(arena *a,const thinkthen_complete_batch_string_v1 *input,
+thinkthen_cobol_ReceiptBatchString *out) {
+    int code=0;
+    (void)a;
+    out->kind=input->kind;
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptPositionPresence(arena *a,const thinkthen_complete_position_presence_v1 *input,
+thinkthen_cobol_ReceiptPositionPresence *out) {
+    int code=0;
+    (void)a;
+    out->presence=input->presence;
+    if(input->value) {
+        thinkthen_cobol_ReceiptPosition *value=allocate(a,1,sizeof(*value));
+        if(!value) return a->code;
+        if(!code) code=copy_thinkthen_cobol_ReceiptPosition(a,input->value,value);
+        out->value=value;
+    }
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptUsagePresence(arena *a,const thinkthen_complete_usage_presence_v1 *input,
+thinkthen_cobol_ReceiptUsagePresence *out) {
+    int code=0;
+    (void)a;
+    out->presence=input->presence;
+    if(input->value) {
+        thinkthen_cobol_ReceiptUsage *value=allocate(a,1,sizeof(*value));
+        if(!value) return a->code;
+        if(!code) code=copy_thinkthen_cobol_ReceiptUsage(a,input->value,value);
+        out->value=value;
+    }
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptUsage(arena *a,const thinkthen_complete_usage_v1 *input,
+thinkthen_cobol_ReceiptUsage *out) {
+    int code=0;
+    (void)a;
+    if(!code) code=copy_thinkthen_cobol_ReceiptU64Presence(a,&input->input_tokens,&out->input_tokens);
+    if(!code) code=copy_thinkthen_cobol_ReceiptU64Presence(a,&input->output_tokens,&out->output_tokens);
+    if(!code) code=copy_thinkthen_cobol_ReceiptExtensions(a,&input->extensions,&out->extensions);
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptQuestionSourceList(arena *a,const thinkthen_complete_question_source_list_v1 *input,
+thinkthen_cobol_ReceiptQuestionSourceList *out) {
+    int code=0;
+    (void)a;
+    thinkthen_cobol_ReceiptQuestionSource *items=allocate(a,input->len,sizeof(*items));
+    out->data=items;
+    out->len=input->len;
+    if(!items) return a->code;
+    for(size_t i=0;
+    i<input->len && !code;
+    i++) {
+        code=copy_thinkthen_cobol_ReceiptQuestionSource(a,input->data[i],items+i);
+    }
+    out->len=input->len;
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptQuestionSource(arena *a,const thinkthen_complete_question_source_v1 *input,
+thinkthen_cobol_ReceiptQuestionSource *out) {
+    int code=0;
+    (void)a;
+    if(!code) code=answer_text(input->answered_by,&out->answered_by);
+    if(!code) code=copy_thinkthen_cobol_ReceiptU64Presence(a,&input->batch_size,&out->batch_size);
+    if(input->origin) {
+        thinkthen_cobol_ReceiptOrigin *value=allocate(a,1,sizeof(*value));
+        if(!value) return a->code;
+        if(!code) code=copy_thinkthen_cobol_ReceiptOrigin(a,input->origin,value);
+        out->origin=value;
+    }
+    if(!code) code=copy_thinkthen_cobol_ReceiptExtensions(a,&input->extensions,&out->extensions);
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptOrigin(arena *a,const thinkthen_complete_origin_v1 *input,
+thinkthen_cobol_ReceiptOrigin *out) {
+    int code=0;
+    (void)a;
+    out->kind=input->kind;
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptProfileWarningPresence(arena *a,const thinkthen_complete_profile_warning_presence_v1 *input,
+thinkthen_cobol_ReceiptProfileWarningPresence *out) {
+    int code=0;
+    (void)a;
+    out->presence=input->presence;
+    if(input->value) {
+        thinkthen_cobol_ReceiptProfileWarning *value=allocate(a,1,sizeof(*value));
+        if(!value) return a->code;
+        if(!code) code=copy_thinkthen_cobol_ReceiptProfileWarning(a,input->value,value);
+        out->value=value;
+    }
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptProfileWarning(arena *a,const thinkthen_complete_profile_warning_v1 *input,
+thinkthen_cobol_ReceiptProfileWarning *out) {
+    int code=0;
+    (void)a;
+    if(!code) code=answer_text(input->running,&out->running);
+    if(!code) code=answer_text(input->tuned_for,&out->tuned_for);
+    if(!code) code=copy_thinkthen_cobol_ReceiptExtensions(a,&input->extensions,&out->extensions);
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptOriginPresence(arena *a,const thinkthen_complete_origin_presence_v1 *input,
+thinkthen_cobol_ReceiptOriginPresence *out) {
+    int code=0;
+    (void)a;
+    out->presence=input->presence;
+    if(input->value) {
+        thinkthen_cobol_ReceiptOrigin *value=allocate(a,1,sizeof(*value));
+        if(!value) return a->code;
+        if(!code) code=copy_thinkthen_cobol_ReceiptOrigin(a,input->value,value);
+        out->value=value;
+    }
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptObservationList(arena *a,const thinkthen_complete_observation_list_v1 *input,
+thinkthen_cobol_ReceiptObservationList *out) {
+    int code=0;
+    (void)a;
+    thinkthen_cobol_ReceiptObservation *items=allocate(a,input->len,sizeof(*items));
+    out->data=items;
+    out->len=input->len;
+    if(!items) return a->code;
+    for(size_t i=0;
+    i<input->len && !code;
+    i++) {
+        code=copy_thinkthen_cobol_ReceiptObservation(a,input->data[i],items+i);
+    }
+    out->len=input->len;
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptObservationData(arena *a,const thinkthen_complete_observation_data_v1 *input,
+thinkthen_cobol_ReceiptObservationData *out,uint32_t kind) {
+    int code=0;
+    (void)a;
+    if(kind==THINKTHEN_COMPLETE_OBSERVATION_OBSERVATION_ID_V1) {
+        if(input->observation_id) {
+            thinkthen_cobol_ReceiptObservationObservationId *value=allocate(a,1,sizeof(*value));
+            if(!value) return a->code;
+            if(!code) code=copy_thinkthen_cobol_ReceiptObservationObservationId(a,input->observation_id,
+            value);
+            out->observation_id=value;
+        }
+    }
+    if(kind==THINKTHEN_COMPLETE_OBSERVATION_FAILURE_ID_V1) {
+        if(input->failure_id) {
+            thinkthen_cobol_ReceiptObservationFailureId *value=allocate(a,1,sizeof(*value));
+            if(!value) return a->code;
+            if(!code) code=copy_thinkthen_cobol_ReceiptObservationFailureId(a,input->failure_id,value);
+            out->failure_id=value;
+        }
+    }
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptObservationFailureId(arena *a,const thinkthen_complete_observation_failure_id_v1 *input,
+thinkthen_cobol_ReceiptObservationFailureId *out) {
+    int code=0;
+    (void)a;
+    if(input->failure_id) {
+        thinkthen_cobol_ReceiptFailureId *value=allocate(a,1,sizeof(*value));
+        if(!value) return a->code;
+        if(!code) code=copy_thinkthen_cobol_ReceiptFailureId(a,input->failure_id,value);
+        out->failure_id=value;
+    }
+    if(!code) code=copy_thinkthen_cobol_ReceiptExtensions(a,&input->extensions,&out->extensions);
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptFailureId(arena *a,const thinkthen_complete_failure_id_v1 *input,
+thinkthen_cobol_ReceiptFailureId *out) {
+    int code=0;
+    (void)a;
+    if(!code) code=answer_text(input->value,&out->value);
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptObservationObservationId(arena *a,const thinkthen_complete_observation_observation_id_v1 *input,
+thinkthen_cobol_ReceiptObservationObservationId *out) {
+    int code=0;
+    (void)a;
+    if(input->observation_id) {
+        thinkthen_cobol_ReceiptObservationId *value=allocate(a,1,sizeof(*value));
+        if(!value) return a->code;
+        if(!code) code=copy_thinkthen_cobol_ReceiptObservationId(a,input->observation_id,value);
+        out->observation_id=value;
+    }
+    if(!code) code=copy_thinkthen_cobol_ReceiptExtensions(a,&input->extensions,&out->extensions);
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptObservationId(arena *a,const thinkthen_complete_observation_id_v1 *input,
+thinkthen_cobol_ReceiptObservationId *out) {
+    int code=0;
+    (void)a;
+    if(!code) code=answer_text(input->value,&out->value);
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptBatchWarningPresence(arena *a,const thinkthen_complete_batch_warning_presence_v1 *input,
+thinkthen_cobol_ReceiptBatchWarningPresence *out) {
+    int code=0;
+    (void)a;
+    out->presence=input->presence;
+    if(input->value) {
+        thinkthen_cobol_ReceiptBatchWarning *value=allocate(a,1,sizeof(*value));
+        if(!value) return a->code;
+        if(!code) code=copy_thinkthen_cobol_ReceiptBatchWarning(a,input->value,value);
+        out->value=value;
+    }
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptBatchWarning(arena *a,const thinkthen_complete_batch_warning_v1 *input,
+thinkthen_cobol_ReceiptBatchWarning *out) {
+    int code=0;
+    (void)a;
+    if(input->running) {
+        thinkthen_cobol_ReceiptBatchSetting *value=allocate(a,1,sizeof(*value));
+        if(!value) return a->code;
+        if(!code) code=copy_thinkthen_cobol_ReceiptBatchSetting(a,input->running,value);
+        out->running=value;
+    }
+    if(input->tuned_for) {
+        thinkthen_cobol_ReceiptBatchSetting *value=allocate(a,1,sizeof(*value));
+        if(!value) return a->code;
+        if(!code) code=copy_thinkthen_cobol_ReceiptBatchSetting(a,input->tuned_for,value);
+        out->tuned_for=value;
+    }
+    if(!code) code=copy_thinkthen_cobol_ReceiptExtensions(a,&input->extensions,&out->extensions);
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptBatchSettingData(arena *a,const thinkthen_complete_batch_setting_data_v1 *input,
+thinkthen_cobol_ReceiptBatchSettingData *out,uint32_t kind) {
+    int code=0;
+    (void)a;
+    if(kind==THINKTHEN_COMPLETE_BATCH_SETTING_INTEGER_V1) {
+        out->integer=input->integer;
+    }
+    if(kind==THINKTHEN_COMPLETE_BATCH_SETTING_STRING_V1) {
+        if(!code) code=answer_text(input->string,&out->string);
+    }
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptBatchSettingPresence(arena *a,const thinkthen_complete_batch_setting_presence_v1 *input,
+thinkthen_cobol_ReceiptBatchSettingPresence *out) {
+    int code=0;
+    (void)a;
+    out->presence=input->presence;
+    if(input->value) {
+        thinkthen_cobol_ReceiptBatchSetting *value=allocate(a,1,sizeof(*value));
+        if(!value) return a->code;
+        if(!code) code=copy_thinkthen_cobol_ReceiptBatchSetting(a,input->value,value);
+        out->value=value;
+    }
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptAttemptList(arena *a,const thinkthen_complete_attempt_list_v1 *input,
+thinkthen_cobol_ReceiptAttemptList *out) {
+    int code=0;
+    (void)a;
+    thinkthen_cobol_ReceiptAttempt *items=allocate(a,input->len,sizeof(*items));
+    out->data=items;
+    out->len=input->len;
+    if(!items) return a->code;
+    for(size_t i=0;
+    i<input->len && !code;
+    i++) {
+        code=copy_thinkthen_cobol_ReceiptAttempt(a,input->data[i],items+i);
+    }
+    out->len=input->len;
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptAttempt(arena *a,const thinkthen_complete_attempt_v1 *input,
+thinkthen_cobol_ReceiptAttempt *out) {
+    int code=0;
+    (void)a;
+    out->ordinal=input->ordinal;
+    if(input->outcome) {
+        thinkthen_cobol_ReceiptAttemptOutcome *value=allocate(a,1,sizeof(*value));
+        if(!value) return a->code;
+        if(!code) code=copy_thinkthen_cobol_ReceiptAttemptOutcome(a,input->outcome,value);
+        out->outcome=value;
+    }
+    if(!code) code=copy_thinkthen_cobol_ReceiptUtf8Presence(a,&input->request_id,&out->request_id);
+    if(!code) code=answer_text(input->request_sha256,&out->request_sha256);
+    if(input->sdk_request_id) {
+        thinkthen_cobol_ReceiptSdkRequestId *value=allocate(a,1,sizeof(*value));
+        if(!value) return a->code;
+        if(!code) code=copy_thinkthen_cobol_ReceiptSdkRequestId(a,input->sdk_request_id,value);
+        out->sdk_request_id=value;
+    }
+    if(!code) code=copy_thinkthen_cobol_ReceiptU64Presence(a,&input->server_ms,&out->server_ms);
+    if(!code) code=copy_thinkthen_cobol_ReceiptU64Presence(a,&input->status,&out->status);
+    out->wall_ms=input->wall_ms;
+    if(!code) code=copy_thinkthen_cobol_ReceiptExtensions(a,&input->extensions,&out->extensions);
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptSdkRequestId(arena *a,const thinkthen_complete_sdk_request_id_v1 *input,
+thinkthen_cobol_ReceiptSdkRequestId *out) {
+    int code=0;
+    (void)a;
+    if(!code) code=answer_text(input->value,&out->value);
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptAttemptOutcome(arena *a,const thinkthen_complete_attempt_outcome_v1 *input,
+thinkthen_cobol_ReceiptAttemptOutcome *out) {
+    int code=0;
+    (void)a;
+    out->kind=input->kind;
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptSessionInputSourceList(arena *a,const thinkthen_complete_session_input_source_list_v1 *input,
+thinkthen_cobol_ReceiptSessionInputSourceList *out) {
+    int code=0;
+    (void)a;
+    thinkthen_cobol_ReceiptSessionInputSource *items=allocate(a,input->len,sizeof(*items));
+    out->data=items;
+    out->len=input->len;
+    if(!items) return a->code;
+    for(size_t i=0;
+    i<input->len && !code;
+    i++) {
+        code=copy_thinkthen_cobol_ReceiptSessionInputSource(a,input->data[i],items+i);
+    }
+    out->len=input->len;
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptSessionInputSource(arena *a,const thinkthen_complete_session_input_source_v1 *input,
+thinkthen_cobol_ReceiptSessionInputSource *out) {
+    int code=0;
+    (void)a;
+    out->index=input->index;
+    if(input->source) {
+        thinkthen_cobol_ReceiptPhysicalSource *value=allocate(a,1,sizeof(*value));
+        if(!value) return a->code;
+        if(!code) code=copy_thinkthen_cobol_ReceiptPhysicalSource(a,input->source,value);
+        out->source=value;
+    }
+    if(!code) code=copy_thinkthen_cobol_ReceiptExtensions(a,&input->extensions,&out->extensions);
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptPhysicalSource(arena *a,const thinkthen_complete_physical_source_v1 *input,
+thinkthen_cobol_ReceiptPhysicalSource *out) {
+    int code=0;
+    (void)a;
+    if(!code) code=answer_text(input->file,&out->file);
+    if(!code) code=copy_thinkthen_cobol_ReceiptU64Presence(a,&input->first_line,&out->first_line);
+    if(!code) code=copy_thinkthen_cobol_ReceiptU64Presence(a,&input->last_line,&out->last_line);
+    if(!code) code=copy_thinkthen_cobol_ReceiptExtensions(a,&input->extensions,&out->extensions);
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptAnswerId(arena *a,const thinkthen_complete_answer_id_v1 *input,
+thinkthen_cobol_ReceiptAnswerId *out) {
+    int code=0;
+    (void)a;
+    if(!code) code=answer_text(input->value,&out->value);
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptRelationMemberList(arena *a,const thinkthen_complete_relation_member_list_v1 *input,
+thinkthen_cobol_ReceiptRelationMemberList *out) {
+    int code=0;
+    (void)a;
+    thinkthen_cobol_ReceiptRelationMember *items=allocate(a,input->len,sizeof(*items));
+    out->data=items;
+    out->len=input->len;
+    if(!items) return a->code;
+    for(size_t i=0;
+    i<input->len && !code;
+    i++) {
+        code=copy_thinkthen_cobol_ReceiptRelationMember(a,input->data[i],items+i);
+    }
+    out->len=input->len;
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptRelationMemberData(arena *a,const thinkthen_complete_relation_member_data_v1 *input,
+thinkthen_cobol_ReceiptRelationMemberData *out,uint32_t kind) {
+    int code=0;
+    (void)a;
+    if(kind==THINKTHEN_COMPLETE_RELATION_MEMBER_ANSWER_ID_V1) {
+        if(input->answer_id) {
+            thinkthen_cobol_ReceiptRelationMemberAnswerId *value=allocate(a,1,sizeof(*value));
+            if(!value) return a->code;
+            if(!code) code=copy_thinkthen_cobol_ReceiptRelationMemberAnswerId(a,input->answer_id,value);
+            out->answer_id=value;
+        }
+    }
+    if(kind==THINKTHEN_COMPLETE_RELATION_MEMBER_FAILURE_ID_V1) {
+        if(input->failure_id) {
+            thinkthen_cobol_ReceiptRelationMemberFailureId *value=allocate(a,1,sizeof(*value));
+            if(!value) return a->code;
+            if(!code) code=copy_thinkthen_cobol_ReceiptRelationMemberFailureId(a,input->failure_id,value);
+            out->failure_id=value;
+        }
+    }
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptFailure(arena *a,const thinkthen_complete_failure_v1 *input,
+thinkthen_cobol_ReceiptFailure *out) {
+    int code=0;
+    (void)a;
+    if(input->cause) {
+        thinkthen_cobol_ReceiptFailureCause *value=allocate(a,1,sizeof(*value));
+        if(!value) return a->code;
+        if(!code) code=copy_thinkthen_cobol_ReceiptFailureCause(a,input->cause,value);
+        out->cause=value;
+    }
+    if(input->kind) {
+        thinkthen_cobol_ReceiptFailureFieldKind *value=allocate(a,1,sizeof(*value));
+        if(!value) return a->code;
+        if(!code) code=copy_thinkthen_cobol_ReceiptFailureFieldKind(a,input->kind,value);
+        out->kind=value;
+    }
+    if(!code) code=copy_thinkthen_cobol_ReceiptExtensions(a,&input->extensions,&out->extensions);
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptFailureFieldKind(arena *a,const thinkthen_complete_failure_field_kind_v1 *input,
+thinkthen_cobol_ReceiptFailureFieldKind *out) {
+    int code=0;
+    (void)a;
+    out->kind=input->kind;
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptFailureCause(arena *a,const thinkthen_complete_failure_cause_v1 *input,
+thinkthen_cobol_ReceiptFailureCause *out) {
+    int code=0;
+    (void)a;
+    out->kind=input->kind;
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptRelatedEntityPresence(arena *a,const thinkthen_complete_related_entity_presence_v1 *input,
+thinkthen_cobol_ReceiptRelatedEntityPresence *out) {
+    int code=0;
+    (void)a;
+    out->presence=input->presence;
+    if(input->value) {
+        thinkthen_cobol_ReceiptRelatedEntity *value=allocate(a,1,sizeof(*value));
+        if(!value) return a->code;
+        if(!code) code=copy_thinkthen_cobol_ReceiptRelatedEntity(a,input->value,value);
+        out->value=value;
+    }
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptRelatedEntity(arena *a,const thinkthen_complete_related_entity_v1 *input,
+thinkthen_cobol_ReceiptRelatedEntity *out) {
+    int code=0;
+    (void)a;
+    if(!code) code=answer_text(input->kind,&out->kind);
+    if(!code) code=answer_text(input->name,&out->name);
+    if(!code) code=copy_thinkthen_cobol_ReceiptExtensions(a,&input->extensions,&out->extensions);
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptQuestionDocumentData(arena *a,const thinkthen_complete_question_document_data_v1 *input,
+thinkthen_cobol_ReceiptQuestionDocumentData *out,uint32_t kind) {
+    int code=0;
+    (void)a;
+    if(kind==THINKTHEN_COMPLETE_QUESTION_DOCUMENT_DECIDE_V1) {
+        if(input->decide) {
+            thinkthen_cobol_ReceiptQuestionDocumentDecide *value=allocate(a,1,sizeof(*value));
+            if(!value) return a->code;
+            if(!code) code=copy_thinkthen_cobol_ReceiptQuestionDocumentDecide(a,input->decide,value);
+            out->decide=value;
+        }
+    }
+    if(kind==THINKTHEN_COMPLETE_QUESTION_DOCUMENT_CHOOSE_V1) {
+        if(input->choose) {
+            thinkthen_cobol_ReceiptQuestionDocumentChoose *value=allocate(a,1,sizeof(*value));
+            if(!value) return a->code;
+            if(!code) code=copy_thinkthen_cobol_ReceiptQuestionDocumentChoose(a,input->choose,value);
+            out->choose=value;
+        }
+    }
+    if(kind==THINKTHEN_COMPLETE_QUESTION_DOCUMENT_TAG_V1) {
+        if(input->tag) {
+            thinkthen_cobol_ReceiptQuestionDocumentTag *value=allocate(a,1,sizeof(*value));
+            if(!value) return a->code;
+            if(!code) code=copy_thinkthen_cobol_ReceiptQuestionDocumentTag(a,input->tag,value);
+            out->tag=value;
+        }
+    }
+    if(kind==THINKTHEN_COMPLETE_QUESTION_DOCUMENT_SCORE_V1) {
+        if(input->score) {
+            thinkthen_cobol_ReceiptQuestionDocumentScore *value=allocate(a,1,sizeof(*value));
+            if(!value) return a->code;
+            if(!code) code=copy_thinkthen_cobol_ReceiptQuestionDocumentScore(a,input->score,value);
+            out->score=value;
+        }
+    }
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptRelationMethod(arena *a,const thinkthen_complete_relation_method_v1 *input,
+thinkthen_cobol_ReceiptRelationMethod *out) {
+    int code=0;
+    (void)a;
+    out->kind=input->kind;
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptRelationDirection(arena *a,const thinkthen_complete_relation_direction_v1 *input,
+thinkthen_cobol_ReceiptRelationDirection *out) {
+    int code=0;
+    (void)a;
+    out->kind=input->kind;
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptRelationMemberAnswerId(arena *a,const thinkthen_complete_relation_member_answer_id_v1 *input,
+thinkthen_cobol_ReceiptRelationMemberAnswerId *out) {
+    int code=0;
+    (void)a;
+    if(input->direction) {
+        thinkthen_cobol_ReceiptRelationDirection *value=allocate(a,1,sizeof(*value));
+        if(!value) return a->code;
+        if(!code) code=copy_thinkthen_cobol_ReceiptRelationDirection(a,input->direction,value);
+        out->direction=value;
+    }
+    if(input->method) {
+        thinkthen_cobol_ReceiptRelationMethod *value=allocate(a,1,sizeof(*value));
+        if(!value) return a->code;
+        if(!code) code=copy_thinkthen_cobol_ReceiptRelationMethod(a,input->method,value);
+        out->method=value;
+    }
+    if(!code) code=copy_thinkthen_cobol_ReceiptObservationList(a,&input->observations,&out->observations);
+    if(input->question) {
+        thinkthen_cobol_ReceiptQuestionDocument *value=allocate(a,1,sizeof(*value));
+        if(!value) return a->code;
+        if(!code) code=copy_thinkthen_cobol_ReceiptQuestionDocument(a,input->question,value);
+        out->question=value;
+    }
+    if(!code) code=copy_thinkthen_cobol_ReceiptQuestionSourceList(a,&input->question_sources,&out->question_sources);
+    if(!code) code=answer_text(input->reads,&out->reads);
+    if(!code) code=answer_text(input->relation,&out->relation);
+    if(!code) code=answer_text(input->request,&out->request);
+    if(input->source) {
+        thinkthen_cobol_ReceiptRelatedEntity *value=allocate(a,1,sizeof(*value));
+        if(!value) return a->code;
+        if(!code) code=copy_thinkthen_cobol_ReceiptRelatedEntity(a,input->source,value);
+        out->source=value;
+    }
+    if(!code) code=copy_thinkthen_cobol_ReceiptRelatedEntityPresence(a,&input->target,&out->target);
+    if(input->threshold) {
+        thinkthen_cobol_ReceiptThreshold *value=allocate(a,1,sizeof(*value));
+        if(!value) return a->code;
+        if(!code) code=copy_thinkthen_cobol_ReceiptThreshold(a,input->threshold,value);
+        out->threshold=value;
+    }
+    if(!code) code=copy_thinkthen_cobol_ReceiptUsagePresence(a,&input->usage,&out->usage);
+    out->accepted=input->accepted;
+    if(input->answer) {
+        thinkthen_cobol_ReceiptAnswer *value=allocate(a,1,sizeof(*value));
+        if(!value) return a->code;
+        if(!code) code=copy_thinkthen_cobol_ReceiptAnswer(a,input->answer,value);
+        out->answer=value;
+    }
+    if(input->answer_id) {
+        thinkthen_cobol_ReceiptAnswerId *value=allocate(a,1,sizeof(*value));
+        if(!value) return a->code;
+        if(!code) code=copy_thinkthen_cobol_ReceiptAnswerId(a,input->answer_id,value);
+        out->answer_id=value;
+    }
+    out->probability=input->probability;
+    if(!code) code=copy_thinkthen_cobol_ReceiptExtensions(a,&input->extensions,&out->extensions);
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptAnswerData(arena *a,const thinkthen_complete_answer_data_v1 *input,
+thinkthen_cobol_ReceiptAnswerData *out,uint32_t kind) {
+    int code=0;
+    (void)a;
+    if(kind==THINKTHEN_COMPLETE_ANSWER_YES_NO_V1) {
+        if(input->yes_no) {
+            thinkthen_cobol_ReceiptAnswerYesNo *value=allocate(a,1,sizeof(*value));
+            if(!value) return a->code;
+            if(!code) code=copy_thinkthen_cobol_ReceiptAnswerYesNo(a,input->yes_no,value);
+            out->yes_no=value;
+        }
+    }
+    if(kind==THINKTHEN_COMPLETE_ANSWER_CHOICE_V1) {
+        if(input->choice) {
+            thinkthen_cobol_ReceiptAnswerChoice *value=allocate(a,1,sizeof(*value));
+            if(!value) return a->code;
+            if(!code) code=copy_thinkthen_cobol_ReceiptAnswerChoice(a,input->choice,value);
+            out->choice=value;
+        }
+    }
+    if(kind==THINKTHEN_COMPLETE_ANSWER_TAG_V1) {
+        if(input->tag) {
+            thinkthen_cobol_ReceiptAnswerTag *value=allocate(a,1,sizeof(*value));
+            if(!value) return a->code;
+            if(!code) code=copy_thinkthen_cobol_ReceiptAnswerTag(a,input->tag,value);
+            out->tag=value;
+        }
+    }
+    if(kind==THINKTHEN_COMPLETE_ANSWER_SCORE_V1) {
+        if(input->score) {
+            thinkthen_cobol_ReceiptAnswerScore *value=allocate(a,1,sizeof(*value));
+            if(!value) return a->code;
+            if(!code) code=copy_thinkthen_cobol_ReceiptAnswerScore(a,input->score,value);
+            out->score=value;
+        }
+    }
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptNumberMap(arena *a,const thinkthen_complete_number_map_v1 *input,
+thinkthen_cobol_ReceiptNumberMap *out) {
+    int code=0;
+    (void)a;
+    thinkthen_cobol_ReceiptNumberMapEntry *items=allocate(a,input->len,sizeof(*items));
+    out->data=items;
+    out->len=input->len;
+    if(!items) return a->code;
+    for(size_t i=0;
+    i<input->len && !code;
+    i++) {
+        code=copy_thinkthen_cobol_ReceiptNumberMapEntry(a,&input->data[i],items+i);
+    }
+    out->len=input->len;
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptNumberMapEntry(arena *a,const thinkthen_complete_number_map_entry_v1 *input,
+thinkthen_cobol_ReceiptNumberMapEntry *out) {
+    int code=0;
+    (void)a;
+    if(!code) code=answer_text(input->name,&out->name);
+    out->value=input->value;
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptF64Presence(arena *a,const thinkthen_complete_f64_presence_v1 *input,
+thinkthen_cobol_ReceiptF64Presence *out) {
+    int code=0;
+    (void)a;
+    out->presence=input->presence;
+    out->value=input->value;
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptAnswerTag(arena *a,const thinkthen_complete_answer_tag_v1 *input,
+thinkthen_cobol_ReceiptAnswerTag *out) {
+    int code=0;
+    (void)a;
+    if(!code) code=answer_text(input->kind,&out->kind);
+    if(!code) code=copy_thinkthen_cobol_ReceiptNumberMap(a,&input->probabilities,&out->probabilities);
+    if(!code) code=copy_thinkthen_cobol_ReceiptExtensions(a,&input->extensions,&out->extensions);
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptAnswerChoice(arena *a,const thinkthen_complete_answer_choice_v1 *input,
+thinkthen_cobol_ReceiptAnswerChoice *out) {
+    int code=0;
+    (void)a;
+    if(!code) code=copy_thinkthen_cobol_ReceiptF64Presence(a,&input->confidence,&out->confidence);
+    if(!code) code=answer_text(input->kind,&out->kind);
+    if(!code) code=answer_text(input->pick,&out->pick);
+    if(!code) code=copy_thinkthen_cobol_ReceiptNumberMap(a,&input->probabilities,&out->probabilities);
+    if(!code) code=copy_thinkthen_cobol_ReceiptExtensions(a,&input->extensions,&out->extensions);
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptAnswerYesNo(arena *a,const thinkthen_complete_answer_yes_no_v1 *input,
+thinkthen_cobol_ReceiptAnswerYesNo *out) {
+    int code=0;
+    (void)a;
+    if(!code) code=answer_text(input->kind,&out->kind);
+    out->probability=input->probability;
+    if(!code) code=copy_thinkthen_cobol_ReceiptExtensions(a,&input->extensions,&out->extensions);
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptRecognitionList(arena *a,const thinkthen_complete_recognition_list_v1 *input,
+thinkthen_cobol_ReceiptRecognitionList *out) {
+    int code=0;
+    (void)a;
+    thinkthen_cobol_ReceiptRecognition *items=allocate(a,input->len,sizeof(*items));
+    out->data=items;
+    out->len=input->len;
+    if(!items) return a->code;
+    for(size_t i=0;
+    i<input->len && !code;
+    i++) {
+        code=copy_thinkthen_cobol_ReceiptRecognition(a,input->data[i],items+i);
+    }
+    out->len=input->len;
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptRecognizeData(arena *a,const thinkthen_complete_recognize_data_v1 *input,
+thinkthen_cobol_ReceiptRecognizeData *out,uint32_t kind) {
+    int code=0;
+    (void)a;
+    if(kind==THINKTHEN_COMPLETE_RECOGNIZE_ENTITIES_V1) {
+        if(input->entities) {
+            thinkthen_cobol_ReceiptRecognizeEntities *value=allocate(a,1,sizeof(*value));
+            if(!value) return a->code;
+            if(!code) code=copy_thinkthen_cobol_ReceiptRecognizeEntities(a,input->entities,value);
+            out->entities=value;
+        }
+    }
+    if(kind==THINKTHEN_COMPLETE_RECOGNIZE_MODE_PROPOSALS_V1) {
+        if(input->mode_proposals) {
+            thinkthen_cobol_ReceiptRecognizeModeProposals *value=allocate(a,1,sizeof(*value));
+            if(!value) return a->code;
+            if(!code) code=copy_thinkthen_cobol_ReceiptRecognizeModeProposals(a,input->mode_proposals,value);
+            out->mode_proposals=value;
+        }
+    }
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptBoundaryProposalList(arena *a,const thinkthen_complete_boundary_proposal_list_v1 *input,
+thinkthen_cobol_ReceiptBoundaryProposalList *out) {
+    int code=0;
+    (void)a;
+    thinkthen_cobol_ReceiptBoundaryProposal *items=allocate(a,input->len,sizeof(*items));
+    out->data=items;
+    out->len=input->len;
+    if(!items) return a->code;
+    for(size_t i=0;
+    i<input->len && !code;
+    i++) {
+        code=copy_thinkthen_cobol_ReceiptBoundaryProposal(a,input->data[i],items+i);
+    }
+    out->len=input->len;
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptBoundaryProposal(arena *a,const thinkthen_complete_boundary_proposal_v1 *input,
+thinkthen_cobol_ReceiptBoundaryProposal *out) {
+    int code=0;
+    (void)a;
+    out->end=input->end;
+    out->length=input->length;
+    out->probability=input->probability;
+    out->start=input->start;
+    if(!code) code=answer_text(input->text,&out->text);
+    if(!code) code=copy_thinkthen_cobol_ReceiptExtensions(a,&input->extensions,&out->extensions);
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptBoundaryMode(arena *a,const thinkthen_complete_boundary_mode_v1 *input,
+thinkthen_cobol_ReceiptBoundaryMode *out) {
+    int code=0;
+    (void)a;
+    out->kind=input->kind;
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptEntityEdgeList(arena *a,const thinkthen_complete_entity_edge_list_v1 *input,
+thinkthen_cobol_ReceiptEntityEdgeList *out) {
+    int code=0;
+    (void)a;
+    thinkthen_cobol_ReceiptEntityEdge *items=allocate(a,input->len,sizeof(*items));
+    out->data=items;
+    out->len=input->len;
+    if(!items) return a->code;
+    for(size_t i=0;
+    i<input->len && !code;
+    i++) {
+        code=copy_thinkthen_cobol_ReceiptEntityEdge(a,input->data[i],items+i);
+    }
+    out->len=input->len;
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptEntityEdge(arena *a,const thinkthen_complete_entity_edge_v1 *input,
+thinkthen_cobol_ReceiptEntityEdge *out) {
+    int code=0;
+    (void)a;
+    if(!code) code=copy_thinkthen_cobol_ReceiptU32Presence(a,&input->either,&out->either);
+    out->probability=input->probability;
+    if(!code) code=answer_text(input->relation,&out->relation);
+    if(input->source) {
+        thinkthen_cobol_ReceiptEntity *value=allocate(a,1,sizeof(*value));
+        if(!value) return a->code;
+        if(!code) code=copy_thinkthen_cobol_ReceiptEntity(a,input->source,value);
+        out->source=value;
+    }
+    if(input->target) {
+        thinkthen_cobol_ReceiptEntity *value=allocate(a,1,sizeof(*value));
+        if(!value) return a->code;
+        if(!code) code=copy_thinkthen_cobol_ReceiptEntity(a,input->target,value);
+        out->target=value;
+    }
+    if(!code) code=copy_thinkthen_cobol_ReceiptExtensions(a,&input->extensions,&out->extensions);
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptEntity(arena *a,const thinkthen_complete_entity_v1 *input,
+thinkthen_cobol_ReceiptEntity *out) {
+    int code=0;
+    (void)a;
+    out->end=input->end;
+    if(!code) code=copy_thinkthen_cobol_ReceiptUtf8Presence(a,&input->file,&out->file);
+    if(!code) code=copy_thinkthen_cobol_ReceiptU64Presence(a,&input->first_line,&out->first_line);
+    if(!code) code=answer_text(input->kind,&out->kind);
+    if(!code) code=copy_thinkthen_cobol_ReceiptU64Presence(a,&input->last_line,&out->last_line);
+    out->length=input->length;
+    out->start=input->start;
+    out->strength=input->strength;
+    if(!code) code=answer_text(input->text,&out->text);
+    if(!code) code=copy_thinkthen_cobol_ReceiptExtensions(a,&input->extensions,&out->extensions);
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptEntityList(arena *a,const thinkthen_complete_entity_list_v1 *input,
+thinkthen_cobol_ReceiptEntityList *out) {
+    int code=0;
+    (void)a;
+    thinkthen_cobol_ReceiptEntity *items=allocate(a,input->len,sizeof(*items));
+    out->data=items;
+    out->len=input->len;
+    if(!items) return a->code;
+    for(size_t i=0;
+    i<input->len && !code;
+    i++) {
+        code=copy_thinkthen_cobol_ReceiptEntity(a,input->data[i],items+i);
+    }
+    out->len=input->len;
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptPhysicalSourcePresence(arena *a,const thinkthen_complete_physical_source_presence_v1 *input,
+thinkthen_cobol_ReceiptPhysicalSourcePresence *out) {
+    int code=0;
+    (void)a;
+    out->presence=input->presence;
+    if(input->value) {
+        thinkthen_cobol_ReceiptPhysicalSource *value=allocate(a,1,sizeof(*value));
+        if(!value) return a->code;
+        if(!code) code=copy_thinkthen_cobol_ReceiptPhysicalSource(a,input->value,value);
+        out->value=value;
+    }
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptVerb(arena *a,const thinkthen_complete_verb_v1 *input,
+thinkthen_cobol_ReceiptVerb *out) {
+    int code=0;
+    (void)a;
+    out->kind=input->kind;
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptRecognitionStageContextPresence(arena *a,const thinkthen_complete_recognition_stage_context_presence_v1 *input,
+thinkthen_cobol_ReceiptRecognitionStageContextPresence *out) {
+    int code=0;
+    (void)a;
+    out->presence=input->presence;
+    if(input->value) {
+        thinkthen_cobol_ReceiptRecognitionStageContext *value=allocate(a,1,sizeof(*value));
+        if(!value) return a->code;
+        if(!code) code=copy_thinkthen_cobol_ReceiptRecognitionStageContext(a,input->value,value);
+        out->value=value;
+    }
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptRecognitionStageContext(arena *a,const thinkthen_complete_recognition_stage_context_v1 *input,
+thinkthen_cobol_ReceiptRecognitionStageContext *out) {
+    int code=0;
+    (void)a;
+    if(!code) code=copy_thinkthen_cobol_ReceiptUtf8Presence(a,&input->boundary,&out->boundary);
+    if(!code) code=copy_thinkthen_cobol_ReceiptUtf8Presence(a,&input->kind_edge,&out->kind_edge);
+    if(!code) code=copy_thinkthen_cobol_ReceiptUtf8Presence(a,&input->relation,&out->relation);
+    if(!code) code=copy_thinkthen_cobol_ReceiptExtensions(a,&input->extensions,&out->extensions);
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptRelationRuleListPresence(arena *a,const thinkthen_complete_relation_rule_list_presence_v1 *input,
+thinkthen_cobol_ReceiptRelationRuleListPresence *out) {
+    int code=0;
+    (void)a;
+    out->presence=input->presence;
+    if(!code) code=copy_thinkthen_cobol_ReceiptRelationRuleList(a,&input->value,&out->value);
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptThresholdPresence(arena *a,const thinkthen_complete_threshold_presence_v1 *input,
+thinkthen_cobol_ReceiptThresholdPresence *out) {
+    int code=0;
+    (void)a;
+    out->presence=input->presence;
+    if(input->value) {
+        thinkthen_cobol_ReceiptThreshold *value=allocate(a,1,sizeof(*value));
+        if(!value) return a->code;
+        if(!code) code=copy_thinkthen_cobol_ReceiptThreshold(a,input->value,value);
+        out->value=value;
+    }
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptRecognitionModePresence(arena *a,const thinkthen_complete_recognition_mode_presence_v1 *input,
+thinkthen_cobol_ReceiptRecognitionModePresence *out) {
+    int code=0;
+    (void)a;
+    out->presence=input->presence;
+    if(input->value) {
+        thinkthen_cobol_ReceiptRecognitionMode *value=allocate(a,1,sizeof(*value));
+        if(!value) return a->code;
+        if(!code) code=copy_thinkthen_cobol_ReceiptRecognitionMode(a,input->value,value);
+        out->value=value;
+    }
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptRecognitionMode(arena *a,const thinkthen_complete_recognition_mode_v1 *input,
+thinkthen_cobol_ReceiptRecognitionMode *out) {
+    int code=0;
+    (void)a;
+    out->kind=input->kind;
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptJsonMap(arena *a,const thinkthen_complete_json_map_v1 *input,
+thinkthen_cobol_ReceiptJsonMap *out) {
+    int code=0;
+    (void)a;
+    thinkthen_cobol_ReceiptJsonMapEntry *items=allocate(a,input->len,sizeof(*items));
+    out->data=items;
+    out->len=input->len;
+    if(!items) return a->code;
+    for(size_t i=0;
+    i<input->len && !code;
+    i++) {
+        code=copy_thinkthen_cobol_ReceiptJsonMapEntry(a,&input->data[i],items+i);
+    }
+    out->len=input->len;
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptJsonMapEntry(arena *a,const thinkthen_complete_json_map_entry_v1 *input,
+thinkthen_cobol_ReceiptJsonMapEntry *out) {
+    int code=0;
+    (void)a;
+    if(!code) code=answer_text(input->name,&out->name);
+    if(input->value) out->value=answer_original(a,input->value);
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptRecognitionOddsData(arena *a,const thinkthen_complete_recognition_odds_data_v1 *input,
+thinkthen_cobol_ReceiptRecognitionOddsData *out,uint32_t kind) {
+    int code=0;
+    (void)a;
+    if(kind==THINKTHEN_COMPLETE_RECOGNITION_ODDS_RECOGNIZE_ANSWER_V1) {
+        if(input->recognize_answer) {
+            thinkthen_cobol_ReceiptRecognitionOddsRecognizeAnswer *value=allocate(a,1,sizeof(*value));
+            if(!value) return a->code;
+            if(!code) code=copy_thinkthen_cobol_ReceiptRecognitionOddsRecognizeAnswer(a,input->recognize_answer,
+            value);
+            out->recognize_answer=value;
+        }
+    }
+    if(kind==THINKTHEN_COMPLETE_RECOGNITION_ODDS_BOUNDARY_ODDS_V1) {
+        if(input->boundary_odds) {
+            thinkthen_cobol_ReceiptRecognitionOddsBoundaryOdds *value=allocate(a,1,sizeof(*value));
+            if(!value) return a->code;
+            if(!code) code=copy_thinkthen_cobol_ReceiptRecognitionOddsBoundaryOdds(a,input->boundary_odds,
+            value);
+            out->boundary_odds=value;
+        }
+    }
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptPieceOddsList(arena *a,const thinkthen_complete_piece_odds_list_v1 *input,
+thinkthen_cobol_ReceiptPieceOddsList *out) {
+    int code=0;
+    (void)a;
+    thinkthen_cobol_ReceiptPieceOdds *items=allocate(a,input->len,sizeof(*items));
+    out->data=items;
+    out->len=input->len;
+    if(!items) return a->code;
+    for(size_t i=0;
+    i<input->len && !code;
+    i++) {
+        code=copy_thinkthen_cobol_ReceiptPieceOdds(a,input->data[i],items+i);
+    }
+    out->len=input->len;
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptPieceOdds(arena *a,const thinkthen_complete_piece_odds_v1 *input,
+thinkthen_cobol_ReceiptPieceOdds *out) {
+    int code=0;
+    (void)a;
+    out->end=input->end;
+    out->start=input->start;
+    if(!code) code=copy_thinkthen_cobol_ReceiptNumberMap(a,&input->tags,&out->tags);
+    if(!code) code=copy_thinkthen_cobol_ReceiptExtensions(a,&input->extensions,&out->extensions);
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptRecognitionProposalList(arena *a,const thinkthen_complete_recognition_proposal_list_v1 *input,
+thinkthen_cobol_ReceiptRecognitionProposalList *out) {
+    int code=0;
+    (void)a;
+    thinkthen_cobol_ReceiptRecognitionProposal *items=allocate(a,input->len,sizeof(*items));
+    out->data=items;
+    out->len=input->len;
+    if(!items) return a->code;
+    for(size_t i=0;
+    i<input->len && !code;
+    i++) {
+        code=copy_thinkthen_cobol_ReceiptRecognitionProposal(a,input->data[i],items+i);
+    }
+    out->len=input->len;
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptPlacePresence(arena *a,const thinkthen_complete_place_presence_v1 *input,
+thinkthen_cobol_ReceiptPlacePresence *out) {
+    int code=0;
+    (void)a;
+    out->presence=input->presence;
+    if(input->value) {
+        thinkthen_cobol_ReceiptPlace *value=allocate(a,1,sizeof(*value));
+        if(!value) return a->code;
+        if(!code) code=copy_thinkthen_cobol_ReceiptPlace(a,input->value,value);
+        out->value=value;
+    }
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptPlace(arena *a,const thinkthen_complete_place_v1 *input,
+thinkthen_cobol_ReceiptPlace *out) {
+    int code=0;
+    (void)a;
+    out->end=input->end;
+    out->start=input->start;
+    if(!code) code=copy_thinkthen_cobol_ReceiptExtensions(a,&input->extensions,&out->extensions);
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptPairOddsList(arena *a,const thinkthen_complete_pair_odds_list_v1 *input,
+thinkthen_cobol_ReceiptPairOddsList *out) {
+    int code=0;
+    (void)a;
+    thinkthen_cobol_ReceiptPairOdds *items=allocate(a,input->len,sizeof(*items));
+    out->data=items;
+    out->len=input->len;
+    if(!items) return a->code;
+    for(size_t i=0;
+    i<input->len && !code;
+    i++) {
+        code=copy_thinkthen_cobol_ReceiptPairOdds(a,input->data[i],items+i);
+    }
+    out->len=input->len;
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptPairOdds(arena *a,const thinkthen_complete_pair_odds_v1 *input,
+thinkthen_cobol_ReceiptPairOdds *out) {
+    int code=0;
+    (void)a;
+    out->probability=input->probability;
+    if(!code) code=answer_text(input->relation,&out->relation);
+    if(input->source) {
+        thinkthen_cobol_ReceiptPlace *value=allocate(a,1,sizeof(*value));
+        if(!value) return a->code;
+        if(!code) code=copy_thinkthen_cobol_ReceiptPlace(a,input->source,value);
+        out->source=value;
+    }
+    if(input->target) {
+        thinkthen_cobol_ReceiptPlace *value=allocate(a,1,sizeof(*value));
+        if(!value) return a->code;
+        if(!code) code=copy_thinkthen_cobol_ReceiptPlace(a,input->target,value);
+        out->target=value;
+    }
+    if(!code) code=copy_thinkthen_cobol_ReceiptExtensions(a,&input->extensions,&out->extensions);
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptNameOddsList(arena *a,const thinkthen_complete_name_odds_list_v1 *input,
+thinkthen_cobol_ReceiptNameOddsList *out) {
+    int code=0;
+    (void)a;
+    thinkthen_cobol_ReceiptNameOdds *items=allocate(a,input->len,sizeof(*items));
+    out->data=items;
+    out->len=input->len;
+    if(!items) return a->code;
+    for(size_t i=0;
+    i<input->len && !code;
+    i++) {
+        code=copy_thinkthen_cobol_ReceiptNameOdds(a,input->data[i],items+i);
+    }
+    out->len=input->len;
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptNumberMapPresence(arena *a,const thinkthen_complete_number_map_presence_v1 *input,
+thinkthen_cobol_ReceiptNumberMapPresence *out) {
+    int code=0;
+    (void)a;
+    out->presence=input->presence;
+    if(!code) code=copy_thinkthen_cobol_ReceiptNumberMap(a,&input->value,&out->value);
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptAnnotationList(arena *a,const thinkthen_complete_annotation_list_v1 *input,
+thinkthen_cobol_ReceiptAnnotationList *out) {
+    int code=0;
+    (void)a;
+    thinkthen_cobol_ReceiptAnnotation *items=allocate(a,input->len,sizeof(*items));
+    out->data=items;
+    out->len=input->len;
+    if(!items) return a->code;
+    for(size_t i=0;
+    i<input->len && !code;
+    i++) {
+        code=copy_thinkthen_cobol_ReceiptAnnotation(a,input->data[i],items+i);
+    }
+    out->len=input->len;
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptAnnotatedFieldMap(arena *a,const thinkthen_complete_annotated_field_map_v1 *input,
+thinkthen_cobol_ReceiptAnnotatedFieldMap *out) {
+    int code=0;
+    (void)a;
+    thinkthen_cobol_ReceiptAnnotatedFieldMapEntry *items=allocate(a,input->len,sizeof(*items));
+    out->data=items;
+    out->len=input->len;
+    if(!items) return a->code;
+    for(size_t i=0;
+    i<input->len && !code;
+    i++) {
+        code=copy_thinkthen_cobol_ReceiptAnnotatedFieldMapEntry(a,&input->data[i],items+i);
+    }
+    out->len=input->len;
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptAnnotatedFieldMapEntry(arena *a,const thinkthen_complete_annotated_field_map_entry_v1 *input,
+thinkthen_cobol_ReceiptAnnotatedFieldMapEntry *out) {
+    int code=0;
+    (void)a;
+    if(!code) code=answer_text(input->name,&out->name);
+    if(input->value) {
+        thinkthen_cobol_ReceiptAnnotatedField *value=allocate(a,1,sizeof(*value));
+        if(!value) return a->code;
+        if(!code) code=copy_thinkthen_cobol_ReceiptAnnotatedField(a,input->value,value);
+        out->value=value;
+    }
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptAnnotatedFieldData(arena *a,const thinkthen_complete_annotated_field_data_v1 *input,
+thinkthen_cobol_ReceiptAnnotatedFieldData *out,uint32_t kind) {
+    int code=0;
+    (void)a;
+    if(kind==THINKTHEN_COMPLETE_ANNOTATED_FIELD_BOOLEAN_V1) {
+        out->boolean=input->boolean;
+    }
+    if(kind==THINKTHEN_COMPLETE_ANNOTATED_FIELD_NULL_V1) {
+        out->null=input->null;
+    }
+    if(kind==THINKTHEN_COMPLETE_ANNOTATED_FIELD_STRING_V1) {
+        if(!code) code=answer_text(input->string,&out->string);
+    }
+    if(kind==THINKTHEN_COMPLETE_ANNOTATED_FIELD_ARRAY_V1) {
+        if(!code) code=copy_thinkthen_cobol_ReceiptStringList(a,&input->array,&out->array);
+    }
+    if(kind==THINKTHEN_COMPLETE_ANNOTATED_FIELD_NUMBER_V1) {
+        out->number=input->number;
+    }
+    if(kind==THINKTHEN_COMPLETE_ANNOTATED_FIELD_OBJECT_V1) {
+        if(input->object) {
+            thinkthen_cobol_ReceiptFailed *value=allocate(a,1,sizeof(*value));
+            if(!value) return a->code;
+            if(!code) code=copy_thinkthen_cobol_ReceiptFailed(a,input->object,value);
+            out->object=value;
+        }
+    }
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptFailed(arena *a,const thinkthen_complete_failed_v1 *input,
+thinkthen_cobol_ReceiptFailed *out) {
+    int code=0;
+    (void)a;
+    if(input->failed) {
+        thinkthen_cobol_ReceiptFailure *value=allocate(a,1,sizeof(*value));
+        if(!value) return a->code;
+        if(!code) code=copy_thinkthen_cobol_ReceiptFailure(a,input->failed,value);
+        out->failed=value;
+    }
+    if(!code) code=copy_thinkthen_cobol_ReceiptExtensions(a,&input->extensions,&out->extensions);
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptAnnotationMemberMap(arena *a,const thinkthen_complete_annotation_member_map_v1 *input,
+thinkthen_cobol_ReceiptAnnotationMemberMap *out) {
+    int code=0;
+    (void)a;
+    thinkthen_cobol_ReceiptAnnotationMemberMapEntry *items=allocate(a,input->len,sizeof(*items));
+    out->data=items;
+    out->len=input->len;
+    if(!items) return a->code;
+    for(size_t i=0;
+    i<input->len && !code;
+    i++) {
+        code=copy_thinkthen_cobol_ReceiptAnnotationMemberMapEntry(a,&input->data[i],items+i);
+    }
+    out->len=input->len;
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptAnnotationMemberMapEntry(arena *a,const thinkthen_complete_annotation_member_map_entry_v1 *input,
+thinkthen_cobol_ReceiptAnnotationMemberMapEntry *out) {
+    int code=0;
+    (void)a;
+    if(!code) code=answer_text(input->name,&out->name);
+    if(input->value) {
+        thinkthen_cobol_ReceiptAnnotationMember *value=allocate(a,1,sizeof(*value));
+        if(!value) return a->code;
+        if(!code) code=copy_thinkthen_cobol_ReceiptAnnotationMember(a,input->value,value);
+        out->value=value;
+    }
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptAnnotationMemberData(arena *a,const thinkthen_complete_annotation_member_data_v1 *input,
+thinkthen_cobol_ReceiptAnnotationMemberData *out,uint32_t kind) {
+    int code=0;
+    (void)a;
+    if(kind==THINKTHEN_COMPLETE_ANNOTATION_MEMBER_ANSWER_ID_V1) {
+        if(input->answer_id) {
+            thinkthen_cobol_ReceiptAnnotationMemberAnswerId *value=allocate(a,1,sizeof(*value));
+            if(!value) return a->code;
+            if(!code) code=copy_thinkthen_cobol_ReceiptAnnotationMemberAnswerId(a,input->answer_id,value);
+            out->answer_id=value;
+        }
+    }
+    if(kind==THINKTHEN_COMPLETE_ANNOTATION_MEMBER_FAILURE_ID_V1) {
+        if(input->failure_id) {
+            thinkthen_cobol_ReceiptAnnotationMemberFailureId *value=allocate(a,1,sizeof(*value));
+            if(!value) return a->code;
+            if(!code) code=copy_thinkthen_cobol_ReceiptAnnotationMemberFailureId(a,input->failure_id,value);
+            out->failure_id=value;
+        }
+    }
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptAnnotationMemberFailureId(arena *a,const thinkthen_complete_annotation_member_failure_id_v1 *input,
+thinkthen_cobol_ReceiptAnnotationMemberFailureId *out) {
+    int code=0;
+    (void)a;
+    if(input->failure) {
+        thinkthen_cobol_ReceiptFailure *value=allocate(a,1,sizeof(*value));
+        if(!value) return a->code;
+        if(!code) code=copy_thinkthen_cobol_ReceiptFailure(a,input->failure,value);
+        out->failure=value;
+    }
+    if(input->failure_id) {
+        thinkthen_cobol_ReceiptFailureId *value=allocate(a,1,sizeof(*value));
+        if(!value) return a->code;
+        if(!code) code=copy_thinkthen_cobol_ReceiptFailureId(a,input->failure_id,value);
+        out->failure_id=value;
+    }
+    if(!code) code=copy_thinkthen_cobol_ReceiptObservationList(a,&input->observations,&out->observations);
+    if(input->question) {
+        thinkthen_cobol_ReceiptQuestionDocument *value=allocate(a,1,sizeof(*value));
+        if(!value) return a->code;
+        if(!code) code=copy_thinkthen_cobol_ReceiptQuestionDocument(a,input->question,value);
+        out->question=value;
+    }
+    if(!code) code=copy_thinkthen_cobol_ReceiptQuestionSourceList(a,&input->question_sources,&out->question_sources);
+    if(!code) code=answer_text(input->request,&out->request);
+    if(!code) code=copy_thinkthen_cobol_ReceiptThresholdPresence(a,&input->threshold,&out->threshold);
+    if(!code) code=copy_thinkthen_cobol_ReceiptUsagePresence(a,&input->usage,&out->usage);
+    if(!code) code=copy_thinkthen_cobol_ReceiptExtensions(a,&input->extensions,&out->extensions);
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptValuePresence(arena *a,const thinkthen_complete_value_presence_v1 *input,
+thinkthen_cobol_ReceiptValuePresence *out) {
+    int code=0;
+    (void)a;
+    out->presence=input->presence;
+    if(input->value) {
+        thinkthen_cobol_ReceiptValue *value=allocate(a,1,sizeof(*value));
+        if(!value) return a->code;
+        if(!code) code=copy_thinkthen_cobol_ReceiptValue(a,input->value,value);
+        out->value=value;
+    }
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptValueData(arena *a,const thinkthen_complete_value_data_v1 *input,
+thinkthen_cobol_ReceiptValueData *out,uint32_t kind) {
+    int code=0;
+    (void)a;
+    if(kind==THINKTHEN_COMPLETE_VALUE_BOOLEAN_V1) {
+        out->boolean=input->boolean;
+    }
+    if(kind==THINKTHEN_COMPLETE_VALUE_NULL_V1) {
+        out->null=input->null;
+    }
+    if(kind==THINKTHEN_COMPLETE_VALUE_STRING_V1) {
+        if(!code) code=answer_text(input->string,&out->string);
+    }
+    if(kind==THINKTHEN_COMPLETE_VALUE_ARRAY_V1) {
+        if(!code) code=copy_thinkthen_cobol_ReceiptStringList(a,&input->array,&out->array);
+    }
+    if(kind==THINKTHEN_COMPLETE_VALUE_NUMBER_V1) {
+        out->number=input->number;
+    }
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptFindCandidateList(arena *a,const thinkthen_complete_find_candidate_list_v1 *input,
+thinkthen_cobol_ReceiptFindCandidateList *out) {
+    int code=0;
+    (void)a;
+    thinkthen_cobol_ReceiptFindCandidate *items=allocate(a,input->len,sizeof(*items));
+    out->data=items;
+    out->len=input->len;
+    if(!items) return a->code;
+    for(size_t i=0;
+    i<input->len && !code;
+    i++) {
+        code=copy_thinkthen_cobol_ReceiptFindCandidate(a,input->data[i],items+i);
+    }
+    out->len=input->len;
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptFindCandidate(arena *a,const thinkthen_complete_find_candidate_v1 *input,
+thinkthen_cobol_ReceiptFindCandidate *out) {
+    int code=0;
+    (void)a;
+    if(!code) code=copy_thinkthen_cobol_ReceiptU64Presence(a,&input->index,&out->index);
+    if(!code) code=copy_thinkthen_cobol_ReceiptJsonPresence(a,&input->input,&out->input);
+    out->probability=input->probability;
+    if(!code) code=copy_thinkthen_cobol_ReceiptPhysicalSourcePresence(a,&input->source,&out->source);
+    if(!code) code=copy_thinkthen_cobol_ReceiptExtensions(a,&input->extensions,&out->extensions);
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptFindAnswer(arena *a,const thinkthen_complete_find_answer_v1 *input,
+thinkthen_cobol_ReceiptFindAnswer *out) {
+    int code=0;
+    (void)a;
+    if(!code) code=copy_thinkthen_cobol_ReceiptF64Presence(a,&input->confidence,&out->confidence);
+    if(!code) code=answer_text(input->kind,&out->kind);
+    if(!code) code=answer_text(input->pick,&out->pick);
+    if(!code) code=copy_thinkthen_cobol_ReceiptNumberMap(a,&input->probabilities,&out->probabilities);
+    if(!code) code=copy_thinkthen_cobol_ReceiptExtensions(a,&input->extensions,&out->extensions);
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptAtomicNonZeroUsizeList(arena *a,const thinkthen_complete_atomic_non_zero_usize_list_v1 *input,
+thinkthen_cobol_ReceiptAtomicNonZeroUsizeList *out) {
+    int code=0;
+    (void)a;
+    thinkthen_cobol_ReceiptAtomicNonZeroUsize *items=allocate(a,input->len,sizeof(*items));
+    out->data=items;
+    out->len=input->len;
+    if(!items) return a->code;
+    for(size_t i=0;
+    i<input->len && !code;
+    i++) {
+        code=copy_thinkthen_cobol_ReceiptAtomicNonZeroUsize(a,input->data[i],items+i);
+    }
+    out->len=input->len;
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptRankMemberList(arena *a,const thinkthen_complete_rank_member_list_v1 *input,
+thinkthen_cobol_ReceiptRankMemberList *out) {
+    int code=0;
+    (void)a;
+    thinkthen_cobol_ReceiptRankMember *items=allocate(a,input->len,sizeof(*items));
+    out->data=items;
+    out->len=input->len;
+    if(!items) return a->code;
+    for(size_t i=0;
+    i<input->len && !code;
+    i++) {
+        code=copy_thinkthen_cobol_ReceiptRankMember(a,input->data[i],items+i);
+    }
+    out->len=input->len;
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptRankMember(arena *a,const thinkthen_complete_rank_member_v1 *input,
+thinkthen_cobol_ReceiptRankMember *out) {
+    int code=0;
+    (void)a;
+    if(!code) code=answer_text(input->name,&out->name);
+    if(input->result) {
+        thinkthen_cobol_ReceiptRankMemberResult *value=allocate(a,1,sizeof(*value));
+        if(!value) return a->code;
+        if(!code) code=copy_thinkthen_cobol_ReceiptRankMemberResult(a,input->result,value);
+        out->result=value;
+    }
+    if(!code) code=copy_thinkthen_cobol_ReceiptExtensions(a,&input->extensions,&out->extensions);
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptImageList(arena *a,const thinkthen_complete_image_list_v1 *input,
+thinkthen_cobol_ReceiptImageList *out) {
+    int code=0;
+    (void)a;
+    thinkthen_cobol_ReceiptImage *items=allocate(a,input->len,sizeof(*items));
+    out->data=items;
+    out->len=input->len;
+    if(!items) return a->code;
+    for(size_t i=0;
+    i<input->len && !code;
+    i++) {
+        code=copy_thinkthen_cobol_ReceiptImage(a,input->data[i],items+i);
+    }
+    out->len=input->len;
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptImage(arena *a,const thinkthen_complete_image_v1 *input,
+thinkthen_cobol_ReceiptImage *out) {
+    int code=0;
+    (void)a;
+    if(!code) code=answer_text(input->base64,&out->base64);
+    out->height=input->height;
+    if(input->media) {
+        thinkthen_cobol_ReceiptImageMedia *value=allocate(a,1,sizeof(*value));
+        if(!value) return a->code;
+        if(!code) code=copy_thinkthen_cobol_ReceiptImageMedia(a,input->media,value);
+        out->media=value;
+    }
+    out->width=input->width;
+    if(!code) code=copy_thinkthen_cobol_ReceiptExtensions(a,&input->extensions,&out->extensions);
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptImageMedia(arena *a,const thinkthen_complete_image_media_v1 *input,
+thinkthen_cobol_ReceiptImageMedia *out) {
+    int code=0;
+    (void)a;
+    out->kind=input->kind;
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptAtomicBooleanList(arena *a,const thinkthen_complete_atomic_boolean_list_v1 *input,
+thinkthen_cobol_ReceiptAtomicBooleanList *out) {
+    int code=0;
+    (void)a;
+    thinkthen_cobol_ReceiptAtomicBoolean *items=allocate(a,input->len,sizeof(*items));
+    out->data=items;
+    out->len=input->len;
+    if(!items) return a->code;
+    for(size_t i=0;
+    i<input->len && !code;
+    i++) {
+        code=copy_thinkthen_cobol_ReceiptAtomicBoolean(a,input->data[i],items+i);
+    }
+    out->len=input->len;
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptAtomicDoubleList(arena *a,const thinkthen_complete_atomic_double_list_v1 *input,
+thinkthen_cobol_ReceiptAtomicDoubleList *out) {
+    int code=0;
+    (void)a;
+    thinkthen_cobol_ReceiptAtomicDouble *items=allocate(a,input->len,sizeof(*items));
+    out->data=items;
+    out->len=input->len;
+    if(!items) return a->code;
+    for(size_t i=0;
+    i<input->len && !code;
+    i++) {
+        code=copy_thinkthen_cobol_ReceiptAtomicDouble(a,input->data[i],items+i);
+    }
+    out->len=input->len;
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptAtomicArrayOfStringList(arena *a,const thinkthen_complete_atomic_array_of_string_list_v1 *input,
+thinkthen_cobol_ReceiptAtomicArrayOfStringList *out) {
+    int code=0;
+    (void)a;
+    thinkthen_cobol_ReceiptAtomicArrayOfString *items=allocate(a,input->len,sizeof(*items));
+    out->data=items;
+    out->len=input->len;
+    if(!items) return a->code;
+    for(size_t i=0;
+    i<input->len && !code;
+    i++) {
+        code=copy_thinkthen_cobol_ReceiptAtomicArrayOfString(a,input->data[i],items+i);
+    }
+    out->len=input->len;
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptAtomicNullableStringList(arena *a,const thinkthen_complete_atomic_nullable_string_list_v1 *input,
+thinkthen_cobol_ReceiptAtomicNullableStringList *out) {
+    int code=0;
+    (void)a;
+    thinkthen_cobol_ReceiptAtomicNullableString *items=allocate(a,input->len,sizeof(*items));
+    out->data=items;
+    out->len=input->len;
+    if(!items) return a->code;
+    for(size_t i=0;
+    i<input->len && !code;
+    i++) {
+        code=copy_thinkthen_cobol_ReceiptAtomicNullableString(a,input->data[i],items+i);
+    }
+    out->len=input->len;
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptAtomicDecideValueList(arena *a,const thinkthen_complete_atomic_decide_value_list_v1 *input,
+thinkthen_cobol_ReceiptAtomicDecideValueList *out) {
+    int code=0;
+    (void)a;
+    thinkthen_cobol_ReceiptAtomicDecideValue *items=allocate(a,input->len,sizeof(*items));
+    out->data=items;
+    out->len=input->len;
+    if(!items) return a->code;
+    for(size_t i=0;
+    i<input->len && !code;
+    i++) {
+        code=copy_thinkthen_cobol_ReceiptAtomicDecideValue(a,input->data[i],items+i);
+    }
+    out->len=input->len;
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptDecideValuePresence(arena *a,const thinkthen_complete_decide_value_presence_v1 *input,
+thinkthen_cobol_ReceiptDecideValuePresence *out) {
+    int code=0;
+    (void)a;
+    out->presence=input->presence;
+    if(input->value) {
+        thinkthen_cobol_ReceiptDecideValue *value=allocate(a,1,sizeof(*value));
+        if(!value) return a->code;
+        if(!code) code=copy_thinkthen_cobol_ReceiptDecideValue(a,input->value,value);
+        out->value=value;
+    }
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptDecideValue(arena *a,const thinkthen_complete_decide_value_v1 *input,
+thinkthen_cobol_ReceiptDecideValue *out) {
+    int code=0;
+    (void)a;
+    if(input->value) out->value=answer_original(a,input->value);
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptRelatedEntityEdge(arena *a,const thinkthen_complete_related_entity_edge_v1 *input,
+thinkthen_cobol_ReceiptRelatedEntityEdge *out) {
+    int code=0;
+    (void)a;
+    if(!code) code=copy_thinkthen_cobol_ReceiptU32Presence(a,&input->either,&out->either);
+    out->probability=input->probability;
+    if(!code) code=answer_text(input->relation,&out->relation);
+    if(input->source) {
+        thinkthen_cobol_ReceiptRelationEndpoint *value=allocate(a,1,sizeof(*value));
+        if(!value) return a->code;
+        if(!code) code=copy_thinkthen_cobol_ReceiptRelationEndpoint(a,input->source,value);
+        out->source=value;
+    }
+    if(input->target) {
+        thinkthen_cobol_ReceiptRelationEndpoint *value=allocate(a,1,sizeof(*value));
+        if(!value) return a->code;
+        if(!code) code=copy_thinkthen_cobol_ReceiptRelationEndpoint(a,input->target,value);
+        out->target=value;
+    }
+    if(!code) code=copy_thinkthen_cobol_ReceiptExtensions(a,&input->extensions,&out->extensions);
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptRelationEndpoint(arena *a,const thinkthen_complete_relation_endpoint_v1 *input,
+thinkthen_cobol_ReceiptRelationEndpoint *out) {
+    int code=0;
+    (void)a;
+    out->kind=input->kind;
+    if(!code) code=copy_thinkthen_cobol_ReceiptRelationEndpointData(a,&input->data,&out->data,input->kind);
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptRelationEndpointSource(arena *a,const thinkthen_complete_relation_endpoint_source_v1 *input,
+thinkthen_cobol_ReceiptRelationEndpointSource *out) {
+    int code=0;
+    (void)a;
+    if(!code) code=copy_thinkthen_cobol_ReceiptUtf8Presence(a,&input->file,&out->file);
+    if(!code) code=copy_thinkthen_cobol_ReceiptU64Presence(a,&input->first_line,&out->first_line);
+    if(!code) code=answer_text(input->kind,&out->kind);
+    if(!code) code=copy_thinkthen_cobol_ReceiptU64Presence(a,&input->last_line,&out->last_line);
+    if(!code) code=answer_text(input->name,&out->name);
+    out->ordinal=input->ordinal;
+    if(!code) code=copy_thinkthen_cobol_ReceiptJsonPresence(a,&input->record,&out->record);
+    if(!code) code=copy_thinkthen_cobol_ReceiptExtensions(a,&input->extensions,&out->extensions);
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptThreshold(arena *a,const thinkthen_complete_threshold_v1 *input,
+thinkthen_cobol_ReceiptThreshold *out) {
+    int code=0;
+    (void)a;
+    out->kind=input->kind;
+    if(!code) code=copy_thinkthen_cobol_ReceiptThresholdData(a,&input->data,&out->data,input->kind);
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptStringListPresence(arena *a,const thinkthen_complete_string_list_presence_v1 *input,
+thinkthen_cobol_ReceiptStringListPresence *out) {
+    int code=0;
+    (void)a;
+    out->presence=input->presence;
+    if(!code) code=copy_thinkthen_cobol_ReceiptStringList(a,&input->value,&out->value);
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptLabelListPresence(arena *a,const thinkthen_complete_label_list_presence_v1 *input,
+thinkthen_cobol_ReceiptLabelListPresence *out) {
+    int code=0;
+    (void)a;
+    out->presence=input->presence;
+    if(!code) code=copy_thinkthen_cobol_ReceiptLabelList(a,&input->value,&out->value);
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptInputDeclaration(arena *a,const thinkthen_complete_input_declaration_v1 *input,
+thinkthen_cobol_ReceiptInputDeclaration *out) {
+    int code=0;
+    (void)a;
+    out->kind=input->kind;
+    if(!code) code=copy_thinkthen_cobol_ReceiptInputDeclarationData(a,&input->data,&out->data,input->kind);
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptInputDeclarationObjectRoot(arena *a,const thinkthen_complete_input_declaration_object_root_v1 *input,
+thinkthen_cobol_ReceiptInputDeclarationObjectRoot *out) {
+    int code=0;
+    (void)a;
+    if(!code) code=copy_thinkthen_cobol_ReceiptInputPropertyTypeMap(a,&input->properties,&out->properties);
+    if(!code) code=copy_thinkthen_cobol_ReceiptStringListPresence(a,&input->required,&out->required);
+    if(input->type) {
+        thinkthen_cobol_ReceiptObjectType *value=allocate(a,1,sizeof(*value));
+        if(!value) return a->code;
+        if(!code) code=copy_thinkthen_cobol_ReceiptObjectType(a,input->type,value);
+        out->type=value;
+    }
+    if(!code) code=copy_thinkthen_cobol_ReceiptExtensions(a,&input->extensions,&out->extensions);
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptInputPropertyType(arena *a,const thinkthen_complete_input_property_type_v1 *input,
+thinkthen_cobol_ReceiptInputPropertyType *out) {
+    int code=0;
+    (void)a;
+    out->kind=input->kind;
+    if(!code) code=copy_thinkthen_cobol_ReceiptInputPropertyTypeData(a,&input->data,&out->data,
+    input->kind);
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptBatch(arena *a,const thinkthen_complete_batch_v1 *input,
+thinkthen_cobol_ReceiptBatch *out) {
+    int code=0;
+    (void)a;
+    out->kind=input->kind;
+    if(!code) code=copy_thinkthen_cobol_ReceiptBatchData(a,&input->data,&out->data,input->kind);
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptPosition(arena *a,const thinkthen_complete_position_v1 *input,
+thinkthen_cobol_ReceiptPosition *out) {
+    int code=0;
+    (void)a;
+    if(!code) code=copy_thinkthen_cobol_ReceiptUtf8Presence(a,&input->file,&out->file);
+    if(!code) code=copy_thinkthen_cobol_ReceiptU64Presence(a,&input->first,&out->first);
+    if(!code) code=copy_thinkthen_cobol_ReceiptStringListPresence(a,&input->images,&out->images);
+    if(!code) code=copy_thinkthen_cobol_ReceiptU64Presence(a,&input->last,&out->last);
+    if(!code) code=copy_thinkthen_cobol_ReceiptExtensions(a,&input->extensions,&out->extensions);
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptObservation(arena *a,const thinkthen_complete_observation_v1 *input,
+thinkthen_cobol_ReceiptObservation *out) {
+    int code=0;
+    (void)a;
+    out->kind=input->kind;
+    if(!code) code=copy_thinkthen_cobol_ReceiptObservationData(a,&input->data,&out->data,input->kind);
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptBatchSetting(arena *a,const thinkthen_complete_batch_setting_v1 *input,
+thinkthen_cobol_ReceiptBatchSetting *out) {
+    int code=0;
+    (void)a;
+    out->kind=input->kind;
+    if(!code) code=copy_thinkthen_cobol_ReceiptBatchSettingData(a,&input->data,&out->data,input->kind);
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptAttemptListPresence(arena *a,const thinkthen_complete_attempt_list_presence_v1 *input,
+thinkthen_cobol_ReceiptAttemptListPresence *out) {
+    int code=0;
+    (void)a;
+    out->presence=input->presence;
+    if(!code) code=copy_thinkthen_cobol_ReceiptAttemptList(a,&input->value,&out->value);
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptSessionInputSourceListPresence(arena *a,const thinkthen_complete_session_input_source_list_presence_v1 *input,
+thinkthen_cobol_ReceiptSessionInputSourceListPresence *out) {
+    int code=0;
+    (void)a;
+    out->presence=input->presence;
+    if(!code) code=copy_thinkthen_cobol_ReceiptSessionInputSourceList(a,&input->value,&out->value);
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptAnswers(arena *a,const thinkthen_complete_answers_v1 *input,
+thinkthen_cobol_ReceiptAnswers *out) {
+    int code=0;
+    (void)a;
+    if(!code) code=copy_thinkthen_cobol_ReceiptRelationMemberList(a,&input->questions,&out->questions);
+    if(!code) code=copy_thinkthen_cobol_ReceiptExtensions(a,&input->extensions,&out->extensions);
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptRelationMember(arena *a,const thinkthen_complete_relation_member_v1 *input,
+thinkthen_cobol_ReceiptRelationMember *out) {
+    int code=0;
+    (void)a;
+    out->kind=input->kind;
+    if(!code) code=copy_thinkthen_cobol_ReceiptRelationMemberData(a,&input->data,&out->data,input->kind);
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptRelationMemberFailureId(arena *a,const thinkthen_complete_relation_member_failure_id_v1 *input,
+thinkthen_cobol_ReceiptRelationMemberFailureId *out) {
+    int code=0;
+    (void)a;
+    if(input->direction) {
+        thinkthen_cobol_ReceiptRelationDirection *value=allocate(a,1,sizeof(*value));
+        if(!value) return a->code;
+        if(!code) code=copy_thinkthen_cobol_ReceiptRelationDirection(a,input->direction,value);
+        out->direction=value;
+    }
+    if(input->method) {
+        thinkthen_cobol_ReceiptRelationMethod *value=allocate(a,1,sizeof(*value));
+        if(!value) return a->code;
+        if(!code) code=copy_thinkthen_cobol_ReceiptRelationMethod(a,input->method,value);
+        out->method=value;
+    }
+    if(!code) code=copy_thinkthen_cobol_ReceiptObservationList(a,&input->observations,&out->observations);
+    if(input->question) {
+        thinkthen_cobol_ReceiptQuestionDocument *value=allocate(a,1,sizeof(*value));
+        if(!value) return a->code;
+        if(!code) code=copy_thinkthen_cobol_ReceiptQuestionDocument(a,input->question,value);
+        out->question=value;
+    }
+    if(!code) code=copy_thinkthen_cobol_ReceiptQuestionSourceList(a,&input->question_sources,&out->question_sources);
+    if(!code) code=answer_text(input->reads,&out->reads);
+    if(!code) code=answer_text(input->relation,&out->relation);
+    if(!code) code=answer_text(input->request,&out->request);
+    if(input->source) {
+        thinkthen_cobol_ReceiptRelatedEntity *value=allocate(a,1,sizeof(*value));
+        if(!value) return a->code;
+        if(!code) code=copy_thinkthen_cobol_ReceiptRelatedEntity(a,input->source,value);
+        out->source=value;
+    }
+    if(!code) code=copy_thinkthen_cobol_ReceiptRelatedEntityPresence(a,&input->target,&out->target);
+    if(input->threshold) {
+        thinkthen_cobol_ReceiptThreshold *value=allocate(a,1,sizeof(*value));
+        if(!value) return a->code;
+        if(!code) code=copy_thinkthen_cobol_ReceiptThreshold(a,input->threshold,value);
+        out->threshold=value;
+    }
+    if(!code) code=copy_thinkthen_cobol_ReceiptUsagePresence(a,&input->usage,&out->usage);
+    if(input->failure) {
+        thinkthen_cobol_ReceiptFailure *value=allocate(a,1,sizeof(*value));
+        if(!value) return a->code;
+        if(!code) code=copy_thinkthen_cobol_ReceiptFailure(a,input->failure,value);
+        out->failure=value;
+    }
+    if(input->failure_id) {
+        thinkthen_cobol_ReceiptFailureId *value=allocate(a,1,sizeof(*value));
+        if(!value) return a->code;
+        if(!code) code=copy_thinkthen_cobol_ReceiptFailureId(a,input->failure_id,value);
+        out->failure_id=value;
+    }
+    if(!code) code=copy_thinkthen_cobol_ReceiptExtensions(a,&input->extensions,&out->extensions);
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptQuestionDocument(arena *a,const thinkthen_complete_question_document_v1 *input,
+thinkthen_cobol_ReceiptQuestionDocument *out) {
+    int code=0;
+    (void)a;
+    out->kind=input->kind;
+    if(!code) code=copy_thinkthen_cobol_ReceiptQuestionDocumentData(a,&input->data,&out->data,input->kind);
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptQuestionDocumentScore(arena *a,const thinkthen_complete_question_document_score_v1 *input,
+thinkthen_cobol_ReceiptQuestionDocumentScore *out) {
+    int code=0;
+    (void)a;
+    if(!code) code=copy_thinkthen_cobol_ReceiptBatchPresence(a,&input->batch,&out->batch);
+    if(!code) code=copy_thinkthen_cobol_ReceiptInputDeclarationPresence(a,&input->context_schema,
+    &out->context_schema);
+    if(!code) code=copy_thinkthen_cobol_ReceiptInputDeclarationPresence(a,&input->item_schema,&out->item_schema);
+    if(!code) code=copy_thinkthen_cobol_ReceiptLabelListPresence(a,&input->label_details,&out->label_details);
+    if(!code) code=copy_thinkthen_cobol_ReceiptUtf8Presence(a,&input->model,&out->model);
+    if(!code) code=copy_thinkthen_cobol_ReceiptQuestionNamePresence(a,&input->name,&out->name);
+    if(!code) code=copy_thinkthen_cobol_ReceiptStringListPresence(a,&input->on,&out->on);
+    if(!code) code=copy_thinkthen_cobol_ReceiptUtf8Presence(a,&input->profile,&out->profile);
+    if(!code) code=copy_thinkthen_cobol_ReceiptWordingVersionPresence(a,&input->wording_version,
+    &out->wording_version);
+    if(!code) code=copy_thinkthen_cobol_ReceiptStringList(a,&input->levels,&out->levels);
+    if(!code) code=copy_thinkthen_cobol_ReceiptJsonPresence(a,&input->text,&out->text);
+    if(!code) code=answer_text(input->verb,&out->verb);
+    if(!code) code=copy_thinkthen_cobol_ReceiptExtensions(a,&input->extensions,&out->extensions);
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptQuestionDocumentTag(arena *a,const thinkthen_complete_question_document_tag_v1 *input,
+thinkthen_cobol_ReceiptQuestionDocumentTag *out) {
+    int code=0;
+    (void)a;
+    if(!code) code=copy_thinkthen_cobol_ReceiptBatchPresence(a,&input->batch,&out->batch);
+    if(!code) code=copy_thinkthen_cobol_ReceiptInputDeclarationPresence(a,&input->context_schema,
+    &out->context_schema);
+    if(!code) code=copy_thinkthen_cobol_ReceiptInputDeclarationPresence(a,&input->item_schema,&out->item_schema);
+    if(!code) code=copy_thinkthen_cobol_ReceiptLabelListPresence(a,&input->label_details,&out->label_details);
+    if(!code) code=copy_thinkthen_cobol_ReceiptUtf8Presence(a,&input->model,&out->model);
+    if(!code) code=copy_thinkthen_cobol_ReceiptQuestionNamePresence(a,&input->name,&out->name);
+    if(!code) code=copy_thinkthen_cobol_ReceiptStringListPresence(a,&input->on,&out->on);
+    if(!code) code=copy_thinkthen_cobol_ReceiptUtf8Presence(a,&input->profile,&out->profile);
+    if(!code) code=copy_thinkthen_cobol_ReceiptWordingVersionPresence(a,&input->wording_version,
+    &out->wording_version);
+    if(!code) code=copy_thinkthen_cobol_ReceiptStringList(a,&input->labels,&out->labels);
+    if(!code) code=copy_thinkthen_cobol_ReceiptJsonPresence(a,&input->text,&out->text);
+    if(!code) code=answer_text(input->verb,&out->verb);
+    if(!code) code=copy_thinkthen_cobol_ReceiptExtensions(a,&input->extensions,&out->extensions);
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptQuestionDocumentChoose(arena *a,const thinkthen_complete_question_document_choose_v1 *input,
+thinkthen_cobol_ReceiptQuestionDocumentChoose *out) {
+    int code=0;
+    (void)a;
+    if(!code) code=copy_thinkthen_cobol_ReceiptBatchPresence(a,&input->batch,&out->batch);
+    if(!code) code=copy_thinkthen_cobol_ReceiptInputDeclarationPresence(a,&input->context_schema,
+    &out->context_schema);
+    if(!code) code=copy_thinkthen_cobol_ReceiptInputDeclarationPresence(a,&input->item_schema,&out->item_schema);
+    if(!code) code=copy_thinkthen_cobol_ReceiptLabelListPresence(a,&input->label_details,&out->label_details);
+    if(!code) code=copy_thinkthen_cobol_ReceiptUtf8Presence(a,&input->model,&out->model);
+    if(!code) code=copy_thinkthen_cobol_ReceiptQuestionNamePresence(a,&input->name,&out->name);
+    if(!code) code=copy_thinkthen_cobol_ReceiptStringListPresence(a,&input->on,&out->on);
+    if(!code) code=copy_thinkthen_cobol_ReceiptUtf8Presence(a,&input->profile,&out->profile);
+    if(!code) code=copy_thinkthen_cobol_ReceiptWordingVersionPresence(a,&input->wording_version,
+    &out->wording_version);
+    if(!code) code=copy_thinkthen_cobol_ReceiptStringList(a,&input->options,&out->options);
+    if(!code) code=copy_thinkthen_cobol_ReceiptJsonPresence(a,&input->text,&out->text);
+    if(!code) code=answer_text(input->verb,&out->verb);
+    if(!code) code=copy_thinkthen_cobol_ReceiptExtensions(a,&input->extensions,&out->extensions);
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptQuestionDocumentDecide(arena *a,const thinkthen_complete_question_document_decide_v1 *input,
+thinkthen_cobol_ReceiptQuestionDocumentDecide *out) {
+    int code=0;
+    (void)a;
+    if(!code) code=copy_thinkthen_cobol_ReceiptBatchPresence(a,&input->batch,&out->batch);
+    if(!code) code=copy_thinkthen_cobol_ReceiptInputDeclarationPresence(a,&input->context_schema,
+    &out->context_schema);
+    if(!code) code=copy_thinkthen_cobol_ReceiptInputDeclarationPresence(a,&input->item_schema,&out->item_schema);
+    if(!code) code=copy_thinkthen_cobol_ReceiptLabelListPresence(a,&input->label_details,&out->label_details);
+    if(!code) code=copy_thinkthen_cobol_ReceiptUtf8Presence(a,&input->model,&out->model);
+    if(!code) code=copy_thinkthen_cobol_ReceiptQuestionNamePresence(a,&input->name,&out->name);
+    if(!code) code=copy_thinkthen_cobol_ReceiptStringListPresence(a,&input->on,&out->on);
+    if(!code) code=copy_thinkthen_cobol_ReceiptUtf8Presence(a,&input->profile,&out->profile);
+    if(!code) code=copy_thinkthen_cobol_ReceiptWordingVersionPresence(a,&input->wording_version,
+    &out->wording_version);
+    if(!code) code=copy_thinkthen_cobol_ReceiptJsonPresence(a,&input->false_,&out->false_);
+    if(!code) code=copy_thinkthen_cobol_ReceiptJsonPresence(a,&input->text,&out->text);
+    if(!code) code=copy_thinkthen_cobol_ReceiptJsonPresence(a,&input->true_,&out->true_);
+    if(!code) code=answer_text(input->verb,&out->verb);
+    if(!code) code=copy_thinkthen_cobol_ReceiptExtensions(a,&input->extensions,&out->extensions);
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptAnswer(arena *a,const thinkthen_complete_answer_v1 *input,
+thinkthen_cobol_ReceiptAnswer *out) {
+    int code=0;
+    (void)a;
+    out->kind=input->kind;
+    if(!code) code=copy_thinkthen_cobol_ReceiptAnswerData(a,&input->data,&out->data,input->kind);
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptAnswerScore(arena *a,const thinkthen_complete_answer_score_v1 *input,
+thinkthen_cobol_ReceiptAnswerScore *out) {
+    int code=0;
+    (void)a;
+    if(!code) code=copy_thinkthen_cobol_ReceiptF64Presence(a,&input->confidence,&out->confidence);
+    if(!code) code=answer_text(input->kind,&out->kind);
+    if(!code) code=answer_text(input->level,&out->level);
+    if(!code) code=copy_thinkthen_cobol_ReceiptNumberMap(a,&input->probabilities,&out->probabilities);
+    if(!code) code=copy_thinkthen_cobol_ReceiptExtensions(a,&input->extensions,&out->extensions);
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptRecognition(arena *a,const thinkthen_complete_recognition_v1 *input,
+thinkthen_cobol_ReceiptRecognition *out) {
+    int code=0;
+    (void)a;
+    if(input->answer) {
+        thinkthen_cobol_ReceiptRecognitionOdds *value=allocate(a,1,sizeof(*value));
+        if(!value) return a->code;
+        if(!code) code=copy_thinkthen_cobol_ReceiptRecognitionOdds(a,input->answer,value);
+        out->answer=value;
+    }
+    if(input->answer_id) {
+        thinkthen_cobol_ReceiptAnswerId *value=allocate(a,1,sizeof(*value));
+        if(!value) return a->code;
+        if(!code) code=copy_thinkthen_cobol_ReceiptAnswerId(a,input->answer_id,value);
+        out->answer_id=value;
+    }
+    if(!code) code=copy_thinkthen_cobol_ReceiptUtf8Presence(a,&input->file,&out->file);
+    if(!code) code=copy_thinkthen_cobol_ReceiptU64Presence(a,&input->first_line,&out->first_line);
+    if(!code) code=copy_thinkthen_cobol_ReceiptU64Presence(a,&input->index,&out->index);
+    if(!code) code=copy_thinkthen_cobol_ReceiptJsonPresence(a,&input->input,&out->input);
+    if(!code) code=copy_thinkthen_cobol_ReceiptU64Presence(a,&input->last_line,&out->last_line);
+    if(input->meta) {
+        thinkthen_cobol_ReceiptMeta *value=allocate(a,1,sizeof(*value));
+        if(!value) return a->code;
+        if(!code) code=copy_thinkthen_cobol_ReceiptMeta(a,input->meta,value);
+        out->meta=value;
+    }
+    if(!code) code=copy_thinkthen_cobol_ReceiptPositionPresence(a,&input->position,&out->position);
+    if(input->question) {
+        thinkthen_cobol_ReceiptRecognizeQuestionDocument *value=allocate(a,1,sizeof(*value));
+        if(!value) return a->code;
+        if(!code) code=copy_thinkthen_cobol_ReceiptRecognizeQuestionDocument(a,input->question,value);
+        out->question=value;
+    }
+    if(input->schema) {
+        thinkthen_cobol_ReceiptVersion *value=allocate(a,1,sizeof(*value));
+        if(!value) return a->code;
+        if(!code) code=copy_thinkthen_cobol_ReceiptVersion(a,input->schema,value);
+        out->schema=value;
+    }
+    if(!code) code=copy_thinkthen_cobol_ReceiptPhysicalSourcePresence(a,&input->source,&out->source);
+    if(input->value) {
+        thinkthen_cobol_ReceiptRecognize *value=allocate(a,1,sizeof(*value));
+        if(!value) return a->code;
+        if(!code) code=copy_thinkthen_cobol_ReceiptRecognize(a,input->value,value);
+        out->value=value;
+    }
+    if(!code) code=copy_thinkthen_cobol_ReceiptExtensions(a,&input->extensions,&out->extensions);
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptRecognize(arena *a,const thinkthen_complete_recognize_v1 *input,
+thinkthen_cobol_ReceiptRecognize *out) {
+    int code=0;
+    (void)a;
+    out->kind=input->kind;
+    if(!code) code=copy_thinkthen_cobol_ReceiptRecognizeData(a,&input->data,&out->data,input->kind);
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptRecognizeModeProposals(arena *a,const thinkthen_complete_recognize_mode_proposals_v1 *input,
+thinkthen_cobol_ReceiptRecognizeModeProposals *out) {
+    int code=0;
+    (void)a;
+    if(input->mode) {
+        thinkthen_cobol_ReceiptBoundaryMode *value=allocate(a,1,sizeof(*value));
+        if(!value) return a->code;
+        if(!code) code=copy_thinkthen_cobol_ReceiptBoundaryMode(a,input->mode,value);
+        out->mode=value;
+    }
+    if(!code) code=copy_thinkthen_cobol_ReceiptBoundaryProposalList(a,&input->proposals,&out->proposals);
+    if(!code) code=copy_thinkthen_cobol_ReceiptExtensions(a,&input->extensions,&out->extensions);
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptEntityEdgeListPresence(arena *a,const thinkthen_complete_entity_edge_list_presence_v1 *input,
+thinkthen_cobol_ReceiptEntityEdgeListPresence *out) {
+    int code=0;
+    (void)a;
+    out->presence=input->presence;
+    if(!code) code=copy_thinkthen_cobol_ReceiptEntityEdgeList(a,&input->value,&out->value);
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptRecognizeQuestionDocument(arena *a,const thinkthen_complete_recognize_question_document_v1 *input,
+thinkthen_cobol_ReceiptRecognizeQuestionDocument *out) {
+    int code=0;
+    (void)a;
+    if(!code) code=copy_thinkthen_cobol_ReceiptBatchPresence(a,&input->batch,&out->batch);
+    if(!code) code=copy_thinkthen_cobol_ReceiptInputDeclarationPresence(a,&input->context_schema,
+    &out->context_schema);
+    if(!code) code=copy_thinkthen_cobol_ReceiptJsonPresence(a,&input->entity_definition,&out->entity_definition);
+    if(!code) code=copy_thinkthen_cobol_ReceiptJsonPresence(a,&input->instructions,&out->instructions);
+    if(!code) code=copy_thinkthen_cobol_ReceiptInputDeclarationPresence(a,&input->item_schema,&out->item_schema);
+    if(!code) code=copy_thinkthen_cobol_ReceiptJsonMap(a,&input->kinds,&out->kinds);
+    if(!code) code=copy_thinkthen_cobol_ReceiptLabelListPresence(a,&input->label_details,&out->label_details);
+    if(!code) code=copy_thinkthen_cobol_ReceiptRecognitionModePresence(a,&input->mode,&out->mode);
+    if(!code) code=copy_thinkthen_cobol_ReceiptUtf8Presence(a,&input->model,&out->model);
+    if(!code) code=copy_thinkthen_cobol_ReceiptQuestionNamePresence(a,&input->name,&out->name);
+    if(!code) code=copy_thinkthen_cobol_ReceiptStringListPresence(a,&input->on,&out->on);
+    if(!code) code=copy_thinkthen_cobol_ReceiptUtf8Presence(a,&input->profile,&out->profile);
+    if(!code) code=copy_thinkthen_cobol_ReceiptThresholdPresence(a,&input->relation_threshold,&out->relation_threshold);
+    if(!code) code=copy_thinkthen_cobol_ReceiptRelationRuleListPresence(a,&input->relations,&out->relations);
+    if(!code) code=copy_thinkthen_cobol_ReceiptU64Presence(a,&input->snippet_pieces,&out->snippet_pieces);
+    if(!code) code=copy_thinkthen_cobol_ReceiptRecognitionStageContextPresence(a,&input->stage_context,
+    &out->stage_context);
+    if(input->threshold) {
+        thinkthen_cobol_ReceiptThreshold *value=allocate(a,1,sizeof(*value));
+        if(!value) return a->code;
+        if(!code) code=copy_thinkthen_cobol_ReceiptThreshold(a,input->threshold,value);
+        out->threshold=value;
+    }
+    if(input->verb) {
+        thinkthen_cobol_ReceiptVerb *value=allocate(a,1,sizeof(*value));
+        if(!value) return a->code;
+        if(!code) code=copy_thinkthen_cobol_ReceiptVerb(a,input->verb,value);
+        out->verb=value;
+    }
+    if(!code) code=copy_thinkthen_cobol_ReceiptWordingVersionPresence(a,&input->wording_version,
+    &out->wording_version);
+    if(!code) code=copy_thinkthen_cobol_ReceiptExtensions(a,&input->extensions,&out->extensions);
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptRecognitionOdds(arena *a,const thinkthen_complete_recognition_odds_v1 *input,
+thinkthen_cobol_ReceiptRecognitionOdds *out) {
+    int code=0;
+    (void)a;
+    out->kind=input->kind;
+    if(!code) code=copy_thinkthen_cobol_ReceiptRecognitionOddsData(a,&input->data,&out->data,input->kind);
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptRecognitionOddsBoundaryOdds(arena *a,const thinkthen_complete_recognition_odds_boundary_odds_v1 *input,
+thinkthen_cobol_ReceiptRecognitionOddsBoundaryOdds *out) {
+    int code=0;
+    (void)a;
+    if(!code) code=copy_thinkthen_cobol_ReceiptPieceOddsList(a,&input->pieces,&out->pieces);
+    if(!code) code=copy_thinkthen_cobol_ReceiptBoundaryProposalList(a,&input->proposals,&out->proposals);
+    if(!code) code=copy_thinkthen_cobol_ReceiptExtensions(a,&input->extensions,&out->extensions);
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptRecognitionOddsRecognizeAnswer(arena *a,const thinkthen_complete_recognition_odds_recognize_answer_v1 *input,
+thinkthen_cobol_ReceiptRecognitionOddsRecognizeAnswer *out) {
+    int code=0;
+    (void)a;
+    if(!code) code=copy_thinkthen_cobol_ReceiptNameOddsList(a,&input->names,&out->names);
+    if(!code) code=copy_thinkthen_cobol_ReceiptPairOddsList(a,&input->pairs,&out->pairs);
+    if(!code) code=copy_thinkthen_cobol_ReceiptPieceOddsList(a,&input->pieces,&out->pieces);
+    if(!code) code=copy_thinkthen_cobol_ReceiptRecognitionProposalList(a,&input->proposals,&out->proposals);
+    if(!code) code=copy_thinkthen_cobol_ReceiptExtensions(a,&input->extensions,&out->extensions);
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptRecognitionProposal(arena *a,const thinkthen_complete_recognition_proposal_v1 *input,
+thinkthen_cobol_ReceiptRecognitionProposal *out) {
+    int code=0;
+    (void)a;
+    out->end=input->end;
+    out->kept=input->kept;
+    if(!code) code=copy_thinkthen_cobol_ReceiptUtf8Presence(a,&input->kind,&out->kind);
+    if(!code) code=copy_thinkthen_cobol_ReceiptPlacePresence(a,&input->selected,&out->selected);
+    out->span_probability=input->span_probability;
+    out->start=input->start;
+    if(!code) code=copy_thinkthen_cobol_ReceiptF64Presence(a,&input->strength,&out->strength);
+    if(!code) code=copy_thinkthen_cobol_ReceiptExtensions(a,&input->extensions,&out->extensions);
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptNameOdds(arena *a,const thinkthen_complete_name_odds_v1 *input,
+thinkthen_cobol_ReceiptNameOdds *out) {
+    int code=0;
+    (void)a;
+    if(!code) code=copy_thinkthen_cobol_ReceiptNumberMapPresence(a,&input->edges,&out->edges);
+    out->end=input->end;
+    if(!code) code=copy_thinkthen_cobol_ReceiptNumberMapPresence(a,&input->kinds,&out->kinds);
+    out->start=input->start;
+    if(!code) code=copy_thinkthen_cobol_ReceiptExtensions(a,&input->extensions,&out->extensions);
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptAnnotation(arena *a,const thinkthen_complete_annotation_v1 *input,
+thinkthen_cobol_ReceiptAnnotation *out) {
+    int code=0;
+    (void)a;
+    if(input->answer_id) {
+        thinkthen_cobol_ReceiptAnswerId *value=allocate(a,1,sizeof(*value));
+        if(!value) return a->code;
+        if(!code) code=copy_thinkthen_cobol_ReceiptAnswerId(a,input->answer_id,value);
+        out->answer_id=value;
+    }
+    if(!code) code=copy_thinkthen_cobol_ReceiptAnnotationMemberMap(a,&input->answers,&out->answers);
+    if(!code) code=copy_thinkthen_cobol_ReceiptUtf8Presence(a,&input->file,&out->file);
+    if(!code) code=copy_thinkthen_cobol_ReceiptU64Presence(a,&input->first_line,&out->first_line);
+    if(!code) code=copy_thinkthen_cobol_ReceiptU64Presence(a,&input->index,&out->index);
+    if(!code) code=copy_thinkthen_cobol_ReceiptJsonPresence(a,&input->input,&out->input);
+    if(!code) code=copy_thinkthen_cobol_ReceiptU64Presence(a,&input->last_line,&out->last_line);
+    if(input->meta) {
+        thinkthen_cobol_ReceiptMeta *value=allocate(a,1,sizeof(*value));
+        if(!value) return a->code;
+        if(!code) code=copy_thinkthen_cobol_ReceiptMeta(a,input->meta,value);
+        out->meta=value;
+    }
+    if(!code) code=copy_thinkthen_cobol_ReceiptPositionPresence(a,&input->position,&out->position);
+    if(input->schema) {
+        thinkthen_cobol_ReceiptVersion *value=allocate(a,1,sizeof(*value));
+        if(!value) return a->code;
+        if(!code) code=copy_thinkthen_cobol_ReceiptVersion(a,input->schema,value);
+        out->schema=value;
+    }
+    if(!code) code=copy_thinkthen_cobol_ReceiptPhysicalSourcePresence(a,&input->source,&out->source);
+    if(input->value) {
+        thinkthen_cobol_ReceiptAnnotatedRow *value=allocate(a,1,sizeof(*value));
+        if(!value) return a->code;
+        if(!code) code=copy_thinkthen_cobol_ReceiptAnnotatedRow(a,input->value,value);
+        out->value=value;
+    }
+    if(!code) code=copy_thinkthen_cobol_ReceiptExtensions(a,&input->extensions,&out->extensions);
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptAnnotatedRow(arena *a,const thinkthen_complete_annotated_row_v1 *input,
+thinkthen_cobol_ReceiptAnnotatedRow *out) {
+    int code=0;
+    (void)a;
+    if(!code) code=copy_thinkthen_cobol_ReceiptAnnotatedFieldMap(a,&input->value,&out->value);
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptAnnotatedField(arena *a,const thinkthen_complete_annotated_field_v1 *input,
+thinkthen_cobol_ReceiptAnnotatedField *out) {
+    int code=0;
+    (void)a;
+    out->kind=input->kind;
+    if(!code) code=copy_thinkthen_cobol_ReceiptAnnotatedFieldData(a,&input->data,&out->data,input->kind);
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptAnnotationMember(arena *a,const thinkthen_complete_annotation_member_v1 *input,
+thinkthen_cobol_ReceiptAnnotationMember *out) {
+    int code=0;
+    (void)a;
+    out->kind=input->kind;
+    if(!code) code=copy_thinkthen_cobol_ReceiptAnnotationMemberData(a,&input->data,&out->data,input->kind);
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptAnnotationMemberAnswerId(arena *a,const thinkthen_complete_annotation_member_answer_id_v1 *input,
+thinkthen_cobol_ReceiptAnnotationMemberAnswerId *out) {
+    int code=0;
+    (void)a;
+    if(input->answer) {
+        thinkthen_cobol_ReceiptAnswer *value=allocate(a,1,sizeof(*value));
+        if(!value) return a->code;
+        if(!code) code=copy_thinkthen_cobol_ReceiptAnswer(a,input->answer,value);
+        out->answer=value;
+    }
+    if(input->answer_id) {
+        thinkthen_cobol_ReceiptAnswerId *value=allocate(a,1,sizeof(*value));
+        if(!value) return a->code;
+        if(!code) code=copy_thinkthen_cobol_ReceiptAnswerId(a,input->answer_id,value);
+        out->answer_id=value;
+    }
+    if(!code) code=copy_thinkthen_cobol_ReceiptObservationList(a,&input->observations,&out->observations);
+    if(input->question) {
+        thinkthen_cobol_ReceiptQuestionDocument *value=allocate(a,1,sizeof(*value));
+        if(!value) return a->code;
+        if(!code) code=copy_thinkthen_cobol_ReceiptQuestionDocument(a,input->question,value);
+        out->question=value;
+    }
+    if(!code) code=copy_thinkthen_cobol_ReceiptQuestionSourceList(a,&input->question_sources,&out->question_sources);
+    if(!code) code=answer_text(input->request,&out->request);
+    if(!code) code=copy_thinkthen_cobol_ReceiptThresholdPresence(a,&input->threshold,&out->threshold);
+    if(!code) code=copy_thinkthen_cobol_ReceiptUsagePresence(a,&input->usage,&out->usage);
+    if(!code) code=copy_thinkthen_cobol_ReceiptValuePresence(a,&input->value,&out->value);
+    if(!code) code=copy_thinkthen_cobol_ReceiptExtensions(a,&input->extensions,&out->extensions);
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptValue(arena *a,const thinkthen_complete_value_v1 *input,
+thinkthen_cobol_ReceiptValue *out) {
+    int code=0;
+    (void)a;
+    out->kind=input->kind;
+    if(!code) code=copy_thinkthen_cobol_ReceiptValueData(a,&input->data,&out->data,input->kind);
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptFindQuestionDocument(arena *a,const thinkthen_complete_find_question_document_v1 *input,
+thinkthen_cobol_ReceiptFindQuestionDocument *out) {
+    int code=0;
+    (void)a;
+    if(!code) code=copy_thinkthen_cobol_ReceiptBatchPresence(a,&input->batch,&out->batch);
+    if(!code) code=copy_thinkthen_cobol_ReceiptInputDeclarationPresence(a,&input->context_schema,
+    &out->context_schema);
+    if(!code) code=copy_thinkthen_cobol_ReceiptInputDeclarationPresence(a,&input->item_schema,&out->item_schema);
+    if(!code) code=copy_thinkthen_cobol_ReceiptLabelListPresence(a,&input->label_details,&out->label_details);
+    if(!code) code=copy_thinkthen_cobol_ReceiptUtf8Presence(a,&input->model,&out->model);
+    if(!code) code=copy_thinkthen_cobol_ReceiptQuestionNamePresence(a,&input->name,&out->name);
+    out->none=input->none;
+    if(!code) code=copy_thinkthen_cobol_ReceiptStringListPresence(a,&input->on,&out->on);
+    if(!code) code=copy_thinkthen_cobol_ReceiptUtf8Presence(a,&input->profile,&out->profile);
+    if(!code) code=copy_thinkthen_cobol_ReceiptJsonPresence(a,&input->text,&out->text);
+    if(!code) code=answer_text(input->verb,&out->verb);
+    if(!code) code=copy_thinkthen_cobol_ReceiptWordingVersionPresence(a,&input->wording_version,
+    &out->wording_version);
+    if(!code) code=copy_thinkthen_cobol_ReceiptExtensions(a,&input->extensions,&out->extensions);
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptFindCandidateListPresence(arena *a,const thinkthen_complete_find_candidate_list_presence_v1 *input,
+thinkthen_cobol_ReceiptFindCandidateListPresence *out) {
+    int code=0;
+    (void)a;
+    out->presence=input->presence;
+    if(!code) code=copy_thinkthen_cobol_ReceiptFindCandidateList(a,&input->value,&out->value);
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptRankMemberListPresence(arena *a,const thinkthen_complete_rank_member_list_presence_v1 *input,
+thinkthen_cobol_ReceiptRankMemberListPresence *out) {
+    int code=0;
+    (void)a;
+    out->presence=input->presence;
+    if(!code) code=copy_thinkthen_cobol_ReceiptRankMemberList(a,&input->value,&out->value);
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptImageListPresence(arena *a,const thinkthen_complete_image_list_presence_v1 *input,
+thinkthen_cobol_ReceiptImageListPresence *out) {
+    int code=0;
+    (void)a;
+    out->presence=input->presence;
+    if(!code) code=copy_thinkthen_cobol_ReceiptImageList(a,&input->value,&out->value);
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptAtomicBoolean(arena *a,const thinkthen_complete_atomic_boolean_v1 *input,
+thinkthen_cobol_ReceiptAtomicBoolean *out) {
+    int code=0;
+    (void)a;
+    if(input->answer) {
+        thinkthen_cobol_ReceiptAnswer *value=allocate(a,1,sizeof(*value));
+        if(!value) return a->code;
+        if(!code) code=copy_thinkthen_cobol_ReceiptAnswer(a,input->answer,value);
+        out->answer=value;
+    }
+    if(input->answer_id) {
+        thinkthen_cobol_ReceiptAnswerId *value=allocate(a,1,sizeof(*value));
+        if(!value) return a->code;
+        if(!code) code=copy_thinkthen_cobol_ReceiptAnswerId(a,input->answer_id,value);
+        out->answer_id=value;
+    }
+    if(!code) code=copy_thinkthen_cobol_ReceiptImageListPresence(a,&input->images,&out->images);
+    if(!code) code=copy_thinkthen_cobol_ReceiptU64Presence(a,&input->index,&out->index);
+    if(!code) code=copy_thinkthen_cobol_ReceiptJsonPresence(a,&input->input,&out->input);
+    if(!code) code=copy_thinkthen_cobol_ReceiptRankMemberListPresence(a,&input->members,&out->members);
+    if(input->meta) {
+        thinkthen_cobol_ReceiptMeta *value=allocate(a,1,sizeof(*value));
+        if(!value) return a->code;
+        if(!code) code=copy_thinkthen_cobol_ReceiptMeta(a,input->meta,value);
+        out->meta=value;
+    }
+    if(input->question) {
+        thinkthen_cobol_ReceiptQuestionDocument *value=allocate(a,1,sizeof(*value));
+        if(!value) return a->code;
+        if(!code) code=copy_thinkthen_cobol_ReceiptQuestionDocument(a,input->question,value);
+        out->question=value;
+    }
+    if(!code) code=copy_thinkthen_cobol_ReceiptUtf8Presence(a,&input->question_name,&out->question_name);
+    if(input->schema) {
+        thinkthen_cobol_ReceiptVersion *value=allocate(a,1,sizeof(*value));
+        if(!value) return a->code;
+        if(!code) code=copy_thinkthen_cobol_ReceiptVersion(a,input->schema,value);
+        out->schema=value;
+    }
+    if(!code) code=copy_thinkthen_cobol_ReceiptPhysicalSourcePresence(a,&input->source,&out->source);
+    if(!code) code=copy_thinkthen_cobol_ReceiptThresholdPresence(a,&input->threshold,&out->threshold);
+    out->value=input->value;
+    if(!code) code=copy_thinkthen_cobol_ReceiptExtensions(a,&input->extensions,&out->extensions);
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptAtomicDouble(arena *a,const thinkthen_complete_atomic_double_v1 *input,
+thinkthen_cobol_ReceiptAtomicDouble *out) {
+    int code=0;
+    (void)a;
+    if(input->answer) {
+        thinkthen_cobol_ReceiptAnswer *value=allocate(a,1,sizeof(*value));
+        if(!value) return a->code;
+        if(!code) code=copy_thinkthen_cobol_ReceiptAnswer(a,input->answer,value);
+        out->answer=value;
+    }
+    if(input->answer_id) {
+        thinkthen_cobol_ReceiptAnswerId *value=allocate(a,1,sizeof(*value));
+        if(!value) return a->code;
+        if(!code) code=copy_thinkthen_cobol_ReceiptAnswerId(a,input->answer_id,value);
+        out->answer_id=value;
+    }
+    if(!code) code=copy_thinkthen_cobol_ReceiptImageListPresence(a,&input->images,&out->images);
+    if(!code) code=copy_thinkthen_cobol_ReceiptU64Presence(a,&input->index,&out->index);
+    if(!code) code=copy_thinkthen_cobol_ReceiptJsonPresence(a,&input->input,&out->input);
+    if(!code) code=copy_thinkthen_cobol_ReceiptRankMemberListPresence(a,&input->members,&out->members);
+    if(input->meta) {
+        thinkthen_cobol_ReceiptMeta *value=allocate(a,1,sizeof(*value));
+        if(!value) return a->code;
+        if(!code) code=copy_thinkthen_cobol_ReceiptMeta(a,input->meta,value);
+        out->meta=value;
+    }
+    if(input->question) {
+        thinkthen_cobol_ReceiptQuestionDocument *value=allocate(a,1,sizeof(*value));
+        if(!value) return a->code;
+        if(!code) code=copy_thinkthen_cobol_ReceiptQuestionDocument(a,input->question,value);
+        out->question=value;
+    }
+    if(!code) code=copy_thinkthen_cobol_ReceiptUtf8Presence(a,&input->question_name,&out->question_name);
+    if(input->schema) {
+        thinkthen_cobol_ReceiptVersion *value=allocate(a,1,sizeof(*value));
+        if(!value) return a->code;
+        if(!code) code=copy_thinkthen_cobol_ReceiptVersion(a,input->schema,value);
+        out->schema=value;
+    }
+    if(!code) code=copy_thinkthen_cobol_ReceiptPhysicalSourcePresence(a,&input->source,&out->source);
+    if(!code) code=copy_thinkthen_cobol_ReceiptThresholdPresence(a,&input->threshold,&out->threshold);
+    out->value=input->value;
+    if(!code) code=copy_thinkthen_cobol_ReceiptExtensions(a,&input->extensions,&out->extensions);
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptAtomicArrayOfString(arena *a,const thinkthen_complete_atomic_array_of_string_v1 *input,
+thinkthen_cobol_ReceiptAtomicArrayOfString *out) {
+    int code=0;
+    (void)a;
+    if(input->answer) {
+        thinkthen_cobol_ReceiptAnswer *value=allocate(a,1,sizeof(*value));
+        if(!value) return a->code;
+        if(!code) code=copy_thinkthen_cobol_ReceiptAnswer(a,input->answer,value);
+        out->answer=value;
+    }
+    if(input->answer_id) {
+        thinkthen_cobol_ReceiptAnswerId *value=allocate(a,1,sizeof(*value));
+        if(!value) return a->code;
+        if(!code) code=copy_thinkthen_cobol_ReceiptAnswerId(a,input->answer_id,value);
+        out->answer_id=value;
+    }
+    if(!code) code=copy_thinkthen_cobol_ReceiptImageListPresence(a,&input->images,&out->images);
+    if(!code) code=copy_thinkthen_cobol_ReceiptU64Presence(a,&input->index,&out->index);
+    if(!code) code=copy_thinkthen_cobol_ReceiptJsonPresence(a,&input->input,&out->input);
+    if(!code) code=copy_thinkthen_cobol_ReceiptRankMemberListPresence(a,&input->members,&out->members);
+    if(input->meta) {
+        thinkthen_cobol_ReceiptMeta *value=allocate(a,1,sizeof(*value));
+        if(!value) return a->code;
+        if(!code) code=copy_thinkthen_cobol_ReceiptMeta(a,input->meta,value);
+        out->meta=value;
+    }
+    if(input->question) {
+        thinkthen_cobol_ReceiptQuestionDocument *value=allocate(a,1,sizeof(*value));
+        if(!value) return a->code;
+        if(!code) code=copy_thinkthen_cobol_ReceiptQuestionDocument(a,input->question,value);
+        out->question=value;
+    }
+    if(!code) code=copy_thinkthen_cobol_ReceiptUtf8Presence(a,&input->question_name,&out->question_name);
+    if(input->schema) {
+        thinkthen_cobol_ReceiptVersion *value=allocate(a,1,sizeof(*value));
+        if(!value) return a->code;
+        if(!code) code=copy_thinkthen_cobol_ReceiptVersion(a,input->schema,value);
+        out->schema=value;
+    }
+    if(!code) code=copy_thinkthen_cobol_ReceiptPhysicalSourcePresence(a,&input->source,&out->source);
+    if(!code) code=copy_thinkthen_cobol_ReceiptThresholdPresence(a,&input->threshold,&out->threshold);
+    if(!code) code=copy_thinkthen_cobol_ReceiptStringList(a,&input->value,&out->value);
+    if(!code) code=copy_thinkthen_cobol_ReceiptExtensions(a,&input->extensions,&out->extensions);
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptAtomicNullableString(arena *a,const thinkthen_complete_atomic_nullable_string_v1 *input,
+thinkthen_cobol_ReceiptAtomicNullableString *out) {
+    int code=0;
+    (void)a;
+    if(input->answer) {
+        thinkthen_cobol_ReceiptAnswer *value=allocate(a,1,sizeof(*value));
+        if(!value) return a->code;
+        if(!code) code=copy_thinkthen_cobol_ReceiptAnswer(a,input->answer,value);
+        out->answer=value;
+    }
+    if(input->answer_id) {
+        thinkthen_cobol_ReceiptAnswerId *value=allocate(a,1,sizeof(*value));
+        if(!value) return a->code;
+        if(!code) code=copy_thinkthen_cobol_ReceiptAnswerId(a,input->answer_id,value);
+        out->answer_id=value;
+    }
+    if(!code) code=copy_thinkthen_cobol_ReceiptImageListPresence(a,&input->images,&out->images);
+    if(!code) code=copy_thinkthen_cobol_ReceiptU64Presence(a,&input->index,&out->index);
+    if(!code) code=copy_thinkthen_cobol_ReceiptJsonPresence(a,&input->input,&out->input);
+    if(!code) code=copy_thinkthen_cobol_ReceiptRankMemberListPresence(a,&input->members,&out->members);
+    if(input->meta) {
+        thinkthen_cobol_ReceiptMeta *value=allocate(a,1,sizeof(*value));
+        if(!value) return a->code;
+        if(!code) code=copy_thinkthen_cobol_ReceiptMeta(a,input->meta,value);
+        out->meta=value;
+    }
+    if(input->question) {
+        thinkthen_cobol_ReceiptQuestionDocument *value=allocate(a,1,sizeof(*value));
+        if(!value) return a->code;
+        if(!code) code=copy_thinkthen_cobol_ReceiptQuestionDocument(a,input->question,value);
+        out->question=value;
+    }
+    if(!code) code=copy_thinkthen_cobol_ReceiptUtf8Presence(a,&input->question_name,&out->question_name);
+    if(input->schema) {
+        thinkthen_cobol_ReceiptVersion *value=allocate(a,1,sizeof(*value));
+        if(!value) return a->code;
+        if(!code) code=copy_thinkthen_cobol_ReceiptVersion(a,input->schema,value);
+        out->schema=value;
+    }
+    if(!code) code=copy_thinkthen_cobol_ReceiptPhysicalSourcePresence(a,&input->source,&out->source);
+    if(!code) code=copy_thinkthen_cobol_ReceiptThresholdPresence(a,&input->threshold,&out->threshold);
+    if(!code) code=copy_thinkthen_cobol_ReceiptUtf8Presence(a,&input->value,&out->value);
+    if(!code) code=copy_thinkthen_cobol_ReceiptExtensions(a,&input->extensions,&out->extensions);
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptAtomicDecideValue(arena *a,const thinkthen_complete_atomic_decide_value_v1 *input,
+thinkthen_cobol_ReceiptAtomicDecideValue *out) {
+    int code=0;
+    (void)a;
+    if(input->answer) {
+        thinkthen_cobol_ReceiptAnswer *value=allocate(a,1,sizeof(*value));
+        if(!value) return a->code;
+        if(!code) code=copy_thinkthen_cobol_ReceiptAnswer(a,input->answer,value);
+        out->answer=value;
+    }
+    if(input->answer_id) {
+        thinkthen_cobol_ReceiptAnswerId *value=allocate(a,1,sizeof(*value));
+        if(!value) return a->code;
+        if(!code) code=copy_thinkthen_cobol_ReceiptAnswerId(a,input->answer_id,value);
+        out->answer_id=value;
+    }
+    if(!code) code=copy_thinkthen_cobol_ReceiptImageListPresence(a,&input->images,&out->images);
+    if(!code) code=copy_thinkthen_cobol_ReceiptU64Presence(a,&input->index,&out->index);
+    if(!code) code=copy_thinkthen_cobol_ReceiptJsonPresence(a,&input->input,&out->input);
+    if(!code) code=copy_thinkthen_cobol_ReceiptRankMemberListPresence(a,&input->members,&out->members);
+    if(input->meta) {
+        thinkthen_cobol_ReceiptMeta *value=allocate(a,1,sizeof(*value));
+        if(!value) return a->code;
+        if(!code) code=copy_thinkthen_cobol_ReceiptMeta(a,input->meta,value);
+        out->meta=value;
+    }
+    if(input->question) {
+        thinkthen_cobol_ReceiptQuestionDocument *value=allocate(a,1,sizeof(*value));
+        if(!value) return a->code;
+        if(!code) code=copy_thinkthen_cobol_ReceiptQuestionDocument(a,input->question,value);
+        out->question=value;
+    }
+    if(!code) code=copy_thinkthen_cobol_ReceiptUtf8Presence(a,&input->question_name,&out->question_name);
+    if(input->schema) {
+        thinkthen_cobol_ReceiptVersion *value=allocate(a,1,sizeof(*value));
+        if(!value) return a->code;
+        if(!code) code=copy_thinkthen_cobol_ReceiptVersion(a,input->schema,value);
+        out->schema=value;
+    }
+    if(!code) code=copy_thinkthen_cobol_ReceiptPhysicalSourcePresence(a,&input->source,&out->source);
+    if(!code) code=copy_thinkthen_cobol_ReceiptThresholdPresence(a,&input->threshold,&out->threshold);
+    if(!code) code=copy_thinkthen_cobol_ReceiptDecideValuePresence(a,&input->value,&out->value);
+    if(!code) code=copy_thinkthen_cobol_ReceiptExtensions(a,&input->extensions,&out->extensions);
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptRelation(arena *a,const thinkthen_complete_relation_v1 *input,
+thinkthen_cobol_ReceiptRelation *out) {
+    int code=0;
+    (void)a;
+    if(input->answer) {
+        thinkthen_cobol_ReceiptAnswers *value=allocate(a,1,sizeof(*value));
+        if(!value) return a->code;
+        if(!code) code=copy_thinkthen_cobol_ReceiptAnswers(a,input->answer,value);
+        out->answer=value;
+    }
+    if(input->answer_id) {
+        thinkthen_cobol_ReceiptAnswerId *value=allocate(a,1,sizeof(*value));
+        if(!value) return a->code;
+        if(!code) code=copy_thinkthen_cobol_ReceiptAnswerId(a,input->answer_id,value);
+        out->answer_id=value;
+    }
+    if(!code) code=copy_thinkthen_cobol_ReceiptUtf8Presence(a,&input->file,&out->file);
+    if(!code) code=copy_thinkthen_cobol_ReceiptU64Presence(a,&input->first_line,&out->first_line);
+    if(!code) code=copy_thinkthen_cobol_ReceiptU64Presence(a,&input->index,&out->index);
+    if(!code) code=copy_thinkthen_cobol_ReceiptJsonPresence(a,&input->input,&out->input);
+    if(!code) code=copy_thinkthen_cobol_ReceiptSessionInputSourceListPresence(a,&input->input_sources,
+    &out->input_sources);
+    if(!code) code=copy_thinkthen_cobol_ReceiptU64Presence(a,&input->last_line,&out->last_line);
+    if(input->meta) {
+        thinkthen_cobol_ReceiptMeta *value=allocate(a,1,sizeof(*value));
+        if(!value) return a->code;
+        if(!code) code=copy_thinkthen_cobol_ReceiptMeta(a,input->meta,value);
+        out->meta=value;
+    }
+    if(!code) code=copy_thinkthen_cobol_ReceiptPositionPresence(a,&input->position,&out->position);
+    if(input->question) {
+        thinkthen_cobol_ReceiptRelateQuestionDocument *value=allocate(a,1,sizeof(*value));
+        if(!value) return a->code;
+        if(!code) code=copy_thinkthen_cobol_ReceiptRelateQuestionDocument(a,input->question,value);
+        out->question=value;
+    }
+    if(input->schema) {
+        thinkthen_cobol_ReceiptVersion *value=allocate(a,1,sizeof(*value));
+        if(!value) return a->code;
+        if(!code) code=copy_thinkthen_cobol_ReceiptVersion(a,input->schema,value);
+        out->schema=value;
+    }
+    if(!code) code=copy_thinkthen_cobol_ReceiptRelatedEntityEdgeList(a,&input->value,&out->value);
+    if(!code) code=copy_thinkthen_cobol_ReceiptExtensions(a,&input->extensions,&out->extensions);
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptRelateQuestionDocument(arena *a,const thinkthen_complete_relate_question_document_v1 *input,
+thinkthen_cobol_ReceiptRelateQuestionDocument *out) {
+    int code=0;
+    (void)a;
+    if(!code) code=copy_thinkthen_cobol_ReceiptBatchPresence(a,&input->batch,&out->batch);
+    if(!code) code=copy_thinkthen_cobol_ReceiptInputDeclarationPresence(a,&input->context_schema,
+    &out->context_schema);
+    if(!code) code=copy_thinkthen_cobol_ReceiptRelateFieldsPresence(a,&input->fields,&out->fields);
+    if(!code) code=copy_thinkthen_cobol_ReceiptInputDeclarationPresence(a,&input->item_schema,&out->item_schema);
+    if(!code) code=copy_thinkthen_cobol_ReceiptLabelListPresence(a,&input->label_details,&out->label_details);
+    if(!code) code=copy_thinkthen_cobol_ReceiptUtf8Presence(a,&input->model,&out->model);
+    if(!code) code=copy_thinkthen_cobol_ReceiptQuestionNamePresence(a,&input->name,&out->name);
+    if(!code) code=copy_thinkthen_cobol_ReceiptStringListPresence(a,&input->on,&out->on);
+    if(!code) code=copy_thinkthen_cobol_ReceiptUtf8Presence(a,&input->profile,&out->profile);
+    if(!code) code=copy_thinkthen_cobol_ReceiptRelationRuleList(a,&input->relations,&out->relations);
+    if(input->threshold) {
+        thinkthen_cobol_ReceiptThreshold *value=allocate(a,1,sizeof(*value));
+        if(!value) return a->code;
+        if(!code) code=copy_thinkthen_cobol_ReceiptThreshold(a,input->threshold,value);
+        out->threshold=value;
+    }
+    if(!code) code=answer_text(input->verb,&out->verb);
+    if(!code) code=copy_thinkthen_cobol_ReceiptWordingVersionPresence(a,&input->wording_version,
+    &out->wording_version);
+    if(!code) code=copy_thinkthen_cobol_ReceiptExtensions(a,&input->extensions,&out->extensions);
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptMeta(arena *a,const thinkthen_complete_meta_v1 *input,
+thinkthen_cobol_ReceiptMeta *out) {
+    int code=0;
+    (void)a;
+    if(!code) code=copy_thinkthen_cobol_ReceiptUtf8Presence(a,&input->answered_by,&out->answered_by);
+    if(!code) code=copy_thinkthen_cobol_ReceiptAttemptListPresence(a,&input->attempts,&out->attempts);
+    if(!code) code=copy_thinkthen_cobol_ReceiptBatchSettingPresence(a,&input->batch_setting,&out->batch_setting);
+    if(!code) code=copy_thinkthen_cobol_ReceiptBatchWarningPresence(a,&input->batch_warning,&out->batch_warning);
+    out->cached=input->cached;
+    if(!code) code=copy_thinkthen_cobol_ReceiptUtf8Presence(a,&input->context_sha256,&out->context_sha256);
+    out->failed_questions=input->failed_questions;
+    if(!code) code=answer_text(input->model,&out->model);
+    if(!code) code=copy_thinkthen_cobol_ReceiptObservationList(a,&input->observations,&out->observations);
+    if(!code) code=copy_thinkthen_cobol_ReceiptOriginPresence(a,&input->origin,&out->origin);
+    if(!code) code=copy_thinkthen_cobol_ReceiptProfileWarningPresence(a,&input->profile_warning,
+    &out->profile_warning);
+    if(!code) code=copy_thinkthen_cobol_ReceiptUtf8Presence(a,&input->question_sha256,&out->question_sha256);
+    if(!code) code=copy_thinkthen_cobol_ReceiptQuestionSourceList(a,&input->question_sources,&out->question_sources);
+    if(!code) code=copy_thinkthen_cobol_ReceiptUtf8Presence(a,&input->questions_sha256,&out->questions_sha256);
+    if(!code) code=copy_thinkthen_cobol_ReceiptStringList(a,&input->requests,&out->requests);
+    out->requests_sent=input->requests_sent;
+    if(!code) code=answer_text(input->tool,&out->tool);
+    if(!code) code=answer_text(input->url,&out->url);
+    if(!code) code=copy_thinkthen_cobol_ReceiptUsagePresence(a,&input->usage,&out->usage);
+    if(!code) code=copy_thinkthen_cobol_ReceiptExtensions(a,&input->extensions,&out->extensions);
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptRecognizeEntities(arena *a,const thinkthen_complete_recognize_entities_v1 *input,
+thinkthen_cobol_ReceiptRecognizeEntities *out) {
+    int code=0;
+    (void)a;
+    if(!code) code=copy_thinkthen_cobol_ReceiptEntityList(a,&input->entities,&out->entities);
+    if(!code) code=copy_thinkthen_cobol_ReceiptEntityEdgeListPresence(a,&input->relations,&out->relations);
+    if(!code) code=copy_thinkthen_cobol_ReceiptExtensions(a,&input->extensions,&out->extensions);
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptFind(arena *a,const thinkthen_complete_find_v1 *input,
+thinkthen_cobol_ReceiptFind *out) {
+    int code=0;
+    (void)a;
+    if(input->answer) {
+        thinkthen_cobol_ReceiptFindAnswer *value=allocate(a,1,sizeof(*value));
+        if(!value) return a->code;
+        if(!code) code=copy_thinkthen_cobol_ReceiptFindAnswer(a,input->answer,value);
+        out->answer=value;
+    }
+    if(input->answer_id) {
+        thinkthen_cobol_ReceiptAnswerId *value=allocate(a,1,sizeof(*value));
+        if(!value) return a->code;
+        if(!code) code=copy_thinkthen_cobol_ReceiptAnswerId(a,input->answer_id,value);
+        out->answer_id=value;
+    }
+    if(!code) code=copy_thinkthen_cobol_ReceiptFindCandidateListPresence(a,&input->candidates,&out->candidates);
+    if(!code) code=copy_thinkthen_cobol_ReceiptUtf8Presence(a,&input->file,&out->file);
+    if(!code) code=copy_thinkthen_cobol_ReceiptU64Presence(a,&input->first_line,&out->first_line);
+    if(!code) code=copy_thinkthen_cobol_ReceiptU64Presence(a,&input->index,&out->index);
+    if(!code) code=copy_thinkthen_cobol_ReceiptU64Presence(a,&input->last_line,&out->last_line);
+    if(input->meta) {
+        thinkthen_cobol_ReceiptMeta *value=allocate(a,1,sizeof(*value));
+        if(!value) return a->code;
+        if(!code) code=copy_thinkthen_cobol_ReceiptMeta(a,input->meta,value);
+        out->meta=value;
+    }
+    if(!code) code=copy_thinkthen_cobol_ReceiptPositionPresence(a,&input->position,&out->position);
+    if(input->question) {
+        thinkthen_cobol_ReceiptFindQuestionDocument *value=allocate(a,1,sizeof(*value));
+        if(!value) return a->code;
+        if(!code) code=copy_thinkthen_cobol_ReceiptFindQuestionDocument(a,input->question,value);
+        out->question=value;
+    }
+    if(input->schema) {
+        thinkthen_cobol_ReceiptVersion *value=allocate(a,1,sizeof(*value));
+        if(!value) return a->code;
+        if(!code) code=copy_thinkthen_cobol_ReceiptVersion(a,input->schema,value);
+        out->schema=value;
+    }
+    if(!code) code=copy_thinkthen_cobol_ReceiptJsonPresence(a,&input->threshold,&out->threshold);
+    if(!code) code=copy_thinkthen_cobol_ReceiptJsonPresence(a,&input->value,&out->value);
+    if(!code) code=copy_thinkthen_cobol_ReceiptExtensions(a,&input->extensions,&out->extensions);
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptAtomicNonZeroUsize(arena *a,const thinkthen_complete_atomic_non_zero_usize_v1 *input,
+thinkthen_cobol_ReceiptAtomicNonZeroUsize *out) {
+    int code=0;
+    (void)a;
+    if(input->answer) {
+        thinkthen_cobol_ReceiptAnswer *value=allocate(a,1,sizeof(*value));
+        if(!value) return a->code;
+        if(!code) code=copy_thinkthen_cobol_ReceiptAnswer(a,input->answer,value);
+        out->answer=value;
+    }
+    if(input->answer_id) {
+        thinkthen_cobol_ReceiptAnswerId *value=allocate(a,1,sizeof(*value));
+        if(!value) return a->code;
+        if(!code) code=copy_thinkthen_cobol_ReceiptAnswerId(a,input->answer_id,value);
+        out->answer_id=value;
+    }
+    if(!code) code=copy_thinkthen_cobol_ReceiptImageListPresence(a,&input->images,&out->images);
+    if(!code) code=copy_thinkthen_cobol_ReceiptU64Presence(a,&input->index,&out->index);
+    if(!code) code=copy_thinkthen_cobol_ReceiptJsonPresence(a,&input->input,&out->input);
+    if(!code) code=copy_thinkthen_cobol_ReceiptRankMemberListPresence(a,&input->members,&out->members);
+    if(input->meta) {
+        thinkthen_cobol_ReceiptMeta *value=allocate(a,1,sizeof(*value));
+        if(!value) return a->code;
+        if(!code) code=copy_thinkthen_cobol_ReceiptMeta(a,input->meta,value);
+        out->meta=value;
+    }
+    if(input->question) {
+        thinkthen_cobol_ReceiptQuestionDocument *value=allocate(a,1,sizeof(*value));
+        if(!value) return a->code;
+        if(!code) code=copy_thinkthen_cobol_ReceiptQuestionDocument(a,input->question,value);
+        out->question=value;
+    }
+    if(!code) code=copy_thinkthen_cobol_ReceiptUtf8Presence(a,&input->question_name,&out->question_name);
+    if(input->schema) {
+        thinkthen_cobol_ReceiptVersion *value=allocate(a,1,sizeof(*value));
+        if(!value) return a->code;
+        if(!code) code=copy_thinkthen_cobol_ReceiptVersion(a,input->schema,value);
+        out->schema=value;
+    }
+    if(!code) code=copy_thinkthen_cobol_ReceiptPhysicalSourcePresence(a,&input->source,&out->source);
+    if(!code) code=copy_thinkthen_cobol_ReceiptThresholdPresence(a,&input->threshold,&out->threshold);
+    out->value=input->value;
+    if(!code) code=copy_thinkthen_cobol_ReceiptExtensions(a,&input->extensions,&out->extensions);
+    return code ? code : a->code;
+}
+static int copy_thinkthen_cobol_ReceiptRankMemberResult(arena *a,const thinkthen_complete_rank_member_result_v1 *input,
+thinkthen_cobol_ReceiptRankMemberResult *out) {
+    int code=0;
+    (void)a;
+    if(input->answer) {
+        thinkthen_cobol_ReceiptAnswer *value=allocate(a,1,sizeof(*value));
+        if(!value) return a->code;
+        if(!code) code=copy_thinkthen_cobol_ReceiptAnswer(a,input->answer,value);
+        out->answer=value;
+    }
+    if(input->answer_id) {
+        thinkthen_cobol_ReceiptAnswerId *value=allocate(a,1,sizeof(*value));
+        if(!value) return a->code;
+        if(!code) code=copy_thinkthen_cobol_ReceiptAnswerId(a,input->answer_id,value);
+        out->answer_id=value;
+    }
+    if(!code) code=copy_thinkthen_cobol_ReceiptImageListPresence(a,&input->images,&out->images);
+    if(input->meta) {
+        thinkthen_cobol_ReceiptMeta *value=allocate(a,1,sizeof(*value));
+        if(!value) return a->code;
+        if(!code) code=copy_thinkthen_cobol_ReceiptMeta(a,input->meta,value);
+        out->meta=value;
+    }
+    if(input->question) {
+        thinkthen_cobol_ReceiptQuestionDocument *value=allocate(a,1,sizeof(*value));
+        if(!value) return a->code;
+        if(!code) code=copy_thinkthen_cobol_ReceiptQuestionDocument(a,input->question,value);
+        out->question=value;
+    }
+    if(input->schema) {
+        thinkthen_cobol_ReceiptVersion *value=allocate(a,1,sizeof(*value));
+        if(!value) return a->code;
+        if(!code) code=copy_thinkthen_cobol_ReceiptVersion(a,input->schema,value);
+        out->schema=value;
+    }
+    if(!code) code=copy_thinkthen_cobol_ReceiptPhysicalSourcePresence(a,&input->source,&out->source);
+    if(!code) code=copy_thinkthen_cobol_ReceiptJsonPresence(a,&input->threshold,&out->threshold);
+    out->value=input->value;
+    if(!code) code=copy_thinkthen_cobol_ReceiptExtensions(a,&input->extensions,&out->extensions);
+    return code ? code : a->code;
+}
+static int append_receipts(tt_answer_owner *owner,const void *rows,size_t count,size_t width) {
+    if(count>SIZE_MAX/width-owner->receipt_count) return THINKTHEN_COBOL_OVERFLOW;
+    size_t total=owner->receipt_count+count;
+    void *data=realloc(owner->receipts,total*width);
+    if(total && !data) return THINKTHEN_ELOCAL;
+    owner->receipts=data;
+    if(count) memcpy((char *)data+owner->receipt_count*width,rows,count*width);
+    owner->receipt_count=total;
+    return 0;
+}
+static int append_numbers(tt_answer_owner *owner,const thinkthen_cobol_AnswerNumber *rows,size_t count) {
+    if(count>SIZE_MAX/sizeof(*rows)-owner->probability_count) return THINKTHEN_COBOL_OVERFLOW;
+    size_t total=owner->probability_count+count;
+    void *data=realloc(owner->probabilities,total*sizeof(*rows));
+    if(total && !data) return THINKTHEN_ELOCAL;
+    owner->probabilities=data;
+    if(count) memcpy(owner->probabilities+owner->probability_count,rows,count*sizeof(*rows));
+    owner->probability_count=total;
+    return 0;
+}
+static int append_probability_list(tt_answer_owner *owner,const thinkthen_cobol_AnswerNumber *rows,
+size_t count) {
+    if(owner->probability_list_count==SIZE_MAX/sizeof(*owner->probability_lists)) return THINKTHEN_COBOL_OVERFLOW;
+    size_t total=owner->probability_list_count+1;
+    void *data=realloc(owner->probability_lists,total*sizeof(*owner->probability_lists));
+    if(!data) return THINKTHEN_ELOCAL;
+    owner->probability_lists=data;
+    owner->probability_lists[owner->probability_list_count++]=(thinkthen_cobol_AnswerProbabilityList){
+        rows,count
+    };
+    return 0;
+}
+static int observe_resolution(tt_answer_owner *owner,const thinkthen_complete_session_packet_v1 *packet) {
+    if(packet->kind!=THINKTHEN_COMPLETE_SESSION_PACKET_OBSERVATION_V1) return 0;
+    const thinkthen_complete_session_observation_v1 *observation=packet->data.observation->value;
+    if(observation->kind!=THINKTHEN_COMPLETE_SESSION_OBSERVATION_ROW_V1) return 0;
+    const thinkthen_complete_session_observation_row_v1 *row=observation->data.row;
+    if(row->value->kind!=THINKTHEN_COMPLETE_SESSION_OBSERVED_ROW_JUDGMENT_V1) return 0;
+    const thinkthen_complete_session_judgment_v1 *judgment=row->value->data.judgment->value;
+    uint32_t present=0;
+    if(judgment->kind==THINKTHEN_COMPLETE_SESSION_JUDGMENT_DECISION_V1) present=judgment->data.decision->value.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1;
+    else if(judgment->kind==THINKTHEN_COMPLETE_SESSION_JUDGMENT_CHOICE_V1) present=judgment->data.choice->value.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1;
+    else return 0;
+    if(row->index==SIZE_MAX) return THINKTHEN_COBOL_OVERFLOW;
+    size_t count=row->index+1;
+    if(count>owner->resolved_count) {
+        void *data=realloc(owner->resolved,count);
+        if(!data) return THINKTHEN_ELOCAL;
+        owner->resolved=data;
+        memset(owner->resolved+owner->resolved_count,0,count-owner->resolved_count);
+        owner->resolved_count=count;
+    }
+    owner->resolved[row->index]=(unsigned char)present;
+    return 0;
+}
+static thinkthen_cobol_AnswerNumber picked_number(thinkthen_complete_number_map_v1 probabilities,
+thinkthen_complete_utf8_v1 pick) {
+    for(size_t i=0;
+    i<probabilities.len;
+    i++) if(probabilities.data[i].name.len==pick.len && (!pick.len || !memcmp(probabilities.data[i].name.data,
+    pick.data,pick.len))) return (thinkthen_cobol_AnswerNumber){
+        1,probabilities.data[i].value
+    };
+    return (thinkthen_cobol_AnswerNumber){
+        0
+    };
+}
+static thinkthen_cobol_AnswerNumber answer_number(const thinkthen_complete_answer_v1 *answer) {
+    if(answer->kind==THINKTHEN_COMPLETE_ANSWER_YES_NO_V1) return (thinkthen_cobol_AnswerNumber){
+        1,answer->data.yes_no->probability
+    };
+    if(answer->kind==THINKTHEN_COMPLETE_ANSWER_CHOICE_V1) return picked_number(answer->data.choice->probabilities,
+    answer->data.choice->pick);
+    return (thinkthen_cobol_AnswerNumber){
+        0
+    };
+}
+static thinkthen_cobol_AnswerNumber recognition_number(const thinkthen_complete_recognition_v1 *receipt,
+const thinkthen_complete_entity_v1 *entity) {
+    if(receipt->answer->kind!=THINKTHEN_COMPLETE_RECOGNITION_ODDS_RECOGNIZE_ANSWER_V1) return (thinkthen_cobol_AnswerNumber){
+        0
+    };
+    const thinkthen_complete_recognition_proposal_list_v1 proposals=receipt->answer->data.recognize_answer->proposals;
+    for(size_t i=0;
+    i<proposals.len;
+    i++) {
+        const thinkthen_complete_recognition_proposal_v1 *proposal=proposals.data[i];
+        if(proposal->kept && proposal->selected.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 && proposal->selected.value->start==entity->start && proposal->selected.value->end==entity->end && proposal->kind.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 && proposal->kind.value.len==entity->kind.len && (!entity->kind.len || !memcmp(proposal->kind.value.data,
+        entity->kind.data,entity->kind.len))) return (thinkthen_cobol_AnswerNumber){
+            1,proposal->span_probability
+        };
+    }
+    return (thinkthen_cobol_AnswerNumber){
+        0
+    };
+}
+static int collect_receipts(tt_answer_owner *owner,const thinkthen_complete_session_packet_v1 *packet,
+uint32_t function) {
+    arena *a=&owner->storage;
+    int code=0;
+    switch(function) {
+        case THINKTHEN_COMPLETE_REQUEST_FUNCTION_DECIDE_V1: {
+            const thinkthen_complete_atomic_decide_value_v1 *const *items=NULL;
+            size_t count=0;
+            const thinkthen_complete_atomic_decide_value_v1 *single=NULL;
+            if(packet->kind==THINKTHEN_COMPLETE_SESSION_PACKET_DECIDE_AGGREGATE_V1) {
+                items=packet->data.decide_aggregate->value.data;
+                count=packet->data.decide_aggregate->value.len;
+            }
+            else if(packet->kind==THINKTHEN_COMPLETE_SESSION_PACKET_DECIDE_ROW_V1) {
+                single=packet->data.decide_row->value;
+                items=&single;
+                count=1;
+            }
+            else return 0;
+            thinkthen_cobol_ReceiptAtomicDecideValue *rows=allocate(a,count,sizeof(*rows));
+            if(!rows) return a->code;
+            for(size_t i=0;
+            i<count && !code;
+            i++) code=copy_thinkthen_cobol_ReceiptAtomicDecideValue(a,items[i],rows+i);
+            if(code) return code;
+            code=append_receipts(owner,rows,count,sizeof(*rows));
+            if(code) return code;
+            thinkthen_cobol_AnswerNumber *numbers=allocate(a,count,sizeof(*numbers));
+            if(!numbers) return a->code;
+            for(size_t i=0;
+            i<count;
+            i++) {
+                numbers[i]=answer_number(items[i]->answer);
+                uint64_t index=items[i]->index.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? items[i]->index.value : owner->receipt_count-count+i;
+                if(index>=owner->resolved_count || !owner->resolved[index]) numbers[i].present=0;
+            }
+            code=append_numbers(owner,numbers,count);
+            break;
+        }
+        case THINKTHEN_COMPLETE_REQUEST_FUNCTION_CHOOSE_V1: {
+            const thinkthen_complete_atomic_nullable_string_v1 *const *items=NULL;
+            size_t count=0;
+            const thinkthen_complete_atomic_nullable_string_v1 *single=NULL;
+            if(packet->kind==THINKTHEN_COMPLETE_SESSION_PACKET_CHOOSE_AGGREGATE_V1) {
+                items=packet->data.choose_aggregate->value.data;
+                count=packet->data.choose_aggregate->value.len;
+            }
+            else if(packet->kind==THINKTHEN_COMPLETE_SESSION_PACKET_CHOOSE_ROW_V1) {
+                single=packet->data.choose_row->value;
+                items=&single;
+                count=1;
+            }
+            else return 0;
+            thinkthen_cobol_ReceiptAtomicNullableString *rows=allocate(a,count,sizeof(*rows));
+            if(!rows) return a->code;
+            for(size_t i=0;
+            i<count && !code;
+            i++) code=copy_thinkthen_cobol_ReceiptAtomicNullableString(a,items[i],rows+i);
+            if(code) return code;
+            code=append_receipts(owner,rows,count,sizeof(*rows));
+            if(code) return code;
+            thinkthen_cobol_AnswerNumber *numbers=allocate(a,count,sizeof(*numbers));
+            if(!numbers) return a->code;
+            for(size_t i=0;
+            i<count;
+            i++) {
+                numbers[i]=answer_number(items[i]->answer);
+                uint64_t index=items[i]->index.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? items[i]->index.value : owner->receipt_count-count+i;
+                if(index>=owner->resolved_count || !owner->resolved[index]) numbers[i].present=0;
+            }
+            code=append_numbers(owner,numbers,count);
+            break;
+        }
+        case THINKTHEN_COMPLETE_REQUEST_FUNCTION_TAG_V1: {
+            const thinkthen_complete_atomic_array_of_string_v1 *const *items=NULL;
+            size_t count=0;
+            const thinkthen_complete_atomic_array_of_string_v1 *single=NULL;
+            if(packet->kind==THINKTHEN_COMPLETE_SESSION_PACKET_TAG_AGGREGATE_V1) {
+                items=packet->data.tag_aggregate->value.data;
+                count=packet->data.tag_aggregate->value.len;
+            }
+            else if(packet->kind==THINKTHEN_COMPLETE_SESSION_PACKET_TAG_ROW_V1) {
+                single=packet->data.tag_row->value;
+                items=&single;
+                count=1;
+            }
+            else return 0;
+            thinkthen_cobol_ReceiptAtomicArrayOfString *rows=allocate(a,count,sizeof(*rows));
+            if(!rows) return a->code;
+            for(size_t i=0;
+            i<count && !code;
+            i++) code=copy_thinkthen_cobol_ReceiptAtomicArrayOfString(a,items[i],rows+i);
+            if(code) return code;
+            code=append_receipts(owner,rows,count,sizeof(*rows));
+            if(code) return code;
+            break;
+        }
+        case THINKTHEN_COMPLETE_REQUEST_FUNCTION_SCORE_V1: {
+            const thinkthen_complete_atomic_double_v1 *const *items=NULL;
+            size_t count=0;
+            const thinkthen_complete_atomic_double_v1 *single=NULL;
+            if(packet->kind==THINKTHEN_COMPLETE_SESSION_PACKET_SCORE_AGGREGATE_V1) {
+                items=packet->data.score_aggregate->value.data;
+                count=packet->data.score_aggregate->value.len;
+            }
+            else if(packet->kind==THINKTHEN_COMPLETE_SESSION_PACKET_SCORE_ROW_V1) {
+                single=packet->data.score_row->value;
+                items=&single;
+                count=1;
+            }
+            else return 0;
+            thinkthen_cobol_ReceiptAtomicDouble *rows=allocate(a,count,sizeof(*rows));
+            if(!rows) return a->code;
+            for(size_t i=0;
+            i<count && !code;
+            i++) code=copy_thinkthen_cobol_ReceiptAtomicDouble(a,items[i],rows+i);
+            if(code) return code;
+            code=append_receipts(owner,rows,count,sizeof(*rows));
+            if(code) return code;
+            break;
+        }
+        case THINKTHEN_COMPLETE_REQUEST_FUNCTION_FILTER_V1: {
+            const thinkthen_complete_atomic_boolean_v1 *const *items=NULL;
+            size_t count=0;
+            const thinkthen_complete_atomic_boolean_v1 *single=NULL;
+            if(packet->kind==THINKTHEN_COMPLETE_SESSION_PACKET_FILTER_AGGREGATE_V1) {
+                items=packet->data.filter_aggregate->value.data;
+                count=packet->data.filter_aggregate->value.len;
+            }
+            else if(packet->kind==THINKTHEN_COMPLETE_SESSION_PACKET_FILTER_ROW_V1) {
+                single=packet->data.filter_row->value;
+                items=&single;
+                count=1;
+            }
+            else return 0;
+            thinkthen_cobol_ReceiptAtomicBoolean *rows=allocate(a,count,sizeof(*rows));
+            if(!rows) return a->code;
+            for(size_t i=0;
+            i<count && !code;
+            i++) code=copy_thinkthen_cobol_ReceiptAtomicBoolean(a,items[i],rows+i);
+            if(code) return code;
+            code=append_receipts(owner,rows,count,sizeof(*rows));
+            if(code) return code;
+            thinkthen_cobol_AnswerNumber *numbers=allocate(a,count,sizeof(*numbers));
+            if(!numbers) return a->code;
+            for(size_t i=0;
+            i<count;
+            i++) {
+                numbers[i]=answer_number(items[i]->answer);
+            }
+            code=append_numbers(owner,numbers,count);
+            break;
+        }
+        case THINKTHEN_COMPLETE_REQUEST_FUNCTION_RANK_V1: {
+            const thinkthen_complete_atomic_non_zero_usize_v1 *const *items=NULL;
+            size_t count=0;
+            if(packet->kind==THINKTHEN_COMPLETE_SESSION_PACKET_RANK_AGGREGATE_V1) {
+                items=packet->data.rank_aggregate->value.data;
+                count=packet->data.rank_aggregate->value.len;
+            }
+            else return 0;
+            thinkthen_cobol_ReceiptAtomicNonZeroUsize *rows=allocate(a,count,sizeof(*rows));
+            if(!rows) return a->code;
+            for(size_t i=0;
+            i<count && !code;
+            i++) code=copy_thinkthen_cobol_ReceiptAtomicNonZeroUsize(a,items[i],rows+i);
+            if(code) return code;
+            code=append_receipts(owner,rows,count,sizeof(*rows));
+            if(code) return code;
+            thinkthen_cobol_AnswerNumber *numbers=allocate(a,count,sizeof(*numbers));
+            if(!numbers) return a->code;
+            for(size_t i=0;
+            i<count;
+            i++) {
+                numbers[i]=answer_number(items[i]->answer);
+            }
+            code=append_numbers(owner,numbers,count);
+            break;
+        }
+        case THINKTHEN_COMPLETE_REQUEST_FUNCTION_FIND_V1: {
+            if(packet->kind!=THINKTHEN_COMPLETE_SESSION_PACKET_FIND_AGGREGATE_V1) return 0;
+            const thinkthen_complete_find_v1 *single=packet->data.find_aggregate->value;
+            const thinkthen_complete_find_v1 *const *items=&single;
+            size_t count=1;
+            thinkthen_cobol_ReceiptFind *rows=allocate(a,count,sizeof(*rows));
+            if(!rows) return a->code;
+            for(size_t i=0;
+            i<count && !code;
+            i++) code=copy_thinkthen_cobol_ReceiptFind(a,items[i],rows+i);
+            if(code) return code;
+            code=append_receipts(owner,rows,count,sizeof(*rows));
+            if(code) return code;
+            thinkthen_cobol_AnswerNumber *numbers=allocate(a,count,sizeof(*numbers));
+            if(!numbers) return a->code;
+            for(size_t i=0;
+            i<count;
+            i++) {
+                if(items[i]->index.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) numbers[i]=picked_number(items[i]->answer->probabilities,
+                items[i]->answer->pick);
+            }
+            code=append_numbers(owner,numbers,count);
+            break;
+        }
+        case THINKTHEN_COMPLETE_REQUEST_FUNCTION_ANNOTATE_V1: {
+            const thinkthen_complete_annotation_v1 *const *items=NULL;
+            size_t count=0;
+            const thinkthen_complete_annotation_v1 *single=NULL;
+            if(packet->kind==THINKTHEN_COMPLETE_SESSION_PACKET_ANNOTATE_AGGREGATE_V1) {
+                items=packet->data.annotate_aggregate->value.data;
+                count=packet->data.annotate_aggregate->value.len;
+            }
+            else if(packet->kind==THINKTHEN_COMPLETE_SESSION_PACKET_ANNOTATE_ROW_V1) {
+                single=packet->data.annotate_row->value;
+                items=&single;
+                count=1;
+            }
+            else return 0;
+            thinkthen_cobol_ReceiptAnnotation *rows=allocate(a,count,sizeof(*rows));
+            if(!rows) return a->code;
+            for(size_t i=0;
+            i<count && !code;
+            i++) code=copy_thinkthen_cobol_ReceiptAnnotation(a,items[i],rows+i);
+            if(code) return code;
+            code=append_receipts(owner,rows,count,sizeof(*rows));
+            if(code) return code;
+            break;
+        }
+        case THINKTHEN_COMPLETE_REQUEST_FUNCTION_RECOGNIZE_V1: {
+            const thinkthen_complete_recognition_v1 *const *items=NULL;
+            size_t count=0;
+            if(packet->kind==THINKTHEN_COMPLETE_SESSION_PACKET_RECOGNIZE_AGGREGATE_V1) {
+                items=packet->data.recognize_aggregate->value.data;
+                count=packet->data.recognize_aggregate->value.len;
+            }
+            else return 0;
+            thinkthen_cobol_ReceiptRecognition *rows=allocate(a,count,sizeof(*rows));
+            if(!rows) return a->code;
+            for(size_t i=0;
+            i<count && !code;
+            i++) code=copy_thinkthen_cobol_ReceiptRecognition(a,items[i],rows+i);
+            if(code) return code;
+            code=append_receipts(owner,rows,count,sizeof(*rows));
+            if(code) return code;
+            for(size_t i=0;
+            i<count && !code;
+            i++) {
+                const thinkthen_complete_recognize_v1 *value=items[i]->value;
+                size_t length=value->kind==THINKTHEN_COMPLETE_RECOGNIZE_ENTITIES_V1 ? value->data.entities->entities.len : value->data.mode_proposals->proposals.len;
+                thinkthen_cobol_AnswerNumber *numbers=allocate(a,length,sizeof(*numbers));
+                if(!numbers) return a->code;
+                for(size_t j=0;
+                j<length;
+                j++) {
+                    if(value->kind==THINKTHEN_COMPLETE_RECOGNIZE_ENTITIES_V1) numbers[j]=recognition_number(items[i],
+                    value->data.entities->entities.data[j]);
+                    else numbers[j]=(thinkthen_cobol_AnswerNumber){
+                        1,value->data.mode_proposals->proposals.data[j]->probability
+                    };
+                }
+                code=append_probability_list(owner,numbers,length);
+            }
+            break;
+        }
+        case THINKTHEN_COMPLETE_REQUEST_FUNCTION_RELATE_V1: {
+            if(packet->kind!=THINKTHEN_COMPLETE_SESSION_PACKET_RELATE_AGGREGATE_V1) return 0;
+            const thinkthen_complete_relation_v1 *single=packet->data.relate_aggregate->value;
+            const thinkthen_complete_relation_v1 *const *items=&single;
+            size_t count=1;
+            thinkthen_cobol_ReceiptRelation *rows=allocate(a,count,sizeof(*rows));
+            if(!rows) return a->code;
+            for(size_t i=0;
+            i<count && !code;
+            i++) code=copy_thinkthen_cobol_ReceiptRelation(a,items[i],rows+i);
+            if(code) return code;
+            code=append_receipts(owner,rows,count,sizeof(*rows));
+            if(code) return code;
+            size_t length=single->value.len;
+            thinkthen_cobol_AnswerNumber *numbers=allocate(a,length,sizeof(*numbers));
+            if(!numbers) return a->code;
+            for(size_t i=0;
+            i<length;
+            i++) numbers[i]=(thinkthen_cobol_AnswerNumber){
+                1,single->value.data[i]->probability
+            };
+            code=append_numbers(owner,numbers,length);
+            break;
+        }
+        default: return THINKTHEN_COBOL_REPRESENTATION;
+    }
+    return code ? code : a->code;
+}
 static int copy_recognition_entity(arena *a,const thinkthen_complete_entity_v1 *entity,thinkthen_cobol_AnswerRecognition *row) {
     row->start=entity->start;
     row->end=entity->end;
     row->length=entity->length;
-    row->probability=entity->strength;
+    row->strength=entity->strength;
     row->file_present=entity->file.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1;
     row->first_line_present=entity->first_line.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1;
     row->first_line=entity->first_line.value;
@@ -5298,9 +9169,11 @@ thinkthen_cobol_AnswerTable *out) {
                 const thinkthen_complete_decide_value_presence_v1 value=list.data[i]->value;
                 rows[i].present=value.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1;
                 if(rows[i].present) {
-                    if(!value.value || !value.value->value || value.value->value->kind!=THINKTHEN_COMPLETE_JSON_BOOLEAN_V1) return THINKTHEN_COBOL_REPRESENTATION;
-                    rows[i].value=value.value->value->data.boolean;
-                }
+                    if(!value.value || !value.value->value) return THINKTHEN_COBOL_REPRESENTATION;
+                    rows[i].value=answer_original(a,value.value->value);
+                } else rows[i].value=answer_original(a,&(thinkthen_complete_json_v1){
+                    .kind=THINKTHEN_COMPLETE_JSON_NULL_V1
+                });
             }
             break;
         }
@@ -5516,7 +9389,7 @@ thinkthen_cobol_AnswerTable *out) {
                         row->start=proposal->start;
                         row->end=proposal->end;
                         row->length=proposal->length;
-                        row->probability=proposal->probability;
+                        row->strength=0;
                         int code=answer_text(proposal->text,&row->text);
                         thinkthen_cobol_AnswerExtensions *extensions=allocate(a,1,sizeof(*extensions));
                         if(extensions && !code) code=copy_thinkthen_cobol_AnswerExtensions(a,&proposal->extensions,
@@ -5699,10 +9572,12 @@ size_t length,uint32_t kind,thinkthen_cobol_AnswerTable *out,thinkthen_cobol_Ans
                 if(!code) code=observed.failure_kind<sizeof(codes)/sizeof(codes[0]) ? codes[observed.failure_kind] : THINKTHEN_ELOCAL;
             }
         } else if(!code) {
+            code=observe_resolution(owner,packet);
+            if(!code) code=collect_receipts(owner,packet,kind);
             thinkthen_cobol_AnswerTable part={
                 0
             };
-            code=project_answer(&owner->storage,packet,kind,&part);
+            if(!code) code=project_answer(&owner->storage,packet,kind,&part);
             if(!code && part.count) code=append_answer(owner,part,kind);
             if(!code && part.edge_count) code=append_edges(owner,part);
         }
@@ -5728,11 +9603,24 @@ const thinkthen_cobol_RequestOptions *options,thinkthen_cobol_AnswerDecideResult
     int code=blocking_answer(engine,question,input,options,"decide",6,THINKTHEN_COMPLETE_REQUEST_FUNCTION_DECIDE_V1,
     &table,status_out);
     if(code) return code;
-    thinkthen_cobol_AnswerDecideResult value={
-        .owner=table.owner,.rows=table.rows,.count=table.count
+    for(size_t i=0;
+    i<table.count;
+    i++) ((thinkthen_cobol_AnswerDecision *)table.rows)[i].present=i<table.owner->probability_count && table.owner->probabilities[i].present;
+    thinkthen_cobol_AnswerDecideResult result={
+        .owner=table.owner,.value={
+            .rows=table.rows,.count=table.count
+        },.results={
+            table.owner->receipts,table.owner->receipt_count
+        },.facts_present=status_out->facts_present,.facts=status_out->facts
     };
-    if(table.count) value.first=value.rows[0];
-    *out=value;
+    result.value.scalar=input && (input->kind==THINKTHEN_COBOL_REQUESTINPUTTEXT_KIND || input->kind==THINKTHEN_COBOL_REQUESTINPUTJSON_KIND);
+    if(table.count) result.value.first=result.value.rows[0];
+    result.probability=(thinkthen_cobol_AnswerProbability){
+        .scalar=result.value.scalar,.data=table.owner->probabilities,.count=table.owner->probability_count,
+        .lists=table.owner->probability_lists,.list_count=table.owner->probability_list_count
+    };
+    if(result.probability.count) result.probability.first=result.probability.data[0];
+    *out=result;
     return 0;
 }
 int TT_CHOOSE(const void *engine,const thinkthen_cobol_RequestQuestion *question,const thinkthen_cobol_RequestInput *input,
@@ -5744,11 +9632,21 @@ const thinkthen_cobol_RequestOptions *options,thinkthen_cobol_AnswerChooseResult
     int code=blocking_answer(engine,question,input,options,"choose",6,THINKTHEN_COMPLETE_REQUEST_FUNCTION_CHOOSE_V1,
     &table,status_out);
     if(code) return code;
-    thinkthen_cobol_AnswerChooseResult value={
-        .owner=table.owner,.rows=table.rows,.count=table.count
+    thinkthen_cobol_AnswerChooseResult result={
+        .owner=table.owner,.value={
+            .rows=table.rows,.count=table.count
+        },.results={
+            table.owner->receipts,table.owner->receipt_count
+        },.facts_present=status_out->facts_present,.facts=status_out->facts
     };
-    if(table.count) value.first=value.rows[0];
-    *out=value;
+    result.value.scalar=input && (input->kind==THINKTHEN_COBOL_REQUESTINPUTTEXT_KIND || input->kind==THINKTHEN_COBOL_REQUESTINPUTJSON_KIND);
+    if(table.count) result.value.first=result.value.rows[0];
+    result.probability=(thinkthen_cobol_AnswerProbability){
+        .scalar=result.value.scalar,.data=table.owner->probabilities,.count=table.owner->probability_count,
+        .lists=table.owner->probability_lists,.list_count=table.owner->probability_list_count
+    };
+    if(result.probability.count) result.probability.first=result.probability.data[0];
+    *out=result;
     return 0;
 }
 int TT_TAG(const void *engine,const thinkthen_cobol_RequestQuestion *question,const thinkthen_cobol_RequestInput *input,
@@ -5760,11 +9658,21 @@ const thinkthen_cobol_RequestOptions *options,thinkthen_cobol_AnswerTagResult *o
     int code=blocking_answer(engine,question,input,options,"tag",3,THINKTHEN_COMPLETE_REQUEST_FUNCTION_TAG_V1,
     &table,status_out);
     if(code) return code;
-    thinkthen_cobol_AnswerTagResult value={
-        .owner=table.owner,.rows=table.rows,.count=table.count
+    thinkthen_cobol_AnswerTagResult result={
+        .owner=table.owner,.value={
+            .rows=table.rows,.count=table.count
+        },.results={
+            table.owner->receipts,table.owner->receipt_count
+        },.facts_present=status_out->facts_present,.facts=status_out->facts
     };
-    if(table.count) value.first=value.rows[0];
-    *out=value;
+    result.value.scalar=input && (input->kind==THINKTHEN_COBOL_REQUESTINPUTTEXT_KIND || input->kind==THINKTHEN_COBOL_REQUESTINPUTJSON_KIND);
+    if(table.count) result.value.first=result.value.rows[0];
+    result.probability=(thinkthen_cobol_AnswerProbability){
+        .scalar=result.value.scalar,.data=table.owner->probabilities,.count=table.owner->probability_count,
+        .lists=table.owner->probability_lists,.list_count=table.owner->probability_list_count
+    };
+    if(result.probability.count) result.probability.first=result.probability.data[0];
+    *out=result;
     return 0;
 }
 int TT_SCORE(const void *engine,const thinkthen_cobol_RequestQuestion *question,const thinkthen_cobol_RequestInput *input,
@@ -5776,11 +9684,21 @@ const thinkthen_cobol_RequestOptions *options,thinkthen_cobol_AnswerScoreResult 
     int code=blocking_answer(engine,question,input,options,"score",5,THINKTHEN_COMPLETE_REQUEST_FUNCTION_SCORE_V1,
     &table,status_out);
     if(code) return code;
-    thinkthen_cobol_AnswerScoreResult value={
-        .owner=table.owner,.rows=table.rows,.count=table.count
+    thinkthen_cobol_AnswerScoreResult result={
+        .owner=table.owner,.value={
+            .rows=table.rows,.count=table.count
+        },.results={
+            table.owner->receipts,table.owner->receipt_count
+        },.facts_present=status_out->facts_present,.facts=status_out->facts
     };
-    if(table.count) value.first=value.rows[0];
-    *out=value;
+    result.value.scalar=input && (input->kind==THINKTHEN_COBOL_REQUESTINPUTTEXT_KIND || input->kind==THINKTHEN_COBOL_REQUESTINPUTJSON_KIND);
+    if(table.count) result.value.first=result.value.rows[0];
+    result.probability=(thinkthen_cobol_AnswerProbability){
+        .scalar=result.value.scalar,.data=table.owner->probabilities,.count=table.owner->probability_count,
+        .lists=table.owner->probability_lists,.list_count=table.owner->probability_list_count
+    };
+    if(result.probability.count) result.probability.first=result.probability.data[0];
+    *out=result;
     return 0;
 }
 int TT_FILTER(const void *engine,const thinkthen_cobol_RequestQuestion *question,const thinkthen_cobol_RequestInput *input,
@@ -5792,11 +9710,22 @@ const thinkthen_cobol_RequestOptions *options,thinkthen_cobol_AnswerFilterResult
     int code=blocking_answer(engine,question,input,options,"filter",6,THINKTHEN_COMPLETE_REQUEST_FUNCTION_FILTER_V1,
     &table,status_out);
     if(code) return code;
-    thinkthen_cobol_AnswerFilterResult value={
-        .owner=table.owner,.rows=table.rows,.count=table.count
+    thinkthen_cobol_AnswerFilterResult result={
+        .owner=table.owner,.value={
+            .rows=table.rows,.count=table.count
+        },.results={
+            table.owner->receipts,table.owner->receipt_count
+        },.facts_present=status_out->facts_present,.facts=status_out->facts
     };
-    if(table.count) value.first=value.rows[0];
-    *out=value;
+    result.value.scalar=input && (input->kind==THINKTHEN_COBOL_REQUESTINPUTTEXT_KIND || input->kind==THINKTHEN_COBOL_REQUESTINPUTJSON_KIND);
+    result.value.scalar=0;
+    if(table.count) result.value.first=result.value.rows[0];
+    result.probability=(thinkthen_cobol_AnswerProbability){
+        .scalar=result.value.scalar,.data=table.owner->probabilities,.count=table.owner->probability_count,
+        .lists=table.owner->probability_lists,.list_count=table.owner->probability_list_count
+    };
+    if(result.probability.count) result.probability.first=result.probability.data[0];
+    *out=result;
     return 0;
 }
 int TT_RANK(const void *engine,const thinkthen_cobol_RequestQuestion *question,const thinkthen_cobol_RequestInput *input,
@@ -5808,11 +9737,22 @@ const thinkthen_cobol_RequestOptions *options,thinkthen_cobol_AnswerRankResult *
     int code=blocking_answer(engine,question,input,options,"rank",4,THINKTHEN_COMPLETE_REQUEST_FUNCTION_RANK_V1,
     &table,status_out);
     if(code) return code;
-    thinkthen_cobol_AnswerRankResult value={
-        .owner=table.owner,.rows=table.rows,.count=table.count
+    thinkthen_cobol_AnswerRankResult result={
+        .owner=table.owner,.value={
+            .rows=table.rows,.count=table.count
+        },.results={
+            table.owner->receipts,table.owner->receipt_count
+        },.facts_present=status_out->facts_present,.facts=status_out->facts
     };
-    if(table.count) value.first=value.rows[0];
-    *out=value;
+    result.value.scalar=input && (input->kind==THINKTHEN_COBOL_REQUESTINPUTTEXT_KIND || input->kind==THINKTHEN_COBOL_REQUESTINPUTJSON_KIND);
+    result.value.scalar=0;
+    if(table.count) result.value.first=result.value.rows[0];
+    result.probability=(thinkthen_cobol_AnswerProbability){
+        .scalar=result.value.scalar,.data=table.owner->probabilities,.count=table.owner->probability_count,
+        .lists=table.owner->probability_lists,.list_count=table.owner->probability_list_count
+    };
+    if(result.probability.count) result.probability.first=result.probability.data[0];
+    *out=result;
     return 0;
 }
 int TT_FIND(const void *engine,const thinkthen_cobol_RequestQuestion *question,const thinkthen_cobol_RequestInput *input,
@@ -5824,11 +9764,23 @@ const thinkthen_cobol_RequestOptions *options,thinkthen_cobol_AnswerFindResult *
     int code=blocking_answer(engine,question,input,options,"find",4,THINKTHEN_COMPLETE_REQUEST_FUNCTION_FIND_V1,
     &table,status_out);
     if(code) return code;
-    thinkthen_cobol_AnswerFindResult value={
-        .owner=table.owner,.rows=table.rows,.count=table.count
+    thinkthen_cobol_AnswerFindResult result={
+        .owner=table.owner,.value={
+            .rows=table.rows,.count=table.count
+        },.results={
+            table.owner->receipts,table.owner->receipt_count
+        },.facts_present=status_out->facts_present,.facts=status_out->facts
     };
-    if(table.count) value.first=value.rows[0];
-    *out=value;
+    result.value.scalar=input && (input->kind==THINKTHEN_COBOL_REQUESTINPUTTEXT_KIND || input->kind==THINKTHEN_COBOL_REQUESTINPUTJSON_KIND);
+    result.value.scalar=0;
+    if(table.count) result.value.first=result.value.rows[0];
+    result.probability=(thinkthen_cobol_AnswerProbability){
+        .scalar=result.value.scalar,.data=table.owner->probabilities,.count=table.owner->probability_count,
+        .lists=table.owner->probability_lists,.list_count=table.owner->probability_list_count
+    };
+    if(result.probability.count) result.probability.first=result.probability.data[0];
+    result.probability.scalar=1;
+    *out=result;
     return 0;
 }
 int TT_ANNOTATE(const void *engine,const thinkthen_cobol_RequestQuestion *question,const thinkthen_cobol_RequestInput *input,
@@ -5840,11 +9792,21 @@ const thinkthen_cobol_RequestOptions *options,thinkthen_cobol_AnswerAnnotateResu
     int code=blocking_answer(engine,question,input,options,"annotate",8,THINKTHEN_COMPLETE_REQUEST_FUNCTION_ANNOTATE_V1,
     &table,status_out);
     if(code) return code;
-    thinkthen_cobol_AnswerAnnotateResult value={
-        .owner=table.owner,.rows=table.rows,.count=table.count
+    thinkthen_cobol_AnswerAnnotateResult result={
+        .owner=table.owner,.value={
+            .rows=table.rows,.count=table.count
+        },.results={
+            table.owner->receipts,table.owner->receipt_count
+        },.facts_present=status_out->facts_present,.facts=status_out->facts
     };
-    if(table.count) value.first=value.rows[0];
-    *out=value;
+    result.value.scalar=input && (input->kind==THINKTHEN_COBOL_REQUESTINPUTTEXT_KIND || input->kind==THINKTHEN_COBOL_REQUESTINPUTJSON_KIND);
+    if(table.count) result.value.first=result.value.rows[0];
+    result.probability=(thinkthen_cobol_AnswerProbability){
+        .scalar=result.value.scalar,.data=table.owner->probabilities,.count=table.owner->probability_count,
+        .lists=table.owner->probability_lists,.list_count=table.owner->probability_list_count
+    };
+    if(result.probability.count) result.probability.first=result.probability.data[0];
+    *out=result;
     return 0;
 }
 int TT_RECOGNIZE(const void *engine,const thinkthen_cobol_RequestQuestion *question,const thinkthen_cobol_RequestInput *input,
@@ -5856,13 +9818,28 @@ const thinkthen_cobol_RequestOptions *options,thinkthen_cobol_AnswerRecognizeRes
     int code=blocking_answer(engine,question,input,options,"recognize",9,THINKTHEN_COMPLETE_REQUEST_FUNCTION_RECOGNIZE_V1,
     &table,status_out);
     if(code) return code;
-    thinkthen_cobol_AnswerRecognizeResult value={
-        .owner=table.owner,.rows=table.rows,.count=table.count
+    thinkthen_cobol_AnswerRecognizeResult result={
+        .owner=table.owner,.value={
+            .rows=table.rows,.count=table.count
+        },.results={
+            table.owner->receipts,table.owner->receipt_count
+        },.facts_present=status_out->facts_present,.facts=status_out->facts
     };
-    if(table.count) value.first=value.rows[0];
-    value.edges=table.edges;
-    value.edge_count=table.edge_count;
-    *out=value;
+    result.value.scalar=input && (input->kind==THINKTHEN_COBOL_REQUESTINPUTTEXT_KIND || input->kind==THINKTHEN_COBOL_REQUESTINPUTJSON_KIND);
+    if(table.count) result.value.first=result.value.rows[0];
+    result.probability=(thinkthen_cobol_AnswerProbability){
+        .scalar=result.value.scalar,.data=table.owner->probabilities,.count=table.owner->probability_count,
+        .lists=table.owner->probability_lists,.list_count=table.owner->probability_list_count
+    };
+    if(result.probability.count) result.probability.first=result.probability.data[0];
+    if(result.value.scalar && result.probability.list_count==1) {
+        result.probability.data=result.probability.lists[0].data;
+        result.probability.count=result.probability.lists[0].count;
+        result.probability.list_count=0;
+    } result.probability.scalar=0;
+    result.value.edges=table.edges;
+    result.value.edge_count=table.edge_count;
+    *out=result;
     return 0;
 }
 int TT_RELATE(const void *engine,const thinkthen_cobol_RequestQuestion *question,const thinkthen_cobol_RequestInput *input,
@@ -5874,11 +9851,22 @@ const thinkthen_cobol_RequestOptions *options,thinkthen_cobol_AnswerRelateResult
     int code=blocking_answer(engine,question,input,options,"relate",6,THINKTHEN_COMPLETE_REQUEST_FUNCTION_RELATE_V1,
     &table,status_out);
     if(code) return code;
-    thinkthen_cobol_AnswerRelateResult value={
-        .owner=table.owner,.rows=table.rows,.count=table.count
+    thinkthen_cobol_AnswerRelateResult result={
+        .owner=table.owner,.value={
+            .rows=table.rows,.count=table.count
+        },.results={
+            table.owner->receipts,table.owner->receipt_count
+        },.facts_present=status_out->facts_present,.facts=status_out->facts
     };
-    if(table.count) value.first=value.rows[0];
-    *out=value;
+    result.value.scalar=input && (input->kind==THINKTHEN_COBOL_REQUESTINPUTTEXT_KIND || input->kind==THINKTHEN_COBOL_REQUESTINPUTJSON_KIND);
+    result.value.scalar=0;
+    if(table.count) result.value.first=result.value.rows[0];
+    result.probability=(thinkthen_cobol_AnswerProbability){
+        .scalar=result.value.scalar,.data=table.owner->probabilities,.count=table.owner->probability_count,
+        .lists=table.owner->probability_lists,.list_count=table.owner->probability_list_count
+    };
+    if(result.probability.count) result.probability.first=result.probability.data[0];
+    *out=result;
     return 0;
 }
 static int plan_unsigned(const thinkthen_complete_json_v1 *value,uint64_t *out) {

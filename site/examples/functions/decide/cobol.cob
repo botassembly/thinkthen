@@ -16,6 +16,7 @@ copy "tt-native-generated.cpy".
 01 row-number usage binary-long.
 01 written usage binary-double unsigned.
 01 selected-text pic x(8192).
+01 boolean-answer usage binary-long unsigned.
 01 status-code usage binary-long signed.
 procedure division.
     call "thinkthen_engine_new" returning engine
@@ -62,10 +63,12 @@ procedure division.
        by reference tt-n-cobol-AnswerDecideResult
        tt-n-cobol-AnswerStatus returning status-code
     if status-code not = 0 stop run returning 1 end-if
-    if v-first-present of tt-n-cobol-AnswerDecideResult = 1
-       and v-first-value of
-          tt-n-cobol-AnswerDecideResult = 1
-       move "Y" to is-refund
+    if v-value-first-present of tt-n-cobol-AnswerDecideResult = 1
+       call "TT_VALUE_BOOLEAN" using
+          by value v-value-first-value of tt-n-cobol-AnswerDecideResult
+          by reference boolean-answer returning status-code
+       if status-code not = 0 stop run returning 3 end-if
+       if boolean-answer = 1 move "Y" to is-refund end-if
     end-if
     call "TT_ANSWER_FREE" using by value
        v-owner of tt-n-cobol-AnswerStatus returning omitted
