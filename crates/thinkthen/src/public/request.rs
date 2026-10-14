@@ -22,6 +22,8 @@ pub(crate) mod pull;
 pub use pull::RequestRows;
 mod recovered;
 mod recovering;
+mod recovering_session;
+pub use recovering_session::{RequestRecoveringSession, RequestRecoveringRead, RequestRecoveringResult};
 mod result;
 pub use recovered::RequestRecoveredRow;
 pub(in crate::public) use recovered::{fatal as is_recovery_fatal, row as recovery_row};
