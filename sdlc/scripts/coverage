@@ -354,7 +354,8 @@ def main():
     initializer = run / 'profile.o'
     continuous = sys.platform == 'linux'
     pattern = '%p-%m%c.profraw' if continuous else '%m.profraw'
-    remaps = [(Path.home(), '/build/home'), (ROOT, '/build/source'),
+    home_destination = '/build/users' if Path.home().is_relative_to('/Users') else '/build/host'
+    remaps = [(Path.home(), home_destination), (ROOT, '/build/source'),
               (Path(os.environ.get('CARGO_HOME', str(Path.home() / '.cargo'))).resolve(), '/build/cargo')]
     flags = ['-C', 'instrument-coverage',
              *[f'--remap-path-prefix={source}={destination}' for source, destination in remaps],
@@ -366,6 +367,7 @@ def main():
                     '-DPROFILE_PATH=' + json.dumps(str(run / 'active' / pattern)), '-DPROFILE_DIR=' + json.dumps(str(run / 'active')), '-o', str(initializer)], check=True)
     env = {name: value for name, value in os.environ.items() if not name.startswith('THINKTHEN_') and name != 'LLVM_PROFILE_FILE'}
     env.update(CFLAGS=' '.join(filter(None, (env.get('CFLAGS'), cflags))), LLVM_PROFILE_FILE=str(run / 'active' / pattern), CARGO_TARGET_DIR=str(run / 'target'), CARGO_NET_OFFLINE='true', RUSTC_WRAPPER='',
+               CXXFLAGS=' '.join(filter(None, (env.get('CXXFLAGS'), cflags))),
                CARGO_ENCODED_RUSTFLAGS='\x1f'.join(flags),
                XDG_CONFIG_HOME=str(run / 'home/config'), XDG_CACHE_HOME=str(run / 'home/cache'),
                XDG_STATE_HOME=str(run / 'home/state'))
