@@ -41,6 +41,11 @@ def question_keys(url, body):
     """
     one_portable_request([body])
     state, model, questions = fixture_questions()
+    return cache_question_keys(url, state, model, model, questions)
+
+
+def cache_question_keys(url, state, requested_model, answered_model, questions):
+    """Independent cache/2 oracle for authored compact question constituents."""
 
     # Match the endpoint resolver: lowercase scheme and literal host letters,
     # preserve host escapes and bracketed addresses, and drop trailing slashes.
@@ -56,7 +61,7 @@ def question_keys(url, body):
     def compact(value):
         return json.dumps(value, separators=(",", ":"), ensure_ascii=False)
     def key(question):
-        parts = ["systemone", url, compact(model), compact(model),
+        parts = ["systemone", url, compact(requested_model), compact(answered_model),
                  compact(state), compact(question)]
         framed = b"thinkthen.question-key/2\0"
         for part in parts:

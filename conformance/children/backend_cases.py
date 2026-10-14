@@ -3,6 +3,7 @@ import hashlib
 import json
 import pathlib
 import sys
+from portable import cache_question_keys
 
 ROWS = json.loads((pathlib.Path(__file__).resolve().parents[1] / "binding-backends.json").read_text())["backends"]
 SLOTS = ("generic_systemone", "generic_decisions", "generic_custom", "capture_systemone", "capture_decisions", "capture_custom", "other", "non_post")
@@ -26,18 +27,19 @@ def alias(row, base):
 
 
 def canonical_replay(folder, row):
-    """Handwritten ADR 0111 answer, independent of the host's plan output."""
+    """Handwritten ADR 0111 answer with specification/cache.md's required v2 fields."""
     folder.mkdir(parents=True, exist_ok=True)
-    state = json.dumps("Each question quotes the text it asks about.", separators=(",", ":"))
+    state_value = "Each question quotes the text it asks about."
+    state = json.dumps(state_value, separators=(",", ":"))
     question = {"type":"noul", "instructions":'The text is "refund". attention?'}
     question["criteria"] = {"true":("yes" if row["form"] == "text" else {"what":"yes","examples":["refund"]})}
     if row["form"] == "both":
         question["criteria"]["false"] = {}
+    key, = cache_question_keys(row["url"], state_value, row["model"], row["model"], [question])
     question = json.dumps(question, separators=(",", ":"))
-    model = json.dumps(row["model"])
-    key = hashlib.sha256("\n".join(("systemone", row["url"], model, state, question)).encode()).hexdigest()
     sha = hashlib.sha256(state.encode()).hexdigest()
-    answer = {"key":key, "url":row["url"], "model":row["model"], "state":sha,
+    answer = {"key":key, "key_version":2, "adapter":"systemone", "observation_id":key,
+              "url":row["url"], "model":row["model"], "state":sha,
               "question":question, "answer":'{"type":"noul","noul":0.9}',
               "answered_by":row["model"], "input_tokens":1, "output_tokens":1,
               "taken_at":0, "origin":"live"}
