@@ -18,7 +18,9 @@ impl RequestRecoveredRow {
     }
     /// Why a logical answer failed, absent on transport or admission failures.
     #[must_use]
-    pub const fn cause(&self) -> Option<FailureCause> { self.cause }
+    pub const fn cause(&self) -> Option<FailureCause> {
+        self.cause
+    }
     pub(in crate::public) fn with_cause(mut self, cause: Option<FailureCause>) -> Self {
         self.cause = cause;
         self
@@ -36,9 +38,13 @@ impl Serialize for RequestRecoveredRow {
         document.serialize_field("index", &self.ordinal)?;
         match &self.outcome {
             Ok(value) => document.serialize_field("results", value)?,
-            Err(error) => document.serialize_field("failure", &RecoveredFailure {
-                error: *error.complete().error(), cause: self.cause,
-            })?,
+            Err(error) => document.serialize_field(
+                "failure",
+                &RecoveredFailure {
+                    error: *error.complete().error(),
+                    cause: self.cause,
+                },
+            )?,
         }
         document.end()
     }
@@ -58,7 +64,11 @@ pub(crate) fn row(
     let outcome = outcome.map_err(Error::normalize_recovery_budget);
     match outcome {
         Err(error) if fatal(&error) => Err(error),
-        outcome => Ok(RequestRecoveredRow { ordinal, outcome, cause: None }),
+        outcome => Ok(RequestRecoveredRow {
+            ordinal,
+            outcome,
+            cause: None,
+        }),
     }
 }
 
