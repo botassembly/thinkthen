@@ -53,4 +53,5 @@ jobs:
           mkdir -p target/website-c-package/include target/website-c-package/lib
           cp native-source/libraries/c/include/thinkthen.h target/website-c-package/include/
           cp native-source/target/debug/libthinkthen_c.dylib target/website-c-package/lib/libthinkthen.dylib
+          ln -s libthinkthen.dylib target/website-c-package/lib/libthinkthen.0.dylib
           node site/scripts/smoke-bindings.mjs objective-c
