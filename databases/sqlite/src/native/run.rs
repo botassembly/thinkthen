@@ -87,6 +87,31 @@ fn project(
     keys: Vec<String>,
     ids: crate::tables::Ids,
 ) -> Result<Receipt, Failure> {
+    if matches!(verb, "rank" | "relate")
+        && let Some(rows) = carrier.get("rows").and_then(Json::as_array)
+        && !rows.is_empty()
+    {
+        let owned = rows
+            .iter()
+            .flat_map(|row| {
+                row.get("observations")
+                    .and_then(Json::as_array)
+                    .into_iter()
+                    .flatten()
+            })
+            .collect::<Vec<_>>();
+        let observed = carrier
+            .get("observations")
+            .and_then(Json::as_array)
+            .into_iter()
+            .flatten()
+            .collect::<Vec<_>>();
+        if owned != observed {
+            return Err(Failure::defect(
+                "aggregate details lost their native observations",
+            ));
+        }
+    }
     let mut receipt = Receipt::default();
     let native = carrier
         .get("native")
