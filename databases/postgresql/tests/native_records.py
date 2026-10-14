@@ -112,7 +112,7 @@ def main():
                 assert body['model'] == 'jev-1.13.0' and body['questions'], plan
                 assert 'Alpha.' in json.dumps(body), plan
             unsupported = {
-                'find': 'Fits?',
+                'find': json.dumps({'find': 'Fits?'}),
                 'annotate': json.dumps({'version': 1, 'questions': {'fit': {'decide': 'Fits?'}}}),
                 'recognize': json.dumps({'version': 1, 'recognize': {'kinds': {'person': "A person's name."}}}),
                 'relate': json.dumps({'version': 1, 'relate': {'relations': [{'name': 'knows', 'source': 'person', 'target': 'person'}]}}),
@@ -123,7 +123,7 @@ def main():
                 before = int(backend.read('count'))
                 out, err = sql(host.socket, "SELECT * FROM thinkthen_plan(" + quoted(question) + ",ARRAY[" + record + "],function=>" + quoted(function) + ")")
                 expected = 'unknown function' if function == 'wrong' else 'rank requires saved decide, score or question set JSON' if function == 'rank' else 'plan requires an atomic or rank question'
-                assert '22023' in err and expected in err, (out, err)
+                assert '22023' in err and expected in err, (function, out, err)
                 assert int(backend.read('count')) == before
             query("SELECT count(*) FROM thinkthen_decide('Fits?',ARRAY[" + record +
                   "],thinkthen_reading(max_requests_total=>0)) r")
