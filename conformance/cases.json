@@ -15818,6 +15818,113 @@
             }
           }
         ]
+      },
+      {
+        "id": "library-call-result",
+        "tier": "binding",
+        "verb": "decide",
+        "kind": "call-result",
+        "consumers": [
+          "rust",
+          "python",
+          "typescript",
+          "javascript",
+          "ruby",
+          "r",
+          "go",
+          "csharp",
+          "java",
+          "kotlin",
+          "scala",
+          "cpp",
+          "swift",
+          "zig",
+          "objective-c",
+          "php",
+          "dart",
+          "flutter",
+          "ada",
+          "cobol",
+          "pandas",
+          "python-polars"
+        ],
+        "input": {
+          "fixture": "conformance/cases.json",
+          "case_refs": [
+            "01-decide-yes-captured",
+            "06-choose-billing"
+          ]
+        },
+        "expect": {
+          "calls": [
+            {
+              "value": true,
+              "probability": 0.99,
+              "results_count": 1,
+              "requests_sent": 1
+            },
+            {
+              "value": "billing",
+              "probability": 0.7,
+              "results_count": 1,
+              "requests_sent": 1
+            }
+          ]
+        },
+        "exchanges": [
+          {
+            "provenance": {
+              "kind": "captured",
+              "path": "demos/01-refund-gate/recording"
+            },
+            "evidence": "From: sam.okafor@example.net\nSubject: order 4417\n\nThe blender arrived with a cracked jug. I do not want a replacement.\nPlease put the money back on my card.\n\nOrder 4417, bought on the 3rd.\n",
+            "request": "{\"state\":\"Each question quotes the text it asks about.\",\"model\":\"jev-1.13.0\",\"questions\":{\"q1\":{\"type\":\"noul\",\"instructions\":\"The text is \\\"From: sam.okafor@example.net\\\\nSubject: order 4417\\\\n\\\\nThe blender arrived with a cracked jug. I do not want a replacement.\\\\nPlease put the money back on my card.\\\\n\\\\nOrder 4417, bought on the 3rd.\\\\n\\\". Does the customer ask for money back?\"}}}",
+            "response": {
+              "model": "jev-1.13.0",
+              "answers": {
+                "q1": {
+                  "type": "noul",
+                  "noul": 0.99
+                }
+              },
+              "usage": {
+                "input_tokens": 331,
+                "output_tokens": 21
+              }
+            }
+          },
+          {
+            "provenance": {
+              "kind": "synthetic_contract"
+            },
+            "evidence": "Route this note.",
+            "request": "{\"state\":\"Each question quotes the text it asks about.\",\"model\":\"jev-1.13.0\",\"questions\":{\"q1\":{\"type\":\"choice\",\"instructions\":\"The text is \\\"Route this note.\\\". Which team owns this?\",\"criteria\":{\"billing\":null,\"shipping\":null,\"other\":null}}}}",
+            "response": {
+              "model": "jev-latest",
+              "answers": {
+                "q1": {
+                  "type": "choice",
+                  "confidence": 0.82,
+                  "probabilities": {
+                    "billing": 0.7,
+                    "shipping": 0.2,
+                    "other": 0.1
+                  }
+                }
+              },
+              "usage": {
+                "input_tokens": 10,
+                "output_tokens": 2
+              }
+            }
+          }
+        ],
+        "preconditions": [],
+        "checks": [
+          "named",
+          "compile",
+          "runtime"
+        ]
       }
     ],
     "image_profiles": {

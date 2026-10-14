@@ -20,6 +20,16 @@ def compact(value):
 
 def document(row, cases, named):
     kind = row['kind']
+    if kind == 'call-result':
+        steps = []
+        for source, expected in zip(row['input']['case_refs'], row['expect']['calls'], strict=True):
+            base = document({'id': source, 'kind': 'behavior', 'verb': cases[source]['verb'],
+                             'input': {'case_ref': source}}, cases, named)
+            base.update(arm='case/' + row['id'] + '/v1', count_delta=True,
+                        settings={'model': 'jev-1.13.0'},
+                        expect={**base['expect'], 'call_result': expected})
+            steps.append(base)
+        return {'arm': 'case/' + row['id'] + '/v1', 'steps': steps}
     if kind == 'image-admission':
         from c_images import project
         return project(row)
@@ -220,6 +230,16 @@ def equivalent(got, want):
 
 def assertions(row, value, got, count):
     expect = value['expect']
+    if 'call_result' in expect:
+        expected = expect['call_result']
+        result = got.get('call_result')
+        assert isinstance(result, dict), 'public call result is missing'
+        assert {'value', 'probability', 'results', 'facts'} <= result.keys(), result
+        assert equivalent(result['value'], expected['value']), result
+        assert equivalent(result['probability'], expected['probability']), result
+        assert isinstance(result['results'], list) and len(result['results']) == expected['results_count'], result
+        assert isinstance(result['facts'], dict) and result['facts']['requests_sent'] == expected['requests_sent'], result
+        assert count == expected['requests_sent'], (count, result)
     error = expect.get('error')
     if error is not None:
         error = error.get('kind') if isinstance(error, dict) else error

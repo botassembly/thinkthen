@@ -57,7 +57,7 @@ def descriptor(v,home):
             original=item['original'].get('value',item['original'].get('text'))
             item['original']={'kind':'json','value':{'item':original,'context':item.pop('context')}}
         options.update(field=['/item'],context_field='/context')
-    return {'verb':v['verb'],'question':question,'input':input,'options':options,'cancel':injection=='cancel_token','held_cancel':v.get('held_cancel',False)}
+    return {'verb':v['verb'],'question':question,'input':input,'options':options,'cancel':injection=='cancel_token','held_cancel':v.get('held_cancel',False),'call_result_contract':'call_result' in v['expect']}
 
 def native_cases(binary, *, consumer=CONSUMER, invoke=None):
     CONSUMER = consumer

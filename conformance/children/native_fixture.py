@@ -41,7 +41,7 @@ def request(value, root, home, settings):
         source={'kind':'records','records':records}
     if value.get('candidate_orders'):
         for at,row in enumerate(source['records']):row['options']=[{'name':n} for n in value['candidate_orders'][at]]
-    return {'verb':verb,'question':q,'input':source,'settings':settings,'cancel':operation.get('injection')=='cancel_token', 'deadline_ms':0 if operation.get('injection')=='expired_deadline' else None, 'shared_context':value.get('shared_context'), 'held_cancel':bool(value.get('held_cancel')), 'incremental':bool(value.get('incremental')), 'batch_probe':bool(value.get('batch_probe'))}
+    return {'verb':verb,'question':q,'input':source,'settings':settings,'cancel':operation.get('injection')=='cancel_token', 'deadline_ms':0 if operation.get('injection')=='expired_deadline' else None, 'shared_context':value.get('shared_context'), 'held_cancel':bool(value.get('held_cancel')), 'incremental':bool(value.get('incremental')), 'batch_probe':bool(value.get('batch_probe')), 'call_result_contract':'call_result' in value['expect']}
 
 def native_request(document):
     """Translate the existing caller fixture into canonical Request selectors."""
@@ -102,6 +102,8 @@ def project(packet,verb):
         if e.get('stopped',{}).get('at') is not None:out['stopped_at']=e['stopped']['at']
         return out
     facts=packet['facts'];out={'code':0,'schema':'thinkthen.result/2','call_id':facts['call_id'],'requests_sent':facts['requests_sent'],'cache_answers':facts['cache_answers'],'rows':[]}
+    if 'call_result' in packet:
+        out['call_result'] = packet['call_result']
     out.update({k:facts[k] for k in ('records','input_tokens','output_tokens') if k in facts})
     results=packet['results'] if isinstance(packet['results'],list) else [packet['results']]
     for at,r in enumerate(results):

@@ -34,6 +34,43 @@ class NativeFixtureEnvironment(unittest.TestCase):
 
 
 class BindingCaseTiers(unittest.TestCase):
+    def test_paired_scalar_fixture_reaches_both_calls_and_requires_public_result_fields(self):
+        from conformance import c_parity
+        import native_fixture
+        cases = {case['id']: case for case in json.loads(parity.DOCUMENT.read_text())['cases']}
+        row = parity.required_cases(parity.inventory(), 'python')['library-call-result']
+        paired = c_parity.document(row, cases, {})
+        self.assertEqual([step['verb'] for step in paired['steps']], ['decide', 'choose'])
+        self.assertEqual([(step['expect']['call_result']['value'],
+                           step['expect']['call_result']['probability']) for step in paired['steps']],
+                         [(True, .99), ('billing', .7)])
+        with tempfile.TemporaryDirectory(prefix='thinkthen-paired-fixture-') as folder:
+            home = Path(folder)
+            (home / 'OWNER').write_text('paired scalar fixture regression\n')
+            for step, source, exchange in zip(paired['steps'], row['input']['case_refs'],
+                                              row['exchanges'], strict=True):
+                with self.subTest(verb=step['verb']):
+                    framed = native_fixture.request(step, parity.ROOT, home, step['settings'])
+                    native = native_fixture.native_request(framed)
+                    self.assertTrue(framed['call_result_contract'])
+                    self.assertTrue(native['call_result_contract'])
+                    self.assertEqual(framed['question']['body'], cases[source]['question'])
+                    self.assertEqual(native['question']['value'], cases[source]['question'])
+                    self.assertEqual(native['input']['items'][0]['original'],
+                                     {'kind': 'text', 'text': exchange['evidence']})
+                    self.assertEqual(exchange['request'].encode(),
+                                     cases[source]['exchanges'][0]['request'].encode())
+                    for missing in ('call_result', 'value', 'probability', 'results', 'facts'):
+                        # Deliberately incomplete driver output must never certify an SDK call.
+                        fields = ('value', 'probability', 'results', 'facts')
+                        packet = {'call_result': dict.fromkeys(fields)}
+                        if missing == 'call_result':
+                            packet.pop(missing)
+                        else:
+                            packet['call_result'].pop(missing)
+                        with self.subTest(missing=missing), self.assertRaises(AssertionError):
+                            c_parity.assertions(row, step, packet, 1)
+
     def test_bindings_keep_every_host_case_and_sample_each_native_group(self):
         contract = parity.inventory()
         rows = {row['id']: row for row in contract['required_cases']}
@@ -570,10 +607,18 @@ class CliApplicability(unittest.TestCase):
         parity.validate_consumer_contracts(self.contract)
         cli = parity.required_cases(self.contract, 'cli')
         self.assertEqual(len(cli), 244)
-        self.assertEqual(len(parity.required_cases(self.contract, 'rust')), 255)
+        self.assertEqual(set(parity.required_cases(self.contract, 'rust')),
+                         {row['id'] for row in original
+                          if 'rust' in row.get('consumers', ['rust'])})
         self.assertEqual(set(parity.required_cases(self.contract, 'mcp')),
-                         {row['id'] for row in original if row['tier'] == 'binding'
-                          or row['id'] in parity.CORE_SAMPLE})
+                         {row['id'] for row in original
+                          if 'mcp' in row.get('consumers', ['mcp'])
+                          and (row['tier'] == 'binding' or row['id'] in parity.CORE_SAMPLE)})
+        result_case = 'library-call-result'
+        self.assertIn(result_case, parity.required_cases(self.contract, 'rust'))
+        self.assertIn(result_case, parity.required_cases(self.contract, 'python'))
+        for consumer in ('cli', 'c', 'mcp', 'sqlite', 'rust-polars'):
+            self.assertNotIn(result_case, parity.required_cases(self.contract, consumer))
         self.assertTrue(all(case['checks'] == ['named', 'runtime'] for case in cli.values()))
         self.assertEqual(cli['declaration-null']['expect']['error'], 'local')
         self.assertEqual(cli['cancellation-held-call']['cli_boundary'], 'signal-drain')
