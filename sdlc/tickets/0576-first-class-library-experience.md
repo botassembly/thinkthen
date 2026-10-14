@@ -73,3 +73,5 @@ Stage 2 starts when G1 and G2 land. One lane per language owns `libraries/<lang>
 - COBOL (c ≤12, h ≤12): settings record; one `CALL` per answer; rank and filter tables; the session check uses the blocking call; correct the README.
 
 PM amendment, 2026-10-14. Ordinary `thinkthen_details` returns the existing typed receipt projection, not JSON. This supersedes the 0538 retention of ordinary details JSON. The approved packed try-details recovery envelope stays as it is.
+
+PM amendment, 2026-10-14. 0582 supersedes ruling (3) and the 2026-10-14 amendment on `thinkthen_details`. The SQLite and PostgreSQL lanes build `thinkthen_<function>_details` for all ten functions instead of typed `thinkthen_details`, `try_details` and record-list overloads. Answer accessors follow 0581.
