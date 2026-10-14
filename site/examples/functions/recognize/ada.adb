@@ -8,24 +8,19 @@ with Thinkthen.Values;
 
 procedure Sample is
    package V renames Thinkthen.Values;
-   Owner : Session;
-   Completed : Completion;
    Evidence : constant String :=
      "Sam Patel says his Kindle arrived broken "
      & "in Denver.";
 begin
-   Thinkthen.Inputs.Calls.Recognize (Owner,
-     File_Question ("kinds.json"),
-     Text_Input (Evidence));
-   Finish (Owner);
    declare
-      Rows : constant Recognition_List :=
-        Recognize_Answer (Owner, Completed);
+      Result : constant Recognize_Result :=
+        Thinkthen.Inputs.Calls.Recognize (
+     File_Question ("kinds.json"),
+     Make_Input_text (Evidence));
       Names : Unbounded_String;
    begin
-      for Row of Rows loop
-         declare
-            Spans : constant V.Value := Entities (Row);
+      declare
+            Spans : constant V.Value := V.Field_Value (Result.Value, "entities");
          begin
             for I in 1 .. V.Length (Spans) loop
                declare
@@ -41,8 +36,7 @@ begin
                     & " ");
                end;
             end loop;
-         end;
-      end loop;
+      end;
       pragma Assert (Names = "Sam Patel/person "
         & "Kindle/product " & "Denver/place ");
    end;

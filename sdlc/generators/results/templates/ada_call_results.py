@@ -62,7 +62,7 @@ def number_expression(spec, function):
     value = path('Rows (I)', spec['probability_path'])
     if spec['probability_mode'] == 'picked':
         pick = path('Rows (I)', spec['pick_path'])
-        value = f'Element ({value}, Natural\'Value (As_Number ({pick})) + 1)'
+        value = f'Field_Value ({value}, As_String ({pick}))' if spec['probability_schema'].get('type') == 'object' else f'Element ({value}, Natural\'Value (As_Number ({pick})) + 1)'
     value = 'Number (' + value + ')'
     if 'selection_path' in spec:
         selected = path('Rows (I)', spec['selection_path'])
@@ -73,7 +73,7 @@ def number_expression(spec, function):
         conditions += [f'As_String (Field_Value (Packet, "function")) = "{function}"', f'{path("Packet", resolution["index_path"])} = Row_Index', f'Kind ({path("Packet", resolution["path"])}) /= Null_Value']
         # The native normalized observation owns resolution, including authored nulls.
         resolver = 'Resolved_' + function.title()
-        RESOLVERS[resolver] = '\n'.join([f'function {resolver} (Call : Completion; Row : Value; Ordinal : Positive) return Boolean is', 'Row_Index : constant Value := (if Has_Field (Row, "index") then Field_Value (Row, "index") else Number_Item (Natural\'Image (Ordinal - 1)));', 'begin', 'for J in 1 .. Length (Call.Packets) loop', 'declare Packet : constant Value := Element (Call.Packets, J); begin', 'if ' + ' and then '.join(conditions) + ' then return True; end if;', 'exception when Constraint_Error => null; end;', 'end loop;', 'return False;', 'end ' + resolver + ';'])
+        RESOLVERS[resolver] = '\n'.join([f'function {resolver} (Call : Completion; Row : Value; Ordinal : Positive) return Boolean is', 'Row_Index : constant Value := (if Has_Field (Row, "index") and then Kind (Field_Value (Row, "index")) /= Null_Value then Field_Value (Row, "index") else Number_Item (Ada.Strings.Fixed.Trim (Natural\'Image (Ordinal - 1), Ada.Strings.Both)));', 'begin', 'for J in 1 .. Length (Call.Packets) loop', 'declare Packet : constant Value := Element (Call.Packets, J); begin', 'if ' + ' and then '.join(conditions) + ' then return True; end if;', 'exception when Constraint_Error => null; end;', 'end loop;', 'return False;', 'end ' + resolver + ';'])
         return f'(if {resolver} (Call, Rows (I), I) then {value} else (State => Null_Field))'
     return value
 

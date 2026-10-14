@@ -38,8 +38,6 @@ package Thinkthen.Answers is
    function Failure_Facts (Error : Failure) return Facts;
    function Requests_Sent (Item : Facts) return Interfaces.Unsigned_64;
    function Records (Item : Facts) return Interfaces.Unsigned_64;
-   function Details (Item : Facts) return Thinkthen.Values.Value;
-   function Details (Error : Failure) return Thinkthen.Values.Value;
    function Source_Name (Edge : Thinkthen.Values.Value) return String;
    function Target_Name (Edge : Thinkthen.Values.Value) return String;
    function Relation_Name (Edge : Thinkthen.Values.Value) return String;

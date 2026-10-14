@@ -9,7 +9,7 @@ procedure Session_Demo is
    use type Thinkthen.Values.Value_Kind;
    Answer : constant Decide_Result := Thinkthen.Inputs.Calls.Decide
      (Text_Question ("Does this ask for a refund?"),
-      Make_Input_text ("Please return my payment."));
+      Text_Input ("Please return my payment."));
 begin
    if Thinkthen.Values.Kind (Answer.Value) = Thinkthen.Values.Null_Value then
       Ada.Text_IO.Put_Line ("uncertain");

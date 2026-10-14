@@ -8,20 +8,17 @@ with Thinkthen.Values;
 
 procedure Sample is
    package V renames Thinkthen.Values;
-   Owner : Session;
-   Completed : Completion;
    Evidence : constant String :=
      "Please refund my order. It arrived broken.";
 begin
-   Thinkthen.Inputs.Calls.Decide (Owner,
-     Text_Question ("Does the customer ask for a refund?"),
-     Text_Input (Evidence));
-   Finish (Owner);
    declare
-      Is_Refund : constant Decision :=
-        Decide_Answer (Owner, Completed);
+      Result : constant Decide_Result :=
+        Thinkthen.Inputs.Calls.Decide (
+     Text_Question ("Does the customer ask for a refund?"),
+     Make_Input_text (Evidence));
+      Is_Refund : constant V.Value := Result.Value;
    begin
       pragma Assert
-        (Is_Refund.Known and then Is_Refund.Value);
+        (V.As_Boolean (Is_Refund));
    end;
 end Sample;

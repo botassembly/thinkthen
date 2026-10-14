@@ -8,8 +8,6 @@ with Thinkthen.Values;
 
 procedure Sample is
    package V renames Thinkthen.Values;
-   Owner : Session;
-   Completed : Completion;
    function Entity (Name, Kind : String) return Item is
      (With_Original (Make_Item,
        Original_From_json
@@ -22,14 +20,12 @@ procedure Sample is
       Entity ("iPhone", "product"),
       Entity ("Kindle", "product")];
 begin
-   Thinkthen.Inputs.Calls.Relate (Owner,
+   declare
+      Result : constant Relate_Result :=
+        Thinkthen.Inputs.Calls.Relate (
      File_Question ("makes.json"),
      Entities_Input (Records));
-   Finish (Owner);
-   declare
-      Related : constant Thinkthen.Answers.Relation :=
-        Relate_Answer (Owner, Completed);
-      Connections : constant V.Value := Edges (Related);
+      Connections : constant V.Value := Result.Value;
       Who_Makes : Unbounded_String;
    begin
       for I in 1 .. V.Length (Connections) loop

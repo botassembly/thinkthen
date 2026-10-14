@@ -184,8 +184,6 @@ package Thinkthen.Answers is
    function Failure_Facts (Error : Failure) return Facts;
    function Requests_Sent (Item : Facts) return Interfaces.Unsigned_64;
    function Records (Item : Facts) return Interfaces.Unsigned_64;
-   function Details (Item : Facts) return Thinkthen.Values.Value;
-   function Details (Error : Failure) return Thinkthen.Values.Value;
    function Source_Name (Edge : Thinkthen.Values.Value) return String;
    function Target_Name (Edge : Thinkthen.Values.Value) return String;
    function Relation_Name (Edge : Thinkthen.Values.Value) return String;
@@ -269,8 +267,6 @@ package body Thinkthen.Answers is
        Kind (Field_Value (Call.Terminal, "facts")) = Object_Value);
    function Call_Facts (Call : Completion) return Facts is ((Data => Field_Value (Call.Terminal, "facts")));
    function Call_Failure (Call : Completion) return Failure is ((Data => Field_Value (Call.Terminal, "failure")));
-   function Details (Item : Facts) return Value is (Item.Data);
-   function Details (Error : Failure) return Value is (Error.Data);
    function Kind (Error : Failure) return Error_Status is
       Name : constant String := As_String (Field_Value (Field_Value (Error.Data, "error"), "kind"));
    begin

@@ -8,20 +8,17 @@ with Thinkthen.Values;
 
 procedure Sample is
    package V renames Thinkthen.Values;
-   Owner : Session;
-   Completed : Completion;
    Evidence : constant String :=
      "My parcel went to the wrong address.";
 begin
-   Thinkthen.Inputs.Calls.Choose (Owner,
-     File_Question ("teams.json"),
-     Text_Input (Evidence));
-   Finish (Owner);
    declare
-      Team : constant Choice :=
-        Choose_Answer (Owner, Completed);
+      Result : constant Choose_Result :=
+        Thinkthen.Inputs.Calls.Choose (
+     File_Question ("teams.json"),
+     Make_Input_text (Evidence));
+      Team : constant V.Value := Result.Value;
    begin
       pragma Assert
-        (Team.Known and then Team.Value = "shipping");
+        (V.As_String (Team) = "shipping");
    end;
 end Sample;

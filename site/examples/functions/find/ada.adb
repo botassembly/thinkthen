@@ -8,8 +8,6 @@ with Thinkthen.Values;
 
 procedure Sample is
    package V renames Thinkthen.Values;
-   Owner : Session;
-   Completed : Completion;
    Records : constant Item_List :=
      [Text_Item ("Returns need the original receipt."),
       Text_Item (
@@ -18,16 +16,14 @@ procedure Sample is
       Text_Item (
         "Gift cards cannot be exchanged for cash.")];
 begin
-   Thinkthen.Inputs.Calls.Find (Owner,
+   declare
+      Result : constant Find_Result :=
+        Thinkthen.Inputs.Calls.Find (
      Text_Question (
        "Which line gives the refund deadline?"),
      Records_Input (Records));
-   Finish (Owner);
-   declare
-      Found : constant Find_Result :=
-        Find_Answer (Owner, Completed);
       Refund_Deadline : constant String :=
-        V.As_String (Found_Value (Found));
+        V.As_String (Result.Value);
    begin
       pragma Assert (Refund_Deadline =
         "Refunds are issued within 30 days of purchase.");

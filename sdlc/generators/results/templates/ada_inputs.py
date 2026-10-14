@@ -164,6 +164,10 @@ def outputs(definitions, names, schemas, metadata=None, plan_definitions=None, r
                         public.append(short_signature+';')
                         value = '(' + identifier(member) + ' => ' + unwrap(value_raw,'Item') + ', others => <>)'
                         bodies.append(short_signature + f' is ((Data => (Kind => Requests.{raw_tag}, V_{index} => '+value+')));')
+                        if label == 'Input' and child_schema['properties'].get('kind', {}).get('const') in ('text', 'json'):
+                            typed_signature = f'function {short} (Item : {argument(value_raw)}) return Thinkthen.Inputs.{child_label}'
+                            public.append(typed_signature + ';')
+                            bodies.append(typed_signature + f' is (Native.Wrap (Requests.{host_key if host_key.startswith("T_") else names[host_key]}\'(' + value[1:-1] + ')));')
                 if child_label:
                     getter = f'function As_{suffix} (Item : Thinkthen.Inputs.{label}) return Thinkthen.Inputs.{child_label}'
                     public.append(getter + ';')

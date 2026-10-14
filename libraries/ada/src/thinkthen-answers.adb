@@ -5586,8 +5586,6 @@ end Read_thinkthen_complete_session_packet_v1;
        Kind (Field_Value (Call.Terminal, "facts")) = Object_Value);
    function Call_Facts (Call : Completion) return Facts is ((Data => Field_Value (Call.Terminal, "facts")));
    function Call_Failure (Call : Completion) return Failure is ((Data => Field_Value (Call.Terminal, "failure")));
-   function Details (Item : Facts) return Value is (Item.Data);
-   function Details (Error : Failure) return Value is (Error.Data);
    function Kind (Error : Failure) return Error_Status is
       Name : constant String := As_String (Field_Value (Field_Value (Error.Data, "error"), "kind"));
    begin
@@ -5715,7 +5713,7 @@ return Copy;
 end;
 end Retained_Values;
 function Resolved_Decide (Call : Completion; Row : Value; Ordinal : Positive) return Boolean is
-Row_Index : constant Value := (if Has_Field (Row, "index") then Field_Value (Row, "index") else Number_Item (Natural'Image (Ordinal - 1)));
+Row_Index : constant Value := (if Has_Field (Row, "index") and then Kind (Field_Value (Row, "index")) /= Null_Value then Field_Value (Row, "index") else Number_Item (Ada.Strings.Fixed.Trim (Natural'Image (Ordinal - 1), Ada.Strings.Both)));
 begin
 for J in 1 .. Length (Call.Packets) loop
 declare Packet : constant Value := Element (Call.Packets, J); begin
@@ -5725,7 +5723,7 @@ end loop;
 return False;
 end Resolved_Decide;
 function Resolved_Choose (Call : Completion; Row : Value; Ordinal : Positive) return Boolean is
-Row_Index : constant Value := (if Has_Field (Row, "index") then Field_Value (Row, "index") else Number_Item (Natural'Image (Ordinal - 1)));
+Row_Index : constant Value := (if Has_Field (Row, "index") and then Kind (Field_Value (Row, "index")) /= Null_Value then Field_Value (Row, "index") else Number_Item (Ada.Strings.Fixed.Trim (Natural'Image (Ordinal - 1), Ada.Strings.Both)));
 begin
 for J in 1 .. Length (Call.Packets) loop
 declare Packet : constant Value := Element (Call.Packets, J); begin
@@ -5850,7 +5848,7 @@ Result.Facts := Call_Facts (Call);
 for I in Rows'Range loop
 Result.Results (I) := (Data => Rows (I));
 Result.Value := Field_Value (Rows (I), "value");
-Result.Probability := (if Resolved_Choose (Call, Rows (I), I) then Number (Element (Field_Value (Field_Value (Rows (I), "answer"), "probabilities"), Natural'Value (As_Number (Field_Value (Field_Value (Rows (I), "answer"), "pick"))) + 1)) else (State => Null_Field));
+Result.Probability := (if Resolved_Choose (Call, Rows (I), I) then Number (Field_Value (Field_Value (Field_Value (Rows (I), "answer"), "probabilities"), As_String (Field_Value (Field_Value (Rows (I), "answer"), "pick")))) else (State => Null_Field));
 end loop;
 return Result;
 end Choose;
@@ -5862,7 +5860,7 @@ Result.Facts := Call_Facts (Call);
 for I in Rows'Range loop
 Result.Results (I) := (Data => Rows (I));
 Result.Value (I) := Field_Value (Rows (I), "value");
-Result.Probability (I) := (if Resolved_Choose (Call, Rows (I), I) then Number (Element (Field_Value (Field_Value (Rows (I), "answer"), "probabilities"), Natural'Value (As_Number (Field_Value (Field_Value (Rows (I), "answer"), "pick"))) + 1)) else (State => Null_Field));
+Result.Probability (I) := (if Resolved_Choose (Call, Rows (I), I) then Number (Field_Value (Field_Value (Field_Value (Rows (I), "answer"), "probabilities"), As_String (Field_Value (Field_Value (Rows (I), "answer"), "pick")))) else (State => Null_Field));
 end loop;
 return Result;
 end Choose;
@@ -5949,7 +5947,7 @@ Result.Facts := Call_Facts (Call);
 for I in Rows'Range loop
 Result.Results (I) := (Data => Rows (I));
 Result.Value := Field_Value (Rows (I), "value");
-Result.Probability := (if Kind (Field_Value (Rows (I), "index")) /= Null_Value then Number (Element (Field_Value (Field_Value (Rows (I), "answer"), "probabilities"), Natural'Value (As_Number (Field_Value (Field_Value (Rows (I), "answer"), "pick"))) + 1)) else (State => Null_Field));
+Result.Probability := (if Kind (Field_Value (Rows (I), "index")) /= Null_Value then Number (Field_Value (Field_Value (Field_Value (Rows (I), "answer"), "probabilities"), As_String (Field_Value (Field_Value (Rows (I), "answer"), "pick")))) else (State => Null_Field));
 end loop;
 return Result;
 end Find;
