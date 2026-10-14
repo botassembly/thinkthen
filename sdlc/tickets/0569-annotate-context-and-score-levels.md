@@ -4,6 +4,8 @@ Status: OPEN.
 
 Milestone: 0.2
 
+Reviews: revision 8590552, accept
+
 ## Outcome
 
 `annotate` accepts `--context` as its help says. It sends a shared document once per request instead of once per question. A score answer reports the level the question names. `thinkthen status` works on a machine with a fresh cache.
