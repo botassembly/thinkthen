@@ -61,7 +61,7 @@ int main(int argc,char** argv) {
     if(argc!=3) return 2;
     try {
         std::ifstream file(argv[1]); auto v=Json::parse(file);
-        Client client(Json::parse(argv[2]).object());
+        Client client(EngineSettings::from_document(Json::parse(argv[2])));
         auto q=question(v.at("question"));auto in=input(v.at("input"));
         auto opts=v.at("options");RequestOptions options;options.set_attempts(true);
         if(opts.contains("deadline_ms")) options.set_deadline_ms(opts.at("deadline_ms").get<int64_t>());

@@ -64,13 +64,28 @@ namespace tt {
             input, options));
         }
         results::Plan plan(const inputs::RequestCall& call) const {
-            auto bytes=inputs::Request().set_call(call).document().dump();
-            char* raw=nullptr;
-            size_t size=0;
-            detail::check_session(thinkthen_request_plan_json(static_cast<const Owner*>(this)->native_engine(),
-            bytes.data(),bytes.size(),&raw,&size));
-            std::unique_ptr<char,decltype(&thinkthen_free_string)> owned(raw,&thinkthen_free_string);
-            return results::Plan(Json::parse(std::string(raw,size)));
+            const auto& value=call.document();
+            auto function=value.at("function").get<std::string>();
+            auto question=value.at("question").dump(), input=value.at("input").dump();
+            auto options=value.contains("options") ? value.at("options").dump() : std::string("{}");
+            thinkthen_named_request_v1 request{
+                {
+                    function.data(),function.size()
+                },{
+                    question.data(),question.size()
+                },{
+                    input.data(),input.size()
+                },{
+                    options.data(),options.size()
+                }
+            };
+            thinkthen_value* raw=nullptr;
+            detail::check_session(thinkthen_request_plan_named_value(static_cast<const Owner*>(this)->native_engine(),
+            &request,&raw));
+            std::unique_ptr<thinkthen_value,decltype(&thinkthen_value_free)> owned(raw,&thinkthen_value_free);
+            const thinkthen_complete_json_v1* view=nullptr;
+            detail::check_session(thinkthen_value_view(owned.get(),&view));
+            return results::Plan(results::detail::native_value(view));
         }
         UsageStatus finish_usage_status() const {
             auto engine=static_cast<const Owner*>(this)->native_engine();

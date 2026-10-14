@@ -25,10 +25,14 @@ int main() {
         }
         assert(refused);
     }
-    auto row=packet(R"({"kind":"row","function":"filter","value":{"input":"kept","index":2,"value":true,"extension":17}})");
+    auto row=packet(R"({"kind":"row","function":"filter","value":{"input":{"extension":17},"index":2,"value":true,"extension":17}})");
     auto filtered=read_filter({row,terminal});
-    assert(filtered.size()==1 && filtered[0].document().at("extension").get<int>()==17);
+    assert(filtered.size()==1 && filtered[0].at("extension").get<int>()==17);
+    auto null_row=packet(R"({"kind":"row","function":"filter","value":{"input":null,"value":true}})");
+    assert(read_filter({null_row,terminal})[0].is_null());
     assert(read_filter({terminal}).empty());
+    auto ranking=packet(R"({"kind":"aggregate","function":"rank","value":[{"index":7,"value":1},{"index":3,"value":2}]})");
+    assert(read_rank({ranking,terminal})==std::vector<uint64_t>({7,3}));
     auto annotated=read_annotate({packet(R"({"kind":"row","function":"annotate","value":{"input":"note","value":{"a":null},"extension":false}})"),terminal});
     assert(annotated.size()==1 && !annotated[0].document().at("extension").get<bool>());
     SessionRelationEdge edge(Json{{"source",Json{{"name","one"}}},{"target",Json{{"name","two"}}}});

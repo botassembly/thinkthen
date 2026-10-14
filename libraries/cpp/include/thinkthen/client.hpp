@@ -59,9 +59,9 @@ private:
         std::unique_ptr<thinkthen_session_result,detail::PacketDeleter> packet(raw);
         if(state==THINKTHEN_SESSION_PENDING_V1) return {PollState::pending,{}};
         if(state==THINKTHEN_SESSION_END_V1) return {PollState::end,{}};
-        const char* bytes=nullptr; size_t size=0;
-        detail::check_session(thinkthen_session_result_json(packet.get(),&bytes,&size));
-        results::SessionPacket value(Json::parse(std::string(bytes,size)));
+        const thinkthen_complete_session_packet_v1* view=nullptr;
+        detail::check_session(thinkthen_session_result_view(packet.get(),&view));
+        results::SessionPacket value(results::detail::native_value(view));
         if(auto terminal=value.as_SessionPacketTerminal()) {
             auto failure=terminal->failure();
             if(failure.state==results::PresenceState::value) throw SessionFailure(std::move(*terminal));
@@ -111,8 +111,7 @@ class Client : public NamedCalls<Client> {
     }
 public:
     Client():engine_(thinkthen_engine_new()) { check_engine(); }
-    explicit Client(const inputs::EngineSettings& settings):Client(settings.document().object()) {}
-    explicit Client(const Json::Object& settings):engine_(thinkthen_engine_new_with(Json(settings).dump().c_str())) { check_engine(); }
+    explicit Client(const inputs::EngineSettings& settings):engine_(thinkthen_engine_new_with(settings.document().dump().c_str())) { check_engine(); }
     Client(Client&&)=default;
     Client& operator=(Client&&)=default;
     Client(const Client&)=delete;

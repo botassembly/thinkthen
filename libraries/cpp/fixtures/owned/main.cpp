@@ -52,8 +52,16 @@ int main(int argc,char** argv) {
             return answered ? 0:3;
         }
         if(argc!=4) return 2;
+        if(std::string(argv[1])=="plan") {
+            Client client;
+            auto call=RequestCall().set_function(RequestFunction("decide"))
+                .set_question(RequestQuestionText().set_text("asks for a refund"))
+                .set_input(RequestInputText().set_text("Refund me please."));
+            auto plan=client.plan(call); client.close();
+            std::cout<<plan.document().dump()<<'\n'; return 0;
+        }
         if(std::string(argv[1])=="closed") {
-            Client client(Json::Object{{"cache",false}});
+            Client client(EngineSettings().set_cache(CacheDocument(DisabledCache(false))));
             auto question=RequestQuestionDefinition().set_value(RequestDefinition::from_document(Json{{"decide","Is it?"},{"item_schema",Json{{"type","string"}}}}));
             auto call=client.decide(question,RequestInputFeed().set_name("closed"));
             auto invalid=RequestSessionDescriptor().set_item(item(Json(42)));
@@ -73,7 +81,7 @@ int main(int argc,char** argv) {
             std::cout<<"closed-push-pass\n"; return 0;
         }
         if(std::string(argv[1])=="usage-written" || std::string(argv[1])=="usage-failed") {
-            Client client(Json::Object{{"cache",false}}); auto call=client.decide(RequestQuestionText().set_text("Is it?"),RequestInputText().set_text("yes"));
+            Client client(EngineSettings().set_cache(CacheDocument(DisabledCache(false)))); auto call=client.decide(RequestQuestionText().set_text("Is it?"),RequestInputText().set_text("yes"));
             call.finish(); auto packets=call.collect(); auto earlier=packets.back().document().dump();
             bool answered=false;
             for(const auto& packet:packets) if(auto row=packet.as_SessionPacketDecideRow()) {
@@ -138,7 +146,9 @@ int main(int argc,char** argv) {
         const std::string originalNumeric=std::setlocale(LC_NUMERIC,nullptr);
         std::optional<CallerLocale> locale;
         if(verb=="locale") locale.emplace();
-        Client client(std::getenv("THINKTHEN_CPP_RECORD") ? Json::Object{{"record",std::getenv("THINKTHEN_CPP_RECORD")}} : Json::Object{});
+        auto settings=EngineSettings();
+        if(auto record=std::getenv("THINKTHEN_CPP_RECORD")) settings.set_record(record);
+        Client client(settings);
         if(verb=="locale") {
             Json original{{"nested",Json::Array{Json{{"number",0.5}},1.25}}};
             auto input=RequestInputRecords().set_items({item(original)});

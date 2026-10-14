@@ -90,7 +90,7 @@ def render(definitions,version):
             lines += [cache_field(t, 'value'), f'public: const {t}& value() const;']
             bodies += [cache_body(n, t, 'value', f'decode<{t}>(value_)')]
         lines += ['};']
-    return '\n'.join(lines+bodies+['}'])+'\n' + answer_helpers(definitions)
+    return '\n'.join(lines+bodies+['}'])+'\n' + answer_helpers(definitions) + native_values(definitions)
 
 def input_render(definitions):
     lines=['// Generated from request.schema.json; do not edit.','#pragma once','#include "result_value.hpp"','namespace tt::inputs {','using results::Node;']
@@ -150,12 +150,17 @@ def named_calls(functions, native_functions):
     for function in functions:
         lines += [f'AnswerCall<results::read_{function}> {function}(const inputs::RequestQuestion& question, const inputs::RequestInput& input, const inputs::RequestOptions& options={{}}) const {{',
                   f'return AnswerCall<results::read_{function}>(static_cast<const Owner*>(this)->start({json.dumps(function)}, question, input, options));', '}']
-    if 'thinkthen_request_plan_json' in native_functions:
+    if 'thinkthen_request_plan_named_value' in native_functions:
         lines += ['results::Plan plan(const inputs::RequestCall& call) const {',
-                  'auto bytes=inputs::Request().set_call(call).document().dump(); char* raw=nullptr; size_t size=0;',
-                  'detail::check_session(thinkthen_request_plan_json(static_cast<const Owner*>(this)->native_engine(),bytes.data(),bytes.size(),&raw,&size));',
-                  'std::unique_ptr<char,decltype(&thinkthen_free_string)> owned(raw,&thinkthen_free_string);',
-                  'return results::Plan(Json::parse(std::string(raw,size)));', '}']
+                  'const auto& value=call.document(); auto function=value.at("function").get<std::string>();',
+                  'auto question=value.at("question").dump(), input=value.at("input").dump();',
+                  'auto options=value.contains("options") ? value.at("options").dump() : std::string("{}");',
+                  'thinkthen_named_request_v1 request{{function.data(),function.size()},{question.data(),question.size()},{input.data(),input.size()},{options.data(),options.size()}};',
+                  'thinkthen_value* raw=nullptr;',
+                  'detail::check_session(thinkthen_request_plan_named_value(static_cast<const Owner*>(this)->native_engine(),&request,&raw));',
+                  'std::unique_ptr<thinkthen_value,decltype(&thinkthen_value_free)> owned(raw,&thinkthen_value_free);',
+                  'const thinkthen_complete_json_v1* view=nullptr; detail::check_session(thinkthen_value_view(owned.get(),&view));',
+                  'return results::Plan(results::detail::native_value(view));', '}']
     for symbol, operation in usage_operations(native_functions):
         lines += [f'UsageStatus {operation}() const {{',
                   'auto engine=static_cast<const Owner*>(this)->native_engine();',
@@ -166,7 +171,7 @@ def named_calls(functions, native_functions):
 
 
 def answer_helpers(definitions):
-    from host_answers import aggregate_answers, judgment_route, scalar_answers
+    from host_answers import aggregate_answers, aggregate_projection, judgment_route, scalar_answers
     scalars = scalar_answers(definitions)
     scalar_names = {function for function, _, _ in scalars}
     path, guards = judgment_route(definitions)
@@ -201,6 +206,17 @@ def answer_helpers(definitions):
                   'if(!answer) throw AnswerCardinalityFailure("no matching judgment",packets);', 'return std::move(*answer);', '}']
     for function, aggregate, payload in aggregate_answers(definitions):
         if function in scalar_names: continue
+        projected, member = aggregate_projection(function, payload, definitions)
+        if member:
+            value_type = typ(projected['items'])
+            lines += [f'inline std::vector<{value_type}> read_{function}(const std::vector<SessionPacket>& packets) {{',
+                      'successful_answer(packets);', f'std::vector<{value_type}> answer;',
+                      f'for(const auto& packet:packets) {{ if(literal(packet.document(),"function",{json.dumps(function)})) {{',
+                      'const auto& value=packet.document().at("value");',
+                      f'if(literal(packet.document(),"kind","row")) answer.push_back(decode<{value_type}>(value.at({json.dumps(member)})));',
+                      f'else if(literal(packet.document(),"kind","aggregate")) {{ if(!answer.empty()) continue; for(const auto& row:value) answer.push_back(decode<{value_type}>(row.at({json.dumps(member)}))); }}',
+                      '}}', 'return answer;', '}']
+            continue
         rows = [(key, value['properties']['value']) for key, value in definitions.items()
                 if value.get('properties', {}).get('function', {}).get('const') == function
                 and value.get('properties', {}).get('kind', {}).get('const') == 'row']
@@ -221,3 +237,98 @@ def answer_helpers(definitions):
                       'if(!answer) throw AnswerCardinalityFailure("no matching aggregate",packets);',
                       'return std::move(*answer);', '}']
     return '\n'.join(lines + ['}']).replace('literal(', 'detail::literal(') + '\n'
+
+
+def native_values(definitions):
+    """Copy compiler-derived native views into immutable host values, without parsing."""
+    import c
+    from generate import SCHEMA, graph, immediate_schema, prepare, references
+    all_definitions = prepare(graph(immediate_schema(json.loads(SCHEMA.read_text())),
+                                    ('completesessionPacket', 'completeImmediateFacts')))
+    definitions, pending = {}, ['completesessionPacket', 'completeImmediateFacts']
+    while pending:
+        key = pending.pop()
+        if key in definitions:
+            continue
+        schema = definitions[key] = all_definitions[key]
+        pending.extend(references(schema))
+        pending.extend(child for child, _ in schema.get('variants', []))
+    class Layout(c.Target):
+        def __init__(self):
+            super().__init__(definitions)
+            self.members = {}
+            self.arms = {}
+        def structure(self, key, members):
+            self.members[key] = members
+            super().structure(key, members)
+        def union(self, key, arms):
+            self.arms[c.ident(key)] = arms
+            super().union(key, arms)
+    target = Layout()
+    for key, schema in definitions.items():
+        target.definition(key, schema)
+    lines = ['#include <thinkthen/thinkthen.h>', 'namespace tt::results::detail {']
+    lines += [f'inline Json native_value(const {key}& value);' for key in target.members]
+    lines += ['inline Json native_value(const thinkthen_complete_json_v1& value);',
+              'inline Json native_value(const thinkthen_complete_utf8_v1& value) { return Json(std::string(value.data ? value.data : "", value.len)); }',
+              'template<class T> Json native_value(const T* value) { if(!value) throw std::invalid_argument("missing native value"); return native_value(*value); }',
+              'template<class T, std::enable_if_t<std::is_arithmetic_v<T>, int> = 0> Json native_value(T value) { return Json(value); }',
+              'inline Json native_value(const thinkthen_complete_json_v1& value) {',
+              'switch(value.kind) {',
+              'case THINKTHEN_COMPLETE_JSON_NULL_V1: return Json(nullptr);',
+              'case THINKTHEN_COMPLETE_JSON_BOOLEAN_V1: return Json(bool(value.data.boolean));',
+              'case THINKTHEN_COMPLETE_JSON_STRING_V1: return native_value(value.data.string);',
+              'case THINKTHEN_COMPLETE_JSON_NUMBER_V1: { auto text=native_value(value.data.number).get<std::string>();',
+              'if(text.find_first_of(".eE")==std::string::npos) { if(!text.empty() && text[0]==\'-\') { int64_t number{}; auto parsed=std::from_chars(text.data(),text.data()+text.size(),number); if(parsed.ec==std::errc{}) return Json(number); } else { uint64_t number{}; auto parsed=std::from_chars(text.data(),text.data()+text.size(),number); if(parsed.ec==std::errc{}) return Json(number); } }',
+              'double number{}; auto parsed=std::from_chars(text.data(),text.data()+text.size(),number); if(parsed.ec!=std::errc{}) throw std::invalid_argument("invalid native number"); return Json(number); }',
+              'case THINKTHEN_COMPLETE_JSON_ARRAY_V1: { Json::Array items; for(size_t i=0;i<value.data.array.len;++i) items.push_back(native_value(value.data.array.data[i])); return Json(std::move(items)); }',
+              'case THINKTHEN_COMPLETE_JSON_OBJECT_V1: { Json::Object items; for(size_t i=0;i<value.data.object.len;++i) { auto& item=value.data.object.data[i]; items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value)); } return Json(std::move(items)); }',
+              'default: throw std::invalid_argument("invalid native value kind"); } }']
+    for key, members in target.members.items():
+        schema = target.schemas.get(key, {})
+        body = []
+        if key in target.arms:
+            body += ['switch(value.kind) {']
+            for arm, _, _, _ in target.arms[key]:
+                symbol = key.removesuffix('_v1').upper() + '_' + arm.upper() + '_V1'
+                field = arm + '_' if arm in ('true', 'false') else arm
+                expression = 'Json(nullptr)' if arm == 'null' else f'native_value(value.data.{field})'
+                if arm == 'boolean': expression = f'Json(bool(value.data.{field}))'
+                body += [f'case {symbol}: return {expression};']
+            body += ['default: throw std::invalid_argument("invalid native alternative"); }']
+        elif 'enum' in schema:
+            body += ['switch(value.kind) {']
+            for value in schema['enum']:
+                symbol = key.removesuffix('_v1').upper() + '_' + re.sub(r'[^A-Za-z0-9]+', '_', value).strip('_').upper() + '_V1'
+                body += [f'case {symbol}: return Json({json.dumps(value)});']
+            body += ['default: throw std::invalid_argument("invalid native enum"); }']
+        elif 'properties' in schema:
+            body += ['Json::Object items;']
+            for member, field_type in members:
+                if member == 'extensions': continue
+                expression = f'value.{member + "_" if member in ("true", "false") else member}'
+                if field_type.endswith('_presence_v1'):
+                    decoded = f'native_value({expression}.value)'
+                    if c.normalized(schema['properties'][member]).get('type') == 'boolean':
+                        decoded = f'Json(bool({expression}.value))'
+                    body += [f'if({expression}.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back({json.dumps(member)},Json(nullptr));',
+                             f'else if({expression}.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back({json.dumps(member)},{decoded});']
+                else:
+                    decoded = f'native_value({expression})'
+                    if c.normalized(schema['properties'][member]).get('type') == 'boolean': decoded = f'Json(bool({expression}))'
+                    body += [f'items.emplace_back({json.dumps(member)},{decoded});']
+            body += ['for(size_t i=0;i<value.extensions.len;++i) { auto& item=value.extensions.data[i]; items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value)); }', 'return Json(std::move(items));']
+        elif members[0][0] == 'presence':
+            body += ['return value.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? native_value(value.value) : Json(nullptr);']
+        elif members[0][0] == 'data':
+            mapping = key.endswith('_map_v1')
+            body += ['Json::Object items;' if mapping else 'Json::Array items;', 'for(size_t i=0;i<value.len;++i) {']
+            body += ['auto& item=value.data[i]; items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));' if mapping else 'items.push_back(native_value(value.data[i]));']
+            body += ['}', 'return Json(std::move(items));']
+        elif members[0][0] == 'name':
+            body += ['return native_value(value.value);']
+        else:
+            expression = 'Json(bool(value.value))' if schema.get('type') == 'boolean' else 'native_value(value.value)'
+            body += [f'return {expression};']
+        lines += [f'inline Json native_value(const {key}& value) {{'] + body + ['}']
+    return '\n'.join(lines + ['}']) + '\n'
