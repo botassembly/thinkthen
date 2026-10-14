@@ -156,6 +156,8 @@ Reviews: revision f0b0422, reject
 
 Reviews: revision 1a166b0, accept
 
+Reviews: revision 8cfc15a, accept
+
 ## Outcome
 
 On the 0.2 candidate, a fresh read-only grader gives every language library, database extension and the MCP server B or better on the seven-point library rubric, and no public API exposes transport JSON, schema-path names or raw C layouts.
