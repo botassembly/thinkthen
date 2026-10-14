@@ -954,7 +954,7 @@ Result.kind := 1;
 Result.data := (discr => 0, unsigned_value => P_thinkthen_request_unsigned_v1 (Convert_EngineSettings_field_max_estimated_input_tokens_total_value_0_Unsigned (Value.V_0, Storage)));
 when T_EngineSettings_field_max_estimated_input_tokens_total_arm_1 =>
 Result.kind := 2;
-Result.data := (discr => 1, null => P_thinkthen_request_null_v1 (Convert_EngineSettings_field_max_estimated_input_tokens_total_value_1_Null (Value.V_1, Storage)));
+Result.data := (discr => 1, c_null => P_thinkthen_request_null_v1 (Convert_EngineSettings_field_max_estimated_input_tokens_total_value_1_Null (Value.V_1, Storage)));
 end case;
 return Store_thinkthen_request_optional_total_v1 (Result, Storage);
 end Convert_EngineSettings_field_max_estimated_input_tokens_total_EngineSettings_max_estimated_input_tokens_total;
@@ -973,7 +973,7 @@ Result.kind := 1;
 Result.data := (discr => 0, unsigned_value => P_thinkthen_request_unsigned_v1 (Convert_EngineSettings_field_max_requests_value_0_Unsigned (Value.V_0, Storage)));
 when T_EngineSettings_field_max_requests_arm_1 =>
 Result.kind := 2;
-Result.data := (discr => 1, null => P_thinkthen_request_null_v1 (Convert_EngineSettings_field_max_requests_value_1_Null (Value.V_1, Storage)));
+Result.data := (discr => 1, c_null => P_thinkthen_request_null_v1 (Convert_EngineSettings_field_max_requests_value_1_Null (Value.V_1, Storage)));
 end case;
 return Store_thinkthen_request_optional_count_v1 (Result, Storage);
 end Convert_EngineSettings_field_max_requests_EngineSettings_max_requests;
@@ -986,7 +986,7 @@ Result.kind := 1;
 Result.data := (discr => 0, unsigned_value => P_thinkthen_request_unsigned_v1 (Convert_EngineSettings_field_max_requests_total_value_0_Unsigned (Value.V_0, Storage)));
 when T_EngineSettings_field_max_requests_total_arm_1 =>
 Result.kind := 2;
-Result.data := (discr => 1, null => P_thinkthen_request_null_v1 (Convert_EngineSettings_field_max_requests_total_value_1_Null (Value.V_1, Storage)));
+Result.data := (discr => 1, c_null => P_thinkthen_request_null_v1 (Convert_EngineSettings_field_max_requests_total_value_1_Null (Value.V_1, Storage)));
 end case;
 return Store_thinkthen_request_optional_total_v1 (Result, Storage);
 end Convert_EngineSettings_field_max_requests_total_EngineSettings_max_estimated_input_tokens_total;
@@ -2123,7 +2123,7 @@ Result.kind := 3;
 Result.data := (discr => 2, json_value_list => P_thinkthen_request_json_value_list_v1 (Convert_Authored_criterion_value_2_JsonValue_list (Value.V_2, Storage)));
 when T_Authored_criterion_arm_3 =>
 Result.kind := 4;
-Result.data := (discr => 3, null => P_thinkthen_request_null_v1 (Convert_Authored_criterion_value_3_Null (Value.V_3, Storage)));
+Result.data := (discr => 3, c_null => P_thinkthen_request_null_v1 (Convert_Authored_criterion_value_3_Null (Value.V_3, Storage)));
 end case;
 return Store_thinkthen_request_criterion_v1 (Result, Storage);
 end Convert_Authored_criterion_Authored_criterion;
@@ -2807,7 +2807,7 @@ Result.kind := 3;
 Result.data := (discr => 2, json_value_list => P_thinkthen_request_json_value_list_v1 (Convert_Authored_description_value_2_JsonValue_list (Value.V_2, Storage)));
 when T_Authored_description_arm_3 =>
 Result.kind := 4;
-Result.data := (discr => 3, null => P_thinkthen_request_null_v1 (Convert_Authored_description_value_3_Null (Value.V_3, Storage)));
+Result.data := (discr => 3, c_null => P_thinkthen_request_null_v1 (Convert_Authored_description_value_3_Null (Value.V_3, Storage)));
 end case;
 return Store_thinkthen_request_description_v1 (Result, Storage);
 end Convert_Authored_description_Authored_description;
@@ -2901,7 +2901,7 @@ Result.kind := 3;
 Result.data := (discr => 2, boolean => P_thinkthen_request_input_property_boolean_v1 (Convert_Authored_inputProperty_boolean_Authored_inputProperty_boolean (Value.V_2, Storage)));
 when T_Authored_inputProperty_arm_array =>
 Result.kind := 4;
-Result.data := (discr => 3, array => P_thinkthen_request_input_property_array_v1 (Convert_Authored_inputProperty_array_Authored_inputProperty_array (Value.V_3, Storage)));
+Result.data := (discr => 3, c_array => P_thinkthen_request_input_property_array_v1 (Convert_Authored_inputProperty_array_Authored_inputProperty_array (Value.V_3, Storage)));
 end case;
 return Store_thinkthen_request_input_property_v1 (Result, Storage);
 end Convert_Authored_inputProperty_Authored_inputProperty;
