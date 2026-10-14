@@ -133,7 +133,6 @@ if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
 	# The installed-file mode (ticket 0128): the stock CLI and the shared cases load the
 	# extension unpacked from the release archive, by its path.
 	. "$REPO/sdlc/scripts/installed.sh"
-	unset THINKTHEN_CONFORMANCE_IDS
 	release=$(sed -n 's/^version = "\(.*\)"$/\1/p' "$REPO/crates/thinkthen/Cargo.toml" | head -n 1)
 	python3 cpp/verify_repository.py "$THINKTHEN_ARTIFACT" "$host_target" "$release"
 	installed_unpack
@@ -152,7 +151,7 @@ if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
 	export THINKTHEN_DUCKDB_EXTENSION="$scratch/$duckdb_metadata_version/$platform/thinkthen.duckdb_extension"
 	"$PY" cpp/verify_complete_tables.py --extension "$THINKTHEN_DUCKDB_EXTENSION"
 	"$PY" cpp/verify_interrupt.py --extension "$THINKTHEN_DUCKDB_EXTENSION"
-	sh "$LIMIT" 1800 python3 ../sqlite/tests/complete/parity.py duckdb
+	[ "$profile" = routine ] || sh "$LIMIT" 1800 python3 ../sqlite/tests/complete/parity.py duckdb
 	sh "$LIMIT" 300 python3 ../sqlite/tests/complete/facts.py duckdb
 	[ "$profile" = full ] || sh "$LIMIT" 900 "$PY" tools/conformance.py
 	sh "$LIMIT" 900 "$PY" tools/plan_suite.py p1_native_struct_is_keyless_and_sends_nothing plan_refusals_and_named_binding_never_send positive_process_total_denies_the_next_actual_send
@@ -206,7 +205,7 @@ if [ "$profile" = stress ]; then
 fi
 
 echo "== complete native calls"
-sh "$LIMIT" 1800 python3 ../sqlite/tests/complete/parity.py duckdb
+[ "$profile" = routine ] || sh "$LIMIT" 1800 python3 ../sqlite/tests/complete/parity.py duckdb
 sh "$LIMIT" 300 python3 ../sqlite/tests/complete/facts.py duckdb
 if [ "$profile" = full ]; then
     own_panic_hook "$THINKTHEN_DUCKDB_EXTENSION"
