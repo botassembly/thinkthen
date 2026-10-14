@@ -20,6 +20,7 @@
       "0.2",
       "0.2.1",
       "0.3",
+      "0.4",
       "later"
     ]
   },
@@ -44,6 +45,11 @@
     },
     {
       "name": "0.3",
+      "targetRef": "origin/main",
+      "state": "active"
+    },
+    {
+      "name": "0.4",
       "targetRef": "origin/main",
       "state": "active"
     }

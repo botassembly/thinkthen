@@ -212,3 +212,5 @@ PM amendment, 2026-10-14. Ordinary `thinkthen_details` returns the existing type
 - 2026-10-14 next: Merged the accepted PHP typed-library slice at 4d4cab9ae after installed parity, answer ownership and shipped example checks passed; continue remaining library migrations before the candidate.
 - 2026-10-14 next: Merged the accepted B+ PostgreSQL typed family at d6145fa84 with obsolete exports removed, unchanged accepted source, 225 retained parity passes and focused rebuilt native checks passing; continue remaining libraries and the candidate ceiling reconciliation.
 - 2026-10-14 next: Merged the freshly accepted Objective-C library at 038586e17 with unchanged reviewed source, passing source gates and retained exact-revision Mac installed checks; finish remaining library reviews and shared candidate proof.
+
+PM amendment, 2026-10-14. 0582 supersedes ruling (3) and the 2026-10-14 amendment on `thinkthen_details`. The SQLite and PostgreSQL lanes build `thinkthen_<function>_details` for all ten functions instead of typed `thinkthen_details`, `try_details` and record-list overloads. Answer accessors follow 0581.
