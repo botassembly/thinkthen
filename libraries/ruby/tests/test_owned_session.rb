@@ -36,15 +36,15 @@ class TestOwnedSession < Minitest::Test
       retained = T::Client.open(cache: false) do |client|
         asks = {
           "decide" => [{decide: "Is it urgent?"}, "text"],
-          "choose" => [{choose: "Which team?", options: %w[billing shipping]}, "text"],
+          "choose" => [T::Client.choose_question("Which team?", options: {billing: "Money", shipping: "Delivery"}), "text"],
           "tag" => [{tag: "Which labels?", labels: %w[money shipping]}, "text"],
           "score" => [{score: "How urgent?", levels: %w[low mid high]}, "text"],
           "filter" => [{decide: "Is it urgent?"}, ["first", {note: "second"}]],
           "rank" => ["Is it urgent?", ["first", "second"]],
           "find" => ["Which line?", %w[first second]],
           "annotate" => [{version: 1, questions: {ok: {decide: "Is it urgent?"}}}, ["text"]],
-          "recognize" => [{version: 1, recognize: {kinds: {person: nil}}}, "Ana Lima"],
-          "relate" => [{version: 1, relate: {relations: [{name: "knows", source: "person", target: "person", either: false}]}}, [{name: "Ana", kind: "person"}, {name: "Bob", kind: "person"}]]
+          "recognize" => [T::Client.recognize_question(kinds: {person: nil}), "Ana Lima"],
+          "relate" => [T::Client.relate_question(relations: [T::Client.relation("knows", source: "person", target: "person", either: false)]), [{name: "Ana", kind: "person"}, {name: "Bob", kind: "person"}]]
         }
         asks.map { |verb, (question, input)| [verb, client.public_send(verb, question, input)] }
       end
@@ -84,8 +84,10 @@ class TestOwnedSession < Minitest::Test
     TestBackend.with(<<~RUBY) do |backend, child|
       T::Client.open(cache: false) do |client|
         preview = client.plan("decide", "Question?", ["one", "two"], batch: 1)
-        say [preview.fetch("records"), preview.fetch("requests")]
-        say client.plan("decide", "Question?", {body: "one"}, batch: 1).fetch("records")
+        raise "untyped preview" unless preview.is_a?(T::Plan) && T::Plan::FIELDS.length == 9
+        raise "public transport" if T::Client.respond_to?(:dump)
+        say [preview.records, preview.requests]
+        say client.plan("decide", "Question?", {body: "one"}, batch: 1).records
         say [T.const_defined?(:Engine, false), T.const_defined?(:Complete, false), T.respond_to?(:decide)]
         say client.inspect
       end
@@ -143,7 +145,7 @@ class TestOwnedSession < Minitest::Test
         File.write(path, JSON.generate(decide: "File wording?"))
         File.write("refund", JSON.generate(decide: "Local wording?"))
         selectors = [T::Client.question_file(path), T::Client.question_name("refund"), T::Client.question_reference("@refund")]
-        say selectors.map { |selector| JSON.parse(T::Client.dump(selector.selector)) }
+        say selectors.map { |selector| selector.selector }
         raise "selector leak" unless selectors.all? { |selector| selector.inspect == "<ThinkThen::Client::Question: content withheld>" }
         T::Client.open(cache: false) do |client|
           results = selectors.map { |selector| client.decide(selector, "text") }

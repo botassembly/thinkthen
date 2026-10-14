@@ -1,6 +1,6 @@
 """Rust-owned Ruby results derived from the prepared shared graph."""
 import json
-ROOTS = ('completesessionPacket',)
+ROOTS = ('completesessionPacket', 'completeplan')
 
 def name(key):
     return 'Native' + ''.join(part[:1].upper() + part[1:] for part in key.removeprefix('complete').split('_'))
@@ -10,6 +10,8 @@ def render(definitions):
     for key, source in definitions.items():
         if 'properties' not in source: continue
         lines += [f'    class {name(key)} < Native::Result']
+        if key == 'completeplan':
+            lines += ['      FIELDS = ' + repr(list(source['properties'])) + '.freeze']
         for member in source['properties']:
             lines += [f'      define_method({member!r}) {{ self[{member!r}] }}']
         lines += ['    end']

@@ -173,5 +173,6 @@ if [ "$profile" = smoke ]; then
   exit 0
 fi
 "$RUBY" "$scratch/libraries/ruby/tests/test_owned_session.rb"
+"$RUBY" "$scratch/libraries/ruby/tests/test_examples.rb"
 python3 "$repo/libraries/ruby/tests/native_cases.py"
 echo "check ruby: pass, installed"

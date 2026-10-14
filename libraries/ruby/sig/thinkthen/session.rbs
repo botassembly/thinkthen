@@ -1,5 +1,6 @@
 # RBS signatures for lib/thinkthen/session.rb.
 module ThinkThen
+  Plan: singleton(Results::NativePlan)
   # The state of this engine's count-only usage deltas.
   class UsageStatus < Struct[untyped]
     attr_reader state: String
@@ -13,11 +14,11 @@ module ThinkThen
     # One plain answer value; the kind follows the call:
     # filter returns the original inputs, rank the typed rows, a scalar call
     # one answer value, and a list call a frozen Array of them.
-    type answer = untyped | Array[untyped] | Array[Native::Result]
+    type answer = bool | String | Integer | Float | nil | Array[untyped] | Native::Result | Hash[String, untyped]
 
     # The owned answer of one named call. Ruby treats every object as true,
     # including a result whose value is false; read value to branch.
-    class Completed
+    class Completed[A = answer]
       def initialize: (Array[Native::Result] results, NativeSessionPacketTerminal? terminal, bool scalar, String verb, Array[NativeSessionPacketObservation] observations) -> void
 
       # The typed result rows.
@@ -27,7 +28,7 @@ module ThinkThen
       attr_reader observations: Array[Results::NativeSessionPacketObservation]
 
       def facts: () -> Results::NativeFacts
-      def value: () -> Results::answer
+      def value: () -> A
       def inspect: () -> String
     end
   end
@@ -45,7 +46,9 @@ module ThinkThen
     def self.question_name: (String name) -> Client::Question
     def self.question_reference: (String reference) -> Client::Question
     # Native JSON of a value; the native extension itself reads this.
+    private
     def self.dump: (untyped value) -> String
+    public
     def self.original: (untyped value) -> Hash[Symbol, untyped]
     def self.descriptor: (untyped value) -> Hash[Symbol, untyped]
 

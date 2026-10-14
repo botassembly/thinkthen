@@ -11,7 +11,7 @@ puts decision.value
 puts decision.facts.requests_sent
 ```
 
-`Client` has the ten named methods: `decide`, `filter`, `rank`, `find`, `choose`, `score`, `tag`, `annotate`, `recognize`, and `relate`. Questions accept literal text, ordinary hashes containing the native definition, or `Client.question_file`, `question_name`, and `question_reference` selectors. Strings are literal wording; references are explicit. Rust validates questions, settings and reading options.
+`Client` has the ten named methods: `decide`, `filter`, `rank`, `find`, `choose`, `score`, `tag`, `annotate`, `recognize`, and `relate`. `Client.choose_question(text, options: ordered_hash)`, `Client.recognize_question(kinds: ...)`, `Client.relation(name, ...)` and `Client.relate_question(relations: ...)` build ordinary definitions that Rust validates. Ruby hashes preserve option order. Questions accept literal text, ordinary hashes containing the native definition, or `Client.question_file`, `question_name`, and `question_reference` selectors. Strings are literal wording; references are explicit. Rust validates questions, settings and reading options.
 
 Pass a scalar, an array, an enumerable, or `Client.files(paths, unit: "line")`. `Client.item(value, context: ..., options: ..., images: ...)` carries per-record fields separately from the original. Image descriptors use native `bytes` with base64 data and media type, or `file` with a path. File and image support follow the shared request contract. Enumerable producers are advanced with backpressure and closed when they support `close`.
 
@@ -19,7 +19,7 @@ Results own their native values after client cleanup. `result.results` contains 
 
 Failures raise a typed `ThinkThen::Error` subclass. Native terminal failures retain `facts`, `complete`, `results` for the completed prefix, and `terminal`. Admission failures have no account. `Cancel.new` and `cancel:` stop reads and submissions; `deadline_ms:` is a native request option. Native waits release the GVL while the session remains owned. Block-scoped `Client.open` and `start` close operations on success, exceptions and interruption. No new Ruby asynchronous framework is introduced.
 
-`client.plan(function, question, records, **options)` returns the native preview without calls, keys or cache reads. It supports the native atomic and rank preview contract and refuses unsupported functions. `usage`, `usage_persistence`, and `finish_usage_status` read the owned engine's observations.
+`client.plan(function, question, records, **options)` returns a typed `Plan` with nine native fields without calls, keys or cache reads. It supports decide, choose, tag, score, filter and rank and refuses unsupported functions. `usage`, `usage_persistence`, and `finish_usage_status` read the owned engine's observations.
 
 ## Migration
 

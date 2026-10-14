@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 require_relative "results_generated"
 module ThinkThen
+  Plan = Results::NativePlan
   UsageStatus = Struct.new(:state, :advice) do
     def initialize(state, advice)
       super(state.freeze, advice&.freeze)
@@ -55,7 +56,7 @@ module ThinkThen
       raise unless active
     end
     def initialize(**settings)
-      @native = Native.request_engine(Client.dump(settings))
+      @native = Native.request_engine(Client.send(:dump, settings))
       @operations = []
       @closed = false
     rescue JSON::GeneratorError, TypeError
@@ -82,6 +83,21 @@ module ThinkThen
       JSON.generate(value)
     rescue JSON::GeneratorError, TypeError, EncodingError
       raise UsageError.new("input cannot be converted to native JSON", "usage")
+    end
+    private_class_method :dump
+    def self.choose_question(text, options:)
+      {choose: text, options: options}.freeze
+    end
+    def self.recognize_question(kinds:, **fields)
+      {version: 1, recognize: {kinds: kinds, **fields}}.freeze
+    end
+    def self.relation(name, **fields)
+      {name: name, **fields}.freeze
+    end
+    def self.relate_question(relations:, fields: nil)
+      body = {relations: relations}
+      body[:fields] = fields unless fields.nil?
+      {version: 1, relate: body}.freeze
     end
     def self.original(value)
       value.is_a?(String) ? {kind: "text", text: value} : {kind: "json", value: value}
@@ -145,7 +161,6 @@ module ThinkThen
         @rows = []
         @observations = []
         @closed = false
-        @scalar = %w[find relate].include?(verb) || (!input.is_a?(Array) && !input.is_a?(Source) && !input.is_a?(Enumerable))
         if input.is_a?(Enumerable) && !input.is_a?(Array) && !input.is_a?(Hash) && !input.is_a?(Source) && !input.is_a?(Item)
           @producer = input.to_enum
           @owner = input

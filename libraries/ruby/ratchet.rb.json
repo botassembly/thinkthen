@@ -1,9 +1,9 @@
 {
   "directory": [
     "lib",
-    "tests",
     "fallback/lib"
   ],
   "extension": ".rb",
-  "max": 1848
+  "max": 305,
+  "scope": "handwritten-production"
 }
