@@ -248,13 +248,15 @@ pub(crate) unsafe extern "C" fn thinkthen_cpp_complete_feed_new(
         };
         let started = (|| {
             let request = source_request(native.map(|(request, _)| request), &prepared, options)?;
+            let all_filter_results = matches!(prepared, complete_native::Prepared::Filter(_))
+                && !request.call.arguments().options.files_only;
             engine.request_session_with_feed_options(
                 request,
                 thinkthen::Surface::Duckdb,
                 thinkthen::RequestSessionFeedOptions {
                     eager: !input.incremental,
                     image_inputs: input.image_inputs()?,
-                    all_filter_results: matches!(prepared, complete_native::Prepared::Filter(_)),
+                    all_filter_results,
                     record_reading: Some(reading),
                 },
             )

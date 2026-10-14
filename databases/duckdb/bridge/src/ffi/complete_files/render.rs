@@ -23,7 +23,7 @@ pub(super) fn packet(packet: Packet) -> Result<Value, Error> {
                 Row::Choice(v) => json!(v.result().value()),
                 Row::Tags(v) => json!(v.result().value()),
                 Row::Score(v) => json!(v.result().value()),
-                Row::Filter(v) => json!(v.result().value()),
+                Row::Filter(v) => super::super::native_records::filter_value(v)?,
                 Row::Annotation(_) => Value::Null,
             };
             crate::complete_native::put(&mut value, "answers", json!([answer]))?;
@@ -33,7 +33,7 @@ pub(super) fn packet(packet: Packet) -> Result<Value, Error> {
             crate::complete_native::put(
                 &mut value,
                 "answers",
-                super::super::native_records::plain_values(result),
+                super::super::native_records::plain_values(result)?,
             )?;
         }
         Packet::Observation { value: event, .. } => {

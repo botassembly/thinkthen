@@ -389,13 +389,35 @@ void OriginalSettings(DataChunk &args, ExpressionState &, Vector &result) {
 	}
 }
 
-void RegisterMacro(ExtensionLoader &loader, const string &sql, const string &purpose) {
+void RegisterMacro(ExtensionLoader &loader, const string &sql, const string &purpose, bool record_overloads = false, bool list_rules = false) {
 	auto parser = ThinkThenMacroParser();
 	parser.ParseQuery(sql);
 	auto &statement = parser.statements.at(0)->Cast<CreateStatement>();
 	ThinkThenMacroSchema(*statement.info);
 	statement.info->internal = true;
 	auto &info = statement.info->Cast<CreateMacroInfo>();
+    if (record_overloads) {
+        auto &records = *info.macros.at(1);
+        records.types.resize(records.parameters.size(), LogicalType::UNKNOWN);
+        records.types.at(1) = LogicalType::LIST(LogicalType::ANY);
+        // A literal NULL cannot be cast to LIST(ANY): its child has no physical
+        // type. Keep each named form, and prefer the legacy text form positionally.
+        auto old_null = info.macros.at(0)->Copy();
+        old_null->types.resize(old_null->parameters.size(), LogicalType::UNKNOWN);
+        old_null->types.at(0) = LogicalType::VARCHAR;
+        old_null->types.at(1) = LogicalType::SQLNULL;
+        auto records_null = records.Copy();
+        records_null->types.at(1) = LogicalType::SQLNULL;
+        if (list_rules) {
+            auto old_list = info.macros.at(0)->Copy();
+            old_list->types.resize(old_list->parameters.size(), LogicalType::UNKNOWN);
+            old_list->types.at(0) = LogicalType::VARCHAR;
+            old_list->types.at(1) = LogicalType::LIST(LogicalType::VARCHAR);
+            info.macros.push_back(std::move(old_list));
+        }
+        info.macros.push_back(std::move(old_null));
+        info.macros.push_back(std::move(records_null));
+    }
 	FunctionDescription description;
 	description.description = purpose;
 	info.descriptions.push_back(std::move(description));
@@ -406,6 +428,10 @@ void RegisterMacro(ExtensionLoader &loader, const string &sql, const string &pur
 
 void RegisterPortableMacro(ExtensionLoader &loader, const string &sql, const string &purpose) {
 	RegisterMacro(loader, sql, purpose);
+}
+
+void RegisterRecordOverloads(ExtensionLoader &loader, const string &sql, const string &purpose, bool list_rules) {
+    RegisterMacro(loader, sql, purpose, true, list_rules);
 }
 
 string PortableOptionParameters() {
@@ -509,12 +535,12 @@ void RegisterPortableDecide(ExtensionLoader &loader) {
 		                      + PortableOptions("CASE WHEN members IS NOT NULL AND typeof(members) = 'VARCHAR' THEN CAST(members AS VARCHAR) ELSE " + PortableJSONArgument("settings") + " END") + ", "
 		                      + std::to_string(kind) + ", CASE WHEN members IS NULL THEN '\"NULL\"' ELSE typeof(members) END, typeof(settings))", purpose);
 	}
-	RegisterMacro(loader, "CREATE MACRO thinkthen_rank(question, keyed_json, settings := NULL" + PortableOptionParameters() + ") "
-	                      "AS TABLE SELECT json_extract_string(item.value, '$.key') AS key, "
+	RegisterRecordOverloads(loader, "CREATE MACRO thinkthen_rank(question, keyed_json, settings := NULL" + PortableOptionParameters() + ") "
+	                      "AS TABLE (SELECT json_extract_string(item.value, '$.key') AS key, "
 	                      "CAST(json_extract(item.value, '$.rank') AS BIGINT) AS rank, "
 	                      "CAST(json_extract(item.value, '$.probability') AS DOUBLE) AS probability "
 	                      "FROM json_each(thinkthen_native_many(" + PortableJSONArgument("question") + ", " + PortableJSONArgument("keyed_json") + ", " + PortableOptions("settings", "question IS NULL OR keyed_json IS NULL", false) + ", "
-	                      + std::to_string(RANK_KIND) + ")) item ORDER BY rank", "Rank keyed text records by their probability of yes.");
+	                      + std::to_string(RANK_KIND) + ")) item ORDER BY rank), (question, records, reading := NULL, settings := NULL, incremental := false, cancelled := false) AS TABLE (" + NativeRecordTableSQL("rank") + ")", "Rank keyed text records or native records with typed readings and final facts.");
 	RegisterMacro(loader, "CREATE MACRO thinkthen_rank_set(questions, keyed_json, settings := NULL" + PortableOptionParameters() + ") "
 	                      "AS TABLE SELECT json_extract_string(item.value, '$.key') AS key, "
 	                      "CAST(json_extract(item.value, '$.rank') AS BIGINT) AS rank, "

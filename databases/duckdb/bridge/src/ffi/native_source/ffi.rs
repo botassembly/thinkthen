@@ -5,7 +5,7 @@ use serde_json::{Value, json, value::RawValue};
 use std::collections::BTreeMap;
 use thinkthen::Error;
 
-fn descriptor(raw: &str, incremental: bool) -> Result<Value, Error> {
+fn descriptor(raw: &str, incremental: bool, cancelled: bool) -> Result<Value, Error> {
     match thinkthen::Settings::parse(&format!("{{\"sql_source\":{raw}}}")) {
         Ok(_) | Err(thinkthen::SettingsError::UnknownKey(_)) => {}
         Err(error) => return Err(complete_native::usage(&error.to_string())),
@@ -13,6 +13,13 @@ fn descriptor(raw: &str, incremental: bool) -> Result<Value, Error> {
     let mut fields: BTreeMap<String, Box<RawValue>> = serde_json::from_str(raw)
         .map_err(|_| complete_native::usage("source uses named native fields"))?;
     fields.retain(|_, value| value.get() != "null");
+    if let Some(marker) = fields.remove("source")
+        && marker.get() != "true"
+    {
+        return Err(complete_native::usage(
+            "source requires an explicit source selector",
+        ));
+    }
     if fields.keys().any(|key| {
         !matches!(
             key.as_str(),
@@ -48,13 +55,33 @@ fn descriptor(raw: &str, incremental: bool) -> Result<Value, Error> {
         .unwrap_or(json!("text"));
     let mut files = json!({"paths":paths,"options":{"reading":reading,"media":media}});
     if let Some(format) = fields.remove("format") {
-        complete_native::put(
-            &mut files,
-            "format",
-            serde_json::from_str(format.get()).map_err(|_| complete_native::defect())?,
-        )?;
+        let format: String = serde_json::from_str(format.get())
+            .map_err(|_| complete_native::usage("source format is text"))?;
+        let framing = match format.as_str() {
+            "document" => Some(thinkthen::RequestFraming::Document),
+            "lines" => Some(thinkthen::RequestFraming::Lines),
+            _ => None,
+        };
+        if let Some(framing) = framing {
+            let options: thinkthen::InputReaderOptions = serde_json::from_value(
+                files
+                    .get("options")
+                    .cloned()
+                    .ok_or_else(complete_native::defect)?,
+            )
+            .map_err(|_| complete_native::usage("invalid native reader options"))?;
+            thinkthen::RequestSource {
+                paths: Vec::new(),
+                reading: options.reading,
+                media: options.media,
+                framing: Some(framing),
+            }
+            .validate_reading()?;
+        } else {
+            complete_native::put(&mut files, "format", json!(format))?;
+        }
     }
-    let value = json!({"files":files,"incremental":incremental});
+    let value = json!({"files":files,"incremental":incremental,"cancelled":cancelled});
     // This validates only controls; the host still owns all metadata and handles.
     complete_native::Inputs::parse(&value.to_string(), true)?;
     Ok(value)
@@ -67,9 +94,10 @@ fn descriptor(raw: &str, incremental: bool) -> Result<Value, Error> {
 pub(crate) unsafe extern "C" fn thinkthen_cpp_native_source_input(
     source: BridgeText,
     incremental: bool,
+    cancelled: bool,
 ) -> Reply {
     reply_boundary(|| {
-        descriptor(text(source.bytes, source.len)?, incremental)
+        descriptor(text(source.bytes, source.len)?, incremental, cancelled)
             .map(|value| value.to_string().into_bytes())
             .map_err(|error| complete_native::failure(&error).to_string())
     })

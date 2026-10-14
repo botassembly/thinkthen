@@ -1,34 +1,10 @@
-"""Actual DuckDB complete functions with typed SQL checks on native JSON fields."""
-import json,sys,threading,os,subprocess,signal
+"""Ordinary DuckDB functions execute native SQL records and typed receipt rows."""
+import json,sys,threading
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[3] / 'duckdb/tools'))
 from receipt_adapter import carrier
 payload=json.loads(sys.stdin.readline())
 def literal(value):return "'"+str(value).replace("'","''")+"'"
-if os.environ.get('THINKTHEN_DUCKDB_NATIVE_CLI'):
-    statements=['LOAD '+literal(sys.argv[1])]
-    for key,value in payload['engine_settings'].items():
-        if key=='cache' and value is False:value='off'
-        if key=='refresh_cache':value=int(value)
-        statements.append('SET thinkthen_'+key+'='+('NULL' if value is None else literal(value)))
-    statements.append('CREATE TEMP TABLE native_receipt AS SELECT thinkthen_'+payload['verb']+'_complete('+','.join(literal(value) for value in (payload['question'],json.dumps(payload['inputs'],ensure_ascii=False,separators=(',',':')),json.dumps(payload.get('controls',{}))))+') AS receipt')
-    statements.append('SELECT receipt,typeof(receipt) AS native_type,receipt.facts.call_id AS call_id,receipt.facts.requests_sent::BIGINT AS sends,receipt.failure.kind AS kind FROM native_receipt')
-    process=subprocess.Popen([os.environ['THINKTHEN_DUCKDB_NATIVE_CLI'],'-unsigned','-json','-c',';'.join(statements)],stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True)
-    if payload.get('held_cancel'):
-        def cancel_cli():
-            sys.stdin.readline();process.send_signal(signal.SIGINT);print('cancel-fired',flush=True)
-        threading.Thread(target=cancel_cli,daemon=True).start()
-    stdout,stderr=process.communicate(timeout=120)
-    if process.returncode:
-        print(json.dumps({'host_error':stderr,'host_cancelled':'Interrupted' in stderr or 'interrupt' in stderr.lower()}),flush=True)
-    else:
-        row,=json.loads(stdout)
-        assert row['native_type'].startswith('STRUCT(')
-        assert row['call_id'] is None or isinstance(row['call_id'],str) and len(row['call_id'])==64
-        assert row['sends'] is None or isinstance(row['sends'],int) and row['sends']>=0
-        assert row['kind'] is None or isinstance(row['kind'],str)
-        print(json.dumps(carrier(row['receipt'],payload['verb']),ensure_ascii=False,separators=(',',':')),flush=True)
-    sys.exit(0)
 import duckdb
 db=duckdb.connect(config={'allow_unsigned_extensions':True,'autoinstall_known_extensions':False})
 db.execute('LOAD '+literal(sys.argv[1]))
@@ -41,11 +17,64 @@ try:
         if key=='cache' and value is False:value='off'
         if key=='refresh_cache':value=int(value)
         db.execute('SET thinkthen_'+key+'='+('NULL' if value is None else literal(value)))
-    db.execute('CREATE TEMP TABLE native_receipt AS SELECT thinkthen_'+payload['verb']+'_complete(?,?,?) AS receipt',[payload['question'],json.dumps(payload['inputs'],ensure_ascii=False,separators=(',',':')),json.dumps(payload.get('controls',{}))])
-    receipt=db.execute('SELECT receipt FROM native_receipt').fetchone()[0]
-    assert isinstance(receipt,dict)
-    assert 'STRUCT' in db.execute('DESCRIBE native_receipt').fetchone()[1]
-    call_id,sends,kind=db.execute('SELECT receipt.facts.call_id,receipt.facts.requests_sent,receipt.failure.kind FROM native_receipt').fetchone()
+    bind = [payload['question']]
+    inputs = payload['inputs']
+    def argument(value, cast=''):
+        bind.append(value)
+        return '?' + cast
+    def record_expression(record):
+        if 'read_error' in record:
+            return "{'read_error':" + argument(record['read_error']) + "}"
+        members = []
+        for key in ('text','document','context','options','examples','seed_spans','source'):
+            if key in record:
+                members.append(key + ' := ' + argument(record[key]))
+        if 'json' in record or 'json_text' in record:
+            original = record.get('json_text') if 'json_text' in record else json.dumps(record['json'],ensure_ascii=False,separators=(',',':'))
+            members.append('json := ' + argument(original, '::JSON'))
+        if 'images' in record:
+            images = []
+            for image in record['images']:
+                images.append('thinkthen_image(' + argument(bytes(image['bytes']), '::BLOB') + ',' + argument(image['media']) + ')')
+            members.append('images := [' + ','.join(images) + ']')
+        return 'thinkthen_record(' + ','.join(members) + ')'
+    if 'files' in inputs:
+        files = inputs['files']
+        options = files.get('options', {})
+        physical = options.get('reading', {})
+        collection = 'thinkthen_source(' + argument(files['paths']) + ',unit := ' + argument(physical.get('unit','line'))
+        if 'window' in physical:
+            collection += ',"window" := ' + argument(physical['window'])
+        if 'format' in files:
+            collection += ',format := ' + argument(files['format'])
+        collection += ',media := ' + argument(options.get('media','text')) + ')'
+    else:
+        collection = '[' + ','.join(record_expression(record) for record in inputs['records']) + ']'
+    reading = dict(inputs.get('reading', {}))
+    for original, canonical in [('fields','field'),('context','context_field'),('options','options_field'),('examples','examples_field'),('seed_spans','seed_spans_field')]:
+        if original in reading:
+            reading[canonical] = reading.pop(original)
+    reading['attempts'] = inputs.get('attempts',False)
+    reading_sql = 'thinkthen_reading(' + ','.join('"'+key+'" := '+argument(value) for key,value in reading.items()) + ')'
+    settings = argument(json.dumps(payload.get('controls',{})))
+    incremental = argument(inputs.get('incremental',False))
+    cancelled = argument(inputs.get('cancelled',False))
+    db.execute('CREATE TEMP TABLE native_rows AS SELECT * FROM thinkthen_'+payload['verb']+
+               '(question := ?,records := '+collection+',reading := '+reading_sql+
+               ',settings := '+settings+',incremental := '+incremental+',cancelled := '+cancelled+')', bind)
+    columns = [row[0] for row in db.execute('DESCRIBE native_rows').fetchall()]
+    actual = [dict(zip(columns,row)) for row in db.execute('SELECT * FROM native_rows ORDER BY ordinal NULLS LAST').fetchall()]
+    assert actual
+    first = actual[0]
+    assert isinstance(first['facts'],dict) or first['facts'] is None
+    assert isinstance(first['failure'],dict) or first['failure'] is None
+    receipt = {'results':[row['result'] for row in actual if row['result'] is not None],
+               'facts':first['facts'],'failure':first['failure'],'observations':first['observations'],
+               'ordinals':[row['ordinal'] for row in actual if row['ordinal'] is not None],
+               'selection':first['selection']}
+    call_id = first['facts']['call_id'] if first['facts'] else None
+    sends = first['facts']['requests_sent'] if first['facts'] else None
+    kind = first['failure']['kind'] if first['failure'] else None
     assert call_id is None or isinstance(call_id,str) and len(call_id)==64
     assert sends is None or isinstance(sends,int) and sends>=0
     assert kind is None or isinstance(kind,str)

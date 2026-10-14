@@ -163,7 +163,9 @@ def render(schema):
     MODEL = model
     for root in ROOTS:
         model.shape({'$ref': '#/$defs/' + root}, root)
-    lines = ['// Generated from the canonical native result schema; do not edit.', '#pragma once']
+    header = ['// Generated from the canonical native result schema; do not edit.', '#pragma once']
+    lines = list(header)
+    chunks = []
     for kind, (fields, union, mapping) in model.types.items():
         members = []
         values = []
@@ -185,7 +187,12 @@ def render(schema):
         else:
             lines += ['return Value::STRUCT(' + kind + 'Type(), {' + ', '.join(values) + '});']
         lines += ['}']
-    return '\n'.join(lines) + '\n'
+        if len(lines) >= 350:
+            chunks.append('\n'.join(lines) + '\n')
+            lines = list(header)
+    if len(lines) > len(header):
+        chunks.append('\n'.join(lines) + '\n')
+    return chunks
 
 
 def model_for(schema):
@@ -217,10 +224,15 @@ if __name__ == '__main__':
     root = Path(__file__).resolve().parents[3]
     schema = json.loads((root / 'crates/thinkthen/src/public/results/complete.schema.json').read_text())
     output = root / 'databases/duckdb/cpp/src/receipt_types_generated.hpp'
-    generated = render(schema)
-    if args.check:
-        if output.read_text() != generated:
-            raise SystemExit('DuckDB native receipt types need generation')
-    else:
-        output.write_text(generated)
+    chunks = render(schema)
+    generated = {output.with_name(f'receipt_types_generated_{index+1}.hpp'): chunk
+                 for index, chunk in enumerate(chunks)}
+    generated[output] = '// Generated canonical receipt fields; do not edit.\n#pragma once\n' + ''.join(
+        f'#include "{path.name}"\n' for path in generated)
+    for path, contents in generated.items():
+        if args.check:
+            if path.read_text() != contents:
+                raise SystemExit('DuckDB native receipt types need generation')
+        else:
+            path.write_text(contents)
 

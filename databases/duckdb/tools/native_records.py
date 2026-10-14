@@ -48,7 +48,7 @@ def helpers(run):
         ], backend.base())
         expect(rows(got[1]), [[0, True, 'example.txt', 2, 3]], "located native record")
         expect(rows(got[2]), [['usage', None]], "unlocated refusal has no invented facts")
-        expect(rows(got[3]), [[True, 'example.txt']], "files_only accepts actual located input")
+        expect(rows(got[3]), [[['"alpha"'], 'example.txt']], "files_only accepts actual located input")
         expect(backend.count(), 1, "location preserves cache identity; refusal sends nothing")
 
 

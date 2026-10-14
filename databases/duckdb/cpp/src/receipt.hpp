@@ -83,14 +83,18 @@ inline Value ReceiptResultValue(const string &verb, ReceiptJSON *value) {
     return Receipt_relatedValue(value);
 }
 inline LogicalType ReceiptAnswerType(const string &verb) {
-    if (verb == "decide" || verb == "filter") { return LogicalType::BOOLEAN; }
+    if (verb == "decide") { return LogicalType::BOOLEAN; }
     if (verb == "choose") { return LogicalType::VARCHAR; }
     if (verb == "tag") { return LogicalType::LIST(LogicalType::VARCHAR); }
+    if (verb == "filter") { return LogicalType::LIST(LogicalType::JSON()); }
     if (verb == "score") { return LogicalType::DOUBLE; }
     if (verb == "rank") { return LogicalType::UBIGINT; }
     return LogicalType::JSON();
 }
 inline Value ReceiptAnswerValue(const string &verb, ReceiptJSON *value) {
+    if (verb == "filter") {
+        return ReceiptList(value, LogicalType::JSON(), [](ReceiptJSON *item) { return ReceiptLeaf(item, LogicalType::JSON()); });
+    }
     if (verb == "tag") {
         return ReceiptList(value, LogicalType::VARCHAR, [](ReceiptJSON *item) { return ReceiptLeaf(item, LogicalType::VARCHAR); });
     }

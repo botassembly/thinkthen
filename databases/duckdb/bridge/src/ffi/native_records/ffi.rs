@@ -5,145 +5,13 @@ use super::{
 };
 use crate::{complete_native, engines};
 use serde_json::{Value, value::RawValue};
-use std::collections::BTreeMap;
 use thinkthen::{
-    Error, InputEvidence, Request, RequestArguments, RequestEnvironment, RequestFeed, RequestInput,
-    RequestOptions, RequestOriginal, RequestOutcome, RequestQuestion,
+    Error, Request, RequestArguments, RequestEnvironment, RequestFeed, RequestInput,
+    RequestOptions, RequestOutcome, RequestQuestion,
 };
 
-type Fields = BTreeMap<String, Box<RawValue>>;
-
-#[derive(Debug)]
-struct Record {
-    item: thinkthen::RequestItem,
-    location: Option<thinkthen::SourceLocation>,
-}
-
-fn fields(raw: &str) -> Result<Fields, Error> {
-    match thinkthen::Settings::parse(&format!("{{\"sql_record\":{raw}}}")) {
-        Ok(_) | Err(thinkthen::SettingsError::UnknownKey(_)) => {}
-        Err(error) => return Err(complete_native::usage(&error.to_string())),
-    }
-    serde_json::from_str(raw).map_err(|_| complete_native::usage("native SQL record is one object"))
-}
-
-fn read_record(raw: &str) -> Result<Record, Error> {
-    let mut given = fields(raw)?;
-    if given.contains_key("read_error") {
-        let input = complete_native::Inputs::parse_request(&format!("{{\"records\":[{raw}]}}"))?;
-        let mut records = input.records(None)?;
-        return match records.next() {
-            Some(Err(error)) => Err(error),
-            _ => Err(complete_native::defect()),
-        };
-    }
-    let json_present = given
-        .remove("json_present")
-        .map(|value| value.get() == "true")
-        .unwrap_or(true);
-    given.retain(|key, value| value.get() != "null" || key == "json" && json_present);
-    let source = given.remove("source");
-    let mut originals = Vec::new();
-    for name in ["text", "json", "document"] {
-        if let Some(value) = given.remove(name) {
-            let original = match name {
-                "json" => format!("{{\"kind\":\"json\",\"value\":{}}}", value.get()),
-                "text" => format!("{{\"kind\":\"text\",\"text\":{}}}", value.get()),
-                _ => {
-                    let document: String = serde_json::from_str(value.get())
-                        .map_err(|_| complete_native::usage("document is text"))?;
-                    let value = thinkthen::RawRecord::json(&document)
-                        .or_else(|_| thinkthen::RawRecord::text(&document))?;
-                    serde_json::to_string(&match value.literal() {
-                        Some(text) => RequestOriginal::Text {
-                            text: text.to_owned(),
-                        },
-                        None => RequestOriginal::Json { value },
-                    })
-                    .map_err(|_| complete_native::defect())?
-                }
-            };
-            originals.push(original);
-        }
-    }
-    if originals.len() > 1 {
-        return Err(complete_native::usage("one original per record"));
-    }
-    if let Some(images) = given.get_mut("images") {
-        *images = image_descriptors(images.get())?;
-    }
-    let mut descriptor = String::from("{");
-    if let Some(original) = originals.first() {
-        descriptor.push_str("\"original\":");
-        descriptor.push_str(original);
-    }
-    for (name, value) in given {
-        if descriptor.len() > 1 {
-            descriptor.push(',');
-        }
-        descriptor.push_str(&serde_json::to_string(&name).map_err(|_| complete_native::defect())?);
-        descriptor.push(':');
-        descriptor.push_str(value.get());
-    }
-    descriptor.push('}');
-    let item = serde_json::from_str(&descriptor).map_err(|_| {
-        complete_native::usage("native record fields, options, context or images are invalid")
-    })?;
-    let location = source
-        .map(|value| source_location(value.get()))
-        .transpose()?;
-    Ok(Record { item, location })
-}
-
-fn image_descriptors(raw: &str) -> Result<Box<RawValue>, Error> {
-    let values: Vec<Value> = serde_json::from_str(raw)
-        .map_err(|_| complete_native::usage("images is an ordered native collection"))?;
-    let images = values
-        .into_iter()
-        .map(|image| {
-            let media = image
-                .get("media")
-                .and_then(Value::as_str)
-                .ok_or_else(|| complete_native::usage("image requires a media type"))?;
-            let bytes = image
-                .get("data")
-                .and_then(Value::as_str)
-                .ok_or_else(|| complete_native::usage("images require native BLOB content"))?;
-            Ok(serde_json::json!({"kind":"bytes","media":media,"bytes":bytes}))
-        })
-        .collect::<Result<Vec<_>, Error>>()?;
-    RawValue::from_string(serde_json::to_string(&images).map_err(|_| complete_native::defect())?)
-        .map_err(|_| complete_native::defect())
-}
-
-fn coordinate(fields: &mut Fields, name: &str) -> Result<Option<usize>, Error> {
-    fields
-        .remove(name)
-        .filter(|value| value.get() != "null")
-        .map(|value| {
-            serde_json::from_str(value.get())
-                .map_err(|_| complete_native::usage("source coordinate is a positive whole number"))
-        })
-        .transpose()
-}
-
-fn source_location(raw: &str) -> Result<thinkthen::SourceLocation, Error> {
-    let mut fields = fields(raw)?;
-    let file = fields
-        .remove("file")
-        .ok_or_else(|| complete_native::usage("source requires a file identity"))?;
-    let file = serde_json::from_str(file.get())
-        .map_err(|_| complete_native::usage("source file is text"))?;
-    let location = thinkthen::SourceLocation::new(
-        file,
-        coordinate(&mut fields, "first_line")?,
-        coordinate(&mut fields, "last_line")?,
-    )?;
-    if !fields.is_empty() {
-        return Err(complete_native::usage("unknown source field"));
-    }
-    Ok(location)
-}
+mod records;
+use records::{Record, compose, fields, read_record};
 
 fn options(raw: &str) -> Result<RequestOptions, Error> {
     let mut fields = fields(raw)?;
@@ -174,39 +42,6 @@ fn composed_request(
     Request::named(verb, args)?.admit()
 }
 
-fn compose(
-    record: Record,
-    reading: &thinkthen::RecordReading,
-) -> Result<thinkthen::RecordInput<thinkthen::QuestionInput>, Error> {
-    let mut row = record.item.compose_record(reading)?;
-    if let Some(location) = record.location {
-        row.original = match row.original {
-            thinkthen::QuestionInput::Record(record) => {
-                thinkthen::QuestionInput::Record(record.with_location(location))
-            }
-            thinkthen::QuestionInput::Images(images)
-                if location.first_line().is_none() && images.images().len() == 1 =>
-            {
-                thinkthen::ImageSourceRecord {
-                    record: images
-                        .images()
-                        .first()
-                        .cloned()
-                        .ok_or_else(complete_native::defect)?,
-                    file: location.file().to_owned(),
-                }
-                .question_input()
-            }
-            _ => {
-                return Err(complete_native::usage(
-                    "source coordinates require a text record",
-                ));
-            }
-        };
-    }
-    Ok(row)
-}
-
 pub(super) fn decision_value(answer: thinkthen::Answer) -> Value {
     match answer {
         thinkthen::Answer::Yes => Value::Bool(true),
@@ -215,7 +50,19 @@ pub(super) fn decision_value(answer: thinkthen::Answer) -> Value {
     }
 }
 
-pub(super) fn plain_values(value: &thinkthen::RequestValue) -> Value {
+pub(super) fn filter_value<T: serde::Serialize>(
+    row: &thinkthen::CompleteRecord<T, thinkthen::CompleteFilter>,
+) -> Result<Value, Error> {
+    if row.result().value() {
+        Ok(Value::Array(vec![
+            serde_json::to_value(row.original()).map_err(|_| complete_native::defect())?,
+        ]))
+    } else {
+        Ok(Value::Array(Vec::new()))
+    }
+}
+
+pub(super) fn plain_values(value: &thinkthen::RequestValue) -> Result<Value, Error> {
     use thinkthen::RequestValue;
     macro_rules! rows {
         ($rows:expr) => {
@@ -227,7 +74,7 @@ pub(super) fn plain_values(value: &thinkthen::RequestValue) -> Value {
             )
         };
     }
-    match value {
+    Ok(match value {
         RequestValue::Decisions(rows) => Value::Array(
             rows.iter()
                 .map(|row| decision_value(row.result().value()))
@@ -236,17 +83,21 @@ pub(super) fn plain_values(value: &thinkthen::RequestValue) -> Value {
         RequestValue::Choices(rows) => rows!(rows),
         RequestValue::Tags(rows) => rows!(rows),
         RequestValue::Scores(rows) => rows!(rows),
-        RequestValue::Filtered(rows) => rows!(rows),
+        RequestValue::Filtered(rows) => Value::Array(
+            rows.iter()
+                .map(filter_value)
+                .collect::<Result<Vec<_>, _>>()?,
+        ),
         RequestValue::Ranked(rows) => rows!(rows),
         RequestValue::SetRanked(rows) => rows!(rows),
         _ => Value::Null,
-    }
+    })
 }
 
 fn render(outcome: RequestOutcome, observations: Value) -> Result<Value, Error> {
     let answers = match &outcome {
-        RequestOutcome::Complete(call) => plain_values(call.value()),
-        RequestOutcome::Failed { completed, .. } => plain_values(completed),
+        RequestOutcome::Complete(call) => plain_values(call.value())?,
+        RequestOutcome::Failed { completed, .. } => plain_values(completed)?,
     };
     let mut native = match outcome {
         RequestOutcome::Complete(call) => {
@@ -387,7 +238,15 @@ fn execute_native(
     if images {
         feed = feed.with_image_inputs();
     }
-    if verb == "filter" {
+    if verb == "filter"
+        && !prepared
+            .request
+            .request()
+            .call
+            .arguments()
+            .options
+            .files_only
+    {
         feed = feed.with_all_filter_results();
     }
     let result = engine.execute_request(
@@ -434,6 +293,7 @@ pub(crate) unsafe extern "C" fn thinkthen_cpp_native_records(
     settings: BridgeText,
     reference: *const thinkthen::QuestionFileReference,
     incremental: bool,
+    cancelled: bool,
     deadline: i64,
     session: BridgeSettings,
     stop: BridgeStop,
@@ -461,6 +321,9 @@ pub(crate) unsafe extern "C" fn thinkthen_cpp_native_records(
         let due = super::portable::due(deadline, prepared.call.deadline_ms());
         let context = prepared.call.context().map(str::to_owned);
         run_detached(stop, move |token| {
+            if cancelled {
+                token.cancel();
+            }
             let controls = engines::options_for(
                 due,
                 &token,
