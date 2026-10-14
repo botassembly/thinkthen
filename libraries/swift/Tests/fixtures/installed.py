@@ -59,7 +59,7 @@ if os.environ.get('LLVM_PROFILE_FILE') and not apple:
     boundary = base.index('--')
     base[boundary:boundary] = ['--bind', str(profiles), str(observation)]
 location = str(work) if apple else '/work'
-env = child_env(keep=('LLVM_PROFILE_FILE',), home=location + '/home', PATH='/usr/bin:/bin' if apple else '/swift/usr/bin:/usr/bin:/bin', LANG='C.UTF-8',
+env = child_env(keep=('LLVM_PROFILE_FILE', 'GITHUB_ACTIONS', 'RUNNER_ENVIRONMENT'), home=location + '/home', PATH='/usr/bin:/bin' if apple else '/swift/usr/bin:/usr/bin:/bin', LANG='C.UTF-8',
                 SWIFTPM_MODULECACHE_OVERRIDE=location + '/cache/modules', XDG_CACHE_HOME=location + '/cache', THINKTHEN_API_KEY='tt-canary-294')
 try:
     profile_link = []
