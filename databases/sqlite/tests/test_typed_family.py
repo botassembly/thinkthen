@@ -254,21 +254,24 @@ def test_rank_details_keep_call_observations_only_on_first_original_record():
     backend=Backend()
     got=child('''
 from native_receipts import Read
-db=connect();db.execute('SELECT thinkthen_configure(?)',('{"cache":false,"batch":64}',))
-records=[{'text':text} for text in ('refund','later','parcel')]
+db=connect();db.execute('SELECT thinkthen_configure(?)',('{"cache":false,"batch":1}',))
+records=[{'text':text} for text in ('refund','parcel')]
 question='{"decide":"Refund?"}';items=json.dumps(records)
 rows=db.execute('SELECT ordinal,observations FROM thinkthen_rank_details WHERE request_question=? AND request_records=?',(question,items)).fetchall()
-assert [row[0] for row in rows]==[0,1,2],rows
+assert [row[0] for row in rows]==[0,1],rows
 assert rows[0][1]==0 and all(row[1] is None for row in rows[1:]),rows
 reader=Read(db,'rank',question,{'records':records},None)
 reader.fields={'request_question':question,'request_records':items}
 events=[reader.object('event',row['event_receipt_index']) for row in reader.rows('event')]
-assert sum(event['kind']=='question' for event in events)==3,events
-assert sum(event['kind']=='row' for event in events)==3,events
+assert sum(event['kind']=='question' for event in events)==2,events
+assert sum(event['kind']=='row' for event in events)==2,events
+assert sum(event['detail']['requests_sent'] for event in events if event['kind']=='question')==2,events
+facts=reader.rows('facts')
+assert facts[0]['facts_requests_sent']==2,facts
 say(rows=len(rows))
 ''',environment(backend,'generic/v1'))
-    expect(got['rows'],3,'original record order owns the first call observation reference')
-    expect(backend.close(),1,'rank records share one packed request')
+    expect(got['rows'],2,'original record order owns the first call observation reference')
+    expect(backend.close(),2,'both ranked records retain their actual requests')
 
 
 def test_whole_call_quota_failure_owns_no_invented_ordinal():

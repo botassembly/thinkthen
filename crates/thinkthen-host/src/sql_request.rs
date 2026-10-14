@@ -312,7 +312,12 @@ fn recover(
         let observed = events
             .iter()
             .filter(|event| {
-                event.get("index").is_none()
+                matches!(
+                    request.request().call.function(),
+                    thinkthen::RequestFunction::Rank
+                        | thinkthen::RequestFunction::Find
+                        | thinkthen::RequestFunction::Relate
+                ) || event.get("index").is_none()
                     || event.get("index").and_then(Value::as_u64) == Some(row.ordinal() as u64)
             })
             .cloned()
