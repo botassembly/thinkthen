@@ -58,14 +58,14 @@ def null_empty_and_invalid_units_do_not_send() -> None:
         "SELECT thinkthen_find('Which?', ['one', NULL])",
         "SELECT thinkthen_find('Which?', ['one', '  '])",
         "SELECT thinkthen_find('   ', ['one','two'])",
-        "SELECT thinkthen_find('Which?', list_transform(range(256), x -> 'x'))",
-        "SELECT thinkthen_find('Which?', list_transform(range(255), x -> 'x'), '{\"none\":true}')",
+        "SELECT thinkthen_find('Which?', ['x' FOR x IN range(256)])",
+        "SELECT thinkthen_find('Which?', ['x' FOR x IN range(255)], '{\"none\":true}')",
         *(["SELECT thinkthen_find('Which?', [repeat('x', 16777216), 'y'])"]
           if os.environ.get("THINKTHEN_TEST_PROFILE") == "full" else []),
         "SELECT thinkthen_find('Which?', ['a','b'], '{\"deadline_ms\":-2}')",
         "SELECT thinkthen_find('Which?', units) FROM (VALUES (0, ['a','b']), (1, ['a',NULL])) t(i,units) ORDER BY i",
         "SELECT thinkthen_find('Which?', units) FROM (VALUES (0, ['a','b']), (1, ['a','  '])) t(i,units) ORDER BY i",
-        "SELECT thinkthen_find('Which?', units) FROM (VALUES (0, ['a','b']), (1, list_transform(range(256), x -> 'x'))) t(i,units) ORDER BY i",
+        "SELECT thinkthen_find('Which?', units) FROM (VALUES (0, ['a','b']), (1, ['x' FOR x IN range(256)])) t(i,units) ORDER BY i",
     )
     with Backend() as backend:
         got = run([*nulls, *invalid], backend.base())

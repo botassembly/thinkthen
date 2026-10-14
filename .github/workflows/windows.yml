@@ -6,6 +6,12 @@ name: windows
 
 on:
   workflow_dispatch:
+    inputs:
+      lane:
+        description: Run Windows core checks or the DuckDB community build
+        type: choice
+        default: windows
+        options: [windows, duckdb-community]
 
 permissions:
   contents: read
@@ -15,7 +21,11 @@ defaults:
     shell: bash
 
 jobs:
+  duckdb-community:
+    if: inputs.lane == 'duckdb-community'
+    uses: ./.github/workflows/duckdb-community.yml
   stage-0:
+    if: inputs.lane != 'duckdb-community'
     name: Windows core tests and installed CLI, Rust, C and Python packages
     runs-on: windows-2025
     timeout-minutes: 120

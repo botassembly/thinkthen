@@ -63,9 +63,6 @@ func failure(raw *C.thinkthen_engine, code C.int) error {
 func newNativeWith(settingsJSON string) (*nativeEngine, error) {
 	settings := C.CString(settingsJSON)
 	defer C.free(unsafe.Pointer(settings))
-	return newNativeEngine(settings)
-}
-func newNativeEngine(settings *C.char) (*nativeEngine, error) {
 	runtime.LockOSThread()
 	defer runtime.UnlockOSThread()
 	raw := C.thinkthen_engine_new_with(settings)

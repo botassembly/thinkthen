@@ -24,7 +24,7 @@ def git_read(source_root, *args):
     return subprocess.check_output(git_command(source_root, *args), env=git_environment())
 
 
-def raw_git(source_root, commit, extra_paths=()):
+def raw_git(source_root, commit, extra_paths=(), managed_gitlinks=None):
     """Compare actual bytes/modes/links to raw Git blobs, bypassing index and filters."""
     def git(*args):
         return git_read(source_root, *args)
@@ -34,14 +34,23 @@ def raw_git(source_root, commit, extra_paths=()):
     batch = subprocess.Popen(git_command(source_root, "cat-file", "--batch"),
                              env=git_environment(), stdin=subprocess.PIPE, stdout=subprocess.PIPE)
     tracked = set()
+    managed = {Path(name): value for name, value in (managed_gitlinks or {}).items()}
+    validated = set()
     try:
         for head, name in rows:
             mode, kind, oid = head.split()
-            if kind != b"blob":
-                raise ValueError("source tree contains a non-blob input")
             relative = Path(os.fsdecode(name))
             tracked.add(relative)
             path = source_root / relative
+            if kind == b"commit" and mode == b"160000" and relative in managed:
+                replacement, replacement_commit = managed[relative]
+                if not path.is_symlink() or path.resolve() != replacement.resolve():
+                    raise ValueError(f"managed source Gitlink differs: {relative}")
+                raw_git(replacement, replacement_commit)
+                validated.add(relative)
+                continue
+            if kind != b"blob":
+                raise ValueError("source tree contains a non-blob input")
             batch.stdin.write(oid + b"\n")
             batch.stdin.flush()
             info = batch.stdout.readline().split()
@@ -59,6 +68,8 @@ def raw_git(source_root, commit, extra_paths=()):
         batch.stdin.close()
         batch.stdout.close()
         batch.wait()
+    if validated != set(managed):
+        raise ValueError("managed source Gitlink is absent from the pinned tree")
     allowed = set(map(Path, extra_paths))
     for directory, folders, files in os.walk(source_root):
         if Path(directory) == source_root:

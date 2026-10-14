@@ -66,27 +66,40 @@ pub(crate) unsafe extern "C" fn thinkthen_cpp_portable_scalar_group(
         let prepared = (|| -> Result<Reply, String> {
             let question = text(question, question_len)?;
             let settings = text(settings, settings_len)?;
-            let (written, call) = prepare(question, from_file != 0, settings, kind)?;
-            let batch = super::portable::batch_word(&call);
-            let mut session = session;
-            if let Some(word) = &batch {
-                session.batch_bytes = word.as_ptr();
-                session.batch_len = word.len();
-            }
-            let context = call.context();
-            // The existing boundary copies all strings before its detached worker starts.
+            prepare(question, from_file != 0, settings, kind)?;
+            let verb = match super::portable_aux::asking_kind(question, from_file != 0, "details")
+                .map_err(|error| error.text)?
+            {
+                0 => "decide",
+                4 => "choose",
+                5 => "score",
+                6 => "tag",
+                _ => return Err("thinkthen defect: details lost its asking kind".into()),
+            };
+            let records = serde_json::to_string(
+                &super::copied_texts(texts, count)?
+                    .into_iter()
+                    .map(|text| serde_json::json!({"text":text}))
+                    .collect::<Vec<_>>(),
+            )
+            .map_err(|_| "thinkthen defect: details originals could not be copied".to_owned())?;
+            let view = |value: &str| BridgeText {
+                bytes: value.as_ptr(),
+                len: value.len(),
+            };
+            // The existing native record owner admits and executes this group once.
             Ok(unsafe {
-                super::scalar::thinkthen_cpp_scalar_group(
-                    written.as_ptr(),
-                    written.len(),
-                    texts,
-                    count,
-                    super::portable::due(query_deadline_ms, call.deadline_ms()),
-                    kind,
+                super::native_records::thinkthen_cpp_native_records(
+                    view(verb),
+                    view(question),
+                    view(&records),
+                    view("{}"),
+                    view(settings),
+                    std::ptr::null(),
+                    false,
+                    false,
+                    query_deadline_ms,
                     session,
-                    0,
-                    context.map_or(std::ptr::null(), str::as_ptr),
-                    context.map_or(0, str::len),
                     stop,
                 )
             })

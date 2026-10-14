@@ -18,6 +18,7 @@ import time
 from pathlib import Path
 
 from harness import CASES, CHILD, EXTENSION, Backend, case, child_env, expect, main, rows, run, said
+from harness import native_reading
 from settings_cases import shared_settings_corpus
 
 ASK = "SELECT thinkthen_decide('Is it a refund?', 'refund now')"
@@ -187,7 +188,7 @@ def saved_calibration_details_keep_the_shared_digest_and_warning():
     with Backend() as backend:
         got = run([f"SET thinkthen_profile = {literal(profile)}",
                    f"SELECT thinkthen_details({literal(question)}, {literal(shared['evidence'])})"], backend.base())
-        details = json.loads(rows(got[1])[0][0])
+        details = native_reading(rows(got[1])[0][0])
         expect(details["meta"]["question_sha256"], shared["question_sha256"], "saved digest")
         expect(details["meta"]["profile_warning"], shared["warning"], "profile mismatch")
         expect(details["meta"]["model"], shared["model"], "actual model")
@@ -466,7 +467,7 @@ def cache_folder_shape():
 @case
 def settings_keep_the_environments_seeding():
     with Backend() as backend, tempfile.TemporaryDirectory() as cache:
-        details = "SELECT CAST(thinkthen_details('Is it a refund?', 'refund now') ->> '$.meta.cached' AS BOOLEAN)"
+        details = "SELECT (thinkthen_details('Is it a refund?', 'refund now')).results[1].decide.meta.cached"
         first = run([details], backend.base(), extra={"THINKTHEN_CACHE": cache})
         expect(rows(first[0]), [[False]], "the first run asks")
         sent = backend.count()

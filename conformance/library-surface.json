@@ -1373,7 +1373,30 @@
         "Cancellation",
         "NativeOwner"
       ],
-      "representation_owners": []
+      "representation_owners": [],
+      "representation_types": [
+        "CallCancelled",
+        "CallFailure",
+        "Cancellation",
+        "StreamCleanupFailure",
+        "UsagePersistenceStatus"
+      ],
+      "representation_calls": [
+        "imageBytes"
+      ],
+      "wrapper_members": {
+        "CallFailure": [
+          "failure",
+          "toString"
+        ],
+        "Cancellation": [
+          "cancelled"
+        ],
+        "StreamCleanupFailure": [
+          "cause",
+          "toString"
+        ]
+      }
     },
     "ada": {
       "root": "libraries/ada",

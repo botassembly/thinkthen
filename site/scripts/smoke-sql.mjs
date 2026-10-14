@@ -77,16 +77,16 @@ const DATABASES = {
     build() {
       const version = duckDBVersion;
       const [nativeTarget, platform] = nativeDuckDBTarget();
-      const tools = path.join(TOOLCHAINS, 'duckdb', version);
-      const cli = path.join(tools, 'duckdb');
-      if (!fs.existsSync(cli)) return { missing: `the pinned DuckDB ${version} CLI that databases/duckdb/tools/setup.sh fetches` };
-      if (!fs.existsSync(path.join(tools, 'static-libs', 'libduckdb_static.a'))) return { missing: 'the pinned DuckDB source and static archives that databases/duckdb/tools/setup.sh --fetch fetches' };
-      const cmake = nativeTarget.endsWith('apple-darwin') ? path.join(tools, 'venv/bin/cmake') : 'cmake';
+      const tools = path.join(TOOLCHAINS, 'duckdb', 'community', version);
+      const cli = path.join(repo, this.folder, 'build/community', version, 'build/release/duckdb');
+      if (!fs.existsSync(path.join(tools, 'source/.git')) || !fs.existsSync(path.join(tools, 'tools/.git'))) return { missing: 'the approved DuckDB source inputs that databases/duckdb/tools/setup.sh --fetch fetches' };
+      const cmake = path.join(tools, 'venv/bin/cmake');
       for (const tool of ['cargo', cmake]) if (run('sh', ['-c', `command -v ${tool}`]).status !== 0) return { missing: tool };
-      if (fs.readFileSync(path.join(tools, 'platform.txt'), 'utf8').trim() !== platform) throw new Error('stock DuckDB reports another platform');
       const target = path.join(repo, 'target', 'site-duckdb');
-      const done = compile('sh', [path.join(repo, this.folder, 'cpp', 'build.sh')], { cwd: repo, env: { ...process.env, THINKTHEN_DUCKDB_VERSION: version, THINKTHEN_DUCKDB_CPP_BUILD: path.join(target, 'cpp'), CARGO_TARGET_DIR: path.join(target, 'bridge') } });
+      const done = compile('sh', [path.join(repo, this.folder, 'cpp', 'build.sh')], { cwd: repo, env: { ...process.env, THINKTHEN_DUCKDB_VERSION: version, CARGO_TARGET_DIR: path.join(target, 'bridge') } });
+      if (done.status === 77) return { missing: `the approved DuckDB ${version} build inputs` };
       if (done.status !== 0) throw new Error(`cpp/build.sh failed in ${this.folder}\n${done.stdout}${done.stderr}`);
+      if (run(cli, ['-noheader', '-list', '-c', 'SELECT platform FROM pragma_platform();']).stdout.trim() !== platform) throw new Error('DuckDB reports another platform');
       const extension = duckDBArtifact(repo, version, nativeTarget);
       return {
         toolchain: [`DuckDB ${run(cli, ['--version']).stdout.split(' ')[0]}`, run(cmake, ['--version']).stdout.split('\n')[0], run('rustc', ['--version']).stdout.trim()],

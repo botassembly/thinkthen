@@ -9,6 +9,7 @@ import tempfile
 from pathlib import Path
 
 from harness import EXTENSION, Backend, case, child_env, expect, main, rows, run, said
+from harness import native_reading
 
 
 @case
@@ -302,31 +303,23 @@ def rank_and_details_share_one_portable_request():
             "SELECT * FROM thinkthen_rank('Is it a refund?', '{\"a\":\"refund now\"}', '{\"threshold\":0.7}')",
         ], backend.base())
         expect(rows(got[0]), [["a", 1, 0.9]], "rank row from one answer")
-        detail = json.loads(rows(got[1])[0][0])
-        expect(detail["value"], True, "details retains the decision")
+        detail = native_reading(rows(got[1])[0][0])
+        expect(rows(got[1])[0][0]["answers"][0], True, "details retains the decision")
         expect(said(got[2]), "thinkthen usage: the settings key `threshold` does not belong to this verb (retryable: no)",
                "rank refuses a threshold")
         expect(backend.count(), 1, "rank and details read one cache identity")
         json_rows = run([
-            "SELECT typeof(d), d->>'$.value' FROM (SELECT thinkthen_details('Is it a refund?', 'refund now', '{\"batch\":1}') AS d)",
+            "SELECT starts_with(typeof(d), 'STRUCT('), d.answers[1].decide FROM (SELECT thinkthen_details('Is it a refund?', 'refund now', '{\"batch\":1}') AS d)",
             "SELECT typeof(d), d->>'$.status', d->>'$.error.kind' FROM (SELECT thinkthen_try_details('', 'x') AS d)",
             "SELECT typeof(thinkthen_usage_status()), json_type(thinkthen_usage_status())",
             "SELECT typeof(thinkthen_native_many(NULL, 'malformed', 'malformed', 0))",
         ], backend.base())
-        expect(rows(json_rows[0]), [["JSON", "true"]], "details JSON operations")
+        expect(rows(json_rows[0]), [[True, True]], "details native receipt operations")
         expect(rows(json_rows[1]), [["JSON", "failed", "usage"]], "try-details failure JSON operations")
         expect(rows(json_rows[2]), [["JSON", "OBJECT"]], "usage JSON operations")
         expect(rows(json_rows[3]), [["JSON"]], "native keyed result JSON type")
         complete = rows(run(["SELECT function_name FROM duckdb_functions() WHERE function_type='macro' AND starts_with(function_name, 'thinkthen_') AND ends_with(function_name, '_complete') ORDER BY function_name"], backend.base())[0])
-        expect(bool(complete), True, "registered complete functions are present")
-        calls = []
-        for (name,) in complete:
-            calls += [f"SELECT typeof(d), d IS NULL FROM (SELECT {name}(NULL, 'malformed', 'malformed') AS d)",
-                      f"SELECT typeof(d), d->>'$.native.error.kind' FROM (SELECT {name}('malformed', 'malformed') AS d)"]
-        results = run(calls, backend.base())
-        for index, (name,) in enumerate(complete):
-            expect(rows(results[2 * index]), [["JSON", True]], name + " NULL before malformed partners")
-            expect(rows(results[2 * index + 1]), [["JSON", "usage"]], name + " failure JSON operations")
+        expect(complete, [], "parallel complete aliases are retired")
         expect(backend.count(), 2, "only the additional live details call sends")
 
 

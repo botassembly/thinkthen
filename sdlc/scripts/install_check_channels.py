@@ -299,12 +299,14 @@ def duckdb(check):
         raise Failure(str(error)) from error
     sql = f'LOAD {sql_quote(extension)}; SET thinkthen_replay={sql_quote(check.sample / "recording")}; SET thinkthen_cache=\'off\';\n'
     sql += "SELECT extension_version FROM duckdb_extensions() WHERE extension_name='thinkthen' AND loaded;\n"
-    sql += f'SELECT thinkthen_details({sql_quote((check.sample / "question.txt").read_text())},{sql_quote((check.sample / "report.txt").read_text())});\n'
+    sql += ("SELECT to_json({'value':d.answers[1].decide,'requests_sent':d.facts.requests_sent}) "
+            f'FROM (SELECT thinkthen_details({sql_quote((check.sample / "question.txt").read_text())},'
+            f'{sql_quote((check.sample / "report.txt").read_text())}) AS d);\n')
     lines = check.run('duckdb', '-unsigned', '-noheader', '-list', ':memory:', input=sql).splitlines()
     if len(lines) != 2:
         raise Failure('DuckDB replay must report one loaded ThinkThen version and one answer')
     details = json.loads(lines[-1])
-    return lines[-2], {'value': details.get('value'), 'requests_sent': details.get('meta', {}).get('requests_sent')}, 'loaded extension version'
+    return lines[-2], details, 'loaded extension version'
 
 
 def postgresql(check):

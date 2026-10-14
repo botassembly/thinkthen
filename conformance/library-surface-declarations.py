@@ -135,6 +135,8 @@ def cstyle(source, language):
         parentheses.append(nesting)
         nesting += (char == '(') - (char == ')')
     type_pattern = r'\b(?:class|struct|interface|enum(?:\s+class)?|record|union|trait|object|extension)\s+(\w+)'
+    if language == 'dart':
+        type_pattern = r'\b(?:class|enum|mixin)\s+(\w+)'
     if language == 'zig':
         type_pattern = r'\bpub\s+const\s+(\w+)\s*=\s*(?:struct|union|enum)\b'
     elif language == 'objc':
@@ -171,6 +173,14 @@ def cstyle(source, language):
             for base in re.finditer(r'(?:^\s*:|,)\s*(?:(public|protected|private)\s+)?([\w:]+)(?:\s*<[^{}]*?>)?', header):
                 if base[1] == 'public' or not base[1] and struct_scopes[start]:
                     result.add(Declaration(name, base[2].split('::')[-1], 'inherited'))
+        if language == 'dart':
+            header = text[match.end():start]
+            bases = re.search(r'\bwith\s+(.+?)(?=\bimplements\b|$)', header, re.S)
+            if bases:
+                for base in bases[1].split(','):
+                    target = re.match(r'\s*(\w+)', base)
+                    if target:
+                        result.add(Declaration(name, target[1], 'inherited'))
         if language in ('typescript', 'csharp'):
             header = text[match.end():start]
             bases = re.search(r'\bextends\s+(.+)|^\s*:\s*(.+)', header)
@@ -254,7 +264,7 @@ def cstyle(source, language):
             continue
         if language == 'go' and not container:
             continue
-        if container is None or name.startswith('_') or language == 'dart' and name == 'Function':
+        if container is None or name.startswith('_') or language == 'dart' and (name == 'Function' or re.match(r'\s*(?:library|part)\b', match[0])):
             continue
         if language == 'cpp' and container:
             if not cpp_public(pos):

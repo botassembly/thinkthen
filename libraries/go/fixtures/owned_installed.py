@@ -43,6 +43,12 @@ with tempfile.TemporaryDirectory(prefix='thinkthen-go-owned-') as folder:
     user_agents = server.user_agents
     try:
         run_env=env|{'THINKTHEN_API_KEY':'tt-canary-274','THINKTHEN_BASE_URL':f'http://127.0.0.1:{server.server_port}/generic/v1'}
+        if feed_only:
+            before = server.attempts
+            result = subprocess.run([str(home/'consumer-bin'), 'nil-feed'], env=run_env, cwd=consumer, text=True, capture_output=True, timeout=5)
+            assert result.returncode == 0 and result.stdout.strip() == 'nil-feed-usage-pass requests=0', (result.stdout, result.stderr)
+            assert server.attempts == before == 0 and not user_agents, server.attempts
+            print('GO_NIL_FEED_INSTALLED_PASS ten calls nil interface and five typed nil kinds typed usage zero-send')
         if encoding_only:
             result=subprocess.run([str(home/'consumer-bin'),'encoding'],env=run_env,cwd=consumer,text=True,capture_output=True,timeout=10)
             assert result.returncode==0,(result.stdout,result.stderr)

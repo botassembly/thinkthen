@@ -34,7 +34,7 @@ def generated_sources(root, target, request, result):
     header = (root / 'libraries/c/include/thinkthen.h').read_text()
     outputs = {}
     roots = getattr(template, 'ROOTS', ('completesessionPacket',))
-    if target == 'php':
+    if target in ('php', 'dart'):
         from native import immediate_schema
         result = immediate_schema(result)
     results = graph(result, roots)
@@ -78,6 +78,11 @@ def generated_sources(root, target, request, result):
     elif target == 'dart':
         outputs['results_generated.dart'] = template.render(results)
         outputs['inputs_generated.dart'] = template.render(inputs, True) + '\nconst requestVersion = ' + json.dumps(version) + ';\n'
+        outputs['calls_generated.dart'] = template.calls(inputs, results)
+        spec = importlib.util.spec_from_file_location('surface_dart_abi', root / 'sdlc/scripts/check-c-exports.py')
+        abi = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(abi)
+        outputs['abi_generated.dart'] = template.bridge(abi.header_abi(root / 'libraries/c/include/thinkthen.h'), results)
     elif target == 'go':
         outputs['owned_results_generated.go'] = template.render(results, inputs) + '\nconst OwnedRequestVersion = ' + json.dumps(version) + '\n' + template.usage(header)
     elif target == 'php':

@@ -37,6 +37,9 @@ inline void ThinkThenSpecialNulls(ScalarFunction &function) {
 inline void ThinkThenArgument(ScalarFunction &function, idx_t index, LogicalType type) {
     function.GetSignature().GetParameter(index).SetType(std::move(type));
 }
+inline string ThinkThenStructName(const LogicalType &type, idx_t index) {
+    return StructType::GetChildName(type, index).GetIdentifierName();
+}
 template <class Function>
 vector<LogicalType> ThinkThenRegistrationTypes(const Function &function) {
     vector<LogicalType> types;
@@ -86,6 +89,9 @@ inline void ThinkThenSpecialNulls(ScalarFunction &function) {
 }
 inline void ThinkThenArgument(ScalarFunction &function, idx_t index, LogicalType type) {
     function.arguments[index] = std::move(type);
+}
+inline string ThinkThenStructName(const LogicalType &type, idx_t index) {
+    return StructType::GetChildName(type, index);
 }
 template <class Function>
 vector<LogicalType> ThinkThenRegistrationTypes(const Function &function) {

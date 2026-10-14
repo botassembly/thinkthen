@@ -1,5 +1,6 @@
 #include "descriptions.hpp"
 #include "portable.hpp"
+#include "receipt.hpp"
 #include "json_result.hpp"
 #include "bridge.hpp"
 #include "listed_result.hpp"
@@ -264,6 +265,31 @@ void Listed(DataChunk &args, ExpressionState &state, Vector &result) {
 	}
 }
 
+vector<Value> DetailsRows(const string &raw, idx_t count) {
+    auto receipt = DecodeReceipt(raw, "details");
+    const auto &fields = StructValue::GetChildren(receipt);
+    const auto &results = ListValue::GetChildren(fields[0]);
+    const auto &answers = fields[1].IsNull() ? vector<Value>() : ListValue::GetChildren(fields[1]);
+    const auto &ordinals = fields[5].IsNull() ? vector<Value>() : ListValue::GetChildren(fields[5]);
+    vector<Value> rows;
+    for (idx_t row = 0; row < count; ++row) {
+        auto projected = fields;
+        vector<Value> reading, answer, ordinal;
+        for (idx_t at = 0; at < ordinals.size(); ++at) {
+            if (ordinals[at].GetValue<uint64_t>() != row) { continue; }
+            reading.push_back(results.at(at));
+            if (at < answers.size()) { answer.push_back(answers.at(at)); }
+            ordinal.push_back(ordinals[at]);
+            break;
+        }
+        projected[0] = Value::LIST(ReceiptResultType("details"), std::move(reading));
+        projected[1] = Value::LIST(ReceiptAnswerType("details"), std::move(answer));
+        projected[5] = Value::LIST(LogicalType::UBIGINT, std::move(ordinal));
+        rows.push_back(Value::STRUCT(ReceiptType("details"), std::move(projected)));
+    }
+    return rows;
+}
+
 void Scalar(DataChunk &args, ExpressionState &state, Vector &result) {
 	if (args.size() == 0) { return; }
 	auto context = ThinkThenBindData(state.expr.Cast<BoundFunctionExpression>()).Cast<PortableBind>().context.lock();
@@ -343,6 +369,10 @@ void Scalar(DataChunk &args, ExpressionState &state, Vector &result) {
 		    reinterpret_cast<const uint8_t *>(group.settings.data()), group.settings.size(), group.kind,
 		    owner->Remaining(*context), session->Bridge(), StopFor(*context)));
 		Checked(reply.value);
+        if (group.kind == 2) {
+            answers.push_back(DetailsRows(ReplyText(reply.value), texts.size()));
+            continue;
+        }
 		vector<Value> values;
 		if (!reply.value.bytes) { throw OrdinaryError("thinkthen defect: the bridge returned no scalar values"); }
 		size_t at = 0;
@@ -363,7 +393,7 @@ void Scalar(DataChunk &args, ExpressionState &state, Vector &result) {
 			auto [group, text] = *slots[row];
 			result.SetValue(row, answers.at(group).at(text));
 		} else {
-			result.SetValue(row, Value(LogicalType::JSON()));
+			result.SetValue(row, Value(result.GetType()));
 		}
 	}
 }
@@ -389,23 +419,41 @@ void OriginalSettings(DataChunk &args, ExpressionState &, Vector &result) {
 	}
 }
 
-void RegisterMacro(ExtensionLoader &loader, const string &sql, const string &purpose) {
+void RegisterMacro(ExtensionLoader &loader, const string &sql, const string &purpose, bool legacy_text = false) {
 	auto parser = ThinkThenMacroParser();
 	parser.ParseQuery(sql);
 	auto &statement = parser.statements.at(0)->Cast<CreateStatement>();
 	ThinkThenMacroSchema(*statement.info);
 	statement.info->internal = true;
 	auto &info = statement.info->Cast<CreateMacroInfo>();
+    if (legacy_text) {
+        auto &legacy = *info.macros.at(0);
+        legacy.types.resize(legacy.parameters.size(), LogicalType::UNKNOWN);
+        legacy.types.at(0) = LogicalType::VARCHAR;
+    }
 	FunctionDescription description;
 	description.description = purpose;
 	info.descriptions.push_back(std::move(description));
 	loader.RegisterFunction(info);
 }
 
+string ManyRows(const string &question, int32_t kind) {
+    const auto call = "thinkthen_native_many(" + PortableJSONArgument(question) + ", " +
+        PortableJSONArgument("keyed_json") + ", " +
+        PortableOptions("settings", question + " IS NULL OR keyed_json IS NULL", false) + ", " +
+        std::to_string(kind) + ")";
+    return "FROM (WITH native_call AS MATERIALIZED (SELECT " + call +
+        " AS readings) SELECT item.* FROM native_call, json_each(readings) item ORDER BY item.id) item";
+}
+
 } // namespace
 
 void RegisterPortableMacro(ExtensionLoader &loader, const string &sql, const string &purpose) {
 	RegisterMacro(loader, sql, purpose);
+}
+
+void RegisterLegacyTextOverloads(ExtensionLoader &loader, const string &sql, const string &purpose) {
+    RegisterMacro(loader, sql, purpose, true);
 }
 
 string PortableOptionParameters() {
@@ -488,8 +536,7 @@ void RegisterPortableDecide(ExtensionLoader &loader) {
 			projection += ", CAST(json_extract(item.value, '$.probability') AS DOUBLE) AS probability";
 		}
 		RegisterMacro(loader, "CREATE MACRO thinkthen_" + name + "_many(question, keyed_json, settings := NULL" + PortableOptionParameters() + ") "
-		                      "AS TABLE SELECT " + projection + " FROM json_each(thinkthen_native_many(" + PortableJSONArgument("question") + ", " + PortableJSONArgument("keyed_json") + ", " + PortableOptions("settings", "question IS NULL OR keyed_json IS NULL", false) + ", "
-		                      + std::to_string(kind) + ")) item", "Judge keyed text records with " + name + " and return one row per record.");
+		                      "AS TABLE SELECT " + projection + " " + ManyRows("question", kind), "Judge keyed text records with " + name + " and return one row per record.");
 	}
 	for (auto kind : {4, 5, 6}) {
 		const string name = kind == 4 ? "choose" : kind == 5 ? "score" : "tag";
@@ -509,26 +556,25 @@ void RegisterPortableDecide(ExtensionLoader &loader) {
 		                      + PortableOptions("CASE WHEN members IS NOT NULL AND typeof(members) = 'VARCHAR' THEN CAST(members AS VARCHAR) ELSE " + PortableJSONArgument("settings") + " END") + ", "
 		                      + std::to_string(kind) + ", CASE WHEN members IS NULL THEN '\"NULL\"' ELSE typeof(members) END, typeof(settings))", purpose);
 	}
-	RegisterMacro(loader, "CREATE MACRO thinkthen_rank(question, keyed_json, settings := NULL" + PortableOptionParameters() + ") "
-	                      "AS TABLE SELECT json_extract_string(item.value, '$.key') AS key, "
+	RegisterLegacyTextOverloads(loader, "CREATE MACRO thinkthen_rank(question, keyed_json, settings := NULL" + PortableOptionParameters() + ") "
+	                      "AS TABLE (SELECT json_extract_string(item.value, '$.key') AS key, "
 	                      "CAST(json_extract(item.value, '$.rank') AS BIGINT) AS rank, "
 	                      "CAST(json_extract(item.value, '$.probability') AS DOUBLE) AS probability "
-	                      "FROM json_each(thinkthen_native_many(" + PortableJSONArgument("question") + ", " + PortableJSONArgument("keyed_json") + ", " + PortableOptions("settings", "question IS NULL OR keyed_json IS NULL", false) + ", "
-	                      + std::to_string(RANK_KIND) + ")) item ORDER BY rank", "Rank keyed text records by their probability of yes.");
+	                      + ManyRows("question", RANK_KIND) + " ORDER BY rank), (question, records, reading, settings := NULL, incremental := false, cancelled := false) AS TABLE (" + NativeRecordTableSQL("rank") + ")", "Rank keyed text records or native records with typed readings and final facts.");
 	RegisterMacro(loader, "CREATE MACRO thinkthen_rank_set(questions, keyed_json, settings := NULL" + PortableOptionParameters() + ") "
 	                      "AS TABLE SELECT json_extract_string(item.value, '$.key') AS key, "
 	                      "CAST(json_extract(item.value, '$.rank') AS BIGINT) AS rank, "
 	                      "CAST(json_extract(item.value, '$.probability') AS DOUBLE) AS probability, "
 	                      "json_extract_string(item.value, '$.question_name') AS question_name, "
 	                      "json_extract(item.value, '$.facts') AS facts "
-	                      "FROM json_each(thinkthen_native_many(" + PortableJSONArgument("questions") + ", " + PortableJSONArgument("keyed_json") + ", " + PortableOptions("settings", "questions IS NULL OR keyed_json IS NULL", false) + ", 9)) item ORDER BY rank", "Rank keyed text records for each named question and include request facts.");
+	                      + ManyRows("questions", 9) + " ORDER BY rank", "Rank keyed text records for each named question and include request facts.");
 	for (auto kind : {2, 3, 7}) {
 		const string name = kind == 2 ? "details" : kind == 3 ? "try_details" : "annotate";
-		const string purpose = kind == 2 ? "Return judgment details as JSON." : kind == 3 ? "Return judgment details or a safe recoverable failure as JSON." : "Annotate text with a question set and return its values as JSON.";
+		const string purpose = kind == 2 ? "Return typed native judgment receipts, owning facts, failures and observations." : kind == 3 ? "Return judgment details or a safe recoverable failure as JSON." : "Annotate text with a question set and return its values as JSON.";
 		ScalarFunction native(ThinkThenIdentifier("thinkthen_native_" + name),
 		                      {LogicalType::VARCHAR, LogicalType::VARCHAR, LogicalType::VARCHAR,
 		                       LogicalType::INTEGER, LogicalType::VARCHAR},
-		                      LogicalType::JSON(), Scalar, ThinkThenBindScalar<Bind>);
+		                      kind == 2 ? ReceiptType("details") : LogicalType::JSON(), Scalar, ThinkThenBindScalar<Bind>);
 		ThinkThenSpecialNulls(native);
 		native.SetStability(FunctionStability::VOLATILE);
 		RegisterDescribedScalar(loader, native, purpose);
