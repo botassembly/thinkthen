@@ -73,11 +73,19 @@ jobs:
           export THINKTHEN_BACKEND_BIN="$PWD/target/debug/conformance-backend"
           export THINKTHEN_ARTIFACT="$RUNNER_TEMP/native/thinkthen-swift-0.2.0-aarch64-apple-darwin.tar.gz"
           python3 libraries/swift/Tests/fixtures/guard.py "$THINKTHEN_ARTIFACT"
+          export THINKTHEN_COVERAGE_STAGE="$RUNNER_TEMP/swift-consumer"
           sh libraries/swift/check.sh
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: always()
         with:
           name: swift-apple-installed-package
           path: ${{ runner.temp }}/native/thinkthen-swift-*
+          if-no-files-found: error
+          retention-days: 7
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: swift-apple-consumer-logs
+          path: ${{ runner.temp }}/swift-consumer/*.log
           if-no-files-found: error
           retention-days: 7
