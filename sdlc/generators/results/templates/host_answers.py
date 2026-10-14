@@ -7,7 +7,9 @@ def call_results(definitions):
 
     Scalar values come from normalized judgments; collections come from the
     aggregate packet. A caller's input shape chooses between them, even for a
-    one-element list. Probability describes the yes odds or the picked odds,
+    one-element list. call_shape distinguishes collection, whole aggregate and
+    input cardinality independently of the shape inside an answer.
+    Probability describes the yes odds or the picked odds,
     never confidence. Item probabilities stay with rank/recognize/relate items.
     Null values remain present, including unresolved scalar judgments.
     """
@@ -30,6 +32,8 @@ def call_results(definitions):
             'receipt_payload': payload,
             'aggregate_value': value,
             'value_projection': projection,
+            'call_shape': ('collection' if projection != 'value' else
+                           'aggregate' if payload.get('type') != 'array' else 'input'),
             'scalar_kind': scalar[0] if scalar else None,
             'scalar_value': scalar[1] if scalar else None,
             'probability_mode': mode,

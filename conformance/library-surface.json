@@ -438,6 +438,7 @@
         "Completed": [
           "initialize",
           "facts",
+          "probability",
           "inspect"
         ]
       },
