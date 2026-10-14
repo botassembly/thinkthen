@@ -37,14 +37,19 @@ impl Engine {
             admitted,
             rejected,
             |ordinal, original, row| {
-                complete_row(
+                let cause = super::records::recovery_cause(&row);
+                let outcome = complete_row(
                     (&engine, self.profile.as_ref(), setting, false, function),
                     &stop,
                     &original,
                     ordinal,
                     row,
                 )
-                .and_then(|canonical| atomic_value(function, original.original, ordinal, canonical))
+                .and_then(|canonical| {
+                    atomic_value(function, original.original, ordinal, canonical)
+                });
+                crate::public::request::recovery_row(ordinal, outcome)
+                    .map(|row| row.with_cause(cause))
             },
         )
     }
@@ -102,7 +107,7 @@ pub(super) fn run<A: Asker, H>(
     stop: &Stop<'_>,
     admitted: Admitted<H, A::Input>,
     rejected: Vec<RequestRecoveredRow>,
-    mut project: impl FnMut(usize, H, pipeline::Row<A>) -> Result<RequestValue, Error>,
+    mut project: impl FnMut(usize, H, pipeline::Row<A>) -> Result<RequestRecoveredRow, Error>,
 ) -> Result<Call<Vec<RequestRecoveredRow>>, Error> {
     stop.run_call(admitted.len() + rejected.len(), |cancel| {
         let (held, inputs): (Vec<_>, Vec<_>) = admitted
@@ -118,13 +123,13 @@ pub(super) fn run<A: Asker, H>(
                 return Flow::Stop;
             };
             let outcome = project(ordinal, original, row);
-            if let Err(error) = &outcome
-                && crate::public::request::is_recovery_fatal(error)
-            {
-                fatal = outcome.err();
-                return Flow::Stop;
+            match outcome {
+                Ok(row) => output.push(row),
+                Err(error) => {
+                    fatal = Some(error);
+                    return Flow::Stop;
+                }
             }
-            output.push(RequestRecoveredRow { ordinal, outcome });
             Flow::Continue
         });
         engine
