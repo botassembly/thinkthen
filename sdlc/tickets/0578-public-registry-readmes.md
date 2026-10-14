@@ -43,6 +43,8 @@ Reviews: revision df9981c, accept
 
 Reviews: revision 5974c75, accept
 
+Reviews: revision 8ac420e, accept
+
 ## Outcome
 
 Each package registry page that ships with 0.2 shows a short README for a stranger with the shared opening, one replayed example in that language, the cost and the install line, and `sdlc/scripts/registry-readmes.py` fails the release on any page that names an ADR, a ticket, an `sdlc/` path, an internal crate or a stale version, or whose example does not run.
