@@ -23,6 +23,37 @@ type producerFunc func(context.Context) (any, error)
 
 func (f producerFunc) Next(ctx context.Context) (any, error) { return f(ctx) }
 
+type pointerProducer struct{}
+
+func (*pointerProducer) Next(context.Context) (any, error) { panic("nil pointer producer called") }
+
+type mapProducer map[string]string
+
+func (mapProducer) Next(context.Context) (any, error) { panic("nil map producer called") }
+
+type sliceProducer []string
+
+func (sliceProducer) Next(context.Context) (any, error) { panic("nil slice producer called") }
+
+type channelProducer chan string
+
+func (channelProducer) Next(context.Context) (any, error) { panic("nil channel producer called") }
+
+func nilFeedChecks(client *tt.Client) {
+	for _, producer := range []tt.Producer{nil, (*pointerProducer)(nil), producerFunc(nil), mapProducer(nil), sliceProducer(nil), channelProducer(nil)} {
+		for _, name := range []string{"Decide", "Choose", "Tag", "Score", "Filter", "Rank", "Find", "Annotate", "Recognize", "Relate"} {
+			returned := reflect.ValueOf(client).MethodByName(name).Call([]reflect.Value{reflect.ValueOf(context.Background()), reflect.ValueOf(tt.TextQuestion("Is it?")), reflect.ValueOf(tt.FeedInput{Producer: producer}), reflect.Zero(reflect.TypeOf((*tt.RequestOptions)(nil)))})
+			call := returned[0].Interface().(tt.Call)
+			var failure *tt.Error
+			err, _ := returned[1].Interface().(error)
+			require(errors.As(err, &failure) && failure.Kind == tt.KindUsage && failure.Code == 1 && !failure.Retryable, "nil feed lost typed usage failure")
+			require(failure.Message == "FeedInput requires a non-nil Producer", "nil feed message changed")
+			require(call.Terminal == nil && len(call.Packets) == 0 && !failure.Facts.RequestsSent().Present && failure.Facts.RequestsSent().Err == nil, "nil feed fabricated native session facts")
+		}
+	}
+	fmt.Println("nil-feed-usage-pass requests=0")
+}
+
 func feedChecks(client *tt.Client) {
 	index := 0
 	producer := producerFunc(func(ctx context.Context) (any, error) {
@@ -250,6 +281,10 @@ func main() {
 		require(errors.Is(err, tt.ErrClosed), "closed finalization admitted")
 		require(finished.State() == expected, "owned status lost after close")
 		fmt.Println("usage-status-pass requests=1")
+		return
+	}
+	if len(os.Args) > 1 && os.Args[1] == "nil-feed" {
+		nilFeedChecks(client)
 		return
 	}
 	if len(os.Args) > 1 && os.Args[1] == "feed" {

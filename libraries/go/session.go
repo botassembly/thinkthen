@@ -90,6 +90,9 @@ func (c *Client) call(ctx context.Context, verb string, question RequestQuestion
 	source := input
 	feedInput, feeding := input.(FeedInput)
 	producer := feedInput.Producer
+	if feeding && nilProducer(producer) {
+		return result, &Error{Code: int(KindUsage), Kind: KindUsage, Message: "FeedInput requires a non-nil Producer", Facts: Facts{ownedJSON{raw: json.RawMessage("{}")}}}
+	}
 	if feeding {
 		source = RequestInputFeed{Name: "records"}
 	}
