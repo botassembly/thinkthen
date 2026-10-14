@@ -270,6 +270,7 @@ fn annotate_and_relate_send_shared_context_and_keep_originals() {
     )
     .expect("annotate");
     exits(&annotated, 0);
+    assert_eq!(listener.count(), 1);
     let row: Value = serde_json::from_slice(&annotated.stdout).expect("row");
     assert_eq!(row["input"], json!({"text":"refund","extra":false}));
     assert!(row["meta"]["context_sha256"].is_string());

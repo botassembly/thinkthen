@@ -4,6 +4,8 @@ Status: OPEN.
 
 Milestone: 0.2
 
+Reviews: revision 8590552, accept
+
 ## Outcome
 
 `annotate` accepts `--context` as its help says. It sends a shared document once per request instead of once per question. A score answer reports the level the question names. `thinkthen status` works on a machine with a fresh cache.
@@ -35,3 +37,5 @@ PM amendment, 2026-10-12. The coordinator's recommendation stands. Keep the curr
 PM amendment, 2026-10-13. Remaining work. Score numbering is done: d9181d5f7 documents zero-based positions in the help and schema, and 2d5b38823 records the five-level proof. The two CLI defects were never reproduced, and d9181d5f7 says they "already pass" without a test, which breaks the 2026-10-12 amendment. Reproduce the `status` failure on the Beelink with real default cache and usage paths. If a clean home does not reproduce it, test against a copy of a real cache folder, and close the item only on a named cause. Write an outside-in test in `crates/thinkthen/tests/` that fails for that cause, then fix `crates/thinkthen/src/cli/status.rs` so an absent cache or usage file reads as empty. Reproduce the `annotate --context` refusal. If the refusal is deliberate, remove `--context` from `annotate --help`; that is the default ruling. Confirm `annotate --help` states the zero-based numbering. Run routine `test` and `lint` and merge into `ticket/0543-final`.
 
 PM amendment, 2026-10-14. The evidence at e363ee504 discharges both reported failures. The annotate `--context` and status reports came from older builds, and the status exit 5 matches a 0.1 binary reading a cache that a newer build had migrated. Keep one outside-in test for annotate shared context with exactly one send and one for status on default paths, then close.
+- 2026-10-14 started
+- 2026-10-14 next: The f708e070c ruling discharges both reported failures at e363ee504; retained outside-in shared-context one-send and default-path status assertions are undergoing routine checks and fresh review.
