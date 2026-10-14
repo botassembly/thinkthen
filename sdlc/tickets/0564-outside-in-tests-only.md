@@ -6,6 +6,10 @@ Milestone: 0.2
 
 Depends on: 0560
 
+Reviews: revision 80dc059, reject
+
+Reviews: revision 7134b30, accept
+
 ## Outcome
 
 Unit tests in `src` stay only where no public surface can show the behavior, or where the stakes call for a direct test, and each one says why. Every behavior they covered that a caller can reach has an outside-in test through the CLI, the Rust public API, the MCP command or an installed library. Outside-in coverage, measured by 0560, rises from 88.7%, and no unique covered line is lost. Passing tests leave no temporary folders behind.
