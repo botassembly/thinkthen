@@ -3,6 +3,12 @@ package thinkthen;
 import java.lang.foreign.*;
 final class NativeWait {
 private NativeWait() {}
+static final int READY_CANCELLED = 4;
+static final int READY_CLOSED = 2;
+static final int READY_END = 3;
+static final int READY_INPUT = 1;
+static final int READY_RESULT = 0;
+static final int READY_TIMEOUT = 5;
 static final int INPUT = 1;
 static final int INTERRUPTIBLE_SETTLEMENT = 4;
 static final int RESULT = 0;

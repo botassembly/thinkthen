@@ -50,6 +50,34 @@ public final class SessionConsumer {
             }
         }
     }
+    static void planFunctions(Engine engine) {
+        var functions = Inputs.RequestFunction.values();
+        var questions = List.of(examples.SampleInputs.decide(), examples.SampleInputs.choose(),
+            examples.SampleInputs.tag(), examples.SampleInputs.score());
+        for (var function : functions) {
+            var question = switch (function) {
+                case CHOOSE -> questions.get(1); case TAG -> questions.get(2); case SCORE -> questions.get(3);
+                case FIND -> examples.SampleInputs.find(); case ANNOTATE -> examples.SampleInputs.annotate();
+                case RECOGNIZE -> examples.SampleInputs.recognize(); case RELATE -> examples.SampleInputs.relate();
+                default -> questions.getFirst();
+            };
+            var request = new Inputs.Request().call(new Inputs.RequestCall().function(function)
+                .question(question).input(records("plan-preview")));
+            switch (function) {
+                case FIND, ANNOTATE, RECOGNIZE, RELATE -> {
+                    try { engine.plan(request); throw new AssertionError("unsupported plan admitted: " + function); }
+                    catch (NativeFailure error) { check(error.kind() == ErrorKind.USAGE && !error.retryable() && error.facts() == null, "unsupported plan refusal"); }
+                }
+                default -> {
+                    var plan = engine.plan(request);
+                    check(plan.requests().signum() > 0 && plan.records().intValueExact() == 1, "plan counts: " + function);
+                    check(plan.estimatedBytes().signum() > 0 && plan.largestRequestBytes().signum() > 0, "plan byte estimates");
+                    check(plan.estimatedInputTokens() != null && plan.largestRequestEstimatedInputTokens().signum() > 0, "plan token estimates");
+                    check(!plan.tokenEstimateMethod().isEmpty() && plan.upperBound() != null && plan.firstBodyUtf8().value().contains("plan-preview"), "plan metadata");
+                }
+            }
+        }
+    }
     public static void main(String[] ignored) throws Exception {
         if (ignored.length == 0) { thinkthen.JsonTest.main(new String[0]); PublicResultsCases.run(); }
         if (ignored.length == 1 && ignored[0].equals("smoke")) {
@@ -126,6 +154,7 @@ public final class SessionConsumer {
             catch (CompletionException error) { check(error.getCause() instanceof IllegalArgumentException,"Unicode representation failure"); }
             try { engine.decide(question,records("status-401"),options()).join(); throw new AssertionError("provider failure succeeded"); }
             catch (CompletionException error) { retainedFailure = (Engine.SessionFailure)error.getCause(); }
+            planFunctions(engine);
             waitScheduler(engine, question);
             var held = engine.decide(question,records("hold-jvm-java"),options());
             arrived("hold-jvm-java");
