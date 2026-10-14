@@ -51,9 +51,9 @@ use std::time::{Duration, Instant};
 
 use conformance_backend::{Backend, Canned, Listener};
 use thinkthen::{
-    AnnotatedRecord, Answer, BatchSetting, CallOptions, CancelToken, Counters, Description, Engine,
-    EngineBuilder, Error, ErrorKind, Found, Judgment, ObservedRow, Question, QuestionSet,
-    QuestionSetBuilder, Ranked, RecordObservation, Row,
+    Answer, BatchSetting, CallOptions, CancelToken, CompleteAnnotated, CompleteRank,
+    CompleteRecord, Counters, Description, Engine, EngineBuilder, Error, ErrorKind, Found,
+    Judgment, ObservedRow, Question, QuestionSet, QuestionSetBuilder, RecordObservation, Row,
 };
 
 const DECIDED: &str = r#"{"model":"jev-latest","answers":{"q1":{"type":"noul","noul":0.9}},"usage":{"input_tokens":3,"output_tokens":1}}"#;
@@ -103,9 +103,9 @@ const _: () = {
     shared::<Error>();
     shared::<thinkthen::Details>();
     shared::<Row<String, Answer>>();
-    shared::<Ranked<String>>();
+    shared::<CompleteRecord<String, CompleteRank>>();
     shared::<Found<String>>();
-    shared::<AnnotatedRecord<String>>();
+    shared::<CompleteRecord<String, CompleteAnnotated>>();
     shared::<thinkthen::Recognize>();
     shared::<thinkthen::Relate>();
 };
