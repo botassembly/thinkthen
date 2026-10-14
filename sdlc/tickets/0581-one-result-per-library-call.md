@@ -70,3 +70,5 @@ PM amendment, 2026-10-14. In C#, a function whose authored values may be any JSO
 PM amendment, 2026-10-14. Probability belongs to the settled value. When a call leaves its value unresolved (null), its probability is null in every host, as Rust reports today.
 
 PM amendment, 2026-10-14. The JVM result is a generated `CallResult<V, P, R>`, matching C#: typed scalar or list probability (`Double` or `List<Double>`, null when unresolved or not given), the existing `Object` authored-value leaf, and idiomatic Kotlin and Scala wrappers over it. Probability is never typed as `Object`.
+
+PM amendment, 2026-10-14. Swift matches C#: generated overloads by input shape, so text or one value returns a scalar `CallResult` and records, sources or feeds return the list form, with optional `Double` or `[Double?]` probability. No `ResultValue` enum for callers to unwrap. Objective-C has no overloading, so it keeps `TTCall` with typed `TTCallValue` and `TTCallProbability` wrappers over a scalar or `NSArray`. Probability is never `id`.
