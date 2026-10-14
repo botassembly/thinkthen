@@ -6,8 +6,6 @@ use std::path::PathBuf;
 
 use serde_json::{Value, json};
 
-use thinkthen::{Details, Probabilities};
-
 use crate::cases::Checked;
 
 /// Read one optional absolute ID list, and refuse duplicate or unknown IDs.
@@ -93,51 +91,51 @@ pub(crate) fn same(what: &str, actual: &Value, expected: &Value) -> Checked {
     }
 }
 
-pub(crate) fn detailed(details: &Details, expected: &Value, base: &str) -> Checked {
+pub(crate) fn detailed(details: &Value, complete: &Value, expected: &Value, base: &str) -> Checked {
     let wanted = &expected["details"];
     let answer = &wanted["answer"];
-    let probabilities = match details.probabilities() {
-        Probabilities::YesNo { yes } => ("probability", json!(yes)),
-        Probabilities::Named(named) => (
-            "probabilities",
-            named
-                .iter()
-                .map(|one| (one.name().to_owned(), json!(one.probability())))
-                .collect(),
-        ),
-    };
-    same(probabilities.0, &probabilities.1, &answer[probabilities.0])?;
-    if let Some(level) = answer.get("level") {
-        same("level", &json!(details.nearest()), level)?;
+    let actual = details.get("answer").ok_or("scalar answer is missing")?;
+    let meta = details.get("meta").ok_or("scalar metadata is missing")?;
+    for field in ["probability", "probabilities", "level"] {
+        if let Some(value) = answer.get(field) {
+            same(field, actual.get(field).unwrap_or(&Value::Null), value)?;
+        }
     }
-    same("model", &json!(details.model()), &wanted["model"])?;
-    same(
-        "question_sha256",
-        &json!(details.question_sha256()),
-        &wanted["question_sha256"],
-    )?;
-    keyed_requests(details.requests(), &wanted["requests"])?;
     same(
         "confidence",
-        &json!(details.confidence()),
+        actual.get("confidence").unwrap_or(&Value::Null),
         &answer["confidence"],
     )?;
-    let usage = details.usage().map(|usage| {
-        json!({"input_tokens": usage.input_tokens(), "output_tokens": usage.output_tokens()})
-    });
-    same("usage", &json!(usage), &wanted["usage"])?;
-    same(
+    for field in [
+        "model",
+        "question_sha256",
+        "usage",
         "requests_sent",
-        &json!(details.requests_sent()),
-        &wanted["requests_sent"],
-    )?;
-    same("cached", &json!(details.cached()), &wanted["cached"])?;
+        "cached",
+    ] {
+        same(
+            field,
+            meta.get(field).unwrap_or(&Value::Null),
+            &wanted[field],
+        )?;
+    }
+    let requests: Vec<String> = serde_json::from_value(
+        meta.get("requests")
+            .ok_or("scalar requests are missing")?
+            .clone(),
+    )
+    .map_err(|error| error.to_string())?;
+    keyed_requests(&requests, &wanted["requests"])?;
     let served = json!(format!("{base}/systemone"));
-    same("url", &json!(details.url()), &served)?;
-    let line: Value =
-        serde_json::from_str(&details.to_json()).map_err(|error| error.to_string())?;
-    let url = line.get("meta").and_then(|meta| meta.get("url"));
-    same("line url", url.unwrap_or(&Value::Null), &served)
+    same("url", meta.get("url").unwrap_or(&Value::Null), &served)?;
+    same(
+        "line url",
+        complete
+            .get("meta")
+            .and_then(|meta| meta.get("url"))
+            .unwrap_or(&Value::Null),
+        &served,
+    )
 }
 
 /// A row lists its own question keys, in order, out of the keys of the

@@ -89,29 +89,35 @@ fn environment_engine_child() {
                 .decide(&decide, "a note")
                 .ok()
                 .map(thinkthen::Call::into_value),
-            Some(thinkthen::Answer::Yes)
+            Some(Some(true))
         );
         assert_eq!(
             environment
                 .decide(&decide, "a note")
                 .ok()
                 .map(thinkthen::Call::into_value),
-            Some(thinkthen::Answer::Yes)
+            Some(Some(true))
         );
         let one = explicit
-            .details(&score, "a note")
-            .expect("the engine details")
-            .into_value();
+            .score(&score, "a note")
+            .expect("the engine details");
+        let one = &one.results()[0];
         let other = environment
-            .details(&score, "a note")
-            .expect("the environment details")
-            .into_value();
-        assert_eq!(one.to_json(), other.to_json());
-        assert_eq!(one.to_scalar_json(), other.to_scalar_json());
+            .score(&score, "a note")
+            .expect("the environment details");
+        let other = &other.results()[0];
+        assert_eq!(comparable_score(one), comparable_score(other));
+        assert_eq!(
+            one.to_scalar_json().expect("engine scalar JSON"),
+            other.to_scalar_json().expect("environment scalar JSON")
+        );
         assert_eq!(one.value(), other.value());
         assert_eq!(one.probabilities(), other.probabilities());
         assert_eq!(one.reported_usage(), other.reported_usage());
-        let observations = (one.observations().to_vec(), other.observations().to_vec());
+        let observations = (
+            one.identity().observations().to_vec(),
+            other.identity().observations().to_vec(),
+        );
         compare_observations(previous_observations.as_ref(), &observations);
         previous_observations = Some(observations);
         assert_eq!(
@@ -186,10 +192,15 @@ fn environment_engine_child() {
                 .expect("the convenience ranks")
                 .into_value()
         );
-        let values = |record: thinkthen::AnnotatedRecord<&str>| record.values().to_vec();
         assert_eq!(
-            rows(explicit.annotate(&set, records), values),
-            rows(environment.annotate(&set, records), values)
+            explicit
+                .annotate(&set, records)
+                .expect("the engine annotates")
+                .into_value(),
+            environment
+                .annotate(&set, records)
+                .expect("the environment annotates")
+                .into_value()
         );
         for (one, other) in [
             (
@@ -260,13 +271,8 @@ fn each_malformed_reply_fails_the_last_question_with_its_cause() {
         ),
     ] {
         let engine = engine(&format!("{}/arm/malformed/{arm}/v1", backend.origin())).expect(arm);
-        let record = engine
-            .annotate(&set, ["a note"])
-            .next()
-            .expect("one record")
-            .expect(arm);
-        let values: Vec<_> = record
-            .values()
+        let record = engine.annotate(&set, ["a note"]).expect(arm);
+        let values: Vec<_> = record.value()[0]
             .iter()
             .map(thinkthen::NamedAnnotation::value)
             .collect();
@@ -410,4 +416,25 @@ fn compare_observations<T: PartialEq + std::fmt::Debug>(
             "separate live answers have separate observations"
         );
     }
+}
+
+/// Compare both serialized paths while retaining each call's independent identities.
+fn comparable_score(result: &thinkthen::CompleteScore) -> Value {
+    let mut document: Value =
+        serde_json::from_str(&result.to_json().expect("complete JSON")).expect("complete document");
+    assert_eq!(document["answer_id"], json!(result.answer_id()));
+    assert_eq!(
+        document["meta"]["observations"],
+        json!(result.identity().observations())
+    );
+    // Separate live calls have distinct observation and derived answer identities.
+    document
+        .as_object_mut()
+        .expect("document")
+        .remove("answer_id");
+    document["meta"]
+        .as_object_mut()
+        .expect("metadata")
+        .remove("observations");
+    document
 }

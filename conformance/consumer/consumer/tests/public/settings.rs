@@ -3,7 +3,7 @@ use std::process::Command;
 use std::time::Duration;
 
 use super::child::ChildEnvironment as _;
-use thinkthen::{Answer, Engine, Entity, ErrorKind, Judgment, Question, Relate};
+use thinkthen::{Answer, Engine, Entity, ErrorKind, Question, Relate};
 
 fn related(engine: &Engine, case: &serde_json::Value, step: &serde_json::Value, id: &str) {
     let entities = case["entities"]
@@ -143,7 +143,7 @@ fn old_recording_child() {
             .decide(&question, report)
             .expect("saved")
             .into_value(),
-        Answer::Yes
+        Some(true)
     );
     let error = engine.decide(&question, vague).expect_err("local miss");
     assert_eq!(
@@ -168,7 +168,7 @@ fn old_recording_child() {
         ),
         (0, 1)
     );
-    assert_eq!(served.into_value(), Answer::Yes);
+    assert_eq!(served.into_value(), Some(true));
 }
 
 #[test]
@@ -246,11 +246,11 @@ fn the_builder_follows_the_command_folder_rules() {
         .expect("pair");
     assert_eq!(
         paired.decide(&ask, "one").expect("send").into_value(),
-        Answer::Yes
+        Some(true)
     );
     assert_eq!(
         paired.decide(&ask, "one").expect("replay").into_value(),
-        Answer::Yes
+        Some(true)
     );
     assert_eq!((backend.count(), paired.usage().cache_answers()), (1, 0));
     let recorder = Engine::builder()
@@ -267,7 +267,7 @@ fn the_builder_follows_the_command_folder_rules() {
             .decide(&ask, "one")
             .expect("send again")
             .into_value(),
-        Answer::Yes
+        Some(true)
     );
     assert_eq!(backend.count(), 2);
     let reader = Engine::builder()
@@ -280,7 +280,7 @@ fn the_builder_follows_the_command_folder_rules() {
         .expect("reader");
     assert_eq!(
         reader.decide(&ask, "one").expect("saved").into_value(),
-        Answer::Yes
+        Some(true)
     );
     assert_eq!(backend.count(), 2);
     let wrong = Engine::builder()
@@ -389,19 +389,15 @@ fn every_shared_setting_reaches_the_public_engine() {
             } else {
                 let text = step["text"].as_str().expect("text");
                 if let Some(model) = step["model"].as_str() {
-                    let details = engine.details(&question, text).expect("details");
-                    assert_eq!(details.value().model(), model, "{id}");
-                    assert_eq!(
-                        details.value().value(),
-                        &Judgment::Decision(Answer::Yes),
-                        "{id}"
-                    );
+                    let details = engine.decide(&question, text).expect("answer");
+                    assert_eq!(details.results()[0].meta().model(), model, "{id}");
+                    assert_eq!(details.value(), &Some(true), "{id}");
                 } else {
                     let result = engine.decide(&question, text);
                     if let Some(kind) = step["error"].as_str() {
                         assert_eq!(result.expect_err(id).kind().name(), kind, "{id}");
                     } else {
-                        assert_eq!(result.expect(id).into_value(), Answer::Yes, "{id}");
+                        assert_eq!(result.expect(id).into_value(), Some(true), "{id}");
                     }
                 }
             }
