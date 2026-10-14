@@ -170,6 +170,7 @@ class RefusalTable(unittest.TestCase):
                  ('v0.0.0', 'linux_amd64', 'supported version'), (stable, 'osx_arm64', 'native target'),
                  (stable, 'linux_amd64', 'source identity'), (stable, 'linux_amd64', 'version identity'),
                  (stable, 'linux_amd64', 'missing'), (stable, 'linux_amd64', 'footer'),
+                 (stable, 'linux_amd64', 'abi'), (stable, 'linux_amd64', 'abi version'),
                  (stable, 'linux_amd64', 'linked'), (stable, 'linux_amd64', 'hardlink')]
         for host, platform, failure in table:
             with self.subTest(host=host, failure=failure), tempfile.TemporaryDirectory() as folder:
@@ -184,6 +185,9 @@ class RefusalTable(unittest.TestCase):
                     files['thinkthen.duckdb_extension'] = files.pop(matching)
                 if failure == 'footer':
                     files[matching] = files[duckdb_member(duckdb_versions()[1])]
+                if failure in ('abi', 'abi version'):
+                    original, changed = (b'CPP', b'CXX') if failure == 'abi' else (b'4', b'5')
+                    files[matching] = files[matching].replace(original.ljust(32, b'\0'), changed.ljust(32, b'\0'))
                 if failure == 'hardlink':
                     files = {'LICENSES/rust/example/extension': files[matching], **files}
                 with tarfile.open(archive, 'w:gz') as output:
@@ -220,6 +224,7 @@ class RefusalTable(unittest.TestCase):
                         duckdb(check)
                     wanted = {'missing': matching,
                               'source identity': 'supported version', 'version identity': 'supported version',
+                              'abi': 'footer ABI is', 'abi version': 'footer ABI version is',
                               'footer': 'DuckDB footer DuckDB version', 'linked': 'link or special member',
                               'hardlink': 'link or special member'}
                     self.assertIn(wanted.get(failure, failure), str(error.exception))
