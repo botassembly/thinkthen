@@ -143,3 +143,4 @@ PM amendment, 2026-10-13. Candidate checklist. This replaces any earlier orderin
 PM amendment, 2026-10-13. Follow `sdlc/decisions/2026-10-13-standing-build-rulings.md` for size, measurement, checks, ownership, questions, records, scope and recovery. 0560, 0561, 0563 and 0565 have no work left; their remainders moved to 0562, 0564, 0576 and this ticket, and they close when the candidate merge lands them. 0575's merge of `docs/0.2-refresh` into `ticket/0543-final` is a gate before the freeze.
 
 PM amendment, 2026-10-13. Drive this ticket and every ticket it depends on by `sdlc/decisions/2026-10-13-drive-0-2-with-maximum-parallelism.md`. Ian ruled that all the library quality work ships in 0.2.
+- 2026-10-14 next: Merged the accepted hosted-runner admission correction at a6bbf9b0b with sixteen admission checks; hosted builds retain four permits without the Beelink load cap, and Swift ARM installed proof passed on GitHub.
