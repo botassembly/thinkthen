@@ -5,6 +5,7 @@ pub const Question = authored.Question;
 pub const Request = authored.Request;
 pub const Plan = authored.Plan;
 pub const session = @import("session.zig");
+pub const calls = @import("calls_generated.zig");
 const c = @import("native.zig").c;
 const values = @import("results_generated.zig");
 pub const results = values.Types;
@@ -47,8 +48,7 @@ pub const Engine = struct {
     closed: bool = false,
     allocator: std.mem.Allocator,
     pub fn init(allocator: std.mem.Allocator) !Result(Engine) {
-        const raw = c.thinkthen_engine_new() orelse return .{ .failed = try capture(allocator, null, c.thinkthen_error_code(null)) };
-        return .{ .ok = .{ .handle = raw, .allocator = allocator } };
+        return initWithSettings(allocator, .{});
     }
     pub fn initWithSettings(allocator: std.mem.Allocator, settings: inputs.EngineSettings) !Result(Engine) {
         const encoded = try std.json.Stringify.valueAlloc(allocator, settings, .{ .emit_null_optional_fields = false });

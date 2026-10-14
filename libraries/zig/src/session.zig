@@ -4,7 +4,6 @@ const tt = @import("thinkthen.zig");
 const c = @import("native.zig").c;
 const values = @import("results_generated.zig");
 const calls = @import("calls_generated.zig");
-pub const Function = enum { decide, choose, tag, score, filter, rank, find, annotate, recognize, relate };
 pub const Error = error{ Usage, Backend, Deadline, Local, Cancelled, Defect, ClosedEngine };
 pub fn checked(code: c_int) Error!void {
     switch (code) {
@@ -30,8 +29,8 @@ const PacketStorage = struct {
 };
 /// A packet owns its copied values until explicit release.
 pub const Packet = opaque {
-    fn storage(self: *const Packet) *const PacketStorage {
-        return @ptrCast(@alignCast(self));
+    fn storage(self: *const Packet) *PacketStorage {
+        return @ptrCast(@alignCast(@constCast(self)));
     }
     pub fn deinit(self: *Packet) void {
         const owned: *PacketStorage = @ptrCast(@alignCast(self));
@@ -41,6 +40,9 @@ pub const Packet = opaque {
     }
     pub fn value(self: *const Packet) *const values.SessionPacket {
         return &self.storage().value;
+    }
+    pub fn answers(self: *const Packet) values.AnswerView {
+        return .{ .packet = self.value(), .allocator = self.storage().arena.allocator() };
     }
     pub fn terminal(self: *const Packet) ?*const values.SessionPacketTerminal {
         return switch (self.value().*) {
@@ -131,13 +133,3 @@ pub fn startNamed(engine: *tt.Engine, function: tt.inputs.RequestFunction, argum
     defer request.deinit();
     return request.start(engine);
 }
-pub const decide = calls.decide;
-pub const choose = calls.choose;
-pub const tag = calls.tag;
-pub const score = calls.score;
-pub const filter = calls.filter;
-pub const rank = calls.rank;
-pub const find = calls.find;
-pub const annotate = calls.annotate;
-pub const recognize = calls.recognize;
-pub const relate = calls.relate;

@@ -2,7 +2,17 @@
 const std = @import("std");
 const c = @import("native.zig").c;
 pub fn Presence(comptime T: type) type {
-    return union(enum) { missing, null_value, value: T };
+    return union(enum) {
+        missing,
+        null_value,
+        value: T,
+        pub fn optional(self: @This()) ?T {
+            return switch (self) {
+                .value => |v| v,
+                else => null,
+            };
+        }
+    };
 }
 pub fn Map(comptime T: type) type {
     return struct {
@@ -18,52 +28,7 @@ pub const Value = union(enum) {
     string: []const u8,
     array: []const Value,
     object: Map(Value),
-    pub fn jsonStringify(self: @This(), writer: anytype) !void {
-        try writeNative(self, writer);
-    }
 };
-fn writeNative(value: anytype, writer: anytype) error{WriteFailed}!void {
-    const T = @TypeOf(value);
-    switch (@typeInfo(T)) {
-        .@"union" => switch (value) {
-            inline else => |member| {
-                if (@TypeOf(member) == void) try writer.write(null) else try writeNative(member, writer);
-            },
-        },
-        .@"struct" => {
-            try writer.beginObject();
-            if (@hasField(T, "entries")) {
-                for (value.entries) |entry| {
-                    try writer.objectField(entry.key);
-                    try writeNative(entry.value, writer);
-                }
-            } else inline for (std.meta.fields(T)) |field| {
-                const member = @field(value, field.name);
-                if (comptime std.mem.eql(u8, field.name, "extensions")) {
-                    for (member.entries) |entry| {
-                        try writer.objectField(entry.key);
-                        try writeNative(entry.value, writer);
-                    }
-                } else {
-                    const omit = if (comptime @typeInfo(field.type) == .@"union" and @hasField(field.type, "missing")) member == .missing else false;
-                    if (!omit) {
-                        try writer.objectField(field.name);
-                        try writeNative(member, writer);
-                    }
-                }
-            }
-            try writer.endObject();
-        },
-        .pointer => |info| {
-            if (T == []const u8) return writer.write(value);
-            if (info.size == .one) return writeNative(value.*, writer);
-            try writer.beginArray();
-            for (value) |member| try writeNative(member, writer);
-            try writer.endArray();
-        },
-        else => try writer.write(value),
-    }
-}
 fn text(v: c.thinkthen_complete_utf8_v1) []const u8 {
     return if (v.len == 0) &.{} else v.data[0..v.len];
 }
@@ -186,9 +151,6 @@ pub const SessionPacket = union(enum) {
     relate_aggregate: SessionPacketRelateAggregate,
     observation: SessionPacketObservation,
     terminal: SessionPacketTerminal,
-    pub fn jsonStringify(self: @This(), writer: anytype) !void {
-        try writeNative(self, writer);
-    }
 };
 
 pub const SessionPacketTerminal = struct {
@@ -5471,4 +5433,99 @@ pub const Types = struct {
     pub const Verb = @import("results_generated.zig").Verb;
     pub const Version = @import("results_generated.zig").Version;
     pub const WordingVersion = @import("results_generated.zig").WordingVersion;
+};
+
+pub const AnswerView = struct {
+    packet: *const SessionPacket,
+    allocator: std.mem.Allocator,
+    fn row(self: @This()) !SessionObservedRow {
+        return switch (self.packet.*) {
+            .observation => |v| switch (v.value) {
+                .row => |r| r.value,
+                else => error.WrongAnswer,
+            },
+            else => error.WrongAnswer,
+        };
+    }
+    fn judgment(self: @This()) !SessionJudgment {
+        return switch (try self.row()) {
+            .judgment => |v| v.value,
+            else => error.WrongAnswer,
+        };
+    }
+    pub fn decide(self: @This()) !?bool {
+        return switch (try self.judgment()) {
+            .decision => |v| v.value.optional(),
+            else => error.WrongAnswer,
+        };
+    }
+    pub fn choose(self: @This()) !?[]const u8 {
+        return switch (try self.judgment()) {
+            .choice => |v| v.value.optional(),
+            else => error.WrongAnswer,
+        };
+    }
+    pub fn score(self: @This()) !f64 {
+        return switch (try self.judgment()) {
+            .score => |v| v.value,
+            else => error.WrongAnswer,
+        };
+    }
+    pub fn tag(self: @This()) ![]const []const u8 {
+        return switch (try self.judgment()) {
+            .tags => |v| v.value,
+            else => error.WrongAnswer,
+        };
+    }
+    pub fn find(self: @This()) !?u64 {
+        return switch (try self.row()) {
+            .find => |v| v.value.optional(),
+            else => error.WrongAnswer,
+        };
+    }
+    pub fn annotate(self: @This()) ![]const SessionAnnotation {
+        return switch (try self.row()) {
+            .annotated => |v| v.value,
+            else => error.WrongAnswer,
+        };
+    }
+    pub fn recognize(self: @This()) !SessionRecognition {
+        return switch (try self.row()) {
+            .recognized => |v| v.value,
+            else => error.WrongAnswer,
+        };
+    }
+    pub fn relate(self: @This()) ![]const SessionRelationEdge {
+        return switch (try self.row()) {
+            .relations => |v| v.value,
+            else => error.WrongAnswer,
+        };
+    }
+    pub fn filter(self: @This()) ![]const Value {
+        const receipts: []const AtomicBoolean = switch (self.packet.*) {
+            .filter_row => |v| &.{v.value},
+            .filter_aggregate => |v| v.value,
+            else => return error.WrongAnswer,
+        };
+        const answer = try self.allocator.alloc(Value, receipts.len);
+        for (answer, receipts) |*out, receipt| out.* = switch (receipt.input) {
+            .value => |v| v,
+            .null_value => .null_value,
+            .missing => return error.WrongAnswer,
+        };
+        return answer;
+    }
+    pub fn rank(self: @This()) ![]const u64 {
+        const receipts: []const AtomicNonZeroUsize = switch (self.packet.*) {
+            .rank_aggregate => |v| v.value,
+            else => return error.WrongAnswer,
+        };
+        const answer = try self.allocator.alloc(u64, receipts.len);
+        for (answer, receipts) |*out, receipt| out.* = switch (receipt.index) {
+            .value => |v| v,
+            .null_value => return error.WrongAnswer,
+            .missing => return error.WrongAnswer,
+        };
+        return answer;
+    }
 };

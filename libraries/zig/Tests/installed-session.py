@@ -58,8 +58,12 @@ with tempfile.TemporaryDirectory(prefix='installed-session-', dir=root) as tempo
         assert backend.user_agents == [f'thinkthen/{version} (zig)'] * 2, backend.user_agents
         before = len(backend.arrivals)
         example = subprocess.run([str(project / 'zig-out/bin/example')], cwd=project, env=env, capture_output=True, text=True, timeout=5)
-        assert example.returncode == 0 and example.stderr == 'records=1 requests=1\n', example.stderr
+        assert example.returncode == 0 and example.stderr == 'answer=true\nrecords=1 requests=1\n', example.stderr
         assert len(backend.arrivals) == before + 1, backend.arrivals
+        before = len(backend.arrivals)
+        helpers = subprocess.run([str(project / 'zig-out/bin/session'), 'helpers'], cwd=project, env=env, capture_output=True, text=True, timeout=5)
+        assert helpers.returncode == 0 and helpers.stderr == 'installed Zig helpers PASS\n', helpers.stderr
+        assert len(backend.arrivals) == before + 2, backend.arrivals
         for mode in ('usage-written', 'usage-failed', 'usage-disabled'):
             mode_home = home / mode
             mode_home.mkdir()

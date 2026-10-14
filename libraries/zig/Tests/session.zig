@@ -1,6 +1,36 @@
 const std = @import("std");
 const tt = @import("thinkthen");
+fn publicTypes(comptime T: type, comptime seen: *[4096]type, comptime count: *usize) void {
+    for (seen[0..count.*]) |visited| if (T == visited) return;
+    seen[count.*] = T;
+    count.* += 1;
+    if (std.mem.indexOfPosLinear(u8, @typeName(T), 0, "cimport") != null) @compileError("public native type: " ++ @typeName(T));
+    if (T == std.json.Value or T == std.mem.Allocator or T == std.heap.ArenaAllocator) return;
+    switch (@typeInfo(T)) {
+        .pointer => |v| publicTypes(v.child, seen, count),
+        .optional => |v| publicTypes(v.child, seen, count),
+        .error_union => |v| publicTypes(v.payload, seen, count),
+        .@"fn" => |v| {
+            for (v.params) |param| if (param.type) |child| publicTypes(child, seen, count);
+            if (v.return_type) |child| publicTypes(child, seen, count);
+        },
+        .@"struct", .@"union", .@"enum", .@"opaque" => {
+            if (std.mem.startsWith(u8, @typeName(T), "std.")) return;
+            inline for (std.meta.declarations(T)) |decl| {
+                const member = @field(T, decl.name);
+                publicTypes(if (@TypeOf(member) == type) member else @TypeOf(member), seen, count);
+            }
+            if (@typeInfo(T) == .@"struct" or @typeInfo(T) == .@"union") inline for (std.meta.fields(T)) |field| publicTypes(field.type, seen, count);
+        },
+        else => {},
+    }
+}
 comptime {
+    @setEvalBranchQuota(1000000);
+    var visited: [4096]type = undefined;
+    var count: usize = 0;
+    publicTypes(tt, &visited, &count);
+    if (@hasDecl(tt.results.SessionPacket, "jsonStringify") or @hasDecl(tt.results.Value, "jsonStringify")) @compileError("result dump methods must stay private");
     if (@hasDecl(tt, "c") or @hasDecl(tt.results, "readSessionPacket")) @compileError("native readers must stay private");
     const capture_engine = @typeInfo(@TypeOf(tt.capture)).@"fn".params[1].type.?;
     if (capture_engine != ?*tt.Engine) @compileError("capture must accept the Zig engine: " ++ @typeName(capture_engine));
@@ -40,6 +70,19 @@ pub fn main() !void {
             if (failure.kind != .usage) return error.WrongAdmissionFailure;
         },
     }
+    inline for (.{ "recognize", "relate" }) |kind| {
+        var typed = switch (try if (comptime std.mem.eql(u8, kind, "recognize"))
+            tt.Question.recognize(&engine, .{ .recognize = .{ .kinds = .{ .entries = &.{.{ .key = "person", .value = .{ .string = "A person" } }} } } })
+        else
+            tt.Question.relate(&engine, .{ .relate = .{ .relations = &.{.{ .either = false, .name = "knows", .source = "person", .target = "person" }} } })) {
+            .ok => |q| q,
+            .failed => |failure| {
+                defer tt.releaseFailure(a, failure);
+                return error.TypedQuestionBuild;
+            },
+        };
+        typed.deinit();
+    }
     const request = try tt.Request.init(a, .{ .function = .decide, .question = .{ .text = .{ .text = "Does it pass?" } }, .input = .{ .text = .{ .text = "Evidence." } }, .options = .{ .details = false } });
     var plan = try request.plan(&engine);
     request.deinit();
@@ -47,6 +90,10 @@ pub fn main() !void {
     if (plan.value.records != 1 or plan.value.requests != 1 or plan.value.largest_request_bytes == 0 or plan.value.estimated_input_tokens.upper == 0) return error.WrongPlan;
     const args = try std.process.argsAlloc(a);
     defer std.process.argsFree(a, args);
+    if (args.len > 1 and std.mem.eql(u8, args[1], "helpers")) {
+        try helperInputs(&engine, a);
+        return;
+    }
     const failure_case = args.len > 1 and std.mem.eql(u8, args[1], "failure");
     const usage_case = args.len > 1 and std.mem.startsWith(u8, args[1], "usage-");
     if (args.len > 1 and !failure_case and !usage_case) {
@@ -55,7 +102,7 @@ pub fn main() !void {
         std.debug.print("installed Zig plan PASS\n", .{});
         return;
     }
-    var session = try tt.session.decide(&engine, .{ .question = .{ .text = .{ .text = "Does it pass?" } }, .input = .{ .feed = .{ .name = "owned" } } });
+    var session = try tt.calls.decide(&engine, .{ .question = .{ .text = .{ .text = "Does it pass?" } }, .input = .{ .feed = .{ .name = "owned" } } });
     if (try session.push(a, .{ .item = .{ .original = .{ .text = .{ .text = if (failure_case) "status-401" else if (usage_case) "consumer-zig" else "Evidence." } } }, .location = .{ .file = "owned.txt", .first_line = 1, .last_line = 1 } }) != .accepted) return error.FeedRefused;
     try session.finish();
     var retained_row: ?*tt.session.Packet = null;
@@ -149,4 +196,36 @@ pub fn main() !void {
     if (packet.failure() != null) return error.NativeFailure;
     if (facts.records != 1) return error.WrongRecords;
     std.debug.print("installed Zig session PASS\n", .{});
+}
+
+fn helperInputs(engine: *tt.Engine, a: std.mem.Allocator) !void {
+    const original = try std.json.parseFromSlice(std.json.Value, a, "{\"ticket\":1}", .{});
+    defer original.deinit();
+    var call = try tt.calls.filter(engine, .{ .options = .{ .batch = .{ .integer = 1 } }, .question = .{ .text = .{ .text = "Does it pass?" } }, .input = .{ .records = .{ .items = &.{
+        .{ .original = .{ .json = .{ .value = .null } } },
+        .{ .original = .{ .json = .{ .value = original.value } } },
+    } } } });
+    try call.finish();
+    var retained: std.ArrayList(*tt.session.Packet) = .empty;
+    defer {
+        for (retained.items) |packet| packet.deinit();
+        retained.deinit(a);
+    }
+    while (true) switch (try call.next()) {
+        .end => break,
+        .pending => return error.BlockingPending,
+        .packet => |packet| if (packet.value().* == .filter_row) {
+            try retained.append(a, packet);
+        } else packet.deinit(),
+    };
+    call.deinit();
+    engine.deinit();
+    if (retained.items.len != 2) return error.MissingFilter;
+    const first = try retained.items[0].answers().filter();
+    const second = try retained.items[1].answers().filter();
+    if (first.len != 1 or second.len != 1 or first[0] != .null_value or second[0] != .object) return error.WrongOriginal;
+    const entries = second[0].object.entries;
+    if (entries.len != 1 or !std.mem.eql(u8, entries[0].key, "ticket") or entries[0].value.number.unsigned != 1) return error.WrongOriginal;
+    if (retained.items[0].answers().rank()) |_| return error.WrongAccessorAccepted else |err| if (err != error.WrongAnswer) return err;
+    std.debug.print("installed Zig helpers PASS\n", .{});
 }

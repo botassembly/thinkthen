@@ -207,7 +207,7 @@ def render_results(definitions):
                 members.append('    ' + identifier(arm) + ': ' + result_name(child) + ',')
                 body.append('        ' + str(index) + ' => .{ .' + identifier(arm) + ' = try read' + result_name(child) + '(a, v.data.' + identifier(arm) + '[0]) },')
             body += ['        else => error.InvalidNativeDiscriminator,', '    };']
-            declarations.append('pub const ' + typ + ' = union(enum) {\n' + '\n'.join(members) + ('\n    pub fn jsonStringify(self: @This(), writer: anytype) !void { try writeNative(self, writer); }' if key == 'completesessionPacket' else '') + '\n};')
+            declarations.append('pub const ' + typ + ' = union(enum) {\n' + '\n'.join(members) + '\n};')
         elif 'enum' in source:
             declarations.append('pub const ' + typ + ' = enum { ' + ', '.join(identifier(value) for value in source['enum']) + ' };')
             body = ['    _ = a;', '    return switch (v.kind) {', *('        ' + str(i) + ' => .' + identifier(value) + ',' for i, value in enumerate(source['enum'], 1)), '        else => error.InvalidNativeDiscriminator,', '    };']
@@ -233,14 +233,17 @@ def render_results(definitions):
         readers.append('pub fn read' + typ + '(a: std.mem.Allocator, v: c.' + ident(key) + ') anyerror!' + typ + ' {\n' + '\n'.join(body) + '\n}')
     aliases = ['Presence', 'Map', 'Number', 'Value', *(result_name(key) for key in emitted)]
     types = '\npub const Types = struct {\n' + '\n'.join('    pub const ' + typ + ' = @import("results_generated.zig").' + typ + ';' for typ in sorted(set(aliases))) + '\n};\n'
-    return RESULT_SUPPORT + '\n\n'.join(declarations + readers) + types
+    return RESULT_SUPPORT + '\n\n'.join(declarations + readers) + types + answer_helpers(definitions)
 
 
 RESULT_SUPPORT = '''// Generated owned values from the canonical native packet graph; do not edit.
 const std = @import("std");
 const c = @import("native.zig").c;
 pub fn Presence(comptime T: type) type {
-    return union(enum) { missing, null_value, value: T };
+    return union(enum) {
+        missing, null_value, value: T,
+        pub fn optional(self: @This()) ?T { return switch (self) { .value => |v| v, else => null }; }
+    };
 }
 pub fn Map(comptime T: type) type {
     return struct {
@@ -251,35 +254,7 @@ pub fn Map(comptime T: type) type {
 pub const Number = union(enum) { signed: i64, unsigned: u64, decimal: f64 };
 pub const Value = union(enum) {
     null_value, boolean: bool, number: Number, string: []const u8, array: []const Value, object: Map(Value),
-    pub fn jsonStringify(self: @This(), writer: anytype) !void { try writeNative(self, writer); }
 };
-fn writeNative(value: anytype, writer: anytype) error{WriteFailed}!void {
-    const T = @TypeOf(value);
-    switch (@typeInfo(T)) {
-        .@"union" => switch (value) { inline else => |member| { if (@TypeOf(member) == void) try writer.write(null) else try writeNative(member, writer); } },
-        .@"struct" => {
-            try writer.beginObject();
-            if (@hasField(T, "entries")) {
-                for (value.entries) |entry| { try writer.objectField(entry.key); try writeNative(entry.value, writer); }
-            } else inline for (std.meta.fields(T)) |field| {
-                const member = @field(value, field.name);
-                if (comptime std.mem.eql(u8, field.name, "extensions")) {
-                    for (member.entries) |entry| { try writer.objectField(entry.key); try writeNative(entry.value, writer); }
-                } else {
-                    const omit = if (comptime @typeInfo(field.type) == .@"union" and @hasField(field.type, "missing")) member == .missing else false;
-                    if (!omit) { try writer.objectField(field.name); try writeNative(member, writer); }
-                }
-            }
-            try writer.endObject();
-        },
-        .pointer => |info| {
-            if (T == []const u8) return writer.write(value);
-            if (info.size == .one) return writeNative(value.*, writer);
-            try writer.beginArray(); for (value) |member| try writeNative(member, writer); try writer.endArray();
-        },
-        else => try writer.write(value),
-    }
-}
 fn text(v: c.thinkthen_complete_utf8_v1) []const u8 {
     return if (v.len == 0) &.{} else v.data[0..v.len];
 }
@@ -334,3 +309,36 @@ pub fn readValue(a: std.mem.Allocator, v: c.thinkthen_complete_json_v1) anyerror
     };
 }
 '''
+
+
+def answer_helpers(definitions):
+    """Project the shared native observations; Rust owns all answer semantics."""
+    from host_answers import scalar_answers, aggregate_answers, aggregate_projection
+    lines = ['\npub const AnswerView = struct {',
+             '    packet: *const SessionPacket,', '    allocator: std.mem.Allocator,',
+             '    fn row(self: @This()) !SessionObservedRow {',
+             '        return switch (self.packet.*) { .observation => |v| switch (v.value) { .row => |r| r.value, else => error.WrongAnswer }, else => error.WrongAnswer };', '    }',
+             '    fn judgment(self: @This()) !SessionJudgment {',
+             '        return switch (try self.row()) { .judgment => |v| v.value, else => error.WrongAnswer };', '    }']
+    scalar_types = {'decide': '?bool', 'choose': '?[]const u8', 'score': 'f64', 'tag': '[]const []const u8'}
+    for function, tag, payload in scalar_answers(definitions):
+        expression = 'v.value.optional()' if function in ('decide', 'choose') else 'v.value'
+        lines += [f'    pub fn {function}(self: @This()) !{scalar_types[function]} {{',
+                  f'        return switch (try self.judgment()) {{ .{tag} => |v| {expression}, else => error.WrongAnswer }};', '    }']
+    for function, tag, typ in [('find', 'find', '?u64'), ('annotate', 'annotated', '[]const SessionAnnotation'), ('recognize', 'recognized', 'SessionRecognition'), ('relate', 'relations', '[]const SessionRelationEdge')]:
+        expr = 'v.value.optional()' if function == 'find' else 'v.value'
+        lines += [f'    pub fn {function}(self: @This()) !{typ} {{',
+                  f'        return switch (try self.row()) {{ .{tag} => |v| {expr}, else => error.WrongAnswer }};', '    }']
+    for function, child, payload in aggregate_answers(definitions):
+        projected, member = aggregate_projection(function, payload, definitions)
+        if member is None: continue
+        typ = 'u64' if function == 'rank' else 'Value'
+        expr = 'switch (receipt.' + member + ') { .value => |v| v, .null_value => ' + ('.null_value' if function == 'filter' else 'return error.WrongAnswer') + ', .missing => return error.WrongAnswer }'
+        receipt_type = name(payload['items']['$ref'].split('/')[-1])
+        row = ' .filter_row => |v| &.{v.value},' if function == 'filter' else ''
+        lines += [f'    pub fn {function}(self: @This()) ![]const {typ} {{',
+                  f'        const receipts: []const {receipt_type} = switch (self.packet.*) {{{row} .{function}_aggregate => |v| v.value, else => return error.WrongAnswer }};',
+                  f'        const answer = try self.allocator.alloc({typ}, receipts.len);',
+                  f'        for (answer, receipts) |*out, receipt| out.* = {expr};',
+                  '        return answer;', '    }']
+    return '\n'.join(lines + ['};', ''])

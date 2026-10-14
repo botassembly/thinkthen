@@ -15,16 +15,10 @@ This fragment reads one typed answer; the [complete example](https://github.com/
 var packet = value;
 defer packet.deinit();
 if (packet.failure()) |_| return error.DecisionFailed;
-if (packet.view.kind == tt.c.THINKTHEN_COMPLETE_SESSION_PACKET_DECIDE_ROW_V1) {
-    const answer = packet.view.data.decide_row.*.value.*;
-    switch (tt.session.presence(answer.value)) {
-        .value => |present| {
-            const boolean = present.*.value.*;
-            if (boolean.kind == tt.c.THINKTHEN_COMPLETE_JSON_BOOLEAN_V1)
-                std.debug.print("{any}\n", .{boolean.data.boolean});
-        },
-        else => std.debug.print("uncertain\n", .{}),
-    }
+if (packet.value().* == .observation) {
+    if (packet.answers().decide()) |answer| {
+        std.debug.print("{any}\n", .{answer});
+    } else |err| if (err != error.WrongAnswer) return err;
 }
 ```
 

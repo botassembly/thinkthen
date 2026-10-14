@@ -18,6 +18,12 @@ pub const Question = struct {
         if (code != c.THINKTHEN_OK) return .{ .failed = try tt.capture(engine.allocator, engine, code) };
         return .{ .ok = .{ .handle = raw orelse return error.Defect } };
     }
+    pub fn recognize(engine: *tt.Engine, definition: inputs.RequestDefinitionRecognizeDefinition) !tt.Result(Question) {
+        return init(engine, .recognize, .{ .RecognizeDefinition = definition });
+    }
+    pub fn relate(engine: *tt.Engine, definition: inputs.RequestDefinitionAuthoredRelate) !tt.Result(Question) {
+        return init(engine, .relate, .{ .Authored_relate = definition });
+    }
     pub fn name(self: Question) !?[]const u8 {
         var value: c.thinkthen_question_author_v1 = undefined;
         try tt.session.checked(c.thinkthen_question_author(@ptrCast(self.handle), &value));

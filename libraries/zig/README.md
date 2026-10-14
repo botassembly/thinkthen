@@ -4,11 +4,13 @@ The source package bundles the matching native engine for x86_64 Linux GNU and r
 
 Construct an engine with `Engine.init(allocator)` or `Engine.initWithSettings(allocator, inputs.EngineSettings)`. Construction returns `.ok` or an owned `.failed` value. A failure has a native kind, message, retry signal and optional typed `facts`. Release it with `releaseFailure(allocator, failure)`.
 
-The ten `session.FUNCTION(engine, arguments)` functions accept generated typed question, input and option descriptors. They return an owned session. Call `next()` to block for a packet or settlement; call `read()` only for an explicit nonblocking read. A feed accepts generated descriptors with `push()`. Use `wait(true)` when its queue is full, then retry. Finish a feed with `finish()` and cancel with `cancel()`.
+The ten `calls.FUNCTION(engine, arguments)` functions accept generated typed question, input and option descriptors. They return an owned session. Call `next()` to block for a packet or settlement; call `read()` only for an explicit nonblocking read. A feed accepts generated descriptors with `push()`. Use `wait(true)` when its queue is full, then retry. Finish a feed with `finish()` and cancel with `cancel()`.
 
 Each returned packet owns copied Zig values. `packet.value()` returns the generated `results.SessionPacket` union. `packet.terminal()`, `packet.facts()` and `packet.failure()` return optional typed fields. Missing, null and present fields use generated `Presence(T)` unions. Packets and their nested values survive session and engine destruction. Release every packet with `deinit()` after its borrowers finish.
 
-`Question.init(engine, role, definition)` uses native saved-question admission. `question.name()` returns its optional borrowed name. The explicit role selects the grammar. Release the question with `deinit()`.
+`packet.answers()` offers typed `decide`, `choose`, `tag`, `score`, `find`, `annotate`, `recognize` and `relate` accessors for normalized observations. `rank` returns original zero-based indices and `filter` returns original input values, including null. Answers borrow the packet and survive engine and session closure. Calling an accessor on another packet returns `error.WrongAnswer`.
+
+`Question.recognize(engine, definition)` and `Question.relate(engine, definition)` admit generated typed definitions through the native engine. `Question.init(engine, role, definition)` uses native saved-question admission. `question.name()` returns its optional borrowed name. The explicit role selects the grammar. Release the question with `deinit()`.
 
 `Request.init(allocator, call)` copies typed arguments independently of the caller. `request.start(engine)` uses native named admission. `request.plan(engine)` previews the same arguments without credentials, cache reads or requests. The returned plan has generated fields under `plan.value` and owns its strings after request and engine destruction. Release both owners with `deinit()`.
 

@@ -12,7 +12,7 @@ pub fn main() !void {
     defer engine.deinit();
     const question = std.posix.getenv("THINKTHEN_TEST_SMOKE_QUESTION") orelse return error.NoQuestion;
     const text = std.posix.getenv("THINKTHEN_TEST_SMOKE_TEXT") orelse return error.NoText;
-    var call = try tt.session.decide(&engine, .{ .question = .{ .text = .{ .text = question } }, .input = .{ .text = .{ .text = text } } });
+    var call = try tt.calls.decide(&engine, .{ .question = .{ .text = .{ .text = question } }, .input = .{ .text = .{ .text = text } } });
     defer call.deinit();
     while (true) switch (try call.next()) {
         .pending => return error.BlockingPending,
@@ -21,12 +21,12 @@ pub fn main() !void {
             var packet = value;
             defer packet.deinit();
             if (packet.failure()) |_| return error.DecisionFailed;
-            if (packet.value().* == .decide_row) {
-                const node = switch (packet.value().decide_row.value.value) {
-                    .value => |v| v,
-                    else => return error.MissingAnswer,
+            if (packet.value().* == .observation) {
+                const value_answer = packet.answers().decide() catch |err| {
+                    if (err == error.WrongAnswer) continue;
+                    return err;
                 };
-                const answer = if (node == .null_value) "null" else if (node == .boolean) (if (node.boolean) "true" else "false") else return error.WrongAnswer;
+                const answer = if (value_answer) |value_bool| (if (value_bool) "true" else "false") else "null";
                 var out = std.fs.File.stdout().writerStreaming(&.{});
                 try out.interface.print("smoke: {s}\n", .{answer});
             }

@@ -45,3 +45,84 @@ pub fn decode(comptime T: type, a: std.mem.Allocator, value: std.json.Value) any
         else => return error.FixtureType,
     }
 }
+
+pub fn writeNative(value: anytype, writer: anytype) error{WriteFailed}!void {
+    const T = @TypeOf(value);
+    switch (@typeInfo(T)) {
+        .@"union" => switch (value) {
+            inline else => |member| {
+                if (@TypeOf(member) == void) try writer.write(null) else try writeNative(member, writer);
+            },
+        },
+        .@"struct" => {
+            try writer.beginObject();
+            if (@hasField(T, "entries")) {
+                for (value.entries) |entry| {
+                    try writer.objectField(entry.key);
+                    try writeNative(entry.value, writer);
+                }
+            } else inline for (std.meta.fields(T)) |field| {
+                const member = @field(value, field.name);
+                if (comptime std.mem.eql(u8, field.name, "extensions")) {
+                    for (member.entries) |entry| {
+                        try writer.objectField(entry.key);
+                        try writeNative(entry.value, writer);
+                    }
+                } else {
+                    const omit = if (comptime @typeInfo(field.type) == .@"union" and @hasField(field.type, "missing")) member == .missing else false;
+                    if (!omit) {
+                        try writer.objectField(field.name);
+                        try writeNative(member, writer);
+                    }
+                }
+            }
+            try writer.endObject();
+        },
+        .pointer => |info| {
+            if (T == []const u8) return writer.write(value);
+            if (info.size == .one) return writeNative(value.*, writer);
+            try writer.beginArray();
+            for (value) |member| try writeNative(member, writer);
+            try writer.endArray();
+        },
+        else => try writer.write(value),
+    }
+}
+
+/// Feed native answer helpers back through the shared outside-in expectations.
+pub fn projectAnswers(packet: anytype, a: std.mem.Allocator) !@TypeOf(packet.value().*) {
+    var projected = packet.value().*;
+    const answers = packet.answers();
+    switch (projected) {
+        .observation => |*observation| switch (observation.value) {
+            .row => |*row| switch (row.value) {
+                .judgment => |*judgment| switch (judgment.value) {
+                    .decision => |*v| v.value = if (try answers.decide()) |answer| .{ .value = answer } else .null_value,
+                    .choice => |*v| v.value = if (try answers.choose()) |answer| .{ .value = answer } else .null_value,
+                    .score => |*v| v.value = try answers.score(),
+                    .tags => |*v| v.value = try answers.tag(),
+                },
+                .find => |*v| v.value = if (try answers.find()) |answer| .{ .value = answer } else .null_value,
+                .annotated => |*v| v.value = try answers.annotate(),
+                .recognized => |*v| v.value = try answers.recognize(),
+                .relations => |*v| v.value = try answers.relate(),
+            },
+            else => {},
+        },
+        .filter_row => |*v| v.value.input = .{ .value = (try answers.filter())[0] },
+        .rank_aggregate => |*v| {
+            const indices = try answers.rank();
+            const receipts = try a.dupe(@typeInfo(@TypeOf(v.value)).pointer.child, v.value);
+            for (receipts, indices) |*receipt, index| receipt.index = .{ .value = index };
+            v.value = receipts;
+        },
+        .filter_aggregate => |*v| {
+            const originals = try answers.filter();
+            const receipts = try a.dupe(@typeInfo(@TypeOf(v.value)).pointer.child, v.value);
+            for (receipts, originals) |*receipt, input| receipt.input = .{ .value = input };
+            v.value = receipts;
+        },
+        else => {},
+    }
+    return projected;
+}

@@ -91,11 +91,14 @@ pub fn main() !void {
         .packet => |packet| try packets.append(a, packet),
     };
     session.deinit();
+    var projection_arena = std.heap.ArenaAllocator.init(a);
+    defer projection_arena.deinit();
     var out = std.fs.File.stdout().writer(&.{});
     try out.interface.writeAll("{\"packets\":[");
     for (packets.items, 0..) |packet, i| {
         if (i > 0) try out.interface.writeAll(",");
-        try std.json.Stringify.value(packet.value().*, .{}, &out.interface);
+        var writer: std.json.Stringify = .{ .writer = &out.interface };
+        try request_fixture.writeNative(try request_fixture.projectAnswers(packet, projection_arena.allocator()), &writer);
     }
     try out.interface.writeAll("]}\n");
 }
