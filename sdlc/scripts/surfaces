@@ -118,7 +118,7 @@ registry() {
 		fi
 	done
 	for surface in $(feature "$1"); do
-		if [ ! -f "$surface/check.sh" ] || [ -n "$(git ls-files -co --exclude-standard -- "$surface" | grep -v -e '/check\.sh$' -e '/README\.md$' -e '^libraries/polars/consumer/Cargo\.toml$' -e '^libraries/polars/consumer/Cargo\.lock$' -e '^libraries/polars/consumer/src/main\.rs$')" ]; then
+		if ! python3 sdlc/scripts/feature-inventory.py "$surface"; then
 			printf 'surfaces: %s is a feature and holds unexpected files\n' "$surface" >&2
 			status=1
 		fi

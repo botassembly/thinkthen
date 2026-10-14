@@ -797,7 +797,7 @@
       "lifecycle_owners": [
         "Client",
         "Call",
-        "AnswerCall"
+        "ResultCall"
       ],
       "representation_owners": [
         "Data",
@@ -810,13 +810,14 @@
           "collect",
           "input_closed"
         ],
-        "AnswerCall": [
-          "answer"
+        "ResultCall": [
+          "collect",
+          "result"
         ]
       },
       "representation_types": [
         "Call",
-        "AnswerCall",
+        "ResultCall",
         "Poll",
         "PollState",
         "PresenceState",
@@ -1225,7 +1226,8 @@
         "DataValue",
         "SessionBoundaryFailure",
         "UsagePersistenceState",
-        "UsagePersistenceStatus"
+        "UsagePersistenceStatus",
+        "CallResult"
       ],
       "lifecycle_members": {
         "Client": [
@@ -1283,6 +1285,12 @@
           "failed",
           "pending",
           "written"
+        ],
+        "CallResult": [
+          "value",
+          "probability",
+          "results",
+          "facts"
         ]
       }
     },
@@ -1477,6 +1485,9 @@
         ],
         "Cancellation": [
           "cancelled"
+        ],
+        "Result": [
+          "probability"
         ]
       },
       "field_adapters": {
