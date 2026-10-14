@@ -75,8 +75,8 @@ def records(source, verb):
 
 @dataclass(frozen=True, repr=False, eq=False)
 class PolarsResult(PandasResult):
-    def to_dict(self):
-        return {**Result.to_dict(self), 'present': list(self.present), 'name': self.source.name}
+    def _to_dict(self):
+        return {**Result._to_dict(self), 'present': list(self.present), 'name': self.source.name}
 
     def _column(self, rows, positions=None):
         return answer_column(self.source.name, rows, self.function, self.detailed)

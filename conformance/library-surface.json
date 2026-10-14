@@ -272,8 +272,7 @@
           "detailed",
           "probability",
           "details",
-          "facts",
-          "to_dict"
+          "facts"
         ],
         "Session": [
           "facts",

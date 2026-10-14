@@ -1,4 +1,3 @@
-import json
 import thinkthen as tt
 
 engine = tt.Engine(model="local-1")
@@ -29,7 +28,6 @@ names = engine.recognize(
     documents, kinds=["person", "organization"]).details
 connections = engine.relate(
     documents, relations={"connected": ("*", "*")}).value
-fields = ("input", "source", "value", "candidates")
 for function, rows in [
     ("filter", refunds), ("rank", billing),
     ("find", policy), ("decide", contracts),
@@ -39,13 +37,22 @@ for function, rows in [
 ]:
     print(function)
     for row in rows:
-        data = row.to_dict()
-        shown = {key: data[key] for key in fields
-                 if key in data}
-        print(json.dumps(shown, ensure_ascii=False))
+        source = getattr(row, "source", None)
+        if source is not None:
+            print(source.file, source.first_line, source.last_line)
+        if function == "recognize":
+            print([(entity.text, entity.kind) for entity in row.value.entities])
+        elif function == "annotate":
+            print(row.value)
+        else:
+            print(row.value)
+        if function == "find":
+            for candidate in row.candidates:
+                source = candidate.source
+                print(candidate.index, source.file, source.first_line, source.last_line, candidate.probability)
 print("relate")
 for edge in connections:
-    print(json.dumps(edge.to_dict(), ensure_ascii=False))
+    print(edge.relation, edge.source.name, edge.target.name, edge.probability)
 windows = tt.read_files(
     ["documents/01-policy.txt", "documents/01-policy.txt"],
     unit="window", window=2)
@@ -53,7 +60,4 @@ window_refunds = engine.filter(
     "Does this line describe a refund?", windows).details
 print("windows")
 for row in window_refunds:
-    data = row.to_dict()
-    shown = {key: data[key] for key in fields
-             if key in data}
-    print(json.dumps(shown, ensure_ascii=False))
+    print(row.source.file, row.source.first_line, row.source.last_line, row.value)

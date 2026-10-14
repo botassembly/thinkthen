@@ -1,16 +1,16 @@
 from typing_extensions import Unpack
-from typing import Any, NamedTuple
+from typing import Any, NamedTuple, TypeAlias
 from ._calls import Result as Result, AsyncCalls, Session
 from ._inputs import ABSENT as ABSENT, Image as Image, Item as Item, Records as Records, Files as Files, QuestionSource as QuestionSource
 from ._native_results import NativeUsagePersistence as NativeUsagePersistence, NativePlan as Plan
-from ._native_results import NativeAtomicDecideValue, NativeAtomicNullableString, NativeAtomicArrayOfString, NativeAtomicDouble, NativeAtomicBoolean, NativeAtomicNonZeroUsize, NativeFind, NativeAnnotation, NativeRecognition, NativeRelation
+from ._native_results import NativeAtomicDecideValue, NativeAtomicNullableString, NativeAtomicArrayOfString, NativeAtomicDouble, NativeAtomicBoolean, NativeAtomicNonZeroUsize, NativeFind, NativeAnnotation, NativeRecognition, NativeRelation, NativeRecognize, NativeRelatedEntityEdge, NativeAnnotatedRow, NativeFacts, NativeCallError, _NativeResult
 
 class ThinkThenError(Exception):
     kind: str
     retryable: bool
-    facts: Any
-    results: tuple[Any, ...]
-    complete: Any
+    facts: NativeFacts | None
+    results: tuple[_NativeResult, ...]
+    complete: NativeCallError | None
 class UsageError(ThinkThenError): ...
 class BackendError(ThinkThenError): ...
 class LocalError(ThinkThenError): ...
@@ -35,25 +35,26 @@ class FileSelection:
     window: int | None
     def __iter__(self) -> Any: ...
 def read_files(path_or_paths: Any, *, unit: str = ..., window: int | None = ...) -> FileSelection: ...
-class _DecideResult(Result[Any]):
+_ReadingValue: TypeAlias = bool | int | float | str | None | list["_ReadingValue"] | dict[str, "_ReadingValue"]
+class _DecideResult(Result[_ReadingValue | NativeAtomicDecideValue | list[NativeAtomicDecideValue]]):
     results: tuple[NativeAtomicDecideValue, ...]
-class _ChooseResult(Result[Any]):
+class _ChooseResult(Result[str | None | list[str | None] | NativeAtomicNullableString | list[NativeAtomicNullableString]]):
     results: tuple[NativeAtomicNullableString, ...]
-class _TagResult(Result[Any]):
+class _TagResult(Result[list[str] | list[list[str]] | NativeAtomicArrayOfString | list[NativeAtomicArrayOfString]]):
     results: tuple[NativeAtomicArrayOfString, ...]
-class _ScoreResult(Result[Any]):
+class _ScoreResult(Result[float | list[float] | NativeAtomicDouble | list[NativeAtomicDouble]]):
     results: tuple[NativeAtomicDouble, ...]
-class _FilterResult(Result[Any]):
+class _FilterResult(Result[list[object] | list[NativeAtomicBoolean]]):
     results: tuple[NativeAtomicBoolean, ...]
-class _RankResult(Result[Any]):
+class _RankResult(Result[list[dict[str, object]] | list[NativeAtomicNonZeroUsize]]):
     results: tuple[NativeAtomicNonZeroUsize, ...]
-class _FindResult(Result[Any]):
+class _FindResult(Result[dict[str, object] | None | NativeFind | list[NativeFind]]):
     results: tuple[NativeFind, ...]
-class _AnnotateResult(Result[Any]):
+class _AnnotateResult(Result[NativeAnnotatedRow | list[NativeAnnotatedRow] | NativeAnnotation | list[NativeAnnotation]]):
     results: tuple[NativeAnnotation, ...]
-class _RecognizeResult(Result[Any]):
+class _RecognizeResult(Result[NativeRecognize | list[NativeRecognize] | NativeRecognition | list[NativeRecognition]]):
     results: tuple[NativeRecognition, ...]
-class _RelateResult(Result[Any]):
+class _RelateResult(Result[list[NativeRelatedEntityEdge] | NativeRelation | list[NativeRelation]]):
     results: tuple[NativeRelation, ...]
 from ._named_generated import EngineSettings, PlanOptions, DecideOptions, ChooseOptions, TagOptions, ScoreOptions, FilterOptions, RankOptions, FindOptions, AnnotateOptions, RecognizeOptions, RelateOptions
 

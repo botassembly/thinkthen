@@ -31,7 +31,8 @@ def test_named_calls_use_owned_typed_results_for_the_ten_functions(backend, tmp_
                 for row in done.results:
                     assert len(row.answer_id) == 64, verb
                     assert row.schema == 'thinkthen.result/2', verb
-                assert pickle.loads(pickle.dumps(done)).to_dict() == done.to_dict(), verb
+                assert not hasattr(done, "to_dict"), verb
+                assert pickle.loads(pickle.dumps(done))._to_dict() == done._to_dict(), verb
                 assert 'one name' not in repr(done)
                 print(verb)
             pairs = [('A', 'person'), ('B', 'person')]
@@ -237,7 +238,7 @@ def test_producer_cleanup_preserves_typed_failure_and_prefix(backend, tmp_path, 
                 assert error.facts.requests_sent == 1
                 assert error.kind == ('backend' if mode == 'backend' else 'usage')
                 assert error.complete.error.kind == error.kind
-                assert error.terminal.failure.to_dict() == error.complete.to_dict()
+                assert error.terminal.failure._to_dict() == error.complete._to_dict()
                 assert [row.input for row in error.results] == ([] if mode == 'backend' else ['first'])
             if mode == 'token': assert error is marker
             if mode == 'on': assert str(error) == "'int' object is not iterable"

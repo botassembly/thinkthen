@@ -17,7 +17,7 @@ VERBS = ('decide', 'choose', 'tag', 'score', 'filter', 'rank', 'find', 'annotate
 
 def _json(value):
     if isinstance(value, native._NativeResult):
-        return value.to_dict()
+        return value._to_dict()
     if isinstance(value, Mapping):
         return {key: _json(item) for key, item in value.items()}
     if isinstance(value, (tuple, list)):
@@ -110,13 +110,13 @@ class Result(Generic[T]):
     def details(self): return self.results
     def __bool__(self): return bool(self.value)
     def __eq__(self, other):
-        if isinstance(other, Result): return self.to_dict() == other.to_dict()
+        if isinstance(other, Result): return self._to_dict() == other._to_dict()
         return self.value == other
     def __repr__(self): return '<Result: content withheld>'
     @property
     def facts(self): return getattr(self.terminal, 'facts', None)
-    def to_dict(self):
-        return {'results': [row.to_dict() for row in self.results], 'terminal': self.terminal.to_dict()}
+    def _to_dict(self):
+        return {'results': [row._to_dict() for row in self.results], 'terminal': self.terminal._to_dict()}
 
 
 def _bare(verb, results, scalar):

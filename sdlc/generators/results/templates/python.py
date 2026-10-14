@@ -132,7 +132,7 @@ def types(definitions, stubs=False):
                  '    def __len__(self) -> int: ...',
                  '    def __bool__(self) -> bool: ...',
                  '    def keys(self) -> list[str]: ...',
-                 '    def to_dict(self) -> dict[str, Any]: ...']
+                 '    def _to_dict(self) -> dict[str, Any]: ...']
     if not stubs:
         lines += ['', '_COLUMN_SCHEMAS = ' + repr({key: column_schema(source) for key, source in definitions.items()})]
     for key, source in definitions.items():

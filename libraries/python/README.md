@@ -1,6 +1,6 @@
 # ThinkThen for Python
 
-Python uses one `Engine` with ten named functions. Rust owns admission, reading, execution, cache identity and result fields. Python converts ordinary values, schedules calls and cleans up sessions.
+ThinkThen is ten functions on top of Jev, TypeSafe's decision model, or any model like it. It puts these decision models in your code, whatever model, language or database you use. Use Jev, OpenAI or a local model. Ask a typed question and get back `true`, `false`, a label or a number. Your code branches on the answer. A model can say not sure, and a failed call never looks like an answer. ThinkThen packs many records into few requests, saves each answer for reuse, and lets tests replay saved answers with no key and no network.
 
 ```python
 import thinkthen as tt
@@ -13,7 +13,7 @@ with tt.Engine(cache=False) as engine:
 
 `decide`, `choose`, `score`, `tag`, `filter`, `rank`, `find` and `annotate` take a question followed by their input. `recognize` and `relate` take their input first and an optional authored question second. Pass `options`, `levels` or `labels` beside question text, or pass an authored question dictionary, a path object or `QuestionSource(name="name")`. Plain strings remain question text for atomic calls. Enum, Literal and the optional Pydantic authoring forms convert to the same native declaration.
 
-`Result.value` presents the ordinary answer. `Result.results` retains every Rust-owned generated result, including probabilities, sources, image facts, reading choices, identifiers and model provenance. `details=True` presents those generated rows as the value. `Result.facts` contains actual final settlement. Printing withholds content; equality, `to_dict()` and pickling preserve absence, null, false, wide integers and permitted extension fields. Embedded failures remain typed failures and cannot become false answers.
+`Result.value` presents the ordinary answer. `Result.results` retains every Rust-owned generated result, including probabilities, sources, image facts, reading choices, identifiers and model provenance. `details=True` presents those generated rows as the value. `Result.facts` contains actual final settlement. Printing withholds content; equality and pickling preserve absence, null, false, wide integers and permitted extension fields. Embedded failures remain typed failures and cannot become false answers.
 
 ```python
 selection = tt.read_files(["notes.txt"], unit="line")
