@@ -55,8 +55,8 @@ fn build_and_ask(setters: &str) -> Vec<String> {
         return vec![debug, "built".to_owned()];
     }
     let question = Question::decide("a refund?").expect("a question").cut();
-    let asked = match engine.details(&question, "alpha") {
-        Ok(call) => format!("model {}", call.value().model()),
+    let asked = match engine.decide(&question, "alpha") {
+        Ok(call) => format!("model {}", call.results()[0].meta().model()),
         Err(error) => format!("{:?}: {error}", error.kind()),
     };
     vec![debug, asked]

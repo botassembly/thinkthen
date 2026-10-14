@@ -137,7 +137,7 @@ fn detailed_and_caller_thread_attempt_observers_share_one_retained_event() {
         held.lock().unwrap().push(attempt);
     };
     let call = engine
-        .details_with(
+        .decide_with(
             &question,
             "Refund me.",
             CallOptions::new().observe_attempt(&observe),

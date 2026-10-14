@@ -16,7 +16,7 @@ fn explicit_original_bodies_survive_sqlite_to_fixture_conversion_and_zero_send_r
     let place = folder();
     let engine = build(&listener).record(&place).unwrap().build().unwrap();
     let question = Question::decide("Refund?").unwrap().cut();
-    let live = engine.details(&question, "Refund me.").unwrap();
+    let live = engine.decide(&question, "Refund me.").unwrap();
     let sent = listener.requests();
     assert_eq!(sent.len(), 1);
     assert_eq!(listener.count(), 1);
@@ -43,14 +43,23 @@ fn explicit_original_bodies_survive_sqlite_to_fixture_conversion_and_zero_send_r
     assert!(!fixture.contains("sdk_request_id"));
     assert!(!fixture.contains("call_id"));
     let replay = build(&listener).replay(&place).unwrap().build().unwrap();
-    let held = replay.details(&question, "Refund me.").unwrap();
-    assert_eq!(held.value().observations(), live.value().observations());
-    assert_eq!(held.value().question_sources()[0].batch_size(), Some(1));
+    let held = replay.decide(&question, "Refund me.").unwrap();
     assert_eq!(
-        held.value().reported_usage().unwrap().input_tokens(),
+        held.results()[0].identity().observations(),
+        live.results()[0].identity().observations()
+    );
+    assert_eq!(
+        held.results()[0].identity().question_sources()[0].batch_size(),
+        Some(1)
+    );
+    assert_eq!(
+        held.results()[0].reported_usage().unwrap().input_tokens(),
         Some(887)
     );
-    assert_eq!(held.value().reported_usage().unwrap().output_tokens(), None);
+    assert_eq!(
+        held.results()[0].reported_usage().unwrap().output_tokens(),
+        None
+    );
     assert_eq!(listener.count(), 1);
     drop(replay);
     std::fs::remove_dir_all(place).unwrap();

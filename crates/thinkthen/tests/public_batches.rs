@@ -337,12 +337,34 @@ fn a_slice_and_an_iterator_give_equal_ordered_results_and_partial_rows() {
         },
     );
     assert_eq!(by_slice, by_cursor);
-    let by_slice = keyed(engine.annotate(&set, texts), |row| {
-        (row.input().to_string(), row.values().to_vec())
-    });
-    let by_cursor = keyed(engine.annotate(&set, cursor(&texts)), |row| {
-        (row.input().clone(), row.values().to_vec())
-    });
+    let by_slice = keyed(
+        crate::api::pull_annotations(
+            &engine,
+            &set,
+            crate::api::plain_records(texts),
+            CallOptions::new(),
+        ),
+        |row| {
+            (
+                row.original().to_string(),
+                row.result().value_json().expect("values"),
+            )
+        },
+    );
+    let by_cursor = keyed(
+        crate::api::pull_annotations(
+            &engine,
+            &set,
+            crate::api::plain_records(cursor(&texts)),
+            CallOptions::new(),
+        ),
+        |row| {
+            (
+                row.original().clone(),
+                row.result().value_json().expect("values"),
+            )
+        },
+    );
     assert_eq!(by_slice, by_cursor);
 
     // Equal probabilities keep input order in a ranking, on both paths.
@@ -352,7 +374,7 @@ fn a_slice_and_an_iterator_give_equal_ordered_results_and_partial_rows() {
         .expect("rank")
         .into_value()
         .into_iter()
-        .map(|row| row.into_input().to_owned())
+        .map(|index| texts[index].to_owned())
         .collect();
     assert_eq!(by_slice, texts.map(str::to_owned));
     let by_cursor = engine.rank(&ranked, cursor(&texts)).expect("rank");
@@ -361,20 +383,15 @@ fn a_slice_and_an_iterator_give_equal_ordered_results_and_partial_rows() {
         by_cursor
             .into_value()
             .into_iter()
-            .map(Ranked::into_input)
+            .map(|index| texts[index].to_owned())
             .collect::<Vec<_>>()
     );
     let found = Question::find("Which asks for a refund?").expect("find");
-    let by_slice = engine
-        .find(&found, texts)
-        .expect("find")
-        .into_value()
-        .into_selected();
+    let by_slice = engine.find(&found, texts).expect("find").into_value();
     let by_cursor = engine
         .find(&found, cursor(&texts))
         .expect("find")
-        .into_value()
-        .into_selected();
+        .into_value();
     assert_eq!(by_slice.map(str::to_owned), by_cursor);
 }
 

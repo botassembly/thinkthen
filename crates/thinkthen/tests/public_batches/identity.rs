@@ -411,13 +411,18 @@ fn a_question_limit_packs_whole_records_and_every_group_together() {
         r#"{"a":"a3","b":"b3"}"#,
         r#"{"a":"a4","b":"b4"}"#,
     ];
-    let mut rows = engine.annotate(&set, records);
+    let mut rows = crate::api::pull_annotations(
+        &engine,
+        &set,
+        crate::api::plain_records(records),
+        CallOptions::new(),
+    );
     let values = rows.by_ref().collect::<Result<Vec<_>, _>>().expect("rows");
     assert_eq!(
-        values.iter().map(|row| row.input()).collect::<Vec<_>>(),
+        values.iter().map(|row| row.original()).collect::<Vec<_>>(),
         records.iter().collect::<Vec<_>>()
     );
-    assert!(values.iter().all(|row| row.values().len() == 5));
+    assert!(values.iter().all(|row| row.result().members().len() == 5));
     assert_eq!(
         rows.facts()
             .map(|facts| (facts.records(), facts.requests_sent())),

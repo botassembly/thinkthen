@@ -62,9 +62,13 @@ fn batch_one_returns_before_the_next_held_input_while_max_waits_for_close() {
         .expect("annotation set");
     let (release_annotation, held_annotation) = std::sync::mpsc::channel();
     let pulled_annotation = std::sync::Arc::new(AtomicUsize::new(0));
-    let mut annotation = engine.annotate_with(
+    let mut annotation = crate::api::pull_annotations(
+        &engine,
         &set,
-        held_input(held_annotation, std::sync::Arc::clone(&pulled_annotation)),
+        crate::api::plain_records(held_input(
+            held_annotation,
+            std::sync::Arc::clone(&pulled_annotation),
+        )),
         CallOptions::new().batch(BatchSetting::Records(std::num::NonZeroUsize::MIN)),
     );
     assert_eq!(
@@ -72,7 +76,7 @@ fn batch_one_returns_before_the_next_held_input_while_max_waits_for_close() {
             .next()
             .expect("annotation row")
             .expect("answer")
-            .input(),
+            .original(),
         &"alpha"
     );
     assert_eq!(pulled_annotation.load(Ordering::SeqCst), 1);

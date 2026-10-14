@@ -2,7 +2,7 @@
 //!
 //! Every shared case that asks one whole text with a single judgment, an
 //! `annotate` set, `recognize`, or `relate` runs through the compiled command
-//! and through the public API on the same case arm. `Details::to_json` must
+//! and through the public API on the same case arm. Retained complete results must
 //! equal the shared judgment members of the `--details` line. `value_json`, `Recognized::to_json`, and each
 //! `Edge::to_json` must equal the bare output. Other tests check what the
 //! command prints; this one holds the library to the same bytes.
@@ -103,10 +103,10 @@ fn compare(backend: &Backend, case: &Case) -> Compared {
             let set = QuestionSet::load(&path).map_err(|error| error.to_string())?;
             texts
                 .map(|text| {
-                    let mut rows = engine.annotate(&set, [text]);
-                    let row = rows.next().ok_or("no row")?.map_err(|e| e.to_string())?;
+                    let call = engine.annotate(&set, [text]).map_err(|e| e.to_string())?;
+                    let row = call.results().first().ok_or("no row")?.result();
                     same(
-                        row.value_json() + "\n",
+                        row.value_json().map_err(|e| e.to_string())? + "\n",
                         &command(case, &path, &base, text, false)?,
                     )
                 })
@@ -172,20 +172,54 @@ fn details(
     base: &str,
     text: &str,
 ) -> Compared {
-    let details = match question {
-        LoadedQuestion::Question(question) => engine.details(question, text),
-        LoadedQuestion::Banded(question) => engine.details(question, text),
+    let document = match case.verb.as_str() {
+        "decide" => {
+            let call = match question {
+                LoadedQuestion::Question(q) => engine.decide(q, text),
+                LoadedQuestion::Banded(q) => engine.decide(q, text),
+            }
+            .map_err(|e| e.to_string())?;
+            call.results()[0].to_json().map_err(|e| e.to_string())?
+        }
+        "choose" | "tag" | "score" => {
+            let LoadedQuestion::Question(q) = question else {
+                return Err("unbanded question required".into());
+            };
+            match case.verb.as_str() {
+                "choose" => crate::api::choose(
+                    engine,
+                    q,
+                    crate::api::plain_records([text]).map(Result::unwrap),
+                    thinkthen::CallOptions::new(),
+                )
+                .map_err(|e| e.to_string())?
+                .value()[0]
+                    .result()
+                    .to_json(),
+                "tag" => crate::api::tag(
+                    engine,
+                    q,
+                    crate::api::plain_records([text]).map(Result::unwrap),
+                    thinkthen::CallOptions::new(),
+                )
+                .map_err(|e| e.to_string())?
+                .value()[0]
+                    .result()
+                    .to_json(),
+                _ => engine.score(q, text).map_err(|e| e.to_string())?.results()[0].to_json(),
+            }
+            .map_err(|e| e.to_string())?
+        }
+        _ => return Err("atomic function required".into()),
     };
-    let details = details.map_err(|error| error.to_string())?;
-    let legacy: serde_json::Value =
-        serde_json::from_str(&details.value().to_json()).map_err(|error| error.to_string())?;
+    let library: serde_json::Value = serde_json::from_str(&document).map_err(|e| e.to_string())?;
     let printed = command(case, path, base, text, true)?;
     let complete: serde_json::Value =
         serde_json::from_str(&printed).map_err(|error| error.to_string())?;
-    if legacy.get("schema").and_then(serde_json::Value::as_str) != Some("thinkthen.result/1")
+    if library.get("schema").and_then(serde_json::Value::as_str) != Some("thinkthen.result/2")
         || complete.get("schema").and_then(serde_json::Value::as_str) != Some("thinkthen.result/2")
     {
-        return Err("the released and complete detail versions were not retained".into());
+        return Err("the canonical complete result version was not retained".into());
     }
     thinkthen::AnswerId::new(
         complete
@@ -203,13 +237,13 @@ fn details(
     }
     // Correlation IDs identify distinct live observations. Compare the retained
     // legacy judgment fields, not the independent answers' transient identities.
-    versioned_values(case, text, &legacy, &complete)?;
+    versioned_values(case, text, &library, &complete)?;
     for key in ["question", "answer", "threshold"] {
-        if legacy.get(key) != complete.get(key) {
+        if library.get(key) != complete.get(key) {
             return Err(format!("the retained {key} differs"));
         }
     }
-    let legacy_meta = legacy
+    let legacy_meta = library
         .get("meta")
         .and_then(serde_json::Value::as_object)
         .ok_or("no legacy meta")?;
@@ -265,9 +299,6 @@ fn versioned_values(
         .find(|answer| answer["exchange"].as_u64() == Some(exchange as u64))
         .ok_or("no canonical answer")?;
     let bare = &answer["bare"];
-    if &legacy["value"] != bare {
-        return Err("the released value differs from the canonical bare answer".into());
-    }
     let question: serde_json::Value =
         serde_json::from_str(case.question.as_ref().map_or("{}", |raw| raw.get()))
             .map_err(|error| error.to_string())?;
@@ -278,7 +309,7 @@ fn versioned_values(
     } else {
         bare
     };
-    if &complete["value"] != expected {
+    if &complete["value"] != expected || &legacy["value"] != expected {
         return Err(
             "the complete value differs from the independently expected authored answer".into(),
         );

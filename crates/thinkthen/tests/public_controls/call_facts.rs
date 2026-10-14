@@ -212,7 +212,7 @@ fn counters_and_cache_answers_match_the_real_attempts() {
         .expect("engine");
     let asked = question();
     let sent = engine.decide(&asked, "Refund me.").expect("live answer");
-    assert_eq!(*sent.value(), Answer::Yes);
+    assert_eq!(*sent.value(), Some(true));
     assert_eq!(
         (sent.facts().records(), sent.facts().requests_sent()),
         (1, 1)
@@ -222,7 +222,7 @@ fn counters_and_cache_answers_match_the_real_attempts() {
         (Some(3), Some(1))
     );
     let cached = engine.decide(&asked, "Refund me.").expect("cached answer");
-    assert_eq!(*cached.value(), Answer::Yes);
+    assert_eq!(*cached.value(), Some(true));
     assert_eq!(
         (
             cached.facts().records(),
