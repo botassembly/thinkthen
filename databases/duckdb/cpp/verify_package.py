@@ -57,10 +57,12 @@ def main() -> None:
     other = selected(args.different_version, args.target)
     assert args.version != args.different_version, 'refusal needs a different supported host'
     source = args.extension.resolve(strict=True)
-    for cli, item in ((args.matching_host, identity), (args.different_host, other)):
-        observed = subprocess.check_output([str(cli), '-noheader', '-list', '-c',
-                                            'SELECT source_id FROM pragma_version()'], text=True).strip()
-        assert observed in {item['source_commit'][:8], item['source_commit'][:10]}, 'the stock host differs from its pin'
+    with tempfile.TemporaryDirectory(prefix='thinkthen-duckdb-host-pin-') as scratch:
+        for cli, item in ((args.matching_host, identity), (args.different_host, other)):
+            observed = subprocess.check_output([str(cli), '-noheader', '-list', '-c',
+                                                'SELECT source_id FROM pragma_version()'],
+                                               env=child_env('http://127.0.0.1:1/v1', Path(scratch)), text=True).strip()
+            assert observed in {item['source_commit'][:8], item['source_commit'][:10]}, 'the stock host differs from its pin'
     release = next(line.split('"')[1] for line in (Path(__file__).resolve().parents[3] / 'crates/thinkthen/Cargo.toml').read_text().splitlines() if line.startswith('version = '))
     verify(source, args.target, identity['metadata_version'], release)
     with tempfile.TemporaryDirectory(prefix='thinkthen-duckdb-package-') as scratch:
