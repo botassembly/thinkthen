@@ -21,12 +21,14 @@ import ThinkThen
         let teamQuestion = Question.definition(QuestionDefinition(value:
             .choose(AuthoredChoose(choose: .string("Which team owns this?"), options: .value(.object(teams))))))
         let refunds = InputRecords(items: ["Please refund my order. It arrived broken.", "Thanks for the quick help yesterday!", "I want to send this back."].map { .text($0) })
-        let refundValues = try await client.decide(.text("Does the customer ask for a refund?"), input: refunds).value
+        let refundCall = try await client.decide(.text("Does the customer ask for a refund?"), input: refunds); let refundValues = refundCall.value
+        precondition(refundCall.probability == [0.99, 0.01, 0.54])
         for refund in refundValues {
             print(refund.map { $0 == .bool(true) ? "true" : "false" } ?? "not sure")
         }
         let messages = InputRecords(items: ["Please refund the extra fee on my invoice.", "My parcel went to the wrong address.", "I cannot reset my password."].map { .text($0) })
-        let teamValues = try await client.choose(teamQuestion, input: messages).value
+        let teamCall = try await client.choose(teamQuestion, input: messages); let teamValues = teamCall.value
+        precondition(teamCall.probability == [1.0, 1.0, 1.0])
         for team in teamValues {
             print(team ?? "not sure")
         }
@@ -34,5 +36,4 @@ import ThinkThen
 }
 ```
 
-The library is free and MIT licensed. Hosted models charge per token. Local models are free to use; you supply the computer that runs them.
-[Backend setup](https://thinkthen.dev/install/backends/) · [ThinkThen documentation](https://thinkthen.dev)
+The library is free and MIT licensed. Hosted models charge per token. Local models are free to use; you supply the computer that runs them. [Backend setup](https://thinkthen.dev/install/backends/) · [ThinkThen documentation](https://thinkthen.dev)

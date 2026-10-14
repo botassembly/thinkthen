@@ -9,8 +9,10 @@ let client = try Client()
 defer { client.close() }
 let question = Question.text("Does the customer ask for a refund?")
 let message = "Please refund my order. It arrived broken."
-let isRefund = try await client.decide(question, input: message).value
-precondition(isRefund == .bool(true))
+let judgment = try await client.decide(question, input: message)
+let isRefund = judgment.value
+let refundProbability = judgment.probability
+precondition(isRefund == .bool(true) && refundProbability == 0.99)
 ```
 
 A scalar text or JSON input returns one value. `InputRecords`, `InputUnits` and `InputSource` return lists for `decide`, `choose`, `tag` and `score`. Use the concrete input type to select the return type. A score is `Double`; a list of scores is `[Double]`. A decision preserves authored readings as `DataValue`, including booleans, objects and explicit null. A missing decision or choice means not sure. Failed calls throw instead of returning an answer.

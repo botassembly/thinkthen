@@ -26,7 +26,8 @@ int main(void) { @autoreleasepool {
     isRefund = [[judgment.value scalar] boolValue];
     NSNumber *refundProbability =
         judgment.probability.scalar;
-    assert(isRefund && refundProbability);
+    assert(isRefund);
+    assert(refundProbability.doubleValue == 0.99);
     return 0;
 } }
 ```

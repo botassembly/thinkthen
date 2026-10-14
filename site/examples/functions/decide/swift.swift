@@ -9,5 +9,5 @@ let judgment = try await client.decide(
 )
 let isRefund = judgment.value == .bool(true)
 let refundProbability: Double? = judgment.probability
-precondition(isRefund && refundProbability != nil)
+precondition(isRefund && refundProbability == 0.99)
 client.close()
