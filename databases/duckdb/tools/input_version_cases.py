@@ -4,6 +4,7 @@ from __future__ import annotations
 import hashlib
 import os
 import re
+import shutil
 import subprocess
 import sys
 import tarfile
@@ -220,6 +221,9 @@ class Cases(unittest.TestCase):
         import json
         tree = self.root / 'tree'
         copy_packer(tree)
+        schema = tree / 'specification/request.schema.json'
+        schema.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(REPO / 'specification/request.schema.json', schema)
         cache = self.root / 'tools'
         authority_path = tree / 'databases/duckdb/tools/version.env'
         text = authority_path.read_text()

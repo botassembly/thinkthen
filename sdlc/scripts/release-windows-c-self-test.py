@@ -221,7 +221,7 @@ def pack_routing(root):
     scripts.mkdir(parents=True)
     for name in ('release-pack', 'scratch.sh', 'release-windows-command.py', 'release-windows-c.py', 'release-bounded.py', 'release-owned-job.py', 'package-inventory.py', 'registry-readmes.py', 'release-windows-c-fixture.py'):
         shutil.copyfile(REPO / 'sdlc/scripts' / name, scripts / name)
-    for relative in ('README.md', 'libraries/c/README-PUBLIC.md', 'libraries/python/README-PUBLIC.md', 'libraries/python/pyproject.toml', 'libraries/typescript/README.md'):
+    for relative in ('README.md', 'specification/request.schema.json', 'libraries/c/README-PUBLIC.md', 'libraries/python/README-PUBLIC.md', 'libraries/python/pyproject.toml', 'libraries/typescript/README.md'):
         path = source / relative
         path.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(REPO / relative, path)
