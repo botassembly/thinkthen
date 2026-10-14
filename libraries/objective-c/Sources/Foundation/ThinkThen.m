@@ -56,6 +56,7 @@ static NSData *TTEncode(id object, NSError **error) {
     BOOL _closed;
 }
 - (instancetype)initWithNative:(struct thinkthen_session *)native;
+- (BOOL)waitInterest:(uint32_t)interest error:(NSError **)error;
 @end
 @implementation TTSession
 - (instancetype)initWithNative:(struct thinkthen_session *)native {
@@ -103,12 +104,15 @@ static NSData *TTEncode(id object, NSError **error) {
 }
 - (void)cancel { [_lock lock]; thinkthen_session_cancel(_native); [_lock unlock]; }
 - (BOOL)waitInput:(BOOL)input error:(NSError **)error {
+    return [self waitInterest:input ? THINKTHEN_SESSION_WAIT_INPUT_V1 : THINKTHEN_SESSION_WAIT_SETTLEMENT_V1 error:error];
+}
+- (BOOL)waitInterest:(uint32_t)interest error:(NSError **)error {
     [_lock lock];
     if (![self live:error]) { [_lock unlock]; return NO; }
     struct thinkthen_session *retained = _native; _waiters++;
     [_lock unlock];
     uint32_t ready = 0;
-    BOOL ok = TTCheck(thinkthen_session_wait(retained, input ? THINKTHEN_SESSION_WAIT_INPUT_V1 : THINKTHEN_SESSION_WAIT_RESULT_V1, UINT32_MAX, &ready), error);
+    BOOL ok = TTCheck(thinkthen_session_wait(retained, interest, UINT32_MAX, &ready), error);
     [_lock lock]; _waiters--;
     if (_closed && !_waiters) { thinkthen_session_free(_native); _native = NULL; }
     [_lock unlock]; return ok;
@@ -167,7 +171,7 @@ static NSData *TTEncode(id object, NSError **error) {
         if (_finished) break;
         if (_feed && !_pending) continue;
         NSError *error = nil;
-        if (![_session waitInput:_pending != nil error:&error]) [self settle:error call:nil];
+        if (![_session waitInterest:_pending ? THINKTHEN_SESSION_WAIT_INPUT_V1 : THINKTHEN_SESSION_WAIT_RESULT_V1 error:&error]) [self settle:error call:nil];
     }
 }
 - (void)settle:(NSError *)error call:(TTCall *)call {
