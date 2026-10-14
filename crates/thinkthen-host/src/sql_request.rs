@@ -4,8 +4,8 @@ use serde_json::{Value, json};
 use std::sync::Mutex;
 use thinkthen::{
     AdmittedRequest, CallOptions, Engine, Error, LoadedQuestion, RecordObservation, Request,
-    RequestArguments,  RequestDefinition, RequestEnvironment, RequestFeed,
-    RequestInput, RequestOptions, RequestOutcome, RequestQuestion, RequestValue, Surface,
+    RequestArguments, RequestDefinition, RequestEnvironment, RequestFeed, RequestInput,
+    RequestOptions, RequestOutcome, RequestQuestion, RequestValue, Surface,
 };
 
 pub fn run(
@@ -40,29 +40,37 @@ pub fn run(
         options
     };
     let result = (|| {
-        let reading = request.record_reading()?;
-        let records = inputs.deferred_records(prepared.reading().or(Some(&reading)));
-        let feed = RequestFeed::from_records("sqlite", records);
-        let feed = if matches!(prepared, Prepared::Filter(_)) {
-            feed.with_all_filter_results()
+        let feed = if matches!(
+            request.request().call.arguments().input,
+            RequestInput::Feed { .. }
+        ) {
+            let reading = request.record_reading()?;
+            let records = inputs.deferred_records(prepared.reading().or(Some(&reading)));
+            let feed = RequestFeed::from_records("sqlite", records);
+            let feed = if matches!(prepared, Prepared::Filter(_)) {
+                feed.with_all_filter_results()
+            } else {
+                feed
+            };
+            let feed = if inputs.image_inputs()? {
+                feed.with_image_inputs()
+            } else {
+                feed
+            };
+            let feed = if inputs.incremental {
+                feed
+            } else {
+                feed.eager()
+            };
+            Some(feed)
         } else {
-            feed
-        };
-        let feed = if inputs.image_inputs()? {
-            feed.with_image_inputs()
-        } else {
-            feed
-        };
-        let feed = if inputs.incremental {
-            feed
-        } else {
-            feed.eager()
+            None
         };
         let outcome = engine.execute_request(
             request,
             RequestEnvironment {
                 controls: options,
-                feed: Some(feed),
+                feed,
             },
         )?;
         render(outcome)
@@ -92,15 +100,37 @@ pub fn admit(prepared: &Prepared) -> Result<AdmittedRequest, Error> {
 }
 
 pub fn request(prepared: &Prepared, options: RequestOptions) -> Result<Request, Error> {
-    let definition = definition(prepared);
-    let args = RequestArguments {
-        question: RequestQuestion::Definition { value: definition },
-        input: RequestInput::Feed {
+    request_input(
+        prepared,
+        RequestInput::Feed {
             name: "sqlite".to_owned(),
             framing: Default::default(),
             reading: Default::default(),
             images: Vec::new(),
         },
+        options,
+    )
+}
+
+/// Build an explicit file request using the existing native source reader.
+pub fn request_source(
+    prepared: &Prepared,
+    source: thinkthen::RequestSource,
+    options: RequestOptions,
+) -> Result<Request, Error> {
+    request_input(prepared, RequestInput::Source { source }, options)
+}
+
+fn request_input(
+    prepared: &Prepared,
+    input: RequestInput,
+    options: RequestOptions,
+) -> Result<Request, Error> {
+    let args = RequestArguments {
+        question: RequestQuestion::Definition {
+            value: definition(prepared),
+        },
+        input,
         options,
     };
     let function = match prepared {
@@ -125,8 +155,7 @@ pub fn request(prepared: &Prepared, options: RequestOptions) -> Result<Request, 
 fn render(outcome: RequestOutcome) -> Result<Value, Error> {
     match outcome {
         RequestOutcome::Complete(call) => {
-            let mut value =
-                serde_json::to_value(call.complete().ok_or_else(defect)?).map_err(|_| defect())?;
+            let mut value = serde_json::to_value(&call).map_err(|_| defect())?;
             supplement(&mut value, call.value())?;
             Ok(value)
         }

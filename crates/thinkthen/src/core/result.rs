@@ -411,25 +411,6 @@ pub(crate) struct DecisionResult {
 }
 
 impl DecisionResult {
-    pub(crate) fn scalar_json(&self) -> Result<String, crate::core::RenderError> {
-        let mut scalar = self.clone();
-        scalar.input = None;
-        crate::core::json_line(&scalar)
-    }
-
-    /// Actual retained compatibility cache flag, independent of source provenance.
-    pub(crate) const fn cached(&self) -> bool {
-        self.meta.cached
-    }
-
-    pub(crate) fn with_captured_attempts(
-        mut self,
-        attempts: Option<Vec<AttemptObservation>>,
-    ) -> Self {
-        self.meta.attempts = attempts;
-        self
-    }
-
     /// Gather one judgment into the document the tool prints.
     ///
     /// `value` is the bare value the command would have printed, so a reader of

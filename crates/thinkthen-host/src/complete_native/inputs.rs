@@ -44,14 +44,7 @@ impl Inputs {
         }
         if let Some(files) = self.raw.get("files") {
             let files = fields(files.get())?;
-            let options = files
-                .get("options")
-                .map(|value| {
-                    serde_json::from_str::<InputReaderOptions>(value.get())
-                        .map_err(|_| usage("invalid native reader options"))
-                })
-                .transpose()?
-                .unwrap_or_default();
+            let options = file_options(&files)?;
             return Ok(options.media == thinkthen::ReaderMedia::Image);
         }
         let records: Vec<Box<RawValue>> =
@@ -230,17 +223,23 @@ impl Inputs {
         )
         .map_err(|_| usage("file paths is a text array"))
     }
+    /// Retain explicit file selection without opening or advancing its reader.
+    pub fn request_source(&self) -> Result<Option<thinkthen::RequestSource>, Error> {
+        let Some(files) = self.raw.get("files") else {
+            return Ok(None);
+        };
+        let options = file_options(&fields(files.get())?)?;
+        Ok(Some(thinkthen::RequestSource {
+            paths: self.file_paths()?.into_iter().map(Into::into).collect(),
+            reading: options.reading,
+            media: options.media,
+            framing: self.framing,
+        }))
+    }
     fn file_records(&self, files: &str, reading: RecordReading) -> Result<Records<'_>, Error> {
         let value = fields(files)?;
         let paths = self.file_paths()?;
-        let options = value
-            .get("options")
-            .map(|v| {
-                serde_json::from_str::<InputReaderOptions>(v.get())
-                    .map_err(|_| usage("invalid native reader options"))
-            })
-            .transpose()?
-            .unwrap_or_default();
+        let options = file_options(&value)?;
         if let Some(framing) = self.framing {
             let source = thinkthen::RequestSource {
                 paths: paths.into_iter().map(Into::into).collect(),
@@ -258,6 +257,17 @@ impl Inputs {
             item.and_then(|item| reading.compose_source(item))
         })))
     }
+}
+
+fn file_options(value: &Fields) -> Result<InputReaderOptions, Error> {
+    value
+        .get("options")
+        .map(|v| {
+            serde_json::from_str::<InputReaderOptions>(v.get())
+                .map_err(|_| usage("invalid native reader options"))
+        })
+        .transpose()
+        .map(Option::unwrap_or_default)
 }
 
 fn compose_framed(

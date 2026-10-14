@@ -18,7 +18,7 @@ pub(super) fn register(generator: &mut SchemaGenerator) {
         generator.subschema_for::<recognize::Document<'_, Value>>(),
         generator.subschema_for::<relate::Document<'_, Value>>(),
         generator
-            .subschema_for::<crate::public::CompleteCall<'_, wire::AtomicDocument<'_, Value>>>(),
+            .subschema_for::<crate::public::Call<wire::AtomicDocument<'_, Value>>>(),
         generator.subschema_for::<crate::public::batch::CompletedPrefix<'_, wire::AtomicDocument<'_, Value>>>(),
         generator.subschema_for::<crate::SessionPacketDocument<'_>>(),
         generator.subschema_for::<crate::public::CompleteError<'_>>(),

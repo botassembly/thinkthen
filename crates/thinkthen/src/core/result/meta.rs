@@ -90,11 +90,4 @@ impl Meta {
         self.reported_usage = usage;
         self
     }
-
-    pub(crate) fn with_attempts(mut self, attempts: Vec<crate::core::AttemptObservation>) -> Self {
-        if !attempts.is_empty() {
-            self.attempts = Some(attempts);
-        }
-        self
-    }
 }

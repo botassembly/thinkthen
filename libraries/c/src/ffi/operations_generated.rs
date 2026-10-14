@@ -48,6 +48,74 @@ pub unsafe extern "C" fn thinkthen_value_view(
     })
 }
 
+/// Parse one arbitrary JSON value through the existing Rust parser.
+/// Numbers retain their original decimal bytes, including large integers and exponents;
+/// object keys, null and false are preserved without request-shape admission.
+/// Success transfers an immutable independent owner; free once with value_free.
+/// Input bytes may be freed on return. Malformed JSON, UTF-8 or extents return EUSAGE,
+/// preserve out and occupy only the calling thread immediate session diagnostic.
+/// # Safety
+/// json has len readable UTF-8 bytes; NULL requires zero, which is invalid JSON.
+/// Extents fit Rust slices; out is nonnull aligned writable pointer storage.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn thinkthen_value_parse(
+    json: *const std::ffi::c_char,
+    len: usize,
+    out: *mut *mut crate::session::views::ValueHandle,
+) -> std::ffi::c_int {
+    failures::session_call(|| {
+        if out.is_null() {
+            return Err(ErrorKind::Usage);
+        }
+        // SAFETY: the caller retains counted input trees until the native helper returns.
+        let value_out = unsafe { super::request_preview::parse_value(json, len) }?;
+        // SAFETY: every slot was validated before the native operation; success publishes once.
+        unsafe {
+            *out = value_out;
+        }
+        Ok(())
+    })
+}
+
+/// Preview a full canonical Request through existing Rust admission and Plan serialization.
+/// Sends nothing and reads no key or cache. Unknown fields and unsupported previews refuse.
+/// Success transfers an immutable independent owner; free once with value_free.
+/// Source bytes and engine may be freed on return. Failures preserve out and occupy
+/// only the calling thread immediate session diagnostic, independently of engine/constructor slots.
+/// # Safety
+/// engine is live; request_json has request_len readable UTF-8 bytes. NULL requires
+/// zero, which is invalid Request JSON. Extents fit Rust slices; out is nonnull
+/// aligned writable pointer storage.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn thinkthen_request_plan_value(
+    engine: *const crate::EngineHandle,
+    request_json: *const std::ffi::c_char,
+    request_len: usize,
+    out: *mut *mut crate::session::views::ValueHandle,
+) -> std::ffi::c_int {
+    failures::session_call(|| {
+        if out.is_null() {
+            return Err(ErrorKind::Usage);
+        }
+        // SAFETY: the caller retains this live owner throughout the operation.
+        let engine = unsafe { engine.as_ref() }.ok_or(ErrorKind::Usage)?;
+        // SAFETY: the caller retains counted input trees until the native helper returns.
+        let value_out = unsafe {
+            super::request_preview::json_plan(
+                engine,
+                request_json,
+                request_len,
+                super::request_preview::value_output,
+            )
+        }?;
+        // SAFETY: every slot was validated before the native operation; success publishes once.
+        unsafe {
+            *out = value_out;
+        }
+        Ok(())
+    })
+}
+
 /// Free an independent canonical value owner; NULL is ignored.
 /// # Safety
 /// owner is NULL or unfreed, after every operation and borrowed view finishes.
@@ -216,8 +284,14 @@ pub unsafe extern "C" fn thinkthen_request_plan_json(
         // SAFETY: the caller retains this live owner throughout the operation.
         let engine = unsafe { engine.as_ref() }.ok_or(ErrorKind::Usage)?;
         // SAFETY: the caller retains counted input trees until the native helper returns.
-        let (value_out, value_out_len) =
-            unsafe { super::request_preview::json_plan(engine, request_json, request_len) }?;
+        let (value_out, value_out_len) = unsafe {
+            super::request_preview::json_plan(
+                engine,
+                request_json,
+                request_len,
+                super::request_preview::json_output,
+            )
+        }?;
         // SAFETY: every slot was validated before the native operation; success publishes once.
         unsafe {
             *out = value_out;

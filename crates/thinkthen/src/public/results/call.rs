@@ -2,7 +2,7 @@
 
 use std::fmt;
 
-use serde::Serialize;
+use serde::{Serialize, Serializer, ser::SerializeStruct};
 use serde_json::value::RawValue;
 
 use crate::core::{CallId, Prices};
@@ -176,9 +176,24 @@ impl Facts {
 }
 
 /// One eager value with its call-scoped facts.
+#[cfg_attr(test, derive(schemars::JsonSchema), schemars(rename = "CompleteCall"))]
 pub struct Call<T> {
     value: T,
+    #[cfg_attr(test, schemars(with = "super::CompleteFacts<'static>"))]
     facts: Facts,
+}
+
+impl<T: Serialize> Serialize for Call<T> {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        let facts = self
+            .facts
+            .complete()
+            .ok_or_else(|| serde::ser::Error::custom("a completed call has no identity"))?;
+        let mut document = serializer.serialize_struct("Call", 2)?;
+        document.serialize_field("value", &self.value)?;
+        document.serialize_field("facts", &facts)?;
+        document.end()
+    }
 }
 
 impl<T> fmt::Debug for Call<T> {

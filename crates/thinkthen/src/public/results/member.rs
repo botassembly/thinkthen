@@ -107,7 +107,7 @@ impl Details {
         original: Option<&T>,
     ) -> Result<Self, Error> {
         let fields = canonical.metadata();
-        let scalar = Written::of(&canonical.compatibility)?;
+        let scalar = Written::of(&canonical.scalar_details(None))?;
         let json = match original {
             Some(original) => {
                 // Match native member materialization without reapplying reader byte limits.
@@ -115,7 +115,7 @@ impl Details {
                     .map_err(|_| Error::usage("a record cannot be written as JSON"))?;
                 let record =
                     core::Record::from_json(core::Json::parse(&source).map_err(Error::refused)?);
-                Written::of(&canonical.compatibility.clone().with_input(record))?
+                Written::of(&canonical.scalar_details(Some(record)))?
             }
             None => scalar.clone(),
         };
@@ -130,7 +130,7 @@ impl Details {
             profile_warning: fields.profile.cloned(),
             requests: fields.requests.to_vec(),
             requests_sent: fields.sent,
-            cached: canonical.compatibility.cached(),
+            cached: canonical.cached(),
             usage: canonical.usage().map(usage),
             reported_usage: canonical.reported_usage(),
             confidence: canonical.answer().confidence().map(|p| p.as_f64()),
