@@ -32,7 +32,7 @@ int main(void) { @autoreleasepool {
         input:input
         options:nil feed:nil error:&error];
     assert(judgment && !error);
-    refundDeadline = judgment.value.scalar;
+    refundDeadline = [judgment.value scalar];
     assert([refundDeadline isEqualToString:policy[1]]);
     return 0;
 } }

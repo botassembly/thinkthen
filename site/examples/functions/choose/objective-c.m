@@ -17,7 +17,7 @@ int main(void) { @autoreleasepool {
         input:parcel
         options:nil feed:nil error:&error];
     assert(judgment && !error);
-    team = judgment.value.scalar;
+    team = [judgment.value scalar];
     assert([team isEqualToString:@"shipping"]);
     return 0;
 } }

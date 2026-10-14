@@ -1,29 +1,55 @@
-# ThinkThen Foundation
+# ThinkThen for Objective-C
 
-The Objective-C library targets Apple Foundation, ARC and blocks on macOS 15 or later. Its SwiftPM product is `ThinkThenFoundation`. Distribution assembles the matching `CThinkThen.xcframework` beside [Package.swift](Package.swift). Consumers import `ThinkThenFoundation.h` and need no Rust compiler or separate native library path.
+Call a decision model from Objective-C and read its answer through a typed call. The ten functions are `decide`, `choose`, `tag`, `score`, `filter`, `rank`, `find`, `annotate`, `recognize` and `relate`.
 
 ```objc
-NSError *error = nil;
-TTFoundationClient *client = [[TTFoundationClient alloc] initWithSettings:nil error:&error];
-TTTextQuestion *question = [TTTextQuestion new];
-question.text = @"Does this mention a refund?";
-TTTextInput *input = [TTTextInput new];
-input.text = @"Please refund my order.";
-TTCall *call = [client decide:question input:input options:nil feed:nil error:&error];
-if (error) { NSLog(@"%@", error.localizedDescription); return; }
-NSLog(@"%@", call.value.scalar);
+#import "ThinkThenFoundation.h"
+#include <assert.h>
+
+int main(void) { @autoreleasepool {
+    NSError *error = nil;
+    TTFoundationClient *client = [[TTFoundationClient alloc]
+        initWithSettings:nil
+        error:&error];
+    assert(client);
+    TTTextQuestion *question = [TTTextQuestion new];
+    question.text = @"Does the customer ask for a refund?";
+    TTTextInput *broken = [TTTextInput new];
+    broken.text = @"Please refund my order. "
+            @"It arrived broken.";
+    BOOL isRefund = NO;
+    TTCall *judgment =
+        [client decide:question
+        input:broken
+        options:nil feed:nil error:&error];
+    assert(judgment && !error);
+    isRefund = [[judgment.value scalar] boolValue];
+    NSNumber *refundProbability =
+        judgment.probability.scalar;
+    assert(isRefund);
+    assert(refundProbability.doubleValue == 0.99);
+    return 0;
+} }
 ```
 
-`decide`, `choose`, `tag`, `score`, `filter`, `rank`, `find`, `annotate`, `recognize` and `relate` each offer a typed blocking `decideAnswer:input:options:feed:call:error:` helper and a named asynchronous call. The optional `call` output retains facts and packet readers. Blocking helpers run the bounded native wait on the calling thread and run feed blocks there. Each completed call has the matching `decideAnswer:` or other answer accessor and typed `facts`. Answer accessors refuse a failed call or the wrong function. Accessors other than filter require exactly one answer. Rank returns Foundation numbers for the native indices. Filter returns zero or more original Foundation values in source order, including `NSNull` and false. Recognize and relate answers use generated entity and relation classes. Relation endpoints expose `sourceName` and `targetName`.
+`call.value` is a `TTCallValue`: `scalar` holds one answer and `items` holds ordered answers for record inputs. Scalars preserve authored Foundation values, including `NSNull`, booleans and precise integers. Read an authored leaf with message syntax, such as `[call.value scalar]`. A nil decision or choice means not sure. A failure returns an error instead of an answer.
 
-`TTSettings` and `TTControls` expose the generated engine settings and request options. Question and input builders expose their native fields without transport dictionaries. `TTQuestionFile`, `TTQuestionName` and `TTQuestionReference` select saved questions. `TTQuestionDefinition` takes an authored definition, including `TTRecognizeDefinitionBuilder` and `TTAuthoredRelateBuilder`. `TTItem` builds records, `TTFiles` selects paths and reading options, and `TTImageBytes(data, media)` builds a typed byte attachment. Arbitrary authored JSON leaves accept ordinary Foundation values. `TTOrderedMap` preserves authored member order.
+`call.probability` is a `TTCallProbability`: `scalar` is an `NSNumber`, and `items` contains typed probability wrappers for records. A score's probability differs from its numerical value. `call.results` retains the complete typed result records; `call.facts` retains final usage, counts and model information. Generated `TTPresence` fields distinguish missing, explicit null and value. These immutable results survive native owner release.
 
-`plan:error:` takes a `TTRequest` containing a `TTCallArguments` and returns a typed `TTPlan`. Rust admits the request and builds the plan without sending. All nine plan fields remain available, including the required nullable `firstBodyUtf8`. Rust also admits named execution requests. Native failures return `TTFailureError`, which preserves the generated native error kind, retryability and optional typed `TTImmediateFacts`. Completed failures also expose the typed `TTCallError` through `failure` and under `TTFailureDetailsKey` in `NSError.userInfo`.
+`TTTextQuestion`, `TTQuestionFile`, `TTQuestionName` and `TTQuestionReference` select questions. `TTQuestionDefinition` accepts authored builders. `TTOrderedMap` preserves authored member order. `TTItem` builds records, `TTFiles` selects native file readers, and `TTImageBytes(data, media)` builds a byte attachment. The engine checks image admission. Arbitrary authored leaves accept ordinary Foundation values.
 
-Results copy Rust's native typed graph into host-owned immutable Foundation values. The library never parses result JSON. `TTPresence` distinguishes missing, explicit null and value. Booleans remain distinct from numeric zero, and integer values retain their precision. Results and error facts survive native owner release.
+## Install
 
-Async callers use `decide:input:options:feed:completion:error:` and retain the returned task when they need cancellation. A `TTFeed` returns one `TTDescriptor` at a time, nil at EOF, or nil with a typed reader failure. Its callback runs on a private serial queue and must return promptly. A task retains one pending descriptor and drains bounded native output, then uses the native timed readiness wait. `TTSession` exposes typed push, finish, read, cancel and close for callers that own scheduling. Completion runs on the private callback queue; dispatch UI changes to the main queue. Cancellation settles the task before a held provider releases; final native facts may still be pending.
+Unpack the matching [release archive](https://github.com/botassembly/thinkthen/releases). Add its SwiftPM package and use the `ThinkThenFoundation` product. The archive includes `CThinkThen.xcframework`; consumers need no Rust compiler or native library path. The library requires Apple Foundation, ARC and blocks on macOS 15 or later.
 
-`usagePersistence:` observes usage persistence without waiting for its writer. `finishUsageStatus:` finishes current deltas. Each returns an immutable `TTUsagePersistenceStatus` with a state and optional advice. Failed persistence preserves successful answers and facts. Only usage-lock acquisition has a deadline.
+Set a hosted key with `THINKTHEN_API_KEY`. [Backend setup](https://thinkthen.dev/install/backends/) covers Jev, SystemOne, OpenAI and local models. The library is MIT licensed. Hosted models charge per token; local models use your computer.
 
-Run `python3 sdlc/generators/results/generate.py --target objc --check` for generated freshness. On macOS, `check.sh` installs the supplied assembled Apple package into an unrelated SwiftPM consumer and checks result ownership, plan admission, refused requests, held-provider cancellation and the shared routine inventory through all ten named calls. `THINKTHEN_TEST_PROFILE=full` selects candidate-only execution coverage. The nonpublishing Objective-C workflow builds the matching native test dependency and runs these installed checks. Linux exits 77 because it cannot qualify Apple Foundation.
+## Advanced calls
+
+`TTSettings` configures the client; `TTControls` selects call options. `plan:error:` builds a typed plan without sending. Blocking calls wait on the calling thread. Asynchronous calls take a completion block and return a cancellable task. Completion runs on a private serial queue; dispatch UI changes to the main queue.
+
+A `TTFeed` supplies one descriptor at a time, EOF, or a typed reader failure. `TTSession` exposes push, finish, read, cancel and close for caller-owned scheduling. `TTFailureError` preserves the native error, retryability and available final facts. `usagePersistence:` observes usage storage; `finishUsageStatus:` finishes pending writes.
+
+## Build and check
+
+`python3 sdlc/generators/results/generate.py --target objc --check` checks generated freshness. On macOS, `check.sh` installs an assembled package into an unrelated SwiftPM consumer and checks typed answers, ownership, cancellation and saved responses. `THINKTHEN_TEST_PROFILE=full` selects the full shared inventory.

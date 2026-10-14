@@ -18,7 +18,10 @@ int main(void) { @autoreleasepool {
         input:broken
         options:nil feed:nil error:&error];
     assert(judgment && !error);
-    isRefund = [judgment.value.scalar boolValue];
+    isRefund = [[judgment.value scalar] boolValue];
+    NSNumber *refundProbability =
+        judgment.probability.scalar;
     assert(isRefund);
+    assert(refundProbability.doubleValue == 0.99);
     return 0;
 } }

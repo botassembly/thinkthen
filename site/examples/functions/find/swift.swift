@@ -15,9 +15,6 @@ let judgment = try await client.find(
   .text(question),
   input: .records(records)
 )
-var refundDeadline = ""
-if case .string(let line)? = judgment.value?.kind {
-  refundDeadline = line
-}
-precondition(refundDeadline == policy[1])
+let refundDeadline = judgment.value
+precondition(refundDeadline == .string(policy[1]))
 client.close()

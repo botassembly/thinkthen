@@ -1,41 +1,40 @@
 # ThinkThen for Swift
 
-The development API uses one typed `Client` family for `decide`, `choose`, `tag`, `score`, `filter`, `rank`, `find`, `annotate`, `recognize` and `relate`. Each call is `async throws` and returns an owned `Call` with generated packet types and the actual native terminal. Rust owns admission, files, image routes, cache, replay, execution and failure facts.
+Call a decision model from Swift and read its typed answer in one line. The ten functions are `decide`, `choose`, `tag`, `score`, `filter`, `rank`, `find`, `annotate`, `recognize` and `relate`.
 
 ```swift
 import ThinkThen
 
 let client = try Client()
 defer { client.close() }
-let answer = try await client.decideAnswer(.text("Does the writer request a refund?"),
-                                         input: .text("Please refund my order."))
-print(answer as Any)
+let question = Question.text("Does the customer ask for a refund?")
+let message = "Please refund my order. It arrived broken."
+let judgment = try await client.decide(question, input: message)
+let isRefund = judgment.value
+let refundProbability = judgment.probability
+precondition(isRefund == .bool(true) && refundProbability == 0.99)
 ```
 
-Use ordinary generated Swift inputs. `EngineSettings` configures the client. `Question` selects literal text, a typed definition, an exact file, a configured name or an explicit reference. Strings supplied through `.text` remain literal text. Use `.definition(QuestionDefinition(value:))` with typed `Definition` cases to build authored questions. `client.plan` accepts the same generated `Request` and returns `Plan` without sending a request.
+A scalar text or JSON input returns one value. `InputRecords`, `InputUnits` and `InputSource` return lists for `decide`, `choose`, `tag` and `score`. Use the concrete input type to select the return type. A score is `Double`; a list of scores is `[Double]`. A decision preserves authored readings as `DataValue`, including booleans, objects and explicit null. A missing decision or choice means not sure. Failed calls throw instead of returning an answer.
 
-`Input` selects text, JSON, records, units, entities, native sources or a bounded feed. `Input.files` selects explicit paths and optional generated reading settings. Native source inputs perform file reads and retain provenance in Rust. Images use `.bytes(data, media:)` or `.file(path, media:)`; Swift only encodes supplied bytes for transport. Ordered arrays retain duplicates. Rust decides which functions and routes admit images and returns its typed failure for refusals.
+Keep the call when you need more than the value. `call.probability` holds an optional answer probability. Record decisions return a list of optional probabilities in input order. Aggregate functions retain their detailed probabilities in `call.results`. It is distinct from a score's value. `call.results` retains the complete typed result records. `call.facts` retains final counts, usage and model information. Each value owns its data after the client closes.
 
-Generated result fields include every known answer, question, observation, location, identifier, usage dimension and failure fact. `Presence<T>` distinguishes `.absent`, `.null` and `.value`; `.value` is an optional convenience and `.isPresent` remains explicit. Unknown nested output members remain in typed value extensions. Transport readers and serializers are internal. `DataValue` represents caller data as null, booleans, strings, exact number literals, lists and maps. It preserves arbitrary inputs and native object encounter order. Transport conversion stays internal. Generated values are immutable and own their source independently of native buffers. Sessions copy the native packet graph before freeing its owner; Swift does not serialize and parse packet results again.
+`Question.text` selects literal text. `.definition(QuestionDefinition(value:))` builds an authored question with generated types. `.file`, `.name` and `.reference` select saved questions. Use `OrderedMap` for authored options, recognize kinds and annotate questions. The [executable example](Examples/main.swift) shows typed questions for all ten functions.
 
-A native terminal failure throws `SessionFailure`, retaining its generated `CallError`, retryability, actual final facts and completed packets. Immediate admission or ownership failures throw `SessionBoundaryFailure` with the native code and copied safe diagnostic. Unresolved answers are successful result values. Caller task cancellation throws `CancellationError`; it does not fabricate a terminal or final facts.
+`InputRecords` keeps caller records in order. `Input.files` selects native file readers and provenance. Images use `.bytes(data, media:)` or `.file(path, media:)`; the engine checks the selected model and function. `DataValue` retains caller JSON values and exact number literals. `Presence` distinguishes an absent field, explicit null and a value.
 
-`Session` is the bounded advanced view of this same family. `client.start(request)` admits a generated request. One producer uses `await session.push(descriptor)` and explicit `finish`; one reader uses `await session.read()`. A full queue retries the same descriptor before advancing intake. `client.execute(request, feed:)` runs an `AsyncThrowingStream` producer concurrently with output. Throw `FeedReadFailure` with a generated IO, UTF-8 or invalid-input failure to preserve the admitted prefix and report native reader failure. Consumer cancellation cancels the producer and detaches native ownership; caller stream termination code remains the caller's responsibility.
+## Install
 
-`Session.cancel()` signals cancellation and permits a later explicit drain from a fresh task. `Session.close()` detaches the native owner without waiting for a blocked provider. Short synchronized leases keep each native operation alive through its immediate copy; no borrowed pointer crosses an `await`. `Client.close()` releases its facade while already admitted sessions retain their native engine. Use `defer` for deterministic release. `usagePersistence()` and `finishUsageStatus()` return an owned native persistence observation, separate from historical call facts. Finalization can perform filesystem work and should run on a caller-selected background executor when needed.
+Unpack the matching [release archive](https://github.com/botassembly/thinkthen/releases). Add the unpacked SwiftPM package as a dependency and use `.product(name: "ThinkThen", package: "thinkthen-swift")`. The package includes its native library. Consumers need no Rust build or native path variable. Deploy SwiftPM's resource bundle beside Linux executables. Apple packages include `CThinkThen.xcframework` and require macOS 15 or later.
 
-## Package
+Set a hosted key with `THINKTHEN_API_KEY`. [Backend setup](https://thinkthen.dev/install/backends/) covers Jev, SystemOne, OpenAI and local models. The library is MIT licensed. Hosted models charge per token; local models use your computer.
 
-The [approved package design](../../sdlc/decisions/2026-10-09-native-package-design.md) supplies the runtime floors and target pairs. A trusted versioned distribution contains this SwiftPM package and its matching native asset. Add its versioned source-control dependency and `.product(name: "ThinkThen", package: "ThinkThen")` in a consumer. Installation requires no native path variable or consumer Rust build.
+## Advanced calls
 
-On Apple, `Package.swift` selects the C-only static `CThinkThen.xcframework` beside the manifest and sets macOS 15. `build-xcframework.sh` assembles its universal macOS slice from matching prebuilt x86-64 and arm64 C package directories using Apple tools. It builds no Rust code. The Swift facade remains source. Actual Apple assembly, native dependency inspection and installed consumer qualification require an Apple machine.
+`EngineSettings` configures one backend per client. `client.plan` returns a typed plan without sending. `client.start` opens a bounded `Session`; one producer pushes descriptors and finishes input while one reader reads packets. `client.execute(request, feed:)` accepts an `AsyncThrowingStream`. `Session.cancel()` signals cancellation; `Session.close()` releases native ownership. Use `defer` to close clients.
 
-On Linux, the Swift target carries `Native/<rust-target>/libthinkthen.so` as a copied SwiftPM resource. Generated C forwarders preserve compiler-derived signatures and remain hidden from native symbol lookup. The loader opens only the absolute bundle asset path and resolves the entire table once before any constructor calls native code. Engines, sessions and results free normally; the successful library handle remains until process exit because workers can outlive their Swift owners. Missing or unloadable assets throw a fixed local failure. Deploy the SwiftPM resource bundle with the executable: SwiftPM's generated `Bundle.module` accessor traps if the whole bundle is absent. The source checkout has no bundled binary; use an assembled trusted package. Linux support covers the declared glibc targets. Routine versioned Linux SwiftPM consumption is checked locally; final distribution contents and Apple linkage are qualified at the candidate.
+`SessionFailure` retains the generated failure, completed packets and final facts. `SessionBoundaryFailure` retains the safe native admission diagnostic. Task cancellation throws `CancellationError`. `usagePersistence()` observes usage storage; `finishUsageStatus()` finishes pending usage writes. Run finalization on a background executor when needed.
 
-## Checks
+## Build and check
 
-`generate.py --target swift --check`, repeated with `--inputs` and `--bridge`, compares generated results, inputs and compiler-derived ABI enums. `Tests/fixtures/owned_consumer.swift` checks typed success and failure, presence, unknown numeric fields, independent task progress and cancellation/cleanup while a provider remains held. The routine checker builds a consumer with an exact versioned SwiftPM dependency, loads the bundled Linux asset and runs selected shared cases through the installed typed API. `THINKTHEN_TEST_PROFILE=full` runs every required shared case at a candidate. Apple linkage, alternate targets, large-input behavior and release qualification remain candidate checks. The ordinary published installation remains the released version until publication is authorized.
-
-The generated `decideAnswer`, `chooseAnswer`, `tagAnswer` and `scoreAnswer` read one native normalized judgment after successful settlement. Decisions and choices preserve null. Zero or multiple judgments throw `AnswerCardinalityError`; native failure preserves `SessionFailure.call` and its completed prefix. Rank answers return original zero-based indexes as `[UInt64]`. Filter answers return original inputs as `[DataValue]`, preserving null. Find, annotate, recognize and relate answer helpers return typed aggregates. Every call also retains complete packets and final facts.
-
-Use `OrderedMap` entries for authored options, recognize kinds and annotate questions. The [executable example](Examples/main.swift) calls all ten answer helpers, builds `RecognizeQuestion` and `RelateQuestion` without JSON parsing, and reads relation edge names with `sourceName()` and `targetName()`.
+The generated input, result and native bridge checks run through `sdlc/generators/results/generate.py`. `check.sh` installs a versioned package into an unrelated consumer and checks typed answers, failure ownership, cancellation and saved responses. `THINKTHEN_TEST_PROFILE=full` selects the full shared inventory.

@@ -8,5 +8,6 @@ let judgment = try await client.decide(
   input: InputText(text: broken)
 )
 let isRefund = judgment.value == .bool(true)
-precondition(isRefund)
+let refundProbability: Double? = judgment.probability
+precondition(isRefund && refundProbability == 0.99)
 client.close()
