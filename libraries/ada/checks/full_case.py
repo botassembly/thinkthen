@@ -145,22 +145,23 @@ def build(package, home):
     for verb in ('decide', 'choose', 'tag', 'score', 'filter', 'rank', 'find', 'annotate', 'recognize', 'relate'):
         key = 'RequestCall'
         function = reader.value(key, definitions[key])
-        calls.append(f'{"if" if not calls else "elsif"} Verb = "{verb}" then Thinkthen.Sessions.Calls.{verb.title()} (Client, Owner, {function});')
+        calls.append(f'{"if" if not calls else "elsif"} Verb = "{verb}" then Thinkthen.Native_Sessions.Start (Client, Owner, {function}, "{verb}");')
     feed = reader.value('RequestSessionDescriptor', definitions['RequestSessionDescriptor'])
     source = Path(__file__).with_name('full_case.adb').read_text()
     source = source.replace('with Ada.Exceptions;', 'with Ada.Exceptions;\nwith Ada.Command_Line;\nwith Thinkthen.Values;')
     source = source.replace('-- REQUEST', 'Input : Ada.Text_IO.File_Type;\nfunction Read_Text return Unbounded_String is begin return Fixture_Text (Get_Line (Input)); end;\n' + NATIVE_READER + '\n'.join('function Read_' + name(key) + ' return ' + name(key) + ';' for key in reader.functions) + '\n' + '\n'.join(reader.functions.values()))
     source = source.replace('-- SETTINGS', 'Ada.Command_Line.Argument (2),')
     source = source.replace('Thinkthen.Sessions.Calls.CALL_NAME (Client, Owner, Request);', 'Ada.Text_IO.Open (Input, Ada.Text_IO.In_File, Ada.Command_Line.Argument (1));\ndeclare Verb : constant String := Get_Line (Input); begin\n' + '\n'.join(calls) + '\nelse raise Program_Error with "unknown fixture call"; end if; end;')
-    source = source.replace('-- CANCEL', 'if Boolean\'Value (Get_Line (Input)) then Cancel (Owner); end if;')
-    source = source.replace('-- FEED', f'declare Count : constant Natural := Natural\'Value (Get_Line (Input)); begin for Index in 1 .. Count loop declare Item : constant T_RequestSessionDescriptor := {feed}; Status : Push_Status; begin loop Push (Owner, Item, Status); exit when Status /= Full; Drain_One; end loop; end; end loop; end;')
+    source = source.replace('-- CANCEL', 'if Boolean\'Value (Get_Line (Input)) then Thinkthen.Native_Sessions.Cancel (Owner); end if;')
+    source = source.replace('-- FEED', f'declare Count : constant Natural := Natural\'Value (Get_Line (Input)); begin for Index in 1 .. Count loop declare Item : constant T_RequestSessionDescriptor := {feed}; Status : Push_Status; begin loop Thinkthen.Native_Sessions.Push (Owner, Item, Status); exit when Status /= Full; Drain_One; end loop; end; end loop; end;')
     source = source.replace('if HELD_CANCEL then', "if Boolean'Value (Get_Line (Input)) then")
     path = home / 'thinkthen-sessions-parity_case.adb'
     path.write_text(source)
+    (home / 'thinkthen-sessions-parity_case.ads').write_text('procedure Thinkthen.Sessions.Parity_Case;\n')
     objects = home / 'ada-objects'
     objects.mkdir(exist_ok=True)
     binary = home / 'ada-consumer'
-    result = subprocess.run(['gnatmake', '-q', '-gnat2022', '-I' + str(package / 'src'), str(path), '-D', str(objects), '-o', str(binary), '-largs', str(package / 'native/lib/libthinkthen.a'), '-ldl', '-lpthread', '-lm'], env=child_env(), text=True, capture_output=True, timeout=180)
+    result = subprocess.run(['gnatmake', '-q', '-gnat2022', '-I' + str(home), '-I' + str(package / 'src'), str(path), '-D', str(objects), '-o', str(binary), '-largs', str(package / 'native/lib/libthinkthen.a'), '-ldl', '-lpthread', '-lm'], env=child_env(), text=True, capture_output=True, timeout=180)
     assert result.returncode == 0, result.stdout + result.stderr
     return binary
 

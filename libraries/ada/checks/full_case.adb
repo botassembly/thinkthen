@@ -6,9 +6,35 @@ with Interfaces; use type Interfaces.Unsigned_32;
 with Interfaces.C; use Interfaces.C;
 with Interfaces.C.Strings; use Interfaces.C.Strings;
 with Thinkthen.Requests; use Thinkthen.Requests;
-with Thinkthen.Sessions.Calls;
-with Thinkthen_Session_C; use Thinkthen_Session_C;
+with Thinkthen.Native_Sessions; use Thinkthen.Native_Sessions;
+with System;
+with Thinkthen.Session_C; use Thinkthen.Session_C;
 procedure Thinkthen.Sessions.Parity_Case is
+   function thinkthen_session_result_json (Result : access constant thinkthen_session_result;
+     Bytes : System.Address; Count : access Interfaces.C.size_t) return Interfaces.C.int
+     with Import, Convention => C, External_Name => "thinkthen_session_result_json";
+   procedure Configure (Client : in out Engine; Settings_JSON : String; Error : out Failure) is
+      Settings : chars_ptr := Null_Ptr;
+      Replacement : Engine_Access;
+      Code : int;
+   begin
+      Settings := New_String (Settings_JSON);
+      Replacement := Engine_Access (thinkthen_engine_new_with (Settings));
+      Free (Settings);
+      if Replacement = null then
+         Code := thinkthen_error_code (null);
+         if Code not in 1 .. 6 then raise Program_Error with "unknown native error kind"; end if;
+         Error := (Kind => Error_Kind'Val (Code),
+                   Retryable => thinkthen_error_retryable (null) /= 0,
+                   Text => To_Unbounded_String (Interfaces.C.Strings.Value (thinkthen_error_message (null))));
+      else
+         thinkthen_engine_free (Engine_Pointer (Client.Handle));
+         Client.Handle := Engine_Address (Replacement);
+         Error := (others => <>);
+      end if;
+   exception
+      when others => Free (Settings); raise;
+   end Configure;
    Client : Engine;
    Owner : Session;
    Value : Packet;
@@ -39,7 +65,7 @@ procedure Thinkthen.Sessions.Parity_Case is
    end Admission;
    procedure Drain_One is
    begin
-      Next_Packet (Owner, Value, Read);
+      Thinkthen.Native_Sessions.Next_Packet (Owner, Value, Read);
       case Read is
          when Pending => raise Program_Error with "blocking read returned pending";
          when Finished => null;
@@ -47,14 +73,14 @@ procedure Thinkthen.Sessions.Parity_Case is
             declare
                Bytes : aliased chars_ptr := Null_Ptr;
                Count : aliased size_t := 0;
-               Code : constant int := thinkthen_session_result_json (Value.Handle, Bytes'Address, Count'Access);
+               Code : constant int := thinkthen_session_result_json (Packet_Pointer (Value.Handle), Bytes'Address, Count'Access);
             begin
                if Code /= 0 then raise Program_Error with "packet serialization refused"; end if;
                if not First then Append (Packets, ','); end if;
                First := False;
                Append (Packets, Text ((data => Bytes, len => Count)));
                if View (Value).kind = K_THINKTHEN_COMPLETE_SESSION_PACKET_TERMINAL_V1 then
-                  Close (Owner);
+                  Thinkthen.Native_Sessions.Close (Owner);
                end if;
             end;
       end case;
@@ -89,14 +115,14 @@ begin
    Thinkthen.Sessions.Calls.CALL_NAME (Client, Owner, Request);
    -- CANCEL
    -- FEED
-   Finish (Owner);
+   Thinkthen.Native_Sessions.Finish (Owner);
    declare
       task Canceller;
       task body Canceller is
       begin
          if HELD_CANCEL then
             declare Signal : constant String := Get_Line; begin null; end;
-            Cancel (Owner); Put_Line ("cancel-fired"); Flush;
+            Thinkthen.Native_Sessions.Cancel (Owner); Put_Line ("cancel-fired"); Flush;
          end if;
       end Canceller;
    begin
