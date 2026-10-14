@@ -50,6 +50,7 @@ pub fn decode(comptime T: type, a: std.mem.Allocator, value: std.json.Value) any
 pub fn writeNative(value: anytype, writer: anytype) error{WriteFailed}!void {
     const T = @TypeOf(value);
     switch (@typeInfo(T)) {
+        .optional => if (value) |member| try writeNative(member, writer) else try writer.write(null),
         .@"union" => switch (value) {
             inline else => |member| {
                 if (@TypeOf(member) == void) try writer.write(null) else try writeNative(member, writer);
