@@ -89,7 +89,32 @@ int main(int argc, const char *argv[]) {
             for (TTCallProbability *odds in filterCall.probability.items) require(odds.scalar.doubleValue > 0 && odds.scalar.doubleValue <= 1);
             require(filterCall.facts.value.requestsSent.value.unsignedIntegerValue == (filterInput == multiple ? 4 : filterInput == empty ? 0 : 1));
         }
+        TTTextInput *decisionInput = [TTTextInput new];
+        for (NSString *text in @[@"no", @"unsure"]) {
+            decisionInput.text = text;
+            TTCall *decision = [client decide:question input:decisionInput options:nil feed:nil error:&error];
+            require(decision && !error && decision.value.items == nil);
+            if ([text isEqual:@"no"]) {
+                require([decision.value.scalar isEqual:@NO] && decision.probability.scalar.doubleValue == .1);
+            } else require(decision.value.scalar == nil && decision.probability == nil);
+        }
+        NSArray *authored = @[NSNull.null, @NO, @{@"value":NSNull.null, @"ok":@NO}, @[NSNull.null, @NO, @"leaf"]];
+        NSMutableArray<TTCall *> *authoredCalls = [NSMutableArray array];
+        for (NSUInteger index = 0; index < authored.count; index++) {
+            TTAuthoredDecideBuilder *definition = [TTAuthoredDecideBuilder new];
+            definition.decide = @"Is it?"; definition.trueValue = authored[index];
+            TTQuestionDefinition *authoredQuestion = [TTQuestionDefinition new]; authoredQuestion.value = definition;
+            decisionInput.text = [NSString stringWithFormat:@"authored-objc-%lu", (unsigned long)index];
+            TTCall *decision = [client decide:authoredQuestion input:decisionInput options:nil feed:nil error:&error];
+            require(decision && !error && decision.value.items == nil);
+            [authoredCalls addObject:decision];
+        }
         client = nil;
+        for (NSUInteger index = 0; index < authoredCalls.count; index++) {
+            require([authoredCalls[index].value.scalar isEqual:authored[index]]);
+            require(authoredCalls[index].probability.scalar.doubleValue == .9);
+            require(authoredCalls[index].results.count == 1);
+        }
         // A new client and unrelated host work progress while a provider is held.
         client = [[TTFoundationClient alloc] initWithSettings:nil error:&error];
         dispatch_semaphore_t cancelled = dispatch_semaphore_create(0);

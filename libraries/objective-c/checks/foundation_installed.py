@@ -96,7 +96,7 @@ with contextlib.ExitStack() as installed:
             result = subprocess.run([str(work / ".build/debug/Consumer"), str(barrier)],
                                     cwd=work, env=env, text=True, capture_output=True, timeout=8)
             assert result.returncode == 0 and "FOUNDATION_INSTALLED_PASS" in result.stdout, (result.returncode, result.stdout, result.stderr)
-            assert collections.Counter(server.arrivals) == collections.Counter(["consumer-objc", 1e308, 1e-308, "no", None, False, 1e308, 1e-308, "hold-foundation"]), server.arrivals
+            assert collections.Counter(server.arrivals) == collections.Counter(["consumer-objc", 1e308, 1e-308, "no", None, False, 1e308, 1e-308, "no", "unsure", "authored-objc-0", "authored-objc-1", "authored-objc-2", "authored-objc-3", "hold-foundation"]), server.arrivals
             print("Foundation installed consumer passed ownership and held-provider cancellation")
         finally:
             (barrier / "release-hold-foundation").touch()
