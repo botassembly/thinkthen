@@ -126,7 +126,13 @@ impl Engine {
                         crate::ErrorKind::Usage | crate::ErrorKind::Local
                     )
                 {
-                    return Err(error.clone().at_record(at));
+                    return Err(row
+                        .err()
+                        .map_or_else(
+                            || Error::defect("an annotation reader refusal lost its error"),
+                            super::failed,
+                        )
+                        .at_record(at));
                 }
                 let original = match original {
                     Some(original) => original,
