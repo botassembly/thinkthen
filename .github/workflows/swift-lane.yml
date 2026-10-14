@@ -30,7 +30,7 @@ jobs:
           test "$(git rev-parse HEAD)" = "${{ github.sha }}"
           rustup target add x86_64-apple-darwin aarch64-apple-darwin
           export CARGO_TARGET_DIR="$RUNNER_TEMP/target"
-          sdlc/scripts/release-pack aarch64-apple-darwin "$RUNNER_TEMP/native" c
+          python3 sdlc/scripts/build-admission.py -- sdlc/scripts/release-pack aarch64-apple-darwin "$RUNNER_TEMP/native" c
           RUSTFLAGS="--remap-path-prefix=$HOME=/build" python3 sdlc/scripts/build-admission.py -- cargo build --locked --manifest-path libraries/c/Cargo.toml --target x86_64-apple-darwin --release --jobs 2
           mkdir -p "$RUNNER_TEMP/x64/lib" "$RUNNER_TEMP/x64/include" "$RUNNER_TEMP/arm64"
           tar -xzf "$RUNNER_TEMP/native/thinkthen-c-0.2.0-aarch64-apple-darwin.tar.gz" -C "$RUNNER_TEMP/arm64"
@@ -38,7 +38,7 @@ jobs:
           cp "$RUNNER_TEMP/arm64/include/thinkthen.h" "$RUNNER_TEMP/x64/include/thinkthen.h"
           sh libraries/swift/build-xcframework.sh "$RUNNER_TEMP/x64" "$RUNNER_TEMP/arm64" "$RUNNER_TEMP/framework"
           cp -R "$RUNNER_TEMP/framework/CThinkThen.xcframework" libraries/swift/
-          sdlc/scripts/release-pack --reuse aarch64-apple-darwin "$RUNNER_TEMP/package" c swift
+          python3 sdlc/scripts/build-admission.py -- sdlc/scripts/release-pack --reuse aarch64-apple-darwin "$RUNNER_TEMP/package" c swift
       - name: Check Darwin admission and exclusive barriers
         run: python3 sdlc/scripts/build-admission-test.py
       - name: Check admission and the installed Swift package on ARM macOS

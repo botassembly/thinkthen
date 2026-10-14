@@ -46,7 +46,7 @@ import Foundation
     func definition(_ value: Definition) -> Question {
       .definition(QuestionDefinition(value: value))
     }
-    let plans: [(RequestFunction, Question)] = [
+    let plans: [(Function, Question)] = [
       (.decide, .text("Is it?")),
       (
         .choose,
@@ -84,9 +84,10 @@ import Foundation
       try expect(
         !preview.tokenEstimateMethod.isEmpty && preview.firstBodyUtf8?.contains("preview") == true,
         "Native full plan body and method")
+      let _: Bool = preview.upperBound
       retained.append(preview)
     }
-    for function in [RequestFunction.find, .annotate, .recognize, .relate] {
+    for function in [Function.find, .annotate, .recognize, .relate] {
       do {
         _ = try planner.plan(
           Request(
