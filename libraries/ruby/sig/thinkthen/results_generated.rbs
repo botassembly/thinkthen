@@ -943,7 +943,7 @@ module ThinkThen
     def self.relate_question: (relations: Array[request_authored_relation], ?fields: { name: String, kind: String }?) -> request_authored_relate
     def self.recognize_question: (kinds: Hash[Symbol | String, request_authored_description], ?entity_definition: request_authored_question_text, ?instructions: request_authored_question_text, ?mode: request_recognition_mode, ?relations: Array[request_authored_relation], ?snippet_pieces: Integer, ?stage_context: request_recognition_stage_context) -> ({ ?context_schema: request_authored_input_declaration, ?item_schema: request_authored_input_declaration, ?model: request_authored_name, ?name: String, ?on: request_authored_pointers, ?profile: request_authored_profile, recognize: { ?entity_definition: request_authored_question_text, ?instructions: request_authored_question_text, ?kinds: Hash[Symbol | String, request_authored_description], ?mode: request_recognition_mode, ?relations: Array[request_authored_relation], ?snippet_pieces: Integer, ?stage_context: request_recognition_stage_context }, ?relation_threshold: request_authored_cut, ?threshold: request_authored_cut, version: untyped, ?wording_version: Integer })
   end
-  type request_authored_choose = { ?batch: untyped, choose: request_authored_question_text, ?context_schema: request_authored_input_declaration, ?item_schema: request_authored_input_declaration, ?model: request_authored_name, ?name: String, ?on: request_authored_pointers, ?options: request_authored_options, ?profile: request_authored_profile, ?threshold: request_authored_cut, ?wording_version: Integer }
+  type request_authored_choose = { ?batch: request_authored_question_batch, choose: request_authored_question_text, ?context_schema: request_authored_input_declaration, ?item_schema: request_authored_input_declaration, ?model: request_authored_name, ?name: String, ?on: request_authored_pointers, ?options: request_authored_options, ?profile: request_authored_profile, ?threshold: request_authored_cut, ?wording_version: Integer }
   type request_authored_criterion = String | Hash[Symbol | String, untyped] | Array[untyped] | nil
   type request_authored_cut = Integer | Float | String
   type request_authored_description = String | Hash[Symbol | String, untyped] | Array[untyped] | nil
@@ -953,6 +953,7 @@ module ThinkThen
   type request_authored_options = Array[request_authored_name] | Hash[Symbol | String, request_authored_description]
   type request_authored_pointers = String | Array[String]
   type request_authored_profile = String
+  type request_authored_question_batch = untyped
   type request_authored_question_text = String | Hash[Symbol | String, untyped] | Array[untyped]
   type request_authored_relate = { ?context_schema: request_authored_input_declaration, ?item_schema: request_authored_input_declaration, ?model: request_authored_name, ?name: String, ?profile: request_authored_profile, relate: { ?fields: { kind: String, name: String }, relations: Array[request_authored_relation] }, ?threshold: request_authored_cut, version: untyped, ?wording_version: Integer }
   type request_authored_relation = { ?either: bool, name: request_authored_name, ?reads: request_authored_name, ?single: bool, ?source: request_authored_name, ?target: request_authored_name }

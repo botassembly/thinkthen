@@ -9,6 +9,8 @@ libraries/ada/src/thinkthen-inputs-native.adb linguist-generated
 libraries/ada/src/thinkthen-inputs-native.ads linguist-generated
 libraries/ada/src/thinkthen-inputs.adb linguist-generated
 libraries/ada/src/thinkthen-inputs.ads linguist-generated
+libraries/ada/src/thinkthen-native_sessions.adb linguist-generated
+libraries/ada/src/thinkthen-native_sessions.ads linguist-generated
 libraries/ada/src/thinkthen-native_values.adb linguist-generated
 libraries/ada/src/thinkthen-native_values.ads linguist-generated
 libraries/ada/src/thinkthen-persistence.adb linguist-generated
@@ -16,13 +18,13 @@ libraries/ada/src/thinkthen-persistence.ads linguist-generated
 libraries/ada/src/thinkthen-requests-native.adb linguist-generated
 libraries/ada/src/thinkthen-requests-native.ads linguist-generated
 libraries/ada/src/thinkthen-requests.ads linguist-generated
+libraries/ada/src/thinkthen-session_c.ads linguist-generated
 libraries/ada/src/thinkthen-sessions-calls.adb linguist-generated
 libraries/ada/src/thinkthen-sessions-calls.ads linguist-generated
 libraries/ada/src/thinkthen-values.adb linguist-generated
 libraries/ada/src/thinkthen-values.ads linguist-generated
 libraries/ada/src/thinkthen_kinds.adb linguist-generated
 libraries/ada/src/thinkthen_kinds.ads linguist-generated
-libraries/ada/src/thinkthen_session_c.ads linguist-generated
 libraries/c/include/thinkthen.h linguist-generated
 libraries/c/src/ffi/carriers/layouts_generated.rs linguist-generated
 libraries/c/src/ffi/current/operations_generated.rs linguist-generated

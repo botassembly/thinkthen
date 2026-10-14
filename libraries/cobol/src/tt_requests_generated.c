@@ -425,8 +425,7 @@ static void *convert_RecognitionExampleText_member_entities_RecognitionExampleEn
 const void *);
 static void *convert_RecognitionExampleText_member_kinds_Text_list(arena *,const void *);
 static void *convert_RecognitionExampleText_member_text_Text(arena *,const void *);
-static void *convert_RequestDefinition_Authored_decide_member_batch_RequestDefinition_Authored_score_batch(arena *,
-const void *);
+static void *convert_Authored_questionBatch_Authored_questionBatch(arena *,const void *);
 static void *convert_Authored_inputDeclaration_Authored_inputDeclaration(arena *,const void *);
 static void *convert_Authored_questionText_Authored_questionText(arena *,const void *);
 static void *convert_Authored_criterion_Authored_criterion(arena *,const void *);
@@ -437,20 +436,14 @@ static void *convert_Authored_profile_Authored_profile(arena *,const void *);
 static void *convert_Authored_threshold_Authored_threshold(arena *,const void *);
 static void *convert_RequestDefinition_Authored_decide_member_wording_version_Integer(arena *,
 const void *);
-static void *convert_RequestDefinition_Authored_choose_member_batch_RequestDefinition_Authored_score_batch(arena *,
-const void *);
 static void *convert_RequestDefinition_Authored_choose_member_name_Text(arena *,const void *);
 static void *convert_Authored_options_Authored_options(arena *,const void *);
 static void *convert_Authored_cut_Authored_cut(arena *,const void *);
 static void *convert_RequestDefinition_Authored_choose_member_wording_version_Integer(arena *,
 const void *);
-static void *convert_RequestDefinition_Authored_tag_member_batch_RequestDefinition_Authored_score_batch(arena *,
-const void *);
 static void *convert_Authored_labels_Authored_labels(arena *,const void *);
 static void *convert_RequestDefinition_Authored_tag_member_name_Text(arena *,const void *);
 static void *convert_RequestDefinition_Authored_tag_member_wording_version_Integer(arena *,
-const void *);
-static void *convert_RequestDefinition_Authored_score_member_batch_RequestDefinition_Authored_score_batch(arena *,
 const void *);
 static void *convert_Authored_levels_Authored_levels(arena *,const void *);
 static void *convert_RequestDefinition_Authored_score_member_name_Text(arena *,const void *);
@@ -475,9 +468,8 @@ static void *convert_RequestImage_file_member_path_Text(arena *,const void *);
 static void *convert_RequestImage_bytes_member_bytes_Text(arena *,const void *);
 static void *convert_RecognitionExampleEntity_RecognitionExampleEntity(arena *,const void *);
 static void *convert_RecognitionExampleText_member_kinds_item_Text(arena *,const void *);
-static void *convert_RequestDefinition_Authored_decide_member_batch_arm_1_Literal_max(arena *,
-const void *);
-static void *convert_RequestDefinition_Authored_decide_member_batch_arm_2_Integer(arena *,const void *);
+static void *convert_Authored_questionBatch_arm_1_Literal_max(arena *,const void *);
+static void *convert_Authored_questionBatch_arm_2_Integer(arena *,const void *);
 static void *convert_Authored_inputDeclaration_string_Authored_inputDeclaration_string(arena *,
 const void *);
 static void *convert_Authored_inputDeclaration_object_Authored_inputDeclaration_object(arena *,
@@ -493,21 +485,12 @@ static void *convert_Authored_pointers_arm_1_Text(arena *,const void *);
 static void *convert_Authored_pointers_arm_2_Text_list(arena *,const void *);
 static void *convert_Authored_threshold_arm_1_Number(arena *,const void *);
 static void *convert_Authored_threshold_arm_2_Text(arena *,const void *);
-static void *convert_RequestDefinition_Authored_choose_member_batch_arm_1_Literal_max(arena *,
-const void *);
-static void *convert_RequestDefinition_Authored_choose_member_batch_arm_2_Integer(arena *,const void *);
 static void *convert_Authored_options_arm_1_Authored_name_list(arena *,const void *);
 static void *convert_Authored_options_arm_2_Authored_description_map(arena *,const void *);
 static void *convert_Authored_cut_arm_1_Number(arena *,const void *);
 static void *convert_Authored_cut_arm_2_Text(arena *,const void *);
-static void *convert_RequestDefinition_Authored_tag_member_batch_arm_1_Literal_max(arena *,
-const void *);
-static void *convert_RequestDefinition_Authored_tag_member_batch_arm_2_Integer(arena *,const void *);
 static void *convert_Authored_labels_arm_1_Authored_name_list(arena *,const void *);
 static void *convert_Authored_labels_arm_2_Authored_description_map(arena *,const void *);
-static void *convert_RequestDefinition_Authored_score_member_batch_arm_1_Literal_max(arena *,
-const void *);
-static void *convert_RequestDefinition_Authored_score_member_batch_arm_2_Integer(arena *,const void *);
 static void *convert_Authored_levels_arm_1_Authored_name_list(arena *,const void *);
 static void *convert_Authored_levels_arm_2_Authored_criterion_map(arena *,const void *);
 static void *convert_RelateFields_RelateFields(arena *,const void *);
@@ -2390,8 +2373,7 @@ const void *input) {
         a->code=THINKTHEN_COBOL_REPRESENTATION;
         return out;
     }
-    if(p->m_batch) out->m_batch=convert_RequestDefinition_Authored_decide_member_batch_RequestDefinition_Authored_score_batch(a,
-    p->m_batch);
+    if(p->m_batch) out->m_batch=convert_Authored_questionBatch_Authored_questionBatch(a,p->m_batch);
     if(p->m_context_schema) out->m_context_schema=convert_Authored_inputDeclaration_Authored_inputDeclaration(a,
     p->m_context_schema);
     if(p->m_decide) out->m_decide=convert_Authored_questionText_Authored_questionText(a,p->m_decide);
@@ -2417,8 +2399,7 @@ const void *input) {
         a->code=THINKTHEN_COBOL_REPRESENTATION;
         return out;
     }
-    if(p->m_batch) out->m_batch=convert_RequestDefinition_Authored_choose_member_batch_RequestDefinition_Authored_score_batch(a,
-    p->m_batch);
+    if(p->m_batch) out->m_batch=convert_Authored_questionBatch_Authored_questionBatch(a,p->m_batch);
     if(p->m_choose) out->m_choose=convert_Authored_questionText_Authored_questionText(a,p->m_choose);
     if(p->m_context_schema) out->m_context_schema=convert_Authored_inputDeclaration_Authored_inputDeclaration(a,
     p->m_context_schema);
@@ -2443,8 +2424,7 @@ const void *input) {
         a->code=THINKTHEN_COBOL_REPRESENTATION;
         return out;
     }
-    if(p->m_batch) out->m_batch=convert_RequestDefinition_Authored_tag_member_batch_RequestDefinition_Authored_score_batch(a,
-    p->m_batch);
+    if(p->m_batch) out->m_batch=convert_Authored_questionBatch_Authored_questionBatch(a,p->m_batch);
     if(p->m_context_schema) out->m_context_schema=convert_Authored_inputDeclaration_Authored_inputDeclaration(a,
     p->m_context_schema);
     if(p->m_item_schema) out->m_item_schema=convert_Authored_inputDeclaration_Authored_inputDeclaration(a,
@@ -2469,8 +2449,7 @@ const void *input) {
         a->code=THINKTHEN_COBOL_REPRESENTATION;
         return out;
     }
-    if(p->m_batch) out->m_batch=convert_RequestDefinition_Authored_score_member_batch_RequestDefinition_Authored_score_batch(a,
-    p->m_batch);
+    if(p->m_batch) out->m_batch=convert_Authored_questionBatch_Authored_questionBatch(a,p->m_batch);
     if(p->m_context_schema) out->m_context_schema=convert_Authored_inputDeclaration_Authored_inputDeclaration(a,
     p->m_context_schema);
     if(p->m_item_schema) out->m_item_schema=convert_Authored_inputDeclaration_Authored_inputDeclaration(a,
@@ -2757,10 +2736,9 @@ static void *convert_RecognitionExampleText_member_text_Text(arena *a,const void
     };
     return out;
 }
-static void *convert_RequestDefinition_Authored_decide_member_batch_RequestDefinition_Authored_score_batch(arena *a,
-const void *input) {
-    const thinkthen_cobol_DefinitionDecideBatch *p=input;
-    thinkthen_request_definition_authored_score_batch_v1 *out=allocate(a,1,sizeof(*out));
+static void *convert_Authored_questionBatch_Authored_questionBatch(arena *a,const void *input) {
+    const thinkthen_cobol_QuestionBatch *p=input;
+    thinkthen_request_question_batch_v1 *out=allocate(a,1,sizeof(*out));
     if(!out) return NULL;
     if(!p) {
         a->code=THINKTHEN_COBOL_REPRESENTATION;
@@ -2768,11 +2746,9 @@ const void *input) {
     }
     out->kind=(uint32_t)p->kind;
     switch(p->kind) {
-        case 1: out->data.arm_1=convert_RequestDefinition_Authored_decide_member_batch_arm_1_Literal_max(a,
-        p->value);
+        case 1: out->data.arm_1=convert_Authored_questionBatch_arm_1_Literal_max(a,p->value);
         break;
-        case 2: out->data.arm_2=convert_RequestDefinition_Authored_decide_member_batch_arm_2_Integer(a,
-        p->value);
+        case 2: out->data.arm_2=convert_Authored_questionBatch_arm_2_Integer(a,p->value);
         break;
         default: a->code=THINKTHEN_COBOL_REPRESENTATION;
         break;
@@ -2933,28 +2909,6 @@ const void *input) {
     out->value=p->value;
     return out;
 }
-static void *convert_RequestDefinition_Authored_choose_member_batch_RequestDefinition_Authored_score_batch(arena *a,
-const void *input) {
-    const thinkthen_cobol_DefinitionChooseBatch *p=input;
-    thinkthen_request_definition_authored_score_batch_v1 *out=allocate(a,1,sizeof(*out));
-    if(!out) return NULL;
-    if(!p) {
-        a->code=THINKTHEN_COBOL_REPRESENTATION;
-        return out;
-    }
-    out->kind=(uint32_t)p->kind;
-    switch(p->kind) {
-        case 1: out->data.arm_1=convert_RequestDefinition_Authored_choose_member_batch_arm_1_Literal_max(a,
-        p->value);
-        break;
-        case 2: out->data.arm_2=convert_RequestDefinition_Authored_choose_member_batch_arm_2_Integer(a,
-        p->value);
-        break;
-        default: a->code=THINKTHEN_COBOL_REPRESENTATION;
-        break;
-    }
-    return out;
-}
 static void *convert_RequestDefinition_Authored_choose_member_name_Text(arena *a,const void *input) {
     const thinkthen_cobol_DefinitionChooseName *p=input;
     thinkthen_request_text_v1 *out=allocate(a,1,sizeof(*out));
@@ -3018,28 +2972,6 @@ const void *input) {
     out->value=p->value;
     return out;
 }
-static void *convert_RequestDefinition_Authored_tag_member_batch_RequestDefinition_Authored_score_batch(arena *a,
-const void *input) {
-    const thinkthen_cobol_DefinitionTagBatch *p=input;
-    thinkthen_request_definition_authored_score_batch_v1 *out=allocate(a,1,sizeof(*out));
-    if(!out) return NULL;
-    if(!p) {
-        a->code=THINKTHEN_COBOL_REPRESENTATION;
-        return out;
-    }
-    out->kind=(uint32_t)p->kind;
-    switch(p->kind) {
-        case 1: out->data.arm_1=convert_RequestDefinition_Authored_tag_member_batch_arm_1_Literal_max(a,
-        p->value);
-        break;
-        case 2: out->data.arm_2=convert_RequestDefinition_Authored_tag_member_batch_arm_2_Integer(a,
-        p->value);
-        break;
-        default: a->code=THINKTHEN_COBOL_REPRESENTATION;
-        break;
-    }
-    return out;
-}
 static void *convert_Authored_labels_Authored_labels(arena *a,const void *input) {
     const thinkthen_cobol_Labels *p=input;
     thinkthen_request_labels_v1 *out=allocate(a,1,sizeof(*out));
@@ -3082,28 +3014,6 @@ const void *input) {
         return out;
     }
     out->value=p->value;
-    return out;
-}
-static void *convert_RequestDefinition_Authored_score_member_batch_RequestDefinition_Authored_score_batch(arena *a,
-const void *input) {
-    const thinkthen_cobol_DefinitionScoreBatch *p=input;
-    thinkthen_request_definition_authored_score_batch_v1 *out=allocate(a,1,sizeof(*out));
-    if(!out) return NULL;
-    if(!p) {
-        a->code=THINKTHEN_COBOL_REPRESENTATION;
-        return out;
-    }
-    out->kind=(uint32_t)p->kind;
-    switch(p->kind) {
-        case 1: out->data.arm_1=convert_RequestDefinition_Authored_score_member_batch_arm_1_Literal_max(a,
-        p->value);
-        break;
-        case 2: out->data.arm_2=convert_RequestDefinition_Authored_score_member_batch_arm_2_Integer(a,
-        p->value);
-        break;
-        default: a->code=THINKTHEN_COBOL_REPRESENTATION;
-        break;
-    }
     return out;
 }
 static void *convert_Authored_levels_Authored_levels(arena *a,const void *input) {
@@ -3369,17 +3279,15 @@ static void *convert_RecognitionExampleText_member_kinds_item_Text(arena *a,cons
     };
     return out;
 }
-static void *convert_RequestDefinition_Authored_decide_member_batch_arm_1_Literal_max(arena *a,
-const void *input) {
-    const thinkthen_cobol_DefinitionDecideBatchArm1 *p=input;
+static void *convert_Authored_questionBatch_arm_1_Literal_max(arena *a,const void *input) {
+    const thinkthen_cobol_QuestionBatchArm1 *p=input;
     thinkthen_request_literal_max_v1 *out=allocate(a,1,sizeof(*out));
     if(!out) return NULL;
     (void)p;
     return out;
 }
-static void *convert_RequestDefinition_Authored_decide_member_batch_arm_2_Integer(arena *a,
-const void *input) {
-    const thinkthen_cobol_DefinitionDecideBatchArm2 *p=input;
+static void *convert_Authored_questionBatch_arm_2_Integer(arena *a,const void *input) {
+    const thinkthen_cobol_QuestionBatchArm2 *p=input;
     thinkthen_request_integer_v1 *out=allocate(a,1,sizeof(*out));
     if(!out) return NULL;
     if(!p) {
@@ -3595,26 +3503,6 @@ static void *convert_Authored_threshold_arm_2_Text(arena *a,const void *input) {
     };
     return out;
 }
-static void *convert_RequestDefinition_Authored_choose_member_batch_arm_1_Literal_max(arena *a,
-const void *input) {
-    const thinkthen_cobol_DefinitionChooseBatchArm1 *p=input;
-    thinkthen_request_literal_max_v1 *out=allocate(a,1,sizeof(*out));
-    if(!out) return NULL;
-    (void)p;
-    return out;
-}
-static void *convert_RequestDefinition_Authored_choose_member_batch_arm_2_Integer(arena *a,
-const void *input) {
-    const thinkthen_cobol_DefinitionChooseBatchArm2 *p=input;
-    thinkthen_request_integer_v1 *out=allocate(a,1,sizeof(*out));
-    if(!out) return NULL;
-    if(!p) {
-        a->code=THINKTHEN_COBOL_REPRESENTATION;
-        return out;
-    }
-    out->value=p->value;
-    return out;
-}
 static void *convert_Authored_options_arm_1_Authored_name_list(arena *a,const void *input) {
     const thinkthen_cobol_OptionsArm1 *p=input;
     thinkthen_request_name_list_v1 *out=allocate(a,1,sizeof(*out));
@@ -3684,25 +3572,6 @@ static void *convert_Authored_cut_arm_2_Text(arena *a,const void *input) {
     };
     return out;
 }
-static void *convert_RequestDefinition_Authored_tag_member_batch_arm_1_Literal_max(arena *a,
-const void *input) {
-    const thinkthen_cobol_DefinitionTagBatchArm1 *p=input;
-    thinkthen_request_literal_max_v1 *out=allocate(a,1,sizeof(*out));
-    if(!out) return NULL;
-    (void)p;
-    return out;
-}
-static void *convert_RequestDefinition_Authored_tag_member_batch_arm_2_Integer(arena *a,const void *input) {
-    const thinkthen_cobol_DefinitionTagBatchArm2 *p=input;
-    thinkthen_request_integer_v1 *out=allocate(a,1,sizeof(*out));
-    if(!out) return NULL;
-    if(!p) {
-        a->code=THINKTHEN_COBOL_REPRESENTATION;
-        return out;
-    }
-    out->value=p->value;
-    return out;
-}
 static void *convert_Authored_labels_arm_1_Authored_name_list(arena *a,const void *input) {
     const thinkthen_cobol_LabelsArm1 *p=input;
     thinkthen_request_name_list_v1 *out=allocate(a,1,sizeof(*out));
@@ -3746,25 +3615,6 @@ static void *convert_Authored_labels_arm_2_Authored_description_map(arena *a,con
         };
         items[i].value=convert_Authored_description_Authored_description(a,p->values[i]);
     }
-    return out;
-}
-static void *convert_RequestDefinition_Authored_score_member_batch_arm_1_Literal_max(arena *a,
-const void *input) {
-    const thinkthen_cobol_DefinitionScoreBatchArm1 *p=input;
-    thinkthen_request_literal_max_v1 *out=allocate(a,1,sizeof(*out));
-    if(!out) return NULL;
-    (void)p;
-    return out;
-}
-static void *convert_RequestDefinition_Authored_score_member_batch_arm_2_Integer(arena *a,const void *input) {
-    const thinkthen_cobol_DefinitionScoreBatchArm2 *p=input;
-    thinkthen_request_integer_v1 *out=allocate(a,1,sizeof(*out));
-    if(!out) return NULL;
-    if(!p) {
-        a->code=THINKTHEN_COBOL_REPRESENTATION;
-        return out;
-    }
-    out->value=p->value;
     return out;
 }
 static void *convert_Authored_levels_arm_1_Authored_name_list(arena *a,const void *input) {

@@ -326,7 +326,7 @@ final class Choose extends _NativeValue {
   Choose._(super.fields);
   factory Choose.read(Object? value) => Choose._(_readObject(value));
   Choose(
-      {Presence<Object?> batch = const Presence.absent(),
+      {Presence<QuestionBatch> batch = const Presence.absent(),
       required Wording choose,
       Presence<QuestionInputDeclaration> contextSchema =
           const Presence.absent(),
@@ -351,8 +351,8 @@ final class Choose extends _NativeValue {
           if (threshold.isPresent) "threshold": threshold.value,
           if (wordingVersion.isPresent) "wording_version": wordingVersion.value
         });
-  Presence<Object?> get batch => _fields.containsKey("batch")
-      ? Presence.present(_fields["batch"])
+  Presence<QuestionBatch> get batch => _fields.containsKey("batch")
+      ? Presence.present(QuestionBatch.read(_fields["batch"]))
       : const Presence.absent();
   Wording get choose => Wording.read(_fields["choose"]);
   Presence<QuestionInputDeclaration> get contextSchema =>
@@ -436,7 +436,7 @@ final class Decide extends _NativeValue {
   Decide._(super.fields);
   factory Decide.read(Object? value) => Decide._(_readObject(value));
   Decide(
-      {Presence<Object?> batch = const Presence.absent(),
+      {Presence<QuestionBatch> batch = const Presence.absent(),
       Presence<QuestionInputDeclaration> contextSchema =
           const Presence.absent(),
       required Wording decide,
@@ -463,8 +463,8 @@ final class Decide extends _NativeValue {
           if (trueValue.isPresent) "true": trueValue.value,
           if (wordingVersion.isPresent) "wording_version": wordingVersion.value
         });
-  Presence<Object?> get batch => _fields.containsKey("batch")
-      ? Presence.present(_fields["batch"])
+  Presence<QuestionBatch> get batch => _fields.containsKey("batch")
+      ? Presence.present(QuestionBatch.read(_fields["batch"]))
       : const Presence.absent();
   Presence<QuestionInputDeclaration> get contextSchema =>
       _fields.containsKey("context_schema")
@@ -752,6 +752,18 @@ final class Pointers implements _EncodedValue {
       (value as List).map((v) => v as String).toList(growable: false);
 }
 
+final class QuestionBatch implements _EncodedValue {
+  final Object? value;
+  const QuestionBatch._(this.value);
+  factory QuestionBatch.read(Object? value) =>
+      value is QuestionBatch ? value : QuestionBatch._(value);
+  Object? _toValue() => value;
+  const QuestionBatch.reading(String this.value);
+  String get asReading => value as String;
+  const QuestionBatch.integer(BigInt this.value);
+  BigInt get asInteger => _readInteger(value);
+}
+
 final class Wording implements _EncodedValue {
   final Object? value;
   const Wording._(this.value);
@@ -882,7 +894,7 @@ final class Score extends _NativeValue {
   Score._(super.fields);
   factory Score.read(Object? value) => Score._(_readObject(value));
   Score(
-      {Presence<Object?> batch = const Presence.absent(),
+      {Presence<QuestionBatch> batch = const Presence.absent(),
       Presence<QuestionInputDeclaration> contextSchema =
           const Presence.absent(),
       Presence<QuestionInputDeclaration> itemSchema = const Presence.absent(),
@@ -905,8 +917,8 @@ final class Score extends _NativeValue {
           "score": score,
           if (wordingVersion.isPresent) "wording_version": wordingVersion.value
         });
-  Presence<Object?> get batch => _fields.containsKey("batch")
-      ? Presence.present(_fields["batch"])
+  Presence<QuestionBatch> get batch => _fields.containsKey("batch")
+      ? Presence.present(QuestionBatch.read(_fields["batch"]))
       : const Presence.absent();
   Presence<QuestionInputDeclaration> get contextSchema =>
       _fields.containsKey("context_schema")
@@ -958,7 +970,7 @@ final class Tag extends _NativeValue {
   Tag._(super.fields);
   factory Tag.read(Object? value) => Tag._(_readObject(value));
   Tag(
-      {Presence<Object?> batch = const Presence.absent(),
+      {Presence<QuestionBatch> batch = const Presence.absent(),
       Presence<QuestionInputDeclaration> contextSchema =
           const Presence.absent(),
       Presence<QuestionInputDeclaration> itemSchema = const Presence.absent(),
@@ -983,8 +995,8 @@ final class Tag extends _NativeValue {
           if (threshold.isPresent) "threshold": threshold.value,
           if (wordingVersion.isPresent) "wording_version": wordingVersion.value
         });
-  Presence<Object?> get batch => _fields.containsKey("batch")
-      ? Presence.present(_fields["batch"])
+  Presence<QuestionBatch> get batch => _fields.containsKey("batch")
+      ? Presence.present(QuestionBatch.read(_fields["batch"]))
       : const Presence.absent();
   Presence<QuestionInputDeclaration> get contextSchema =>
       _fields.containsKey("context_schema")
@@ -1671,7 +1683,7 @@ final class ChooseQuestion extends Definition {
   factory ChooseQuestion.read(Object? value) =>
       ChooseQuestion._(_readObject(value));
   ChooseQuestion(
-      {Presence<Object?> batch = const Presence.absent(),
+      {Presence<QuestionBatch> batch = const Presence.absent(),
       required Wording choose,
       Presence<QuestionInputDeclaration> contextSchema =
           const Presence.absent(),
@@ -1696,8 +1708,8 @@ final class ChooseQuestion extends Definition {
           if (threshold.isPresent) "threshold": threshold.value,
           if (wordingVersion.isPresent) "wording_version": wordingVersion.value
         });
-  Presence<Object?> get batch => _fields.containsKey("batch")
-      ? Presence.present(_fields["batch"])
+  Presence<QuestionBatch> get batch => _fields.containsKey("batch")
+      ? Presence.present(QuestionBatch.read(_fields["batch"]))
       : const Presence.absent();
   Wording get choose => Wording.read(_fields["choose"]);
   Presence<QuestionInputDeclaration> get contextSchema =>
@@ -1754,7 +1766,7 @@ final class DecideQuestion extends Definition {
   factory DecideQuestion.read(Object? value) =>
       DecideQuestion._(_readObject(value));
   DecideQuestion(
-      {Presence<Object?> batch = const Presence.absent(),
+      {Presence<QuestionBatch> batch = const Presence.absent(),
       Presence<QuestionInputDeclaration> contextSchema =
           const Presence.absent(),
       required Wording decide,
@@ -1781,8 +1793,8 @@ final class DecideQuestion extends Definition {
           if (trueValue.isPresent) "true": trueValue.value,
           if (wordingVersion.isPresent) "wording_version": wordingVersion.value
         });
-  Presence<Object?> get batch => _fields.containsKey("batch")
-      ? Presence.present(_fields["batch"])
+  Presence<QuestionBatch> get batch => _fields.containsKey("batch")
+      ? Presence.present(QuestionBatch.read(_fields["batch"]))
       : const Presence.absent();
   Presence<QuestionInputDeclaration> get contextSchema =>
       _fields.containsKey("context_schema")
@@ -1976,7 +1988,7 @@ final class ScoreQuestion extends Definition {
   factory ScoreQuestion.read(Object? value) =>
       ScoreQuestion._(_readObject(value));
   ScoreQuestion(
-      {Presence<Object?> batch = const Presence.absent(),
+      {Presence<QuestionBatch> batch = const Presence.absent(),
       Presence<QuestionInputDeclaration> contextSchema =
           const Presence.absent(),
       Presence<QuestionInputDeclaration> itemSchema = const Presence.absent(),
@@ -1999,8 +2011,8 @@ final class ScoreQuestion extends Definition {
           "score": score,
           if (wordingVersion.isPresent) "wording_version": wordingVersion.value
         });
-  Presence<Object?> get batch => _fields.containsKey("batch")
-      ? Presence.present(_fields["batch"])
+  Presence<QuestionBatch> get batch => _fields.containsKey("batch")
+      ? Presence.present(QuestionBatch.read(_fields["batch"]))
       : const Presence.absent();
   Presence<QuestionInputDeclaration> get contextSchema =>
       _fields.containsKey("context_schema")
@@ -2052,7 +2064,7 @@ final class TagQuestion extends Definition {
   TagQuestion._(super.fields);
   factory TagQuestion.read(Object? value) => TagQuestion._(_readObject(value));
   TagQuestion(
-      {Presence<Object?> batch = const Presence.absent(),
+      {Presence<QuestionBatch> batch = const Presence.absent(),
       Presence<QuestionInputDeclaration> contextSchema =
           const Presence.absent(),
       Presence<QuestionInputDeclaration> itemSchema = const Presence.absent(),
@@ -2077,8 +2089,8 @@ final class TagQuestion extends Definition {
           if (threshold.isPresent) "threshold": threshold.value,
           if (wordingVersion.isPresent) "wording_version": wordingVersion.value
         });
-  Presence<Object?> get batch => _fields.containsKey("batch")
-      ? Presence.present(_fields["batch"])
+  Presence<QuestionBatch> get batch => _fields.containsKey("batch")
+      ? Presence.present(QuestionBatch.read(_fields["batch"]))
       : const Presence.absent();
   Presence<QuestionInputDeclaration> get contextSchema =>
       _fields.containsKey("context_schema")

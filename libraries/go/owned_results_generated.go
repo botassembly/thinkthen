@@ -3878,16 +3878,16 @@ func (v RelateFields) marshalJSON() ([]byte, error) {
 }
 
 type RequestDefinitionAuthoredScore struct {
-	Batch          *RequestDefinitionAuthoredScoreBatch `json:"batch,omitempty"`
-	ContextSchema  *AuthoredInputDeclaration            `json:"context_schema,omitempty"`
-	ItemSchema     *AuthoredInputDeclaration            `json:"item_schema,omitempty"`
-	Levels         *AuthoredLevels                      `json:"levels,omitempty"`
-	Model          *AuthoredName                        `json:"model,omitempty"`
-	Name           *string                              `json:"name,omitempty"`
-	On             *AuthoredPointers                    `json:"on,omitempty"`
-	Profile        *AuthoredProfile                     `json:"profile,omitempty"`
-	Score          AuthoredQuestionText                 `json:"score"`
-	WordingVersion *int64                               `json:"wording_version,omitempty"`
+	Batch          *AuthoredQuestionBatch    `json:"batch,omitempty"`
+	ContextSchema  *AuthoredInputDeclaration `json:"context_schema,omitempty"`
+	ItemSchema     *AuthoredInputDeclaration `json:"item_schema,omitempty"`
+	Levels         *AuthoredLevels           `json:"levels,omitempty"`
+	Model          *AuthoredName             `json:"model,omitempty"`
+	Name           *string                   `json:"name,omitempty"`
+	On             *AuthoredPointers         `json:"on,omitempty"`
+	Profile        *AuthoredProfile          `json:"profile,omitempty"`
+	Score          AuthoredQuestionText      `json:"score"`
+	WordingVersion *int64                    `json:"wording_version,omitempty"`
 }
 
 func (v RequestDefinitionAuthoredScore) marshalJSON() ([]byte, error) {
@@ -3943,25 +3943,25 @@ func (v RequestDefinitionAuthoredScore) marshalJSON() ([]byte, error) {
 	return json.Marshal(object)
 }
 
-type RequestDefinitionAuthoredScoreBatch interface{ isRequestDefinitionAuthoredScoreBatch() }
+type AuthoredQuestionBatch interface{ isAuthoredQuestionBatch() }
 
-func (RequestDefinitionAuthoredScoreBatchValue) isRequestDefinitionAuthoredScoreBatch()   {}
-func (RequestDefinitionAuthoredScoreBatchInteger) isRequestDefinitionAuthoredScoreBatch() {}
+func (AuthoredQuestionBatchValue) isAuthoredQuestionBatch()   {}
+func (AuthoredQuestionBatchInteger) isAuthoredQuestionBatch() {}
 
-type RequestDefinitionAuthoredScoreBatchInteger int64
-type RequestDefinitionAuthoredScoreBatchValue string
+type AuthoredQuestionBatchInteger int64
+type AuthoredQuestionBatchValue string
 type RequestDefinitionAuthoredTag struct {
-	Batch          *RequestDefinitionAuthoredTagBatch `json:"batch,omitempty"`
-	ContextSchema  *AuthoredInputDeclaration          `json:"context_schema,omitempty"`
-	ItemSchema     *AuthoredInputDeclaration          `json:"item_schema,omitempty"`
-	Labels         *AuthoredLabels                    `json:"labels,omitempty"`
-	Model          *AuthoredName                      `json:"model,omitempty"`
-	Name           *string                            `json:"name,omitempty"`
-	On             *AuthoredPointers                  `json:"on,omitempty"`
-	Profile        *AuthoredProfile                   `json:"profile,omitempty"`
-	Tag            AuthoredQuestionText               `json:"tag"`
-	Threshold      *AuthoredCut                       `json:"threshold,omitempty"`
-	WordingVersion *int64                             `json:"wording_version,omitempty"`
+	Batch          *AuthoredQuestionBatch    `json:"batch,omitempty"`
+	ContextSchema  *AuthoredInputDeclaration `json:"context_schema,omitempty"`
+	ItemSchema     *AuthoredInputDeclaration `json:"item_schema,omitempty"`
+	Labels         *AuthoredLabels           `json:"labels,omitempty"`
+	Model          *AuthoredName             `json:"model,omitempty"`
+	Name           *string                   `json:"name,omitempty"`
+	On             *AuthoredPointers         `json:"on,omitempty"`
+	Profile        *AuthoredProfile          `json:"profile,omitempty"`
+	Tag            AuthoredQuestionText      `json:"tag"`
+	Threshold      *AuthoredCut              `json:"threshold,omitempty"`
+	WordingVersion *int64                    `json:"wording_version,omitempty"`
 }
 
 func (v RequestDefinitionAuthoredTag) marshalJSON() ([]byte, error) {
@@ -4022,25 +4022,18 @@ func (v RequestDefinitionAuthoredTag) marshalJSON() ([]byte, error) {
 	return json.Marshal(object)
 }
 
-type RequestDefinitionAuthoredTagBatch interface{ isRequestDefinitionAuthoredTagBatch() }
-
-func (RequestDefinitionAuthoredTagBatchValue) isRequestDefinitionAuthoredTagBatch()   {}
-func (RequestDefinitionAuthoredTagBatchInteger) isRequestDefinitionAuthoredTagBatch() {}
-
-type RequestDefinitionAuthoredTagBatchInteger int64
-type RequestDefinitionAuthoredTagBatchValue string
 type RequestDefinitionAuthoredChoose struct {
-	Batch          *RequestDefinitionAuthoredChooseBatch `json:"batch,omitempty"`
-	Choose         AuthoredQuestionText                  `json:"choose"`
-	ContextSchema  *AuthoredInputDeclaration             `json:"context_schema,omitempty"`
-	ItemSchema     *AuthoredInputDeclaration             `json:"item_schema,omitempty"`
-	Model          *AuthoredName                         `json:"model,omitempty"`
-	Name           *string                               `json:"name,omitempty"`
-	On             *AuthoredPointers                     `json:"on,omitempty"`
-	Options        *AuthoredOptions                      `json:"options,omitempty"`
-	Profile        *AuthoredProfile                      `json:"profile,omitempty"`
-	Threshold      *AuthoredCut                          `json:"threshold,omitempty"`
-	WordingVersion *int64                                `json:"wording_version,omitempty"`
+	Batch          *AuthoredQuestionBatch    `json:"batch,omitempty"`
+	Choose         AuthoredQuestionText      `json:"choose"`
+	ContextSchema  *AuthoredInputDeclaration `json:"context_schema,omitempty"`
+	ItemSchema     *AuthoredInputDeclaration `json:"item_schema,omitempty"`
+	Model          *AuthoredName             `json:"model,omitempty"`
+	Name           *string                   `json:"name,omitempty"`
+	On             *AuthoredPointers         `json:"on,omitempty"`
+	Options        *AuthoredOptions          `json:"options,omitempty"`
+	Profile        *AuthoredProfile          `json:"profile,omitempty"`
+	Threshold      *AuthoredCut              `json:"threshold,omitempty"`
+	WordingVersion *int64                    `json:"wording_version,omitempty"`
 }
 
 func (v RequestDefinitionAuthoredChoose) marshalJSON() ([]byte, error) {
@@ -4101,26 +4094,19 @@ func (v RequestDefinitionAuthoredChoose) marshalJSON() ([]byte, error) {
 	return json.Marshal(object)
 }
 
-type RequestDefinitionAuthoredChooseBatch interface{ isRequestDefinitionAuthoredChooseBatch() }
-
-func (RequestDefinitionAuthoredChooseBatchValue) isRequestDefinitionAuthoredChooseBatch()   {}
-func (RequestDefinitionAuthoredChooseBatchInteger) isRequestDefinitionAuthoredChooseBatch() {}
-
-type RequestDefinitionAuthoredChooseBatchInteger int64
-type RequestDefinitionAuthoredChooseBatchValue string
 type RequestDefinitionAuthoredDecide struct {
-	Batch          *RequestDefinitionAuthoredDecideBatch `json:"batch,omitempty"`
-	ContextSchema  *AuthoredInputDeclaration             `json:"context_schema,omitempty"`
-	Decide         AuthoredQuestionText                  `json:"decide"`
-	False          *AuthoredCriterion                    `json:"false,omitempty"`
-	ItemSchema     *AuthoredInputDeclaration             `json:"item_schema,omitempty"`
-	Model          *AuthoredName                         `json:"model,omitempty"`
-	Name           *string                               `json:"name,omitempty"`
-	On             *AuthoredPointers                     `json:"on,omitempty"`
-	Profile        *AuthoredProfile                      `json:"profile,omitempty"`
-	Threshold      *AuthoredThreshold                    `json:"threshold,omitempty"`
-	True           *AuthoredCriterion                    `json:"true,omitempty"`
-	WordingVersion *int64                                `json:"wording_version,omitempty"`
+	Batch          *AuthoredQuestionBatch    `json:"batch,omitempty"`
+	ContextSchema  *AuthoredInputDeclaration `json:"context_schema,omitempty"`
+	Decide         AuthoredQuestionText      `json:"decide"`
+	False          *AuthoredCriterion        `json:"false,omitempty"`
+	ItemSchema     *AuthoredInputDeclaration `json:"item_schema,omitempty"`
+	Model          *AuthoredName             `json:"model,omitempty"`
+	Name           *string                   `json:"name,omitempty"`
+	On             *AuthoredPointers         `json:"on,omitempty"`
+	Profile        *AuthoredProfile          `json:"profile,omitempty"`
+	Threshold      *AuthoredThreshold        `json:"threshold,omitempty"`
+	True           *AuthoredCriterion        `json:"true,omitempty"`
+	WordingVersion *int64                    `json:"wording_version,omitempty"`
 }
 
 func (v RequestDefinitionAuthoredDecide) marshalJSON() ([]byte, error) {
@@ -4186,13 +4172,6 @@ func (v RequestDefinitionAuthoredDecide) marshalJSON() ([]byte, error) {
 	return json.Marshal(object)
 }
 
-type RequestDefinitionAuthoredDecideBatch interface{ isRequestDefinitionAuthoredDecideBatch() }
-
-func (RequestDefinitionAuthoredDecideBatchValue) isRequestDefinitionAuthoredDecideBatch()   {}
-func (RequestDefinitionAuthoredDecideBatchInteger) isRequestDefinitionAuthoredDecideBatch() {}
-
-type RequestDefinitionAuthoredDecideBatchInteger int64
-type RequestDefinitionAuthoredDecideBatchValue string
 type RequestQuestionText struct {
 	Text string `json:"text"`
 }
