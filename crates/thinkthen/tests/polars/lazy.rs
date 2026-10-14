@@ -345,8 +345,7 @@ fn saved_listener(case: &Value) -> Listener {
         .iter()
         .map(|exchange| Canned::ok(&exchange["response"].to_string()))
         .collect();
-    let listener = Listener::serving(responses).expect("saved listener");
-    listener
+    Listener::serving(responses).expect("saved listener")
 }
 
 #[test]
