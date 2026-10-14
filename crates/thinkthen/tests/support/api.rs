@@ -480,3 +480,38 @@ pub(crate) fn dynamic_one() -> thinkthen::CallOptions<'static> {
 pub(crate) fn dynamic_candidates(text: &str) -> thinkthen::RecordOptions {
     thinkthen::RecordOptions::project(text, "").unwrap()
 }
+
+/// Recover each literal decision through the canonical native request scheduler.
+pub(crate) fn recover_decisions(
+    engine: &Engine,
+    question: &thinkthen::Question,
+    records: &[String],
+    controls: thinkthen::CallOptions<'_>,
+) -> Result<thinkthen::Call<Vec<thinkthen::RequestRecoveredRow>>, thinkthen::Error> {
+    let request = admitted(
+        thinkthen::RequestFunction::Decide,
+        thinkthen::RequestQuestion::Definition {
+            value: question.clone().into(),
+        },
+        thinkthen::RequestInput::Feed {
+            name: "recovery".into(),
+            framing: thinkthen::RequestFraming::Document,
+            reading: thinkthen::ReaderOptions::default(),
+            images: Vec::new(),
+        },
+    )?;
+    let feed = thinkthen::RequestFeed::from_records(
+        "recovery",
+        records
+            .iter()
+            .map(|text| Ok(record(thinkthen::QuestionInput::Text(text.clone())))),
+    )
+    .eager();
+    engine.execute_request_recovering(
+        &request,
+        thinkthen::RequestEnvironment {
+            controls,
+            feed: Some(feed),
+        },
+    )
+}

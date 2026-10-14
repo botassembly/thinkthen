@@ -1,4 +1,4 @@
-//! Recoverable native details beside the stopping public stream.
+//! Recoverable native outcomes beside the stopping public stream.
 
 use super::identity::question_keys;
 use super::*;
@@ -30,33 +30,25 @@ fn native_recovery_continues_after_one_failed_left_member_but_stopping_rows_do_n
     ])
     .expect("native listener");
     let native_engine = engine(listener.base());
-    let result = native_engine
-        .details_many_recoverable_with(&question, &texts.map(str::to_owned), options)
-        .expect("recoverable native vector");
+    let result = crate::api::recover_decisions(
+        &native_engine,
+        &question,
+        &texts.map(str::to_owned),
+        options,
+    )
+    .expect("recoverable native vector");
     assert_eq!(
         (result.facts().records(), result.facts().requests_sent()),
         (4, 3)
     );
-    assert!(matches!(
-        result.value()[0],
-        thinkthen::RecoverableDetails::Answered(_)
-    ));
-    assert!(matches!(
-        result.value()[1],
-        thinkthen::RecoverableDetails::Failed {
-            kind: ErrorKind::Backend,
-            retryable: false,
-            cause: Some(_)
-        }
-    ));
-    assert!(matches!(
-        result.value()[2],
-        thinkthen::RecoverableDetails::Answered(_)
-    ));
-    assert!(matches!(
-        result.value()[3],
-        thinkthen::RecoverableDetails::Answered(_)
-    ));
+    assert!(result.value()[0].outcome().is_ok());
+    assert_failed(
+        &result.value()[1],
+        ErrorKind::Backend,
+        thinkthen::StopCause::Reply,
+    );
+    assert!(result.value()[2].outcome().is_ok());
+    assert!(result.value()[3].outcome().is_ok());
     let requests = listener.requests();
     assert_eq!(requests.len(), 3);
     let expected = [
@@ -69,10 +61,15 @@ fn native_recovery_continues_after_one_failed_left_member_but_stopping_rows_do_n
     }
     let keys = question_keys(listener.url(), SPLIT_ORIGINAL.as_bytes(), "jev-latest");
     for place in [0, 2, 3] {
-        let thinkthen::RecoverableDetails::Answered(details) = &result.value()[place] else {
-            panic!("answered member")
+        let thinkthen::RequestValue::Decisions(rows) =
+            result.value()[place].outcome().expect("answered member")
+        else {
+            panic!("decision rows");
         };
-        assert_eq!(details.requests(), std::slice::from_ref(&keys[place]));
+        assert_eq!(
+            rows[0].result().meta().requests(),
+            std::slice::from_ref(&keys[place])
+        );
     }
 
     let listener = Listener::serving(vec![
@@ -120,28 +117,25 @@ fn native_recovery_continues_after_one_failed_left_member_but_stopping_rows_do_n
     ])
     .expect("request failure listener");
     let native_engine = engine(listener.base());
-    let result = native_engine
-        .details_many_recoverable_with(&question, &texts.map(str::to_owned), options)
-        .expect("recoverable left request");
+    let result = crate::api::recover_decisions(
+        &native_engine,
+        &question,
+        &texts.map(str::to_owned),
+        options,
+    )
+    .expect("recoverable left request");
     assert_eq!(
         (result.facts().records(), result.facts().requests_sent()),
         (4, 3)
     );
     for place in [0, 1] {
-        assert!(matches!(
-            result.value()[place],
-            thinkthen::RecoverableDetails::Failed {
-                kind: ErrorKind::Backend,
-                retryable: false,
-                cause: None
-            }
-        ));
+        assert_failed(
+            &result.value()[place],
+            ErrorKind::Backend,
+            thinkthen::StopCause::Status,
+        );
     }
-    assert!(
-        result.value()[2..]
-            .iter()
-            .all(|row| matches!(row, thinkthen::RecoverableDetails::Answered(_)))
-    );
+    assert!(result.value()[2..].iter().all(|row| row.outcome().is_ok()));
     let requests = listener.requests();
     assert_eq!(requests.len(), 3);
     for (actual, expected) in requests.iter().zip(expected) {
@@ -183,27 +177,22 @@ fn native_denied_left_fills_unsent_half_and_keeps_stopping_stream_terminal() {
 
     let budget = SendBudget::new();
     let listener = Listener::serving(vec![Canned::status(413, "too large")]).expect("listener");
-    let result = engine(listener.base())
-        .details_many_recoverable_with(
-            &question,
-            &texts,
-            CallOptions::new()
-                .batch(setting)
-                .send_budget(&budget, Some(1)),
-        )
-        .expect("safe denied left and unsent right");
+    let result = crate::api::recover_decisions(
+        &engine(listener.base()),
+        &question,
+        &texts,
+        CallOptions::new()
+            .batch(setting)
+            .send_budget(&budget, Some(1)),
+    )
+    .expect("safe denied left and unsent right");
     assert_eq!(
         (result.facts().records(), result.facts().requests_sent()),
         (4, 1)
     );
-    assert!(result.value().iter().all(|row| matches!(
-        row,
-        thinkthen::RecoverableDetails::Failed {
-            kind: ErrorKind::Usage,
-            retryable: false,
-            cause: None
-        }
-    )));
+    for row in result.value().iter() {
+        assert_failed(row, ErrorKind::Usage, thinkthen::StopCause::Usage);
+    }
     let requests = listener.requests();
     assert_eq!(requests.len(), 1);
     assert_eq!(requests[0].body, SPLIT_ORIGINAL.as_bytes());
@@ -247,15 +236,15 @@ fn native_denied_right_keeps_answered_left_with_its_question_keys() {
     let left = r#"{"model":"jev-latest","answers":{"q1":{"type":"noul","noul":0.9},"q2":{"type":"noul","noul":0.8}}}"#;
     let listener = Listener::serving(vec![Canned::status(413, "too large"), Canned::ok(left)])
         .expect("listener");
-    let result = engine(listener.base())
-        .details_many_recoverable_with(
-            &question,
-            &texts,
-            CallOptions::new()
-                .batch(setting)
-                .send_budget(&budget, Some(2)),
-        )
-        .expect("answered left and safe denied right");
+    let result = crate::api::recover_decisions(
+        &engine(listener.base()),
+        &question,
+        &texts,
+        CallOptions::new()
+            .batch(setting)
+            .send_budget(&budget, Some(2)),
+    )
+    .expect("answered left and safe denied right");
     assert_eq!(
         (result.facts().records(), result.facts().requests_sent()),
         (4, 2)
@@ -266,19 +255,18 @@ fn native_denied_right_keeps_answered_left_with_its_question_keys() {
     assert_eq!(requests[1].body, SPLIT_LEFT.as_bytes());
     let keys = question_keys(listener.url(), SPLIT_ORIGINAL.as_bytes(), "jev-latest");
     for (row, key) in result.value()[..2].iter().zip(&keys) {
-        let thinkthen::RecoverableDetails::Answered(details) = row else {
-            panic!("answered left member")
+        let thinkthen::RequestValue::Decisions(rows) = row.outcome().expect("answered left member")
+        else {
+            panic!("decision rows");
         };
-        assert_eq!(details.requests(), std::slice::from_ref(key));
+        assert_eq!(
+            rows[0].result().meta().requests(),
+            std::slice::from_ref(key)
+        );
     }
-    assert!(result.value()[2..].iter().all(|row| matches!(
-        row,
-        thinkthen::RecoverableDetails::Failed {
-            kind: ErrorKind::Usage,
-            retryable: false,
-            cause: None
-        }
-    )));
+    for row in result.value()[2..].iter() {
+        assert_failed(row, ErrorKind::Usage, thinkthen::StopCause::Usage);
+    }
 }
 
 #[test]
@@ -288,25 +276,22 @@ fn native_denied_retry_is_usage_without_a_second_send() {
     let listener =
         Listener::answering(|_| Canned::status(503, "busy").asking("retry-after-ms", "0"))
             .expect("listener");
-    let result = retrying(listener.base())
-        .details_many_recoverable_with(
-            &question(),
-            &["alpha".to_owned()],
-            CallOptions::new().send_budget(&budget, Some(1)),
-        )
-        .expect("safe denied retry");
+    let result = crate::api::recover_decisions(
+        &retrying(listener.base()),
+        &question(),
+        &["alpha".to_owned()],
+        CallOptions::new().send_budget(&budget, Some(1)),
+    )
+    .expect("safe denied retry");
     assert_eq!(
         (result.facts().records(), result.facts().requests_sent()),
         (1, 1)
     );
-    assert!(matches!(
-        result.value()[0],
-        thinkthen::RecoverableDetails::Failed {
-            kind: ErrorKind::Usage,
-            retryable: false,
-            cause: None
-        }
-    ));
+    assert_failed(
+        &result.value()[0],
+        ErrorKind::Usage,
+        thinkthen::StopCause::Usage,
+    );
     assert_eq!(listener.requests().len(), 1);
 }
 
@@ -345,31 +330,26 @@ fn native_denied_retry_keeps_a_later_request_answered_first() {
     .expect("listener");
     let budget = SendBudget::new();
     let texts = ["alpha", "beta", "gamma", "delta"].map(str::to_owned);
-    let result = retrying(listener.base())
-        .details_many_recoverable_with(
-            &question(),
-            &texts,
-            CallOptions::new()
-                .batch(BatchSetting::Records(
-                    std::num::NonZeroUsize::new(2).expect("two"),
-                ))
-                .send_budget(&budget, Some(2)),
-        )
-        .expect("safe denied retry beside a later answer");
+    let result = crate::api::recover_decisions(
+        &retrying(listener.base()),
+        &question(),
+        &texts,
+        CallOptions::new()
+            .batch(BatchSetting::Records(
+                std::num::NonZeroUsize::new(2).expect("two"),
+            ))
+            .send_budget(&budget, Some(2)),
+    )
+    .expect("safe denied retry beside a later answer");
     let answered: Vec<bool> = result
         .value()
         .iter()
-        .map(|row| matches!(row, thinkthen::RecoverableDetails::Answered(_)))
+        .map(|row| row.outcome().is_ok())
         .collect();
     assert_eq!(answered, [false, false, true, true]);
-    assert!(result.value()[..2].iter().all(|row| matches!(
-        row,
-        thinkthen::RecoverableDetails::Failed {
-            kind: ErrorKind::Usage,
-            retryable: false,
-            cause: None
-        }
-    )));
+    for row in result.value()[..2].iter() {
+        assert_failed(row, ErrorKind::Usage, thinkthen::StopCause::Usage);
+    }
     assert_eq!(listener.requests().len(), 2);
 }
 
@@ -381,32 +361,35 @@ fn native_recovery_keeps_one_invalid_member_out_of_one_request() {
     )])
     .expect("listener");
     let engine = engine(listener.base());
-    let result = engine
-        .details_many_recoverable_with(
-            &question(),
-            &["alpha".to_owned(), " ".to_owned(), "beta".to_owned()],
-            CallOptions::new(),
-        )
-        .expect("recoverable rows");
-    assert!(matches!(
-        result.value()[0],
-        thinkthen::RecoverableDetails::Answered(_)
-    ));
-    assert!(matches!(
-        result.value()[1],
-        thinkthen::RecoverableDetails::Failed {
-            kind: ErrorKind::Usage,
-            retryable: false,
-            cause: None
-        }
-    ));
-    assert!(matches!(
-        result.value()[2],
-        thinkthen::RecoverableDetails::Answered(_)
-    ));
+    let result = crate::api::recover_decisions(
+        &engine,
+        &question(),
+        &["alpha".to_owned(), " ".to_owned(), "beta".to_owned()],
+        CallOptions::new(),
+    )
+    .expect("recoverable rows");
+    assert!(result.value()[0].outcome().is_ok());
+    assert_failed(
+        &result.value()[1],
+        ErrorKind::Usage,
+        thinkthen::StopCause::Usage,
+    );
+    assert!(result.value()[2].outcome().is_ok());
     assert_eq!(
         (result.facts().records(), result.facts().requests_sent()),
         (3, 1)
     );
     assert_eq!(listener.requests().len(), 1);
+}
+
+#[cfg(test)]
+fn assert_failed(
+    row: &thinkthen::RequestRecoveredRow,
+    kind: ErrorKind,
+    cause: thinkthen::StopCause,
+) {
+    let error = row.outcome().expect_err("failed row");
+    assert_eq!(error.kind(), kind);
+    assert!(!error.retryable());
+    assert_eq!(error.stopped().cause(), cause);
 }

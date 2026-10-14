@@ -369,21 +369,22 @@ fn a_slice_and_an_iterator_give_equal_ordered_results_and_partial_rows() {
 
     // Equal probabilities keep input order in a ranking, on both paths.
     let ranked = Question::rank("Which asks for a refund?").expect("rank");
-    let by_slice: Vec<String> = engine
-        .rank(&ranked, texts)
-        .expect("rank")
-        .into_value()
-        .into_iter()
-        .map(|index| texts[index].to_owned())
+    let slice_call = engine.rank(&ranked, texts).expect("rank");
+    assert_eq!(*slice_call.value(), (0..texts.len()).collect::<Vec<_>>());
+    let by_slice: Vec<String> = slice_call
+        .results()
+        .iter()
+        .map(|row| row.original().to_string())
         .collect();
     assert_eq!(by_slice, texts.map(str::to_owned));
     let by_cursor = engine.rank(&ranked, cursor(&texts)).expect("rank");
+    assert_eq!(by_cursor.value(), slice_call.value());
     assert_eq!(
         by_slice,
         by_cursor
-            .into_value()
-            .into_iter()
-            .map(|index| texts[index].to_owned())
+            .results()
+            .iter()
+            .map(|row| row.original().clone())
             .collect::<Vec<_>>()
     );
     let found = Question::find("Which asks for a refund?").expect("find");
