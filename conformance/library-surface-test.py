@@ -16,6 +16,52 @@ from conformance.children.children import child_env
 
 
 class PublicSurface(unittest.TestCase):
+    def test_native_adapter_omissions_and_extra_members(self):
+        mutations = {
+            'c': [('include/thinkthen.h', 'thinkthen_session_new_typed_with_surface(', 'missing_dispatch(', 'missing function: decide'),
+                  ('include/thinkthen.h', '} thinkthen_request_item_v1;', '} missing_item_v1;', 'missing helper: item')],
+            'ruby': [('lib/thinkthen/session.rb', 'define_singleton_method("question_#{kind}")', 'define_singleton_method("absent_#{kind}")', 'missing helper: question_file'),
+                     ('lib/thinkthen/session.rb', 'private_constant :Carrier', '# visible Carrier', 'unlisted public type/export: .Carrier')],
+            'typescript': [('native.d.ts', 'readonly context?: R.JsonValue;', 'readonly extraField?: R.JsonValue;', 'unlisted public field: ItemFields.extraField')],
+            'zig': [('src/authored.zig', 'pub fn plan(', 'pub fn missingPlan(', 'missing helper: plan'),
+                    ('src/thinkthen.zig', 'pub fn usagePersistence(', 'pub fn absentUsage(', 'missing helper: usage_persistence'),
+                    ('src/thinkthen.zig', 'closed: bool = false,', 'closed: bool = false, extraField: bool = false,', 'unlisted public field: Engine.extraField'),
+                    ('src/results_generated.zig', 'cache_answers: u64,', 'absent_cache_answers: u64,', 'missing generated declaration: results_generated.zig:ImmediateFacts.cache_answers')],
+        }
+        for library, cases in mutations.items():
+            with self.subTest(library=library), tempfile.TemporaryDirectory(prefix='library-surface-native-') as folder:
+                root = Path(folder)
+                for name in ('sdlc', 'specification', 'conformance'):
+                    (root / name).symlink_to(ROOT / name, target_is_directory=True)
+                header = root / 'libraries/c/include/thinkthen.h'
+                header.parent.mkdir(parents=True)
+                shutil.copyfile(ROOT / 'libraries/c/include/thinkthen.h', header)
+                if library == 'c':
+                    (root / 'libraries/c/src').symlink_to(ROOT / 'libraries/c/src', target_is_directory=True)
+                    (root / 'libraries/c/cbindgen.toml').symlink_to(ROOT / 'libraries/c/cbindgen.toml')
+                else:
+                    for suffix in ('*.rb', '*.rbs', '*.d.ts', '*.zig'):
+                        for path in (ROOT / 'libraries' / library).rglob(suffix):
+                            if 'target' in path.parts or 'node_modules' in path.parts:
+                                continue
+                            output = root / path.relative_to(ROOT)
+                            output.parent.mkdir(parents=True, exist_ok=True)
+                            shutil.copyfile(path, output)
+                def invoke():
+                    run = subprocess.run(['python3', str(CHECK), '--root', str(root), '--library', library, '--json'],
+                                         capture_output=True, text=True, env=child_env(home=folder))
+                    self.assertIn(run.returncode, (0, 1), run.stderr)
+                    return json.loads(run.stdout)['libraries'][library]
+                self.assertEqual(invoke(), [])
+                for filename, before, after, diagnostic in cases:
+                    with self.subTest(filename=filename, diagnostic=diagnostic):
+                        path = root / 'libraries' / library / filename
+                        original = path.read_text()
+                        self.assertIn(before, original)
+                        path.write_text(original.replace(before, after, 1))
+                        self.assertIn(diagnostic, invoke())
+                        path.write_text(original)
+
     def test_dart_mixins_and_generated_schema_still_detect_omissions(self):
         with tempfile.TemporaryDirectory(prefix='library-surface-dart-') as folder:
             root = Path(folder)

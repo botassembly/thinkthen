@@ -104,8 +104,12 @@ def generated_sources(root, target, request, result):
         outputs.update({filename: '\n'.join(lines) + '\n'
                         for filename, lines in usage.outputs(root).items()})
     elif target == 'zig':
+        from native import immediate_schema
         outputs['plan_generated.zig'] = template.render(graph(result, ('completeplan',)))
         outputs['request_generated.zig'] = template.render(inputs)
+        outputs['calls_generated.zig'] = template.calls(inputs)
+        outputs['results_generated.zig'] = template.render_results(
+            graph(immediate_schema(result), ('completesessionPacket', 'completeImmediateFacts')))
     elif target == 'ada':
         # Reuse the production generator, including its friendly schema projections.
         # Redirect only output paths; neither the source tree nor its templates change.

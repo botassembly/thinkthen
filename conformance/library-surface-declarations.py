@@ -138,7 +138,7 @@ def cstyle(source, language):
     if language == 'dart':
         type_pattern = r'\b(?:class|enum|mixin)\s+(\w+)'
     if language == 'zig':
-        type_pattern = r'\bpub\s+const\s+(\w+)\s*=\s*(?:struct|union|enum)\b'
+        type_pattern = r'\bpub\s+const\s+(\w+)\s*=\s*(?:struct|union|enum|opaque)\b'
     elif language == 'objc':
         type_pattern = r'@interface\s+(\w+)'
     for match in re.finditer(type_pattern, text):
@@ -244,7 +244,7 @@ def cstyle(source, language):
         'swift': r'\bpublic\s+(?:(?:static|class|mutating|convenience)\s+)*(?:func|var|let)\s+`?(\w+)',
         'kotlin': r'(?m)(?:^|[;{}\n])\s*(?:(?:public|override|open|final|suspend)\s+)*(?:fun|val|var)\s+`?(\w+)' ,
         'scala': r'(?m)(?:^|[;{}\n])\s*(?:(?:override|final|lazy)\s+)*(?:def|val|var)\s+`?(\w+)' ,
-        'zig': r'\bpub\s+(?:fn|const|var)\s+(\w+)|(?m:^\s*)(\w+)\s*:',
+        'zig': r'\bpub\s+(?:fn|const|var)\s+(\w+)|(?:^|[{},\n])\s*(\w+)\s*:',
         'go': r'(?m:^\s*)([A-Z]\w*)\s+[^\n{}]+',
         'php': r'\bpublic\s+(?:static\s+)?function\s+(\w+)\s*\(|\bpublic\s+(?:readonly\s+)?[\w?\\]+\s+\$(\w+)',
         'dart': r'(?m)(?:^|[;{}\n])\s*(?:(?:static|final|late|const|external|factory)\s+)*[\w<>?,.]+\s+(?:get\s+)?(\w+)\s*(?:\(|=>|[;=])|\bget\s+(\w+)\s*(?:=>|\{)',
@@ -258,7 +258,7 @@ def cstyle(source, language):
             continue
         pos = next(match.start(i) for i, group in enumerate(match.groups(), 1) if group)
         container = owner(pos)
-        if language == 'typescript' and parentheses[pos]:
+        if language in ('typescript', 'zig') and parentheses[pos]:
             continue
         if language == 'cpp' and (parentheses[pos] or name == 'operator'):
             continue
@@ -271,6 +271,10 @@ def cstyle(source, language):
                 continue
         tail = text[match.end():match.end() + 3]
         kind = 'call' if '(' in match[0] or language in ('swift', 'objc', 'php') and 'func' in match[0] or language in ('kotlin', 'scala', 'zig') and re.search(r'\b(fun|def|fn)\b', match[0]) else 'field'
+        if language == 'zig' and re.search(r'\bpub\s+const\b', match[0]):
+            kind = 'export'
+        if language == 'zig' and kind == 'field' and not container:
+            continue
         if kind == 'call' and (name == container or language == 'scala' and name == 'this'):
             continue
         result.add(Declaration(container, name, kind))
@@ -455,6 +459,12 @@ def other(source, language):
             if match:
                 constants[(container, match[1])] = match[2].split()
             loop = re.match(r'\s*(\w+)\.each\s+do\s+\|(\w+)\|', line)
+            literal_loop = re.match(r'\s*%w\[([^]]*)\]\.each\s+do\s+\|(\w+)\|', line)
+            if literal_loop:
+                singleton_loop = (container, literal_loop[2], literal_loop[1].split())
+            singleton = re.match(r'\s*define_singleton_method\("(\w+)#\{(\w+)\}"\)', line)
+            if singleton and 'singleton_loop' in locals() and singleton_loop[:2] == (container, singleton[2]):
+                result.update(Declaration(container, singleton[1] + name, 'call') for name in singleton_loop[2])
             if loop:
                 variable = loop[2]
                 method_loop = (container, variable, constants.get((container, loop[1]), ()))
@@ -475,6 +485,9 @@ def other(source, language):
             match = re.match(r'\s*define_method\([\'\"](\w+)[\'\"]\)', line)
             if match:
                 result.add(Declaration(container, match[1], 'field'))
+        hidden_types = set(re.findall(r'\bprivate_constant\s+:(\w+)', source))
+        result = {d for d in result if d.owner.split('.')[0] not in hidden_types
+                  and not (d.kind == 'type' and d.name in hidden_types)}
     elif language == 'ada':
         text = re.sub(r'--[^\n]*', '', source)
         if re.search(r'(?im)^\s*private\s+package\b', text):

@@ -332,7 +332,8 @@
         "examples"
       ],
       "representation_types": [
-        "Results"
+        "Results",
+        "CompleteInput"
       ],
       "function_containers": [
         "Client",
@@ -342,7 +343,9 @@
         "Client",
         "Operation"
       ],
-      "representation_owners": [],
+      "representation_owners": [
+        "Client"
+      ],
       "wrapper_members": {
         "ClientError": [
           "constructor"
@@ -354,6 +357,22 @@
         "question_reference": "Client.questionReference",
         "item": "Client.item",
         "files": "Client.files"
+      },
+      "representation_members": {
+        "Client": [
+          "recognizeQuestion",
+          "relateQuestion"
+        ]
+      },
+      "field_adapters": {
+        "ItemFields": {
+          "contract": "request",
+          "type": "RequestItem"
+        },
+        "ImageBytes": {
+          "contract": "request",
+          "type": "RequestImage"
+        }
       }
     },
     "ruby": {
@@ -364,8 +383,13 @@
         "libraries/ruby/lib/**/*.rb",
         "libraries/ruby/sig/thinkthen/results_generated.rbs"
       ],
-      "option_containers": ["Client.*"],
-      "setting_containers": ["Client.initialize", "Client.open"],
+      "option_containers": [
+        "Client.*"
+      ],
+      "setting_containers": [
+        "Client.initialize",
+        "Client.open"
+      ],
       "function_prefix": "",
       "test_folders": [
         "tests",
@@ -376,7 +400,9 @@
       ],
       "lifecycle_owners": [
         "Client",
-        "Operation"
+        "Operation",
+        "UsageStatus",
+        "Error"
       ],
       "representation_owners": [
         "Completed"
@@ -387,6 +413,41 @@
         "question_reference": "Client.question_reference",
         "item": "Client.item",
         "files": "Client.files"
+      },
+      "representation_types": [
+        "Error",
+        "CancelledError"
+      ],
+      "lifecycle_members": {
+        "Client": [
+          "inspect"
+        ],
+        "Operation": [
+          "inspect",
+          "initialize"
+        ],
+        "UsageStatus": [
+          "initialize"
+        ],
+        "Error": [
+          "initialize",
+          "code"
+        ]
+      },
+      "representation_members": {
+        "Completed": [
+          "initialize",
+          "facts",
+          "inspect"
+        ]
+      },
+      "wrapper_members": {
+        "Completed": [
+          "observations"
+        ],
+        "Error": [
+          "observations"
+        ]
       }
     },
     "r": {
@@ -675,7 +736,12 @@
       "helper_names": {
         "usage_persistence": "thinkthen_engine_usage_persistence_v1",
         "finish_usage_status": "thinkthen_engine_finish_usage_status_v1",
-        "plan": "thinkthen_request_plan_json"
+        "plan": "thinkthen_request_plan_json",
+        "question_file": "thinkthen_request_question_selector_file_v1",
+        "question_name": "thinkthen_request_question_selector_name_v1",
+        "question_reference": "thinkthen_request_question_selector_reference_v1",
+        "item": "thinkthen_request_item_v1",
+        "files": "thinkthen_request_source_v1"
       },
       "function_containers": [
         ""
@@ -684,7 +750,8 @@
         ""
       ],
       "representation_owners": [],
-      "field_prefix": "m_"
+      "field_prefix": "m_",
+      "function_dispatch": "thinkthen_session_new_typed_with_surface"
     },
     "cpp": {
       "root": "libraries/cpp",
@@ -1221,7 +1288,9 @@
       "language": "zig",
       "naming": "camel",
       "declarations": [
-        "libraries/zig/src/*.zig"
+        "libraries/zig/src/thinkthen.zig",
+        "libraries/zig/src/authored.zig",
+        "libraries/zig/src/session.zig"
       ],
       "option_containers": [
         "RequestOptions"
@@ -1241,7 +1310,10 @@
         "question_name": "RequestQuestionName",
         "question_reference": "RequestQuestionReference",
         "item": "RequestItem",
-        "files": "RequestSource"
+        "files": "RequestSource",
+        "plan": "Request.plan",
+        "usage_persistence": "Engine.usagePersistence",
+        "finish_usage_status": "Engine.finishUsageStatus"
       },
       "function_containers": [
         ""
@@ -1257,8 +1329,81 @@
       ],
       "representation_owners": [
         "Presence",
-        "InputDocument"
-      ]
+        "InputDocument",
+        "Packet",
+        "Question",
+        "Session",
+        "Role"
+      ],
+      "representation_types": [
+        "Packet",
+        "Read",
+        "Role"
+      ],
+      "representation_calls": [
+        "Result",
+        "authored",
+        "inputs",
+        "calls",
+        "session",
+        "results",
+        "capture",
+        "releaseFailure",
+        "startNamed",
+        "completeNamed",
+        "checked",
+        "message",
+        "bytes",
+        "Answer"
+      ],
+      "representation_members": {
+        "Packet": [
+          "answers",
+          "facts",
+          "failure",
+          "terminal",
+          "value"
+        ],
+        "Question": [
+          "name"
+        ]
+      },
+      "wrapper_members": {
+        "Engine": [
+          "handle",
+          "closed",
+          "allocator"
+        ],
+        "Failure": [
+          "arena"
+        ],
+        "Plan": [
+          "arena"
+        ],
+        "Question": [
+          "handle"
+        ],
+        "Session": [
+          "handle",
+          "allocator",
+          "Read"
+        ],
+        "Read": [
+          "pending",
+          "end",
+          "packet"
+        ],
+        "Role": [
+          "atomic",
+          "set",
+          "dynamic_choose",
+          "recognize",
+          "relate",
+          "rank",
+          "rank_set",
+          "find"
+        ]
+      }
     },
     "php": {
       "root": "libraries/php",
