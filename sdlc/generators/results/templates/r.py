@@ -1,7 +1,7 @@
 """Native R representation conversions over the shared result graph."""
 import json
 
-ROOTS = ('completesessionPacket', 'completeFacts', 'completeCallError', 'completeAtomic_DecideValue',
+ROOTS = ('completeplan', 'completesessionPacket', 'completeFacts', 'completeCallError', 'completeAtomic_DecideValue',
          'completeAtomic_Nullable_string', 'completeAtomic_Array_of_string',
          'completeAtomic_double', 'completeAtomic_boolean', 'completeAtomic_NonZeroUsize',
          'completeFind', 'completeAnnotation', 'completeRecognition', 'completeRelation')
@@ -146,7 +146,8 @@ def answer_helpers(definitions):
             key = item['$ref'].split('/')[-1]
             source = definitions[key]
             if function in ('filter', 'rank'):
-                read = expression(item, 'row')
+                field = 'input' if function == 'filter' else 'index'
+                read = f'plain(row.get("{field}").ok_or_else(|| crate::defect("native answer has no {field}"))?)'
             else:
                 read = expression(source['properties']['value'], 'row.get("value").ok_or_else(|| crate::defect("native answer has no value"))?')
             body = 'array(rows, |row| ' + read + ')'

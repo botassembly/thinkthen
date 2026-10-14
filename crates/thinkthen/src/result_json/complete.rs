@@ -6,7 +6,7 @@ mod relate;
 pub(crate) use recognize::{RecognitionRow, recognition};
 pub(crate) use relate::{RelationRow, relation};
 mod find;
-use super::{Run, decision_with_digest};
+use super::{Run, atomic_metadata};
 use crate::core::image::InputFunction;
 use crate::core::{self, Question, RenderError, Threshold, Value};
 use crate::engine::facade::Judgment;
@@ -50,23 +50,17 @@ pub(crate) fn atomic(
         &[],
     )?;
     let digest = core::question_sha256_with_profile(&spec.question, spec.threshold, run.tuned_for)?;
-    let compatibility = decision_with_digest(
-        run,
-        judged,
-        spec.question,
-        spec.threshold,
-        spec.shown,
-        input,
-        Some(requests),
-        &digest,
-        Vec::new(),
-    )?
-    .with_captured_attempts(attempts);
+    let meta = atomic_metadata(run, judged, requests, &digest).with_captured_attempts(attempts);
     Ok(core::CompleteAtomic {
         function: spec.function,
         declarations: spec.declarations,
         identity,
-        compatibility,
+        value: spec.shown,
+        question: spec.question,
+        threshold: spec.threshold,
+        answer: judged.answer.clone(),
+        input,
+        meta,
         rank_position: spec.rank_position,
         source: None,
         images: None,

@@ -221,13 +221,11 @@ uses the existing host configuration. Per-call model, cuts, pointers and
 score members refuse before sending. One-member sets preserve the plain
 question's wire/cache identity. Recording each member individually supports
 strict set replay with zero sends. Described decide members retain their
-authored true/false meanings. The additive `thinkthen_rank_complete` route also accepts described decide and
-saved score questions through the native complete rank API.
+authored true/false meanings. The native record overload of `thinkthen_rank` also accepts described decide and saved score questions.
 
 `facts` comes directly from the same completed native call, counts original
 records and combined member requests, and repeats on every output row. It
-is the compatibility count-facts shape. Use `thinkthen_rank_complete` for full
-observations, call/answer IDs and started-failure envelopes. An empty object yields
+is the compatibility count-facts shape. Use the native record overload of `thinkthen_rank` for typed full observations, call and answer IDs, and started failure facts. An empty object yields
 no rows. Set JSON and files use native RankSet admission, preserving member
 order and rejecting duplicates, authored thresholds/on and non-decide kinds.
 
@@ -237,44 +235,41 @@ Preserve the authored set as text, including text returned by
 The existing privileged/confined `@file` door also applies. NULL questions or keyed input yields no rows before inspecting partners, reading files or sending; NULL settings uses defaults.
 PUBLIC execution is revoked by the extension default.
 
-## Complete native calls (0.2 development)
+## Native records and readings
 
-All ten `thinkthen_FUNCTION_complete(question TEXT, inputs TEXT, settings TEXT :=
-NULL)` calls expose the owning native result/2 envelope and final facts, including
-started-failure facts, full probabilities, authors, call/answer/observation IDs,
-structured stops, requested attempts and optional exact caller-priced cost.
-Ordinary scalar/table signatures and cumulative usage remain compatible. See the
-[shared SQL complete API](../sqlite/README.md#complete-native-calls-02-development)
-for explicit records, context, reading, options, images, rank sets, file controls,
-error envelopes and native cache/record/replay behavior.
-
-PostgreSQL returns `json`. Evidence and image paths remain the explicit native
-client-reader/keyed-table workaround. Question files retain the accepted role,
-descriptor, regular-file, final-link, size, confinement and PUBLIC revoke checks.
-For complete calls, `@@NAME` selects the native catalog; `@reference` retains
-local-entry precedence. Relative references use the administrator
-`thinkthen.file_directory` when set, otherwise the server working directory.
-The role check precedes resolution probes. Named files must also lie inside the
-captured native questions root on the same opened descriptor, including for
-privileged readers. Original authored bytes reach native role/name validation
-before caller settings are applied.
-`thinkthen.base_url` and `thinkthen.refresh_cache` are administrator settings;
-the paired price GUCs are decimal strings. No key GUC becomes a credential source.
-
-`thinkthen_decide_images_complete(question TEXT, images thinkthen_image_value[],
-settings TEXT := NULL)` returns the same complete envelope as `json`. Build the
-ordered collection with `thinkthen_image(bytea, media)` or read stored composites:
+Each function accepts an ordered `thinkthen_record[]` and an optional `thinkthen_reading` alongside its question. Construct both with named SQL arguments. The returned `value` has the function's ordinary SQL type. The `result`, `facts`, `failure` and `observations` columns carry typed complete readings and final call facts. Observations retain the actual input image and source metadata separately from the generic original-value serialization.
 
 ```sql
-SELECT thinkthen_decide_images_complete(
-  'Is the package damaged?',
-  ARRAY[thinkthen_image($1::bytea, 'image/png')],
-  NULL);
+SELECT attention.value AS needs_attention, (attention.facts).requests_sent, (attention.result).answer_id
+FROM thinkthen_decide(
+  'Does this need attention?',
+  ARRAY[thinkthen_record(text => 'A short note.')],
+  thinkthen_reading(threshold => '0.9', context => 'Use this policy note.')
+) AS attention;
 ```
 
-One collection becomes one image-only record. Order and duplicates remain present;
-image bytes never require a JSON byte array. Select an admitted backend and model
-through the existing settings. A NULL question or collection returns SQL NULL
-before reading partners or resolving question files. NULL settings uses defaults.
-Malformed native images and backend failures return the complete error envelope.
-The existing text complete signatures and scalar image functions remain available.
+Read a named choice from `value` and its confidence from the same typed receipt:
+
+```sql
+SELECT ownership.value AS team, ((ownership.result).answer).confidence AS confidence
+FROM thinkthen_choose(
+  'Which team owns this?',
+  ARRAY[thinkthen_record(text => 'Please refund the duplicate charge.')],
+  thinkthen_reading(options => ARRAY[
+    ROW('billing', NULL)::thinkthen_option,
+    ROW('shipping', NULL)::thinkthen_option
+  ])
+) AS ownership;
+```
+
+`team` is the selected option name. SQL `NULL` represents an unresolved choice. The receipt retains the resolved question, option order, answer identity, confidence and named probability distribution.
+
+`thinkthen_record(value => 'null'::json)` holds authored JSON null. Omitting `value` leaves the original absent. The `context_value` argument accepts an object context. Typed option, image, seed and example arrays retain their order. Examples accept bracket text or explicit entity spans through `thinkthen_example` composites.
+
+Reading controls include ordered question options, levels and labels, typed context declarations, model, threshold, batch, deadline, send budget, recognition stages, projection pointers, ranking limits and file selection. `incremental => true` retains completed rows before a later record fails. The default admits the whole collection before sending. A failure row preserves the native error's kind, safe message, stop position and any final facts. A required NULL question or collection returns no rows before inspecting its partners.
+
+Rank returns zero-based original indexes. Filter returns original authored values as `jsonb`; rejected records have a NULL `value` while their reading remains available. Read their plain arrays with `array_agg(value)` and `FILTER (WHERE value IS NOT NULL)`. Order rank's array by `(result).value` to retain ranking order.
+
+For filter, `files_only => true` returns the first selected record from each physical file in input order. Each record needs a `thinkthen_source` location. Every record still contributes to the call's final facts. The default rejects any missing location before sending; incremental reading retains an already completed prefix.
+
+`thinkthen_plan(question, records, reading)` returns record and request counts, byte estimates and token bounds without sending. Its typed `result` includes all nine canonical plan fields and the prepared first body. The default infers a judgment function. The optional named `function` selects `decide`, `choose`, `tag`, `score`, `filter` or `rank` through the native request constructor; other functions retain the native no-send refusal. Questions retain privileged and confined file references. Evidence and image files must be read by the client. Attach their explicit location with a `thinkthen_source` composite; PostgreSQL never opens an evidence path. Cache, replay, recording and engine settings retain their session scopes and privileges.

@@ -31,7 +31,7 @@ type Error struct {
 	Kind      ErrorKind
 	Retryable bool
 	Message   string
-	Facts     json.RawMessage
+	Facts     Facts
 }
 
 func (e *Error) Error() string { return fmt.Sprintf("thinkthen code %d: %s", e.Code, e.Message) }
@@ -51,9 +51,9 @@ func failure(raw *C.thinkthen_engine, code C.int) error {
 		kind = ErrorKind(code)
 	}
 	borrowed := C.thinkthen_error_facts_json(raw)
-	var facts json.RawMessage
+	facts := Facts{ownedJSON{raw: json.RawMessage("{}")}}
 	if borrowed != nil {
-		facts = json.RawMessage([]byte(C.GoString(borrowed)))
+		facts = Facts{ownedJSON{raw: json.RawMessage(C.GoString(borrowed))}}
 	}
 	return &Error{Code: int(code), Kind: kind, Retryable: C.thinkthen_error_retryable(raw) != 0,
 		Message: C.GoString(C.thinkthen_error_message(raw)), Facts: facts}

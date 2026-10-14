@@ -7,11 +7,15 @@ import sys
 import tempfile
 import time
 sys.path.insert(0, str(Path(__file__).resolve().parents[3] / 'conformance/children'))
-from backend import Backend
+from backend import Backend, unquoted_single
 from children import child_env
 from usage import run_usage
 
+def admitted(command):
+    return [sys.executable, os.environ['THINKTHEN_BUILD_ADMISSION'], '--lock', os.environ.get('THINKTHEN_HEAVY_LOCK', '/tmp/thinkthen-heavy.lock'), '--', *command]
+
 module = Path(sys.argv[1]).resolve()
+encoding_only = len(sys.argv) > 2 and sys.argv[2] == 'encoding'
 plan_only = len(sys.argv) > 2 and sys.argv[2] == 'plan'
 surface_only = len(sys.argv) > 2 and sys.argv[2] == 'surface'
 usage_only = len(sys.argv) > 2 and sys.argv[2] == 'usage'
@@ -23,8 +27,10 @@ with tempfile.TemporaryDirectory(prefix='thinkthen-go-owned-') as folder:
     consumer.mkdir()
     (consumer / 'go.mod').write_text('module example.org/owned-consumer\n\ngo 1.22\n\nrequire github.com/botassembly/thinkthen/libraries/go v0.0.0\nreplace github.com/botassembly/thinkthen/libraries/go => ' + str(module) + '\n')
     shutil.copy2(Path(__file__).parents[1] / 'examples/decide/main.go' if example_only else Path(__file__).with_name('owned_consumer.go'), consumer / 'main.go')
+    if not example_only:
+        shutil.copy2(Path(__file__).with_name('consumer_bridge.go'), consumer / 'bridge.go')
     env = child_env(home=str(home), GOPROXY='off', GOSUMDB='off', GOTOOLCHAIN='local', GOCACHE=os.environ.get('GOCACHE', str(Path(__file__).resolve().parents[3]/'target/go/cache')), GOMODCACHE=str(home/'modcache'), CGO_ENABLED='1')
-    subprocess.run(['go','build','-p','1','-buildvcs=false','-o',str(home/'consumer-bin'),'.'],cwd=consumer,env=env,check=True)
+    subprocess.run(admitted(['go','build','-p','1','-buildvcs=false','-o',str(home/'consumer-bin'),'.']),cwd=consumer,env=env,check=True)
     if os.environ.get('THINKTHEN_COVERAGE_STAGE'):
         stage = Path(os.environ['THINKTHEN_COVERAGE_STAGE']); stage.mkdir(parents=True, exist_ok=True)
         label = sys.argv[2] if len(sys.argv) > 2 else 'owned'
@@ -37,6 +43,17 @@ with tempfile.TemporaryDirectory(prefix='thinkthen-go-owned-') as folder:
     user_agents = server.user_agents
     try:
         run_env=env|{'THINKTHEN_API_KEY':'tt-canary-274','THINKTHEN_BASE_URL':f'http://127.0.0.1:{server.server_port}/generic/v1'}
+        if encoding_only:
+            result=subprocess.run([str(home/'consumer-bin'),'encoding'],env=run_env,cwd=consumer,text=True,capture_output=True,timeout=10)
+            assert result.returncode==0,(result.stdout,result.stderr)
+            states=[unquoted_single(request)['state'] for request in server.requests]
+            assert states==['QQ==',{'label':'kept','count':'7'},{'bytes':'QQ=='}],states
+            before=server.attempts
+            result=subprocess.run([str(home/'consumer-bin'),'cyclic'],env=run_env,cwd=consumer,text=True,capture_output=True,timeout=10)
+            assert result.returncode==0 and result.stdout.strip()=='cyclic-authored-refusal-pass',(result.stdout,result.stderr)
+            assert server.attempts==before==3,server.attempts
+            print('GO_ENCODING_INSTALLED_PASS standard authored bytes embedded tags empty collections cyclic refusal zero-send')
+            sys.exit(0)
         if example_only:
             result = subprocess.run([str(home/'consumer-bin')], env=run_env, cwd=consumer, text=True, capture_output=True, timeout=20)
             assert result.returncode == 0, (result.stdout, result.stderr)

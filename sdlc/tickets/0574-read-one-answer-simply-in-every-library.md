@@ -35,3 +35,5 @@ In every language library, a caller reads one call's answer in one short, safe l
 - Defers: long generated names belong to 0562, which renames them.
 
 ## Progress
+
+PM amendment, 2026-10-13. Remaining work. 0574 owns the Zig session wait, the Objective-C blocking call and safe C++; 0576 cites them. TypeScript, Zig, COBOL and Objective-C gain the generated blocking answer call for each of the ten functions. C stays a packet reader as the shared layer and is exempt from one-line answers and plain lists. Zig merges e0afccd3a after review and adds the ten accessors. The C++ check runs all ten real examples under AddressSanitizer. Ruby, TypeScript and Objective-C ship a 0.2 example their installed checks run, and R's check runs its example. Go and Swift reach the recognize and relate builders without schema-path names. Answer accessors return the plain lists 0576 defines.

@@ -56,11 +56,15 @@ def main():
                 os.environ['THINKTHEN_TEST_SMOKE_QUESTION'], os.environ['THINKTHEN_TEST_SMOKE_TEXT']],
                 env=env, check=True, timeout=5)
             return
+        shutil.copyfile(app / 'vendor/botassembly/thinkthen/native/libthinkthen.so', work / 'libthinkthen.so.0')
+        subprocess.run([sys.executable, str(ROOT / 'sdlc/scripts/build-admission.py'), '--', '/usr/bin/cc', '-Wall', '-Wextra', '-Werror', '-shared', '-fPIC',
+            '-I', str(app / 'vendor/botassembly/thinkthen/src/session'), str(Path(__file__).with_name('constructor_error.c')),
+            '-Wl,--no-as-needed', str(app / 'vendor/botassembly/thinkthen/native/libthinkthen.so'), '-Wl,-rpath,' + str(work), '-o', str(work / 'constructor-error.so')], env=install_env, check=True)
         shutil.copyfile(Path(__file__).with_name('session_consumer.php'), work / 'consumer.php')
         server = Backend(work / 'barrier', key='tt-canary-291', hold_first=True)
         try:
             env = child_env(home=work / 'home', LANG='C.UTF-8', LC_ALL='C.UTF-8',
-                TT_AUTOLOAD=str(app / 'vendor/autoload.php'), TT_BARRIER=str(work / 'barrier'),
+                TT_AUTOLOAD=str(app / 'vendor/autoload.php'), TT_ERROR_LIBRARY=str(work / 'constructor-error.so'), TT_BARRIER=str(work / 'barrier'),
                 THINKTHEN_BASE_URL=f'http://127.0.0.1:{server.server_port}/generic/v1',
                 THINKTHEN_API_KEY='tt-canary-291')
             for mode in ('surface', 'poll', 'named', 'presence', 'native-values', 'failure', 'zero', 'destroy'):

@@ -6,13 +6,13 @@
 int main() {
     using namespace tt;
     using namespace tt::results;
-    Json::Array ranks, names;
+    Data::Array ranks, names;
     for(unsigned i=0;i<64;++i) {
-        ranks.emplace_back(Json{{"input","one"},{"value",1}});
-        names.emplace_back(Json{{"input","Paris"},{"value",Json{{"entities",Json::Array{Json{{"text","Paris"},{"kind","place"},{"start",0},{"end",5},{"length",5},{"strength",0.9}}}}}}});
+        ranks.emplace_back(Data{{"input","one"},{"value",1}});
+        names.emplace_back(Data{{"input","Paris"},{"value",Data{{"entities",Data::Array{Data{{"text","Paris"},{"kind","place"},{"start",0},{"end",5},{"length",5},{"strength",0.9}}}}}}});
     }
-    SessionPacket rank(Json{{"kind","aggregate"},{"function","rank"},{"value",Json(std::move(ranks))}});
-    SessionPacket recognize(Json{{"kind","aggregate"},{"function","recognize"},{"value",Json(std::move(names))}});
+    SessionPacket rank(Data{{"kind","aggregate"},{"function","rank"},{"value",Data(std::move(ranks))}});
+    SessionPacket recognize(Data{{"kind","aggregate"},{"function","recognize"},{"value",Data(std::move(names))}});
     auto ranked=rank.as_SessionPacketRankAggregate();
     auto found=recognize.as_SessionPacketRecognizeAggregate();
     std::atomic<unsigned> ready{0};

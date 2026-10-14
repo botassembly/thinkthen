@@ -1,0 +1,55 @@
+{
+  "generated": true,
+  "blocking": [
+    "TT_DECIDE",
+    "TT_CHOOSE",
+    "TT_TAG",
+    "TT_SCORE",
+    "TT_FILTER",
+    "TT_RANK",
+    "TT_FIND",
+    "TT_ANNOTATE",
+    "TT_RECOGNIZE",
+    "TT_RELATE"
+  ],
+  "streaming": [
+    "TT_SESSION_DECIDE",
+    "TT_SESSION_CHOOSE",
+    "TT_SESSION_TAG",
+    "TT_SESSION_SCORE",
+    "TT_SESSION_FILTER",
+    "TT_SESSION_RANK",
+    "TT_SESSION_FIND",
+    "TT_SESSION_ANNOTATE",
+    "TT_SESSION_RECOGNIZE",
+    "TT_SESSION_RELATE"
+  ],
+  "answer_records": {
+    "decide": "tt-n-cobol-AnswerDecideResult",
+    "choose": "tt-n-cobol-AnswerChooseResult",
+    "tag": "tt-n-cobol-AnswerTagResult",
+    "score": "tt-n-cobol-AnswerScoreResult",
+    "filter": "tt-n-cobol-AnswerFilterResult",
+    "rank": "tt-n-cobol-AnswerRankResult",
+    "find": "tt-n-cobol-AnswerFindResult",
+    "annotate": "tt-n-cobol-AnswerAnnotateResult",
+    "recognize": "tt-n-cobol-AnswerRecognizeResult",
+    "relate": "tt-n-cobol-AnswerRelateResult"
+  },
+  "settings": "TT_ENGINE_NEW",
+  "preview": "TT_PREVIEW",
+  "preview_fields": [
+    "estimated_bytes",
+    "estimated_input_tokens",
+    "first_body_utf8",
+    "largest_request_bytes",
+    "largest_request_estimated_input_tokens",
+    "records",
+    "requests",
+    "token_estimate_method",
+    "upper_bound"
+  ],
+  "native_constructor": "thinkthen_session_new_typed_with_surface",
+  "native_wait": "thinkthen_session_next_packet",
+  "native_views": "thinkthen_session_result_view"
+}

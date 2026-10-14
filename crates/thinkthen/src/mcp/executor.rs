@@ -133,11 +133,8 @@ fn complete(call: Call<RequestValue>, single: bool) -> Result<NativeReply, Error
     }
 }
 fn reply<T: Serialize>(call: Call<T>, failed: bool) -> Result<NativeReply, Error> {
-    let complete = call
-        .complete()
-        .ok_or_else(|| Error::defect("native complete call has no identity"))?;
     Ok(NativeReply {
-        object: NativeObject::new(&complete)
+        object: NativeObject::new(&call)
             .map_err(|_| Error::defect("native complete call could not be written"))?,
         failed,
     })

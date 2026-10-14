@@ -21,20 +21,26 @@ corpus = json.loads((SHARED / "corpus.json").read_text())
 checks = shared.validators(json.loads((ROOT / "specification/result.schema.json").read_text()))
 shared.check_schema(corpus["cases"], checks)
 conformance = {case["id"]: case for case in json.loads((ROOT / "conformance/cases.json").read_text())["cases"]}
+def stop_backend(backend):
+    backend.terminate()
+    try:
+        backend.wait(timeout=5)
+    except subprocess.TimeoutExpired:
+        backend.kill()
+        backend.wait()
+
+
 run = Path(os.environ.get("THINKTHEN_TYPECASE_DLL", HERE / "bin/Release/net8.0/TypeCase.dll")).resolve(strict=True)
 if os.environ.get("THINKTHEN_ARTIFACT") and not os.environ.get("THINKTHEN_TYPECASE_DLL"):
     raise ValueError("installed C# parity requires its package-referenced caller")
-if os.environ.get("THINKTHEN_BACKEND_BIN"):
-    backend = subprocess.Popen([os.environ["THINKTHEN_BACKEND_BIN"]],
-                               stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-                               stderr=subprocess.PIPE, env=child_env(), text=True)
-    try:
-        port = int(read_process_line(backend.stdout))
-    except BaseException:
-        shared.stop_backend(backend)
-        raise
-else:
-    backend, port = shared.start_backend()
+backend_path = os.environ.get("THINKTHEN_BACKEND_BIN", str(Path(os.environ.get("CARGO_TARGET_DIR", ROOT / "target")) / "debug/conformance-backend"))
+backend = subprocess.Popen([backend_path], stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                           stderr=subprocess.PIPE, env=child_env(), text=True)
+try:
+    port = int(read_process_line(backend.stdout))
+except BaseException:
+    stop_backend(backend)
+    raise
 count = 0
 FIELDS = {"17-annotate-partial": [{"refund": "unresolved", "team": "failed backend missing_probability",
                                    "severity": "answered", "topics": "answered"}]}
@@ -180,7 +186,6 @@ def native_parity(consumer, command):
 
 
 try:
-    assert type_case(["carriers"], child_env(), "owned carrier fixtures") == {"carriers": "pass"}
     with tempfile.TemporaryDirectory(prefix="thinkthen-csharp-types-") as cache:
         # Ticket 0291, before any case sends: P1 and one invalid plan run with
         # no key through the public Engine.Plan; the zero budgets and the zero
@@ -188,6 +193,7 @@ try:
         env = child_env(home=cache, XDG_CACHE_HOME=cache, DOTNET_CLI_HOME=cache,
                         THINKTHEN_BASE_URL=f"http://127.0.0.1:{port}/generic/v1",
                         THINKTHEN_CACHE=str(Path(cache) / "plan"))
+        assert type_case(["carriers"], env, "owned carrier fixtures") == {"carriers": "pass"}
         p1 = next(case for case in corpus["cases"] if case["name"] == "plan-p1")
         actual = type_case(["plan", json.dumps(p1["plan_input"])], env, "plan-p1")
         assert actual == p1["response"] and checks["plan"].is_valid(actual), actual
@@ -253,7 +259,7 @@ try:
         print("C# named native: ten functions, typed fields and physical file locations PASS",flush=True)
 
 finally:
-    shared.stop_backend(backend)
+    stop_backend(backend)
 print(f"C# J1 public binding: {len(corpus['cases'])} schema cases, {count} typed runtime cases, plan P1, limits and annotate fields passed; 14 frozen C JSON syntax/control cases retain schema validation")
 
 raise SystemExit(native_parity("csharp", [str(resolve_dotnet()), str(run)]))

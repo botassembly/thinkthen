@@ -38,7 +38,7 @@ def native(name, style):
 
 
 def language(path, default):
-    return {'.kt': 'kotlin', '.scala': 'scala', '.h': 'c' if default == 'cobol' else default}.get(path.suffix, default)
+    return {'.kt': 'kotlin', '.scala': 'scala', '.h': 'c' if default == 'cobol' else default, '.rbs': 'rbs'}.get(path.suffix, default)
 
 
 def members(declared, containers, prefix=''):
@@ -50,7 +50,7 @@ def members(declared, containers, prefix=''):
 
 
 def function_errors(declared, functions, config, containers, facade=''):
-    if config['language'] in ('java', 'cpp', 'php'):
+    if config['language'] in ('java', 'cpp', 'php', 'typescript', 'csharp'):
         declared = READ.public_inherited(declared)
     names = {canonical(d.name) for d in declared if d.kind == 'call' and d.owner in containers}
     errors = []
@@ -125,7 +125,7 @@ def check(root, manifest, name):
     sys.path.insert(0, str(root / 'sdlc/generators/results'))
     from registry import OUTPUTS
     suffixes = {
-        'python': ('.pyi',), 'typescript': ('.d.ts',), 'ruby': ('.rb',),
+        'python': ('.pyi',), 'typescript': ('.d.ts',), 'ruby': ('.rb', '.rbs'),
         'c': ('.h',), 'cpp': ('.hpp',), 'csharp': ('.cs',), 'go': ('.go',),
         'java': ('.java', '.kt', '.scala'), 'swift': ('.swift',), 'zig': ('.zig',),
         'php': ('.php',), 'dart': ('.dart',), 'ada': ('.ads',), 'objc': ('.h',),
@@ -146,12 +146,17 @@ def check(root, manifest, name):
             source_files[relative] = path
             try:
                 found = READ.declarations(path.read_text(), language(path, config['language']))
+                if config['language'] == 'r' and path.name != 'NAMESPACE':
+                    found = {d for d in found if d.kind != 'export'}
                 declared.update(exported(found, exports[path.resolve()]) if exports is not None else found)
             except (SyntaxError, ValueError) as error:
                 errors.append(f'{relative}: declaration parse failed: {error}')
     if not source_files:
         errors.append('no public declaration files')
     promoted_owners = {owner: READ.go_owners(declared, owner) for owner in config.get('representation_embedded_members', {})}
+    keyword_links = {d for d in declared if d.kind == 'unpacked'}
+    if config['language'] == 'python':
+        declared = READ.python_keywords(declared)
     if config['language'] == 'go':
         declared = READ.public_go(declared)
     if config['language'] == 'r':
@@ -184,20 +189,22 @@ def check(root, manifest, name):
                 wanted = READ.public_go(wanted)
             if exports is not None:
                 wanted = exported(wanted, exports[paths[0].resolve()])
-            wanted = {d for d in wanted if d.kind != 'inherited'}
+            wanted = {d for d in wanted if d.kind != 'inherited' or lang == 'python'}
             expected.update(wanted)
             actual = READ.declarations(paths[0].read_text(), lang)
             if lang == 'go':
                 actual = READ.public_go(actual)
             if exports is not None:
                 actual = exported(actual, exports[paths[0].resolve()])
-            actual = {d for d in actual if d.kind != 'inherited'}
+            actual = {d for d in actual if d.kind != 'inherited' or lang == 'python'}
             for item in sorted(wanted - actual):
                 errors.append(f'missing generated declaration: {filename}:{item.owner}.{item.name}')
             for item in sorted(actual - wanted):
                 errors.append(f'unlisted generated declaration: {filename}:{item.owner}.{item.name}')
     except (KeyError, ValueError, OSError, TypeError, AttributeError, ImportError, RuntimeError, subprocess.SubprocessError) as error:
         errors.append('schema declaration derivation failed: ' + str(error))
+    if config['language'] == 'python':
+        expected = READ.python_keywords(expected | keyword_links)
     categories = manifest['categories']
     allowed_types = set(categories['lifecycle'] + categories['errors'])
     allowed_calls = set()
@@ -253,7 +260,7 @@ def check(root, manifest, name):
                 field = adapter.get('aliases', {}).get(item.name, canonical(item.name))
                 contract = request if adapter['contract'] == 'request' else result
                 types = adapter['type'] if isinstance(adapter['type'], list) else [adapter['type']]
-                if any(field in SCHEMA.properties(contract, key) for key in types):
+                if any(field in SCHEMA.properties(contract, key, adapter.get('path', ())) for key in types):
                     continue
             if item.name in config.get('wrapper_members', {}).get(item.owner, []):
                 continue

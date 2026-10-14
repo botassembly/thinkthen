@@ -3,6 +3,20 @@ declare(strict_types=1);
 require getenv('TT_AUTOLOAD');
 use ThinkThen\Client;
 
+/** Test adapter serialization is not a public library operation. */
+function fixtureValue(mixed $value): mixed
+{
+    if ($value instanceof ThinkThen\Results\Node) {
+        $value = (object)(new ReflectionProperty(ThinkThen\Results\Node::class, 'values'))->getValue($value);
+    }
+    if ($value instanceof stdClass) {
+        $result = new stdClass();
+        foreach ($value as $name => $field) $result->$name = fixtureValue($field);
+        return $result;
+    }
+    return is_array($value) ? array_map(fixtureValue(...), $value) : $value;
+}
+
 function check(bool $ok, string $message): void { if (!$ok) throw new RuntimeException($message); }
 $client = new Client(['cache' => false, 'batch' => 1, 'max_retries' => 0]);
 $asks = [
@@ -21,7 +35,7 @@ $asks = [
 $mode = $argv[1];
 if ($mode === 'usage-written' || $mode === 'usage-failed') {
     $call = $client->decide('Is it?', 'surface-attribution');
-    $earlier = json_encode($call->facts()->toObject());
+    $earlier = json_encode(fixtureValue($call->facts()));
     check($call->results[0]->value === true && $call->facts()->requests_sent === 1, 'retained answer and sends');
     $observed = $client->usagePersistence();
     if ($mode === 'usage-failed') check($observed->state === ThinkThen\UsagePersistenceState::Pending && $observed->advice === null, 'held writer pending');
@@ -30,7 +44,7 @@ if ($mode === 'usage-written' || $mode === 'usage-failed') {
     check($finished->state === $expected, 'finalized state');
     check($finished->advice === ($mode === 'usage-failed' ? 'check the usage folder permissions and free space' : null), 'native safe advice');
     check($client->usagePersistence() == $finished && $client->finishUsageStatus() == $finished, 'latched observation');
-    check(json_encode($call->facts()->toObject()) === $earlier, 'retained facts changed');
+    check(json_encode(fixtureValue($call->facts())) === $earlier, 'retained facts changed');
     $client->close();
     foreach (['usagePersistence', 'finishUsageStatus'] as $method) {
         try { $client->$method(); throw new RuntimeException('closed method admitted'); }
@@ -54,12 +68,21 @@ if ($mode === 'usage-written' || $mode === 'usage-failed') {
     }
     check($retained['decide']->decideAnswer() === true, 'one safe decision');
     check(is_string($retained['choose']->chooseAnswer()) && is_array($retained['tag']->tagAnswer()) && is_numeric($retained['score']->scoreAnswer()), 'one safe scalar answer');
-    check(is_array($retained['filter']->filterAnswer()) && is_array($retained['rank']->rankAnswer()), 'plain answer lists');
+    check($retained['filter']->filterAnswer() === ['filter-yes'], 'filter returns only retained originals');
+    check($retained['rank']->rankAnswer() === [0, 1], 'rank returns original zero-based indexes');
+    check($retained['find']->findAnswer() instanceof ThinkThen\Results\Find, 'typed find answer');
+    check($retained['annotate']->annotateAnswer()[0] instanceof ThinkThen\Results\Annotation, 'typed annotation answer');
+    check($retained['recognize']->recognizeAnswer()[0] instanceof ThinkThen\Results\Recognition, 'typed recognition answer');
+    $relation = $retained['relate']->relateAnswer();
+    check($relation instanceof ThinkThen\Results\Relation && $relation->value[0]->sourceName() === 'Ana' && $relation->value[0]->targetName() === 'Bob', 'typed relation endpoints');
+    try { $retained['decide']->rankAnswer(); throw new RuntimeException('wrong answer reader accepted'); }
+    catch (ThinkThen\UsageFailure) {}
+    check($client->filter('Is it?', [null, false])->filterAnswer() === [null, false], 'filter lost original null or false');
     $client->close();
     foreach ($retained as $call) foreach ($call->results as $row) {
         check($row instanceof ThinkThen\Results\Node, 'owned typed row');
         check(is_string($row->answer_id), 'owned answer ID');
-        check($row->toObject()->answer_id === $row->answer_id, 'lossless owned JSON');
+        check(fixtureValue($row)->answer_id === $row->answer_id, 'lossless owned JSON');
     }
     ob_start();
     require dirname((new ReflectionClass(Client::class))->getFileName(), 3).'/examples/direct.php';
@@ -118,6 +141,13 @@ if ($mode === 'usage-written' || $mode === 'usage-failed') {
     $view = $ffi->new('thinkthen_complete_immediate_facts_v1');
     $view->records = 1; $view->requests_sent = -1;
     $owned = ThinkThen\Internal\Decoder::failureFacts(FFI::addr($view));
+    $number = $ffi->new('thinkthen_complete_json_v1');
+    $decimal = '0.12345678901234567890123456789';
+    $bytes = $ffi->new('char['.(strlen($decimal) + 1).']');
+    FFI::memcpy($bytes, $decimal, strlen($decimal));
+    $number->kind = 3; $number->data->number->data = FFI::addr($bytes[0]); $number->data->number->len = strlen($decimal);
+    $read = new ReflectionMethod(ThinkThen\Internal\Decoder::class, 'jsonValue');
+    check($read->invoke(null, $number) === $decimal, 'native authored decimal rounded');
     unset($view, $ffi);
     check($owned instanceof ThinkThen\Results\FailureFacts && !$owned->has('call_id'), 'count-only native facts gained an identity');
     check($owned->requests_sent === '18446744073709551615' && $owned->records === 1, 'native wide integer rounded or lifetime lost');
@@ -133,6 +163,23 @@ if ($mode === 'usage-written' || $mode === 'usage-failed') {
         catch (ThinkThen\BackendFailure $again) { check($again->facts()->requests_sent === 1, 'failed prefix lost facts'); }
     }
 } elseif ($mode === 'zero') {
+    $preview = $client->plan('decide', 'Is it?', 'secret-preview');
+    check($preview instanceof ThinkThen\Results\Plan && $preview->records === 1 && $preview->requests === 1 && !$preview->upper_bound, 'typed native plan counts');
+    $emptyPreview = $client->plan('decide', 'Is it?', []);
+    check($emptyPreview->first_body_utf8()->present && $emptyPreview->first_body_utf8 === null, 'required null plan body became absent');
+    check(!method_exists(ThinkThen\Results\Node::class, 'toObject'), 'public packet transport dump remains');
+    check($preview->estimated_bytes > 0 && $preview->first_body_utf8()->present && str_contains($preview->first_body_utf8, 'secret-preview') && $preview->estimated_input_tokens instanceof ThinkThen\Results\TokenBand, 'complete typed plan fields');
+    $produced = false;
+    try { $client->plan('decide', 'Is it?', (function() use (&$produced) { $produced = true; yield 'unreachable'; })()); throw new RuntimeException('feed plan admitted'); }
+    catch (ThinkThen\UsageFailure) {}
+    check(!$produced, 'plan consumed producer');
+    try { new Client([], getenv('TT_ERROR_LIBRARY')); throw new RuntimeException('synthetic constructor answered'); }
+    catch (ThinkThen\BackendFailure $error) {
+        check($error->retryable && $error->kind === ThinkThen\ErrorKind::Backend && $error->facts() instanceof ThinkThen\Results\FailureFacts, 'constructor error view not copied');
+        check($error->facts()->records === 7 && $error->facts()->requests_sent === 3 && !$error->facts()->has('call_id'), 'constructor facts changed');
+    }
+    try { new Client(new ThinkThen\Inputs\Settings(max_retries: -1)); throw new RuntimeException('invalid settings admitted'); }
+    catch (ThinkThen\UsageFailure $error) { check($error->kind === ThinkThen\ErrorKind::Usage && !$error->retryable && $error->facts() === null, 'constructor error kind/retryability/facts'); }
     $marker = new RuntimeException('private producer marker');
     $producer = (function() use ($marker) { throw $marker; yield 'unreachable'; })();
     try { $client->decide('Is it?', $producer); throw new RuntimeException('producer answered'); }
@@ -144,7 +191,10 @@ if ($mode === 'usage-written' || $mode === 'usage-failed') {
     catch (ThinkThen\UsageFailure $error) { check($error->getMessage() === 'the question declaration uses an unsupported feature', 'native admission changed'); }
 
     try { $client->start('decide', 'Is it?', ['unreachable-first', Client::item('unreachable-tail', ['context' => false])]); throw new RuntimeException('invalid tail admitted eagerly'); }
-    catch (ThinkThen\UsageFailure $error) { check($error->getMessage() === 'the per-item context does not match context_schema', 'eager tail admission changed'); }
+    catch (ThinkThen\UsageFailure $error) {
+        check($error->getMessage() === 'the per-item context does not match context_schema', 'eager tail admission changed');
+        check(!$error->retryable && $error->facts() === null, 'immediate admission facts lost');
+    }
 
     try { new Client([], getenv('HOME').'/missing-library.so'); throw new RuntimeException('missing library loaded'); }
     catch (ThinkThen\LocalFailure) {}

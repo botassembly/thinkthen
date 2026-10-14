@@ -55,16 +55,12 @@ fn blocking_push_ignores_pending_output_and_wakes_for_room_or_cancel() {
                 RequestSessionPushStatus::Closed
             );
         } else {
-            loop {
-                if matches!(
-                    session
-                        .next_packet(RequestSessionWaitInterest::Result)
-                        .unwrap(),
-                    RequestSessionRead::Result(RequestSessionResult::Row(_))
-                ) {
-                    break;
-                }
-            }
+            while !matches!(
+                session
+                    .next_packet(RequestSessionWaitInterest::Result)
+                    .unwrap(),
+                RequestSessionRead::Result(RequestSessionResult::Row(_))
+            ) {}
             assert_eq!(
                 received
                     .recv_timeout(Duration::from_secs(5))

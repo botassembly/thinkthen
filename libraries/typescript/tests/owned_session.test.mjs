@@ -79,6 +79,7 @@ test('Client report disabled usage when the environment selects no storage',asyn
 test('the ten Client functions retain generated values after close',async t=>{
   const backend=await startBackend(t);
   const {value}=await ask(backend,`
+    if('parse' in tt.Results || 'packet' in tt.Results)throw Error('public transport decoder');
     const client=new tt.Client({cache:false});
     const asks={
       decide:[{decide:'Is it urgent?'},'text'],
@@ -89,8 +90,8 @@ test('the ten Client functions retain generated values after close',async t=>{
       rank:['Is it urgent?',['first','second']],
       find:['Which line?',['first','second']],
       annotate:[{version:1,questions:{ok:{decide:'Is it urgent?'}}},['text']],
-      recognize:[{version:1,recognize:{kinds:{person:null}}},'Ana Lima'],
-      relate:[{version:1,relate:{relations:[{name:'knows',source:'person',target:'person',either:false}]}},[{name:'Ana',kind:'person'},{name:'Bob',kind:'person'}]]
+      recognize:[tt.Client.recognizeQuestion({person:null}),'Ana Lima'],
+      relate:[tt.Client.relateQuestion([{name:'knows',source:'person',target:'person',either:false}]),[{name:'Ana',kind:'person'},{name:'Bob',kind:'person'}]]
     };
     const held=[];
     for(const [verb,[q,input]] of Object.entries(asks)) held.push([verb,await client[verb](q,input,{attempts:true})]);
@@ -105,6 +106,21 @@ test('the ten Client functions retain generated values after close',async t=>{
     if(!(held[0][1].results[0].answer instanceof tt.Results.NativeAnswerYesNo) || !(held[0][1].results[0].answer.probability>0))throw Error('lost decision probabilities');
     if(!(held[1][1].results[0].answer instanceof tt.Results.NativeAnswerChoice) || !Object.values(held[1][1].results[0].answer.probabilities).every(v=>typeof v==='number'))throw Error('lost choice probabilities');
     if(typeof held[0][1].facts.largest_request_bytes!=='number' || !(held[0][1].facts.input_tokens>0) || !held[0][1].facts.token_estimate_method || !(held[0][1].facts.usage_persistence instanceof tt.Results.NativePersistenceObservation))throw Error('lost observed cost facts');
+    for(const [verb,done] of held) {
+      const answer=done[verb+'Answer']();
+      if(verb==='rank' && JSON.stringify(answer)!==JSON.stringify(done.results.map(row=>row.index)))throw Error('rank returned receipts');
+      if(verb==='filter' && JSON.stringify(answer)!==JSON.stringify(done.results.map(row=>row.input)))throw Error('filter returned receipts');
+      if(['decide','choose','tag','score'].includes(verb) && JSON.stringify(answer)!==JSON.stringify(done.results[0].value))throw Error('scalar answer changed');
+      if(['find','relate'].includes(verb) && answer!==done.results[0])throw Error('aggregate answer changed');
+      if(verb==='recognize' && JSON.stringify(answer)!==JSON.stringify(done.results))throw Error('recognition answer changed');
+    }
+    const direct=new tt.Client({cache:false});
+    if(typeof await direct.decideAnswer('Question?','text')!=='boolean')throw Error('direct answer changed');
+    try{(await direct.decide('Question?',['first','second'])).decideAnswer();throw Error('accepted multiple answers');}
+    catch(error){if(!(error instanceof tt.ClientError) || !error.facts || error.results.length!==2)throw error;}
+    try{held[0][1].filterAnswer();throw Error('accepted wrong reader');}
+    catch(error){if(!(error instanceof tt.ClientError) || error.facts!==held[0][1].facts)throw error;}
+    direct.close();
     return held.map(([verb,done])=>[verb,done.results.length,done.facts.requests_sent]);
   `,{arm:'arm/full/capture'});
   assert.deepEqual(value.map(row=>row[0]),['decide','choose','tag','score','filter','rank','find','annotate','recognize','relate']);
@@ -112,7 +128,7 @@ test('the ten Client functions retain generated values after close',async t=>{
   assert.ok(await backend.count()>=10);
 });
 
-test('Client retains false, null, missing, extensions and physical positions',async t=>{
+test('Client retains false, null, missing, exact numbers and physical positions',async t=>{
   const backend=await startBackend(t);
   const {value}=await ask(backend,`
     const client=new tt.Client({cache:false});
@@ -123,14 +139,13 @@ test('Client retains false, null, missing, extensions and physical positions',as
     const {writeFileSync}=await import('node:fs');
     const path=process.env.HOME+'/input.txt';writeFileSync(path,'first\\n\\nthird\\n');
     const located=await client.decide('Question?',tt.Client.files([path]));
-    const exactDone=await client.decide('Question?',tt.Results.parse('9007199254740993'));client.close();
-    const raw=JSON.parse(JSON.stringify(no.terminal));raw.future={flag:false,empty:null};
-    const extended=tt.Results.packet(raw);
-    return {values:[no.results[0].value,nil.results[0].value,uncertain.results[0].value],presence:[no.results[0].question.has('true'),nil.results[0].question.has('true'),nil.results[0].question.true],positions:located.results.map(r=>[r.index,r.source.first_line,r.source.last_line,r.input]),future:extended.future,nativeExact:[exactDone.results[0].input.raw,JSON.stringify(exactDone.results[0].input)],exact:(()=>{const p=tt.Results.parse('9007199254740993');return [p.raw,JSON.stringify(p)];})(),typed:extended instanceof tt.Results.NativeSessionPacketTerminal};
+    const exactPath=process.env.HOME+'/exact.jsonl';writeFileSync(exactPath,'9007199254740993\\n');
+    const exactDone=await client.decide('Question?',tt.Client.files([exactPath],{unit:'line'},'text','jsonl'));client.close();
+    return {values:[no.results[0].value,nil.results[0].value,uncertain.results[0].value],presence:[no.results[0].question.has('true'),nil.results[0].question.has('true'),nil.results[0].question.true],positions:located.results.map(r=>[r.index,r.source.first_line,r.source.last_line,r.input]),nativeExact:[exactDone.results[0].input.raw,JSON.stringify(exactDone.results[0].input)],typed:no.terminal instanceof tt.Results.NativeSessionPacketTerminal};
   `);
   assert.deepEqual(value.values,[false,null,null]);assert.deepEqual(value.presence,[false,true,null]);
   assert.deepEqual(value.positions,[[0,1,1,'first'],[1,3,3,'third']]);
-  assert.deepEqual(value.future,{flag:false,empty:null});assert.equal(value.typed,true);assert.deepEqual(value.exact,['9007199254740993','9007199254740993']);assert.deepEqual(value.nativeExact,['9007199254740993','9007199254740993']);
+  assert.equal(value.typed,true);assert.deepEqual(value.nativeExact,['9007199254740993','9007199254740993']);
 });
 
 test('Client reports native deadline settlement and invalid admission sends nothing',async t=>{
@@ -269,4 +284,25 @@ test('Client retains producer exceptions and native admission messages',async t=
     client.close();return true;
   `);
   assert.equal(value,true);assert.equal(await backend.count(),0);
+});
+
+
+test('Client previews complete inputs through native admission without sending',async t=>{
+  const backend=await startBackend(t);
+  const {value}=await ask(backend,`
+    const client=new tt.Client({cache:false});
+    const plan=client.plan('decide','Question?',['first','second'],{batch:1});
+    let advanced=false;const input=(function*(){advanced=true;yield 'text';})();
+    const errors=[];
+    for(const [verb,question,rows,controls] of [['decide','Question?',input,{}],['decide','Question?',['text'],{batch:0}],['recognize',{version:1,recognize:{kinds:{person:null}}},['text'],{}],['decide','Question?',['text'],{signal:AbortSignal.abort()}]]) {
+      try{client.plan(verb,question,rows,controls);throw Error('preview accepted invalid input');}
+      catch(error){if(!(error instanceof tt.ClientError))throw error;errors.push(error.kind);}
+    }
+    client.close();return {plan,advanced,errors};
+  `);
+  assert.equal(value.plan.records,2);assert.equal(value.plan.requests,2);
+  assert.ok(value.plan.token_estimate_method);assert.ok(value.plan.estimated_bytes>0);
+  assert.ok(value.plan.first_body_utf8.includes('first'));
+  assert.equal(value.advanced,false);assert.deepEqual(value.errors,['usage','usage','usage','cancelled']);
+  assert.equal(await backend.count(),0);
 });

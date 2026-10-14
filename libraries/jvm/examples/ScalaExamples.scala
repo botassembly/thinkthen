@@ -5,7 +5,7 @@ import scala.concurrent.duration.*
 object ScalaExamples {
   def run(engine: ScalaEngine): List[Any] = {
     val answers = List(
-    Await.result(engine.decide(S.decide(), S.input("session-decide"), S.options()).result, 10.seconds).decide(),
+    Await.result(engine.decide(question = S.decide(), input = S.input("session-decide"), options = Some(S.options())).result, 10.seconds).decide(),
     Await.result(engine.choose(S.choose(), S.input("session-choose"), S.options()).result, 10.seconds).choose(),
     Await.result(engine.tag(S.tag(), S.input("session-tag"), S.options()).result, 10.seconds).tag(),
     Await.result(engine.score(S.score(), S.input("session-score"), S.options()).result, 10.seconds).score(),

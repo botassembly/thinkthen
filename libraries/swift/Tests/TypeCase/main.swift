@@ -1,18 +1,18 @@
 import Foundation
-import ThinkThen
+@testable import ThinkThen
 
 @main enum SharedConsumer {
-    static func run(_ fixture: [String: Any], settings: String, originalJSON: JSONValue) async throws -> OwnedCall {
-        let client = try Client(settings: InputEngineSettings.read(JSONValue.parse(Data(settings.utf8))))
+    static func run(_ fixture: [String: Any], settings: String, originalJSON: DataValue) async throws -> Call {
+        let client = try Client(settings: EngineSettings.read(DataValue.parse(Data(settings.utf8))))
         defer { client.close() }
         let verb = fixture["verb"] as! String
-        func value(_ object: Any) throws -> JSONValue {
-            try JSONValue.parse(JSONSerialization.data(withJSONObject: object, options: [.fragmentsAllowed]))
+        func value(_ object: Any) throws -> DataValue {
+            try DataValue.parse(JSONSerialization.data(withJSONObject: object, options: [.fragmentsAllowed]))
         }
-        let preserved: [String: JSONValue]
+        let preserved: [String: DataValue]
         if case .orderedObject(let members) = originalJSON.kind { preserved = Dictionary(members.map { ($0.key, $0.value) }, uniquingKeysWith: { _, last in last }) }
-        else { throw JSONConversionError("Fixture is not an object") }
-        let question: InputRequestQuestion
+        else { throw ValueConversionError("Fixture is not an object") }
+        let question: Question
         switch fixture["loader"] as? String {
         case "named", "load_named": question = .name(fixture["reference"] as! String)
         case "reference", "load_reference": question = .reference(fixture["reference"] as! String)
@@ -20,7 +20,7 @@ import ThinkThen
         default:
             if fixture["question_form"] as? String == "file" { question = .file("fixture-question.json") }
             else {
-                var authored = try (fixture["raw"] as? String).map { try JSONValue.parse(Data($0.utf8)) } ?? preserved["question"]!
+                var authored = try (fixture["raw"] as? String).map { try DataValue.parse(Data($0.utf8)) } ?? preserved["question"]!
                 if case .orderedObject(let members) = authored.kind {
                     authored = .orderedObject(verb == "find" ? members.filter { $0.key != "none" } : members)
                 }
@@ -31,14 +31,14 @@ import ThinkThen
         let injection = (fixture["operation"] as? [String: Any])?["injection"] as? String
         let contexts = fixture["contexts"] as? [Any]
         let projectContext = contexts?.contains { !($0 is String || $0 is [String: Any] || $0 is NSNull) } ?? false
-        var input: InputRequestInput
+        var input: Input
         if let paths = fixture["paths"] as? [String], !paths.isEmpty {
             let unit = fixture["source_unit"] as? Int ?? 3
             var source: [String: Any] = ["paths": paths, "reading": ["unit": unit == 2 ? "window" : (unit == 1 || unit == 5 ? "line" : "file")]]
             if unit == 2, let window = fixture["window"] as? Int, window != 0 { source["reading"] = ["unit": "window", "window": window] }
             if unit == 5 || fixture["owned_jsonl"] as? Bool == true { source["framing"] = "jsonl" }
             if unit == 4 || fixture["image_reader"] as? Bool == true { source["media"] = "image" }
-            input = try InputRequestInput.read(value(["kind": "source", "source": source]))
+            input = try Input.read(value(["kind": "source", "source": source]))
         } else {
             let images: [[String: Any]] = try (fixture["image_paths"] as? [String] ?? []).map {
                 ["kind": "bytes", "bytes": try Data(contentsOf: URL(fileURLWithPath: $0)).base64EncodedString(), "media": fixture["media"] ?? "image/png"]
@@ -58,7 +58,7 @@ import ThinkThen
                 if !images.isEmpty { item["images"] = images }
                 records.append(item)
             }
-            input = try InputRequestInput.read(value(["kind": verb == "find" ? "units" : verb == "relate" ? "entities" : "records", "items": records]))
+            input = try Input.read(value(["kind": verb == "find" ? "units" : verb == "relate" ? "entities" : "records", "items": records]))
         }
         var options: [String: Any] = ["attempts": true]
         if projectContext {
@@ -70,20 +70,20 @@ import ThinkThen
         if injection == "expired_deadline" { options["deadline_ms"] = 0 }
         if fixture["context_present"] as? Bool == true, fixture["context"] is NSNull, fixture["contexts"] is NSNull || fixture["contexts"] == nil {
             let first = (fixture["items"] as! [Any])[0]
-            input = .json(InputRequestInputJson(value: try value(["item": first, "context": NSNull()])))
+            input = .json(InputJson(value: try value(["item": first, "context": NSNull()])))
             options["field"] = ["/item"]
             options["context_field"] = "/context"
         }
-        let typedOptions = Presence.value(try InputRequestOptions.read(value(options)))
+        let typedOptions = Presence.value(try Options.read(value(options)))
         let incremental = fixture["incremental"] as? Bool == true
         let worker = Task {
             if incremental, case .records(let records) = input {
-                let feed = AsyncThrowingStream<InputRequestSessionDescriptor, any Error> { continuation in
-                    for item in records.items { continuation.yield(InputRequestSessionDescriptor(item: item)) }
+                let feed = AsyncThrowingStream<SessionDescriptor, any Error> { continuation in
+                    for item in records.items { continuation.yield(SessionDescriptor(item: item)) }
                     continuation.finish()
                 }
-                let call = InputRequestCall(function: .decide, input: .feed(InputRequestInputFeed(name: "records")), options: typedOptions, question: question)
-                return try await client.execute(InputRequest(call: call, schema: .thinkthenRequest_1), feed: feed)
+                let call = CallRequest(function: .decide, input: .feed(InputFeed(name: "records")), options: typedOptions, question: question)
+                return try await client.execute(Request(call: call, schema: .thinkthenRequest_1), feed: feed)
             }
             switch verb {
             case "decide": return try await client.decide(question, input: input, options: typedOptions)
@@ -96,7 +96,7 @@ import ThinkThen
             case "annotate": return try await client.annotate(question, input: input, options: typedOptions)
             case "recognize": return try await client.recognize(question, input: input, options: typedOptions)
             case "relate": return try await client.relate(question, input: input, options: typedOptions)
-            default: throw JSONConversionError("Unknown fixture function")
+            default: throw ValueConversionError("Unknown fixture function")
             }
         }
         if injection == "cancel_token" { worker.cancel() }
@@ -111,18 +111,18 @@ import ThinkThen
     }
     static func main() async throws {
         let bytes = try Data(contentsOf: URL(fileURLWithPath: CommandLine.arguments[1]))
-        let originalJSON = try JSONValue.parse(bytes)
+        let originalJSON = try DataValue.parse(bytes)
         let fixture = try JSONSerialization.jsonObject(with: bytes) as! [String: Any]
-        let payload: JSONValue
+        let payload: DataValue
         do {
             let call = try await run(fixture, settings: CommandLine.arguments[2], originalJSON: originalJSON)
             payload = .object(["packets": .array(call.packets.map(\.json))])
         } catch let failure as SessionFailure {
             payload = .object(["packets": .array(failure.call.packets.map(\.json))])
         } catch let failure as SessionBoundaryFailure {
-            payload = try JSONValue.parse(JSONSerialization.data(withJSONObject: ["admission": ["code": failure.code, "message": failure.message]]))
+            payload = try DataValue.parse(JSONSerialization.data(withJSONObject: ["admission": ["code": failure.code, "message": failure.message]]))
         } catch is CancellationError {
-            payload = try JSONValue.parse(Data(#"{"admission":{"code":5,"message":"the call was cancelled"}}"#.utf8))
+            payload = try DataValue.parse(Data(#"{"admission":{"code":5,"message":"the call was cancelled"}}"#.utf8))
         }
         print(String(decoding: try payload.data(), as: UTF8.self))
     }

@@ -71,10 +71,10 @@ package Thinkthen_Session_C is
    K_THINKTHEN_COMPLETE_ORIGIN_MEMORY_V1 : constant := 5;
    K_THINKTHEN_COMPLETE_ORIGIN_PROXY_V1 : constant := 4;
    K_THINKTHEN_COMPLETE_ORIGIN_REPLAY_V1 : constant := 3;
-   K_THINKTHEN_COMPLETE_READABLE_QUESTION_CHOOSE_V1 : constant := 2;
-   K_THINKTHEN_COMPLETE_READABLE_QUESTION_DECIDE_V1 : constant := 1;
-   K_THINKTHEN_COMPLETE_READABLE_QUESTION_SCORE_V1 : constant := 4;
-   K_THINKTHEN_COMPLETE_READABLE_QUESTION_TAG_V1 : constant := 3;
+   K_THINKTHEN_COMPLETE_QUESTION_DOCUMENT_CHOOSE_V1 : constant := 2;
+   K_THINKTHEN_COMPLETE_QUESTION_DOCUMENT_DECIDE_V1 : constant := 1;
+   K_THINKTHEN_COMPLETE_QUESTION_DOCUMENT_SCORE_V1 : constant := 4;
+   K_THINKTHEN_COMPLETE_QUESTION_DOCUMENT_TAG_V1 : constant := 3;
    K_THINKTHEN_COMPLETE_RECOGNITION_MODE_BOUNDARY_ONLY_V1 : constant := 2;
    K_THINKTHEN_COMPLETE_RECOGNITION_MODE_WHOLE_V1 : constant := 1;
    K_THINKTHEN_COMPLETE_RECOGNITION_ODDS_BOUNDARY_ODDS_V1 : constant := 2;
@@ -268,7 +268,9 @@ package Thinkthen_Session_C is
    K_THINKTHEN_SESSION_READY_TIMEOUT_V1 : constant := 5;
    K_THINKTHEN_SESSION_RESULT_V1 : constant := 0;
    K_THINKTHEN_SESSION_WAIT_INPUT_V1 : constant := 1;
+   K_THINKTHEN_SESSION_WAIT_INTERRUPTIBLE_SETTLEMENT_V1 : constant := 4;
    K_THINKTHEN_SESSION_WAIT_RESULT_V1 : constant := 0;
+   K_THINKTHEN_SESSION_WAIT_SETTLEMENT_ARM_V1 : constant := 3;
    K_THINKTHEN_SESSION_WAIT_SETTLEMENT_V1 : constant := 2;
    type thinkthen_engine is null record;
    type thinkthen_question is null record;
@@ -1997,7 +1999,7 @@ package Thinkthen_Session_C is
       value : access constant thinkthen_complete_wording_version_v1;
    end record
    with Convention => C_Pass_By_Copy;
-   type thinkthen_complete_readable_question_decide_v1 is record
+   type thinkthen_complete_question_document_decide_v1 is record
       batch : aliased thinkthen_complete_batch_presence_v1;
       context_schema : aliased thinkthen_complete_input_declaration_presence_v1;
       item_schema : aliased thinkthen_complete_input_declaration_presence_v1;
@@ -2014,7 +2016,7 @@ package Thinkthen_Session_C is
       extensions : aliased thinkthen_complete_extensions_v1;
    end record
    with Convention => C_Pass_By_Copy;
-   type thinkthen_complete_readable_question_choose_v1 is record
+   type thinkthen_complete_question_document_choose_v1 is record
       batch : aliased thinkthen_complete_batch_presence_v1;
       context_schema : aliased thinkthen_complete_input_declaration_presence_v1;
       item_schema : aliased thinkthen_complete_input_declaration_presence_v1;
@@ -2030,7 +2032,7 @@ package Thinkthen_Session_C is
       extensions : aliased thinkthen_complete_extensions_v1;
    end record
    with Convention => C_Pass_By_Copy;
-   type thinkthen_complete_readable_question_tag_v1 is record
+   type thinkthen_complete_question_document_tag_v1 is record
       batch : aliased thinkthen_complete_batch_presence_v1;
       context_schema : aliased thinkthen_complete_input_declaration_presence_v1;
       item_schema : aliased thinkthen_complete_input_declaration_presence_v1;
@@ -2046,7 +2048,7 @@ package Thinkthen_Session_C is
       extensions : aliased thinkthen_complete_extensions_v1;
    end record
    with Convention => C_Pass_By_Copy;
-   type thinkthen_complete_readable_question_score_v1 is record
+   type thinkthen_complete_question_document_score_v1 is record
       batch : aliased thinkthen_complete_batch_presence_v1;
       context_schema : aliased thinkthen_complete_input_declaration_presence_v1;
       item_schema : aliased thinkthen_complete_input_declaration_presence_v1;
@@ -2062,23 +2064,23 @@ package Thinkthen_Session_C is
       extensions : aliased thinkthen_complete_extensions_v1;
    end record
    with Convention => C_Pass_By_Copy;
-   type thinkthen_complete_readable_question_data_v1 (discr : unsigned := 0) is record
+   type thinkthen_complete_question_document_data_v1 (discr : unsigned := 0) is record
       case discr is
          when 0 =>
-            decide : access constant thinkthen_complete_readable_question_decide_v1;
+            decide : access constant thinkthen_complete_question_document_decide_v1;
          when 1 =>
-            choose : access constant thinkthen_complete_readable_question_choose_v1;
+            choose : access constant thinkthen_complete_question_document_choose_v1;
          when 2 =>
-            tag : access constant thinkthen_complete_readable_question_tag_v1;
+            tag : access constant thinkthen_complete_question_document_tag_v1;
          when others =>
-            score : access constant thinkthen_complete_readable_question_score_v1;
+            score : access constant thinkthen_complete_question_document_score_v1;
       end case;
    end record
    with Convention => C_Pass_By_Copy,
         Unchecked_Union => True;
-   type thinkthen_complete_readable_question_v1 is record
+   type thinkthen_complete_question_document_v1 is record
       kind : aliased Interfaces.Unsigned_32;
-      data : aliased thinkthen_complete_readable_question_data_v1;
+      data : aliased thinkthen_complete_question_document_data_v1;
    end record
    with Convention => C_Pass_By_Copy;
    type thinkthen_complete_version_v1 is record
@@ -2102,7 +2104,7 @@ package Thinkthen_Session_C is
       answer_id : access constant thinkthen_complete_answer_id_v1;
       images : aliased thinkthen_complete_image_list_presence_v1;
       meta : access constant thinkthen_complete_meta_v1;
-      question : access constant thinkthen_complete_readable_question_v1;
+      question : access constant thinkthen_complete_question_document_v1;
       schema : access constant thinkthen_complete_version_v1;
       source : aliased thinkthen_complete_physical_source_presence_v1;
       threshold : aliased thinkthen_complete_json_presence_v1;
@@ -2163,7 +2165,7 @@ package Thinkthen_Session_C is
       input : aliased thinkthen_complete_json_presence_v1;
       members : aliased thinkthen_complete_rank_member_list_presence_v1;
       meta : access constant thinkthen_complete_meta_v1;
-      question : access constant thinkthen_complete_readable_question_v1;
+      question : access constant thinkthen_complete_question_document_v1;
       question_name : aliased thinkthen_complete_utf8_presence_v1;
       schema : access constant thinkthen_complete_version_v1;
       source : aliased thinkthen_complete_physical_source_presence_v1;
@@ -2187,7 +2189,7 @@ package Thinkthen_Session_C is
       input : aliased thinkthen_complete_json_presence_v1;
       members : aliased thinkthen_complete_rank_member_list_presence_v1;
       meta : access constant thinkthen_complete_meta_v1;
-      question : access constant thinkthen_complete_readable_question_v1;
+      question : access constant thinkthen_complete_question_document_v1;
       question_name : aliased thinkthen_complete_utf8_presence_v1;
       schema : access constant thinkthen_complete_version_v1;
       source : aliased thinkthen_complete_physical_source_presence_v1;
@@ -2211,7 +2213,7 @@ package Thinkthen_Session_C is
       input : aliased thinkthen_complete_json_presence_v1;
       members : aliased thinkthen_complete_rank_member_list_presence_v1;
       meta : access constant thinkthen_complete_meta_v1;
-      question : access constant thinkthen_complete_readable_question_v1;
+      question : access constant thinkthen_complete_question_document_v1;
       question_name : aliased thinkthen_complete_utf8_presence_v1;
       schema : access constant thinkthen_complete_version_v1;
       source : aliased thinkthen_complete_physical_source_presence_v1;
@@ -2235,7 +2237,7 @@ package Thinkthen_Session_C is
       input : aliased thinkthen_complete_json_presence_v1;
       members : aliased thinkthen_complete_rank_member_list_presence_v1;
       meta : access constant thinkthen_complete_meta_v1;
-      question : access constant thinkthen_complete_readable_question_v1;
+      question : access constant thinkthen_complete_question_document_v1;
       question_name : aliased thinkthen_complete_utf8_presence_v1;
       schema : access constant thinkthen_complete_version_v1;
       source : aliased thinkthen_complete_physical_source_presence_v1;
@@ -2259,7 +2261,7 @@ package Thinkthen_Session_C is
       input : aliased thinkthen_complete_json_presence_v1;
       members : aliased thinkthen_complete_rank_member_list_presence_v1;
       meta : access constant thinkthen_complete_meta_v1;
-      question : access constant thinkthen_complete_readable_question_v1;
+      question : access constant thinkthen_complete_question_document_v1;
       question_name : aliased thinkthen_complete_utf8_presence_v1;
       schema : access constant thinkthen_complete_version_v1;
       source : aliased thinkthen_complete_physical_source_presence_v1;
@@ -2305,7 +2307,7 @@ package Thinkthen_Session_C is
       answer : access constant thinkthen_complete_answer_v1;
       answer_id : access constant thinkthen_complete_answer_id_v1;
       observations : aliased thinkthen_complete_observation_list_v1;
-      question : access constant thinkthen_complete_readable_question_v1;
+      question : access constant thinkthen_complete_question_document_v1;
       question_sources : aliased thinkthen_complete_question_source_list_v1;
       request : aliased thinkthen_complete_utf8_v1;
       threshold : aliased thinkthen_complete_threshold_presence_v1;
@@ -2332,7 +2334,7 @@ package Thinkthen_Session_C is
       failure : access constant thinkthen_complete_failure_v1;
       failure_id : access constant thinkthen_complete_failure_id_v1;
       observations : aliased thinkthen_complete_observation_list_v1;
-      question : access constant thinkthen_complete_readable_question_v1;
+      question : access constant thinkthen_complete_question_document_v1;
       question_sources : aliased thinkthen_complete_question_source_list_v1;
       request : aliased thinkthen_complete_utf8_v1;
       threshold : aliased thinkthen_complete_threshold_presence_v1;
@@ -2511,7 +2513,7 @@ package Thinkthen_Session_C is
       input : aliased thinkthen_complete_json_presence_v1;
       members : aliased thinkthen_complete_rank_member_list_presence_v1;
       meta : access constant thinkthen_complete_meta_v1;
-      question : access constant thinkthen_complete_readable_question_v1;
+      question : access constant thinkthen_complete_question_document_v1;
       question_name : aliased thinkthen_complete_utf8_presence_v1;
       schema : access constant thinkthen_complete_version_v1;
       source : aliased thinkthen_complete_physical_source_presence_v1;
@@ -2558,7 +2560,7 @@ package Thinkthen_Session_C is
       value : aliased thinkthen_complete_find_candidate_list_v1;
    end record
    with Convention => C_Pass_By_Copy;
-   type thinkthen_complete_readable_question_2_v1 is record
+   type thinkthen_complete_find_question_document_v1 is record
       batch : aliased thinkthen_complete_batch_presence_v1;
       context_schema : aliased thinkthen_complete_input_declaration_presence_v1;
       item_schema : aliased thinkthen_complete_input_declaration_presence_v1;
@@ -2584,7 +2586,7 @@ package Thinkthen_Session_C is
       last_line : aliased thinkthen_complete_u64_presence_v1;
       meta : access constant thinkthen_complete_meta_v1;
       position : aliased thinkthen_complete_position_presence_v1;
-      question : access constant thinkthen_complete_readable_question_2_v1;
+      question : access constant thinkthen_complete_find_question_document_v1;
       schema : access constant thinkthen_complete_version_v1;
       threshold : aliased thinkthen_complete_json_presence_v1;
       value : aliased thinkthen_complete_json_presence_v1;
@@ -2778,7 +2780,7 @@ package Thinkthen_Session_C is
       kind : aliased Interfaces.Unsigned_32;
    end record
    with Convention => C_Pass_By_Copy;
-   type thinkthen_complete_readable_question_3_v1 is record
+   type thinkthen_complete_recognize_question_document_v1 is record
       batch : aliased thinkthen_complete_batch_presence_v1;
       context_schema : aliased thinkthen_complete_input_declaration_presence_v1;
       entity_definition : aliased thinkthen_complete_json_presence_v1;
@@ -2879,7 +2881,7 @@ package Thinkthen_Session_C is
       last_line : aliased thinkthen_complete_u64_presence_v1;
       meta : access constant thinkthen_complete_meta_v1;
       position : aliased thinkthen_complete_position_presence_v1;
-      question : access constant thinkthen_complete_readable_question_3_v1;
+      question : access constant thinkthen_complete_recognize_question_document_v1;
       schema : access constant thinkthen_complete_version_v1;
       source : aliased thinkthen_complete_physical_source_presence_v1;
       value : access constant thinkthen_complete_recognize_v1;
@@ -2921,7 +2923,7 @@ package Thinkthen_Session_C is
       direction : access constant thinkthen_complete_relation_direction_v1;
       method : access constant thinkthen_complete_relation_method_v1;
       observations : aliased thinkthen_complete_observation_list_v1;
-      question : access constant thinkthen_complete_readable_question_v1;
+      question : access constant thinkthen_complete_question_document_v1;
       question_sources : aliased thinkthen_complete_question_source_list_v1;
       reads : aliased thinkthen_complete_utf8_v1;
       relation : aliased thinkthen_complete_utf8_v1;
@@ -2941,7 +2943,7 @@ package Thinkthen_Session_C is
       direction : access constant thinkthen_complete_relation_direction_v1;
       method : access constant thinkthen_complete_relation_method_v1;
       observations : aliased thinkthen_complete_observation_list_v1;
-      question : access constant thinkthen_complete_readable_question_v1;
+      question : access constant thinkthen_complete_question_document_v1;
       question_sources : aliased thinkthen_complete_question_source_list_v1;
       reads : aliased thinkthen_complete_utf8_v1;
       relation : aliased thinkthen_complete_utf8_v1;
@@ -3007,7 +3009,7 @@ package Thinkthen_Session_C is
       value : access constant thinkthen_complete_relate_fields_v1;
    end record
    with Convention => C_Pass_By_Copy;
-   type thinkthen_complete_readable_question_4_v1 is record
+   type thinkthen_complete_relate_question_document_v1 is record
       batch : aliased thinkthen_complete_batch_presence_v1;
       context_schema : aliased thinkthen_complete_input_declaration_presence_v1;
       fields : aliased thinkthen_complete_relate_fields_presence_v1;
@@ -3081,7 +3083,7 @@ package Thinkthen_Session_C is
       last_line : aliased thinkthen_complete_u64_presence_v1;
       meta : access constant thinkthen_complete_meta_v1;
       position : aliased thinkthen_complete_position_presence_v1;
-      question : access constant thinkthen_complete_readable_question_4_v1;
+      question : access constant thinkthen_complete_relate_question_document_v1;
       schema : access constant thinkthen_complete_version_v1;
       value : aliased thinkthen_complete_related_entity_edge_list_v1;
       extensions : aliased thinkthen_complete_extensions_v1;
@@ -3186,7 +3188,7 @@ package Thinkthen_Session_C is
       model : aliased thinkthen_complete_utf8_v1;
       observations : aliased thinkthen_complete_observation_list_v1;
       probabilities : aliased thinkthen_complete_session_probabilities_presence_v1;
-      question : access constant thinkthen_complete_readable_question_v1;
+      question : access constant thinkthen_complete_question_document_v1;
       question_sha256 : aliased thinkthen_complete_utf8_v1;
       question_sources : aliased thinkthen_complete_question_source_list_v1;
       raw_pick : aliased thinkthen_complete_utf8_presence_v1;

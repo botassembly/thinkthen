@@ -38,11 +38,8 @@ final class NativeSession {
     @SuppressWarnings("restricted") // Native-owned pointers satisfy the C ABI lifetime contract.
     static void check(int code) {
         if (code == 0) return;
-        MemorySegment message = (MemorySegment)call("thinkthen_session_error_message", ValueLayout.ADDRESS, new MemoryLayout[]{});
-        boolean retryable = (int)call("thinkthen_session_error_retryable", ValueLayout.JAVA_INT, new MemoryLayout[]{}) != 0;
-        var facts = (MemorySegment)call("thinkthen_session_error_facts_json", ValueLayout.ADDRESS, new MemoryLayout[]{});
-        throw new NativeFailure(code, retryable, message.reinterpret(Long.MAX_VALUE).getString(0),
-            facts.equals(MemorySegment.NULL) ? null : Json.parse(facts.reinterpret(Long.MAX_VALUE).getString(0)));
+        var view = (MemorySegment)call("thinkthen_session_error_view", ValueLayout.ADDRESS, new MemoryLayout[]{});
+        throw NativeResults.failure(view);
     }
     @SuppressWarnings("restricted") // Native-owned pointers satisfy the C ABI lifetime contract.
     static UsagePersistence usage(MemorySegment engine, String function) {
@@ -60,10 +57,5 @@ final class NativeSession {
                 new String(data.reinterpret(length).toArray(ValueLayout.JAVA_BYTE), StandardCharsets.UTF_8);
             return new UsagePersistence(UsagePersistence.State.read(state.get(ValueLayout.JAVA_INT, NativeUsageLayouts.STATE_KIND)), copied);
         }
-    }
-    @SuppressWarnings("restricted") // Native-owned pointers satisfy the C ABI lifetime contract.
-    static Object copied(MemorySegment pointer, long length) {
-        if (length > Integer.MAX_VALUE) throw new IllegalStateException("Result exceeds Java array size");
-        return Json.parseOwned(new String(pointer.reinterpret(length).toArray(ValueLayout.JAVA_BYTE), StandardCharsets.UTF_8));
     }
 }

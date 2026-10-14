@@ -1,4 +1,5 @@
 // Generated from the shared Rust result graph; do not edit.
+import type { Question, Input, Controls, Completed } from "./native.js";
 export type JsonValue =
   | null
   | boolean
@@ -34,7 +35,7 @@ export class NativeAnnotationMemberAnswerId {
   readonly "answer": NativeAnswer;
   readonly "answer_id": NativeAnswerId;
   readonly "observations": readonly NativeObservation[];
-  readonly "question": NativeReadableQuestion;
+  readonly "question": NativeQuestionDocument;
   readonly "question_sources": readonly NativeQuestionSource[];
   readonly "request": string;
   readonly "threshold": NativeThreshold | null;
@@ -47,7 +48,7 @@ export class NativeAnnotationMemberFailureId {
   readonly "failure": NativeFailure;
   readonly "failure_id": NativeFailureId;
   readonly "observations": readonly NativeObservation[];
-  readonly "question": NativeReadableQuestion;
+  readonly "question": NativeQuestionDocument;
   readonly "question_sources": readonly NativeQuestionSource[];
   readonly "request": string;
   readonly "threshold": NativeThreshold | null;
@@ -105,7 +106,7 @@ export class NativeAtomicArrayOfString {
   readonly "input"?: JsonValue;
   readonly "members"?: readonly NativeRankMember[];
   readonly "meta": NativeMeta;
-  readonly "question": NativeReadableQuestion;
+  readonly "question": NativeQuestionDocument;
   readonly "question_name"?: string;
   readonly "schema": NativeVersion;
   readonly "source"?: NativePhysicalSource;
@@ -122,7 +123,7 @@ export class NativeAtomicDecideValue {
   readonly "input"?: JsonValue;
   readonly "members"?: readonly NativeRankMember[];
   readonly "meta": NativeMeta;
-  readonly "question": NativeReadableQuestion;
+  readonly "question": NativeQuestionDocument;
   readonly "question_name"?: string;
   readonly "schema": NativeVersion;
   readonly "source"?: NativePhysicalSource;
@@ -139,7 +140,7 @@ export class NativeAtomicNonZeroUsize {
   readonly "input"?: JsonValue;
   readonly "members"?: readonly NativeRankMember[];
   readonly "meta": NativeMeta;
-  readonly "question": NativeReadableQuestion;
+  readonly "question": NativeQuestionDocument;
   readonly "question_name"?: string;
   readonly "schema": NativeVersion;
   readonly "source"?: NativePhysicalSource;
@@ -156,7 +157,7 @@ export class NativeAtomicNullableString {
   readonly "input"?: JsonValue;
   readonly "members"?: readonly NativeRankMember[];
   readonly "meta": NativeMeta;
-  readonly "question": NativeReadableQuestion;
+  readonly "question": NativeQuestionDocument;
   readonly "question_name"?: string;
   readonly "schema": NativeVersion;
   readonly "source"?: NativePhysicalSource;
@@ -173,7 +174,7 @@ export class NativeAtomicBoolean {
   readonly "input"?: JsonValue;
   readonly "members"?: readonly NativeRankMember[];
   readonly "meta": NativeMeta;
-  readonly "question": NativeReadableQuestion;
+  readonly "question": NativeQuestionDocument;
   readonly "question_name"?: string;
   readonly "schema": NativeVersion;
   readonly "source"?: NativePhysicalSource;
@@ -190,7 +191,7 @@ export class NativeAtomicDouble {
   readonly "input"?: JsonValue;
   readonly "members"?: readonly NativeRankMember[];
   readonly "meta": NativeMeta;
-  readonly "question": NativeReadableQuestion;
+  readonly "question": NativeQuestionDocument;
   readonly "question_name"?: string;
   readonly "schema": NativeVersion;
   readonly "source"?: NativePhysicalSource;
@@ -308,7 +309,7 @@ export class NativeFind {
   readonly "last_line"?: number | NativeNumber;
   readonly "meta": NativeMeta;
   readonly "position"?: NativePosition;
-  readonly "question": NativeReadableQuestion2;
+  readonly "question": NativeFindQuestionDocument;
   readonly "schema": NativeVersion;
   readonly "threshold": null;
   readonly "value": JsonValue;
@@ -466,137 +467,11 @@ export class NativeRankMemberResult {
   readonly "answer_id": NativeAnswerId;
   readonly "images"?: readonly NativeImage[];
   readonly "meta": NativeMeta;
-  readonly "question": NativeReadableQuestion;
+  readonly "question": NativeQuestionDocument;
   readonly "schema": NativeVersion;
   readonly "source"?: NativePhysicalSource;
   readonly "threshold": null;
   readonly "value": number | NativeNumber;
-  has(key: string): boolean;
-  readonly [key: string]: unknown;
-}
-export type NativeReadableQuestion =
-  | NativeReadableQuestionDecide
-  | NativeReadableQuestionChoose
-  | NativeReadableQuestionTag
-  | NativeReadableQuestionScore;
-export class NativeReadableQuestion2 {
-  readonly "batch"?: NativeBatch;
-  readonly "context_schema"?: NativeInputDeclaration;
-  readonly "item_schema"?: NativeInputDeclaration;
-  readonly "label_details"?: readonly NativeLabel[];
-  readonly "model"?: string;
-  readonly "name"?: NativeQuestionName;
-  readonly "none": boolean;
-  readonly "on"?: readonly string[];
-  readonly "profile"?: string;
-  readonly "text": JsonValue;
-  readonly "verb": "find";
-  readonly "wording_version"?: NativeWordingVersion;
-  has(key: string): boolean;
-  readonly [key: string]: unknown;
-}
-export class NativeReadableQuestion3 {
-  readonly "batch"?: NativeBatch;
-  readonly "context_schema"?: NativeInputDeclaration;
-  readonly "entity_definition"?: JsonValue;
-  readonly "instructions"?: JsonValue;
-  readonly "item_schema"?: NativeInputDeclaration;
-  readonly "kinds": Readonly<Record<string, JsonValue>>;
-  readonly "label_details"?: readonly NativeLabel[];
-  readonly "mode"?: NativeRecognitionMode;
-  readonly "model"?: string;
-  readonly "name"?: NativeQuestionName;
-  readonly "on"?: readonly string[];
-  readonly "profile"?: string;
-  readonly "relation_threshold"?: NativeThreshold;
-  readonly "relations"?: readonly NativeRelationRule[];
-  readonly "snippet_pieces"?: number | NativeNumber;
-  readonly "stage_context"?: NativeRecognitionStageContext;
-  readonly "threshold": NativeThreshold;
-  readonly "verb": NativeVerb;
-  readonly "wording_version"?: NativeWordingVersion;
-  has(key: string): boolean;
-  readonly [key: string]: unknown;
-}
-export class NativeReadableQuestion4 {
-  readonly "batch"?: NativeBatch;
-  readonly "context_schema"?: NativeInputDeclaration;
-  readonly "fields": NativeRelateFields | null;
-  readonly "item_schema"?: NativeInputDeclaration;
-  readonly "label_details"?: readonly NativeLabel[];
-  readonly "model"?: string;
-  readonly "name"?: NativeQuestionName;
-  readonly "on"?: readonly string[];
-  readonly "profile"?: string;
-  readonly "relations": readonly NativeRelationRule[];
-  readonly "threshold": NativeThreshold;
-  readonly "verb": "relate";
-  readonly "wording_version"?: NativeWordingVersion;
-  has(key: string): boolean;
-  readonly [key: string]: unknown;
-}
-export class NativeReadableQuestionChoose {
-  readonly "batch"?: NativeBatch;
-  readonly "context_schema"?: NativeInputDeclaration;
-  readonly "item_schema"?: NativeInputDeclaration;
-  readonly "label_details"?: readonly NativeLabel[];
-  readonly "model"?: string;
-  readonly "name"?: NativeQuestionName;
-  readonly "on"?: readonly string[];
-  readonly "profile"?: string;
-  readonly "wording_version"?: NativeWordingVersion;
-  readonly "options": readonly string[];
-  readonly "text": JsonValue;
-  readonly "verb": "choose";
-  has(key: string): boolean;
-  readonly [key: string]: unknown;
-}
-export class NativeReadableQuestionDecide {
-  readonly "batch"?: NativeBatch;
-  readonly "context_schema"?: NativeInputDeclaration;
-  readonly "item_schema"?: NativeInputDeclaration;
-  readonly "label_details"?: readonly NativeLabel[];
-  readonly "model"?: string;
-  readonly "name"?: NativeQuestionName;
-  readonly "on"?: readonly string[];
-  readonly "profile"?: string;
-  readonly "wording_version"?: NativeWordingVersion;
-  readonly "false"?: JsonValue;
-  readonly "text": JsonValue;
-  readonly "true"?: JsonValue;
-  readonly "verb": "decide";
-  has(key: string): boolean;
-  readonly [key: string]: unknown;
-}
-export class NativeReadableQuestionScore {
-  readonly "batch"?: NativeBatch;
-  readonly "context_schema"?: NativeInputDeclaration;
-  readonly "item_schema"?: NativeInputDeclaration;
-  readonly "label_details"?: readonly NativeLabel[];
-  readonly "model"?: string;
-  readonly "name"?: NativeQuestionName;
-  readonly "on"?: readonly string[];
-  readonly "profile"?: string;
-  readonly "wording_version"?: NativeWordingVersion;
-  readonly "levels": readonly string[];
-  readonly "text": JsonValue;
-  readonly "verb": "score";
-  has(key: string): boolean;
-  readonly [key: string]: unknown;
-}
-export class NativeReadableQuestionTag {
-  readonly "batch"?: NativeBatch;
-  readonly "context_schema"?: NativeInputDeclaration;
-  readonly "item_schema"?: NativeInputDeclaration;
-  readonly "label_details"?: readonly NativeLabel[];
-  readonly "model"?: string;
-  readonly "name"?: NativeQuestionName;
-  readonly "on"?: readonly string[];
-  readonly "profile"?: string;
-  readonly "wording_version"?: NativeWordingVersion;
-  readonly "labels": readonly string[];
-  readonly "text": JsonValue;
-  readonly "verb": "tag";
   has(key: string): boolean;
   readonly [key: string]: unknown;
 }
@@ -610,7 +485,7 @@ export class NativeRecognition {
   readonly "last_line"?: number | NativeNumber;
   readonly "meta": NativeMeta;
   readonly "position"?: NativePosition;
-  readonly "question": NativeReadableQuestion3;
+  readonly "question": NativeRecognizeQuestionDocument;
   readonly "schema": NativeVersion;
   readonly "source"?: NativePhysicalSource;
   readonly "value": NativeRecognize;
@@ -673,7 +548,7 @@ export class NativeRelation {
   readonly "last_line"?: number | NativeNumber;
   readonly "meta": NativeMeta;
   readonly "position"?: NativePosition;
-  readonly "question": NativeReadableQuestion4;
+  readonly "question": NativeRelateQuestionDocument;
   readonly "schema": NativeVersion;
   readonly "value": readonly NativeRelatedEntityEdge[];
   has(key: string): boolean;
@@ -707,7 +582,7 @@ export class NativeRelationMemberAnswerId {
   readonly "direction": NativeRelationDirection;
   readonly "method": NativeRelationMethod;
   readonly "observations": readonly NativeObservation[];
-  readonly "question": NativeReadableQuestion;
+  readonly "question": NativeQuestionDocument;
   readonly "question_sources": readonly NativeQuestionSource[];
   readonly "reads": string;
   readonly "relation": string;
@@ -727,7 +602,7 @@ export class NativeRelationMemberFailureId {
   readonly "direction": NativeRelationDirection;
   readonly "method": NativeRelationMethod;
   readonly "observations": readonly NativeObservation[];
-  readonly "question": NativeReadableQuestion;
+  readonly "question": NativeQuestionDocument;
   readonly "question_sources": readonly NativeQuestionSource[];
   readonly "reads": string;
   readonly "relation": string;
@@ -919,6 +794,22 @@ export class NativeFindAnswer {
   has(key: string): boolean;
   readonly [key: string]: unknown;
 }
+export class NativeFindQuestionDocument {
+  readonly "batch"?: NativeBatch;
+  readonly "context_schema"?: NativeInputDeclaration;
+  readonly "item_schema"?: NativeInputDeclaration;
+  readonly "label_details"?: readonly NativeLabel[];
+  readonly "model"?: string;
+  readonly "name"?: NativeQuestionName;
+  readonly "none": boolean;
+  readonly "on"?: readonly string[];
+  readonly "profile"?: string;
+  readonly "text": JsonValue;
+  readonly "verb": "find";
+  readonly "wording_version"?: NativeWordingVersion;
+  has(key: string): boolean;
+  readonly [key: string]: unknown;
+}
 export class NativeNameOdds {
   readonly "edges": Readonly<Record<string, number | NativeNumber>> | null;
   readonly "end": number | NativeNumber;
@@ -948,9 +839,92 @@ export class NativePlace {
   has(key: string): boolean;
   readonly [key: string]: unknown;
 }
+export class NativePlan {
+  readonly "estimated_bytes": number | NativeNumber;
+  readonly "estimated_input_tokens": NativeTokenBand;
+  readonly "first_body_utf8": string | null;
+  readonly "largest_request_bytes": number | NativeNumber;
+  readonly "largest_request_estimated_input_tokens": number | NativeNumber;
+  readonly "records": number | NativeNumber;
+  readonly "requests": number | NativeNumber;
+  readonly "token_estimate_method": string;
+  readonly "upper_bound": boolean;
+  has(key: string): boolean;
+  readonly [key: string]: unknown;
+}
 export class NativeProfileWarning {
   readonly "running": string;
   readonly "tuned_for": string;
+  has(key: string): boolean;
+  readonly [key: string]: unknown;
+}
+export type NativeQuestionDocument =
+  | NativeQuestionDocumentDecide
+  | NativeQuestionDocumentChoose
+  | NativeQuestionDocumentTag
+  | NativeQuestionDocumentScore;
+export class NativeQuestionDocumentChoose {
+  readonly "batch"?: NativeBatch;
+  readonly "context_schema"?: NativeInputDeclaration;
+  readonly "item_schema"?: NativeInputDeclaration;
+  readonly "label_details"?: readonly NativeLabel[];
+  readonly "model"?: string;
+  readonly "name"?: NativeQuestionName;
+  readonly "on"?: readonly string[];
+  readonly "profile"?: string;
+  readonly "wording_version"?: NativeWordingVersion;
+  readonly "options": readonly string[];
+  readonly "text": JsonValue;
+  readonly "verb": "choose";
+  has(key: string): boolean;
+  readonly [key: string]: unknown;
+}
+export class NativeQuestionDocumentDecide {
+  readonly "batch"?: NativeBatch;
+  readonly "context_schema"?: NativeInputDeclaration;
+  readonly "item_schema"?: NativeInputDeclaration;
+  readonly "label_details"?: readonly NativeLabel[];
+  readonly "model"?: string;
+  readonly "name"?: NativeQuestionName;
+  readonly "on"?: readonly string[];
+  readonly "profile"?: string;
+  readonly "wording_version"?: NativeWordingVersion;
+  readonly "false"?: JsonValue;
+  readonly "text": JsonValue;
+  readonly "true"?: JsonValue;
+  readonly "verb": "decide";
+  has(key: string): boolean;
+  readonly [key: string]: unknown;
+}
+export class NativeQuestionDocumentScore {
+  readonly "batch"?: NativeBatch;
+  readonly "context_schema"?: NativeInputDeclaration;
+  readonly "item_schema"?: NativeInputDeclaration;
+  readonly "label_details"?: readonly NativeLabel[];
+  readonly "model"?: string;
+  readonly "name"?: NativeQuestionName;
+  readonly "on"?: readonly string[];
+  readonly "profile"?: string;
+  readonly "wording_version"?: NativeWordingVersion;
+  readonly "levels": readonly string[];
+  readonly "text": JsonValue;
+  readonly "verb": "score";
+  has(key: string): boolean;
+  readonly [key: string]: unknown;
+}
+export class NativeQuestionDocumentTag {
+  readonly "batch"?: NativeBatch;
+  readonly "context_schema"?: NativeInputDeclaration;
+  readonly "item_schema"?: NativeInputDeclaration;
+  readonly "label_details"?: readonly NativeLabel[];
+  readonly "model"?: string;
+  readonly "name"?: NativeQuestionName;
+  readonly "on"?: readonly string[];
+  readonly "profile"?: string;
+  readonly "wording_version"?: NativeWordingVersion;
+  readonly "labels": readonly string[];
+  readonly "text": JsonValue;
+  readonly "verb": "tag";
   has(key: string): boolean;
   readonly [key: string]: unknown;
 }
@@ -962,6 +936,29 @@ export class NativeRecognizeAnswer {
   readonly "pairs": readonly NativePairOdds[];
   readonly "pieces": readonly NativePieceOdds[];
   readonly "proposals": readonly NativeRecognitionProposal[];
+  has(key: string): boolean;
+  readonly [key: string]: unknown;
+}
+export class NativeRecognizeQuestionDocument {
+  readonly "batch"?: NativeBatch;
+  readonly "context_schema"?: NativeInputDeclaration;
+  readonly "entity_definition"?: JsonValue;
+  readonly "instructions"?: JsonValue;
+  readonly "item_schema"?: NativeInputDeclaration;
+  readonly "kinds": Readonly<Record<string, JsonValue>>;
+  readonly "label_details"?: readonly NativeLabel[];
+  readonly "mode"?: NativeRecognitionMode;
+  readonly "model"?: string;
+  readonly "name"?: NativeQuestionName;
+  readonly "on"?: readonly string[];
+  readonly "profile"?: string;
+  readonly "relation_threshold"?: NativeThreshold;
+  readonly "relations"?: readonly NativeRelationRule[];
+  readonly "snippet_pieces"?: number | NativeNumber;
+  readonly "stage_context"?: NativeRecognitionStageContext;
+  readonly "threshold": NativeThreshold;
+  readonly "verb": NativeVerb;
+  readonly "wording_version"?: NativeWordingVersion;
   has(key: string): boolean;
   readonly [key: string]: unknown;
 }
@@ -980,6 +977,23 @@ export class NativeRecognizeModeProposals {
 export class NativeRelateFields {
   readonly "kind": string;
   readonly "name": string;
+  has(key: string): boolean;
+  readonly [key: string]: unknown;
+}
+export class NativeRelateQuestionDocument {
+  readonly "batch"?: NativeBatch;
+  readonly "context_schema"?: NativeInputDeclaration;
+  readonly "fields": NativeRelateFields | null;
+  readonly "item_schema"?: NativeInputDeclaration;
+  readonly "label_details"?: readonly NativeLabel[];
+  readonly "model"?: string;
+  readonly "name"?: NativeQuestionName;
+  readonly "on"?: readonly string[];
+  readonly "profile"?: string;
+  readonly "relations": readonly NativeRelationRule[];
+  readonly "threshold": NativeThreshold;
+  readonly "verb": "relate";
+  readonly "wording_version"?: NativeWordingVersion;
   has(key: string): boolean;
   readonly [key: string]: unknown;
 }
@@ -1285,7 +1299,7 @@ export class NativeSessionQuestionDetail {
   readonly "model": string;
   readonly "observations": readonly NativeObservation[];
   readonly "probabilities"?: NativeSessionProbabilities;
-  readonly "question": NativeReadableQuestion;
+  readonly "question": NativeQuestionDocument;
   readonly "question_sha256": string;
   readonly "question_sources": readonly NativeQuestionSource[];
   readonly "raw_pick"?: string;
@@ -1328,6 +1342,12 @@ export class NativeSourceRelationEndpoint {
   readonly [key: string]: unknown;
 }
 export type NativeThreshold = number | NativeNumber | string;
+export class NativeTokenBand {
+  readonly "lower": number | NativeNumber;
+  readonly "upper": number | NativeNumber;
+  has(key: string): boolean;
+  readonly [key: string]: unknown;
+}
 export class NativeTokenUsage {
   readonly "input_tokens": number | NativeNumber;
   readonly "output_tokens": number | NativeNumber;
@@ -1351,6 +1371,552 @@ export type NativeFindResult = NativeFind;
 export type NativeAnnotateResult = NativeAnnotation;
 export type NativeRecognizeResult = NativeRecognition;
 export type NativeRelateResult = NativeRelation;
-export function packet(value: JsonValue): NativeSessionPacket;
-export function parse(text: string): JsonValue;
+export interface AnswerReaders {
+  decideAnswer(): boolean | null;
+  chooseAnswer(): string | null;
+  tagAnswer(): readonly string[];
+  scoreAnswer(): number | NativeNumber;
+  filterAnswer(): readonly JsonValue[];
+  rankAnswer(): readonly (number | NativeNumber)[];
+  findAnswer(): NativeFind;
+  annotateAnswer(): readonly NativeAnnotation[];
+  recognizeAnswer(): readonly NativeRecognition[];
+  relateAnswer(): NativeRelation;
+}
+export interface NamedCalls {
+  decide(
+    q: Question,
+    i: Input,
+    c?: Controls,
+  ): Promise<Completed<NativeDecideResult>>;
+  decideAnswer(q: Question, i: Input, c?: Controls): Promise<boolean | null>;
+  choose(
+    q: Question,
+    i: Input,
+    c?: Controls,
+  ): Promise<Completed<NativeChooseResult>>;
+  chooseAnswer(q: Question, i: Input, c?: Controls): Promise<string | null>;
+  tag(q: Question, i: Input, c?: Controls): Promise<Completed<NativeTagResult>>;
+  tagAnswer(q: Question, i: Input, c?: Controls): Promise<readonly string[]>;
+  score(
+    q: Question,
+    i: Input,
+    c?: Controls,
+  ): Promise<Completed<NativeScoreResult>>;
+  scoreAnswer(
+    q: Question,
+    i: Input,
+    c?: Controls,
+  ): Promise<number | NativeNumber>;
+  filter(
+    q: Question,
+    i: Input,
+    c?: Controls,
+  ): Promise<Completed<NativeFilterResult>>;
+  filterAnswer(
+    q: Question,
+    i: Input,
+    c?: Controls,
+  ): Promise<readonly JsonValue[]>;
+  rank(
+    q: Question,
+    i: Input,
+    c?: Controls,
+  ): Promise<Completed<NativeRankResult>>;
+  rankAnswer(
+    q: Question,
+    i: Input,
+    c?: Controls,
+  ): Promise<readonly (number | NativeNumber)[]>;
+  find(
+    q: Question,
+    i: Input,
+    c?: Controls,
+  ): Promise<Completed<NativeFindResult>>;
+  findAnswer(q: Question, i: Input, c?: Controls): Promise<NativeFind>;
+  annotate(
+    q: Question,
+    i: Input,
+    c?: Controls,
+  ): Promise<Completed<NativeAnnotateResult>>;
+  annotateAnswer(
+    q: Question,
+    i: Input,
+    c?: Controls,
+  ): Promise<readonly NativeAnnotation[]>;
+  recognize(
+    q: Question,
+    i: Input,
+    c?: Controls,
+  ): Promise<Completed<NativeRecognizeResult>>;
+  recognizeAnswer(
+    q: Question,
+    i: Input,
+    c?: Controls,
+  ): Promise<readonly NativeRecognition[]>;
+  relate(
+    q: Question,
+    i: Input,
+    c?: Controls,
+  ): Promise<Completed<NativeRelateResult>>;
+  relateAnswer(q: Question, i: Input, c?: Controls): Promise<NativeRelation>;
+}
 export const REQUEST_VERSION: string;
+export interface AnnotateDefinition {
+  readonly batch?: JsonValue;
+  readonly profile?: Profile;
+  readonly questions: Readonly<Record<string, AnnotateQuestion>>;
+  readonly threshold?: Threshold;
+  readonly version: 1;
+}
+export type AnnotateQuestion =
+  | AnnotateQuestionDecide
+  | AnnotateQuestionChoose
+  | AnnotateQuestionTag
+  | AnnotateQuestionScore;
+export interface AnnotateQuestionChoose {
+  readonly choose: QuestionText;
+  readonly context_schema?: InputDeclaration;
+  readonly item_schema?: InputDeclaration;
+  readonly name?: string;
+  readonly on?: Pointers;
+  readonly options?: Options;
+  readonly threshold?: Cut;
+  readonly wording_version?: number;
+  readonly decide?: never;
+  readonly score?: never;
+  readonly tag?: never;
+}
+export interface AnnotateQuestionDecide {
+  readonly context_schema?: InputDeclaration;
+  readonly decide: QuestionText;
+  readonly false?: Criterion;
+  readonly item_schema?: InputDeclaration;
+  readonly name?: string;
+  readonly on?: Pointers;
+  readonly threshold?: Threshold;
+  readonly true?: Criterion;
+  readonly wording_version?: number;
+  readonly choose?: never;
+  readonly score?: never;
+  readonly tag?: never;
+}
+export interface AnnotateQuestionScore {
+  readonly context_schema?: InputDeclaration;
+  readonly item_schema?: InputDeclaration;
+  readonly levels?: Levels;
+  readonly name?: string;
+  readonly on?: Pointers;
+  readonly score: QuestionText;
+  readonly wording_version?: number;
+  readonly choose?: never;
+  readonly decide?: never;
+  readonly tag?: never;
+}
+export interface AnnotateQuestionTag {
+  readonly context_schema?: InputDeclaration;
+  readonly item_schema?: InputDeclaration;
+  readonly labels?: Labels;
+  readonly name?: string;
+  readonly on?: Pointers;
+  readonly tag: QuestionText;
+  readonly threshold?: Cut;
+  readonly wording_version?: number;
+  readonly choose?: never;
+  readonly decide?: never;
+  readonly score?: never;
+}
+export interface Choose {
+  readonly batch?: "max" | number;
+  readonly choose: QuestionText;
+  readonly context_schema?: InputDeclaration;
+  readonly item_schema?: InputDeclaration;
+  readonly model?: Name;
+  readonly name?: string;
+  readonly on?: Pointers;
+  readonly options?: Options;
+  readonly profile?: Profile;
+  readonly threshold?: Cut;
+  readonly wording_version?: number;
+}
+export type Criterion =
+  | string
+  | Readonly<Record<string, JsonValue>>
+  | readonly JsonValue[]
+  | null;
+export type Cut = number | string;
+export interface Decide {
+  readonly batch?: "max" | number;
+  readonly context_schema?: InputDeclaration;
+  readonly decide: QuestionText;
+  readonly false?: Criterion;
+  readonly item_schema?: InputDeclaration;
+  readonly model?: Name;
+  readonly name?: string;
+  readonly on?: Pointers;
+  readonly profile?: Profile;
+  readonly threshold?: Threshold;
+  readonly true?: Criterion;
+  readonly wording_version?: number;
+}
+export type Description =
+  | string
+  | Readonly<Record<string, JsonValue>>
+  | readonly JsonValue[]
+  | null;
+export interface Find {
+  readonly context_schema?: InputDeclaration;
+  readonly find: QuestionText;
+  readonly item_schema?: InputDeclaration;
+  readonly model?: Name;
+  readonly name?: string;
+  readonly on?: Pointers;
+  readonly profile?: Profile;
+  readonly wording_version?: number;
+}
+export type InputDeclaration = InputDeclarationString | InputDeclarationObject;
+export interface InputDeclarationObject {
+  readonly properties: Readonly<Record<string, InputProperty>>;
+  readonly required?: readonly string[];
+  readonly type: "object";
+}
+export interface InputDeclarationString {
+  readonly type: "string";
+}
+export type InputProperty =
+  | InputPropertyString
+  | InputPropertyNumber
+  | InputPropertyBoolean
+  | InputPropertyArray;
+export interface InputPropertyArray {
+  readonly items: Readonly<Record<string, JsonValue>>;
+  readonly type: "array";
+}
+export interface InputPropertyBoolean {
+  readonly type: "boolean";
+}
+export interface InputPropertyNumber {
+  readonly type: "number";
+}
+export interface InputPropertyString {
+  readonly type: "string";
+}
+export type Labels = readonly Name[] | Readonly<Record<string, Description>>;
+export type Levels = readonly Name[] | Readonly<Record<string, Criterion>>;
+export type Name = string;
+export type Options = readonly Name[] | Readonly<Record<string, Description>>;
+export type Pointers = string | readonly string[];
+export type Profile = string;
+export type QuestionText =
+  | string
+  | Readonly<Record<string, JsonValue>>
+  | readonly JsonValue[];
+export interface Relate {
+  readonly context_schema?: InputDeclaration;
+  readonly item_schema?: InputDeclaration;
+  readonly model?: Name;
+  readonly name?: string;
+  readonly profile?: Profile;
+  readonly relate: RelateQuestion;
+  readonly threshold?: Cut;
+  readonly version: 1;
+  readonly wording_version?: number;
+}
+export interface Relation {
+  readonly either?: boolean;
+  readonly name: Name;
+  readonly reads?: Name;
+  readonly single?: boolean;
+  readonly source?: Name;
+  readonly target?: Name;
+}
+export interface Score {
+  readonly batch?: "max" | number;
+  readonly context_schema?: InputDeclaration;
+  readonly item_schema?: InputDeclaration;
+  readonly levels?: Levels;
+  readonly model?: Name;
+  readonly name?: string;
+  readonly on?: Pointers;
+  readonly profile?: Profile;
+  readonly score: QuestionText;
+  readonly wording_version?: number;
+}
+export interface Tag {
+  readonly batch?: "max" | number;
+  readonly context_schema?: InputDeclaration;
+  readonly item_schema?: InputDeclaration;
+  readonly labels?: Labels;
+  readonly model?: Name;
+  readonly name?: string;
+  readonly on?: Pointers;
+  readonly profile?: Profile;
+  readonly tag: QuestionText;
+  readonly threshold?: Cut;
+  readonly wording_version?: number;
+}
+export type Threshold = number | string;
+export type CacheDocument = string | DisabledCache;
+export type DisabledCache = false;
+export interface EngineSettings {
+  readonly backend?: string;
+  readonly base_url?: string;
+  readonly batch?: RequestBatch;
+  readonly cache?: CacheDocument;
+  readonly max_estimated_input_tokens_total?: number | null;
+  readonly max_request_bytes?: number;
+  readonly max_requests?: number | null;
+  readonly max_requests_total?: number | null;
+  readonly max_retries?: number;
+  readonly model?: string;
+  readonly profile?: string;
+  readonly proxy?: JsonValue;
+  readonly record?: string;
+  readonly refresh_cache?: boolean;
+  readonly replay?: string;
+  readonly throttle?: number;
+  readonly timeout?: number;
+  readonly usd_per_million_input?: string;
+  readonly usd_per_million_output?: string;
+}
+export type RecognitionExample = string | RecognitionExampleText;
+export interface RecognitionExampleEntity {
+  readonly end: number;
+  readonly kind: string;
+  readonly start: number;
+}
+export interface RecognitionExampleText {
+  readonly entities: readonly RecognitionExampleEntity[];
+  readonly kinds?: readonly string[];
+  readonly text: string;
+}
+export type RecognitionMode = "whole" | "boundary_only";
+export interface RecognitionSeedSpan {
+  readonly end: number;
+  readonly kind?: string;
+  readonly start: number;
+}
+export interface RecognitionStageContext {
+  readonly boundary?: string;
+  readonly kind_edge?: string;
+  readonly relation?: string;
+}
+export interface RecognizeDefinition {
+  readonly context_schema?: InputDeclaration;
+  readonly item_schema?: InputDeclaration;
+  readonly model?: Name;
+  readonly name?: string;
+  readonly on?: Pointers;
+  readonly profile?: Profile;
+  readonly recognize: RecognizeQuestion;
+  readonly relation_threshold?: Cut;
+  readonly threshold?: Cut;
+  readonly version: 1;
+  readonly wording_version?: number;
+}
+export interface RecognizeQuestion {
+  readonly entity_definition?: QuestionText;
+  readonly instructions?: QuestionText;
+  readonly kinds?: Readonly<Record<string, Description>>;
+  readonly mode?: RecognitionMode;
+  readonly relations?: readonly Relation[];
+  readonly snippet_pieces?: number;
+  readonly stage_context?: RecognitionStageContext;
+}
+export interface RelateFields {
+  readonly kind: string;
+  readonly name: string;
+}
+export interface RelateQuestion {
+  readonly fields?: RelateFields;
+  readonly relations: readonly Relation[];
+}
+export type RequestBatch = number | string;
+export type RequestDefinition =
+  | DecideDefinition
+  | ChooseDefinition
+  | TagDefinition
+  | ScoreDefinition
+  | RelateDefinition
+  | FindDefinition
+  | RecognizeRequestDefinition
+  | AnnotateRequestDefinition;
+export interface AnnotateRequestDefinition {
+  readonly batch?: JsonValue;
+  readonly profile?: Profile;
+  readonly questions: Readonly<Record<string, AnnotateQuestion>>;
+  readonly threshold?: Threshold;
+  readonly version: 1;
+  readonly choose?: never;
+  readonly decide?: never;
+  readonly find?: never;
+  readonly recognize?: never;
+  readonly relate?: never;
+  readonly score?: never;
+  readonly tag?: never;
+}
+export interface ChooseDefinition {
+  readonly batch?: "max" | number;
+  readonly choose: QuestionText;
+  readonly context_schema?: InputDeclaration;
+  readonly item_schema?: InputDeclaration;
+  readonly model?: Name;
+  readonly name?: string;
+  readonly on?: Pointers;
+  readonly options?: Options;
+  readonly profile?: Profile;
+  readonly threshold?: Cut;
+  readonly wording_version?: number;
+  readonly decide?: never;
+  readonly find?: never;
+  readonly questions?: never;
+  readonly recognize?: never;
+  readonly relate?: never;
+  readonly score?: never;
+  readonly tag?: never;
+  readonly version?: never;
+}
+export interface DecideDefinition {
+  readonly batch?: "max" | number;
+  readonly context_schema?: InputDeclaration;
+  readonly decide: QuestionText;
+  readonly false?: Criterion;
+  readonly item_schema?: InputDeclaration;
+  readonly model?: Name;
+  readonly name?: string;
+  readonly on?: Pointers;
+  readonly profile?: Profile;
+  readonly threshold?: Threshold;
+  readonly true?: Criterion;
+  readonly wording_version?: number;
+  readonly choose?: never;
+  readonly find?: never;
+  readonly questions?: never;
+  readonly recognize?: never;
+  readonly relate?: never;
+  readonly score?: never;
+  readonly tag?: never;
+  readonly version?: never;
+}
+export interface FindDefinition {
+  readonly context_schema?: InputDeclaration;
+  readonly find: QuestionText;
+  readonly item_schema?: InputDeclaration;
+  readonly model?: Name;
+  readonly name?: string;
+  readonly on?: Pointers;
+  readonly profile?: Profile;
+  readonly wording_version?: number;
+  readonly choose?: never;
+  readonly decide?: never;
+  readonly questions?: never;
+  readonly recognize?: never;
+  readonly relate?: never;
+  readonly score?: never;
+  readonly tag?: never;
+  readonly version?: never;
+}
+export interface RelateDefinition {
+  readonly context_schema?: InputDeclaration;
+  readonly item_schema?: InputDeclaration;
+  readonly model?: Name;
+  readonly name?: string;
+  readonly profile?: Profile;
+  readonly relate: RelateQuestion;
+  readonly threshold?: Cut;
+  readonly version: 1;
+  readonly wording_version?: number;
+  readonly choose?: never;
+  readonly decide?: never;
+  readonly find?: never;
+  readonly questions?: never;
+  readonly recognize?: never;
+  readonly score?: never;
+  readonly tag?: never;
+}
+export interface ScoreDefinition {
+  readonly batch?: "max" | number;
+  readonly context_schema?: InputDeclaration;
+  readonly item_schema?: InputDeclaration;
+  readonly levels?: Levels;
+  readonly model?: Name;
+  readonly name?: string;
+  readonly on?: Pointers;
+  readonly profile?: Profile;
+  readonly score: QuestionText;
+  readonly wording_version?: number;
+  readonly choose?: never;
+  readonly decide?: never;
+  readonly find?: never;
+  readonly questions?: never;
+  readonly recognize?: never;
+  readonly relate?: never;
+  readonly tag?: never;
+  readonly version?: never;
+}
+export interface TagDefinition {
+  readonly batch?: "max" | number;
+  readonly context_schema?: InputDeclaration;
+  readonly item_schema?: InputDeclaration;
+  readonly labels?: Labels;
+  readonly model?: Name;
+  readonly name?: string;
+  readonly on?: Pointers;
+  readonly profile?: Profile;
+  readonly tag: QuestionText;
+  readonly threshold?: Cut;
+  readonly wording_version?: number;
+  readonly choose?: never;
+  readonly decide?: never;
+  readonly find?: never;
+  readonly questions?: never;
+  readonly recognize?: never;
+  readonly relate?: never;
+  readonly score?: never;
+  readonly version?: never;
+}
+export interface RecognizeRequestDefinition {
+  readonly context_schema?: InputDeclaration;
+  readonly item_schema?: InputDeclaration;
+  readonly model?: Name;
+  readonly name?: string;
+  readonly on?: Pointers;
+  readonly profile?: Profile;
+  readonly recognize: RecognizeQuestion;
+  readonly relation_threshold?: Cut;
+  readonly threshold?: Cut;
+  readonly version: 1;
+  readonly wording_version?: number;
+  readonly choose?: never;
+  readonly decide?: never;
+  readonly find?: never;
+  readonly questions?: never;
+  readonly relate?: never;
+  readonly score?: never;
+  readonly tag?: never;
+}
+export interface RequestOptions {
+  readonly attempts?: boolean;
+  readonly batch?: RequestBatch;
+  readonly context?: string;
+  readonly context_field?: string;
+  readonly deadline_ms?: number;
+  readonly details?: boolean;
+  readonly examples?: readonly RecognitionExample[];
+  readonly examples_field?: string;
+  readonly field?: readonly string[];
+  readonly files_only?: boolean;
+  readonly max_requests_total?: number;
+  readonly mode?: RecognitionMode;
+  readonly model?: string;
+  readonly none?: boolean;
+  readonly options_field?: string;
+  readonly relation_threshold?: RequestThreshold;
+  readonly seed_spans?: readonly RecognitionSeedSpan[];
+  readonly seed_spans_field?: string;
+  readonly snippet_pieces?: number;
+  readonly stage_context?: RecognitionStageContext;
+  readonly threshold?: RequestThreshold;
+  readonly top?: number;
+}
+export type RequestThreshold = number | string;

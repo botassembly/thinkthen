@@ -64,37 +64,13 @@ namespace tt {
             input, options));
         }
         results::Plan plan(const inputs::RequestCall& call) const {
-            auto bytes=inputs::Request().set_call(call).document().dump();
-            char* raw=nullptr;
-            size_t size=0;
-            detail::check_session(thinkthen_request_plan_json(static_cast<const Owner*>(this)->native_engine(),
-            bytes.data(),bytes.size(),&raw,&size));
-            std::unique_ptr<char,decltype(&thinkthen_free_string)> owned(raw,&thinkthen_free_string);
-            return results::Plan(Json::parse(std::string(raw,size)));
+            return static_cast<const Owner*>(this)->plan_impl(call);
         }
         UsageStatus finish_usage_status() const {
-            auto engine=static_cast<const Owner*>(this)->native_engine();
-            thinkthen_complete_usage_persistence_v1 state{
-            };
-            thinkthen_complete_utf8_v1 advice{
-            };
-            detail::check_session(thinkthen_engine_finish_usage_status_v1(engine,&state,&advice));
-            return {
-                static_cast<UsagePersistenceState>(state.kind),advice.data ? std::optional<std::string>(std::string(advice.data,
-                advice.len)) : std::nullopt
-            };
+            return static_cast<const Owner*>(this)->usage_impl(true);
         }
         UsageStatus usage_persistence() const {
-            auto engine=static_cast<const Owner*>(this)->native_engine();
-            thinkthen_complete_usage_persistence_v1 state{
-            };
-            thinkthen_complete_utf8_v1 advice{
-            };
-            detail::check_session(thinkthen_engine_usage_persistence_v1(engine,&state,&advice));
-            return {
-                static_cast<UsagePersistenceState>(state.kind),advice.data ? std::optional<std::string>(std::string(advice.data,
-                advice.len)) : std::nullopt
-            };
+            return static_cast<const Owner*>(this)->usage_impl(false);
         }
     };
 }

@@ -171,7 +171,8 @@
         "libraries/python/thinkthen/_calls.pyi",
         "libraries/python/thinkthen/_inputs.py",
         "libraries/python/thinkthen/_native_results.pyi",
-        "libraries/python/thinkthen/files.py"
+        "libraries/python/thinkthen/files.py",
+        "libraries/python/thinkthen/_named_generated.py"
       ],
       "option_containers": [
         "Engine.*"
@@ -182,12 +183,7 @@
       "function_prefix": "",
       "test_folders": [
         "tests",
-        "Tests",
-        "checks",
-        "fixtures",
-        "consumer",
-        "examples",
-        "Examples"
+        "examples"
       ],
       "helper_names": {
         "question_file": "QuestionSource.path",
@@ -277,8 +273,7 @@
           "detailed",
           "probability",
           "details",
-          "facts",
-          "to_dict"
+          "facts"
         ],
         "Session": [
           "facts",
@@ -334,18 +329,14 @@
       "function_prefix": "",
       "test_folders": [
         "tests",
-        "Tests",
-        "checks",
-        "fixtures",
-        "consumer",
-        "examples",
-        "Examples"
+        "examples"
       ],
       "representation_types": [
         "Results"
       ],
       "function_containers": [
-        "Client"
+        "Client",
+        "NamedCalls"
       ],
       "lifecycle_owners": [
         "Client",
@@ -356,6 +347,13 @@
         "ClientError": [
           "constructor"
         ]
+      },
+      "helper_names": {
+        "question_file": "Client.questionFile",
+        "question_name": "Client.questionName",
+        "question_reference": "Client.questionReference",
+        "item": "Client.item",
+        "files": "Client.files"
       }
     },
     "ruby": {
@@ -363,27 +361,15 @@
       "language": "ruby",
       "naming": "snake",
       "declarations": [
-        "libraries/ruby/lib/**/*.rb"
+        "libraries/ruby/lib/**/*.rb",
+        "libraries/ruby/sig/thinkthen/results_generated.rbs"
       ],
-      "option_containers": [
-        "RequestOptions",
-        "InputRequestOptions",
-        "Controls"
-      ],
-      "setting_containers": [
-        "EngineSettings",
-        "InputEngineSettings",
-        "Settings"
-      ],
+      "option_containers": ["Client.*"],
+      "setting_containers": ["Client.initialize", "Client.open"],
       "function_prefix": "",
       "test_folders": [
         "tests",
-        "Tests",
-        "checks",
-        "fixtures",
-        "consumer",
-        "examples",
-        "Examples"
+        "examples"
       ],
       "function_containers": [
         "Client"
@@ -394,7 +380,14 @@
       ],
       "representation_owners": [
         "Completed"
-      ]
+      ],
+      "helper_names": {
+        "question_file": "Client.question_file",
+        "question_name": "Client.question_name",
+        "question_reference": "Client.question_reference",
+        "item": "Client.item",
+        "files": "Client.files"
+      }
     },
     "r": {
       "root": "libraries/r",
@@ -405,7 +398,7 @@
         "libraries/r/thinkthen/R/*.R"
       ],
       "option_containers": [
-        "tt_request_options"
+        "tt_options"
       ],
       "setting_containers": [
         "tt_engine"
@@ -413,12 +406,7 @@
       "function_prefix": "tt_",
       "test_folders": [
         "tests",
-        "Tests",
-        "checks",
-        "fixtures",
-        "consumer",
-        "examples",
-        "Examples"
+        "examples"
       ],
       "function_containers": [
         ""
@@ -426,7 +414,245 @@
       "lifecycle_owners": [
         ""
       ],
-      "representation_owners": []
+      "representation_owners": [],
+      "helper_names": {
+        "question_file": "tt_question.file",
+        "question_name": "tt_question.name",
+        "question_reference": "tt_question.reference",
+        "files": "tt_files",
+        "item": "tt_item"
+      },
+      "lifecycle_members": {
+        "": [
+          "tt_batch",
+          "tt_completion",
+          "tt_completion_read",
+          "tt_engine",
+          "tt_usage"
+        ]
+      },
+      "representation_calls": [
+        "tt_feed",
+        "tt_input",
+        "tt_options",
+        "tt_question",
+        "tt_reader_failure",
+        "tt_recognize_question",
+        "tt_record",
+        "tt_relate_question"
+      ],
+      "field_adapters": {
+        "tt_decide": {
+          "contract": "request",
+          "type": [
+            "RequestCall",
+            "RequestOptions"
+          ],
+          "aliases": {
+            "function_name": "function"
+          }
+        },
+        "tt_choose": {
+          "contract": "request",
+          "type": [
+            "RequestCall",
+            "RequestOptions"
+          ],
+          "aliases": {
+            "function_name": "function"
+          }
+        },
+        "tt_tag": {
+          "contract": "request",
+          "type": [
+            "RequestCall",
+            "RequestOptions"
+          ],
+          "aliases": {
+            "function_name": "function"
+          }
+        },
+        "tt_score": {
+          "contract": "request",
+          "type": [
+            "RequestCall",
+            "RequestOptions"
+          ],
+          "aliases": {
+            "function_name": "function"
+          }
+        },
+        "tt_filter": {
+          "contract": "request",
+          "type": [
+            "RequestCall",
+            "RequestOptions"
+          ],
+          "aliases": {
+            "function_name": "function"
+          }
+        },
+        "tt_rank": {
+          "contract": "request",
+          "type": [
+            "RequestCall",
+            "RequestOptions"
+          ],
+          "aliases": {
+            "function_name": "function"
+          }
+        },
+        "tt_find": {
+          "contract": "request",
+          "type": [
+            "RequestCall",
+            "RequestOptions"
+          ],
+          "aliases": {
+            "function_name": "function"
+          }
+        },
+        "tt_annotate": {
+          "contract": "request",
+          "type": [
+            "RequestCall",
+            "RequestOptions"
+          ],
+          "aliases": {
+            "function_name": "function"
+          }
+        },
+        "tt_recognize": {
+          "contract": "request",
+          "type": [
+            "RequestCall",
+            "RequestOptions"
+          ],
+          "aliases": {
+            "function_name": "function"
+          }
+        },
+        "tt_relate": {
+          "contract": "request",
+          "type": [
+            "RequestCall",
+            "RequestOptions"
+          ],
+          "aliases": {
+            "function_name": "function"
+          }
+        },
+        "tt_plan": {
+          "contract": "request",
+          "type": [
+            "RequestCall",
+            "RequestOptions"
+          ],
+          "aliases": {
+            "function_name": "function"
+          }
+        },
+        "tt_batch": {
+          "contract": "request",
+          "type": [
+            "RequestCall",
+            "RequestOptions"
+          ],
+          "aliases": {
+            "function_name": "function"
+          }
+        },
+        "tt_files": {
+          "contract": "request",
+          "type": [
+            "RequestSource",
+            "RequestReader"
+          ]
+        },
+        "tt_question": {
+          "contract": "request",
+          "type": "RequestQuestion",
+          "aliases": {
+            "file": "path"
+          }
+        },
+        "tt_input": {
+          "contract": "request",
+          "type": "RequestInput"
+        },
+        "tt_item": {
+          "contract": "request",
+          "type": "RequestItem"
+        },
+        "tt_feed": {
+          "contract": "request",
+          "type": "RequestInput"
+        },
+        "tt_record": {
+          "contract": "request",
+          "type": [
+            "RequestItem",
+            "RequestSessionDescriptor"
+          ]
+        },
+        "tt_reader_failure": {
+          "contract": "request",
+          "type": "RequestReaderFailure"
+        },
+        "tt_recognize_question": {
+          "contract": "request",
+          "type": "RequestDefinition",
+          "path": [
+            "recognize"
+          ]
+        },
+        "tt_relate_question": {
+          "contract": "request",
+          "type": "Authored_relate",
+          "path": [
+            "relate"
+          ]
+        }
+      },
+      "wrapper_members": {
+        "tt_decide": [
+          "completion"
+        ],
+        "tt_choose": [
+          "completion"
+        ],
+        "tt_tag": [
+          "completion"
+        ],
+        "tt_score": [
+          "completion"
+        ],
+        "tt_filter": [
+          "completion"
+        ],
+        "tt_rank": [
+          "completion"
+        ],
+        "tt_find": [
+          "completion"
+        ],
+        "tt_annotate": [
+          "completion"
+        ],
+        "tt_recognize": [
+          "completion"
+        ],
+        "tt_relate": [
+          "completion"
+        ],
+        "tt_completion_read": [
+          "handle"
+        ],
+        "tt_feed": [
+          "next_item",
+          "close"
+        ]
+      }
     },
     "c": {
       "root": "libraries/c",
@@ -436,20 +662,15 @@
         "libraries/c/include/thinkthen.h"
       ],
       "option_containers": [
-        "thinkthen_request_options_v1"
+        "thinkthen_request_call_options_v1"
       ],
       "setting_containers": [
-        "thinkthen_engine_settings_v1"
+        "thinkthen_request_engine_settings_v1"
       ],
       "function_prefix": "thinkthen_",
       "test_folders": [
         "tests",
-        "Tests",
-        "checks",
-        "fixtures",
-        "consumer",
-        "examples",
-        "Examples"
+        "examples"
       ],
       "helper_names": {
         "usage_persistence": "thinkthen_engine_usage_persistence_v1",
@@ -462,14 +683,20 @@
       "lifecycle_owners": [
         ""
       ],
-      "representation_owners": []
+      "representation_owners": [],
+      "field_prefix": "m_"
     },
     "cpp": {
       "root": "libraries/cpp",
       "language": "cpp",
       "naming": "snake",
       "declarations": [
-        "libraries/cpp/include/thinkthen/*.hpp"
+        "libraries/cpp/include/thinkthen/client.hpp",
+        "libraries/cpp/include/thinkthen/results_generated.hpp",
+        "libraries/cpp/include/thinkthen/inputs_generated.hpp",
+        "libraries/cpp/include/thinkthen/calls_generated.hpp",
+        "libraries/cpp/include/thinkthen/result_value.hpp",
+        "libraries/cpp/include/thinkthen/value.hpp"
       ],
       "option_containers": [
         "RequestOptions",
@@ -483,13 +710,8 @@
       ],
       "function_prefix": "",
       "test_folders": [
-        "tests",
-        "Tests",
-        "checks",
         "fixtures",
-        "consumer",
-        "examples",
-        "Examples"
+        "examples"
       ],
       "helper_names": {
         "question_file": "RequestQuestionFile",
@@ -507,7 +729,7 @@
         "AnswerCall"
       ],
       "representation_owners": [
-        "Json",
+        "Data",
         "Node",
         ""
       ],
@@ -527,15 +749,16 @@
         "Poll",
         "PollState",
         "PresenceState",
-        "Json",
+        "Data",
         "Node"
       ],
       "representation_members": {
-        "Json": [
+        "Node": [],
+        "": [],
+        "Data": [
           "at",
           "begin",
           "contains",
-          "dump",
           "end",
           "get",
           "is_array",
@@ -545,21 +768,10 @@
           "is_object",
           "is_string",
           "object",
-          "parse"
-        ],
-        "Node": [
-          "document"
-        ],
-        "": [
-          "encode",
-          "decode"
+          "read"
         ]
       },
       "wrapper_members": {
-        "Json": [
-          "Array",
-          "Object"
-        ],
         "Poll": [
           "packet"
         ],
@@ -574,6 +786,10 @@
         ],
         "SessionFailure": [
           "failure"
+        ],
+        "Data": [
+          "Array",
+          "Object"
         ]
       }
     },
@@ -598,23 +814,18 @@
       "function_prefix": "",
       "test_folders": [
         "tests",
-        "Tests",
-        "checks",
-        "fixtures",
-        "consumer",
-        "examples",
-        "Examples"
+        "examples"
       ],
       "function_suffix": "Async",
       "function_containers": [
         "Engine"
       ],
       "helper_names": {
-        "question_file": "InputRequestQuestionFile",
-        "question_name": "InputRequestQuestionName",
-        "question_reference": "InputRequestQuestionReference",
-        "item": "InputRequestItem",
-        "files": "InputRequestSource"
+        "question_file": "RequestQuestionFile",
+        "question_name": "RequestQuestionName",
+        "question_reference": "RequestQuestionReference",
+        "item": "RequestItem",
+        "files": "RequestSource"
       },
       "lifecycle_owners": [
         "Engine",
@@ -624,7 +835,6 @@
       "lifecycle_members": {
         "Engine": [
           "open",
-          "parse_question",
           "start_session",
           "execute"
         ]
@@ -633,9 +843,7 @@
         "Failure": {
           "contract": "result",
           "type": "completeCallError",
-          "aliases": {
-            "FactsJson": "facts"
-          }
+          "aliases": {}
         },
         "SessionFailure": {
           "contract": "result",
@@ -663,13 +871,8 @@
       ],
       "function_prefix": "",
       "test_folders": [
-        "tests",
-        "Tests",
-        "checks",
         "fixtures",
-        "consumer",
-        "examples",
-        "Examples"
+        "examples"
       ],
       "helper_names": {
         "question_file": "RequestQuestionFile",
@@ -685,8 +888,10 @@
         "PresenceState",
         "UsagePersistenceState",
         "OwnedPresence",
-        "JSONValue",
-        "Producer"
+        "Producer",
+        "FeedInput",
+        "AnswerCardinalityError",
+        "Call"
       ],
       "representation_calls": [
         "NewClient",
@@ -698,7 +903,6 @@
         "String",
         "Boolean",
         "Value",
-        "MarshalJSON",
         "UnmarshalJSON",
         "Error",
         "KindUsage",
@@ -711,34 +915,42 @@
         "Present",
         "Null",
         "GoString",
-        "JSONValue",
-        "Ptr"
+        "Ptr",
+        "TextInput",
+        "RecordsInput",
+        "TextRecordsInput"
       ],
       "function_containers": [
         "Client"
       ],
       "lifecycle_owners": [
         "Client",
-        "OwnedCall",
+        "Call",
         "OwnedSession"
       ],
       "representation_owners": [
         "Presence",
         "OwnedPresence",
-        "JSONValue",
         "UsageStatus",
         "Error",
         "ErrorKind",
-        "SessionError"
+        "SessionError",
+        "FeedInput",
+        "AnswerCardinalityError"
       ],
       "representation_embedded_members": {
         "ownedJSON": [
           "Boolean",
-          "JSONValue",
           "String",
           "GoString",
-          "MarshalJSON",
           "UnmarshalJSON"
+        ]
+      },
+      "wrapper_members": {
+        "AnswerCardinalityError": [
+          "Function",
+          "Count",
+          "Call"
         ]
       }
     },
@@ -762,12 +974,7 @@
       "function_prefix": "",
       "test_folders": [
         "tests",
-        "Tests",
-        "checks",
-        "fixtures",
-        "consumer",
-        "examples",
-        "Examples"
+        "examples"
       ],
       "helper_names": {
         "question_file": "RequestQuestionFile",
@@ -799,7 +1006,8 @@
         "UsagePersistence",
         "Values",
         "Builder",
-        "View"
+        "View",
+        "Options"
       ],
       "lifecycle_members": {
         "Engine": [
@@ -846,7 +1054,9 @@
         "Surface",
         "Values",
         "Builder",
-        "View"
+        "View",
+        "Questions",
+        "Options"
       ],
       "representation_members": {
         "Values": [
@@ -863,6 +1073,9 @@
         ],
         "View": [
           "json"
+        ],
+        "Options": [
+          "option"
         ]
       },
       "wrapper_members": {
@@ -891,31 +1104,22 @@
         "libraries/swift/Sources/ThinkThen/*.swift"
       ],
       "option_containers": [
-        "RequestOptions",
-        "InputRequestOptions",
-        "Controls"
+        "Options"
       ],
       "setting_containers": [
-        "EngineSettings",
-        "InputEngineSettings",
-        "Settings"
+        "EngineSettings"
       ],
       "function_prefix": "",
       "test_folders": [
-        "tests",
         "Tests",
-        "checks",
-        "fixtures",
-        "consumer",
-        "examples",
         "Examples"
       ],
       "helper_names": {
-        "question_file": "InputRequestQuestion.file",
-        "question_name": "InputRequestQuestion.name",
-        "question_reference": "InputRequestQuestion.reference",
-        "item": "InputRequestItem.text",
-        "files": "InputRequestInput.files"
+        "question_file": "Question.file",
+        "question_name": "Question.name",
+        "question_reference": "Question.reference",
+        "item": "Item.text",
+        "files": "Input.files"
       },
       "function_containers": [
         "Client"
@@ -926,17 +1130,91 @@
       ],
       "representation_owners": [
         "Presence",
-        "OwnedUsagePersistenceStatus",
+        "UsagePersistenceStatus",
         "Array",
         "Bool",
         "Dictionary",
         "Double",
         "Int64",
-        "JSONValue",
+        "DataValue",
         "Optional",
         "String",
-        "UInt64"
-      ]
+        "UInt64",
+        "Image",
+        "ValueKind",
+        "ValueMember",
+        "NumberLiteral",
+        "UsagePersistenceState"
+      ],
+      "representation_types": [
+        "Call",
+        "FeedReadFailure",
+        "ValueKind",
+        "ValueMember",
+        "NumberLiteral",
+        "DataValue",
+        "SessionBoundaryFailure",
+        "UsagePersistenceState",
+        "UsagePersistenceStatus"
+      ],
+      "lifecycle_members": {
+        "Client": [
+          "execute"
+        ]
+      },
+      "representation_members": {
+        "Image": [
+          "bytes"
+        ],
+        "DataValue": [
+          "array",
+          "bool",
+          "number",
+          "object",
+          "orderedObject",
+          "string"
+        ]
+      },
+      "wrapper_members": {
+        "FeedReadFailure": [
+          "failure"
+        ],
+        "ValueKind": [
+          "array",
+          "bool",
+          "null",
+          "number",
+          "object",
+          "orderedObject",
+          "string"
+        ],
+        "ValueMember": [
+          "key"
+        ],
+        "NumberLiteral": [
+          "rawValue"
+        ],
+        "DataValue": [
+          "null"
+        ],
+        "Presence": [
+          "absent",
+          "null"
+        ],
+        "SessionBoundaryFailure": [
+          "description"
+        ],
+        "SessionFailure": [
+          "description",
+          "failure"
+        ],
+        "UsagePersistenceState": [
+          "disabled",
+          "failed",
+          "pending",
+          "written"
+        ]
+      }
     },
     "zig": {
       "root": "libraries/zig",
@@ -955,13 +1233,8 @@
       ],
       "function_prefix": "",
       "test_folders": [
-        "tests",
         "Tests",
-        "checks",
-        "fixtures",
-        "consumer",
-        "examples",
-        "Examples"
+        "examples"
       ],
       "helper_names": {
         "question_file": "RequestQuestionFile",
@@ -1002,13 +1275,8 @@
       ],
       "function_prefix": "",
       "test_folders": [
-        "tests",
-        "Tests",
-        "checks",
         "fixtures",
-        "consumer",
-        "examples",
-        "Examples"
+        "examples"
       ],
       "helper_names": {
         "question_file": "Client.questionFile",
@@ -1017,7 +1285,8 @@
         "item": "Client.item",
         "files": "Client.files",
         "usage_persistence": "usagePersistence",
-        "finish_usage_status": "finishUsageStatus"
+        "finish_usage_status": "finishUsageStatus",
+        "plan": "Client.plan"
       },
       "function_containers": [
         "Client"
@@ -1047,8 +1316,7 @@
         ],
         "Node": [
           "field",
-          "has",
-          "toObject"
+          "has"
         ],
         "Operation": [
           "poll"
@@ -1082,29 +1350,22 @@
         "libraries/dart/lib/**/*.dart"
       ],
       "option_containers": [
-        "InputRequestOptions"
+        "Options"
       ],
       "setting_containers": [
-        "InputEngineSettings"
+        "EngineSettings"
       ],
       "function_prefix": "",
       "test_folders": [
-        "tests",
-        "Tests",
         "checks",
-        "fixtures",
-        "consumer",
-        "examples",
-        "Examples",
-        "test",
         "example"
       ],
       "helper_names": {
-        "question_file": "InputRequestQuestionFile",
-        "question_name": "InputRequestQuestionName",
-        "question_reference": "InputRequestQuestionReference",
-        "item": "InputRequestItem",
-        "files": "InputRequestSource"
+        "question_file": "QuestionFile",
+        "question_name": "QuestionName",
+        "question_reference": "QuestionReference",
+        "item": "Item",
+        "files": "InputSource"
       },
       "entrypoint": "libraries/dart/lib/thinkthen_dart.dart",
       "function_containers": [
@@ -1133,13 +1394,8 @@
       ],
       "function_prefix": "",
       "test_folders": [
-        "tests",
-        "Tests",
         "checks",
-        "fixtures",
-        "consumer",
-        "examples",
-        "Examples"
+        "examples"
       ],
       "function_containers": [
         ""
@@ -1168,24 +1424,15 @@
         "libraries/objective-c/Sources/Foundation/TTResults.g.h"
       ],
       "option_containers": [
-        "RequestOptions",
-        "InputRequestOptions",
-        "Controls"
+        "TTControls"
       ],
       "setting_containers": [
-        "EngineSettings",
-        "InputEngineSettings",
-        "Settings"
+        "TTSettings"
       ],
       "function_prefix": "",
       "test_folders": [
-        "tests",
-        "Tests",
         "checks",
-        "fixtures",
-        "consumer",
-        "examples",
-        "Examples"
+        "examples"
       ],
       "function_containers": [
         "TTFoundationClient"
@@ -1194,10 +1441,79 @@
         "TTFoundationClient",
         "TTSession",
         "TTTask",
-        "TTUsagePersistenceStatus"
+        "TTUsagePersistenceStatus",
+        "TTCall",
+        "TTFailureError"
       ],
       "representation_owners": [
         "TTPresence",
+        "TTUsagePersistenceStatus",
+        "TTFailureError"
+      ],
+      "helper_names": {
+        "plan": "plan",
+        "question_file": "TTQuestionFile",
+        "question_name": "TTQuestionName",
+        "question_reference": "TTQuestionReference",
+        "item": "TTItem",
+        "files": "TTFiles",
+        "usage_persistence": "usagePersistence",
+        "finish_usage_status": "finishUsageStatus"
+      },
+      "wrapper_members": {
+        "TTCall": [
+          "packets",
+          "terminal",
+          "decideAnswer",
+          "chooseAnswer",
+          "tagAnswer",
+          "scoreAnswer",
+          "filterAnswer",
+          "rankAnswer",
+          "findAnswer",
+          "annotateAnswer",
+          "recognizeAnswer",
+          "relateAnswer"
+        ],
+        "TTSession": [
+          "tryPush",
+          "finish",
+          "tryReadEnded",
+          "waitInput",
+          "cancel",
+          "close"
+        ],
+        "TTTask": [
+          "cancel"
+        ],
+        "TTFailureError": [
+          "kind",
+          "retryable",
+          "facts",
+          "failure"
+        ],
+        "TTOrderedEntry": [
+          "key",
+          "value",
+          "initWithKey"
+        ],
+        "TTOrderedMap": [
+          "entries",
+          "initWithEntries"
+        ],
+        "TTFoundationClient": [
+          "initWithSettings",
+          "init",
+          "new",
+          "startRequest"
+        ]
+      },
+      "representation_types": [
+        "TTFailureError",
+        "TTPresence",
+        "TTResultNode",
+        "TTSession",
+        "TTTask",
         "TTUsagePersistenceStatus"
       ]
     },
@@ -1213,26 +1529,22 @@
         "tt-n-cobol-RequestOptions"
       ],
       "setting_containers": [
-        "tt-n-cobol-EngineSettings"
+        "tt-n-cobol-Settings"
       ],
       "function_prefix": "TT_SESSION_",
       "test_folders": [
-        "tests",
-        "Tests",
         "checks",
-        "fixtures",
-        "consumer",
-        "examples",
-        "Examples"
+        "examples"
       ],
       "helper_names": {
+        "plan": "TT_PREVIEW",
         "usage_persistence": "TT_ENGINE_USAGE_PERSISTENCE",
         "finish_usage_status": "TT_ENGINE_FINISH_USAGE_STATUS",
-        "question_file": "tt-n-cobol-RequestQuestion-file",
-        "question_name": "tt-n-cobol-RequestQuestion-name",
-        "question_reference": "tt-n-cobol-RequestQuestion-reference",
-        "item": "tt-n-cobol-RequestItem",
-        "files": "tt-n-cobol-RequestSource"
+        "question_file": "thinkthen_cobol_RequestQuestionFile",
+        "question_name": "thinkthen_cobol_RequestQuestionName",
+        "question_reference": "thinkthen_cobol_RequestQuestionReference",
+        "item": "thinkthen_cobol_RequestItem",
+        "files": "thinkthen_cobol_RequestSource"
       },
       "function_containers": [
         ""
@@ -1241,7 +1553,77 @@
       "lifecycle_owners": [
         ""
       ],
-      "representation_owners": []
+      "representation_owners": [],
+      "representation_calls": [
+        "TT_SESSION_NEXT",
+        "TT_SESSION_TEXT"
+      ]
+    }
+  },
+  "databases": {
+    "postgresql": {
+      "root": "databases/postgresql",
+      "test_folders": [
+        "tests",
+        "fixtures",
+        "examples"
+      ],
+      "test_files": [
+        "src/files_complete_tests.rs"
+      ]
+    },
+    "duckdb": {
+      "root": "databases/duckdb",
+      "test_folders": [
+        "test",
+        "tests",
+        "proof",
+        "examples"
+      ],
+      "test_files": [
+        "tools/backend_setups.py",
+        "tools/build_version_cases.py",
+        "tools/conformance.py",
+        "tools/databases_suite.py",
+        "tools/files_suite.py",
+        "tools/find_suite.py",
+        "tools/harness.py",
+        "tools/images_suite.py",
+        "tools/input_version_cases.py",
+        "tools/named_backends.py",
+        "tools/plan_suite.py",
+        "tools/portable_suite.py",
+        "tools/rank_sets_suite.py",
+        "tools/rank_suite.py",
+        "tools/relate_suite.py",
+        "tools/release_pack_cases.py",
+        "tools/settings_cases.py",
+        "tools/settings_suite.py",
+        "tools/signal_suite.py",
+        "tools/site_examples.py",
+        "tools/source_checks.py",
+        "tools/source_pin_cases.py",
+        "tools/verbs_budget.py",
+        "tools/verbs_complete.py",
+        "tools/verbs_portable.py",
+        "tools/verbs_suite.py",
+        "cpp/verify_complete_tables.py",
+        "cpp/verify_decide.py",
+        "cpp/verify_footer.py",
+        "cpp/verify_interrupt.py",
+        "cpp/verify_nested.py",
+        "cpp/verify_package.py",
+        "cpp/verify_repository.py",
+        "cpp/verify_tables.py"
+      ]
+    },
+    "sqlite": {
+      "root": "databases/sqlite",
+      "test_folders": [
+        "tests",
+        "fixtures",
+        "examples"
+      ]
     }
   }
 }

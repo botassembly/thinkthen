@@ -10,6 +10,7 @@ The PM made these rulings so the coordinator decides alone in the common cases. 
 - A required new export, call or helper in a library under a fixed limit is offset by a cut in the same library. If no safe cut exists, raise the limit to the measured total and say why.
 - A size target is a goal, not a gate. Stop at safe cuts and report the gap. Never cut an assertion, a test or formatting to meet a number.
 - Generated lines never count against a handwritten limit.
+- The combined Rust total is a gate on the final candidate, not on a lane merge. A reviewed lane that adds required Rust lines merges into `ticket/0543-final` when its other checks pass. The Rust test lane and G2 then cut the combined total to main or below before freeze.
 
 ## Measurements
 
@@ -22,11 +23,11 @@ The PM made these rulings so the coordinator decides alone in the common cases. 
 - Every checkpoint runs one fixed gate list: routine `test`, `lint` and every library build, collecting all failures in each phase before stopping.
 - A developer runs its own library's `check.sh`, its lint limit and the routine tests for the files it touched before it hands back.
 - Each lane builds into its own Cargo folder, `CARGO_TARGET_DIR=/tmp/thinkthen-target-<lane>`, so lanes never queue on one build directory. The lane deletes it when it lands.
-- Every `check.sh` uses one heavy-build lock path. Up to four developer lanes run at once while machine load stays below the core count.
+- Every `check.sh` uses one heavy-build lock path. Run every ready developer lane at once; at most four heavy builds run on the Beelink at a time, while machine load stays below the core count.
 
 ## Ownership
 
-- One generator developer owns `sdlc/generators/`, every generated file, `.gitattributes` and `policy.py`. A language lane that needs a generator change asks that developer and does not edit those files.
+- One generator developer owns the shared generator files: `generate.py`, `registry.py`, `host_answers.py`, `layouts.py`, `c.py`, `native_request.py`, `operations.py`, `.gitattributes` and `policy.py`. Each language lane owns its own `sdlc/generators/results/templates/<lang>*.py` files and regenerates its own outputs. A lane that needs a shared generator change asks the generator developer.
 - Each language lane edits only its own `libraries/<language>` directory and its own limit entry.
 - A developer who touches a shared file outside its lane stops and asks the coordinator.
 

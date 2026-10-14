@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 require_relative "results_generated"
 module ThinkThen
+  Plan = Results::NativePlan
   UsageStatus = Struct.new(:state, :advice) do
     def initialize(state, advice)
       super(state.freeze, advice&.freeze)
@@ -19,9 +20,8 @@ module ThinkThen
       def facts = terminal.facts
       def value
         return results.map(&:input).freeze if @verb == "filter"
-        return results if @verb == "rank"
         values = results.map { |row| row.key?("value") ? row.value : row }
-        @scalar && values.size == 1 ? values.first : values.freeze
+        @verb != "rank" && @scalar && values.size == 1 ? values.first : values.freeze
       end
       def inspect = "<ThinkThen::Results::Completed: content withheld>"
     end
@@ -30,15 +30,19 @@ module ThinkThen
   # One family of named calls over the owned native engine.
   class Client
     FUNCTIONS = %w[decide choose tag score filter rank find annotate recognize relate].freeze
-    Source = Struct.new(:source) do
-      def inspect = "<ThinkThen::Client::Source: content withheld>"
+    class Carrier
+      private attr_reader :payload
+      def initialize(payload)
+        @payload = payload
+        freeze
+      end
+      private_class_method :new, :allocate
+      def inspect = "<#{self.class.name}: content withheld>"
     end
-    Question = Struct.new(:selector) do
-      def inspect = "<ThinkThen::Client::Question: content withheld>"
-    end
-    Item = Struct.new(:descriptor) do
-      def inspect = "<ThinkThen::Client::Item: content withheld>"
-    end
+    private_constant :Carrier
+    Source = Class.new(Carrier) { alias_method :source, :payload }
+    Question = Class.new(Carrier) { alias_method :selector, :payload }
+    Item = Class.new(Carrier) { alias_method :descriptor, :payload }
     def self.open(**settings)
       client = new(**settings)
       return client unless block_given?
@@ -48,46 +52,44 @@ module ThinkThen
         cleanup(client)
       end
     end
-    def self.cleanup(owner)
+    private_class_method def self.cleanup(owner)
       active = $!
       owner.close
     rescue Exception
       raise unless active
     end
     def initialize(**settings)
-      @native = Native.request_engine(Client.dump(settings))
+      @native = Native.request_engine(Client.send(:dump, settings))
       @operations = []
       @closed = false
     rescue JSON::GeneratorError, TypeError
       raise UsageError.new("settings cannot be converted to native JSON", "usage")
     end
-    def self.question_file(path)
-      Question.new({kind: "file", path: path}).freeze
-    end
-    def self.question_name(name)
-      Question.new({kind: "name", name: name}).freeze
-    end
-    def self.question_reference(reference)
-      Question.new({kind: "reference", reference: reference}).freeze
+    %w[file name reference].each do |kind|
+      field = kind == "file" ? :path : kind.to_sym
+      define_singleton_method("question_#{kind}") do |value|
+        Question.send(:new, {kind: kind, field => value})
+      end
     end
     def self.files(paths, framing: nil, media: "text", **reading)
       source = {paths: Array(paths), reading: reading, media: media}
       source[:framing] = framing unless framing.nil?
-      Source.new(source).freeze
+      Source.send(:new, source)
     end
     def self.item(value, **fields)
-      Item.new({original: original(value), **fields}).freeze
+      Item.send(:new, {original: original(value), **fields})
     end
     def self.dump(value)
       JSON.generate(value)
     rescue JSON::GeneratorError, TypeError, EncodingError
       raise UsageError.new("input cannot be converted to native JSON", "usage")
     end
-    def self.original(value)
+    private_class_method :dump
+    private_class_method def self.original(value)
       value.is_a?(String) ? {kind: "text", text: value} : {kind: "json", value: value}
     end
-    def self.descriptor(value)
-      value.is_a?(Item) ? value.descriptor : {original: original(value)}
+    private_class_method def self.descriptor(value)
+      value.is_a?(Item) ? value.send(:descriptor) : {original: original(value)}
     end
     def plan(verb, question, input, **options)
       raise UsageError.new("client is closed", "usage") if @closed
@@ -99,7 +101,7 @@ module ThinkThen
         begin
           operation.result
         ensure
-          Client.cleanup(operation)
+          Client.send(:cleanup, operation)
         end
       end
     end
@@ -111,7 +113,7 @@ module ThinkThen
       begin
         yield operation
       ensure
-        Client.cleanup(operation)
+        Client.send(:cleanup, operation)
       end
     end
     def close
@@ -145,12 +147,11 @@ module ThinkThen
         @rows = []
         @observations = []
         @closed = false
-        @scalar = %w[find relate].include?(verb) || (!input.is_a?(Array) && !input.is_a?(Source) && !input.is_a?(Enumerable))
         if input.is_a?(Enumerable) && !input.is_a?(Array) && !input.is_a?(Hash) && !input.is_a?(Source) && !input.is_a?(Item)
           @producer = input.to_enum
           @owner = input
         end
-        @scalar = true unless input.is_a?(Array) || input.is_a?(Source) || @producer
+        @scalar = %w[find relate].include?(verb) || !(input.is_a?(Array) || input.is_a?(Source) || @producer)
         if token&.cancelled?
           raise CancelledError.new("the call was cancelled", "cancelled")
         end
@@ -202,19 +203,19 @@ module ThinkThen
           end
         end
       ensure
-        Client.cleanup(self)
+        Client.send(:cleanup, self)
       end
-      def cancelled
+      private def cancelled
         error = CancelledError.new("the call was cancelled", "cancelled")
         error.instance_variable_set(:@results, @rows.dup.freeze)
         error.instance_variable_set(:@terminal, @terminal)
         error.instance_variable_set(:@facts, @terminal&.facts)
         error
       end
-      def feed
+      private def feed
         unless @pending
           begin
-            @pending = @session.item(Client.descriptor(@producer.next))
+            @pending = @session.item(Client.send(:descriptor, @producer.next))
           rescue StopIteration
             @session.finish(nil)
             close_producer
@@ -245,7 +246,7 @@ module ThinkThen
           @remove&.call(self)
         end
       end
-      def close_producer
+      private def close_producer
         owner, @owner, @producer = @owner, nil, nil
         owner.close if owner.respond_to?(:close)
       rescue StandardError
@@ -253,8 +254,5 @@ module ThinkThen
       end
       def inspect = "<ThinkThen::Client::Operation>"
     end
-  end
-  class Error
-    attr_reader :results, :terminal, :observations
   end
 end

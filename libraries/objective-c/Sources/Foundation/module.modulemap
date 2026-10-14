@@ -1,4 +1,5 @@
 module ThinkThen {
     umbrella header "ThinkThenFoundation.h"
+    exclude header "TTResultPrivate.h"
     export *
 }

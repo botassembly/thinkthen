@@ -217,7 +217,7 @@ PY
 fi
 if [ "$mode" = ada-objective-c-cobol ]; then
 	tar -tzf "$dir/$c" | LC_ALL=C sort >"$work/members" || fail 'cannot list C members'
-	printf '%s\n' ./ ./include/ ./include/thinkthen.h ./lib/ ./lib/pkgconfig/ \
+	printf '%s\n' ./ ./README.md ./include/ ./include/thinkthen.h ./lib/ ./lib/pkgconfig/ \
 		./lib/pkgconfig/thinkthen.pc ./lib/libthinkthen.a ./lib/libthinkthen.so \
 		./lib/libthinkthen.so.0 | LC_ALL=C sort >"$work/expected-members"
 	cmp -s "$work/members" "$work/expected-members" || fail 'C members differ'

@@ -26,12 +26,14 @@ mod ffi;
 mod files;
 mod images;
 mod many;
+mod named;
 mod question;
 mod rank_set;
 mod recognize_document;
 mod request;
 mod scalars;
 mod settings;
+mod source_filter;
 mod tables;
 mod worker;
 

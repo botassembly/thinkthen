@@ -10,6 +10,9 @@ pub struct RecognizeQuestionFile {
     reading: RecordReading,
 }
 impl RecognizeQuestionFile {
+    pub(crate) fn from_parts(question: Recognize, reading: RecordReading) -> Self {
+        Self { question, reading }
+    }
     /// Admit the ordinary saved grammar, retaining every authored `on` pointer.
     /// # Errors
     /// Refuses invalid kinds, relations, cuts, settings or pointer combinations.

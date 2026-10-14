@@ -6,6 +6,12 @@ Milestone: 0.2
 
 Depends on: 0561, 0565
 
+Reviews: revision dcafe90, accept
+
+Reviews: revision 4d8d1a8, accept
+
+Reviews: revision c6792fe, accept
+
 ## Outcome
 
 Lint checks every generated file against its generator. Each language carries only the generated declarations it uses. Generated public names read as real names, not schema paths. The C view layout shares one presence struct per value type. These changes land before the candidate, because the names and the `_v1` layouts become public API at 0.2.
@@ -47,3 +53,8 @@ Lint checks every generated file against its generator. Each language carries on
 
 
 PM amendment, 2026-10-13. Remaining work. One generator developer owns `sdlc/generators/`, every generated file, `.gitattributes` and `policy.py`, and no other lane edits them. (1) Mark the 13 unmarked generated files, such as `libraries/c/src/session/primitives_generated.rs`, `libraries/cpp/include/thinkthen/calls_generated.hpp` and `libraries/python/thinkthen/_named_generated.py`, and delete the 4 `.gitattributes` entries that name deleted files. (2) Give each untitled schema arm a title, so no public name contains `arm_`, `ARM_` or `Alternative`. (3) Add a lint check that fails when a header, public type or public function name in a generated file exceeds 60 characters; static and private helpers are exempt. (4) Delete the unused C export named in the 0561 amendment. (5) Generate everything the 0574 and 0576 language lanes need from the generator before those lanes start: per-function typed answer accessors, typed errors with typed facts, plain lists for rank and filter, and typed recognize and relate builders. Record in Progress whether the collapsed `RequestCall`, the Ada generic optional type and the Rust per-field-kind helper are done, and drop any that are not. 0562 owns generated names; 0576 only grades them. Generated file sizes appear in the 0568 `library-size` report, and this ticket sets no separate budget. Proof: `sdlc/scripts/lint` passes, a planted edit in one generated file fails it, and every changed language's `check.sh` passes.
+
+## Progress
+
+- 2026-10-13 started
+- 2026-10-13 next: Merged reviewed released-generator coherence as 73558a3e89f0bd76b5c69d72f7afbcbfc2aad747 with installed Dart and PHP checks passing; remaining language outputs stay with their owners.

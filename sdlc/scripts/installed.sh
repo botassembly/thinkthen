@@ -62,14 +62,16 @@ native_install() {
 		for native_flag in ${RUSTFLAGS:-}; do native_flags="$native_flags${native_flags:+$native_separator}$native_flag"; done
 	fi
 	if [ "${THINKTHEN_FULL_COMPILER:-}" != 1 ]; then
-	for native_flag in --remap-path-prefix=/home=/build/home --remap-path-prefix=/Users=/build/users "--remap-path-prefix=$1=/build/thinkthen"; do
+	for native_flag in --remap-path-prefix=/home=/build/host --remap-path-prefix=/Users=/build/users "--remap-path-prefix=$1=/build/thinkthen"; do
 		native_flags="$native_flags${native_flags:+$native_separator}$native_flag"
 	done
 	fi
 	native_cflags=${CFLAGS:-}
-	[ "${THINKTHEN_FULL_COMPILER:-}" = 1 ] || native_cflags="${native_cflags:+$native_cflags }-ffile-prefix-map=/home=/build/home -ffile-prefix-map=/Users=/build/users"
+	[ "${THINKTHEN_FULL_COMPILER:-}" = 1 ] || native_cflags="${native_cflags:+$native_cflags }-ffile-prefix-map=/home=/build/host -ffile-prefix-map=/Users=/build/users"
+	native_cxxflags=${CXXFLAGS:-}
+	[ "${THINKTHEN_FULL_COMPILER:-}" = 1 ] || native_cxxflags="${native_cxxflags:+$native_cxxflags }-ffile-prefix-map=/home=/build/host -ffile-prefix-map=/Users=/build/users"
 	CARGO_TARGET_DIR="$native_build" CARGO_ENCODED_RUSTFLAGS="$native_flags" \
-		CFLAGS="$native_cflags" \
+		CFLAGS="$native_cflags" CXXFLAGS="$native_cxxflags" \
 		cargo build --quiet --locked --offline --manifest-path "$1/libraries/c/Cargo.toml" --lib || return
 	native_metadata=$(CARGO_TARGET_DIR="$native_build" cargo metadata --quiet --locked --offline --no-deps --format-version 1 \
 		--manifest-path "$1/libraries/c/Cargo.toml") || return

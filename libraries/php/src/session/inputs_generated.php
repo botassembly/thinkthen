@@ -21,15 +21,6 @@ final class Settings extends \ThinkThen\Inputs\Document
     }
 }
 namespace ThinkThen\Inputs;
-final class RecognitionDefinition extends \ThinkThen\Inputs\Document
-{
-    private const TAGS = ['version' => 1];
-    public function __construct(public readonly RecognitionSpec $recognize, public readonly mixed $context_schema = Omitted::Value, public readonly mixed $item_schema = Omitted::Value, public readonly string|Omitted $model = Omitted::Value, public readonly string|Omitted $name = Omitted::Value, public readonly mixed $on = Omitted::Value, public readonly string|Omitted $profile = Omitted::Value, public readonly mixed $relation_threshold = Omitted::Value, public readonly mixed $threshold = Omitted::Value, public readonly int|Omitted $wording_version = Omitted::Value)
-    {
-        parent::__construct([...self::TAGS, ...($context_schema === Omitted::Value ? [] : ['context_schema' => $context_schema]), ...($item_schema === Omitted::Value ? [] : ['item_schema' => $item_schema]), ...($model === Omitted::Value ? [] : ['model' => $model]), ...($name === Omitted::Value ? [] : ['name' => $name]), ...($on === Omitted::Value ? [] : ['on' => $on]), ...($profile === Omitted::Value ? [] : ['profile' => $profile]), 'recognize' => $recognize, ...($relation_threshold === Omitted::Value ? [] : ['relation_threshold' => $relation_threshold]), ...($threshold === Omitted::Value ? [] : ['threshold' => $threshold]), ...($wording_version === Omitted::Value ? [] : ['wording_version' => $wording_version])]);
-    }
-}
-namespace ThinkThen\Inputs;
 final class RecognitionSpec extends \ThinkThen\Inputs\Document
 {
     public function __construct(public readonly mixed $entity_definition = Omitted::Value, public readonly mixed $instructions = Omitted::Value, public readonly mixed $kinds = Omitted::Value, public readonly mixed $mode = Omitted::Value, public readonly array|Omitted $relations = Omitted::Value, public readonly int|Omitted $snippet_pieces = Omitted::Value, public readonly mixed $stage_context = Omitted::Value)
@@ -123,10 +114,6 @@ final class Options extends \ThinkThen\Inputs\Document
     {
         parent::__construct([...($attempts === Omitted::Value ? [] : ['attempts' => $attempts]), ...($batch === Omitted::Value ? [] : ['batch' => $batch]), ...($context === Omitted::Value ? [] : ['context' => $context]), ...($context_field === Omitted::Value ? [] : ['context_field' => $context_field]), ...($deadline_ms === Omitted::Value ? [] : ['deadline_ms' => $deadline_ms]), ...($details === Omitted::Value ? [] : ['details' => $details]), ...($examples === Omitted::Value ? [] : ['examples' => $examples]), ...($examples_field === Omitted::Value ? [] : ['examples_field' => $examples_field]), ...($field === Omitted::Value ? [] : ['field' => $field]), ...($files_only === Omitted::Value ? [] : ['files_only' => $files_only]), ...($max_requests_total === Omitted::Value ? [] : ['max_requests_total' => $max_requests_total]), ...($mode === Omitted::Value ? [] : ['mode' => $mode]), ...($model === Omitted::Value ? [] : ['model' => $model]), ...($none === Omitted::Value ? [] : ['none' => $none]), ...($options_field === Omitted::Value ? [] : ['options_field' => $options_field]), ...($relation_threshold === Omitted::Value ? [] : ['relation_threshold' => $relation_threshold]), ...($seed_spans === Omitted::Value ? [] : ['seed_spans' => $seed_spans]), ...($seed_spans_field === Omitted::Value ? [] : ['seed_spans_field' => $seed_spans_field]), ...($snippet_pieces === Omitted::Value ? [] : ['snippet_pieces' => $snippet_pieces]), ...($stage_context === Omitted::Value ? [] : ['stage_context' => $stage_context]), ...($threshold === Omitted::Value ? [] : ['threshold' => $threshold]), ...($top === Omitted::Value ? [] : ['top' => $top])]);
     }
-}
-namespace ThinkThen\Internal\Requests;
-final class Question extends \ThinkThen\Inputs\Document
-{
 }
 namespace ThinkThen\Internal\Requests;
 final class QuestionDefinition extends \ThinkThen\Inputs\Document

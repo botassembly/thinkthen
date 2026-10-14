@@ -37,8 +37,7 @@ fn complete_envelopes_keep_owned_originals_and_actual_facts_without_changing_leg
     };
     let call = batch.into_call().unwrap();
     assert_eq!(call.value()[0].original().a, [2, 1]);
-    let complete = call.complete().unwrap();
-    let encoded = serde_json::to_string(&complete).unwrap();
+    let encoded = serde_json::to_string(&call).unwrap();
     assert!(encoded.contains(r#""input":{"z":false,"body":"One.","a":[2,1]}"#));
     let doc: Value = serde_json::from_str(&encoded).unwrap();
     assert_eq!(doc["value"][0]["schema"], "thinkthen.result/2");
@@ -53,7 +52,7 @@ fn complete_envelopes_keep_owned_originals_and_actual_facts_without_changing_leg
     let legacy: Value = serde_json::to_value(call.facts()).unwrap();
     assert!(legacy.get("call_id").is_none());
     assert!(legacy.get("attempts").is_none());
-    assert!(!format!("{complete:?}").contains("One."));
+    assert!(!format!("{call:?}").contains("One."));
     assert_eq!(listener.count(), 1);
 }
 

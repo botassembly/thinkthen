@@ -61,12 +61,14 @@ def release_base(root):
 def additions(root, since, manifest, classifier, generated, outputs):
     result = []
     for commit in git(root, 'rev-list', '--reverse', '--topo-order', since + '..HEAD').splitlines():
-        counts = {name: 0 for name in manifest['libraries']}
+        counts = {name: 0 for name in classifier.source_owners(manifest)}
         parents = git(root, 'rev-list', '--parents', '-1', commit).split()[1:]
         merge = len(parents) > 1
         prefix = '+' * len(parents) if merge else '+'
         patch = git(root, 'show', '--format=', '--cc' if merge else '--patch', '--unified=0',
-                    '--no-renames', commit, '--', 'libraries', *sorted(generated))
+                    '--no-renames', commit, '--',
+                    *(config['root'] for config in classifier.source_owners(manifest).values()),
+                    *sorted(generated))
         path = None
         for line in patch.splitlines():
             if line.startswith('+++ b/'):
@@ -86,7 +88,7 @@ def measure(root, manifest, since):
     classifier = committed_classifier(root)
     generated, outputs = classifier.generated_paths(), classifier.output_owners()
     counts = {name: dict(handwritten=0, generated=0, test=0, exception=0,
-                         languages={}) for name in manifest['libraries']}
+                         languages={}) for name in classifier.source_owners(manifest)}
     paths = [path for path in git(root, 'ls-tree', '-r', '--name-only', 'HEAD').splitlines()
              if classifier.owner(path, manifest, outputs) and classifier.classification(
                  path, classifier.owner(path, manifest, outputs), manifest, generated)]

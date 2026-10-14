@@ -72,7 +72,11 @@ fn reported(error: Error) -> Error {
                 | SendBudgetDenial::BeforeRetry { .. }
         )
     ) {
-        return spent(settings::current_total());
+        let reported = spent(settings::current_total());
+        return match error.facts().cloned() {
+            Some(facts) => reported.with_facts(facts),
+            None => reported,
+        };
     }
     error
 }

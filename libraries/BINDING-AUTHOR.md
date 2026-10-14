@@ -16,6 +16,31 @@ C, Zig, Ada and COBOL use fixed layouts generated from Rust. Other C-interface l
 
 [0517](../sdlc/tickets/0517-prebuilt-native-libraries-in-every-package.md) designs how each package carries its prebuilt native library for supported platforms. Each migration ticket builds its own package under that design. Installation and the first call require no manual library path. Follow the language package's normal install command; package inventories come from the shared generated definition. Public installation text continues to describe the published release until 0.2 ships.
 
+## Existing test folders
+
+Keep each library's current test folder. The surface manifest classifies source in that folder and its examples as test code. The size report and handwritten production checks share that classification. Generated files remain generated regardless of their folder.
+
+| Library | Main test folder | Examples folder |
+| --- | --- | --- |
+| Python | `tests` | `examples` |
+| TypeScript | `tests` | `examples` |
+| Ruby | `tests` | `examples` |
+| R | `tests` | `examples` |
+| C | `tests` | `examples` |
+| C++ | `fixtures` | `examples` |
+| C# | `tests` | `examples` |
+| Go | `fixtures` | `examples` |
+| JVM | `tests` | `examples` |
+| Swift | `Tests` | `Examples` |
+| Zig | `Tests` | `examples` |
+| PHP | `fixtures` | `examples` |
+| Dart and Flutter | `checks` | `example` |
+| Ada | `checks` | `examples` |
+| Objective-C | `checks` | `examples` |
+| COBOL | `checks` | `examples` |
+
+Folder names also classify nested example projects. A listed examples folder need not exist when the library has no example yet. Do not rename folders to match another language.
+
 ## Caller acceptance and code ownership
 
 The [native package design](../sdlc/decisions/2026-10-09-native-package-design.md) fixes platform pairs, runtime floors, native layout and automatic loading. The PM approved its pub build-time asset route in [the pub ruling](../sdlc/decisions/2026-10-09-pub-build-time-native-asset.md).
@@ -28,7 +53,7 @@ Minimize maintained logic across the engine, generator, templates and host glue 
 
 0513 completes the shared semantic graph, generator mechanics and C# reference. Host migration tickets own their target templates, outputs and installed adoption. 0505 supplies additive complete C session views for C and Zig. Ada (0528) and COBOL (0529) generate their declarations from those views. A generated header over an incomplete old carrier is not complete typed access. Known observations, presence, partial usage and failure facts must survive native serialization before any host round trip can prove them.
 
-The native session wait consumes no packet or descriptor. Result interest ignores available input room; Input interest also observes capacity and intake closure. Both interests wake on cancellation. Settlement interest ignores cancellation so a caller can drain final packets while provider work remains pending. Ready output takes priority over cancellation, and a caller still uses the nonblocking read or push to transfer ownership. The Rust session method and generated C header define the wait contract.
+The native session wait consumes no packet or descriptor. Result interest ignores available input room; Input interest also observes capacity and intake closure. Both interests wake on cancellation. Settlement interest ignores cancellation so a caller can drain final packets while provider work remains pending. An exclusive settlement reader uses SettlementArm before checking its caller cancellation or disposal state, then InterruptibleSettlement to wait. Arming discards earlier cancellation notifications and checks readiness immediately (C requires a zero timeout; Rust ignores its duration); later cancellation persists until the next arm, including cancellation before the blocking call enters. Another reader must not rearm an active wait. Ready output takes priority over cancellation, and a caller still uses the nonblocking read or push to transfer ownership. The Rust session method and generated C header define the wait contract.
 
 A host wait retains its session owner until native return. Cancel signals the native condition and returns without joining provider work; close detaches host ownership and frees only after every active native wait returns. C exports take shared handle borrows and synchronize queue access. Each worker copies any immediate failure on the same operating-system thread that made the failing call. An asynchronous bridge uses a dedicated worker, dispatch queue or helper isolate and retains at most one pending wait per read/producer path; a caller must join direct synchronous waits before closing their owner. A bounded native timeout lets a synchronous host check its interrupts without a sleep or scheduler timer. Manual polling facades keep their reads nonblocking and offer only the minimal wait needed to use their private owner.
 
@@ -431,6 +456,8 @@ Use the existing checks below. Their present scope does not establish future gen
 | Installed package and native assets | Existing package checks, including [C#](csharp/tests/package_check.py) and [JVM](jvm/tests/package_check.py), and the [release package checks](../sdlc/scripts/README.md) | Install a local artifact in a clean environment and run a real call without a library path override. Migration packaging slices and 0501 share the generated product inventory for builders and installed checks. |
 
 Test children use a cleared, explicit environment with owned cache/state directories, the loopback address and a fake key only when needed. A plan test uses no key. Source-tree checks and installed-artifact checks report separate evidence. Replay changed documentation examples. Run the smallest relevant format, policy and functional checks. The coordinator runs the routine suite once at ticket closure; large-input and full parity runs wait for the release suite. Hosted qualification and publication retain the release hold.
+
+Library checks source the shared compiler admission entry after resolving the repository and clearing credentials: set `heavy_scripts="$repo/sdlc/scripts"`, then source `"$heavy_scripts/heavy-compile"`. The separate default rung entry `heavy-lock` always clears credentials through its allowlist before admission and ignores inherited library mode and script path variables. Library owners clear credentials before sourcing the compiler entry. Call `heavy_compile COMMAND ARGUMENTS...` around each compiler phase, including Cargo, CMake and host compilers. The function preserves the check's existing environment boundary and owned `CARGO_TARGET_DIR`, artifact and coverage settings. The supervisor owns compiler descendants until the phase ends; following runtime and parity checks hold no new permit or admission marker. Nested compiler calls reuse an existing permit. Leave source and cache mutation locks exclusive. Generator and core lanes set `heavy_priority=high`; library lanes use the default priority. The process ownership checks qualify Linux; candidate checks qualify other platforms.
 
 The reviewer applies all ten rows to each language and checks the generated source and actual installed consumer. C# and Dart must reach the session, presence, async and cleanup shapes stated above. The reviewer treats missing observations, lost presence, duplicated rules, borrowed buffers outliving their owner and missing packaged native libraries as caller failures. No private copy of the corpus or hand-kept result field inventory stands in for this evidence.
 

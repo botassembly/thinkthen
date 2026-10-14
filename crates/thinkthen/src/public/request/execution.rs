@@ -3,6 +3,7 @@
 //! Private dispatch never calls public per-function wrappers. SQL row recovery and
 //! typed entities retain distinct private modes under this same execution owner.
 use super::RequestOutcome::Complete as complete;
+pub(super) use super::native_feed::projection as feed_projection;
 use super::{
     AdmittedRequest, RequestDefinition, RequestFunction as Function, RequestInput, RequestItem,
     RequestOptions, RequestOutcome, RequestValue,
@@ -550,44 +551,6 @@ pub(super) fn prepare<'a>(
     })
 }
 
-pub(super) fn feed_projection(
-    request: &AdmittedRequest,
-    feed: Option<&RequestFeed<'_>>,
-) -> Result<bool, Error> {
-    let args = request.request.call.arguments();
-    if let RequestInput::Feed { name, .. } = &args.input
-        && feed.is_none_or(|feed| &feed.name != name)
-    {
-        return Err(Error::usage(
-            "the request requires its named caller-supplied feed",
-        ));
-    }
-    let all = feed.is_some_and(|feed| feed.all_filter_results);
-    if all
-        && (request.request.call.function() != Function::Filter
-            || !matches!(args.input, RequestInput::Feed { .. })
-            || feed.is_none_or(|feed| {
-                !matches!(
-                    feed.contents,
-                    FeedContents::Records(_) | FeedContents::Session(_)
-                )
-            }))
-    {
-        return Err(Error::usage(
-            "all filter results require a native composed filter feed",
-        ));
-    }
-    if feed.is_some_and(|feed| feed.record_reading.is_some())
-        && (!matches!(args.input, RequestInput::Feed { .. })
-            || feed.is_none_or(|feed| !matches!(feed.contents, FeedContents::Session(_)))
-            || super::composition::explicit_projection(&args.options))
-    {
-        return Err(Error::usage(
-            "owned record reading requires a session feed without request projections",
-        ));
-    }
-    Ok(all)
-}
 pub(super) fn controls<'a>(
     options: &'a RequestOptions,
     controls: CallOptions<'a>,

@@ -8,8 +8,10 @@ from pathlib import Path
 import sys
 import subprocess
 import shutil
+import tempfile
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from registry import OUTPUTS, invocations, output_path
+sys.path.insert(1, str(Path(__file__).resolve().parent / 'templates'))
+from registry import OUTPUTS, attributes, invocations, output_path
 from native import selected_functions, immediate_schema
 from formatting import format_source
 
@@ -328,7 +330,7 @@ def generated(schema, language="csharp"):
     spec.loader.exec_module(target)
     roots = ('completeFacts', 'completeanswer', 'completefindAnswer',
              'completeCallError', 'completeRelationMember', 'completeObservation',
-             'completeUsage', 'completeReadableQuestion', 'completesourceRelationEndpoint',
+             'completeUsage', 'completequestionDocument', 'completesourceRelationEndpoint',
              'completesessionPacket', 'completeplan')
     return target.render(prepare(graph(schema, roots)))
 
@@ -361,7 +363,7 @@ def bridge():
         lines += [' public ' + types[field['type']] + ' ' + name + ';'
                   for name, field in native['records'][carrier]['fields'].items()]
         lines += ['}']
-    for enum, prefix, suffix, underlying in [('AuthoredQuestionKind', 'THINKTHEN_LOAD_', '_V1', 'uint'), ('FailureKind', 'THINKTHEN_E', '', 'int'), ('UsagePersistenceState', 'THINKTHEN_COMPLETE_USAGE_PERSISTENCE_', '_V1', 'uint')]:
+    for enum, prefix, suffix, underlying in [('FailureKind', 'THINKTHEN_E', '', 'int'), ('UsagePersistenceState', 'THINKTHEN_COMPLETE_USAGE_PERSISTENCE_', '_V1', 'uint')]:
         members = [(name.removeprefix(prefix).removesuffix(suffix), value) for name, value in native['constants'].items()
                    if name.startswith(prefix) and (name.endswith(suffix) if suffix else not name.endswith('_V1'))]
         lines += ['public enum ' + enum + ' : ' + underlying + ' { ' + ', '.join(''.join(word.title() for word in name.split('_')) + ' = ' + str(value) for name, value in members) + ' }']
@@ -385,7 +387,11 @@ def bridge():
               '}', 'internal static class NativeWait {']
     for name, value in native['constants'].items():
         if name.startswith('THINKTHEN_SESSION_WAIT_'):
-            lines += [' internal const uint ' + name.removeprefix('THINKTHEN_SESSION_WAIT_').removesuffix('_V1').title() + ' = ' + str(value) + ';']
+            lines += [' internal const uint ' + ''.join(part.title() for part in name.removeprefix('THINKTHEN_SESSION_WAIT_').removesuffix('_V1').split('_')) + ' = ' + str(value) + ';']
+    for name, value in native['constants'].items():
+        if name.startswith('THINKTHEN_SESSION_READY_'):
+            suffix = ''.join(part.title() for part in name.removeprefix('THINKTHEN_SESSION_READY_').removesuffix('_V1').split('_'))
+            lines += [' internal const uint Ready' + suffix + ' = ' + str(value) + ';']
     prototype = native['functions']['thinkthen_session_wait']
     parameters = {'const thinkthen_session *': 'SessionHandle session', 'uint32_t': 'uint', 'uint32_t *': 'out uint ready'}
     arguments = [parameters[typ] + (' interest' if at == 1 else ' timeoutMilliseconds' if at == 2 else '') for at, typ in enumerate(prototype['arguments'])]
@@ -412,11 +418,20 @@ def main():
     parser.add_argument('--schema', type=Path, default=SCHEMA)
     parser.add_argument('--output', type=Path, default=OUTPUT)
     parser.add_argument('--inputs', action='store_true')
-    parser.add_argument('--target', choices=('csharp', 'cobol', 'c', 'r', 'zig', 'python', 'jvm', 'ruby', 'typescript', 'go', 'php', 'cpp', 'dart', 'ada', 'objc', 'swift'), default='csharp')
+    parser.add_argument('--target', choices=('csharp', 'cobol', 'c', 'r', 'zig', 'python', 'jvm', 'ruby', 'typescript', 'go', 'php', 'cpp', 'dart', 'ada', 'objc', 'swift', 'postgresql'), default='csharp')
     parser.add_argument('--bridge', action='store_true')
     parser.add_argument('--operations', action='store_true')
     args = parser.parse_args()
     if args.all:
+        failures = []
+        attributes_path = ROOT / '.gitattributes'
+        attributes_source = attributes_path.read_text()
+        generated_attributes = attributes(attributes_source)
+        if args.check and attributes_source != generated_attributes:
+            print('generated Git attributes differ', file=sys.stderr)
+            failures.append('registry:attributes')
+        elif not args.check:
+            attributes_path.write_text(generated_attributes)
         for producer, target, mode in invocations():
             command = ([sys.executable, str(ROOT / 'sdlc/scripts/generate-c-header.py')]
                        if producer == 'header' else
@@ -429,8 +444,19 @@ def main():
                 keep=(*CARGO, 'LANG', 'LC_ALL', 'TMPDIR', 'TT_DART'),
                 CARGO_NET_OFFLINE='true'))
             if completed.returncode:
-                return completed.returncode
-        return 0
+                failures.append(f'{producer}:{target}:{mode}')
+        if failures:
+            print('generation failed: ' + ', '.join(failures), file=sys.stderr)
+        return int(bool(failures))
+    if args.target == 'postgresql':
+        if args.inputs or args.bridge or args.operations:
+            parser.error('PostgreSQL emits results and functions in one producer invocation')
+        command = [sys.executable, str(Path(__file__).parent / 'templates/postgresql.py')]
+        if args.check:
+            command.append('--check')
+        with tempfile.TemporaryDirectory(prefix='thinkthen-postgresql-generator-') as home:
+            return subprocess.run(command, env=child_env(
+                keep=(*CARGO, 'LANG', 'LC_ALL', 'TMPDIR'), home=home)).returncode
     if args.operations:
         if args.target != 'c' or args.inputs or args.bridge:
             parser.error('operation transport is a separate C producer')
@@ -656,8 +682,15 @@ def main():
         import typescript
         definitions = prepare(graph(json.loads(args.schema.read_text()), typescript.ROOTS))
         version = json.loads((ROOT / "specification/request.schema.json").read_text())["$defs"]["RequestVersion"]["oneOf"][0]["const"]
-        outputs = {output_path(ROOT, 'typescript', 'results_generated.js'): typescript.runtime(definitions, version),
-                   output_path(ROOT, 'typescript', 'results_generated.d.ts'): typescript.declarations(definitions)}
+        request_schema = json.loads((ROOT / 'specification/request.schema.json').read_text())
+        input_roots = getattr(typescript, 'INPUT_ROOTS', ())
+        input_definitions = prepare(graph(request_schema, input_roots))
+        runtime = (typescript.runtime(definitions, version, input_definitions) if input_roots
+                   else typescript.runtime(definitions, version))
+        declarations = (typescript.declarations(definitions, input_definitions) if input_roots
+                        else typescript.declarations(definitions))
+        outputs = {output_path(ROOT, 'typescript', 'results_generated.js'): runtime,
+                   output_path(ROOT, 'typescript', 'results_generated.d.ts'): declarations}
         for output, result in outputs.items():
             result = format_source(output, result, child_env(keep=(*CARGO, "LANG", "LC_ALL", "TMPDIR")))
             if args.check:
@@ -675,7 +708,8 @@ def main():
         definitions = prepare(graph(json.loads(args.schema.read_text()), ruby.ROOTS))
         version = json.loads((ROOT / "specification/request.schema.json").read_text())["$defs"]["RequestVersion"]["oneOf"][0]["const"]
         outputs = {output_path(ROOT, 'ruby', 'results_generated.rb'): ruby.render(definitions) + "module ThinkThen\n  class Client\n    REQUEST_VERSION = " + repr(version) + ".freeze\n  end\nend\n",
-                   output_path(ROOT, 'ruby', 'results_generated.rs'): ruby.rust(definitions)}
+                   output_path(ROOT, 'ruby', 'results_generated.rs'): ruby.rust(definitions),
+                   output_path(ROOT, 'ruby', 'results_generated.rbs'): ruby.rbs(definitions)}
         for output, result in outputs.items():
             result = format_source(output, result, child_env(keep=(*CARGO, "LANG", "LC_ALL", "TMPDIR")))
             if args.check:
@@ -748,7 +782,7 @@ def main():
         schema = json.loads((ROOT / 'specification/request.schema.json').read_text()) if args.inputs else json.loads(args.schema.read_text())
         if args.inputs:
             schema['$defs']['Request'] = {key: value for key, value in schema.items() if key != '$defs'}
-            definitions = prepare(graph(schema, ('Request', 'RequestSessionDescriptor')))
+            definitions = prepare(graph(schema, ('Request', 'RequestSessionDescriptor', 'EngineSettings')))
             outputs = {'request_generated.zig': zig.render(definitions), 'calls_generated.zig': zig.calls(definitions)}
         else:
             outputs = {'plan_generated.zig': zig.render(prepare(graph(schema, ('completeplan',)))),
@@ -756,7 +790,9 @@ def main():
         primary = 'request_generated.zig' if args.inputs else 'plan_generated.zig'
         for filename, result in outputs.items():
             output = args.output if filename == primary and args.output != OUTPUT else output_path(ROOT, 'zig', filename)
-            result = format_source(output, result, child_env(keep=(*CARGO, 'LANG', 'LC_ALL', 'TMPDIR')))
+            result = subprocess.run(['zig', 'fmt', '--stdin'], input=result,
+                                    text=True, capture_output=True, check=True,
+                                    env=child_env(keep=(*CARGO, 'LANG', 'LC_ALL', 'TMPDIR'))).stdout
             if args.check:
                 if not output.exists() or output.read_text() != result:
                     print('generated Zig source differs: ' + filename, file=sys.stderr)

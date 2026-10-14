@@ -24,16 +24,7 @@
       "type": "object",
       "properties": {
         "batch": {
-          "description": "`max`, or a whole number of at least 1.",
-          "anyOf": [
-            {
-              "const": "max"
-            },
-            {
-              "type": "integer",
-              "minimum": 1
-            }
-          ]
+          "$ref": "#/$defs/Authored_questionBatch"
         },
         "choose": {
           "$ref": "#/$defs/Authored_questionText"
@@ -109,16 +100,7 @@
       "type": "object",
       "properties": {
         "batch": {
-          "description": "`max`, or a whole number of at least 1.",
-          "anyOf": [
-            {
-              "const": "max"
-            },
-            {
-              "type": "integer",
-              "minimum": 1
-            }
-          ]
+          "$ref": "#/$defs/Authored_questionBatch"
         },
         "context_schema": {
           "$ref": "#/$defs/Authored_inputDeclaration"
@@ -418,6 +400,18 @@
       "type": "string",
       "pattern": "^[a-z0-9_-]+$"
     },
+    "Authored_questionBatch": {
+      "description": "`max`, or a whole number of at least 1.",
+      "anyOf": [
+        {
+          "const": "max"
+        },
+        {
+          "type": "integer",
+          "minimum": 1
+        }
+      ]
+    },
     "Authored_questionText": {
       "description": "The question text: a nonblank string, an object, or a list. An object or a list may be empty; the value is the text.",
       "anyOf": [
@@ -539,16 +533,7 @@
       "type": "object",
       "properties": {
         "batch": {
-          "description": "`max`, or a whole number of at least 1.",
-          "anyOf": [
-            {
-              "const": "max"
-            },
-            {
-              "type": "integer",
-              "minimum": 1
-            }
-          ]
+          "$ref": "#/$defs/Authored_questionBatch"
         },
         "context_schema": {
           "$ref": "#/$defs/Authored_inputDeclaration"
@@ -591,16 +576,7 @@
       "type": "object",
       "properties": {
         "batch": {
-          "description": "`max`, or a whole number of at least 1.",
-          "anyOf": [
-            {
-              "const": "max"
-            },
-            {
-              "type": "integer",
-              "minimum": 1
-            }
-          ]
+          "$ref": "#/$defs/Authored_questionBatch"
         },
         "context_schema": {
           "$ref": "#/$defs/Authored_inputDeclaration"

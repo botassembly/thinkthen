@@ -1,6 +1,6 @@
 # ThinkThen for Python
 
-Python uses one `Engine` with ten named functions. Rust owns admission, reading, execution, cache identity and result fields. Python converts ordinary values, schedules calls and cleans up sessions.
+ThinkThen is ten functions on top of Jev, TypeSafe's decision model, or any model like it. It puts these decision models in your code, whatever model, language or database you use. Use Jev, OpenAI or a local model. Ask a typed question and get back `true`, `false`, a label or a number. Your code branches on the answer. A model can say not sure, and a failed call never looks like an answer. ThinkThen packs many records into few requests, saves each answer for reuse, and lets tests replay saved answers with no key and no network.
 
 ```python
 import thinkthen as tt
@@ -13,7 +13,7 @@ with tt.Engine(cache=False) as engine:
 
 `decide`, `choose`, `score`, `tag`, `filter`, `rank`, `find` and `annotate` take a question followed by their input. `recognize` and `relate` take their input first and an optional authored question second. Pass `options`, `levels` or `labels` beside question text, or pass an authored question dictionary, a path object or `QuestionSource(name="name")`. Plain strings remain question text for atomic calls. Enum, Literal and the optional Pydantic authoring forms convert to the same native declaration.
 
-`Result.value` presents the ordinary answer. `Result.results` retains every Rust-owned generated result, including probabilities, sources, image facts, reading choices, identifiers and model provenance. `details=True` presents those generated rows as the value. `Result.facts` contains actual final settlement. Printing withholds content; equality, `to_dict()` and pickling preserve absence, null, false, wide integers and permitted extension fields. Embedded failures remain typed failures and cannot become false answers.
+`Result.value` presents the ordinary answer. `Result.results` retains every Rust-owned generated result, including probabilities, sources, image facts, reading choices, identifiers and model provenance. `details=True` presents those generated rows as the value. `Result.facts` contains actual final settlement. Printing withholds content; equality and pickling preserve absence, null, false, wide integers and permitted extension fields. Embedded failures remain typed failures and cannot become false answers.
 
 ```python
 selection = tt.read_files(["notes.txt"], unit="line")
@@ -27,7 +27,7 @@ with tt.Engine(cache=False) as engine:
 
 `engine.asyncio` mirrors the named calls and keeps the event loop responsive. Task cancellation closes its producer and native session without waiting for a held provider. Engine context exit closes every active session. Errors have a native kind and retry signal. Started failures retain any completed results and actual facts; unsettled facts remain absent.
 
-`engine.iterate(function, question, input, **controls)` returns a lazy typed iterator over the same native session. It starts on the first pull and supports context-manager cleanup, cancellation and `facts` after settlement. `engine.plan(function, question, complete_input, **controls)` calls the native no-send preview for supported functions. It refuses iterators instead of consuming them as a preview.
+`engine.iterate(function, question, input, **controls)` returns a lazy typed iterator over the same native session. It starts on the first pull and supports context-manager cleanup, cancellation and `facts` after settlement. `engine.plan(function, question, complete_input, **controls)` returns a typed `Plan` from the native no-send preview for atomic calls and single-question rank. Read `plan.records`, `plan.requests`, `plan.estimated_input_tokens.lower` and `.upper`, or the largest-request estimates. `plan.first_body_utf8` contains the first prepared body when present. The preview needs no key and refuses iterators before consuming them.
 
 Pandas and Python Polars Series namespaces are opt-in:
 
@@ -37,7 +37,7 @@ import thinkthen.pandas
 refund = series.tt.decide("Does this ask for a refund?", engine=engine)
 ```
 
-All ten namespace methods retain original row positions and null masks. Filter returns selected original rows. Rank, find and relate issue one whole-set call. `on=` selects DataFrame input columns for the ordinary engine methods; annotation adds named typed columns and failures, while recognition preserves its documented dataframe presentation. Async calls share this conversion. The package imports neither dataframe library by default. Pydantic support is available through `thinkthen[pydantic]`.
+All ten namespace methods retain original row positions and null masks. Filter returns selected original rows. Rank, find and relate issue one whole-set call. Polars presents ordinary answers as typed columns, including nested lists and structs. Columns retain Object values when a typed representation would change a value or add an absent member. Detailed results retain the native result objects. `on=` selects DataFrame input columns for the ordinary engine methods; annotation adds named typed columns and failures, while recognition preserves its documented dataframe presentation. Async calls share this conversion. The package imports neither dataframe library by default. Pydantic support is available through `thinkthen[pydantic]`.
 
 ## Replace old calls
 

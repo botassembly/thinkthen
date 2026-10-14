@@ -12,15 +12,7 @@ import kotlin.coroutines.resumeWithException
 class KotlinEngine private constructor(private val engine: Engine) : KotlinNamedCalls(engine), AutoCloseable {
     constructor(settings: Inputs.EngineSettings = Inputs.EngineSettings()) : this(nativeResult { Engine(settings, Engine.Surface.KOTLIN) })
     protected override suspend fun await(start: () -> CompletableFuture<Engine.OwnedCall>): OwnedCall {
-        currentCoroutineContext().ensureActive()
-        val call = start()
-        return suspendCancellableCoroutine { continuation ->
-            continuation.invokeOnCancellation { call.cancel(false) }
-            call.whenComplete { value, error ->
-                if (error != null) continuation.resumeWithException(convertFailure(error))
-                else try { continuation.resume(value) } catch (error: Throwable) { continuation.resumeWithException(convertFailure(error)) }
-            }
-        }
+        return OwnedCall(awaitNative(start))
     }
     fun plan(request: Inputs.Request): Results.Plan = try { engine.plan(request) } catch (error: Throwable) { throw convertFailure(error) }
     fun startSession(request: Inputs.Request): OwnedSession = nativeResult { OwnedSession(engine.startSession(request)) }
@@ -31,8 +23,15 @@ class KotlinEngine private constructor(private val engine: Engine) : KotlinNamed
     override fun close() = engine.close()
 }
 
-typealias OwnedCall = Engine.OwnedCall
 typealias SessionFailure = Engine.SessionFailure
+private suspend fun <T> awaitNative(start: () -> CompletableFuture<T>): T {
+    currentCoroutineContext().ensureActive()
+    val pending = start()
+    return suspendCancellableCoroutine { continuation ->
+        continuation.invokeOnCancellation { pending.cancel(false) }
+        pending.whenComplete { value, error -> if (error == null) continuation.resume(value) else continuation.resumeWithException(convertFailure(error)) }
+    }
+}
 private fun convertFailure(error: Throwable): Throwable = when (error) {
     is java.util.concurrent.CompletionException -> error.cause?.let { convertFailure(it) } ?: error
     is Engine.SessionFailure -> error
@@ -40,28 +39,21 @@ private fun convertFailure(error: Throwable): Throwable = when (error) {
     else -> error
 }
 class NativeFailure internal constructor(error: thinkthen.NativeFailure) : RuntimeException(error.message, error) {
+    val kind: thinkthen.ErrorKind = error.kind()
     val code: Int = error.code()
     val retryable: Boolean = error.retryable()
-    val facts: Any? = error.facts()
+    val facts: Results.ImmediateFacts? = error.facts()
 }
 private fun <T> nativeResult(action: () -> T): T = try { action() } catch (error: Throwable) { throw convertFailure(error) }
 
 /** One producer and one reader; pending reads remain distinct from end. */
 class OwnedSession internal constructor(private val native: thinkthen.OwnedSession) : AutoCloseable {
     fun tryPush(descriptor: Inputs.RequestSessionDescriptor): Int = nativeResult { native.tryPush(descriptor) }
-    suspend fun push(descriptor: Inputs.RequestSessionDescriptor): Int = suspendCancellableCoroutine { continuation ->
-        val pending = native.push(descriptor)
-        continuation.invokeOnCancellation { native.cancel(); pending.cancel(false) }
-        pending.whenComplete { value, error -> if (error == null) continuation.resume(value) else continuation.resumeWithException(convertFailure(error)) }
-    }
-    suspend fun nextPacket(settlement: Boolean = false): Read = suspendCancellableCoroutine { continuation ->
-        val pending = native.nextPacketAsync(settlement)
-        continuation.invokeOnCancellation { native.cancel(); pending.cancel(false) }
-        pending.whenComplete { value, error -> if (error == null) continuation.resume(Read(value.packet(), value.ended())) else continuation.resumeWithException(convertFailure(error)) }
-    }
+    suspend fun push(descriptor: Inputs.RequestSessionDescriptor): Int = awaitNative { native.push(descriptor) }
+    suspend fun nextPacket(settlement: Boolean = false): Read = awaitNative { native.nextPacketAsync(settlement) }.let { Read(it.packet(), it.ended()) }
     fun finish(failure: Inputs.RequestReaderFailure? = null) = nativeResult { native.finish(failure) }
     fun cancel() = native.cancel()
-    fun waitReady(input: Boolean): java.util.concurrent.CompletableFuture<Void> = native.waitReady(input)
+    suspend fun waitReady(input: Boolean) { awaitNative { native.waitReady(input) } }
     fun tryRead(): Read = nativeResult { val read = native.tryRead(); Read(read.packet(), read.ended()) }
     override fun close() = native.close()
     data class Read(val packet: Results.SessionPacket?, val ended: Boolean)

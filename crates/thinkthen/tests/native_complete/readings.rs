@@ -54,7 +54,7 @@ fn complete_getters_keep_authored_content_order_null_and_raw_choice_before_cut()
         options[0].description().unwrap().to_json().unwrap(),
         r#"{"z":null,"a":"kept"}"#
     );
-    let document = serde_json::to_value(call.complete().unwrap()).unwrap();
+    let document = serde_json::to_value(&call).unwrap();
     assert_eq!(
         document["value"][0]["question"]["options"],
         json!(["second", "first"])
@@ -210,7 +210,7 @@ fn complete_score_retains_explicit_null_and_array_level_descriptions() {
         RequestEnvironment::default(),
     )
     .unwrap();
-    let document = serde_json::to_value(call.complete().unwrap()).unwrap();
+    let document = serde_json::to_value(&call).unwrap();
     assert_eq!(
         document["value"][0]["question"]["label_details"],
         json!([

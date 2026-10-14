@@ -7,8 +7,5 @@ pub(super) use shared::{check, check_batch};
 
 #[cfg(test)]
 pub(super) fn call<T: Serialize>(call: &thinkthen::Call<T>, definition: &str) {
-    check(
-        &serde_json::to_value(call.complete().unwrap()).unwrap(),
-        definition,
-    );
+    check(&serde_json::to_value(call).unwrap(), definition);
 }

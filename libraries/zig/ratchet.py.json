@@ -1,5 +1,6 @@
 {
   "directory": ".",
   "extension": ".py",
-  "max": 178
+  "max": 0,
+  "scope": "handwritten-production"
 }

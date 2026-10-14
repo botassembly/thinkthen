@@ -1,7 +1,6 @@
 const std = @import("std");
 const tt = @import("thinkthen");
 const request_fixture = @import("request_fixture.zig");
-const view_check = @import("view_check.zig");
 const io = @cImport({
     @cInclude("stdio.h");
 });
@@ -18,7 +17,12 @@ pub fn main() !void {
     const fixture = try std.json.parseFromSlice(std.json.Value, a, input, .{});
     defer fixture.deinit();
     const doc = fixture.value.object;
-    var engine = switch (try tt.Engine.initWithSettings(a, args[2])) {
+    var settings_arena = std.heap.ArenaAllocator.init(a);
+    defer settings_arena.deinit();
+    const settings_json = try std.json.parseFromSlice(std.json.Value, a, args[2], .{});
+    defer settings_json.deinit();
+    const settings = try request_fixture.decode(tt.inputs.EngineSettings, settings_arena.allocator(), settings_json.value);
+    var engine = switch (try tt.Engine.initWithSettings(a, settings)) {
         .ok => |value| value,
         .failed => |failure| {
             defer tt.releaseFailure(a, failure);
@@ -35,36 +39,48 @@ pub fn main() !void {
     defer call.object.deinit();
     try call.object.put("function", doc.get("verb").?);
     inline for (.{ "question", "input", "options" }) |key| try call.object.put(key, doc.get(key).?);
-    const verb = doc.get("verb").?.string;
-    var session: tt.session.Session = blk: {
-        inline for (std.meta.fields(tt.inputs.RequestCall)) |arm| {
-            if (std.mem.eql(u8, verb, arm.name)) {
-                var arena = std.heap.ArenaAllocator.init(a);
-                defer arena.deinit();
-                const descriptor = try request_fixture.decode(arm.type, arena.allocator(), call);
-                break :blk @field(tt.session, arm.name)(&engine, descriptor) catch |err| {
-                    var out = std.fs.File.stdout().writer(&.{});
-                    const code: u32 = switch (err) {
-                        error.Usage => 1,
-                        error.Backend => 2,
-                        error.Deadline => 3,
-                        error.Local => 4,
-                        error.Cancelled => 5,
-                        else => 6,
-                    };
-                    try out.interface.print("{{\"admission\":{{\"code\":{d},\"message\":", .{code});
-                    try std.json.Stringify.value(tt.session.message(), .{}, &out.interface);
-                    try out.interface.writeAll("}}\n");
+    var request_arena = std.heap.ArenaAllocator.init(a);
+    defer request_arena.deinit();
+    const descriptor = try request_fixture.decode(tt.inputs.RequestCall, request_arena.allocator(), call);
+    const request = try tt.Request.init(a, @tagName(descriptor.function), descriptor.question, descriptor.input, descriptor.options);
+    defer request.deinit();
+    if (!doc.get("cancel").?.bool and !doc.get("held_cancel").?.bool and descriptor.input != .feed) {
+        inline for (std.meta.fields(tt.inputs.RequestFunction)) |function| {
+            if (descriptor.function == @field(tt.inputs.RequestFunction, function.name)) {
+                if (@field(tt.calls, function.name)(&engine, .{ .question = descriptor.question, .input = descriptor.input, .options = descriptor.options })) |result| {
+                    var answer = result;
+                    defer answer.deinit();
+                    engine.deinit();
+                    if (answer.failure() == null) {
+                        var rows: usize = 0;
+                        for (answer.packets) |packet| if (packet.value().* == .observation and packet.value().observation.value == .row) {
+                            rows += 1;
+                        };
+                        if (comptime !std.mem.eql(u8, function.name, "rank") and !std.mem.eql(u8, function.name, "filter")) {
+                            if (rows != 1) {
+                                if (answer.value()) |_| return error.MultipleAnswersAccepted else |err| if (err != error.Cardinality) return err;
+                            } else try compareAnswer(function.name, answer, a);
+                        } else try compareAnswer(function.name, answer, a);
+                    } else {
+                        if (answer.value()) |_| return error.FailedAnswerAccepted else |err| if (err != error.CallFailed) return err;
+                    }
+                    try writePackets(answer.packets, a);
                     return;
-                };
+                } else |err| {
+                    try writeAdmission(err);
+                    return;
+                }
             }
         }
-        return error.UnknownFunction;
+    }
+    var session = request.start(&engine) catch |err| {
+        try writeAdmission(err);
+        return;
     };
     if (doc.get("cancel").?.bool) session.cancel();
-    var packets: std.ArrayList(tt.session.Packet) = .empty;
+    var packets: std.ArrayList(*tt.session.Packet) = .empty;
     defer {
-        for (packets.items) |*packet| packet.deinit();
+        for (packets.items) |packet| packet.deinit();
         packets.deinit(a);
     }
     if (doc.get("feed_items")) |items| {
@@ -73,10 +89,7 @@ pub fn main() !void {
         for (items.array.items) |item| {
             const next: tt.inputs.RequestSessionDescriptor = .{ .item = try request_fixture.decode(tt.inputs.RequestItem, arena.allocator(), item) };
             while (try session.push(a, next) == .full) switch (try session.read()) {
-                .pending => {
-                    var ready: u32 = undefined;
-                    try tt.session.checked(tt.c.thinkthen_session_wait(session.raw, tt.c.THINKTHEN_SESSION_WAIT_INPUT_V1, 50, &ready));
-                },
+                .pending => try session.wait(true),
                 .end => break,
                 .packet => |packet| try packets.append(a, packet),
             };
@@ -90,27 +103,66 @@ pub fn main() !void {
         _ = io.fflush(io.stdout);
     }
     engine.deinit();
-    while (true) switch (try session.read()) {
-        .pending => {
-            var ready: u32 = undefined;
-            try tt.session.checked(tt.c.thinkthen_session_wait(session.raw, tt.c.THINKTHEN_SESSION_WAIT_SETTLEMENT_V1, 50, &ready));
-        },
+    while (true) switch (try session.next()) {
+        .pending => return error.BlockingPending,
         .end => break,
         .packet => |packet| try packets.append(a, packet),
     };
     session.deinit();
+    try writePackets(packets.items, a);
+}
+
+fn writePackets(packets: []const *tt.session.Packet, a: std.mem.Allocator) !void {
+    var projection_arena = std.heap.ArenaAllocator.init(a);
+    defer projection_arena.deinit();
     var out = std.fs.File.stdout().writer(&.{});
     try out.interface.writeAll("{\"packets\":[");
-    for (packets.items, 0..) |packet, i| {
-        var raw: [*c]const u8 = null;
-        var len: usize = 0;
-        try tt.session.checked(tt.c.thinkthen_session_result_json(packet.raw, &raw, &len));
-        const expected = try std.json.parseFromSlice(std.json.Value, a, raw[0..len], .{});
-        defer expected.deinit();
-        // Every known field is compared through the typed graph after both owners close.
-        try view_check.compare(@TypeOf(packet.view), packet.view, expected.value);
+    for (packets, 0..) |packet, i| {
         if (i > 0) try out.interface.writeAll(",");
-        try out.interface.writeAll(raw[0..len]);
+        var writer: std.json.Stringify = .{ .writer = &out.interface };
+        try request_fixture.writeNative(try request_fixture.projectAnswers(packet, packets, projection_arena.allocator()), &writer);
     }
     try out.interface.writeAll("]}\n");
+}
+
+fn writeAdmission(err: anyerror) !void {
+    var out = std.fs.File.stdout().writer(&.{});
+    const code: u32 = switch (err) {
+        error.Usage => 1,
+        error.Backend => 2,
+        error.Deadline => 3,
+        error.Local => 4,
+        error.Cancelled => 5,
+        else => 6,
+    };
+    try out.interface.print("{{\"admission\":{{\"code\":{d},\"message\":", .{code});
+    try std.json.Stringify.value(tt.session.message(), .{}, &out.interface);
+    try out.interface.writeAll("}}\n");
+}
+
+fn compareAnswer(comptime function: []const u8, answer: anytype, a: std.mem.Allocator) !void {
+    const actual = try answer.value();
+    if (comptime std.mem.eql(u8, function, "rank") or std.mem.eql(u8, function, "filter")) {
+        const Element = @typeInfo(@TypeOf(actual)).pointer.child;
+        var expected: std.ArrayList(Element) = .empty;
+        defer expected.deinit(a);
+        for (answer.packets) |packet| {
+            const aggregate = if (comptime std.mem.eql(u8, function, "rank")) packet.value().* == .rank_aggregate else packet.value().* == .filter_aggregate;
+            if (aggregate) {
+                expected.clearRetainingCapacity();
+                const view = packet.answers();
+                try expected.appendSlice(a, try @field(@TypeOf(view), function)(view));
+                break;
+            }
+            if (comptime std.mem.eql(u8, function, "filter")) if (packet.value().* == .filter_row) try expected.appendSlice(a, try packet.answers().filter());
+        }
+        try std.testing.expectEqualDeep(@as(@TypeOf(actual), expected.items), actual);
+    } else {
+        for (answer.packets) |packet| if (packet.value().* == .observation and packet.value().observation.value == .row) {
+            const view = packet.answers();
+            try std.testing.expectEqualDeep(try @field(@TypeOf(view), function)(view), actual);
+            return;
+        };
+        return error.MissingAnswer;
+    }
 }

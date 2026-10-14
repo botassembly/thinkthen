@@ -15,6 +15,8 @@ def group(target, mode, base, *names):
 
 
 OUTPUTS = (
+    *group('postgresql', 'results', 'databases/postgresql/src/native/',
+           'results_generated.rs', 'functions_generated.rs'),
     *group('c', 'results', 'libraries/c/src/session/', 'views_generated.rs'),
     *group('c', 'operations', 'libraries/c/src/ffi/', 'operations_generated.rs'),
     *group('c', 'operations', 'libraries/c/src/ffi/session/', 'operations_generated.rs'),
@@ -36,6 +38,7 @@ OUTPUTS = (
     *group('zig', 'inputs', 'libraries/zig/src/', 'request_generated.zig', 'calls_generated.zig'),
     *group('ruby', 'results', 'libraries/ruby/lib/thinkthen/', 'results_generated.rb'),
     *group('ruby', 'results', 'libraries/ruby/src/ffi/', 'results_generated.rs'),
+    *group('ruby', 'results', 'libraries/ruby/sig/thinkthen/', 'results_generated.rbs'),
     *group('typescript', 'results', 'libraries/typescript/', 'results_generated.js', 'results_generated.d.ts'),
     *group('go', 'results', 'libraries/go/', 'owned_results_generated.go'),
     *group('php', 'results', 'libraries/php/src/session/', 'results_generated.php', 'ffi_generated.h', 'constants_generated.php', 'inputs_generated.php'),
@@ -50,8 +53,8 @@ OUTPUTS = (
     *group('swift', 'inputs', 'libraries/swift/Sources/ThinkThen/', 'InputsGenerated.swift'),
     *group('swift', 'bridge', 'libraries/swift/Sources/ThinkThen/', 'ABIGenerated.swift'),
     *group('swift', 'bridge', 'libraries/swift/Sources/CThinkThen/', 'bridge.c'),
-    *group('cobol', 'results', 'libraries/cobol/', 'src/tt_requests_generated.h', 'src/tt_requests_generated.c', 'copybooks/tt-native-generated.cpy'),
-    *group('jvm', 'results', 'libraries/jvm/session/thinkthen/', 'Results.java', 'Inputs.java', 'RequestVersion.java', 'NativeWait.java', 'UsagePersistence.java', 'NativeUsageLayouts.java', 'NamedCalls.java', 'NativeNamed.java', 'ErrorKind.java'),
+    *group('cobol', 'results', 'libraries/cobol/', 'src/tt_requests_generated.h', 'src/tt_requests_generated.c', 'copybooks/tt-native-generated.cpy', 'native-helpers.json'),
+    *group('jvm', 'results', 'libraries/jvm/session/thinkthen/', 'Results.java', 'Inputs.java', 'RequestVersion.java', 'NativeWait.java', 'UsagePersistence.java', 'NativeUsageLayouts.java', 'NativeResults.java', 'NamedCalls.java', 'NativeNamed.java', 'ErrorKind.java'),
     *group('jvm', 'results', 'libraries/jvm/session/kotlin/', 'UsagePersistence.kt', 'KotlinNamedCalls.kt'),
     *group('jvm', 'results', 'libraries/jvm/session/scala/', 'UsagePersistence.scala', 'ScalaNamedCalls.scala'),
 )
@@ -59,6 +62,21 @@ OUTPUTS = (
 
 def generated_paths():
     return {output.path for output in OUTPUTS}
+
+
+def attributes(source):
+    """Derive generated-file labels without replacing unrelated Git attributes."""
+    retained = []
+    for line in source.splitlines():
+        fields = line.split()
+        if not fields or fields[0].startswith('#') or 'linguist-generated' not in fields[1:]:
+            retained.append(line)
+            continue
+        fields = [field for field in fields if field != 'linguist-generated']
+        if len(fields) > 1:
+            retained.append(' '.join(fields))
+    return '\n'.join([*retained, *(path + ' linguist-generated'
+                                 for path in sorted(generated_paths()))]) + '\n'
 
 
 def invocations():

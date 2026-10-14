@@ -1,7 +1,7 @@
 //! One HTTP exchange with a backend, retried as `specification/backends.md` says.
 //!
-//! A retried status is sent again. A transport failure never is, because the
-//! backend may already have the request and may bill it.
+//! A retried status is sent again. An unopened connection gets one retry;
+//! a request that may have reached the backend is never resent after transport failure.
 
 use std::fmt;
 use std::path::Path;
@@ -11,18 +11,19 @@ use ureq::Agent;
 use ureq::tls::{PemItem, RootCerts};
 
 use crate::core::Withheld;
-use crate::engine::error::{Error, TransportKind};
+use crate::engine::error::Error;
 use crate::engine::roots::{self, Error as RootsError};
 use crate::engine::usage::Counters;
 use crate::engine::{Permit, Width, Widths, backoff};
 
+mod diagnostic;
 mod observation;
 mod retry;
 mod send;
 use observation::{ResponseInfo, observed_result};
 #[cfg(test)]
 use retry::honored;
-use retry::{bounded_wait, draw, floor, longest, too_long};
+use retry::{bounded_wait, draw, floor, longest};
 use send::timed;
 #[cfg(test)]
 use send::{io_transport, transport};
@@ -174,7 +175,11 @@ impl Client {
         }
         Self {
             api: Default::default(),
-            agent: config.build().into(),
+            agent: Agent::with_parts(
+                config.build(),
+                send::OpeningConnector::default(),
+                send::OpeningResolver::default(),
+            ),
             timeout,
             width: crate::engine::limits::client_width(widths),
             every: None,
@@ -209,7 +214,7 @@ impl Client {
     ///
     /// Returns [`Error`] when the backend cannot be reached, when it answers
     /// with an error status, or when a retried status still holds after the
-    /// last retry. A transport failure returns after its one attempt.
+    /// last retry. Only a connection that never opened gets one transport retry.
     #[cfg(test)]
     pub(crate) fn post_observed(
         &self,
@@ -272,9 +277,7 @@ impl Client {
         let invocation = cancel.invocation()?;
         let sdk_request_id = crate::engine::invocation::request_id()?;
         let gates = &crate::engine::limits::of(std::process::id(), cancel)?.gates;
-        let mut wait = exchange.retry_wait;
-        let mut retries = 0;
-        let mut last_status = None;
+        let mut retries = retry::Attempts::new(exchange.retry_wait);
         loop {
             let now = Instant::now();
             let cap = now + longest(self.timeout);
@@ -282,16 +285,16 @@ impl Client {
             // another in-flight reply could have closed the gate meanwhile.
             let permit = self.acquire_open(gates, exchange.url, cap, cancel)?;
             cancel.stop_or_remaining()?;
-            before_attempt(retries > 0);
+            before_attempt(retries.again());
             let prepared = usage.prepare_attempt()?;
             // Bookkeeping and the test hook may wait. The final check reads no
             // host callback while the usage lock is held.
             let budget = cancel.remaining_without_check()?;
             let limit = budget.map_or(self.timeout, |budget| budget.min(self.timeout));
-            let reservation = cancel.reserve_send(last_status, exchange.body.len())?;
+            let reservation = cancel.reserve_send(retries.last_status, exchange.body.len())?;
             after_reservation();
             cancel.remaining_without_check()?;
-            prepared.mark(retries > 0)?;
+            prepared.mark(retries.again())?;
             if let Some(reservation) = reservation {
                 reservation.commit();
             }
@@ -324,7 +327,7 @@ impl Client {
                 permit.release_closing(
                     gates,
                     exchange.url,
-                    bounded_wait(attempt.asked, wait, self.timeout, draw()),
+                    bounded_wait(attempt.asked, retries.wait, self.timeout, draw()),
                     floor(attempt.asked, &attempt.failure),
                 );
             } else {
@@ -339,24 +342,7 @@ impl Client {
                 }
                 Err(attempt) => attempt,
             };
-            if matches!(attempt.failure, Error::Transport(TransportKind::Timeout))
-                && budget.is_some_and(|budget| budget <= self.timeout)
-                && let Some(passed) = cancel.passed()
-            {
-                return Err(passed);
-            }
-            if retries >= exchange.max_retries
-                || !is_retried(&attempt.failure)
-                || too_long(attempt.asked, self.timeout)
-            {
-                return Err(attempt.failure);
-            }
-            last_status = match attempt.failure {
-                Error::Status(status) => Some(status),
-                _ => None,
-            };
-            wait = wait.saturating_mul(2);
-            retries += 1;
+            retries.failed(*attempt, exchange, self.timeout, cancel, budget)?;
         }
     }
 }
@@ -401,6 +387,7 @@ struct Attempt {
     failure: Error,
     asked: Option<Duration>,
     info: ResponseInfo,
+    unopened: bool,
 }
 
 impl From<Error> for Attempt {
@@ -410,6 +397,7 @@ impl From<Error> for Attempt {
             failure,
             asked: None,
             info: ResponseInfo::default(),
+            unopened: false,
         }
     }
 }

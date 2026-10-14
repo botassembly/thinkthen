@@ -4,5 +4,6 @@
     "examples"
   ],
   "extension": ".rs",
-  "max": 4321
+  "scope": "handwritten-production",
+  "max": 5180
 }

@@ -334,7 +334,7 @@ def apple_package_cases():
                 destination = root / name
                 destination.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copyfile(REPO / name, destination)
-        for name in ('crates/thinkthen/Cargo.toml', 'libraries/c/include/thinkthen.h',
+        for name in ('README.md', 'crates/thinkthen/Cargo.toml', 'libraries/c/include/thinkthen.h',
                      'sdlc/scripts/release-pack', 'sdlc/scripts/scratch.sh', 'sdlc/scripts/registry-readmes.py'):
             destination = root / name
             destination.parent.mkdir(parents=True, exist_ok=True)

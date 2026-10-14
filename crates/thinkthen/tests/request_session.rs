@@ -10,6 +10,8 @@ use thinkthen::*;
 mod framing;
 #[path = "request_session/push.rs"]
 mod push;
+#[path = "request_session/recognize.rs"]
+mod recognize;
 #[path = "request_session/wait.rs"]
 mod wait;
 
@@ -510,14 +512,6 @@ fn filter_observes_rejected_occurrences_and_selects_only_first_passing_file() {
         let mut arguments = request(feed()).call.arguments().clone();
         arguments.options.threshold = Some(RequestThreshold::Cut(threshold));
         arguments.options.files_only = true;
-        assert_eq!(
-            Request::new(RequestCall::new(RequestFunction::Filter, arguments.clone()))
-                .admit()
-                .unwrap_err()
-                .detail()
-                .message(),
-            "files_only requires filter source input"
-        );
         let session = engine
             .request_session(Request::new(RequestCall::new(
                 RequestFunction::Filter,

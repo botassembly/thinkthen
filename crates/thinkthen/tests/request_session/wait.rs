@@ -118,12 +118,29 @@ fn held_provider_case() {
                 other => panic!("feed closed before cancellation: {other:?}"),
             })
             .expect("held native work eventually backpressures the one input cell");
-        assert_eq!(
-            session
-                .try_push_with::<Error>(|| panic!("full intake inspected payload"))
-                .unwrap(),
-            RequestSessionPushStatus::Full
-        );
+        // A consumer may take the cell after the earlier Full snapshot. Check
+        // conversion against the capacity decision made by this same push.
+        let full = (0..100).any(|_| {
+            let mut converted = false;
+            let status = session
+                .try_push_with::<Error>(|| {
+                    converted = true;
+                    Ok(descriptor("next"))
+                })
+                .unwrap();
+            match status {
+                RequestSessionPushStatus::Full => {
+                    assert!(!converted, "full intake inspected payload");
+                    true
+                }
+                RequestSessionPushStatus::Accepted => {
+                    assert!(converted, "accepted intake skipped payload");
+                    false
+                }
+                other => panic!("feed closed before cancellation: {other:?}"),
+            }
+        });
+        assert!(full, "held native work eventually refuses conversion");
         session.finish(None).unwrap();
         assert_eq!(
             session.wait(RequestSessionWaitInterest::Input, Duration::ZERO),

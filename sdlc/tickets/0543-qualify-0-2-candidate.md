@@ -32,6 +32,12 @@ Reviews: revision 597ef8ae60b452689aa5f3813d6aea3967a5fe7b, accept
 
 Reviews: revision 6712593, accept
 
+Reviews: revision d20e618, accept
+
+Reviews: revision ca927f9, accept
+
+Reviews: revision f8005a6, accept
+
 ## Outcome
 
 One reviewed commit, tagged `rc/0.2.0-rc.N`, passes the local release suite and the hosted rehearsal on Linux, macOS and Windows. It publishes nothing. This closes the build side of 0.2. Release QA and publication stay with 0425.
@@ -135,3 +141,6 @@ PM amendment, 2026-10-13. Candidate checklist. This replaces any earlier orderin
 9. Close 0543 and the wave tickets on the passing SHA and hand the SHA to the PM, who brings 0425 to Ian. Pinning and pushing the DuckDB descriptor follows Ian's go and is not a candidate gate.
 
 PM amendment, 2026-10-13. Follow `sdlc/decisions/2026-10-13-standing-build-rulings.md` for size, measurement, checks, ownership, questions, records, scope and recovery. 0560, 0561, 0563 and 0565 have no work left; their remainders moved to 0562, 0564, 0576 and this ticket, and they close when the candidate merge lands them. 0575's merge of `docs/0.2-refresh` into `ticket/0543-final` is a gate before the freeze.
+
+PM amendment, 2026-10-13. Drive this ticket and every ticket it depends on by `sdlc/decisions/2026-10-13-drive-0-2-with-maximum-parallelism.md`. Ian ruled that all the library quality work ships in 0.2.
+- 2026-10-14 next: Merged the accepted hosted-runner admission correction at a6bbf9b0b with sixteen admission checks; hosted builds retain four permits without the Beelink load cap, and Swift ARM installed proof passed on GitHub.

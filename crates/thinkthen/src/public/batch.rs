@@ -111,10 +111,7 @@ pub(crate) enum Outcome<T> {
 impl<T: serde::Serialize> serde::Serialize for Outcome<T> {
     fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         match self {
-            Self::Complete(call) => call
-                .complete()
-                .ok_or_else(|| serde::ser::Error::custom("a completed batch has no identity"))?
-                .serialize(serializer),
+            Self::Complete(call) => call.serialize(serializer),
             Self::Failed { completed, error } if completed.is_empty() => {
                 error.complete().serialize(serializer)
             }

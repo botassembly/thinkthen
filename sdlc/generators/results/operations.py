@@ -65,6 +65,17 @@ OPERATIONS = (
         (Argument('owner', '*const crate::session::views::ValueHandle', 'borrow'),
          Argument('out', '*mut *const crate::session::views::thinkthen_complete_json_v1', 'borrowed-output', lifetime='value_free')),
         'request_preview::value_view', ('owner',), ('out',), 'session_call'),
+    Operation('engine', 'thinkthen_value_parse',
+        '/// Parse one arbitrary JSON value through the existing Rust parser.\n/// Numbers retain their original decimal bytes, including large integers and exponents;\n/// object keys, null and false are preserved without request-shape admission.\n/// Success transfers an immutable independent owner; free once with value_free.\n/// Input bytes may be freed on return. Malformed JSON, UTF-8 or extents return EUSAGE,\n/// preserve out and occupy only the calling thread immediate session diagnostic.\n/// # Safety\n/// json has len readable UTF-8 bytes; NULL requires zero, which is invalid JSON.\n/// Extents fit Rust slices; out is nonnull aligned writable pointer storage.\n',
+        (Argument('json', '*const c_char', 'input', 'len'), Argument('len', 'usize', 'input'),
+         Argument('out', '*mut *mut crate::session::views::ValueHandle', 'transfer', lifetime='value_free')),
+        'request_preview::parse_value', ('json', 'len'), ('out',), 'session_call', native_unsafe=True),
+    Operation('engine', 'thinkthen_request_plan_value',
+        '/// Preview a full canonical Request through existing Rust admission and Plan serialization.\n/// Sends nothing and reads no key or cache. Unknown fields and unsupported previews refuse.\n/// Success transfers an immutable independent owner; free once with value_free.\n/// Source bytes and engine may be freed on return. Failures preserve out and occupy\n/// only the calling thread immediate session diagnostic, independently of engine/constructor slots.\n/// # Safety\n/// engine is live; request_json has request_len readable UTF-8 bytes. NULL requires\n/// zero, which is invalid Request JSON. Extents fit Rust slices; out is nonnull\n/// aligned writable pointer storage.\n',
+        (Argument('engine', '*const EngineHandle', 'borrow'),
+         Argument('request_json', '*const c_char', 'input', 'request_len'), Argument('request_len', 'usize', 'input'),
+         Argument('out', '*mut *mut crate::session::views::ValueHandle', 'transfer', lifetime='value_free')),
+        'request_preview::json_plan', ('engine', 'request_json', 'request_len', '@super::request_preview::value_output'), ('out',), 'session_call', native_unsafe=True),
     Operation('engine', 'thinkthen_value_free',
         '/// Free an independent canonical value owner; NULL is ignored.\n/// # Safety\n/// owner is NULL or unfreed, after every operation and borrowed view finishes.\n',
         (Argument('owner', '*mut crate::session::views::ValueHandle', 'consume-nullable'),),
@@ -89,7 +100,7 @@ OPERATIONS = (
         (Argument('settings', '*const carriers::thinkthen_request_engine_settings_v1'),),
         'settings_typed', ('settings',), (), 'constructor_build', '*mut EngineHandle', 'std::ptr::null_mut()', native_unsafe=True),
     Operation('session', 'thinkthen_session_wait',
-        "/// Block for requested readiness without consuming a packet or joining provider\n/// work. timeout_ms is the maximum condition wait in milliseconds; zero checks\n/// readiness immediately. RESULT ignores input room; INPUT also watches intake;\n/// SETTLEMENT ignores cancel to drain final packets after cancellation. Output\n/// readiness takes priority over cancel. Success preserves thread-local errors;\n/// failures preserve out_ready and set only the calling thread's diagnostic.\n/// # Safety\n/// session is live for the whole wait, including concurrent cancel/read/push.\n/// Shared operations are synchronized internally. out_ready is writable and\n/// nonnull. Free only after every concurrent operation, including wait, returns.\n",
+        "/// Block for requested readiness without consuming a packet or joining provider\n/// work. timeout_ms is the maximum condition wait in milliseconds; zero checks\n/// readiness immediately. RESULT ignores input room; INPUT also watches intake;\n/// SETTLEMENT ignores cancel to drain final packets after cancellation.\n/// SETTLEMENT_ARM discards earlier cancel notifications and checks readiness\n/// immediately; timeout_ms must be zero or Usage preserves outputs and state. One exclusive reader arms before checking\n/// its cancellation/disposal state, then uses INTERRUPTIBLE_SETTLEMENT to wait\n/// for output or a subsequent cancel. Other readers must not rearm its wait. Output\n/// readiness takes priority over cancel. Success preserves thread-local errors;\n/// failures preserve out_ready and set only the calling thread's diagnostic.\n/// # Safety\n/// session is live for the whole wait, including concurrent cancel/read/push.\n/// Shared operations are synchronized internally. out_ready is writable and\n/// nonnull. Free only after every concurrent operation, including wait, returns.\n",
         (
             Argument('session', '*const SessionHandle', 'borrow'),
             Argument('interest', 'u32', 'input'),
@@ -217,7 +228,7 @@ OPERATIONS = (
             Argument('request_len', 'usize', 'input'),
             Argument('out', '*mut *mut c_char', 'transfer', lifetime='free_string'),
             Argument('out_len', '*mut usize', 'transfer'),
-        ), 'request_preview::json_plan', ('engine', 'request_json', 'request_len'), ('out', 'out_len'), 'session_call', native_unsafe=True),
+        ), 'request_preview::json_plan', ('engine', 'request_json', 'request_len', '@super::request_preview::json_output'), ('out', 'out_len'), 'session_call', native_unsafe=True),
     Operation('typed', 'thinkthen_request_plan_typed_json',
         '/// Preview typed request arguments through Rust admission without sending.\n/// Supports the same fixed atomic questions and plan JSON as the JSON preview.\n/// COBOL scalar capacity applies before admission. No carrier pointer survives return.\n/// Success owns NUL-terminated JSON; free once with thinkthen_free_string.\n/// Refusals preserve both output slots and use the calling thread session diagnostic.\n/// # Safety\n/// Engine is live; function and surface are counted UTF-8 views. The finite aligned\n/// argument tree remains readable until return. Outputs are writable and nonoverlapping.\n',
         (
@@ -237,7 +248,7 @@ OPERATIONS = (
             Argument('out', '*mut *mut SessionHandle', 'transfer', None, lifetime='session_free'),
         ), 'typed_session', ('engine', 'function', 'arguments', 'surface_name'), ('out',), 'session_native_call', native_unsafe=True),
 
-    Operation('session', 'thinkthen_session_cancel', '/// Signal cancellation without waiting for a provider or final facts. NULL is ignored.\n/// # Safety\n/// session is NULL or live throughout the call.\n',
+    Operation('session', 'thinkthen_session_cancel', '/// Signal cancellation without waiting for a provider or final facts. NULL is ignored.\n/// Interrupt any settlement reader armed before this call, even after prior cancel.\n/// # Safety\n/// session is NULL or live throughout the call.\n',
         (
             Argument('session', '*mut SessionHandle', 'nullable-borrow'),
         ), 'cancel_session', ('session',), (), 'session_guard', '()', '()', native_unsafe=True, foreign_unsafe=True),
@@ -270,7 +281,7 @@ OPERATIONS = (
 )
 
 # Native status projections preserve their established public integer values.
-STATUSES = (('THINKTHEN_SESSION_ACCEPTED_V1', 0, 'Push transferred one descriptor to the session.'), ('THINKTHEN_SESSION_FULL_V1', 1, 'Push retained nothing; retry the same descriptor.'), ('THINKTHEN_SESSION_CLOSED_V1', 2, 'Intake closed; stop advancing the producer.'), ('THINKTHEN_SESSION_RESULT_V1', 0, 'Read transferred one independent packet owner.'), ('THINKTHEN_SESSION_PENDING_V1', 1, 'Work has not settled and no packet is ready.'), ('THINKTHEN_SESSION_END_V1', 2, 'Terminal was read and no more output will arrive.'), ('THINKTHEN_SESSION_WAIT_RESULT_V1', 0, 'Wait only for results, end or cancel; input room cannot wake this wait.'), ('THINKTHEN_SESSION_WAIT_INPUT_V1', 1, 'Wait for result, input room/closure, end or cancel.'), ('THINKTHEN_SESSION_WAIT_SETTLEMENT_V1', 2, 'Drain output after cancel without waking repeatedly for cancellation.'), ('THINKTHEN_SESSION_READY_RESULT_V1', 0, 'A result or terminal packet is ready; no packet has been consumed.'), ('THINKTHEN_SESSION_READY_INPUT_V1', 1, 'Caller-supplied input has room.'), ('THINKTHEN_SESSION_READY_CLOSED_V1', 2, 'Caller-supplied input has closed.'), ('THINKTHEN_SESSION_READY_END_V1', 3, 'Every output packet has been consumed.'), ('THINKTHEN_SESSION_READY_CANCELLED_V1', 4, 'Intake was cancelled; settlement can still be pending.'), ('THINKTHEN_SESSION_READY_TIMEOUT_V1', 5, 'The caller-given timeout passed.'))
+STATUSES = (('THINKTHEN_SESSION_ACCEPTED_V1', 0, 'Push transferred one descriptor to the session.'), ('THINKTHEN_SESSION_FULL_V1', 1, 'Push retained nothing; retry the same descriptor.'), ('THINKTHEN_SESSION_CLOSED_V1', 2, 'Intake closed; stop advancing the producer.'), ('THINKTHEN_SESSION_RESULT_V1', 0, 'Read transferred one independent packet owner.'), ('THINKTHEN_SESSION_PENDING_V1', 1, 'Work has not settled and no packet is ready.'), ('THINKTHEN_SESSION_END_V1', 2, 'Terminal was read and no more output will arrive.'), ('THINKTHEN_SESSION_WAIT_RESULT_V1', 0, 'Wait only for results, end or cancel; input room cannot wake this wait.'), ('THINKTHEN_SESSION_WAIT_INPUT_V1', 1, 'Wait for result, input room/closure, end or cancel.'), ('THINKTHEN_SESSION_WAIT_SETTLEMENT_V1', 2, 'Drain output after cancel without waking repeatedly for cancellation.'), ('THINKTHEN_SESSION_WAIT_SETTLEMENT_ARM_V1', 3, 'Arm one exclusive settlement reader and check readiness immediately; timeout must be zero.'), ('THINKTHEN_SESSION_WAIT_INTERRUPTIBLE_SETTLEMENT_V1', 4, 'Wait for final output or cancellation requested since this reader armed.'), ('THINKTHEN_SESSION_READY_RESULT_V1', 0, 'A result or terminal packet is ready; no packet has been consumed.'), ('THINKTHEN_SESSION_READY_INPUT_V1', 1, 'Caller-supplied input has room.'), ('THINKTHEN_SESSION_READY_CLOSED_V1', 2, 'Caller-supplied input has closed.'), ('THINKTHEN_SESSION_READY_END_V1', 3, 'Every output packet has been consumed.'), ('THINKTHEN_SESSION_READY_CANCELLED_V1', 4, 'Intake was cancelled; settlement can still be pending.'), ('THINKTHEN_SESSION_READY_TIMEOUT_V1', 5, 'The caller-given timeout passed.'))
 PROJECTIONS = (
     ('push_status', 'thinkthen::RequestSessionPushStatus', 'u32', (
         ('Accepted', 'THINKTHEN_SESSION_ACCEPTED_V1'),

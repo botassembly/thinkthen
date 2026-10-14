@@ -1,36 +1,39 @@
 # ThinkThen for COBOL
 
-ThinkThen answers typed questions about text. Ask for a yes or no, a label, a number, or records selected and ranked by meaning. ThinkThen gives code typed answers to branch on, caches each question so you pay once, and replays recorded answers offline for tests. Backends include Jev, SystemOne, OpenAI and local models.
+ThinkThen is ten functions on top of Jev, TypeSafe's decision model, or any model like it. It puts these decision models in your code, whatever model, language or database you use. Use Jev, OpenAI or a local model. Ask a typed question and get back `true`, `false`, a label or a number. Your code branches on the answer. A model can say not sure, and a failed call never looks like an answer. ThinkThen packs many records into few requests, saves each answer for reuse, and lets tests replay saved answers with no key and no network.
 
-Download the matching release archive, then unpack it:
+Unpack the matching archive: `tar -xzf thinkthen-cobol-0.2.0-TARGET.tar.gz`. Replace `TARGET` with your platform. Set your hosted backend key: `export THINKTHEN_API_KEY=...`.
 
-```sh
-tar -xzf thinkthen-cobol-0.2.0-TARGET.tar.gz
-```
-
-Replace `TARGET` with the platform name on your downloaded archive. Set your hosted backend key: `export THINKTHEN_API_KEY=...`.
-
-This excerpt reads one typed boolean; the packaged `examples/session.cob` includes construction, session calls and cleanup.
+The packaged `examples/blocking.cob` builds two generated question selectors and three text records. Each call blocks until the native result settles and returns an owned typed table. This excerpt reads the first yes-or-no answer and label:
 
 ```cobol
-*> After receiving a decision row, retain packet-owner during this read.
-set address of tt-n-complete-session-packet-v1 to packet-view
-set address of tt-n-complete-session-packet-decide-row-v1
-   to v-data-decide-row of tt-n-complete-session-packet-v1
-set address of tt-n-complete-atomic-decide-value-v1
-   to v-value of tt-n-complete-session-packet-decide-row-v1
-if v-value-presence of tt-n-complete-atomic-decide-value-v1 =
-   tt-n-complete-presence-value-v1-k
-   set address of tt-n-complete-decide-value-v1
-      to v-value-value of tt-n-complete-atomic-decide-value-v1
-   set address of tt-n-complete-json-v1
-      to v-value of tt-n-complete-decide-value-v1
-   if v-kind of tt-n-complete-json-v1 = tt-n-complete-json-boolean-v1-k
-      display v-data-boolean of tt-n-complete-json-v1
-   end-if
+call "TT_DECIDE" using by value engine decide-question input-rows no-controls
+   by reference tt-n-cobol-AnswerDecideResult tt-n-cobol-AnswerStatus
+   returning status-code
+if status-code = 0 and v-count of tt-n-cobol-AnswerDecideResult not = 3
+   move 2 to return-code goback
 end-if
+if status-code = 0 and v-first-present of tt-n-cobol-AnswerDecideResult = 1
+   display v-first-value of tt-n-cobol-AnswerDecideResult
+end-if
+call "TT_ANSWER_FREE" using
+   by value v-owner of tt-n-cobol-AnswerStatus returning omitted
+
+call "TT_CHOOSE" using by value engine choose-question input-rows no-controls
+   by reference tt-n-cobol-AnswerChooseResult tt-n-cobol-AnswerStatus
+   returning status-code
+if status-code = 0 and v-count of tt-n-cobol-AnswerChooseResult not = 3
+   move 2 to return-code goback
+end-if
+if status-code = 0 and v-first-present of tt-n-cobol-AnswerChooseResult = 1
+   display v-first-value-text of tt-n-cobol-AnswerChooseResult
+      (1:v-first-value-length of tt-n-cobol-AnswerChooseResult)
+end-if
+call "TT_ANSWER_FREE" using
+   by value v-owner of tt-n-cobol-AnswerStatus returning omitted
 ```
 
-The library is free and MIT licensed. Hosted models charge per token. Local models are free to use; you supply the computer that runs them.
+Use the decision and choice first-answer presence indicators when a question permits an unresolved answer. Free the status owner once after reading the answer and diagnostic facts. The answer table shares that owner.
 
+The library is free and MIT licensed. Hosted models charge per token. Local models are free to use; you supply the computer that runs them.
 [Backend setup](https://thinkthen.dev/install/backends/) · [ThinkThen documentation](https://thinkthen.dev)

@@ -12,6 +12,7 @@ pub(super) struct Prepared {
     pub(super) text: String,
     pub(super) engine: facade::Engine,
     pub(super) context: Option<String>,
+    pub(super) resolved_context: Option<crate::core::Evidence>,
     pub(super) ask: Recognize,
 }
 impl Prepared {
@@ -118,7 +119,9 @@ pub(super) fn prepare<T: InputEvidence>(
     fallback: Option<&str>,
 ) -> Result<Unit<T>, Error> {
     let (original, input, text, context, resolved, ask) = prepare_input(ask, record, fallback)?;
-    let engine = engine.clone().with_aggregate_context_value(resolved);
+    let engine = engine
+        .clone()
+        .with_aggregate_context_value(resolved.clone());
     Ok(Unit {
         original,
         prepared: Prepared {
@@ -126,6 +129,7 @@ pub(super) fn prepare<T: InputEvidence>(
             text,
             engine,
             context,
+            resolved_context: resolved,
             ask,
         },
     })

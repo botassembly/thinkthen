@@ -8,7 +8,7 @@ let package = Package(
         .binaryTarget(name: "CThinkThen", path: "CThinkThen.xcframework"),
         .target(name: "ThinkThen", dependencies: ["CThinkThen"],
                 path: "Sources/Foundation", publicHeadersPath: ".",
-                cSettings: [.unsafeFlags(["-fobjc-arc", "-fblocks"])],
+                cSettings: [.unsafeFlags(["-fobjc-arc", "-fblocks", "-Wall", "-Wextra", "-Werror"])],
                 linkerSettings: [.linkedFramework("Foundation")])
     ]
 )

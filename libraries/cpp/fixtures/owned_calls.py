@@ -42,6 +42,11 @@ try:
             assert len(server.requests) == before + 1, server.requests
             print('CPP_USAGE_INSTALLED_PASS', mode, 'requests=1')
         sys.exit(0)
+    before = len(server.requests)
+    preview = subprocess.run([binary, 'plan', scratch, scratch], env=env, capture_output=True, text=True, timeout=5)
+    assert preview.returncode == 0, (preview.stdout, preview.stderr)
+    assert json.loads(preview.stdout) and len(server.requests) == before, preview.stdout
+    print('CPP_INSTALLED_PLAN_PASS requests=0')
     for verb in ('decide','choose','tag','score','filter','rank','find','annotate','recognize','relate'):
         source = prefix / 'share/thinkthen-cpp/examples' / (verb + '.cpp')
         assert source.is_file(), 'CPP_EXAMPLE_MISSING ' + verb
@@ -75,7 +80,11 @@ try:
                          if p['kind'] == 'observation' and p['value']['kind'] == 'row'
                          and p['value']['value']['kind'] == 'judgment']
             assert len(judgments) == 1 and sampled_value == judgments[0]['value'], (verb, sampled_value, judgments)
-        elif verb in ('filter', 'rank', 'annotate', 'recognize'):
+        elif verb == 'filter':
+            assert sampled_value == [original], (verb, sampled_value)
+        elif verb == 'rank':
+            assert sampled_value == [0], (verb, sampled_value)
+        elif verb in ('annotate', 'recognize'):
             assert len(sampled_value) == 1 and sampled_value[0]['input'] == original, (verb, sampled_value)
         print('CPP_INSTALLED_EXAMPLE_PASS', verb)
 

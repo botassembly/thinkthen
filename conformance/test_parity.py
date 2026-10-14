@@ -14,6 +14,7 @@ import unittest
 from unittest.mock import patch
 from conformance import parity
 from conformance import c_images
+from conformance.source_fixtures import stage_generated_source
 
 
 class NativeFixtureEnvironment(unittest.TestCase):
@@ -44,6 +45,8 @@ class BindingCaseTiers(unittest.TestCase):
                           if identity in row.get('consumers', [identity])}
             if identity == 'cli':
                 applicable -= parity.SDK_ONLY_CLI_CASES
+            elif identity == 'postgresql':
+                applicable.discard('proxy-reservation-refusal')
             expected = applicable if identity in ('cli', 'rust', 'c') else {
                 key for key in applicable if rows[key]['tier'] == 'binding' or key in sample}
             self.assertEqual(set(selected), expected)
@@ -428,8 +431,9 @@ class PublicAssertions(unittest.TestCase):
         import venv
         with tempfile.TemporaryDirectory() as scratch:
             root = Path(scratch)
+            stage_generated_source(parity.ROOT, root, 'python')
             library = root / 'libraries/python'
-            library.mkdir(parents=True)
+            library.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(parity.ROOT / 'libraries/python/check.sh', library / 'check.sh')
             (library / 'host.sh').write_text('python_host() { command -v python3; }\n')
             scripts = root / 'sdlc/scripts'
@@ -443,7 +447,7 @@ class PublicAssertions(unittest.TestCase):
             (assets / 'tests').mkdir()
             (assets / 'tests/native_case.py').write_text('# compiled installed caller fixture\n')
             children = root / 'conformance/children'
-            children.mkdir(parents=True)
+            children.mkdir(parents=True, exist_ok=True)
             (children / 'native_fixture.py').write_text(
                 'import os, sys\nfrom pathlib import Path\n'
                 'def run(consumer, command, root, **kwargs):\n'
@@ -624,6 +628,30 @@ class CliApplicability(unittest.TestCase):
                     cli['case_rulings']['declaration-null']['expect'] = {'error': 'Usage'}
                 with self.assertRaises(ValueError):
                     parity.validate_consumer_contracts(changed)
+
+    def test_postgresql_reservation_ruling_keeps_all_other_contracts(self):
+        parity.validate_consumer_contracts(self.contract)
+        selected = parity.required_cases(self.contract, 'postgresql')
+        self.assertNotIn('proxy-reservation-refusal', selected)
+        self.assertIn('proxy-reservation-refusal', parity.required_cases(self.contract, 'rust'))
+        self.assertIn('typed-decide', selected)
+        for defect in ('binding', 'case', 'boundary', 'native-case', 'checks'):
+            changed = copy.deepcopy(self.contract)
+            pg = next(row for row in changed['consumers'] if row['id'] == 'postgresql')
+            if defect == 'binding':
+                other = next(row for row in changed['consumers'] if row['id'] == 'duckdb')
+                other['case_rulings'] = pg.pop('case_rulings')
+            elif defect == 'case':
+                pg['case_rulings']['typed-decide'] = pg['case_rulings']['proxy-reservation-refusal']
+            elif defect == 'boundary':
+                pg['case_rulings']['proxy-reservation-refusal']['boundary'] = 'unsupported'
+            elif defect == 'native-case':
+                changed['required_cases'] = [row for row in changed['required_cases']
+                                             if row['id'] != 'proxy-reservation-refusal']
+            else:
+                pg['required_checks'] = ['runtime']
+            with self.subTest(defect=defect), self.assertRaises(ValueError):
+                parity.validate_consumer_contracts(changed)
 
     def test_cells_require_actual_cli_checks_and_refuse_sdk_only_passes(self):
         cases = {case['id']: case for case in self.contract['required_cases']}

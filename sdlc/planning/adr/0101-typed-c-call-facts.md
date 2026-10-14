@@ -1,5 +1,7 @@
 # ADR 0101: Owned facts for typed C calls
 
+Superseded for the 0.2 C exports by [the no-compatibility ruling](../../decisions/2026-10-12-no-compatibility-before-1-0.md), as tickets 0561 and 0576 require. The frozen compatibility exports below are retired; current calls retain their own actual facts through the shared session interface.
+
 - Status: Accepted by the coordinator after fresh High design review of `d97f27350a9487c3e63e2438629b051f9b6e861f`. Ian can overturn this routine compatible API choice before release.
 - Date: 2026-09-28
 

@@ -49,8 +49,8 @@ function Read_thinkthen_complete_question_source_list_v1 (P : thinkthen_complete
 function Read_thinkthen_complete_question_source_v1 (P : access constant thinkthen_complete_question_source_v1) return Value;
 function Read_thinkthen_complete_string_list_v1 (P : thinkthen_complete_string_list_v1) return Value;
 function Read_thinkthen_complete_usage_v1 (P : access constant thinkthen_complete_usage_v1) return Value;
-function Read_thinkthen_complete_readable_question_v1 (P : access constant thinkthen_complete_readable_question_v1) return Value;
-function Read_thinkthen_complete_readable_question_decide_v1 (P : access constant thinkthen_complete_readable_question_decide_v1) return Value;
+function Read_thinkthen_complete_question_document_v1 (P : access constant thinkthen_complete_question_document_v1) return Value;
+function Read_thinkthen_complete_question_document_decide_v1 (P : access constant thinkthen_complete_question_document_decide_v1) return Value;
 function Read_thinkthen_complete_batch_v1 (P : access constant thinkthen_complete_batch_v1) return Value;
 function Read_thinkthen_complete_batch_string_v1 (P : access constant thinkthen_complete_batch_string_v1) return Value;
 function Read_thinkthen_complete_input_declaration_v1 (P : access constant thinkthen_complete_input_declaration_v1) return Value;
@@ -69,9 +69,9 @@ function Read_thinkthen_complete_label_list_v1 (P : thinkthen_complete_label_lis
 function Read_thinkthen_complete_label_v1 (P : access constant thinkthen_complete_label_v1) return Value;
 function Read_thinkthen_complete_question_name_v1 (P : access constant thinkthen_complete_question_name_v1) return Value;
 function Read_thinkthen_complete_wording_version_v1 (P : access constant thinkthen_complete_wording_version_v1) return Value;
-function Read_thinkthen_complete_readable_question_choose_v1 (P : access constant thinkthen_complete_readable_question_choose_v1) return Value;
-function Read_thinkthen_complete_readable_question_tag_v1 (P : access constant thinkthen_complete_readable_question_tag_v1) return Value;
-function Read_thinkthen_complete_readable_question_score_v1 (P : access constant thinkthen_complete_readable_question_score_v1) return Value;
+function Read_thinkthen_complete_question_document_choose_v1 (P : access constant thinkthen_complete_question_document_choose_v1) return Value;
+function Read_thinkthen_complete_question_document_tag_v1 (P : access constant thinkthen_complete_question_document_tag_v1) return Value;
+function Read_thinkthen_complete_question_document_score_v1 (P : access constant thinkthen_complete_question_document_score_v1) return Value;
 function Read_thinkthen_complete_version_v1 (P : access constant thinkthen_complete_version_v1) return Value;
 function Read_thinkthen_complete_physical_source_v1 (P : access constant thinkthen_complete_physical_source_v1) return Value;
 function Read_thinkthen_complete_threshold_v1 (P : access constant thinkthen_complete_threshold_v1) return Value;
@@ -117,7 +117,7 @@ function Read_thinkthen_complete_find_v1 (P : access constant thinkthen_complete
 function Read_thinkthen_complete_find_answer_v1 (P : access constant thinkthen_complete_find_answer_v1) return Value;
 function Read_thinkthen_complete_find_candidate_list_v1 (P : thinkthen_complete_find_candidate_list_v1) return Value;
 function Read_thinkthen_complete_find_candidate_v1 (P : access constant thinkthen_complete_find_candidate_v1) return Value;
-function Read_thinkthen_complete_readable_question_2_v1 (P : access constant thinkthen_complete_readable_question_2_v1) return Value;
+function Read_thinkthen_complete_find_question_document_v1 (P : access constant thinkthen_complete_find_question_document_v1) return Value;
 function Read_thinkthen_complete_session_packet_annotate_aggregate_v1 (P : access constant thinkthen_complete_session_packet_annotate_aggregate_v1) return Value;
 function Read_thinkthen_complete_annotation_list_v1 (P : thinkthen_complete_annotation_list_v1) return Value;
 function Read_thinkthen_complete_session_packet_recognize_aggregate_v1 (P : access constant thinkthen_complete_session_packet_recognize_aggregate_v1) return Value;
@@ -137,7 +137,7 @@ function Read_thinkthen_complete_recognition_proposal_v1 (P : access constant th
 function Read_thinkthen_complete_recognition_odds_boundary_odds_v1 (P : access constant thinkthen_complete_recognition_odds_boundary_odds_v1) return Value;
 function Read_thinkthen_complete_boundary_proposal_list_v1 (P : thinkthen_complete_boundary_proposal_list_v1) return Value;
 function Read_thinkthen_complete_boundary_proposal_v1 (P : access constant thinkthen_complete_boundary_proposal_v1) return Value;
-function Read_thinkthen_complete_readable_question_3_v1 (P : access constant thinkthen_complete_readable_question_3_v1) return Value;
+function Read_thinkthen_complete_recognize_question_document_v1 (P : access constant thinkthen_complete_recognize_question_document_v1) return Value;
 function Read_thinkthen_complete_json_map_v1 (P : thinkthen_complete_json_map_v1) return Value;
 function Read_thinkthen_complete_recognition_mode_v1 (P : access constant thinkthen_complete_recognition_mode_v1) return Value;
 function Read_thinkthen_complete_relation_rule_list_v1 (P : thinkthen_complete_relation_rule_list_v1) return Value;
@@ -164,7 +164,7 @@ function Read_thinkthen_complete_related_entity_v1 (P : access constant thinkthe
 function Read_thinkthen_complete_relation_member_failure_id_v1 (P : access constant thinkthen_complete_relation_member_failure_id_v1) return Value;
 function Read_thinkthen_complete_session_input_source_list_v1 (P : thinkthen_complete_session_input_source_list_v1) return Value;
 function Read_thinkthen_complete_session_input_source_v1 (P : access constant thinkthen_complete_session_input_source_v1) return Value;
-function Read_thinkthen_complete_readable_question_4_v1 (P : access constant thinkthen_complete_readable_question_4_v1) return Value;
+function Read_thinkthen_complete_relate_question_document_v1 (P : access constant thinkthen_complete_relate_question_document_v1) return Value;
 function Read_thinkthen_complete_relate_fields_v1 (P : access constant thinkthen_complete_relate_fields_v1) return Value;
 function Read_thinkthen_complete_related_entity_edge_list_v1 (P : thinkthen_complete_related_entity_edge_list_v1) return Value;
 function Read_thinkthen_complete_related_entity_edge_v1 (P : access constant thinkthen_complete_related_entity_edge_v1) return Value;
@@ -1066,7 +1066,7 @@ begin
 if P = null then raise Constraint_Error with "missing native value"; end if;
 return Number_Item (Ada.Strings.Fixed.Trim (Interfaces.Unsigned_64'Image (P.value), Ada.Strings.Both));
 end Read_thinkthen_complete_wording_version_v1;
-function Read_thinkthen_complete_readable_question_decide_v1 (P : access constant thinkthen_complete_readable_question_decide_v1) return Value is
+function Read_thinkthen_complete_question_document_decide_v1 (P : access constant thinkthen_complete_question_document_decide_v1) return Value is
 Fields : Field_List (1 .. 13 + (if P = null then 0 else Index (P.extensions.len)));
 Count : Natural := 0;
 begin
@@ -1157,8 +1157,8 @@ Count := Count + 1; Fields (Count) := Named (Text (Extensions (I).name), Read_Js
 end loop;
 end;
 return Object_Item (Fields (1 .. Count));
-end Read_thinkthen_complete_readable_question_decide_v1;
-function Read_thinkthen_complete_readable_question_choose_v1 (P : access constant thinkthen_complete_readable_question_choose_v1) return Value is
+end Read_thinkthen_complete_question_document_decide_v1;
+function Read_thinkthen_complete_question_document_choose_v1 (P : access constant thinkthen_complete_question_document_choose_v1) return Value is
 Fields : Field_List (1 .. 12 + (if P = null then 0 else Index (P.extensions.len)));
 Count : Natural := 0;
 begin
@@ -1238,8 +1238,8 @@ Count := Count + 1; Fields (Count) := Named (Text (Extensions (I).name), Read_Js
 end loop;
 end;
 return Object_Item (Fields (1 .. Count));
-end Read_thinkthen_complete_readable_question_choose_v1;
-function Read_thinkthen_complete_readable_question_tag_v1 (P : access constant thinkthen_complete_readable_question_tag_v1) return Value is
+end Read_thinkthen_complete_question_document_choose_v1;
+function Read_thinkthen_complete_question_document_tag_v1 (P : access constant thinkthen_complete_question_document_tag_v1) return Value is
 Fields : Field_List (1 .. 12 + (if P = null then 0 else Index (P.extensions.len)));
 Count : Natural := 0;
 begin
@@ -1319,8 +1319,8 @@ Count := Count + 1; Fields (Count) := Named (Text (Extensions (I).name), Read_Js
 end loop;
 end;
 return Object_Item (Fields (1 .. Count));
-end Read_thinkthen_complete_readable_question_tag_v1;
-function Read_thinkthen_complete_readable_question_score_v1 (P : access constant thinkthen_complete_readable_question_score_v1) return Value is
+end Read_thinkthen_complete_question_document_tag_v1;
+function Read_thinkthen_complete_question_document_score_v1 (P : access constant thinkthen_complete_question_document_score_v1) return Value is
 Fields : Field_List (1 .. 12 + (if P = null then 0 else Index (P.extensions.len)));
 Count : Natural := 0;
 begin
@@ -1400,19 +1400,19 @@ Count := Count + 1; Fields (Count) := Named (Text (Extensions (I).name), Read_Js
 end loop;
 end;
 return Object_Item (Fields (1 .. Count));
-end Read_thinkthen_complete_readable_question_score_v1;
-function Read_thinkthen_complete_readable_question_v1 (P : access constant thinkthen_complete_readable_question_v1) return Value is
+end Read_thinkthen_complete_question_document_score_v1;
+function Read_thinkthen_complete_question_document_v1 (P : access constant thinkthen_complete_question_document_v1) return Value is
 
 begin
 if P = null then raise Constraint_Error with "missing native value"; end if;
 case P.kind is
-when 1 => return Read_thinkthen_complete_readable_question_decide_v1 (P.data.decide);
-when 2 => return Read_thinkthen_complete_readable_question_choose_v1 (P.data.choose);
-when 3 => return Read_thinkthen_complete_readable_question_tag_v1 (P.data.tag);
-when 4 => return Read_thinkthen_complete_readable_question_score_v1 (P.data.score);
+when 1 => return Read_thinkthen_complete_question_document_decide_v1 (P.data.decide);
+when 2 => return Read_thinkthen_complete_question_document_choose_v1 (P.data.choose);
+when 3 => return Read_thinkthen_complete_question_document_tag_v1 (P.data.tag);
+when 4 => return Read_thinkthen_complete_question_document_score_v1 (P.data.score);
 when others => raise Constraint_Error with "invalid native alternative";
 end case;
-end Read_thinkthen_complete_readable_question_v1;
+end Read_thinkthen_complete_question_document_v1;
 function Read_thinkthen_complete_version_v1 (P : access constant thinkthen_complete_version_v1) return Value is
 
 begin
@@ -1468,7 +1468,7 @@ when 2 => Count := Count + 1; Fields (Count) := Named ("images", Read_thinkthen_
 when others => raise Constraint_Error with "invalid native presence";
 end case;
 Count := Count + 1; Fields (Count) := Named ("meta", Read_thinkthen_complete_meta_v1(P.meta));
-Count := Count + 1; Fields (Count) := Named ("question", Read_thinkthen_complete_readable_question_v1(P.question));
+Count := Count + 1; Fields (Count) := Named ("question", Read_thinkthen_complete_question_document_v1(P.question));
 Count := Count + 1; Fields (Count) := Named ("schema", Read_thinkthen_complete_version_v1(P.schema));
 case P.source.presence is
 when 0 => null;
@@ -1580,7 +1580,7 @@ when 2 => Count := Count + 1; Fields (Count) := Named ("members", Read_thinkthen
 when others => raise Constraint_Error with "invalid native presence";
 end case;
 Count := Count + 1; Fields (Count) := Named ("meta", Read_thinkthen_complete_meta_v1(P.meta));
-Count := Count + 1; Fields (Count) := Named ("question", Read_thinkthen_complete_readable_question_v1(P.question));
+Count := Count + 1; Fields (Count) := Named ("question", Read_thinkthen_complete_question_document_v1(P.question));
 case P.question_name.presence is
 when 0 => null;
 when 1 => Count := Count + 1; Fields (Count) := Named ("question_name", Null_Item);
@@ -1674,7 +1674,7 @@ when 2 => Count := Count + 1; Fields (Count) := Named ("members", Read_thinkthen
 when others => raise Constraint_Error with "invalid native presence";
 end case;
 Count := Count + 1; Fields (Count) := Named ("meta", Read_thinkthen_complete_meta_v1(P.meta));
-Count := Count + 1; Fields (Count) := Named ("question", Read_thinkthen_complete_readable_question_v1(P.question));
+Count := Count + 1; Fields (Count) := Named ("question", Read_thinkthen_complete_question_document_v1(P.question));
 case P.question_name.presence is
 when 0 => null;
 when 1 => Count := Count + 1; Fields (Count) := Named ("question_name", Null_Item);
@@ -1768,7 +1768,7 @@ when 2 => Count := Count + 1; Fields (Count) := Named ("members", Read_thinkthen
 when others => raise Constraint_Error with "invalid native presence";
 end case;
 Count := Count + 1; Fields (Count) := Named ("meta", Read_thinkthen_complete_meta_v1(P.meta));
-Count := Count + 1; Fields (Count) := Named ("question", Read_thinkthen_complete_readable_question_v1(P.question));
+Count := Count + 1; Fields (Count) := Named ("question", Read_thinkthen_complete_question_document_v1(P.question));
 case P.question_name.presence is
 when 0 => null;
 when 1 => Count := Count + 1; Fields (Count) := Named ("question_name", Null_Item);
@@ -1857,7 +1857,7 @@ when 2 => Count := Count + 1; Fields (Count) := Named ("members", Read_thinkthen
 when others => raise Constraint_Error with "invalid native presence";
 end case;
 Count := Count + 1; Fields (Count) := Named ("meta", Read_thinkthen_complete_meta_v1(P.meta));
-Count := Count + 1; Fields (Count) := Named ("question", Read_thinkthen_complete_readable_question_v1(P.question));
+Count := Count + 1; Fields (Count) := Named ("question", Read_thinkthen_complete_question_document_v1(P.question));
 case P.question_name.presence is
 when 0 => null;
 when 1 => Count := Count + 1; Fields (Count) := Named ("question_name", Null_Item);
@@ -1946,7 +1946,7 @@ when 2 => Count := Count + 1; Fields (Count) := Named ("members", Read_thinkthen
 when others => raise Constraint_Error with "invalid native presence";
 end case;
 Count := Count + 1; Fields (Count) := Named ("meta", Read_thinkthen_complete_meta_v1(P.meta));
-Count := Count + 1; Fields (Count) := Named ("question", Read_thinkthen_complete_readable_question_v1(P.question));
+Count := Count + 1; Fields (Count) := Named ("question", Read_thinkthen_complete_question_document_v1(P.question));
 case P.question_name.presence is
 when 0 => null;
 when 1 => Count := Count + 1; Fields (Count) := Named ("question_name", Null_Item);
@@ -2024,7 +2024,7 @@ if P = null then raise Constraint_Error with "missing native value"; end if;
 Count := Count + 1; Fields (Count) := Named ("answer", Read_thinkthen_complete_answer_v1(P.answer));
 Count := Count + 1; Fields (Count) := Named ("answer_id", Read_thinkthen_complete_answer_id_v1(P.answer_id));
 Count := Count + 1; Fields (Count) := Named ("observations", Read_thinkthen_complete_observation_list_v1(P.observations));
-Count := Count + 1; Fields (Count) := Named ("question", Read_thinkthen_complete_readable_question_v1(P.question));
+Count := Count + 1; Fields (Count) := Named ("question", Read_thinkthen_complete_question_document_v1(P.question));
 Count := Count + 1; Fields (Count) := Named ("question_sources", Read_thinkthen_complete_question_source_list_v1(P.question_sources));
 Count := Count + 1; Fields (Count) := Named ("request", String_Item (Text (P.request)));
 case P.threshold.presence is
@@ -2111,7 +2111,7 @@ if P = null then raise Constraint_Error with "missing native value"; end if;
 Count := Count + 1; Fields (Count) := Named ("failure", Read_thinkthen_complete_failure_v1(P.failure));
 Count := Count + 1; Fields (Count) := Named ("failure_id", Read_thinkthen_complete_failure_id_v1(P.failure_id));
 Count := Count + 1; Fields (Count) := Named ("observations", Read_thinkthen_complete_observation_list_v1(P.observations));
-Count := Count + 1; Fields (Count) := Named ("question", Read_thinkthen_complete_readable_question_v1(P.question));
+Count := Count + 1; Fields (Count) := Named ("question", Read_thinkthen_complete_question_document_v1(P.question));
 Count := Count + 1; Fields (Count) := Named ("question_sources", Read_thinkthen_complete_question_source_list_v1(P.question_sources));
 Count := Count + 1; Fields (Count) := Named ("request", String_Item (Text (P.request)));
 case P.threshold.presence is
@@ -2561,7 +2561,7 @@ when 2 => Count := Count + 1; Fields (Count) := Named ("members", Read_thinkthen
 when others => raise Constraint_Error with "invalid native presence";
 end case;
 Count := Count + 1; Fields (Count) := Named ("meta", Read_thinkthen_complete_meta_v1(P.meta));
-Count := Count + 1; Fields (Count) := Named ("question", Read_thinkthen_complete_readable_question_v1(P.question));
+Count := Count + 1; Fields (Count) := Named ("question", Read_thinkthen_complete_question_document_v1(P.question));
 case P.question_name.presence is
 when 0 => null;
 when 1 => Count := Count + 1; Fields (Count) := Named ("question_name", Null_Item);
@@ -2712,7 +2712,7 @@ Items_Copy (I) := Read_thinkthen_complete_find_candidate_v1(Items (I));
 end loop;
 return Array_Item (Items_Copy);
 end Read_thinkthen_complete_find_candidate_list_v1;
-function Read_thinkthen_complete_readable_question_2_v1 (P : access constant thinkthen_complete_readable_question_2_v1) return Value is
+function Read_thinkthen_complete_find_question_document_v1 (P : access constant thinkthen_complete_find_question_document_v1) return Value is
 Fields : Field_List (1 .. 12 + (if P = null then 0 else Index (P.extensions.len)));
 Count : Natural := 0;
 begin
@@ -2792,7 +2792,7 @@ Count := Count + 1; Fields (Count) := Named (Text (Extensions (I).name), Read_Js
 end loop;
 end;
 return Object_Item (Fields (1 .. Count));
-end Read_thinkthen_complete_readable_question_2_v1;
+end Read_thinkthen_complete_find_question_document_v1;
 function Read_thinkthen_complete_find_v1 (P : access constant thinkthen_complete_find_v1) return Value is
 Fields : Field_List (1 .. 13 + (if P = null then 0 else Index (P.extensions.len)));
 Count : Natural := 0;
@@ -2837,7 +2837,7 @@ when 1 => Count := Count + 1; Fields (Count) := Named ("position", Null_Item);
 when 2 => Count := Count + 1; Fields (Count) := Named ("position", Read_thinkthen_complete_position_v1(P.position.value));
 when others => raise Constraint_Error with "invalid native presence";
 end case;
-Count := Count + 1; Fields (Count) := Named ("question", Read_thinkthen_complete_readable_question_2_v1(P.question));
+Count := Count + 1; Fields (Count) := Named ("question", Read_thinkthen_complete_find_question_document_v1(P.question));
 Count := Count + 1; Fields (Count) := Named ("schema", Read_thinkthen_complete_version_v1(P.schema));
 case P.threshold.presence is
 when 0 => null;
@@ -3325,7 +3325,7 @@ when 1 => return String_Item ("recognize");
 when others => raise Constraint_Error with "invalid native enum";
 end case;
 end Read_thinkthen_complete_verb_v1;
-function Read_thinkthen_complete_readable_question_3_v1 (P : access constant thinkthen_complete_readable_question_3_v1) return Value is
+function Read_thinkthen_complete_recognize_question_document_v1 (P : access constant thinkthen_complete_recognize_question_document_v1) return Value is
 Fields : Field_List (1 .. 19 + (if P = null then 0 else Index (P.extensions.len)));
 Count : Natural := 0;
 begin
@@ -3442,7 +3442,7 @@ Count := Count + 1; Fields (Count) := Named (Text (Extensions (I).name), Read_Js
 end loop;
 end;
 return Object_Item (Fields (1 .. Count));
-end Read_thinkthen_complete_readable_question_3_v1;
+end Read_thinkthen_complete_recognize_question_document_v1;
 function Read_thinkthen_complete_entity_v1 (P : access constant thinkthen_complete_entity_v1) return Value is
 Fields : Field_List (1 .. 9 + (if P = null then 0 else Index (P.extensions.len)));
 Count : Natural := 0;
@@ -3653,7 +3653,7 @@ when 1 => Count := Count + 1; Fields (Count) := Named ("position", Null_Item);
 when 2 => Count := Count + 1; Fields (Count) := Named ("position", Read_thinkthen_complete_position_v1(P.position.value));
 when others => raise Constraint_Error with "invalid native presence";
 end case;
-Count := Count + 1; Fields (Count) := Named ("question", Read_thinkthen_complete_readable_question_3_v1(P.question));
+Count := Count + 1; Fields (Count) := Named ("question", Read_thinkthen_complete_recognize_question_document_v1(P.question));
 Count := Count + 1; Fields (Count) := Named ("schema", Read_thinkthen_complete_version_v1(P.schema));
 case P.source.presence is
 when 0 => null;
@@ -3761,7 +3761,7 @@ if P = null then raise Constraint_Error with "missing native value"; end if;
 Count := Count + 1; Fields (Count) := Named ("direction", Read_thinkthen_complete_relation_direction_v1(P.direction));
 Count := Count + 1; Fields (Count) := Named ("method", Read_thinkthen_complete_relation_method_v1(P.method));
 Count := Count + 1; Fields (Count) := Named ("observations", Read_thinkthen_complete_observation_list_v1(P.observations));
-Count := Count + 1; Fields (Count) := Named ("question", Read_thinkthen_complete_readable_question_v1(P.question));
+Count := Count + 1; Fields (Count) := Named ("question", Read_thinkthen_complete_question_document_v1(P.question));
 Count := Count + 1; Fields (Count) := Named ("question_sources", Read_thinkthen_complete_question_source_list_v1(P.question_sources));
 Count := Count + 1; Fields (Count) := Named ("reads", String_Item (Text (P.reads)));
 Count := Count + 1; Fields (Count) := Named ("relation", String_Item (Text (P.relation)));
@@ -3806,7 +3806,7 @@ if P = null then raise Constraint_Error with "missing native value"; end if;
 Count := Count + 1; Fields (Count) := Named ("direction", Read_thinkthen_complete_relation_direction_v1(P.direction));
 Count := Count + 1; Fields (Count) := Named ("method", Read_thinkthen_complete_relation_method_v1(P.method));
 Count := Count + 1; Fields (Count) := Named ("observations", Read_thinkthen_complete_observation_list_v1(P.observations));
-Count := Count + 1; Fields (Count) := Named ("question", Read_thinkthen_complete_readable_question_v1(P.question));
+Count := Count + 1; Fields (Count) := Named ("question", Read_thinkthen_complete_question_document_v1(P.question));
 Count := Count + 1; Fields (Count) := Named ("question_sources", Read_thinkthen_complete_question_source_list_v1(P.question_sources));
 Count := Count + 1; Fields (Count) := Named ("reads", String_Item (Text (P.reads)));
 Count := Count + 1; Fields (Count) := Named ("relation", String_Item (Text (P.relation)));
@@ -3941,7 +3941,7 @@ end loop;
 end;
 return Object_Item (Fields (1 .. Count));
 end Read_thinkthen_complete_relate_fields_v1;
-function Read_thinkthen_complete_readable_question_4_v1 (P : access constant thinkthen_complete_readable_question_4_v1) return Value is
+function Read_thinkthen_complete_relate_question_document_v1 (P : access constant thinkthen_complete_relate_question_document_v1) return Value is
 Fields : Field_List (1 .. 13 + (if P = null then 0 else Index (P.extensions.len)));
 Count : Natural := 0;
 begin
@@ -4022,7 +4022,7 @@ Count := Count + 1; Fields (Count) := Named (Text (Extensions (I).name), Read_Js
 end loop;
 end;
 return Object_Item (Fields (1 .. Count));
-end Read_thinkthen_complete_readable_question_4_v1;
+end Read_thinkthen_complete_relate_question_document_v1;
 function Read_thinkthen_complete_relation_endpoint_related_entity_v1 (P : access constant thinkthen_complete_relation_endpoint_related_entity_v1) return Value is
 Fields : Field_List (1 .. 2 + (if P = null then 0 else Index (P.extensions.len)));
 Count : Natural := 0;
@@ -4193,7 +4193,7 @@ when 1 => Count := Count + 1; Fields (Count) := Named ("position", Null_Item);
 when 2 => Count := Count + 1; Fields (Count) := Named ("position", Read_thinkthen_complete_position_v1(P.position.value));
 when others => raise Constraint_Error with "invalid native presence";
 end case;
-Count := Count + 1; Fields (Count) := Named ("question", Read_thinkthen_complete_readable_question_4_v1(P.question));
+Count := Count + 1; Fields (Count) := Named ("question", Read_thinkthen_complete_relate_question_document_v1(P.question));
 Count := Count + 1; Fields (Count) := Named ("schema", Read_thinkthen_complete_version_v1(P.schema));
 Count := Count + 1; Fields (Count) := Named ("value", Read_thinkthen_complete_related_entity_edge_list_v1(P.value));
 declare
@@ -4425,7 +4425,7 @@ when 1 => Count := Count + 1; Fields (Count) := Named ("probabilities", Null_Ite
 when 2 => Count := Count + 1; Fields (Count) := Named ("probabilities", Read_thinkthen_complete_session_probabilities_v1(P.probabilities.value));
 when others => raise Constraint_Error with "invalid native presence";
 end case;
-Count := Count + 1; Fields (Count) := Named ("question", Read_thinkthen_complete_readable_question_v1(P.question));
+Count := Count + 1; Fields (Count) := Named ("question", Read_thinkthen_complete_question_document_v1(P.question));
 Count := Count + 1; Fields (Count) := Named ("question_sha256", String_Item (Text (P.question_sha256)));
 Count := Count + 1; Fields (Count) := Named ("question_sources", Read_thinkthen_complete_question_source_list_v1(P.question_sources));
 case P.raw_pick.presence is

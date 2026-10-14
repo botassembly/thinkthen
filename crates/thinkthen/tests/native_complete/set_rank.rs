@@ -238,7 +238,7 @@ fn complete_set_rank_preserves_selected_objects_typed_context_and_actual_source_
     let rows = crate::api::set_ranked(&call).unwrap();
     assert_eq!(rows[0].result().value(), 1);
     assert_eq!(rows[0].result().members().len(), 2);
-    let document = serde_json::to_value(call.complete().unwrap()).unwrap();
+    let document = serde_json::to_value(&call).unwrap();
     assert_located_documents(&document);
     assert_rank_schema(&document);
 

@@ -1,5 +1,7 @@
 # The DuckDB surface
 
+The current source build supports DuckDB v1.5.6 and v2.0-cyanoptera. These targets use the native C++ source route. The archive instructions below describe the earlier unsigned release.
+
 Unsigned loadable extensions for DuckDB v1.5.5 and v1.5.4 that put the `thinkthen` engine behind SQL. The Linux x86_64, Linux ARM64, Apple Silicon and Intel macOS release routes use DuckDB's C++ API and a Rust bridge to `thinkthen`'s public API (tickets 0201 and 0231). The Intel package has focused installed proof under Rosetta on macOS 26; native Intel hardware, macOS 15 and release-runner proof remain open.
 
 The archive uses DuckDB's repository layout: `v1.5.5/<platform>/thinkthen.duckdb_extension` and `v1.5.4/<platform>/thinkthen.duckdb_extension`. From its unpacked directory, run DuckDB with unsigned extensions allowed at startup:
@@ -51,6 +53,25 @@ Discovery creates no engine, reads no input files and sends no requests.
 | `thinkthen_usage_status()` | live JSON persistence observation across resident engines and failures retained at eviction |
 
 `thinkthen_usage_status()` returns a VARCHAR JSON object with `state`: `disabled`, `pending`, `written` or `failed`. Failed adds only the native fixed advice, `check the usage folder permissions and free space`. Observation builds no engine, sends no request and never waits on the registry or writer. Failure takes precedence, then pending work, then written current deltas; an empty registry is disabled. A busy registry reports pending observation. Written does not promise future calls or other processes. Eviction retains failure discovered by the existing retirement finalization; successful answers and historical `thinkthen_usage()` totals remain available.
+
+Authored decide, choose, score and tag questions, annotation sets, keyed inputs and settings can be native DuckDB `STRUCT` or `MAP` values. Find and rank questions keep their literal-text contract. Choose options, score levels and tag labels accept ordered maps of names to authored readings as well as lists of names. Named controls can accompany a native settings object. The shared Rust parser validates these values and refuses repeated controls before any send.
+
+```sql
+SELECT thinkthen_decide({'decide': 'Does the writer ask for a refund?',
+                        'true': {'meaning': 'refund', 'optional': NULL},
+                        'false': {'meaning': 'other', 'enabled': FALSE}},
+                       body, settings := {'batch': 'max'}, model := 'jev-1.13.0') AS asks_refund
+FROM tickets;
+SELECT thinkthen_choose('Which team owns this?', body,
+                       {'billing': 'Handles charges', 'shipping': NULL},
+                       settings := {'deadline_ms': -1}) AS owning_team
+FROM tickets;
+SELECT * FROM thinkthen_decide_many('Does the writer ask for a refund?',
+                                    MAP(['first', 'second'], ['Refund me', 'Hello']),
+                                    batch := 'max');
+```
+
+Native `NULL` reading members retain authored JSON null, and `FALSE` and zero retain their values. Settings `NULL` means omission. `thinkthen_plan` accepts the same native objects and named controls as the judgment calls. A legacy settings string remains accepted under the shared settings contract.
 
 Required SQL NULL operands return SQL NULL from scalar calls and zero rows from table or set calls before inspecting partner operands, session settings or files. Optional NULL settings mean omitted settings. NULL members inside a supplied list retain that function’s existing validation.
 

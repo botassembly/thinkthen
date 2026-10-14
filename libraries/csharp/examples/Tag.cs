@@ -1,8 +1,8 @@
 using ThinkThen;
 using ThinkThen.Inputs;
 using var engine = Engine.Open();
-var question = new InputRequestQuestionDefinition { Value = new InputRequestDefinitionAuthoredTag {
-    Tag = new InputAuthoredQuestionTextAlternative0 { Value = "Which labels?" },
-    Labels = new InputAuthoredLabelsAlternative0 { Value = new InputAuthoredName[] { new() { Value = "first" }, new() { Value = "second" } } }
+var question = new RequestQuestionDefinition { Value = new RequestDefinitionAuthoredTag {
+    Tag = new AuthoredQuestionTextString { Value = "Which labels?" },
+    Labels = new AuthoredLabelsList { Value = new AuthoredName[] { new() { Value = "first" }, new() { Value = "second" } } }
 } };
-Console.WriteLine(string.Join(",", await engine.TagValueAsync(question, new InputRequestInputText { Text = "example" })));
+Console.WriteLine(string.Join(",", await engine.TagValueAsync(question, new RequestInputText { Text = "example" })));

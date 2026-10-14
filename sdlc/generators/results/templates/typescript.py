@@ -1,27 +1,37 @@
 """Owned JavaScript values and declarations from the shared Rust graph."""
 import json
-ROOTS = ('completesessionPacket',)
+from host_answers import aggregate_answers, aggregate_projection, scalar_answers, judgment_route
+ROOTS = ('completesessionPacket', 'completeplan')
+INPUT_ROOTS = ('RequestOptions', 'EngineSettings', 'RequestDefinition')
 
 def name(key):
     return 'Native' + ''.join(p[:1].upper()+p[1:] for p in key.removeprefix('complete').split('_'))
 
-def typ(source):
+def input_name(key):
+    if key.startswith('RequestDefinition_'):
+        base = input_name(key.removeprefix('RequestDefinition_'))
+        return base.removesuffix('Definition') + ('RequestDefinition' if base.endswith('Definition') else 'Definition')
+    return ''.join(p[:1].upper()+p[1:] for p in key.removeprefix('Authored_').split('_'))
+
+def typ(source, inputs=False):
+    named = input_name if inputs else name
     if isinstance(source,bool): return 'JsonValue'
-    if '$ref' in source: return name(source['$ref'].removeprefix('#/$defs/'))
+    if '$ref' in source: return named(source['$ref'].removeprefix('#/$defs/'))
     if 'const' in source: return json.dumps(source['const'])
     if 'enum' in source: return ' | '.join(json.dumps(v) for v in source['enum'])
-    if 'variants' in source: return ' | '.join(name(k) for k,_ in source['variants'])
-    if 'primitive_schemas' in source: return ' | '.join(typ(v) for v in source['primitive_schemas'].values())
+    if 'variants' in source: return ' | '.join(named(k) for k,_ in source['variants'])
+    if 'primitive_schemas' in source: return ' | '.join(typ(v, inputs) for v in source['primitive_schemas'].values())
     for union in ('anyOf','oneOf'):
-        if union in source: return ' | '.join(typ(v) for v in source[union])
+        if union in source: return ' | '.join(typ(v, inputs) for v in source[union])
     kind=source.get('type')
-    if isinstance(kind,list): return ' | '.join(typ({**source,'type':v}) for v in kind)
-    if kind=='array': return 'readonly ('+typ(source.get('items',{}))+')[]'
-    if kind=='object': return 'Readonly<Record<string, '+typ(source.get('additionalProperties',{}))+'>>'
-    return {'string':'string','integer':'number | NativeNumber','number':'number | NativeNumber','boolean':'boolean','null':'null'}.get(kind,'JsonValue')
+    if isinstance(kind,list): return ' | '.join(typ({**source,'type':v}, inputs) for v in kind)
+    if kind=='array': return 'readonly ('+typ(source.get('items',{}), inputs)+')[]'
+    if kind=='object': return 'Readonly<Record<string, '+typ(source.get('additionalProperties',{}), inputs)+'>>'
+    numeric = 'number' if inputs else 'number | NativeNumber'
+    return {'string':'string','integer':numeric,'number':numeric,'boolean':'boolean','null':'null'}.get(kind,'JsonValue')
 
-def declarations(definitions):
-    lines=['// Generated from the shared Rust result graph; do not edit.', 'export type JsonValue = null | boolean | number | NativeNumber | string | readonly JsonValue[] | { readonly [key: string]: JsonValue };']
+def declarations(definitions, input_definitions=None):
+    lines=['// Generated from the shared Rust result graph; do not edit.', "import type {Question, Input, Controls, Completed} from './native.js';", 'export type JsonValue = null | boolean | number | NativeNumber | string | readonly JsonValue[] | { readonly [key: string]: JsonValue };']
     lines += ['export class NativeNumber { readonly raw: string; private constructor(); }']
     for key,source in definitions.items():
         if 'properties' in source:
@@ -40,10 +50,36 @@ def declarations(definitions):
                 if value.get('type')=='array': value=value['items']
                 values.append(typ(value))
         lines += ['export type Native'+verb.title()+'Result = '+' | '.join(dict.fromkeys(values))+';']
-    lines += ['export function packet(value: JsonValue): NativeSessionPacket;', 'export function parse(text: string): JsonValue;', 'export const REQUEST_VERSION: string;']
+    lines += ['export interface AnswerReaders {']
+    for function, payload, _, _ in answers(definitions):
+        lines += [f' {function}Answer(): {typ(payload)};']
+    lines += ['}']
+    lines += ['export interface NamedCalls {']
+    for function, payload, _, _ in answers(definitions):
+        lines += [f' {function}(q:Question,i:Input,c?:Controls):Promise<Completed<Native{function.title()}Result>>;',
+                  f' {function}Answer(q:Question,i:Input,c?:Controls):Promise<{typ(payload)}>;']
+    lines += ['}']
+    lines += ['export const REQUEST_VERSION: string;']
+    lines += input_declarations(input_definitions or {})
     return '\n'.join(lines)+'\n'
 
-def runtime(definitions,version):
+def input_declarations(definitions):
+    lines = []
+    excluded = {key: tag[2]['excluded'] for source in definitions.values()
+                for key, tag in source.get('variants', []) if tag[0] == 'structure'}
+    for key, source in definitions.items():
+        if 'properties' not in source:
+            lines += [f'export type {input_name(key)} = {typ(source, True)};']
+            continue
+        lines += [f'export interface {input_name(key)} {{']
+        for member, field in source['properties'].items():
+            optional = '' if member in source.get('required', []) else '?'
+            lines += [f' readonly {json.dumps(member)}{optional}: {typ(field, True)};']
+        lines += [f' readonly {json.dumps(member)}?: never;' for member in excluded.get(key, [])]
+        lines += ['}']
+    return lines
+
+def runtime(definitions,version,input_definitions=None):
     lines=["'use strict';", '// Generated from the shared Rust result graph; do not edit.', 'const graph = {']
     for key,source in definitions.items():
         lines += [json.dumps(key)+': {']
@@ -104,6 +140,51 @@ function convert(schema,value,key) {
   }
   return Object.freeze(held);
 }
+function plan(value) { return convert(graph.completeplan,value,'completeplan'); }
 function packet(value) { return convert(graph.completesessionPacket,value,'completesessionPacket'); }
-''', 'module.exports = { packet, parse, NativeNumber, REQUEST_VERSION: '+json.dumps(version)+', '+', '.join(name(k) for k,s in definitions.items() if 'properties' in s)+' };']
+''', answer_runtime(definitions), 'module.exports = { answer, plan, packet, parse, NativeNumber, REQUEST_VERSION: '+json.dumps(version)+', '+', '.join(name(k) for k,s in definitions.items() if 'properties' in s)+' };']
     return '\n'.join(lines)+'\n'
+
+
+def answers(definitions):
+    values = []
+    for function, _, payload in aggregate_answers(definitions):
+        projected, member = aggregate_projection(function, payload, definitions)
+        values.append((function, projected, None, member))
+    values = {function: (function, payload, kind, member) for function, payload, kind, member in values}
+    values.update({function: (function, payload, kind, None) for function, kind, payload in scalar_answers(definitions)})
+    return list(values.values())
+
+
+def answer_runtime(definitions):
+    route, guards = judgment_route(definitions)
+    rules = {function: {'path': route if kind else ['value'], 'guards': guards if kind else [],
+                        'kind': kind, 'member': member, 'collection': not kind and payload.get('type') == 'array'}
+             for function, payload, kind, member in answers(definitions)}
+    return 'const answerRules = '+json.dumps(rules)+';'+r'''
+function answer(packets,functionName) {
+  const rule=answerRules[functionName],values=[];
+  for(const packet of packets) {
+    if(packet.function!==functionName) continue;
+    let value;
+    if(rule.kind) {
+      if(!rule.guards.every(([path,expected])=>path.reduce((v,key)=>v?.[key],packet)===expected)) continue;
+      const carrier=rule.path.reduce((v,key)=>v?.[key],packet);
+      if(carrier?.kind!==rule.kind) continue;
+      value=carrier.value;
+    } else {
+      if(packet.kind==='aggregate') value=packet.value;
+      else if(rule.collection && packet.kind==='row') value=[packet.value];
+      else continue;
+    }
+    if(rule.collection) values.push(...value);
+    else values.push(value);
+  }
+  if(rule.collection) return Object.freeze(rule.member ? values.map(value=>{
+    if(!Object.hasOwn(value,rule.member)) throw new TypeError('Native answer is missing its projected member');
+    return value[rule.member];
+  }) : values);
+  if(values.length!==1) throw new RangeError('Expected exactly one successful answer');
+  return values[0];
+}
+'''

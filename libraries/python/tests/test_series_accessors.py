@@ -8,6 +8,68 @@ from backend_settings import configuration, isolated
 CORPUS = REPO / "conformance/cases.json"
 
 
+@pytest.mark.parametrize("readings,expected,dtype", [
+    ({'true': 'refund', 'false': 'retain'}, ['refund', 'retain'], 'String'),
+    ({'true': {'action': 'refund'}, 'false': {'action': 'retain'}},
+     [{'action': 'refund'}, {'action': 'retain'}], 'Struct'),
+    ({'true': ['refund'], 'false': ['retain', 'review']}, [['refund'], ['retain', 'review']], 'List'),
+    ({'true': {'a': 1}, 'false': {'b': 2}}, [{'a': 1}, {'b': 2}], 'Object'),
+    ({'true': [1], 'false': [True]}, [[1], [True]], 'Object'),
+    ({'true': {'nested': {'a': 1}}, 'false': {'nested': {'b': 2}}}, [{'nested': {'a': 1}}, {'nested': {'b': 2}}], 'Object'),
+    ({'true': [-1], 'false': [18446744073709551615]}, [[-1], [18446744073709551615]], 'List'),
+    ({'true': [1.0], 'false': [9007199254740993]}, [[1.0], [9007199254740993]], 'Object'),
+    ({'true': 'refund'}, ['refund', False], 'Object'),
+    ({'false': 'retain'}, [True, 'retain'], 'Object'),
+    ({'true': {'action': 'refund'}, 'false': 'retain'}, [{'action': 'refund'}, 'retain'], 'Object'),
+])
+def test_polars_question_files_preserve_authored_readings(backend, tmp_path, readings, expected, dtype):
+    question = tmp_path / 'refund.json'
+    question.write_text(json.dumps({'decide': 'Does the writer ask for a refund?', **readings}))
+    recording = tmp_path / 'recording'
+    printed = run(f'''
+        import json, threading, polars as pl, thinkthen as tt
+        from http.server import BaseHTTPRequestHandler, HTTPServer
+        class Reply(BaseHTTPRequestHandler):
+            def log_message(self, *args): pass
+            def do_POST(self):
+                body = self.rfile.read(int(self.headers['Content-Length']))
+                self.server.calls += 1
+                probability = .9 if b'refund now' in body else .1
+                response = json.dumps({{'model': 'jev-latest', 'answers': {{'q1': {{'type': 'noul', 'noul': probability}}}},
+                                       'usage': {{'input_tokens': 10, 'output_tokens': 2}}}}).encode()
+                self.send_response(200)
+                self.send_header("Connection", "close")
+                self.send_header('Content-Length', str(len(response)))
+                self.end_headers()
+                self.wfile.write(response)
+        server = HTTPServer(('127.0.0.1', 0), Reply); server.calls = 0
+        threading.Thread(target=server.serve_forever, daemon=True).start()
+        address = f'http://127.0.0.1:{{server.server_port}}/v1'
+        source = pl.Series('body', ['refund now', None, 'good morning'])
+        question = tt.QuestionSource(path={str(question)!r})
+        with tt.Engine(cache=False, batch=1, base_url=address, record={str(recording)!r}) as engine:
+            result = engine.decide(question, source)
+            assert json.dumps([row.value for row in result.results], sort_keys=True) == json.dumps({expected!r}, sort_keys=True)
+            values = result.value
+            assert json.dumps(values.to_list(), sort_keys=True) == json.dumps([{expected[0]!r}, None, {expected[1]!r}], sort_keys=True)
+            assert values.dtype.base_type() == getattr(pl, {dtype!r})
+            if {expected!r} == [[-1], [18446744073709551615]]: assert values.dtype.inner == pl.Int128
+            assert result.positions == (0, 2)
+            assert result.facts.records == 2 and result.facts.requests_sent == 2
+            assert result.probability.to_list() == [.9, None, .1]
+            assert source.to_list() == ['refund now', None, 'good morning']
+        with tt.Engine(cache=False, batch=1, base_url=address, replay={str(recording)!r}) as engine:
+            replayed = engine.decide(question, source)
+            assert json.dumps(replayed.value.to_list(), sort_keys=True) == json.dumps(values.to_list(), sort_keys=True)
+            assert replayed.facts.requests_sent == 0 and replayed.facts.records == 2
+        assert server.calls == 2
+        server.shutdown(); server.server_close()
+        print('authored readings retained')
+    ''', child_env(backend, tmp_path))
+    assert printed.strip() == 'authored readings retained'
+    assert backend.count() == 0
+
+
 def test_polars_frame_answers_keep_native_types_false_null_and_field_projection(backend, tmp_path):
     printed = run('''
         import polars as pl, thinkthen as tt
@@ -30,6 +92,73 @@ def test_polars_frame_answers_keep_native_types_false_null_and_field_projection(
     ''', child_env(backend, tmp_path))
     assert printed.strip() == 'typed frame answers'
     assert backend.count() == 8
+
+
+def test_polars_annotation_frames_keep_complete_failure_schema(backend, tmp_path):
+    printed = run('''
+        import json, threading, polars as pl, thinkthen as tt
+        from http.server import BaseHTTPRequestHandler, HTTPServer
+        class Reply(BaseHTTPRequestHandler):
+            def log_message(self, *args): pass
+            def do_POST(self):
+                request = json.loads(self.rfile.read(int(self.headers['Content-Length'])))
+                self.server.calls += 1
+                instructions = request['questions']['q1']['instructions']
+                omitted = 'q1' if 'The text is "first"' in instructions else 'q2' if 'The text is "second"' in instructions else None
+                answers = {name: {'type': 'noul', 'noul': .9} for name in request['questions'] if name != omitted}
+                response = json.dumps({'model': 'jev-latest', 'answers': answers,
+                                       'usage': {'input_tokens': 10, 'output_tokens': 2}}).encode()
+                self.send_response(200)
+                self.send_header('Connection', 'close')
+                self.send_header('Content-Length', str(len(response)))
+                self.end_headers(); self.wfile.write(response)
+        server = HTTPServer(('127.0.0.1', 0), Reply); server.calls = 0
+        threading.Thread(target=server.serve_forever, daemon=True).start()
+        form = {'version': 1, 'questions': {'first': {'decide': 'First?'}, 'second': {'decide': 'Second?'}}}
+        marker = pl.Struct({'failed': pl.Struct({'kind': pl.String, 'cause': pl.String})})
+        expected = {'body': pl.String, 'first': pl.Boolean, 'second': pl.Boolean,
+                    'failed': pl.Struct({'first': marker, 'second': marker})}
+        with tt.Engine(cache=False, batch=1, max_retries=0,
+                       base_url=f'http://127.0.0.1:{server.server_port}/v1') as engine:
+            for values in ([], [None, None], ['ok', None]):
+                source = pl.DataFrame({'body': pl.Series(values, dtype=pl.String)})
+                result = engine.annotate(form, source, on='body')
+                assert result.value.schema == expected and result.value.columns == list(expected)
+                assert result.value['failed'].to_list() == [None] * len(values)
+                assert result.value['first'].to_list() == [True if value is not None else None for value in values]
+            source = pl.DataFrame({'body': ['first', None, 'second', 'ok']})
+            result = engine.annotate(form, source, on='body')
+            assert result.value.schema == expected and result.value.columns == list(expected)
+            failure = {'failed': {'kind': 'backend', 'cause': 'missing_answer'}}
+            assert result.value['failed'].to_list() == [
+                {'first': failure, 'second': None}, None, {'first': None, 'second': failure}, None], result.value['failed'].to_list()
+            assert result.value['first'].to_list() == [None, None, True, True]
+            assert result.value['second'].to_list() == [True, None, None, True]
+        assert server.calls == 4
+        server.shutdown(); server.server_close()
+        print('stable annotation schema')
+    ''', child_env(backend, tmp_path))
+    assert printed.strip() == 'stable annotation schema'
+    assert backend.count() == 0
+
+
+def test_polars_recognition_frames_keep_empty_entity_schema(backend, tmp_path):
+    printed = run('''
+        import polars as pl, thinkthen as tt
+        with tt.Engine(cache=False) as engine:
+            for values in ([], [None, None]):
+                source = pl.DataFrame({'body': pl.Series(values, dtype=pl.String)})
+                result = engine.recognize(source, kinds=['person'], on='body')
+                expected = {'row': pl.Int64, 'text': pl.String, 'start': pl.Int64,
+                            'end': pl.Int64, 'length': pl.Int64, 'kind': pl.String,
+                            'strength': pl.Float64}
+                assert result.value.schema == expected and result.value.columns == list(expected)
+                assert result.value.height == 0
+                assert result.facts.requests_sent == 0
+        print('stable empty entity schema')
+    ''', child_env(backend, tmp_path))
+    assert printed.strip() == 'stable empty entity schema'
+    assert backend.count() == 0
 
 
 @pytest.mark.parametrize("shape", ["pandas", "polars"])
@@ -72,7 +201,7 @@ def test_named_and_async_series_calls_keep_owned_rows_and_original_positions(bac
             entities = series([('Ada', 'person'), None, ('Bo', 'person')])
             related = entities.tt.relate(engine=engine, relations={'knows': ('person', 'person')})
             assert related.facts.requests_sent == 1
-            assert [(edge.source.name, edge.target.name) for edge in related.value] == [('Ada', 'Bo'), ('Bo', 'Ada')]
+            assert [(edge.source.name, edge.target.name) for edge in related.results[0].value] == [('Ada', 'Bo'), ('Bo', 'Ada')]
             failed_engine = tt.Engine(cache=False, max_retries=0, base_url=__import__('os').environ['THINKTHEN_BASE_URL'].replace('/generic/', '/arm/malformed/missing_answer/'))
             failed = failed_engine.annotate({'version': 1, 'questions': {'late': {'decide': 'Late?'}, 'bad': {'decide': 'Refund?'}}}, series(['note', None]))
             embedded = cell(failed.value, 0)['bad']
@@ -110,7 +239,7 @@ def test_ten_series_functions_preserve_null_duplicate_and_whole_set_identity(bac
         import json, pandas as pd, polars as pl, thinkthen as tt
         import thinkthen.pandas, thinkthen.polars
         shape = {shape!r}
-        engine = tt.Engine(batch=1, cache=False)
+        engine = tt.Engine(batch=1, cache=False, record=RECORDING)
         def series(values):
             return (pd.Series(values, name="body", index=[9, 9, 2], dtype=object)
                     if shape == "pandas" else pl.Series("body", values, strict=False))
@@ -138,9 +267,9 @@ def test_ten_series_functions_preserve_null_duplicate_and_whole_set_identity(bac
         print("filter", kept.value.to_list(), kept.value.name)
         if shape == "pandas": assert kept.value.index.to_list() == [9, 2]
         ranked = call("rank", "Relevant?")
-        print("rank", [(row["index"], row["record"], row["probability"]) for row in ranked.value])
+        print("rank", [(row["index"], row["record"], row["probability"]) for row in (ranked.value.to_list() if shape == "polars" else ranked.value)])
         found = call("find", "Which?")
-        print("find", dict(found.value), [list(row.answer.probabilities.items()) for row in found.details])
+        print("find", dict(found.value[0] if shape == "polars" else found.value), [list(row.answer.probabilities.items()) for row in found.details])
         form = {{"version": 1, "questions": {{"late": {{"decide": "Late?"}}}}}}
         annotated = call("annotate", form)
         print("annotate", list(annotated.value.to_list()[0]), annotated.facts["records"])
@@ -148,6 +277,16 @@ def test_ten_series_functions_preserve_null_duplicate_and_whole_set_identity(bac
         recognized = (texts.tt.recognize(engine=engine, kinds=["note"]) if shape == "pandas"
                       else engine.recognize(texts, kinds=["note"]))
         rows = recognized.value.to_list()
+        if shape == "polars":
+            assert recognized.value.dtype.base_type() == pl.Struct
+            assert recognized.value.dtype.to_schema()["entities"].base_type() == pl.List
+            assert recognized.value.dtype.to_schema()["entities"].inner.base_type() == pl.Struct
+            assert annotated.value.dtype == pl.Struct({{"late": pl.Boolean}})
+            assert ranked.value.dtype == pl.Struct({{"index": pl.Int64, "record": pl.String, "probability": pl.Float64}})
+            assert found.value.dtype == pl.Struct({{"index": pl.Int64, "unit": pl.String, "probability": pl.Float64}})
+            assert kept.value.dtype == texts.dtype
+            rows = [None] * len(texts)
+            for at, row in zip(recognized.positions, recognized.results): rows[at] = row.value
         assert rows[1] is None
         print("recognize", [[(e.text, e.start, e.end, e.kind) for e in row.entities]
                              if row is not None else None for row in rows])
@@ -157,8 +296,44 @@ def test_ten_series_functions_preserve_null_duplicate_and_whole_set_identity(bac
                         [('Ada', 'person'), None, ('Bo', 'person')], dtype=pl.Object))
         related = (entities.tt.relate(engine=engine, relations={{"knows": ("person", "person")}})
                    if shape == "pandas" else engine.relate(entities, relations={{"knows": ("person", "person")}}))
-        print("relate", [(e.relation, e.source.name, e.target.name) for e in related.value])
-    """, child_env(backend, tmp_path))
+        if shape == "polars":
+            assert related.value.dtype.base_type() == pl.Struct
+            assert related.value.dtype.to_schema()["source"] == pl.Struct({{"kind": pl.String, "name": pl.String}})
+        print("relate", [(e.relation, e.source.name, e.target.name) for e in related.results[0].value])
+        if shape == "polars":
+            replay = tt.Engine(batch=1, cache=False, replay=RECORDING)
+            for verb, args, controls, first in [
+                    ("filter", ["Late?", texts], {{}}, kept),
+                    ("rank", ["Relevant?", texts], {{}}, ranked),
+                    ("find", ["Which?", texts], {{}}, found),
+                    ("annotate", [form, texts], {{}}, annotated),
+                    ("recognize", [texts], {{"kinds": ["note"]}}, recognized),
+                    ("relate", [entities], {{"relations": {{"knows": ("person", "person")}}}}, related)]:
+                second = getattr(replay, verb)(*args, **controls)
+                assert second.value.dtype == first.value.dtype
+                assert second.value.to_list() == first.value.to_list()
+                assert second.facts.requests_sent == 0
+                assert all(type(row) is type(original) for row, original in zip(second.results, first.results))
+                detailed = getattr(replay, verb)(*args, details=True, **controls)
+                assert detailed.facts.requests_sent == 0
+                detailed_rows = detailed.value if isinstance(detailed.value, list) else detailed.value.to_list()
+                assert detailed_rows[0] is detailed.results[0]
+                frame = pl.DataFrame({{"body": entities if verb == "relate" else texts}})
+                framed_args = [frame] if verb in ("recognize", "relate") else [args[0], frame]
+                framed = getattr(replay, verb)(*framed_args, on="body", **controls)
+                assert framed.facts.requests_sent == 0
+                if verb == "filter": assert framed.value.to_dicts() == [{{"body": "one note"}}] * 2
+                elif verb == "annotate":
+                    assert framed.value["late"].dtype == pl.Boolean
+                    assert framed.value["late"].to_list() == [True, None, True]
+                elif verb == "recognize":
+                    assert framed.value["strength"].dtype == pl.Float64
+                    assert framed.value["text"].to_list() == ["one note", "one note"]
+                    assert framed.value["row"].to_list() == [1, 3]
+                else:
+                    assert framed.value.dtype == first.value.dtype
+                    assert framed.value.to_list() == first.value.to_list()
+    """.replace("RECORDING", repr(str(tmp_path / "recording"))), child_env(backend, tmp_path))
     assert printed.splitlines() == [
         'decide [true, null, true]', 'choose ["billing", null, "billing"]',
         'score [0.15, null, 0.15]', 'tag [["bill", "ship"], null, ["bill", "ship"]]',

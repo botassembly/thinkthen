@@ -34,7 +34,8 @@ impl Failure {
                     }
                 }
             }
-            Self::Transport(_)
+            Self::Provider { .. }
+            | Self::Transport(_)
             | Self::Status(_)
             | Self::TokenLimit
             | Self::ReplyTooLarge(_)

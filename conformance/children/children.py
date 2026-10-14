@@ -11,7 +11,9 @@ from pathlib import Path
 import re
 
 # The names cargo and rustup read, as test_deadline/child.rs lists them.
-CARGO = ("HOME", "CARGO_HOME", "RUSTUP_HOME", "RUSTUP_TOOLCHAIN", "CARGO_TARGET_DIR", "RUSTC_WRAPPER")
+CARGO = ("HOME", "CARGO_HOME", "CARGO_BUILD_JOBS", "RUSTUP_HOME", "RUSTUP_TOOLCHAIN",
+         "CARGO_TARGET_DIR", "RUSTC_WRAPPER", "RUSTFLAGS", "CARGO_ENCODED_RUSTFLAGS",
+         "CFLAGS", "CXXFLAGS")
 SECRET = re.compile(r"^THINKTHEN_|KEY|TOKEN|SECRET|PASSWORD|CREDENTIAL|AUTH", re.IGNORECASE)
 
 

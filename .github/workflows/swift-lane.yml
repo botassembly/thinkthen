@@ -1,0 +1,135 @@
+name: Check Swift branch package
+on:
+  push:
+    branches: [ticket/0576-swift]
+    paths:
+      - 'libraries/swift/**'
+      - 'sdlc/generators/results/templates/swift*'
+      - '.github/workflows/swift-lane.yml'
+  workflow_dispatch:
+    inputs:
+      native_run:
+        description: Run containing source-equivalent native C packages
+        required: false
+        type: string
+permissions:
+  contents: read
+  actions: read
+jobs:
+  native:
+    if: ${{ !inputs.native_run }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-15
+            target: aarch64-apple-darwin
+          - runner: macos-15-intel
+            target: x86_64-apple-darwin
+    runs-on: ${{ matrix.runner }}
+    env:
+      CARGO_BUILD_JOBS: '2'
+      MACOSX_DEPLOYMENT_TARGET: '15.0'
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          persist-credentials: false
+      - run: rustup toolchain install 1.95.0 --profile minimal
+      - name: Build matching native C package
+        env:
+          TARGET: ${{ matrix.target }}
+        run: sdlc/scripts/release-pack "$TARGET" "$RUNNER_TEMP/native" c
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: swift-native-${{ matrix.target }}
+          path: ${{ runner.temp }}/native/*
+          if-no-files-found: error
+          retention-days: 7
+  swift:
+    if: ${{ always() && (needs.native.result == 'success' || (needs.native.result == 'skipped' && inputs.native_run)) }}
+    needs: native
+    runs-on: macos-15
+    env:
+      CARGO_BUILD_JOBS: '2'
+      MACOSX_DEPLOYMENT_TARGET: '15.0'
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c
+        with:
+          python-version: '3.13'
+      - run: rustup toolchain install 1.95.0 --profile minimal
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          pattern: swift-native-*
+          run-id: ${{ inputs.native_run || github.run_id }}
+          github-token: ${{ github.token }}
+          path: ${{ runner.temp }}/native
+          merge-multiple: true
+      - name: Assemble the existing Swift package
+        env:
+          THINKTHEN_RELEASE_EXPECTED_SHA: ${{ github.sha }}
+        run: |
+          mkdir "$RUNNER_TEMP/x64" "$RUNNER_TEMP/arm64"
+          tar -xzf "$RUNNER_TEMP/native/thinkthen-c-0.2.0-x86_64-apple-darwin.tar.gz" -C "$RUNNER_TEMP/x64"
+          tar -xzf "$RUNNER_TEMP/native/thinkthen-c-0.2.0-aarch64-apple-darwin.tar.gz" -C "$RUNNER_TEMP/arm64"
+          sh libraries/swift/build-xcframework.sh "$RUNNER_TEMP/x64" "$RUNNER_TEMP/arm64" "$RUNNER_TEMP/framework"
+          cp -R "$RUNNER_TEMP/framework/CThinkThen.xcframework" libraries/swift/
+          sdlc/scripts/release-pack --apple-wrappers aarch64-apple-darwin "$RUNNER_TEMP/native" swift objective-c
+      - name: Check Darwin admission and exclusive barriers
+        run: python3 sdlc/scripts/build-admission-test.py
+      - name: Check admission and the installed Swift package on ARM macOS
+        run: |
+          cargo build --locked --package conformance-backend --jobs 2
+          export THINKTHEN_BACKEND_BIN="$PWD/target/debug/conformance-backend"
+          export THINKTHEN_ARTIFACT="$RUNNER_TEMP/native/thinkthen-swift-0.2.0-aarch64-apple-darwin.tar.gz"
+          python3 libraries/swift/Tests/fixtures/guard.py "$THINKTHEN_ARTIFACT"
+          export THINKTHEN_COVERAGE_STAGE="$RUNNER_TEMP/swift-consumer"
+          python3 - <<'PYTHON'
+          import importlib.util, json, os, pathlib, subprocess, sys, time
+          from contextlib import ExitStack
+          sys.path.insert(0, str(pathlib.Path('conformance/children').resolve()))
+          from children import child_env
+          helper = pathlib.Path('sdlc/scripts/build-admission.py').resolve()
+          spec = importlib.util.spec_from_file_location('admission', helper)
+          gate = importlib.util.module_from_spec(spec)
+          spec.loader.exec_module(gate)
+          lock_path = pathlib.Path('/tmp/thinkthen-heavy.lock')
+          directory = pathlib.Path(str(lock_path.resolve()) + '.priority')
+          directory.mkdir(mode=0o700, exist_ok=True)
+          result = {'pool': 'macos-15', 'cpu_count': os.cpu_count(), 'actual_load': os.getloadavg()}
+          with ExitStack() as stack:
+              lock = stack.enter_context(lock_path.open('a+b'))
+              resources = gate.Resources(lock.fileno(), directory, stack)
+              result['canonical_barrier_acquired'] = gate.available(lock.fileno(), lambda fd: gate.fcntl.flock(fd, gate.fcntl.LOCK_SH | gate.fcntl.LOCK_NB))
+              result['admission_resource_acquired'] = resources.acquire(gate.PERMITS) if result['canonical_barrier_acquired'] else False
+              result['permits_acquired'] = sum(resources.acquire(index) for index in range(gate.PERMITS)) if result['admission_resource_acquired'] else 0
+          stage = pathlib.Path(os.environ['THINKTHEN_COVERAGE_STAGE'])
+          (stage / 'home').mkdir(parents=True, exist_ok=True)
+          env = child_env(keep=('GITHUB_ACTIONS', 'RUNNER_ENVIRONMENT'), home=stage / 'home', PATH='/usr/bin:/bin', LANG='C.UTF-8')
+          started = time.monotonic()
+          observed = subprocess.run([sys.executable, str(helper), '--timeout', '3', '--', sys.executable, '-u', '-c', 'print("ADMISSION_GRANTED")'], env=env, capture_output=True, timeout=5)
+          result.update(gate_return_code=observed.returncode, admitted_command_started=b'ADMISSION_GRANTED' in observed.stdout, gate_elapsed_seconds=time.monotonic()-started)
+          text = json.dumps(result, sort_keys=True)
+          (stage / 'admission-preflight.log').write_text(text+'\n')
+          print(text)
+          if observed.returncode != 0 or not result['admitted_command_started']:
+              print('ARM macOS admission prerequisite blocked; Swift compiler was not started')
+              sys.exit(77)
+          PYTHON
+          sh libraries/swift/check.sh
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: swift-apple-installed-package
+          path: ${{ runner.temp }}/native/thinkthen-swift-*
+          if-no-files-found: error
+          retention-days: 7
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: swift-apple-consumer-logs
+          path: ${{ runner.temp }}/swift-consumer/*.log
+          if-no-files-found: error
+          retention-days: 7

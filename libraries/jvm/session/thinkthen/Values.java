@@ -5,23 +5,22 @@ import java.util.*;
 import java.util.function.Function;
 
 /** Owned JSON values. Known members are exposed by generated result classes. */
-public final class Values {
+final class Values {
     private Values() {}
-    public interface Value { Object json(); }
     /** Fluent generated input state retains omission and explicit null separately. */
-    public abstract static class Builder<T extends Builder<T>> implements Value {
+    public abstract static class Builder<T extends Builder<T>> {
         private final Map<String,Object> members = new LinkedHashMap<>();
         protected abstract T self();
         protected final T put(String member, Object value) { members.put(member, freeze(value)); return self(); }
         protected final T omit(String member) { members.remove(member); return self(); }
         /** Forward an unknown member for native closed-grammar admission. */
         public final T extension(String member, Object value) { return put(member, value); }
-        public final Object json() { return freeze(members); }
+        final Object json() { return freeze(members); }
     }
-    public static class View implements Value {
+    public static class View {
         private final Object value;
         protected View(Object value) { this.value = freeze(value); }
-        public final Object json() { return value; }
+        final Object json() { return value; }
         protected final Object required(String member) {
             var object = object(value);
             if (!object.containsKey(member)) throw new IllegalStateException("Missing native member: " + member);
@@ -34,7 +33,7 @@ public final class Values {
             return selected == null ? Presence.nil() : Presence.of(decode.apply(selected));
         }
     }
-    public static Object json(Object value) { return value instanceof Value view ? view.json() : value; }
+    public static Object json(Object value) { return value instanceof Builder<?> builder ? builder.json() : value instanceof View view ? view.json() : Results.tree(Inputs.tree(value)); }
     public static Object freeze(Object value) {
         value = json(value);
         if (value instanceof Map<?,?> object) {

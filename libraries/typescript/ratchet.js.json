@@ -1,5 +1,6 @@
 {
   "directory": ".",
   "extension": ".js",
-  "max": 2179
+  "max": 180,
+  "scope": "handwritten-production"
 }

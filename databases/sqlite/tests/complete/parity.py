@@ -5,6 +5,8 @@ from pathlib import Path
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[4] / "conformance/children"))
 from children import child_env, read_process_line
 ROOT=Path(__file__).resolve().parents[4]
+BACKEND=Path(os.environ.get('THINKTHEN_BACKEND_BIN',os.environ.get('THINKTHEN_BACKEND',
+    str(Path(os.environ.get('CARGO_TARGET_DIR',ROOT/'target'))/'debug/conformance-backend'))))
 sys.path.insert(0,str(ROOT/'conformance'))
 import parity as inventory
 from c_parity import document,prepare,assertions,compact,Backend
@@ -104,7 +106,7 @@ def main():
                               LANG='C.UTF-8',
                               LD_LIBRARY_PATH=os.environ.get('LD_LIBRARY_PATH',''))
                 if consumer=='postgresql':env['THINKTHEN_POSTGRESQL_SOCKET']=os.environ['THINKTHEN_POSTGRESQL_SOCKET']
-                backend=Backend(ROOT/'target/debug/conformance-backend',env)
+                backend=Backend(BACKEND,env)
                 try:
                     env.update(THINKTHEN_API_KEY='sk-conformance-loopback',LIQUIDAI_API_KEY='sk-conformance-loopback',OPENROUTER_API_KEY='sk-conformance-loopback',PERPLEXITY_API_KEY='sk-conformance-loopback')
                     prepare(home,value)
@@ -119,7 +121,7 @@ def main():
                         if step.get('damage_store'):
                             with sqlite3.connect(home/'saved/thinkthen.sqlite') as db:db.execute("UPDATE answers SET answer='damaged fixture answer'")
                         if value.get('image_variants'):
-                            backend.close();backend=Backend(ROOT/'target/debug/conformance-backend',env);prepare(home,step)
+                            backend.close();backend=Backend(BACKEND,env);prepare(home,step)
                         settings={'cache':False,'model':'jev-latest' if 'steps' in value else 'jev-1.13.0','batch':1,'max_retries':0,**step.get('settings',{})}
                         env['THINKTHEN_BASE_URL']=f'http://127.0.0.1:{backend.port}/{step["arm"] if value.get("image_variants") else value["arm"]}'
                         settings['base_url']=env['THINKTHEN_BASE_URL']

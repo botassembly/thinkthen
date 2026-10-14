@@ -90,8 +90,8 @@ def main():
 
             got = call('decide', {'decide': 'Fits?'},
                        {'files': {'paths': ['/unreadable-server-evidence']}}, 0, client_read=False)
-            assert got['code'] == ERRORS['usage'] and 'facts' not in got, got
-            assert 'client-read records' in got['message'], got
+            assert got['code'] == ERRORS['local'] and 'facts' not in got, got
+            assert got['message'] == 'source operand could not be inspected', got
             for inputs in ({'records': [], 'incremental': None},
                            {'records': [], 'unknown': True}):
                 got = call('decide', {'decide': 'Fits?'}, inputs, 0)

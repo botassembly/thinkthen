@@ -1,8 +1,26 @@
 #import "ThinkThenFoundation.h"
+#import "TTResultPrivate.h"
 #import <dispatch/dispatch.h>
 #include <stdio.h>
-static void require(BOOL condition) { if (!condition) abort(); }
-static id read(NSData *data) { return [NSJSONSerialization JSONObjectWithData:data options:NSJSONReadingFragmentsAllowed error:NULL]; }
+#define require(condition) do { if (!(condition)) { fprintf(stderr, "Foundation condition failed at line %d: %s\n", __LINE__, #condition); abort(); } } while (0)
+static id orderedValue(NSDictionary *node) {
+    if ([node[@"kind"] isEqual:@"scalar"]) return node[@"value"];
+    if ([node[@"kind"] isEqual:@"array"]) {
+        NSMutableArray *items = [NSMutableArray array];
+        for (NSDictionary *item in node[@"items"]) [items addObject:orderedValue(item)];
+        return [items copy];
+    }
+    NSMutableArray *entries = [NSMutableArray array];
+    for (NSArray *pair in node[@"entries"]) [entries addObject:[[TTOrderedEntry alloc] initWithKey:pair[0] value:orderedValue(pair[1])]];
+    return [[TTOrderedMap alloc] initWithEntries:entries];
+}
+static NSDictionary *orderedFields(NSDictionary *node) {
+    TTOrderedMap *object = orderedValue(node);
+    NSMutableDictionary *fields = [NSMutableDictionary dictionary];
+    for (TTOrderedEntry *entry in object.entries) fields[entry.key] = entry.value;
+    return fields;
+}
+static id readFixture(NSData *data) { return [NSJSONSerialization JSONObjectWithData:data options:NSJSONReadingFragmentsAllowed error:NULL]; }
 static void typed(NSArray<TTSessionPacket *> *packets, TTSessionPacketTerminal *terminal) {
     require(terminal.kind.state == TTPresenceValue);
     if (terminal.facts.state == TTPresenceValue) {
@@ -11,7 +29,7 @@ static void typed(NSArray<TTSessionPacket *> *packets, TTSessionPacketTerminal *
     }
     for (TTSessionPacket *packet in packets) {
         if ([packet isKindOfClass:TTSessionPacketDecideRow.class]) {
-            TTAtomicDecideValue *value = ((TTSessionPacketDecideRow *)packet).value.value;
+            TTDecisionRecord *value = ((TTSessionPacketDecideRow *)packet).value.value;
             id raw = value.rawFields[@"value"];
             require(value.value.state == (raw == NSNull.null ? TTPresenceNull : TTPresenceValue));
             if (value.value.state == TTPresenceValue) require([value.value.value isEqual:raw]);
@@ -21,8 +39,8 @@ static void typed(NSArray<TTSessionPacket *> *packets, TTSessionPacketTerminal *
             require(values.count == [packet.rawFields[@"value"] count]);
             for (TTRecognition *value in values) {
                 require(value.value.state == TTPresenceValue);
-                if ([value.value.value isKindOfClass:TTRecognizeFieldsEntities.class]) {
-                    TTRecognizeFieldsEntities *recognized = (id)value.value.value;
+                if ([value.value.value isKindOfClass:TTRecognizeEntities.class]) {
+                    TTRecognizeEntities *recognized = (id)value.value.value;
                     require(recognized.entities.state == TTPresenceValue);
                     require(recognized.entities.value.count == [recognized.rawFields[@"entities"] count]);
                 }
@@ -32,11 +50,15 @@ static void typed(NSArray<TTSessionPacket *> *packets, TTSessionPacketTerminal *
 }
 int main(int argc, const char *argv[]) {
     @autoreleasepool {
-        require(argc == 3);
-        NSDictionary *fixture = read([NSData dataWithContentsOfFile:[NSString stringWithUTF8String:argv[1]]]);
-        NSDictionary *settings = read([[NSString stringWithUTF8String:argv[2]] dataUsingEncoding:NSUTF8StringEncoding]);
+        require(argc == 3 || argc == 4);
+        BOOL blocking = argc == 4;
+        NSDictionary *fixture = readFixture([NSData dataWithContentsOfFile:[NSString stringWithUTF8String:argv[1]]]);
+        NSDictionary *question = orderedFields(fixture[@"ordered"][@"question"]);
+        NSDictionary *input = orderedFields(fixture[@"ordered"][@"input"]);
+        NSDictionary *options = orderedFields(fixture[@"ordered"][@"options"]);
+        NSDictionary *settings = readFixture([[NSString stringWithUTF8String:argv[2]] dataUsingEncoding:NSUTF8StringEncoding]);
         NSError *error = nil;
-        TTFoundationClient *client = [[TTFoundationClient alloc] initWithSettings:settings error:&error];
+        TTFoundationClient *client = [[TTFoundationClient alloc] initWithSettings:[[TTSettings alloc] initWithFields:settings] error:&error];
         __block TTCall *retained = nil;
         __block NSError *failure = nil;
         dispatch_semaphore_t completed = dispatch_semaphore_create(0);
@@ -51,9 +73,9 @@ int main(int argc, const char *argv[]) {
             // The explicit session exposes the final native terminal. TTTask
             // deliberately settles cancellation early with facts still pending.
             NSDictionary *request = @{@"schema":TTRequestVersion, @"call":@{
-                @"function":verb, @"question":fixture[@"question"],
-                @"input":fixture[@"input"], @"options":fixture[@"options"]}};
-            TTSession *session = [client startRequest:request error:&error];
+                @"function":verb, @"question":question,
+                @"input":input, @"options":options}};
+            TTSession *session = [client startRequest:[[TTRequest alloc] initWithFields:request] error:&error];
             if (session) {
                 if ([fixture[@"cancel"] boolValue]) [session cancel];
                 require([session finish:nil error:&error]);
@@ -77,16 +99,16 @@ int main(int argc, const char *argv[]) {
             }
         } else {
             TTFeed feed = nil;
-            NSArray *items = fixture[@"feed_items"];
+            NSArray *items = fixture[@"ordered"][@"feed_items"] ? orderedValue(fixture[@"ordered"][@"feed_items"]) : nil;
             if (items) {
                 __block NSUInteger index = 0;
-                feed = ^NSDictionary *(NSDictionary **readerFailure) {
+                feed = ^TTDescriptor *(TTRequestObject **readerFailure) {
                     *readerFailure = nil;
                     if (index == items.count) return nil;
-                    return @{@"item":items[index++]};
+                    return [[TTDescriptor alloc] initWithFields:@{@"item":items[index++]}];
                 };
             }
-#define NAMED(name) if ([verb isEqual:@#name]) task = [client name:fixture[@"question"] input:fixture[@"input"] options:fixture[@"options"] feed:feed completion:completion error:&error];
+#define NAMED(name) if ([verb isEqual:@#name]) { if (blocking) { id answer = [client name##Answer:[[TTQuestion alloc] initWithFields:question] input:[[TTInput alloc] initWithFields:input] options:[[TTControls alloc] initWithFields:options] feed:feed call:&retained error:&error]; require(answer != nil || error != nil); } else task = [client name:[[TTQuestion alloc] initWithFields:question] input:[[TTInput alloc] initWithFields:input] options:[[TTControls alloc] initWithFields:options] feed:feed completion:completion error:&error]; }
         NAMED(decide) NAMED(choose) NAMED(tag) NAMED(score) NAMED(filter)
         NAMED(rank) NAMED(find) NAMED(annotate) NAMED(recognize) NAMED(relate)
 #undef NAMED
@@ -100,6 +122,15 @@ int main(int argc, const char *argv[]) {
         if (retained || explicitPackets) {
             NSArray<TTSessionPacket *> *values = retained ? retained.packets : explicitPackets;
             typed(values, retained ? retained.terminal : explicitTerminal);
+            if (retained && [verb isEqual:@"rank"] && !failure) {
+                NSArray<NSNumber *> *answer = [retained rankAnswer:&error];
+                require(answer != nil && error == nil);
+                NSMutableArray *indices = [NSMutableArray array];
+                for (TTSessionPacket *packet in values) if ([packet isKindOfClass:TTSessionPacketRankAggregate.class]) {
+                    for (TTRankedRecord *row in ((TTSessionPacketRankAggregate *)packet).value.value) [indices addObject:row.index.value];
+                }
+                require([answer isEqual:indices]);
+            }
             NSMutableArray *packets = [NSMutableArray array];
             for (TTSessionPacket *packet in values) [packets addObject:packet.rawFields];
             payload = @{@"packets":packets};

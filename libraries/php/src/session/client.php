@@ -46,6 +46,21 @@ final class Client
         $operation = $this->start($function, $question, $input, $options, $cancel);
         try { return $operation->result(); } finally { $operation->close(); }
     }
+    /** Preview through native admission without sending a request. */
+    public function plan(string $function, mixed $question, mixed $input, array|\ThinkThen\Inputs\Options $options = []): \ThinkThen\Results\Plan
+    {
+        if ($this->engine === null) throw new UsageFailure('client is closed');
+        $request = new \ThinkThen\Internal\Request($this->ffi, $function, $question, $input, $options);
+        $owner = $this->ffi->new('struct thinkthen_value *');
+        $code = $this->ffi->thinkthen_request_plan_named_value($this->engine, \FFI::addr($request->value), \FFI::addr($owner));
+        if ($code) \ThinkThen\Internal\ErrorFactory::raise($this->ffi, $code, true);
+        try {
+            $view = $this->ffi->new('const thinkthen_complete_json_v1 *');
+            $code = $this->ffi->thinkthen_value_view($owner, \FFI::addr($view));
+            if ($code) \ThinkThen\Internal\ErrorFactory::raise($this->ffi, $code, true);
+            return \ThinkThen\Internal\Decoder::plan($view);
+        } finally { $this->ffi->thinkthen_value_free($owner); }
+    }
     public function usagePersistence(): UsageStatus { return $this->usageStatus(false); }
     public function finishUsageStatus(): UsageStatus { return $this->usageStatus(true); }
     private function usageStatus(bool $finish): UsageStatus

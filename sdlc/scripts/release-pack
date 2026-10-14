@@ -105,6 +105,8 @@ esac
 # Remap all three origins before packaging a library's panic/debug locations.
 cargo_home=${CARGO_HOME:-$HOME/.cargo}
 source_remap=$REPO cargo_remap=$cargo_home home_remap=$HOME
+home_destination=/build/host
+case $HOME in /Users/*) home_destination=/build/users ;; esac
 if [ "$TARGET" = x86_64-pc-windows-msvc ]; then
 	# Rust on Windows reports native paths; Git Bash paths cannot match them.
 	source_remap=$(cygpath -m "$REPO") cargo_remap=$(cygpath -m "$cargo_home") home_remap=$(cygpath -m "$HOME")
@@ -114,9 +116,11 @@ if [ "$TARGET" = x86_64-pc-windows-msvc ]; then
 	fi
 fi
 if [ "${THINKTHEN_FULL_COMPILER:-}" != 1 ]; then
-RUSTFLAGS="${RUSTFLAGS:+$RUSTFLAGS }--remap-path-prefix=$source_remap=/build/source --remap-path-prefix=$cargo_remap=/build/cargo --remap-path-prefix=$home_remap=/build/home"
+RUSTFLAGS="${RUSTFLAGS:+$RUSTFLAGS }--remap-path-prefix=/home=/build/host --remap-path-prefix=/Users=/build/users --remap-path-prefix=$source_remap=/build/source --remap-path-prefix=$cargo_remap=/build/cargo --remap-path-prefix=$home_remap=$home_destination"
 if [ "$TARGET" != x86_64-pc-windows-msvc ]; then
-	CFLAGS="${CFLAGS:+$CFLAGS }-ffile-prefix-map=$REPO=/build/source -ffile-prefix-map=$cargo_home=/build/cargo -ffile-prefix-map=$HOME=/build/home"
+	compiler_remaps="-ffile-prefix-map=/home=/build/host -ffile-prefix-map=/Users=/build/users -ffile-prefix-map=$REPO=/build/source -ffile-prefix-map=$cargo_home=/build/cargo -ffile-prefix-map=$HOME=$home_destination"
+	CFLAGS="${CFLAGS:+$CFLAGS }$compiler_remaps"
+	CXXFLAGS="${CXXFLAGS:+$CXXFLAGS }$compiler_remaps"
 else
 	# MSVC does not accept the Unix compiler's file-prefix-map flags.
 	CFLAGS=${CFLAGS:-}
@@ -125,7 +129,7 @@ elif [ "$TARGET" = x86_64-pc-windows-msvc ]; then
 	RUSTFLAGS="${RUSTFLAGS:+$RUSTFLAGS }--remap-path-prefix=$source_remap=/build/source --remap-path-prefix=$cargo_remap=/build/cargo"
 	CFLAGS=
 fi
-export RUSTFLAGS CFLAGS
+export RUSTFLAGS CFLAGS CXXFLAGS
 . sdlc/scripts/scratch.sh
 scratch_dir stage
 
@@ -663,7 +667,7 @@ fi
 # Ticket 0366: in build mode without a caller's CARGO_TARGET_DIR, each part builds in its own scratch
 # folder, which goes once the part is packed. A run then holds one part's build at a time.
 # The build folder's remap comes after release-pack's others, so it wins over them. A build script's
-# own HOME remap comes later still, so a TMPDIR under HOME shows as /build/home/... with the scratch
+# own HOME remap comes later still, so a TMPDIR under HOME shows as /build/host/... with the scratch
 # name. release-container sets TMPDIR to its run folder, outside HOME.
 own_build=
 [ -n "$reuse" ] || [ -n "${CARGO_TARGET_DIR:-}" ] || own_build=1

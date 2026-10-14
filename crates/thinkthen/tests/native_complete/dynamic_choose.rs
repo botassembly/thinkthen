@@ -92,7 +92,7 @@ fn missing_later_record_candidates_refuse_before_sending_and_empty_choose_has_no
     assert_eq!(empty.facts().records(), 0);
     assert_eq!(empty.facts().requests_sent(), 0);
     assert!(empty.facts().attempts().unwrap().is_empty());
-    assert!(empty.complete().is_some());
+    assert!(empty.facts().call_id().is_some());
     let invalid_batch =
         RecordChooseQuestion::from_json(r#"{"choose":"Which?","batch":0}"#).unwrap();
     let refused = crate::api::eager_choices(

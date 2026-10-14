@@ -66,6 +66,18 @@ pub(super) fn due(query: i64, call: Option<i64>) -> i64 {
     }
 }
 
+/// Validate the original portable settings before SQL appends named controls.
+/// # Safety
+/// The counted string remains readable through this synchronous call.
+#[unsafe(no_mangle)]
+pub(crate) unsafe extern "C" fn thinkthen_cpp_portable_settings(settings: BridgeText) -> Reply {
+    reply_boundary(|| {
+        let raw = text(settings.bytes, settings.len)?;
+        Settings::parse(raw).map_err(usage)?;
+        Ok(raw.as_bytes().to_vec())
+    })
+}
+
 /// Refuse one complete portable call before the caller starts any group.
 ///
 /// # Safety

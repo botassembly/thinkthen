@@ -231,7 +231,7 @@ fn scan(
     verb: For,
 ) -> Result<Scan, Failure> {
     let mut given = 0;
-    let mut values = [ValueRef::Null; 4];
+    let mut values = [ValueRef::Null; 4 + crate::named::COUNT];
     for (at, value) in values.iter_mut().enumerate() {
         if mask & (1 << at) != 0 {
             *value = filters
@@ -258,6 +258,8 @@ fn scan(
         ValueRef::Text(bytes) => bytes,
         _ => return Err(Failure::usage("the settings are JSON text")),
     };
+    let effective = crate::named::settings(settings, &values[4..])?;
+    let settings = effective.as_ref();
     // A numeric or NULL equality is evaluated by SQLite with TEXT affinity;
     // returning all candidates lets its residual predicate decide. The same
     // applies to malformed text, which SQLite can compare without this host
@@ -278,7 +280,7 @@ fn scan(
     string(settings, "the settings")?;
     let controls = call_settings(ValueRef::Text(settings))?;
     let rows = if kind == "thinkthen_rank_set" {
-        crate::rank_set::ranked(db, &question_text, &packed_text, values[2])?
+        crate::rank_set::ranked(db, &question_text, &packed_text, ValueRef::Text(settings))?
     } else if verb == For::Rank {
         ranked(db, &question_text, &packed_text, controls)?
     } else {
@@ -440,7 +442,10 @@ macro_rules! many {
             const NAME: &'static str = $sql;
             const SCHEMA: &'static CStr = $schema;
             const FIRST_HIDDEN: usize = $visible;
-            const COLUMNS: usize = Self::FIRST_HIDDEN + 4;
+            const COLUMNS: usize = Self::FIRST_HIDDEN + 4 + crate::named::COUNT;
+            fn schema() -> Result<std::borrow::Cow<'static, CStr>, Failure> {
+                crate::named::schema(Self::SCHEMA)
+            }
             const REQUIRED: usize = 2;
             fn rows(_: *mut sqlite3, _: &[Value]) -> Result<Vec<Vec<Value>>, Failure> {
                 Err(Failure::defect("keyed rows lost their borrowed arguments"))

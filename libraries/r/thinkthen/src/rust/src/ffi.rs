@@ -23,8 +23,8 @@ use std::sync::Arc;
 use extendr_api::SEXP;
 use extendr_api::prelude::*;
 
-use crate::calls::receipt::Receipt;
-use crate::calls::{self, Crossed};
+use crate::calls::Completion;
+use crate::calls::Crossed;
 use crate::usage;
 
 mod engine;
@@ -160,8 +160,8 @@ pub(crate) fn deadline_of(value: &Robj) -> Crossed<Option<f64>> {
 }
 
 #[extendr]
-fn tt_completion_new() -> ExternalPtr<Arc<Receipt>> {
-    ExternalPtr::new(Arc::new(Receipt::new()))
+fn tt_completion_new() -> ExternalPtr<Arc<Completion>> {
+    ExternalPtr::new(Arc::new(Completion::new()))
 }
 
 #[extendr]
@@ -174,8 +174,8 @@ fn tt_completion_claim(value: Robj) -> Crossed<()> {
 }
 
 #[extendr]
-fn tt_completion_read_native(value: Robj) -> Crossed<String> {
-    calls::render::receipt(&required_completion(&value)?.read())
+fn tt_completion_read_native(value: Robj) -> Crossed<Robj> {
+    required_completion(&value)?.read()
 }
 
 #[extendr]
@@ -204,8 +204,19 @@ fn tt_complete_error_native(error: Robj) -> Crossed<Robj> {
 }
 
 #[extendr]
-fn tt_usage_counters() -> Crossed<String> {
-    calls::counters()
+fn tt_usage_counters() -> Crossed<Robj> {
+    fn count(value: u64) -> Robj {
+        i32::try_from(value).map_or_else(|_| (value as f64).into(), Robj::from)
+    }
+    let usage = crate::engine()?.usage();
+    Ok(list!(
+        requests_sent = count(usage.requests_sent()),
+        retries = count(usage.retries()),
+        input_tokens = count(usage.input_tokens()),
+        output_tokens = count(usage.output_tokens()),
+        cache_answers = count(usage.cache_answers())
+    )
+    .into())
 }
 
 #[extendr]

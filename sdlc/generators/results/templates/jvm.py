@@ -61,15 +61,20 @@ def condition(tag):
 
 
 def render(definitions):
+    definitions = dict(definitions)
+    facts = dict(definitions['completeFacts'])
+    facts['required'] = [field for field in facts['required'] if field != 'call_id']
+    definitions['completeImmediateFacts'] = facts
     lines = ['// Generated from the Rust result graph. Do not edit.',
              'package thinkthen;', 'import java.util.*;', 'import java.math.*;',
-             'public final class Results {', 'private Results() {}']
+             'public final class Results {', 'private Results() {}', 'public static class View extends Values.View { protected View(Object value) { super(value); } }']
+    trees = []
     parents = {child: name(key) for key, source in definitions.items() for child, _ in source.get('variants', [])}
     for key, raw in definitions.items():
         typ = name(key)
         source = shape(raw)
         if 'variants' in source:
-            lines += [f'public sealed interface {typ} extends Values.Value permits ' + ','.join(name(child) for child, _ in source['variants']) + ' {',
+            lines += [f'public sealed interface {typ} permits ' + ','.join(name(child) for child, _ in source['variants']) + ' {',
                       f'static {typ} read(Object value) {{ Map<String,Object> object = Values.object(value);']
             for child, tag in source['variants']:
                 lines.append(f'if ({condition(tag)}) return {name(child)}.read(value);')
@@ -77,7 +82,7 @@ def render(definitions):
             continue
         if 'primitive_variants' in source:
             alternatives = source['primitive_variants']
-            lines += [f'public sealed interface {typ} extends Values.Value permits ' + ','.join(typ + name(kind) for kind in alternatives) + ' {', f'static {typ} read(Object value) {{']
+            lines += [f'public sealed interface {typ} permits ' + ','.join(typ + name(kind) for kind in alternatives) + ' {', f'static {typ} read(Object value) {{']
             tests = {'boolean': 'Boolean', 'string': 'String', 'number': 'BigDecimal', 'integer': 'BigDecimal', 'array': 'List<?>', 'object': 'Map<?,?>'}
             for kind in alternatives:
                 if kind == 'null':
@@ -86,11 +91,12 @@ def render(definitions):
                     lines.append(f'if (value instanceof {tests[kind]}) return {typ}{name(kind)}.read(value);')
             lines += ['throw new IllegalStateException("Unknown native value alternative");', '}', '}']
             for kind in alternatives:
+                trees.append(f'if (value instanceof {typ}{name(kind)} item) return Values.json(item.value());')
                 target, decode = conversion(source.get('primitive_schemas', {}).get(kind, {'type': kind}), definitions)
-                lines += [f'public record {typ}{name(kind)}({target} value) implements {typ} {{', f'static {typ}{name(kind)} read(Object value) {{ return new {typ}{name(kind)}({decode}); }}', 'public Object json() { return Values.json(value); }', '}']
+                lines += [f'public record {typ}{name(kind)}({target} value) implements {typ} {{', f'static {typ}{name(kind)} read(Object value) {{ return new {typ}{name(kind)}({decode}); }}', 'Object json() { return Values.json(value); }', '}']
             continue
         parent = f' implements {parents[key]}' if key in parents else ''
-        lines += [f'public static final class {typ} extends Values.View{parent} {{', f'public {typ}(Object value) {{ super(value); }}', f'static {typ} read(Object value) {{ return new {typ}(value); }}']
+        lines += [f'public static final class {typ} extends View{parent} {{', f'public {typ}(Object value) {{ super(value); }}', f'static {typ} read(Object value) {{ return new {typ}(value); }}']
         if 'properties' in source:
             for field, spec in source['properties'].items():
                 target, decode = conversion(spec, definitions, 'value')
@@ -106,6 +112,7 @@ def render(definitions):
         for field in named_object_fields(source, definitions):
             lines.append(f'public String {member(field)}Name() {{ return (String)Values.object(required({json.dumps(field)})).get("name"); }}')
         lines.append('}')
+    lines += ['static Object tree(Object value) {', *trees, 'return value;', '}']
     lines.append(answers(definitions))
     return '\n'.join(lines + ['}']) + '\n'
 
@@ -158,27 +165,31 @@ def inputs(definitions):
     lines = ['// Generated from the shared Rust Request schema. Do not edit.',
              'package thinkthen;', 'import java.util.*;',
              '/** Typed wire builders. Native code owns grammar and admission errors. */',
-             'public final class Inputs {', 'private Inputs() {}']
+             'public final class Inputs {', 'private Inputs() {}', 'public abstract static class Builder<T extends Builder<T>> extends Values.Builder<T> {}']
+    trees = []
+    readers = []
     for key, source in sorted(definitions.items()):
         typ = name(key)
         if 'variants' in source:
-            lines += [f'public sealed interface {typ} extends Values.Value permits ' + ','.join(name(child) for child, _ in source['variants']) + ' {']
+            lines += [f'public sealed interface {typ} permits ' + ','.join(name(child) for child, _ in source['variants']) + ' {']
             alternatives = [definitions[child].get('properties', {}) for child, _ in source['variants']]
             for field, spec in alternatives[0].items():
                 if isinstance(spec, dict) and 'const' not in spec and all(fields.get(field) == spec for fields in alternatives):
                     lines.append(f'{typ} {member(field)}({target(spec)} value);')
-            lines.append(f'static {typ} fromJson(Object value) {{ Map<String,Object> object = Values.object(value);')
+            lines.append('}')
+            selected_reader = [f'static {typ} read{typ}(Object value) {{ Map<String,Object> object = Values.object(value);']
             for child, tag in source['variants']:
-                lines.append(f'if ({condition(tag)}) return {name(child)}.fromJson(value);')
+                selected_reader.append(f'if ({condition(tag)}) return {name(child)}.fromJson(value);')
             # Selection only chooses the host carrier; native admission owns invalid shapes.
-            lines += [f'return {name(source["variants"][0][0])}.fromJson(value);', '}', '}']
+            readers += selected_reader + [f'return {name(source["variants"][0][0])}.fromJson(value);', '}']
             continue
         values = enum_values(source)
         if values:
             constants = ','.join(member(value).upper() + '(' + json.dumps(value) + ')' for value in values)
-            lines += [f'public enum {typ} implements Values.Value {{ {constants};',
+            trees.append(f'if (value instanceof {typ} item) return item.json();')
+            lines += [f'public enum {typ} {{ {constants};',
                       f'private final String value; {typ}(String value) {{ this.value = value; }}',
-                      'public Object json() { return value; }', '}']
+                      'Object json() { return value; }', '}']
             continue
         if 'properties' not in source:
             alternatives = source.get('anyOf', source.get('oneOf', []))
@@ -188,13 +199,14 @@ def inputs(definitions):
                 alternatives = [{**source, 'type': kind} for kind in source['type']]
             if alternatives:
                 types = dict.fromkeys(target(item) for item in alternatives if item.get('type') != 'null')
-                lines += [f'public static final class {typ} implements Values.Value {{', 'private final Object value;']
+                trees.append(f'if (value instanceof {typ} item) return item.json();')
+                lines += [f'public static final class {typ} {{', 'private final Object value;']
                 for value_type in types:
                     lines.append(f'public {typ}({value_type} value) {{ this.value = Values.freeze(value); }}')
-                lines += ['public Object json() { return value; }', '}']
+                lines += ['Object json() { return value; }', '}']
             continue
         interfaces = ' implements ' + ','.join(parents[key]) if key in parents else ''
-        lines += [f'public static final class {typ} extends Values.Builder<{typ}>{interfaces} {{', f'public {typ}() {{']
+        lines += [f'public static final class {typ} extends Builder<{typ}>{interfaces} {{', f'public {typ}() {{']
         for field, spec in source['properties'].items():
             if field in source.get('required', []) and isinstance(spec, dict):
                 resolved = definitions[spec['$ref'].removeprefix('#/$defs/')] if '$ref' in spec else spec
@@ -203,7 +215,7 @@ def inputs(definitions):
                 if constant is not None:
                     lines.append(f'put({json.dumps(field)}, {json.dumps(constant)});')
         clear = ' '.join(f'result.omit({json.dumps(field)});' for field in source['properties'])
-        lines += ['}', f'public static {typ} fromJson(Object value) {{ {typ} result = new {typ}(); {clear} Values.object(value).forEach(result::extension); return result; }}', f'protected {typ} self() {{ return this; }}']
+        lines += ['}', f'static {typ} fromJson(Object value) {{ {typ} result = new {typ}(); {clear} Values.object(value).forEach(result::extension); return result; }}', f'protected {typ} self() {{ return this; }}']
         for field, spec in source['properties'].items():
             if isinstance(spec, dict) and 'const' in spec:
                 continue
@@ -212,4 +224,5 @@ def inputs(definitions):
                       f'public {typ} {method}Null() {{ return put({quoted}, null); }}',
                       f'public {typ} omit{method[0].upper() + method[1:]}() {{ return omit({quoted}); }}']
         lines.append('}')
+    lines += readers + ['static Object tree(Object value) {', *trees, 'return value;', '}']
     return '\n'.join(lines + ['}']) + '\n'

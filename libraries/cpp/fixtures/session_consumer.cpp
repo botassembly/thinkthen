@@ -3,15 +3,15 @@
 #include <iostream>
 using namespace tt;
 using namespace tt::inputs;
-static std::string text(const Json& value) { return value.get<std::string>(); }
-static RequestQuestion question(const Json& v) {
+static std::string text(const Data& value) { return value.get<std::string>(); }
+static RequestQuestion question(const Data& v) {
     auto kind=text(v.at("kind"));
-    if(kind=="definition") return RequestQuestionDefinition().set_value(RequestDefinition::from_document(v.at("value")));
+    if(kind=="definition") return RequestQuestionDefinition().set_value(::tt::results::detail::Loader::input<RequestDefinition>(v.at("value")));
     if(kind=="name") return RequestQuestionName().set_name(text(v.at("name")));
     if(kind=="reference") return RequestQuestionReference().set_reference(text(v.at("reference")));
     return RequestQuestionFile().set_path(text(v.at("path")));
 }
-static RequestInput input(const Json& v) {
+static RequestInput input(const Data& v) {
     auto kind=text(v.at("kind"));
     if(kind=="feed") return RequestInputFeed().set_name(text(v.at("name")));
     if(kind=="source") {
@@ -60,8 +60,8 @@ static RequestInput input(const Json& v) {
 int main(int argc,char** argv) {
     if(argc!=3) return 2;
     try {
-        std::ifstream file(argv[1]); auto v=Json::parse(file);
-        Client client(Json::parse(argv[2]).object());
+        std::ifstream file(argv[1]); auto v=Data::read(file);
+        Client client(::tt::results::detail::Loader::input<EngineSettings>(::tt::detail::parse_original(argv[2])));
         auto q=question(v.at("question"));auto in=input(v.at("input"));
         auto opts=v.at("options");RequestOptions options;options.set_attempts(true);
         if(opts.contains("deadline_ms")) options.set_deadline_ms(opts.at("deadline_ms").get<int64_t>());
@@ -86,24 +86,25 @@ int main(int argc,char** argv) {
             if(!moved.input_closed() || !call.input_closed() || moved.try_push(item)) throw std::logic_error("moved closed intake reopened");
             call=std::move(moved);
         }
-        Json::Array packets;
+        Data::Array packets;
         try {
             if(v.contains("feed_items")) for(const auto& item:v.at("feed_items")) {
                 if(call.input_closed()) break;
-                auto next=RequestSessionDescriptor().set_item(RequestItem::from_document(item));
+                auto next=RequestSessionDescriptor().set_item(::tt::results::detail::Loader::input<RequestItem>(item));
                 if(!call.push(next)) break;
             }
             call.finish();
             if(v.at("held_cancel").get<bool>()) { if(std::cin.get()!='!') return 3; call.cancel(); std::cout<<"cancel-fired\n"<<std::flush; }
-            for(const auto& packet:call.collect()) packets.push_back(packet.document());
+            for(const auto& packet:call.collect()) packets.push_back(::tt::results::detail::document(packet));
         }
-        catch(const SessionFailure& error) {
-            for(const auto& packet:error.packets) packets.push_back(packet.document());
-            packets.push_back(error.terminal.document());
+        catch(const ::tt::Failure& error) {
+            if(!error.terminal) throw;
+            for(const auto& packet:error.packets) packets.push_back(::tt::results::detail::document(packet));
+            packets.push_back(::tt::results::detail::document(*error.terminal));
         }
         client.close();call.close();
-        std::cout<<Json{{"packets",packets}}.dump()<<'\n';
-    } catch(const NativeFailure& error) {
-        std::cout<<Json{{"admission",Json{{"code",static_cast<int>(error.kind)},{"message",std::string(error.what())}}}}.dump()<<'\n';
+        std::cout<<::tt::detail::serialize(Data{{"packets",packets}})<<'\n';
+    } catch(const ::tt::Failure& error) {
+        std::cout<<::tt::detail::serialize(Data{{"admission",Data{{"code",static_cast<int>(error.kind)},{"message",std::string(error.what())}}}})<<'\n';
     } catch(const std::exception& error) { std::cerr<<error.what()<<'\n';return 1; }
 }

@@ -34,6 +34,8 @@ The edge type owns serde decoding and schema derives. Convert admitted values di
 
 ## Frozen C compatibility boundary
 
+This section is superseded by [the no-compatibility ruling](../../decisions/2026-10-12-no-compatibility-before-1-0.md) under tickets 0561, 0565 and 0576. It records the earlier boundary; 0.2 retains one current Request admission path and refuses retired shapes.
+
 `thinkthen_call` selects the canonical decoder only when a request carries the new schema marker. Its unversioned request path remains the accepted 0.1 grammar, including later accepted additive controls. Keep the legacy question-file parser and a small legacy envelope translator. Translate accepted legacy values into the same admitted native invocation. The new request schema describes only versioned Request. Keep legacy `doorRequest` in the question-file schema until a separately authorized compatibility change.
 
 Do not deserialize the unversioned envelope with canonical `deny_unknown_fields`. The current BTreeMap decoder keeps the last value of a repeated object key; preserve that behavior at the legacy boundary. The legacy envelope excludes recognize from the functions accepting records. Preserve its usage refusal and diagnostic `recognize takes no records key` when records accompanies recognize, including when evidence is also present. Preserve usage-only requests outside the ten-function Request, details true/false, attempts present only as true, call restrictions and each accepted question grammar. Invalid legacy requests retain their established error kind and diagnostics. Counted no-send safety checks still apply to both paths.

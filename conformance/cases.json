@@ -8815,7 +8815,13 @@
         ],
         "rulings": [
           "0434: client native reader plus keyed table; server evidence paths are refused; both boundaries must execute"
-        ]
+        ],
+        "case_rulings": {
+          "proxy-reservation-refusal": {
+            "boundary": "sdk-only",
+            "reason": "Typed PostgreSQL reading has no proxy reservation argument. Installed native_record_contract_cases proves SQLSTATE 42883 for the unknown named argument and zero backend sends. The native SDK/C/CLI reservation assertions remain unchanged."
+          }
+        }
       },
       {
         "id": "pandas",

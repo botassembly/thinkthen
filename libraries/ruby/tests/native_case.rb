@@ -23,7 +23,10 @@ begin
     ThinkThen::Client.files(source.fetch("paths"), framing: source["framing"], media: source.fetch("media", "text"), **source.fetch("reading", {}).transform_keys(&:to_sym))
   else
     input.fetch("items").map do |item|
-      ThinkThen::Client::Item.new(item.transform_keys(&:to_sym))
+      original = item.fetch("original")
+      value = original.fetch(original.fetch("kind") == "text" ? "text" : "value")
+      fields = item.reject { |key, _| key == "original" }.transform_keys(&:to_sym)
+      ThinkThen::Client.item(value, **fields)
     end
   end
   input = input.each if doc["incremental"] && input.is_a?(Array)

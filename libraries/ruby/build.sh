@@ -8,7 +8,7 @@ cd -- "$(dirname -- "$0")"
 repo=$(CDPATH='' cd ../.. && pwd)
 cargo_home=${CARGO_HOME:-$HOME/.cargo}
 if [ "${THINKTHEN_FULL_COMPILER:-}" != 1 ]; then
-RUSTFLAGS="${RUSTFLAGS:+$RUSTFLAGS }--remap-path-prefix=$repo=/build/source --remap-path-prefix=$cargo_home=/build/cargo --remap-path-prefix=$HOME=/build/home"
+RUSTFLAGS="${RUSTFLAGS:+$RUSTFLAGS }--remap-path-prefix=$repo=/build/source --remap-path-prefix=$cargo_home=/build/cargo --remap-path-prefix=/home=/build/host --remap-path-prefix=/Users=/build/users"
 fi
 # RUSTFLAGS from the environment replaces .cargo/config.toml target rustflags.
 # Preserve the Darwin extension's load-time Ruby symbol lookup when remapping.

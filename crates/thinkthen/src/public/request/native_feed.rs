@@ -1,16 +1,27 @@
 //! Native composed feeds retain their originals while sharing request admission.
-use super::{AdmittedRequest, RequestFraming, RequestInput};
+use super::execution::{FeedContents, RequestFeed};
+use super::{AdmittedRequest, RequestFraming, RequestFunction, RequestInput};
 use crate::{Error, QuestionInput};
 
 pub(super) fn records<'a>(
     request: &'a AdmittedRequest,
-    contents: super::execution::FeedContents<'a>,
+    contents: FeedContents<'a>,
 ) -> Result<super::composition::Inputs<'a>, Error> {
     header(request)?;
-    let super::execution::FeedContents::Records(records) = contents else {
+    let FeedContents::Records(records) = contents else {
         return Err(Error::defect("native feed lost its records"));
     };
-    Ok(records)
+    if !request.request.call.arguments().options.files_only {
+        return Ok(records);
+    }
+    Ok(Box::new(records.map(|row| {
+        row.and_then(|row| {
+            if !matches!(&row.original, QuestionInput::Record(record) if record.location().is_some()) {
+                return Err(Error::usage("files_only requires filter source input"));
+            }
+            Ok(row)
+        })
+    })))
 }
 
 pub(super) fn header(request: &AdmittedRequest) -> Result<(), Error> {
@@ -96,6 +107,57 @@ pub(super) fn validate<T>(
         return Err(Error::usage(message.to_owned()));
     }
     Ok(())
+}
+
+pub(super) fn projection(
+    request: &AdmittedRequest,
+    feed: Option<&RequestFeed<'_>>,
+) -> Result<bool, Error> {
+    let args = request.request.call.arguments();
+    if let RequestInput::Feed { name, .. } = &args.input
+        && feed.is_none_or(|feed| &feed.name != name)
+    {
+        return Err(Error::usage(
+            "the request requires its named caller-supplied feed",
+        ));
+    }
+    let all = feed.is_some_and(|feed| feed.all_filter_results);
+    // Feed location authority belongs to the attached owner, not the header.
+    if args.options.files_only
+        && matches!(args.input, RequestInput::Feed { .. })
+        && feed.is_none_or(|feed| {
+            !matches!(
+                feed.contents,
+                FeedContents::Records(_) | FeedContents::Session(_)
+            )
+        })
+    {
+        return Err(Error::usage("files_only requires filter source input"));
+    }
+    if all
+        && (request.request.call.function() != RequestFunction::Filter
+            || !matches!(args.input, RequestInput::Feed { .. })
+            || feed.is_none_or(|feed| {
+                !matches!(
+                    feed.contents,
+                    FeedContents::Records(_) | FeedContents::Session(_)
+                )
+            }))
+    {
+        return Err(Error::usage(
+            "all filter results require a native composed filter feed",
+        ));
+    }
+    if feed.is_some_and(|feed| feed.record_reading.is_some())
+        && (!matches!(args.input, RequestInput::Feed { .. })
+            || feed.is_none_or(|feed| !matches!(feed.contents, FeedContents::Session(_)))
+            || super::composition::explicit_projection(&args.options))
+    {
+        return Err(Error::usage(
+            "owned record reading requires a session feed without request projections",
+        ));
+    }
+    Ok(all)
 }
 
 #[cfg(test)]

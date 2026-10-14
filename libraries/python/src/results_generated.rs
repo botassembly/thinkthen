@@ -289,66 +289,6 @@ pub(crate) fn convert(py: Python<'_>, kind: &str, value: &Value) -> PyResult<Py<
             "completeRankMemberResult",
             value,
         ),
-        "completeReadableQuestion" => {
-            if value.get("verb").and_then(Value::as_str) == Some("decide") {
-                return convert(py, "completeReadableQuestion_decide", value);
-            }
-            if value.get("verb").and_then(Value::as_str) == Some("choose") {
-                return convert(py, "completeReadableQuestion_choose", value);
-            }
-            if value.get("verb").and_then(Value::as_str) == Some("tag") {
-                return convert(py, "completeReadableQuestion_tag", value);
-            }
-            if value.get("verb").and_then(Value::as_str) == Some("score") {
-                return convert(py, "completeReadableQuestion_score", value);
-            }
-            Err(crate::defect(
-                py,
-                "native result has no generated alternative",
-            ))
-        }
-        "completeReadableQuestion2" => object(
-            py,
-            "NativeReadableQuestion2",
-            "completeReadableQuestion2",
-            value,
-        ),
-        "completeReadableQuestion3" => object(
-            py,
-            "NativeReadableQuestion3",
-            "completeReadableQuestion3",
-            value,
-        ),
-        "completeReadableQuestion4" => object(
-            py,
-            "NativeReadableQuestion4",
-            "completeReadableQuestion4",
-            value,
-        ),
-        "completeReadableQuestion_choose" => object(
-            py,
-            "NativeReadableQuestionChoose",
-            "completeReadableQuestion_choose",
-            value,
-        ),
-        "completeReadableQuestion_decide" => object(
-            py,
-            "NativeReadableQuestionDecide",
-            "completeReadableQuestion_decide",
-            value,
-        ),
-        "completeReadableQuestion_score" => object(
-            py,
-            "NativeReadableQuestionScore",
-            "completeReadableQuestion_score",
-            value,
-        ),
-        "completeReadableQuestion_tag" => object(
-            py,
-            "NativeReadableQuestionTag",
-            "completeReadableQuestion_tag",
-            value,
-        ),
         "completeRecognition" => object(py, "NativeRecognition", "completeRecognition", value),
         "completeRecognitionEdgeDocument" => object(
             py,
@@ -548,13 +488,62 @@ pub(crate) fn convert(py: Python<'_>, kind: &str, value: &Value) -> PyResult<Py<
         "completefailureCause" => plain(py, value),
         "completefailureKind" => plain(py, value),
         "completefindAnswer" => object(py, "NativeFindAnswer", "completefindAnswer", value),
+        "completefindQuestionDocument" => object(
+            py,
+            "NativeFindQuestionDocument",
+            "completefindQuestionDocument",
+            value,
+        ),
         "completenameOdds" => object(py, "NativeNameOdds", "completenameOdds", value),
         "completepairOdds" => object(py, "NativePairOdds", "completepairOdds", value),
         "completepieceOdds" => object(py, "NativePieceOdds", "completepieceOdds", value),
         "completeplace" => object(py, "NativePlace", "completeplace", value),
+        "completeplan" => object(py, "NativePlan", "completeplan", value),
         "completeprofileWarning" => {
             object(py, "NativeProfileWarning", "completeprofileWarning", value)
         }
+        "completequestionDocument" => {
+            if value.get("verb").and_then(Value::as_str) == Some("decide") {
+                return convert(py, "completequestionDocument_decide", value);
+            }
+            if value.get("verb").and_then(Value::as_str) == Some("choose") {
+                return convert(py, "completequestionDocument_choose", value);
+            }
+            if value.get("verb").and_then(Value::as_str) == Some("tag") {
+                return convert(py, "completequestionDocument_tag", value);
+            }
+            if value.get("verb").and_then(Value::as_str) == Some("score") {
+                return convert(py, "completequestionDocument_score", value);
+            }
+            Err(crate::defect(
+                py,
+                "native result has no generated alternative",
+            ))
+        }
+        "completequestionDocument_choose" => object(
+            py,
+            "NativeQuestionDocumentChoose",
+            "completequestionDocument_choose",
+            value,
+        ),
+        "completequestionDocument_decide" => object(
+            py,
+            "NativeQuestionDocumentDecide",
+            "completequestionDocument_decide",
+            value,
+        ),
+        "completequestionDocument_score" => object(
+            py,
+            "NativeQuestionDocumentScore",
+            "completequestionDocument_score",
+            value,
+        ),
+        "completequestionDocument_tag" => object(
+            py,
+            "NativeQuestionDocumentTag",
+            "completequestionDocument_tag",
+            value,
+        ),
         "completerecognize" => {
             if value.get("entities").is_some()
                 && value.get("mode").is_none()
@@ -579,6 +568,12 @@ pub(crate) fn convert(py: Python<'_>, kind: &str, value: &Value) -> PyResult<Py<
             "completerecognizeAnswer",
             value,
         ),
+        "completerecognizeQuestionDocument" => object(
+            py,
+            "NativeRecognizeQuestionDocument",
+            "completerecognizeQuestionDocument",
+            value,
+        ),
         "completerecognize_entities" => object(
             py,
             "NativeRecognizeEntities",
@@ -592,6 +587,12 @@ pub(crate) fn convert(py: Python<'_>, kind: &str, value: &Value) -> PyResult<Py<
             value,
         ),
         "completerelateFields" => object(py, "NativeRelateFields", "completerelateFields", value),
+        "completerelateQuestionDocument" => object(
+            py,
+            "NativeRelateQuestionDocument",
+            "completerelateQuestionDocument",
+            value,
+        ),
         "completerelatedEntity" => {
             object(py, "NativeRelatedEntity", "completerelatedEntity", value)
         }
@@ -986,6 +987,7 @@ pub(crate) fn convert(py: Python<'_>, kind: &str, value: &Value) -> PyResult<Py<
             value,
         ),
         "completethreshold" => plain(py, value),
+        "completetokenBand" => object(py, "NativeTokenBand", "completetokenBand", value),
         "completetokenUsage" => object(py, "NativeTokenUsage", "completetokenUsage", value),
         "completevalue" => plain(py, value),
         _ => Err(crate::defect(py, "unknown generated Python result type")),
@@ -1031,7 +1033,7 @@ pub(crate) fn field(
             array(py, value, |value| convert(py, "completeObservation", value))
         }
         ("completeAnnotationMember_answer_id", "question") => {
-            convert(py, "completeReadableQuestion", value)
+            convert(py, "completequestionDocument", value)
         }
         ("completeAnnotationMember_answer_id", "question_sources") => array(py, value, |value| {
             convert(py, "completeQuestionSource", value)
@@ -1060,7 +1062,7 @@ pub(crate) fn field(
             array(py, value, |value| convert(py, "completeObservation", value))
         }
         ("completeAnnotationMember_failure_id", "question") => {
-            convert(py, "completeReadableQuestion", value)
+            convert(py, "completequestionDocument", value)
         }
         ("completeAnnotationMember_failure_id", "question_sources") => array(py, value, |value| {
             convert(py, "completeQuestionSource", value)
@@ -1105,7 +1107,7 @@ pub(crate) fn field(
         }
         ("completeAtomic_Array_of_string", "meta") => convert(py, "completeMeta", value),
         ("completeAtomic_Array_of_string", "question") => {
-            convert(py, "completeReadableQuestion", value)
+            convert(py, "completequestionDocument", value)
         }
         ("completeAtomic_Array_of_string", "question_name") => plain(py, value),
         ("completeAtomic_Array_of_string", "schema") => convert(py, "completeVersion", value),
@@ -1136,7 +1138,7 @@ pub(crate) fn field(
         }
         ("completeAtomic_DecideValue", "meta") => convert(py, "completeMeta", value),
         ("completeAtomic_DecideValue", "question") => {
-            convert(py, "completeReadableQuestion", value)
+            convert(py, "completequestionDocument", value)
         }
         ("completeAtomic_DecideValue", "question_name") => plain(py, value),
         ("completeAtomic_DecideValue", "schema") => convert(py, "completeVersion", value),
@@ -1167,7 +1169,7 @@ pub(crate) fn field(
         }
         ("completeAtomic_NonZeroUsize", "meta") => convert(py, "completeMeta", value),
         ("completeAtomic_NonZeroUsize", "question") => {
-            convert(py, "completeReadableQuestion", value)
+            convert(py, "completequestionDocument", value)
         }
         ("completeAtomic_NonZeroUsize", "question_name") => plain(py, value),
         ("completeAtomic_NonZeroUsize", "schema") => convert(py, "completeVersion", value),
@@ -1198,7 +1200,7 @@ pub(crate) fn field(
         }
         ("completeAtomic_Nullable_string", "meta") => convert(py, "completeMeta", value),
         ("completeAtomic_Nullable_string", "question") => {
-            convert(py, "completeReadableQuestion", value)
+            convert(py, "completequestionDocument", value)
         }
         ("completeAtomic_Nullable_string", "question_name") => plain(py, value),
         ("completeAtomic_Nullable_string", "schema") => convert(py, "completeVersion", value),
@@ -1228,7 +1230,7 @@ pub(crate) fn field(
             array(py, value, |value| convert(py, "completeRankMember", value))
         }
         ("completeAtomic_boolean", "meta") => convert(py, "completeMeta", value),
-        ("completeAtomic_boolean", "question") => convert(py, "completeReadableQuestion", value),
+        ("completeAtomic_boolean", "question") => convert(py, "completequestionDocument", value),
         ("completeAtomic_boolean", "question_name") => plain(py, value),
         ("completeAtomic_boolean", "schema") => convert(py, "completeVersion", value),
         ("completeAtomic_boolean", "source") => {
@@ -1257,7 +1259,7 @@ pub(crate) fn field(
             array(py, value, |value| convert(py, "completeRankMember", value))
         }
         ("completeAtomic_double", "meta") => convert(py, "completeMeta", value),
-        ("completeAtomic_double", "question") => convert(py, "completeReadableQuestion", value),
+        ("completeAtomic_double", "question") => convert(py, "completequestionDocument", value),
         ("completeAtomic_double", "question_name") => plain(py, value),
         ("completeAtomic_double", "schema") => convert(py, "completeVersion", value),
         ("completeAtomic_double", "source") => {
@@ -1363,7 +1365,7 @@ pub(crate) fn field(
         ("completeFind", "last_line") => plain(py, value),
         ("completeFind", "meta") => convert(py, "completeMeta", value),
         ("completeFind", "position") => convert(py, "completePosition", value),
-        ("completeFind", "question") => convert(py, "completeReadableQuestion2", value),
+        ("completeFind", "question") => convert(py, "completefindQuestionDocument", value),
         ("completeFind", "schema") => convert(py, "completeVersion", value),
         ("completeFind", "threshold") => plain(py, value),
         ("completeFind", "value") => plain(py, value),
@@ -1483,7 +1485,7 @@ pub(crate) fn field(
             array(py, value, |value| convert(py, "completeImage", value))
         }
         ("completeRankMemberResult", "meta") => convert(py, "completeMeta", value),
-        ("completeRankMemberResult", "question") => convert(py, "completeReadableQuestion", value),
+        ("completeRankMemberResult", "question") => convert(py, "completequestionDocument", value),
         ("completeRankMemberResult", "schema") => convert(py, "completeVersion", value),
         ("completeRankMemberResult", "source") => {
             if value.is_null() {
@@ -1494,343 +1496,6 @@ pub(crate) fn field(
         }
         ("completeRankMemberResult", "threshold") => plain(py, value),
         ("completeRankMemberResult", "value") => plain(py, value),
-        ("completeReadableQuestion2", "batch") => {
-            if value.is_null() {
-                plain(py, value)
-            } else {
-                convert(py, "completeBatch", value)
-            }
-        }
-        ("completeReadableQuestion2", "context_schema") => {
-            if value.is_null() {
-                plain(py, value)
-            } else {
-                convert(py, "completeInputDeclaration", value)
-            }
-        }
-        ("completeReadableQuestion2", "item_schema") => {
-            if value.is_null() {
-                plain(py, value)
-            } else {
-                convert(py, "completeInputDeclaration", value)
-            }
-        }
-        ("completeReadableQuestion2", "label_details") => {
-            array(py, value, |value| convert(py, "completeLabel", value))
-        }
-        ("completeReadableQuestion2", "model") => plain(py, value),
-        ("completeReadableQuestion2", "name") => {
-            if value.is_null() {
-                plain(py, value)
-            } else {
-                convert(py, "completeQuestionName", value)
-            }
-        }
-        ("completeReadableQuestion2", "none") => plain(py, value),
-        ("completeReadableQuestion2", "on") => array(py, value, |value| plain(py, value)),
-        ("completeReadableQuestion2", "profile") => plain(py, value),
-        ("completeReadableQuestion2", "text") => plain(py, value),
-        ("completeReadableQuestion2", "verb") => plain(py, value),
-        ("completeReadableQuestion2", "wording_version") => {
-            if value.is_null() {
-                plain(py, value)
-            } else {
-                convert(py, "completeWordingVersion", value)
-            }
-        }
-        ("completeReadableQuestion3", "batch") => {
-            if value.is_null() {
-                plain(py, value)
-            } else {
-                convert(py, "completeBatch", value)
-            }
-        }
-        ("completeReadableQuestion3", "context_schema") => {
-            if value.is_null() {
-                plain(py, value)
-            } else {
-                convert(py, "completeInputDeclaration", value)
-            }
-        }
-        ("completeReadableQuestion3", "entity_definition") => plain(py, value),
-        ("completeReadableQuestion3", "instructions") => plain(py, value),
-        ("completeReadableQuestion3", "item_schema") => {
-            if value.is_null() {
-                plain(py, value)
-            } else {
-                convert(py, "completeInputDeclaration", value)
-            }
-        }
-        ("completeReadableQuestion3", "kinds") => mapping(py, value, |value| plain(py, value)),
-        ("completeReadableQuestion3", "label_details") => {
-            array(py, value, |value| convert(py, "completeLabel", value))
-        }
-        ("completeReadableQuestion3", "mode") => convert(py, "completeRecognitionMode", value),
-        ("completeReadableQuestion3", "model") => plain(py, value),
-        ("completeReadableQuestion3", "name") => {
-            if value.is_null() {
-                plain(py, value)
-            } else {
-                convert(py, "completeQuestionName", value)
-            }
-        }
-        ("completeReadableQuestion3", "on") => array(py, value, |value| plain(py, value)),
-        ("completeReadableQuestion3", "profile") => plain(py, value),
-        ("completeReadableQuestion3", "relation_threshold") => {
-            if value.is_null() {
-                plain(py, value)
-            } else {
-                convert(py, "completethreshold", value)
-            }
-        }
-        ("completeReadableQuestion3", "relations") => array(py, value, |value| {
-            convert(py, "completerelationRule", value)
-        }),
-        ("completeReadableQuestion3", "snippet_pieces") => plain(py, value),
-        ("completeReadableQuestion3", "stage_context") => {
-            convert(py, "completeRecognitionStageContext", value)
-        }
-        ("completeReadableQuestion3", "threshold") => convert(py, "completethreshold", value),
-        ("completeReadableQuestion3", "verb") => convert(py, "completeVerb", value),
-        ("completeReadableQuestion3", "wording_version") => {
-            if value.is_null() {
-                plain(py, value)
-            } else {
-                convert(py, "completeWordingVersion", value)
-            }
-        }
-        ("completeReadableQuestion4", "batch") => {
-            if value.is_null() {
-                plain(py, value)
-            } else {
-                convert(py, "completeBatch", value)
-            }
-        }
-        ("completeReadableQuestion4", "context_schema") => {
-            if value.is_null() {
-                plain(py, value)
-            } else {
-                convert(py, "completeInputDeclaration", value)
-            }
-        }
-        ("completeReadableQuestion4", "fields") => {
-            if value.is_null() {
-                plain(py, value)
-            } else {
-                convert(py, "completerelateFields", value)
-            }
-        }
-        ("completeReadableQuestion4", "item_schema") => {
-            if value.is_null() {
-                plain(py, value)
-            } else {
-                convert(py, "completeInputDeclaration", value)
-            }
-        }
-        ("completeReadableQuestion4", "label_details") => {
-            array(py, value, |value| convert(py, "completeLabel", value))
-        }
-        ("completeReadableQuestion4", "model") => plain(py, value),
-        ("completeReadableQuestion4", "name") => {
-            if value.is_null() {
-                plain(py, value)
-            } else {
-                convert(py, "completeQuestionName", value)
-            }
-        }
-        ("completeReadableQuestion4", "on") => array(py, value, |value| plain(py, value)),
-        ("completeReadableQuestion4", "profile") => plain(py, value),
-        ("completeReadableQuestion4", "relations") => array(py, value, |value| {
-            convert(py, "completerelationRule", value)
-        }),
-        ("completeReadableQuestion4", "threshold") => convert(py, "completethreshold", value),
-        ("completeReadableQuestion4", "verb") => plain(py, value),
-        ("completeReadableQuestion4", "wording_version") => {
-            if value.is_null() {
-                plain(py, value)
-            } else {
-                convert(py, "completeWordingVersion", value)
-            }
-        }
-        ("completeReadableQuestion_choose", "batch") => {
-            if value.is_null() {
-                plain(py, value)
-            } else {
-                convert(py, "completeBatch", value)
-            }
-        }
-        ("completeReadableQuestion_choose", "context_schema") => {
-            if value.is_null() {
-                plain(py, value)
-            } else {
-                convert(py, "completeInputDeclaration", value)
-            }
-        }
-        ("completeReadableQuestion_choose", "item_schema") => {
-            if value.is_null() {
-                plain(py, value)
-            } else {
-                convert(py, "completeInputDeclaration", value)
-            }
-        }
-        ("completeReadableQuestion_choose", "label_details") => {
-            array(py, value, |value| convert(py, "completeLabel", value))
-        }
-        ("completeReadableQuestion_choose", "model") => plain(py, value),
-        ("completeReadableQuestion_choose", "name") => {
-            if value.is_null() {
-                plain(py, value)
-            } else {
-                convert(py, "completeQuestionName", value)
-            }
-        }
-        ("completeReadableQuestion_choose", "on") => array(py, value, |value| plain(py, value)),
-        ("completeReadableQuestion_choose", "profile") => plain(py, value),
-        ("completeReadableQuestion_choose", "wording_version") => {
-            if value.is_null() {
-                plain(py, value)
-            } else {
-                convert(py, "completeWordingVersion", value)
-            }
-        }
-        ("completeReadableQuestion_choose", "options") => {
-            array(py, value, |value| plain(py, value))
-        }
-        ("completeReadableQuestion_choose", "text") => plain(py, value),
-        ("completeReadableQuestion_choose", "verb") => plain(py, value),
-        ("completeReadableQuestion_decide", "batch") => {
-            if value.is_null() {
-                plain(py, value)
-            } else {
-                convert(py, "completeBatch", value)
-            }
-        }
-        ("completeReadableQuestion_decide", "context_schema") => {
-            if value.is_null() {
-                plain(py, value)
-            } else {
-                convert(py, "completeInputDeclaration", value)
-            }
-        }
-        ("completeReadableQuestion_decide", "item_schema") => {
-            if value.is_null() {
-                plain(py, value)
-            } else {
-                convert(py, "completeInputDeclaration", value)
-            }
-        }
-        ("completeReadableQuestion_decide", "label_details") => {
-            array(py, value, |value| convert(py, "completeLabel", value))
-        }
-        ("completeReadableQuestion_decide", "model") => plain(py, value),
-        ("completeReadableQuestion_decide", "name") => {
-            if value.is_null() {
-                plain(py, value)
-            } else {
-                convert(py, "completeQuestionName", value)
-            }
-        }
-        ("completeReadableQuestion_decide", "on") => array(py, value, |value| plain(py, value)),
-        ("completeReadableQuestion_decide", "profile") => plain(py, value),
-        ("completeReadableQuestion_decide", "wording_version") => {
-            if value.is_null() {
-                plain(py, value)
-            } else {
-                convert(py, "completeWordingVersion", value)
-            }
-        }
-        ("completeReadableQuestion_decide", "false") => plain(py, value),
-        ("completeReadableQuestion_decide", "text") => plain(py, value),
-        ("completeReadableQuestion_decide", "true") => plain(py, value),
-        ("completeReadableQuestion_decide", "verb") => plain(py, value),
-        ("completeReadableQuestion_score", "batch") => {
-            if value.is_null() {
-                plain(py, value)
-            } else {
-                convert(py, "completeBatch", value)
-            }
-        }
-        ("completeReadableQuestion_score", "context_schema") => {
-            if value.is_null() {
-                plain(py, value)
-            } else {
-                convert(py, "completeInputDeclaration", value)
-            }
-        }
-        ("completeReadableQuestion_score", "item_schema") => {
-            if value.is_null() {
-                plain(py, value)
-            } else {
-                convert(py, "completeInputDeclaration", value)
-            }
-        }
-        ("completeReadableQuestion_score", "label_details") => {
-            array(py, value, |value| convert(py, "completeLabel", value))
-        }
-        ("completeReadableQuestion_score", "model") => plain(py, value),
-        ("completeReadableQuestion_score", "name") => {
-            if value.is_null() {
-                plain(py, value)
-            } else {
-                convert(py, "completeQuestionName", value)
-            }
-        }
-        ("completeReadableQuestion_score", "on") => array(py, value, |value| plain(py, value)),
-        ("completeReadableQuestion_score", "profile") => plain(py, value),
-        ("completeReadableQuestion_score", "wording_version") => {
-            if value.is_null() {
-                plain(py, value)
-            } else {
-                convert(py, "completeWordingVersion", value)
-            }
-        }
-        ("completeReadableQuestion_score", "levels") => array(py, value, |value| plain(py, value)),
-        ("completeReadableQuestion_score", "text") => plain(py, value),
-        ("completeReadableQuestion_score", "verb") => plain(py, value),
-        ("completeReadableQuestion_tag", "batch") => {
-            if value.is_null() {
-                plain(py, value)
-            } else {
-                convert(py, "completeBatch", value)
-            }
-        }
-        ("completeReadableQuestion_tag", "context_schema") => {
-            if value.is_null() {
-                plain(py, value)
-            } else {
-                convert(py, "completeInputDeclaration", value)
-            }
-        }
-        ("completeReadableQuestion_tag", "item_schema") => {
-            if value.is_null() {
-                plain(py, value)
-            } else {
-                convert(py, "completeInputDeclaration", value)
-            }
-        }
-        ("completeReadableQuestion_tag", "label_details") => {
-            array(py, value, |value| convert(py, "completeLabel", value))
-        }
-        ("completeReadableQuestion_tag", "model") => plain(py, value),
-        ("completeReadableQuestion_tag", "name") => {
-            if value.is_null() {
-                plain(py, value)
-            } else {
-                convert(py, "completeQuestionName", value)
-            }
-        }
-        ("completeReadableQuestion_tag", "on") => array(py, value, |value| plain(py, value)),
-        ("completeReadableQuestion_tag", "profile") => plain(py, value),
-        ("completeReadableQuestion_tag", "wording_version") => {
-            if value.is_null() {
-                plain(py, value)
-            } else {
-                convert(py, "completeWordingVersion", value)
-            }
-        }
-        ("completeReadableQuestion_tag", "labels") => array(py, value, |value| plain(py, value)),
-        ("completeReadableQuestion_tag", "text") => plain(py, value),
-        ("completeReadableQuestion_tag", "verb") => plain(py, value),
         ("completeRecognition", "answer") => convert(py, "completeRecognitionOdds", value),
         ("completeRecognition", "answer_id") => convert(py, "completeAnswerId", value),
         ("completeRecognition", "file") => plain(py, value),
@@ -1840,7 +1505,9 @@ pub(crate) fn field(
         ("completeRecognition", "last_line") => plain(py, value),
         ("completeRecognition", "meta") => convert(py, "completeMeta", value),
         ("completeRecognition", "position") => convert(py, "completePosition", value),
-        ("completeRecognition", "question") => convert(py, "completeReadableQuestion3", value),
+        ("completeRecognition", "question") => {
+            convert(py, "completerecognizeQuestionDocument", value)
+        }
         ("completeRecognition", "schema") => convert(py, "completeVersion", value),
         ("completeRecognition", "source") => {
             if value.is_null() {
@@ -1901,7 +1568,7 @@ pub(crate) fn field(
         ("completeRelation", "last_line") => plain(py, value),
         ("completeRelation", "meta") => convert(py, "completeMeta", value),
         ("completeRelation", "position") => convert(py, "completePosition", value),
-        ("completeRelation", "question") => convert(py, "completeReadableQuestion4", value),
+        ("completeRelation", "question") => convert(py, "completerelateQuestionDocument", value),
         ("completeRelation", "schema") => convert(py, "completeVersion", value),
         ("completeRelation", "value") => array(py, value, |value| {
             convert(py, "completerelatedEntityEdge", value)
@@ -1925,7 +1592,7 @@ pub(crate) fn field(
             array(py, value, |value| convert(py, "completeObservation", value))
         }
         ("completeRelationMember_answer_id", "question") => {
-            convert(py, "completeReadableQuestion", value)
+            convert(py, "completequestionDocument", value)
         }
         ("completeRelationMember_answer_id", "question_sources") => array(py, value, |value| {
             convert(py, "completeQuestionSource", value)
@@ -1967,7 +1634,7 @@ pub(crate) fn field(
             array(py, value, |value| convert(py, "completeObservation", value))
         }
         ("completeRelationMember_failure_id", "question") => {
-            convert(py, "completeReadableQuestion", value)
+            convert(py, "completequestionDocument", value)
         }
         ("completeRelationMember_failure_id", "question_sources") => array(py, value, |value| {
             convert(py, "completeQuestionSource", value)
@@ -2045,6 +1712,50 @@ pub(crate) fn field(
         ("completefindAnswer", "kind") => plain(py, value),
         ("completefindAnswer", "pick") => plain(py, value),
         ("completefindAnswer", "probabilities") => mapping(py, value, |value| plain(py, value)),
+        ("completefindQuestionDocument", "batch") => {
+            if value.is_null() {
+                plain(py, value)
+            } else {
+                convert(py, "completeBatch", value)
+            }
+        }
+        ("completefindQuestionDocument", "context_schema") => {
+            if value.is_null() {
+                plain(py, value)
+            } else {
+                convert(py, "completeInputDeclaration", value)
+            }
+        }
+        ("completefindQuestionDocument", "item_schema") => {
+            if value.is_null() {
+                plain(py, value)
+            } else {
+                convert(py, "completeInputDeclaration", value)
+            }
+        }
+        ("completefindQuestionDocument", "label_details") => {
+            array(py, value, |value| convert(py, "completeLabel", value))
+        }
+        ("completefindQuestionDocument", "model") => plain(py, value),
+        ("completefindQuestionDocument", "name") => {
+            if value.is_null() {
+                plain(py, value)
+            } else {
+                convert(py, "completeQuestionName", value)
+            }
+        }
+        ("completefindQuestionDocument", "none") => plain(py, value),
+        ("completefindQuestionDocument", "on") => array(py, value, |value| plain(py, value)),
+        ("completefindQuestionDocument", "profile") => plain(py, value),
+        ("completefindQuestionDocument", "text") => plain(py, value),
+        ("completefindQuestionDocument", "verb") => plain(py, value),
+        ("completefindQuestionDocument", "wording_version") => {
+            if value.is_null() {
+                plain(py, value)
+            } else {
+                convert(py, "completeWordingVersion", value)
+            }
+        }
         ("completenameOdds", "edges") => mapping(py, value, |value| plain(py, value)),
         ("completenameOdds", "end") => plain(py, value),
         ("completenameOdds", "kinds") => mapping(py, value, |value| plain(py, value)),
@@ -2058,8 +1769,196 @@ pub(crate) fn field(
         ("completepieceOdds", "tags") => mapping(py, value, |value| plain(py, value)),
         ("completeplace", "end") => plain(py, value),
         ("completeplace", "start") => plain(py, value),
+        ("completeplan", "estimated_bytes") => plain(py, value),
+        ("completeplan", "estimated_input_tokens") => convert(py, "completetokenBand", value),
+        ("completeplan", "first_body_utf8") => plain(py, value),
+        ("completeplan", "largest_request_bytes") => plain(py, value),
+        ("completeplan", "largest_request_estimated_input_tokens") => plain(py, value),
+        ("completeplan", "records") => plain(py, value),
+        ("completeplan", "requests") => plain(py, value),
+        ("completeplan", "token_estimate_method") => plain(py, value),
+        ("completeplan", "upper_bound") => plain(py, value),
         ("completeprofileWarning", "running") => plain(py, value),
         ("completeprofileWarning", "tuned_for") => plain(py, value),
+        ("completequestionDocument_choose", "batch") => {
+            if value.is_null() {
+                plain(py, value)
+            } else {
+                convert(py, "completeBatch", value)
+            }
+        }
+        ("completequestionDocument_choose", "context_schema") => {
+            if value.is_null() {
+                plain(py, value)
+            } else {
+                convert(py, "completeInputDeclaration", value)
+            }
+        }
+        ("completequestionDocument_choose", "item_schema") => {
+            if value.is_null() {
+                plain(py, value)
+            } else {
+                convert(py, "completeInputDeclaration", value)
+            }
+        }
+        ("completequestionDocument_choose", "label_details") => {
+            array(py, value, |value| convert(py, "completeLabel", value))
+        }
+        ("completequestionDocument_choose", "model") => plain(py, value),
+        ("completequestionDocument_choose", "name") => {
+            if value.is_null() {
+                plain(py, value)
+            } else {
+                convert(py, "completeQuestionName", value)
+            }
+        }
+        ("completequestionDocument_choose", "on") => array(py, value, |value| plain(py, value)),
+        ("completequestionDocument_choose", "profile") => plain(py, value),
+        ("completequestionDocument_choose", "wording_version") => {
+            if value.is_null() {
+                plain(py, value)
+            } else {
+                convert(py, "completeWordingVersion", value)
+            }
+        }
+        ("completequestionDocument_choose", "options") => {
+            array(py, value, |value| plain(py, value))
+        }
+        ("completequestionDocument_choose", "text") => plain(py, value),
+        ("completequestionDocument_choose", "verb") => plain(py, value),
+        ("completequestionDocument_decide", "batch") => {
+            if value.is_null() {
+                plain(py, value)
+            } else {
+                convert(py, "completeBatch", value)
+            }
+        }
+        ("completequestionDocument_decide", "context_schema") => {
+            if value.is_null() {
+                plain(py, value)
+            } else {
+                convert(py, "completeInputDeclaration", value)
+            }
+        }
+        ("completequestionDocument_decide", "item_schema") => {
+            if value.is_null() {
+                plain(py, value)
+            } else {
+                convert(py, "completeInputDeclaration", value)
+            }
+        }
+        ("completequestionDocument_decide", "label_details") => {
+            array(py, value, |value| convert(py, "completeLabel", value))
+        }
+        ("completequestionDocument_decide", "model") => plain(py, value),
+        ("completequestionDocument_decide", "name") => {
+            if value.is_null() {
+                plain(py, value)
+            } else {
+                convert(py, "completeQuestionName", value)
+            }
+        }
+        ("completequestionDocument_decide", "on") => array(py, value, |value| plain(py, value)),
+        ("completequestionDocument_decide", "profile") => plain(py, value),
+        ("completequestionDocument_decide", "wording_version") => {
+            if value.is_null() {
+                plain(py, value)
+            } else {
+                convert(py, "completeWordingVersion", value)
+            }
+        }
+        ("completequestionDocument_decide", "false") => plain(py, value),
+        ("completequestionDocument_decide", "text") => plain(py, value),
+        ("completequestionDocument_decide", "true") => plain(py, value),
+        ("completequestionDocument_decide", "verb") => plain(py, value),
+        ("completequestionDocument_score", "batch") => {
+            if value.is_null() {
+                plain(py, value)
+            } else {
+                convert(py, "completeBatch", value)
+            }
+        }
+        ("completequestionDocument_score", "context_schema") => {
+            if value.is_null() {
+                plain(py, value)
+            } else {
+                convert(py, "completeInputDeclaration", value)
+            }
+        }
+        ("completequestionDocument_score", "item_schema") => {
+            if value.is_null() {
+                plain(py, value)
+            } else {
+                convert(py, "completeInputDeclaration", value)
+            }
+        }
+        ("completequestionDocument_score", "label_details") => {
+            array(py, value, |value| convert(py, "completeLabel", value))
+        }
+        ("completequestionDocument_score", "model") => plain(py, value),
+        ("completequestionDocument_score", "name") => {
+            if value.is_null() {
+                plain(py, value)
+            } else {
+                convert(py, "completeQuestionName", value)
+            }
+        }
+        ("completequestionDocument_score", "on") => array(py, value, |value| plain(py, value)),
+        ("completequestionDocument_score", "profile") => plain(py, value),
+        ("completequestionDocument_score", "wording_version") => {
+            if value.is_null() {
+                plain(py, value)
+            } else {
+                convert(py, "completeWordingVersion", value)
+            }
+        }
+        ("completequestionDocument_score", "levels") => array(py, value, |value| plain(py, value)),
+        ("completequestionDocument_score", "text") => plain(py, value),
+        ("completequestionDocument_score", "verb") => plain(py, value),
+        ("completequestionDocument_tag", "batch") => {
+            if value.is_null() {
+                plain(py, value)
+            } else {
+                convert(py, "completeBatch", value)
+            }
+        }
+        ("completequestionDocument_tag", "context_schema") => {
+            if value.is_null() {
+                plain(py, value)
+            } else {
+                convert(py, "completeInputDeclaration", value)
+            }
+        }
+        ("completequestionDocument_tag", "item_schema") => {
+            if value.is_null() {
+                plain(py, value)
+            } else {
+                convert(py, "completeInputDeclaration", value)
+            }
+        }
+        ("completequestionDocument_tag", "label_details") => {
+            array(py, value, |value| convert(py, "completeLabel", value))
+        }
+        ("completequestionDocument_tag", "model") => plain(py, value),
+        ("completequestionDocument_tag", "name") => {
+            if value.is_null() {
+                plain(py, value)
+            } else {
+                convert(py, "completeQuestionName", value)
+            }
+        }
+        ("completequestionDocument_tag", "on") => array(py, value, |value| plain(py, value)),
+        ("completequestionDocument_tag", "profile") => plain(py, value),
+        ("completequestionDocument_tag", "wording_version") => {
+            if value.is_null() {
+                plain(py, value)
+            } else {
+                convert(py, "completeWordingVersion", value)
+            }
+        }
+        ("completequestionDocument_tag", "labels") => array(py, value, |value| plain(py, value)),
+        ("completequestionDocument_tag", "text") => plain(py, value),
+        ("completequestionDocument_tag", "verb") => plain(py, value),
         ("completerecognizeAnswer", "names") => {
             array(py, value, |value| convert(py, "completenameOdds", value))
         }
@@ -2072,6 +1971,73 @@ pub(crate) fn field(
         ("completerecognizeAnswer", "proposals") => array(py, value, |value| {
             convert(py, "completeRecognitionProposal", value)
         }),
+        ("completerecognizeQuestionDocument", "batch") => {
+            if value.is_null() {
+                plain(py, value)
+            } else {
+                convert(py, "completeBatch", value)
+            }
+        }
+        ("completerecognizeQuestionDocument", "context_schema") => {
+            if value.is_null() {
+                plain(py, value)
+            } else {
+                convert(py, "completeInputDeclaration", value)
+            }
+        }
+        ("completerecognizeQuestionDocument", "entity_definition") => plain(py, value),
+        ("completerecognizeQuestionDocument", "instructions") => plain(py, value),
+        ("completerecognizeQuestionDocument", "item_schema") => {
+            if value.is_null() {
+                plain(py, value)
+            } else {
+                convert(py, "completeInputDeclaration", value)
+            }
+        }
+        ("completerecognizeQuestionDocument", "kinds") => {
+            mapping(py, value, |value| plain(py, value))
+        }
+        ("completerecognizeQuestionDocument", "label_details") => {
+            array(py, value, |value| convert(py, "completeLabel", value))
+        }
+        ("completerecognizeQuestionDocument", "mode") => {
+            convert(py, "completeRecognitionMode", value)
+        }
+        ("completerecognizeQuestionDocument", "model") => plain(py, value),
+        ("completerecognizeQuestionDocument", "name") => {
+            if value.is_null() {
+                plain(py, value)
+            } else {
+                convert(py, "completeQuestionName", value)
+            }
+        }
+        ("completerecognizeQuestionDocument", "on") => array(py, value, |value| plain(py, value)),
+        ("completerecognizeQuestionDocument", "profile") => plain(py, value),
+        ("completerecognizeQuestionDocument", "relation_threshold") => {
+            if value.is_null() {
+                plain(py, value)
+            } else {
+                convert(py, "completethreshold", value)
+            }
+        }
+        ("completerecognizeQuestionDocument", "relations") => array(py, value, |value| {
+            convert(py, "completerelationRule", value)
+        }),
+        ("completerecognizeQuestionDocument", "snippet_pieces") => plain(py, value),
+        ("completerecognizeQuestionDocument", "stage_context") => {
+            convert(py, "completeRecognitionStageContext", value)
+        }
+        ("completerecognizeQuestionDocument", "threshold") => {
+            convert(py, "completethreshold", value)
+        }
+        ("completerecognizeQuestionDocument", "verb") => convert(py, "completeVerb", value),
+        ("completerecognizeQuestionDocument", "wording_version") => {
+            if value.is_null() {
+                plain(py, value)
+            } else {
+                convert(py, "completeWordingVersion", value)
+            }
+        }
         ("completerecognize_entities", "entities") => {
             array(py, value, |value| convert(py, "completeentity", value))
         }
@@ -2084,6 +2050,59 @@ pub(crate) fn field(
         }),
         ("completerelateFields", "kind") => plain(py, value),
         ("completerelateFields", "name") => plain(py, value),
+        ("completerelateQuestionDocument", "batch") => {
+            if value.is_null() {
+                plain(py, value)
+            } else {
+                convert(py, "completeBatch", value)
+            }
+        }
+        ("completerelateQuestionDocument", "context_schema") => {
+            if value.is_null() {
+                plain(py, value)
+            } else {
+                convert(py, "completeInputDeclaration", value)
+            }
+        }
+        ("completerelateQuestionDocument", "fields") => {
+            if value.is_null() {
+                plain(py, value)
+            } else {
+                convert(py, "completerelateFields", value)
+            }
+        }
+        ("completerelateQuestionDocument", "item_schema") => {
+            if value.is_null() {
+                plain(py, value)
+            } else {
+                convert(py, "completeInputDeclaration", value)
+            }
+        }
+        ("completerelateQuestionDocument", "label_details") => {
+            array(py, value, |value| convert(py, "completeLabel", value))
+        }
+        ("completerelateQuestionDocument", "model") => plain(py, value),
+        ("completerelateQuestionDocument", "name") => {
+            if value.is_null() {
+                plain(py, value)
+            } else {
+                convert(py, "completeQuestionName", value)
+            }
+        }
+        ("completerelateQuestionDocument", "on") => array(py, value, |value| plain(py, value)),
+        ("completerelateQuestionDocument", "profile") => plain(py, value),
+        ("completerelateQuestionDocument", "relations") => array(py, value, |value| {
+            convert(py, "completerelationRule", value)
+        }),
+        ("completerelateQuestionDocument", "threshold") => convert(py, "completethreshold", value),
+        ("completerelateQuestionDocument", "verb") => plain(py, value),
+        ("completerelateQuestionDocument", "wording_version") => {
+            if value.is_null() {
+                plain(py, value)
+            } else {
+                convert(py, "completeWordingVersion", value)
+            }
+        }
         ("completerelatedEntity", "kind") => plain(py, value),
         ("completerelatedEntity", "name") => plain(py, value),
         ("completerelatedEntityEdge", "either") => plain(py, value),
@@ -2292,7 +2311,7 @@ pub(crate) fn field(
             }
         }
         ("completesessionQuestionDetail", "question") => {
-            convert(py, "completeReadableQuestion", value)
+            convert(py, "completequestionDocument", value)
         }
         ("completesessionQuestionDetail", "question_sha256") => plain(py, value),
         ("completesessionQuestionDetail", "question_sources") => array(py, value, |value| {
@@ -2352,6 +2371,8 @@ pub(crate) fn field(
         ("completesourceRelationEndpoint", "name") => plain(py, value),
         ("completesourceRelationEndpoint", "ordinal") => plain(py, value),
         ("completesourceRelationEndpoint", "record") => plain(py, value),
+        ("completetokenBand", "lower") => plain(py, value),
+        ("completetokenBand", "upper") => plain(py, value),
         ("completetokenUsage", "input_tokens") => plain(py, value),
         ("completetokenUsage", "output_tokens") => plain(py, value),
         _ => plain(py, value),

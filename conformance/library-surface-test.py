@@ -2,18 +2,178 @@
 """Plant contract omissions and extra exports at the checker CLI boundary."""
 import importlib.util
 import json
-import os
 import shutil
 from pathlib import Path
 import subprocess
+import sys
 import tempfile
 import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
 CHECK = ROOT / 'conformance/library-surface.py'
+sys.path.insert(0, str(ROOT))
+from conformance.children.children import child_env
 
 
 class PublicSurface(unittest.TestCase):
+    def test_python_typed_keyword_sources_and_private_exports(self):
+        with tempfile.TemporaryDirectory(prefix='library-surface-python-') as folder:
+            root = Path(folder)
+            for name in ('sdlc', 'specification', 'conformance'):
+                (root / name).symlink_to(ROOT / name, target_is_directory=True)
+            shutil.copytree(ROOT / 'libraries/python/thinkthen', root / 'libraries/python/thinkthen',
+                            ignore=shutil.ignore_patterns('__pycache__', '*.so'))
+            header = root / 'libraries/c/include/thinkthen.h'
+            header.parent.mkdir(parents=True)
+            shutil.copyfile(ROOT / 'libraries/c/include/thinkthen.h', header)
+            def invoke():
+                run = subprocess.run(['python3', str(CHECK), '--root', str(root), '--library', 'python', '--json'],
+                                     capture_output=True, text=True, env=child_env(home=folder))
+                self.assertIn(run.returncode, (0, 1), run.stderr)
+                return json.loads(run.stdout)['libraries']['python']
+            self.assertEqual(invoke(), [])
+            generated = root / 'libraries/python/thinkthen/_named_generated.py'
+            original = generated.read_text()
+            for before, after, missing in [('attempts: bool', 'extra_keyword: bool', '.attempts'),
+                                            ('backend: str | None', 'backend: int | None', '.backend.str | None')]:
+                with self.subTest(before=before):
+                    self.assertIn(before, original)
+                    generated.write_text(original.replace(before, after, 1))
+                    self.assertTrue(any(error.startswith('missing generated declaration: _named_generated.py:')
+                                        and missing in error for error in invoke()))
+            generated.write_text(original)
+            stub = root / 'libraries/python/thinkthen/__init__.pyi'
+            source = stub.read_text()
+            stub.write_text(source.replace('Unpack[EngineSettings]', 'Unpack[UnknownSettings]'))
+            self.assertTrue(any(error.startswith('missing setting: backend') for error in invoke()))
+            stub.write_text(source.replace("__all__ = [", "__all__ = ['_private_codec', "))
+            self.assertIn('unlisted public call/export: ._private_codec', invoke())
+
+    def test_rbs_keyword_types_and_ruby_private_class_visibility(self):
+        with tempfile.TemporaryDirectory(prefix='library-surface-ruby-') as folder:
+            root = Path(folder)
+            for name in ('sdlc', 'specification', 'conformance'):
+                (root / name).symlink_to(ROOT / name, target_is_directory=True)
+            shutil.copytree(ROOT / 'libraries/ruby/lib', root / 'libraries/ruby/lib')
+            shutil.copytree(ROOT / 'libraries/ruby/sig', root / 'libraries/ruby/sig')
+            header = root / 'libraries/c/include/thinkthen.h'
+            header.parent.mkdir(parents=True)
+            shutil.copyfile(ROOT / 'libraries/c/include/thinkthen.h', header)
+            def invoke():
+                run = subprocess.run(['python3', str(CHECK), '--root', str(root), '--library', 'ruby', '--json'],
+                                     capture_output=True, text=True, env=child_env(home=folder))
+                self.assertIn(run.returncode, (0, 1), run.stderr)
+                return set(json.loads(run.stdout)['libraries']['ruby'])
+            baseline = invoke()
+            generated = root / 'libraries/ruby/sig/thinkthen/results_generated.rbs'
+            original = generated.read_text()
+            for before, after in [('?attempts: bool', '?extra_keyword: bool'),
+                                  ('?backend: String', '?backend: Integer'),
+                                  ('def schema: () -> (String)', 'def schema: () -> (Integer)')]:
+                with self.subTest(before=before):
+                    self.assertIn(before, original)
+                    generated.write_text(original.replace(before, after, 1))
+                    self.assertTrue(any(error.startswith('missing generated declaration: results_generated.rbs:')
+                                        for error in invoke() - baseline))
+            generated.write_text(original)
+            overload = '                 | (?backend: String'
+            self.assertIn(overload, original)
+            generated.write_text(original.replace(overload, overload.replace('String', 'Integer'), 1))
+            self.assertIn('unlisted generated declaration: results_generated.rbs:Client.open.backend.Integer',
+                          invoke() - baseline)
+            generated.write_text(original)
+            runtime = root / 'libraries/ruby/lib/thinkthen/session.rb'
+            source = runtime.read_text()
+            hidden = source.replace('    def self.original(value)',
+                                    '    private_class_method :dump\n    def self.original(value)', 1)
+            runtime.write_text(hidden)
+            self.assertNotIn('unlisted public call/export: Client.dump', invoke())
+            runtime.write_text(hidden.replace('private_class_method :dump', ''))
+            self.assertIn('unlisted public call/export: Client.dump', invoke())
+
+    def test_cobol_outer_guard_preserves_real_public_macros(self):
+        with tempfile.TemporaryDirectory(prefix='library-surface-cobol-') as folder:
+            root = Path(folder)
+            for name in ('sdlc', 'specification', 'conformance'):
+                (root / name).symlink_to(ROOT / name, target_is_directory=True)
+            shutil.copytree(ROOT / 'libraries/cobol', root / 'libraries/cobol')
+            header = root / 'libraries/c/include/thinkthen.h'
+            header.parent.mkdir(parents=True)
+            shutil.copyfile(ROOT / 'libraries/c/include/thinkthen.h', header)
+            bridge = root / 'libraries/cobol/src/tt_session.h'
+            def invoke():
+                result = subprocess.run(['python3', str(CHECK), '--root', str(root), '--library', 'cobol', '--json'], capture_output=True, text=True, env=child_env(home=folder))
+                self.assertIn(result.returncode, (0, 1), result.stderr)
+                return result.returncode, json.loads(result.stdout)['libraries']['cobol']
+            self.assertEqual(invoke(), (0, []))
+            original = bridge.read_text()
+            bridge.write_text(original.replace('#endif', '#define TT_PUBLIC_EMPTY\n#define TT_PUBLIC_NUMBER 17\n#define TT_UNMATCHED\n#endif'))
+            code, errors = invoke()
+            self.assertEqual(code, 1)
+            for name in ('TT_PUBLIC_EMPTY', 'TT_PUBLIC_NUMBER', 'TT_UNMATCHED'):
+                self.assertIn('unlisted public type/export: .' + name, errors)
+            self.assertFalse(any('TT_COBOL_SESSION_H' in error for error in errors))
+            bridge.write_text(original.replace('#endif', ''))
+            code, errors = invoke()
+            self.assertEqual(code, 1)
+            self.assertIn('unlisted public type/export: .TT_COBOL_SESSION_H', errors)
+
+    def test_r_namespace_and_nested_formal_defaults(self):
+        with tempfile.TemporaryDirectory(prefix='library-surface-r-') as folder:
+            root = Path(folder)
+            for name in ['sdlc', 'specification', 'conformance']:
+                (root / name).symlink_to(ROOT / name, target_is_directory=True)
+            shutil.copytree(ROOT / 'libraries/r/thinkthen/R', root / 'libraries/r/thinkthen/R')
+            namespace = root / 'libraries/r/thinkthen/NAMESPACE'
+            namespace.write_text((ROOT / 'libraries/r/thinkthen/NAMESPACE').read_text())
+            header = root / 'libraries/c/include/thinkthen.h'
+            header.parent.mkdir(parents=True)
+            shutil.copyfile(ROOT / 'libraries/c/include/thinkthen.h', header)
+            source = root / 'libraries/r/thinkthen/R/surface-fixture.R'
+            source.write_text('''# export(fakeCommentExport)
+export(fakeSourceExport)
+.tt_decide <- function(hidden = NULL) {}
+extraPublicExport <- function(context = NULL, enabled = FALSE,
+    close = function() invisible(NULL), later = list(a = 1, b = 2), ...) {}
+''')
+            def invoke():
+                run = subprocess.run(['python3', str(CHECK), '--root', str(root), '--library', 'r', '--json'],
+                                     capture_output=True, text=True, env=child_env(home=folder))
+                self.assertIn(run.returncode, (0, 1), run.stderr)
+                return json.loads(run.stdout)['libraries']['r']
+            baseline = invoke()
+            self.assertFalse(any(error.endswith(('.NULL', '.FALSE', '.hidden')) for error in baseline))
+            self.assertFalse(any('fake' in error or 'extraPublicExport' in error for error in baseline))
+            generated = root / 'libraries/r/thinkthen/R/inputs-generated.R'
+            original = generated.read_text()
+            generated.write_text(original.replace('function(attempts = NULL', 'function(extra_option = NULL', 1))
+            self.assertIn('missing option: attempts in tt_options', invoke())
+            generated.write_text(original.replace('function(entity_definition = NULL', 'function(extra_field = NULL', 1))
+            self.assertIn('unlisted public field: tt_recognize_question.extra_field', invoke())
+            generated.write_text(original)
+            feed = root / 'libraries/r/thinkthen/R/feeds.R'
+            original_feed = feed.read_text()
+            for default in ['"records"', '"#"', "'#'", '"escaped\\\"#,)]}"']:
+                with self.subTest(default=default):
+                    feed.write_text(original_feed.replace('name = "records",', 'name = ' + default + ',', 1))
+                    self.assertEqual(invoke(), baseline)
+                    for extra in ['NULL', 'list(a = c(1, 2), b = function() { "#" })']:
+                        feed.write_text(original_feed.replace('name = "records",',
+                            'name = ' + default + ', # Ignore extra_hidden = NULL, )\n'
+                            '                    extra_option = ' + extra + ',', 1))
+                        self.assertEqual(set(invoke()) - set(baseline),
+                                         {'unlisted public field: tt_feed.extra_option'})
+            feed.write_text(original_feed)
+            namespace.write_text(namespace.read_text() + '\nexport(extraPublicExport)\n')
+            errors = invoke()
+            self.assertIn('unlisted public call/export: .extraPublicExport', errors)
+            for name in ['context', 'enabled', 'close', 'later']:
+                self.assertIn('unlisted public field: extraPublicExport.' + name, errors)
+            namespace.write_text(namespace.read_text().replace('export(tt_decide)', ''))
+            self.assertIn('missing function: decide', invoke())
+            namespace.write_text(namespace.read_text().replace('export(tt_plan)', ''))
+            self.assertIn('missing helper: plan', invoke())
+
     def test_cpp_public_inheritance_and_accessibility(self):
         with tempfile.TemporaryDirectory(prefix='library-surface-cpp-') as folder:
             root = Path(folder)
@@ -30,7 +190,7 @@ class PublicSurface(unittest.TestCase):
                 client.write_text(source)
                 calls.write_text(mixin)
                 run = subprocess.run(['python3', str(CHECK), '--root', str(root), '--library', 'cpp', '--json'],
-                                     capture_output=True, text=True, env=dict(os.environ, HOME=folder))
+                                     capture_output=True, text=True, env=child_env(home=folder))
                 self.assertIn(run.returncode, (0, 1), run.stderr)
                 return json.loads(run.stdout)['libraries']['cpp']
             baseline = invoke()
@@ -55,7 +215,7 @@ class PublicSurface(unittest.TestCase):
             self.assertEqual(set(errors) - set(baseline), {
                 'unlisted public type/export: .Other', 'unlisted public call/export: Other.extraPublicExport'})
             # Native category adapters accept only their documented members.
-            for filename, owner in [('json.hpp', 'Json'), ('result_value.hpp', 'Node')]:
+            for filename, owner in [('value.hpp', 'Data'), ('result_value.hpp', 'Node')]:
                 path = client.with_name(filename)
                 path.write_text(path.read_text().replace('class ' + owner + ' {',
                     'class ' + owner + ' { public: void extraPublicExport(); private:', 1))
@@ -63,7 +223,7 @@ class PublicSurface(unittest.TestCase):
             extra = extra.replace('class AnswerCall : public Call {',
                                   'class AnswerCall : public Call { public: void extraPublicExport(); private:', 1)
             errors = invoke(extra)
-            for owner in ['Json', 'Node', 'Call', 'AnswerCall']:
+            for owner in ['Data', 'Node', 'Call', 'AnswerCall']:
                 self.assertIn('unlisted public call/export: ' + owner + '.extraPublicExport', errors)
 
     def test_scoped_options_helpers_settings_generated_members_and_extra_exports(self):
@@ -85,7 +245,21 @@ class PublicSurface(unittest.TestCase):
                 'RequestSessionDescriptor': {'type': 'object', 'properties': {}},
             }
             request = {'$ref': '#/$defs/RequestCall', '$defs': definitions}
-            result = {'$ref': '#/$defs/completesessionPacket', '$defs': {'completesessionPacket': {'type': 'object', 'properties': {'payload': {'type': 'string'}}}}}
+            definitions['RequestDefinition'] = definitions['RequestCall']
+            result = {'$ref': '#/$defs/completesessionPacket', '$defs': {
+                'completesessionPacket': {'oneOf': [
+                    {'type': 'object', 'properties': {'kind': {'const': 'aggregate'},
+                        'function': {'const': 'decide'}, 'value': {'type': 'boolean'}},
+                     'required': ['kind', 'function', 'value']},
+                    {'type': 'object', 'properties': {'kind': {'const': 'observation'},
+                        'payload': {'type': 'string'},
+                        'judgment': {'$ref': '#/$defs/completesessionJudgment'}},
+                     'required': ['kind', 'judgment']}]},
+                'completesessionJudgment': {'oneOf': [
+                    {'type': 'object', 'x-request-function': function,
+                     'properties': {'kind': {'const': function}, 'value': {'type': 'boolean'}},
+                     'required': ['kind', 'value']} for function in ('decide', 'choose')]},
+                'completeplan': {'type': 'object', 'properties': {}}}}
             write('request.json', json.dumps(request))
             write('result.json', json.dumps(result))
             manifest = json.loads((ROOT / 'conformance/library-surface.json').read_text())
@@ -104,19 +278,27 @@ class PublicSurface(unittest.TestCase):
             # Produce the remaining native declarations through the same renderer.
             spec = importlib.util.spec_from_file_location('fixture_typescript', ROOT / 'sdlc/generators/results/templates/typescript.py')
             template = importlib.util.module_from_spec(spec)
-            spec.loader.exec_module(template)
-            generated = template.declarations(result['$defs'])
+            original_path = sys.path[:]
+            sys.path[:0] = [str(Path(spec.origin).parent), str(Path(spec.origin).parent.parent)]
+            try:
+                spec.loader.exec_module(template)
+                import generate
+            finally:
+                sys.path[:] = original_path
+            generated = template.declarations(generate.prepare(generate.graph(result, template.ROOTS)),
+                                              generate.prepare(generate.graph(request, template.INPUT_ROOTS)))
             write('libraries/typescript/results_generated.d.ts', generated)
             declarations = ('export interface Controls { readonly context?: string; readonly [key:string]: unknown; }\n'
                             'export interface Settings { readonly backend?: string; }\n'
-                            'export class Client { decide(): void; }\n')
-            declarations += ''.join('export function ' + name + '(): void;\n' for name in ['plan', 'questionFile', 'questionName', 'questionReference', 'item', 'files', 'usagePersistence', 'finishUsageStatus'])
+                            'export class Client { decide(): void; static questionFile(): void; static questionName(): void;\n'
+                            'static questionReference(): void; static item(): void; static files(): void; }\n')
+            declarations += ''.join('export function ' + name + '(): void;\n' for name in ['plan', 'usagePersistence', 'finishUsageStatus'])
             def invoke(source=declarations, graph=generated):
                 write('libraries/typescript/native.d.ts', source)
                 write('libraries/typescript/results_generated.d.ts', graph)
                 run = subprocess.run(['python3', str(CHECK), '--root', str(root), '--json'],
                                      capture_output=True, text=True,
-                                     env=dict(os.environ, HOME=folder))
+                                     env=child_env(home=folder))
                 return run.returncode, json.loads(run.stdout)['libraries']['typescript']
             code, errors = invoke()
             self.assertEqual((code, errors), (0, []))
@@ -149,6 +331,16 @@ class PublicSurface(unittest.TestCase):
             self.assertIn('missing helper: plan', errors)
             code, errors = invoke(graph=generated.replace(' readonly "payload"?: string;', ''))
             self.assertTrue(any('missing generated declaration:' in error and '.payload' in error for error in errors))
+            code, errors = invoke(graph=generated.replace(' readonly "payload"?: string;', ' readonly "payload"?: number;'))
+            self.assertTrue(any('missing generated declaration:' in error and '.payload.' in error for error in errors), errors)
+            self.assertIn('"choose"', generated)
+            code, errors = invoke(graph=generated.replace('"choose"', '"cho ose"', 1))
+            self.assertEqual(code, 1)
+            self.assertTrue(any('unlisted generated declaration:' in error and '"cho ose"' in error
+                                for error in errors), errors)
+            inherited = declarations.replace('decide(): void;', '') + '\nexport interface Client extends R.TypedCalls {}\nexport interface TypedCalls { decide(): void; }\n'
+            self.assertNotIn('missing function: decide', invoke(inherited)[1])
+            self.assertIn('missing function: decide', invoke(inherited.replace(' extends R.TypedCalls', ''))[1])
             code, errors = invoke(graph=generated.replace(' readonly "payload"?: string;', ' readonly "payload"?: string;\n surprise: string;'))
             self.assertTrue(any('unlisted generated declaration:' in error and '.surprise' in error for error in errors))
 
@@ -172,7 +364,7 @@ class PublicSurface(unittest.TestCase):
                               'func (v ownedJSON) ExtraRepresentationExport() {}\n')
             run = subprocess.run(['python3', str(CHECK), '--root', str(root), '--manifest',
                                   str(ROOT / 'conformance/library-surface.json'), '--library', 'go', '--json'],
-                                 capture_output=True, text=True, env=dict(os.environ, HOME=folder))
+                                 capture_output=True, text=True, env=child_env(home=folder))
             errors = json.loads(run.stdout)['libraries']['go']
             self.assertEqual(run.returncode, 1)
             self.assertFalse(any('schema declaration derivation failed:' in error for error in errors))
@@ -180,7 +372,7 @@ class PublicSurface(unittest.TestCase):
             self.assertIn('unlisted public call/export: Exported.ExtraPublicExport', errors)
             self.assertIn('unlisted public call/export: ExportedAlias.ExtraPublicExport', errors)
             self.assertIn('unlisted public call/export: returned.ExtraReturnedExport', errors)
-            self.assertIn('unlisted public call/export: OwnedFacts.ExtraRepresentationExport', errors)
+            self.assertIn('unlisted public call/export: Facts.ExtraRepresentationExport', errors)
             self.assertFalse(any('InvisibleExport' in error for error in errors))
             self.assertNotIn('unlisted public call/export: Client.Close', errors)
             self.assertFalse(any('nativeEngine.' in error or 'ownedJSON.' in error for error in errors))
@@ -190,7 +382,7 @@ class PublicSurface(unittest.TestCase):
             generated.write_text(source)
             run = subprocess.run(['python3', str(CHECK), '--root', str(root), '--manifest',
                                   str(ROOT / 'conformance/library-surface.json'), '--library', 'go', '--json'],
-                                 capture_output=True, text=True, env=dict(os.environ, HOME=folder))
+                                 capture_output=True, text=True, env=child_env(home=folder))
             errors = json.loads(run.stdout)['libraries']['go']
             self.assertIn('missing generated declaration: owned_results_generated.go:RequestOptions.Context', errors)
             self.assertIn('unlisted generated declaration: owned_results_generated.go:RequestOptions.Surprise', errors)
@@ -216,7 +408,7 @@ class PublicSurface(unittest.TestCase):
                 calls.write_text(source)
                 run = subprocess.run(['python3', str(CHECK), '--root', str(root), '--manifest',
                                       str(ROOT / 'conformance/library-surface.json'), '--library', 'csharp', '--json'],
-                                     capture_output=True, text=True, env=dict(os.environ, HOME=folder))
+                                     capture_output=True, text=True, env=child_env(home=folder))
                 return json.loads(run.stdout)['libraries']['csharp']
             baseline = invoke(original)
             self.assertEqual(baseline, [])
@@ -226,24 +418,27 @@ class PublicSurface(unittest.TestCase):
             extra.write_text('public class Other {\n'
                              + ''.join('public void ' + method + '() {}\n' for method in methods)
                              + 'public string FactsJson {get;} public string Failure {get;} }\n'
-                             + 'public class InputRequestOptions { public string SurpriseOption {get;} }\n'
-                             + 'public class InputEngineSettings { public string SurpriseSetting {get;} }\n')
+                             + 'public class RequestOptions { public string SurpriseOption {get;} }\n'
+                             + 'public class EngineSettings { public string SurpriseSetting {get;} }\n')
             unexpected = invoke(original)
             for method in methods:
                 self.assertIn('unlisted public call/export: Other.' + method, unexpected)
             for owner, field in [('Other', 'FactsJson'), ('Other', 'Failure'),
-                                 ('InputRequestOptions', 'SurpriseOption'), ('InputEngineSettings', 'SurpriseSetting')]:
+                                 ('RequestOptions', 'SurpriseOption'), ('EngineSettings', 'SurpriseSetting')]:
                 self.assertIn('unlisted public field: ' + owner + '.' + field, unexpected)
+            extra.write_text('public class TransportBase { public string TransportJson {get;} }\n'
+                             'public class Engine : TransportBase {}\n')
+            self.assertIn('unlisted public field: TransportBase.TransportJson', invoke(original))
             extra.unlink()
             inputs = root / 'libraries/csharp/src/RequestInputs.g.cs'
             input_source = inputs.read_text()
-            inputs.write_text(input_source.replace('InputPresence<string> Context {', 'InputPresence<string> SurpriseOption {')
-                              .replace('InputPresence<string> Backend {', 'InputPresence<string> SurpriseSetting {'))
+            inputs.write_text(input_source.replace('AuthoredPresence<string> Context {', 'AuthoredPresence<string> SurpriseOption {')
+                              .replace('AuthoredPresence<string> Backend {', 'AuthoredPresence<string> SurpriseSetting {'))
             drift = invoke(original)
             for kind, field in [('option', 'context'), ('setting', 'backend')]:
                 self.assertTrue(any(error.startswith('missing ' + kind + ': ' + field) for error in drift))
-            for owner, before, after in [('InputRequestOptions', 'Context', 'SurpriseOption'),
-                                         ('InputEngineSettings', 'Backend', 'SurpriseSetting')]:
+            for owner, before, after in [('RequestOptions', 'Context', 'SurpriseOption'),
+                                         ('EngineSettings', 'Backend', 'SurpriseSetting')]:
                 self.assertIn('missing generated declaration: RequestInputs.g.cs:' + owner + '.' + before, drift)
                 self.assertIn('unlisted generated declaration: RequestInputs.g.cs:' + owner + '.' + after, drift)
             inputs.write_text(input_source)
@@ -258,7 +453,7 @@ class PublicSurface(unittest.TestCase):
         manifest = json.loads((ROOT / 'conformance/library-surface.json').read_text())
         with tempfile.TemporaryDirectory(prefix='library-surface-records-') as folder:
             root = Path(folder)
-            for name in ['sdlc', 'specification']:
+            for name in ['sdlc', 'specification', 'crates']:
                 (root / name).symlink_to(ROOT / name, target_is_directory=True)
             paths = [ROOT / 'libraries/c/include/thinkthen.h']
             for pattern in manifest['libraries']['jvm']['declarations']:
@@ -273,7 +468,7 @@ class PublicSurface(unittest.TestCase):
                 records.write_text(source)
                 run = subprocess.run(['python3', str(CHECK), '--root', str(root), '--manifest',
                                       str(ROOT / 'conformance/library-surface.json'), '--library', 'jvm', '--json'],
-                                     capture_output=True, text=True, env=dict(os.environ, HOME=folder))
+                                     capture_output=True, text=True, env=child_env(home=folder))
                 return json.loads(run.stdout)['libraries']['jvm']
             baseline = invoke(original)
             missing = invoke(original.replace('record BatchInteger(BigInteger value)',
@@ -344,7 +539,9 @@ class PublicSurface(unittest.TestCase):
             original = calls.read_text()
             def invoke(source):
                 calls.write_text(source)
-                result = subprocess.run(['python3', str(CHECK), '--root', str(root), '--manifest', str(selected), '--library', 'php', '--json'], capture_output=True, text=True)
+                result = subprocess.run(['python3', str(CHECK), '--root', str(root), '--manifest',
+                                         str(selected), '--library', 'php', '--json'],
+                                        capture_output=True, text=True, env=child_env(home=folder))
                 self.assertIn(result.returncode, [0, 1], result.stderr)
                 return json.loads(result.stdout)['libraries']['php']
             baseline = invoke(original)
@@ -369,7 +566,7 @@ class PublicSurface(unittest.TestCase):
             'go': 'type RequestOptions struct {\nContext string\nhidden string\n}\nfunc ExtraPublicExport() {}',
             'swift': 'public struct RequestOptions {\npublic var context: String\nprivate var hidden: String\npublic func extraPublicExport() {}\n}',
             'cpp': 'class RequestOptions { public: std::string context; void extraPublicExport(); private: std::string hidden; };',
-            'c': 'typedef struct RequestOptions { const char *context; } RequestOptions; void extraPublicExport(void);',
+            'c': 'typedef struct RequestOptions { const struct Text *context; } RequestOptions; struct Result *extraPublicExport(void);',
             'zig': 'pub const RequestOptions = struct {\ncontext: []const u8,\npub fn extraPublicExport() void {}\n};',
             'php': 'class RequestOptions { public string $context; private string $hidden; public function extraPublicExport() {} }',
             'dart': 'class RequestOptions {\nString get context => value;\nString _hidden;\nvoid extraPublicExport() {}\n}',

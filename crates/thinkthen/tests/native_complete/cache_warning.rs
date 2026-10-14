@@ -38,7 +38,7 @@ fn excluded_held_model_warning_is_call_scoped_and_corrected_cache_hits_remain_si
     assert!(corrected.facts().held_model_mismatch());
     assert_eq!(corrected.facts().requests_sent(), 1);
     assert_eq!(corrected_result.identity().answered_by(), Some("fixed"));
-    let row = serde_json::to_value(corrected.complete().unwrap()).unwrap();
+    let row = serde_json::to_value(&corrected).unwrap();
     assert_eq!(row["facts"]["held_model_mismatch"], true);
     schema::check(&row, "completeDecide");
     assert!(!row.to_string().contains("stored-private-model"));

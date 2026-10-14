@@ -240,7 +240,7 @@ withheld!(
 
 /// Presentation only: the semantic question serializer remains unchanged.
 #[derive(Serialize)]
-#[cfg_attr(test, derive(schemars::JsonSchema))]
+#[cfg_attr(test, derive(schemars::JsonSchema), schemars(rename = "{Q}Document"))]
 pub(crate) struct ReadableQuestion<'a, Q: Serialize, P = presentation::AuthoredProfile<'a>> {
     #[serde(flatten)]
     pub(crate) question: &'a Q,

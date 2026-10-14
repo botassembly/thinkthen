@@ -12,8 +12,10 @@ def source_path(root, value):
     path = Path(value)
     if path.is_relative_to('/build/source'):
         path = root / path.relative_to('/build/source')
-    elif path.is_relative_to('/build/home'):
-        path = Path.home() / path.relative_to('/build/home')
+    elif path.is_relative_to('/build/host'):
+        path = Path.home() / path.relative_to('/build/host')
+    elif path.is_relative_to('/build/users'):
+        path = Path.home() / path.relative_to('/build/users')
     if not path.is_absolute():
         path = root / path
     try:

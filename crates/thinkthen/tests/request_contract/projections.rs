@@ -22,6 +22,36 @@ fn feed_input() -> RequestInput {
         images: vec![],
     }
 }
+
+#[test]
+fn engine_filter_keeps_originals_in_order_and_counts_rejected_records() {
+    let listener = Listener::answering(response).unwrap();
+    let engine = engine(&listener);
+    let originals = [String::from("Alpha."), String::from("Beta.")];
+    for threshold in [0.5, 0.95] {
+        let question = Question::decide("Fits?")
+            .unwrap()
+            .cut_at(threshold)
+            .unwrap();
+        let mut kept = engine
+            .filter(&question, originals.iter().map(String::as_str))
+            .unwrap();
+        if threshold == 0.5 {
+            for original in &originals {
+                assert!(std::ptr::eq(
+                    kept.next().unwrap().unwrap(),
+                    original.as_str()
+                ));
+            }
+        }
+        assert!(kept.next().is_none());
+        let facts = kept.facts().unwrap();
+        assert_eq!(facts.records(), 2);
+        assert!(facts.call_id().is_some());
+        assert_eq!(facts.requests_sent(), 1);
+    }
+    assert_eq!(listener.count(), 2);
+}
 #[allow(
     clippy::panic,
     reason = "an unexpected typed fixture result stops the regression"

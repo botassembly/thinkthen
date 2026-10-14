@@ -222,7 +222,12 @@ fn a_failure_no_body_causes_stops_the_check_at_the_first_probe() {
         };
         let stops = [
             ("/arm/status/401/v1", key("401: the key was refused")),
-            ("/arm/status/402/v1", key("402: the account has no credit")),
+            (
+                "/arm/status/402/v1",
+                format!(
+                    "ok connection\ncritical key: the backend systemone account is out of credit\nunchecked endpoint\n{later}"
+                ),
+            ),
             (
                 "/arm/status/403/v1",
                 key("403: the key may not use this model or address"),
@@ -325,6 +330,7 @@ fn a_dry_run_prints_the_four_fixed_bodies_and_sends_nothing() {
                 + &requests
                 + "rich-probes {\"records\":4,\"requests\":4,\"estimated_bytes\":1568,\"largest_request_bytes\":716,\"largest_request_estimated_input_tokens\":651,\"token_estimate_method\":\"encoded-body-bytes-908-v1\",\"estimated_input_tokens\":{\"lower\":809,\"upper\":1424},\"upper_bound\":false}\n";
             let stdout = text(&output.stdout);
+            assert!(stdout.contains("token-estimate measured byte rates; actual billed input can exceed the upper estimate; the observed Jev check estimated about 4200 input tokens and the provider reported 5131, about 22% above the estimate\n"), "{stdout}");
             assert!(stdout.starts_with(&printed), "{stdout}");
             let plans = stdout
                 .lines()
@@ -462,3 +468,27 @@ fn the_report_names_the_model_asked_the_model_sent_and_the_model_each_reply_name
 
 #[path = "check/limits.rs"]
 mod limits;
+
+#[test]
+fn a_decisions_plan_names_the_request_shape_and_the_measured_estimate_limit() {
+    let listener = Listener::serving(vec![]).expect("loopback listener");
+    let output = check(
+        &["backends", "check"],
+        &[
+            "--backend",
+            "openai",
+            "--url",
+            listener.base(),
+            "--model",
+            "fixed",
+            "--plan",
+        ],
+        &[],
+    );
+    let stdout = text(&output.stdout);
+    assert_eq!(output.status.code(), Some(0), "{stdout}");
+    assert!(stdout.contains("\nprovider openai\n"), "{stdout}");
+    assert!(stdout.contains("token-estimate measured byte rates; actual billed input can exceed the upper estimate; provider tokenization and internal prompts are not measured\n"), "{stdout}");
+    assert!(stdout.contains("\"questions\":["), "{stdout}");
+    assert_eq!(listener.requests().len(), 0);
+}

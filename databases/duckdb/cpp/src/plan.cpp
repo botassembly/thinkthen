@@ -88,7 +88,7 @@ void Plan(DataChunk &args, ExpressionState &state, Vector &result) {
 		if (question.IsNull() || keyed.IsNull()) { continue; }
 		live = true;
 		const auto type = args.data[3].GetValue(row).GetValue<string>();
-		if (type != "\"NULL\"" && type != "VARCHAR") {
+		if (!PortableSettingsType(type)) {
 			throw OrdinaryError("thinkthen usage: plan settings are one JSON text object");
 		}
 		auto setting = args.data[2].GetValue(row);
@@ -123,8 +123,8 @@ void RegisterPlan(ExtensionLoader &loader) {
 	ThinkThenSpecialNulls(function);
 	function.SetStability(FunctionStability::VOLATILE);
 	RegisterDescribedScalar(loader, function, purpose);
-	RegisterPortableMacro(loader, "CREATE MACRO thinkthen_plan(question, keyed_json, settings := NULL) AS "
-	                              "thinkthen_native_plan(question, keyed_json, CAST(settings AS VARCHAR), typeof(settings))", purpose);
+	RegisterPortableMacro(loader, "CREATE MACRO thinkthen_plan(question, keyed_json, settings := NULL" + PortableOptionParameters() + ") AS "
+	                              "thinkthen_native_plan(" + PortableJSONArgument("question") + ", " + PortableJSONArgument("keyed_json") + ", " + PortableOptions("settings", "question IS NULL OR keyed_json IS NULL") + ", typeof(settings))", purpose);
 }
 
 } // namespace duckdb

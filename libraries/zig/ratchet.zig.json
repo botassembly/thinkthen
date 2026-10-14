@@ -1,5 +1,6 @@
 {
   "directory": ".",
   "extension": ".zig",
-  "max": 1796
+  "max": 506,
+  "scope": "handwritten-production"
 }

@@ -9,10 +9,7 @@ const PHRASES: [(u16, &str); 19] = [
         302,
         "the redirect was not followed; use the final --url directly",
     ),
-    (
-        400,
-        "the backend refused the request; check --model and the request size",
-    ),
+    (400, "the backend refused the request"),
     (401, "the key was refused"),
     (402, "the account has no credit"),
     (403, "the key may not use this model or address"),

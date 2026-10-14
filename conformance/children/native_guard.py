@@ -4,8 +4,8 @@ import sys
 import tarfile
 
 def normalized_bytes(data):
-    """Release remaps use /build/home; it is not a private /home origin."""
-    return data.replace(b'/build/home/', b'/build/')
+    """Preserve every raw path marker for package privacy checks."""
+    return data
 
 
 def main():
@@ -19,8 +19,6 @@ def main():
                     if member.isfile():
                         data.append(archive.extractfile(member).read())
         for chunk in data:
-            # release-pack remaps the builder's home; keep scanning the rest of each path.
-            chunk = normalized_bytes(chunk)
             for needle in needles:
                 if needle in chunk:
                     print('rejected private byte pattern in', path.name)

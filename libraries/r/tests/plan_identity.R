@@ -11,8 +11,8 @@ actual_sends <- sent_by(answer <- tt_decide("Q?", c("alpha", "beta"), options = 
 check("the batch-one plan has independently known bytes and token band without a send",
       planned_sends == 0L && identical(plan$records, 2) &&
       identical(plan$requests, 2) && identical(plan$estimated_bytes, 309) &&
-      identical(plan$estimated_input_tokens, list(lower = 159, upper = 281)) &&
-      identical(plan$first_body, alpha))
+      identical(unclass(plan$estimated_input_tokens), list(lower = 159, upper = 281)) &&
+      identical(plan$first_body_utf8, alpha))
 check("both actual batch-one bodies and the listener count match that plan",
       actual_sends == 2L && identical(answer$facts$requests_sent, 2) &&
       identical(vapply(answer$results, `[[`, TRUE, "value"), c(TRUE, TRUE)))
@@ -25,7 +25,7 @@ check("a shared context also plans its own actual body and sends once",
       context_plan_sends == 0L && context_sends == 1L &&
       identical(context_plan$requests, 1) &&
       identical(sort(unlist(bodies[1:2])), sort(c(alpha,beta))) &&
-      identical(bodies[[3L]],context_plan$first_body) &&
+      identical(bodies[[3L]],context_plan$first_body_utf8) &&
       grepl("Shared reference", bodies[[3L]], fixed = TRUE) &&
       identical(context_answer$facts$requests_sent, 1))
 finish("plan identity", 3L)
