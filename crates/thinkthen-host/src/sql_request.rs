@@ -1,5 +1,7 @@
 //! SQLite host arguments enter the native shared Request without serialization.
 use crate::complete_native::{Inputs, Prepared, defect};
+mod rows;
+pub use rows::{project_outcome, project_value};
 use serde_json::{Value, json};
 use std::sync::Mutex;
 use thinkthen::{
@@ -246,7 +248,11 @@ pub fn run_records_recovering<'a>(
         .iter()
         .filter_map(|row| row.as_ref().ok())
         .any(|row| matches!(row.original, thinkthen::QuestionInput::Images(_)));
-    let feed = RequestFeed::from_records("sqlite", records.into_iter()).eager();
+    let name = match &request.request().call.arguments().input {
+        RequestInput::Feed { name, .. } => name.as_str(),
+        _ => "sql",
+    };
+    let feed = RequestFeed::from_records(name, records.into_iter()).eager();
     let feed = if matches!(prepared, Prepared::Filter(_)) {
         feed.with_all_filter_results()
     } else {
@@ -268,42 +274,31 @@ pub fn run_records_recovering<'a>(
     let events = events
         .into_inner()
         .unwrap_or_else(std::sync::PoisonError::into_inner);
-    let rows = call
-        .value()
-        .iter()
-        .map(|row| {
-            let observed = events
-                .iter()
-                .filter(|event| {
-                    event.get("index").and_then(Value::as_u64) == Some(row.ordinal() as u64)
-                })
-                .cloned()
-                .collect::<Vec<_>>();
-            let (value, probability, result, failure) = match row.outcome() {
-                Ok(result) => {
-                    let result = serde_json::to_value(result).map_err(|_| defect())?;
-                    let (value, probability) =
-                        row_value(request.request().call.function(), &result);
-                    let result = result
-                        .as_array()
-                        .and_then(|rows| rows.first())
-                        .cloned()
-                        .unwrap_or(result);
-                    (value, probability, result, Value::Null)
-                }
-                Err(error) => (
-                    Value::Null,
-                    Value::Null,
-                    Value::Null,
-                    serde_json::to_value(error.complete().error()).map_err(|_| defect())?,
-                ),
-            };
-            Ok(
-                json!({"ordinal":row.ordinal(),"value":value,"probability":probability,
-            "result":result,"failure":failure,"facts":facts,"observations":observed}),
-            )
-        })
-        .collect::<Result<Vec<_>, Error>>()?;
+    let mut rows = Vec::new();
+    for row in call.value() {
+        let observed = events
+            .iter()
+            .filter(|event| {
+                event.get("index").and_then(Value::as_u64) == Some(row.ordinal() as u64)
+            })
+            .cloned()
+            .collect::<Vec<_>>();
+        match row.outcome() {
+            Ok(result) => rows.extend(rows::complete(
+                request.request().call.function(),
+                row.ordinal(),
+                serde_json::to_value(result).map_err(|_| defect())?,
+                &facts,
+                &observed,
+            )),
+            Err(error) => rows.push(rows::failed(
+                row.ordinal(),
+                serde_json::to_value(error.complete().error()).map_err(|_| defect())?,
+                &facts,
+                &observed,
+            )),
+        }
+    }
     Ok(json!({"native":{"facts":facts},"rows":rows,"observations":events}))
 }
 
@@ -335,131 +330,4 @@ pub fn run_recovering(
         controls,
         surface,
     )
-}
-
-fn row_value(function: thinkthen::RequestFunction, result: &Value) -> (Value, Value) {
-    use thinkthen::RequestFunction as F;
-    let records = result
-        .as_array()
-        .map(Vec::as_slice)
-        .unwrap_or_else(|| std::slice::from_ref(result));
-    let row = records.first().unwrap_or(&Value::Null);
-    let answer = row.get("value").cloned().unwrap_or(Value::Null);
-    let probability = match function {
-        F::Decide | F::Filter => row
-            .pointer("/answer/probability")
-            .cloned()
-            .unwrap_or(Value::Null),
-        F::Choose | F::Find => row
-            .pointer("/answer/pick")
-            .and_then(Value::as_str)
-            .and_then(|pick| {
-                row.pointer("/answer/probabilities")
-                    .and_then(|values| values.get(pick))
-            })
-            .cloned()
-            .unwrap_or(Value::Null),
-        F::Rank => Value::Array(
-            records
-                .iter()
-                .map(|row| {
-                    row.pointer("/answer/probability")
-                        .cloned()
-                        .unwrap_or(Value::Null)
-                })
-                .collect(),
-        ),
-        F::Recognize => answer
-            .get("entities")
-            .and_then(Value::as_array)
-            .map(|entities| {
-                Value::Array(
-                    entities
-                        .iter()
-                        .map(|entity| entity.get("strength").cloned().unwrap_or(Value::Null))
-                        .collect(),
-                )
-            })
-            .unwrap_or(Value::Null),
-        F::Relate => answer
-            .as_array()
-            .map(|edges| {
-                Value::Array(
-                    edges
-                        .iter()
-                        .map(|edge| edge.get("probability").cloned().unwrap_or(Value::Null))
-                        .collect(),
-                )
-            })
-            .unwrap_or(Value::Null),
-        _ => Value::Null,
-    };
-    let value = match function {
-        F::Rank => Value::Array(
-            records
-                .iter()
-                .map(|row| row.get("index").cloned().unwrap_or(Value::Null))
-                .collect(),
-        ),
-        F::Filter => {
-            if answer == Value::Bool(true) {
-                row.get("input").cloned().unwrap_or(Value::Null)
-            } else {
-                Value::Null
-            }
-        }
-        F::Recognize => answer.get("entities").cloned().unwrap_or(Value::Null),
-        _ => answer,
-    };
-    (value, probability)
-}
-
-/// Project an ordinary SQL call without changing its aggregate input semantics.
-pub fn project_outcome(
-    function: thinkthen::RequestFunction,
-    outcome: RequestOutcome,
-    observations: Vec<Value>,
-) -> Result<Vec<Value>, Error> {
-    let (result, facts, failure) = match outcome {
-        RequestOutcome::Complete(call) => {
-            let facts = serde_json::to_value(call.facts()).map_err(|_| defect())?;
-            (call.into_value(), facts, None)
-        }
-        RequestOutcome::Failed { completed, error } => {
-            if matches!(
-                error.kind(),
-                thinkthen::ErrorKind::Cancelled
-                    | thinkthen::ErrorKind::Deadline
-                    | thinkthen::ErrorKind::Defect
-            ) {
-                return Err(error);
-            }
-            let failed = crate::complete_native::failure(&error);
-            (
-                completed,
-                failed.get("facts").cloned().unwrap_or(Value::Null),
-                failed.get("error").cloned(),
-            )
-        }
-    };
-    let encoded = serde_json::to_value(&result).map_err(|_| defect())?;
-    let results = encoded.as_array().cloned().unwrap_or_else(|| vec![encoded]);
-    let mut rows = results
-        .into_iter()
-        .enumerate()
-        .map(|(at, result)| {
-            let ordinal = result
-                .get("index")
-                .and_then(Value::as_u64)
-                .unwrap_or(at as u64);
-            let (value, probability) = row_value(function, &result);
-            json!({"ordinal":ordinal,"value":value,"probability":probability,
-            "result":result,"failure":null,"facts":facts,"observations":observations})
-        })
-        .collect::<Vec<_>>();
-    if let Some(failure) = failure {
-        rows.push(json!({"ordinal":rows.len(),"value":null,"probability":null,
-            "result":null,"failure":failure,"facts":facts,"observations":observations}));
-    }
-    Ok(rows)
 }
