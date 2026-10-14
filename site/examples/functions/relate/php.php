@@ -10,21 +10,18 @@ $names = [
     ['name' => 'iPhone', 'kind' => 'product'],
     ['name' => 'Kindle', 'kind' => 'product'],
 ];
-$makes = [
-    'name' => 'makes',
-    'source' => 'company',
-    'target' => 'product',
-];
-$ask = [
-    'version' => 1,
-    'relate' => ['relations' => [$makes]],
-];
+$makes = new ThinkThen\Inputs\RelationRule(
+    name: 'makes', source: 'company', target: 'product',
+);
+$ask = new ThinkThen\Inputs\RelateQuestion(
+    new ThinkThen\Inputs\RelationSpec([$makes]),
+);
 $whoMakes = $client->relate($ask, $names)
-    ->relateAnswer()->value;
+    ->value;
 $pairs = array_map(
     fn ($edge) => [
-        $edge->source->name,
-        $edge->target->name,
+        $edge->sourceName(),
+        $edge->targetName(),
     ],
     $whoMakes,
 );

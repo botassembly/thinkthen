@@ -9,22 +9,28 @@ Future<void> main() async {
       'in Denver.';
   final call = await engine.recognize(
     DefinedQuestion(
-      value: Definition.read({
-        'version': 1,
-        'recognize': {
-          'kinds': {for (final kind in kinds) kind: null},
-        },
-      }),
+      value: RecognizeQuestion(
+        recognize: RecognitionSpec(
+          kinds: Presence.present({
+            for (final kind in kinds) kind: null,
+          }),
+        ),
+      ),
     ),
     InputText(text: text),
   );
   final facts = call.value as RecognizeEntities;
-  final names = [for (final one in facts.entities) (one.text, one.kind)];
+  final names = [
+    for (final one in facts.entities) (one.text, one.kind),
+  ];
   const expected = [
     ('Sam Patel', 'person'),
     ('Kindle', 'product'),
     ('Denver', 'place'),
   ];
-  assert(const ListEquality<(String, String)>().equals(names, expected));
+  assert(
+    const ListEquality<(String, String)>()
+        .equals(names, expected),
+  );
   engine.close();
 }

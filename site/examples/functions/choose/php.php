@@ -14,6 +14,6 @@ $parcel = 'My parcel went to the wrong address.';
 $team = $client->choose(
     ['choose' => $question, 'options' => $teams],
     $parcel,
-)->chooseAnswer();
+)->value;
 assert($team === 'shipping');
 $client->close();

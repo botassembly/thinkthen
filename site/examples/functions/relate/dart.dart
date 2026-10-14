@@ -13,28 +13,37 @@ Future<void> main() async {
   ];
   final call = await engine.relate(
     DefinedQuestion(
-      value: Definition.read({
-        'version': 1,
-        'relate': {
-          'relations': [
-            {'name': 'makes', 'source': 'company', 'target': 'product'},
-          ],
-        },
-      }),
+      value: RelateQuestion(
+        relate: RelationSpec(relations: [
+          RelationDefinition(
+            name: 'makes',
+            source: const Presence.present('company'),
+            target: const Presence.present('product'),
+          ),
+        ]),
+      ),
     ),
     InputEntities(
       items: [
         for (final name in names)
-          Item(original: Presence.present(OriginalJson(value: name))),
+          Item(original: Presence.present(
+            OriginalJson(value: name),
+          )),
       ],
     ),
   );
   final whoMakes = call.value;
   final pairs = [
     for (final edge in whoMakes)
-      ((edge.source as Named).name, (edge.target as Named).name),
+      ((edge.source as Named).name,
+       (edge.target as Named).name),
   ];
-  const expected = [('Apple', 'iPhone'), ('Amazon', 'Kindle')];
-  assert(const ListEquality<(String, String)>().equals(pairs, expected));
+  const expected = [
+    ('Apple', 'iPhone'), ('Amazon', 'Kindle'),
+  ];
+  assert(
+    const ListEquality<(String, String)>()
+        .equals(pairs, expected),
+  );
   engine.close();
 }

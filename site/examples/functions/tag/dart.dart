@@ -11,7 +11,9 @@ Future<void> main() async {
       'and I was charged twice.\n';
   final call = await engine.tag(
     DefinedQuestion(
-      value: Definition.read({'tag': question, 'labels': labels}),
+      value: Definition.read(
+        {'tag': question, 'labels': labels},
+      ),
     ),
     InputText(text: message),
   );
