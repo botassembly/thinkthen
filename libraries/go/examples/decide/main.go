@@ -12,7 +12,44 @@ func printAnswer[T any](answer T, err error) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	if err := json.NewEncoder(os.Stdout).Encode(answer); err != nil {
+	var output any = answer
+	switch value := any(answer).(type) {
+	case tt.Find:
+		found := value.Value()
+		if found.Err != nil {
+			log.Fatal(found.Err)
+		}
+		output = found.Value
+	case []tt.Annotation:
+		rows := make([]any, len(value))
+		for i, row := range value {
+			authored, err := row.Value().Value.JSONValue()
+			if err != nil {
+				log.Fatal(err)
+			}
+			rows[i] = authored
+		}
+		output = rows
+	case []tt.Recognition:
+		names := []string{}
+		for _, row := range value {
+			entities, err := row.Value().Value.AsRecognizeEntities()
+			if err != nil {
+				log.Fatal(err)
+			}
+			for _, entity := range entities.Entities().Value {
+				names = append(names, entity.Text().Value)
+			}
+		}
+		output = names
+	case tt.Relation:
+		edges := [][3]string{}
+		for _, edge := range value.Value().Value {
+			edges = append(edges, [3]string{edge.SourceName().Value, edge.Relation().Value, edge.TargetName().Value})
+		}
+		output = edges
+	}
+	if err := json.NewEncoder(os.Stdout).Encode(output); err != nil {
 		log.Fatal(err)
 	}
 }
