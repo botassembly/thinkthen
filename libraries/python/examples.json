@@ -33,21 +33,17 @@
       "python": "tt.score(\"How urgent is this?\", \"maybe later\", levels=[\"Routine.\", \"Soon.\", \"Immediate.\"]).value",
       "expected": "0.15"
     },
-    "details": {
-      "python": "tt.decide(\"Is this a complaint?\", \"I demand a refund today\").probability",
-      "expected": "0.9"
-    },
     "filter": {
       "python": "tt.filter(\"Is this a complaint?\", [\"good morning\", \"I demand a refund today\"]).value",
       "expected": "['good morning', 'I demand a refund today']"
     },
     "rank": {
       "python": "tt.rank(\"Which is a complaint?\", [\"good morning\", \"I demand a refund today\"]).value",
-      "expected": "[{'index': 0, 'record': 'good morning', 'probability': 0.9}, {'index': 1, 'record': 'I demand a refund today', 'probability': 0.9}]"
+      "expected": "[0, 1]"
     },
     "find": {
       "python": "tt.find(\"Which line asks for money back?\", [\"good morning\", \"I want a refund\"]).value",
-      "expected": "{'index': 0, 'unit': 'good morning', 'probability': 0.9}"
+      "expected": "'good morning'"
     },
     "annotate": {
       "files": {
@@ -67,6 +63,10 @@
     "usage": {
       "python": "(tt.decide(\"Is this a complaint?\", \"hello\").value, tt.decide(\"Is this a complaint?\", \"hello\").value, tt.usage()[\"requests_sent\"], tt.usage()[\"cache_answers\"])",
       "expected": "(True, True, 1, 1)"
+    },
+    "probability": {
+      "python": "tt.decide(\"Is this a complaint?\", \"I demand a refund today\").probability",
+      "expected": "0.9"
     }
   }
 }

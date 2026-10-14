@@ -38,24 +38,44 @@ def read_files(path_or_paths: Any, *, unit: str = ..., window: int | None = ...)
 _ReadingValue: TypeAlias = bool | int | float | str | None | list["_ReadingValue"] | dict[str, "_ReadingValue"]
 class _DecideResult(Result[_ReadingValue]):
     results: tuple[NativeAtomicDecideValue, ...]
+    @property
+    def probability(self) -> float | None | list[float | None]: ...
 class _ChooseResult(Result[str | None | list[str | None]]):
     results: tuple[NativeAtomicNullableString, ...]
+    @property
+    def probability(self) -> float | None | list[float | None]: ...
 class _TagResult(Result[list[str] | list[list[str]]]):
     results: tuple[NativeAtomicArrayOfString, ...]
+    @property
+    def probability(self) -> None: ...
 class _ScoreResult(Result[float | list[float]]):
     results: tuple[NativeAtomicDouble, ...]
+    @property
+    def probability(self) -> None: ...
 class _FilterResult(Result[list[object]]):
     results: tuple[NativeAtomicBoolean, ...]
+    @property
+    def probability(self) -> list[float | None]: ...
 class _RankResult(Result[list[int]]):
     results: tuple[NativeAtomicNonZeroUsize, ...]
+    @property
+    def probability(self) -> list[float | None]: ...
 class _FindResult(Result[object | None]):
     results: tuple[NativeFind, ...]
+    @property
+    def probability(self) -> float | None: ...
 class _AnnotateResult(Result[NativeAnnotatedRow | list[NativeAnnotatedRow]]):
     results: tuple[NativeAnnotation, ...]
+    @property
+    def probability(self) -> None: ...
 class _RecognizeResult(Result[NativeRecognize | list[NativeRecognize]]):
     results: tuple[NativeRecognition, ...]
+    @property
+    def probability(self) -> list[float] | list[list[float]]: ...
 class _RelateResult(Result[list[NativeRelatedEntityEdge]]):
     results: tuple[NativeRelation, ...]
+    @property
+    def probability(self) -> list[float]: ...
 from ._named_generated import EngineSettings, PlanOptions, DecideOptions, ChooseOptions, TagOptions, ScoreOptions, FilterOptions, RankOptions, FindOptions, AnnotateOptions, RecognizeOptions, RelateOptions
 
 class Engine:

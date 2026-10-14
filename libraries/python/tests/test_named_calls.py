@@ -37,6 +37,16 @@ def test_named_calls_use_owned_typed_results_for_the_ten_functions(backend, tmp_
                 assert pickle.loads(pickle.dumps(done))._to_dict() == done._to_dict(), verb
                 assert 'one name' not in repr(done)
                 print(verb)
+            named = engine.recognize('Ada Ada', kinds=['person'],
+                                     seed_spans=[{'start': 0, 'end': 3}, {'start': 4, 'end': 7}])
+            entities = named.value.entities
+            assert [(entity.text, entity.start, entity.end) for entity in entities] == [('Ada', 0, 3), ('Ada', 4, 7)]
+            kept = [proposal for proposal in named.results[0].answer.proposals if proposal.kept]
+            assert len(kept) == len(named.probability) == 2
+            assert named.probability == [proposal.span_probability for proposal in kept]
+            assert all(chance != entity.strength for chance, entity in zip(named.probability, entities))
+            boundary = engine.recognize('Ada Ada', mode='boundary_only')
+            assert boundary.probability == [proposal.probability for proposal in boundary.value.proposals]
             pairs = [('A', 'person'), ('B', 'person')]
             relations = {'knows': ('person', 'person')}
             related = engine.relate(pairs, relations=relations)
@@ -56,7 +66,12 @@ def test_named_calls_use_owned_typed_results_for_the_ten_functions(backend, tmp_
             item = engine.decide('Late?', c.Records((c.Item(value='note', text=True, context='policy'),)))
             assert item.results[0].meta.context_sha256 == context.results[0].meta.context_sha256
             assert bool(detailed.value) is True
+            unresolved = engine.decide('Late?', ['first', 'second'], threshold='0.2:0.95')
+            assert unresolved.value == [None, None] and unresolved.probability == [.9, .9]
             assert engine.decide('Late?', 'note').value is True
+            try: engine.decide('Late?', 'note', details=True)
+            except TypeError: pass
+            else: raise AssertionError('removed details keyword admitted')
             assert engine.choose('Team?', 'note', options=['bill', 'ship']).probability == .9
             import asyncio
             assert asyncio.run(engine.asyncio.decide('Late?', 'note')).value is True

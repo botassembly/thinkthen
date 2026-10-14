@@ -25,7 +25,7 @@ def main():
             options = options if options is tt.ABSENT else tuple((item['name'], item.get('description', tt.ABSENT)) for item in options)
             values.append(tt.Item(value=content.get('value'), text=content['kind']=='text', image_only=content['kind']=='images',
                 images=tuple(tt.Image(data=bytes(image['bytes']), media=image['media']) for image in row.get('images', [])), context=context, options=options))
-        source = tt.Records(tuple(values))
+        source = values[0] if document.get('call_result_contract') else tt.Records(tuple(values))
         if document.get('incremental'):
             source = iter(values)
         elif LIBRARY == 'pandas':
@@ -66,7 +66,7 @@ def main():
                 else: done = getattr(engine, verb)(question, source, **controls)
                 results, facts = done.results, done.facts
             call_result = None
-            if document.get('kind') == 'call-result':
+            if document.get('call_result_contract'):
                 value, probability = done.value, done.probability
                 if LIBRARY is not None:
                     value = value.to_list()[0]

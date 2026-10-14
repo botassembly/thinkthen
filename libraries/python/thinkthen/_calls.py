@@ -3,7 +3,6 @@ from __future__ import annotations
 import asyncio
 from collections.abc import Iterator, Mapping
 from dataclasses import dataclass
-import os
 import sys
 from typing import Generic, TypeVar
 from . import _thinkthen as native
@@ -23,37 +22,6 @@ def _json(value):
     if isinstance(value, (tuple, list)):
         return [_json(item) for item in value]
     return value
-
-
-def _original(value, text=False):
-    return {'kind': 'text', 'text': value} if text else {'kind': 'json', 'value': _json(value)}
-
-
-def _item(value, verb):
-    if isinstance(value, c.Item):
-        import base64
-        descriptor = {'images': [{'kind': 'bytes', 'media': image.media, 'bytes': base64.b64encode(image.data).decode('ascii')} for image in value.images]}
-        if not value.image_only: descriptor['original'] = _original(value.value, value.text)
-        if value.context is not c.ABSENT: descriptor['context'] = value.context
-        if value.options is not c.ABSENT:
-            descriptor['options'] = [dict(name=name, **({} if description is c.ABSENT else {'description': description})) for name, description in value.options]
-        return descriptor
-    if verb == 'relate':
-        if isinstance(value, tuple): value = dict(zip(('name', 'kind'), value, strict=True))
-        elif isinstance(value, native._NativeResult): value = {'name': value.text, 'kind': value.kind}
-    return {'original': _original(value, isinstance(value, str))}
-
-
-def _input(value, verb):
-    if isinstance(value, (c.Files, FileSelection)):
-        reading = {'unit': value.unit}
-        if value.window is not None and value.window is not c.ABSENT: reading['window'] = value.window
-        source = {'paths': [os.fspath(path) for path in value.paths], 'reading': reading, 'media': getattr(value, 'media', 'text')}
-        if getattr(value, 'jsonl', False): source['framing'] = 'jsonl'
-        return {'kind': 'source', 'source': source}
-    if isinstance(value, c.Records): value = value.items
-    values = value if isinstance(value, (list, tuple)) else (value,)
-    return {'kind': 'records', 'items': [_item(item, verb) for item in values]}
 
 
 def _question(verb, question, controls, frame=False):
@@ -95,7 +63,7 @@ class Result(Generic[T]):
     def value(self):
         from ._native_results import _CALL_RESULTS
         projection = _CALL_RESULTS[self.function]['value_projection']
-        if projection:
+        if projection != 'value':
             return [getattr(row, projection) for row in self.results]
         if self.function == 'relate': return self.results[0].value if self.results else []
         if self.function == 'find': return self.results[0].value if self.results else None
@@ -112,13 +80,22 @@ class Result(Generic[T]):
             if mode == 'picked':
                 chance = answer.probabilities.get(answer.pick)
             elif self.function == 'recognize':
-                chance = [entity.strength for entity in getattr(row.value, 'entities', ())]
+                if 'entities' in row.value:
+                    # Canonical kept proposals own span probabilities; entity strength ranks names.
+                    proposals = [proposal for proposal in row.answer.proposals if proposal.kept]
+                    chance = [next(proposal.span_probability for proposal in proposals
+                                   if proposal.kind == entity.kind and
+                                   (proposal.selected.start, proposal.selected.end) == (entity.start, entity.end))
+                              for entity in row.value.entities]
+                else: chance = [proposal.probability for proposal in row.value.proposals]
             elif self.function == 'relate':
                 chance = [edge.probability for edge in row.value]
             else:
                 chance = getattr(answer, 'probability', None)
             values.append(chance)
-        if self.function in ('find', 'relate'): return values[0] if values else None
+        if self.function == 'relate': return values[0] if values else []
+        if self.function == 'find': return values[0] if values else None
+        if self.function == 'rank': return values
         return values[0] if self.scalar and values else values
     def __repr__(self): return '<Result: content withheld>'
     @property

@@ -875,11 +875,15 @@ _COLUMN_SCHEMAS = {
 _CALL_RESULTS = {
     "decide": {
         "carrier": "completesessionPacket_decide_aggregate",
-        "aggregate_value": {
+        "receipt_payload": {
             "items": {"$ref": "#/$defs/completeAtomic_DecideValue"},
             "type": "array",
         },
-        "value_projection": None,
+        "aggregate_value": {
+            "type": "array",
+            "items": {"$ref": "#/$defs/completeDecideValue"},
+        },
+        "value_projection": "value",
         "scalar_kind": "decision",
         "scalar_value": {"type": ["boolean", "null"]},
         "probability_mode": "yes",
@@ -888,11 +892,12 @@ _CALL_RESULTS = {
     },
     "choose": {
         "carrier": "completesessionPacket_choose_aggregate",
-        "aggregate_value": {
+        "receipt_payload": {
             "items": {"$ref": "#/$defs/completeAtomic_Nullable_string"},
             "type": "array",
         },
-        "value_projection": None,
+        "aggregate_value": {"type": "array", "items": {"type": ["string", "null"]}},
+        "value_projection": "value",
         "scalar_kind": "choice",
         "scalar_value": {"type": ["string", "null"]},
         "probability_mode": "picked",
@@ -905,28 +910,40 @@ _CALL_RESULTS = {
     },
     "tag": {
         "carrier": "completesessionPacket_tag_aggregate",
-        "aggregate_value": {
+        "receipt_payload": {
             "items": {"$ref": "#/$defs/completeAtomic_Array_of_string"},
             "type": "array",
         },
-        "value_projection": None,
+        "aggregate_value": {
+            "type": "array",
+            "items": {"items": {"type": "string"}, "type": "array"},
+        },
+        "value_projection": "value",
         "scalar_kind": "tags",
         "scalar_value": {"items": {"type": "string"}, "type": "array"},
         "probability_mode": "null",
     },
     "score": {
         "carrier": "completesessionPacket_score_aggregate",
-        "aggregate_value": {
+        "receipt_payload": {
             "items": {"$ref": "#/$defs/completeAtomic_double"},
             "type": "array",
         },
-        "value_projection": None,
+        "aggregate_value": {
+            "type": "array",
+            "items": {"format": "double", "type": "number"},
+        },
+        "value_projection": "value",
         "scalar_kind": "score",
         "scalar_value": {"format": "double", "type": "number"},
         "probability_mode": "null",
     },
     "filter": {
         "carrier": "completesessionPacket_filter_aggregate",
+        "receipt_payload": {
+            "items": {"$ref": "#/$defs/completeAtomic_boolean"},
+            "type": "array",
+        },
         "aggregate_value": {"type": "array", "items": True},
         "value_projection": "input",
         "scalar_kind": None,
@@ -937,6 +954,10 @@ _CALL_RESULTS = {
     },
     "rank": {
         "carrier": "completesessionPacket_rank_aggregate",
+        "receipt_payload": {
+            "items": {"$ref": "#/$defs/completeAtomic_NonZeroUsize"},
+            "type": "array",
+        },
         "aggregate_value": {
             "type": "array",
             "items": {
@@ -953,8 +974,9 @@ _CALL_RESULTS = {
     },
     "find": {
         "carrier": "completesessionPacket_find_aggregate",
-        "aggregate_value": {"$ref": "#/$defs/completeFind"},
-        "value_projection": None,
+        "receipt_payload": {"$ref": "#/$defs/completeFind"},
+        "aggregate_value": True,
+        "value_projection": "value",
         "scalar_kind": None,
         "scalar_value": None,
         "probability_mode": "picked",
@@ -967,30 +989,42 @@ _CALL_RESULTS = {
     },
     "annotate": {
         "carrier": "completesessionPacket_annotate_aggregate",
-        "aggregate_value": {
+        "receipt_payload": {
             "items": {"$ref": "#/$defs/completeAnnotation"},
             "type": "array",
         },
-        "value_projection": None,
+        "aggregate_value": {
+            "type": "array",
+            "items": {"$ref": "#/$defs/completeannotatedRow"},
+        },
+        "value_projection": "value",
         "scalar_kind": None,
         "scalar_value": None,
         "probability_mode": "null",
     },
     "recognize": {
         "carrier": "completesessionPacket_recognize_aggregate",
-        "aggregate_value": {
+        "receipt_payload": {
             "items": {"$ref": "#/$defs/completeRecognition"},
             "type": "array",
         },
-        "value_projection": None,
+        "aggregate_value": {
+            "type": "array",
+            "items": {"$ref": "#/$defs/completerecognize"},
+        },
+        "value_projection": "value",
         "scalar_kind": None,
         "scalar_value": None,
         "probability_mode": "items",
     },
     "relate": {
         "carrier": "completesessionPacket_relate_aggregate",
-        "aggregate_value": {"$ref": "#/$defs/completeRelation"},
-        "value_projection": None,
+        "receipt_payload": {"$ref": "#/$defs/completeRelation"},
+        "aggregate_value": {
+            "items": {"$ref": "#/$defs/completerelatedEntityEdge"},
+            "type": "array",
+        },
+        "value_projection": "value",
         "scalar_kind": None,
         "scalar_value": None,
         "probability_mode": "items",
