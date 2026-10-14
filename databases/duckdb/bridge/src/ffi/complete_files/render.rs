@@ -37,7 +37,10 @@ pub(super) fn packet(packet: Packet) -> Result<Value, Error> {
             )?;
         }
         Packet::Observation { value: event, .. } => {
-            crate::complete_native::put(&mut value, "value", observations::owned_event(event)?)?
+            super::super::native_records::observations::supplement(
+                value.get_mut("value").ok_or_else(defect)?,
+                observations::owned_event(event)?,
+            )?
         }
         Packet::Terminal(_) => {}
     }

@@ -10,6 +10,7 @@ use thinkthen::{
     RequestOptions, RequestOutcome, RequestQuestion,
 };
 
+pub(super) mod observations;
 mod records;
 use records::{Record, compose, fields, read_record};
 
@@ -221,11 +222,12 @@ fn execute_native(
             .is_ok_and(|record| !record.item.images.is_empty())
     });
     let events = std::sync::Mutex::new(Vec::new());
+    let function = prepared.request.request().call.function();
     let observer = |event: thinkthen::RecordObservation<'_>| {
         events
             .lock()
             .unwrap_or_else(std::sync::PoisonError::into_inner)
-            .push(complete_native::observations::event(&event));
+            .push(observations::event(&event, function));
     };
     let rows = prepared
         .records
@@ -301,6 +303,24 @@ pub(crate) unsafe extern "C" fn thinkthen_cpp_native_records(
     reply_boundary(|| {
         let verb = text(verb.bytes, verb.len)?.to_owned();
         let question = text(question.bytes, question.len)?;
+        let verb = if verb == "details" {
+            match super::portable_aux::asking_kind(
+                question,
+                question.trim_start().starts_with('{'),
+                "details",
+            )
+            .map_err(|error| error.text)?
+            {
+                0 => "decide",
+                4 => "choose",
+                5 => "score",
+                6 => "tag",
+                _ => return Err("thinkthen defect: details lost its asking kind".into()),
+            }
+            .to_owned()
+        } else {
+            verb
+        };
         // SAFETY: the host retains the selected question through synchronous return.
         let selected = unsafe { reference.as_ref() };
         let parsed = prepare_native(

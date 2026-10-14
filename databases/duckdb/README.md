@@ -42,7 +42,7 @@ Discovery creates no engine, reads no input files and sends no requests.
 | `thinkthen_rank(question, keyed_json[, settings])` | table rows `(key, rank, probability)` as `VARCHAR, BIGINT, DOUBLE`, best first |
 | `thinkthen_plan(question, keyed_json[, settings])` | a native struct with records, prepared requests, byte and token estimates, an upper-bound flag, and the first request body |
 | `thinkthen_annotate(set, text[, settings])` | `VARCHAR`, the record's values as JSON |
-| `thinkthen_details(question, text[, settings])` | the command's `--details` line, as JSON text |
+| `thinkthen_details(question, text[, settings])` | a native receipt struct with typed results, plain answers, owning facts, failures and observations |
 | `thinkthen_try_details(question, text[, settings])` | an answered JSON envelope, or a safe failed envelope for a recoverable row error |
 | `thinkthen_recognize(text, kinds[, settings])` | a list of `(text, start, end, length, kind, strength)` |
 | `thinkthen_relations(text, file[, settings])` | a list of `(relation, source, source_kind, target, target_kind, probability, either)`; `either` is true for a both-ways rule, whose ends are then in the order found |
@@ -127,9 +127,17 @@ The cast refuses a label outside the enum. A stored `NULL` can represent a choic
 
 ## Run facts
 
-`thinkthen_details(question, text)` returns the command's scalar `--details` shape as JSON text, schema `thinkthen.result/1`. It omits record `input`, even when the engine packs several texts. Read a member with DuckDB's JSON functions, such as `thinkthen_details(q, t) ->> '$.meta.usage.input_tokens'`. The backend's reply supplies `meta.model`, `meta.usage` with its input and output tokens, and every probability, with `answer.confidence` when the backend sends one. The engine counts `meta.requests_sent` and sets `meta.cached` when a cache or recording answered. `meta.requests` holds the recording digest of each actual request, including a refused parent before one split; `meta.batch` names a packed member. `meta.url` names the address that answered. A field the backend did not report is absent. This legacy scalar details shape does not include owning-call cost or elapsed time. The native record table forms below return those facts when available.
+`thinkthen_details(question, text)` returns the same native receipt projection as the record table forms. It accepts decide, choose, score and tag questions. `results` and `answers` use DuckDB UNION arms named `decide`, `choose`, `score` and `tag`, each reusing that function's existing native type. The scalar row contains its own actual result and the owning group's final facts and observations. Compatible distinct texts still pack together; repeated text reuses its group's result.
 
-The details digest includes a question's saved calibration `profile`. A different runtime `thinkthen_profile` name appears as `meta.profile_warning` with `tuned_for` and `running`; the selected profile checks limits before sending.
+```sql
+SELECT receipt.answers[1].decide AS asks_refund,
+       receipt.results[1].decide.answer.probability AS refund_probability,
+       receipt.facts.requests_sent, receipt.failure.kind
+FROM (SELECT thinkthen_details('Does the writer ask for a refund?', body) AS receipt
+      FROM tickets) AS refund_readings;
+```
+
+The typed result's `meta` retains reported model, probabilities, request identities, cache origin, saved question digest and profile warning. Optional native fields are SQL NULL when absent. `facts` retains owning-call counts, identity, elapsed time and optional caller-priced cost; started failures retain their actual facts. Required SQL NULL question or text returns SQL NULL before inspecting settings. Original settings and asking-question validation still precede any send.
 
 `thinkthen_usage()` returns this process's running totals of requests sent, cache answers and tokens.
 
@@ -199,7 +207,7 @@ LOAD takes SIGINT and chains to the host's own action. A Ctrl-C stops the runnin
 
 `thinkthen_image(bytes BLOB, mime VARCHAR)` returns `STRUCT(media VARCHAR, data BLOB, file VARCHAR)`. Pass an ordered list of these structs. MIME is exactly `image/png` or `image/jpeg`; the native reader/decoder validates original compressed pixels. Each question takes 1–8 images and at most 24 MiB of compressed bytes. Order and duplicates are preserved. Source file names stay outside model evidence and cache identity.
 
-`thinkthen_decide_images(question, images, text := NULL, settings := NULL)`, `thinkthen_choose_images`, `thinkthen_score_images` and `thinkthen_details_images` use the existing native image engine. The first three return their ordinary scalar value; the last returns native detailed JSON. Questions and settings use the existing text/JSON/question-file grammar. Choose options and score levels belong in question JSON or settings. Ancillary text is optional.
+`thinkthen_decide_images(question, images, text := NULL, settings := NULL)`, `thinkthen_choose_images`, `thinkthen_score_images` and `thinkthen_details_images` use the existing native image engine. The first three return their ordinary scalar value; the last returns the same typed native receipt with asking-question UNION arms. Questions and settings use the existing text/JSON/question-file grammar. Choose options and score levels belong in question JSON or settings. Ancillary text is optional.
 
 NULL constructor operands return NULL. NULL question or collection returns NULL without sending; NULL ancillary text means absent text and NULL settings means defaults. A NULL member inside a collection, empty collection, invalid media/pixels/tag or exceeded limit is Usage before sending. Unsure decide/choose is NULL; failures remain errors. Arbitrary BLOB/bytea, text, paths, URLs and generic JSON never become images implicitly. Other functions retain their text input contract.
 

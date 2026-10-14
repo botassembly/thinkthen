@@ -32,6 +32,7 @@ def check(run):
     sources(run)
     rich_overloads(run)
     null_members(run)
+    details_columns(run)
 
 
 def helpers(run):
@@ -110,3 +111,25 @@ def null_members(run):
         expect([rows(item) for item in got], [[['usage', None]]] * len(cases),
                "authored null ancillary members refuse without invented facts")
         expect(backend.count(), 0, "authored null refuses before sends")
+
+
+def details_columns(run):
+    """Ordinary details reuse native receipts and one packed canonical call."""
+    with Backend() as backend:
+        got = run([
+            "SELECT d.answers[1].decide, d.results[1].decide.input, "
+            "d.results[1].decide.answer.probability,d.facts.records,d.facts.requests_sent, "
+            "d.observations[1].detail.value.boolean_value,d.observations[2].value.kind, "
+            "d.observations[2].value.value.object_value.value.boolean_value "
+            "FROM (SELECT thinkthen_details('Refund?',x,batch := 2) AS d, i "
+            "FROM (VALUES (0,'alpha'),(1,'beta'),(2,'alpha')) v(i,x)) ORDER BY i",
+            "SELECT d.failure.kind,d.facts.requests_sent FROM "
+            "(SELECT thinkthen_details('Refund?','delta',deadline_ms := 0) AS d)",
+            "SELECT thinkthen_details(NULL,'delta',settings := 'not JSON') IS NULL",
+        ], backend.base())
+        expect(rows(got[0]), [[True,'"alpha"',0.9,2,1,True,'judgment',True],
+                              [True,'"beta"',0.9,2,1,True,'judgment',True],
+                              [True,'"alpha"',0.9,2,1,True,'judgment',True]], "typed details map native originals and owning facts")
+        expect(rows(got[1]), [['deadline',0]], "typed details retain started zero-send facts")
+        expect(rows(got[2]), [[True]], "details required NULL shields settings")
+        expect(backend.count(), 1, "packed distinct details originals send once")
