@@ -341,6 +341,7 @@ impl From<EngineError> for Error {
 /// because its sentences name command-line options.
 fn message(error: &EngineError) -> String {
     let fixed = match error {
+        EngineError::Provider { cause, diagnostic } => return diagnostic.sentence(message(cause)),
         EngineError::Transport(kind) => transport(*kind),
         EngineError::Status(302) => {
             return "the backend answered with status 302: the redirect was not followed"

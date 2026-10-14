@@ -4,6 +4,12 @@ Status: OPEN.
 
 Milestone: 0.2
 
+Reviews: revision 5d81001, reject
+
+Reviews: revision 782454e, reject
+
+Reviews: revision 8c2f689, reject
+
 ## Outcome
 
 When a live backend fails, ThinkThen stops or retries correctly and tells the user why in the provider's own words. A quota error stops at once and says the account is out of credit. `backends check` names the provider it actually calls. A connection that never opened gets one retry.
@@ -35,3 +41,5 @@ PM amendment, 2026-10-13. Add the marketing lead's Ollama finding. On the M5 wit
 PM amendment, 2026-10-13. Remaining work. `ticket/0579-backend-errors` holds 18 unmerged commits covering the quota stop (d996fce7d), the provider's own message with key and header screening (d5ee893fa to 782454ea7), the public provider name (f17eb57a2), one retry for an unopened connection (77d6b2ac7, 1872a07b3), and separate reported and planned token counts (3141e3695, 03ce8eb0b). A fresh review rejected 5d81001; 782454ea7 answers it and needs a fresh review. Remaining: implement the Ollama amendment, treating port 11434 or a host named `ollama` as Ollama-shaped, and remove the fixed text in `crates/thinkthen/src/cli/failure/status.rs` unless the provider's message points there, with an outside-in test against a local fake server. For Jev's plan estimate, state the margin in the plan output and name the measured cause in the record; do not tune the estimator. Rebase on `ticket/0543-final`, run routine `test` and `lint`, get a fresh accept on the head, and merge. No live or paid call is needed.
 
 PM amendment, 2026-10-13. Yes: replace only the evidence inputs in the `status_reason` fixtures whose evidence is a short word such as `model` or `a` with unrelated evidence. Keep every diagnostic, kind, facts and send assertion, and keep the separate short-reflection refusal tests.
+- 2026-10-13 started
+- 2026-10-13 next: Qualify the reviewed backend repairs with the landed staging fixes and corrected generated outputs before merge; the combined Rust ceiling gates the candidate under the approved ruling.

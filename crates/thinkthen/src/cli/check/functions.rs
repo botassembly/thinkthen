@@ -46,6 +46,9 @@ pub(super) fn check(
                 if let Some(reason) = error.estimated_input_denial() {
                     return Err(crate::failure::Failure::EstimatedInput(reason));
                 }
+                if error.stopped().status() == Some(429) && !error.stopped().retryable() {
+                    stopped.store(true, Ordering::Relaxed);
+                }
                 Some(error.to_string())
             }
         };

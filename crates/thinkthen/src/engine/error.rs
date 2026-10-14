@@ -4,7 +4,9 @@ use std::fmt;
 use std::time::Duration;
 
 use crate::core::ProfileLimit;
+mod provider;
 use crate::core::adapters::built_in::DecodeError;
+pub(crate) use provider::ProviderDiagnostic;
 
 /// A safe, stable description of why a backend connection failed.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -41,6 +43,10 @@ pub(crate) enum Kind {
 pub(crate) enum Error {
     Transport(TransportKind),
     Status(u16),
+    Provider {
+        cause: Box<Self>,
+        diagnostic: ProviderDiagnostic,
+    },
     /// A process send total refused the first live attempt.
     SendBudgetFirst,
     /// A process send total refused another ordinary or split request.
@@ -143,7 +149,7 @@ impl fmt::Display for Budget {
 impl Error {
     /// A refusal that a smaller batch may answer.
     pub(crate) const fn too_large(&self) -> bool {
-        matches!(self, Self::TokenLimit | Self::Status(413))
+        matches!(self.base(), Self::TokenLimit | Self::Status(413))
     }
 
     /// A refusal by the caller's send budget or estimated input cap.
@@ -158,8 +164,16 @@ impl Error {
         )
     }
 
+    pub(crate) const fn base(&self) -> &Self {
+        match self {
+            Self::Provider { cause, .. } => cause.base(),
+            other => other,
+        }
+    }
+
     pub(crate) const fn kind(&self) -> Kind {
         match self {
+            Self::Provider { cause, .. } => cause.kind(),
             Self::Transport(_)
             | Self::Status(_)
             | Self::SendBudgetRetry(_)
@@ -203,7 +217,11 @@ impl Error {
     /// failing backend status. A transport failure may already have reached
     /// the backend, so it is never retried.
     pub(crate) fn retryable(&self) -> bool {
-        matches!(self, Self::Status(status) if retried_status(*status))
+        match self {
+            Self::Provider { cause, diagnostic } => !diagnostic.quota && cause.retryable(),
+            Self::Status(status) => retried_status(*status),
+            _ => false,
+        }
     }
 }
 

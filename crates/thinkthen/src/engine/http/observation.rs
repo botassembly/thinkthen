@@ -43,13 +43,9 @@ impl ResponseInfo {
                     .all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'.' | b'_' | b'-'))
             })
             .filter(|value| {
-                let key = exchange.key.as_str();
-                (key.is_empty() || !value.contains(key))
+                !super::diagnostic::key_echo(value, exchange.key)
                     && !exchange.url.contains(value)
-                    && !exchange
-                        .body
-                        .windows(value.len())
-                        .any(|part| part == value.as_bytes())
+                    && !super::diagnostic::request_echo(value, exchange.body)
             })
             .map(str::to_owned);
         Self {

@@ -56,6 +56,21 @@ impl ApiType {
             Self::Decisions => openai::validate_exchange(request, response),
         }
     }
+    #[cfg(feature = "cli")]
+    pub(crate) const fn plan_estimate_note(self) -> &'static str {
+        match self {
+            Self::Primary => systemone::PLAN_ESTIMATE_NOTE,
+            Self::Decisions => {
+                "token-estimate measured byte rates; actual billed input can exceed the upper estimate; provider tokenization and internal prompts are not measured"
+            }
+        }
+    }
+    pub(crate) const fn provider_name(self) -> &'static str {
+        match self {
+            Self::Primary => systemone::NAME,
+            Self::Decisions => openai::BUILT_IN.name,
+        }
+    }
     pub(crate) const fn name(self) -> &'static str {
         match self {
             Self::Primary => systemone::NAME,
