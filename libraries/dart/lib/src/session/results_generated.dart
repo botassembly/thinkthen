@@ -2165,6 +2165,40 @@ final class Place extends _NativeValue {
       });
 }
 
+final class Plan extends _NativeValue {
+  Plan._(super.fields);
+  factory Plan.read(Object? value) => Plan._(_readObject(value));
+  BigInt get estimatedBytes => _readInteger(_fields["estimated_bytes"]);
+  TokenBand get estimatedInputTokens =>
+      TokenBand.read(_fields["estimated_input_tokens"]);
+  String? get firstBodyUtf8 => _fields["first_body_utf8"] == null
+      ? null
+      : _fields["first_body_utf8"] as String;
+  BigInt get largestRequestBytes =>
+      _readInteger(_fields["largest_request_bytes"]);
+  BigInt get largestRequestEstimatedInputTokens =>
+      _readInteger(_fields["largest_request_estimated_input_tokens"]);
+  BigInt get records => _readInteger(_fields["records"]);
+  BigInt get requests => _readInteger(_fields["requests"]);
+  String get tokenEstimateMethod => _fields["token_estimate_method"] as String;
+  bool get upperBound => _fields["upper_bound"] as bool;
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (![
+            "estimated_bytes",
+            "estimated_input_tokens",
+            "first_body_utf8",
+            "largest_request_bytes",
+            "largest_request_estimated_input_tokens",
+            "records",
+            "requests",
+            "token_estimate_method",
+            "upper_bound"
+          ].contains(entry.key))
+            entry.key: entry.value
+      });
+}
+
 final class ProfileWarning extends _NativeValue {
   ProfileWarning._(super.fields);
   factory ProfileWarning.read(Object? value) =>
@@ -3486,6 +3520,17 @@ final class SourceRelationEndpoint extends _NativeValue {
             "record"
           ].contains(entry.key))
             entry.key: entry.value
+      });
+}
+
+final class TokenBand extends _NativeValue {
+  TokenBand._(super.fields);
+  factory TokenBand.read(Object? value) => TokenBand._(_readObject(value));
+  BigInt get lower => _readInteger(_fields["lower"]);
+  BigInt get upper => _readInteger(_fields["upper"]);
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (!["lower", "upper"].contains(entry.key)) entry.key: entry.value
       });
 }
 
