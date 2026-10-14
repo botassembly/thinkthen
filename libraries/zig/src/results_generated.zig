@@ -5529,3 +5529,200 @@ pub const AnswerView = struct {
         return answer;
     }
 };
+
+pub fn callReceiptType(comptime function: anytype) type {
+    if (comptime std.mem.eql(u8, @tagName(function), "decide")) return AtomicDecideValue;
+    if (comptime std.mem.eql(u8, @tagName(function), "choose")) return AtomicNullableString;
+    if (comptime std.mem.eql(u8, @tagName(function), "tag")) return AtomicArrayOfString;
+    if (comptime std.mem.eql(u8, @tagName(function), "score")) return AtomicDouble;
+    if (comptime std.mem.eql(u8, @tagName(function), "filter")) return AtomicBoolean;
+    if (comptime std.mem.eql(u8, @tagName(function), "rank")) return AtomicNonZeroUsize;
+    if (comptime std.mem.eql(u8, @tagName(function), "find")) return Find;
+    if (comptime std.mem.eql(u8, @tagName(function), "annotate")) return Annotation;
+    if (comptime std.mem.eql(u8, @tagName(function), "recognize")) return Recognition;
+    if (comptime std.mem.eql(u8, @tagName(function), "relate")) return Relation;
+    @compileError("unknown named function");
+}
+pub fn callReceipts(comptime function: anytype, packet: *const SessionPacket, a: std.mem.Allocator) !?[]const callReceiptType(function) {
+    if (comptime std.mem.eql(u8, @tagName(function), "decide")) {
+        if (packet.* != .decide_aggregate) return null;
+        return packet.decide_aggregate.value;
+    }
+    if (comptime std.mem.eql(u8, @tagName(function), "choose")) {
+        if (packet.* != .choose_aggregate) return null;
+        return packet.choose_aggregate.value;
+    }
+    if (comptime std.mem.eql(u8, @tagName(function), "tag")) {
+        if (packet.* != .tag_aggregate) return null;
+        return packet.tag_aggregate.value;
+    }
+    if (comptime std.mem.eql(u8, @tagName(function), "score")) {
+        if (packet.* != .score_aggregate) return null;
+        return packet.score_aggregate.value;
+    }
+    if (comptime std.mem.eql(u8, @tagName(function), "filter")) {
+        if (packet.* != .filter_aggregate) return null;
+        return packet.filter_aggregate.value;
+    }
+    if (comptime std.mem.eql(u8, @tagName(function), "rank")) {
+        if (packet.* != .rank_aggregate) return null;
+        return packet.rank_aggregate.value;
+    }
+    if (comptime std.mem.eql(u8, @tagName(function), "find")) {
+        if (packet.* != .find_aggregate) return null;
+        const result = try a.alloc(callReceiptType(function), 1);
+        result[0] = packet.find_aggregate.value;
+        return result;
+    }
+    if (comptime std.mem.eql(u8, @tagName(function), "annotate")) {
+        if (packet.* != .annotate_aggregate) return null;
+        return packet.annotate_aggregate.value;
+    }
+    if (comptime std.mem.eql(u8, @tagName(function), "recognize")) {
+        if (packet.* != .recognize_aggregate) return null;
+        return packet.recognize_aggregate.value;
+    }
+    if (comptime std.mem.eql(u8, @tagName(function), "relate")) {
+        if (packet.* != .relate_aggregate) return null;
+        const result = try a.alloc(callReceiptType(function), 1);
+        result[0] = packet.relate_aggregate.value;
+        return result;
+    }
+    unreachable;
+}
+pub fn callValueType(comptime function: anytype) type {
+    if (comptime std.mem.eql(u8, @tagName(function), "decide")) return ?@typeInfo(@TypeOf(@as(@TypeOf(@field(@as(callReceiptType(function), undefined), "value")), undefined).optional())).optional.child;
+    if (comptime std.mem.eql(u8, @tagName(function), "choose")) return ?@typeInfo(@TypeOf(@as(@TypeOf(@field(@as(callReceiptType(function), undefined), "value")), undefined).optional())).optional.child;
+    if (comptime std.mem.eql(u8, @tagName(function), "tag")) return @TypeOf(@field(@as(callReceiptType(function), undefined), "value"));
+    if (comptime std.mem.eql(u8, @tagName(function), "score")) return @TypeOf(@field(@as(callReceiptType(function), undefined), "value"));
+    if (comptime std.mem.eql(u8, @tagName(function), "filter")) return @typeInfo(@TypeOf(@as(@TypeOf(@field(@as(callReceiptType(function), undefined), "input")), undefined).optional())).optional.child;
+    if (comptime std.mem.eql(u8, @tagName(function), "rank")) return @typeInfo(@TypeOf(@as(@TypeOf(@field(@as(callReceiptType(function), undefined), "index")), undefined).optional())).optional.child;
+    if (comptime std.mem.eql(u8, @tagName(function), "find")) return ?@typeInfo(@TypeOf(@as(@TypeOf(@field(@as(callReceiptType(function), undefined), "value")), undefined).optional())).optional.child;
+    if (comptime std.mem.eql(u8, @tagName(function), "annotate")) return @TypeOf(@field(@as(callReceiptType(function), undefined), "value"));
+    if (comptime std.mem.eql(u8, @tagName(function), "recognize")) return @TypeOf(@field(@as(callReceiptType(function), undefined), "value"));
+    if (comptime std.mem.eql(u8, @tagName(function), "relate")) return @TypeOf(@field(@as(callReceiptType(function), undefined), "value"));
+    @compileError("unknown named function");
+}
+pub fn callValue(comptime function: anytype, receipt: callReceiptType(function)) !callValueType(function) {
+    if (comptime std.mem.eql(u8, @tagName(function), "decide")) return receipt.value.optional();
+    if (comptime std.mem.eql(u8, @tagName(function), "choose")) return receipt.value.optional();
+    if (comptime std.mem.eql(u8, @tagName(function), "tag")) return receipt.value;
+    if (comptime std.mem.eql(u8, @tagName(function), "score")) return receipt.value;
+    if (comptime std.mem.eql(u8, @tagName(function), "filter")) return switch (receipt.input) {
+        .value => |v| v,
+        .null_value => .null_value,
+        .missing => return error.MissingAnswer,
+    };
+    if (comptime std.mem.eql(u8, @tagName(function), "rank")) return switch (receipt.index) {
+        .value => |v| v,
+        .null_value => return error.MissingAnswer,
+        .missing => return error.MissingAnswer,
+    };
+    if (comptime std.mem.eql(u8, @tagName(function), "find")) return receipt.value.optional();
+    if (comptime std.mem.eql(u8, @tagName(function), "annotate")) return receipt.value;
+    if (comptime std.mem.eql(u8, @tagName(function), "recognize")) return receipt.value;
+    if (comptime std.mem.eql(u8, @tagName(function), "relate")) return receipt.value;
+    unreachable;
+}
+pub fn callProbabilityType(comptime function: anytype) type {
+    if (comptime std.mem.eql(u8, @tagName(function), "decide")) return ?f64;
+    if (comptime std.mem.eql(u8, @tagName(function), "choose")) return ?f64;
+    if (comptime std.mem.eql(u8, @tagName(function), "tag")) return ?f64;
+    if (comptime std.mem.eql(u8, @tagName(function), "score")) return ?f64;
+    if (comptime std.mem.eql(u8, @tagName(function), "filter")) return ?f64;
+    if (comptime std.mem.eql(u8, @tagName(function), "rank")) return ?f64;
+    if (comptime std.mem.eql(u8, @tagName(function), "find")) return ?f64;
+    if (comptime std.mem.eql(u8, @tagName(function), "annotate")) return ?f64;
+    if (comptime std.mem.eql(u8, @tagName(function), "recognize")) return []const ?f64;
+    if (comptime std.mem.eql(u8, @tagName(function), "relate")) return []const ?f64;
+    @compileError("unknown named function");
+}
+pub fn callProbability(comptime function: anytype, receipt: callReceiptType(function), ordinal: usize, packets: []const *const SessionPacket, a: std.mem.Allocator) !callProbabilityType(function) {
+    if (comptime std.mem.eql(u8, @tagName(function), "decide")) {
+        const index = receipt.index.optional() orelse ordinal;
+        var resolved = false;
+        for (packets) |packet| {
+            if (packet.* != .observation or packet.observation.value != .row) continue;
+            const row = packet.observation.value.row;
+            if (row.index != index or row.value != .judgment) continue;
+            if (row.value.judgment.value != .decision) continue;
+            resolved = row.value.judgment.value.decision.value == .value;
+        }
+        if (!resolved) return null;
+        if (receipt.answer != .yes_no) return error.WrongAnswer;
+        return receipt.answer.yes_no.probability;
+    }
+    if (comptime std.mem.eql(u8, @tagName(function), "choose")) {
+        const index = receipt.index.optional() orelse ordinal;
+        var resolved = false;
+        for (packets) |packet| {
+            if (packet.* != .observation or packet.observation.value != .row) continue;
+            const row = packet.observation.value.row;
+            if (row.index != index or row.value != .judgment) continue;
+            if (row.value.judgment.value != .choice) continue;
+            resolved = row.value.judgment.value.choice.value == .value;
+        }
+        if (!resolved) return null;
+        if (receipt.answer != .choice) return error.WrongAnswer;
+        for (receipt.answer.choice.probabilities.entries) |entry| {
+            if (std.mem.eql(u8, entry.key, receipt.answer.choice.pick)) return entry.value;
+        }
+        return null;
+    }
+    if (comptime std.mem.eql(u8, @tagName(function), "tag")) {
+        return null;
+    }
+    if (comptime std.mem.eql(u8, @tagName(function), "score")) {
+        return null;
+    }
+    if (comptime std.mem.eql(u8, @tagName(function), "filter")) {
+        if (receipt.answer != .yes_no) return error.WrongAnswer;
+        return receipt.answer.yes_no.probability;
+    }
+    if (comptime std.mem.eql(u8, @tagName(function), "rank")) {
+        if (receipt.answer != .yes_no) return error.WrongAnswer;
+        return receipt.answer.yes_no.probability;
+    }
+    if (comptime std.mem.eql(u8, @tagName(function), "find")) {
+        if (receipt.index != .value) return null;
+        for (receipt.answer.probabilities.entries) |entry| {
+            if (std.mem.eql(u8, entry.key, receipt.answer.pick)) return entry.value;
+        }
+        return null;
+    }
+    if (comptime std.mem.eql(u8, @tagName(function), "annotate")) {
+        return null;
+    }
+    if (comptime std.mem.eql(u8, @tagName(function), "recognize")) {
+        switch (receipt.value) {
+            .mode_proposals => |value| {
+                const result = try a.alloc(?f64, value.proposals.len);
+                for (result, value.proposals) |*out, proposal| out.* = proposal.probability;
+                return result;
+            },
+            .entities => |value| {
+                if (receipt.answer != .recognize_answer) return error.WrongAnswer;
+                const result = try a.alloc(?f64, value.entities.len);
+                for (result, value.entities) |*out, entity| {
+                    out.* = null;
+                    for (receipt.answer.recognize_answer.proposals) |proposal| {
+                        if (!proposal.kept) continue;
+                        const selected = proposal.selected.optional() orelse continue;
+                        const kind = proposal.kind.optional() orelse continue;
+                        if (selected.start == entity.start and selected.end == entity.end and std.mem.eql(u8, kind, entity.kind)) {
+                            out.* = proposal.span_probability;
+                            break;
+                        }
+                    }
+                }
+                return result;
+            },
+        }
+    }
+    if (comptime std.mem.eql(u8, @tagName(function), "relate")) {
+        const result = try a.alloc(?f64, receipt.value.len);
+        for (result, receipt.value) |*out, edge| out.* = edge.probability;
+        return result;
+    }
+    unreachable;
+}

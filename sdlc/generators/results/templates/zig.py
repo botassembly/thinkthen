@@ -237,7 +237,7 @@ def render_results(definitions):
         readers.append('pub fn read' + typ + '(a: std.mem.Allocator, v: c.' + ident(key) + ') anyerror!' + typ + ' {\n' + '\n'.join(body) + '\n}')
     aliases = ['Presence', 'Map', 'Number', 'Value', *(result_name(key) for key in emitted)]
     types = '\npub const Types = struct {\n' + '\n'.join('    pub const ' + typ + ' = @import("results_generated.zig").' + typ + ';' for typ in sorted(set(aliases))) + '\n};\n'
-    return RESULT_SUPPORT + '\n\n'.join(declarations + readers) + types + answer_helpers(definitions)
+    return RESULT_SUPPORT + '\n\n'.join(declarations + readers) + types + answer_helpers(definitions) + call_helpers(definitions)
 
 
 RESULT_SUPPORT = '''// Generated owned values from the canonical native packet graph; do not edit.
@@ -346,3 +346,128 @@ def answer_helpers(definitions):
                   f'        for (answer, receipts) |*out, receipt| out.* = {expr};',
                   '        return answer;', '    }']
     return '\n'.join(lines + ['};', ''])
+
+
+def call_helpers(definitions):
+    """Private typed receipt projections, independent of the named call API."""
+    from host_answers import call_results
+    from c import variant_member, nullable
+    rules = call_results(definitions)
+    lines = ['\npub fn callReceiptType(comptime function: anytype) type {']
+    for function, rule in rules.items():
+        payload = rule['receipt_payload']
+        receipt = payload.get('items', payload)['$ref'].split('/')[-1]
+        lines.append(f'    if (comptime std.mem.eql(u8, @tagName(function), "{function}")) return {name(receipt)};')
+    lines += ['    @compileError("unknown named function");', '}',
+              'pub fn callReceipts(comptime function: anytype, packet: *const SessionPacket, a: std.mem.Allocator) !?[]const callReceiptType(function) {']
+    for function, rule in rules.items():
+        carrier = variant_member('completesessionPacket', rule['carrier'])
+        lines += [f'    if (comptime std.mem.eql(u8, @tagName(function), "{function}")) {{',
+                  f'        if (packet.* != .{carrier}) return null;']
+        if rule['receipt_payload'].get('type') == 'array':
+            lines += [f'        return packet.{carrier}.value;']
+        else:
+            lines += ['        const result = try a.alloc(callReceiptType(function), 1);',
+                      f'        result[0] = packet.{carrier}.value;', '        return result;']
+        lines += ['    }']
+    lines += ['    unreachable;', '}',
+              'pub fn callValueType(comptime function: anytype) type {']
+    for function, rule in rules.items():
+        payload = rule['receipt_payload']
+        receipt = definitions[payload.get('items', payload)['$ref'].split('/')[-1]]
+        field = rule['value_projection']
+        schema = receipt['properties'][field]
+        presence = field not in receipt.get('required', []) or nullable(schema, definitions)
+        raw = f'@TypeOf(@field(@as(callReceiptType(function), undefined), "{field}"))'
+        typ = f'@typeInfo(@TypeOf(@as({raw}, undefined).optional())).optional.child' if presence else raw
+        if presence and function not in ('filter', 'rank'):
+            typ = '?' + typ
+        lines += [f'    if (comptime std.mem.eql(u8, @tagName(function), "{function}")) return {typ};']
+    lines += ['    @compileError("unknown named function");', '}',
+              'pub fn callValue(comptime function: anytype, receipt: callReceiptType(function)) !callValueType(function) {']
+    for function, rule in rules.items():
+        payload = rule['receipt_payload']
+        receipt = definitions[payload.get('items', payload)['$ref'].split('/')[-1]]
+        field = rule['value_projection']
+        presence = field not in receipt.get('required', []) or nullable(receipt['properties'][field], definitions)
+        value = f'receipt.{field}'
+        if presence:
+            if function in ('filter', 'rank'):
+                null = '.null_value' if function == 'filter' else 'return error.MissingAnswer'
+                value = f'switch ({value}) {{ .value => |v| v, .null_value => {null}, .missing => return error.MissingAnswer }}'
+            else:
+                value += '.optional()'
+        lines += [f'    if (comptime std.mem.eql(u8, @tagName(function), "{function}")) return {value};']
+    lines += ['    unreachable;', '}',
+              'pub fn callProbabilityType(comptime function: anytype) type {']
+    for function, rule in rules.items():
+        typ = '[]const ?f64' if function in ('recognize', 'relate') else '?f64'
+        lines += [f'    if (comptime std.mem.eql(u8, @tagName(function), "{function}")) return {typ};']
+    lines += ['    @compileError("unknown named function");', '}',
+              'pub fn callProbability(comptime function: anytype, receipt: callReceiptType(function), ordinal: usize, packets: []const *const SessionPacket, a: std.mem.Allocator) !callProbabilityType(function) {']
+    for function, rule in rules.items():
+        lines += [f'    if (comptime std.mem.eql(u8, @tagName(function), "{function}")) {{']
+        mode = rule['probability_mode']
+        if 'resolution' in rule:
+            tag = rule['scalar_kind']
+            lines += ['        const index = receipt.index.optional() orelse ordinal;',
+                      '        var resolved = false;',
+                      '        for (packets) |packet| {',
+                      '            if (packet.* != .observation or packet.observation.value != .row) continue;',
+                      '            const row = packet.observation.value.row;',
+                      '            if (row.index != index or row.value != .judgment) continue;',
+                      f'            if (row.value.judgment.value != .{tag}) continue;',
+                      f'            resolved = row.value.judgment.value.{tag}.value == .value;',
+                      '        }', '        if (!resolved) return null;']
+        if 'selection_path' in rule:
+            lines += ['        if (receipt.index != .value) return null;']
+        if mode == 'null':
+            lines += ['        return null;']
+        elif mode in ('yes', 'picked') or function == 'rank':
+            answer = 'receipt.answer'
+            schema = definitions[definitions[rule['receipt_payload'].get('items', rule['receipt_payload'])['$ref'].split('/')[-1]]['properties']['answer']['$ref'].split('/')[-1]]
+            if 'variants' in schema:
+                tag = 'yes_no' if mode == 'yes' or function == 'rank' else 'choice'
+                lines += [f'        if (receipt.answer != .{tag}) return error.WrongAnswer;']
+                answer += '.' + tag
+            if mode == 'picked':
+                lines += [f'        for ({answer}.probabilities.entries) |entry| {{',
+                          f'            if (std.mem.eql(u8, entry.key, {answer}.pick)) return entry.value;',
+                          '        }', '        return null;']
+            else:
+                lines += [f'        return {answer}.probability;']
+        elif function == 'relate':
+            lines += ['        const result = try a.alloc(?f64, receipt.value.len);',
+                      '        for (result, receipt.value) |*out, edge| out.* = edge.probability;', '        return result;']
+        elif function == 'recognize':
+            lines += RECOGNITION_CHANCES.strip().splitlines()
+        lines += ['    }']
+    return '\n'.join(lines + ['    unreachable;', '}', ''])
+
+
+RECOGNITION_CHANCES = '''
+        switch (receipt.value) {
+            .mode_proposals => |value| {
+                const result = try a.alloc(?f64, value.proposals.len);
+                for (result, value.proposals) |*out, proposal| out.* = proposal.probability;
+                return result;
+            },
+            .entities => |value| {
+                if (receipt.answer != .recognize_answer) return error.WrongAnswer;
+                const result = try a.alloc(?f64, value.entities.len);
+                for (result, value.entities) |*out, entity| {
+                    out.* = null;
+                    for (receipt.answer.recognize_answer.proposals) |proposal| {
+                        if (!proposal.kept) continue;
+                        const selected = proposal.selected.optional() orelse continue;
+                        const kind = proposal.kind.optional() orelse continue;
+                        if (selected.start == entity.start and selected.end == entity.end and std.mem.eql(u8, kind, entity.kind)) {
+                            out.* = proposal.span_probability;
+                            break;
+                        }
+                    }
+                }
+                return result;
+            },
+        }
+'''
