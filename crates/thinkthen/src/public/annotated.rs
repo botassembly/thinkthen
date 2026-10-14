@@ -110,7 +110,8 @@ impl Failed {
 }
 
 /// Why the backend's answer to one question could not be read.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq, serde::Serialize)]
+#[serde(rename_all = "snake_case")]
 pub enum FailureCause {
     /// The reply omitted the answer.
     MissingAnswer,
