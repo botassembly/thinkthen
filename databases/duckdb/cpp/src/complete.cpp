@@ -7,7 +7,7 @@
 #include "duckdb/common/file_system.hpp"
 #include "duckdb/common/error_data.hpp"
 #include "portable.hpp"
-#include "receipt.hpp"
+#include "details_result.hpp"
 #include "native_input.hpp"
 #include "request_helpers_generated.hpp"
 #include "scalar_owner.hpp"
@@ -42,10 +42,34 @@ struct Bind : FunctionData {
     unique_ptr<FunctionData> Copy() const override { return make_uniq<Bind>(context); }
     bool Equals(const FunctionData &other) const override { return context.lock() == other.Cast<Bind>().context.lock(); }
 };
-unique_ptr<FunctionData> BindComplete(ClientContext &context, const string &, vector<unique_ptr<Expression>> &) {
+unique_ptr<FunctionData> BindCompleteImpl(ClientContext &context, const string &name,
+    vector<unique_ptr<Expression>> &arguments, LogicalType &result) {
     context.registered_state->GetOrCreate<StatementOwner>(OWNER_KEY);
+    const auto verb = name.substr(string("thinkthen_native_").size(),
+        name.size() - string("thinkthen_native_").size() - string("_details").size());
+#if defined(THINKTHEN_DUCKDB_V2) && THINKTHEN_DUCKDB_V2
+    const auto &input = arguments.at(1)->GetReturnType();
+#else
+    const auto &input = arguments.at(1)->return_type;
+#endif
+    const bool collection = input.id() == LogicalTypeId::LIST &&
+        ListType::GetChildType(input).id() == LogicalTypeId::STRUCT;
+    result = collection ? LogicalType::LIST(DetailsType(verb)) : DetailsType(verb);
     return make_uniq<Bind>(context.shared_from_this());
 }
+#if defined(THINKTHEN_DUCKDB_V2) && THINKTHEN_DUCKDB_V2
+unique_ptr<FunctionData> BindComplete(BindScalarFunctionInput &input) {
+    LogicalType result;
+    auto data = BindCompleteImpl(input.GetClientContext(), input.GetBoundFunction().GetName().GetIdentifierName(), input.GetArguments(), result);
+    input.GetBoundFunction().SetReturnType(std::move(result));
+    return data;
+}
+#else
+unique_ptr<FunctionData> BindComplete(ClientContext &context, ScalarFunction &function,
+    vector<unique_ptr<Expression>> &arguments) {
+    return BindCompleteImpl(context, function.name, arguments, function.return_type);
+}
+#endif
 bool NativeSourceSelector(const Value &value) {
     if (value.IsNull() || value.type().id() != LogicalTypeId::STRUCT) { return false; }
     auto &fields = StructValue::GetChildren(value);
@@ -59,12 +83,14 @@ void NativeRecords(DataChunk &args, ExpressionState &state, Vector &result) {
     auto &expression = state.expr.Cast<BoundFunctionExpression>();
     auto context = ThinkThenBindData(expression).Cast<Bind>().context.lock();
     if (!context) { throw OrdinaryError("thinkthen defect: the caller session ended"); }
-    const auto verb = ThinkThenFunctionName(expression).substr(string("thinkthen_native_records_").size());
+    const auto name = ThinkThenFunctionName(expression);
+    const auto verb = name.substr(string("thinkthen_native_").size(), name.size() - string("thinkthen_native_").size() - string("_details").size());
+    const bool collection = result.GetType().id() == LogicalTypeId::LIST;
     auto owner = context->registered_state->GetOrCreate<StatementOwner>(OWNER_KEY);
     std::optional<SessionSettings> session;
     for (idx_t row = 0; row < args.size(); ++row) {
         auto question = args.data[0].GetValue(row), records = args.data[1].GetValue(row);
-        if (question.IsNull() || records.IsNull()) { result.SetValue(row, Value(ReceiptType(verb))); continue; }
+        if (question.IsNull() || records.IsNull()) { result.SetValue(row, Value(result.GetType())); continue; }
         try {
             auto settings = args.data[3].GetValue(row);
             const auto controls = settings.IsNull() ? string("{}") : settings.type().id() == LogicalTypeId::VARCHAR ? settings.GetValue<string>() : NativeInputJSON(settings);
@@ -81,7 +107,7 @@ void NativeRecords(DataChunk &args, ExpressionState &state, Vector &result) {
             string content = authored;
             if (!authored.empty() && authored[0] == '@') {
                 RustReply resolved(thinkthen_cpp_complete_question_resolve(View(authored), &selection.value));
-                if (resolved.value.status != 0) { result.SetValue(row, DecodeReceipt(FailureEnvelope(ReplyText(resolved.value)), verb)); continue; }
+                if (resolved.value.status != 0) { result.SetValue(row, DecodeDetails(FailureEnvelope(ReplyText(resolved.value)), verb, collection)); continue; }
                 const auto path = ReplyText(resolved.value);
                 AuthorizeLocalSource(FileSystem::GetFileSystem(*context), path);
                 content = ReadQuestion(*context, path, "question", true);
@@ -93,55 +119,45 @@ void NativeRecords(DataChunk &args, ExpressionState &state, Vector &result) {
                 auto &members = ListValue::GetChildren(records);
                 if (members.size() == 1 && NativeSourceSelector(members[0])) { source = &members[0]; }
             }
-            const auto inputs = NativeInputJSON(source ? *source : records, !source);
+            const auto input = collection ? records : Value::LIST(LogicalType::STRUCT({{"text", LogicalType::VARCHAR}}), {Value::STRUCT({{"text", records}})});
+            const auto inputs = NativeInputJSON(source ? *source : input, !source);
             const auto incremental = args.data[4].GetValue(row), cancelled = args.data[5].GetValue(row);
             if (!session) { session.emplace(Settings(*context)); }
             if (source) {
                 RustReply descriptor(thinkthen_cpp_native_source_input(View(inputs), !incremental.IsNull() && incremental.GetValue<bool>(), !cancelled.IsNull() && cancelled.GetValue<bool>()));
                 if (descriptor.value.status != 0) {
-                    result.SetValue(row, DecodeReceipt(FailureEnvelope(ReplyText(descriptor.value)), verb)); continue;
+                    result.SetValue(row, DecodeDetails(FailureEnvelope(ReplyText(descriptor.value)), verb, collection)); continue;
                 }
                 string source_result;
                 CompleteFileCall(*context, verb, content, ReplyText(descriptor.value), controls, selection.value,
                     owner->Remaining(*context), session->Bridge(), source_result, options);
-                result.SetValue(row, DecodeReceipt(source_result, verb)); continue;
+                result.SetValue(row, DecodeDetails(source_result, verb, collection)); continue;
             }
             RustReply reply(thinkthen_cpp_native_records(View(verb), View(content), View(inputs), View(options), View(controls),
                 selection.value, !incremental.IsNull() && incremental.GetValue<bool>(), !cancelled.IsNull() && cancelled.GetValue<bool>(), owner->Remaining(*context), session->Bridge(), StopFor(*context)));
             Checked(reply.value);
-            result.SetValue(row, DecodeReceipt(ReplyText(reply.value), verb));
+            result.SetValue(row, DecodeDetails(ReplyText(reply.value), verb, collection));
         } catch (const Exception &error) {
             if (ErrorData(error).Type() == ExceptionType::INTERRUPT || QueryInterrupted(*context)) { throw; }
-            result.SetValue(row, DecodeReceipt(FailureEnvelope(CompleteAdmissionError(error)), verb));
+            result.SetValue(row, DecodeDetails(FailureEnvelope(CompleteAdmissionError(error)), verb, collection));
         }
     }
 }
 }
-string NativeRecordTableSQL(const string &verb) {
-    const auto name = string("thinkthen_native_records_") + verb;
-    const auto value = (verb == "decide" || verb == "choose" || verb == "tag" || verb == "score" || verb == "filter" || verb == "rank")
-        ? "list_extract(receipt.answers, position)" : "result.value";
-    return "WITH call AS MATERIALIZED (SELECT " + name + "(question, records, reading, settings, incremental, cancelled) AS receipt) "
-        "SELECT list_extract(receipt.ordinals, position) AS ordinal, " + string(value) +
-        " AS value, result, receipt.facts AS facts, receipt.failure AS failure, "
-        "receipt.observations AS observations, receipt.selection AS selection "
-        "FROM call, UNNEST(CASE WHEN len(receipt.results) = 0 THEN [NULL] ELSE receipt.results END) WITH ORDINALITY AS rows(result, position) "
-        "WHERE receipt IS NOT NULL";
-}
 void RegisterComplete(ExtensionLoader &loader) {
     RegisterRequestHelpers(loader);
     for (auto verb : {"decide", "choose", "tag", "score", "filter", "rank", "find", "annotate", "recognize", "relate"}) {
-        const auto name = string("thinkthen_native_records_") + verb;
-        const string purpose = "Read ordered native SQL records and return typed readings, final facts, failures and observations.";
-        ScalarFunction function(ThinkThenIdentifier(name), {LogicalType::ANY, LogicalType::ANY, LogicalType::ANY, LogicalType::ANY, LogicalType::ANY, LogicalType::ANY},
-            ReceiptType(verb), NativeRecords, ThinkThenBindScalar<BindComplete>);
+        const auto name = string("thinkthen_native_") + verb + "_details";
+        const string purpose = "Return typed values, probabilities, results, failures, facts and observations.";
+        ScalarFunction function(ThinkThenIdentifier(name),
+            {LogicalType::ANY, LogicalType::ANY, LogicalType::ANY, LogicalType::ANY, LogicalType::ANY, LogicalType::ANY},
+            DetailsType(verb), NativeRecords, BindComplete);
         ThinkThenSpecialNulls(function);
         function.SetStability(FunctionStability::VOLATILE);
         RegisterDescribedScalar(loader, function, purpose);
-        if (string(verb) == "rank" || string(verb) == "relate") { continue; }
         RegisterPortableMacro(loader, string("CREATE MACRO thinkthen_") + verb +
-            "(question, records, reading := NULL, settings := NULL, incremental := false, cancelled := false) AS TABLE " +
-            NativeRecordTableSQL(verb), purpose);
+            "_details(question, input, reading := NULL, settings := NULL, incremental := false, cancelled := false) AS " +
+            name + "(question, input, reading, settings, incremental, cancelled)", purpose);
     }
 }
 }

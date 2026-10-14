@@ -135,16 +135,7 @@ void Judge(DataChunk &args, ExpressionState &state, Vector &result) {
 	for (idx_t row = 0; row < args.size(); ++row) {
 		if (!inputs[row]) { result.SetValue(row, Value(result.GetType())); continue; }
 		auto &input = *inputs[row];
-        if (kind == 2) {
-            auto record = Value::STRUCT({{"text", input.text ? Value(*input.text) : Value(LogicalType::VARCHAR)},
-                                        {"images", args.data[1].GetValue(row)}});
-            const auto records = NativeInputJSON(Value::LIST(record.type(), {record}), true);
-            RustReply reply(thinkthen_cpp_native_records(View("details"), View(input.question.text), View(records),
-                View("{}"), View(input.settings), nullptr, false, false, owner->Remaining(*context), session->Bridge(), StopFor(*context)));
-            Checked(reply.value);
-            result.SetValue(row, DecodeReceipt(ReplyText(reply.value), "details"));
-            continue;
-        }
+
 		auto views = input.Views();
 		RustReply reply(thinkthen_cpp_images(View(input.question.text), input.question.from_file, views.data(), views.size(), input.Text(), View(input.settings), kind, owner->Remaining(*context), session->Bridge(), StopFor(*context)));
 		Checked(reply.value);
@@ -186,7 +177,7 @@ vector<ThinkThenImage> ImageViews(const vector<std::pair<string, string>> &image
 void RegisterImages(ExtensionLoader &loader) {
 	Register(loader, "thinkthen_image", {LogicalType::BLOB, LogicalType::VARCHAR}, ImageType(), Constructor, false, "Construct image evidence from native bytes and a media type.");
 	Register(loader, "thinkthen_image_file", {LogicalType::VARCHAR}, ImageType(), File, true, "Read an authorized local image file as image evidence.");
-	for (auto verb : {"decide", "choose", "score", "details"}) {
+	for (auto verb : {"decide", "choose", "score"}) {
 		const string name = string("thinkthen_native_") + verb + "_images";
 		const string purpose = string(verb) == "decide" ? "Judge a yes-or-no question using image evidence and optional text." : string(verb) == "choose" ? "Choose an option using image evidence and optional text." : string(verb) == "score" ? "Score image evidence and optional text against ordered levels." : "Return typed native judgment receipts for image evidence and optional text.";
 		Register(loader, name, {LogicalType::VARCHAR, LogicalType::LIST(ImageType()), LogicalType::VARCHAR, LogicalType::VARCHAR},

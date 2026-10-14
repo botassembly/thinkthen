@@ -303,24 +303,6 @@ pub(crate) unsafe extern "C" fn thinkthen_cpp_native_records(
     reply_boundary(|| {
         let verb = text(verb.bytes, verb.len)?.to_owned();
         let question = text(question.bytes, question.len)?;
-        let verb = if verb == "details" {
-            match super::portable_aux::asking_kind(
-                question,
-                question.trim_start().starts_with('{'),
-                "details",
-            )
-            .map_err(|error| error.text)?
-            {
-                0 => "decide",
-                4 => "choose",
-                5 => "score",
-                6 => "tag",
-                _ => return Err("thinkthen defect: details lost its asking kind".into()),
-            }
-            .to_owned()
-        } else {
-            verb
-        };
         // SAFETY: the host retains the selected question through synchronous return.
         let selected = unsafe { reference.as_ref() };
         let parsed = prepare_native(
