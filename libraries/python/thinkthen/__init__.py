@@ -4,12 +4,12 @@ import os
 from typing import NamedTuple as _NamedTuple
 from . import _thinkthen
 from ._thinkthen import BackendError, Cancelled, CancelToken, DeadlineError, DefectError, LocalError, ThinkThenError, UsageError
-from ._native_results import NativeUsagePersistence
+from ._native_results import NativeUsagePersistence, NativePlan as Plan
 from ._calls import Result
 from ._inputs import ABSENT, Image, Item, Records, Files, QuestionSource
 from .files import FileSelection, SourceRecord, read_files
 
-__all__ = ['BackendError', 'Cancelled', 'CancelToken', 'DeadlineError', 'DefectError', 'LocalError', 'ThinkThenError', 'UsageError', 'Engine', 'Result', 'UsageStatus', 'NativeUsagePersistence', 'ABSENT', 'Image', 'Item', 'Records', 'Files', 'QuestionSource', 'FileSelection', 'SourceRecord', 'read_files', 'decide', 'choose', 'score', 'tag', 'filter', 'rank', 'find', 'annotate', 'recognize', 'relate', 'usage']
+__all__ = ['BackendError', 'Cancelled', 'CancelToken', 'DeadlineError', 'DefectError', 'LocalError', 'ThinkThenError', 'UsageError', 'Engine', 'Plan', 'Result', 'UsageStatus', 'NativeUsagePersistence', 'ABSENT', 'Image', 'Item', 'Records', 'Files', 'QuestionSource', 'FileSelection', 'SourceRecord', 'read_files', 'decide', 'choose', 'score', 'tag', 'filter', 'rank', 'find', 'annotate', 'recognize', 'relate', 'usage']
 
 class UsageStatus(_NamedTuple):
     """Live native durability state and optional fixed advice; no call facts."""
@@ -67,7 +67,7 @@ class Engine(NamedCalls):
     takes ``labels``.
     """
 
-    __slots__ = ("_engine", "_settings_json", "_sessions")
+    __slots__ = ("_engine", "_sessions")
 
     def __setattr__(self, name, value):
         if hasattr(self, name):
@@ -76,9 +76,8 @@ class Engine(NamedCalls):
 
     def _configure(self, given):
         self._sessions = set()
-        self._settings_json = json.dumps({key: value for key, value in given.items()
-                                          if value is not None}, default=os.fspath)
-        self._engine = _thinkthen._Engine(self._settings_json)
+        self._engine = _thinkthen._Engine(json.dumps({key: value for key, value in given.items()
+                                                     if value is not None}, default=os.fspath))
 
     def __repr__(self):
         return "Engine()"
@@ -138,7 +137,6 @@ def _engine():
     if _process is None:
         engine = Engine.__new__(Engine)
         engine._engine = _thinkthen._Engine("{}")
-        engine._settings_json = None
         engine._sessions = set()
         _process = engine
     return _process

@@ -1,7 +1,7 @@
 """Python result carriers and native conversion from the shared result graph."""
 import json
 
-ROOTS = ('completesessionPacket',)
+ROOTS = ('completesessionPacket', 'completeplan')
 
 
 def name(key):
@@ -132,12 +132,94 @@ def types(definitions, stubs=False):
     return '\n'.join(lines) + '\n'
 
 
+def option_types(schema):
+    """Keep Python control declarations derived from native admission schemas."""
+    definitions = schema['$defs']
+    emitted = set()
+    lines = ['from __future__ import annotations',
+             'from os import PathLike',
+             'from typing import Literal, TypedDict, TYPE_CHECKING, Union, _SpecialForm',
+             'if TYPE_CHECKING:', '    from . import CancelToken',
+             'Labels = list[str] | dict[str, str] | dict[str, object] | type[object] | tuple[object, ...] | _SpecialForm']
+
+    def emit(key):
+        if key in emitted:
+            return
+        emitted.add(key)
+        source = definitions[key]
+
+        def walk(value):
+            if isinstance(value, dict):
+                if '$ref' in value:
+                    emit(value['$ref'].split('/')[-1])
+                for child in value.values():
+                    walk(child)
+            elif isinstance(value, list):
+                for child in value:
+                    walk(child)
+        walk(source)
+        if 'properties' in source:
+            required = source.get('required', ())
+            if required:
+                lines.append(f'class _{key}Required(TypedDict):')
+                for field in required:
+                    lines.append(f'    {field}: {request_annotation(source["properties"][field])}')
+            base = f'_{key}Required' if required else 'TypedDict'
+            lines.append(f'class {key}({base}, total=False):')
+            optional = {field: value for field, value in source['properties'].items() if field not in required}
+            if not optional:
+                lines.append('    pass')
+            for field, value in optional.items():
+                typed = request_annotation(value)
+                if key == 'EngineSettings':
+                    if field in ('record', 'replay', 'profile', 'cache'):
+                        typed += ' | PathLike[str]'
+                    typed += ' | None'
+                lines.append(f'    {field}: {typed}')
+        else:
+            lines.append(f'{key} = {request_annotation(source)}')
+
+    def request_annotation(source):
+        if not isinstance(source, dict):
+            return 'object'
+        if '$ref' in source:
+            return source['$ref'].split('/')[-1]
+        typed = annotation(source).replace('Any', 'object')
+        for key in definitions:
+            typed = typed.replace(name(key), key)
+        return typed
+
+    emit('EngineSettings')
+    emit('RequestOptions')
+    lines += ['class CallOptions(RequestOptions, total=False):',
+              '    token: CancelToken', '    on: str | list[str]',
+              'class DecideOptions(CallOptions, total=False):',
+              '    true: object', '    false: object',
+              'class ChooseOptions(CallOptions, total=False):', '    options: Labels',
+              'class TagOptions(CallOptions, total=False):', '    labels: Labels',
+              'class ScoreOptions(CallOptions, total=False):',
+              '    levels: Labels | list[float]',
+              'class FilterOptions(DecideOptions): pass',
+              'class RankOptions(DecideOptions): pass',
+              'class FindOptions(CallOptions): pass',
+              'class AnnotateOptions(CallOptions): pass',
+              'class RelateOptions(CallOptions, total=False):',
+              '    relations: dict[str, tuple[str, str]] | list[tuple[str, str, str]]',
+              '    either: list[str]',
+              'class RecognizeOptions(RelateOptions, total=False):',
+              '    kinds: Labels', '    descriptions: dict[str, object]'
+,
+              '    instructions: object', '    entity_definition: object',
+              'class PlanOptions(DecideOptions, ChooseOptions, TagOptions, ScoreOptions, RecognizeOptions): pass']
+    return lines
+
+
 def named_calls(schema):
     """Derive the named family and native control inventory from RequestFunction."""
     definitions = schema['$defs']
     controls = list(definitions['RequestOptions']['properties'])
     lines = ['# Generated from the canonical request schema; do not edit.',
-             'MISSING = object()', 'class NamedCalls:', '    __slots__ = ()']
+             *option_types(schema), 'MISSING = object()', 'class NamedCalls:', '    __slots__ = ()']
     settings = list(definitions['EngineSettings']['properties'])
     lines += ['    def __init__(self, *, ' + ', '.join(field + '=None' for field in settings) + '):',
               '        self._configure(dict(' + ', '.join(field + '=' + field for field in settings) + '))']

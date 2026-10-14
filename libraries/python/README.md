@@ -27,7 +27,7 @@ with tt.Engine(cache=False) as engine:
 
 `engine.asyncio` mirrors the named calls and keeps the event loop responsive. Task cancellation closes its producer and native session without waiting for a held provider. Engine context exit closes every active session. Errors have a native kind and retry signal. Started failures retain any completed results and actual facts; unsettled facts remain absent.
 
-`engine.iterate(function, question, input, **controls)` returns a lazy typed iterator over the same native session. It starts on the first pull and supports context-manager cleanup, cancellation and `facts` after settlement. `engine.plan(function, question, complete_input, **controls)` calls the native no-send preview for supported functions. It refuses iterators instead of consuming them as a preview.
+`engine.iterate(function, question, input, **controls)` returns a lazy typed iterator over the same native session. It starts on the first pull and supports context-manager cleanup, cancellation and `facts` after settlement. `engine.plan(function, question, complete_input, **controls)` returns a typed `Plan` from the native no-send preview for atomic calls and single-question rank. Read `plan.records`, `plan.requests`, `plan.estimated_input_tokens.lower` and `.upper`, or the largest-request estimates. `plan.first_body_utf8` contains the first prepared body when present. The preview needs no key and refuses iterators before consuming them.
 
 Pandas and Python Polars Series namespaces are opt-in:
 

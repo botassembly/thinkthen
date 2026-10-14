@@ -183,34 +183,6 @@ class NativeRankMemberResult(_NativeResult):
     __slots__ = ()
 
 
-class NativeReadableQuestion2(_NativeResult):
-    __slots__ = ()
-
-
-class NativeReadableQuestion3(_NativeResult):
-    __slots__ = ()
-
-
-class NativeReadableQuestion4(_NativeResult):
-    __slots__ = ()
-
-
-class NativeReadableQuestionChoose(_NativeResult):
-    __slots__ = ()
-
-
-class NativeReadableQuestionDecide(_NativeResult):
-    __slots__ = ()
-
-
-class NativeReadableQuestionScore(_NativeResult):
-    __slots__ = ()
-
-
-class NativeReadableQuestionTag(_NativeResult):
-    __slots__ = ()
-
-
 class NativeRecognition(_NativeResult):
     __slots__ = ()
 
@@ -319,6 +291,10 @@ class NativeFindAnswer(_NativeResult):
     __slots__ = ()
 
 
+class NativeFindQuestionDocument(_NativeResult):
+    __slots__ = ()
+
+
 class NativeNameOdds(_NativeResult):
     __slots__ = ()
 
@@ -335,11 +311,35 @@ class NativePlace(_NativeResult):
     __slots__ = ()
 
 
+class NativePlan(_NativeResult):
+    __slots__ = ()
+
+
 class NativeProfileWarning(_NativeResult):
     __slots__ = ()
 
 
+class NativeQuestionDocumentChoose(_NativeResult):
+    __slots__ = ()
+
+
+class NativeQuestionDocumentDecide(_NativeResult):
+    __slots__ = ()
+
+
+class NativeQuestionDocumentScore(_NativeResult):
+    __slots__ = ()
+
+
+class NativeQuestionDocumentTag(_NativeResult):
+    __slots__ = ()
+
+
 class NativeRecognizeAnswer(_NativeResult):
+    __slots__ = ()
+
+
+class NativeRecognizeQuestionDocument(_NativeResult):
     __slots__ = ()
 
 
@@ -352,6 +352,10 @@ class NativeRecognizeModeProposals(_NativeResult):
 
 
 class NativeRelateFields(_NativeResult):
+    __slots__ = ()
+
+
+class NativeRelateQuestionDocument(_NativeResult):
     __slots__ = ()
 
 
@@ -519,6 +523,10 @@ class NativeSourceRelationEndpoint(_NativeResult):
     __slots__ = ()
 
 
+class NativeTokenBand(_NativeResult):
+    __slots__ = ()
+
+
 class NativeTokenUsage(_NativeResult):
     __slots__ = ()
 
@@ -565,12 +573,6 @@ NativeOrigin = Union[
     Literal["memory"],
 ]
 NativeQuestionName = str
-NativeReadableQuestion = Union[
-    NativeReadableQuestionDecide,
-    NativeReadableQuestionChoose,
-    NativeReadableQuestionTag,
-    NativeReadableQuestionScore,
-]
 NativeRecognitionMode = Union[Literal["whole"], Literal["boundary_only"]]
 NativeRecognitionOdds = Union[
     NativeRecognitionOddsRecognizeAnswer, NativeRecognitionOddsBoundaryOdds
@@ -643,6 +645,12 @@ NativeFailureKind = Union[
     Literal["cancelled"],
     Literal["deadline"],
     Literal["defect"],
+]
+NativeQuestionDocument = Union[
+    NativeQuestionDocumentDecide,
+    NativeQuestionDocumentChoose,
+    NativeQuestionDocumentTag,
+    NativeQuestionDocumentScore,
 ]
 NativeRecognize = Union[NativeRecognizeEntities, NativeRecognizeModeProposals]
 NativeSessionJudgment = Union[
