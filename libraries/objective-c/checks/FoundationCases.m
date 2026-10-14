@@ -83,7 +83,7 @@ int main(int argc, const char *argv[]) {
         NSDictionary *input = orderedFields(fixture[@"ordered"][@"input"]);
         if ([fixture[@"call_result_contract"] boolValue]) {
             require([input[@"kind"] isEqual:@"records"] && [input[@"items"] count] == 1);
-            NSDictionary *original = input[@"items"][0][@"original"];
+            NSDictionary *original = fixture[@"input"][@"items"][0][@"original"];
             input = [original[@"kind"] isEqual:@"text"] ? @{@"kind":@"text", @"text":original[@"text"]} : @{@"kind":@"json", @"value":original[@"value"]};
         }
         NSDictionary *options = orderedFields(fixture[@"ordered"][@"options"]);
