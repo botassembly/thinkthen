@@ -26,7 +26,9 @@ WRONG_PLATFORM = {
 
 def copy_packer(destination: Path) -> None:
     names = ['Cargo.toml', 'Cargo.lock', 'sdlc/scripts/release-pack', 'sdlc/scripts/scratch.sh', 'sdlc/scripts/release-archive-tree.py',
-             'crates/thinkthen/Cargo.toml', 'LICENSE', 'conformance/children/children.py']
+             'sdlc/scripts/registry-readmes.py', 'crates/thinkthen/Cargo.toml', 'LICENSE',
+             'databases/duckdb/README-PUBLIC.md',
+             'conformance/children/children.py']
     names += [str(p.relative_to(REPO)) for folder in ('databases/duckdb/tools', 'databases/duckdb/cpp')
               for p in (REPO / folder).iterdir() if p.is_file() and p.suffix in ('.py', '.sh', '.env', '.txt')]
     for folder in ('crates/thinkthen', 'crates/thinkthen-host', 'conformance/backend', 'databases/duckdb/bridge'):
