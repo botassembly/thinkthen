@@ -1509,6 +1509,7 @@ complete_environment() {
     export THINKTHEN_POSTGRESQL_BIN=$BIN THINKTHEN_POSTGRESQL_DATA=$DATA THINKTHEN_POSTGRESQL_SOCKET=$SOCK
 }
 complete_cases() {
+    failed=0
     complete_environment
     if [ "$profile" = routine ]; then
         python3 tests/runner.py plan >"$RUN/complete.plan"
@@ -1526,12 +1527,13 @@ for line in pathlib.Path(sys.argv[1]).read_text().splitlines():
         print(f"native parity: not run {identity}: no outside defect boundary", file=sys.stderr)
 PY
         while IFS= read -r id; do
-            sh "$LIMIT" 300 python3 ../sqlite/tests/complete/parity.py postgresql "$id"
+            sh "$LIMIT" 300 python3 ../sqlite/tests/complete/parity.py postgresql "$id" || failed=1
         done <"$RUN/complete.ids"
     else
-        sh "$LIMIT" 1800 python3 ../sqlite/tests/complete/parity.py postgresql
+        sh "$LIMIT" 1800 python3 ../sqlite/tests/complete/parity.py postgresql || failed=1
     fi
-    sh "$LIMIT" 300 python3 ../sqlite/tests/complete/facts.py postgresql
+    sh "$LIMIT" 300 python3 ../sqlite/tests/complete/facts.py postgresql || failed=1
+    [ "$failed" -eq 0 ]
 }
 check complete_cases
 complete_request_contract_cases() {
