@@ -74,7 +74,10 @@ impl Tally {
     ///
     /// # Errors
     /// Returns the call error or an accounting overflow.
-    pub fn run<T>(&self, call: impl FnOnce() -> Result<Call<T>, Error>) -> Result<Call<T>, Error> {
+    pub fn run<T, R, P>(
+        &self,
+        call: impl FnOnce() -> Result<Call<T, R, P>, Error>,
+    ) -> Result<Call<T, R, P>, Error> {
         let started = self.start();
         let result = call();
         match &result {

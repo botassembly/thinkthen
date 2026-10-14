@@ -17,6 +17,15 @@ pub struct CompleteRelated {
 }
 
 impl CompleteRelated {
+    /// Per-item probabilities in the same order as the plain answer.
+    #[must_use]
+    pub fn probability(&self) -> Vec<Option<f64>> {
+        self.value
+            .iter()
+            .map(|edge| Some(edge.probability()))
+            .collect()
+    }
+
     /// The actual resolved relation plan and input mode.
     #[must_use]
     pub fn question(&self) -> super::RelationReading<'_> {

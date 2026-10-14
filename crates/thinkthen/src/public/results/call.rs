@@ -179,7 +179,9 @@ impl Facts {
 #[cfg_attr(test, derive(schemars::JsonSchema), schemars(rename = "CompleteCall"))]
 pub struct Call<T, R = (), P = Option<f64>> {
     value: T,
+    #[cfg_attr(test, schemars(skip))]
     results: R,
+    #[cfg_attr(test, schemars(skip))]
     probability: P,
     #[cfg_attr(test, schemars(skip))]
     projected: bool,

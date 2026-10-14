@@ -77,10 +77,6 @@ impl<'de> serde::de::Visitor<'de> for OptionsCarrier {
                 return Err(serde::de::Error::custom("duplicate MCP option"));
             }
         }
-        // MCP always returns complete results; details is CLI output framing.
-        if fields.contains_key("details") {
-            return Err(serde::de::Error::custom("unsupported MCP option"));
-        }
         let cancelled = fields
             .remove("cancelled")
             .map(|raw| serde_json::from_str(raw.get()))
