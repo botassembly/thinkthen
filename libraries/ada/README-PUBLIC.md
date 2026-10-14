@@ -18,12 +18,12 @@ procedure Registry_Example is
    Refunds : constant Texts := [To_Unbounded_String ("Please refund my order. It arrived broken."), To_Unbounded_String ("Thanks for the quick help yesterday!"), To_Unbounded_String ("I want to send this back.")];
    Messages : constant Texts := [To_Unbounded_String ("Please refund the extra fee on my invoice."), To_Unbounded_String ("My parcel went to the wrong address."), To_Unbounded_String ("I cannot reset my password.")];
    Expected_Teams : constant Texts := [To_Unbounded_String ("billing"), To_Unbounded_String ("shipping"), To_Unbounded_String ("account")];
-   Expected_Probability : constant Score_List := [0.99, 0.01, 0.54]; I : Positive := 1; Expected_Raw_Probability : constant Texts := [To_Unbounded_String ("0.99"), To_Unbounded_String ("0.01"), To_Unbounded_String ("0.54")];
+   Expected_Probability : constant Score_List := [0.99, 0.01, 0.54]; I : Positive := 1;
 begin
    for Text of Refunds loop
       declare Refund : constant Decide_Result := Thinkthen.Inputs.Calls.Decide (Text_Question ("Does the customer ask for a refund?"), Text_Input (To_String (Text))); begin
-         pragma Assert (Refund.Record_Count = 1 and then To_Unbounded_String (Thinkthen.Values.As_Number (Thinkthen.Values.Field_Value (Thinkthen.Values.Field_Value (Record_Value (Refund.Results (1)), "answer"), "probability"))) = Expected_Raw_Probability (I)); pragma Assert (if I = 3 then Thinkthen.Values.Kind (Refund.Value) = Thinkthen.Values.Null_Value and then Refund.Probability.State = Null_Field else Thinkthen.Values.Kind (Refund.Value) = Thinkthen.Values.Boolean_Value and then Thinkthen.Values.As_Boolean (Refund.Value) = (I = 1) and then Refund.Probability.State = Present_Field and then Refund.Probability.Value = Expected_Probability (I));
-         Ada.Text_IO.Put_Line (if Thinkthen.Values.Kind (Refund.Value) = Thinkthen.Values.Null_Value then "not sure" else Boolean'Image (Thinkthen.Values.As_Boolean (Refund.Value)));
+         pragma Assert (Refund.Record_Count = 1 and then Long_Float'Value (Thinkthen.Values.As_Number (Thinkthen.Values.Field_Value (Thinkthen.Values.Field_Value (Record_Value (Refund.Results (1)), "answer"), "probability"))) = Expected_Probability (I)); pragma Assert (if I = 3 then Thinkthen.Values.Kind (Refund.Value) = Thinkthen.Values.Null_Value and then Refund.Probability.State = Null_Field else Thinkthen.Values.Kind (Refund.Value) = Thinkthen.Values.Boolean_Value and then Thinkthen.Values.As_Boolean (Refund.Value) = (I = 1) and then Refund.Probability.State = Present_Field and then Refund.Probability.Value = Expected_Probability (I));
+         Ada.Text_IO.Put_Line (if Thinkthen.Values.Kind (Refund.Value) = Thinkthen.Values.Null_Value then "not sure" else (if Thinkthen.Values.As_Boolean (Refund.Value) then "TRUE" else "FALSE"));
       end; I := I + 1;
    end loop; I := 1;
    for Text of Messages loop
