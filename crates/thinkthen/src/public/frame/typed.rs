@@ -1,4 +1,4 @@
-//! Typed complete native calls retain dataframe presentation separately.
+//! Typed native calls retain original dataframe positions separately.
 use crate::public::{Error, RecordInput};
 use polars::prelude::Series;
 

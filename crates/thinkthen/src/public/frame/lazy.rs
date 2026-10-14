@@ -1,5 +1,6 @@
-//! Owned controls at the Polars expression boundary. Each evaluation morsel
-//! starts a fresh eager call, while its token and tally remain shared.
+//! Owned controls at the Polars expression boundary. Atomic evaluation morsels
+//! start fresh calls; collection expressions materialize one logical set. Tokens
+//! and tallies remain shared across evaluations.
 
 use std::fmt;
 use std::panic::{AssertUnwindSafe, catch_unwind};
