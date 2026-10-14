@@ -4,6 +4,10 @@ Status: OPEN.
 
 Milestone: 0.2
 
+Depends on: 0576
+
+Reviews: revision f583a17, accept
+
 ## Outcome
 
 SQLite, DuckDB and PostgreSQL each return the full record for all ten functions through `thinkthen_<function>_details`, and the plain calls return only the plain value.
