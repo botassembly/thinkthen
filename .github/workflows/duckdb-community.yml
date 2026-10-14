@@ -91,15 +91,31 @@ jobs:
           ./scripts/generate_extensions_json.py
           test -s build/docs/thinkthen.md
           python3 - <<'PYCODE'
-          import os, subprocess, yaml
+          import sys, yaml
+          from pathlib import Path
+          sys.path[:0] = ['../source/databases/duckdb/tools', '../source/conformance/children']
+          from backend import Backend
+          from harness import FAKE_KEY, expect
+          from source_hosts import cli_runner
           with open('extensions/thinkthen/description.yml') as source:
               sql = yaml.safe_load(source)['docs']['hello_world']
-          done = subprocess.run(['./duckdb', '-unsigned', '-init', '/dev/null', '-csv', '-c',
-                                 "LOAD 'build/downloaded/thinkthen.duckdb_extension'; " + sql],
-                                env={key: value for key, value in os.environ.items()
-                                     if not key.startswith('THINKTHEN_')},
-                                check=True, capture_output=True, text=True)
-          assert done.stdout.splitlines()[-1] == '1', done.stdout
+          backend = Backend(key=FAKE_KEY)
+          try:
+              run = cli_runner(Path('duckdb').resolve(),
+                               Path('build/downloaded/thinkthen.duckdb_extension').resolve())
+              got = run([statement for statement in sql.split(';') if statement.strip()],
+                        f'http://127.0.0.1:{backend.server_port}/generic/v1')
+              expect(got, [
+                  {'rows': [['Please refund my order. It arrived broken.', True],
+                            ['Thanks for the quick help yesterday!', True],
+                            ['I want to send this back.', True]]},
+                  {'rows': [['Please refund the extra fee on my invoice.', 'billing'],
+                            ['My parcel went to the wrong address.', 'billing'],
+                            ['I cannot reset my password.', 'billing']]},
+              ], 'documentation SQL against the fixed loopback answers')
+              expect(backend.attempts, 2, 'each documentation query packs its three records')
+          finally:
+              backend.close()
           PYCODE
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
