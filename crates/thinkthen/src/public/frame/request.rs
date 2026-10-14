@@ -72,6 +72,12 @@ fn execute_feed(
     feed: RequestFeed<'_>,
     complete: bool,
 ) -> Result<Call<RequestValue>, Error> {
+    let options = RequestOptions {
+        none: matches!(&definition,
+            RequestDefinition::Atomic(crate::LoadedQuestion::Question(question))
+                if matches!(question.kind, crate::public::question::Kind::FindNone)),
+        ..RequestOptions::default()
+    };
     let call = RequestCall::new(
         call,
         RequestArguments {
@@ -82,7 +88,7 @@ fn execute_feed(
                 reading: crate::ReaderOptions::default(),
                 images: vec![],
             },
-            options: RequestOptions::default(),
+            options,
         },
     );
     // Typed complete filters retain every observation, including rejected rows.
