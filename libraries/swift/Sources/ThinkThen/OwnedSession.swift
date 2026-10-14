@@ -186,7 +186,7 @@ public final class Client: @unchecked Sendable {
     public func start(_ request: Request) throws -> Session {
         let call = request.call
         let values = [Data(try String.read(call.function.json).utf8), try call.question.json.data(),
-                      try call.input.json.data(), try (call.options.value?.json ?? .object([:])).data(), Data("swift".utf8)]
+                      try call.input.json.data(), try (call.options.isPresent ? call.options.value?.json ?? .null : .object([:])).data(), Data("swift".utf8)]
         let buffers = values.map { data -> UnsafeMutablePointer<CChar> in
             let pointer = UnsafeMutablePointer<CChar>.allocate(capacity: max(data.count, 1))
             data.copyBytes(to: UnsafeMutableRawBufferPointer(start: pointer, count: data.count))
