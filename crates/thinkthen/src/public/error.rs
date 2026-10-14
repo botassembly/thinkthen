@@ -286,7 +286,10 @@ impl Error {
 
     pub(in crate::public) fn normalize_recovery_budget(self) -> Self {
         match self {
-            Self::Backend(mut detail) if detail.send_budget_denial.is_some() || detail.estimated_input_denial.is_some() => {
+            Self::Backend(mut detail)
+                if detail.send_budget_denial.is_some()
+                    || detail.estimated_input_denial.is_some() =>
+            {
                 detail.retryable = false;
                 detail.stopped = detail.stopped.recovery_budget();
                 Self::Usage(detail)

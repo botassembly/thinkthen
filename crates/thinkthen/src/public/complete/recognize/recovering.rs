@@ -58,19 +58,15 @@ impl Engine {
         stop.run_call(0, |cancel| {
             let cancel = cancel.with_storage_scope();
             let mut ordinal = 0;
-            loop {
-                cancel.stop_or_remaining().map_err(Error::from)?;
-                let Some(record) = records.next() else {
-                    break;
-                };
+            while let Some(record) = next_record(&mut records, &cancel)? {
                 self.check_record_limit(ordinal)?;
-                let record = record?;
-                let outcome = (|| {
-                    let unit = prepare(&engine, ask, record, options.context_text())?;
-                    unit.prepared.admit(limit)?;
-                    answer(ordinal, unit, &stop, &cancel, false)
-                        .map(|row| RequestValue::Recognized(vec![row]))
-                })();
+                let outcome = recognition_record(
+                    (&engine, ask, options.context_text(), limit),
+                    record?,
+                    ordinal,
+                    &stop,
+                    &cancel,
+                );
                 sink(crate::public::request::recovery_row(ordinal, outcome)?);
                 cancel.finished_records(1);
                 ordinal += 1;
@@ -78,4 +74,28 @@ impl Engine {
             Ok(())
         })
     }
+}
+
+fn next_record<I: Iterator>(
+    records: &mut I,
+    cancel: &crate::engine::Cancel<'_>,
+) -> Result<Option<I::Item>, Error> {
+    cancel.stop_or_remaining().map_err(Error::from)?;
+    Ok(records.next())
+}
+fn recognition_record(
+    (engine, ask, context, limit): (
+        &crate::engine::facade::Engine,
+        &Recognize,
+        Option<&str>,
+        usize,
+    ),
+    record: RecordInput<QuestionInput>,
+    ordinal: usize,
+    stop: &Stop<'_>,
+    cancel: &crate::engine::Cancel<'_>,
+) -> Result<RequestValue, Error> {
+    let unit = prepare(engine, ask, record, context)?;
+    unit.prepared.admit(limit)?;
+    answer(ordinal, unit, stop, cancel, false).map(|row| RequestValue::Recognized(vec![row]))
 }
