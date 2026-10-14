@@ -146,7 +146,7 @@ fn tag(
 
 crate::descriptions::describe! {
 ["Return a typed thinkthen_question_detail receipt with answer, identity, probabilities and metadata. ", &crate::descriptions::scalar_text()].concat();
-[name = "thinkthen_details", parallel_restricted];
+[name = "thinkthen_details", parallel_restricted, requires = ["native_generated_types"]];
 #[allow(
     clippy::too_many_arguments,
     reason = "PostgreSQL exposes these defaulted named parameters in its public SQL signature"
