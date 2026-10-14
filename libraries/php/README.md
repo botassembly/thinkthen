@@ -31,6 +31,4 @@ Failures throw `UsageFailure`, `BackendFailure`, `DeadlineFailure`, `LocalFailur
 
 Set `THINKTHEN_ARTIFACT` to check a selected archive. `THINKTHEN_TEST_PROFILE=full` selects the shared installed suite at the release candidate, using `conformance/session_projection.py`. Full parity, large-input cases and other platforms are release-only. No paid backend runs in these checks.
 
-The development PHP API renames `usage_persistence()` to `plan($function, $question, $input, $options)` previews native request admission without sending or consuming a producer. Its readonly `Plan` contains record, request, byte and token estimates. Its `first_body_utf8` preserves the required nullable native preview body, and its typed token band preserves lower and upper estimates.
-
-`usagePersistence()` and `finish_usage_status()` to `finishUsageStatus()`. An operation retains its client until close, so `(new Client)->start(...)` remains live.
+The development PHP API renames `usage_persistence()` to `usagePersistence()` and `finish_usage_status()` to `finishUsageStatus()`. An operation retains its client until close, so `(new Client)->start(...)` remains live.
