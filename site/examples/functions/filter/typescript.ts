@@ -13,6 +13,6 @@ try {
   const complaints = (await tt.filter(
     question,
     reviews,
-  )).results.map(row => row.input);
+  )).filterAnswer();
   assert.deepEqual(complaints, [reviews[1], reviews[3]]);
 } finally { tt.close(); }

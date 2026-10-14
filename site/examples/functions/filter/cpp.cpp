@@ -22,16 +22,10 @@ int main() {
     }
     auto call = client.filter(
         question, RequestInputRecords().set_items(records));
-    call.finish();
+    auto kept = call.answer();
     std::vector<std::string> complaints;
-    for (const auto& packet : call.collect()) {
-        auto row = packet.as_SessionPacketFilterRow();
-        if (!row) continue;
-        auto kept = row->value().value;
-        if (kept->value().value == true) {
-            auto index = *kept->index().value;
-            complaints.push_back(reviews[index]);
-        }
+    for (const auto& text : kept) {
+        complaints.push_back(text.get<std::string>());
     }
     std::vector<std::string> expected{
         reviews[1],

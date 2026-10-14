@@ -23,21 +23,15 @@ int main() {
     auto call = client.relate(
         relations,
         RequestInputEntities().set_items(entities));
-    call.finish();
+    auto found = call.answer();
     std::vector<std::string> who_makes;
-    for (const auto& packet : call.collect()) {
-        auto found =
-            packet.as_SessionPacketRelateAggregate();
-        if (!found) continue;
-        auto edges = found->value().value->value().value;
-        for (const auto& edge : *edges) {
-            auto company = edge.source().value->document();
-            auto product = edge.target().value->document();
-            who_makes.push_back(
-                company.at("name").get<std::string>() +
-                " makes " +
-                product.at("name").get<std::string>());
-        }
+    for (const auto& edge : *found.value().value) {
+        auto company = edge.source().value->document();
+        auto product = edge.target().value->document();
+        who_makes.push_back(
+            company.at("name").get<std::string>() +
+            " makes " +
+            product.at("name").get<std::string>());
     }
     std::vector<std::string> expected{
         "Apple makes iPhone",

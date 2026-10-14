@@ -12,19 +12,10 @@ let inbox = [
 let records = InputRequestInputRecords(
     items: inbox.map { .text($0) }
 )
-let call = try await client.rank(
+let judgment = try await client.rankAnswer(
     .text(question),
     input: .records(records)
 )
-var byUrgency = [Int](repeating: -1, count: inbox.count)
-for case .rankAggregate(let ranked) in call.packets {
-    for one in ranked.value {
-        if case .value(let index) =
-            one.index
-        {
-            byUrgency[Int(one.value) - 1] = Int(index)
-        }
-    }
-}
+let byUrgency = judgment
 precondition(byUrgency == [1, 3, 2, 0])
 client.close()

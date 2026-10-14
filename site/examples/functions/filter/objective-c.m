@@ -1,16 +1,14 @@
 #import "ThinkThenFoundation.h"
 #include <assert.h>
 
-int main(void) {
+int main(void) { @autoreleasepool {
     NSError *error = nil;
     TTFoundationClient *client = [[TTFoundationClient alloc]
         initWithSettings:nil
         error:&error];
     assert(client);
-    NSDictionary *question = @{
-        @"kind": @"text",
-        @"text": @"Is this a complaint?",
-    };
+    TTTextQuestion *question = [TTTextQuestion new];
+    question.text = @"Is this a complaint?";
     NSArray<NSString *> *reviews = @[
         @"Arrived a day early. Thank you!",
         @"The zipper broke the first time I used it.",
@@ -19,41 +17,21 @@ int main(void) {
     ];
     NSMutableArray *records = [NSMutableArray array];
     for (NSString *one in reviews) {
-        [records addObject:@{
-            @"original": @{@"kind": @"text", @"text": one},
-        }];
+        TTOriginalText *original = [TTOriginalText new];
+        original.text = one;
+        TTItem *item = [TTItem new];
+        item.original = original;
+        [records addObject:item];
     }
-    NSDictionary *input = @{
-        @"kind": @"records",
-        @"items": records,
-    };
+    TTRecordsInput *input = [TTRecordsInput new];
+    input.items = records;
     NSMutableArray *complaints = [NSMutableArray array];
-    __block TTCall *answered = nil;
-    dispatch_semaphore_t done =
-        dispatch_semaphore_create(0);
-    TTTask *task = [client filter:question
+    NSArray *judgment = [client filterAnswer:question
         input:input
-        options:nil
-        feed:nil
-        completion:^(TTCall *call, NSError *failure) {
-            answered = call;
-            dispatch_semaphore_signal(done);
-        }
-        error:&error];
-    assert(task);
-    dispatch_semaphore_wait(done, DISPATCH_TIME_FOREVER);
-
-    Class wanted = TTSessionPacketFilterRow.class;
-    for (id packet in answered.packets) {
-        if (![packet isKindOfClass:wanted]) continue;
-        TTSessionPacketFilterRow *found = packet;
-        TTAtomicBoolean *row = found.value.value;
-        if (row.value.value.boolValue) {
-            int at = row.index.value.intValue;
-            [complaints addObject:reviews[at]];
-        }
-    }
+        options:nil feed:nil call:NULL error:&error];
+    assert(judgment && !error);
+    [complaints addObjectsFromArray:judgment];
     NSArray *expected = @[reviews[1], reviews[3]];
     assert([complaints isEqualToArray:expected]);
     return 0;
-}
+} }

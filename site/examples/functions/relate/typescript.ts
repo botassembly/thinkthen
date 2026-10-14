@@ -15,7 +15,7 @@ try {
        either: false}
     ]}},
     names.map(([name, kind]) => ({name, kind})),
-  )).results[0].value;
+  )).relateAnswer().value;
   const makes = whoMakes.map((edge) => [
     edge.source.name,
     edge.target.name,

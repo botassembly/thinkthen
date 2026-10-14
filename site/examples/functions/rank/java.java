@@ -4,7 +4,6 @@ import thinkthen.Inputs.RequestInputRecords;
 import thinkthen.Inputs.RequestItem;
 import thinkthen.Inputs.RequestOriginalText;
 import thinkthen.Inputs.RequestQuestionText;
-import thinkthen.Results.SessionPacketRankAggregate;
 
 public class Rank {
     public static void main(String[] args) {
@@ -22,17 +21,10 @@ public class Rank {
                 .map(text -> new RequestItem().original(
                     new RequestOriginalText().text(text)))
                 .toList());
-        var ranking = SessionPacketRankAggregate.class;
         try (var tt = new Engine()) {
-            var byUrgency = tt.rank(question, records)
-                .join().packets().stream()
-                .filter(ranking::isInstance)
-                .map(ranking::cast)
-                .findFirst().orElseThrow()
-                .value();
-            var order = byUrgency.stream()
-                .map(one -> one.index().value().intValue())
-                .toList();
+            var order = tt.rank(question, records)
+                .join().rank().stream()
+                .map(one -> one.intValue()).toList();
             assert order.equals(List.of(1, 3, 2, 0));
         }
     }

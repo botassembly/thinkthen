@@ -19,13 +19,6 @@ int main() {
     auto call = client.choose(
         RequestQuestionDefinition().set_value(which_team),
         parcel);
-    call.finish();
-    std::string team;
-    for (const auto& packet : call.collect()) {
-        auto row = packet.as_SessionPacketChooseRow();
-        if (!row) continue;
-        auto name = row->value().value->value().value;
-        team = name.value_or("");
-    }
+    auto team = call.answer().value_or("");
     assert(team == "shipping");
 }

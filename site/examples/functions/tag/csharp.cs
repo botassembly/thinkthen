@@ -17,9 +17,6 @@ var labelQuestion = engine.ParseQuestion(
 var call = await engine.TagAsync(
     labelQuestion,
     new InputRequestInputText { Text = message });
-var fittingLabels = call.Packets
-    .OfType<SessionPacketTagRow>()
-    .Single()
-    .Value.Value;
+var fittingLabels = call.Tag();
 Trace.Assert(fittingLabels.SequenceEqual(
     ["praise", "bug", "billing"]));

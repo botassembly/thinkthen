@@ -13,21 +13,14 @@ int main() {
         "Sam Patel says his Kindle arrived broken "
         "in Denver.");
     auto call = client.recognize(kinds, text);
-    call.finish();
+    auto rows = call.answer();
     std::vector<std::string> names;
-    for (const auto& packet : call.collect()) {
-        auto found =
-            packet.as_SessionPacketRecognizeAggregate();
-        if (!found) continue;
-        auto rows = found->value().value;
-        for (const auto& row : *rows) {
-            auto value = *row.value().value;
-            auto facts = value.as_RecognizeEntities();
-            auto entities = facts->entities().value;
-            for (const auto& one : *entities) {
-                names.push_back(*one.text().value + " (" +
-                    *one.kind().value + ")");
-            }
+    for (const auto& row : rows) {
+        auto facts =
+            row.value().value->as_RecognizeEntities();
+        for (const auto& one : *facts->entities().value) {
+            names.push_back(*one.text().value + " (" +
+                *one.kind().value + ")");
         }
     }
     std::vector<std::string> expected{

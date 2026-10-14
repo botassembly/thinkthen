@@ -24,14 +24,11 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	var isRefund bool
-	for _, packet := range call.Packets {
-		row, err := packet.AsSessionPacketDecideRow()
-		if err == nil {
-			answer := row.Value().Value.Value().Value
-			isRefund, _ = answer.Boolean()
-		}
+	refund, err := call.DecideAnswer()
+	if err != nil {
+		log.Fatal(err)
 	}
+	isRefund := refund != nil && *refund
 	if !isRefund {
 		log.Fatal("expected yes")
 	}

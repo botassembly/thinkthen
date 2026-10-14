@@ -19,17 +19,6 @@ int main() {
     auto call = client.tag(
         RequestQuestionDefinition().set_value(which_labels),
         message);
-    call.finish();
-    std::vector<std::string> fitting_labels;
-    for (const auto& packet : call.collect()) {
-        auto row = packet.as_SessionPacketTagRow();
-        if (!row) continue;
-        fitting_labels = *row->value().value->value().value;
-    }
-    std::vector<std::string> all_three{
-        "praise",
-        "bug",
-        "billing",
-    };
+    auto fitting_labels = call.answer();
     assert(fitting_labels == all_three);
 }

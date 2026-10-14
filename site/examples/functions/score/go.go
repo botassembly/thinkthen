@@ -35,14 +35,11 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	var urgency float64
-	for _, packet := range call.Packets {
-		row, err := packet.AsSessionPacketScoreRow()
-		if err == nil {
-			level := row.Value().Value.Value().Value
-			urgency, _ = level.Float64()
-		}
+	level, err := call.ScoreAnswer()
+	if err != nil {
+		log.Fatal(err)
 	}
+	urgency, _ := level.Float64()
 	if urgency != 2 {
 		log.Fatal("expected 2")
 	}

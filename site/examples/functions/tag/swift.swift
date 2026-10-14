@@ -19,13 +19,10 @@ let message = """
     and I was charged twice.
 
     """
-let call = try await client.tag(
+let judgment = try await client.tagAnswer(
     whichLabels,
     input: .text(message)
 )
-var fittingLabels: [String] = []
-for case .tagRow(let row) in call.packets {
-    fittingLabels = row.value.value
-}
+let fittingLabels = judgment
 precondition(fittingLabels == ["praise", "bug", "billing"])
 client.close()

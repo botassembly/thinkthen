@@ -11,6 +11,6 @@ $outage = "Our checkout page is down "
 $urgency = $client->score(
     ['score' => $question, 'levels' => $levels],
     $outage,
-)->results[0]->value;
+)->scoreAnswer();
 assert($urgency === 2.0);
 $client->close();

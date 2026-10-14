@@ -16,8 +16,5 @@ var scale = engine.ParseQuestion(
 var call = await engine.ScoreAsync(
     scale,
     new InputRequestInputText { Text = outage });
-var urgency = call.Packets
-    .OfType<SessionPacketScoreRow>()
-    .Single()
-    .Value.Value;
+var urgency = call.Score();
 Trace.Assert(urgency == 2.0);

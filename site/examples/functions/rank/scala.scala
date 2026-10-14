@@ -3,7 +3,6 @@ import scala.concurrent.duration.*
 import scala.util.Using
 import scala.jdk.CollectionConverters.*
 import thinkthen.Inputs.*
-import thinkthen.Results.SessionPacketRankAggregate
 import thinkthen.scala.ScalaEngine
 
 @main def rank(): Unit =
@@ -24,11 +23,7 @@ import thinkthen.scala.ScalaEngine
           RequestOriginalText().text(text))
       }.asJava)
     val call = tt.rank(question, records)
-    val byUrgency = Await.result(call.result, 10.seconds)
-      .packets().asScala.collectFirst {
-        case ranked: SessionPacketRankAggregate =>
-          ranked.value().asScala.toList
-      }.get
-    val order = byUrgency.map(_.index().value().intValue())
+    val order = Await.result(call.result, 10.seconds)
+      .rank().asScala.map(_.intValue()).toList
     assert(order == List(1, 3, 2, 0))
   }

@@ -17,19 +17,17 @@ let entities = InputRequestInputEntities(items: names.map {
         original: .value(.json(original))
     )
 })
-let call = try await client.relate(
+let judgment = try await client.relateAnswer(
     .file("makes.json"),
     input: .entities(entities)
 )
 var whoMakes: [String] = []
-for case .relateAggregate(let found) in call.packets {
-    for edge in found.value.value {
-        if case .alternative0(let company) = edge.source,
-           case .alternative0(let product) = edge.target {
-            whoMakes.append(
-                "\(company.name) makes \(product.name)"
-            )
-        }
+for edge in judgment.value {
+    if case .alternative0(let company) = edge.source,
+       case .alternative0(let product) = edge.target {
+        whoMakes.append(
+            "\(company.name) makes \(product.name)"
+        )
     }
 }
 precondition(whoMakes == [

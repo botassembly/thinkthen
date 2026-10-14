@@ -28,9 +28,5 @@ var records = new InputRequestInputRecords
 var call = await engine.RankAsync(
     new InputRequestQuestionText { Text = question },
     records);
-var byUrgency = call.Packets
-    .OfType<SessionPacketRankAggregate>()
-    .Single()
-    .Value;
-var order = byUrgency.Select(one => one.Index.Value);
+var order = call.Rank();
 Trace.Assert(order.SequenceEqual([1UL, 3UL, 2UL, 0UL]));

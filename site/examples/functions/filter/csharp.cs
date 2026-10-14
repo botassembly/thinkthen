@@ -27,9 +27,7 @@ var records = new InputRequestInputRecords
 var call = await engine.FilterAsync(
     new InputRequestQuestionText { Text = question },
     records);
-var complaints = call.Packets
-    .OfType<SessionPacketFilterRow>()
-    .Select(row => row.Value.Input.Value.GetString())
-    .ToList();
+var complaints = call.Filter()
+    .Select(one => one.GetString());
 Trace.Assert(complaints.SequenceEqual(
     [reviews[1], reviews[3]]));

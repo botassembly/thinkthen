@@ -31,13 +31,11 @@ const uint32_t score_row =
 uint32_t status = THINKTHEN_SESSION_PENDING_V1;
 while (status != THINKTHEN_SESSION_END_V1) {
     thinkthen_session_result *owner = NULL;
-    rc = thinkthen_session_try_read(call, &status, &owner);
+    rc = thinkthen_session_next_packet(call,
+        THINKTHEN_SESSION_WAIT_SETTLEMENT_V1,
+        &status, &owner);
     assert(rc == THINKTHEN_OK);
-    if (status == THINKTHEN_SESSION_PENDING_V1) {
-        uint32_t ready;
-        thinkthen_session_wait(call,
-            THINKTHEN_SESSION_WAIT_RESULT_V1, 50, &ready);
-    }
+
     if (status != THINKTHEN_SESSION_RESULT_V1) continue;
     const thinkthen_complete_session_packet_v1 *packet;
     thinkthen_session_result_view(owner, &packet);

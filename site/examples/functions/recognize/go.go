@@ -26,18 +26,16 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	rows, err := call.RecognizeAnswer()
+	if err != nil {
+		log.Fatal(err)
+	}
 	var names [][2]string
-	for _, packet := range call.Packets {
-		found, err := packet.AsSessionPacketRecognizeAggregate()
-		if err != nil || len(found.Value().Value) == 0 {
-			continue
-		}
-		facts, _ := found.Value().Value[0].Value().Value.
-			AsRecognizeEntities()
+	for _, row := range rows {
+		facts, _ := row.Value().Value.AsRecognizeEntities()
 		for _, one := range facts.Entities().Value {
 			names = append(names, [2]string{
-				one.Text().Value,
-				one.Kind().Value,
+				one.Text().Value, one.Kind().Value,
 			})
 		}
 	}

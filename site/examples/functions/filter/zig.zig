@@ -1,6 +1,5 @@
 const std = @import("std");
 const tt = @import("thinkthen");
-const c = tt.c;
 
 pub fn main() !void {
     const allocator = std.heap.page_allocator;
@@ -26,38 +25,18 @@ pub fn main() !void {
             .original = .{ .text = .{ .text = text } },
         };
     }
-    var call = try tt.session.filter(&engine, .{
+    var call = try tt.calls.filter(&engine, .{
         .question = .{ .text = .{ .text = question } },
         .input = .{ .records = .{ .items = &records } },
     });
     defer call.deinit();
 
-    const filter_row =
-        c.THINKTHEN_COMPLETE_SESSION_PACKET_FILTER_ROW_V1;
-    var is_complaint = [_]bool{false} ** reviews.len;
-
-    while (true) {
-        var packet = switch (try call.read()) {
-            .pending => {
-                var ready: u32 = undefined;
-                _ = c.thinkthen_session_wait(
-                    call.raw,
-                    c.THINKTHEN_SESSION_WAIT_RESULT_V1,
-                    50,
-                    &ready,
-                );
-                continue;
-            },
-            .end => break,
-            .packet => |value| value,
-        };
-        defer packet.deinit();
-        if (packet.view.kind != filter_row) continue;
-        const row = packet.view.data.filter_row.*.value.*;
-        is_complaint[row.index.value] = row.value == 1;
-    }
-    const expected = [_]bool{ false, true, false, true };
+    const complaints = try call.value();
+    std.debug.assert(complaints.len == 2);
     std.debug.assert(
-        std.mem.eql(bool, &is_complaint, &expected),
+        std.mem.eql(u8, complaints[0].string, reviews[1]),
+    );
+    std.debug.assert(
+        std.mem.eql(u8, complaints[1].string, reviews[3]),
     );
 }

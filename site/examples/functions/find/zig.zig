@@ -1,6 +1,5 @@
 const std = @import("std");
 const tt = @import("thinkthen");
-const c = tt.c;
 
 pub fn main() !void {
     const allocator = std.heap.page_allocator;
@@ -27,41 +26,15 @@ pub fn main() !void {
             .original = .{ .text = .{ .text = text } },
         };
     }
-    var call = try tt.session.find(&engine, .{
+    var call = try tt.calls.find(&engine, .{
         .question = .{ .text = .{ .text = question } },
         .input = .{ .records = .{ .items = &records } },
     });
     defer call.deinit();
 
-    const observation =
-        c.THINKTHEN_COMPLETE_SESSION_PACKET_OBSERVATION_V1;
-    var refund_deadline: []const u8 = "";
-
-    while (true) {
-        var packet = switch (try call.read()) {
-            .pending => {
-                var ready: u32 = undefined;
-                _ = c.thinkthen_session_wait(
-                    call.raw,
-                    c.THINKTHEN_SESSION_WAIT_RESULT_V1,
-                    50,
-                    &ready,
-                );
-                continue;
-            },
-            .end => break,
-            .packet => |value| value,
-        };
-        defer packet.deinit();
-        if (packet.terminal() != null) continue;
-        if (packet.view.kind == observation) continue;
-        const found = packet.view.data.find_aggregate.*;
-        const answer = found.value.*.value;
-        const line =
-            tt.session.optional(answer) orelse continue;
-        const text = tt.session.bytes(line.*.data.string);
-        refund_deadline = try allocator.dupe(u8, text);
-    }
+    const at = (try call.value())
+        orelse return error.NotSure;
+    const refund_deadline = policy[at];
     std.debug.assert(
         std.mem.eql(u8, refund_deadline, policy[1]),
     );

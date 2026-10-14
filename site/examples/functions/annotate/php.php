@@ -8,7 +8,7 @@ $report = 'Steps: click Log in. Nobody gets in.';
 $triage = $client->annotate(
     Client::questionFile('form.json'),
     [$report],
-)->results[0]->value;
+)->annotateAnswer()[0]->value;
 assert((array) $triage === [
     'steps' => true,
     'area' => 'login',

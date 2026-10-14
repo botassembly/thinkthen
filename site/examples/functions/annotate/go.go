@@ -25,13 +25,13 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	var triage []byte
-	for _, packet := range call.Packets {
-		row, err := packet.AsSessionPacketAnnotateRow()
-		if err == nil {
-			answers := row.Value().Value.Value().Value
-			triage, _ = json.Marshal(answers)
-		}
+	rows, err := call.AnnotateAnswer()
+	if err != nil {
+		log.Fatal(err)
+	}
+	triage, err := json.Marshal(rows[0].Value().Value)
+	if err != nil {
+		log.Fatal(err)
 	}
 	want := `{"steps":true,"area":"login","impact":1.98}`
 	if string(triage) != want {

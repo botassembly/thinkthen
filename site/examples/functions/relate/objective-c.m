@@ -1,16 +1,14 @@
 #import "ThinkThenFoundation.h"
 #include <assert.h>
 
-int main(void) {
+int main(void) { @autoreleasepool {
     NSError *error = nil;
     TTFoundationClient *client = [[TTFoundationClient alloc]
         initWithSettings:nil
         error:&error];
     assert(client);
-    NSDictionary *relations = @{
-        @"kind": @"file",
-        @"path": @"makes.json",
-    };
+    TTQuestionFile *relations = [TTQuestionFile new];
+    relations.path = @"makes.json";
     NSArray *names = @[
         @[@"Apple", @"company"],
         @[@"Amazon", @"company"],
@@ -19,45 +17,28 @@ int main(void) {
     ];
     NSMutableArray *entities = [NSMutableArray array];
     for (NSArray *name in names) {
-        [entities addObject:@{@"original": @{
-            @"kind": @"json",
-            @"value": @{@"name": name[0], @"kind": name[1]},
-        }}];
+        TTOriginalJSON *original = [TTOriginalJSON new];
+        original.value =
+        @{@"name": name[0], @"kind": name[1]};
+        TTItem *item = [TTItem new];
+        item.original = original;
+        [entities addObject:item];
     }
-    NSDictionary *input = @{
-        @"kind": @"entities",
-        @"items": entities,
-    };
+    TTEntitiesInput *input = [TTEntitiesInput new];
+    input.items = entities;
     NSMutableArray *whoMakes = [NSMutableArray array];
-    __block TTCall *answered = nil;
-    dispatch_semaphore_t done =
-        dispatch_semaphore_create(0);
-    TTTask *task = [client relate:relations
+    TTPresence<TTRelation *> *judgment =
+        [client relateAnswer:relations
         input:input
-        options:nil
-        feed:nil
-        completion:^(TTCall *call, NSError *failure) {
-            answered = call;
-            dispatch_semaphore_signal(done);
-        }
-        error:&error];
-    assert(task);
-    dispatch_semaphore_wait(done, DISPATCH_TIME_FOREVER);
-
-    Class wanted = TTSessionPacketRelateAggregate.class;
-    for (id packet in answered.packets) {
-        if (![packet isKindOfClass:wanted]) continue;
-        TTSessionPacketRelateAggregate *found = packet;
-        NSArray *edges = found.value.value.value.value;
-        for (TTRelatedEntityEdge *edge in edges) {
-            TTResultNode *company = edge.source.value;
-            TTResultNode *product = edge.target.value;
-            NSString *makes = [NSString stringWithFormat:
-                @"%@ makes %@",
-                company.rawFields[@"name"],
-                product.rawFields[@"name"]];
-            [whoMakes addObject:makes];
-        }
+        options:nil feed:nil call:NULL error:&error];
+    assert(judgment && !error);
+    NSArray *edges = judgment.value.value.value;
+    for (TTRelatedEntityEdge *edge in edges) {
+        TTRelatedEntity *company = (id)edge.source.value;
+        TTRelatedEntity *product = (id)edge.target.value;
+        [whoMakes addObject:[NSString stringWithFormat:
+            @"%@ makes %@", company.name.value,
+                product.name.value]];
     }
     NSArray *expected = @[
         @"Apple makes iPhone",
@@ -65,4 +46,4 @@ int main(void) {
     ];
     assert([whoMakes isEqualToArray:expected]);
     return 0;
-}
+} }

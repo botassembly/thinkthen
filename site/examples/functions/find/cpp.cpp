@@ -22,15 +22,7 @@ int main() {
     }
     auto call = client.find(
         question, RequestInputRecords().set_items(records));
-    call.finish();
-    std::string refund_deadline;
-    for (const auto& packet : call.collect()) {
-        auto found = packet.as_SessionPacketFindAggregate();
-        if (!found) continue;
-        auto line = found->value().value->value().value;
-        if (line) {
-            refund_deadline = line->get<std::string>();
-        }
-    }
+    auto found = call.answer();
+    auto refund_deadline = *found.value().value;
     assert(refund_deadline == policy[1]);
 }

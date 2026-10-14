@@ -40,22 +40,18 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	var edges []tt.OwnedRelatedEntityEdge
-	for _, packet := range call.Packets {
-		related, err := packet.AsSessionPacketRelateAggregate()
-		if err == nil {
-			edges = related.Value().Value.Value().Value
-		}
+	related, err := call.RelateAnswer()
+	if err != nil {
+		log.Fatal(err)
 	}
 	var pairs [][2]string
-	for _, edge := range edges {
+	for _, edge := range related.Value().Value {
 		source, _ := edge.Source().Value.
 			AsRelationEndpointRelatedEntity()
 		target, _ := edge.Target().Value.
 			AsRelationEndpointRelatedEntity()
 		pairs = append(pairs, [2]string{
-			source.Name().Value,
-			target.Name().Value,
+			source.Name().Value, target.Name().Value,
 		})
 	}
 	want := [][2]string{

@@ -12,6 +12,6 @@ $message = "Love the new dashboard, "
 $fittingLabels = $client->tag(
     ['tag' => $question, 'labels' => $labels],
     $message,
-)->results[0]->value;
+)->tagAnswer();
 assert($fittingLabels === ['praise', 'bug', 'billing']);
 $client->close();

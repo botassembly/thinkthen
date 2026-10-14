@@ -20,8 +20,5 @@ var teamQuestion = engine.ParseQuestion(
 var call = await engine.ChooseAsync(
     teamQuestion,
     new InputRequestInputText { Text = parcel });
-var team = call.Packets
-    .OfType<SessionPacketChooseRow>()
-    .Single()
-    .Value.Value.Value;
+var team = call.Choice();
 Trace.Assert(team == "shipping");

@@ -23,11 +23,7 @@ var ask = engine.ParseQuestion(
 var call = await engine.RecognizeAsync(
     ask,
     new InputRequestInputText { Text = text });
-var facts = (RecognizeEntities)call.Packets
-    .OfType<SessionPacketRecognizeAggregate>()
-    .First()
-    .Value.Single()
-    .Value;
+var facts = (RecognizeEntities)call.Recognize()[0].Value;
 var names = facts.Entities
     .Select(one => (one.Text, one.Kind));
 Trace.Assert(names.SequenceEqual(

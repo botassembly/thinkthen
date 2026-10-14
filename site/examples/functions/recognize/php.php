@@ -13,7 +13,8 @@ $ask = [
         'kinds' => array_fill_keys($kinds, null),
     ],
 ];
-$facts = $client->recognize($ask, $text)->results[0]->value;
+$facts = $client->recognize($ask, $text)
+    ->recognizeAnswer()[0]->value;
 $names = array_map(
     fn ($one) => [$one->text, $one->kind],
     $facts->entities,

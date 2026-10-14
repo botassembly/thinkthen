@@ -20,7 +20,7 @@ $ask = [
     'relate' => ['relations' => [$makes]],
 ];
 $whoMakes = $client->relate($ask, $names)
-    ->results[0]->value;
+    ->relateAnswer()->value;
 $pairs = array_map(
     fn ($edge) => [
         $edge->source->name,

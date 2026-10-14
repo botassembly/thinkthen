@@ -7,6 +7,6 @@ $client = new Client();
 $question = 'Does the customer ask for a refund?';
 $broken = 'Please refund my order. It arrived broken.';
 $isRefund = $client->decide($question, $broken)
-    ->results[0]->value;
+    ->decideAnswer();
 assert($isRefund === true);
 $client->close();

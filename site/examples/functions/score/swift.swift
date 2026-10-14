@@ -16,13 +16,10 @@ let howUrgent = try client.parseQuestion(
 )
 let outage =
     "Our checkout page is down and customers cannot pay.\n"
-let call = try await client.score(
+let judgment = try await client.scoreAnswer(
     howUrgent,
     input: .text(outage)
 )
-var urgency = -1.0
-for case .scoreRow(let row) in call.packets {
-    urgency = row.value.value
-}
+let urgency = judgment
 precondition(urgency == 2.0)
 client.close()

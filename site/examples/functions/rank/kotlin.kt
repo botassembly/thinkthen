@@ -3,7 +3,6 @@ import thinkthen.Inputs.RequestItem
 import thinkthen.Inputs.RequestOriginalText
 import thinkthen.Inputs.RequestQuestionText
 import thinkthen.kotlin.KotlinEngine
-import thinkthen.Results.SessionPacketRankAggregate
 
 suspend fun main() = KotlinEngine().use { tt ->
     val question = RequestQuestionText()
@@ -21,11 +20,7 @@ suspend fun main() = KotlinEngine().use { tt ->
             RequestItem().original(
                 RequestOriginalText().text(text))
         })
-    val byUrgency = tt.rank(question, records).packets()
-        .filterIsInstance<SessionPacketRankAggregate>()
-        .first().value()
-    val order = byUrgency.map { one ->
-        one.index().value().toInt()
-    }
+    val order = tt.rank(question, records).rank()
+        .map { it.toInt() }
     check(order == listOf(1, 3, 2, 0))
 }

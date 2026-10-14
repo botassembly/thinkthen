@@ -9,14 +9,9 @@ int main() {
     auto report = RequestInputText().set_text(
         "Steps: click Log in. Nobody gets in.");
     auto call = client.annotate(form, report);
-    call.finish();
-    tt::Json triage;
-    for (const auto& packet : call.collect()) {
-        auto row = packet.as_SessionPacketAnnotateRow();
-        if (!row) continue;
-        auto annotation = row->value().value;
-        triage = annotation->value().value->document();
-    }
+    auto annotations = call.answer();
+    auto triage =
+        annotations.at(0).value().value->document();
     tt::Json expected{
         {"steps", true},
         {"area", "login"},

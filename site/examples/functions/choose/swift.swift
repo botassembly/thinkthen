@@ -16,15 +16,10 @@ let whichTeam = try client.parseQuestion(
     ])
 )
 let parcel = "My parcel went to the wrong address."
-let call = try await client.choose(
+let judgment = try await client.chooseAnswer(
     whichTeam,
     input: .text(parcel)
 )
-var team = ""
-for case .chooseRow(let row) in call.packets {
-    if case .alternative0(let name) = row.value.value {
-        team = name
-    }
-}
+let team = judgment ?? ""
 precondition(team == "shipping")
 client.close()

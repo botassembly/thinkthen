@@ -29,14 +29,11 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	var refundDeadline any
-	for _, packet := range call.Packets {
-		found, err := packet.AsSessionPacketFindAggregate()
-		if err == nil {
-			answer := found.Value().Value
-			refundDeadline = answer.Value().Value
-		}
+	found, err := call.FindAnswer()
+	if err != nil {
+		log.Fatal(err)
 	}
+	refundDeadline := found.Value().Value
 	if refundDeadline != policy[1] {
 		log.Fatal("expected the refund line")
 	}

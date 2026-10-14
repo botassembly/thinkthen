@@ -1,7 +1,7 @@
 #import "ThinkThenFoundation.h"
 #include <assert.h>
 
-int main(void) {
+int main(void) { @autoreleasepool {
     NSError *error = nil;
     TTFoundationClient *client = [[TTFoundationClient alloc]
         initWithSettings:nil
@@ -13,38 +13,23 @@ int main(void) {
         @"Soon.",
         @"Immediate.",
     ];
-    NSDictionary *howUrgent = @{
-        @"kind": @"definition",
-        @"value": @{@"score": question, @"levels": levels},
-    };
-    NSDictionary *outage = @{
-        @"kind": @"text",
-        @"text": @"Our checkout page is down and "
-            @"customers cannot pay.\n",
-    };
+    TTAuthoredScoreBuilder *definition =
+        [TTAuthoredScoreBuilder new];
+    definition.score = question;
+    definition.levels = levels;
+    TTQuestionDefinition *howUrgent =
+        [TTQuestionDefinition new];
+    howUrgent.value = definition;
+    TTTextInput *outage = [TTTextInput new];
+    outage.text = @"Our checkout page is down and "
+            @"customers cannot pay.\n";
     double urgency = -1;
-    __block TTCall *answered = nil;
-    dispatch_semaphore_t done =
-        dispatch_semaphore_create(0);
-    TTTask *task = [client score:howUrgent
+    TTPresence<NSNumber *> *judgment =
+        [client scoreAnswer:howUrgent
         input:outage
-        options:nil
-        feed:nil
-        completion:^(TTCall *call, NSError *failure) {
-            answered = call;
-            dispatch_semaphore_signal(done);
-        }
-        error:&error];
-    assert(task);
-    dispatch_semaphore_wait(done, DISPATCH_TIME_FOREVER);
-
-    Class wanted = TTSessionPacketScoreRow.class;
-    for (id packet in answered.packets) {
-        if (![packet isKindOfClass:wanted]) continue;
-        TTSessionPacketScoreRow *found = packet;
-        TTAtomicDouble *row = found.value.value;
-        urgency = row.value.value.doubleValue;
-    }
+        options:nil feed:nil call:NULL error:&error];
+    assert(judgment && !error);
+    urgency = judgment.value.doubleValue;
     assert(urgency == 2.0);
     return 0;
-}
+} }

@@ -11,15 +11,13 @@ let policy = [
 let records = InputRequestInputRecords(
     items: policy.map { .text($0) }
 )
-let call = try await client.find(
+let judgment = try await client.findAnswer(
     .text(question),
     input: .records(records)
 )
 var refundDeadline = ""
-for case .findAggregate(let found) in call.packets {
-    if case .string(let line) = found.value.value.kind {
-        refundDeadline = line
-    }
+if case .string(let line) = judgment.value.kind {
+    refundDeadline = line
 }
 precondition(refundDeadline == policy[1])
 client.close()

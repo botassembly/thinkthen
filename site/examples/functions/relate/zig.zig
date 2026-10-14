@@ -1,6 +1,5 @@
 const std = @import("std");
 const tt = @import("thinkthen");
-const c = tt.c;
 
 pub fn main() !void {
     const allocator = std.heap.page_allocator;
@@ -29,50 +28,19 @@ pub fn main() !void {
             .value = .{ .object = fields },
         } } };
     }
-    var call = try tt.session.relate(&engine, .{
+    var call = try tt.calls.relate(&engine, .{
         .question = .{ .file = .{ .path = relations } },
         .input = .{ .entities = .{ .items = &entities } },
     });
     defer call.deinit();
 
-    const observation =
-        c.THINKTHEN_COMPLETE_SESSION_PACKET_OBSERVATION_V1;
+    const edges = try call.value();
     var who_makes: std.ArrayList(u8) = .empty;
-
-    while (true) {
-        var packet = switch (try call.read()) {
-            .pending => {
-                var ready: u32 = undefined;
-                _ = c.thinkthen_session_wait(
-                    call.raw,
-                    c.THINKTHEN_SESSION_WAIT_RESULT_V1,
-                    50,
-                    &ready,
-                );
-                continue;
-            },
-            .end => break,
-            .packet => |value| value,
-        };
-        defer packet.deinit();
-        if (packet.terminal() != null) continue;
-        if (packet.view.kind == observation) continue;
-        const found = packet.view.data.relate_aggregate.*;
-        const edges = found.value.*.value;
-        for (edges.data[0..edges.len]) |edge| {
-            const source = edge.*.source.*.data;
-            const target = edge.*.target.*.data;
-            const company = source.related_entity.*.name;
-            const product = target.related_entity.*.name;
-            try who_makes.print(
-                allocator,
-                "{s} makes {s}. ",
-                .{
-                    tt.session.bytes(company),
-                    tt.session.bytes(product),
-                },
-            );
-        }
+    defer who_makes.deinit(allocator);
+    for (edges) |edge| {
+        try who_makes.print(allocator, "{s} makes {s}. ", .{
+            edge.source.name, edge.target.name,
+        });
     }
     std.debug.assert(std.mem.eql(u8, who_makes.items,
         "Apple makes iPhone. " ++

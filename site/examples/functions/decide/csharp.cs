@@ -9,8 +9,5 @@ var broken = "Please refund my order. It arrived broken.";
 var call = await engine.DecideAsync(
     new InputRequestQuestionText { Text = question },
     new InputRequestInputText { Text = broken });
-var isRefund = call.Packets
-    .OfType<SessionPacketDecideRow>()
-    .Single()
-    .Value.Value.GetBoolean();
+var isRefund = call.Decision();
 Trace.Assert(isRefund);

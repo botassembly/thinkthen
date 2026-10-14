@@ -6,7 +6,7 @@ ThinkThen::Client.open do |client|
     "in Denver."
   facts = client.recognize(
     {version: 1, recognize: {kinds: kinds}}, text
-  ).results[0].value
+  ).value
   names = facts.entities.map { |one| [one.text, one.kind] }
   raise unless names == [
     ["Sam Patel", "person"],

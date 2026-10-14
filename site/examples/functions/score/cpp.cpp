@@ -17,12 +17,6 @@ int main() {
     auto call = client.score(
         RequestQuestionDefinition().set_value(how_urgent),
         outage);
-    call.finish();
-    double urgency = -1;
-    for (const auto& packet : call.collect()) {
-        auto row = packet.as_SessionPacketScoreRow();
-        if (!row) continue;
-        urgency = *row->value().value->value().value;
-    }
+    auto urgency = call.answer();
     assert(urgency == 2.0);
 }

@@ -12,7 +12,7 @@ try {
   const complaints = (await tt.filter(
     complaintQuestion,
     reviews,
-  )).results.map(row => row.input);
+  )).filterAnswer();
   assert.deepEqual(complaints, [reviews[1], reviews[2]]);
 
   const levels = ["Routine.", "Soon.", "Immediate."];
@@ -23,6 +23,6 @@ try {
   const outage = "Nobody can log in to the site right now.";
   const urgency = (await tt.score(
     urgencyScale, outage,
-  )).results[0].value;
+  )).filterAnswer();
   assert.equal(urgency, 2);
 } finally { tt.close(); }

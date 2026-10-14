@@ -27,8 +27,5 @@ var records = new InputRequestInputRecords
 var call = await engine.FindAsync(
     new InputRequestQuestionText { Text = question },
     records);
-var refundDeadline = call.Packets
-    .OfType<SessionPacketFindAggregate>()
-    .Single()
-    .Value.Value.Value.GetString();
+var refundDeadline = call.Find().Value.GetString();
 Trace.Assert(refundDeadline == policy[1]);

@@ -1,7 +1,7 @@
 #import "ThinkThenFoundation.h"
 #include <assert.h>
 
-int main(void) {
+int main(void) { @autoreleasepool {
     NSError *error = nil;
     TTFoundationClient *client = [[TTFoundationClient alloc]
         initWithSettings:nil
@@ -9,38 +9,24 @@ int main(void) {
     assert(client);
     NSString *question = @"Which labels fit this message?";
     NSArray *labels = @[@"praise", @"bug", @"billing"];
-    NSDictionary *whichLabels = @{
-        @"kind": @"definition",
-        @"value": @{@"tag": question, @"labels": labels},
-    };
-    NSDictionary *message = @{
-        @"kind": @"text",
-        @"text": @"Love the new dashboard, "
+    TTAuthoredTagBuilder *definition =
+        [TTAuthoredTagBuilder new];
+    definition.tag = question;
+    definition.labels = labels;
+    TTQuestionDefinition *whichLabels =
+        [TTQuestionDefinition new];
+    whichLabels.value = definition;
+    TTTextInput *message = [TTTextInput new];
+    message.text = @"Love the new dashboard, "
             @"but export crashes the app,\n"
-            @"and I was charged twice.\n",
-    };
+            @"and I was charged twice.\n";
     NSArray<NSString *> *fittingLabels = nil;
-    __block TTCall *answered = nil;
-    dispatch_semaphore_t done =
-        dispatch_semaphore_create(0);
-    TTTask *task = [client tag:whichLabels
+    TTPresence<NSArray<NSString *> *> *judgment =
+        [client tagAnswer:whichLabels
         input:message
-        options:nil
-        feed:nil
-        completion:^(TTCall *call, NSError *failure) {
-            answered = call;
-            dispatch_semaphore_signal(done);
-        }
-        error:&error];
-    assert(task);
-    dispatch_semaphore_wait(done, DISPATCH_TIME_FOREVER);
-
-    Class wanted = TTSessionPacketTagRow.class;
-    for (id packet in answered.packets) {
-        if (![packet isKindOfClass:wanted]) continue;
-        TTSessionPacketTagRow *found = packet;
-        fittingLabels = found.value.value.value.value;
-    }
+        options:nil feed:nil call:NULL error:&error];
+    assert(judgment && !error);
+    fittingLabels = judgment.value;
     assert([fittingLabels isEqualToArray:labels]);
     return 0;
-}
+} }

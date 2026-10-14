@@ -30,13 +30,13 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	kept, err := call.FilterAnswer()
+	if err != nil {
+		log.Fatal(err)
+	}
 	var complaints []string
-	for _, packet := range call.Packets {
-		row, err := packet.AsSessionPacketFilterRow()
-		if err == nil {
-			input := row.Value().Value.Input().Value
-			complaints = append(complaints, input.(string))
-		}
+	for _, text := range kept {
+		complaints = append(complaints, text.(string))
 	}
 	want := []string{reviews[1], reviews[3]}
 	if !slices.Equal(complaints, want) {

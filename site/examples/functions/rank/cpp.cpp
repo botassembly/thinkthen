@@ -24,18 +24,7 @@ int main() {
     }
     auto call = client.rank(
         question, RequestInputRecords().set_items(records));
-    call.finish();
-    std::vector<uint64_t> order(inbox.size());
-    for (const auto& packet : call.collect()) {
-        auto ranked =
-            packet.as_SessionPacketRankAggregate();
-        if (!ranked) continue;
-        auto places = ranked->value().value;
-        for (const auto& one : *places) {
-            auto place = *one.value().value;
-            order[place - 1] = *one.index().value;
-        }
-    }
+    auto order = call.answer();
     std::vector<uint64_t> by_urgency{1, 3, 2, 0};
     assert(order == by_urgency);
 }

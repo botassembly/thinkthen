@@ -21,10 +21,7 @@ var records = new InputRequestInputRecords
 var call = await engine.AnnotateAsync(
     new InputRequestQuestionFile { Path = "form.json" },
     records);
-var triage = call.Packets
-    .OfType<SessionPacketAnnotateRow>()
-    .Single()
-    .Value.Value;
+var triage = call.Annotate()[0].Value;
 Trace.Assert(triage["steps"] is AnnotatedFieldBoolean
 {
     Value: true,

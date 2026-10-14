@@ -1,6 +1,5 @@
 const std = @import("std");
 const tt = @import("thinkthen");
-const c = tt.c;
 
 pub fn main() !void {
     const allocator = std.heap.page_allocator;
@@ -34,7 +33,7 @@ pub fn main() !void {
             .options = teams,
         },
     };
-    var call = try tt.session.choose(&engine, .{
+    var call = try tt.calls.choose(&engine, .{
         .question = .{
             .definition = .{ .value = which_team },
         },
@@ -42,32 +41,7 @@ pub fn main() !void {
     });
     defer call.deinit();
 
-    const choose_row =
-        c.THINKTHEN_COMPLETE_SESSION_PACKET_CHOOSE_ROW_V1;
-    var team: []const u8 = "";
-
-    while (true) {
-        var packet = switch (try call.read()) {
-            .pending => {
-                var ready: u32 = undefined;
-                _ = c.thinkthen_session_wait(
-                    call.raw,
-                    c.THINKTHEN_SESSION_WAIT_RESULT_V1,
-                    50,
-                    &ready,
-                );
-                continue;
-            },
-            .end => break,
-            .packet => |value| value,
-        };
-        defer packet.deinit();
-        if (packet.view.kind != choose_row) continue;
-        const row = packet.view.data.choose_row.*.value.*;
-        const name =
-            tt.session.optional(row.value) orelse continue;
-        const text = tt.session.bytes(name);
-        team = try allocator.dupe(u8, text);
-    }
+    const team = (try call.value())
+        orelse return error.NotSure;
     std.debug.assert(std.mem.eql(u8, team, "shipping"));
 }

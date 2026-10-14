@@ -12,6 +12,6 @@ $policy = [
     'Gift cards cannot be exchanged for cash.',
 ];
 $refundDeadline = $client->find($question, $policy)
-    ->results[0]->value;
+    ->findAnswer()->value;
 assert($refundDeadline === $policy[1]);
 $client->close();

@@ -9,7 +9,7 @@ try {
     "\n";
   const isRefund = (await tt.decide(
     refund, moneyBack,
-  )).results[0].value;
+  )).decideAnswer();
   assert.equal(
     isRefund, "The customer asks for money back.",
   );

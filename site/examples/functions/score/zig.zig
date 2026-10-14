@@ -1,6 +1,5 @@
 const std = @import("std");
 const tt = @import("thinkthen");
-const c = tt.c;
 
 pub fn main() !void {
     const allocator = std.heap.page_allocator;
@@ -27,7 +26,7 @@ pub fn main() !void {
             .levels = .{ .array = &levels },
         },
     };
-    var call = try tt.session.score(&engine, .{
+    var call = try tt.calls.score(&engine, .{
         .question = .{
             .definition = .{ .value = how_urgent },
         },
@@ -35,29 +34,6 @@ pub fn main() !void {
     });
     defer call.deinit();
 
-    const score_row =
-        c.THINKTHEN_COMPLETE_SESSION_PACKET_SCORE_ROW_V1;
-    var urgency: f64 = -1;
-
-    while (true) {
-        var packet = switch (try call.read()) {
-            .pending => {
-                var ready: u32 = undefined;
-                _ = c.thinkthen_session_wait(
-                    call.raw,
-                    c.THINKTHEN_SESSION_WAIT_RESULT_V1,
-                    50,
-                    &ready,
-                );
-                continue;
-            },
-            .end => break,
-            .packet => |value| value,
-        };
-        defer packet.deinit();
-        if (packet.view.kind != score_row) continue;
-        const row = packet.view.data.score_row.*.value.*;
-        urgency = row.value;
-    }
+    const urgency = try call.value();
     std.debug.assert(urgency == 2.0);
 }

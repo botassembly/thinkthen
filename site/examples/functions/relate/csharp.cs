@@ -41,10 +41,7 @@ var entities = new InputRequestInputRecords
         .ToList(),
 };
 var call = await engine.RelateAsync(ask, entities);
-var whoMakes = call.Packets
-    .OfType<SessionPacketRelateAggregate>()
-    .Single()
-    .Value.Value;
+var whoMakes = call.Relate().Value;
 var pairs = whoMakes.Select(edge => (
     ((Named)edge.Source).Name,
     ((Named)edge.Target).Name));

@@ -32,17 +32,11 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	var order []int64
-	for _, packet := range call.Packets {
-		ranked, err := packet.AsSessionPacketRankAggregate()
-		if err == nil {
-			for _, one := range ranked.Value().Value {
-				index, _ := one.Index().Value.Int64()
-				order = append(order, index)
-			}
-		}
+	order, err := call.RankAnswer()
+	if err != nil {
+		log.Fatal(err)
 	}
-	if !slices.Equal(order, []int64{1, 3, 2, 0}) {
+	if !slices.Equal(order, []uint64{1, 3, 2, 0}) {
 		log.Fatal("expected the outage first")
 	}
 }

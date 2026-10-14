@@ -1,6 +1,5 @@
 const std = @import("std");
 const tt = @import("thinkthen");
-const c = tt.c;
 
 pub fn main() !void {
     const allocator = std.heap.page_allocator;
@@ -28,7 +27,7 @@ pub fn main() !void {
             .labels = .{ .array = &labels },
         },
     };
-    var call = try tt.session.tag(&engine, .{
+    var call = try tt.calls.tag(&engine, .{
         .question = .{
             .definition = .{ .value = which_labels },
         },
@@ -36,37 +35,9 @@ pub fn main() !void {
     });
     defer call.deinit();
 
-    const tag_row =
-        c.THINKTHEN_COMPLETE_SESSION_PACKET_TAG_ROW_V1;
-    var fitting_labels: std.ArrayList([]const u8) = .empty;
-
-    while (true) {
-        var packet = switch (try call.read()) {
-            .pending => {
-                var ready: u32 = undefined;
-                _ = c.thinkthen_session_wait(
-                    call.raw,
-                    c.THINKTHEN_SESSION_WAIT_RESULT_V1,
-                    50,
-                    &ready,
-                );
-                continue;
-            },
-            .end => break,
-            .packet => |value| value,
-        };
-        defer packet.deinit();
-        if (packet.view.kind != tag_row) continue;
-        const found = packet.view.data.tag_row.*.value.*;
-        const count = found.value.len;
-        for (found.value.data[0..count]) |label| {
-            const text = tt.session.bytes(label);
-            const copy = try allocator.dupe(u8, text);
-            try fitting_labels.append(allocator, copy);
-        }
-    }
-    std.debug.assert(fitting_labels.items.len == 3);
-    for (labels, fitting_labels.items) |label, fitting| {
+    const fitting_labels = try call.value();
+    std.debug.assert(fitting_labels.len == 3);
+    for (labels, fitting_labels) |label, fitting| {
         std.debug.assert(std.mem.eql(u8, label, fitting));
     }
 }

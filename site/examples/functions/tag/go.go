@@ -37,12 +37,9 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	var fittingLabels []string
-	for _, packet := range call.Packets {
-		row, err := packet.AsSessionPacketTagRow()
-		if err == nil {
-			fittingLabels = row.Value().Value.Value().Value
-		}
+	fittingLabels, err := call.TagAnswer()
+	if err != nil {
+		log.Fatal(err)
 	}
 	want := []string{"praise", "bug", "billing"}
 	if !slices.Equal(fittingLabels, want) {

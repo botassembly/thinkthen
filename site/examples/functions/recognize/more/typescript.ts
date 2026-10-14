@@ -26,7 +26,7 @@ const authored = {
 };
 const facts = (await tt.recognize(
   authored, text,
-)).results[0].value;
+)).recognizeAnswer()[0].value;
 const names = facts.entities.map((one) => [
   one.text,
   one.kind,

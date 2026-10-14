@@ -4,7 +4,6 @@ import thinkthen.Inputs.RequestInputRecords;
 import thinkthen.Inputs.RequestItem;
 import thinkthen.Inputs.RequestOriginalText;
 import thinkthen.Inputs.RequestQuestionText;
-import thinkthen.Results.SessionPacketFilterRow;
 
 public class Filter {
     public static void main(String[] args) {
@@ -20,14 +19,9 @@ public class Filter {
                 .map(text -> new RequestItem().original(
                     new RequestOriginalText().text(text)))
                 .toList());
-        var row = SessionPacketFilterRow.class;
         try (var tt = new Engine()) {
             var complaints = tt.filter(question, records)
-                .join().packets().stream()
-                .filter(row::isInstance)
-                .map(row::cast)
-                .map(one -> one.value().input().value())
-                .toList();
+                .join().filter();
             assert complaints.equals(
                 List.of(reviews.get(1), reviews.get(3)));
         }

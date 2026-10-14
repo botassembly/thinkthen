@@ -24,12 +24,13 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	var team string
-	for _, packet := range call.Packets {
-		row, err := packet.AsSessionPacketChooseRow()
-		if err == nil {
-			team = row.Value().Value.Value().Value
-		}
+	selected, err := call.ChooseAnswer()
+	if err != nil {
+		log.Fatal(err)
+	}
+	team := ""
+	if selected != nil {
+		team = *selected
 	}
 	if team != "shipping" {
 		log.Fatal("expected shipping")
