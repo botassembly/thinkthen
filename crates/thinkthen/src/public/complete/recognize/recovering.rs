@@ -63,10 +63,9 @@ impl Engine {
                 self.check_record_limit(ordinal)?;
                 let unit = record
                     .and_then(|record| prepare(&engine, ask, record, options.context_text()))
-                    .and_then(|unit| {
-                        unit.prepared.admit(limit)?;
-                        Ok(unit)
-                    })
+                    .map_err(|error| error.at_record(ordinal))?;
+                unit.prepared
+                    .admit(limit)
                     .map_err(|error| error.at_record(ordinal))?;
                 let outcome = answer(ordinal, unit, &stop, &cancel, false)
                     .map(|row| RequestValue::Recognized(vec![row]));
