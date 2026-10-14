@@ -151,7 +151,7 @@ module ThinkThen
           @producer = input.to_enum
           @owner = input
         end
-        @scalar = true unless input.is_a?(Array) || input.is_a?(Source) || @producer
+        @scalar = %w[find relate].include?(verb) || !(input.is_a?(Array) || input.is_a?(Source) || @producer)
         if token&.cancelled?
           raise CancelledError.new("the call was cancelled", "cancelled")
         end

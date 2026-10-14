@@ -141,6 +141,7 @@ fi
 THINKTHEN_ARTIFACT=$(realpath "$THINKTHEN_ARTIFACT")
 . "$repo/sdlc/scripts/installed.sh"
 installed_tests "$repo" libraries/ruby "$plant"
+cp README.md "$scratch/libraries/ruby/"
 if [ "${THINKTHEN_ARTIFACT##*/}" = "thinkthen-$(sed -n 's/^version = "\(.*\)"$/\1/p' ../../crates/thinkthen/Cargo.toml | head -n 1).gem" ]; then
   "$RUBY" tests/test_package.rb -n test_fallback_install_explains_support_and_import_refuses_to_work
   exit 0

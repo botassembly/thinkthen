@@ -96,7 +96,7 @@ class TestOwnedSession < Minitest::Test
         questions.each do |verb, question|
           plan = client.plan(verb.to_s, question, ["one", "two"], batch: 1)
           raise "missing preview field" unless T::Plan::FIELDS.all? { |field| plan.key?(field) }
-          raise "wrong preview" unless plan.records == 2 && plan.requests == 2
+          raise "wrong preview" unless plan.records == 2 && plan.requests == (verb == :tag ? 4 : 2)
         end
         unsupported = {find: "Question?", annotate: {version: 1, questions: {ok: {decide: "Question?"}}},
           recognize: T::Client.recognize_question(kinds: {person: nil}),
