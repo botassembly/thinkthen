@@ -251,7 +251,20 @@ SAMPLES = {
 }
 
 
-FUNCTION = r'(?<![\w])(?:thinkthen_|tt_)?(decide|choose|tag|score|filter|rank|find|annotate|recognize|relate)(?:Answer(?:Async)?|ValueAsync|_Answer)?(?![\w])'
+FUNCTION_NAMES = r'(decide|choose|tag|score|filter|rank|find|annotate|recognize|relate)'
+FUNCTION = r'(?<![\w])(?:thinkthen_|tt_)?' + FUNCTION_NAMES + r'(?:Answer(?:Async)?|ValueAsync|_Answer|_details)?(?![\w])'
+
+
+def database_functions(code):
+    # SQL strings and comments cannot stand in for executable named calls.
+    sql = re.sub(r"--[^\n]*|/\*[\s\S]*?\*/|'(?:''|[^'])*'|\$(\w*)\$[\s\S]*?\$\1\$", ' ', code)
+    functions = set()
+    for route in re.findall(r'\b((?:thinkthen_|tt_)[A-Za-z_]\w*)"?\s*\(', sql, re.I):
+        call = re.fullmatch(r'(?:thinkthen_|tt_)' + FUNCTION_NAMES + r'(?:_details)?', route, re.I)
+        if not call:
+            raise Refusal('unsupported-database-example-route: ' + route)
+        functions.add(call[1].lower())
+    return functions
 
 
 def examples(family, root=REPO):
@@ -262,13 +275,15 @@ def examples(family, root=REPO):
     functions = set()
     for block in blocks:
         code = block.group(1) + '\n'
+        calls = (database_functions(code) if family in ('sqlite', 'postgresql', 'duckdb')
+                 else {name.lower() for name in re.findall(FUNCTION, code, re.I)})
         # Installation belongs to package assembly, not offline sample replay.
-        if not re.search(FUNCTION, code, re.I) and re.fullmatch(
+        if not calls and re.fullmatch(
                 r'(?:(?:install\.packages\([^\n]*\)|CREATE EXTENSION thinkthen;|'
                 r'INSTALL thinkthen FROM community;|LOAD (?:thinkthen|\x27[^\n]+\x27);|\.load [^\n]*|'
                 r'curl [^\n]*install\.sh[^\n]*|brew install [^\n]*)\n)+', code):
             continue
-        functions.update(name.lower() for name in re.findall(FUNCTION, code, re.I))
+        functions.update(calls)
         output = re.match(r'\s*```text\n(.*?)\n```', text[block.end():], re.S)
         samples.append((filename, code, output.group(1) + '\n' if output else None))
     if not samples:

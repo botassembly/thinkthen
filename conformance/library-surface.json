@@ -347,6 +347,9 @@
         "Client"
       ],
       "wrapper_members": {
+        "Result": [
+          "probability"
+        ],
         "ClientError": [
           "constructor"
         ]

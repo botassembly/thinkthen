@@ -511,6 +511,13 @@ extraPublicExport <- function(context = NULL, enabled = FALSE,
                      'properties': {'kind': {'const': function}, 'value': {'type': 'boolean'}},
                      'required': ['kind', 'value']} for function in ('decide', 'choose')]},
                 'completeplan': {'type': 'object', 'properties': {}}}}
+            # Keep the aggregate's receipt contract owned by the real producer.
+            canonical = json.loads((ROOT / 'crates/thinkthen/src/public/results/complete.schema.json').read_text())
+            aggregate = next(variant for variant in canonical['$defs']['completesessionPacket']['oneOf']
+                             if variant.get('properties', {}).get('kind', {}).get('const') == 'aggregate'
+                             and variant['properties']['function']['const'] == 'decide')
+            result['$defs']['completesessionPacket']['oneOf'][0]['properties']['value'] = aggregate['properties']['value']
+            result['$defs'] = dict(canonical['$defs'], **result['$defs'])
             write('request.json', json.dumps(request))
             write('result.json', json.dumps(result))
             manifest = json.loads((ROOT / 'conformance/library-surface.json').read_text())
@@ -696,9 +703,9 @@ extraPublicExport <- function(context = NULL, enabled = FALSE,
             renamed = invoke(original.replace('DecideAsync(', 'SurpriseAsync('))
             self.assertIn('missing generated declaration: NamedCalls.g.cs:Engine.DecideAsync', renamed)
             self.assertIn('unlisted generated declaration: NamedCalls.g.cs:Engine.SurpriseAsync', renamed)
-            accessor = invoke(original.replace('Choice(this OwnedCall', 'SurpriseAccessor(this OwnedCall'))
-            self.assertIn('missing generated declaration: NamedCalls.g.cs:AnswerAccessors.Choice', accessor)
-            self.assertIn('unlisted generated declaration: NamedCalls.g.cs:AnswerAccessors.SurpriseAccessor', accessor)
+            field = invoke(original.replace('TProbability Probability {', 'TProbability SurpriseProbability {'))
+            self.assertIn('missing generated declaration: NamedCalls.g.cs:CallResult.Probability', field)
+            self.assertIn('unlisted generated declaration: NamedCalls.g.cs:CallResult.SurpriseProbability', field)
 
     def test_java_record_components_are_checked_at_the_cli(self):
         manifest = json.loads((ROOT / 'conformance/library-surface.json').read_text())

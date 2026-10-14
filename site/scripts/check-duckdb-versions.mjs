@@ -9,10 +9,19 @@ export function omissions(authority, catalog, readme) {
   const match = /^DUCKDB_VERSIONS="(v[0-9.A-Za-z-]+(?: v[0-9.A-Za-z-]+)*)"$/m.exec(authority);
   if (!match) throw new Error('malformed DuckDB version list');
   const declaration = /supportedVersions: \[([^\]]+)\]/.exec(catalog)?.[1] ?? '';
-  return match[1].split(' ').flatMap((version) => [
-    ...(!declaration.includes(`'${version}'`) ? [`catalog omits ${version}`] : []),
-    ...(!readme.includes(`DuckDB ${version}`) && !readme.includes(`and ${version}`) ? [`DuckDB README omits ${version}`] : []),
-  ]);
+  return match[1].split(' ').flatMap((version) => {
+    // Public prose uses release numbers; build metadata retains exact source tags.
+    const display = /^v(\d+\.\d+(?:\.\d+)?)(?:-[A-Za-z0-9-]+)?$/.exec(version)?.[1];
+    const labels = [version, ...(display ? [display] : [])];
+    const documented = labels.some((label) => {
+      const escaped = label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      return new RegExp(`(?:DuckDB |and )${escaped}(?![\\w-]|\\.\\d)`).test(readme);
+    });
+    return [
+      ...(!declaration.includes(`'${version}'`) ? [`catalog omits ${version}`] : []),
+      ...(!documented ? [`DuckDB README omits ${version}`] : []),
+    ];
+  });
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
