@@ -123,12 +123,12 @@ def test_polars_annotation_frames_keep_complete_failure_schema(backend, tmp_path
             for values in ([], [None, None], ['ok', None]):
                 source = pl.DataFrame({'body': pl.Series(values, dtype=pl.String)})
                 result = engine.annotate(form, source, on='body')
-                assert result.value.schema == expected
+                assert result.value.schema == expected and result.value.columns == list(expected)
                 assert result.value['failed'].to_list() == [None] * len(values)
                 assert result.value['first'].to_list() == [True if value is not None else None for value in values]
             source = pl.DataFrame({'body': ['first', None, 'second', 'ok']})
             result = engine.annotate(form, source, on='body')
-            assert result.value.schema == expected
+            assert result.value.schema == expected and result.value.columns == list(expected)
             failure = {'failed': {'kind': 'backend', 'cause': 'missing_answer'}}
             assert result.value['failed'].to_list() == [
                 {'first': failure, 'second': None}, None, {'first': None, 'second': failure}, None], result.value['failed'].to_list()
@@ -149,9 +149,10 @@ def test_polars_recognition_frames_keep_empty_entity_schema(backend, tmp_path):
             for values in ([], [None, None]):
                 source = pl.DataFrame({'body': pl.Series(values, dtype=pl.String)})
                 result = engine.recognize(source, kinds=['person'], on='body')
-                assert result.value.schema == {'row': pl.Int64, 'text': pl.String, 'start': pl.Int64,
-                                              'end': pl.Int64, 'length': pl.Int64, 'kind': pl.String,
-                                              'strength': pl.Float64}
+                expected = {'row': pl.Int64, 'text': pl.String, 'start': pl.Int64,
+                            'end': pl.Int64, 'length': pl.Int64, 'kind': pl.String,
+                            'strength': pl.Float64}
+                assert result.value.schema == expected and result.value.columns == list(expected)
                 assert result.value.height == 0
                 assert result.facts.requests_sent == 0
         print('stable empty entity schema')
