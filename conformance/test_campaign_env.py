@@ -175,6 +175,7 @@ with Path(os.environ['CAPTURE']).open('a') as out:
                     receipt.write_text('')
                     env = child_env(home=private) | {'PATH': str(tools) + ':' + os.defpath,
                            'HOME': str(private), 'CAPTURE': str(receipt),
+                           'THINKTHEN_DUCKDB_CHECK_ARCHIVES': '1',
                            'THINKTHEN_TEST_PROFILE': profile, 'RUSTFLAGS': '--ambient',
                            'CFLAGS': '-O1', 'CXXFLAGS': '-O1'}
                     env.pop('THINKTHEN_FULL_COMPILER', None)

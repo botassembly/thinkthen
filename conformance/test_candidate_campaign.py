@@ -103,7 +103,7 @@ class RetainedNpmArtifact(unittest.TestCase):
             for directory in (library, scripts, tools, root / 'sdlc/generators/results'):
                 directory.mkdir(parents=True)
             stage_generated_source(parity.ROOT, root, 'typescript')
-            stage_files(parity.ROOT, root, ('sdlc/scripts/registry-readmes.py',
+            stage_files(parity.ROOT, root, ('README.md', 'sdlc/scripts/registry-readmes.py',
                         'libraries/typescript/README.md', 'libraries/typescript/package.json',
                         'crates/thinkthen/Cargo.toml'))
             shutil.copyfile(parity.ROOT / 'libraries/typescript/check.sh', library / 'check.sh')
