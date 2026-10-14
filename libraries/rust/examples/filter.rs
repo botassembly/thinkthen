@@ -13,8 +13,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     ];
     let kept = tt.filter(&complaint, reviews)?;
     let mut out = std::io::stdout().lock();
-    for row in kept {
-        writeln!(out, "{}", row?)?;
+    for row in kept.into_value() {
+        writeln!(out, "{row}")?;
     }
     Ok(())
 }
