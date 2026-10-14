@@ -44,10 +44,18 @@ class FeatureInventory(unittest.TestCase):
             result = invoke()
             self.assertEqual(result.returncode, 1)
             self.assertIn('columns.rs', result.stderr)
-            for comment in ('// mod columns;', '/*\nmod columns;\n*/'):
-                (surface / 'consumer/src/main.rs').write_text(comment)
-                self.assertIn('columns.rs', invoke().stderr)
-            (surface / 'consumer/src/main.rs').write_text('mod columns;')
+            for comment in ('// mod columns;', '/*\nmod columns;\n*/',
+                            '/* outer /* inner */\nmod columns;\n*/',
+                            'const TEXT: &str = r###"\nmod columns;\n"###;',
+                            'const TEXT: &str = "\nmod columns;\n";'):
+                with self.subTest(source=comment):
+                    (surface / 'consumer/src/main.rs').write_text(comment)
+                    result = invoke()
+                    self.assertEqual(result.returncode, 1)
+                    self.assertIn('columns.rs', result.stderr)
+            (surface / 'consumer/src/main.rs').write_text(
+                'const QUOTE: char = \'"\';\n#[path = "columns.rs"]\nmod columns;')
+            self.assertEqual(invoke().returncode, 0)
             (surface / 'check.sh').unlink()
             self.assertIn('check.sh', invoke().stderr)
 

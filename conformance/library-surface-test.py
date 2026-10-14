@@ -145,6 +145,13 @@ class PublicSurface(unittest.TestCase):
             values.write_text(value_source.replace('final CallProbability? probability;',
                                                   'final CallProbability? unknownProbability;', 1))
             self.assertIn('unlisted public field: CallResult.unknownProbability', invoke())
+            values.write_text(value_source.replace('final class CallResult<V, R> {',
+                'final class CallResult<V, R> {\n'
+                '  Future<Map<String, List<R?>>> extraPublicExport() => throw UnimplementedError();\n'
+                '  final Map<String, List<R?>> extraPublicField = {};', 1))
+            errors = invoke()
+            self.assertIn('unlisted public call/export: CallResult.extraPublicExport', errors)
+            self.assertIn('unlisted public field: CallResult.extraPublicField', errors)
             values.write_text(value_source)
             generated = root / 'libraries/dart/lib/src/session/calls_generated.dart'
             original = generated.read_text()
