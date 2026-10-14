@@ -772,11 +772,11 @@ export const SURFACES = [
     lang: 'sql', tab: 'SQL',
     blurb: 'Ask a question in WHERE, SELECT, or ORDER BY.',
     unsureWord: '`NULL`',
-    facts: '`thinkthen_usage()` gives the totals for the process.',
+    facts: '`thinkthen_<function>_details` returns the typed value, its probability and the full record. `facts` counts the call once; repeated rows carry the same facts.',
     errors: 'A failure is an error whose text starts `thinkthen <kind>: `. It never reads as `NULL`.',
     settings: '`SET thinkthen_record` writes a recording to a folder. `SET thinkthen_replay` answers from that recording with no connection.',
     install: [
-      ['thinkthen-duckdb-VERSION-TARGET.tar.gz', `Unsigned extensions for DuckDB ${duckDBArchiveVersions}, from each release. Unpack the repository where DuckDB runs.`],
+      ['thinkthen-duckdb-VERSION-TARGET.tar.gz', 'Unsigned extensions for DuckDB 1.5.6 and 2.0, from each release. Unpack the archive where DuckDB runs.'],
       ['duckdb -unsigned', 'The `-unsigned` flag lets DuckDB load a local extension file. The query loads that file first.'],
     ],
     supportedVersions: ['v1.5.6', 'v2.0-cyanoptera'],

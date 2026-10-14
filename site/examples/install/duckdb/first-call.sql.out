@@ -1,4 +1,10 @@
-id|team
-1|shipping
-3|account
-4|billing
+id|is_complaint|probability
+1|true|0.95
+2|false|0.02
+3|true|0.91
+4|true|0.95
+id|team|probability
+1|shipping|1.0
+2|NULL|NULL
+3|account|0.99
+4|billing|1.0
