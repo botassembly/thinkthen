@@ -47,13 +47,13 @@ def ordinary_forms(run):
             "SELECT d.ordinal,d.value,d.probability,d.failure.kind FROM (SELECT UNNEST(thinkthen_rank_details('Refund?',{'a':'alpha','b':'beta'})) AS d)",
             "SELECT d.value[1].value.boolean_value,d.probability,d.failure.kind FROM (SELECT thinkthen_annotate_details("+question_set+",'alpha') AS d)",
             "SELECT d.value,d.probability,d.failure.kind FROM (SELECT thinkthen_recognize_details('Ada',['person']) AS d)",
-            f"SELECT d.value.source.name,d.value.target.name,d.probability,d.failure.kind FROM (SELECT UNNEST(thinkthen_relate_details({query},['near'])) AS d)",
+            f"SELECT d.value.source.name,d.value.target.name,d.probability,d.failure.kind,len(d.result.value),d.result.value[1].source.name,d.result.value[1].target.name FROM (SELECT UNNEST(thinkthen_relate_details({query},['near'])) AS d)",
             f"SELECT * FROM thinkthen_relate({query},['near'])",
             "SELECT thinkthen_filter('Refund?','alpha')",
         ], backend.base())
         wanted = [[[0.1,None,None]],[[['billing','shipping'],None,None]], [['"alpha"',0.9,None]],
                   [['"alpha"',0.9,None]],[[0,1,0.9,None],[1,2,0.9,None]],[[True,None,None]],
-                  [[[],[],None]],[['1','2',0.9,None],['2','1',0.9,None]],
+                  [[[],[],None]],[['1','2',0.9,None,1,'Ada','Bob'],['2','1',0.9,None,1,'Bob','Ada']],
                   [['near','1','2',0.9,False],['near','2','1',0.9,False]],[['alpha']]]
         expect([rows(item) for item in got], wanted, 'ordinary typed details across the function family')
         expect(backend.count(), 8, 'ordinary details reuse annotate, relate and filter cache entries; recognition sends both passes')
