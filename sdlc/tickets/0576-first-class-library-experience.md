@@ -118,3 +118,5 @@ Stage 2 starts when G1 and G2 land. One lane per language owns `libraries/<lang>
 - 2026-10-13 next: Merged the reviewed native helper slice as 8b2a47981a416a324514920e8b72197a89b263e5 after installed C ownership, all 42 shared cases, fourteen ASan door checks and unchanged Ada prerequisite passed; continue the language slices and combined checkpoint.
 - 2026-10-14 next: Merged the freshly accepted located-feed file selection repair at 959ed3c7 with 40 request and 39 session checks passing; continue the database and language migrations on the combined branch.
 - 2026-10-13 next: Merged reviewed Zig native helpers and strengthened find receipt as 1d9fb9ccccb047b8a3d1717fd959fde8831c05ab with installed ownership and all forty-two routine cases passing; continue remaining language quality work.
+
+PM amendment, 2026-10-14. Ordinary `thinkthen_details` returns the existing typed receipt projection, not JSON. This supersedes the 0538 retention of ordinary details JSON. The approved packed try-details recovery envelope stays as it is.
