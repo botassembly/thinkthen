@@ -22,21 +22,32 @@ A separate CMake project can set `CMAKE_PREFIX_PATH` to that prefix and call `fi
 
 For Linux x86-64, `sdlc/scripts/release-pack TARGET OUT c go cpp` produces versioned Go, C++ and C archives from one clean source commit. Run `sdlc/scripts/release-go-cpp-pair OUT` before using the files together. Unpack the C++ source and the matching C archive into separate folders, then pass the C archive's `include/thinkthen.h`, `lib/libthinkthen.so`, and `lib/libthinkthen.a` to CMake through the three `THINKTHEN_` inputs above. The C++ archive's `THINKTHEN-PACKAGE-INPUTS` records the exact C archive digest. Each GitHub release ships these archives, and an installed `find_package` consumer check covers them. No CMake registry package is published.
 
-The owned caller API uses `tt::Client` and ten named methods: `decide`, `choose`, `tag`, `score`, `filter`, `rank`, `find`, `annotate`, `recognize` and `relate`. Each starts a native-owned session and returns a move-only `tt::Call`. The native engine admits the generated input values and owns validation, defaults, files, images, cache and replay behavior.
+The owned caller API uses `tt::Client` and ten named methods: `decide`, `choose`, `tag`, `score`, `filter`, `rank`, `find`, `annotate`, `recognize` and `relate`. Each starts a native-owned session and returns a move-only `tt::ResultCall`. The native engine admits the generated input values and owns validation, defaults, files, images, cache and replay behavior.
 
 ```cpp
+#include <cassert>
 #include <thinkthen/client.hpp>
 using namespace tt::inputs;
 
-tt::Client client;
-auto answer = client.decide(
-    RequestQuestionText().set_text("Does the customer ask for money back?"),
-    RequestInputText().set_text("Please refund my order.")).answer();
-// answer is std::optional<bool>; null means the native judgment abstained.
-
+int main() {
+    tt::Client client;
+    auto question = RequestQuestionText().set_text(
+        "Does the customer ask for a refund?");
+    auto message = RequestInputText().set_text(
+        "Please refund my order. It arrived broken.");
+    auto refund = client.decide(question, message).result();
+    auto is_refund = refund.value.get<bool>();
+    assert(is_refund);
+    assert(refund.probability.has_value());
+    assert(refund.results.size() == 1);
+}
 ```
 
-`answer()` closes input, waits for one successful call and returns its typed answer. Decide and choose retain null as `std::optional`; score returns a number and tag returns a label list. Rank returns zero-based original input indexes, and filter returns original inputs including explicit null. The other functions retain their complete typed rows or aggregate payload, including caller input and unknown extensions. Zero or multiple scalar judgments raise `Failure`; session failures retain their already delivered packets. The ten standalone programs in `examples/` exercise this API through the installed package.
+Each named method starts work immediately and returns a move-only `tt::ResultCall`. Its `result()` method closes input and waits for successful settlement. The returned `tt::results::CallResult<Value, Probability, Row>` owns `value`, `probability`, `results` and `facts`. Failures raise `tt::Failure` and retain earlier packets.
+
+Concrete text and JSON input overloads return scalar views for primitive calls. Decide returns `tt::Data`, including authored JSON readings and explicit null; choose returns `std::optional<std::string>`. Their probabilities are `std::optional<double>`. Record, file and feed overloads return vectors of values and optional probabilities. Keep the concrete input type when calling a primitive method. Tag returns labels and score returns a number; both have an empty optional probability.
+
+Filter returns original inputs and aligned optional probabilities. Rank returns zero-based original indexes and aligned optional probabilities. Find returns the picked input or null with an optional probability. Annotate returns named typed fields and an empty optional probability. Recognition returns entity or boundary-proposal vectors; its aligned probabilities come from retained span proposals or boundary proposals, never entity strength. Relate returns typed edges and their aligned optional probabilities. The `results` rows retain all generated fields and `facts` retains settlement evidence. The ten standalone programs in `examples/` exercise this API through the installed package.
 
 `collect` blocks explicitly and drains settlement packets. `next` blocks for one ready packet and returns promptly when cancelled. `push` waits for input room without consuming output. An event loop uses `poll`, whose state is `pending`, `result` or `end`; a worker can own a moved call and use `collect`. A single host thread owns each call. `try_push` admits one generated feed descriptor without waiting and returns false when the native queue is full or closed. Callers stop feeding when `input_closed()` is true and retry only while it is false. Native closure, cancellation and close retain this stop state. `finish` declares input EOF. `cancel` signals stop without waiting; `close` and destruction cancel and free the native owner without joining the provider. Closing the client leaves existing calls valid. Generated C++ packet values own their data after native result cleanup.
 

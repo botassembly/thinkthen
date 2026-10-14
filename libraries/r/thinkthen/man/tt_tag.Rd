@@ -22,20 +22,13 @@ keeps the native defaults.}
 evidence for this call.}
 }
 \value{
-A complete call carrier of class \code{thinkthen_Call}. \code{$results} holds
-one typed row of class \code{thinkthen_TagResult} per record, each with
-\code{$value} (the applicable labels as an R list of strings),
-\code{$question}, \code{$meta}, and \code{$answer_id}, and, when the
-reading provides them, the zero-based native \code{$index} and
-\code{$input}. \code{$answer} holds the typed answer view: a list with one
-label list per record for explicit selectors and structured inputs; for an
-ordinary atomic column it is a list of character vectors, one per record,
-with a missing atomic slot retaining an empty character vector.
-\code{$facts} holds the
-call's facts, including \code{requests_sent}. For a column the carrier also
-carries \code{$positions} and \code{$length} beside those views. A feed
-input returns a carrier with \code{$results} and \code{$facts} only,
-without the answer and column views.
+A carrier of class \code{thinkthen_Call} with \code{$value},
+\code{$probability}, complete native rows in \code{$results}, and actual
+settlement evidence in \code{$facts}. The value is a list of character vectors, one per record. Probability is NULL.
+Atomic columns retain \code{$positions} and \code{$length} to identify
+missing slots without changing native record identities. Generated optional
+fields use \code{thinkthen_absent} for absence and \code{NULL} for explicit null.
+Bounded feeds join into these same call fields.
 }
 \description{
 Asks one question whose answer is any number of labels from the declared
@@ -55,9 +48,20 @@ are \code{thinkthen_absent} when missing and \code{NULL} when explicitly null.
 }
 \examples{
 \dontrun{
-tags <- tt_tag(list(tag = "Which labels?", labels = c("refund", "shipping")),
-               "Refund shipping")
-tags$value[[1]]
+question <- "Which labels fit this message?"
+labels <- c("praise", "bug", "billing")
+message <- paste0(
+  "Love the new dashboard, but export crashes the app,\n",
+  "and I was charged twice.\n"
+)
+fitting_labels <- tt_tag(
+  list(tag = question, labels = labels),
+  message
+)$value[[1]]
+stopifnot(identical(
+  fitting_labels,
+  c("praise", "bug", "billing")
+))
 }
 }
 \seealso{

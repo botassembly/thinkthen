@@ -21,17 +21,13 @@ keeps the native defaults. \code{threshold} sets the mark records must reach.}
 evidence for this call.}
 }
 \value{
-A complete call carrier of class \code{thinkthen_Call}. \code{$results} holds
-one selected typed row of class \code{thinkthen_FilterResult} per kept record, each with
-\code{$value} (\code{TRUE} when the record reaches the mark),
-\code{$question}, \code{$meta}, and \code{$answer_id}, and, when the reading
-provides them, the zero-based native \code{$index} and \code{$input}.
-\code{$answer} holds the typed answer view: a list of the
-inputs that reach the mark. \code{$facts} holds the
-call's facts, including \code{requests_sent}. The carrier also carries
-\code{$positions} and \code{$length} beside those views. A feed
-input returns a carrier with \code{$results} and \code{$facts} only,
-without the answer and column views.
+A carrier of class \code{thinkthen_Call} with \code{$value},
+\code{$probability}, complete native rows in \code{$results}, and actual
+settlement evidence in \code{$facts}. The value is a list of kept original inputs. Probability is a list aligned with the kept inputs.
+Atomic columns retain \code{$positions} and \code{$length} to identify
+missing slots without changing native record identities. Generated optional
+fields use \code{thinkthen_absent} for absence and \code{NULL} for explicit null.
+Bounded feeds join into these same call fields.
 }
 \description{
 Asks one yes-or-no question about every record and keeps the records whose
@@ -51,8 +47,18 @@ are \code{thinkthen_absent} when missing and \code{NULL} when explicitly null.
 }
 \examples{
 \dontrun{
-kept <- tt_filter("Is this a complaint?", c("first", "second"))
-kept$value[[1]]
+question <- "Is this a complaint?"
+reviews <- c(
+  "Arrived a day early. Thank you!",
+  "The zipper broke the first time I used it.",
+  "Does this come in blue?",
+  "The strap snapped on day two."
+)
+complaints <- unlist(
+  tt_filter(question, reviews)$value,
+  use.names = FALSE
+)
+stopifnot(identical(complaints, reviews[c(2, 4)]))
 }
 }
 \seealso{

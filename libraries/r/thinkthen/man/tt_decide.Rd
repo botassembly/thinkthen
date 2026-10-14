@@ -30,22 +30,13 @@ answer ID, or a digest.}
 ignored.}
 }
 \value{
-A complete call carrier of class \code{thinkthen_Call}. \code{$results} holds
-one typed row of class \code{thinkthen_DecideResult} per record, each with
-\code{$value} (\code{TRUE} or \code{FALSE}, \code{NULL} when the answer is
-not sure, or the question's authored reading for the side it landed on when it
-declares one),
-\code{$question}, \code{$meta}, and \code{$answer_id}, and, when the reading
-provides them, the zero-based native \code{$index} and \code{$input}.
-\code{$answer} holds the typed answer view; for an
-ordinary atomic column it is a plain logical column whose not-sure cells are
-\code{NA}, with \code{$value} and
-\code{$probability} beside it filling missing slots with typed missing values.
-\code{$facts} holds the call's facts, including \code{requests_sent}. For a
-column the carrier also carries \code{$positions}, which maps compact native
-record indexes to original zero-based slots, and \code{$length}, the full
-column length. A feed input returns a carrier with \code{$results} and
-\code{$facts} only, without the answer and column views.
+A carrier of class \code{thinkthen_Call} with \code{$value},
+\code{$probability}, complete native rows in \code{$results}, and actual
+settlement evidence in \code{$facts}. Scalar text returns a logical value or NULL for not sure; an authored reading can instead return an admitted JSON object, list or null. Atomic columns return logical columns with typed missing slots. The probability is scalar or aligned with records.
+Atomic columns retain \code{$positions} and \code{$length} to identify
+missing slots without changing native record identities. Generated optional
+fields use \code{thinkthen_absent} for absence and \code{NULL} for explicit null.
+Bounded feeds join into these same call fields.
 }
 \description{
 Asks one yes-or-no question about each record and returns a typed answer per
@@ -70,8 +61,10 @@ rows and identities print summaries that withhold content.
 }
 \examples{
 \dontrun{
-call <- tt_decide("Does this ask for a refund?", "Please refund my order.")
-call$value
+question <- "Does the customer ask for a refund?"
+broken <- "Please refund my order. It arrived broken."
+is_refund <- tt_decide(question, broken)$value
+stopifnot(identical(is_refund, TRUE))
 }
 }
 \seealso{

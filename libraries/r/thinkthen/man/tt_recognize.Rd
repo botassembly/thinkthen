@@ -22,23 +22,13 @@ recognition asked for relations.}
 evidence for this call.}
 }
 \value{
-A complete call carrier of class \code{thinkthen_Call}. \code{$results} holds
-one typed row of class \code{thinkthen_RecognizeResult} per record, each
-with \code{$question}, \code{$meta}, and \code{$answer_id}, and, when the
-reading provides them, the zero-based native \code{$index} and
-\code{$input}. \code{$answer} is an outer list with one entry per
-record, in the same order as \code{$results}. Each entry is that
-record's typed answer view: whole recognition gives the entry
-\code{$entities}, each carrying its \code{$text}, \code{$kind}, and
-zero-based Unicode-scalar \code{$start} and \code{$end} offsets, and,
-when the question asks for relations, the recognized \code{$relations}.
-A question that selects boundary-only mode gives the entry
-\code{$mode} and \code{$proposals} instead, each proposal carrying its
-\code{$text}, zero-based \code{$start} and \code{$end}, \code{$length},
-and \code{$probability}, with no entities. Read the fields per record,
-as in \code{result$answer[[1]]$entities} or
-\code{result$answer[[1]]$proposals}. \code{$facts} holds the call's
-facts, including \code{requests_sent}.
+A carrier of class \code{thinkthen_Call} with \code{$value},
+\code{$probability}, complete native rows in \code{$results}, and actual
+settlement evidence in \code{$facts}. Scalar input returns an entity carrier, or a boundary-proposal carrier in boundary-only mode. Record input returns a list of those carriers. Probability contains aligned lists from retained span proposals or boundary proposals; entity strength is a separate field. Complete rows retain relations when requested.
+Atomic columns retain \code{$positions} and \code{$length} to identify
+missing slots without changing native record identities. Generated optional
+fields use \code{thinkthen_absent} for absence and \code{NULL} for explicit null.
+Bounded feeds join into these same call fields.
 }
 \description{
 Reads one text, finds every name in it, and gives each one a kind. A
@@ -61,9 +51,28 @@ explicitly null.
 }
 \examples{
 \dontrun{
-recognition <- tt_recognize_question(kinds = list(person = NULL, organization = NULL))
-names <- tt_recognize(recognition, "Maria Chen joined Northwind Freight.")
-names$value$entities[[1]]$text
+kinds <- list(
+  person = NULL,
+  product = NULL,
+  place = NULL
+)
+text <- paste0(
+  "Sam Patel says his Kindle arrived broken ",
+  "in Denver."
+)
+facts <- tt_recognize(
+  list(version = 1, recognize = list(kinds = kinds)),
+  text
+)$value
+entity_names <- vapply(facts$entities, `[[`, "", "text")
+found_kinds <- vapply(facts$entities, `[[`, "", "kind")
+stopifnot(
+  identical(
+    entity_names,
+    c("Sam Patel", "Kindle", "Denver")
+  ),
+  identical(found_kinds, names(kinds))
+)
 }
 }
 \seealso{

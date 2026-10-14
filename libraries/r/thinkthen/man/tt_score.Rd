@@ -22,17 +22,13 @@ keeps the native defaults. A score takes no threshold.}
 evidence for this call.}
 }
 \value{
-A complete call carrier of class \code{thinkthen_Call}. \code{$results} holds
-one typed row of class \code{thinkthen_ScoreResult} per record, each with
-\code{$question}, \code{$meta}, and \code{$answer_id}, and, when the reading
-provides them, the zero-based native \code{$index} and \code{$input}.
-\code{$answer} holds the typed answer view; for an
-ordinary atomic column it is a plain double column, with \code{$value} beside
-it filling missing slots with typed missing values. \code{$facts} holds the
-call's facts, including \code{requests_sent}. For a column the carrier also
-carries \code{$positions} and \code{$length} beside those views. A feed
-input returns a carrier with \code{$results} and \code{$facts} only,
-without the answer and column views.
+A carrier of class \code{thinkthen_Call} with \code{$value},
+\code{$probability}, complete native rows in \code{$results}, and actual
+settlement evidence in \code{$facts}. The value is a scalar number or an aligned numeric column. Probability is NULL.
+Atomic columns retain \code{$positions} and \code{$length} to identify
+missing slots without changing native record identities. Generated optional
+fields use \code{thinkthen_absent} for absence and \code{NULL} for explicit null.
+Bounded feeds join into these same call fields.
 }
 \description{
 Places each record on the question's named levels, which are declared
@@ -51,9 +47,17 @@ are \code{thinkthen_absent} when missing and \code{NULL} when explicitly null.
 }
 \examples{
 \dontrun{
-urgency <- tt_score(list(score = "How urgent?", levels = c("low", "soon", "high")),
-                    "Later")
-urgency$value
+question <- "How urgent is this?"
+levels <- c("Routine.", "Soon.", "Immediate.")
+outage <- paste0(
+  "Our checkout page is down and customers cannot pay.",
+  "\n"
+)
+urgency <- tt_score(
+  list(score = question, levels = levels),
+  outage
+)$value
+stopifnot(identical(urgency, 2))
 }
 }
 \seealso{

@@ -22,15 +22,13 @@ answer can say that nothing fits.}
 evidence for this call.}
 }
 \value{
-A complete call carrier of class \code{thinkthen_Call}. \code{$results} holds
-one typed row of class \code{thinkthen_FindResult} for the whole set, with
-\code{$value} (the picked unit's own value), \code{$answer} (a typed view with
-the pick's kind, confidence, and per-candidate probabilities),
-\code{$candidates} (one view per unit with its zero-based \code{$index},
-\code{$input}, and \code{$probability}), \code{$question}, \code{$meta},
-and \code{$answer_id}. \code{$answer} holds the same typed find
-view as that single row. \code{$facts} holds the call's facts, including
-\code{requests_sent}.
+A carrier of class \code{thinkthen_Call} with \code{$value},
+\code{$probability}, complete native rows in \code{$results}, and actual
+settlement evidence in \code{$facts}. The value is the selected original input or NULL when nothing fits. Probability is the selected probability or NULL. The complete row retains candidates and the typed find answer.
+Atomic columns retain \code{$positions} and \code{$length} to identify
+missing slots without changing native record identities. Generated optional
+fields use \code{thinkthen_absent} for absence and \code{NULL} for explicit null.
+Bounded feeds join into these same call fields.
 }
 \description{
 Picks the one unit, out of a set the model sees at once, that best answers the
@@ -49,8 +47,17 @@ are \code{thinkthen_absent} when missing and \code{NULL} when explicitly null.
 }
 \examples{
 \dontrun{
-picked <- tt_find("Which line?", c("first", "second"))
-picked$value
+question <- "Which line gives the refund deadline?"
+policy <- c(
+  "Returns need the original receipt.",
+  "Refunds are issued within 30 days of purchase.",
+  "Shipping is free on orders over $50.",
+  "Gift cards cannot be exchanged for cash."
+)
+refund_deadline <- tt_find(
+  question, policy
+)$value
+stopifnot(identical(refund_deadline, policy[2]))
 }
 }
 \seealso{
