@@ -63,9 +63,11 @@ procedure division.
        by reference tt-n-cobol-AnswerDecideResult
        tt-n-cobol-AnswerStatus returning status-code
     if status-code not = 0 stop run returning 1 end-if
-    if v-value-first-present of tt-n-cobol-AnswerDecideResult = 1
+    if v-value-first-present of
+    tt-n-cobol-AnswerDecideResult = 1
        call "TT_VALUE_BOOLEAN" using
-          by value v-value-first-value of tt-n-cobol-AnswerDecideResult
+          by value v-value-first-value of
+          tt-n-cobol-AnswerDecideResult
           by reference boolean-answer returning status-code
        if status-code not = 0 stop run returning 3 end-if
        if boolean-answer = 1 move "Y" to is-refund end-if
