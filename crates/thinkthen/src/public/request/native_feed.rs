@@ -1,4 +1,5 @@
 //! Native composed feeds retain their originals while sharing request admission.
+//! Stays: The private composed-feed admission boundary rejects incompatible controls and image routes before native scheduling or reader access.
 use super::execution::{FeedContents, RequestFeed};
 use super::{AdmittedRequest, RequestFraming, RequestFunction, RequestInput};
 use crate::{Error, QuestionInput};

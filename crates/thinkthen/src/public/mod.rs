@@ -38,7 +38,6 @@ pub(crate) mod error;
 mod filter;
 #[cfg(feature = "polars")]
 mod frame;
-mod native_batch;
 mod options;
 pub(crate) use options::readiness;
 mod panic;
@@ -82,7 +81,7 @@ pub use crate::core::{RelationDirection, RelationMethod, ReportedUsage};
 /// can wait too (ticket 0365). It is for the bindings, not a documented API.
 #[doc(hidden)]
 pub use crate::engine::fork_safe;
-pub use annotated::{Annotated, AnnotatedRecord, Failed, FailureCause, NamedAnnotation};
+pub use annotated::{Annotated, Failed, FailureCause, NamedAnnotation};
 pub use batch::Batch;
 pub use builders::{ChooseBuilder, DecideBuilder, LabelBuilder, ScoreBuilder, TagBuilder};
 pub use choice::Choice;
@@ -90,7 +89,6 @@ pub use engine::{DecisionQuestion, DetailQuestion, Engine, Evidence};
 pub use error::{Error, ErrorDetail, ErrorKind, StopCause, Stopped};
 #[cfg(feature = "polars")]
 pub use frame::{PolarsCallOptions, PolarsEngine, PolarsExprOptions};
-pub use native_batch::RecoverableDetails;
 pub use options::{
     BatchSetting, CallOptions, CancelToken, EstimatedInputDenial, SendBudget, SendBudgetDenial,
     process_requests_sent,
@@ -108,16 +106,13 @@ pub use recognize::{
 };
 pub use relate::{Edge, Entity, Relate, RelateBuilder};
 pub use results::FindSelection;
-#[cfg(test)]
-pub(crate) use results::QuestionJson;
 pub use results::{
     Answer, AttemptObservation, AttemptOutcome, BatchMismatch, Call, CallReply, Candidate,
     CompleteAnnotated, CompleteAnnotationMember, CompleteAttempt, CompleteChoice, CompleteDecision,
     CompleteFacts, CompleteFilter, CompleteFound, CompleteRank, CompleteRankMember, CompleteRecord,
     CompleteScore, CompleteSetRank, CompleteTags, Counters, Details, Facts, Found, Judgment,
-    NamedProbability, ObservedRow, Picked, Probabilities, ProfileMismatch, QuestionDetail, Ranked,
-    RankedRow, RecordObservation, ResultMetadata, Row, SetRanked, Tally, TallyStart, Usage,
-    complete_call_schema,
+    NamedProbability, ObservedRow, Picked, Probabilities, ProfileMismatch, QuestionDetail,
+    RecordObservation, ResultMetadata, Row, Tally, TallyStart, Usage, complete_call_schema,
 };
 pub use results::{
     CompleteRecognized, NameProbabilities, PairProbability, PieceProbabilities,
@@ -127,6 +122,8 @@ pub use results::{
     CompleteRelated, CompleteRelationMember, SourceRelationEdge, SourceRelationEndpoint,
 };
 pub use results::{OwnedObservedRow, OwnedQuestionDetail, OwnedRecordObservation};
+#[cfg(test)]
+pub(crate) use results::{QuestionJson, RankedRow};
 pub use set::{QuestionSet, QuestionSetBuilder};
 pub use settings::EngineBuilder;
 

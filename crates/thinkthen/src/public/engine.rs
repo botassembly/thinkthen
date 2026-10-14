@@ -66,7 +66,7 @@ pub(crate) trait Sealed {
 )]
 pub trait DecisionQuestion: Sealed {}
 
-/// A question `details` accepts.
+/// A primitive question the planning methods accept.
 #[expect(
     private_bounds,
     reason = "the sealed bound keeps the question kinds closed"

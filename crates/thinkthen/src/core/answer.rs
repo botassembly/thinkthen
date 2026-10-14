@@ -402,6 +402,7 @@ impl Answer {
 
     /// The level a placement leads with, or `None` for any other answer.
     #[must_use]
+    #[cfg(test)]
     pub(crate) fn level(&self) -> Option<&str> {
         match &self.0 {
             Shape::Score { level, .. } => Some(&level.0),

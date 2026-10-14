@@ -120,6 +120,7 @@ impl Engine {
                 })
             }),
             Box::new(move |stop, at, original, row| {
+                let row = reader_admission(row).map_err(|error| error.at_record(at))?;
                 let original = match original {
                     Some(original) => original,
                     None => {
@@ -150,5 +151,19 @@ impl Engine {
                 crate::public::request::recovery_row(at, outcome).map(Some)
             }),
         ))
+    }
+}
+
+fn reader_admission(row: pull::Row<Annotations>) -> Result<pull::Row<Annotations>, Error> {
+    match row {
+        Err(crate::engine::pipeline::Failed::Asker(error))
+            if matches!(
+                error.kind(),
+                crate::ErrorKind::Usage | crate::ErrorKind::Local
+            ) =>
+        {
+            Err(error)
+        }
+        row => Ok(row),
     }
 }

@@ -51,14 +51,13 @@ pub use call::{
     RankCall, RecognitionCall, RelationCall, ScoreCall, SetRankCall, TagCall,
 };
 pub use found::{Candidate, Found, Picked};
+#[cfg(test)]
 mod ranked;
-pub use ranked::{Ranked, RankedRow};
-mod set_ranked;
-pub use set_ranked::SetRanked;
+#[cfg(test)]
+pub(crate) use ranked::RankedRow;
 mod tally;
 pub use tally::{Tally, TallyStart};
 mod member;
-pub(crate) use member::Member;
 pub(crate) use member::batch_warning;
 mod observation;
 mod owned_observation;

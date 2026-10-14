@@ -1,4 +1,5 @@
 //! Owned native causes for host diagnostics, absent from every public view.
+//! Stays: Private typed diagnostic causes must retain native error kinds and exact command projections without parsing message text.
 use std::any::Any;
 
 pub(crate) enum Diagnostic {
