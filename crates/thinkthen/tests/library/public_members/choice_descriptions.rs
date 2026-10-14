@@ -49,9 +49,7 @@ fn old_bare_identity(engine: &Engine, listener: &Listener) {
         .and_then(|builder| builder.option(Team::Outage, None))
         .and_then(thinkthen::ChooseBuilder::build)
         .expect("old bare choice");
-    let details = engine
-        .details(&old, "An invoice dispute.")
-        .expect("details");
+    let details = engine.choose(&old, "An invoice dispute.").expect("details");
     assert_eq!(listener.count(), 1);
     let request = listener.requests().pop().expect("captured request");
     assert_eq!(
@@ -59,7 +57,10 @@ fn old_bare_identity(engine: &Engine, listener: &Listener) {
         r#"{"state":"Each question quotes the text it asks about.","model":"jev-1.13.0","questions":{"q1":{"type":"choice","instructions":"The text is \"An invoice dispute.\". Which team?","criteria":{"billing":null,"outage":null}}}}"#
     );
     assert_eq!(
-        details.value().question_sha256(),
+        details.results()[0]
+            .meta()
+            .question_sha256()
+            .expect("digest"),
         "768f400eee4e2fc2f8d63204d7c3ca381a58fb70d43b7b51441b44d566fbb216"
     );
 }
@@ -75,17 +76,23 @@ fn described_choose_identity(engine: &Engine, listener: &Listener) {
         .into_choose::<DescribedTeam>()
         .expect("bound described map");
     let typed_details = engine
-        .details(&typed, "An invoice dispute.")
+        .choose(&typed, "An invoice dispute.")
         .expect("typed details");
     let loaded_details = engine
-        .details(&loaded_choice, "An invoice dispute.")
+        .choose(&loaded_choice, "An invoice dispute.")
         .expect("map details");
     let (typed_body, map_body) = captured_pair(listener);
     assert_eq!(typed_body, map_body);
     assert!(String::from_utf8_lossy(&typed_body).contains(r#""criteria":{"billing":"Money owed.","outage":{"what":"Service unavailable.","examples":["Cannot sign in."]},"other":null}"#));
     assert_eq!(
-        typed_details.value().question_sha256(),
-        loaded_details.value().question_sha256()
+        typed_details.results()[0]
+            .meta()
+            .question_sha256()
+            .expect("digest"),
+        loaded_details.results()[0]
+            .meta()
+            .question_sha256()
+            .expect("digest")
     );
     assert_eq!(
         engine
@@ -107,16 +114,22 @@ fn described_choose_identity(engine: &Engine, listener: &Listener) {
         .into_choose::<DescribedTeam>()
         .expect("bound override map");
     let override_details = engine
-        .details(&overridden, "An invoice dispute.")
+        .choose(&overridden, "An invoice dispute.")
         .expect("override details");
     let map_details = engine
-        .details(&mapped, "An invoice dispute.")
+        .choose(&mapped, "An invoice dispute.")
         .expect("map details");
     let (typed_body, map_body) = captured_pair(listener);
     assert_eq!(typed_body, map_body);
     assert_eq!(
-        override_details.value().question_sha256(),
-        map_details.value().question_sha256()
+        override_details.results()[0]
+            .meta()
+            .question_sha256()
+            .expect("digest"),
+        map_details.results()[0]
+            .meta()
+            .question_sha256()
+            .expect("digest")
     );
 }
 
@@ -131,16 +144,22 @@ fn described_tag_and_null_identity(engine: &Engine, listener: &Listener) {
         .into_tag::<DescribedTeam>()
         .expect("bound tag map");
     let tag_details = engine
-        .details(&tagged, "An invoice dispute.")
+        .tag(&tagged, "An invoice dispute.")
         .expect("tag details");
     let map_tag_details = engine
-        .details(&tagged_map, "An invoice dispute.")
+        .tag(&tagged_map, "An invoice dispute.")
         .expect("map tag details");
     let (typed_body, map_body) = captured_pair(listener);
     assert_eq!(typed_body, map_body);
     assert_eq!(
-        tag_details.value().question_sha256(),
-        map_tag_details.value().question_sha256()
+        tag_details.results()[0]
+            .meta()
+            .question_sha256()
+            .expect("digest"),
+        map_tag_details.results()[0]
+            .meta()
+            .question_sha256()
+            .expect("digest")
     );
     assert_eq!(
         engine
@@ -159,10 +178,10 @@ fn described_tag_and_null_identity(engine: &Engine, listener: &Listener) {
         .into_choose::<DescribedTeam>()
         .expect("bare list binding");
     let null_details = engine
-        .details(&null_map, "An invoice dispute.")
+        .choose(&null_map, "An invoice dispute.")
         .expect("null map details");
     let list_details = engine
-        .details(&bare_list, "An invoice dispute.")
+        .choose(&bare_list, "An invoice dispute.")
         .expect("bare list details");
     let (null_body, list_body) = captured_pair(listener);
     assert_eq!(null_body, list_body);
@@ -171,8 +190,14 @@ fn described_tag_and_null_identity(engine: &Engine, listener: &Listener) {
             .contains(r#""criteria":{"billing":null,"outage":null,"other":null}"#)
     );
     assert_eq!(
-        null_details.value().question_sha256(),
-        list_details.value().question_sha256()
+        null_details.results()[0]
+            .meta()
+            .question_sha256()
+            .expect("digest"),
+        list_details.results()[0]
+            .meta()
+            .question_sha256()
+            .expect("digest")
     );
 }
 

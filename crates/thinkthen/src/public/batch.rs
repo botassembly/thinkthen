@@ -73,12 +73,14 @@ impl<'a, T: 'a> Batch<'a, T> {
     }
 
     /// A batch that yields one error, then nothing.
+    #[cfg(any(test, feature = "polars"))]
     pub(crate) fn failed(error: Error) -> Self {
         Self {
             source: Box::new(Some(error)),
         }
     }
 
+    #[cfg(any(test, feature = "polars"))]
     pub(crate) fn of(result: Result<Self, Error>) -> Self {
         result.unwrap_or_else(Self::failed)
     }

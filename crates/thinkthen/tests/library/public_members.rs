@@ -12,8 +12,8 @@ use std::path::PathBuf;
 
 use conformance_backend::{Backend, Canned, Listener};
 use thinkthen::{
-    Engine, ErrorKind, Judgment, LoadedQuestion, Probabilities, Question, QuestionKind,
-    QuestionSet, Recognize, Relate, RelationRule,
+    Engine, ErrorKind, LoadedQuestion, Probabilities, Question, QuestionKind, QuestionSet,
+    Recognize, Relate, RelationRule,
 };
 
 const CASES: &str = include_str!("../../../../conformance/cases.json");
@@ -65,13 +65,26 @@ fn a_saved_calibration_name_reaches_the_public_digest_and_warning() {
         .build()
         .expect("engine");
     let details = engine
-        .details(&question, case["evidence"].as_str().expect("evidence"))
+        .decide(&question, case["evidence"].as_str().expect("evidence"))
         .expect("details");
     assert_eq!(listener.count(), 1);
-    assert_eq!(details.value().question_sha256(), case["question_sha256"]);
-    assert_eq!(details.value().profile_warning(), Some(("old", "new")));
+    assert_eq!(
+        details.results()[0]
+            .meta()
+            .question_sha256()
+            .expect("digest"),
+        case["question_sha256"]
+    );
+    assert_eq!(
+        details.results()[0]
+            .meta()
+            .profile_warning()
+            .map(|warning| (warning.tuned_for(), warning.running())),
+        Some(("old", "new"))
+    );
     let row: serde_json::Value =
-        serde_json::from_str(&details.value().to_json()).expect("result JSON");
+        serde_json::from_str(&details.results()[0].to_scalar_json().expect("scalar JSON"))
+            .expect("result JSON");
     assert_eq!(row["meta"]["question_sha256"], case["question_sha256"]);
     assert_eq!(row["meta"]["profile_warning"], case["warning"]);
     assert_eq!(row["meta"]["model"], case["model"]);
@@ -89,7 +102,7 @@ fn a_runtime_profile_limit_refuses_the_saved_question_before_sending() {
         .no_cache()
         .build()
         .expect("engine");
-    let error = engine.details(&question, "two").expect_err("profile limit");
+    let error = engine.decide(&question, "two").expect_err("profile limit");
     assert_eq!(error.kind(), ErrorKind::Usage);
     assert!(
         error
@@ -143,32 +156,24 @@ fn runtime_labels_build_the_files_question_and_refuse_a_repeat_at_its_step() {
 }
 
 #[test]
-fn details_over_runtime_labels_is_the_typed_call_with_one_send_each() {
+fn a_typed_choose_call_retains_value_probability_and_records_with_one_send() {
     let backend = Backend::start().expect("backend");
     let engine = engine(&format!("{}/generic/v1", backend.origin()));
-    let runtime = Question::choose_labels("Which team owns this?")
+    let typed = Question::choose_labels("Which team owns this?")
         .and_then(|labels| labels.label("billing", None))
         .and_then(|labels| labels.label("outage", None))
         .and_then(thinkthen::LabelBuilder::build)
-        .expect("runtime");
-    let typed = runtime.clone().into_choose::<Team>().expect("bound");
-    let details = engine
-        .details(&runtime, "The invoice is wrong.")
-        .expect("details");
-    assert_eq!(
-        details.value().value(),
-        &Judgment::Choice(Some("billing".to_owned()))
-    );
-    assert_eq!(backend.count(), 1);
-    let picked = engine
+        .expect("runtime")
+        .into_choose::<Team>()
+        .expect("bound");
+    let call = engine
         .choose(&typed, "The invoice is wrong.")
-        .expect("typed");
-    assert_eq!(picked.into_value(), Some(Team::Billing));
-    assert_eq!(backend.count(), 2);
-    let bound = engine
-        .details(&typed, "The invoice is wrong.")
-        .expect("typed details");
-    assert_eq!(bound.value().requests(), details.value().requests());
+        .expect("choice");
+    assert_eq!(call.value(), &Some(Team::Billing));
+    assert_eq!(call.probability(), &Some(0.96));
+    assert_eq!(call.results().len(), 1);
+    assert_eq!(call.facts().requests_sent(), 1);
+    assert_eq!(backend.count(), 1);
 }
 
 #[test]
@@ -295,14 +300,14 @@ fn a_bulk_row_carries_the_yes_probability_details_reads() {
         .collect();
     assert_eq!(read, [0.3, 0.8]);
     for row in &rows {
-        let details = engine.details(&question, row.original()).expect("details");
-        let Probabilities::YesNo { yes } = details.value().probabilities() else {
+        let details = engine.decide(&question, row.original()).expect("details");
+        let Probabilities::YesNo { yes } = details.results()[0].probabilities() else {
             panic!("a yes or no answer");
         };
         let Probabilities::YesNo { yes: batch_yes } = row.result().probabilities() else {
             panic!("a yes or no answer");
         };
-        assert_eq!(*yes, batch_yes);
+        assert_eq!(yes, batch_yes);
     }
     let requests = listener.requests();
     assert_eq!(requests.len(), 3, "one packed call and two details calls");

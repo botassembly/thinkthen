@@ -177,13 +177,17 @@ impl Facts {
 
 /// One eager value with its call-scoped facts.
 #[cfg_attr(test, derive(schemars::JsonSchema), schemars(rename = "CompleteCall"))]
-pub struct Call<T> {
+pub struct Call<T, R = (), P = Option<f64>> {
     value: T,
+    results: R,
+    probability: P,
+    #[cfg_attr(test, schemars(skip))]
+    projected: bool,
     #[cfg_attr(test, schemars(with = "super::CompleteFacts<'static>"))]
     facts: Facts,
 }
 
-impl<T: Serialize> Serialize for Call<T> {
+impl<T: Serialize, R: Serialize, P: Serialize> Serialize for Call<T, R, P> {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         let facts = self
             .facts
@@ -191,12 +195,16 @@ impl<T: Serialize> Serialize for Call<T> {
             .ok_or_else(|| serde::ser::Error::custom("a completed call has no identity"))?;
         let mut document = serializer.serialize_struct("Call", 2)?;
         document.serialize_field("value", &self.value)?;
+        if self.projected {
+            document.serialize_field("probability", &self.probability)?;
+            document.serialize_field("results", &self.results)?;
+        }
         document.serialize_field("facts", &facts)?;
         document.end()
     }
 }
 
-impl<T> fmt::Debug for Call<T> {
+impl<T, R, P> fmt::Debug for Call<T, R, P> {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         formatter
             .debug_struct("Call")
@@ -207,7 +215,43 @@ impl<T> fmt::Debug for Call<T> {
 
 impl<T> Call<T> {
     pub(crate) const fn new(value: T, facts: Facts) -> Self {
-        Self { value, facts }
+        Self {
+            value,
+            facts,
+            results: (),
+            probability: None,
+            projected: false,
+        }
+    }
+}
+
+impl<T, R, P> Call<T, R, P> {
+    /// Canonical complete records retained by this call.
+    #[must_use]
+    pub const fn results(&self) -> &R {
+        &self.results
+    }
+
+    /// The scalar or aligned item probabilities of the plain answer.
+    #[must_use]
+    pub const fn probability(&self) -> &P {
+        &self.probability
+    }
+
+    pub(crate) fn project<U, S, Q>(
+        self,
+        project: impl FnOnce(T) -> Result<(U, S, Q), Error>,
+    ) -> Result<Call<U, S, Q>, Error> {
+        match project(self.value) {
+            Ok((value, results, probability)) => Ok(Call {
+                value,
+                results,
+                probability,
+                facts: self.facts,
+                projected: true,
+            }),
+            Err(error) => Err(error.with_facts(self.facts)),
+        }
     }
 
     /// Borrow the value without losing its facts.
@@ -228,16 +272,28 @@ impl<T> Call<T> {
         &self.facts
     }
 
-    pub(crate) fn map<U>(self, map: impl FnOnce(T) -> U) -> Call<U> {
-        Call::new(map(self.value), self.facts)
+    pub(crate) fn map<U>(self, map: impl FnOnce(T) -> U) -> Call<U, R, P> {
+        Call {
+            value: map(self.value),
+            facts: self.facts,
+            results: self.results,
+            probability: self.probability,
+            projected: self.projected,
+        }
     }
 
     pub(crate) fn try_map<U>(
         self,
         map: impl FnOnce(T) -> Result<U, Error>,
-    ) -> Result<Call<U>, Error> {
+    ) -> Result<Call<U, R, P>, Error> {
         match map(self.value) {
-            Ok(value) => Ok(Call::new(value, self.facts)),
+            Ok(value) => Ok(Call {
+                value,
+                facts: self.facts,
+                results: self.results,
+                probability: self.probability,
+                projected: self.projected,
+            }),
             Err(error) => Err(error.with_facts(self.facts)),
         }
     }

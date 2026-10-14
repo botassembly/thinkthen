@@ -55,7 +55,7 @@ fn input_schema(tool: Tool) -> Value {
     let mut options = json!({"type":"object","additionalProperties":false,
         "properties":canonical.pointer("/$defs/RequestOptions/properties").cloned().unwrap_or_else(|| json!({}))});
     if let Some(map) = options.get_mut("properties").and_then(Value::as_object_mut) {
-        map.retain(|name, _| tool.allows_option(name) && name != "details");
+        map.retain(|name, _| tool.allows_option(name));
         for schema in map.values_mut() {
             *schema = summary(schema, &canonical);
         }

@@ -19,14 +19,6 @@ pub struct Ranked<T> {
 withheld_debug!(Ranked<T> { index, probability });
 
 impl<T> Ranked<T> {
-    pub(crate) const fn new(index: usize, input: T, probability: f64) -> Self {
-        Self {
-            index,
-            input,
-            probability,
-        }
-    }
-
     /// The record's zero-based place in the input.
     #[must_use]
     pub fn index(&self) -> usize {
