@@ -22,7 +22,7 @@ try {
  if(document.batch_probe){console.log('ready');line();}
  const controls={...document.options,signal:controller.signal};
  const done=document.call_result_contract?await client[document.verb](question,input,controls):await client.start(document.verb,question,document.incremental && Array.isArray(input)?input.values():input,controls).result();
- console.log(JSON.stringify({native:true,results:done.results,facts:done.facts,...(document.call_result_contract?{call_result:{value:done.value,probability:done.probability,results_count:done.results.length,requests_sent:done.facts.requests_sent}}:{})}));
+ console.log(JSON.stringify({native:true,results:done.results,facts:done.facts,...(document.call_result_contract?{call_result:{value:done.value,probability:done.probability,results:done.results,facts:done.facts}}:{})}));
 } catch(error) {
  if(!(error instanceof tt.ClientError))throw error;
  console.log(JSON.stringify({native:true,error:error.complete?.error??{kind:error.kind,message:error.message,retryable:error.retryable},facts:error.facts,completed:error.results?.length?{native:true,results:error.results,facts:error.facts}:undefined}));
