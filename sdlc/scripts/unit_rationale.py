@@ -4,7 +4,8 @@ import re
 
 def missing_rationales(text, tokenize):
     offsets = []
-    tokens = tokenize(text, literals=True, offsets=offsets)
+    docs = []
+    tokens = tokenize(text, literals=True, offsets=offsets, docs=docs)
     modules = [("file", 0, len(text), [])]
     stack = [0]
     braces = []
@@ -29,8 +30,8 @@ def missing_rationales(text, tokenize):
     justified = []
     for name, start, end, tests in modules:
         first = next((offset for offset in offsets if start <= offset < end), end)
-        header = text[start:first]
-        if re.search(r"(?m)^\s*//!\s*Stays:[ \t]*\S[^\n]*", header):
+        if any(start <= offset < first and re.match(r"//!\s*Stays:[ \t]*\S[^\n]*", doc)
+               for offset, doc in docs):
             justified.append((start, end))
         elif tests and not any(outer <= start and end <= close for outer, close in justified):
             missing.append((name, start))
@@ -46,6 +47,8 @@ def check_unit_rationale(repo, tokenize, fail):
         ('// #[test] fn a() {}\nconst S: &str = "#[test] fn a() {}";', False),
         ("#[cfg(test)] use super::*; #[cfg(test)] mod empty {}", False),
         ("mod outer { mod tests { #[test] fn a() {} } }", True),
+        ("/*\n//! Stays: fake doc inside a block comment.\n*/\n#[test] fn a() {}", True),
+        ("mod a { //! Stays: private parser.\n#[test] fn a() {} } mod b { #[test] fn b() {} }", True),
         ("//! Stays: private owner state.\nmod tests { #[test] fn a() {} }", False),
     )
     for text, refused in fixtures:

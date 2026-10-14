@@ -1141,7 +1141,8 @@ def rust_char_end(text: str, quote: int) -> int | None:
     return place + 1 if place < len(text) and text[place] == "'" else None
 
 
-def rust_tokens(text: str, literals: bool = False, offsets: list[int] | None = None) -> list[str]:
+def rust_tokens(text: str, literals: bool = False, offsets: list[int] | None = None,
+                docs: list[tuple[int, str]] | None = None) -> list[str]:
     """Skip comments and literals, retaining literal tokens only for attributes."""
     tokens = []
     place = 0
@@ -1152,6 +1153,8 @@ def rust_tokens(text: str, literals: bool = False, offsets: list[int] | None = N
     while place < len(text):
         if text.startswith("//", place):
             end = text.find("\n", place + 2)
+            if docs is not None and text.startswith("//!", place):
+                docs.append((place, text[place:len(text) if end < 0 else end]))
             place = len(text) if end < 0 else end + 1
             continue
         if text.startswith("/*", place):
