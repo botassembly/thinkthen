@@ -425,7 +425,7 @@ impl<T, V> fmt::Debug for Row<T, V> {
 }
 
 impl<T, V> Row<T, V> {
-    #[cfg(any(test, feature = "polars"))]
+    #[cfg(test)]
     pub(crate) const fn new(input: T, value: V, probability: f64) -> Self {
         Self {
             input,

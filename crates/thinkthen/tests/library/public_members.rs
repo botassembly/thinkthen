@@ -79,8 +79,8 @@ fn a_saved_calibration_name_reaches_the_public_digest_and_warning() {
         details.results()[0]
             .meta()
             .profile_warning()
-            .map(|warning| (warning.tuned_for(), warning.running())),
-        Some(("old", "new"))
+            .map(|warning| (warning.tuned_for().to_owned(), warning.running().to_owned())),
+        Some(("old".to_owned(), "new".to_owned()))
     );
     let row: serde_json::Value =
         serde_json::from_str(&details.results()[0].to_scalar_json().expect("scalar JSON"))
