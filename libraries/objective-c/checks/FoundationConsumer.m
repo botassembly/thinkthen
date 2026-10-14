@@ -1,6 +1,6 @@
 #import "ThinkThenFoundation.h"
 #import <dispatch/dispatch.h>
-static void require(BOOL condition) { if (!condition) abort(); }
+#define require(condition) do { if (!(condition)) { fprintf(stderr, "Foundation condition failed at line %d: %s\n", __LINE__, #condition); abort(); } } while (0)
 int main(int argc, const char *argv[]) {
     @autoreleasepool {
         require(argc == 2);

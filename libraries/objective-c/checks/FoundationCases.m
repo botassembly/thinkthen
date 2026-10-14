@@ -2,7 +2,7 @@
 #import "TTResultPrivate.h"
 #import <dispatch/dispatch.h>
 #include <stdio.h>
-static void require(BOOL condition) { if (!condition) abort(); }
+#define require(condition) do { if (!(condition)) { fprintf(stderr, "Foundation condition failed at line %d: %s\n", __LINE__, #condition); abort(); } } while (0)
 static id readFixture(NSData *data) { return [NSJSONSerialization JSONObjectWithData:data options:NSJSONReadingFragmentsAllowed error:NULL]; }
 static void typed(NSArray<TTSessionPacket *> *packets, TTSessionPacketTerminal *terminal) {
     require(terminal.kind.state == TTPresenceValue);

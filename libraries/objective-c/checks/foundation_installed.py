@@ -78,7 +78,7 @@ with contextlib.ExitStack() as installed:
                        THINKTHEN_API_KEY="tt-canary-295", THINKTHEN_CACHE=str(work / "cache"))
             result = subprocess.run([str(work / ".build/debug/Consumer"), str(barrier)],
                                     cwd=work, env=env, text=True, capture_output=True, timeout=8)
-            assert result.returncode == 0 and "FOUNDATION_INSTALLED_PASS" in result.stdout, (result.stdout, result.stderr)
+            assert result.returncode == 0 and "FOUNDATION_INSTALLED_PASS" in result.stdout, (result.returncode, result.stdout, result.stderr)
             assert collections.Counter(server.arrivals) == collections.Counter(["consumer-objc", "hold-foundation"]), server.arrivals
             print("Foundation installed consumer passed ownership and held-provider cancellation")
         finally:
