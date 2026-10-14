@@ -82,7 +82,7 @@ pub(crate) unsafe extern "C" fn thinkthen_cpp_complete_feed_new(
         })();
         let (call, prepared, input, reading, native) = match parsed {
             Ok(v) => v,
-            Err(e) => return Ok(complete_native::admission(&e).to_string().into_bytes()),
+            Err(e) => return admission(e),
         };
         let held = asked(&session)?;
         let engine = engines::engine_for(&held, |path| probe(&session, path))?;
@@ -112,7 +112,7 @@ pub(crate) unsafe extern "C" fn thinkthen_cpp_complete_feed_new(
             )
         })();
         match started {
-            Err(e) => Ok(complete_native::admission(&e).to_string().into_bytes()),
+            Err(e) => admission(e),
             Ok(feed) => {
                 if input.cancelled {
                     feed.cancel();
@@ -125,6 +125,19 @@ pub(crate) unsafe extern "C" fn thinkthen_cpp_complete_feed_new(
             }
         }
     })
+}
+
+fn admission(error: thinkthen::Error) -> Result<Vec<u8>, String> {
+    if matches!(
+        error.kind(),
+        thinkthen::ErrorKind::Cancelled
+            | thinkthen::ErrorKind::Deadline
+            | thinkthen::ErrorKind::Defect
+    ) {
+        Err(crate::errors::RowError::from(error).text)
+    } else {
+        Ok(complete_native::admission(&error).to_string().into_bytes())
+    }
 }
 
 fn source_total(total: Option<i64>) -> Result<Option<u64>, String> {

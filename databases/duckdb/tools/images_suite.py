@@ -57,7 +57,7 @@ def stored_images_keep_order_duplicates_native_answers_and_zero_send_replay():
 def image_call(question, records, settings='NULL'):
     listed = records.startswith('[') or 'STRUCT' in records
     call = f'thinkthen_decide_details(question := {question}, input := {records}, settings := {settings})'
-    return '(SELECT detail.* FROM (SELECT UNNEST(' + (call if listed else '[' + call + ']') + ') AS detail))'
+    return '(SELECT detail.* FROM (SELECT UNNEST(' + (call if listed else '[' + call + ']') + ') AS detail) WHERE detail IS NOT NULL)'
 
 
 def image_receipt(result):
@@ -102,7 +102,7 @@ def complete_images_keep_native_blobs_facts_replay_and_local_refusals():
         nulls += ["SELECT count(*) FROM "+image_call(literal('@'+missing),partner,literal('bad'))
                   for partner in ("NULL::VARCHAR", "NULL::STRUCT(images STRUCT(media VARCHAR,data BLOB,file VARCHAR)[])[]")]
         got = run(["SET thinkthen_refresh_cache=2", *nulls,
-                   query(question,"'{bad}'")], backend.base, extra=extra)
+                   query(question,"[{'unknown':'private-image-evidence'}]")], backend.base, extra=extra)
         expect([rows(r) for r in got[1:-1]], [[[0]]] * len(nulls), 'required NULL precedes malformed session settings')
         expect('thinkthen_refresh_cache is 0 or 1' in json.dumps(image_receipt(got[-1])['failure']), True, 'live rows still validate session settings')
         probe = folder + '/null-record/.probe'
@@ -112,7 +112,7 @@ def complete_images_keep_native_blobs_facts_replay_and_local_refusals():
             expect(sum(f'"{probe}"' in line for line in trace.read_text().splitlines()), 0, 'NULL rows never probe recording folder')
         got = run(["SELECT count(*) FROM "+image_call('NULL',bad,literal('bad')),
                    "SELECT count(*) FROM "+image_call(literal('@'+missing),'NULL',literal('bad')),
-                   query(question,bad), query(question,empty), query(question,"'{bad}'")],
+                   query(question,bad), query(question,empty), query(question,"[{'unknown':'private-image-evidence'}]")],
                    backend.base, extra=extra, wrap=wrap)
         expect([rows(r) for r in got[:2]], [[[0]],[[0]]], 'required NULL skips malformed partners')
         for result in got[2:]:
@@ -128,7 +128,9 @@ def complete_images_keep_native_blobs_facts_replay_and_local_refusals():
         failed = run([*stored(folder), "SET thinkthen_model='d1'", "SET thinkthen_max_retries=0", call], backend.base, extra=extra)
         envelope = image_receipt(failed[-1])
         expect(envelope['failure']['kind'], 'backend', 'backend failure preserves complete kind')
-        expect('private-backend-body' in json.dumps(envelope), False, 'failure withholds response')
+        expect(envelope['failure']['retryable'], True, 'retryable backend status')
+        expect(envelope['facts']['requests_sent'], 1, 'one failed request owns actual facts')
+        expect('fake-sql-image-key' in json.dumps(envelope), False, 'failure withholds actual provider key')
         expect(backend.count(), 2, 'one failed attempt after the successful request')
 
 

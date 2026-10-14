@@ -65,15 +65,18 @@ try:
                ',settings := '+settings+',incremental := '+incremental+',cancelled := '+cancelled+')) AS detail)', bind)
     columns = [row[0] for row in db.execute('DESCRIBE native_rows').fetchall()]
     actual = [dict(zip(columns,row)) for row in db.execute('SELECT * FROM native_rows ORDER BY ordinal NULLS LAST').fetchall()]
-    assert actual
+    if not actual:
+        print(json.dumps({"empty_sql_rows":[],"details_rows":[]}),flush=True)
+        sys.exit(0)
     if payload['verb'] == 'rank' and actual[0]['failure'] is None and actual[0]['result'] is not None:
         actual.sort(key=lambda row: row['result']['value'])
-    first = actual[0]
+    first = next((row for row in actual if row['failure'] is not None), actual[0])
+    events = {json.dumps(event,sort_keys=True):event for row in actual for event in (row['observations'] or [])}
     assert isinstance(first['facts'],dict) or first['facts'] is None
     assert isinstance(first['failure'],dict) or first['failure'] is None
     receipt = {'results':[row['result'] for row in actual if row['result'] is not None],
-               'facts':first['facts'],'failure':first['failure'],'observations':[event for row in actual for event in (row['observations'] or [])],
-               'ordinals':[row['ordinal'] for row in actual if row['ordinal'] is not None],
+               'facts':first['facts'],'failure':first['failure'],'observations':list(events.values()),
+               'ordinals':[row['ordinal'] for row in actual if row['ordinal'] is not None and row['result'] is not None],
                'selection': first['ordinal'] if payload['verb']=='find' and first['result'] is not None else None}
     call_id = first['facts']['call_id'] if first['facts'] else None
     sends = first['facts']['requests_sent'] if first['facts'] else None

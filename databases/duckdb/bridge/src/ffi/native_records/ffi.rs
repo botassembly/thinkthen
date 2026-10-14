@@ -4,7 +4,7 @@ use super::{
     run_detached, text,
 };
 use crate::{complete_native, engines};
-use serde_json::{Value, value::RawValue};
+use serde_json::value::RawValue;
 use thinkthen::{Error, Request, RequestArguments, RequestInput, RequestOptions, RequestQuestion};
 
 pub(super) mod observations;
@@ -38,58 +38,6 @@ fn composed_request(
     args.options.examples_field = None;
     args.options.seed_spans_field = None;
     Request::named(verb, args)?.admit()
-}
-
-pub(super) fn decision_value(answer: thinkthen::Answer) -> Value {
-    match answer {
-        thinkthen::Answer::Yes => Value::Bool(true),
-        thinkthen::Answer::No => Value::Bool(false),
-        thinkthen::Answer::Unsure => Value::Null,
-    }
-}
-
-pub(super) fn filter_value<T: serde::Serialize>(
-    row: &thinkthen::CompleteRecord<T, thinkthen::CompleteFilter>,
-) -> Result<Value, Error> {
-    if row.result().value() {
-        Ok(Value::Array(vec![
-            serde_json::to_value(row.original()).map_err(|_| complete_native::defect())?,
-        ]))
-    } else {
-        Ok(Value::Array(Vec::new()))
-    }
-}
-
-pub(super) fn plain_values(value: &thinkthen::RequestValue) -> Result<Value, Error> {
-    use thinkthen::RequestValue;
-    macro_rules! rows {
-        ($rows:expr) => {
-            serde_json::json!(
-                $rows
-                    .iter()
-                    .map(|row| row.result().value())
-                    .collect::<Vec<_>>()
-            )
-        };
-    }
-    Ok(match value {
-        RequestValue::Decisions(rows) => Value::Array(
-            rows.iter()
-                .map(|row| decision_value(row.result().value()))
-                .collect(),
-        ),
-        RequestValue::Choices(rows) => rows!(rows),
-        RequestValue::Tags(rows) => rows!(rows),
-        RequestValue::Scores(rows) => rows!(rows),
-        RequestValue::Filtered(rows) => Value::Array(
-            rows.iter()
-                .map(filter_value)
-                .collect::<Result<Vec<_>, _>>()?,
-        ),
-        RequestValue::Ranked(rows) => rows!(rows),
-        RequestValue::SetRanked(rows) => rows!(rows),
-        _ => Value::Null,
-    })
 }
 
 #[derive(Debug)]

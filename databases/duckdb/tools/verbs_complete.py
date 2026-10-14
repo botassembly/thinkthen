@@ -115,10 +115,10 @@ def native_complete_file_authorization_precedes_content_parsing():
     with Backend() as backend, tempfile.TemporaryDirectory() as folder:
         path = Path(folder) / "question.json"
         path.write_text('{"decide":"Refund?"}')
-        call = f"SELECT facts,failure,observations FROM thinkthen_decide('@{path}', [])"
+        call = f"SELECT d.facts,d.failure,d.observations FROM (SELECT UNNEST(thinkthen_decide_details('@{path}', [])) AS d)"
         got = run(["PREPARE complete AS " + call, "EXECUTE complete",
                    "SET enable_external_access=false", "EXECUTE complete"], backend.base())
-        assert rows(got[1])[0][1] is None, got[1]
+        expect(rows(got[1]), [], "authorized empty call has no result rows")
         facts, failure, observations = rows(got[3])[0]
         assert failure['kind']=='local' and facts is None and observations==[], got[3]
         path.write_text('{"decide":"PRIVATE_DENIED_COMPLETE_CONTENT"')

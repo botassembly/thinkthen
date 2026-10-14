@@ -213,7 +213,16 @@ void NativeRecords(DataChunk &args, ExpressionState &state, Vector &result) {
             result.SetValue(row, AdmissionFailure(error, *context, verb, output_list));
         }
     }
-    if (!calls.empty()) { session.emplace(Settings(*context)); }
+    if (!calls.empty()) {
+        try { session.emplace(Settings(*context)); }
+        catch (const Exception &error) {
+            for (const auto &call : calls) {
+                auto failure = AdmissionFailure(error, *context, verb, output_list);
+                for (const auto slot : call.slots) { result.SetValue(slot, failure); }
+            }
+            return;
+        }
+    }
     for (auto &call : calls) {
         try {
         string answer;
@@ -222,9 +231,9 @@ void NativeRecords(DataChunk &args, ExpressionState &state, Vector &result) {
                 owner->Remaining(*context), session->Bridge());
         } else if (call.source) {
             RustReply descriptor(thinkthen_cpp_native_source_input(View(call.inputs), call.incremental, call.cancelled));
-            Checked(descriptor.value);
-            CompleteFileCall(*context, verb, call.content, ReplyText(descriptor.value), call.controls,
-                call.selection->value, owner->Remaining(*context), session->Bridge(), answer, call.options);
+            if (descriptor.value.status != 0) { answer = FailureEnvelope(ReplyText(descriptor.value)); }
+            else { CompleteFileCall(*context, verb, call.content, ReplyText(descriptor.value), call.controls,
+                call.selection->value, owner->Remaining(*context), session->Bridge(), answer, call.options); }
         } else {
             RustReply reply(thinkthen_cpp_native_records(View(verb), View(call.content), View(call.inputs), View(call.options),
                 View(call.controls), call.selection->value, call.incremental, call.cancelled, !collection,

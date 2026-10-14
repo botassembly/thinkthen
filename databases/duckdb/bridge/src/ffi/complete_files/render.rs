@@ -9,11 +9,11 @@ pub(super) fn packet(packet: Packet) -> Result<Value, Error> {
             let mut value = serde_json::to_value(&row).map_err(|_| defect())?;
             put(&mut value, "kind", json!("row"))?;
             if let Ok(result) = row.outcome() {
-                put(
-                    &mut value,
-                    "answers",
-                    super::super::native_records::plain_values(result)?,
-                )?;
+                let encoded = serde_json::to_value(result).map_err(|_| defect())?;
+                let count = encoded.as_array().map_or(1, Vec::len);
+                let mut typed = vec![json!({}); count];
+                thinkthen_host::sql_request::typed_values(result, &mut typed)?;
+                put(&mut value, "typed_values", json!(typed))?;
             }
             Ok(value)
         }
@@ -52,6 +52,15 @@ pub(super) fn packet(packet: Packet) -> Result<Value, Error> {
     }
 }
 
+fn supplement_values(row: &mut Value, typed: &Value) -> Result<(), Error> {
+    for field in ["value", "probability"] {
+        if let Some(value) = typed.get(field) {
+            put(row, field, value.clone())?;
+        }
+    }
+    Ok(())
+}
+
 fn project_packet(
     function: thinkthen::RequestFunction,
     packet: &Value,
@@ -70,11 +79,9 @@ fn project_packet(
     };
     let carrier = json!({"native":native,"observations":events});
     let mut completed = thinkthen_host::sql_request::project_carrier(function, &carrier);
-    if function == thinkthen::RequestFunction::Decide
-        && let Some(answers) = packet.get("answers").and_then(Value::as_array)
-    {
-        for (row, answer) in completed.iter_mut().zip(answers) {
-            put(row, "value", answer.clone())?;
+    if let Some(values) = packet.get("typed_values").and_then(Value::as_array) {
+        for (row, typed) in completed.iter_mut().zip(values) {
+            supplement_values(row, typed)?;
         }
     }
     if packet.get("failure").is_some() {

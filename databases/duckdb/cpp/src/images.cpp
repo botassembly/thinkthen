@@ -23,8 +23,7 @@ ThinkThenReply thinkthen_cpp_images(ThinkThenText, int32_t, const ThinkThenImage
 ThinkThenReply thinkthen_cpp_image_read(void *, int64_t (*)(void *, uint8_t *, size_t));
 }
 
-extern "C" ThinkThenReply thinkthen_cpp_native_records(ThinkThenText, ThinkThenText, ThinkThenText, ThinkThenText,
-    ThinkThenText, const void *, bool, bool, int64_t, ThinkThenSettings, ThinkThenStop);
+
 namespace duckdb {
 namespace {
 constexpr size_t MAX_IMAGE_BYTES = 24 * 1024 * 1024;
@@ -95,7 +94,6 @@ struct Json {
 	~Json() { duckdb_yyjson::yyjson_doc_free(doc); }
 };
 Value Answer(const ThinkThenReply &reply, int32_t kind) {
-	if (kind == 2) { return ThinkThenJSON(ReplyText(reply)); }
 	Json json(reply);
 	auto value = duckdb_yyjson::yyjson_obj_get(duckdb_yyjson::yyjson_doc_get_root(json.doc), "value");
 	if (!value) { throw OrdinaryError("thinkthen defect: image details omitted value"); }

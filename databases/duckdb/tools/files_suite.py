@@ -227,7 +227,7 @@ def native_query(verb, question, descriptor, settings=None):
 def receipt(result):
     actual = rows(result)
     assert actual, result
-    ordinal, completed, facts, failure, observations = actual[0]
+    ordinal, completed, facts, failure, observations = next((row for row in actual if row[3] is not None),actual[0])
     return {'facts': facts, 'failure': failure, 'observations': observations,
             'completed': [row[1] for row in actual if row[1] is not None],
             'ordinals': [row[0] for row in actual if row[1] is not None]}

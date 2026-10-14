@@ -84,6 +84,7 @@ inline Value DecodeDetails(const string &text, const string &verb, bool collecti
         auto failure = DetailsFailureValue(ReceiptMember(native, "error"));
         auto fields = StructValue::GetChildren(DetailsRow(nullptr, verb));
         fields[4] = std::move(failure);
+        fields[6] = Value::LIST(Receipt_eventType(), {});
         auto row = Value::STRUCT(DetailsType(verb), std::move(fields));
         return collection ? Value::LIST(DetailsType(verb), {row}) : row;
     }
