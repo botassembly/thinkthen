@@ -2,7 +2,7 @@
 
 ThinkThen is ten functions on top of Jev, TypeSafe's decision model, or any model like it. It puts these decision models in your code, whatever model, language or database you use. Use Jev, OpenAI or a local model. Ask a typed question and get back `true`, `false`, a label or a number. Your code branches on the answer. A model can say not sure, and a failed call never looks like an answer. ThinkThen packs many records into few requests, saves each answer for reuse, and lets tests replay saved answers with no key and no network.
 
-Unpack the matching archive: `tar -xzf thinkthen-cobol-0.2.0-TARGET.tar.gz`. Replace `TARGET` with your platform. Set your hosted backend key: `export THINKTHEN_API_KEY=...`.
+Unpack the matching archive: `tar -xzf thinkthen-cobol-0.2.0-TARGET.tar.gz`. Replace `TARGET` with your platform. Compile this free-format example with `cobc -free -ftext-column=4096`. Set your hosted backend key: `export THINKTHEN_API_KEY=...`.
 
 ```cobol
 identification division. program-id. RegistryExample.

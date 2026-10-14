@@ -425,7 +425,7 @@ def run_example(family, packages, work, root=REPO, selected=None, sample_index=0
     def run(command, build=False, input=None):
         done = run_build(command, work, env, input) if build else run_process(command, work, env, input, 30)
         if done.returncode:
-            raise Refusal('example-did-not-run: ' + family + '\n' + (done.stdout + done.stderr)[-4000:])
+            raise Refusal('example-did-not-run: ' + family + '\n' + done.stdout + done.stderr)
         return done.stdout
 
     if family == 'command':
@@ -479,9 +479,27 @@ def run_example(family, packages, work, root=REPO, selected=None, sample_index=0
         native_package = unpack_example_package('c', packages, work / 'native', text_failures=text_failures)
         library = native_package / 'lib'
         if family == 'cpp':
-            (work / 'include/thinkthen').mkdir(parents=True)
-            shutil.copyfile(native_package / 'include/thinkthen.h', work / 'include/thinkthen/thinkthen.h')
-            command = ['c++', '-std=c++17', '-Wall', '-Wextra', '-Werror', '-I' + str(package / 'include'), '-I' + str(work / 'include'), str(sample), '-L' + str(library), '-lthinkthen', '-Wl,-rpath,' + str(library), '-o', str(work / 'sample')]
+            installed = package
+            if not (installed / 'lib/cmake/thinkthen-cpp').is_dir():
+                installed = work / 'installed'
+                run(['cmake', '-S', str(package), '-B', str(work / 'wrapper-build'),
+                     '-DCMAKE_INSTALL_PREFIX=' + str(installed),
+                     '-DTHINKTHEN_NATIVE_SHARED=' + str(library / 'libthinkthen.so'),
+                     '-DTHINKTHEN_NATIVE_STATIC=' + str(library / 'libthinkthen.a'),
+                     '-DTHINKTHEN_C_HEADER=' + str(native_package / 'include/thinkthen.h')], True)
+                run(['cmake', '--build', str(work / 'wrapper-build'), '--target', 'install', '-j2'], True)
+            (work / 'CMakeLists.txt').write_text('cmake_minimum_required(VERSION 3.18)\n'
+                'project(RegistryExample LANGUAGES CXX)\n'
+                'find_package(thinkthen-cpp CONFIG REQUIRED)\n'
+                'add_executable(sample sample.cpp)\n'
+                'target_link_libraries(sample PRIVATE thinkthen::thinkthen_cpp_shared)\n')
+            run(['cmake', '-S', str(work), '-B', str(work / 'consumer-build'),
+                 '-DCMAKE_PREFIX_PATH=' + str(installed)], True)
+            run(['cmake', '--build', str(work / 'consumer-build'), '-j2'], True)
+            output = run([str(work / 'consumer-build/sample')])
+            if expected is not None and output != expected:
+                raise Refusal('example-output-mismatch: ' + family)
+            return
         elif family == 'ada':
             command = ['gnatmake', '-q', '-gnat2022', '-I' + str(package / 'src'), str(sample), '-o', str(work / 'sample'), '-largs', '-L' + str(library), '-lthinkthen', '-Wl,-rpath,' + str(library)]
         elif family == 'c':
