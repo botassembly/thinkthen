@@ -20,10 +20,31 @@ class PublicSurface(unittest.TestCase):
         mutations = {
             'c': [('include/thinkthen.h', 'thinkthen_session_new_typed_with_surface(', 'missing_dispatch(', 'missing function: decide'),
                   ('include/thinkthen.h', '} thinkthen_request_item_v1;', '} missing_item_v1;', 'missing helper: item')],
-            'ruby': [('lib/thinkthen/session.rb', 'define_singleton_method("question_#{kind}")', 'define_singleton_method("absent_#{kind}")', 'missing helper: question_file'),
-                     ('lib/thinkthen/session.rb', 'private_constant :Carrier', '# visible Carrier', 'unlisted public type/export: .Carrier'),
-                     ('lib/thinkthen/session.rb', 'private_constant :Carrier', '# private_constant :Carrier', 'unlisted public type/export: .Carrier'),
-                     ('lib/thinkthen/session.rb', 'private_constant :Carrier', '"private_constant :Carrier"', 'unlisted public type/export: .Carrier')],
+            'ruby': [('lib/thinkthen/session.rb', 'define_singleton_method("question_#{kind}")', 'define_singleton_method("absent_#{kind}")', 'missing helper: question_file')] + [
+                     ('lib/thinkthen/session.rb', 'private_constant :Carrier', literal, 'unlisted public type/export: .Carrier')
+                     for literal in ('# visible Carrier', '# private_constant :Carrier',
+                                     '"private_constant :Carrier"', '%q{private_constant :Carrier}',
+                                     '%Q(private_constant :Carrier)', '%[private_constant :Carrier]',
+                                     '%q<private_constant :Carrier>', '%q|private_constant :Carrier|',
+                                     '%q#private_constant :Carrier#', '%Q!private_constant :Carrier!',
+                                     '%q"private_constant :Carrier"', '%q=private_constant :Carrier=',
+                                     r'%q{nested {text} \} private_constant :Carrier}',
+                                     r'%q|escaped \| private_constant :Carrier|',
+                                     '%w[private_constant :Carrier]', '%W[private_constant :Carrier]',
+                                     '%i[private_constant :Carrier]', '%I[private_constant :Carrier]',
+                                     '%r{private_constant :Carrier}',
+                                     '%x{private_constant :Carrier}', '%s{private_constant :Carrier}',
+                                     '`private_constant :Carrier`', '/private_constant :Carrier/',
+                                     'literal = /private_constant :Carrier/',
+                                     r'/[\/] private_constant :Carrier/',
+                                     '<<TEXT\nprivate_constant :Carrier\nTEXT',
+                                     '<<-TEXT\nprivate_constant :Carrier\n  TEXT',
+                                     '<<~\'TEXT\'\nprivate_constant :Carrier\n  TEXT',
+                                     '<<"TEXT"\nprivate_constant :Carrier\nTEXT',
+                                     '<<`TEXT`\nprivate_constant :Carrier\nTEXT',
+                                     '<<\'END-HERE\'\nprivate_constant :Carrier\nEND-HERE',
+                                     '[<<ONE, <<TWO]\nfirst literal\nONE\nprivate_constant :Carrier\nTWO',
+                                     '\n=begin\nprivate_constant :Carrier\n=end')],
             'typescript': [('native.d.ts', 'readonly context?: R.JsonValue;', 'readonly extraField?: R.JsonValue;', 'unlisted public field: ItemFields.extraField')],
             'zig': [('src/authored.zig', 'pub fn plan(', 'pub fn missingPlan(', 'missing helper: plan'),
                     ('src/thinkthen.zig', 'pub fn usagePersistence(', 'pub fn absentUsage(', 'missing helper: usage_persistence'),
@@ -56,12 +77,15 @@ class PublicSurface(unittest.TestCase):
                     return json.loads(run.stdout)['libraries'][library]
                 self.assertEqual(invoke(), [])
                 for filename, before, after, diagnostic in cases:
-                    with self.subTest(filename=filename, diagnostic=diagnostic):
+                    with self.subTest(filename=filename, after=after, diagnostic=diagnostic):
                         path = root / 'libraries' / library / filename
                         original = path.read_text()
                         self.assertIn(before, original)
                         path.write_text(original.replace(before, after, 1))
                         self.assertIn(diagnostic, invoke())
+                        if library == 'ruby' and before == 'private_constant :Carrier':
+                            path.write_text(original.replace(before, after + '\n    ' + before, 1))
+                            self.assertEqual(invoke(), [])
                         path.write_text(original)
 
     def test_dart_mixins_and_generated_schema_still_detect_omissions(self):

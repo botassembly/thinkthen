@@ -58,10 +58,56 @@ def python(source):
     return result
 
 
+QUOTED = r'"(?:\\.|[^"\\])*"|\'(?:\\.|[^\'\\])*\''
+
+
 def masked(source, comments=r'//[^\n]*|/\*[\s\S]*?\*/'):
     # Preserve positions and newlines for scope matching, but never match words in comments/strings.
-    pattern = comments + r'|"(?:\\.|[^"\\])*"|\'(?:\\.|[^\'\\])*\''
-    return re.sub(pattern, lambda m: ''.join('\n' if c == '\n' else ' ' for c in m[0]), source)
+    return re.sub(comments + '|' + QUOTED,
+                  lambda m: ''.join('\n' if c == '\n' else ' ' for c in m[0]), source)
+
+
+def ruby_masked(source):
+    """Mask Ruby literal bodies without interpreting or executing their contents."""
+    tokens = re.compile(r'(?m:(?:^|(?<=[=(,:;!~\n]))[ \t]*/'
+                        r'(?:\\.|\[(?:\\.|[^\]\\])*\]|[^/\\])+/[imoxnesu]*)|'
+                        r'#[^\n]*|' + QUOTED + r'|`(?:\\.|[^`\\])*`'
+                        r'|(?P<percent>%(?!=)[qQwWiIrxs]?(?P<delimiter>[^\w\s]))'
+                        r'|<<(?P<indent>[-~]?)(?:(?P<quote>[\'"`])(?P<quoted>[^\r\n]+?)(?P=quote)|(?P<bare>[A-Za-z_]\w*))'
+                        r'|(?P<newline>\n)|(?m:^=begin\b[\s\S]*?^=end\b[^\n]*)')
+    output, pending, pos = list(source), [], 0
+    def erase(start, end):
+        output[start:end] = ['\n' if char == '\n' else ' ' for char in source[start:end]]
+    while match := tokens.search(source, pos):
+        pos = match.end()
+        if match['newline']:
+            for marker, indented in pending:
+                closing = re.search(r'(?m)^' + (r'[ \t]*' if indented else '')
+                                    + re.escape(marker) + r'\r?$', source[pos:])
+                end = pos + closing.end() if closing else len(source)
+                erase(pos, end)
+                pos = end + (end < len(source) and source[end] == '\n')
+            pending.clear()
+        elif match['percent']:
+            opening = match['delimiter']
+            closing = {'(': ')', '[': ']', '{': '}', '<': '>'}.get(opening, opening)
+            depth = 1
+            while pos < len(source) and depth:
+                char = source[pos]
+                if char == '\\':
+                    pos += 2
+                    continue
+                if char == closing:
+                    depth -= 1
+                elif opening != closing and char == opening:
+                    depth += 1
+                pos += 1
+            erase(match.start(), min(pos, len(source)))
+        else:
+            if match['quoted'] or match['bare']:
+                pending.append((match['quoted'] or match['bare'], bool(match['indent'])))
+            erase(match.start(), pos)
+    return ''.join(output)
 
 
 def normalized_annotation(source):
@@ -440,7 +486,8 @@ def other(source, language):
         scopes = []
         private = set()
         constants = {}
-        for line in source.splitlines():
+        text = ruby_masked(source)
+        for raw, line in zip(source.splitlines(), text.splitlines()):
             indent = len(line) - len(line.lstrip())
             if line.strip() and not line.lstrip().startswith('#'):
                 scopes = [s for s in scopes if s[0] < indent]
@@ -455,14 +502,14 @@ def other(source, language):
                 private.add(container)
             elif line.strip() == 'public':
                 private.discard(container)
-            match = re.match(r'\s*(\w+)\s*=\s*%w\[([^]]*)\]', line)
+            match = re.match(r'\s*(\w+)\s*=\s*%w\[([^]]*)\]', raw) if re.match(r'\s*\w+\s*=', line) else None
             if match:
                 constants[(container, match[1])] = match[2].split()
             loop = re.match(r'\s*(\w+)\.each\s+do\s+\|(\w+)\|', line)
-            literal_loop = re.match(r'\s*%w\[([^]]*)\]\.each\s+do\s+\|(\w+)\|', line)
+            literal_loop = re.match(r'\s*%w\[([^]]*)\]\.each\s+do\s+\|(\w+)\|', raw) if re.match(r'\s*\.each\s+do\b', line) else None
             if literal_loop:
                 singleton_loop = (container, literal_loop[2], literal_loop[1].split())
-            singleton = re.match(r'\s*define_singleton_method\("(\w+)#\{(\w+)\}"\)', line)
+            singleton = re.match(r'\s*define_singleton_method\("(\w+)#\{(\w+)\}"\)', raw) if re.match(r'\s*define_singleton_method\(', line) else None
             if singleton and 'singleton_loop' in locals() and singleton_loop[:2] == (container, singleton[2]):
                 result.update(Declaration(container, singleton[1] + name, 'call') for name in singleton_loop[2])
             if loop:
@@ -482,10 +529,10 @@ def other(source, language):
                     result.add(Declaration(container, name, 'field'))
             for name in re.findall(r':(\w+)', line) if re.match(r'\s*private_class_method\b', line) else ():
                 result.discard(Declaration(container, name, 'call'))
-            match = re.match(r'\s*define_method\([\'\"](\w+)[\'\"]\)', line)
+            match = re.match(r'\s*define_method\([\'\"](\w+)[\'\"]\)', raw) if re.match(r'\s*define_method\(', line) else None
             if match:
                 result.add(Declaration(container, match[1], 'field'))
-        hidden_types = set(re.findall(r'\bprivate_constant\s+:(\w+)', masked(source, r'#[^\n]*')))
+        hidden_types = set(re.findall(r'\bprivate_constant\s+:(\w+)', text))
         result = {d for d in result if d.owner.split('.')[0] not in hidden_types
                   and not (d.kind == 'type' and d.name in hidden_types)}
     elif language == 'ada':
