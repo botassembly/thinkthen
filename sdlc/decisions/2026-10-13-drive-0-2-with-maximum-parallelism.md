@@ -40,6 +40,7 @@ Language lanes do not wait for G1. A language lane starts with the items that do
 
 - Developers and reviewers are cheap; builds are the limit. Run as many developer lanes as are ready.
 - On the Beelink, at most four heavy builds run at once. The one heavy-build lock that every `check.sh` uses holds four shared permits, not one exclusive permit, and the existing load cap still applies. G1 and G2 take the next free permit before other lanes. A developer edits and reasons while its build waits.
+- A checkpoint or candidate routine run takes all four permits, so no other heavy build writes to disk while its timed tests run. Lanes keep editing and reviewing meanwhile. The checkpoint records `/proc/pressure/io` before and after. A timeout during high disk pressure reruns once under the same exclusive hold before anyone treats it as a failure.
 - Each lane builds into its own `CARGO_TARGET_DIR=/tmp/thinkthen-target-<lane>` and deletes it when it lands.
 - When machine load stays above the core count, start no new heavy build until it falls.
 - The Swift and Objective-C lanes, and any lane that needs Windows or macOS proof, dispatch the nonpublishing GitHub workflows on their own lane branch. Use the M5 only for light, one-time checks.
