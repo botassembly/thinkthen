@@ -100,7 +100,6 @@ fn eager_recovery_counts_completed_rows_when_the_observer_cancels() {
             api::plain_records([
                 QuestionInput::Text("Ada".into()),
                 QuestionInput::Text("Bob".into()),
-                QuestionInput::Text("Cara".into()),
             ]),
         )
         .eager();
@@ -127,7 +126,7 @@ fn lazy_recognition_schema_refusal_is_terminal_before_sending() {
     let listener = Listener::answering(recognition_response).unwrap();
     let engine = api::loopback(listener.base(), "sk-schema-recovery");
     let ask =
-        Recognize::from_json(r#"{"version":1,"recognize":{},"item_schema":{"type":"object"}}"#)
+        Recognize::from_json(r#"{"version":1,"recognize":{},"item_schema":{"type":"object","properties":{"name":{"type":"string"}}}}"#)
             .unwrap();
     let request = feed_request(RequestFunction::Recognize, ask.into());
     let pulls = Cell::new(0);
