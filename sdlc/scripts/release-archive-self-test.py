@@ -308,7 +308,7 @@ def main():
         (native / "libthinkthen_c.so").write_bytes(b"fixture shared")
         # release-pack localizes the static library, so the fixture is a real one-function archive.
         (base / "fixture.c").write_text(
-            'const char *thinkthen_fixture(void) { return "/build/home/.rustup/library/std/src/lib.rs"; }\n')
+            'const char *thinkthen_fixture(void) { return "/build/host/.rustup/library/std/src/lib.rs"; }\n')
         subprocess.run(["cc", "-c", "-o", str(base / "fixture.o"), str(base / "fixture.c")], check=True)
         subprocess.run(["ar", "rcs", str(native / "libthinkthen_c.a"), str(base / "fixture.o")], check=True)
         cpp_guard = str(REPO / "libraries/cpp/fixtures/guard.py")
