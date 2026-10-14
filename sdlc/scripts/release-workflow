@@ -759,9 +759,9 @@ public-examples)
 		python3 sdlc/scripts/registry-readmes.py examples "$3" \
 			--family command --family crate --family python --family typescript \
 			--family ruby --family go --family cpp --family c --family csharp \
-			--family jvm --family swift --family zig --family php --family dart \
+			--family jvm --family swift --family zig --family php --family dart --family flutter \
 			--family ada --family cobol --family r --family sqlite \
-			--family postgresql --family duckdb --family packagist
+			--family duckdb --family packagist --family postgresql
 		;;
 	*-apple-darwin)
 		python3 sdlc/scripts/registry-readmes.py examples "$3" --family objective-c

@@ -330,6 +330,8 @@ def unpack_example_package(family, packages, destination, selected=None, text_fa
             library = destination / 'lib' / filename
             if library.is_file() and not (library.parent / alias).exists():
                 (library.parent / alias).symlink_to(library.name)
+    if family == 'flutter':
+        return destination / 'flutter'
     if family == 'r':
         return destination / 'thinkthen'
     if family == 'crate':
@@ -538,9 +540,10 @@ def run_example(family, packages, work, root=REPO, selected=None, sample_index=0
         run([dotnet, 'restore', 'example.csproj', '--configfile', str(work / 'NuGet.Config'), '-p:NuGetAudit=false'], True)
         run([dotnet, 'build', 'example.csproj', '--no-restore', '-o', str(work / 'bin')], True)
         output = run([dotnet, str(work / 'bin/example.dll')])
-    elif family == 'dart':
+    elif family in ('dart', 'flutter'):
+        core = unpack_example_package('dart', packages, work / 'dart', text_failures=text_failures) if family == 'flutter' else package
         native = unpack_example_package('c', packages, work / 'native', text_failures=text_failures)
-        manifest = json.loads((package / 'native-assets.json').read_text())
+        manifest = json.loads((core / 'native-assets.json').read_text())
         target = {'x86_64': 'x86_64', 'arm64': 'aarch64'}.get(os.uname().machine, os.uname().machine) + '-unknown-linux-gnu'
         assets = [asset for asset in manifest['assets'].values() if asset['target'] == target]
         if len(assets) != 1:
@@ -554,10 +557,14 @@ def run_example(family, packages, work, root=REPO, selected=None, sample_index=0
         assets_cache = work / 'assets'; assets_cache.mkdir()
         (assets_cache / asset['sha256']).mkdir()
         shutil.copyfile(binary, assets_cache / asset['sha256'] / asset['file'])
-        (work / 'pubspec.yaml').write_text('name: registry_example\nenvironment:\n  sdk: ">=3.10.0 <4.0.0"\ndependencies:\n  thinkthen_dart:\n    path: ' + json.dumps(str(package)) + '\nhooks:\n  user_defines:\n    thinkthen_dart:\n      offline: true\n      asset_cache: ' + json.dumps(str(assets_cache) + '/') + '\n')
+        dependency = 'thinkthen_flutter' if family == 'flutter' else 'thinkthen_dart'
+        override = '\ndependency_overrides:\n  thinkthen_dart:\n    path: ' + json.dumps(str(core)) if family == 'flutter' else ''
+        (work / 'pubspec.yaml').write_text('name: registry_example\nenvironment:\n  sdk: ">=3.10.0 <4.0.0"\ndependencies:\n  ' + dependency + ':\n    path: ' + json.dumps(str(package)) + override + '\nhooks:\n  user_defines:\n    thinkthen_dart:\n      offline: true\n      asset_cache: ' + json.dumps(str(assets_cache) + '/') + '\n')
         env['PUB_CACHE'] = os.environ.get('PUB_CACHE', str(Path.home() / '.pub-cache'))
         dart = os.environ.get('TT_DART', 'dart')
-        run([dart, 'pub', 'get', '--offline'], True)
+        env['FLUTTER_SUPPRESS_ANALYTICS'] = 'true'
+        pub = os.environ.get('TT_FLUTTER', 'flutter') if family == 'flutter' else dart
+        run([pub, 'pub', 'get', '--offline'], True)
         run([dart, 'build', 'cli', '-t', str(sample), '-o', str(work / 'dart-build')], True)
         output = run([str(work / 'dart-build/bundle/bin/sample')])
     elif family == 'r':
@@ -604,32 +611,15 @@ def run_example(family, packages, work, root=REPO, selected=None, sample_index=0
         raise Refusal('example-output-mismatch: ' + family)
 
 
-def published_families(root=REPO):
-    workflow = (root / '.github/workflows/release.yml').read_text()
-    inventory = (root / 'sdlc/scripts/package-inventory.py').read_text()
-    declarations = []
-    for name in ('release-pack', 'release-smoke', 'release-container'):
-        text = (root / 'sdlc/scripts' / name).read_text()
-        declarations += re.findall(r'(?:for family in|set --) ([\w -]+)(?:;|$)', text, re.M)
-        declarations += re.findall(r'release-pack[^\n]+', text) if name == 'release-container' else []
-    declarations += re.findall(r'release-pack[^\n]+', workflow)
-    declared = set(re.findall(r'[a-z][a-z-]*', ' '.join(declarations)))
-    declared.update(re.findall(r"choices=\['npm', '([^']+)', '([^']+)'\]", inventory)[0])
-    if 'sdlc/scripts/package' in workflow:
-        declared.add('crate')
-    if (root / 'composer.json').is_file():
-        declared.add('packagist')
-    return tuple(family for family in PUBLIC_FAMILIES if family in declared)
-
-
 def check_examples(packages, root=REPO, families=None):
     failures = []
     with tempfile.TemporaryDirectory(prefix='thinkthen-registry-examples-') as folder:
         scratch = Path(folder)
         (scratch / 'OWNER').write_text('ThinkThen public package README replay\n')
-        roster = published_families(root)
+        # Source-wrapper pages ship even when their registry publication is disabled.
+        roster = PUBLIC_FAMILIES
         if families is not None and not set(families) <= set(roster):
-            raise Refusal('unpublished-example-family')
+            raise Refusal('unknown-public-example-family')
         for family in families if families is not None else roster:
             selected = [None]
             if family == 'duckdb':
