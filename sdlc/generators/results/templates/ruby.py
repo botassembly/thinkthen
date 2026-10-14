@@ -42,3 +42,8 @@ def rust(definitions):
             lines.append(json.dumps(prefix + json.dumps(source, separators=(',', ':'))) + ',')
     lines += [json.dumps('}'), ');']
     return '\n'.join(lines[:2] + ['    ' + line for line in lines[2:-1]] + lines[-1:]) + '\n'
+
+
+def rbs(definitions):
+    from templates import ruby_rbs
+    return ruby_rbs.render(definitions, name)

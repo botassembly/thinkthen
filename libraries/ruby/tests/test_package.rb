@@ -16,6 +16,14 @@ class TestPackage < Minitest::Test
     "Requires Ruby >= 3.4, < 4 on x86_64-linux, aarch64-linux, x86_64-darwin or arm64-darwin " \
     "(macOS 15.0 or later). This fallback cannot run ThinkThen."
 
+  def fallback_files
+    prior = ENV["THINKTHEN_RUBY_FALLBACK"]
+    ENV["THINKTHEN_RUBY_FALLBACK"] = "1"
+    Gem::Specification.load("#{ROOT}/thinkthen.gemspec").files.sort
+  ensure
+    ENV["THINKTHEN_RUBY_FALLBACK"] = prior
+  end
+
   def child(root, code, *args)
     Open3.capture3(Children.env(keep: %w[LD_LIBRARY_PATH DYLD_LIBRARY_PATH], home: root, GEM_HOME: "#{root}/gems",
                               GEM_PATH: "#{root}/gems", LANG: "C.UTF-8"),
@@ -26,7 +34,7 @@ class TestPackage < Minitest::Test
     spec = Gem::Package.new(FALLBACK).spec
     assert_equal VERSION, spec.version.to_s
     assert_equal "ruby", spec.platform.to_s
-    assert_equal ["fallback/lib/thinkthen.rb", "lib/thinkthen/version.rb"], spec.files.sort
+    assert_equal fallback_files, spec.files.sort
     assert_equal ["MIT"], spec.licenses
     %w[2.7 3.3 3.4 4.0].each { |version| assert spec.required_ruby_version.satisfied_by?(Gem::Version.new(version)) }
     assert_equal DIAGNOSTIC.delete_suffix(".") + '; require "thinkthen" raises LoadError.', spec.post_install_message

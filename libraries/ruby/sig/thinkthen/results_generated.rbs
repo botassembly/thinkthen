@@ -1,0 +1,947 @@
+# Generated from the shared Rust result and request graphs; do not edit.
+module ThinkThen
+  module Results
+    class NativeAnnotation < Native::Result
+      def answer_id: () -> (String)
+      def answers: () -> (Hash[String, NativeAnnotationMemberAnswerId | NativeAnnotationMemberFailureId])
+      def file: () -> (String)
+      def first_line: () -> (Integer)
+      def index: () -> (Integer)
+      def input: () -> (untyped)
+      def last_line: () -> (Integer)
+      def meta: () -> (NativeMeta)
+      def position: () -> (NativePosition)
+      def schema: () -> (String)
+      def source: () -> (NativePhysicalSource)
+      def value: () -> (Hash[String, bool | nil | String | Array[String] | Integer | Float | NativeFailed])
+    end
+    class NativeAnnotationMemberAnswerId < Native::Result
+      def answer: () -> (NativeAnswerYesNo | NativeAnswerChoice | NativeAnswerTag | NativeAnswerScore)
+      def answer_id: () -> (String)
+      def observations: () -> (Array[NativeObservationObservationId | NativeObservationFailureId])
+      def question: () -> (NativeQuestionDocumentDecide | NativeQuestionDocumentChoose | NativeQuestionDocumentTag | NativeQuestionDocumentScore)
+      def question_sources: () -> (Array[NativeQuestionSource])
+      def request: () -> (String)
+      def threshold: () -> (Integer | Float | String | nil)
+      def usage: () -> (NativeUsage)
+      def value: () -> (bool | nil | String | Array[String] | Integer | Float)
+    end
+    class NativeAnnotationMemberFailureId < Native::Result
+      def failure: () -> (NativeFailure)
+      def failure_id: () -> (String)
+      def observations: () -> (Array[NativeObservationObservationId | NativeObservationFailureId])
+      def question: () -> (NativeQuestionDocumentDecide | NativeQuestionDocumentChoose | NativeQuestionDocumentTag | NativeQuestionDocumentScore)
+      def question_sources: () -> (Array[NativeQuestionSource])
+      def request: () -> (String)
+      def threshold: () -> (Integer | Float | String | nil)
+      def usage: () -> (NativeUsage)
+    end
+    class NativeAnnotationValueChoice < Native::Result
+      def kind: () -> (String)
+      def value: () -> (String | nil)
+    end
+    class NativeAnnotationValueDecision < Native::Result
+      def kind: () -> (String)
+      def value: () -> (bool | nil)
+    end
+    class NativeAnnotationValueFailed < Native::Result
+      def kind: () -> (String)
+      def value: () -> (NativeFailure)
+    end
+    class NativeAnnotationValueScore < Native::Result
+      def kind: () -> (String)
+      def value: () -> (Integer | Float)
+    end
+    class NativeAnnotationValueTags < Native::Result
+      def kind: () -> (String)
+      def value: () -> (Array[String])
+    end
+    class NativeAnswers < Native::Result
+      def questions: () -> (Array[NativeRelationMemberAnswerId | NativeRelationMemberFailureId])
+    end
+    class NativeAtomicArrayOfString < Native::Result
+      def answer: () -> (NativeAnswerYesNo | NativeAnswerChoice | NativeAnswerTag | NativeAnswerScore)
+      def answer_id: () -> (String)
+      def images: () -> (Array[NativeImage])
+      def index: () -> (Integer)
+      def input: () -> (untyped)
+      def members: () -> (Array[NativeRankMember])
+      def meta: () -> (NativeMeta)
+      def question: () -> (NativeQuestionDocumentDecide | NativeQuestionDocumentChoose | NativeQuestionDocumentTag | NativeQuestionDocumentScore)
+      def question_name: () -> (String)
+      def schema: () -> (String)
+      def source: () -> (NativePhysicalSource)
+      def threshold: () -> (Integer | Float | String | nil)
+      def value: () -> (Array[String])
+    end
+    class NativeAtomicDecideValue < Native::Result
+      def answer: () -> (NativeAnswerYesNo | NativeAnswerChoice | NativeAnswerTag | NativeAnswerScore)
+      def answer_id: () -> (String)
+      def images: () -> (Array[NativeImage])
+      def index: () -> (Integer)
+      def input: () -> (untyped)
+      def members: () -> (Array[NativeRankMember])
+      def meta: () -> (NativeMeta)
+      def question: () -> (NativeQuestionDocumentDecide | NativeQuestionDocumentChoose | NativeQuestionDocumentTag | NativeQuestionDocumentScore)
+      def question_name: () -> (String)
+      def schema: () -> (String)
+      def source: () -> (NativePhysicalSource)
+      def threshold: () -> (Integer | Float | String | nil)
+      def value: () -> (bool | request_authored_criterion)
+    end
+    class NativeAtomicNonZeroUsize < Native::Result
+      def answer: () -> (NativeAnswerYesNo | NativeAnswerChoice | NativeAnswerTag | NativeAnswerScore)
+      def answer_id: () -> (String)
+      def images: () -> (Array[NativeImage])
+      def index: () -> (Integer)
+      def input: () -> (untyped)
+      def members: () -> (Array[NativeRankMember])
+      def meta: () -> (NativeMeta)
+      def question: () -> (NativeQuestionDocumentDecide | NativeQuestionDocumentChoose | NativeQuestionDocumentTag | NativeQuestionDocumentScore)
+      def question_name: () -> (String)
+      def schema: () -> (String)
+      def source: () -> (NativePhysicalSource)
+      def threshold: () -> (Integer | Float | String | nil)
+      def value: () -> (Integer)
+    end
+    class NativeAtomicNullableString < Native::Result
+      def answer: () -> (NativeAnswerYesNo | NativeAnswerChoice | NativeAnswerTag | NativeAnswerScore)
+      def answer_id: () -> (String)
+      def images: () -> (Array[NativeImage])
+      def index: () -> (Integer)
+      def input: () -> (untyped)
+      def members: () -> (Array[NativeRankMember])
+      def meta: () -> (NativeMeta)
+      def question: () -> (NativeQuestionDocumentDecide | NativeQuestionDocumentChoose | NativeQuestionDocumentTag | NativeQuestionDocumentScore)
+      def question_name: () -> (String)
+      def schema: () -> (String)
+      def source: () -> (NativePhysicalSource)
+      def threshold: () -> (Integer | Float | String | nil)
+      def value: () -> (String | nil)
+    end
+    class NativeAtomicBoolean < Native::Result
+      def answer: () -> (NativeAnswerYesNo | NativeAnswerChoice | NativeAnswerTag | NativeAnswerScore)
+      def answer_id: () -> (String)
+      def images: () -> (Array[NativeImage])
+      def index: () -> (Integer)
+      def input: () -> (untyped)
+      def members: () -> (Array[NativeRankMember])
+      def meta: () -> (NativeMeta)
+      def question: () -> (NativeQuestionDocumentDecide | NativeQuestionDocumentChoose | NativeQuestionDocumentTag | NativeQuestionDocumentScore)
+      def question_name: () -> (String)
+      def schema: () -> (String)
+      def source: () -> (NativePhysicalSource)
+      def threshold: () -> (Integer | Float | String | nil)
+      def value: () -> (bool)
+    end
+    class NativeAtomicDouble < Native::Result
+      def answer: () -> (NativeAnswerYesNo | NativeAnswerChoice | NativeAnswerTag | NativeAnswerScore)
+      def answer_id: () -> (String)
+      def images: () -> (Array[NativeImage])
+      def index: () -> (Integer)
+      def input: () -> (untyped)
+      def members: () -> (Array[NativeRankMember])
+      def meta: () -> (NativeMeta)
+      def question: () -> (NativeQuestionDocumentDecide | NativeQuestionDocumentChoose | NativeQuestionDocumentTag | NativeQuestionDocumentScore)
+      def question_name: () -> (String)
+      def schema: () -> (String)
+      def source: () -> (NativePhysicalSource)
+      def threshold: () -> (Integer | Float | String | nil)
+      def value: () -> (Integer | Float)
+    end
+    class NativeAttempt < Native::Result
+      def ordinal: () -> (Integer)
+      def outcome: () -> (String)
+      def request_id: () -> (String)
+      def request_sha256: () -> (String)
+      def sdk_request_id: () -> (String)
+      def server_ms: () -> (Integer)
+      def status: () -> (Integer)
+      def wall_ms: () -> (Integer)
+    end
+    class NativeBoundaryOdds < Native::Result
+      def pieces: () -> (Array[NativePieceOdds])
+      def proposals: () -> (Array[NativeBoundaryProposal])
+    end
+    class NativeBoundaryProposal < Native::Result
+      def end: () -> (Integer)
+      def length: () -> (Integer)
+      def probability: () -> (Integer | Float)
+      def start: () -> (Integer)
+      def text: () -> (String)
+    end
+    class NativeCallError < Native::Result
+      def error: () -> (NativeError)
+      def facts: () -> (NativeFacts)
+    end
+    class NativeEntityDocument < Native::Result
+      def kind: () -> (String)
+      def name: () -> (String)
+    end
+    class NativeError < Native::Result
+      def estimated_input_denial: () -> (NativeEstimatedInputDenialInitialRequest | NativeEstimatedInputDenialAdditionalRequest | NativeEstimatedInputDenialRetry)
+      def kind: () -> (String)
+      def message: () -> (String)
+      def retryable: () -> (bool)
+      def send_budget_denial: () -> (NativeSendBudgetDenialBeforeFirstSend | NativeSendBudgetDenialBeforeAdditionalSend | NativeSendBudgetDenialBeforeRetry)
+      def stopped: () -> (NativeStopped)
+    end
+    class NativeEstimatedInputDenialAdditionalRequest < Native::Result
+      def kind: () -> (String)
+      def limit: () -> (Integer)
+    end
+    class NativeEstimatedInputDenialInitialRequest < Native::Result
+      def kind: () -> (String)
+      def limit: () -> (Integer)
+    end
+    class NativeEstimatedInputDenialRetry < Native::Result
+      def kind: () -> (String)
+      def last_status: () -> (Integer)
+      def limit: () -> (Integer)
+    end
+    class NativeFacts < Native::Result
+      def attempts: () -> (Array[NativeAttempt])
+      def cache_answers: () -> (Integer)
+      def call_id: () -> (String)
+      def estimated_cost_usd: () -> (String)
+      def held_model_mismatch: () -> (bool)
+      def input_tokens: () -> (Integer)
+      def largest_request_bytes: () -> (Integer)
+      def largest_request_estimated_input_tokens: () -> (Integer | nil)
+      def model: () -> (String)
+      def output_tokens: () -> (Integer)
+      def records: () -> (Integer)
+      def requests_sent: () -> (Integer)
+      def seconds: () -> (Integer | Float)
+      def token_estimate_method: () -> (String)
+      def usage_persistence: () -> (NativePersistenceObservation)
+    end
+    class NativeFind < Native::Result
+      def answer: () -> (NativeFindAnswer)
+      def answer_id: () -> (String)
+      def candidates: () -> (Array[NativeFindCandidate])
+      def file: () -> (String)
+      def first_line: () -> (Integer)
+      def index: () -> (Integer | nil)
+      def last_line: () -> (Integer)
+      def meta: () -> (NativeMeta)
+      def position: () -> (NativePosition)
+      def question: () -> (NativeFindQuestionDocument)
+      def schema: () -> (String)
+      def threshold: () -> (nil)
+      def value: () -> (untyped)
+    end
+    class NativeFindCandidate < Native::Result
+      def index: () -> (Integer | nil)
+      def input: () -> (untyped)
+      def probability: () -> (Integer | Float)
+      def source: () -> (NativePhysicalSource)
+    end
+    class NativeImage < Native::Result
+      def base64: () -> (String)
+      def height: () -> (Integer)
+      def media: () -> (String)
+      def width: () -> (Integer)
+    end
+    class NativeInputDeclarationObjectRoot < Native::Result
+      def properties: () -> (Hash[String, NativeInputPropertyTypeString | NativeInputPropertyTypeNumber | NativeInputPropertyTypeBoolean | NativeInputPropertyTypeArray])
+      def required: () -> (Array[String])
+      def type: () -> (String)
+    end
+    class NativeInputDeclarationStringRoot < Native::Result
+      def type: () -> (String)
+    end
+    class NativeInputPropertyTypeArray < Native::Result
+      def items: () -> (NativeStringRoot)
+      def type: () -> (String)
+    end
+    class NativeInputPropertyTypeBoolean < Native::Result
+      def type: () -> (String)
+    end
+    class NativeInputPropertyTypeNumber < Native::Result
+      def type: () -> (String)
+    end
+    class NativeInputPropertyTypeString < Native::Result
+      def type: () -> (String)
+    end
+    class NativeLabel < Native::Result
+      def description: () -> (request_authored_description)
+      def name: () -> (String)
+    end
+    class NativeMeta < Native::Result
+      def answered_by: () -> (String)
+      def attempts: () -> (Array[NativeAttempt])
+      def batch_setting: () -> (Integer | String)
+      def batch_warning: () -> (NativeBatchWarning)
+      def cached: () -> (bool)
+      def context_sha256: () -> (String)
+      def failed_questions: () -> (Integer)
+      def model: () -> (String)
+      def observations: () -> (Array[NativeObservationObservationId | NativeObservationFailureId])
+      def origin: () -> (String | nil)
+      def profile_warning: () -> (NativeProfileWarning)
+      def question_sha256: () -> (String)
+      def question_sources: () -> (Array[NativeQuestionSource])
+      def questions_sha256: () -> (String)
+      def requests: () -> (Array[String])
+      def requests_sent: () -> (Integer)
+      def tool: () -> (String)
+      def url: () -> (String)
+      def usage: () -> (NativeUsage)
+    end
+    class NativeObjectRoot < Native::Result
+      def properties: () -> (Hash[String, NativeInputPropertyTypeString | NativeInputPropertyTypeNumber | NativeInputPropertyTypeBoolean | NativeInputPropertyTypeArray])
+      def required: () -> (Array[String])
+      def type: () -> (String)
+    end
+    class NativeObservationFailureId < Native::Result
+      def failure_id: () -> (String)
+    end
+    class NativeObservationObservationId < Native::Result
+      def observation_id: () -> (String)
+    end
+    class NativePersistenceObservation < Native::Result
+      def advice: () -> (String)
+      def observed_at: () -> (String)
+      def state: () -> (String)
+    end
+    class NativePhysicalSource < Native::Result
+      def file: () -> (String)
+      def first_line: () -> (Integer)
+      def last_line: () -> (Integer)
+    end
+    class NativePosition < Native::Result
+      def file: () -> (String | nil)
+      def first: () -> (Integer)
+      def images: () -> (Array[String])
+      def last: () -> (Integer)
+    end
+    class NativeQuestionSource < Native::Result
+      def answered_by: () -> (String)
+      def batch_size: () -> (Integer)
+      def origin: () -> (String)
+    end
+    class NativeRankMember < Native::Result
+      def name: () -> (String)
+      def result: () -> (NativeRankMemberResult)
+    end
+    class NativeRankMemberResult < Native::Result
+      def answer: () -> (NativeAnswerYesNo | NativeAnswerChoice | NativeAnswerTag | NativeAnswerScore)
+      def answer_id: () -> (String)
+      def images: () -> (Array[NativeImage])
+      def meta: () -> (NativeMeta)
+      def question: () -> (NativeQuestionDocumentDecide | NativeQuestionDocumentChoose | NativeQuestionDocumentTag | NativeQuestionDocumentScore)
+      def schema: () -> (String)
+      def source: () -> (NativePhysicalSource)
+      def threshold: () -> (nil)
+      def value: () -> (Integer)
+    end
+    class NativeRecognition < Native::Result
+      def answer: () -> (NativeRecognitionOddsRecognizeAnswer | NativeRecognitionOddsBoundaryOdds)
+      def answer_id: () -> (String)
+      def file: () -> (String)
+      def first_line: () -> (Integer)
+      def index: () -> (Integer)
+      def input: () -> (untyped)
+      def last_line: () -> (Integer)
+      def meta: () -> (NativeMeta)
+      def position: () -> (NativePosition)
+      def question: () -> (NativeRecognizeQuestionDocument)
+      def schema: () -> (String)
+      def source: () -> (NativePhysicalSource)
+      def value: () -> (NativeRecognizeEntities | NativeRecognizeModeProposals)
+    end
+    class NativeRecognitionEdgeDocument < Native::Result
+      def either: () -> (bool)
+      def probability: () -> (Integer | Float)
+      def relation: () -> (String)
+      def source: () -> (NativeEntity)
+      def target: () -> (NativeEntity)
+    end
+    class NativeRecognitionOddsBoundaryOdds < Native::Result
+      def pieces: () -> (Array[NativePieceOdds])
+      def proposals: () -> (Array[NativeBoundaryProposal])
+    end
+    class NativeRecognitionOddsRecognizeAnswer < Native::Result
+      def names: () -> (Array[NativeNameOdds])
+      def pairs: () -> (Array[NativePairOdds])
+      def pieces: () -> (Array[NativePieceOdds])
+      def proposals: () -> (Array[NativeRecognitionProposal])
+    end
+    class NativeRecognitionProposal < Native::Result
+      def end: () -> (Integer)
+      def kept: () -> (bool)
+      def kind: () -> (String)
+      def selected: () -> (NativePlace)
+      def span_probability: () -> (Integer | Float)
+      def start: () -> (Integer)
+      def strength: () -> (Integer | Float)
+    end
+    class NativeRecognitionStageContext < Native::Result
+      def boundary: () -> (String)
+      def kind_edge: () -> (String)
+      def relation: () -> (String)
+    end
+    class NativeRelation < Native::Result
+      def answer: () -> (NativeAnswers)
+      def answer_id: () -> (String)
+      def file: () -> (String)
+      def first_line: () -> (Integer)
+      def index: () -> (Integer)
+      def input: () -> (untyped)
+      def input_sources: () -> (Array[NativeSessionInputSource])
+      def last_line: () -> (Integer)
+      def meta: () -> (NativeMeta)
+      def position: () -> (NativePosition)
+      def question: () -> (NativeRelateQuestionDocument)
+      def schema: () -> (String)
+      def value: () -> (Array[NativeRelatedEntityEdge])
+    end
+    class NativeRelationEndpointRelatedEntity < Native::Result
+      def kind: () -> (String)
+      def name: () -> (String)
+    end
+    class NativeRelationEndpointSource < Native::Result
+      def file: () -> (String | nil)
+      def first_line: () -> (Integer)
+      def kind: () -> (String)
+      def last_line: () -> (Integer)
+      def name: () -> (String)
+      def ordinal: () -> (Integer)
+      def record: () -> (untyped)
+    end
+    class NativeRelationMemberAnswerId < Native::Result
+      def direction: () -> (String)
+      def method: () -> (String)
+      def observations: () -> (Array[NativeObservationObservationId | NativeObservationFailureId])
+      def question: () -> (NativeQuestionDocumentDecide | NativeQuestionDocumentChoose | NativeQuestionDocumentTag | NativeQuestionDocumentScore)
+      def question_sources: () -> (Array[NativeQuestionSource])
+      def reads: () -> (String)
+      def relation: () -> (String)
+      def request: () -> (String)
+      def source: () -> (NativeRelatedEntity)
+      def target: () -> (NativeRelatedEntity | nil)
+      def threshold: () -> (Integer | Float | String)
+      def usage: () -> (NativeUsage)
+      def accepted: () -> (bool)
+      def answer: () -> (NativeAnswerYesNo | NativeAnswerChoice | NativeAnswerTag | NativeAnswerScore)
+      def answer_id: () -> (String)
+      def probability: () -> (Integer | Float)
+    end
+    class NativeRelationMemberFailureId < Native::Result
+      def direction: () -> (String)
+      def method: () -> (String)
+      def observations: () -> (Array[NativeObservationObservationId | NativeObservationFailureId])
+      def question: () -> (NativeQuestionDocumentDecide | NativeQuestionDocumentChoose | NativeQuestionDocumentTag | NativeQuestionDocumentScore)
+      def question_sources: () -> (Array[NativeQuestionSource])
+      def reads: () -> (String)
+      def relation: () -> (String)
+      def request: () -> (String)
+      def source: () -> (NativeRelatedEntity)
+      def target: () -> (NativeRelatedEntity | nil)
+      def threshold: () -> (Integer | Float | String)
+      def usage: () -> (NativeUsage)
+      def failure: () -> (NativeFailure)
+      def failure_id: () -> (String)
+    end
+    class NativeSendBudgetDenialBeforeAdditionalSend < Native::Result
+      def kind: () -> (String)
+    end
+    class NativeSendBudgetDenialBeforeFirstSend < Native::Result
+      def kind: () -> (String)
+    end
+    class NativeSendBudgetDenialBeforeRetry < Native::Result
+      def kind: () -> (String)
+      def last_status: () -> (Integer)
+    end
+    class NativeStopped < Native::Result
+      def at: () -> (Integer)
+      def cause: () -> (String)
+      def retryable: () -> (bool)
+      def status: () -> (Integer)
+    end
+    class NativeStringRoot < Native::Result
+      def type: () -> (String)
+    end
+    class NativeUsage < Native::Result
+      def input_tokens: () -> (Integer)
+      def output_tokens: () -> (Integer)
+    end
+    class NativeAnswerChoice < Native::Result
+      def confidence: () -> (Integer | Float)
+      def kind: () -> (String)
+      def pick: () -> (String)
+      def probabilities: () -> (Hash[String, Integer | Float])
+    end
+    class NativeAnswerScore < Native::Result
+      def confidence: () -> (Integer | Float)
+      def kind: () -> (String)
+      def level: () -> (String)
+      def probabilities: () -> (Hash[String, Integer | Float])
+    end
+    class NativeAnswerTag < Native::Result
+      def kind: () -> (String)
+      def probabilities: () -> (Hash[String, Integer | Float])
+    end
+    class NativeAnswerYesNo < Native::Result
+      def kind: () -> (String)
+      def probability: () -> (Integer | Float)
+    end
+    class NativeBatchWarning < Native::Result
+      def running: () -> (Integer | String)
+      def tuned_for: () -> (Integer | String)
+    end
+    class NativeEntity < Native::Result
+      def end: () -> (Integer)
+      def file: () -> (String)
+      def first_line: () -> (Integer)
+      def kind: () -> (String)
+      def last_line: () -> (Integer)
+      def length: () -> (Integer)
+      def start: () -> (Integer)
+      def strength: () -> (Integer | Float)
+      def text: () -> (String)
+    end
+    class NativeEntityEdge < Native::Result
+      def either: () -> (bool)
+      def probability: () -> (Integer | Float)
+      def relation: () -> (String)
+      def source: () -> (NativeEntity)
+      def target: () -> (NativeEntity)
+    end
+    class NativeFailed < Native::Result
+      def failed: () -> (NativeFailure)
+    end
+    class NativeFailure < Native::Result
+      def cause: () -> (String)
+      def kind: () -> (String)
+    end
+    class NativeFindAnswer < Native::Result
+      def confidence: () -> (Integer | Float)
+      def kind: () -> (untyped)
+      def pick: () -> (String)
+      def probabilities: () -> (Hash[String, Integer | Float])
+    end
+    class NativeFindQuestionDocument < Native::Result
+      def batch: () -> (Integer | String)
+      def context_schema: () -> (NativeInputDeclarationStringRoot | NativeInputDeclarationObjectRoot)
+      def item_schema: () -> (NativeInputDeclarationStringRoot | NativeInputDeclarationObjectRoot)
+      def label_details: () -> (Array[NativeLabel])
+      def model: () -> (String)
+      def name: () -> (String)
+      def none: () -> (bool)
+      def on: () -> (Array[String])
+      def profile: () -> (String)
+      def text: () -> (request_authored_question_text)
+      def verb: () -> (untyped)
+      def wording_version: () -> (Integer)
+    end
+    class NativeNameOdds < Native::Result
+      def edges: () -> (Hash[String, Integer | Float] | nil)
+      def end: () -> (Integer)
+      def kinds: () -> (Hash[String, Integer | Float] | nil)
+      def start: () -> (Integer)
+    end
+    class NativePairOdds < Native::Result
+      def probability: () -> (Integer | Float)
+      def relation: () -> (String)
+      def source: () -> (NativePlace)
+      def target: () -> (NativePlace)
+    end
+    class NativePieceOdds < Native::Result
+      def end: () -> (Integer)
+      def start: () -> (Integer)
+      def tags: () -> (Hash[String, Integer | Float])
+    end
+    class NativePlace < Native::Result
+      def end: () -> (Integer)
+      def start: () -> (Integer)
+    end
+    class NativeProfileWarning < Native::Result
+      def running: () -> (String)
+      def tuned_for: () -> (String)
+    end
+    class NativeQuestionDocumentChoose < Native::Result
+      def batch: () -> (Integer | String)
+      def context_schema: () -> (NativeInputDeclarationStringRoot | NativeInputDeclarationObjectRoot)
+      def item_schema: () -> (NativeInputDeclarationStringRoot | NativeInputDeclarationObjectRoot)
+      def label_details: () -> (Array[NativeLabel])
+      def model: () -> (String)
+      def name: () -> (String)
+      def on: () -> (Array[String])
+      def profile: () -> (String)
+      def wording_version: () -> (Integer)
+      def options: () -> (Array[String])
+      def text: () -> (request_authored_question_text)
+      def verb: () -> (String)
+    end
+    class NativeQuestionDocumentDecide < Native::Result
+      def batch: () -> (Integer | String)
+      def context_schema: () -> (NativeInputDeclarationStringRoot | NativeInputDeclarationObjectRoot)
+      def item_schema: () -> (NativeInputDeclarationStringRoot | NativeInputDeclarationObjectRoot)
+      def label_details: () -> (Array[NativeLabel])
+      def model: () -> (String)
+      def name: () -> (String)
+      def on: () -> (Array[String])
+      def profile: () -> (String)
+      def wording_version: () -> (Integer)
+      def false: () -> (request_authored_criterion)
+      def text: () -> (request_authored_question_text)
+      def true: () -> (request_authored_criterion)
+      def verb: () -> (String)
+    end
+    class NativeQuestionDocumentScore < Native::Result
+      def batch: () -> (Integer | String)
+      def context_schema: () -> (NativeInputDeclarationStringRoot | NativeInputDeclarationObjectRoot)
+      def item_schema: () -> (NativeInputDeclarationStringRoot | NativeInputDeclarationObjectRoot)
+      def label_details: () -> (Array[NativeLabel])
+      def model: () -> (String)
+      def name: () -> (String)
+      def on: () -> (Array[String])
+      def profile: () -> (String)
+      def wording_version: () -> (Integer)
+      def levels: () -> (Array[String])
+      def text: () -> (request_authored_question_text)
+      def verb: () -> (String)
+    end
+    class NativeQuestionDocumentTag < Native::Result
+      def batch: () -> (Integer | String)
+      def context_schema: () -> (NativeInputDeclarationStringRoot | NativeInputDeclarationObjectRoot)
+      def item_schema: () -> (NativeInputDeclarationStringRoot | NativeInputDeclarationObjectRoot)
+      def label_details: () -> (Array[NativeLabel])
+      def model: () -> (String)
+      def name: () -> (String)
+      def on: () -> (Array[String])
+      def profile: () -> (String)
+      def wording_version: () -> (Integer)
+      def labels: () -> (Array[String])
+      def text: () -> (request_authored_question_text)
+      def verb: () -> (String)
+    end
+    class NativeRecognizeAnswer < Native::Result
+      def names: () -> (Array[NativeNameOdds])
+      def pairs: () -> (Array[NativePairOdds])
+      def pieces: () -> (Array[NativePieceOdds])
+      def proposals: () -> (Array[NativeRecognitionProposal])
+    end
+    class NativeRecognizeQuestionDocument < Native::Result
+      def batch: () -> (Integer | String)
+      def context_schema: () -> (NativeInputDeclarationStringRoot | NativeInputDeclarationObjectRoot)
+      def entity_definition: () -> (request_authored_question_text)
+      def instructions: () -> (request_authored_question_text)
+      def item_schema: () -> (NativeInputDeclarationStringRoot | NativeInputDeclarationObjectRoot)
+      def kinds: () -> (Hash[String, untyped])
+      def label_details: () -> (Array[NativeLabel])
+      def mode: () -> (String)
+      def model: () -> (String)
+      def name: () -> (String)
+      def on: () -> (Array[String])
+      def profile: () -> (String)
+      def relation_threshold: () -> (Integer | Float | String)
+      def relations: () -> (Array[NativeRelationRule])
+      def snippet_pieces: () -> (Integer)
+      def stage_context: () -> (NativeRecognitionStageContext)
+      def threshold: () -> (Integer | Float | String)
+      def verb: () -> (String)
+      def wording_version: () -> (Integer)
+    end
+    class NativeRecognizeEntities < Native::Result
+      def entities: () -> (Array[NativeEntity])
+      def relations: () -> (Array[NativeEntityEdge])
+    end
+    class NativeRecognizeModeProposals < Native::Result
+      def mode: () -> (String)
+      def proposals: () -> (Array[NativeBoundaryProposal])
+    end
+    class NativeRelateFields < Native::Result
+      def kind: () -> (String)
+      def name: () -> (String)
+    end
+    class NativeRelateQuestionDocument < Native::Result
+      def batch: () -> (Integer | String)
+      def context_schema: () -> (NativeInputDeclarationStringRoot | NativeInputDeclarationObjectRoot)
+      def fields: () -> (NativeRelateFields | nil)
+      def item_schema: () -> (NativeInputDeclarationStringRoot | NativeInputDeclarationObjectRoot)
+      def label_details: () -> (Array[NativeLabel])
+      def model: () -> (String)
+      def name: () -> (String)
+      def on: () -> (Array[String])
+      def profile: () -> (String)
+      def relations: () -> (Array[NativeRelationRule])
+      def threshold: () -> (Integer | Float | String)
+      def verb: () -> (untyped)
+      def wording_version: () -> (Integer)
+    end
+    class NativeRelatedEntity < Native::Result
+      def kind: () -> (String)
+      def name: () -> (String)
+    end
+    class NativeRelatedEntityEdge < Native::Result
+      def either: () -> (bool)
+      def probability: () -> (Integer | Float)
+      def relation: () -> (String)
+      def source: () -> (NativeRelationEndpointRelatedEntity | NativeRelationEndpointSource)
+      def target: () -> (NativeRelationEndpointRelatedEntity | NativeRelationEndpointSource)
+    end
+    class NativeRelationRule < Native::Result
+      def either: () -> (bool)
+      def name: () -> (String)
+      def reads: () -> (String)
+      def single: () -> (bool)
+      def source: () -> (String)
+      def target: () -> (String)
+    end
+    class NativeSessionAnnotation < Native::Result
+      def name: () -> (String)
+      def value: () -> (NativeAnnotationValueDecision | NativeAnnotationValueChoice | NativeAnnotationValueScore | NativeAnnotationValueTags | NativeAnnotationValueFailed)
+    end
+    class NativeSessionInputSource < Native::Result
+      def index: () -> (Integer)
+      def source: () -> (NativePhysicalSource)
+    end
+    class NativeSessionJudgmentChoice < Native::Result
+      def kind: () -> (String)
+      def value: () -> (String | nil)
+    end
+    class NativeSessionJudgmentDecision < Native::Result
+      def kind: () -> (String)
+      def value: () -> (bool | nil)
+    end
+    class NativeSessionJudgmentScore < Native::Result
+      def kind: () -> (String)
+      def value: () -> (Integer | Float)
+    end
+    class NativeSessionJudgmentTags < Native::Result
+      def kind: () -> (String)
+      def value: () -> (Array[String])
+    end
+    class NativeSessionNamedProbability < Native::Result
+      def name: () -> (String)
+      def probability: () -> (Integer | Float)
+    end
+    class NativeSessionObservationQuestion < Native::Result
+      def detail: () -> (NativeSessionQuestionDetail)
+      def index: () -> (Integer)
+      def kind: () -> (String)
+      def member: () -> (String)
+      def position: () -> (Integer)
+      def stage: () -> (String)
+    end
+    class NativeSessionObservationRow < Native::Result
+      def index: () -> (Integer)
+      def kind: () -> (String)
+      def value: () -> (NativeSessionObservedRowJudgment | NativeSessionObservedRowAnnotated | NativeSessionObservedRowRecognized | NativeSessionObservedRowFind | NativeSessionObservedRowRelations)
+    end
+    class NativeSessionObservedRowAnnotated < Native::Result
+      def kind: () -> (String)
+      def value: () -> (Array[NativeSessionAnnotation])
+    end
+    class NativeSessionObservedRowFind < Native::Result
+      def kind: () -> (String)
+      def value: () -> (Integer | nil)
+    end
+    class NativeSessionObservedRowJudgment < Native::Result
+      def kind: () -> (String)
+      def value: () -> (NativeSessionJudgmentDecision | NativeSessionJudgmentChoice | NativeSessionJudgmentScore | NativeSessionJudgmentTags)
+    end
+    class NativeSessionObservedRowRecognized < Native::Result
+      def kind: () -> (String)
+      def value: () -> (NativeSessionRecognition)
+    end
+    class NativeSessionObservedRowRelations < Native::Result
+      def kind: () -> (String)
+      def value: () -> (Array[NativeSessionRelationEdge])
+    end
+    class NativeSessionPacketAnnotateAggregate < Native::Result
+      def function: () -> (String)
+      def kind: () -> (String)
+      def value: () -> (Array[NativeAnnotation])
+    end
+    class NativeSessionPacketAnnotateRow < Native::Result
+      def function: () -> (String)
+      def kind: () -> (String)
+      def value: () -> (NativeAnnotation)
+    end
+    class NativeSessionPacketChooseAggregate < Native::Result
+      def function: () -> (String)
+      def kind: () -> (String)
+      def value: () -> (Array[NativeAtomicNullableString])
+    end
+    class NativeSessionPacketChooseRow < Native::Result
+      def function: () -> (String)
+      def kind: () -> (String)
+      def value: () -> (NativeAtomicNullableString)
+    end
+    class NativeSessionPacketDecideAggregate < Native::Result
+      def function: () -> (String)
+      def kind: () -> (String)
+      def value: () -> (Array[NativeAtomicDecideValue])
+    end
+    class NativeSessionPacketDecideRow < Native::Result
+      def function: () -> (String)
+      def kind: () -> (String)
+      def value: () -> (NativeAtomicDecideValue)
+    end
+    class NativeSessionPacketFilterAggregate < Native::Result
+      def function: () -> (String)
+      def kind: () -> (String)
+      def value: () -> (Array[NativeAtomicBoolean])
+    end
+    class NativeSessionPacketFilterRow < Native::Result
+      def function: () -> (String)
+      def kind: () -> (String)
+      def value: () -> (NativeAtomicBoolean)
+    end
+    class NativeSessionPacketFindAggregate < Native::Result
+      def function: () -> (String)
+      def kind: () -> (String)
+      def value: () -> (NativeFind)
+    end
+    class NativeSessionPacketObservation < Native::Result
+      def function: () -> (String)
+      def kind: () -> (String)
+      def value: () -> (NativeSessionObservationQuestion | NativeSessionObservationRow)
+    end
+    class NativeSessionPacketRankAggregate < Native::Result
+      def function: () -> (String)
+      def kind: () -> (String)
+      def value: () -> (Array[NativeAtomicNonZeroUsize])
+    end
+    class NativeSessionPacketRecognizeAggregate < Native::Result
+      def function: () -> (String)
+      def kind: () -> (String)
+      def value: () -> (Array[NativeRecognition])
+    end
+    class NativeSessionPacketRelateAggregate < Native::Result
+      def function: () -> (String)
+      def kind: () -> (String)
+      def value: () -> (NativeRelation)
+    end
+    class NativeSessionPacketScoreAggregate < Native::Result
+      def function: () -> (String)
+      def kind: () -> (String)
+      def value: () -> (Array[NativeAtomicDouble])
+    end
+    class NativeSessionPacketScoreRow < Native::Result
+      def function: () -> (String)
+      def kind: () -> (String)
+      def value: () -> (NativeAtomicDouble)
+    end
+    class NativeSessionPacketTagAggregate < Native::Result
+      def function: () -> (String)
+      def kind: () -> (String)
+      def value: () -> (Array[NativeAtomicArrayOfString])
+    end
+    class NativeSessionPacketTagRow < Native::Result
+      def function: () -> (String)
+      def kind: () -> (String)
+      def value: () -> (NativeAtomicArrayOfString)
+    end
+    class NativeSessionPacketTerminal < Native::Result
+      def facts: () -> (NativeFacts)
+      def failure: () -> (NativeCallError)
+      def kind: () -> (String)
+    end
+    class NativeSessionProbabilitiesNamed < Native::Result
+      def kind: () -> (String)
+      def value: () -> (Array[NativeSessionNamedProbability])
+    end
+    class NativeSessionProbabilitiesYesNo < Native::Result
+      def kind: () -> (String)
+      def value: () -> (Integer | Float)
+    end
+    class NativeSessionQuestionDetail < Native::Result
+      def answer_id: () -> (String)
+      def cached: () -> (bool)
+      def confidence: () -> (Integer | Float)
+      def failed_questions: () -> (Integer)
+      def failure: () -> (NativeFailure)
+      def failure_id: () -> (String)
+      def input: () -> (untyped)
+      def input_source: () -> (NativePhysicalSource)
+      def input_sources: () -> (Array[NativeSessionInputSource])
+      def inputs: () -> (Array[untyped])
+      def model: () -> (String)
+      def observations: () -> (Array[NativeObservationObservationId | NativeObservationFailureId])
+      def probabilities: () -> (NativeSessionProbabilitiesYesNo | NativeSessionProbabilitiesNamed)
+      def question: () -> (NativeQuestionDocumentDecide | NativeQuestionDocumentChoose | NativeQuestionDocumentTag | NativeQuestionDocumentScore)
+      def question_sha256: () -> (String)
+      def question_sources: () -> (Array[NativeQuestionSource])
+      def raw_pick: () -> (String)
+      def reported_usage: () -> (NativeUsage)
+      def requests: () -> (Array[String])
+      def requests_sent: () -> (Integer)
+      def threshold: () -> (Integer | Float | String)
+      def url: () -> (String)
+      def usage: () -> (NativeTokenUsage)
+      def value: () -> (bool | nil | String | Array[String] | Integer | Float)
+    end
+    class NativeSessionRecognition < Native::Result
+      def entities: () -> (Array[NativeEntity])
+      def mode: () -> (String)
+      def proposals: () -> (Array[NativeBoundaryProposal])
+      def relations: () -> (Array[NativeRecognitionEdgeDocument])
+    end
+    class NativeSessionRelationEdge < Native::Result
+      def either: () -> (bool)
+      def probability: () -> (Integer | Float)
+      def relation: () -> (String)
+      def source: () -> (NativeEntityDocument)
+      def target: () -> (NativeEntityDocument)
+    end
+    class NativeSourceRelationEndpoint < Native::Result
+      def file: () -> (String | nil)
+      def first_line: () -> (Integer)
+      def kind: () -> (String)
+      def last_line: () -> (Integer)
+      def name: () -> (String)
+      def ordinal: () -> (Integer)
+      def record: () -> (untyped)
+    end
+    class NativeTokenUsage < Native::Result
+      def input_tokens: () -> (Integer)
+      def output_tokens: () -> (Integer)
+    end
+  end
+  class Client
+    REQUEST_VERSION: String
+    def decide: (String | Hash[Symbol | String, untyped] | Client::Question question, untyped input, ?cancel: Cancel?, ?attempts: bool, ?batch: request_request_batch, ?context: String, ?context_field: String, ?deadline_ms: Integer, ?details: bool, ?examples: Array[request_recognition_example], ?examples_field: String, ?field: Array[String], ?files_only: bool, ?max_requests_total: Integer, ?mode: request_recognition_mode, ?model: String, ?none: bool, ?options_field: String, ?relation_threshold: request_request_threshold, ?seed_spans: Array[request_recognition_seed_span], ?seed_spans_field: String, ?snippet_pieces: Integer, ?stage_context: request_recognition_stage_context, ?threshold: request_request_threshold, ?top: Integer) -> Results::Completed
+    def choose: (String | Hash[Symbol | String, untyped] | Client::Question question, untyped input, ?cancel: Cancel?, ?attempts: bool, ?batch: request_request_batch, ?context: String, ?context_field: String, ?deadline_ms: Integer, ?details: bool, ?examples: Array[request_recognition_example], ?examples_field: String, ?field: Array[String], ?files_only: bool, ?max_requests_total: Integer, ?mode: request_recognition_mode, ?model: String, ?none: bool, ?options_field: String, ?relation_threshold: request_request_threshold, ?seed_spans: Array[request_recognition_seed_span], ?seed_spans_field: String, ?snippet_pieces: Integer, ?stage_context: request_recognition_stage_context, ?threshold: request_request_threshold, ?top: Integer) -> Results::Completed
+    def tag: (String | Hash[Symbol | String, untyped] | Client::Question question, untyped input, ?cancel: Cancel?, ?attempts: bool, ?batch: request_request_batch, ?context: String, ?context_field: String, ?deadline_ms: Integer, ?details: bool, ?examples: Array[request_recognition_example], ?examples_field: String, ?field: Array[String], ?files_only: bool, ?max_requests_total: Integer, ?mode: request_recognition_mode, ?model: String, ?none: bool, ?options_field: String, ?relation_threshold: request_request_threshold, ?seed_spans: Array[request_recognition_seed_span], ?seed_spans_field: String, ?snippet_pieces: Integer, ?stage_context: request_recognition_stage_context, ?threshold: request_request_threshold, ?top: Integer) -> Results::Completed
+    def score: (String | Hash[Symbol | String, untyped] | Client::Question question, untyped input, ?cancel: Cancel?, ?attempts: bool, ?batch: request_request_batch, ?context: String, ?context_field: String, ?deadline_ms: Integer, ?details: bool, ?examples: Array[request_recognition_example], ?examples_field: String, ?field: Array[String], ?files_only: bool, ?max_requests_total: Integer, ?mode: request_recognition_mode, ?model: String, ?none: bool, ?options_field: String, ?relation_threshold: request_request_threshold, ?seed_spans: Array[request_recognition_seed_span], ?seed_spans_field: String, ?snippet_pieces: Integer, ?stage_context: request_recognition_stage_context, ?threshold: request_request_threshold, ?top: Integer) -> Results::Completed
+    def filter: (String | Hash[Symbol | String, untyped] | Client::Question question, untyped input, ?cancel: Cancel?, ?attempts: bool, ?batch: request_request_batch, ?context: String, ?context_field: String, ?deadline_ms: Integer, ?details: bool, ?examples: Array[request_recognition_example], ?examples_field: String, ?field: Array[String], ?files_only: bool, ?max_requests_total: Integer, ?mode: request_recognition_mode, ?model: String, ?none: bool, ?options_field: String, ?relation_threshold: request_request_threshold, ?seed_spans: Array[request_recognition_seed_span], ?seed_spans_field: String, ?snippet_pieces: Integer, ?stage_context: request_recognition_stage_context, ?threshold: request_request_threshold, ?top: Integer) -> Results::Completed
+    def rank: (String | Hash[Symbol | String, untyped] | Client::Question question, untyped input, ?cancel: Cancel?, ?attempts: bool, ?batch: request_request_batch, ?context: String, ?context_field: String, ?deadline_ms: Integer, ?details: bool, ?examples: Array[request_recognition_example], ?examples_field: String, ?field: Array[String], ?files_only: bool, ?max_requests_total: Integer, ?mode: request_recognition_mode, ?model: String, ?none: bool, ?options_field: String, ?relation_threshold: request_request_threshold, ?seed_spans: Array[request_recognition_seed_span], ?seed_spans_field: String, ?snippet_pieces: Integer, ?stage_context: request_recognition_stage_context, ?threshold: request_request_threshold, ?top: Integer) -> Results::Completed
+    def find: (String | Hash[Symbol | String, untyped] | Client::Question question, untyped input, ?cancel: Cancel?, ?attempts: bool, ?batch: request_request_batch, ?context: String, ?context_field: String, ?deadline_ms: Integer, ?details: bool, ?examples: Array[request_recognition_example], ?examples_field: String, ?field: Array[String], ?files_only: bool, ?max_requests_total: Integer, ?mode: request_recognition_mode, ?model: String, ?none: bool, ?options_field: String, ?relation_threshold: request_request_threshold, ?seed_spans: Array[request_recognition_seed_span], ?seed_spans_field: String, ?snippet_pieces: Integer, ?stage_context: request_recognition_stage_context, ?threshold: request_request_threshold, ?top: Integer) -> Results::Completed
+    def annotate: (String | Hash[Symbol | String, untyped] | Client::Question question, untyped input, ?cancel: Cancel?, ?attempts: bool, ?batch: request_request_batch, ?context: String, ?context_field: String, ?deadline_ms: Integer, ?details: bool, ?examples: Array[request_recognition_example], ?examples_field: String, ?field: Array[String], ?files_only: bool, ?max_requests_total: Integer, ?mode: request_recognition_mode, ?model: String, ?none: bool, ?options_field: String, ?relation_threshold: request_request_threshold, ?seed_spans: Array[request_recognition_seed_span], ?seed_spans_field: String, ?snippet_pieces: Integer, ?stage_context: request_recognition_stage_context, ?threshold: request_request_threshold, ?top: Integer) -> Results::Completed
+    def recognize: (String | Hash[Symbol | String, untyped] | Client::Question question, untyped input, ?cancel: Cancel?, ?attempts: bool, ?batch: request_request_batch, ?context: String, ?context_field: String, ?deadline_ms: Integer, ?details: bool, ?examples: Array[request_recognition_example], ?examples_field: String, ?field: Array[String], ?files_only: bool, ?max_requests_total: Integer, ?mode: request_recognition_mode, ?model: String, ?none: bool, ?options_field: String, ?relation_threshold: request_request_threshold, ?seed_spans: Array[request_recognition_seed_span], ?seed_spans_field: String, ?snippet_pieces: Integer, ?stage_context: request_recognition_stage_context, ?threshold: request_request_threshold, ?top: Integer) -> Results::Completed
+    def relate: (String | Hash[Symbol | String, untyped] | Client::Question question, untyped input, ?cancel: Cancel?, ?attempts: bool, ?batch: request_request_batch, ?context: String, ?context_field: String, ?deadline_ms: Integer, ?details: bool, ?examples: Array[request_recognition_example], ?examples_field: String, ?field: Array[String], ?files_only: bool, ?max_requests_total: Integer, ?mode: request_recognition_mode, ?model: String, ?none: bool, ?options_field: String, ?relation_threshold: request_request_threshold, ?seed_spans: Array[request_recognition_seed_span], ?seed_spans_field: String, ?snippet_pieces: Integer, ?stage_context: request_recognition_stage_context, ?threshold: request_request_threshold, ?top: Integer) -> Results::Completed
+    def initialize: (?backend: String, ?base_url: String, ?batch: request_request_batch, ?cache: request_cache_document, ?max_estimated_input_tokens_total: Integer | nil, ?max_request_bytes: Integer, ?max_requests: Integer | nil, ?max_requests_total: Integer | nil, ?max_retries: Integer, ?model: String, ?profile: String, ?proxy: untyped, ?record: String, ?refresh_cache: bool, ?replay: String, ?throttle: Integer, ?timeout: Integer, ?usd_per_million_input: String, ?usd_per_million_output: String) -> void
+    def self.open: (?backend: String, ?base_url: String, ?batch: request_request_batch, ?cache: request_cache_document, ?max_estimated_input_tokens_total: Integer | nil, ?max_request_bytes: Integer, ?max_requests: Integer | nil, ?max_requests_total: Integer | nil, ?max_retries: Integer, ?model: String, ?profile: String, ?proxy: untyped, ?record: String, ?refresh_cache: bool, ?replay: String, ?throttle: Integer, ?timeout: Integer, ?usd_per_million_input: String, ?usd_per_million_output: String) { (Client client) -> untyped } -> untyped
+                 | (?backend: String, ?base_url: String, ?batch: request_request_batch, ?cache: request_cache_document, ?max_estimated_input_tokens_total: Integer | nil, ?max_request_bytes: Integer, ?max_requests: Integer | nil, ?max_requests_total: Integer | nil, ?max_retries: Integer, ?model: String, ?profile: String, ?proxy: untyped, ?record: String, ?refresh_cache: bool, ?replay: String, ?throttle: Integer, ?timeout: Integer, ?usd_per_million_input: String, ?usd_per_million_output: String) -> Client
+    def plan: (String verb, String | Hash[Symbol | String, untyped] | Client::Question question, untyped input, ?attempts: bool, ?batch: request_request_batch, ?context: String, ?context_field: String, ?deadline_ms: Integer, ?details: bool, ?examples: Array[request_recognition_example], ?examples_field: String, ?field: Array[String], ?files_only: bool, ?max_requests_total: Integer, ?mode: request_recognition_mode, ?model: String, ?none: bool, ?options_field: String, ?relation_threshold: request_request_threshold, ?seed_spans: Array[request_recognition_seed_span], ?seed_spans_field: String, ?snippet_pieces: Integer, ?stage_context: request_recognition_stage_context, ?threshold: request_request_threshold, ?top: Integer) -> Hash[String, untyped]
+    def start: (String verb, String | Hash[Symbol | String, untyped] | Client::Question question, untyped input, ?cancel: Cancel?, ?attempts: bool, ?batch: request_request_batch, ?context: String, ?context_field: String, ?deadline_ms: Integer, ?details: bool, ?examples: Array[request_recognition_example], ?examples_field: String, ?field: Array[String], ?files_only: bool, ?max_requests_total: Integer, ?mode: request_recognition_mode, ?model: String, ?none: bool, ?options_field: String, ?relation_threshold: request_request_threshold, ?seed_spans: Array[request_recognition_seed_span], ?seed_spans_field: String, ?snippet_pieces: Integer, ?stage_context: request_recognition_stage_context, ?threshold: request_request_threshold, ?top: Integer) { (Client::Operation operation) -> untyped } -> untyped
+             | (String verb, String | Hash[Symbol | String, untyped] | Client::Question question, untyped input, ?cancel: Cancel?, ?attempts: bool, ?batch: request_request_batch, ?context: String, ?context_field: String, ?deadline_ms: Integer, ?details: bool, ?examples: Array[request_recognition_example], ?examples_field: String, ?field: Array[String], ?files_only: bool, ?max_requests_total: Integer, ?mode: request_recognition_mode, ?model: String, ?none: bool, ?options_field: String, ?relation_threshold: request_request_threshold, ?seed_spans: Array[request_recognition_seed_span], ?seed_spans_field: String, ?snippet_pieces: Integer, ?stage_context: request_recognition_stage_context, ?threshold: request_request_threshold, ?top: Integer) -> Client::Operation
+    def self.files: (String | Array[String] paths, ?framing: request_request_framing | nil, ?media: request_reader_media, ?unit: request_source_unit, ?window: Integer) -> Client::Source
+    def self.item: (untyped value, ?context: request_context_schema, ?examples: Array[request_recognition_example], ?images: Array[request_request_image], ?options: Array[request_option_schema], ?seed_spans: Array[request_recognition_seed_span]) -> Client::Item
+  end
+  type request_authored_criterion = String | Hash[Symbol | String, untyped] | Array[untyped] | nil
+  type request_authored_description = String | Hash[Symbol | String, untyped] | Array[untyped] | nil
+  type request_authored_question_text = String | Hash[Symbol | String, untyped] | Array[untyped]
+  type request_cache_document = String | request_disabled_cache
+  type request_context_schema = String | Hash[Symbol | String, untyped]
+  type request_disabled_cache = bool
+  type request_image_media = String
+  type request_option_schema = { ?description: untyped, name: String }
+  type request_reader_media = String
+  type request_recognition_example = String | request_recognition_example_text
+  type request_recognition_example_entity = { end: Integer, kind: String, start: Integer }
+  type request_recognition_example_text = { entities: Array[request_recognition_example_entity], ?kinds: Array[String], text: String }
+  type request_recognition_mode = String
+  type request_recognition_seed_span = { end: Integer, ?kind: String, start: Integer }
+  type request_recognition_stage_context = { ?boundary: String, ?kind_edge: String, ?relation: String }
+  type request_request_batch = Integer | String
+  type request_request_framing = String
+  type request_request_image = { kind: String, ?media: request_image_media, path: String } | { bytes: String, kind: String, media: request_image_media }
+  type request_request_threshold = Integer | Float | String
+  type request_source_unit = String
+end

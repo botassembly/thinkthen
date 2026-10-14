@@ -1,0 +1,95 @@
+# RBS signatures for lib/thinkthen/session.rb.
+module ThinkThen
+  # The state of this engine's count-only usage deltas.
+  class UsageStatus < Struct[untyped]
+    attr_reader state: String
+    # Safe advice, present only after a persistence failure.
+    attr_reader advice: String?
+
+    def initialize: (String state, String? advice) -> void
+  end
+
+  module Results
+    # One plain answer value; the kind follows the call:
+    # filter returns the original inputs, rank the typed rows, a scalar call
+    # one answer value, and a list call a frozen Array of them.
+    type answer = untyped | Array[untyped] | Array[Native::Result]
+
+    # The owned answer of one named call. Ruby treats every object as true,
+    # including a result whose value is false; read value to branch.
+    class Completed
+      def initialize: (Array[Native::Result] results, NativeSessionPacketTerminal? terminal, bool scalar, String verb, Array[NativeSessionPacketObservation] observations) -> void
+
+      # The typed result rows.
+      attr_reader results: Array[Native::Result]
+      # Nil when the native session ended without a terminal packet.
+      attr_reader terminal: Results::NativeSessionPacketTerminal?
+      attr_reader observations: Array[Results::NativeSessionPacketObservation]
+
+      def facts: () -> Results::NativeFacts
+      def value: () -> Results::answer
+      def inspect: () -> String
+    end
+  end
+
+  # One family of named calls over the owned native engine.
+  class Client
+    FUNCTIONS: Array[String]
+
+    # Named calls and schema-defined keyword controls are generated in
+    # results_generated.rbs from the canonical request grammar.
+
+    # Close the owner, keeping any exception already in flight.
+    def self.cleanup: (Client | Client::Operation owner) -> void
+    def self.question_file: (String path) -> Client::Question
+    def self.question_name: (String name) -> Client::Question
+    def self.question_reference: (String reference) -> Client::Question
+    # Native JSON of a value; the native extension itself reads this.
+    def self.dump: (untyped value) -> String
+    def self.original: (untyped value) -> Hash[Symbol, untyped]
+    def self.descriptor: (untyped value) -> Hash[Symbol, untyped]
+
+    def close: () -> nil
+    def inspect: () -> String
+    # The engine's count-only totals since it was built.
+    def usage: () -> Hash[Symbol, Integer]
+    def usage_persistence: () -> UsageStatus
+    def finish_usage_status: () -> UsageStatus
+
+    # A file or reference question selector.
+    class Question < Struct[untyped]
+      attr_reader selector: Hash[Symbol, untyped]
+
+      def initialize: (Hash[Symbol, untyped] selector) -> void
+      def inspect: () -> String
+    end
+    # Files read natively, from Client.files.
+    class Source < Struct[untyped]
+      attr_reader source: Hash[Symbol, untyped]
+
+      def initialize: (Hash[Symbol, untyped] source) -> void
+      def inspect: () -> String
+    end
+    # One record with its original and per-record fields, from Client.item.
+    class Item < Struct[untyped]
+      attr_reader descriptor: Hash[Symbol, untyped]
+
+      def initialize: (Hash[Symbol, untyped] descriptor) -> void
+      def inspect: () -> String
+    end
+
+    # One named call in flight; start returns one and the named calls wait.
+    class Operation
+      # Nil until the native terminal packet arrives.
+      attr_reader terminal: Results::NativeSessionPacketTerminal?
+
+      def result: () -> Results::Completed
+      def cancelled: () -> CancelledError
+      def feed: () -> nil
+      def cancel: () -> void
+      def close: () -> nil
+      def close_producer: () -> nil
+      def inspect: () -> String
+    end
+  end
+end
