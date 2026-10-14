@@ -414,7 +414,8 @@ fn a_missing_key_and_a_refused_connection_have_distinct_causes() {
         line(&refused)["stopped"],
         json!({"at":1,"cause":"transport","retryable":false})
     );
-    assert_eq!(line(&refused)["requests_sent"], 1);
+    assert_eq!(line(&refused)["requests_sent"], 2);
+    assert_eq!(line(&refused)["retries"], 1);
 }
 
 // It names the XDG folders. Windows reads APPDATA and LOCALAPPDATA (sdlc/planning/windows.md).
