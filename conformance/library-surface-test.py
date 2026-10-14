@@ -138,6 +138,21 @@ class PublicSurface(unittest.TestCase):
             client.write_text(original.replace('with NamedCalls', '', 1))
             self.assertIn('missing function: decide', invoke())
             client.write_text(original)
+            values = root / 'libraries/dart/lib/src/session/values.dart'
+            value_source = values.read_text()
+            values.write_text(value_source + '\nfinal class UnknownResultWrapper {}\n')
+            self.assertIn('unlisted public type/export: .UnknownResultWrapper', invoke())
+            values.write_text(value_source.replace('final CallProbability? probability;',
+                                                  'final CallProbability? unknownProbability;', 1))
+            self.assertIn('unlisted public field: CallResult.unknownProbability', invoke())
+            values.write_text(value_source.replace('final class CallResult<V, R> {',
+                'final class CallResult<V, R> {\n'
+                '  Future<Map<String, List<R?>>> extraPublicExport() => throw UnimplementedError();\n'
+                '  final Map<String, List<R?>> extraPublicField = {};', 1))
+            errors = invoke()
+            self.assertIn('unlisted public call/export: CallResult.extraPublicExport', errors)
+            self.assertIn('unlisted public field: CallResult.extraPublicField', errors)
+            values.write_text(value_source)
             generated = root / 'libraries/dart/lib/src/session/calls_generated.dart'
             original = generated.read_text()
             self.assertIn('decide(', original)
@@ -471,10 +486,9 @@ extraPublicExport <- function(context = NULL, enabled = FALSE,
                 path.write_text(path.read_text().replace('class ' + owner + ' {',
                     'class ' + owner + ' { public: void extraPublicExport(); private:', 1))
             extra = original.replace('class Call {', 'class Call { public: void extraPublicExport(); private:', 1)
-            extra = extra.replace('class AnswerCall : public Call {',
-                                  'class AnswerCall : public Call { public: void extraPublicExport(); private:', 1)
+            extra += '\nnamespace tt { template<auto Project> class ResultCall : public Call { public: void extraPublicExport(); }; }\n'
             errors = invoke(extra)
-            for owner in ['Data', 'Node', 'Call', 'AnswerCall']:
+            for owner in ['Data', 'Node', 'Call', 'ResultCall']:
                 self.assertIn('unlisted public call/export: ' + owner + '.extraPublicExport', errors)
 
     def test_scoped_options_helpers_settings_generated_members_and_extra_exports(self):
@@ -802,8 +816,9 @@ extraPublicExport <- function(context = NULL, enabled = FALSE,
             manifest['libraries']['php']['setting_containers'] = ['Settings']
             selected = root / 'manifest.json'
             selected.write_text(json.dumps(manifest))
-            calls = root / 'libraries/php/src/session/inputs_generated.php'
+            calls = root / 'libraries/php/src/session/results_generated.php'
             original = calls.read_text()
+            self.assertIn('trait NamedCalls\n{', original)
             def invoke(source):
                 calls.write_text(source)
                 result = subprocess.run(['python3', str(CHECK), '--root', str(root), '--manifest',
@@ -814,7 +829,7 @@ extraPublicExport <- function(context = NULL, enabled = FALSE,
             baseline = invoke(original)
             self.assertFalse(any(error.startswith('missing function:') for error in baseline), baseline)
             errors = invoke(original.replace('trait NamedCalls\n{', 'trait NamedCalls\n{ public function extraPublicExport() {}', 1))
-            self.assertIn('unlisted generated declaration: inputs_generated.php:NamedCalls.extraPublicExport', errors)
+            self.assertIn('unlisted generated declaration: results_generated.php:NamedCalls.extraPublicExport', errors)
             self.assertIn('unlisted public call/export: NamedCalls.extraPublicExport', errors)
             errors = invoke(original.replace('function decide(', 'function missingDecide(', 1))
             self.assertIn('missing function: decide', errors)

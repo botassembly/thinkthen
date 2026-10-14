@@ -286,7 +286,7 @@ def cstyle(source, language):
         'zig': r'\bpub\s+(?:fn|const|var)\s+(\w+)|(?:^|[{},\n])\s*(\w+)\s*:',
         'go': r'(?m:^\s*)([A-Z]\w*)\s+[^\n{}]+',
         'php': r'\bpublic\s+(?:static\s+)?function\s+(\w+)\s*\(|\bpublic\s+(?:readonly\s+)?[\w?\\]+\s+\$(\w+)',
-        'dart': r'(?m)(?:^|[;{}\n])\s*(?:(?:static|final|late|const|external|factory)\s+)*[\w<>?,.]+\s+(?:get\s+)?(\w+)\s*(?:\(|=>|[;=])|\bget\s+(\w+)\s*(?:=>|\{)',
+        'dart': r'(?m)(?:^|[;{}\n])\s*(?:(?:static|final|late|const|external|factory)\s+)*[\w.]+(?:<[\w<>?,.\[\] \t\r\n]+>)?\??\s+(?:get\s+)?(\w+)\s*(?:\(|=>|[;=])|\bget\s+(\w+)\s*(?:=>|\{)',
         'cpp': r'(?m)(?:^|(?<=[;{}\n]))[ \t]*[A-Za-z_][\w:<>,? \t]*?[*& \t]+(\w+)\s*(?:\(|[;=])',
         'c': r'(?m)(?:^|(?<=[;{}\n]))[ \t]*[A-Za-z_][\w \t]*?[* \t]+(\w+)\s*(?:\(|;|\[)',
         'objc': r'[-+]\s*\([^)]*\)\s*(\w+)|@property[^;\n]*?(\w+)\s*;',
