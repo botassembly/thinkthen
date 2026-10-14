@@ -84,63 +84,32 @@ impl Completion {
             let text = packet.to_json().map_err(|e| carry(&e))?;
             let document: Value = serde_json::from_str(&text)
                 .map_err(|_| defect("session packet could not be decoded"))?;
-            match packet {
-                RequestSessionResult::Row(row) => {
-                    state.packet["results"]
-                        .as_array_mut()
-                        .ok_or_else(|| defect("row results are not a list"))?
-                        .push(document["value"].clone());
-                    append(&mut state.value, row)?;
-                }
-                RequestSessionResult::Aggregate(value) => {
-                    state.packet["results"] = document["value"].clone();
-                    state.value = Some(value);
-                }
-                RequestSessionResult::Observation { .. } => {
-                    let mut detail = document["value"].clone();
-                    if let Some(index) = detail.get("index").and_then(Value::as_u64)
-                        && let Some(position) = state
-                            .positions
-                            .as_ref()
-                            .and_then(|p| usize::try_from(index).ok().and_then(|i| p.get(i)))
-                    {
-                        detail["index"] = json!(position);
-                    }
-                    state.details.push(detail);
-                }
-                RequestSessionResult::Terminal(terminal) => {
-                    state.name = "terminal";
-                    state.kind = Some(
-                        terminal
-                            .error
-                            .as_ref()
-                            .map_or("success", |e| e.kind().name())
-                            .into(),
-                    );
-                    if let Some(facts) = document.get("facts") {
-                        state.packet["facts"] = facts.clone();
-                    }
-                    if let Some(failure) = document.get("failure") {
-                        state.packet["failure"] = failure.clone();
-                    }
-                    state.error = terminal.error;
-                    state.session = None;
-                    return Ok(true);
-                }
+            if state.accept(packet, document)? {
+                return Ok(true);
             }
         }
     }
     pub(crate) fn read(&self) -> Crossed<extendr_api::Robj> {
         self.drain()?;
         let state = self.state();
-        let mut value = json!({"state": state.name});
+        let mut fields = vec![("state", extendr_api::Robj::from(state.name))];
         if let Some(kind) = &state.kind {
-            value["kind"] = json!(kind);
-            value["facts"] = state.packet.get("facts").cloned().unwrap_or(Value::Null);
-            value["details"] = json!(state.details);
+            fields.push(("kind", kind.as_str().into()));
+            fields.push((
+                "facts",
+                match state.packet.get("facts") {
+                    Some(value) => crate::native_results::facts(value)?,
+                    None => ().into(),
+                },
+            ));
+            fields.push((
+                "details",
+                crate::native_results::plain(&json!(state.details))?,
+            ));
         }
-        crate::native_results::plain(&value)
+        Ok(extendr_api::List::from_pairs(fields).into())
     }
+
     pub(crate) fn result(
         &self,
         function: thinkthen::RequestFunction,
@@ -168,6 +137,72 @@ impl Completion {
         crate::request::view(value, view)
     }
 }
+impl State {
+    fn accept(&mut self, packet: RequestSessionResult, document: Value) -> Crossed<bool> {
+        match packet {
+            RequestSessionResult::Row(row) => {
+                self.packet
+                    .get_mut("results")
+                    .and_then(Value::as_array_mut)
+                    .ok_or_else(|| defect("row results are not a list"))?
+                    .push(
+                        document
+                            .get("value")
+                            .ok_or_else(|| defect("session packet has no payload"))?
+                            .clone(),
+                    );
+                append(&mut self.value, row)?;
+            }
+            RequestSessionResult::Aggregate(value) => {
+                field(
+                    &mut self.packet,
+                    "results",
+                    document
+                        .get("value")
+                        .ok_or_else(|| defect("session packet has no payload"))?
+                        .clone(),
+                )?;
+                self.value = Some(value);
+            }
+            RequestSessionResult::Observation { .. } => {
+                let mut detail = document
+                    .get("value")
+                    .ok_or_else(|| defect("session packet has no payload"))?
+                    .clone();
+                if let Some(index) = detail.get("index").and_then(Value::as_u64)
+                    && let Some(position) = self
+                        .positions
+                        .as_ref()
+                        .and_then(|p| usize::try_from(index).ok().and_then(|i| p.get(i)))
+                {
+                    field(&mut detail, "index", json!(position))?;
+                }
+                self.details.push(detail);
+            }
+            RequestSessionResult::Terminal(terminal) => {
+                self.name = "terminal";
+                self.kind = Some(
+                    terminal
+                        .error
+                        .as_ref()
+                        .map_or("success", |e| e.kind().name())
+                        .into(),
+                );
+                if let Some(facts) = document.get("facts") {
+                    field(&mut self.packet, "facts", facts.clone())?;
+                }
+                if let Some(failure) = document.get("failure") {
+                    field(&mut self.packet, "failure", failure.clone())?;
+                }
+                self.error = terminal.error;
+                self.session = None;
+                return Ok(true);
+            }
+        }
+        Ok(false)
+    }
+}
+
 fn append(value: &mut Option<RequestValue>, row: RequestSessionRow) -> Crossed<()> {
     macro_rules! add {
         ($row:expr, $kind:ident) => {{
@@ -186,5 +221,13 @@ fn append(value: &mut Option<RequestValue>, row: RequestSessionRow) -> Crossed<(
         RequestSessionRow::Filter(row) => add!(row, Filtered),
         RequestSessionRow::Annotation(row) => add!(row, Annotations),
     }
+    Ok(())
+}
+
+fn field(object: &mut Value, name: &str, value: Value) -> Crossed<()> {
+    object
+        .as_object_mut()
+        .ok_or_else(|| defect("session document is not an object"))?
+        .insert(name.into(), value);
     Ok(())
 }

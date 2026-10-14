@@ -46,7 +46,7 @@ check("item controls reach native admission and judgment", is.null(item_call$ans
       grepl("Per-record reference", tail(capture(), 1)[[1]], fixed = TRUE))
 check("native plan exposes largest request estimates and method", plan$largest_request_bytes > 0 &&
       plan$largest_request_estimated_input_tokens > 0 && is.character(plan$token_estimate_method) &&
-      is.character(plan$first_body_utf8) && is.null(plan$first_body))
+      is.character(plan$first_body_utf8) && !"first_body" %in% names(plan))
 questions <- list(
   decide = "Decide Q?",
   choose = list(choose = "Choose Q?", options = c("first", "second")),

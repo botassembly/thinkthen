@@ -99,11 +99,8 @@ fn tt_request_plan(request: Robj) -> Crossed<Robj> {
             },
         )
         .map_err(|error| crate::carry(&error))?;
-    let value = crate::native_results::tagged(
-        crate::plan::render(plan)?.into(),
-        "Plan",
-        "thinkthen_complete",
-    )?;
+    let value =
+        crate::native_results::tagged(crate::plan::render(plan)?, "Plan", "thinkthen_complete")?;
     match &request.column {
         Some(column) => crate::request::attach(column, value),
         None => Ok(value),
