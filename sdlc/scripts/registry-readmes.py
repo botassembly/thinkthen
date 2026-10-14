@@ -281,7 +281,7 @@ def example(family, root=REPO):
     return examples(family, root)[0]
 
 
-def unpack_example_package(family, packages, destination, selected=None):
+def unpack_example_package(family, packages, destination, selected=None, text_failures=None):
     family = 'php' if family == 'packagist' else family
     candidates = []
     for path in packages.iterdir():
@@ -302,7 +302,12 @@ def unpack_example_package(family, packages, destination, selected=None):
     if len(candidates) != 1:
         raise Refusal('missing-or-ambiguous-example-package: ' + family)
     package = candidates[0]
-    check_package(family, package)
+    try:
+        check_package(family, package)
+    except Refusal as error:
+        if text_failures is None:
+            raise
+        text_failures.append(family + ' packed text: ' + str(error))
     files = members(package.read_bytes(), package.suffix in ('.whl', '.nupkg', '.zip'))
     executable = set()
     if package.suffix not in ('.whl', '.nupkg', '.zip') and family != 'ruby':
@@ -394,11 +399,11 @@ def run_build(command, work, env, input):
         return run_process(command, work, env, input, 300)
 
 
-def run_example(family, packages, work, root=REPO, selected=None, sample_index=0):
+def run_example(family, packages, work, root=REPO, selected=None, sample_index=0, text_failures=None):
     filename, code, expected = examples(family, root)[sample_index]
     if family == 'packagist':
         family = 'command'
-    package = unpack_example_package(family, packages, work / 'package', selected)
+    package = unpack_example_package(family, packages, work / 'package', selected, text_failures)
     home = work / 'home'; home.mkdir()
     cache = work / 'cache'; cache.mkdir(mode=0o700)
     # The site uses this same recording as a fresh cache, without shell settings or a key.
@@ -471,7 +476,7 @@ def run_example(family, packages, work, root=REPO, selected=None, sample_index=0
         run(['javac', '--release', '22', '-cp', classpath, str(sample)], True)
         output = run(['java', '--enable-native-access=ALL-UNNAMED', '-cp', str(work) + os.pathsep + classpath, 'RegistryExample'])
     elif family in ('c', 'cpp', 'ada', 'cobol', 'zig'):
-        native_package = unpack_example_package('c', packages, work / 'native')
+        native_package = unpack_example_package('c', packages, work / 'native', text_failures=text_failures)
         library = native_package / 'lib'
         if family == 'cpp':
             (work / 'include/thinkthen').mkdir(parents=True)
@@ -602,7 +607,7 @@ def check_examples(packages, root=REPO, families=None):
                 for sample_index in range(len(samples)):
                     sample_work = work / str(sample_index); sample_work.mkdir()
                     try:
-                        run_example(family, packages, sample_work, root, package, sample_index)
+                        run_example(family, packages, sample_work, root, package, sample_index, failures)
                         print('registry-readmes: replayed ' + family + ' block ' + str(sample_index + 1) + (' ' + package.name if package else ''))
                     except (Refusal, OSError, StopIteration, subprocess.SubprocessError) as error:
                         failures.append(family + ' block ' + str(sample_index + 1) + ': ' +

@@ -184,12 +184,13 @@ class PackageText(unittest.TestCase):
                                           '```sh\nthinkthen choose fail\n```\n')
             packages = tree / 'packages'; packages.mkdir()
             package = packages / ('thinkthen-' + readmes.version() + '-x86_64-unknown-linux-musl.tar.gz')
-            archive(package, {'README.md': readmes.source('command').read_bytes(),
+            archive(package, {'README.md': b'Wrong public opening',
                               'thinkthen': b'#!/bin/sh\n[ "$2" != fail ] || exit 77\nprintf "fixture\\n"\n'})
             with patch.object(readmes, 'published_families', return_value=('command',)):
                 with self.assertRaisesRegex(readmes.Refusal, 'example-did-not-run: command') as rejected:
                     readmes.check_examples(packages, root)
                 self.assertEqual(str(rejected.exception).count('example-did-not-run: command'), 2)
+                self.assertEqual(str(rejected.exception).count('command packed text: shared-opening'), 2)
                 self.assertIn('command block 1:', str(rejected.exception))
                 self.assertIn('command block 2:', str(rejected.exception))
 
