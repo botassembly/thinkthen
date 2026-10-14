@@ -4,12 +4,35 @@ on:
 permissions:
   contents: read
 jobs:
+  inputs:
+    runs-on: ubuntu-24.04
+    outputs:
+      release: ${{ steps.pins.outputs.release }}
+      release_tools: ${{ steps.pins.outputs.release_tools }}
+      preview_source: ${{ steps.pins.outputs.preview_source }}
+      preview_tools: ${{ steps.pins.outputs.preview_tools }}
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          persist-credentials: false
+      - id: pins
+        run: |
+          python3 - <<'PYCODE'
+          import os, sys
+          sys.path.insert(0, 'databases/duckdb/tools')
+          from inputs import authority
+          values = authority()
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as output:
+              for name in ('RELEASE', 'RELEASE_TOOLS', 'PREVIEW_SOURCE', 'PREVIEW_TOOLS'):
+                  print(name.lower() + '=' + values['DUCKDB_ROUTINE_' + name], file=output)
+          PYCODE
   release:
+    needs: inputs
     uses: duckdb/extension-ci-tools/.github/workflows/_extension_distribution.yml@3fd6109fc01555673b7c7123eba8d0d143fe8ce4
     with:
       extension_name: thinkthen
-      duckdb_version: v1.5.6
-      ci_tools_version: 3fd6109fc01555673b7c7123eba8d0d143fe8ce4
+      duckdb_version: ${{ needs.inputs.outputs.release }}
+      ci_tools_version: ${{ needs.inputs.outputs.release_tools }}
       override_repository: ${{ github.repository }}
       override_ref: ${{ github.sha }}
       exclude_archs: windows_amd64;windows_amd64_mingw;windows_arm64;wasm_mvp;wasm_eh;wasm_threads
@@ -17,11 +40,12 @@ jobs:
       reduced_ci_mode: disabled
       save_cache: false
   preview:
+    needs: inputs
     uses: duckdb/extension-ci-tools/.github/workflows/_extension_distribution.yml@a68570fde10384547868301a12327d5c67909527
     with:
       extension_name: thinkthen
-      duckdb_version: d4355d01c59362d57036ad377735dd5340276a5b
-      ci_tools_version: a68570fde10384547868301a12327d5c67909527
+      duckdb_version: ${{ needs.inputs.outputs.preview_source }}
+      ci_tools_version: ${{ needs.inputs.outputs.preview_tools }}
       override_repository: ${{ github.repository }}
       override_ref: ${{ github.sha }}
       exclude_archs: windows_amd64;windows_amd64_mingw;windows_arm64;wasm_mvp;wasm_eh;wasm_threads
