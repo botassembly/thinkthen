@@ -94,6 +94,11 @@ def inputs(definitions):
         if t == 'object' or 'anyOf' in s or 'oneOf' in s:
             definitions[key] = s; pending.append(key); return ident(key)
         return {'string':'string', 'boolean':'bool', 'integer':('uint64' if str(s.get('format','')).startswith('uint') else 'int64'), 'number':'float64'}.get(t, 'any')
+    def encoded(value, ft):
+        if ft in ('[]any', 'map[string]any'): return value
+        if ft.startswith('[]'): return f'transportSequence({value})'
+        if ft.startswith('map[string]'): return f'transportDictionary({value})'
+        return value
     while pending:
         key = pending.pop()
         if key in generated: continue
@@ -130,6 +135,7 @@ def inputs(definitions):
         if 'properties' in s:
             lines += [f'type {n} struct {{']
             constants={}
+            fields=[]
             for member,field in s['properties'].items():
                 resolved=resolve(field)
                 literals=resolved.get('oneOf',[]) if isinstance(resolved,dict) else []
@@ -139,19 +145,29 @@ def inputs(definitions):
                     constants[member]=literals[0]['const']; continue
                 ft=field_type(field,key+ident(member)); required=member in s.get('required',[])
                 # Optional pointers retain explicit false, zero, empty and null values.
+                fields.append((member, ft, required))
                 if not required: ft='*'+ft
                 lines.append(f'{ident(member)} {ft} `json:"{member}{"" if required else ",omitempty"}"`')
             lines += ['}']
-            if constants:
-                lines += [f'func (v {n}) marshalJSON() ([]byte,error) {{', f'type plain {n}', 'data,err:=transportMarshal(plain(v)); if err!=nil { return nil,err }; var object map[string]json.RawMessage; if err=json.Unmarshal(data,&object);err!=nil {return nil,err}']
-                lines += [f'object[{json.dumps(k)}]=json.RawMessage({json.dumps(json.dumps(v))})' for k,v in constants.items()]
-                lines += ['return transportMarshal(object)', '}']
+            lines += [f'func (v {n}) marshalJSON() ([]byte,error) {{', 'object:=map[string]json.RawMessage{}']
+            lines += [f'object[{json.dumps(k)}]=json.RawMessage({json.dumps(json.dumps(v))})' for k,v in constants.items()]
+            for member, ft, required in fields:
+                value='v.'+ident(member)
+                if not required: lines.append(f'if {value}!=nil {{'); value='*'+value
+                if ft == 'any':
+                    lines.append(f'raw,err:=json.Marshal({value}); if err!=nil {{ return nil,err }}; object[{json.dumps(member)}]=raw')
+                else:
+                    lines.append(f'if err:=transportMember(object,{json.dumps(member)},{encoded(value,ft)});err!=nil {{ return nil,err }}')
+                if not required: lines.append('}')
+            lines += ['return json.Marshal(object)', '}']
             continue
         if s.get('type') == 'null':
             lines += [f'type {n} struct {{}}', f'func ({n}) marshalJSON() ([]byte,error) {{ return []byte("null"),nil }}']; continue
         ft=field_type(s,key+'Value')
         nullable = isinstance(s.get('type'),list) and 'null' in s['type']
         lines.append(f'type {n} = *{ft}' if nullable else f'type {n} {ft}')
+        if not nullable and (ft.startswith('[]') and not s.get('x-preserve-order') or ft.startswith('map[string]')):
+            lines += [f'func (v {n}) marshalJSON() ([]byte,error) {{ return json.Marshal({encoded(ft + "(v)", ft)}) }}']
         if s.get('x-preserve-order'):
             lines += [f'func (v {n}) marshalJSON() ([]byte,error) {{ return {ft}(v).marshalJSON() }}', f'func (v *{n}) UnmarshalJSON(data []byte) error {{ return (*{ft})(v).UnmarshalJSON(data) }}']
     return '\n'.join(lines)+'\n'

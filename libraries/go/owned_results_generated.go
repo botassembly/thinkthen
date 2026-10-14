@@ -2514,23 +2514,49 @@ type RequestInputFeed struct {
 }
 
 func (v RequestInputFeed) marshalJSON() ([]byte, error) {
-	type plain RequestInputFeed
-	data, err := transportMarshal(plain(v))
-	if err != nil {
-		return nil, err
-	}
-	var object map[string]json.RawMessage
-	if err = json.Unmarshal(data, &object); err != nil {
-		return nil, err
-	}
+	object := map[string]json.RawMessage{}
 	object["kind"] = json.RawMessage("\"feed\"")
-	return transportMarshal(object)
+	if v.Framing != nil {
+		if err := transportMember(object, "framing", *v.Framing); err != nil {
+			return nil, err
+		}
+	}
+	if v.Images != nil {
+		if err := transportMember(object, "images", transportSequence(*v.Images)); err != nil {
+			return nil, err
+		}
+	}
+	if err := transportMember(object, "name", v.Name); err != nil {
+		return nil, err
+	}
+	if v.Reading != nil {
+		if err := transportMember(object, "reading", *v.Reading); err != nil {
+			return nil, err
+		}
+	}
+	return json.Marshal(object)
 }
 
 type RequestReader struct {
 	Unit   *RequestSourceUnit `json:"unit,omitempty"`
 	Window *uint64            `json:"window,omitempty"`
 }
+
+func (v RequestReader) marshalJSON() ([]byte, error) {
+	object := map[string]json.RawMessage{}
+	if v.Unit != nil {
+		if err := transportMember(object, "unit", *v.Unit); err != nil {
+			return nil, err
+		}
+	}
+	if v.Window != nil {
+		if err := transportMember(object, "window", *v.Window); err != nil {
+			return nil, err
+		}
+	}
+	return json.Marshal(object)
+}
+
 type RequestSourceUnit string
 
 const (
@@ -2550,17 +2576,15 @@ type RequestImageBytes struct {
 }
 
 func (v RequestImageBytes) marshalJSON() ([]byte, error) {
-	type plain RequestImageBytes
-	data, err := transportMarshal(plain(v))
-	if err != nil {
-		return nil, err
-	}
-	var object map[string]json.RawMessage
-	if err = json.Unmarshal(data, &object); err != nil {
-		return nil, err
-	}
+	object := map[string]json.RawMessage{}
 	object["kind"] = json.RawMessage("\"bytes\"")
-	return transportMarshal(object)
+	if err := transportMember(object, "bytes", v.Bytes); err != nil {
+		return nil, err
+	}
+	if err := transportMember(object, "media", v.Media); err != nil {
+		return nil, err
+	}
+	return json.Marshal(object)
 }
 
 type ImageMedia string
@@ -2576,17 +2600,17 @@ type RequestImageFile struct {
 }
 
 func (v RequestImageFile) marshalJSON() ([]byte, error) {
-	type plain RequestImageFile
-	data, err := transportMarshal(plain(v))
-	if err != nil {
-		return nil, err
-	}
-	var object map[string]json.RawMessage
-	if err = json.Unmarshal(data, &object); err != nil {
-		return nil, err
-	}
+	object := map[string]json.RawMessage{}
 	object["kind"] = json.RawMessage("\"file\"")
-	return transportMarshal(object)
+	if v.Media != nil {
+		if err := transportMember(object, "media", *v.Media); err != nil {
+			return nil, err
+		}
+	}
+	if err := transportMember(object, "path", v.Path); err != nil {
+		return nil, err
+	}
+	return json.Marshal(object)
 }
 
 type RequestFraming string
@@ -2604,17 +2628,12 @@ type RequestInputSource struct {
 }
 
 func (v RequestInputSource) marshalJSON() ([]byte, error) {
-	type plain RequestInputSource
-	data, err := transportMarshal(plain(v))
-	if err != nil {
-		return nil, err
-	}
-	var object map[string]json.RawMessage
-	if err = json.Unmarshal(data, &object); err != nil {
-		return nil, err
-	}
+	object := map[string]json.RawMessage{}
 	object["kind"] = json.RawMessage("\"source\"")
-	return transportMarshal(object)
+	if err := transportMember(object, "source", v.Source); err != nil {
+		return nil, err
+	}
+	return json.Marshal(object)
 }
 
 type RequestSource struct {
@@ -2623,6 +2642,30 @@ type RequestSource struct {
 	Paths   []string        `json:"paths"`
 	Reading *RequestReader  `json:"reading,omitempty"`
 }
+
+func (v RequestSource) marshalJSON() ([]byte, error) {
+	object := map[string]json.RawMessage{}
+	if v.Framing != nil {
+		if err := transportMember(object, "framing", *v.Framing); err != nil {
+			return nil, err
+		}
+	}
+	if v.Media != nil {
+		if err := transportMember(object, "media", *v.Media); err != nil {
+			return nil, err
+		}
+	}
+	if err := transportMember(object, "paths", transportSequence(v.Paths)); err != nil {
+		return nil, err
+	}
+	if v.Reading != nil {
+		if err := transportMember(object, "reading", *v.Reading); err != nil {
+			return nil, err
+		}
+	}
+	return json.Marshal(object)
+}
+
 type ReaderMedia string
 
 const (
@@ -2635,17 +2678,12 @@ type RequestInputEntities struct {
 }
 
 func (v RequestInputEntities) marshalJSON() ([]byte, error) {
-	type plain RequestInputEntities
-	data, err := transportMarshal(plain(v))
-	if err != nil {
-		return nil, err
-	}
-	var object map[string]json.RawMessage
-	if err = json.Unmarshal(data, &object); err != nil {
-		return nil, err
-	}
+	object := map[string]json.RawMessage{}
 	object["kind"] = json.RawMessage("\"entities\"")
-	return transportMarshal(object)
+	if err := transportMember(object, "items", transportSequence(v.Items)); err != nil {
+		return nil, err
+	}
+	return json.Marshal(object)
 }
 
 type RequestItem struct {
@@ -2656,11 +2694,64 @@ type RequestItem struct {
 	Original  *RequestOriginal       `json:"original,omitempty"`
 	SeedSpans *[]RecognitionSeedSpan `json:"seed_spans,omitempty"`
 }
+
+func (v RequestItem) marshalJSON() ([]byte, error) {
+	object := map[string]json.RawMessage{}
+	if v.Context != nil {
+		if err := transportMember(object, "context", *v.Context); err != nil {
+			return nil, err
+		}
+	}
+	if v.Examples != nil {
+		if err := transportMember(object, "examples", transportSequence(*v.Examples)); err != nil {
+			return nil, err
+		}
+	}
+	if v.Images != nil {
+		if err := transportMember(object, "images", transportSequence(*v.Images)); err != nil {
+			return nil, err
+		}
+	}
+	if v.Options != nil {
+		if err := transportMember(object, "options", transportSequence(*v.Options)); err != nil {
+			return nil, err
+		}
+	}
+	if v.Original != nil {
+		if err := transportMember(object, "original", *v.Original); err != nil {
+			return nil, err
+		}
+	}
+	if v.SeedSpans != nil {
+		if err := transportMember(object, "seed_spans", transportSequence(*v.SeedSpans)); err != nil {
+			return nil, err
+		}
+	}
+	return json.Marshal(object)
+}
+
 type RecognitionSeedSpan struct {
 	End   uint64  `json:"end"`
 	Kind  *string `json:"kind,omitempty"`
 	Start uint64  `json:"start"`
 }
+
+func (v RecognitionSeedSpan) marshalJSON() ([]byte, error) {
+	object := map[string]json.RawMessage{}
+	if err := transportMember(object, "end", v.End); err != nil {
+		return nil, err
+	}
+	if v.Kind != nil {
+		if err := transportMember(object, "kind", *v.Kind); err != nil {
+			return nil, err
+		}
+	}
+	if err := transportMember(object, "start", v.Start); err != nil {
+		return nil, err
+	}
+	return json.Marshal(object)
+}
+
 type RequestOriginal interface{ isRequestOriginal() }
 
 func (RequestOriginalText) isRequestOriginal() {}
@@ -2671,17 +2762,14 @@ type RequestOriginalJson struct {
 }
 
 func (v RequestOriginalJson) marshalJSON() ([]byte, error) {
-	type plain RequestOriginalJson
-	data, err := transportMarshal(plain(v))
+	object := map[string]json.RawMessage{}
+	object["kind"] = json.RawMessage("\"json\"")
+	raw, err := json.Marshal(v.Value)
 	if err != nil {
 		return nil, err
 	}
-	var object map[string]json.RawMessage
-	if err = json.Unmarshal(data, &object); err != nil {
-		return nil, err
-	}
-	object["kind"] = json.RawMessage("\"json\"")
-	return transportMarshal(object)
+	object["value"] = raw
+	return json.Marshal(object)
 }
 
 type RequestOriginalText struct {
@@ -2689,23 +2777,34 @@ type RequestOriginalText struct {
 }
 
 func (v RequestOriginalText) marshalJSON() ([]byte, error) {
-	type plain RequestOriginalText
-	data, err := transportMarshal(plain(v))
-	if err != nil {
-		return nil, err
-	}
-	var object map[string]json.RawMessage
-	if err = json.Unmarshal(data, &object); err != nil {
-		return nil, err
-	}
+	object := map[string]json.RawMessage{}
 	object["kind"] = json.RawMessage("\"text\"")
-	return transportMarshal(object)
+	if err := transportMember(object, "text", v.Text); err != nil {
+		return nil, err
+	}
+	return json.Marshal(object)
 }
 
 type OptionSchema struct {
 	Description *any   `json:"description,omitempty"`
 	Name        string `json:"name"`
 }
+
+func (v OptionSchema) marshalJSON() ([]byte, error) {
+	object := map[string]json.RawMessage{}
+	if v.Description != nil {
+		raw, err := json.Marshal(*v.Description)
+		if err != nil {
+			return nil, err
+		}
+		object["description"] = raw
+	}
+	if err := transportMember(object, "name", v.Name); err != nil {
+		return nil, err
+	}
+	return json.Marshal(object)
+}
+
 type RecognitionExample interface{ isRecognitionExample() }
 
 func (RecognitionExampleString) isRecognitionExample() {}
@@ -2716,11 +2815,43 @@ type RecognitionExampleText struct {
 	Kinds    *[]string                  `json:"kinds,omitempty"`
 	Text     string                     `json:"text"`
 }
+
+func (v RecognitionExampleText) marshalJSON() ([]byte, error) {
+	object := map[string]json.RawMessage{}
+	if err := transportMember(object, "entities", transportSequence(v.Entities)); err != nil {
+		return nil, err
+	}
+	if v.Kinds != nil {
+		if err := transportMember(object, "kinds", transportSequence(*v.Kinds)); err != nil {
+			return nil, err
+		}
+	}
+	if err := transportMember(object, "text", v.Text); err != nil {
+		return nil, err
+	}
+	return json.Marshal(object)
+}
+
 type RecognitionExampleEntity struct {
 	End   uint64 `json:"end"`
 	Kind  string `json:"kind"`
 	Start uint64 `json:"start"`
 }
+
+func (v RecognitionExampleEntity) marshalJSON() ([]byte, error) {
+	object := map[string]json.RawMessage{}
+	if err := transportMember(object, "end", v.End); err != nil {
+		return nil, err
+	}
+	if err := transportMember(object, "kind", v.Kind); err != nil {
+		return nil, err
+	}
+	if err := transportMember(object, "start", v.Start); err != nil {
+		return nil, err
+	}
+	return json.Marshal(object)
+}
+
 type RecognitionExampleString string
 type ContextSchema interface{ isContextSchema() }
 
@@ -2728,23 +2859,21 @@ func (ContextSchemaString) isContextSchema() {}
 func (ContextSchemaObject) isContextSchema() {}
 
 type ContextSchemaObject map[string]any
+
+func (v ContextSchemaObject) marshalJSON() ([]byte, error) { return json.Marshal(map[string]any(v)) }
+
 type ContextSchemaString string
 type RequestInputUnits struct {
 	Items []RequestItem `json:"items"`
 }
 
 func (v RequestInputUnits) marshalJSON() ([]byte, error) {
-	type plain RequestInputUnits
-	data, err := transportMarshal(plain(v))
-	if err != nil {
-		return nil, err
-	}
-	var object map[string]json.RawMessage
-	if err = json.Unmarshal(data, &object); err != nil {
-		return nil, err
-	}
+	object := map[string]json.RawMessage{}
 	object["kind"] = json.RawMessage("\"units\"")
-	return transportMarshal(object)
+	if err := transportMember(object, "items", transportSequence(v.Items)); err != nil {
+		return nil, err
+	}
+	return json.Marshal(object)
 }
 
 type RequestInputRecords struct {
@@ -2752,17 +2881,12 @@ type RequestInputRecords struct {
 }
 
 func (v RequestInputRecords) marshalJSON() ([]byte, error) {
-	type plain RequestInputRecords
-	data, err := transportMarshal(plain(v))
-	if err != nil {
-		return nil, err
-	}
-	var object map[string]json.RawMessage
-	if err = json.Unmarshal(data, &object); err != nil {
-		return nil, err
-	}
+	object := map[string]json.RawMessage{}
 	object["kind"] = json.RawMessage("\"records\"")
-	return transportMarshal(object)
+	if err := transportMember(object, "items", transportSequence(v.Items)); err != nil {
+		return nil, err
+	}
+	return json.Marshal(object)
 }
 
 type RequestInputJson struct {
@@ -2771,17 +2895,19 @@ type RequestInputJson struct {
 }
 
 func (v RequestInputJson) marshalJSON() ([]byte, error) {
-	type plain RequestInputJson
-	data, err := transportMarshal(plain(v))
+	object := map[string]json.RawMessage{}
+	object["kind"] = json.RawMessage("\"json\"")
+	if v.Images != nil {
+		if err := transportMember(object, "images", transportSequence(*v.Images)); err != nil {
+			return nil, err
+		}
+	}
+	raw, err := json.Marshal(v.Value)
 	if err != nil {
 		return nil, err
 	}
-	var object map[string]json.RawMessage
-	if err = json.Unmarshal(data, &object); err != nil {
-		return nil, err
-	}
-	object["kind"] = json.RawMessage("\"json\"")
-	return transportMarshal(object)
+	object["value"] = raw
+	return json.Marshal(object)
 }
 
 type RequestInputText struct {
@@ -2790,17 +2916,17 @@ type RequestInputText struct {
 }
 
 func (v RequestInputText) marshalJSON() ([]byte, error) {
-	type plain RequestInputText
-	data, err := transportMarshal(plain(v))
-	if err != nil {
-		return nil, err
-	}
-	var object map[string]json.RawMessage
-	if err = json.Unmarshal(data, &object); err != nil {
-		return nil, err
-	}
+	object := map[string]json.RawMessage{}
 	object["kind"] = json.RawMessage("\"text\"")
-	return transportMarshal(object)
+	if v.Images != nil {
+		if err := transportMember(object, "images", transportSequence(*v.Images)); err != nil {
+			return nil, err
+		}
+	}
+	if err := transportMember(object, "text", v.Text); err != nil {
+		return nil, err
+	}
+	return json.Marshal(object)
 }
 
 type RequestQuestion interface{ isRequestQuestion() }
@@ -2816,17 +2942,12 @@ type RequestQuestionReference struct {
 }
 
 func (v RequestQuestionReference) marshalJSON() ([]byte, error) {
-	type plain RequestQuestionReference
-	data, err := transportMarshal(plain(v))
-	if err != nil {
-		return nil, err
-	}
-	var object map[string]json.RawMessage
-	if err = json.Unmarshal(data, &object); err != nil {
-		return nil, err
-	}
+	object := map[string]json.RawMessage{}
 	object["kind"] = json.RawMessage("\"reference\"")
-	return transportMarshal(object)
+	if err := transportMember(object, "reference", v.Reference); err != nil {
+		return nil, err
+	}
+	return json.Marshal(object)
 }
 
 type RequestQuestionName struct {
@@ -2834,17 +2955,12 @@ type RequestQuestionName struct {
 }
 
 func (v RequestQuestionName) marshalJSON() ([]byte, error) {
-	type plain RequestQuestionName
-	data, err := transportMarshal(plain(v))
-	if err != nil {
-		return nil, err
-	}
-	var object map[string]json.RawMessage
-	if err = json.Unmarshal(data, &object); err != nil {
-		return nil, err
-	}
+	object := map[string]json.RawMessage{}
 	object["kind"] = json.RawMessage("\"name\"")
-	return transportMarshal(object)
+	if err := transportMember(object, "name", v.Name); err != nil {
+		return nil, err
+	}
+	return json.Marshal(object)
 }
 
 type RequestQuestionFile struct {
@@ -2852,17 +2968,12 @@ type RequestQuestionFile struct {
 }
 
 func (v RequestQuestionFile) marshalJSON() ([]byte, error) {
-	type plain RequestQuestionFile
-	data, err := transportMarshal(plain(v))
-	if err != nil {
-		return nil, err
-	}
-	var object map[string]json.RawMessage
-	if err = json.Unmarshal(data, &object); err != nil {
-		return nil, err
-	}
+	object := map[string]json.RawMessage{}
 	object["kind"] = json.RawMessage("\"file\"")
-	return transportMarshal(object)
+	if err := transportMember(object, "path", v.Path); err != nil {
+		return nil, err
+	}
+	return json.Marshal(object)
 }
 
 type RequestQuestionDefinition struct {
@@ -2870,17 +2981,12 @@ type RequestQuestionDefinition struct {
 }
 
 func (v RequestQuestionDefinition) marshalJSON() ([]byte, error) {
-	type plain RequestQuestionDefinition
-	data, err := transportMarshal(plain(v))
-	if err != nil {
-		return nil, err
-	}
-	var object map[string]json.RawMessage
-	if err = json.Unmarshal(data, &object); err != nil {
-		return nil, err
-	}
+	object := map[string]json.RawMessage{}
 	object["kind"] = json.RawMessage("\"definition\"")
-	return transportMarshal(object)
+	if err := transportMember(object, "value", v.Value); err != nil {
+		return nil, err
+	}
+	return json.Marshal(object)
 }
 
 type RequestDefinition interface{ isRequestDefinition() }
@@ -2902,17 +3008,29 @@ type RequestDefinitionAnnotateDefinition struct {
 }
 
 func (v RequestDefinitionAnnotateDefinition) marshalJSON() ([]byte, error) {
-	type plain RequestDefinitionAnnotateDefinition
-	data, err := transportMarshal(plain(v))
-	if err != nil {
-		return nil, err
-	}
-	var object map[string]json.RawMessage
-	if err = json.Unmarshal(data, &object); err != nil {
-		return nil, err
-	}
+	object := map[string]json.RawMessage{}
 	object["version"] = json.RawMessage("1")
-	return transportMarshal(object)
+	if v.Batch != nil {
+		raw, err := json.Marshal(*v.Batch)
+		if err != nil {
+			return nil, err
+		}
+		object["batch"] = raw
+	}
+	if v.Profile != nil {
+		if err := transportMember(object, "profile", *v.Profile); err != nil {
+			return nil, err
+		}
+	}
+	if err := transportMember(object, "questions", v.Questions); err != nil {
+		return nil, err
+	}
+	if v.Threshold != nil {
+		if err := transportMember(object, "threshold", *v.Threshold); err != nil {
+			return nil, err
+		}
+	}
+	return json.Marshal(object)
 }
 
 type AuthoredThreshold interface{ isAuthoredThreshold() }
@@ -2938,6 +3056,45 @@ type AnnotateQuestionScore struct {
 	Score          AuthoredQuestionText      `json:"score"`
 	WordingVersion *int64                    `json:"wording_version,omitempty"`
 }
+
+func (v AnnotateQuestionScore) marshalJSON() ([]byte, error) {
+	object := map[string]json.RawMessage{}
+	if v.ContextSchema != nil {
+		if err := transportMember(object, "context_schema", *v.ContextSchema); err != nil {
+			return nil, err
+		}
+	}
+	if v.ItemSchema != nil {
+		if err := transportMember(object, "item_schema", *v.ItemSchema); err != nil {
+			return nil, err
+		}
+	}
+	if v.Levels != nil {
+		if err := transportMember(object, "levels", *v.Levels); err != nil {
+			return nil, err
+		}
+	}
+	if v.Name != nil {
+		if err := transportMember(object, "name", *v.Name); err != nil {
+			return nil, err
+		}
+	}
+	if v.On != nil {
+		if err := transportMember(object, "on", *v.On); err != nil {
+			return nil, err
+		}
+	}
+	if err := transportMember(object, "score", v.Score); err != nil {
+		return nil, err
+	}
+	if v.WordingVersion != nil {
+		if err := transportMember(object, "wording_version", *v.WordingVersion); err != nil {
+			return nil, err
+		}
+	}
+	return json.Marshal(object)
+}
+
 type AuthoredQuestionText interface{ isAuthoredQuestionText() }
 
 func (AuthoredQuestionTextString) isAuthoredQuestionText() {}
@@ -2945,7 +3102,15 @@ func (AuthoredQuestionTextObject) isAuthoredQuestionText() {}
 func (AuthoredQuestionTextArray) isAuthoredQuestionText()  {}
 
 type AuthoredQuestionTextArray []any
+
+func (v AuthoredQuestionTextArray) marshalJSON() ([]byte, error) { return json.Marshal([]any(v)) }
+
 type AuthoredQuestionTextObject map[string]any
+
+func (v AuthoredQuestionTextObject) marshalJSON() ([]byte, error) {
+	return json.Marshal(map[string]any(v))
+}
+
 type AuthoredQuestionTextString string
 type AuthoredPointers interface{ isAuthoredPointers() }
 
@@ -2953,6 +3118,11 @@ func (AuthoredPointersString) isAuthoredPointers() {}
 func (AuthoredPointersArray) isAuthoredPointers()  {}
 
 type AuthoredPointersArray []string
+
+func (v AuthoredPointersArray) marshalJSON() ([]byte, error) {
+	return json.Marshal(transportSequence([]string(v)))
+}
+
 type AuthoredPointersString string
 type AuthoredLevels interface{ isAuthoredLevels() }
 
@@ -2960,6 +3130,11 @@ func (AuthoredLevelsArray) isAuthoredLevels()  {}
 func (AuthoredLevelsObject) isAuthoredLevels() {}
 
 type AuthoredLevelsObject map[string]AuthoredCriterion
+
+func (v AuthoredLevelsObject) marshalJSON() ([]byte, error) {
+	return json.Marshal(transportDictionary(map[string]AuthoredCriterion(v)))
+}
+
 type AuthoredCriterion interface{ isAuthoredCriterion() }
 
 func (AuthoredCriterionString) isAuthoredCriterion() {}
@@ -2972,9 +3147,22 @@ type AuthoredCriterionNull struct{}
 func (AuthoredCriterionNull) marshalJSON() ([]byte, error) { return []byte("null"), nil }
 
 type AuthoredCriterionArray []any
+
+func (v AuthoredCriterionArray) marshalJSON() ([]byte, error) { return json.Marshal([]any(v)) }
+
 type AuthoredCriterionObject map[string]any
+
+func (v AuthoredCriterionObject) marshalJSON() ([]byte, error) {
+	return json.Marshal(map[string]any(v))
+}
+
 type AuthoredCriterionString string
 type AuthoredLevelsArray []AuthoredName
+
+func (v AuthoredLevelsArray) marshalJSON() ([]byte, error) {
+	return json.Marshal(transportSequence([]AuthoredName(v)))
+}
+
 type AuthoredName string
 type AuthoredInputDeclaration interface{ isAuthoredInputDeclaration() }
 
@@ -2987,17 +3175,17 @@ type AuthoredInputDeclarationObject struct {
 }
 
 func (v AuthoredInputDeclarationObject) marshalJSON() ([]byte, error) {
-	type plain AuthoredInputDeclarationObject
-	data, err := transportMarshal(plain(v))
-	if err != nil {
-		return nil, err
-	}
-	var object map[string]json.RawMessage
-	if err = json.Unmarshal(data, &object); err != nil {
-		return nil, err
-	}
+	object := map[string]json.RawMessage{}
 	object["type"] = json.RawMessage("\"object\"")
-	return transportMarshal(object)
+	if err := transportMember(object, "properties", transportDictionary(v.Properties)); err != nil {
+		return nil, err
+	}
+	if v.Required != nil {
+		if err := transportMember(object, "required", transportSequence(*v.Required)); err != nil {
+			return nil, err
+		}
+	}
+	return json.Marshal(object)
 }
 
 type AuthoredInputProperty interface{ isAuthoredInputProperty() }
@@ -3012,102 +3200,57 @@ type AuthoredInputPropertyArray struct {
 }
 
 func (v AuthoredInputPropertyArray) marshalJSON() ([]byte, error) {
-	type plain AuthoredInputPropertyArray
-	data, err := transportMarshal(plain(v))
-	if err != nil {
-		return nil, err
-	}
-	var object map[string]json.RawMessage
-	if err = json.Unmarshal(data, &object); err != nil {
-		return nil, err
-	}
+	object := map[string]json.RawMessage{}
 	object["type"] = json.RawMessage("\"array\"")
-	return transportMarshal(object)
+	if err := transportMember(object, "items", v.Items); err != nil {
+		return nil, err
+	}
+	return json.Marshal(object)
 }
 
 type AuthoredInputPropertyArrayItems struct {
 }
 
 func (v AuthoredInputPropertyArrayItems) marshalJSON() ([]byte, error) {
-	type plain AuthoredInputPropertyArrayItems
-	data, err := transportMarshal(plain(v))
-	if err != nil {
-		return nil, err
-	}
-	var object map[string]json.RawMessage
-	if err = json.Unmarshal(data, &object); err != nil {
-		return nil, err
-	}
+	object := map[string]json.RawMessage{}
 	object["type"] = json.RawMessage("\"string\"")
-	return transportMarshal(object)
+	return json.Marshal(object)
 }
 
 type AuthoredInputPropertyBoolean struct {
 }
 
 func (v AuthoredInputPropertyBoolean) marshalJSON() ([]byte, error) {
-	type plain AuthoredInputPropertyBoolean
-	data, err := transportMarshal(plain(v))
-	if err != nil {
-		return nil, err
-	}
-	var object map[string]json.RawMessage
-	if err = json.Unmarshal(data, &object); err != nil {
-		return nil, err
-	}
+	object := map[string]json.RawMessage{}
 	object["type"] = json.RawMessage("\"boolean\"")
-	return transportMarshal(object)
+	return json.Marshal(object)
 }
 
 type AuthoredInputPropertyNumber struct {
 }
 
 func (v AuthoredInputPropertyNumber) marshalJSON() ([]byte, error) {
-	type plain AuthoredInputPropertyNumber
-	data, err := transportMarshal(plain(v))
-	if err != nil {
-		return nil, err
-	}
-	var object map[string]json.RawMessage
-	if err = json.Unmarshal(data, &object); err != nil {
-		return nil, err
-	}
+	object := map[string]json.RawMessage{}
 	object["type"] = json.RawMessage("\"number\"")
-	return transportMarshal(object)
+	return json.Marshal(object)
 }
 
 type AuthoredInputPropertyString struct {
 }
 
 func (v AuthoredInputPropertyString) marshalJSON() ([]byte, error) {
-	type plain AuthoredInputPropertyString
-	data, err := transportMarshal(plain(v))
-	if err != nil {
-		return nil, err
-	}
-	var object map[string]json.RawMessage
-	if err = json.Unmarshal(data, &object); err != nil {
-		return nil, err
-	}
+	object := map[string]json.RawMessage{}
 	object["type"] = json.RawMessage("\"string\"")
-	return transportMarshal(object)
+	return json.Marshal(object)
 }
 
 type AuthoredInputDeclarationString struct {
 }
 
 func (v AuthoredInputDeclarationString) marshalJSON() ([]byte, error) {
-	type plain AuthoredInputDeclarationString
-	data, err := transportMarshal(plain(v))
-	if err != nil {
-		return nil, err
-	}
-	var object map[string]json.RawMessage
-	if err = json.Unmarshal(data, &object); err != nil {
-		return nil, err
-	}
+	object := map[string]json.RawMessage{}
 	object["type"] = json.RawMessage("\"string\"")
-	return transportMarshal(object)
+	return json.Marshal(object)
 }
 
 type AnnotateQuestionTag struct {
@@ -3120,6 +3263,50 @@ type AnnotateQuestionTag struct {
 	Threshold      *AuthoredCut              `json:"threshold,omitempty"`
 	WordingVersion *int64                    `json:"wording_version,omitempty"`
 }
+
+func (v AnnotateQuestionTag) marshalJSON() ([]byte, error) {
+	object := map[string]json.RawMessage{}
+	if v.ContextSchema != nil {
+		if err := transportMember(object, "context_schema", *v.ContextSchema); err != nil {
+			return nil, err
+		}
+	}
+	if v.ItemSchema != nil {
+		if err := transportMember(object, "item_schema", *v.ItemSchema); err != nil {
+			return nil, err
+		}
+	}
+	if v.Labels != nil {
+		if err := transportMember(object, "labels", *v.Labels); err != nil {
+			return nil, err
+		}
+	}
+	if v.Name != nil {
+		if err := transportMember(object, "name", *v.Name); err != nil {
+			return nil, err
+		}
+	}
+	if v.On != nil {
+		if err := transportMember(object, "on", *v.On); err != nil {
+			return nil, err
+		}
+	}
+	if err := transportMember(object, "tag", v.Tag); err != nil {
+		return nil, err
+	}
+	if v.Threshold != nil {
+		if err := transportMember(object, "threshold", *v.Threshold); err != nil {
+			return nil, err
+		}
+	}
+	if v.WordingVersion != nil {
+		if err := transportMember(object, "wording_version", *v.WordingVersion); err != nil {
+			return nil, err
+		}
+	}
+	return json.Marshal(object)
+}
+
 type AuthoredCut interface{ isAuthoredCut() }
 
 func (AuthoredCutNumber) isAuthoredCut() {}
@@ -3133,6 +3320,11 @@ func (AuthoredLabelsArray) isAuthoredLabels()  {}
 func (AuthoredLabelsObject) isAuthoredLabels() {}
 
 type AuthoredLabelsObject map[string]AuthoredDescription
+
+func (v AuthoredLabelsObject) marshalJSON() ([]byte, error) {
+	return json.Marshal(transportDictionary(map[string]AuthoredDescription(v)))
+}
+
 type AuthoredDescription interface{ isAuthoredDescription() }
 
 func (AuthoredDescriptionString) isAuthoredDescription() {}
@@ -3145,9 +3337,22 @@ type AuthoredDescriptionNull struct{}
 func (AuthoredDescriptionNull) marshalJSON() ([]byte, error) { return []byte("null"), nil }
 
 type AuthoredDescriptionArray []any
+
+func (v AuthoredDescriptionArray) marshalJSON() ([]byte, error) { return json.Marshal([]any(v)) }
+
 type AuthoredDescriptionObject map[string]any
+
+func (v AuthoredDescriptionObject) marshalJSON() ([]byte, error) {
+	return json.Marshal(map[string]any(v))
+}
+
 type AuthoredDescriptionString string
 type AuthoredLabelsArray []AuthoredName
+
+func (v AuthoredLabelsArray) marshalJSON() ([]byte, error) {
+	return json.Marshal(transportSequence([]AuthoredName(v)))
+}
+
 type AnnotateQuestionChoose struct {
 	Choose         AuthoredQuestionText      `json:"choose"`
 	ContextSchema  *AuthoredInputDeclaration `json:"context_schema,omitempty"`
@@ -3158,6 +3363,50 @@ type AnnotateQuestionChoose struct {
 	Threshold      *AuthoredCut              `json:"threshold,omitempty"`
 	WordingVersion *int64                    `json:"wording_version,omitempty"`
 }
+
+func (v AnnotateQuestionChoose) marshalJSON() ([]byte, error) {
+	object := map[string]json.RawMessage{}
+	if err := transportMember(object, "choose", v.Choose); err != nil {
+		return nil, err
+	}
+	if v.ContextSchema != nil {
+		if err := transportMember(object, "context_schema", *v.ContextSchema); err != nil {
+			return nil, err
+		}
+	}
+	if v.ItemSchema != nil {
+		if err := transportMember(object, "item_schema", *v.ItemSchema); err != nil {
+			return nil, err
+		}
+	}
+	if v.Name != nil {
+		if err := transportMember(object, "name", *v.Name); err != nil {
+			return nil, err
+		}
+	}
+	if v.On != nil {
+		if err := transportMember(object, "on", *v.On); err != nil {
+			return nil, err
+		}
+	}
+	if v.Options != nil {
+		if err := transportMember(object, "options", *v.Options); err != nil {
+			return nil, err
+		}
+	}
+	if v.Threshold != nil {
+		if err := transportMember(object, "threshold", *v.Threshold); err != nil {
+			return nil, err
+		}
+	}
+	if v.WordingVersion != nil {
+		if err := transportMember(object, "wording_version", *v.WordingVersion); err != nil {
+			return nil, err
+		}
+	}
+	return json.Marshal(object)
+}
+
 type AuthoredOptions interface{ isAuthoredOptions() }
 
 func (AuthoredOptionsArray) isAuthoredOptions()  {}
@@ -3173,6 +3422,11 @@ func (v *AuthoredOptionsObject) UnmarshalJSON(data []byte) error {
 }
 
 type AuthoredOptionsArray []AuthoredName
+
+func (v AuthoredOptionsArray) marshalJSON() ([]byte, error) {
+	return json.Marshal(transportSequence([]AuthoredName(v)))
+}
+
 type AnnotateQuestionDecide struct {
 	ContextSchema  *AuthoredInputDeclaration `json:"context_schema,omitempty"`
 	Decide         AuthoredQuestionText      `json:"decide"`
@@ -3184,6 +3438,55 @@ type AnnotateQuestionDecide struct {
 	True           *AuthoredCriterion        `json:"true,omitempty"`
 	WordingVersion *int64                    `json:"wording_version,omitempty"`
 }
+
+func (v AnnotateQuestionDecide) marshalJSON() ([]byte, error) {
+	object := map[string]json.RawMessage{}
+	if v.ContextSchema != nil {
+		if err := transportMember(object, "context_schema", *v.ContextSchema); err != nil {
+			return nil, err
+		}
+	}
+	if err := transportMember(object, "decide", v.Decide); err != nil {
+		return nil, err
+	}
+	if v.False != nil {
+		if err := transportMember(object, "false", *v.False); err != nil {
+			return nil, err
+		}
+	}
+	if v.ItemSchema != nil {
+		if err := transportMember(object, "item_schema", *v.ItemSchema); err != nil {
+			return nil, err
+		}
+	}
+	if v.Name != nil {
+		if err := transportMember(object, "name", *v.Name); err != nil {
+			return nil, err
+		}
+	}
+	if v.On != nil {
+		if err := transportMember(object, "on", *v.On); err != nil {
+			return nil, err
+		}
+	}
+	if v.Threshold != nil {
+		if err := transportMember(object, "threshold", *v.Threshold); err != nil {
+			return nil, err
+		}
+	}
+	if v.True != nil {
+		if err := transportMember(object, "true", *v.True); err != nil {
+			return nil, err
+		}
+	}
+	if v.WordingVersion != nil {
+		if err := transportMember(object, "wording_version", *v.WordingVersion); err != nil {
+			return nil, err
+		}
+	}
+	return json.Marshal(object)
+}
+
 type AuthoredProfile string
 type RequestDefinitionRecognizeDefinition struct {
 	ContextSchema     *AuthoredInputDeclaration `json:"context_schema,omitempty"`
@@ -3199,17 +3502,57 @@ type RequestDefinitionRecognizeDefinition struct {
 }
 
 func (v RequestDefinitionRecognizeDefinition) marshalJSON() ([]byte, error) {
-	type plain RequestDefinitionRecognizeDefinition
-	data, err := transportMarshal(plain(v))
-	if err != nil {
-		return nil, err
-	}
-	var object map[string]json.RawMessage
-	if err = json.Unmarshal(data, &object); err != nil {
-		return nil, err
-	}
+	object := map[string]json.RawMessage{}
 	object["version"] = json.RawMessage("1")
-	return transportMarshal(object)
+	if v.ContextSchema != nil {
+		if err := transportMember(object, "context_schema", *v.ContextSchema); err != nil {
+			return nil, err
+		}
+	}
+	if v.ItemSchema != nil {
+		if err := transportMember(object, "item_schema", *v.ItemSchema); err != nil {
+			return nil, err
+		}
+	}
+	if v.Model != nil {
+		if err := transportMember(object, "model", *v.Model); err != nil {
+			return nil, err
+		}
+	}
+	if v.Name != nil {
+		if err := transportMember(object, "name", *v.Name); err != nil {
+			return nil, err
+		}
+	}
+	if v.On != nil {
+		if err := transportMember(object, "on", *v.On); err != nil {
+			return nil, err
+		}
+	}
+	if v.Profile != nil {
+		if err := transportMember(object, "profile", *v.Profile); err != nil {
+			return nil, err
+		}
+	}
+	if err := transportMember(object, "recognize", v.Recognize); err != nil {
+		return nil, err
+	}
+	if v.RelationThreshold != nil {
+		if err := transportMember(object, "relation_threshold", *v.RelationThreshold); err != nil {
+			return nil, err
+		}
+	}
+	if v.Threshold != nil {
+		if err := transportMember(object, "threshold", *v.Threshold); err != nil {
+			return nil, err
+		}
+	}
+	if v.WordingVersion != nil {
+		if err := transportMember(object, "wording_version", *v.WordingVersion); err != nil {
+			return nil, err
+		}
+	}
+	return json.Marshal(object)
 }
 
 type RecognizeQuestion struct {
@@ -3221,11 +3564,73 @@ type RecognizeQuestion struct {
 	SnippetPieces    *uint64                          `json:"snippet_pieces,omitempty"`
 	StageContext     *RecognitionStageContext         `json:"stage_context,omitempty"`
 }
+
+func (v RecognizeQuestion) marshalJSON() ([]byte, error) {
+	object := map[string]json.RawMessage{}
+	if v.EntityDefinition != nil {
+		if err := transportMember(object, "entity_definition", *v.EntityDefinition); err != nil {
+			return nil, err
+		}
+	}
+	if v.Instructions != nil {
+		if err := transportMember(object, "instructions", *v.Instructions); err != nil {
+			return nil, err
+		}
+	}
+	if v.Kinds != nil {
+		if err := transportMember(object, "kinds", *v.Kinds); err != nil {
+			return nil, err
+		}
+	}
+	if v.Mode != nil {
+		if err := transportMember(object, "mode", *v.Mode); err != nil {
+			return nil, err
+		}
+	}
+	if v.Relations != nil {
+		if err := transportMember(object, "relations", transportSequence(*v.Relations)); err != nil {
+			return nil, err
+		}
+	}
+	if v.SnippetPieces != nil {
+		if err := transportMember(object, "snippet_pieces", *v.SnippetPieces); err != nil {
+			return nil, err
+		}
+	}
+	if v.StageContext != nil {
+		if err := transportMember(object, "stage_context", *v.StageContext); err != nil {
+			return nil, err
+		}
+	}
+	return json.Marshal(object)
+}
+
 type RecognitionStageContext struct {
 	Boundary *string `json:"boundary,omitempty"`
 	KindEdge *string `json:"kind_edge,omitempty"`
 	Relation *string `json:"relation,omitempty"`
 }
+
+func (v RecognitionStageContext) marshalJSON() ([]byte, error) {
+	object := map[string]json.RawMessage{}
+	if v.Boundary != nil {
+		if err := transportMember(object, "boundary", *v.Boundary); err != nil {
+			return nil, err
+		}
+	}
+	if v.KindEdge != nil {
+		if err := transportMember(object, "kind_edge", *v.KindEdge); err != nil {
+			return nil, err
+		}
+	}
+	if v.Relation != nil {
+		if err := transportMember(object, "relation", *v.Relation); err != nil {
+			return nil, err
+		}
+	}
+	return json.Marshal(object)
+}
+
 type AuthoredRelation struct {
 	Either *bool         `json:"either,omitempty"`
 	Name   AuthoredName  `json:"name"`
@@ -3234,6 +3639,40 @@ type AuthoredRelation struct {
 	Source *AuthoredName `json:"source,omitempty"`
 	Target *AuthoredName `json:"target,omitempty"`
 }
+
+func (v AuthoredRelation) marshalJSON() ([]byte, error) {
+	object := map[string]json.RawMessage{}
+	if v.Either != nil {
+		if err := transportMember(object, "either", *v.Either); err != nil {
+			return nil, err
+		}
+	}
+	if err := transportMember(object, "name", v.Name); err != nil {
+		return nil, err
+	}
+	if v.Reads != nil {
+		if err := transportMember(object, "reads", *v.Reads); err != nil {
+			return nil, err
+		}
+	}
+	if v.Single != nil {
+		if err := transportMember(object, "single", *v.Single); err != nil {
+			return nil, err
+		}
+	}
+	if v.Source != nil {
+		if err := transportMember(object, "source", *v.Source); err != nil {
+			return nil, err
+		}
+	}
+	if v.Target != nil {
+		if err := transportMember(object, "target", *v.Target); err != nil {
+			return nil, err
+		}
+	}
+	return json.Marshal(object)
+}
+
 type RecognitionMode string
 
 const (
@@ -3251,6 +3690,50 @@ type RequestDefinitionAuthoredFind struct {
 	Profile        *AuthoredProfile          `json:"profile,omitempty"`
 	WordingVersion *int64                    `json:"wording_version,omitempty"`
 }
+
+func (v RequestDefinitionAuthoredFind) marshalJSON() ([]byte, error) {
+	object := map[string]json.RawMessage{}
+	if v.ContextSchema != nil {
+		if err := transportMember(object, "context_schema", *v.ContextSchema); err != nil {
+			return nil, err
+		}
+	}
+	if err := transportMember(object, "find", v.Find); err != nil {
+		return nil, err
+	}
+	if v.ItemSchema != nil {
+		if err := transportMember(object, "item_schema", *v.ItemSchema); err != nil {
+			return nil, err
+		}
+	}
+	if v.Model != nil {
+		if err := transportMember(object, "model", *v.Model); err != nil {
+			return nil, err
+		}
+	}
+	if v.Name != nil {
+		if err := transportMember(object, "name", *v.Name); err != nil {
+			return nil, err
+		}
+	}
+	if v.On != nil {
+		if err := transportMember(object, "on", *v.On); err != nil {
+			return nil, err
+		}
+	}
+	if v.Profile != nil {
+		if err := transportMember(object, "profile", *v.Profile); err != nil {
+			return nil, err
+		}
+	}
+	if v.WordingVersion != nil {
+		if err := transportMember(object, "wording_version", *v.WordingVersion); err != nil {
+			return nil, err
+		}
+	}
+	return json.Marshal(object)
+}
+
 type RequestDefinitionAuthoredRelate struct {
 	ContextSchema  *AuthoredInputDeclaration `json:"context_schema,omitempty"`
 	ItemSchema     *AuthoredInputDeclaration `json:"item_schema,omitempty"`
@@ -3263,27 +3746,83 @@ type RequestDefinitionAuthoredRelate struct {
 }
 
 func (v RequestDefinitionAuthoredRelate) marshalJSON() ([]byte, error) {
-	type plain RequestDefinitionAuthoredRelate
-	data, err := transportMarshal(plain(v))
-	if err != nil {
-		return nil, err
-	}
-	var object map[string]json.RawMessage
-	if err = json.Unmarshal(data, &object); err != nil {
-		return nil, err
-	}
+	object := map[string]json.RawMessage{}
 	object["version"] = json.RawMessage("1")
-	return transportMarshal(object)
+	if v.ContextSchema != nil {
+		if err := transportMember(object, "context_schema", *v.ContextSchema); err != nil {
+			return nil, err
+		}
+	}
+	if v.ItemSchema != nil {
+		if err := transportMember(object, "item_schema", *v.ItemSchema); err != nil {
+			return nil, err
+		}
+	}
+	if v.Model != nil {
+		if err := transportMember(object, "model", *v.Model); err != nil {
+			return nil, err
+		}
+	}
+	if v.Name != nil {
+		if err := transportMember(object, "name", *v.Name); err != nil {
+			return nil, err
+		}
+	}
+	if v.Profile != nil {
+		if err := transportMember(object, "profile", *v.Profile); err != nil {
+			return nil, err
+		}
+	}
+	if err := transportMember(object, "relate", v.Relate); err != nil {
+		return nil, err
+	}
+	if v.Threshold != nil {
+		if err := transportMember(object, "threshold", *v.Threshold); err != nil {
+			return nil, err
+		}
+	}
+	if v.WordingVersion != nil {
+		if err := transportMember(object, "wording_version", *v.WordingVersion); err != nil {
+			return nil, err
+		}
+	}
+	return json.Marshal(object)
 }
 
 type RelateQuestion struct {
 	Fields    *RelateFields      `json:"fields,omitempty"`
 	Relations []AuthoredRelation `json:"relations"`
 }
+
+func (v RelateQuestion) marshalJSON() ([]byte, error) {
+	object := map[string]json.RawMessage{}
+	if v.Fields != nil {
+		if err := transportMember(object, "fields", *v.Fields); err != nil {
+			return nil, err
+		}
+	}
+	if err := transportMember(object, "relations", transportSequence(v.Relations)); err != nil {
+		return nil, err
+	}
+	return json.Marshal(object)
+}
+
 type RelateFields struct {
 	Kind string `json:"kind"`
 	Name string `json:"name"`
 }
+
+func (v RelateFields) marshalJSON() ([]byte, error) {
+	object := map[string]json.RawMessage{}
+	if err := transportMember(object, "kind", v.Kind); err != nil {
+		return nil, err
+	}
+	if err := transportMember(object, "name", v.Name); err != nil {
+		return nil, err
+	}
+	return json.Marshal(object)
+}
+
 type RequestDefinitionAuthoredScore struct {
 	Batch          *RequestDefinitionAuthoredScoreBatch `json:"batch,omitempty"`
 	ContextSchema  *AuthoredInputDeclaration            `json:"context_schema,omitempty"`
@@ -3296,6 +3835,60 @@ type RequestDefinitionAuthoredScore struct {
 	Score          AuthoredQuestionText                 `json:"score"`
 	WordingVersion *int64                               `json:"wording_version,omitempty"`
 }
+
+func (v RequestDefinitionAuthoredScore) marshalJSON() ([]byte, error) {
+	object := map[string]json.RawMessage{}
+	if v.Batch != nil {
+		if err := transportMember(object, "batch", *v.Batch); err != nil {
+			return nil, err
+		}
+	}
+	if v.ContextSchema != nil {
+		if err := transportMember(object, "context_schema", *v.ContextSchema); err != nil {
+			return nil, err
+		}
+	}
+	if v.ItemSchema != nil {
+		if err := transportMember(object, "item_schema", *v.ItemSchema); err != nil {
+			return nil, err
+		}
+	}
+	if v.Levels != nil {
+		if err := transportMember(object, "levels", *v.Levels); err != nil {
+			return nil, err
+		}
+	}
+	if v.Model != nil {
+		if err := transportMember(object, "model", *v.Model); err != nil {
+			return nil, err
+		}
+	}
+	if v.Name != nil {
+		if err := transportMember(object, "name", *v.Name); err != nil {
+			return nil, err
+		}
+	}
+	if v.On != nil {
+		if err := transportMember(object, "on", *v.On); err != nil {
+			return nil, err
+		}
+	}
+	if v.Profile != nil {
+		if err := transportMember(object, "profile", *v.Profile); err != nil {
+			return nil, err
+		}
+	}
+	if err := transportMember(object, "score", v.Score); err != nil {
+		return nil, err
+	}
+	if v.WordingVersion != nil {
+		if err := transportMember(object, "wording_version", *v.WordingVersion); err != nil {
+			return nil, err
+		}
+	}
+	return json.Marshal(object)
+}
+
 type RequestDefinitionAuthoredScoreBatch interface{ isRequestDefinitionAuthoredScoreBatch() }
 
 func (RequestDefinitionAuthoredScoreBatchValue) isRequestDefinitionAuthoredScoreBatch()   {}
@@ -3316,6 +3909,65 @@ type RequestDefinitionAuthoredTag struct {
 	Threshold      *AuthoredCut                       `json:"threshold,omitempty"`
 	WordingVersion *int64                             `json:"wording_version,omitempty"`
 }
+
+func (v RequestDefinitionAuthoredTag) marshalJSON() ([]byte, error) {
+	object := map[string]json.RawMessage{}
+	if v.Batch != nil {
+		if err := transportMember(object, "batch", *v.Batch); err != nil {
+			return nil, err
+		}
+	}
+	if v.ContextSchema != nil {
+		if err := transportMember(object, "context_schema", *v.ContextSchema); err != nil {
+			return nil, err
+		}
+	}
+	if v.ItemSchema != nil {
+		if err := transportMember(object, "item_schema", *v.ItemSchema); err != nil {
+			return nil, err
+		}
+	}
+	if v.Labels != nil {
+		if err := transportMember(object, "labels", *v.Labels); err != nil {
+			return nil, err
+		}
+	}
+	if v.Model != nil {
+		if err := transportMember(object, "model", *v.Model); err != nil {
+			return nil, err
+		}
+	}
+	if v.Name != nil {
+		if err := transportMember(object, "name", *v.Name); err != nil {
+			return nil, err
+		}
+	}
+	if v.On != nil {
+		if err := transportMember(object, "on", *v.On); err != nil {
+			return nil, err
+		}
+	}
+	if v.Profile != nil {
+		if err := transportMember(object, "profile", *v.Profile); err != nil {
+			return nil, err
+		}
+	}
+	if err := transportMember(object, "tag", v.Tag); err != nil {
+		return nil, err
+	}
+	if v.Threshold != nil {
+		if err := transportMember(object, "threshold", *v.Threshold); err != nil {
+			return nil, err
+		}
+	}
+	if v.WordingVersion != nil {
+		if err := transportMember(object, "wording_version", *v.WordingVersion); err != nil {
+			return nil, err
+		}
+	}
+	return json.Marshal(object)
+}
+
 type RequestDefinitionAuthoredTagBatch interface{ isRequestDefinitionAuthoredTagBatch() }
 
 func (RequestDefinitionAuthoredTagBatchValue) isRequestDefinitionAuthoredTagBatch()   {}
@@ -3336,6 +3988,65 @@ type RequestDefinitionAuthoredChoose struct {
 	Threshold      *AuthoredCut                          `json:"threshold,omitempty"`
 	WordingVersion *int64                                `json:"wording_version,omitempty"`
 }
+
+func (v RequestDefinitionAuthoredChoose) marshalJSON() ([]byte, error) {
+	object := map[string]json.RawMessage{}
+	if v.Batch != nil {
+		if err := transportMember(object, "batch", *v.Batch); err != nil {
+			return nil, err
+		}
+	}
+	if err := transportMember(object, "choose", v.Choose); err != nil {
+		return nil, err
+	}
+	if v.ContextSchema != nil {
+		if err := transportMember(object, "context_schema", *v.ContextSchema); err != nil {
+			return nil, err
+		}
+	}
+	if v.ItemSchema != nil {
+		if err := transportMember(object, "item_schema", *v.ItemSchema); err != nil {
+			return nil, err
+		}
+	}
+	if v.Model != nil {
+		if err := transportMember(object, "model", *v.Model); err != nil {
+			return nil, err
+		}
+	}
+	if v.Name != nil {
+		if err := transportMember(object, "name", *v.Name); err != nil {
+			return nil, err
+		}
+	}
+	if v.On != nil {
+		if err := transportMember(object, "on", *v.On); err != nil {
+			return nil, err
+		}
+	}
+	if v.Options != nil {
+		if err := transportMember(object, "options", *v.Options); err != nil {
+			return nil, err
+		}
+	}
+	if v.Profile != nil {
+		if err := transportMember(object, "profile", *v.Profile); err != nil {
+			return nil, err
+		}
+	}
+	if v.Threshold != nil {
+		if err := transportMember(object, "threshold", *v.Threshold); err != nil {
+			return nil, err
+		}
+	}
+	if v.WordingVersion != nil {
+		if err := transportMember(object, "wording_version", *v.WordingVersion); err != nil {
+			return nil, err
+		}
+	}
+	return json.Marshal(object)
+}
+
 type RequestDefinitionAuthoredChooseBatch interface{ isRequestDefinitionAuthoredChooseBatch() }
 
 func (RequestDefinitionAuthoredChooseBatchValue) isRequestDefinitionAuthoredChooseBatch()   {}
@@ -3357,6 +4068,70 @@ type RequestDefinitionAuthoredDecide struct {
 	True           *AuthoredCriterion                    `json:"true,omitempty"`
 	WordingVersion *int64                                `json:"wording_version,omitempty"`
 }
+
+func (v RequestDefinitionAuthoredDecide) marshalJSON() ([]byte, error) {
+	object := map[string]json.RawMessage{}
+	if v.Batch != nil {
+		if err := transportMember(object, "batch", *v.Batch); err != nil {
+			return nil, err
+		}
+	}
+	if v.ContextSchema != nil {
+		if err := transportMember(object, "context_schema", *v.ContextSchema); err != nil {
+			return nil, err
+		}
+	}
+	if err := transportMember(object, "decide", v.Decide); err != nil {
+		return nil, err
+	}
+	if v.False != nil {
+		if err := transportMember(object, "false", *v.False); err != nil {
+			return nil, err
+		}
+	}
+	if v.ItemSchema != nil {
+		if err := transportMember(object, "item_schema", *v.ItemSchema); err != nil {
+			return nil, err
+		}
+	}
+	if v.Model != nil {
+		if err := transportMember(object, "model", *v.Model); err != nil {
+			return nil, err
+		}
+	}
+	if v.Name != nil {
+		if err := transportMember(object, "name", *v.Name); err != nil {
+			return nil, err
+		}
+	}
+	if v.On != nil {
+		if err := transportMember(object, "on", *v.On); err != nil {
+			return nil, err
+		}
+	}
+	if v.Profile != nil {
+		if err := transportMember(object, "profile", *v.Profile); err != nil {
+			return nil, err
+		}
+	}
+	if v.Threshold != nil {
+		if err := transportMember(object, "threshold", *v.Threshold); err != nil {
+			return nil, err
+		}
+	}
+	if v.True != nil {
+		if err := transportMember(object, "true", *v.True); err != nil {
+			return nil, err
+		}
+	}
+	if v.WordingVersion != nil {
+		if err := transportMember(object, "wording_version", *v.WordingVersion); err != nil {
+			return nil, err
+		}
+	}
+	return json.Marshal(object)
+}
+
 type RequestDefinitionAuthoredDecideBatch interface{ isRequestDefinitionAuthoredDecideBatch() }
 
 func (RequestDefinitionAuthoredDecideBatchValue) isRequestDefinitionAuthoredDecideBatch()   {}
@@ -3369,17 +4144,12 @@ type RequestQuestionText struct {
 }
 
 func (v RequestQuestionText) marshalJSON() ([]byte, error) {
-	type plain RequestQuestionText
-	data, err := transportMarshal(plain(v))
-	if err != nil {
-		return nil, err
-	}
-	var object map[string]json.RawMessage
-	if err = json.Unmarshal(data, &object); err != nil {
-		return nil, err
-	}
+	object := map[string]json.RawMessage{}
 	object["kind"] = json.RawMessage("\"text\"")
-	return transportMarshal(object)
+	if err := transportMember(object, "text", v.Text); err != nil {
+		return nil, err
+	}
+	return json.Marshal(object)
 }
 
 type RequestOptions struct {
@@ -3406,6 +4176,122 @@ type RequestOptions struct {
 	Threshold         *RequestThreshold        `json:"threshold,omitempty"`
 	Top               *uint64                  `json:"top,omitempty"`
 }
+
+func (v RequestOptions) marshalJSON() ([]byte, error) {
+	object := map[string]json.RawMessage{}
+	if v.Attempts != nil {
+		if err := transportMember(object, "attempts", *v.Attempts); err != nil {
+			return nil, err
+		}
+	}
+	if v.Batch != nil {
+		if err := transportMember(object, "batch", *v.Batch); err != nil {
+			return nil, err
+		}
+	}
+	if v.Context != nil {
+		if err := transportMember(object, "context", *v.Context); err != nil {
+			return nil, err
+		}
+	}
+	if v.ContextField != nil {
+		if err := transportMember(object, "context_field", *v.ContextField); err != nil {
+			return nil, err
+		}
+	}
+	if v.DeadlineMs != nil {
+		if err := transportMember(object, "deadline_ms", *v.DeadlineMs); err != nil {
+			return nil, err
+		}
+	}
+	if v.Details != nil {
+		if err := transportMember(object, "details", *v.Details); err != nil {
+			return nil, err
+		}
+	}
+	if v.Examples != nil {
+		if err := transportMember(object, "examples", transportSequence(*v.Examples)); err != nil {
+			return nil, err
+		}
+	}
+	if v.ExamplesField != nil {
+		if err := transportMember(object, "examples_field", *v.ExamplesField); err != nil {
+			return nil, err
+		}
+	}
+	if v.Field != nil {
+		if err := transportMember(object, "field", transportSequence(*v.Field)); err != nil {
+			return nil, err
+		}
+	}
+	if v.FilesOnly != nil {
+		if err := transportMember(object, "files_only", *v.FilesOnly); err != nil {
+			return nil, err
+		}
+	}
+	if v.MaxRequestsTotal != nil {
+		if err := transportMember(object, "max_requests_total", *v.MaxRequestsTotal); err != nil {
+			return nil, err
+		}
+	}
+	if v.Mode != nil {
+		if err := transportMember(object, "mode", *v.Mode); err != nil {
+			return nil, err
+		}
+	}
+	if v.Model != nil {
+		if err := transportMember(object, "model", *v.Model); err != nil {
+			return nil, err
+		}
+	}
+	if v.None != nil {
+		if err := transportMember(object, "none", *v.None); err != nil {
+			return nil, err
+		}
+	}
+	if v.OptionsField != nil {
+		if err := transportMember(object, "options_field", *v.OptionsField); err != nil {
+			return nil, err
+		}
+	}
+	if v.RelationThreshold != nil {
+		if err := transportMember(object, "relation_threshold", *v.RelationThreshold); err != nil {
+			return nil, err
+		}
+	}
+	if v.SeedSpans != nil {
+		if err := transportMember(object, "seed_spans", transportSequence(*v.SeedSpans)); err != nil {
+			return nil, err
+		}
+	}
+	if v.SeedSpansField != nil {
+		if err := transportMember(object, "seed_spans_field", *v.SeedSpansField); err != nil {
+			return nil, err
+		}
+	}
+	if v.SnippetPieces != nil {
+		if err := transportMember(object, "snippet_pieces", *v.SnippetPieces); err != nil {
+			return nil, err
+		}
+	}
+	if v.StageContext != nil {
+		if err := transportMember(object, "stage_context", *v.StageContext); err != nil {
+			return nil, err
+		}
+	}
+	if v.Threshold != nil {
+		if err := transportMember(object, "threshold", *v.Threshold); err != nil {
+			return nil, err
+		}
+	}
+	if v.Top != nil {
+		if err := transportMember(object, "top", *v.Top); err != nil {
+			return nil, err
+		}
+	}
+	return json.Marshal(object)
+}
+
 type RequestThreshold interface{ isRequestThreshold() }
 
 func (RequestThresholdNumber) isRequestThreshold() {}
@@ -3441,6 +4327,109 @@ type EngineSettings struct {
 	UsdPerMillionInput           *string        `json:"usd_per_million_input,omitempty"`
 	UsdPerMillionOutput          *string        `json:"usd_per_million_output,omitempty"`
 }
+
+func (v EngineSettings) marshalJSON() ([]byte, error) {
+	object := map[string]json.RawMessage{}
+	if v.Backend != nil {
+		if err := transportMember(object, "backend", *v.Backend); err != nil {
+			return nil, err
+		}
+	}
+	if v.BaseUrl != nil {
+		if err := transportMember(object, "base_url", *v.BaseUrl); err != nil {
+			return nil, err
+		}
+	}
+	if v.Batch != nil {
+		if err := transportMember(object, "batch", *v.Batch); err != nil {
+			return nil, err
+		}
+	}
+	if v.Cache != nil {
+		if err := transportMember(object, "cache", *v.Cache); err != nil {
+			return nil, err
+		}
+	}
+	if v.MaxEstimatedInputTokensTotal != nil {
+		if err := transportMember(object, "max_estimated_input_tokens_total", *v.MaxEstimatedInputTokensTotal); err != nil {
+			return nil, err
+		}
+	}
+	if v.MaxRequestBytes != nil {
+		if err := transportMember(object, "max_request_bytes", *v.MaxRequestBytes); err != nil {
+			return nil, err
+		}
+	}
+	if v.MaxRequests != nil {
+		if err := transportMember(object, "max_requests", *v.MaxRequests); err != nil {
+			return nil, err
+		}
+	}
+	if v.MaxRequestsTotal != nil {
+		if err := transportMember(object, "max_requests_total", *v.MaxRequestsTotal); err != nil {
+			return nil, err
+		}
+	}
+	if v.MaxRetries != nil {
+		if err := transportMember(object, "max_retries", *v.MaxRetries); err != nil {
+			return nil, err
+		}
+	}
+	if v.Model != nil {
+		if err := transportMember(object, "model", *v.Model); err != nil {
+			return nil, err
+		}
+	}
+	if v.Profile != nil {
+		if err := transportMember(object, "profile", *v.Profile); err != nil {
+			return nil, err
+		}
+	}
+	if v.Proxy != nil {
+		raw, err := json.Marshal(*v.Proxy)
+		if err != nil {
+			return nil, err
+		}
+		object["proxy"] = raw
+	}
+	if v.Record != nil {
+		if err := transportMember(object, "record", *v.Record); err != nil {
+			return nil, err
+		}
+	}
+	if v.RefreshCache != nil {
+		if err := transportMember(object, "refresh_cache", *v.RefreshCache); err != nil {
+			return nil, err
+		}
+	}
+	if v.Replay != nil {
+		if err := transportMember(object, "replay", *v.Replay); err != nil {
+			return nil, err
+		}
+	}
+	if v.Throttle != nil {
+		if err := transportMember(object, "throttle", *v.Throttle); err != nil {
+			return nil, err
+		}
+	}
+	if v.Timeout != nil {
+		if err := transportMember(object, "timeout", *v.Timeout); err != nil {
+			return nil, err
+		}
+	}
+	if v.UsdPerMillionInput != nil {
+		if err := transportMember(object, "usd_per_million_input", *v.UsdPerMillionInput); err != nil {
+			return nil, err
+		}
+	}
+	if v.UsdPerMillionOutput != nil {
+		if err := transportMember(object, "usd_per_million_output", *v.UsdPerMillionOutput); err != nil {
+			return nil, err
+		}
+	}
+	return json.Marshal(object)
+}
+
 type CacheDocument interface{ isCacheDocument() }
 
 func (CacheDocumentString) isCacheDocument() {}
@@ -3453,17 +4442,12 @@ type Request struct {
 }
 
 func (v Request) marshalJSON() ([]byte, error) {
-	type plain Request
-	data, err := transportMarshal(plain(v))
-	if err != nil {
-		return nil, err
-	}
-	var object map[string]json.RawMessage
-	if err = json.Unmarshal(data, &object); err != nil {
-		return nil, err
-	}
+	object := map[string]json.RawMessage{}
 	object["schema"] = json.RawMessage("\"thinkthen.request/1\"")
-	return transportMarshal(object)
+	if err := transportMember(object, "call", v.Call); err != nil {
+		return nil, err
+	}
+	return json.Marshal(object)
 }
 
 type RequestCall struct {
@@ -3472,6 +4456,26 @@ type RequestCall struct {
 	Options  *RequestOptions `json:"options,omitempty"`
 	Question RequestQuestion `json:"question"`
 }
+
+func (v RequestCall) marshalJSON() ([]byte, error) {
+	object := map[string]json.RawMessage{}
+	if err := transportMember(object, "function", v.Function); err != nil {
+		return nil, err
+	}
+	if err := transportMember(object, "input", v.Input); err != nil {
+		return nil, err
+	}
+	if v.Options != nil {
+		if err := transportMember(object, "options", *v.Options); err != nil {
+			return nil, err
+		}
+	}
+	if err := transportMember(object, "question", v.Question); err != nil {
+		return nil, err
+	}
+	return json.Marshal(object)
+}
+
 type RequestFunction string
 
 const (
@@ -3491,11 +4495,44 @@ type RequestSessionDescriptor struct {
 	Item     RequestItem            `json:"item"`
 	Location *SessionSourceLocation `json:"location,omitempty"`
 }
+
+func (v RequestSessionDescriptor) marshalJSON() ([]byte, error) {
+	object := map[string]json.RawMessage{}
+	if err := transportMember(object, "item", v.Item); err != nil {
+		return nil, err
+	}
+	if v.Location != nil {
+		if err := transportMember(object, "location", *v.Location); err != nil {
+			return nil, err
+		}
+	}
+	return json.Marshal(object)
+}
+
 type SessionSourceLocation struct {
 	File      string  `json:"file"`
 	FirstLine *uint64 `json:"first_line,omitempty"`
 	LastLine  *uint64 `json:"last_line,omitempty"`
 }
+
+func (v SessionSourceLocation) marshalJSON() ([]byte, error) {
+	object := map[string]json.RawMessage{}
+	if err := transportMember(object, "file", v.File); err != nil {
+		return nil, err
+	}
+	if v.FirstLine != nil {
+		if err := transportMember(object, "first_line", *v.FirstLine); err != nil {
+			return nil, err
+		}
+	}
+	if v.LastLine != nil {
+		if err := transportMember(object, "last_line", *v.LastLine); err != nil {
+			return nil, err
+		}
+	}
+	return json.Marshal(object)
+}
+
 type DecideInput interface{ RequestInput }
 
 func (c *Client) Decide(ctx context.Context, question RequestQuestion, input DecideInput, options *RequestOptions) (Call, error) {

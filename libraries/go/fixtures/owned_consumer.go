@@ -123,6 +123,35 @@ func collectionAnswerChecks() {
 	}
 }
 
+type EmbeddedOriginal struct {
+	Label string `json:"label"`
+}
+type StructuredOriginal struct {
+	EmbeddedOriginal
+	Count   int            `json:"count,string"`
+	Empty   []string       `json:"empty,omitempty"`
+	Members map[string]int `json:"members,omitempty"`
+}
+
+func authoredEncoding(client *tt.Client, cyclic bool) {
+	if cyclic {
+		value := map[string]any{}
+		value["self"] = value
+		var pointer any
+		pointer = &pointer
+		for _, value := range []any{value, pointer} {
+			_, err := client.Decide(context.Background(), tt.TextQuestion("Is it?"), tt.RecordsInput(tt.JSONItem(value)), nil)
+			require(err != nil, "cyclic authored value accepted")
+		}
+		fmt.Println("cyclic-authored-refusal-pass")
+		return
+	}
+	for _, value := range []any{[]byte{65}, StructuredOriginal{EmbeddedOriginal: EmbeddedOriginal{Label: "kept"}, Count: 7, Empty: []string{}, Members: map[string]int{}}, map[string]any{"bytes": []byte{65}}} {
+		_, err := client.Decide(context.Background(), tt.TextQuestion("Is it?"), tt.RecordsInput(tt.JSONItem(value)), nil)
+		require(err == nil, "authored encoding call failed")
+	}
+	fmt.Println("authored-encoding-pass requests=3")
+}
 func main() {
 	for _, value := range []any{tt.TextInput("text"), tt.Request{}, tt.SessionPacket{}, tt.OrderedMap[string]{}, tt.Facts{}} {
 		_, exposes := value.(json.Marshaler)
@@ -136,6 +165,10 @@ func main() {
 		panic(err)
 	}
 	defer client.Close()
+	if len(os.Args) > 1 && (os.Args[1] == "encoding" || os.Args[1] == "cyclic") {
+		authoredEncoding(client, os.Args[1] == "cyclic")
+		return
+	}
 	if len(os.Args) > 1 && os.Args[1] == "plan" {
 		planClient, err := tt.NewClient(tt.EngineSettings{BaseUrl: tt.Ptr(os.Getenv("THINKTHEN_BASE_URL")), Model: tt.Ptr("jev-1.13.0"), Cache: tt.Ptr[tt.CacheDocument](tt.DisabledCache(false))})
 		require(err == nil, "plan constructor")
