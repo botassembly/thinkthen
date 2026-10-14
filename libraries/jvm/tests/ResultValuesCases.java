@@ -27,6 +27,8 @@ public final class ResultValuesCases {
             } else check(((List<?>)result.value()).get(2).equals(new BigDecimal(wide)), "authored list keeps exact integer");
             check(result.results().size() == 1 && result.facts().requestsSent().intValueExact() == 1, "authored receipts and facts remain attached");
         }
+        var keptNull = engine.filter(examples.SampleInputs.decide(), new Inputs.RequestInputJson().value(null)).join();
+        check(keptNull.value().equals(Collections.singletonList(null)) && keptNull.probability().equals(List.of(new BigDecimal("0.9"))), "filter preserves a selected original null");
         var threshold = new Inputs.RequestQuestionDefinition().value(new Inputs.RequestDefinitionAuthoredDecide().decide(new Inputs.AuthoredQuestionText("Is it?")).threshold(new Inputs.AuthoredThreshold("0.2:0.95")));
         var records = new Inputs.RequestInputRecords().items(List.of(new Inputs.RequestItem().original(new Inputs.RequestOriginalText().text("result-first")), new Inputs.RequestItem().original(new Inputs.RequestOriginalText().text("no"))));
         var decisions = engine.decide(threshold, records, new Inputs.RequestOptions().batch(new Inputs.RequestBatch(1))).join();

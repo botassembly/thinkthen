@@ -111,7 +111,7 @@ def run(jars, out, *, maven=False, language=None, profiles=None):
             assert b'INSTALLED_JVM_SESSION_PASS' in result.stdout
             expected = ['session-decide','session-choose','session-tag','session-score','session-filter','session-rank','[{\"id\":\"u001\",\"evidence\":\"session-find\"},{\"id\":\"u002\",\"evidence\":\"session-find-two\"}]','session-annotate','Maria Chen','Maria Chen',{'entities':[{'id':'i1','name':'First','kind':'alert'},{'id':'i2','name':'Second','kind':'alert'}]},'status-401','hold-jvm-java','session-independent','multiple-first','multiple-second']
             expected += sample_arrivals
-            expected += ['result-authored-0','result-authored-1','result-authored-2','result-authored-3','result-first','no','result-choose-unsure','result-first','no','[{"id":"u001","evidence":"null"},{"id":"u002","evidence":"other"}]']
+            expected += ['result-authored-0','result-authored-1','result-authored-2','result-authored-3',None,'result-first','no','result-choose-unsure','result-first','no','[{"id":"u001","evidence":"null"},{"id":"u002","evidence":"other"}]']
             assert_arrivals(server.arrivals, expected)
             expected_agents = [f'thinkthen/{version} (java)'] * len(expected)
             assert server.attempts == server.connections == len(expected),server.arrivals
