@@ -7,7 +7,8 @@ INSERT INTO entities VALUES
     (3, 'iPhone', 'product'),
     (4, 'Kindle', 'product');
 
-SELECT * FROM thinkthen_relate(
+SELECT relation, source, target, probability
+FROM thinkthen_relate(
     'SELECT id, name, kind FROM entities',
     'makes=company:product'
 ) AS makes;

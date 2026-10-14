@@ -115,11 +115,12 @@ ORDER BY abbey_road.rank;
 | `thinkthen_score(question, input[, settings])` | position on the named levels |
 | `thinkthen_tag(question, input[, settings])` | JSON array text of labels |
 | `thinkthen_<function>_details` as a table | value, probability, typed result, failure, facts and observations for each row |
+| `thinkthen_rank(question, keyed_json[, settings])` | key, rank and probability for each record |
 | `thinkthen_find(question, units_json[, settings])` | selected index, value and probabilities as JSON text |
 | `thinkthen_annotate(questions, input[, settings])` | named judgments as JSON text |
 | `thinkthen_recognize(input, kinds[, settings])` | rows of names, offsets, kinds and strengths |
 | `thinkthen_relations(input, spec)` | complete recognition JSON, including relations |
-| `thinkthen_relate(query, rules[, settings])` | rows of relation, source id, target id, probability, and `either`, 1 for an edge of a both-ways rule (its ends then in query order) and 0 otherwise |
+| `thinkthen_relate(query, rules[, settings])` | rows of relation, source id, target id, probability, and optional `either`, which marks an edge of a both-ways rule (its ends then follow query order) |
 | `thinkthen_plan(question, keyed_json[, settings])` | JSON text with planned records, requests, bytes, input token band and the first exact request body as `first_body_utf8` |
 | `thinkthen_usage()` | cumulative request, cache-answer and reported token totals; the process also adds them to the command's usage totals when it exits, so `thinkthen status` shows them (ADR 0113) |
 | `thinkthen_usage_status()` | live JSON persistence observation; builds no engine and sends no request |
@@ -174,7 +175,7 @@ FROM thinkthen_read_files('specification/fixtures/files/documents', '{"unit":"fi
 
 Files use the caller's native filesystem permissions. The reader remains DIRECTONLY even under `sqlite3_thinkthen_trusted_init`: stored main/attached views and triggers cannot read files. Caller-created TEMP objects retain SQLite's availability under either trusted_schema setting. A reader's source coordinates stay outside judging payloads and cache keys. `thinkthen_span_lines(record, first_line, start, end)` returns JSON with physical `first_line` and `last_line` from the shared native Unicode scalar mapper; retain the local recognize offsets alongside it. Relate joins both returned endpoint ids to their actual reader rows and admits at most 255 source rows before deduplication. PostgreSQL server paths remain deferred.
 
-## Explicit images (0.2 development)
+## Explicit images
 
 `thinkthen_image(bytes BLOB, mime TEXT)` returns a versioned tagged BLOB. `thinkthen_images(image, ...)` packs 1–8 values in authored order into another persistent tagged BLOB. Tags survive storage; every judgment revalidates them. MIME is exactly `image/png` or `image/jpeg`; the native reader/decoder validates original compressed pixels. Each question takes 1–8 images and at most 24 MiB of compressed bytes. Order and duplicates are preserved. Source file names stay outside model evidence and cache identity.
 
@@ -193,11 +194,11 @@ Settings take batch, context and deadline. Engine configuration supplies model/b
 
 ## Read typed answers and receipts
 
-Each of the ten functions has one `thinkthen_<function>_details` table. Plain calls retain their ordinary value. The retired `thinkthen_details`, `thinkthen_try_details`, `thinkthen_details_images`, `_complete` functions and record-list forms of plain calls are absent.
+Each of the ten functions has one `thinkthen_<function>_details` table. Plain calls retain their ordinary value. Use named collection inputs on the details tables for several records.
 
-Each details row exposes `ordinal, value, probability, result, failure, facts, observations`. Result, failure, facts and observation references select the named typed projections from the same evaluation. Decide and filter expose yes probability; choose and find expose the selected option's probability. Score, tag and annotate expose null probability. Rank exposes one row per ranked record with its rank and probability. Recognition retains probabilities for each span. Relate exposes one row per edge with its probability. Rank, find and relate consume the supplied records as one whole set. A failed aggregate returns one failure row.
+Read the typed answer directly with `SELECT value, probability FROM thinkthen_decide_details(question, input)`. Each details row exposes `ordinal, value, probability, result, failure, facts, observations`. Result, failure, facts and observation references select the named typed projections from the same evaluation. Decide and filter expose yes probability; choose and find expose the selected option's probability. Score, tag and annotate expose null probability. Rank exposes one row per ranked record with its rank and probability. Recognition retains probabilities for each span. Relate exposes one row per edge with its probability. Rank, find and relate consume the supplied records as one whole set. A failed aggregate returns one failure row.
 
-Rank and relate retain the call's observations on the first details row, whose ordinal is zero. Later rows expose an empty observation list. Read the first row to inspect the whole call. A single failure row retains all observations.
+Each relate row owns one edge in its Related result. Rank and relate retain the call's observations on the first details row, whose ordinal is zero. Later rows expose an empty observation list. Read the first row to inspect the whole call. A single failure row retains all observations.
 
 For one ordinary receipt:
 
