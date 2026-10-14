@@ -404,7 +404,7 @@ class PublicSurface(unittest.TestCase):
     def test_cobol_outer_guard_preserves_real_public_macros(self):
         with tempfile.TemporaryDirectory(prefix='library-surface-cobol-') as folder:
             root = Path(folder)
-            for name in ('sdlc', 'specification', 'conformance'):
+            for name in ('sdlc', 'specification', 'conformance', 'crates'):
                 (root / name).symlink_to(ROOT / name, target_is_directory=True)
             shutil.copytree(ROOT / 'libraries/cobol', root / 'libraries/cobol')
             header = root / 'libraries/c/include/thinkthen.h'
