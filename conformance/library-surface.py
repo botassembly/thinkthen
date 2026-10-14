@@ -50,7 +50,7 @@ def members(declared, containers, prefix=''):
 
 
 def function_errors(declared, functions, config, containers, facade=''):
-    if config['language'] in ('java', 'cpp', 'php', 'typescript', 'csharp'):
+    if config['language'] in ('java', 'cpp', 'php', 'typescript', 'csharp', 'dart'):
         declared = READ.public_inherited(declared)
     names = {canonical(d.name) for d in declared if d.kind == 'call' and d.owner in containers}
     errors = []
@@ -75,7 +75,7 @@ def facade_errors(declared, functions, manifest, config):
 
 
 def helper_errors(declared, manifest, config):
-    if config['language'] in ('cpp', 'php'):
+    if config['language'] in ('cpp', 'php', 'dart'):
         declared = READ.public_inherited(declared)
     errors = []
     helper_names = config.get('helper_names', {})

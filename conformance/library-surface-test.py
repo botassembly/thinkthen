@@ -16,6 +16,46 @@ from conformance.children.children import child_env
 
 
 class PublicSurface(unittest.TestCase):
+    def test_dart_mixins_and_generated_schema_still_detect_omissions(self):
+        with tempfile.TemporaryDirectory(prefix='library-surface-dart-') as folder:
+            root = Path(folder)
+            for name in ('sdlc', 'specification', 'conformance'):
+                (root / name).symlink_to(ROOT / name, target_is_directory=True)
+            shutil.copytree(ROOT / 'libraries/dart/lib', root / 'libraries/dart/lib')
+            header = root / 'libraries/c/include/thinkthen.h'
+            header.parent.mkdir(parents=True)
+            shutil.copyfile(ROOT / 'libraries/c/include/thinkthen.h', header)
+            def invoke():
+                run = subprocess.run(['python3', str(CHECK), '--root', str(root), '--library', 'dart', '--json'],
+                                     capture_output=True, text=True, env=child_env(home=folder))
+                self.assertIn(run.returncode, (0, 1), run.stderr)
+                return json.loads(run.stdout)['libraries']['dart']
+            errors = invoke()
+            self.assertFalse(any(error.startswith(('missing function:', 'schema declaration derivation failed:',
+                                                   'missing generated declaration:', 'unlisted generated declaration:'))
+                                 for error in errors), errors)
+            client = root / 'libraries/dart/lib/src/session/client.dart'
+            original = client.read_text()
+            self.assertIn('with NamedCalls', original)
+            client.write_text(original.replace('with NamedCalls', '', 1))
+            self.assertIn('missing function: decide', invoke())
+            client.write_text(original)
+            generated = root / 'libraries/dart/lib/src/session/calls_generated.dart'
+            original = generated.read_text()
+            self.assertIn('decide(', original)
+            generated.write_text(original.replace('decide(', 'missingDecide(', 1))
+            errors = invoke()
+            self.assertIn('missing function: decide', errors)
+            self.assertTrue(any(error.startswith('missing generated declaration: calls_generated.dart:NamedCalls.decide')
+                                for error in errors), errors)
+            generated.write_text(original)
+            results = root / 'libraries/dart/lib/src/session/results_generated.dart'
+            original = results.read_text()
+            self.assertIn('get callId', original)
+            results.write_text(original.replace('get callId', 'get missingCallId', 1))
+            self.assertTrue(any(error.startswith('missing generated declaration: results_generated.dart:')
+                                and '.callId' in error for error in invoke()))
+
     def test_python_typed_keyword_sources_and_private_exports(self):
         with tempfile.TemporaryDirectory(prefix='library-surface-python-') as folder:
             root = Path(folder)
