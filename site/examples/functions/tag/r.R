@@ -9,7 +9,7 @@ message <- paste0(
 fitting_labels <- tt_tag(
   list(tag = question, labels = labels),
   message
-)$value[[1]]
+)$answer[[1]]
 stopifnot(identical(
   fitting_labels,
   c("praise", "bug", "billing")

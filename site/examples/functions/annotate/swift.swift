@@ -10,13 +10,13 @@ let triage = judgment[0].value
 var steps = false
 var area = ""
 var impact = 0.0
-if case .alternative0(let given)? = triage["steps"] {
+if case .boolean(let given)? = triage["steps"] {
     steps = given
 }
-if case .alternative2(let part)? = triage["area"] {
+if case .string(let part)? = triage["area"] {
     area = part
 }
-if case .alternative4(let level)? = triage["impact"] {
+if case .number(let level)? = triage["impact"] {
     impact = level
 }
 precondition(steps && area == "login" && impact == 1.98)

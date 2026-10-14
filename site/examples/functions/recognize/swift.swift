@@ -9,7 +9,7 @@ let judgment = try await client.recognizeAnswer(
 )
 var names: [String] = []
 for row in judgment {
-    if case .alternative0(let facts) = row.value {
+    if case .entities(let facts) = row.value {
         names += facts.entities.map {
             "\($0.text) (\($0.kind))"
         }

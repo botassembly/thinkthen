@@ -9,5 +9,5 @@ policy <- c(
 )
 refund_deadline <- tt_find(
   question, policy
-)$results[[1]]$value
+)$answer$value
 stopifnot(identical(refund_deadline, policy[2]))

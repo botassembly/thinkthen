@@ -12,12 +12,12 @@ string[] reviews =
     "Does this come in blue?",
     "The strap snapped on day two.",
 ];
-var records = new InputRequestInputRecords
+var records = new RequestInputRecords
 {
     Items = reviews
-        .Select(review => new InputRequestItem
+        .Select(review => new RequestItem
         {
-            Original = new InputRequestOriginalText
+            Original = new RequestOriginalText
             {
                 Text = review,
             },
@@ -25,7 +25,7 @@ var records = new InputRequestInputRecords
         .ToList(),
 };
 var call = await engine.FilterAsync(
-    new InputRequestQuestionText { Text = question },
+    new RequestQuestionText { Text = question },
     records);
 var complaints = call.Filter()
     .Select(one => one.GetString());

@@ -8,7 +8,7 @@ let reviews = [
     "Does this come in blue?",
     "The strap snapped on day two.",
 ]
-let records = InputRequestInputRecords(
+let records = InputRecords(
     items: reviews.map { .text($0) }
 )
 let judgment = try await client.filterAnswer(
@@ -16,7 +16,7 @@ let judgment = try await client.filterAnswer(
     input: .records(records)
 )
 let complaints = judgment.compactMap { value -> String? in
-    if case .string(let text) = value { return text }
+    if case .string(let text) = value.kind { return text }
     return nil
 }
 precondition(complaints == [reviews[1], reviews[3]])

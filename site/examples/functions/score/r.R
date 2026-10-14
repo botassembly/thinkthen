@@ -9,5 +9,5 @@ outage <- paste0(
 urgency <- tt_score(
   list(score = question, levels = levels),
   outage
-)$value
+)$answer
 stopifnot(identical(urgency, 2))

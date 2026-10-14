@@ -6,18 +6,12 @@ using namespace tt::inputs;
 
 int main() {
     tt::Client client;
-    std::string question = "Which team owns this?";
-    tt::Json teams{
-        {"billing", "Invoices, fees, and refunds."},
-        {"shipping", "Parcels and delivery."},
-        {"account", "Logins and passwords."},
-    };
-    auto which_team = RequestDefinition::from_document(
-        tt::Json{{"choose", question}, {"options", teams}});
+    auto which_team =
+        RequestQuestionFile().set_path("teams.json");
     auto parcel = RequestInputText().set_text(
         "My parcel went to the wrong address.");
     auto call = client.choose(
-        RequestQuestionDefinition().set_value(which_team),
+        which_team,
         parcel);
     auto team = call.answer().value_or("");
     assert(team == "shipping");

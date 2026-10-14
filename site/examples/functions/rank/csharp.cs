@@ -13,12 +13,12 @@ string[] inbox =
     "Reminder: your invoice is due in 30 days",
     "Please send the signed quote by 5 pm today",
 ];
-var records = new InputRequestInputRecords
+var records = new RequestInputRecords
 {
     Items = inbox
-        .Select(message => new InputRequestItem
+        .Select(message => new RequestItem
         {
-            Original = new InputRequestOriginalText
+            Original = new RequestOriginalText
             {
                 Text = message,
             },
@@ -26,7 +26,7 @@ var records = new InputRequestInputRecords
         .ToList(),
 };
 var call = await engine.RankAsync(
-    new InputRequestQuestionText { Text = question },
+    new RequestQuestionText { Text = question },
     records);
 var order = call.Rank();
 Trace.Assert(order.SequenceEqual([1UL, 3UL, 2UL, 0UL]));

@@ -7,13 +7,13 @@ let names = [
     ("iPhone", "product"),
     ("Kindle", "product"),
 ]
-let entities = InputRequestInputEntities(items: names.map {
-    let entity = JSONValue.orderedObject([
-        JSONMember("name", .string($0.0)),
-        JSONMember("kind", .string($0.1)),
+let entities = InputEntities(items: names.map {
+    let entity = DataValue.orderedObject([
+        ValueMember("name", .string($0.0)),
+        ValueMember("kind", .string($0.1)),
     ])
-    let original = InputRequestOriginalJson(value: entity)
-    return InputRequestItem(
+    let original = OriginalJson(value: entity)
+    return Item(
         original: .value(.json(original))
     )
 })
@@ -23,8 +23,8 @@ let judgment = try await client.relateAnswer(
 )
 var whoMakes: [String] = []
 for edge in judgment.value {
-    if case .alternative0(let company) = edge.source,
-       case .alternative0(let product) = edge.target {
+    if case .kindName(let company) = edge.source,
+       case .kindName(let product) = edge.target {
         whoMakes.append(
             "\(company.name) makes \(product.name)"
         )

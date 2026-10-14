@@ -9,7 +9,7 @@ int main() {
     tt::Client client;
     auto relations =
         RequestQuestionFile().set_path("makes.json");
-    std::vector<tt::Json> names{
+    std::vector<tt::Data> names{
         {{"name", "Apple"}, {"kind", "company"}},
         {{"name", "Amazon"}, {"kind", "company"}},
         {{"name", "iPhone"}, {"kind", "product"}},
@@ -26,12 +26,14 @@ int main() {
     auto found = call.answer();
     std::vector<std::string> who_makes;
     for (const auto& edge : *found.value().value) {
-        auto company = edge.source().value->document();
-        auto product = edge.target().value->document();
+        auto company = edge.source().value->
+            as_RelationEndpointRelatedEntity();
+        auto product = edge.target().value->
+            as_RelationEndpointRelatedEntity();
         who_makes.push_back(
-            company.at("name").get<std::string>() +
+            *company->name().value +
             " makes " +
-            product.at("name").get<std::string>());
+            *product->name().value);
     }
     std::vector<std::string> expected{
         "Apple makes iPhone",

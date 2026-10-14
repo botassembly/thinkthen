@@ -9,7 +9,7 @@ let inbox = [
     "Reminder: your invoice is due in 30 days",
     "Please send the signed quote by 5 pm today",
 ]
-let records = InputRequestInputRecords(
+let records = InputRecords(
     items: inbox.map { .text($0) }
 )
 let judgment = try await client.rankAnswer(

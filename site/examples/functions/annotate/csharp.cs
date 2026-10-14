@@ -5,13 +5,13 @@ using ThinkThen.Results;
 
 using var engine = Engine.Open();
 var report = "Steps: click Log in. Nobody gets in.";
-var records = new InputRequestInputRecords
+var records = new RequestInputRecords
 {
     Items =
     [
-        new InputRequestItem
+        new RequestItem
         {
-            Original = new InputRequestOriginalText
+            Original = new RequestOriginalText
             {
                 Text = report,
             },
@@ -19,7 +19,7 @@ var records = new InputRequestInputRecords
     ],
 };
 var call = await engine.AnnotateAsync(
-    new InputRequestQuestionFile { Path = "form.json" },
+    new RequestQuestionFile { Path = "form.json" },
     records);
 var triage = call.Annotate()[0].Value;
 Trace.Assert(triage["steps"] is AnnotatedFieldBoolean

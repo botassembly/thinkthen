@@ -1,19 +1,7 @@
 import ThinkThen
 
 let client = try Client()
-let question = "How urgent is this?"
-let levels: [JSONValue] = [
-    .string("Routine."),
-    .string("Soon."),
-    .string("Immediate."),
-]
-let howUrgent = try client.parseQuestion(
-    .atomic,
-    authored: .orderedObject([
-        JSONMember("score", .string(question)),
-        JSONMember("levels", .array(levels)),
-    ])
-)
+let howUrgent = Question.file("levels.json")
 let outage =
     "Our checkout page is down and customers cannot pay.\n"
 let judgment = try await client.scoreAnswer(

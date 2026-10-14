@@ -14,25 +14,16 @@ var names = new[]
     new { name = "iPhone", kind = "product" },
     new { name = "Kindle", kind = "product" },
 };
-var makes = new
+var ask = new RequestQuestionFile
 {
-    name = "makes",
-    source = "company",
-    target = "product",
+    Path = "makes.json",
 };
-var ask = engine.ParseQuestion(
-    AuthoredQuestionKind.Relate,
-    JsonSerializer.Serialize(new
-    {
-        version = 1,
-        relate = new { relations = new[] { makes } },
-    }));
-var entities = new InputRequestInputRecords
+var entities = new RequestInputRecords
 {
     Items = names
-        .Select(name => new InputRequestItem
+        .Select(name => new RequestItem
         {
-            Original = new InputRequestOriginalJson
+            Original = new RequestOriginalJson
             {
                 Value =
                     JsonSerializer.SerializeToElement(name),

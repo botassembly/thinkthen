@@ -17,7 +17,7 @@ makes <- list(
 who_makes <- tt_relate(
   list(version = 1, relate = list(relations = list(makes))),
   entities
-)$results[[1]]$value
+)$answer
 companies <- vapply(who_makes, \(edge) edge$source$name, "")
 products <- vapply(who_makes, \(edge) edge$target$name, "")
 stopifnot(

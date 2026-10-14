@@ -7,8 +7,8 @@ reviews <- c(
   "Does this come in blue?",
   "The strap snapped on day two."
 )
-complaints <- vapply(
-  tt_filter(question, reviews)$results,
-  `[[`, "", "input"
+complaints <- unlist(
+  tt_filter(question, reviews)$answer,
+  use.names = FALSE
 )
 stopifnot(identical(complaints, reviews[c(2, 4)]))

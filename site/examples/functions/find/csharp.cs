@@ -12,12 +12,12 @@ string[] policy =
     "Shipping is free on orders over $50.",
     "Gift cards cannot be exchanged for cash.",
 ];
-var records = new InputRequestInputRecords
+var records = new RequestInputRecords
 {
     Items = policy
-        .Select(line => new InputRequestItem
+        .Select(line => new RequestItem
         {
-            Original = new InputRequestOriginalText
+            Original = new RequestOriginalText
             {
                 Text = line,
             },
@@ -25,7 +25,7 @@ var records = new InputRequestInputRecords
         .ToList(),
 };
 var call = await engine.FindAsync(
-    new InputRequestQuestionText { Text = question },
+    new RequestQuestionText { Text = question },
     records);
 var refundDeadline = call.Find().Value.GetString();
 Trace.Assert(refundDeadline == policy[1]);
