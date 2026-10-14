@@ -174,21 +174,24 @@ class PackageText(unittest.TestCase):
             self.assertIn('tt_decide(', samples[0][1])
             self.assertIn('tt_choose(', samples[1][1])
 
-    def test_replay_refuses_a_broken_earlier_usage_block(self):
+    def test_replay_collects_every_broken_usage_block(self):
         with tempfile.TemporaryDirectory() as scratch:
             tree = Path(scratch)
             root = tree / 'root'; (root / 'site/recordings').mkdir(parents=True)
             shutil.copyfile(readmes.REPO / 'rust-toolchain.toml', root / 'rust-toolchain.toml')
             shutil.copyfile(readmes.REPO / 'site/recordings/thinkthen.jsonl', root / 'site/recordings/thinkthen.jsonl')
             (root / 'README.md').write_text('```sh\nthinkthen decide fail\n```\n'
-                                          '```sh\nthinkthen choose pass\n```\n')
+                                          '```sh\nthinkthen choose fail\n```\n')
             packages = tree / 'packages'; packages.mkdir()
             package = packages / ('thinkthen-' + readmes.version() + '-x86_64-unknown-linux-musl.tar.gz')
             archive(package, {'README.md': readmes.source('command').read_bytes(),
                               'thinkthen': b'#!/bin/sh\n[ "$2" != fail ] || exit 77\nprintf "fixture\\n"\n'})
             with patch.object(readmes, 'published_families', return_value=('command',)):
-                with self.assertRaisesRegex(readmes.Refusal, 'example-did-not-run: command'):
+                with self.assertRaisesRegex(readmes.Refusal, 'example-did-not-run: command') as rejected:
                     readmes.check_examples(packages, root)
+                self.assertEqual(str(rejected.exception).count('example-did-not-run: command'), 2)
+                self.assertIn('command block 1:', str(rejected.exception))
+                self.assertIn('command block 2:', str(rejected.exception))
 
     def test_preserved_root_checks_only_opening_and_versions(self):
         for family in ('command', 'packagist'):

@@ -217,17 +217,22 @@ PUBLIC_FAMILIES = ('command', 'crate', 'python', 'typescript', 'ruby', 'go', 'cp
 
 
 def check_sources(root=REPO):
+    failures = []
     for family in PUBLIC_FAMILIES:
-        check_readme(family, source(family, root).read_bytes(), root)
-        text = description(family, root)
-        if text is not None:
-            check_description(family, text, root)
+        for check in (lambda: check_readme(family, source(family, root).read_bytes(), root),
+                      lambda: check_description(family, text, root) if (text := description(family, root)) is not None else None):
+            try:
+                check()
+            except (Refusal, OSError, KeyError, AttributeError) as error:
+                failures.append(family + ': ' + str(error))
     descriptor = (root / 'sdlc/records/0577-description-draft.yml').read_text()
     descriptor_opening = re.search(r'  extended_description: \|\n    (.*)', descriptor)
     pr_opening = (root / 'sdlc/records/0577-pr-description-draft.md').read_text().split('\n\n')[1:2]
     expected = opening((root / 'README.md').read_text())
     if descriptor_opening is None or descriptor_opening.group(1) != expected or pr_opening != [expected]:
-        raise Refusal('shared-opening: duckdb-submission')
+        failures.append('shared-opening: duckdb-submission')
+    if failures:
+        raise Refusal('\n'.join(failures))
 
 
 SAMPLES = {
@@ -590,12 +595,18 @@ def check_examples(packages, root=REPO, families=None):
             for index, package in enumerate(selected):
                 work = scratch / (family + '-' + str(index)); work.mkdir()
                 try:
-                    for sample_index in range(len(examples(family, root))):
-                        sample_work = work / str(sample_index); sample_work.mkdir()
+                    samples = examples(family, root)
+                except (Refusal, OSError) as error:
+                    failures.append(family + ': ' + str(error))
+                    continue
+                for sample_index in range(len(samples)):
+                    sample_work = work / str(sample_index); sample_work.mkdir()
+                    try:
                         run_example(family, packages, sample_work, root, package, sample_index)
                         print('registry-readmes: replayed ' + family + ' block ' + str(sample_index + 1) + (' ' + package.name if package else ''))
-                except (Refusal, OSError, StopIteration, subprocess.SubprocessError) as error:
-                    failures.append(str(error) or ('example-did-not-run: ' + family))
+                    except (Refusal, OSError, StopIteration, subprocess.SubprocessError) as error:
+                        failures.append(family + ' block ' + str(sample_index + 1) + ': ' +
+                                        (str(error) or 'example-did-not-run'))
     if failures:
         raise Refusal('\n'.join(failures))
 

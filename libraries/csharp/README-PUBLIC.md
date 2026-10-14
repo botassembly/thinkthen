@@ -11,12 +11,21 @@ Set your hosted backend key: `export THINKTHEN_API_KEY=...`.
 ```csharp
 using ThinkThen;
 using ThinkThen.Inputs;
-
 using var engine = Engine.Open();
-var call = await engine.DecideAsync(
-    new RequestQuestionText { Text = "Does this ask for a refund?" },
-    new RequestInputText { Text = "Please refund my order." });
-Console.WriteLine(call.Decision());
+var teams = new AuthoredOptionsObject { Value = new KeyValuePair<string, AuthoredDescription>[] {
+    new("billing", new() { Value = new AuthoredDescriptionValueString { Value = "Invoices, fees, and refunds." } }),
+    new("shipping", new() { Value = new AuthoredDescriptionValueString { Value = "Parcels and delivery." } }),
+    new("account", new() { Value = new AuthoredDescriptionValueString { Value = "Logins and passwords." } }) } };
+var teamQuestion = new RequestQuestionDefinition { Value = new RequestDefinitionAuthoredChoose {
+    Choose = new AuthoredQuestionTextString { Value = "Which team owns this?" }, Options = teams } };
+foreach (var text in new[] { "Please refund my order. It arrived broken.", "Thanks for the quick help yesterday!", "I want to send this back." }) {
+    var refund = await engine.DecideValueAsync(new RequestQuestionText { Text = "Does the customer ask for a refund?" }, new RequestInputText { Text = text });
+    Console.WriteLine(refund?.ToString() ?? "not sure");
+}
+foreach (var text in new[] { "Please refund the extra fee on my invoice.", "My parcel went to the wrong address.", "I cannot reset my password." }) {
+    var team = await engine.ChooseValueAsync(teamQuestion, new RequestInputText { Text = text });
+    Console.WriteLine(team ?? "not sure");
+}
 ```
 
 The library is free and MIT licensed. Hosted models charge per token. Local models are free to use; you supply the computer that runs them.
