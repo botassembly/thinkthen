@@ -166,6 +166,26 @@ if ($mode === 'usage-written' || $mode === 'usage-failed') {
 } elseif ($mode === 'zero') {
     $preview = $client->plan('decide', 'Is it?', 'secret-preview');
     check($preview instanceof ThinkThen\Results\Plan && $preview->records === 1 && $preview->requests === 1 && !$preview->upper_bound, 'typed native plan counts');
+    check($preview->estimated_bytes === strlen($preview->first_body_utf8) && $preview->largest_request_bytes === $preview->estimated_bytes, 'plan byte totals differ from the native body');
+    check(is_string($preview->token_estimate_method) && $preview->token_estimate_method !== '' && $preview->largest_request_estimated_input_tokens > 0, 'plan token method or largest request missing');
+    check($preview->estimated_input_tokens->lower > 0 && $preview->estimated_input_tokens->upper >= $preview->estimated_input_tokens->lower, 'plan token band lost its bounds');
+    foreach (array_slice($asks, 0, 6, true) as $verb => [$question, $input]) {
+        $plan = $client->plan($verb, $question, $input, new Options(batch: 1));
+        check($plan->records === (is_array($input) ? count($input) : 1) && $plan->requests > 0, 'supported native preview '.$verb);
+    }
+    foreach (array_slice($asks, 6, null, true) as $verb => [$question, $input]) {
+        try { $client->plan($verb, $question, $input); throw new RuntimeException('specialized preview admitted '.$verb); }
+        catch (ThinkThen\UsageFailure $error) { check($error->getMessage() === 'plan requires an atomic or rank question', 'specialized preview refusal changed'); }
+    }
+    $questionFolder = getenv('XDG_CONFIG_HOME').'/thinkthen/questions';
+    mkdir($questionFolder, recursive: true);
+    $saved = $questionFolder.'/saved.json';
+    file_put_contents($saved, '{"decide":"Is it?","name":"saved"}');
+    foreach ([Client::questionFile($saved), Client::questionNamed('saved'), Client::questionReference('@saved')] as $selector) {
+        check($client->plan('decide', $selector, Client::item('selector-preview', ['context' => '']))->requests === 1, 'native question selector or item context');
+    }
+    check(!method_exists(ChooseQuestion::class, 'jsonSerialize') && !method_exists(RecognizeQuestion::class, 'toObject'), 'public question transport remains');
+    check((new ReflectionMethod(ThinkThen\Operation::class, '__construct'))->isPrivate(), 'public operation exposes native handles');
     $emptyPreview = $client->plan('decide', 'Is it?', []);
     check($emptyPreview->first_body_utf8()->present && $emptyPreview->first_body_utf8 === null, 'required null plan body became absent');
     check(!method_exists(ThinkThen\Results\Node::class, 'toObject'), 'public packet transport dump remains');
