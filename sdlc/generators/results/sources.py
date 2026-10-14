@@ -15,12 +15,17 @@ TOOL_GENERATED = {'libraries/r/thinkthen/R/extendr-wrappers.R',
                   'libraries/dart/flutter/example/windows/flutter/generated_plugin_registrant.h'}
 
 
+def source_owners(manifest):
+    return {**manifest['libraries'], **manifest.get('databases', {})}
+
+
 def owner(path, manifest, outputs):
-    for name, config in manifest['libraries'].items():
+    owners = source_owners(manifest)
+    for name, config in owners.items():
         if path.startswith(config['root'] + '/'):
             return name
     target = outputs.get(path)
-    if target in manifest['libraries']:
+    if target in owners:
         return target
     return None
 
@@ -30,7 +35,7 @@ def classification(path, name, manifest, generated):
         return 'generated'
     if Path(path).suffix not in EXTENSIONS:
         return None
-    config = manifest['libraries'][name]
+    config = source_owners(manifest)[name]
     parts = Path(path).parts
     if Path(path).name == 'tests.rs' or any(folder in parts for folder in config['test_folders']):
         return 'test'

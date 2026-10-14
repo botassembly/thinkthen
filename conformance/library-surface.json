@@ -1428,5 +1428,19 @@
       ],
       "representation_owners": []
     }
+  },
+  "databases": {
+    "postgresql": {
+      "root": "databases/postgresql",
+      "test_folders": ["tests", "fixtures", "examples"]
+    },
+    "duckdb": {
+      "root": "databases/duckdb",
+      "test_folders": ["test", "tests", "proof", "examples"]
+    },
+    "sqlite": {
+      "root": "databases/sqlite",
+      "test_folders": ["tests", "fixtures", "examples"]
+    }
   }
 }
