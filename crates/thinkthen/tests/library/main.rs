@@ -24,6 +24,7 @@ mod public_size_retry;
 mod public_tally;
 mod public_timeout;
 mod question_file;
+mod recovered_calls;
 
 #[path = "../support/api.rs"]
 mod api;

@@ -54,8 +54,6 @@ preparation!(rank, Rank, Question);
 preparation!(rank_set, RankSet, RankSet);
 preparation!(recognition, Recognition, Recognize);
 preparation!(relation, Relate, Relate);
-#[cfg(feature = "polars")]
-preparation!(dynamic_choose, DynamicChoose, RecordChooseQuestion);
 impl RequestDefinition {
     pub(in crate::public) fn atomic(self) -> Result<Question, Error> {
         match self {

@@ -236,8 +236,8 @@ pub struct RequestSessionFeedOptions {
 /// One bounded session. Drop signals stop and never joins a provider.
 #[derive(Debug)]
 pub struct RequestSession {
-    queue: Arc<Queue>,
-    feed: bool,
+    pub(super) queue: Arc<Queue>,
+    pub(super) feed: bool,
 }
 impl RequestSession {
     /// Transfer one descriptor without waiting for native work or queue space.

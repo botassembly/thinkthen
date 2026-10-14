@@ -45,7 +45,7 @@ impl Engine {
                 for row in rows {
                     prepared.controls.admission()?;
                     prepared.engine.check_record_limit(records.len())?;
-                    records.push(row);
+                    records.push(Ok(row?));
                 }
                 let mut controls = prepared.controls;
                 if let Some(context) = &prepared.context {

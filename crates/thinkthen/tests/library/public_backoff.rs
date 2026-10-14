@@ -8,7 +8,7 @@ use std::fs;
 use std::time::Duration;
 
 use conformance_backend::{Canned, Listener};
-use thinkthen::{Answer, CallOptions, EngineBuilder, ErrorKind, Question};
+use thinkthen::{CallOptions, EngineBuilder, ErrorKind, Question};
 
 const ANSWER: &str = r#"{"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.92}},"usage":{"input_tokens":1,"output_tokens":1}}"#;
 
@@ -52,7 +52,7 @@ fn a_spent_request_closes_the_address_for_other_engines_but_not_cache_or_another
             .decide(&question, "cached")
             .expect("warm answer")
             .into_value(),
-        Answer::Yes
+        Some(true)
     );
     let overloaded = live.decide(&question, "overload").expect_err("503");
     assert_eq!(overloaded.kind(), ErrorKind::Backend);
@@ -63,7 +63,7 @@ fn a_spent_request_closes_the_address_for_other_engines_but_not_cache_or_another
             .decide_with(&question, "cached", quick_call())
             .expect("cache hit")
             .into_value(),
-        Answer::Yes
+        Some(true)
     );
     assert_eq!(a.count(), 2, "cache sent nothing through the closed gate");
     assert_eq!(
@@ -71,7 +71,7 @@ fn a_spent_request_closes_the_address_for_other_engines_but_not_cache_or_another
             .decide_with(&question, "elsewhere", quick_call())
             .expect("other address")
             .into_value(),
-        Answer::Yes
+        Some(true)
     );
     assert_eq!(b.count(), 1);
 

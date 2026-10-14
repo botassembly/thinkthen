@@ -87,18 +87,13 @@ pub(super) fn prepare<H, P>(
     mut prepare: impl FnMut(usize, RecordInput<QuestionInput>) -> Result<(H, P), Error>,
 ) -> Result<PreparedRows<H, P>, Error> {
     let mut admitted = Vec::new();
-    let mut rejected = Vec::new();
     for (ordinal, record) in records.into_iter().enumerate() {
-        match record.and_then(|record| prepare(ordinal, record)) {
-            Ok((held, prepared)) => admitted.push((ordinal, held, prepared)),
-            Err(error) if crate::public::request::is_recovery_fatal(&error) => return Err(error),
-            Err(error) => rejected.push(RequestRecoveredRow {
-                ordinal,
-                outcome: Err(error.at_record(ordinal)),
-            }),
-        }
+        let (held, prepared) = record
+            .and_then(|record| prepare(ordinal, record))
+            .map_err(|error| error.at_record(ordinal))?;
+        admitted.push((ordinal, held, prepared));
     }
-    Ok((admitted, rejected))
+    Ok((admitted, Vec::new()))
 }
 
 pub(super) fn run<A: Asker, H>(
