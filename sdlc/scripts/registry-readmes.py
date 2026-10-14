@@ -254,7 +254,7 @@ def examples(family, root=REPO):
         # Installation belongs to package assembly, not offline sample replay.
         if not re.search(FUNCTION, code, re.I) and re.fullmatch(
                 r'(?:(?:install\.packages\([^\n]*\)|CREATE EXTENSION thinkthen;|'
-                r'INSTALL thinkthen FROM community;|LOAD thinkthen;|\.load [^\n]*|'
+                r'INSTALL thinkthen FROM community;|LOAD (?:thinkthen|\x27[^\n]+\x27);|\.load [^\n]*|'
                 r'curl [^\n]*install\.sh[^\n]*|brew install [^\n]*)\n)+', code):
             continue
         functions.update(name.lower() for name in re.findall(FUNCTION, code, re.I))
@@ -510,7 +510,15 @@ def run_example(family, packages, work, root=REPO, selected=None, sample_index=0
         library = next(package.rglob('libthinkthen0.so'))
         output = run(['sqlite3', '-batch', ':memory:'], input='.bail on\n.load ' + str(library) + '\n' + code)
     elif family == 'duckdb':
-        library = next(package.rglob('*.duckdb_extension'))
+        source_id = run(['duckdb', '-csv', '-noheader', '-init', '/dev/null', '-c',
+                         'SELECT source_id FROM pragma_version();']).strip()
+        pins = dict(re.findall(r'(?m)^([A-Z0-9_]+)=(.*)$', (root / 'databases/duckdb/tools/version.env').read_text()))
+        versions = [pins['DUCKDB_ROUTINE_RELEASE'] if kind == 'RELEASE' else pins['DUCKDB_ROUTINE_PREVIEW_SOURCE'][:10]
+                    for kind in ('RELEASE', 'PREVIEW') if pins['DUCKDB_ROUTINE_' + kind + '_SOURCE'].startswith(source_id)]
+        libraries = [path for path in package.rglob('*.duckdb_extension') if any(pin in path.parts for pin in versions)]
+        if len(libraries) != 1:
+            raise Refusal('duckdb-example-host-member-mismatch')
+        library = libraries[0]
         output = run(['duckdb', '-unsigned', '-list', '-init', '/dev/null'], input="LOAD '" + str(library) + "';\n" + code)
     elif family == 'postgresql' and os.uname().sysname == 'Linux':
         pin = re.search(r'(?m)^VERSION=(.*)$', (root / 'databases/postgresql/runtime.sh').read_text()).group(1)
