@@ -186,8 +186,29 @@ fn successful_named(output: &Output, label: &str) {
     );
 }
 
+/// Decode platform text lines without discarding lone carriage returns or spaces.
 fn text(bytes: &[u8]) -> String {
-    String::from_utf8_lossy(bytes).into_owned()
+    String::from_utf8_lossy(bytes).replace("\r\n", "\n")
+}
+
+/// Collected and streamed C text preserves content across platform line endings.
+#[test]
+fn consumer_text_preserves_content_across_platform_line_endings() {
+    let binary = compile(&crate_dir().join("tests/c/text_output.c"));
+    let output = run(&binary, "", b"");
+    successful(&output);
+    assert_eq!(text(&output.stdout), "cancelled\nfreed\nembedded\rtail\n");
+    let mut child = start_with(&binary, "", &[]);
+    drop(child.stdin.take());
+    let mut output = BufReader::new(child.stdout.take().expect("output"));
+    for expected in ["cancelled\n", "freed\n", "embedded\rtail\n"] {
+        let mut line = String::new();
+        output.read_line(&mut line).expect("consumer text");
+        assert_eq!(text(line.as_bytes()), expected);
+    }
+    let mut trailing = String::new();
+    assert_eq!(output.read_line(&mut trailing).expect("end of text"), 0);
+    successful(&finished(child));
 }
 
 /// The documented session caller reads terminal facts through owned packet views.

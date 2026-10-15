@@ -233,7 +233,8 @@ fn session_wait_and_packet_read_cancel_promptly_and_drain_terminal_facts() {
             let mut line = String::new();
             output.read_line(&mut line).expect("operation return");
             assert_eq!(
-                line, expected,
+                text(line.as_bytes()),
+                expected,
                 "operation must return while the provider stays held"
             );
         }
@@ -279,7 +280,7 @@ fn cancelled_terminal(
         {
             return None;
         }
-        if line == "freed\n" {
+        if text(line.as_bytes()) == "freed\n" {
             return terminal;
         }
         let packet: serde_json::Value = serde_json::from_str(&line).expect("complete packet");
