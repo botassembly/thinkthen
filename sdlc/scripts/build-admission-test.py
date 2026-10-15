@@ -10,6 +10,7 @@ import signal
 import subprocess
 import sys
 import tempfile
+import threading
 import time
 import unittest
 
@@ -17,6 +18,9 @@ HELPER = Path(__file__).with_name('build-admission.py')
 # The launch boundary controls host load without an extra production setting.
 LAUNCH = 'import os,runpy,sys; load=sys.argv[1]; os.getloadavg=lambda:(float(open(load).read()),0,0); sys.argv=sys.argv[2:]; runpy.run_path(sys.argv[0],run_name="__main__")'
 COMPILER = 'import pathlib,sys,time; p=pathlib.Path(sys.argv[1]); p.with_suffix(".started").write_text("yes");\nwhile not p.exists(): time.sleep(.01)'
+# Publish readiness only after the complete PID is visible to the caller.
+PUBLISH_PID = ('pidfile=pathlib.Path(sys.argv[1]); temporary=pidfile.with_name(pidfile.name+".tmp"); '
+               'temporary.write_text(str(p.pid)); temporary.replace(pidfile); ')
 
 
 class Admission(unittest.TestCase):
@@ -100,25 +104,56 @@ class Admission(unittest.TestCase):
             # finish their compiler cleanup before fixture locks disappear.
             os.killpg(child.pid, signal.SIGTERM)
             child.wait(timeout=2)
-            def group_finished():
-                if sys.platform == 'linux':
-                    try:
-                        while os.waitpid(-child.pid, os.WNOHANG)[0]:
-                            pass
-                    except ChildProcessError:
-                        pass
-                try:
-                    os.killpg(child.pid, 0)
-                    return False
-                except ProcessLookupError:
-                    return True
-                except PermissionError:
-                    # Darwin reports EPERM for a group with only zombies.
-                    # It still exists: wait for reaping and ESRCH, just as
-                    # for a signalable group, without accepting cleanup early.
-                    return False
-            self.wait_for(group_finished)
+            self.wait_group_finished(child)
             raise
+
+    def wait_group_finished(self, child):
+        def group_finished():
+            if sys.platform == 'linux':
+                try:
+                    while os.waitpid(-child.pid, os.WNOHANG)[0]:
+                        pass
+                except ChildProcessError:
+                    pass
+            try:
+                os.killpg(child.pid, 0)
+                return False
+            except ProcessLookupError:
+                return True
+            except PermissionError:
+                # Darwin reports EPERM for a group with only zombies.
+                # It still exists: wait for reaping and ESRCH, just as
+                # for a signalable group, without accepting cleanup early.
+                return False
+        self.wait_for(group_finished)
+
+    @unittest.skipUnless(sys.platform == 'darwin', 'Darwin zombie group probe')
+    def test_zombie_group_cleanup_requires_reaping_and_keeps_deadline(self):
+        for reap in (True, False):
+            with self.subTest(reap=reap):
+                child = subprocess.Popen([sys.executable, '-c', 'pass'], start_new_session=True)
+                self.children.append(child)
+                self.wait_for(lambda: subprocess.check_output(
+                    ['ps', '-o', 'state=', '-p', str(child.pid)], text=True).strip().startswith('Z'))
+                with self.assertRaises(PermissionError):
+                    os.killpg(child.pid, 0)
+                if reap:
+                    reaper = threading.Timer(.1, child.wait)
+                    reaper.start()
+                    try:
+                        self.wait_group_finished(child)
+                    finally:
+                        reaper.join()
+                    with self.assertRaises(ProcessLookupError):
+                        os.killpg(child.pid, 0)
+                else:
+                    try:
+                        with self.assertRaisesRegex(AssertionError, 'process did not reach expected state'):
+                            self.wait_group_finished(child)
+                        with self.assertRaises(PermissionError):
+                            os.killpg(child.pid, 0)
+                    finally:
+                        child.wait(timeout=2)
 
     def assert_resources_available(self):
         with ExitStack() as stack:
@@ -273,8 +308,8 @@ class Admission(unittest.TestCase):
     def test_exit_timeout_and_termination_reap_children_and_release_permits(self):
         for mode in ('exit', 'timeout', 'terminate', 'interrupt', 'hangup'):
             pidfile = self.root / (mode + '.pid')
-            code = ('import subprocess,sys,time,pathlib; p=subprocess.Popen([sys.executable,"-c","import time; time.sleep(30)"]); '
-                    'pathlib.Path(sys.argv[1]).write_text(str(p.pid)); ' + ('sys.exit(23)' if mode == 'exit' else 'time.sleep(30)'))
+            code = ('import subprocess,sys,time,pathlib; p=subprocess.Popen([sys.executable,"-c","import time; time.sleep(30)"]); ' +
+                    PUBLISH_PID + ('sys.exit(23)' if mode == 'exit' else 'time.sleep(30)'))
             child = self.launch(mode, command=[sys.executable, '-c', code, str(pidfile)], timeout=.4 if mode == 'timeout' else None)
             self.wait_for(pidfile.exists)
             signum = {'terminate': signal.SIGTERM, 'interrupt': signal.SIGINT, 'hangup': signal.SIGHUP}.get(mode)
@@ -297,8 +332,8 @@ class Admission(unittest.TestCase):
             with self.subTest(mode=mode):
                 pidfile = self.root / (mode + '.detached')
                 code = ('import subprocess,sys,time,pathlib; '
-                        'p=subprocess.Popen([sys.executable,"-c","import time; time.sleep(30)"],start_new_session=True); '
-                        'pathlib.Path(sys.argv[1]).write_text(str(p.pid)); ' +
+                        'p=subprocess.Popen([sys.executable,"-c","import time; time.sleep(30)"],start_new_session=True); ' +
+                        PUBLISH_PID +
                         ('sys.exit(23)' if mode == 'exit' else 'time.sleep(30)'))
                 child = self.launch(mode, command=[sys.executable, '-c', code, str(pidfile)], timeout=.3 if mode == 'timeout' else None)
                 self.wait_for(pidfile.exists)
