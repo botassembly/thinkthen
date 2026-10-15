@@ -400,7 +400,7 @@ The retained C caller inventory below distinguishes actual production or example
 | thinkthen_session_error_message | libraries/go/session.go:75 |
 | thinkthen_session_error_retryable | libraries/go/session.go:75 |
 | thinkthen_session_error_view | libraries/cpp/include/thinkthen/native_implementation.hpp:23 |
-| thinkthen_session_finish | libraries/cpp/include/thinkthen/native_implementation.hpp:49 |
+| thinkthen_session_finish | libraries/cpp/include/thinkthen/native_implementation.hpp:50 |
 | thinkthen_session_finish_typed | libraries/cobol/src/tt_requests_generated.c:9554 |
 | thinkthen_session_free | libraries/cpp/include/thinkthen/native_implementation.hpp:25 |
 | thinkthen_session_new | C example: libraries/c/examples/session.c:22 |
@@ -412,11 +412,20 @@ The retained C caller inventory below distinguishes actual production or example
 | thinkthen_session_push_typed | libraries/cobol/src/tt_requests_generated.c:4421 |
 | thinkthen_session_result_free | libraries/cpp/include/thinkthen/native_implementation.hpp:26 |
 | thinkthen_session_result_json | libraries/go/session.go:225 |
-| thinkthen_session_result_view | libraries/cpp/include/thinkthen/native_implementation.hpp:69 |
+| thinkthen_session_result_view | libraries/cpp/include/thinkthen/native_implementation.hpp:68 |
 | thinkthen_session_try_push | libraries/cpp/include/thinkthen/native_implementation.hpp:56 |
 | thinkthen_session_try_push_typed | Documented C API; libraries/c/tests/c/session.c:55; header contract:4480 |
 | thinkthen_session_try_read | libraries/cpp/include/thinkthen/native_implementation.hpp:63 |
-| thinkthen_session_wait | libraries/cpp/include/thinkthen/native_implementation.hpp:78 |
+| thinkthen_session_wait | libraries/cpp/include/thinkthen/native_implementation.hpp:76 |
 | thinkthen_value_free | libraries/swift/Sources/ThinkThen/OwnedSession.swift:216 |
 | thinkthen_value_parse | libraries/cpp/include/thinkthen/native_implementation.hpp:9 |
 | thinkthen_value_view | libraries/cpp/include/thinkthen/native_implementation.hpp:12 |
+
+
+The rc.15 rehearsal at `95567f6d8da0d7e8389498c20645a554c738a3be`, run `38782380531`, ends with four successful jobs, four failed jobs and seventeen skipped jobs. Windows, the crate/R package job, Apple coverage and source resolution pass. Both native Mac build jobs install OpenSSL 3.5.9 and refuse it against the unchanged 3.6 pin. Linux x86 refuses an extracted source tree containing Python bytecode produced by the DuckDB helper import. Linux ARM builds the current extension and passes forty-five SQL assertions in two cases before the helper attempts to decode an already decoded JSON string. Intel setup makes actual compiler and installation progress before its OpenSSL refusal; no stall is established. Every executed job log is collected and all observers are reaped. All nine publishing jobs and the downstream npm package proof are skipped.
+
+The local rc.15 campaign stops at its full-functional smoke stage with four failures: C prints the ABI summary instead of exercising its session consumer, the JVM environment filter loses the selected JDK alias and falls back to Java 21, old ignored Dart manifests trigger the source privacy refusal, and the per-checkout DuckDB source hosts are absent. The original package, stress and Linux coverage stages do not run. The campaign exits with no remaining children; its failed result remains unchanged. Removing only the unused generated Dart folders repairs the machine state and its privacy checks pass. The separately authorized package diagnostic on the unchanged candidate passes, including its archive-built Rust consumer and documentation checks. Its crate contains the exact candidate Git revision and has SHA256 `17b7d0ddee8dbc4f593def1a24fc419fbd48fd790cc9d1af098794b45c927cbf`.
+
+Fresh review accepts four repair batches: `80be87763` selects the versioned OpenSSL formula while preserving the pin; `7e112935e` disables Python bytecode writes at the extracted-source release boundaries; `3914de39c` executes the existing C session consumer and preserves the existing JDK selection alias; `77b898dad` passes the existing JSON representation flag through the native DuckDB helper. Their old-behavior controls reproduce each defect and repaired controls pass. The bytecode change extends one existing archive fixture and adds no scanner. The JSON repair retains strict authored-value assertions for strings, nulls, booleans, numbers and objects. Tests using retained older DuckDB hosts prove helper behavior, not qualification of the repaired candidate; their separate old-product probability/cache failures remain visible.
+
+The successful rehearsal Apple coverage artifact measures Swift at 22,128 reached nonblank production lines and Objective-C at 21,667, with 56,149 mapped and 33,522 unobserved. The report names the exact rc.15 revision and has no unmeasured collections or missing profiles. Swift exceeds its accepted lower baseline of 16,701; Objective-C has no measured baseline. These actual counts are separate from the failed rehearsal conclusion. The actual Windows rehearsal C archive has SHA256 `64b1699e9ceca716e85be0e54040d20342de0695dcaf38c0edd1bc602a6bf874`; its DLL exports exactly the forty-six names inventoried above, including forty-three actual production/example callers and the three documented public C exceptions. The saved candidate CLI returns a 24,754-byte tools/list response containing ten tools and no output schemas. The existing formal library grades remain B or better after checking the implementation revisions against their accepted reviews.
