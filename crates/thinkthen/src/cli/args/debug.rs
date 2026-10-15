@@ -94,6 +94,7 @@ mod tests {
             ],
             vec![
                 "thinkthen",
+                "backends",
                 "check",
                 "--url",
                 "http://localhost/debug-secret-0210",
