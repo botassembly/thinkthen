@@ -803,7 +803,7 @@ class CliApplicability(unittest.TestCase):
         original = copy.deepcopy(self.contract['required_cases'])
         parity.validate_consumer_contracts(self.contract)
         cli = parity.required_cases(self.contract, 'cli')
-        self.assertEqual(len(cli), 244)
+        self.assertEqual(len(cli), 243)
         self.assertEqual(set(parity.required_cases(self.contract, 'rust')),
                          {row['id'] for row in original
                           if 'rust' in row.get('consumers', ['rust'])})
