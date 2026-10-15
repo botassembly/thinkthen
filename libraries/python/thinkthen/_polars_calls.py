@@ -53,6 +53,7 @@ def answer_column(name, rows, function):
 def probability_column(result, name):
     import polars as pl
     rows = result._probability_rows()
+    if rows is None: return None
     dtype = pl.List(pl.Float64) if result.function in ('recognize', 'relate') else pl.Float64
     return pl.Series(name, rows, dtype=dtype)
 

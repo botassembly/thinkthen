@@ -65,6 +65,21 @@ def main():
                     done = getattr(source.tt, verb)(question, engine=engine, **controls)
                 else: done = getattr(engine, verb)(question, source, **controls)
                 results, facts = done.results, done.facts
+                if LIBRARY is not None and not isinstance(source, (tt.Files, tt.Records)):
+                    probability = done.probability
+                    if verb in ('score', 'tag', 'annotate'):
+                        assert probability is None, 'this function has no call probability'
+                    else:
+                        assert probability is not None, 'this function retains a probability column'
+                        assert len(probability) == len(source), 'probability retains original rows'
+                        if LIBRARY == 'pandas':
+                            import pandas as pd
+                            import pyarrow as pa
+                            dtype = pd.ArrowDtype(pa.list_(pa.float64())) if verb in ('recognize', 'relate') else 'Float64'
+                        else:
+                            import polars as pl
+                            dtype = pl.List(pl.Float64) if verb in ('recognize', 'relate') else pl.Float64
+                        assert probability.dtype == dtype, 'probability retains its numeric column type'
                 if verb == 'find' and LIBRARY is None and getattr(results[0], 'index', None) is None:
                     assert done.probability is None, 'unresolved find probability'
             call_result = None
@@ -72,7 +87,7 @@ def main():
                 value, probability = done.value, done.probability
                 if LIBRARY is not None:
                     value = value.to_list()[0]
-                    probability = probability.to_list()[0]
+                    if probability is not None: probability = probability.to_list()[0]
                 call_result = {'value': value, 'probability': probability,
                                'results': [result._to_dict() for result in done.results],
                                'facts': done.facts._to_dict()}

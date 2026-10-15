@@ -84,8 +84,12 @@ def test_polars_frame_answers_keep_native_types_false_null_and_field_projection(
                 assert call.value.dtype == dtype
                 assert call.value.to_list() == expected
                 assert call.value.name == 'body' and call.positions == (0, 2)
-                assert call.probability.dtype == pl.Float64
-                assert pickle.loads(pickle.dumps(call)).probability.to_list() == call.probability.to_list()
+                restored = pickle.loads(pickle.dumps(call))
+                if verb in ('score', 'tag'):
+                    assert call.probability is restored.probability is None
+                else:
+                    assert call.probability.dtype == pl.Float64
+                    assert restored.probability.to_list() == call.probability.to_list()
                 assert call.facts.records == 2 and call.facts.requests_sent == 2
                 assert call.results[0].input == {'body': 'first', 'context': 'a'}
             assert source.to_dicts()[1] == {'body': None, 'context': 'b'}
@@ -255,7 +259,8 @@ def test_ten_series_functions_preserve_null_duplicate_and_whole_set_identity(bac
             values = [None if value is pd.NA else value for value in result.value.to_list()]
             if shape == "polars":
                 assert result.value.dtype == dict(decide=pl.Boolean, choose=pl.String, score=pl.Float64, tag=pl.List(pl.String))[verb]
-                assert result.probability.dtype == pl.Float64
+                if verb in ('score', 'tag'): assert result.probability is None
+                else: assert result.probability.dtype == pl.Float64
             if verb == "tag":
                 values = [list(value) if value is not None else None for value in values]
             assert result.value.name == "body"
@@ -265,7 +270,7 @@ def test_ten_series_functions_preserve_null_duplicate_and_whole_set_identity(bac
             print(verb, json.dumps(values))
         def probabilities(result):
             return [None if value is pd.NA else value for value in result.probability.to_list()]
-        assert probabilities(result) == [None, None, None]
+        assert result.probability is None
         kept = call("filter", "Late?")
         assert probabilities(kept) == [.9, None, .9]
         print("filter", kept.value.to_list(), kept.value.name)
@@ -282,7 +287,7 @@ def test_ten_series_functions_preserve_null_duplicate_and_whole_set_identity(bac
         if shape == "pandas": assert annotated.value.index.to_list() == [9, 9, 2]
         recognized = (texts.tt.recognize(engine=engine, kinds=["note"]) if shape == "pandas"
                       else engine.recognize(texts, kinds=["note"]))
-        assert probabilities(annotated) == [None, None, None]
+        assert annotated.probability is None
         spans = [row.answer.proposals[0].span_probability for row in recognized.results]
         assert spans[0] != recognized.results[0].value.entities[0].strength
         assert probabilities(recognized) == [[spans[0]], None, [spans[1]]]
@@ -451,7 +456,8 @@ def test_empty_invalid_expired_and_cancelled_series_calls_send_nothing(backend, 
             assert call.facts['records'] == call.facts['requests_sent'] == 0
             if shape == "polars" and verb in ('decide', 'choose', 'score', 'tag'):
                 assert call.value.dtype == dict(decide=pl.Boolean, choose=pl.String, score=pl.Float64, tag=pl.List(pl.String))[verb]
-                assert call.probability.dtype == pl.Float64
+                if verb in ('score', 'tag'): assert call.probability is None
+                else: assert call.probability.dtype == pl.Float64
         source = series(['a', 'b'])
         token = tt.CancelToken(); token.cancel()
         for verb, kw in [('filter', {'deadline_ms':0}), ('rank', {'token':token}),
