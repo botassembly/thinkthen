@@ -69,14 +69,19 @@ def smoke(native, scratch):
                     '-I', str(native / 'include'), '-I', str(scratch),
                     str(ROOT / 'libraries/c/tests/c/session_cases.c'),
                     '-L', str(native / 'lib'), '-lthinkthen',
-                    '-Wl,-rpath,' + str(native / 'lib'), '-o', str(binary)], check=True)
+                    '-Wl,-rpath,' + str(native / 'lib'), '-o', str(binary)],
+                   env=child_env(home=scratch / 'home'), check=True)
     request = {'schema': 'thinkthen.request/1', 'call': {'function': 'decide',
                'question': {'kind': 'text', 'text': os.environ['THINKTHEN_TEST_SMOKE_QUESTION']},
                'input': {'kind': 'text', 'text': os.environ['THINKTHEN_TEST_SMOKE_TEXT']}}}
     path = scratch / 'request.json'
     path.write_text(json.dumps(request))
+    env = child_env(home=scratch / 'home',
+                    THINKTHEN_BASE_URL=os.environ['THINKTHEN_BASE_URL'],
+                    THINKTHEN_CACHE=os.environ['THINKTHEN_CACHE'],
+                    THINKTHEN_API_KEY='sk-smoke-loopback')
     result = subprocess.run([str(binary), str(path), '{}', '-', '-'],
-                            capture_output=True, text=True, check=True)
+                            env=env, capture_output=True, text=True, check=True)
     assert not result.stderr, result.stderr
     payload = json.loads(result.stdout)
     assert payload['packets'] == payload['native'], payload
