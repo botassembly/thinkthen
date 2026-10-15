@@ -192,6 +192,11 @@ fn grade_all(arguments: &AuditArguments) -> Result<Graded, Refusal> {
     let (rule, shown) = rule("--threshold", arguments.threshold.as_deref())
         .map_err(|cause| refusal("results", cause))?;
     let results = lines(&arguments.results).map_err(|cause| refusal("results", cause))?;
+    for (line, row) in &results {
+        if row.member("schema").and_then(crate::core::Json::as_str) == Some("thinkthen.result/1") {
+            return Err(refusal("results", Cause::OldResults(*line)));
+        }
+    }
     let key_lines = lines(&arguments.key).map_err(|cause| refusal("key", cause))?;
     let answers = answer::read(&results, &pointer, Identity::Question)
         .map_err(|e| refusal("results", Cause::Measure(e)))?;

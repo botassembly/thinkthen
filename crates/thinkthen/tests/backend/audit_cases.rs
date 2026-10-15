@@ -6,6 +6,7 @@ use crate::child::ChildEnvironment as _;
 use crate::measure_support;
 use crate::wait;
 
+use std::io::Write as _;
 use std::process::{Command, Stdio};
 
 use conformance_backend::{Canned, Listener};
@@ -215,6 +216,81 @@ fn case_view_sends_nothing_with_a_configured_backend_and_key() {
 }
 
 #[test]
+fn old_saved_envelopes_refuse_without_sending_and_current_envelopes_grade() {
+    let listener = Listener::answering(|_| Canned::ok("{}")).expect("listener");
+    let source = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../transforms/rows");
+    let question = std::fs::read_to_string(source.join("question.txt")).expect("question");
+    let output = Command::new(env!("CARGO_BIN_EXE_thinkthen"))
+        .args([
+            "decide",
+            question.trim(),
+            "--jsonl",
+            "--field",
+            "/body",
+            "--details",
+            "--batch",
+            "1",
+            "--replay",
+        ])
+        .arg(source.join("recording"))
+        .arg("--input")
+        .arg(source.join("cases.jsonl"))
+        .clear_environment()
+        .output()
+        .expect("replay current results");
+    assert!(output.status.success());
+    assert!(output.stderr.is_empty());
+    let current = String::from_utf8(output.stdout).expect("UTF-8");
+    super::native_results::validate(
+        &rows(&current)
+            .into_iter()
+            .map(|row| ("completeDecide".to_owned(), row))
+            .collect::<Vec<_>>(),
+    );
+    let old = current.replace("thinkthen.result/2", "thinkthen.result/1");
+    for cases in [false, true] {
+        for (input, expected) in [(&old, 2), (&current, 0)] {
+            let mut args = vec!["runs", "audit", "-", "replay/key.jsonl"];
+            if cases {
+                args.push("--cases");
+            }
+            let mut child = Command::new(env!("CARGO_BIN_EXE_thinkthen"))
+                .args(args)
+                .current_dir(fixtures())
+                .clear_environment()
+                .env("THINKTHEN_BASE_URL", listener.base())
+                .env("THINKTHEN_API_KEY", "canary-old-envelope")
+                .stdin(Stdio::piped())
+                .stdout(Stdio::piped())
+                .stderr(Stdio::piped())
+                .spawn()
+                .expect("audit child");
+            child
+                .stdin
+                .take()
+                .expect("stdin")
+                .write_all(input.as_bytes())
+                .expect("saved rows");
+            let output = wait::finish(child, "audit saved envelopes").expect("audit finishes");
+            assert_eq!(output.status.code(), Some(expected));
+            assert_eq!(listener.count(), 0);
+            if expected == 2 {
+                assert!(output.stdout.is_empty());
+                assert_eq!(output.stderr, b"thinkthen: audit: results line 1 uses the old thinkthen.result/1 format; save the results again with the current version\n");
+            } else {
+                assert!(output.stderr.is_empty());
+                let report = rows(std::str::from_utf8(&output.stdout).expect("UTF-8"));
+                if cases {
+                    assert_eq!(report.len(), 40);
+                } else {
+                    assert_eq!(report[0]["rows"], 40);
+                }
+            }
+        }
+    }
+}
+
+#[test]
 fn saved_decision_meanings_grade_the_run_verdict_and_keep_explicit_cuts() {
     let base: Value = serde_json::from_str(
         fixture("small/decide.jsonl")
@@ -320,7 +396,7 @@ fn saved_decisions_without_probability_refuse_without_echoing_content() {
 }
 
 #[test]
-fn actual_saved_failures_and_legacy_value_markers_remain_failed() {
+fn actual_saved_failures_and_current_value_markers_remain_failed() {
     let base: Value = serde_json::from_str(
         fixture("small/decide.jsonl")
             .lines()
@@ -329,11 +405,9 @@ fn actual_saved_failures_and_legacy_value_markers_remain_failed() {
     )
     .expect("saved row");
     let failure = json!({"kind":"backend","cause":"missing_answer"});
-    for route in ["explicit", "bare", "legacy"] {
+    for route in ["explicit", "bare"] {
         let mut saved = base.clone();
-        if route != "legacy" {
-            saved["schema"] = json!("thinkthen.result/2");
-        }
+        saved["schema"] = json!("thinkthen.result/2");
         if route == "explicit" {
             saved["failure"] = failure.clone();
         } else {

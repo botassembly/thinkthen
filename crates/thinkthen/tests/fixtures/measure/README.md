@@ -10,6 +10,8 @@ These files define `thinkthen audit` and `thinkthen diff`. The source is a proto
 
 `small/`, `249/`, and the fourteen files directly under `golden/` are byte-for-byte copies of the prototype's `tests/fixtures/audit/` at those checksums. Two depart. Quick Fix qf-diff-warnings renamed the meta key in `small/annotate.jsonl` to `questions_sha256`, the key a real `annotate` line carries. The small fixtures share the placeholder digest `00`. It also recaptured `golden/diff-choose.jsonl`, the second departure, and `golden/table/diff-choose.txt` from `thinkthen diff` under the wider McNemar rule. Their McNemar p moved from 1.0 to 0.5. `249/` holds `thinkthen decide --details` lines replayed from an earlier experiment's recordings with every key unset: 272 yes/no questions about Beatles songs.
 
+Saved grading rows use the current unversioned object input contract. Their obsolete `thinkthen.result/1` schema tags were removed; all grading fields and golden outputs remain unchanged.
+
 Three inputs are derived from `small/`. `decide-reversed.jsonl` holds the lines of `decide.jsonl` in reverse. `decide-key-noparts.jsonl` holds the key without `part`. `decide-key-odd.jsonl` holds the key without `part` and without `r6`.
 
 The files under `golden/extra/`, `golden/table/`, and `replay/audit.jsonl` were captured by running the prototype script with those checksums under Python 3.12.3 from this folder. `replay/key.jsonl` holds the labels of `transforms/rows/cases.jsonl`. `replay/audit.jsonl` grades the replay of `transforms/rows/recording` described in `specification/audit.md`.
@@ -226,32 +228,32 @@ The hand-written `--lines` relate line in `audit_sets` carries `f2c4e88c6a7b11bd
 
 | File | SHA-256 |
 | --- | --- |
-| `249/control.jsonl` | `c9abe7ba38243fe5fbf577a94754067de873be4b0b00339ec31eed40138d8bdb` |
+| `249/control.jsonl` | `83bebd7a68bc564a3f96d02ae9ed8befc104903575c5458417b9e19ad4562a6b` |
 | `249/key-noparts.jsonl` | `b6386622b98cf36523623ab22516629bfe38742e35f7f4d96f2db8cd87bd387b` |
 | `249/key.jsonl` | `8e5e8fb7c799b0c64d1502167fc8f010d4a598202b060b0fd407600b68429b59` |
-| `249/soft.jsonl` | `12dd593528336582c930e9f4472708018fd5bd67d9f1a3337e613773e734a08b` |
+| `249/soft.jsonl` | `bf720249288003196f08620d50bf31cfc83402879091361a066ac9b3973d9f5a` |
 | `abbey/key-tune.jsonl` | `489151528893b560763f9abca1cc0d81a735e1a63310de444d19295b94f7f9e7` |
 | `abbey/key.jsonl` | `3b12e168ca9715a775bf3bc759c20f6e018f7d1d1763a8c6352c59d2a42c242e` |
-| `abbey/rows.jsonl` | `70b54a7636132e4576538107d45b2ff1841709de3eceb2a8b5970404b2678952` |
+| `abbey/rows.jsonl` | `d83cb2206437abadca59925f0963739458a84f8459dfc6156ec64b2c89912896` |
 | `better/choose-more-key.jsonl` | `4400e79ce28f6f352d9ec7db606df7647879ec40aee49c52e210013be5776d99` |
-| `better/choose-more.jsonl` | `9bd9459368a823269e6de6057f9228f212fbfd4ad066eecc52ce96f5482d692f` |
+| `better/choose-more.jsonl` | `6b9a1670ad4978eee1cb3a19de17007233895e61dec175244f28eab7b1f27e6a` |
 | `better/choose-reach-key.jsonl` | `641ab843cc9a72c3d8adca4e77e1da3393d40853dd2ca6c3f4270d921febb15e` |
-| `better/choose-reach.jsonl` | `cfdc382795a8d25dfad725f6c0e3e1cd6691b1a684d1b2353fbd7f67162a37e6` |
+| `better/choose-reach.jsonl` | `8a13efa5c6ad182104399048010405d20478dc5095d4fe192382a23f10db950d` |
 | `better/decide-key.jsonl` | `8b47ff1106e77c8fd4c00802006c2fe9ca449e4e9e94b00e65bf6b04ad8898b0` |
-| `better/decide.jsonl` | `07082f6c1c542f5e70f21e579df3f824280c4dd59e8b015f439e1e72b41aedd8` |
+| `better/decide.jsonl` | `82e51031c9ccdeff15685241f3bdfacbbd6c2d07fda1bd22a1870728c57dab9e` |
 | `better/tie-key.jsonl` | `8b47ff1106e77c8fd4c00802006c2fe9ca449e4e9e94b00e65bf6b04ad8898b0` |
-| `better/tie.jsonl` | `d74c6d3b93823583fc02fcd2b9ba3be5ef11a98e7ab5bfa32c495d492cdf0386` |
+| `better/tie.jsonl` | `f599b29338b5151e0bbcbb3bd59c8d3f57047ac85b6a109a58faab1c18cd0f99` |
 | `cases/expected.jsonl` | `aaeed17b3028edb387ab1595c27661c427a405ea71b03f275e024203a7014c38` |
 | `cases/key.jsonl` | `133e4e360af0a7e6f8225aa1b5bc2941e914a450e8a01ccaf8394a21e4a8cf1f` |
 | `cases/results.jsonl` | `a6ec997003c3b6a2dab188ae76c55250f119beaa09805065c7dff9f5e0011059` |
-| `diff-recognize-key-run.jsonl` | `b4df57a858b64759ec923be871971c7d03f80da3bf3f4142cc62e064eed93b6e` |
+| `diff-recognize-key-run.jsonl` | `8f4221890cabb7ca22e3348c3ed8eec1354085b207322a3022cb12f7a2258841` |
 | `given/by-key.jsonl` | `2380d356e8c93b6136ddc594557cf62ad369c95818f8becc432d3721ed96cb5e` |
-| `given/by.jsonl` | `8d9094499bf640f84258a1d0495c4e934e5a231023e7789a493357055ab1b2b8` |
-| `given/choose.jsonl` | `6cc988a7406d39ea0f40fe11cd2c7ba8e609258be4e8750a63393703d8c0dbd1` |
+| `given/by.jsonl` | `ebb529aae086e651a8e097ee200e39c0e48f24b326c14b8c9d05f92a714b485a` |
+| `given/choose.jsonl` | `722bdc8b572249df3c224cbfaea68d3b0045fa2bc9b9cbcca35f3f3dabbea374` |
 | `given/crossed-key.jsonl` | `a530ed13dc777260b3e5612ec9437d695b46e5921ab5f4ffc052fd8c16aa4e8c` |
-| `given/crossed.jsonl` | `b42e456bb619f9d5eccc35954770603f4b7d0a8c63a67e9af2df7e86fcc43020` |
+| `given/crossed.jsonl` | `577bd6599be885ff3f293ab8de0acc14f395a58174085bc473c3e90ac1bc676e` |
 | `given/key.jsonl` | `8b56e25deac98b1f208f662a4ecb223ca08a11283977e7bb40ab049f7f97d8e5` |
-| `given/yesno.jsonl` | `ddabfebfc1d7ef71d45593e4c7d27e92ec971c7ea4bf901b757ac9567b84a94b` |
+| `given/yesno.jsonl` | `6aafe4d648fa2fc2f51c371a82848110e79ba93577d408cd73cc0021825c3516` |
 | `golden/audit-249-seed.jsonl` | `73d9def49b9dfe2bcf47f9bedad4c2328c5dd93929dc39503728a88e7fca5f70` |
 | `golden/audit-249.jsonl` | `7b40c727fe9450e84a71c36c6dd93bab1971250cc0fd39d46cb4c90bc1d2ed62` |
 | `golden/audit-annotate.jsonl` | `5ec5f3aa346ff09737125b2b84661c08837f620d2fce8f55a95bc15aea551e26` |
@@ -295,7 +297,7 @@ The hand-written `--lines` relate line in `audit_sets` carries `f2c4e88c6a7b11bd
 | `items/mcnemar-b.jsonl` | `8a5219be268c3fc8f1f59a61da7745645a53db9eedb1edc9ba445b2203719de9` |
 | `items/mcnemar-key.jsonl` | `08b1355f91bacec1957bad36e7b9d4d72d7195c0e0a12a542ae43a2d30dd32f9` |
 | `items/mixed-decide.jsonl` | `a8e64784b80315466f6b9a85e9ea99332aeea852c863b406437e6b6035214795` |
-| `items/mixed-relate.jsonl` | `ea3dfdebd51805fcb2e57d93ef4b20250ebfd295b8b757c1e386f2644420c9fc` |
+| `items/mixed-relate.jsonl` | `79bd5a49cb478351749e42a052b94d7ce68ffb58fcbb23965d9b005890bff1ce` |
 | `items/pair-decide.jsonl` | `acdfa964bb19f2663c33f1a0081b32ee2d5564fc69861300dc32e0461e3681c6` |
 | `items/person-only.jsonl` | `6f24d094a7ceaa214cd56512180f08ee3506d6dd76626fbcfe950ce87b53447d` |
 | `items/recognize-a.jsonl` | `0eadcf13876c07abf815def47ebd31170bfcb5a34c793b58815310b0d5dcc0a8` |
@@ -303,8 +305,8 @@ The hand-written `--lines` relate line in `audit_sets` carries `f2c4e88c6a7b11bd
 | `items/recognize-key.jsonl` | `14093ac072d004fdcd4ce08c769260125bcde30e4105352e6d20c2bc2ab1080f` |
 | `items/recognize-none.jsonl` | `221b0c12eec3edb7581ca2e685f556fc553e6a91a10e21897e6609c28f681b74` |
 | `items/record-mode.jsonl` | `5752c8338a4606242f22bffa59411f024310e7985beee1ab67184c10707787f8` |
-| `items/relate-a.jsonl` | `4c9acaafbe2448a88ee508925b5b60fc8ae6d2099be5c47643447263703e4830` |
-| `items/relate-b.jsonl` | `03c0b1eeb031fc87ba55f887fa200ff823ae259d9787f8a5036009c395f67678` |
+| `items/relate-a.jsonl` | `bd54225af63196831f490f5a2f0f5c5c206867c903fe5874bc9003a36fbdf939` |
+| `items/relate-b.jsonl` | `f503ad1c9f08ee498af9d1c4dd79ef3b67d52a8bd879be8a71492115c2529532` |
 | `items/relate-key.jsonl` | `d5dd48e496c38c511440232568e07827932525c6738bfd7ec8c9c4f685d78127` |
 | `items/tag.jsonl` | `538c71294f9e7ae38b0f4f0cc9391142441eb1e6cee6d1efa1e6b23fc38bbf3a` |
 | `replay/audit.jsonl` | `d0a1e138ae38922f55363f2f4d446d61580013657dcc4049f69ad1f211e08e8e` |
@@ -312,32 +314,32 @@ The hand-written `--lines` relate line in `audit_sets` carries `f2c4e88c6a7b11bd
 | `sets/cut-key.jsonl` | `eb4ae5c67d4accc03efcdacbd4d4918c9479d803165f1f1e3985f94943bdd7ca` |
 | `sets/cut.jsonl` | `5238ba287efe3605ce1238b110214505685459c553bfed73b9223ca89a86ec9a` |
 | `sets/edges-key.jsonl` | `f45486609c9923d9549fe032d9b58d58a0b9517b76f718e51ea369f145ee7b58` |
-| `sets/edges.jsonl` | `ccaa648abd1ec49a8ae0355f5df81d36de5667686c6deaf5b82a7135afcdfe1c` |
+| `sets/edges.jsonl` | `f9f6d7fc0707caf5d8745516c43abf0ac440270cfa5fbde44de3bc7b2f90715b` |
 | `sets/names-key.jsonl` | `382523d51f5aa82757ca75bab931a6f3fb450ecbf07e7bb2e90c2f2698edffac` |
 | `sets/names.jsonl` | `20e6a04fb06cffae4b4ac0ec65664dce5263a000aba3798de9b2939771f107ee` |
 | `small/annotate-key.jsonl` | `fcaebb1e268c468d697e6bc6852c4b5aab5198e544552711d7d5c1b27e523b26` |
-| `small/annotate.jsonl` | `c827c6ca44198b10c0561b49d930d85f74bdba88549169e1cc187e2320c24270` |
-| `small/choose-b.jsonl` | `b227bc45a7fbcb64db89352bda57d0da5eb53a9b9df01f2332c956dc844d8d51` |
+| `small/annotate.jsonl` | `9e85667fb3609716d4b342f0e3443a40b4b57ce33aef2b8e440ab5e7db0daf1b` |
+| `small/choose-b.jsonl` | `dd4cc4591978f14079b1ea202783b187ad374aab81525e9ba4c0a414e8a6d85d` |
 | `small/choose-key.jsonl` | `f908ef59696a2fc7ba06001e3bbaaf53e52427a4adf5d8f2d347e8bb7ca0ddfa` |
-| `small/choose.jsonl` | `b8f2178160860be3a58b4801e72eb68ded2cdfc0fd1675c34a23e95f8e9be7cb` |
-| `small/decide-b.jsonl` | `a63d035f5a867b8080cca87efba5aeaec0ecbf3b53ffb6339f7c80ca1b0f785f` |
-| `small/decide-band.jsonl` | `c8dc93088bc80ffbefa5087c5639a48da1eb5a10408ec760c4547e68674aa2a6` |
+| `small/choose.jsonl` | `a776cf409e7611a044bd7fa3b7989d63f588c8a741b65f9e5fd465e7f186ebe7` |
+| `small/decide-b.jsonl` | `c8ce6b736561dbbece1f1efadeb5f3cda9c769cadf8cede891ad235a351a5c01` |
+| `small/decide-band.jsonl` | `87abb81254db197e4521ee2c1a16b71bc41623aba725e2518706923eabc2eef1` |
 | `small/decide-bare.jsonl` | `b9f53267f0fb1fa0d89250f42c3c6f2bbd4c975548dde94668b55b545dad2e11` |
 | `small/decide-key-noparts.jsonl` | `ebd896c265f68c7a4e71387ab8af8b495ae5f9406d9248b4cb2f9fadd87d0e25` |
 | `small/decide-key-odd.jsonl` | `5aea71cae954171b2003947a27294ab86c8e17a746124cb04b0d9b5100d96128` |
 | `small/decide-key.jsonl` | `10461a043dd3aa8feb8b5647212abd31f779511b274df5ddd2e9269403b59df4` |
-| `small/decide-reversed.jsonl` | `e51b0c73bd7183715e3cda4bf71a02e0a0f4ca22cdc051ecedf83430a497ea86` |
-| `small/decide.jsonl` | `fd6546d99ca631ec96569e432a8ec6d40889c312a445728be9a678196b0a06c6` |
+| `small/decide-reversed.jsonl` | `89b30692ea85c4b666e678660df02d42eea85ba54ea057e3e91725adcddeb63a` |
+| `small/decide.jsonl` | `87ecd0771328357f9c16d00db313989ccba14ac6df7492f58e0c5b83b40c98fd` |
 | `verbs/annotate-key.jsonl` | `d39de81ae6d31ba4f2dc748c259d689a0e9ccb538d744f3a4221d1403454b63f` |
-| `verbs/annotate.jsonl` | `6ad41b300b9de9c2fc680b32da7627ee6f5d7bb0c9eaa7fe17d7e641a5ca8704` |
+| `verbs/annotate.jsonl` | `7a28f3dcc376b93a0f3345458e31eac4f050ff110189289101d68da6e01741d0` |
 | `verbs/find-key.jsonl` | `9aacc7cfeb2ae55030779e536b09b739f170efdc44df7e962948069615057128` |
-| `verbs/find.jsonl` | `15a956b7f23c1e7f21046ae6a06b949e14fb44c4679bc53cc02cfe9eacf37e9b` |
+| `verbs/find.jsonl` | `5dc7d1fe2c428dabc6befb82ccf49da2d110c91ccf7ccedba6b451ef36f61099` |
 | `verbs/rank-key.jsonl` | `c45b0db08b0b382c6f28c96a35f76f2a9b600ddae3009cc50910f519854cb8f4` |
-| `verbs/rank.jsonl` | `a47981836cdd181ae6905a1adac191c63adf90d6936e43d54e6c3b402dd2d64d` |
+| `verbs/rank.jsonl` | `6b06ef0ae45a85330bc91d4b13d9cfb604eb20282e77cac7a5afc6141fb674c5` |
 | `verbs/score-key.jsonl` | `be01ccf4a2ec3478c4628cce5a07f73b263251497db8c467d585d1ded7b92c37` |
-| `verbs/score.jsonl` | `fb70310ebc6d57166fc88c2701be55b902e0c3cb96a6bed9c66fa38e909e8f35` |
+| `verbs/score.jsonl` | `9c5c2f3992a4c5a49be163c9782039f6c2d7443cb337b15e175c56546764d3d4` |
 | `verbs/tag-key.jsonl` | `df891f08ee40f159c81b5172dfe91cf2a19189422b510fd8fdb5e19245e217a8` |
-| `verbs/tag.jsonl` | `789fef009c2dd692d1444eaf824b680189665d1f064d05bc4ec2060f54ef4c32` |
+| `verbs/tag.jsonl` | `e07038403d92eceb718b7fb2cf44d2880531dca5f7ea820131cf0c9f9e3cbe09` |
 | `write/decide.json` | `9f95c830aa63f2e905f530067cb8139af4d334787cb9ddeb9b30ac73c96ea683` |
 | `write/key.jsonl` | `2208a2f79f308ff14ceb303be29d8cf0dc44f7f84cac22ecddec152d25265864` |
 | `write/rank.json` | `237516ad81b76d4cf9508a44d59c637f88a97ca5d5c5865567e16ba1e7d799d3` |
