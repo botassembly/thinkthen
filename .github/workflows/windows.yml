@@ -196,8 +196,4 @@ jobs:
       - name: Download locked crates
         run: cargo fetch --locked
       - name: Diagnose recognition cancellation once
-        run: |
-          set -eu
-          cargo clippy --locked --offline -p thinkthen --lib --test mcp_stdio --test request_session -- -D warnings
-          cargo test --locked --offline -p thinkthen --lib mcp::input::windows::tests:: -- --nocapture
-          cargo test --locked --offline -p thinkthen --test mcp_stdio --test request_session
+        run: cargo test --locked --offline -p thinkthen --test request_session recognize::cancellation_stops_waiting_duplicate_recognition_without_extra_sends -- --exact --nocapture
