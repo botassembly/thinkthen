@@ -3,12 +3,24 @@
 use super::*;
 
 #[test]
+#[allow(
+    clippy::print_stderr,
+    reason = "temporary Windows connection timing diagnostic"
+)]
 fn a_refused_connection_retries_with_a_live_deadline_and_stops_when_spent() {
     let _serial = serial();
     let port = std::net::TcpListener::bind("127.0.0.1:0")
         .and_then(|listener| listener.local_addr())
         .expect("a free port")
         .port();
+    let address = std::net::SocketAddr::from(([127, 0, 0, 1], port));
+    let started = Instant::now();
+    let direct = std::net::TcpStream::connect_timeout(&address, Duration::from_secs(30));
+    eprintln!(
+        "closed-port direct connect: elapsed={:?}, result={:?}",
+        started.elapsed(),
+        direct.as_ref().map(|_| ()).map_err(std::io::Error::kind)
+    );
     let engine = engine(&format!("http://127.0.0.1:{port}/v1"));
     let token = CancelToken::new();
     token.cancel();
@@ -31,11 +43,26 @@ fn a_refused_connection_retries_with_a_live_deadline_and_stops_when_spent() {
         (CallOptions::new().cancel(&token), ErrorKind::Cancelled, 0),
     ] {
         let before = engine.usage();
+        let started = Instant::now();
         let error = engine
-            .decide_with(&question(), "Refund me.", options)
+            .decide_with(&question(), "Refund me.", options.attempts(true))
             .expect_err("refusal");
-        assert_eq!(error.kind(), expected);
         let after = engine.usage();
+        eprintln!(
+            "closed-port call: expected={expected:?}, actual={:?}, elapsed={:?}, sends={}, retries={}, attempts={:?}",
+            error.kind(),
+            started.elapsed(),
+            after.requests_sent() - before.requests_sent(),
+            after.retries() - before.retries(),
+            error
+                .facts()
+                .and_then(|facts| facts.complete())
+                .and_then(|facts| facts.attempts().map(|attempts| attempts
+                    .iter()
+                    .map(|attempt| (attempt.ordinal(), attempt.wall_ms(), attempt.outcome()))
+                    .collect::<Vec<_>>()))
+        );
+        assert_eq!(error.kind(), expected);
         assert_eq!(after.requests_sent() - before.requests_sent(), sends);
         assert_eq!(after.retries() - before.retries(), u64::from(sends == 2));
     }
