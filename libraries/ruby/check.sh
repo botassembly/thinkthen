@@ -129,7 +129,7 @@ RUBY=$prefix/bin/ruby
 "$RUBY" -v | grep -q "^ruby $RUBY_VERSION " || fail "$RUBY is not Ruby $RUBY_VERSION behind a matching stamp"
 if [ "$host" = Darwin ]; then
   command -v xcrun >/dev/null 2>&1 || not_run "xcrun is missing"
-  openssl=${THINKTHEN_RUBY_OPENSSL:-$(brew --prefix openssl@3 2>/dev/null || true)}
+  openssl=${THINKTHEN_RUBY_OPENSSL:-$(brew --prefix "openssl@$RUBY_OPENSSL_SERIES" 2>/dev/null || true)}
   [ -x "$openssl/bin/openssl" ] || not_run "OpenSSL $RUBY_OPENSSL_SERIES host prefix is missing"
   case $("$openssl/bin/openssl" version) in "OpenSSL $RUBY_OPENSSL_SERIES."*) ;; *) not_run "OpenSSL host version differs from toolchain.env" ;; esac
   clang=$(xcrun --find clang 2>/dev/null)

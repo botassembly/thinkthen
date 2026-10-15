@@ -203,8 +203,8 @@ jobs:
         run: |
           set -eu
           if [ "$(uname -s)" = Darwin ]; then
-            brew install openssl@3
             . libraries/ruby/toolchain.env
+            brew install "openssl@$RUBY_OPENSSL_SERIES"
             printf 'MACOSX_DEPLOYMENT_TARGET=%s\n' "$RUBY_MACOS_DEPLOYMENT_TARGET" >> "$GITHUB_ENV"
             printf 'SDKROOT=%s\n' "$(xcrun --sdk macosx --show-sdk-path)" >> "$GITHUB_ENV"
             clang=$(xcrun --find clang)

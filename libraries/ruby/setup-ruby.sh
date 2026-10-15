@@ -35,7 +35,7 @@ fetch "$RUBY_URL" "ruby-$RUBY_VERSION.tar.xz"
 fetch "$YAML_URL" yaml-0.2.5.tar.gz
 if [ "$host" = Darwin ]; then
 	command -v shasum >/dev/null || { echo 'setup-ruby: shasum is missing' >&2; exit 77; }
-	openssl=${THINKTHEN_RUBY_OPENSSL:-$(brew --prefix openssl@3 2>/dev/null || true)}
+	openssl=${THINKTHEN_RUBY_OPENSSL:-$(brew --prefix "openssl@$RUBY_OPENSSL_SERIES" 2>/dev/null || true)}
 	[ -x "$openssl/bin/openssl" ] || { echo "setup-ruby: OpenSSL $RUBY_OPENSSL_SERIES host prefix is missing" >&2; exit 77; }
 	case $("$openssl/bin/openssl" version) in "OpenSSL $RUBY_OPENSSL_SERIES."*) ;; *) echo 'setup-ruby: OpenSSL host version differs from toolchain.env' >&2; exit 77 ;; esac
 	DYLD_LIBRARY_PATH=$openssl/lib${DYLD_LIBRARY_PATH:+:$DYLD_LIBRARY_PATH}

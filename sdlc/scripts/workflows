@@ -639,7 +639,9 @@ uv) case $0 in "$FAKE_ROOT/pinned/uv") ;; *) echo 'a stray uv ran' >&2; exit 93 
 uname) case $1 in -s) case $FAKE_TARGET in *apple*) echo Darwin ;; *) echo Linux ;; esac ;;
   -m) case $FAKE_TARGET in aarch64*) echo arm64 ;; *) echo x86_64 ;; esac ;; esac ;;
 xcrun) echo "$FAKE_ROOT/sdk" ;;
-brew) case $1 in --cache) for formula in "$@"; do :; done; echo "$FAKE_ROOT/$formula" ;; --prefix) echo "$FAKE_ROOT/openssl3" ;; esac ;;
+brew) case "$*" in "install pkgconf jq openssl@3.6") touch "$FAKE_ROOT/openssl-ready" ;;
+  "--prefix openssl@3") echo "$FAKE_ROOT/openssl-default"; exit 0 ;; esac
+  case $1 in --cache) for formula in "$@"; do :; done; echo "$FAKE_ROOT/$formula" ;; --prefix) echo "$FAKE_ROOT/openssl3" ;; esac ;;
 shasum) PG_MAJOR=${3##*postgresql@}; . databases/postgresql/runtime-darwin.env
   case $FAKE_TARGET in aarch64*) pin=$PG_BOTTLE_ARM64_SEQUOIA ;;
     *) pin=${PG_BOTTLE_X86_64_SONOMA:-$PG_SOURCE_SHA256} ;; esac
@@ -655,8 +657,14 @@ esac
         route.chmod(0o755)
         openssl = root / "openssl3/bin/openssl"
         openssl.parent.mkdir(parents=True)
-        openssl.write_text("#!/bin/sh\necho 'OpenSSL 3.6.3 27 Jan 2026'\n")
+        openssl.write_text("#!/bin/sh\n[ -f \"$FAKE_ROOT/openssl-ready\" ] || exit 91\necho 'OpenSSL 3.6.3 27 Jan 2026'\n")
         openssl.chmod(0o755)
+        for name, line in (("openssl-default/bin/openssl", "OpenSSL 3.5.9"),
+                           ("bin/openssl", "OpenSSL 4.0.3")):
+            other = root / name
+            other.parent.mkdir(parents=True, exist_ok=True)
+            other.write_text(f"#!/bin/sh\necho '{line}'\n")
+            other.chmod(0o755)
         sqlite_python = root / "openssl3/bin/python3.14"
         sqlite_python.write_text('#!/bin/sh\necho sqlite-python-check >> "$FAKE_LOG"\n')
         sqlite_python.chmod(0o755)
