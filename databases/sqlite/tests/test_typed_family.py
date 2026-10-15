@@ -98,6 +98,24 @@ say(answers=answers,receipts=receipts)
     expect(backend.close(),4,'one evaluation for each default details call and no projection sends')
 
 
+def test_unresolved_details_probability_is_null_but_authored_null_stays_resolved():
+    backend=Backend()
+    got=child('''
+db=connect();db.execute('SELECT thinkthen_configure(?)',('{"cache":false}',))
+question=json.dumps({'decide':'Fits?','true':None,'threshold':'0.1:0.95'})
+scalar=run(db,'SELECT value,probability,error_kind,facts_requests_sent FROM thinkthen_decide_details(?,?)',(question,'alpha'))
+records=json.dumps([{'text':'alpha'},{'json':{'body':'beta'}}])
+listed=run(db,'SELECT ordinal,value,probability,error_kind,facts_requests_sent FROM thinkthen_decide_details WHERE request_question=? AND request_records=?',(question,records))
+resolved=json.dumps({'decide':'Fits?','true':None})
+settled=run(db,'SELECT value,probability,decision_value,facts_requests_sent FROM thinkthen_decide_details(?,?)',(resolved,'alpha'))
+say(scalar=scalar,listed=listed,settled=settled)
+''',environment(backend))
+    expect(got['scalar'],[[None,None,None,1]],'unresolved scalar has no settled probability')
+    expect(got['listed'],[[0,None,None,None,1],[1,None,None,None,1]],'unresolved text and JSON records have no settled probability')
+    expect(got['settled'],[[1,.9,None,1]],'authored null retains its resolved yes probability')
+    expect(backend.close(),3,'one send per details invocation')
+
+
 def test_output_predicates_do_not_change_call_identity_or_admit_extra_options():
     backend = Backend()
     got = child('''

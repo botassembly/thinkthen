@@ -11,6 +11,8 @@ Reviews: revision 4c93d32, accept
 
 Reviews: revision a05f4d1, accept
 
+Reviews: revision 09e4246, accept
+
 ## Outcome
 
 SQLite, DuckDB and PostgreSQL each return the full record for all ten functions through `thinkthen_<function>_details`, and the plain calls return only the plain value.

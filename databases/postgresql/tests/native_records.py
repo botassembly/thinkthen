@@ -120,8 +120,14 @@ def main():
                 assert 'private evidence' not in got[1]['failure']['message'], got
                 assert all(row['facts']['requests_sent'] == 3 for row in got), got
             host.start({**env, 'THINKTHEN_BASE_URL': f'http://127.0.0.1:{backend.port}/arm/full/v1'})
-            got = rows("SELECT to_jsonb(r) FROM thinkthen_decide_details('Fits?',ARRAY[" + record + "],thinkthen_reading(threshold=>'0.1:0.95')) r", 1)
-            assert got[0]['value'] is None and got[0]['probability'] == .9, got
+            for arguments in ("'Fits?',ARRAY[" + record + "],thinkthen_reading(threshold=>'0.1:0.95')",
+                              "'Fits?','Alpha.',threshold=>'0.1:0.95'"):
+                got = rows("SELECT to_jsonb(r) FROM thinkthen_decide_details(" + arguments + ") r", 1)
+                assert got[0]['value'] is None and got[0]['probability'] is None, got
+                assert got[0]['failure'] is None and got[0]['facts']['requests_sent'] == 1, got
+            settled = rows("SELECT to_jsonb(r) FROM thinkthen_decide_details(" + quoted('{"decide":"Fits?","true":null}') + ",ARRAY[" + record + "]) r", 1)
+            assert settled[0]['value'] is True and settled[0]['probability'] == .9, settled
+            assert settled[0]['result']['value'] is None and settled[0]['failure'] is None, settled
             source = "ROW('caller-read.txt',1,1)::thinkthen_source"
             got = rows("SELECT to_jsonb(r) FROM thinkthen_decide_details('Fits?',ARRAY[thinkthen_record(text=>'Alpha.',source=>" + source + ")]) r", 1)
             assert got[0]['result']['source']['file'] == 'caller-read.txt', got
