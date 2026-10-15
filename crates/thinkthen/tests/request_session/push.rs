@@ -1,8 +1,41 @@
 //! Push-all callers retain ordered output without needing a concurrent reader.
 use super::*;
+#[path = "../../src/test_deadline/child.rs"]
+mod child;
+use child::ChildEnvironment as _;
 
 #[test]
 fn push_all_then_finish_reads_ordered_prefix_at_request_cap() {
+    const CASE: &str = "push::push_all_then_finish_reads_ordered_prefix_at_request_cap";
+    const CHILD: &str = "THINKTHEN_TEST_PUSH_ALL_CHILD";
+    if std::env::var_os(CHILD).is_none() {
+        // Scheduler width is process-wide; isolate this width-one caller from
+        // the parallel recognition cases in the same integration binary.
+        let home = std::path::Path::new(env!("CARGO_TARGET_TMPDIR"))
+            .join(format!("push-all-session-{}", std::process::id()));
+        std::fs::create_dir(&home).unwrap();
+        let binary = std::env::current_exe().unwrap();
+        let output = child::run::output(
+            child::command(binary.to_str().unwrap(), &[])
+                .args(["--exact", CASE, "--nocapture", "--test-threads=1"])
+                .isolated_home(&home)
+                .env(CHILD, "1"),
+        );
+        std::fs::remove_dir_all(&home).unwrap();
+        let output = output.unwrap();
+        let said = String::from_utf8_lossy(&output.stdout);
+        assert!(
+            output.status.success(),
+            "{said}\n{}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+        assert!(said.contains("1 passed"), "the child ran {CASE}");
+        return;
+    }
+    push_all_case();
+}
+
+fn push_all_case() {
     for blocking in [false, true] {
         let listener = Listener::answering(response).unwrap();
         let mut arguments = request(feed()).call.arguments().clone();
