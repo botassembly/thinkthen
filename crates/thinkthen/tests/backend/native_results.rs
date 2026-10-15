@@ -5,7 +5,7 @@ use std::io::Write;
 use std::process::Stdio;
 mod annotation;
 mod cache_warning;
-pub(crate) mod compatibility;
+pub(crate) mod comparison;
 mod find;
 mod rank;
 mod recognize;

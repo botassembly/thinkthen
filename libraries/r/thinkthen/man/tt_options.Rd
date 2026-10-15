@@ -3,7 +3,7 @@
 \title{Build named request controls}
 \usage{
 tt_options(attempts = NULL, batch = NULL, context = NULL,
-  context_field = NULL, deadline_ms = NULL, details = NULL,
+  context_field = NULL, deadline_ms = NULL,
   examples = NULL, examples_field = NULL, field = NULL,
   files_only = NULL, max_requests_total = NULL, mode = NULL,
   model = NULL, none = NULL, options_field = NULL,
@@ -19,7 +19,6 @@ request, or \code{"max"}.}
 \item{context_field}{Per-record context projection pointer.}
 \item{deadline_ms}{The millisecond deadline for the call, including \code{-1}
 for no deadline.}
-\item{details}{Compatibility details output for scalar calls.}
 \item{examples, examples_field}{Recognition boundary examples, or a per-record
 example projection pointer.}
 \item{field}{Evidence projection pointers, in caller order.}

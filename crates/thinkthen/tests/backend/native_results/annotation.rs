@@ -90,7 +90,7 @@ fn complete_annotation_replays_coalesced_observations_and_retains_declared_readi
         assert_eq!(held["answer_id"], live["answer_id"]);
         assert_eq!(
             held["answers"],
-            compatibility::retrieved_members(live["answers"].clone(), "replay")
+            comparison::retrieved_members(live["answers"].clone(), "replay")
         );
         assert_eq!(held["meta"]["origin"], "replay");
         assert_eq!(held["meta"]["requests_sent"], 0);

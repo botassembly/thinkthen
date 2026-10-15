@@ -31,6 +31,16 @@ fn file(folder: &Path, name: &str, relations: &str) -> String {
 
 const WORKS_FOR: &str = r#"{"name":"works_for","source":"person","target":"organization","reads":"works for","single":true}"#;
 
+#[cfg(test)]
+fn works_for_menu_question() -> Value {
+    json!({"verb":"choose",
+        "text":"Which listed organization fills the blank: Item 1 (person \"Ada\") works for ___? Choose none if no listed organization does.",
+        "options":["i2","i3","none"],"label_details":[
+            {"name":"i2","description":"Item 2 (organization \"Acme\")"},
+            {"name":"i3","description":"Item 3 (organization \"Initech\")"},
+            {"name":"none","description":"No listed organization."}]})
+}
+
 fn choice(i2: f64, i3: f64, none: f64) -> String {
     json!({"type":"choice","probabilities":{"i2":i2,"i3":i3,"none":none}}).to_string()
 }
@@ -94,14 +104,16 @@ fn the_top_label_makes_the_one_edge_and_the_detail_entry() {
             Some(&acme),
             0.5,
             true,
+            "i2",
         ),
-        ("none on top", (0.3, 0.1, 0.6), None, 0.6, false),
+        ("none on top", (0.3, 0.1, 0.6), None, 0.6, false, "none"),
         (
             "a target on top below the cut",
             (0.4, 0.3, 0.3),
             Some(&acme),
             0.4,
             false,
+            "i2",
         ),
         (
             "an exact tie of two targets",
@@ -109,6 +121,7 @@ fn the_top_label_makes_the_one_edge_and_the_detail_entry() {
             None,
             0.5,
             false,
+            "i2",
         ),
         (
             "an exact tie of a target and none",
@@ -116,6 +129,7 @@ fn the_top_label_makes_the_one_edge_and_the_detail_entry() {
             None,
             0.45,
             false,
+            "i3",
         ),
         (
             "the second target on top",
@@ -123,11 +137,12 @@ fn the_top_label_makes_the_one_edge_and_the_detail_entry() {
             Some(&initech),
             0.7,
             true,
+            "i3",
         ),
     ];
     let rule = file(&folder, "works-for", WORKS_FOR);
     let input = br#"[{"name":"Ada","kind":"person"},{"name":"Acme","kind":"organization"},{"name":"Initech","kind":"organization"}]"#;
-    for (row, (i2, i3, none), target, probability, accepted) in rows {
+    for (row, (i2, i3, none), target, probability, accepted, pick) in rows {
         let answer = choice(i2, i3, none);
         let listener = Listener::answering(move |_| {
             Canned::ok(&format!(
@@ -139,13 +154,17 @@ fn the_top_label_makes_the_one_edge_and_the_detail_entry() {
         assert_eq!(details.status.code(), Some(0), "{row}");
         let result: Value = serde_json::from_slice(&details.stdout).expect("details");
         assert_eq!(result["question"]["relations"][0]["single"], true, "{row}");
-        let mut entry =
-            crate::native_results::compatibility::judgment(result)["answer"]["questions"][0]
-                .clone();
-        entry.as_object_mut().expect("entry").remove("request");
+        let entry =
+            crate::native_results::comparison::judgment(result)["answer"]["questions"][0].clone();
+        let request = crate::support::keys(listener.url(), &listener.requests()[0].body).remove(0);
         assert_eq!(
             entry,
-            json!({"relation":"works_for","reads":"works for","method":"choice","direction":"source_to_target","source":{"name":"Ada","kind":"person"},"target":target,"probability":probability,"accepted":accepted}),
+            json!({"relation":"works_for","reads":"works for","method":"choice","direction":"source_to_target","source":{"name":"Ada","kind":"person"},"target":target,"probability":probability,"accepted":accepted,
+                "request":request,"answer_id":"0".repeat(64),
+                "answer":{"kind":"choice","pick":pick,"probabilities":{"i2":i2,"i3":i3,"none":none}},
+                "question":works_for_menu_question(),
+                "threshold":0.5,"question_sources":[{"origin":"live","answered_by":"local-1","batch_size":1}],
+                "observations":[{"observation_id":"0".repeat(64)}]}),
             "{row}"
         );
         let bare = run(&listener, &[&rule], input);

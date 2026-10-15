@@ -342,7 +342,7 @@ fn a_record_row_carries_the_whole_record_under_input() {
     assert_eq!(output.status.code(), Some(0));
     let row = printed(&output);
     let details: serde_json::Value = serde_json::from_str(&row).unwrap();
-    let preserved = crate::native_results::compatibility::judgment(details);
+    let preserved = crate::native_results::comparison::judgment(details);
     assert_eq!(preserved["value"], true);
     assert_eq!(
         preserved["question"],
