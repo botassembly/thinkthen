@@ -41,6 +41,16 @@ def workflow_cases():
     windows = yaml.safe_load((REPO / '.github/workflows/windows.yml').read_text())
     assert workflow_command('release.yml', release)[0] == 0
     assert workflow_command('windows.yml', windows)[0] == 0
+    gate = yaml.safe_load((REPO / '.github/workflows/gate.yml').read_text())
+    assert workflow_command('gate.yml', gate)[0] == 0
+    for defect in ('paid', 'string', 'default'):
+        doc = deepcopy(gate)
+        platform = doc.get('on', doc.get(True))['workflow_dispatch']['inputs']['platform']
+        if defect == 'paid': platform['options'].append('macos-15-large')
+        elif defect == 'string': platform['type'] = 'string'
+        else: platform['default'] = 'macos-15-large'
+        code, output = workflow_command('gate.yml', doc)
+        assert code == 1 and 'standard free hosted runners' in output, (defect, code, output)
     for defect in ('paid', 'matrix-paid', 'skip-apple', 'mask-apple', 'wrong-sha', 'missing-language', 'mixed-paid', 'job-mask', 'upload-always'):
         doc = deepcopy(release)
         apple = doc['jobs']['apple-packages']
