@@ -1,7 +1,5 @@
 //! Push-all callers retain ordered output without needing a concurrent reader.
 use super::*;
-#[path = "../../src/test_deadline/child.rs"]
-mod child;
 use child::ChildEnvironment as _;
 
 #[test]
@@ -35,6 +33,11 @@ fn push_all_then_finish_reads_ordered_prefix_at_request_cap() {
     push_all_case();
 }
 
+#[expect(
+    clippy::unwrap_used,
+    clippy::panic,
+    reason = "the isolated loopback case must retain its ordered rows and native terminal"
+)]
 fn push_all_case() {
     for blocking in [false, true] {
         let listener = Listener::answering(response).unwrap();
@@ -119,31 +122,32 @@ fn push_all_case() {
     }
 }
 
+#[expect(
+    clippy::unwrap_used,
+    reason = "fixture admission and timeout failures stop this caller behavior"
+)]
 fn push_bounded(
     session: &Arc<RequestSession>,
     index: usize,
     blocking: bool,
 ) -> RequestSessionPushStatus {
-    let waiting = Arc::clone(&session);
+    let waiting = Arc::clone(session);
     let (sent, received) = mpsc::channel();
     let producer = std::thread::spawn(move || {
         let item = descriptor(&format!("row {index}"));
-        let status = if blocking {
-            waiting.push_with(|| Ok::<_, Error>(item)).unwrap()
-        } else {
-            let mut item = item;
-            loop {
-                match waiting.try_push(item).unwrap() {
-                    RequestSessionPush::Accepted => {
-                        break RequestSessionPushStatus::Accepted;
-                    }
-                    RequestSessionPush::Closed(_) => {
-                        break RequestSessionPushStatus::Closed;
-                    }
-                    RequestSessionPush::Full(retry) => {
-                        item = retry;
-                        std::thread::yield_now();
-                    }
+        if blocking {
+            let status = waiting.push_with(|| Ok::<_, Error>(item)).unwrap();
+            let _ = sent.send(status);
+            return;
+        }
+        let mut item = item;
+        let status = loop {
+            match waiting.try_push(item).unwrap() {
+                RequestSessionPush::Accepted => break RequestSessionPushStatus::Accepted,
+                RequestSessionPush::Closed(_) => break RequestSessionPushStatus::Closed,
+                RequestSessionPush::Full(retry) => {
+                    item = retry;
+                    std::thread::yield_now();
                 }
             }
         };

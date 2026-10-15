@@ -600,29 +600,33 @@ fn push_all_then_finish_or_cancel_preserves_parked_recovering_rows() {
     }
 }
 
+#[expect(
+    clippy::unwrap_used,
+    reason = "fixture admission and timeout failures stop this caller behavior"
+)]
 fn push_bounded(
     session: &Arc<RequestRecoveringSession>,
     index: usize,
     blocking: bool,
 ) -> RequestSessionPushStatus {
-    let waiting = Arc::clone(&session);
+    let waiting = Arc::clone(session);
     let (sent, received) = mpsc::channel();
     let producer = std::thread::spawn(move || {
-        let status = if blocking {
-            waiting
+        if blocking {
+            let status = waiting
                 .push_with(|| Ok::<_, thinkthen::Error>(descriptor(&format!("row {index}"))))
-                .unwrap()
-        } else {
-            let encoded =
-                json!({"item":{"original":{"kind":"text","text":format!("row {index}")}}})
-                    .to_string();
-            loop {
-                let status = waiting.try_push_json(&encoded).unwrap();
-                if status != RequestSessionPushStatus::Full {
-                    break status;
-                }
-                std::thread::yield_now();
+                .unwrap();
+            let _ = sent.send(status);
+            return;
+        }
+        let encoded =
+            json!({"item":{"original":{"kind":"text","text":format!("row {index}")}}}).to_string();
+        let status = loop {
+            let status = waiting.try_push_json(&encoded).unwrap();
+            if status != RequestSessionPushStatus::Full {
+                break status;
             }
+            std::thread::yield_now();
         };
         let _ = sent.send(status);
     });
