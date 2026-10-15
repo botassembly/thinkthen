@@ -10,7 +10,6 @@ use std::io;
 use std::time::Duration;
 use ureq::Agent;
 
-#[expect(clippy::print_stderr, reason = "temporary Windows transport diagnosis")]
 pub(super) fn timed(
     agent: &Agent,
     exchange: &Exchange<'_>,
@@ -24,13 +23,7 @@ pub(super) fn timed(
 ) -> (Result<Sent, Box<Attempt>>, u64) {
     let interval = usage.http_interval();
     let started = std::time::Instant::now();
-    eprintln!("HTTP {:?}: sending", std::thread::current().id());
     let sent = send(agent, exchange, limit, invocation, sdk_request_id, controls);
-    eprintln!(
-        "HTTP {:?}: returned {}",
-        std::thread::current().id(),
-        sent.is_ok()
-    );
     drop(interval);
     let wall_ms =
         u64::try_from(started.elapsed().as_nanos().div_ceil(1_000_000).max(1)).unwrap_or(u64::MAX);
