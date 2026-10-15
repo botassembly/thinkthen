@@ -110,6 +110,51 @@ runpy.run_path(sys.argv[0], run_name='__main__')
         print('community Python: modern and older callers preserve archived sources, preparation pins and offline inputs; missing modern host refuses')
 
 
+def container_build_tools():
+    """Configure C and C++ with the exact container bootstrap and no ambient Ninja."""
+    if sys.platform != 'linux':
+        print('release container: Linux build-tool regression requires a Linux host')
+        return
+    with tempfile.TemporaryDirectory(prefix='thinkthen-container-tools-') as temporary:
+        root = Path(temporary)
+        tools = root / 'bin'
+        tools.mkdir()
+        for name in ('cmake', 'make', 'cc', 'c++', 'as', 'ld', 'ar', 'ranlib'):
+            (tools / name).symlink_to(shutil.which(name))
+        requirements = REPO / 'databases/duckdb/tools/requirements.txt'
+        install = tools / 'python3'
+        install.write_text(f'''#!{sys.executable}
+import pathlib, sys
+assert sys.argv[1:] == ['-m', 'pip', 'install', '--disable-pip-version-check', '-r', {str(requirements)!r}], sys.argv
+pathlib.Path({str(tools / 'ninja')!r}).symlink_to({shutil.which('ninja')!r})
+''')
+        install.chmod(0o755)
+        source = root / 'source'
+        source.mkdir()
+        (source / 'CMakeLists.txt').write_text('cmake_minimum_required(VERSION 3.18)\nproject(probe LANGUAGES C CXX)\n')
+        container = (REPO / 'sdlc/scripts/release-container').read_text()
+        bootstrap = container.split('\tINPUTS_HERE=', 1)[1].split('\tpython3 "$INPUTS_HERE/source_hosts.py" --fetch', 1)[0]
+        bootstrap = 'INPUTS_HERE=' + bootstrap.replace('/work/src/databases/duckdb/tools', str(requirements.parent))
+        env = child_env(home=root / 'home') | {'PATH': str(tools), 'TARGET': 'aarch64-unknown-linux-gnu'}
+        command = bootstrap + '\ncmake -G Ninja -S "' + str(source) + '" -B "' + str(root / 'build') + '"\n'
+        result = subprocess.run(['/bin/sh', '-eu', '-c', command], env=env,
+                                capture_output=True, text=True, timeout=30)
+        assert result.returncode == 0, result.stdout + result.stderr
+        cache = (root / 'build/CMakeCache.txt').read_text()
+        assert 'CMAKE_MAKE_PROGRAM:FILEPATH=' + str(tools / 'ninja') in cache, cache
+        for language in ('C', 'CXX'):
+            assert f'CMAKE_{language}_COMPILER:FILEPATH=' in cache, cache
+        for missing in ('make', 'cmake', 'cc', 'c++'):
+            (tools / 'ninja').unlink()
+            (tools / missing).unlink()
+            refused = subprocess.run(['/bin/sh', '-eu', '-c', bootstrap], env=env,
+                                     capture_output=True, text=True, timeout=5)
+            assert refused.returncode == 1, refused.stderr
+            assert f'missing DuckDB build tool: {missing}' in refused.stderr, refused.stderr
+            (tools / missing).symlink_to(shutil.which(missing))
+        print('release container: pinned bootstrap provides Ninja, configures C and C++, and refuses missing build tools')
+
+
 def wheel():
     with tempfile.TemporaryDirectory(prefix='thinkthen-wheel-python-') as temporary:
         root = Path(temporary)
@@ -138,4 +183,5 @@ sys.exit(97)
 
 if __name__ == '__main__':
     community()
+    container_build_tools()
     wheel()
