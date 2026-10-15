@@ -6,6 +6,10 @@ import io
 from contextlib import redirect_stdout
 import importlib.util
 import json
+import os
+import runpy
+import subprocess
+import sys
 from pathlib import Path
 import tempfile
 import urllib.request
@@ -59,7 +63,29 @@ def route(root, *, missing=False, receipt=False, extra=False):
     assert calls == ['powershell', 'pwsh'] and len(replays) == 2
 
 
+def timeout_diagnostics():
+    fixture = runpy.run_path(str(REPO / 'sdlc/scripts/windows-installer-test.py'))
+    log = io.StringIO()
+    with redirect_stdout(log):
+        try:
+            fixture['run_fixture']([sys.executable, '-c',
+                "import sys, threading; print('fixture phase: waiting', flush=True); "
+                "print('controlled fixture error', file=sys.stderr, flush=True); threading.Event().wait()"],
+                env={key: os.environ[key] for key in ('SystemRoot', 'SystemDrive', 'TEMP', 'TMP') if key in os.environ},
+                timeout=2, label='controlled timeout')
+        except ValueError as error:
+            assert isinstance(error.__cause__, subprocess.TimeoutExpired)
+            assert error.__cause__.stdout.splitlines() == [b'fixture phase: waiting']
+            assert error.__cause__.stderr.splitlines() == [b'controlled fixture error']
+        else:
+            raise AssertionError('controlled child did not time out')
+    assert 'fixture phase: waiting' in log.getvalue()
+    assert 'controlled fixture error' in log.getvalue()
+    assert 'controlled timeout failed' in log.getvalue()
+
+
 def main():
+    timeout_diagnostics()
     with tempfile.TemporaryDirectory(prefix='thinkthen-installer-routing-') as temporary:
         root = Path(temporary)
         for name, options in (('good', {}), ('missing-host', dict(missing=True)),
@@ -74,7 +100,7 @@ def main():
             else:
                 if name != 'good':
                     raise RuntimeError(f'routing accepted {name}')
-    print('Windows installer routing: both hosts install before replay; 3 refusal plants pass; native Windows proof NOT RUN')
+    print('Windows installer routing: both hosts install before replay; 3 refusal plants and captured timeout diagnostics pass; native Windows proof NOT RUN')
 
 
 if __name__ == '__main__':

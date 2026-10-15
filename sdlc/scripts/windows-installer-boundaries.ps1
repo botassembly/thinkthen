@@ -2,12 +2,14 @@
 param([string] $Installer, [string] $Cases, [string] $FixtureRoot, [string] $NativeBinary = '', [string] $ReleaseVersion = '0.2.0', [string] $ReleaseBase = '')
 Set-StrictMode -Version 2.0
 $ErrorActionPreference = 'Stop'
+[Console]::Error.WriteLine('Boundary fixture phase: parse installer')
 $tokens = $null; $errors = $null
 $ast = [System.Management.Automation.Language.Parser]::ParseFile($Installer, [ref] $tokens, [ref] $errors)
 if ($errors.Count) { throw ($errors | Out-String) }
 foreach ($function in $ast.EndBlock.Statements) {
     if ($function -is [System.Management.Automation.Language.FunctionDefinitionAst]) { . ([scriptblock]::Create($function.Extent.Text)) }
 }
+[Console]::Error.WriteLine('Boundary fixture phase: initialize helpers')
 Initialize-InstallHelpers
 $script:Checks = 0
 function Check([bool] $Pass, [string] $Label) {
@@ -21,6 +23,7 @@ function Refuses([scriptblock] $Call, [string] $Label) {
 }
 $table = Get-Content -LiteralPath $Cases -Raw | ConvertFrom-Json
 foreach ($case in $table) {
+    [Console]::Error.WriteLine('Boundary fixture phase: portable ' + $case.kind)
     $refused = $false
     try {
         switch ($case.kind) {
@@ -46,6 +49,7 @@ foreach ($case in $table) {
     } catch { $refused = $true; if ($case.ok) { throw } }
     Check ($refused -ne $case.ok) $case.label
 }
+[Console]::Error.WriteLine('Boundary fixture phase: cleanup refusal plants')
 # This plant precedes every real cleanup. No ACL stub is involved.
 $script:InstallDirectory = $FixtureRoot
 $script:Scratch = Join-Path $FixtureRoot '.thinkthen-install.00000000-0000-0000-0000-000000000000'
@@ -56,6 +60,7 @@ Refuses { Remove-OwnedScratch (Join-Path $FixtureRoot 'unowned-sibling') } 'clea
 Check ([System.IO.Directory]::Exists([System.IO.Path]::GetDirectoryName($Installer))) 'lane survives cleanup plant'
 
 if ($NativeBinary) {
+    [Console]::Error.WriteLine('Boundary fixture phase: native file and replacement checks')
     if ([Environment]::OSVersion.Platform -ne [PlatformID]::Win32NT) { throw 'Native proof requires Windows.' }
     $script:UserSid = [System.Security.Principal.WindowsIdentity]::GetCurrent().User.Value
     # Fixture root is owned by Python. Installer cleanup owns only its own flat scratch.
@@ -81,6 +86,7 @@ if ($NativeBinary) {
         [System.IO.File]::Replace($Stage, $Destination, $Backup, $false)
     }
     foreach ($fault in @('1176', '1177', 'after')) {
+        [Console]::Error.WriteLine('Boundary fixture phase: replacement ' + $fault)
         $script:Fault = $fault
         Refuses { Commit-File $stage $original $old } ('replacement exception ' + $fault)
         Check ($script:LastReplacementState.Count -eq 3) ('inspect all replacement names ' + $fault)
@@ -151,6 +157,7 @@ if ($NativeBinary) {
     $compiler = Join-Path $env:SystemRoot 'Microsoft.NET\Framework64\v4.0.30319\csc.exe'
     if (-not [System.IO.File]::Exists($compiler)) { throw 'Native version-probe fixtures require the installed .NET Framework compiler.' }
     foreach ($mode in @('good', 'wrong', 'error', 'exit', 'timeout', 'output')) {
+        [Console]::Error.WriteLine('Boundary fixture phase: native probe ' + $mode)
         $source = Join-Path $script:Scratch ('probe-' + $mode + '.cs')
         $probe = Join-Path $script:Scratch ('probe-' + $mode + '.exe')
         $body = 'Console.WriteLine("thinkthen 0.2.0");'
@@ -176,6 +183,7 @@ if ($NativeBinary) {
         else { Refuses { [ThinkThenInstall.Native]::Probe($probe) } ('version probe ' + $mode + ' refuses') }
         Remove-Item Env:THINKTHEN_PROBE_SENTINEL, Env:FIXTURE_API_KEY
     }
+    [Console]::Error.WriteLine('Boundary fixture phase: receipt and cleanup refusal checks')
     $receiptBytes = [System.IO.File]::ReadAllBytes($receipt)
     foreach ($bad in @('not json', '{}', ($pending | ConvertTo-Json -Compress).Replace('"schema_version":1', '"schema_version":2'),
                        ($pending | ConvertTo-Json -Compress).Replace('"state":"pending"', '"state":"other"'),
@@ -198,6 +206,7 @@ if ($NativeBinary) {
     [System.IO.Directory]::Delete($junction, $false) # Remove this fixture junction only.
     Remove-OwnedScratch $script:Scratch
     Check (-not [System.IO.Directory]::Exists($script:Scratch)) 'owned flat cleanup succeeds'
+    [Console]::Error.WriteLine('Boundary fixture phase: concurrent installer refusal')
     $env:THINKTHEN_INSTALL_DIR = $nativeRoot
     $nativeLock = Join-Path $nativeRoot '.thinkthen-install.lock'
     $held = [ThinkThenInstall.Native]::NewFile($nativeLock, $script:UserSid, $true)
@@ -225,6 +234,7 @@ if ($NativeBinary) {
                             'pending-preflight-mismatch', 'pending-receipt-1176', 'pending-receipt-1177',
                             'pending-receipt-after', 'binary-1177', 'installed-receipt-1177',
                             'after-binary', 'rollback-command-absent', 'rollback-receipt-absent')) {
+        [Console]::Error.WriteLine('Boundary fixture phase: install ' + $scenario)
         $requestedTarget = Join-Path $FixtureRoot ('installed space ' + [char] 0x3a9 + '-' + [guid]::NewGuid().ToString('D'))
         # Framework expands short parent names; compare receipts with the same
         # normalized path while still installing from the original spelling.

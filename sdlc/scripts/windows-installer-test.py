@@ -12,6 +12,7 @@ from pathlib import Path
 import runpy
 import shutil
 import struct
+import subprocess
 import tempfile
 import threading
 import time
@@ -32,6 +33,10 @@ def run_fixture(args, env, *, timeout, label):
     try:
         result = CAPTURE(args, env=env, timeout=timeout)
     except Exception as error:
+        if isinstance(error.__cause__, subprocess.TimeoutExpired):
+            for output in (error.__cause__.stdout, error.__cause__.stderr):
+                if output:
+                    print(output.decode('utf-8', errors='replace'), end='', flush=True)
         print(f'{Path(args[0]).name}: {label} failed in {time.monotonic() - started:.2f}s: {error}', flush=True)
         raise
     for output in (result.stdout, result.stderr):
