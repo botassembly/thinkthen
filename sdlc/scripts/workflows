@@ -204,7 +204,7 @@ def release(name, doc):
             or resolve.get("outputs") != expected_outputs
             or resolve.get("steps") != [expected_checkout, expected_source]
             or any(key in resolve for key in ("if", "continue-on-error", "env", "environment", "defaults"))
-            or "env" in doc
+            or doc.get("env") != {"PYTHONDONTWRITEBYTECODE": "1"}
             or (doc.get("defaults") or {}).get("run") is not None):
         out.append(f"{name}: resolve must enforce the exact rehearsal guard with only contents/actions read and step GH_TOKEN")
     for job, spec in jobs.items():

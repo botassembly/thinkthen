@@ -14,7 +14,8 @@ with lock.open('a') as held:
     fcntl.flock(held, fcntl.LOCK_EX)
     settings = {name: value for name in ('THINKTHEN_TOOLCHAINS', 'THINKTHEN_DUCKDB_VERSION')
                 if (value := os.environ.get(name)) is not None}
-    env = child_env(CARGO + ('LANG', 'LC_ALL', 'TMPDIR', 'UV_CACHE_DIR', 'UV_PYTHON_INSTALL_DIR'),
+    env = child_env(CARGO + ('LANG', 'LC_ALL', 'TMPDIR', 'UV_CACHE_DIR', 'UV_PYTHON_INSTALL_DIR',
+                            'PYTHONDONTWRITEBYTECODE'),
                     THINKTHEN_DUCKDB_CACHE_LOCK_HELD=str(lock), **settings)
     result = subprocess.run(sys.argv[2:], env=env, check=False)
     sys.exit(result.returncode if result.returncode >= 0 else 128 - result.returncode)

@@ -16,6 +16,9 @@ on:
 
 permissions: {}
 
+env:
+  PYTHONDONTWRITEBYTECODE: '1'
+
 jobs:
   resolve:
     runs-on: ubuntu-24.04
