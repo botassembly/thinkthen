@@ -12,7 +12,7 @@ REPO=$(cd ../.. && pwd)
 LIMIT=$REPO/sdlc/scripts/time-limit
 EXT_VERSION=$(sed -n "s/^default_version = '\(.*\)'$/\1/p" thinkthen.control)
 runtime_open
-cleanup() { pg_stop; scratch_clean; rm -f .runtime/last-run; }
+cleanup() { pg_stop; runtime_remove; scratch_clean; rm -f .runtime/last-run; }
 trap cleanup EXIT INT TERM
 PG_CONFIG=${PG_CONFIG:-/usr/bin/pg_config}
 EXT=${CARGO_TARGET_DIR:-target}/release/thinkthen-pg16

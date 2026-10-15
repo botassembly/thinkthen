@@ -153,9 +153,12 @@ BIN=.runtime/tree/usr/lib/postgresql/$PG_MAJOR/bin
 runtime_install() {
 	if [ "$PG_HOST" = Darwin ]; then
 		RUNTIME_LIBRARY_DIR=$("$PG_CONFIG" --pkglibdir)
-		[ ! -e "$RUNTIME_LIBRARY_DIR/thinkthen.so" ] && [ ! -e "$RUNTIME_LIBRARY_DIR/thinkthen.dylib" ] && [ ! -e "$RUNTIME_EXTENSION_DIR/thinkthen.control" ] || {
-			echo 'runtime.sh: a thinkthen extension already occupies the Homebrew PostgreSQL keg' >&2; return 1;
-		}
+		for path in "$RUNTIME_LIBRARY_DIR/thinkthen.so" "$RUNTIME_LIBRARY_DIR/thinkthen.dylib" "$RUNTIME_EXTENSION_DIR/thinkthen.control" "$RUNTIME_EXTENSION_DIR"/thinkthen--*.sql; do
+			if [ -e "$path" ] || [ -L "$path" ]; then
+				echo 'runtime.sh: a thinkthen extension already occupies the Homebrew PostgreSQL keg' >&2; return 1
+			fi
+		done
+		RUNTIME_INSTALL_OWNED=1
 		cp "$2/thinkthen.control" "$2/thinkthen--$EXT_VERSION.sql" "$RUNTIME_EXTENSION_DIR/"
 		cp "$1"/thinkthen.* "$RUNTIME_LIBRARY_DIR/"
 		BIN=$EXTRACTED/bin
@@ -169,6 +172,14 @@ runtime_install() {
 	sh "$LIMIT" 60 "$BIN/initdb" -D "$DATA" --auth=trust -U postgres >"$RUN/initdb.log" 2>&1
 	printf "listen_addresses = ''\nunix_socket_directories = '%s'\n" "$SOCK" >>"$DATA/postgresql.conf"
 	cp "$DATA/postgresql.conf" "$RUN/postgresql.conf.base"
+}
+
+# Both check entry points remove only files this process installed into an empty keg.
+runtime_remove() {
+	if [ "$PG_HOST" = Darwin ] && [ "${RUNTIME_INSTALL_OWNED:-}" = 1 ]; then
+		rm -f -- "$RUNTIME_LIBRARY_DIR"/thinkthen.so "$RUNTIME_LIBRARY_DIR"/thinkthen.dylib "$RUNTIME_EXTENSION_DIR"/thinkthen.control "$RUNTIME_EXTENSION_DIR"/thinkthen--*.sql
+		RUNTIME_INSTALL_OWNED=
+	fi
 }
 
 # The host of an address, or nothing when it names user information.

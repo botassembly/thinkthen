@@ -87,9 +87,7 @@ SHIPPED=$EXT-shipped
 runtime_open
 cleanup() {
 	[ ! -f "$DATA/postmaster.pid" ] || "$BIN/pg_ctl" -D "$DATA" -m immediate stop >/dev/null 2>&1 || true
-	if [ "$PG_HOST" = Darwin ] && [ -n "${RUNTIME_LIBRARY_DIR:-}" ]; then
-		rm -f -- "$RUNTIME_LIBRARY_DIR"/thinkthen.so "$RUNTIME_LIBRARY_DIR"/thinkthen.dylib "$RUNTIME_EXTENSION_DIR"/thinkthen.control "$RUNTIME_EXTENSION_DIR"/thinkthen--*.sql
-	fi
+	runtime_remove
 	[ -z "${BPID:-}" ] || backend_stop
 	scratch_clean
 	rm -f .runtime/last-run

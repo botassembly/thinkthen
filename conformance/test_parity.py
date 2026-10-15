@@ -515,6 +515,62 @@ class PublicAssertions(unittest.TestCase):
                     self.assertIn(cause, result.stderr)
                     self.assertFalse(marker.exists(), 'invalid selection started a backend')
 
+    @unittest.skipUnless(os.name == 'posix', 'Homebrew PostgreSQL setup runs on POSIX hosts')
+    def test_postgresql_keg_cleanup_preserves_unowned_files_and_removes_owned_files(self):
+        import re
+        import shlex
+        postgres = parity.ROOT / 'databases/postgresql'
+        cleanup = re.search(r'^cleanup\(\) \{.*?^\}', (postgres / 'check.sh').read_text(), re.M | re.S).group()
+        helper = parity.ROOT / 'databases/sqlite/tests/complete/postgresql_runtime.sh'
+        helper_cleanup = next(line for line in helper.read_text().splitlines() if line.startswith('cleanup()'))
+        for entry, cleanup_function in (('check', cleanup), ('sqlite-host', helper_cleanup)):
+            for major in (16, 17, 18):
+                for occupied in ('so', 'dylib', 'control', 'sql', 'dangling-so', 'dangling-sql', 'owned'):
+                    with self.subTest(entry=entry, major=major, occupied=occupied), tempfile.TemporaryDirectory(prefix='pg-keg-ownership-') as folder:
+                        root = Path(folder)
+                        for name in ('runtime.sha256', 'runtime.url', 'runtime-darwin.env'):
+                            shutil.copyfile(postgres / name, root / name)
+                        for name in ('lib', 'extension', 'source-lib', 'source-extension', 'data', 'home', 'bin'):
+                            (root / name).mkdir()
+                        config = root / 'pg_config'
+                        config.write_text('#!/bin/sh\nprintf "%s\n" ' + shlex.quote(str(root / 'lib')) + '\n')
+                        config.chmod(0o755)
+                        initdb = root / 'bin/initdb'
+                        initdb.write_text('#!/bin/sh\n: >"$DATA/postgresql.conf"\n')
+                        initdb.chmod(0o755)
+                        for name in ('thinkthen.control', 'thinkthen--0.2.0.sql'):
+                            (root / 'source-extension' / name).write_text('owned source')
+                        (root / 'source-lib/thinkthen.so').write_text('owned module')
+                        other = root / 'extension/other.sql'
+                        other.write_text('other extension')
+                        if occupied != 'owned':
+                            name = {'so': 'lib/thinkthen.so', 'dylib': 'lib/thinkthen.dylib',
+                                    'control': 'extension/thinkthen.control', 'sql': 'extension/thinkthen--0.1.0.sql',
+                                    'dangling-so': 'lib/thinkthen.so', 'dangling-sql': 'extension/thinkthen--0.1.0.sql'}[occupied]
+                            sentinel = root / name
+                            if occupied.startswith('dangling'): sentinel.symlink_to(root / 'unowned-target')
+                            else: sentinel.write_text('preexisting extension')
+                        script = root / 'run.sh'
+                        script.write_text('set -eu\n. ' + shlex.quote(str(postgres / 'runtime.sh'))
+                            + '\nPG_HOST=Darwin\nEXTRACTED=$FIXTURE_ROOT\nscratch_clean() { :; }\n'
+                            + cleanup_function + '\ntrap cleanup EXIT\nruntime_install source-lib source-extension\n')
+                        env = {'PATH': os.defpath, 'HOME': str(root / 'home'), 'PG_MAJOR': str(major),
+                               'PG_CONFIG': str(config), 'FIXTURE_ROOT': str(root), 'RUN': str(root),
+                               'RUNTIME_EXTENSION_DIR': str(root / 'extension'), 'DATA': str(root / 'data'),
+                               'BIN': str(root / 'bin'), 'SOCK': str(root / 'socket'), 'EXT_VERSION': '0.2.0',
+                               'LIMIT': str(parity.ROOT / 'sdlc/scripts/time-limit')}
+                        result = subprocess.run(['bash', str(script)], cwd=root, env=env, capture_output=True, text=True)
+                        self.assertEqual(result.returncode, 0 if occupied == 'owned' else 1, result.stdout + result.stderr)
+                        self.assertEqual(other.read_text(), 'other extension')
+                        if occupied == 'owned':
+                            self.assertFalse((root / 'lib/thinkthen.so').exists())
+                            self.assertFalse((root / 'extension/thinkthen.control').exists())
+                            self.assertFalse((root / 'extension/thinkthen--0.2.0.sql').exists())
+                        elif occupied.startswith('dangling'):
+                            self.assertTrue(sentinel.is_symlink())
+                            self.assertFalse((root / 'unowned-target').exists())
+                        else: self.assertEqual(sentinel.read_text(), 'preexisting extension')
+
     @unittest.skipUnless(os.name == 'posix', 'PostgreSQL child readers run on POSIX hosts')
     def test_sql_postgresql_child_keeps_alternate_target_and_selected_profile(self):
         from importlib.util import module_from_spec, spec_from_file_location
