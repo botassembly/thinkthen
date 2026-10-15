@@ -359,8 +359,9 @@ pub unsafe extern "C" fn thinkthen_session_try_push(
     })
 }
 
-/// Wait for input room and transfer one descriptor without consuming output.
-/// Pending output cannot wake this producer. Closure or cancellation returns
+/// Wait for input room and transfer one descriptor.
+/// Park unread output in session order; unread answers consume memory.
+/// Push never waits for a reader. Closure or cancellation returns
 /// CLOSED without decoding the payload. Failures preserve status and publish
 /// only the calling thread diagnostic. No input bytes survive return.
 /// # Safety

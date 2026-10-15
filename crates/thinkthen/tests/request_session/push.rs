@@ -1,76 +1,125 @@
-//! Producer transfer ignores pending output and releases foreign payloads on close.
+//! Push-all callers retain ordered output without needing a concurrent reader.
 use super::*;
 
 #[test]
-fn blocking_push_ignores_pending_output_and_wakes_for_room_or_cancel() {
-    for cancel in [false, true] {
+fn push_all_then_finish_reads_ordered_prefix_at_request_cap() {
+    for blocking in [false, true] {
         let listener = Listener::answering(response).unwrap();
         let mut arguments = request(feed()).call.arguments().clone();
         arguments.options.batch = Some(RequestBatch::Count(1));
         let request = Request::new(RequestCall::new(RequestFunction::Decide, arguments));
-        let session = Arc::new(engine(&listener).request_session(request).unwrap());
-        loop {
-            match session.try_push(descriptor("queued")).unwrap() {
-                RequestSessionPush::Accepted => {}
-                RequestSessionPush::Full(_) => break,
-                other => panic!("intake closed: {other:?}"),
+        let session = Arc::new(
+            crate::api::fixed(listener.base(), "session-fixture")
+                .no_cache()
+                .max_retries(0)
+                .throttle(1)
+                .unwrap()
+                .max_requests(Some(3))
+                .unwrap()
+                .build()
+                .unwrap()
+                .request_session(request)
+                .unwrap(),
+        );
+        for index in 0..32 {
+            let status = push_bounded(&session, index, blocking);
+            if status == RequestSessionPushStatus::Closed {
+                break;
             }
         }
+        session.finish(None).unwrap();
+        let packets = drain(&session);
+        let kinds = packets
+            .iter()
+            .map(|packet| match packet {
+                RequestSessionResult::Observation {
+                    value: OwnedRecordObservation::Question { .. },
+                    ..
+                } => "question",
+                RequestSessionResult::Observation { .. } => "observation",
+                RequestSessionResult::Row(_) => "row",
+                RequestSessionResult::Terminal(_) => "terminal",
+                RequestSessionResult::Aggregate(_) => "aggregate",
+            })
+            .collect::<Vec<_>>();
         assert_eq!(
-            session.wait(RequestSessionWaitInterest::Result, Duration::from_secs(5)),
-            RequestSessionReady::Result
+            kinds,
+            [
+                "question",
+                "observation",
+                "row",
+                "question",
+                "observation",
+                "row",
+                "question",
+                "observation",
+                "row",
+                "terminal"
+            ]
         );
-        // Once the worker publishes its output it can consume one queued input.
-        // Fill that room too, leaving both cells occupied for the producer wait.
-        while matches!(
-            session.try_push(descriptor("queued")).unwrap(),
-            RequestSessionPush::Accepted
-        ) {}
-        let waiting = Arc::clone(&session);
-        let (entered, started) = mpsc::channel();
-        let (sent, received) = mpsc::channel();
-        let producer = std::thread::spawn(move || {
-            entered.send(()).unwrap();
-            sent.send(waiting.push_with(|| Ok::<_, Error>(descriptor("transferred"))))
-                .unwrap();
-        });
-        started.recv_timeout(Duration::from_secs(1)).unwrap();
-        assert!(matches!(
-            received.recv_timeout(Duration::from_millis(30)),
-            Err(mpsc::RecvTimeoutError::Timeout)
-        ));
-        if cancel {
-            session.cancel();
+        let rows = packets
+            .iter()
+            .filter_map(|packet| match packet {
+                RequestSessionResult::Row(RequestSessionRow::Decision(row)) => Some(row),
+                _ => None,
+            })
+            .collect::<Vec<_>>();
+        assert_eq!(
+            rows.iter().map(|row| row.ordinal()).collect::<Vec<_>>(),
+            [0, 1, 2]
+        );
+        for (index, row) in rows.iter().enumerate() {
+            let QuestionInput::Record(original) = row.original() else {
+                panic!("feed original")
+            };
             assert_eq!(
-                received
-                    .recv_timeout(Duration::from_secs(1))
-                    .unwrap()
-                    .unwrap(),
-                RequestSessionPushStatus::Closed
+                original.original().literal(),
+                Some(format!("row {index}").as_str())
             );
-            assert_eq!(
-                session
-                    .push_with::<Error>(|| panic!("closed intake decoded payload"))
-                    .unwrap(),
-                RequestSessionPushStatus::Closed
-            );
-        } else {
-            while !matches!(
-                session
-                    .next_packet(RequestSessionWaitInterest::Result)
-                    .unwrap(),
-                RequestSessionRead::Result(RequestSessionResult::Row(_))
-            ) {}
-            assert_eq!(
-                received
-                    .recv_timeout(Duration::from_secs(5))
-                    .unwrap()
-                    .unwrap(),
-                RequestSessionPushStatus::Accepted
-            );
-            session.cancel();
         }
-        producer.join().unwrap();
-        let _ = drain(&session);
+        let RequestSessionResult::Terminal(terminal) = packets.last().unwrap() else {
+            panic!("terminal follows rows")
+        };
+        assert_eq!(terminal.error.as_ref().unwrap().kind(), ErrorKind::Usage);
+        assert_eq!(terminal.facts.as_ref().unwrap().requests_sent(), 3);
+        assert_eq!(listener.count(), 3);
     }
+}
+
+fn push_bounded(
+    session: &Arc<RequestSession>,
+    index: usize,
+    blocking: bool,
+) -> RequestSessionPushStatus {
+    let waiting = Arc::clone(&session);
+    let (sent, received) = mpsc::channel();
+    let producer = std::thread::spawn(move || {
+        let item = descriptor(&format!("row {index}"));
+        let status = if blocking {
+            waiting.push_with(|| Ok::<_, Error>(item)).unwrap()
+        } else {
+            let mut item = item;
+            loop {
+                match waiting.try_push(item).unwrap() {
+                    RequestSessionPush::Accepted => {
+                        break RequestSessionPushStatus::Accepted;
+                    }
+                    RequestSessionPush::Closed(_) => {
+                        break RequestSessionPushStatus::Closed;
+                    }
+                    RequestSessionPush::Full(retry) => {
+                        item = retry;
+                        std::thread::yield_now();
+                    }
+                }
+            }
+        };
+        let _ = sent.send(status);
+    });
+    let status = received.recv_timeout(Duration::from_secs(2));
+    if status.is_err() {
+        session.cancel();
+    }
+    producer.join().unwrap();
+    status.unwrap()
 }

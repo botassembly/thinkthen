@@ -1,10 +1,13 @@
-//! One input cell, one output cell and independent terminal cells.
+//! Input and output cells, ordered parked output and independent terminal cells.
 use super::{
     RequestReaderFailure, RequestSessionDescriptor, RequestSessionPush, RequestSessionPushStatus,
     RequestSessionRead, RequestSessionResult, RequestSessionTerminal,
 };
 use crate::{CallOptions, CancelToken, Error};
-use std::sync::{Arc, Condvar, Mutex, MutexGuard};
+use std::{
+    collections::VecDeque,
+    sync::{Arc, Condvar, Mutex, MutexGuard},
+};
 
 #[derive(Debug)]
 enum Finish {
@@ -18,6 +21,7 @@ struct State {
     finish: Option<Finish>,
     intake_closed: bool,
     output: Option<RequestSessionResult>,
+    parked: VecDeque<RequestSessionResult>,
     terminal: Option<RequestSessionTerminal>,
     settled: bool,
     receiver_closed: bool,
@@ -45,6 +49,18 @@ impl Change {
         *generation = generation.wrapping_add(1);
         self.wake.notify_all();
     }
+    fn wait_changed(&self, observed: u64) {
+        let mut generation = self
+            .generation
+            .lock()
+            .unwrap_or_else(|error| error.into_inner());
+        while *generation == observed {
+            generation = self
+                .wake
+                .wait(generation)
+                .unwrap_or_else(|error| error.into_inner());
+        }
+    }
     pub(super) fn wait(&self, observed: u64, timeout: std::time::Duration) {
         let generation = self
             .generation
@@ -60,26 +76,30 @@ impl Change {
     }
 }
 
+pub(super) trait ParkOutput: std::fmt::Debug + Send + Sync {
+    fn park(&self);
+}
+
 #[derive(Debug, Default)]
 pub(super) struct Queue {
     state: Mutex<State>,
     wake: Condvar,
-    changed: Option<Arc<Change>>,
+    changed: Arc<Change>,
+    recovering_output: Option<Arc<dyn ParkOutput>>,
     pub(super) cancel: CancelToken,
 }
 
 impl Queue {
-    pub(super) fn recovering(changed: Arc<Change>) -> Self {
+    pub(super) fn recovering(changed: Arc<Change>, output: Arc<dyn ParkOutput>) -> Self {
         Self {
-            changed: Some(changed),
+            changed,
+            recovering_output: Some(output),
             ..Self::default()
         }
     }
     fn notify(&self) {
         self.wake.notify_all();
-        if let Some(changed) = &self.changed {
-            changed.notify();
-        }
+        self.changed.notify();
     }
     fn lock(&self) -> MutexGuard<'_, State> {
         self.state.lock().unwrap_or_else(|error| error.into_inner())
@@ -102,7 +122,7 @@ impl Queue {
             state.settlement_interrupted = false;
         }
         loop {
-            if state.output.is_some() || state.terminal.is_some() {
+            if !state.parked.is_empty() || state.output.is_some() || state.terminal.is_some() {
                 return Ready::Result;
             }
             if state.settled || state.receiver_closed {
@@ -140,7 +160,10 @@ impl Queue {
         }
     }
     pub(super) fn capacity(&self) -> RequestSessionPushStatus {
-        let state = self.lock();
+        let mut state = self.lock();
+        if state.input.is_some() {
+            self.park(&mut state);
+        }
         if state.intake_closed || state.finish.is_some() {
             RequestSessionPushStatus::Closed
         } else if state.input.is_some() {
@@ -149,21 +172,37 @@ impl Queue {
             RequestSessionPushStatus::Accepted
         }
     }
-    pub(super) fn input_room(&self) -> bool {
-        let mut state = self.lock();
-        while state.input.is_some() && !state.intake_closed && state.finish.is_none() {
-            state = self.wait(state);
+    fn park(&self, state: &mut State) {
+        if let Some(packet) = state.output.take() {
+            state.parked.push_back(packet);
+            self.notify();
         }
+        if let Some(output) = &self.recovering_output {
+            output.park();
+        }
+    }
+    fn wait_for_room(&self) -> MutexGuard<'_, State> {
+        loop {
+            // Observe before inspecting either queue so publication cannot lose a wake.
+            let observed = self.changed.observed();
+            let mut state = self.lock();
+            if state.input.is_none() || state.intake_closed || state.finish.is_some() {
+                return state;
+            }
+            self.park(&mut state);
+            drop(state);
+            self.changed.wait_changed(observed);
+        }
+    }
+    pub(super) fn input_room(&self) -> bool {
+        let state = self.wait_for_room();
         !state.intake_closed && state.finish.is_none()
     }
     pub(super) fn push_wait(
         &self,
         descriptor: RequestSessionDescriptor,
     ) -> RequestSessionPushStatus {
-        let mut state = self.lock();
-        while state.input.is_some() && !state.intake_closed && state.finish.is_none() {
-            state = self.wait(state);
-        }
+        let mut state = self.wait_for_room();
         if state.intake_closed || state.finish.is_some() {
             RequestSessionPushStatus::Closed
         } else {
@@ -174,6 +213,9 @@ impl Queue {
     }
     pub(super) fn push(&self, descriptor: RequestSessionDescriptor) -> RequestSessionPush {
         let mut state = self.lock();
+        if state.input.is_some() {
+            self.park(&mut state);
+        }
         if state.intake_closed || state.finish.is_some() {
             RequestSessionPush::Closed(descriptor)
         } else if state.input.is_some() {
@@ -293,7 +335,9 @@ impl Queue {
         }
     }
     fn read_locked(&self, state: &mut State) -> RequestSessionRead {
-        if let Some(packet) = state.output.take() {
+        if let Some(packet) = state.parked.pop_front() {
+            RequestSessionRead::Result(packet)
+        } else if let Some(packet) = state.output.take() {
             self.notify();
             RequestSessionRead::Result(packet)
         } else if let Some(terminal) = state.terminal.take() {
@@ -319,6 +363,7 @@ impl Queue {
         if drop_receiver {
             state.receiver_closed = true;
             state.output = None;
+            state.parked.clear();
             state.terminal = None;
         }
         self.notify();

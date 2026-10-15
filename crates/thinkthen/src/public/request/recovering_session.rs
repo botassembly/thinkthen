@@ -43,6 +43,7 @@ pub enum RequestRecoveringRead {
 #[derive(Debug, Default)]
 struct OutputState {
     packet: Option<RequestRecoveringResult>,
+    parked: std::collections::VecDeque<RequestRecoveringResult>,
     terminal: Option<RequestSessionTerminal>,
     settled: bool,
     closed: bool,
@@ -79,7 +80,9 @@ impl Output {
         self.changed.notify();
     }
     fn read(&self, state: &mut OutputState) -> RequestRecoveringRead {
-        if let Some(packet) = state.packet.take() {
+        if let Some(packet) = state.parked.pop_front() {
+            RequestRecoveringRead::Result(packet)
+        } else if let Some(packet) = state.packet.take() {
             self.wake.notify_all();
             self.changed.notify();
             RequestRecoveringRead::Result(packet)
@@ -92,7 +95,17 @@ impl Output {
         }
     }
 }
-/// One bounded recovering request with owned descriptor intake.
+impl super::session_queue::ParkOutput for Output {
+    fn park(&self) {
+        let mut state = self.lock();
+        if let Some(packet) = state.packet.take() {
+            state.parked.push_back(packet);
+            self.wake.notify_all();
+            self.changed.notify();
+        }
+    }
+}
+/// One recovering request with owned descriptor intake and parked unread output.
 #[derive(Debug)]
 pub struct RequestRecoveringSession {
     input: RequestSession,
@@ -197,7 +210,8 @@ impl RequestRecoveringSession {
                     .queue
                     .ready(interest, std::time::Duration::ZERO, self.input.feed);
             let state = self.output.lock();
-            return if state.packet.is_some() || state.terminal.is_some() {
+            return if !state.parked.is_empty() || state.packet.is_some() || state.terminal.is_some()
+            {
                 Ready::Result
             } else if state.settled || state.closed {
                 Ready::End
@@ -209,7 +223,7 @@ impl RequestRecoveringSession {
         loop {
             let observed = self.output.changed.observed();
             let state = self.output.lock();
-            if state.packet.is_some() || state.terminal.is_some() {
+            if !state.parked.is_empty() || state.packet.is_some() || state.terminal.is_some() {
                 return Ready::Result;
             }
             if state.settled || state.closed {
@@ -246,13 +260,14 @@ impl Drop for RequestRecoveringSession {
         let mut state = self.output.lock();
         state.closed = true;
         state.packet = None;
+        state.parked.clear();
         state.terminal = None;
         self.output.wake.notify_all();
         self.output.changed.notify();
     }
 }
 impl Engine {
-    /// Start a bounded recovering source or inline request.
+    /// Start a recovering source or inline request with owned unread output.
     /// # Errors
     /// Returns declaration refusal or failure to start the worker.
     pub fn start_request_recovering_session(
@@ -266,7 +281,7 @@ impl Engine {
             RequestSessionFeedOptions::default(),
         )
     }
-    /// Start a bounded recovering descriptor feed with native reader controls.
+    /// Start a recovering descriptor feed with bounded intake and native reader controls.
     /// # Errors
     /// Refuses incompatible controls before descriptor intake.
     pub fn request_recovering_session_with_feed_options(
@@ -291,9 +306,10 @@ impl Engine {
             ));
         }
         let output = Arc::new(Output::default());
-        let queue = Arc::new(super::session_queue::Queue::recovering(Arc::clone(
-            &output.changed,
-        )));
+        let queue = Arc::new(super::session_queue::Queue::recovering(
+            Arc::clone(&output.changed),
+            output.clone(),
+        ));
         let runtime_feed = make_feed(&admitted, Arc::clone(&queue), &options);
         super::execution::feed_projection(&admitted, runtime_feed.as_ref())?;
         drop(runtime_feed);
@@ -465,9 +481,10 @@ mod tests {
     }
     fn wake_case(interest: RequestSessionWaitInterest, expected: Ready) {
         let output = Arc::new(Output::default());
-        let queue = Arc::new(super::super::session_queue::Queue::recovering(Arc::clone(
-            &output.changed,
-        )));
+        let queue = Arc::new(super::super::session_queue::Queue::recovering(
+            Arc::clone(&output.changed),
+            output.clone(),
+        ));
         let descriptor = super::super::RequestSessionDescriptor::from_json(
             r#"{"item":{"original":{"kind":"text","text":"Held."}}}"#,
         )

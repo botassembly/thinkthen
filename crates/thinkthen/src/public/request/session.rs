@@ -233,7 +233,8 @@ pub struct RequestSessionFeedOptions {
     pub record_reading: Option<crate::RecordReading>,
 }
 
-/// One bounded session. Drop signals stop and never joins a provider.
+/// One session with bounded intake and owned unread output.
+/// Drop signals stop and never joins a provider.
 #[derive(Debug)]
 pub struct RequestSession {
     pub(super) queue: Arc<Queue>,
@@ -286,7 +287,8 @@ impl RequestSession {
             RequestSessionPush::Closed(_) => RequestSessionPushStatus::Closed,
         })
     }
-    /// Wait for input room and transfer one descriptor without consuming output.
+    /// Wait for input room, parking unread output in session order as needed.
+    /// Unread answers consume memory; they never block this producer.
     /// Convert at most once, outside the queue lock, only after intake has room.
     /// Closure or cancellation wakes the producer and retains nothing.
     /// # Errors

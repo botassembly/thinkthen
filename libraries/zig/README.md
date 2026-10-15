@@ -14,7 +14,7 @@ For a text input, `decide` returns an optional authored yes/no value; a plain qu
 
 The [short example](README-PUBLIC.md) decides which messages request refunds and filters the same records. The installed examples under `examples/` show complete call ownership.
 
-Use `Request.start(engine)` or `session.startNamed(engine, function, arguments)` for an owned streaming session. Call `next()` to block for a packet or settlement; call `read()` for an explicit nonblocking read. A feed accepts generated descriptors with `push(allocator, descriptor)`. Use `wait(true)` when its queue is full, then retry. Finish a feed with `finish()` and cancel with `cancel()`.
+Use `Request.start(engine)` or `session.startNamed(engine, function, arguments)` for an owned streaming session. Call `next()` to block for a packet or settlement; call `read()` for an explicit nonblocking read. A feed accepts generated descriptors with `push(allocator, descriptor)`. Use `wait(true)` when its queue is full, then retry the same descriptor. Push parks waiting answers in session order when intake is full, so pushing every record before reading consumes memory like collecting results and never waits on unread answers. Finish a feed with `finish()` and cancel with `cancel()`.
 
 Each returned packet owns copied Zig values. `packet.value()` borrows the generated `results.SessionPacket` union. `packet.terminal()`, `packet.facts()` and `packet.failure()` return optional typed fields. Missing, null and present fields use generated `Presence(T)` unions. Packets and their nested values survive session and engine destruction. Release every packet with `deinit()` after its borrowers finish.
 
