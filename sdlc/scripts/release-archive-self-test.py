@@ -83,16 +83,39 @@ if args[0] == 'api':
             if ('--draft' not in created[0][0] or
                     ('--verify-tag' if mode == 'release' else '--target') not in created[0][0]):
                 raise AssertionError(("draft guards", created))
+        for mode, selected, overrides, diagnostic in (
+            ("unexpected", commit, {}, "draft mode must be release or rehearse"),
+            ("rehearse", "2" * 40, {}, "draft checkout differs from resolve SHA"),
+            ("release", commit, {"GITHUB_REF": "refs/heads/main"}, "release ref differs from name"),
+        ):
+            receipt.write_text("")
+            expect(run("sh", str(root / "sdlc/scripts/release-workflow"), "draft", mode,
+                       "v0.2.0", selected, str(files), env=env | overrides), diagnostic)
+            if receipt.read_text():
+                raise AssertionError(("invalid draft reached GitHub", mode, receipt.read_text()))
         for document in ("0.2.0.md", "0.2.0-known-gaps.md"):
             page = root / "release-notes" / document
             body = page.read_text()
             page.unlink()
-            receipt.write_text("")
-            expect(run("sh", str(root / "sdlc/scripts/release-workflow"), "draft", "rehearse",
-                       "v0.2.0", commit, str(files), env=env), "missing release document release-notes/" + document)
-            if receipt.read_text():
-                raise AssertionError("missing notes reached GitHub")
+            for mode in ("release", "rehearse"):
+                receipt.write_text("")
+                expect(run("sh", str(root / "sdlc/scripts/release-workflow"), "draft", mode,
+                           "v0.2.0", commit, str(files), env=env), "missing release document release-notes/" + document)
+                if receipt.read_text():
+                    raise AssertionError("missing notes reached GitHub")
             page.write_text(body)
+        manifest = root / "crates/thinkthen/Cargo.toml"
+        manifest.write_text(manifest.read_text().replace('version = "0.2.0"', 'version = "9.8.7"'))
+        for document in (".md", "-known-gaps.md"):
+            (root / "release-notes" / ("0.2.0" + document)).rename(
+                root / "release-notes" / ("9.8.7" + document))
+        receipt.write_text("")
+        expect(run("sh", str(root / "sdlc/scripts/release-workflow"), "draft", "rehearse",
+                   "v9.8.7", commit, str(files), env=env), "", success=True)
+        created = [json.loads(line) for line in receipt.read_text().splitlines()
+                   if json.loads(line)[0][:2] == ['release', 'create']]
+        if len(created) != 1 or created[0][1] != f"Rehearsal from {commit}; do not publish\n\n" + expected:
+            raise AssertionError(("draft did not load source version documents", created))
 
 
 def resolve_outputs(commit, version):

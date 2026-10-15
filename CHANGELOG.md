@@ -2,49 +2,45 @@
 
 Every release of every surface shares one version number.
 
-## Unreleased: 0.2.0
-
-Version 0.2 is implemented on main and remains unreleased. Public installation still names 0.1.2. Final distribution assembly, full installed-package parity, platform qualification, candidate release QA and rehearsal remain required for the current APIs. Earlier candidate campaigns do not qualify the current packages. Publication requires Ian's explicit go.
+## 0.2.0
 
 ### Functions, files and saved questions
 
-Every SDK exposes the same ten functions: `decide`, `choose`, `tag`, `score`, `filter`, `rank`, `find`, `annotate`, `recognize` and `relate`. CLI, typed C, language SDKs, SQL and dataframe adapters use the native engine's admitted inputs, generated complete results, errors and cache/record/replay behavior. Each language now has one typed call family. Superseded host APIs and handwritten complete readers have been removed. Superseded native C exports have been removed. Routine installed checks establish local behavior separately from candidate qualification.
+ThinkThen exposes ten functions: `decide`, `choose`, `tag`, `score`, `filter`, `rank`, `find`, `annotate`, `recognize` and `relate`. The command, libraries and database extensions use the same engine.
 
-File readers retain physical source locations separately from selected evidence and original records. Folder descendants sort by relative path; explicit operands and duplicates keep their order. Paths never become model evidence or cache identity. PostgreSQL retains its client-reader/keyed-table workaround and privileged bounded question-file loader.
+File readers keep source locations beside the selected text and original records. Folder contents sort by relative path. Explicit files and duplicates keep their order. Paths never become model evidence.
 
-`find` accepts a single source unit when `none` is offered, so it can select that unit or return no answer. A single unit without `none` still refuses before sending. DuckDB file recognition now appends streamed recognition rows; the final empty aggregate no longer erases earlier results.
+`find` accepts one source unit when the question offers `none`. DuckDB file recognition retains every returned row.
 
-Saved questions add author names, wording versions, named lookup, restricted item/context declarations and authored yes/no readings. Existing 0.1 question files remain accepted. Local entries take precedence over named lookup. ThinkThen creates no question file or configuration. Declarations validate selected inputs without coercion; they do not implement arbitrary JSON Schema. Per-record context and replacement choose options remain associated with their records. Explicit empty context suppresses shared context. Effective context and options affect requests and cache identity.
+Saved questions add author names, wording versions, input declarations and authored yes/no readings. Existing 0.1 question files work unchanged. Declarations check values without changing them. ThinkThen creates no question file or configuration.
 
 ### Images and MCP
 
-`decide`, `choose` and `score` admit ordered JPEG/PNG images, including duplicates, with optional text. Separate whole-file image inputs retain their source provenance. The other seven functions refuse images before reading files or sending. Liquid `d1`, Perplexity `pplx-decider-v1-27b` and explicitly declared supported local setups have admitted image routes. TypeSafe, OpenRouter, Ollama, the named MLX route and OpenAI Decisions refuse images. Native decoded-input and vendor limits apply; oversized inputs refuse without hidden resizing. Admission makes no image accuracy claim.
+`decide`, `choose` and `score` accept ordered JPEG and PNG images with optional text. Other functions refuse images before reading files or sending. Images need a supported backend and model. ThinkThen does not resize images to fit. The [known limits](release-notes/0.2.0-known-gaps.md) name the supported routes.
 
-The local stdio server starts with `thinkthen mcp` and exposes exactly the ten function tools through one native engine, route and cache. It accepts native question selectors, files, records, context/options and admitted images, and returns native complete results and errors. It adds no administrative, question-writing or business-routing tools. The [MCP contract](specification/mcp.md) defines frame and attachment limits. Output overflow closes after any work already performed. Final installed MCP parity, archive timing and Windows qualification remain candidate checks.
+`thinkthen mcp` exposes the ten functions over local stdio. It uses the same engine, backend and answer cache as the command. It adds no question-writing, administration or business-routing tools. Frame and attachment limits apply. An oversized output closes the connection after any work already performed.
 
-### Results, cache and compatibility
+### Results and compatibility
 
-New complete results use `thinkthen.result/2` with stable answer IDs, observed source/model metadata, call/request identity, timing, attempts and usage facts. Rank details now return final positions starting at 1. Bare CLI, scalar SQL, documented convenience values remain. Generated host results preserve absence, explicit null, false, wide counters and unknown extension members. Requested and reported models stay separate; absent observations remain absent. Cached calls report zero current send cost without inventing token counts. Settled call facts count each live provider response once; summing row token shares does not recover provider usage.
+Each library function except C returns one result with `value`, `probability`, `results` and `facts`. C returns typed session packets. SQL plain calls return values. SQL `thinkthen_<function>_details` calls return typed rows. The command keeps `--details` for complete results.
 
-Cache/2 identity includes literal requested/reported models, normalized final endpoints and image media/bytes/order. ThinkThen refuses 0.1 cache and recording files before sending. The refusal names the file and says to delete it. ThinkThen leaves the database bytes and modification time unchanged. It does not convert old stores. Damaged or ambiguous stores also refuse before sends. Response no-store prohibits persistence; refresh sends no-cache and evicts old working answers after a good nonstorable reply. Explicit recording fails locally for such a reply. Reserved proxy types refuse activation in 0.2; override execution waits for an admitted 0.3 protocol.
+Complete results use `thinkthen.result/2`. They keep source locations, answer identities, timing, attempts, usage and observed model facts. Rank positions start at 1. Missing facts stay missing. Requested and reported models stay separate. Cached calls report no current send cost.
 
-`runs audit` and `runs diff` are the visible offline commands. Hidden top-level `audit` and `diff` aliases retain their options, outputs, diagnostics and exit codes. Reserved command nouns remain unimplemented; no eleventh judging function is added.
+ThinkThen refuses 0.1 cache and recording files before sending. The message names the file and says to delete it. The database bytes and modification time stay unchanged. ThinkThen does not convert old stores. Save any answers you need before deleting those files.
 
-### Backends and known limits
+`runs audit` and `runs diff` compare saved answers offline. The old top-level `audit` and `diff` spellings still work.
 
-Python, TypeScript, Ruby, R and the C JSON door can select a named backend in their constructor. Packages that forward C settings JSON inherit `"backend"`. DuckDB and PostgreSQL select a backend through their session settings. SQLite accepts `"backend"` in its process configuration before the first engine build. SQL accepts no address or key.
+### Backends and platforms
 
-The default throttle is 8 simultaneous requests on every surface. Explicit throttles retain their process-wide precedence and range of 1 through 32.
+Named backends add `perplexity`, `openrouter`, `llamacpp`, `mlx` and `openai`. Configuration entries may set a relative posting path. Existing custom entries named `perplexity` or `openrouter` must use another name. Each engine uses one backend route. Your application or proxy supplies routing and fallback policy.
 
-Named backends add `perplexity` and `openrouter`. Configuration entries may set a relative posting `path`. OpenRouter preserves descriptions and fills a missing yes-or-no side with `{}`. Existing configured entries named `perplexity` or `openrouter` must be renamed or removed because those names now select built-ins; a built-in configuration entry accepts only `requests_per_minute`. OpenAI Decisions text support is implemented through the native adapter. Each engine resolves one endpoint, key and provider API type; business routing belongs to the proxy.
-
-Windows x86-64 support is in 0.2 scope for the command, Rust crate, C DLL, Python wheel, Node addon, C# and JVM packages. Final Windows package assembly and native execution qualification remain required. Development command builds are unsigned. JVM uses stable JDK 22 or later and packaged native assets. The Objective-C API now uses Apple Foundation, ARC and generated results; GNU support has ended. Apple SDK compilation does not establish current native linkage, installed Foundation sessions, cancellation or shared execution parity. Those checks remain with the candidate. The [package design](sdlc/decisions/2026-10-09-native-package-design.md) defines intended targets and runtime floors. Candidate documentation QA must cover the current text, image and MCP routes. Clean public-package checks follow actual publication.
+Windows command builds are unsigned. JVM requires JDK 22 or later. Objective-C requires Apple Foundation and ARC.
 
 ## 0.1.2 (2026-10-03)
 
-The macOS Ruby gems name no macOS version. `gem install thinkthen` on macOS 26 installed the 0.0.1 placeholder, because the 0.1.1 gems matched only darwin 24 (ticket 0394). The gems still need macOS 15.0.
+The macOS Ruby gems name no macOS version. `gem install thinkthen` on macOS 26 installed the 0.0.1 placeholder, because the 0.1.1 gems matched only darwin 24. The gems still need macOS 15.0.
 
-The R package builds on R-universe again. The 0.1.1 source build stopped in configure with `cargo could not resolve thinkthen 0.1.1 from crates.io`, because the lock update named a package the lock no longer held (ticket 0395).
+The R package builds on R-universe again. The 0.1.1 source build stopped in configure with `cargo could not resolve thinkthen 0.1.1 from crates.io`, because the lock update named a package the lock no longer held.
 
 ## 0.1.1 (2026-10-02)
 
