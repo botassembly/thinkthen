@@ -6,6 +6,8 @@ Milestone: 0.2
 
 Depends on: 0561
 
+Reviews: revision 6b2a737, accept
+
 ## Outcome
 
 ThinkThen 0.2 carries no code, tests or documents whose only job is backward compatibility. Each public surface has one current way to do each thing, and old input gets a clear refusal. This follows the [no-compatibility ruling](../decisions/2026-10-12-no-compatibility-before-1-0.md).
