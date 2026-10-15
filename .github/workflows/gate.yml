@@ -24,7 +24,7 @@ on:
         type: choice
         required: false
         default: none
-        options: [none, go, cpp, postgresql]
+        options: [none, go, cpp, postgresql, ruby]
       platform:
         description: Standard hosted runner for the selected installed package
         type: choice
@@ -139,7 +139,7 @@ jobs:
         env: {REF: "${{ github.ref }}", SHA: "${{ github.sha }}"}
         run: |
           set -eu
-          case "$LANGUAGE" in go|cpp|postgresql) ;; *) exit 2 ;; esac
+          case "$LANGUAGE" in go|cpp|postgresql|ruby) ;; *) exit 2 ;; esac
           case "$REF" in refs/heads/*) ;; *) exit 2 ;; esac
           [ "$(git rev-parse HEAD)" = "$SHA" ]
           echo "Checking $LANGUAGE at $SHA"
@@ -196,8 +196,47 @@ jobs:
             THINKTHEN_ARTIFACT="$out/thinkthen-postgresql$major-$version-$target.tar.gz" \
               python3 sdlc/scripts/build-admission.py -- bash databases/postgresql/check.sh "$major"
           done
+      - name: Prepare both pinned Ruby toolchains
+        if: inputs.language == 'ruby'
+        run: |
+          set -eu
+          if [ "$(uname -s)" = Darwin ]; then
+            brew install openssl@3
+            . libraries/ruby/toolchain.env
+            printf 'MACOSX_DEPLOYMENT_TARGET=%s\n' "$RUBY_MACOS_DEPLOYMENT_TARGET" >> "$GITHUB_ENV"
+            printf 'SDKROOT=%s\n' "$(xcrun --sdk macosx --show-sdk-path)" >> "$GITHUB_ENV"
+            clang=$(xcrun --find clang)
+            clang=${clang%/bin/clang}/lib
+          else
+            sudo apt-get update -qq
+            sudo apt-get install -y libclang-dev libssl-dev
+            clang=$(for lib in /usr/lib/llvm-*/lib; do [ -e "$lib/libclang.so.1" ] && echo "$lib"; done | sort -V | tail -n 1)
+          fi
+          printf 'LIBCLANG_PATH=%s\n' "$clang" >> "$GITHUB_ENV"
+          cargo install --locked "cargo-deny@$DENY_VERSION"
+          cargo fetch --locked --manifest-path libraries/ruby/Cargo.toml
+          sh libraries/ruby/setup-ruby.sh
+          cargo build --locked --offline -p conformance-backend
+      - name: Pack and check the Ruby gem on both runtimes
+        if: inputs.language == 'ruby'
+        run: |
+          set -eu
+          target=$(rustc -vV | sed -n 's/^host: //p')
+          version=$(sed -n 's/^version = "\(.*\)"$/\1/p' crates/thinkthen/Cargo.toml | head -n 1)
+          out="$RUNNER_TEMP/thinkthen-language-packages"
+          CARGO_NET_OFFLINE=true sdlc/scripts/release-pack "$target" "$out" ruby
+          artifact=$(find "$out" -maxdepth 1 -name "thinkthen-$version-*.gem")
+          . libraries/ruby/toolchain.env
+          for minor in $RUBY_MINORS; do
+            THINKTHEN_ARTIFACT="$artifact" THINKTHEN_RUBY_MINOR=$minor sh libraries/ruby/check.sh
+            THINKTHEN_RUBY_MINOR=$minor
+            . libraries/ruby/toolchain.env
+            prefix=$HOME/.cache/thinkthen-toolchains/ruby/$RUBY_VERSION
+            [ "$(uname -s)" != Darwin ] || prefix=$prefix-$(uname -m)-darwin
+            "$prefix/bin/ruby" libraries/ruby/tests/test_package.rb
+          done
       - name: Pack and check only the selected installed language
-        if: inputs.language != 'postgresql'
+        if: inputs.language != 'postgresql' && inputs.language != 'ruby'
         run: |
           set -eu
           target=$(rustc -vV | sed -n 's/^host: //p')
