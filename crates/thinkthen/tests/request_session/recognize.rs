@@ -282,13 +282,13 @@ fn uncached_and_refreshed_repeated_recognition_keep_parallel_sends() {
                 items: vec![descriptor("Ada").item; 2],
             }))
             .unwrap();
-        for round in 0..2 {
-            for arrival in 0..2 {
-                received.recv_timeout(Duration::from_secs(5)).unwrap_or_else(|error| {
-                    panic!("recognition arrival {round}/{arrival}, refresh {refresh}: {error:?}; sends {}; requests {:?}; session {session:?}", listener.count(), listener.requests());
-                });
+        for arrival in 0..4 {
+            received.recv_timeout(Duration::from_secs(5)).unwrap_or_else(|error| {
+                panic!("recognition arrival {arrival}, refresh {refresh}: {error:?}; sends {}; requests {:?}; session {session:?}", listener.count(), listener.requests());
+            });
+            if arrival % 2 == 1 {
+                assert!(release.wait());
             }
-            assert!(release.wait());
         }
         let packets = drain(&session);
         let RequestSessionResult::Terminal(terminal) = packets.last().unwrap() else {
