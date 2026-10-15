@@ -66,6 +66,25 @@ def workflow_cases():
             proof['run'] = '\n'.join(proof['run'].splitlines()[:-1])
         code, output = workflow_command('release.yml', doc)
         assert code == 1 and ('standard free hosted runners' if 'paid' in defect else 'both installed Apple languages') in output, (defect, output)
+    for defect in ('missing', 'skip', 'mask', 'wrong-sha', 'runner', 'upload'):
+        doc = deepcopy(release)
+        job = doc['jobs']['apple-coverage']
+        if defect == 'missing':
+            del doc['jobs']['apple-coverage']
+        elif defect == 'runner':
+            job['runs-on'] = 'macos-15-large'
+        else:
+            step = next(step for step in job['steps'] if 'sdlc/scripts/coverage' in step.get('run', ''))
+            if defect == 'skip':
+                step['if'] = 'false'
+            elif defect == 'mask':
+                step['continue-on-error'] = True
+            elif defect == 'wrong-sha':
+                job['steps'][0]['with']['ref'] = '${{ github.sha }}'
+            else:
+                job['steps'][-1]['if'] = '${{ always() }}'
+        code, output = workflow_command('release.yml', doc)
+        assert code == 1, (defect, output)
     for defect in ('skip', 'mask', 'wrong-sha', 'late', 'guard-bypass', 'missing-input'):
         doc = deepcopy(windows)
         steps = doc['jobs']['stage-0']['steps']

@@ -20,6 +20,52 @@ import coverage_installed_c_hosts
 DRIVER = runpy.run_path(str(Path(__file__).with_name('coverage')))
 
 
+class PlatformCommandEvidence(unittest.TestCase):
+    def test_platform_commands_refuse_a_foreign_host_and_native_slice(self):
+        command = [sys.executable, str(Path(__file__).with_name('coverage')), '--release', '--platform']
+        foreign = 'apple' if sys.platform == 'linux' else 'linux'
+        result = subprocess.run([*command, foreign], capture_output=True)
+        self.assertEqual(result.returncode, 1)
+        self.assertIn(b'requires its own host', result.stderr)
+        result = subprocess.run([*command, foreign, '--native'], capture_output=True)
+        self.assertEqual(result.returncode, 1)
+        self.assertIn(b'cannot qualify', result.stderr)
+
+    def test_join_requires_both_hosts_and_all_collections_on_the_current_commit(self):
+        revision = subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip()
+        expected = set(DRIVER['NATIVE_COLLECTIONS']) | {name for helper in DRIVER['installed_helpers']() for name in helper.COLLECTIONS}
+        with tempfile.TemporaryDirectory() as temporary:
+            paths = [Path(temporary) / name for name in ('linux.json', 'apple.json')]
+            payloads = [dict(source=revision, platform_collection=platform_name, unmeasured_collections=[],
+                             totals=dict(mapped_nonblank=100, **{name: 50 for name in names}))
+                        for platform_name, names in (('linux', expected - {'installed-objective-c'}),
+                                                    ('apple', {'installed-swift', 'installed-objective-c'}))]
+            command = [sys.executable, str(Path(__file__).with_name('coverage')), '--release', '--join', *map(str, paths)]
+            for payload, path in zip(payloads, paths):
+                path.write_text(json.dumps(payload))
+            self.assertEqual(subprocess.run(command, capture_output=True).returncode, 0)
+            for change in ('absent', 'source', 'missing', 'apple', 'pending', '77', 'linux'):
+                with self.subTest(change=change):
+                    values = json.loads(json.dumps(payloads))
+                    if change == 'source':
+                        values[1]['source'] = '0' * 40
+                    elif change == 'missing':
+                        values[1]['unmeasured_collections'] = ['installed-objective-c']
+                    elif change in ('pending', '77'):
+                        values[1]['totals']['installed-objective-c'] = change
+                    elif change == 'apple':
+                        del values[1]['totals']['installed-objective-c']
+                    elif change == 'linux':
+                        del values[0]['totals']['installed-c']
+                    for value, path in zip(values, paths):
+                        path.write_text(json.dumps(value))
+                    if change == 'absent':
+                        paths[1].unlink()
+                    result = subprocess.run(command, capture_output=True)
+                    self.assertEqual(result.returncode, 1, result.stderr.decode())
+
+
+
 class RetainedLineEvidence(unittest.TestCase):
     def test_equal_totals_retain_distinct_lines_and_production_denominator(self):
         with tempfile.TemporaryDirectory() as temporary:
@@ -69,14 +115,17 @@ class InstalledScriptInvocation(unittest.TestCase):
             run = Path(temporary)
             tools = run / 'tools'
             tools.mkdir()
-            for name in ('gprbuild', 'gnatmake', 'gcc', 'python3', 'nm', 'node'):
+            for name in ('gprbuild', 'gnatmake', 'gcc', 'nm', 'node'):
                 (tools / name).symlink_to('/bin/true')
-            for name in ('uname', 'dirname', 'flock', 'env', 'sh'):
+            for name in ('uname', 'dirname', 'flock', 'env', 'sh', 'python3'):
                 (tools / name).symlink_to(shutil.which(name))
             library = run / 'libthinkthen.so'
             library.touch()
-            script_dir = run / 'ada'
-            script_dir.mkdir()
+            script_dir = run / 'libraries/ada'
+            script_dir.mkdir(parents=True)
+            admission = run / 'sdlc/scripts'
+            admission.mkdir(parents=True)
+            shutil.copy2(checkout / 'sdlc/scripts/build-admission.py', admission)
             # Keep the real gate through its tool checks and lock-owning re-exec.
             source = (checkout / 'libraries/ada/check.sh').read_text()
             prefix = source.split('. "$REPO/sdlc/scripts/scratch.sh"')[0]
@@ -149,6 +198,47 @@ class ManagedToolAvailability(unittest.TestCase):
                             collection = next(c for c in collections if c['name'] == 'installed-' + language)
                             with self.assertRaisesRegex(DRIVER['MissingTool'], absent):
                                 collection['runner'](run)
+
+    def test_apple_packages_run_the_installed_commands_with_the_measured_archive(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            run = root / 'run'
+            run.mkdir()
+            tools = root / 'tools'
+            tools.mkdir()
+            native = run / 'target-c/debug/libthinkthen_c.a'
+            native.parent.mkdir(parents=True)
+            native.write_bytes(b'measured native archive')
+            header = root / 'libraries/c/include/thinkthen.h'
+            header.parent.mkdir(parents=True)
+            header.write_bytes(b'measured public header')
+            fake = tools / 'xcrun'
+            fake.write_text('#!' + sys.executable + '\n' +
+                "import sys, pathlib, shutil, plistlib, platform\n" +
+                "args=sys.argv; out=pathlib.Path(args[args.index('-output')+1]); part=out/'host'\n" +
+                "part.mkdir(parents=True); shutil.copytree(args[args.index('-headers')+1],part/'Headers')\n" +
+                "shutil.copyfile(args[args.index('-library')+1],part/'libthinkthen.a')\n" +
+                "(out/'Info.plist').write_bytes(plistlib.dumps({'AvailableLibraries':[dict(SupportedPlatform='macos', SupportedArchitectures=[platform.machine()], LibraryIdentifier='host', LibraryPath='libthinkthen.a', HeadersPath='Headers')]}))\n")
+            fake.chmod(0o700)
+            for tool in ('lipo', 'swift'):
+                (tools / tool).symlink_to('/bin/true')
+            for language, binaries, subdirectory in (('swift', 'Owned Parity', 'installed'),
+                                                     ('objective-c', 'Consumer Cases', '.build/debug')):
+                library = root / 'libraries' / language
+                library.mkdir(parents=True)
+                (library / 'Package.swift').write_text('measured package manifest')
+                (library / 'check.sh').write_text('set -eu\nmkdir -p "$THINKTHEN_COVERAGE_STAGE/' + subdirectory + '"\n' +
+                    'for name in ' + binaries + '; do printf measured > "$THINKTHEN_COVERAGE_STAGE/' + subdirectory + '/$name"; done\n')
+            env = {'PATH': str(tools) + ':/usr/bin:/bin'}
+            context = dict(root=root, run=run, env=env, command=DRIVER['command'],
+                           missing_tool=DRIVER['MissingTool'], c_target=native.parents[1], initializer=run / 'profile.o')
+            collections = coverage_installed_managed.prepare_apple(context)
+            self.assertEqual({row['name'] for row in collections}, {'installed-swift', 'installed-objective-c'})
+            for row in collections:
+                folder = run / row['name']
+                folder.mkdir()
+                row['runner'](folder)
+                self.assertTrue(all(path.read_bytes() == b'measured' for path in row['objects']))
 
     def test_apple_collector_requires_matching_archive_and_retains_executables(self):
         with tempfile.TemporaryDirectory() as temporary:

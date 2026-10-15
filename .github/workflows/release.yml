@@ -204,6 +204,31 @@ jobs:
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with: {name: 'apple-framework-${{ matrix.target }}', path: libraries/swift/CThinkThen.xcframework/, if-no-files-found: error, retention-days: 7}
 
+  apple-coverage:
+    needs: resolve
+    if: inputs.mode == 'rehearse'
+    runs-on: macos-15
+    permissions: {contents: read}
+    env: {MACOSX_DEPLOYMENT_TARGET: '15.0'}
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with: {ref: "${{ needs.resolve.outputs.sha }}", persist-credentials: false}
+      - uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c
+        with: {python-version: '3.13'}
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with: {node-version: '22.22.3'}
+      - name: Prepare the measured Apple host
+        run: |
+          rustup toolchain install 1.95.0 --profile minimal --component llvm-tools-preview
+          cargo fetch --locked
+          cargo fetch --locked --manifest-path libraries/c/Cargo.toml
+          python3 -m pip install --disable-pip-version-check 'jsonschema==4.25.1'
+      - name: Measure installed Swift and Objective-C on the candidate
+        run: sdlc/scripts/coverage --release --platform apple --output "$RUNNER_TEMP/apple-coverage"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with: {name: 'apple-coverage-${{ needs.resolve.outputs.sha }}', path: '${{ runner.temp }}/apple-coverage/totals.json', if-no-files-found: error, retention-days: 7}
+
+
   wheels:
     needs: [resolve, build]
     runs-on: ubuntu-24.04

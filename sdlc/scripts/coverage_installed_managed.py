@@ -44,7 +44,7 @@ def apple_collection(language, context, env, stage, retained, folder):
         if not shutil.which(tool, path=env.get('PATH')):
             raise missing(f'installed {language} needs {tool}')
     key = 'THINKTHEN_' + language.upper().replace('-', '_') + '_ARTIFACT'
-    artifact = Path(os.environ.get(key, ''))
+    artifact = Path(context.get('apple_artifacts', {}).get(language, os.environ.get(key, '')))
     if not artifact.is_file():
         raise missing(f'installed {language} needs {key}: matching instrumented Apple package')
     package = stage / ('apple-' + language)
@@ -89,6 +89,44 @@ def apple_collection(language, context, env, stage, retained, folder):
     installed = retained / 'installed' if language == 'swift' else retained / '.build/debug'
     for binary in binaries:
         shutil.copy2(installed / binary, retained / binary)
+
+
+def prepare_apple(context):
+    """Assemble measured host packages from this run's instrumented archive."""
+    root, run, env = context['root'], context['run'], context['env']
+    stage = run / 'stage-managed'
+    stage.mkdir()
+    headers = stage / 'headers'
+    headers.mkdir()
+    shutil.copy2(root / 'libraries/c/include/thinkthen.h', headers)
+    (headers / 'module.modulemap').write_text('module CThinkThen { header "thinkthen.h" export * }\n')
+    framework = stage / 'CThinkThen.xcframework'
+    context['command'](['xcrun', 'xcodebuild', '-create-xcframework', '-library',
+                        str(context['c_target'] / 'debug/libthinkthen_c.a'), '-headers', str(headers),
+                        '-output', str(framework)], root, env, run / 'apple-framework.log')
+    context['apple_artifacts'] = {}
+    collections = []
+    for language in ('swift', 'objective-c'):
+        package = stage / (language + '-package')
+        package.mkdir()
+        source = root / 'libraries' / language
+        for name in ('Sources', 'Package.swift', 'LICENSE', 'README.md', 'Examples', 'source-package.json'):
+            item = source / name
+            if item.is_dir():
+                shutil.copytree(item, package / name)
+            elif item.is_file():
+                shutil.copy2(item, package / name)
+        shutil.copytree(framework, package / framework.name)
+        artifact = stage / (language + '.tar.gz')
+        archive(package, artifact, [item.name for item in package.iterdir()])
+        context['apple_artifacts'][language] = str(artifact)
+        name = 'installed-' + language
+        retained = run / name / 'installed'
+        binaries = ('Owned', 'Parity') if language == 'swift' else ('Consumer', 'Cases')
+        def runner(folder, language=language, retained=retained):
+            apple_collection(language, context, env, stage, retained, folder)
+        collections.append(dict(name=name, objects=[retained / binary for binary in binaries], runner=runner))
+    return collections
 
 
 def prepare(context):
