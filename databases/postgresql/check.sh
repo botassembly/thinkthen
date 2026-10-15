@@ -92,7 +92,10 @@ cleanup() {
 	scratch_clean
 	rm -f .runtime/last-run
 }
-trap cleanup EXIT INT TERM
+trap cleanup EXIT
+trap 'exit 129' HUP
+trap 'exit 130' INT
+trap 'exit 143' TERM
 
 PASSED=0 FAILED=0
 # Each step runs in a subshell under errexit, so its first failing line fails
