@@ -112,6 +112,11 @@ class Admission(unittest.TestCase):
                     return False
                 except ProcessLookupError:
                     return True
+                except PermissionError:
+                    # Darwin reports EPERM for a group with only zombies.
+                    # It still exists: wait for reaping and ESRCH, just as
+                    # for a signalable group, without accepting cleanup early.
+                    return False
             self.wait_for(group_finished)
             raise
 
