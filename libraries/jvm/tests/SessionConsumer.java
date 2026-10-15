@@ -112,18 +112,6 @@ public final class SessionConsumer {
     }
     public static void main(String[] ignored) throws Exception {
         if (ignored.length == 0) { thinkthen.JsonTest.main(new String[0]); PublicResultsCases.run(); }
-        if (ignored.length == 1 && ignored[0].equals("smoke")) {
-            try (var engine = new Engine()) {
-                var call = done(engine.decide(question(System.getenv("THINKTHEN_TEST_SMOKE_QUESTION")),
-                    new Inputs.RequestInputText().text(System.getenv("THINKTHEN_TEST_SMOKE_TEXT")), new Inputs.RequestOptions()));
-                var row = (Results.SessionPacketDecideRow)call.packets().stream()
-                    .filter(Results.SessionPacketDecideRow.class::isInstance).findFirst().orElseThrow();
-                var answer = row.value().value().value();
-                check(answer instanceof Boolean, "smoke answer is not boolean");
-                System.out.println("smoke: " + answer);
-            }
-            return;
-        }
         Results.Plan retainedPlan;
         Engine.OwnedCall retained;
         Engine.SessionFailure retainedFailure;
