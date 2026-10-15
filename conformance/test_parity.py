@@ -515,6 +515,31 @@ class PublicAssertions(unittest.TestCase):
                     self.assertIn(cause, result.stderr)
                     self.assertFalse(marker.exists(), 'invalid selection started a backend')
 
+    @unittest.skipUnless(os.name == 'posix', 'PostgreSQL shell signals run on POSIX hosts')
+    def test_postgresql_signal_cleanup_exits_before_later_cases(self):
+        import re
+        import shlex
+        entries = ('databases/postgresql/check.sh',
+                   'databases/sqlite/tests/complete/postgresql_runtime.sh')
+        for entry in entries:
+            source = (parity.ROOT / entry).read_text()
+            lifecycle = re.search(r'^cleanup\(\).*?(?=\n\n|\nPG_CONFIG=)', source, re.M | re.S).group()
+            for name, code in (('HUP', 129), ('INT', 130), ('TERM', 143)):
+                with self.subTest(entry=entry, signal=name), tempfile.TemporaryDirectory() as folder:
+                    root = Path(folder)
+                    (root / '.runtime').mkdir()
+                    script = ('set -eu\n. ' + shlex.quote(str(parity.ROOT / 'sdlc/scripts/scratch.sh'))
+                              + '\nscratch_dir RUN\nDATA=$RUN/data\nmkdir "$DATA"\n'
+                              + 'printf "%s" "$RUN" > owned-run\n'
+                              + 'runtime_remove() { :; }\npg_stop() { :; }\n'
+                              + lifecycle + '\nkill -' + name + ' "$$"\n'
+                              + 'touch later-case\n')
+                    result = subprocess.run(['bash', '-c', script], cwd=root,
+                                            env={'PATH': os.defpath}, capture_output=True, text=True, timeout=5)
+                    self.assertEqual(result.returncode, code, result.stdout + result.stderr)
+                    self.assertFalse((root / 'later-case').exists())
+                    self.assertFalse(Path((root / 'owned-run').read_text()).exists())
+
     @unittest.skipUnless(os.name == 'posix', 'Homebrew PostgreSQL setup runs on POSIX hosts')
     def test_postgresql_keg_cleanup_preserves_unowned_files_and_removes_owned_files(self):
         import re
