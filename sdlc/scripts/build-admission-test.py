@@ -39,25 +39,28 @@ class Admission(unittest.TestCase):
     def tearDown(self):
         # Stop all supervisors before waiting: one stalled child must not leave
         # the remaining permit holders running or skip descendant cleanup.
-        for child in self.children:
-            if child.poll() is None:
-                child.terminate()
-        deadline = time.monotonic() + 2
         errors = []
         try:
             for child in self.children:
                 try:
-                    child.wait(timeout=max(0, deadline - time.monotonic()))
-                except subprocess.TimeoutExpired:
-                    child.kill()
+                    if child.poll() is None:
+                        child.terminate()
+                except OSError as error:
+                    errors.append(error)
+            deadline = time.monotonic() + 2
+            for child in self.children:
+                try:
                     try:
+                        child.wait(timeout=max(0, deadline - time.monotonic()))
+                    except subprocess.TimeoutExpired:
+                        child.kill()
                         child.wait(timeout=2)
-                    except subprocess.TimeoutExpired as error:
-                        errors.append(error)
+                except (OSError, subprocess.TimeoutExpired) as error:
+                    errors.append(error)
             for pid in self.descendants:
                 try:
                     self.wait_for(lambda: self.kill_and_reap(pid))
-                except AssertionError as error:
+                except (AssertionError, OSError) as error:
                     errors.append(error)
             if sys.platform == 'linux':
                 # Killing an unresponsive supervisor adopts its compiler here.
@@ -69,7 +72,7 @@ class Admission(unittest.TestCase):
                     return not owned
                 try:
                     self.wait_for(reaped)
-                except AssertionError as error:
+                except (AssertionError, OSError) as error:
                     errors.append(error)
             if errors:
                 raise errors[0]
@@ -104,6 +107,11 @@ class Admission(unittest.TestCase):
 
     @unittest.skipUnless(sys.platform == 'linux', 'Linux adopted descendant cleanup')
     def test_fixture_cleanup_reaps_unresponsive_supervisor_and_all_owned_children(self):
+        for signal_error in (False, True):
+            with self.subTest(signal_error=signal_error):
+                self.check_fixture_cleanup(signal_error)
+
+    def check_fixture_cleanup(self, signal_error):
         fixture = Admission()
         fixture.setUp()
         self.addCleanup(fixture.temporary.cleanup)
@@ -122,8 +130,20 @@ class Admission(unittest.TestCase):
         waiting = fixture.launch('waiting')
         self.children.append(waiting)
         os.kill(stopped.pid, signal.SIGSTOP)
+        if signal_error:
+            terminate = stopped.terminate
+
+            def fail_after_signal():
+                terminate()
+                raise OSError("fixture signal failure")
+
+            stopped.terminate = fail_after_signal
         try:
-            fixture.tearDown()
+            if signal_error:
+                with self.assertRaisesRegex(OSError, "fixture signal failure"):
+                    fixture.tearDown()
+            else:
+                fixture.tearDown()
             self.assertTrue(all(child.poll() is not None for child in fixture.children))
             self.assertEqual(fixture.adopted_children(), fixture.existing_children)
             for pid in pids:
@@ -131,6 +151,8 @@ class Admission(unittest.TestCase):
                     os.kill(pid, 0)
             self.assertFalse(fixture.root.exists())
         finally:
+            if signal_error:
+                stopped.terminate = terminate
             if stopped.poll() is None:
                 os.kill(stopped.pid, signal.SIGCONT)
 
