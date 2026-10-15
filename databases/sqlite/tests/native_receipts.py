@@ -67,6 +67,7 @@ class Read:
                    'context_schema': 'record_context_schema', 'seed_spans': 'record_seed_spans_field', 'examples': 'record_examples_field'}[name]
             self.fields[key] = json.dumps(value) if name in ('fields','context_schema') else value
         self.cache = {}
+        self.indices = {}
 
     def rows(self, kind):
         if kind in self.cache:
@@ -88,11 +89,13 @@ class Read:
         sql += ' AND '.join(name + '=?' for name in self.fields) + ' AND projection=?'
         rows = self.db.execute(sql, [*self.fields.values(), kind]).fetchall()
         self.cache[kind] = [dict(zip(columns, row)) for row in rows]
+        self.indices[kind] = {row[kind + '_receipt_index']: row for row in self.cache[kind]}
+        assert len(self.indices[kind]) == len(rows), 'receipt indices must be unique'
         return self.cache[kind]
 
     def object(self, kind, index):
-        rows = self.rows(kind)
-        row = next(row for row in rows if row[kind + '_receipt_index'] == index)
+        self.rows(kind)
+        row = self.indices[kind][index]
         fields, union = TYPES[kind]
         output = {}
         for name, descriptor in fields.items():
