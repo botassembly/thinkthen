@@ -151,12 +151,17 @@ impl Engine {
     }
 }
 
+#[expect(clippy::print_stderr, reason = "temporary Windows worker diagnosis")]
 fn answer(
     ordinal: usize,
     prepared: Prepared,
     limit: usize,
     cancel: &crate::engine::Cancel<'_>,
 ) -> Result<ordered::Row<Answered>, Error> {
+    eprintln!(
+        "recognition worker {:?} record {ordinal}: entered",
+        std::thread::current().id()
+    );
     let mut attempts = BTreeMap::new();
     let found = prepared
         .engine
@@ -172,7 +177,17 @@ fn answer(
                 Ok(())
             },
         )
-        .map_err(|error| Error::from(error).at_record(ordinal))?;
+        .map_err(|error| {
+            eprintln!(
+                "recognition worker {:?} record {ordinal}: failed {error:?}",
+                std::thread::current().id()
+            );
+            Error::from(error).at_record(ordinal)
+        })?;
+    eprintln!(
+        "recognition worker {:?} record {ordinal}: answered",
+        std::thread::current().id()
+    );
     Ok(ordered::Row {
         replayed: !found.meta.live,
         value: Answered {

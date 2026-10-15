@@ -196,4 +196,4 @@ jobs:
       - name: Download locked crates
         run: cargo fetch --locked
       - name: Diagnose recognition cancellation once
-        run: cargo test --locked --offline -p thinkthen --test request_session recognize::cancellation_stops_waiting_duplicate_recognition_without_extra_sends -- --exact --nocapture
+        run: cargo test --locked --offline -p thinkthen --test request_session

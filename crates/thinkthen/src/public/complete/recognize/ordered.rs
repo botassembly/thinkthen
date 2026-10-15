@@ -52,6 +52,7 @@ struct Run<R, E> {
 }
 
 impl<R, E> Run<R, E> {
+    #[expect(clippy::print_stderr, reason = "temporary Windows scheduler diagnosis")]
     fn accept<T>(&mut self, event: Event<T, R, E>, work: &Sender<(usize, T)>, ended: fn() -> E) {
         match event {
             Event::Input(input) => {
@@ -66,6 +67,11 @@ impl<R, E> Run<R, E> {
             }
             Event::ReaderReady => {}
             Event::Answered(place, result) => {
+                eprintln!(
+                    "ordered {:?}: answered {place}, success {}",
+                    std::thread::current().id(),
+                    result.is_ok()
+                );
                 self.in_flight -= 1;
                 self.halted |= result.is_err();
                 self.pending.insert(place, result);
