@@ -12,6 +12,8 @@
 # each part builds in a scratch folder that goes once the part is packed (ticket 0366). Every
 # cargo call is locked; fetch first where the network is off.
 set -eu
+# Release helpers import modules from source that must stay unchanged.
+export PYTHONDONTWRITEBYTECODE=1
 apple_wrappers=
 [ "${1:-}" != --apple-wrappers ] || { apple_wrappers=1; shift; }
 reuse=
