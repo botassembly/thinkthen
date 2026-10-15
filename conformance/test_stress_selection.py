@@ -11,6 +11,39 @@ from conformance.children.children import child_env
 
 
 class StressSelection(unittest.TestCase):
+    def test_postgresql_failure_survives_a_later_unavailable_major(self):
+        with tempfile.TemporaryDirectory(prefix='thinkthen-pg-selection-') as folder:
+            root = Path(folder)
+            scripts = root / 'sdlc/scripts'
+            scripts.mkdir(parents=True)
+            for name in ('surfaces', 'verdict.sh'):
+                shutil.copyfile(parity.ROOT / 'sdlc/scripts' / name, scripts / name)
+            (scripts / 'allow-list').touch()
+            (scripts / 'scratch.sh').write_text('usage_guard() { :; }\n')
+            (scripts / 'installed.sh').write_text('backend_start() { port=12345; }\n')
+            (root / 'sdlc/surfaces.txt').write_text('databases/postgresql landed\n')
+            conformance = root / 'conformance'
+            conformance.mkdir()
+            (conformance / 'parity.py').touch()
+            surface = root / 'databases/postgresql'
+            surface.mkdir(parents=True)
+            (surface / 'Cargo.toml').touch()
+            (surface / 'check.sh').write_text(
+                'echo "$1" >> "$FIXTURE_ROOT/calls"\n'
+                'case $1 in 16) exit "$CODE16" ;; 18) exit "$CODE18" ;; esac\n')
+            env = child_env(home=root / 'home', PATH=os.defpath, FIXTURE_ROOT=str(root))
+            for first, last in ((1, 77), (77, 1), (77, 77), (0, 77)):
+                with self.subTest(first=first, last=last):
+                    calls = root / 'calls'
+                    calls.write_text('')
+                    result = subprocess.run(['sh', str(scripts / 'surfaces')], cwd=root,
+                                            env=env | {'CODE16': str(first), 'CODE18': str(last)},
+                                            capture_output=True, text=True)
+                    self.assertEqual(calls.read_text().splitlines(), ['16', '18'],
+                                     result.stdout + result.stderr)
+                    self.assertEqual(result.returncode, int(1 in (first, last)),
+                                     result.stdout + result.stderr)
+
     def test_actual_registry_excludes_unsupported_php_and_requires_selected_checks(self):
         selected = {'libraries/polars', 'libraries/typescript', 'libraries/r',
                     'databases/sqlite', 'databases/duckdb', 'databases/postgresql'}

@@ -292,7 +292,13 @@ for surface in $(landed sdlc/surfaces.txt) $(feature sdlc/surfaces.txt); do
         [ "$mode" != release ] || majors='16 17 18'
         code=0
         for major in $majors; do
-            sh "$surface/check.sh" "$major" 3>&- || code=$?
+            major_code=0
+            sh "$surface/check.sh" "$major" 3>&- || major_code=$?
+            case $major_code in
+            0) ;;
+            77) [ "$code" -ne 0 ] || code=77 ;;
+            *) code=1 ;;
+            esac
         done
     else
         sh "$surface/check.sh" "$port" 3>&-
