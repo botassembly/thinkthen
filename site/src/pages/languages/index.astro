@@ -4,7 +4,7 @@
 import Base from '../../layouts/Base.astro';
 import LinkName from '../../components/LinkName.astro';
 import InstallLine from '../../components/InstallLine.astro';
-import { SURFACES, BINDINGS, TAB_GROUPS, COUNTS, CODE_FUNCTIONS } from '../../data/catalog.mjs';
+import { SURFACES, MCP, BINDINGS, TAB_GROUPS, COUNTS, CODE_FUNCTIONS } from '../../data/catalog.mjs';
 import { hasSamples } from '../../data/samples.mjs';
 
 const shell = SURFACES.find((s) => s.slug === 'shell');
@@ -12,7 +12,7 @@ const plain = (text) => text.replaceAll('`', '');
 const groups = TAB_GROUPS
   .filter((g) => g.name !== 'Command line' && g.name !== 'Databases')
   .map((g) => ({ name: g.name, list: g.slugs.map((slug) => ({ ...SURFACES.find((s) => s.slug === slug), route: BINDINGS.find((b) => b.slug === slug).route })) }));
-const supported = [shell, { name: 'MCP', route: '/languages/agents/', versions: shell.versions }, ...groups.flatMap((g) => g.list)];
+const supported = [shell, MCP, ...groups.flatMap((g) => g.list)];
 const databases = BINDINGS.filter((b) => b.database);
 const names = [...CODE_FUNCTIONS.map((fn) => fn.name), 'question-file'];
 const withSamples = groups.flatMap((g) => g.list).filter((s) => hasSamples(s.slug, names));
@@ -27,7 +27,7 @@ const listed = (list) => list.map((s, i) => `${i === 0 ? '' : i === list.length 
   <table>
     <thead><tr><th scope="col">Language or command</th><th scope="col">Supported versions</th><th scope="col">Platforms</th></tr></thead>
     <tbody>{supported.map((s) => (
-      <tr><th scope="row"><a href={s.route ?? '/languages/bash/'}>{s.name}</a></th><td>{s.versions?.runtime}</td><td>{s.versions?.platforms}</td></tr>
+      <tr><td><a href={s.route ?? '/languages/bash/'}>{s.name}</a></td><td>{s.versions?.runtime}</td><td>{s.versions?.platforms}</td></tr>
     ))}</tbody>
   </table>
 

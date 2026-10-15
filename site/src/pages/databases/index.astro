@@ -55,7 +55,7 @@ const DIFFERS = [
   <table>
     <thead><tr><th scope="col">Database</th><th scope="col">Supported versions</th><th scope="col">Platforms</th></tr></thead>
     <tbody>{DBS.map((db) => (
-      <tr><th scope="row"><a href={`/databases/${db.slug}/`}>{db.name}</a></th><td>{Array.isArray(db.versions?.runtime) ? db.versions.runtime.join(' and ') : db.versions?.runtime}</td><td>{db.versions?.platforms}</td></tr>
+      <tr><td><a href={`/databases/${db.slug}/`}>{db.name}</a></td><td>{Array.isArray(db.versions?.runtime) ? db.versions.runtime.join(' and ') : db.versions?.runtime}</td><td>{db.versions?.platforms}</td></tr>
     ))}</tbody>
   </table>
 

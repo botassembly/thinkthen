@@ -433,6 +433,11 @@ const MAC_PLATFORMS = 'macOS 15 or later on Intel and Apple silicon';
 const UNIX_PLATFORMS = `${LINUX_PLATFORMS}; ${MAC_PLATFORMS}`;
 const NATIVE_PLATFORMS = `${UNIX_PLATFORMS}; Windows x86-64`;
 
+export const MCP = {
+  name: 'MCP', route: '/languages/agents/',
+  versions: { runtime: 'MCP 2025-11-25; no language runtime required', platforms: NATIVE_PLATFORMS },
+};
+
 export const SURFACES = [
   {
     slug: 'shell', name: 'Bash', deckHeading: null,
@@ -549,7 +554,7 @@ export const SURFACES = [
   },
   {
     slug: 'rust', name: 'Rust', deckHeading: 'Rust',
-    versions: { runtime: 'Rust 1.95.0 or later', platforms: NATIVE_PLATFORMS },
+    versions: { runtime: 'Rust 1.95.0 or later; Polars 0.55.2 for the polars feature', platforms: NATIVE_PLATFORMS },
     backends: 'builder',
     lang: 'rust', tab: 'Rust',
     blurb: 'Call the engine directly. The compiler makes you handle not sure.',
@@ -580,7 +585,7 @@ export const SURFACES = [
   },
   {
     slug: 'cpp', name: 'C++', deckHeading: null,
-    versions: { runtime: 'C++17', platforms: UNIX_PLATFORMS },
+    versions: { runtime: 'C++17', platforms: LINUX_PLATFORMS },
     backends: 'code',
     lang: 'cpp', tab: 'C++',
     blurb: "Call the ten functions from C++17 through a header-only CMake package.",
@@ -778,7 +783,7 @@ export const SURFACES = [
   },
   {
     slug: 'dart', name: 'Dart', deckHeading: null,
-    versions: { runtime: 'Dart 3.10 or later, below 4', platforms: 'Linux x86-64' },
+    versions: { runtime: 'Dart 3.10 or later, below 4; Flutter 3.38 or later', platforms: 'Linux x86-64' },
     backends: 'code',
     lang: 'dart', tab: 'Dart',
     blurb: "Await the ten functions from Dart and Flutter.",
