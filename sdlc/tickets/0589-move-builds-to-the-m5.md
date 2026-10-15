@@ -4,6 +4,8 @@ Status: OPEN.
 
 Milestone: 0.2.1
 
+Depends on: 0425
+
 ## Outcome
 
 ThinkThen's routine builds and tests for a ticket run on the M5 through `pm job run`, and `pm ticket land --merge-branch` runs the declared gate there, while Linux release qualification stays on the Beelink at each candidate.
