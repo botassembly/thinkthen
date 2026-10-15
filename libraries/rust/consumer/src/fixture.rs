@@ -3,8 +3,8 @@ use serde::Deserialize;
 use serde_json::{Map, Value, value::RawValue};
 use thinkthen::{
     AdmittedRequest, Call, Engine, EngineBuilder, Error, ErrorKind, Facts, InputEvidence,
-    InputReaderOptions, QuestionInput, Request, RequestInput, RequestOptions,
-    RequestQuestion, SourceItem,
+    InputReaderOptions, QuestionInput, Request, RequestInput, RequestOptions, RequestQuestion,
+    SourceItem,
 };
 
 pub(super) type Original = QuestionInput;
@@ -28,6 +28,8 @@ pub(super) struct Fixture {
     pub incremental: bool,
     #[serde(default)]
     pub batch_probe: bool,
+    #[serde(default)]
+    pub call_result_contract: bool,
     pub deadline_ms: Option<i64>,
     pub shared_context: Option<String>,
 }
@@ -87,6 +89,54 @@ pub(super) fn written<T: serde::Serialize>(call: Call<T>) -> Result<(String, Fac
         packet(call.value(), call.facts().complete())?,
         call.facts().clone(),
     ))
+}
+
+thinkthen::choices! {
+    #[derive(serde::Serialize)]
+    #[serde(rename_all = "lowercase")]
+    enum Team { Billing => "billing", Shipping => "shipping", Other => "other" }
+}
+
+pub(super) fn scalar_call(
+    fixture: &Fixture,
+    admitted: &AdmittedRequest,
+    engine: &Engine,
+    options: thinkthen::CallOptions<'_>,
+) -> Result<String, Error> {
+    let RequestInput::Records { items } = &fixture.input else {
+        return Err(usage("scalar fixture requires one text record"));
+    };
+    let [item] = items.as_slice() else {
+        return Err(usage("scalar fixture requires one text record"));
+    };
+    let Some(thinkthen::RequestOriginal::Text { text }) = &item.original else {
+        return Err(usage("scalar fixture requires text evidence"));
+    };
+    let thinkthen::RequestDefinition::Atomic(question) = admitted.resolve_question()? else {
+        return Err(usage("scalar fixture requires an atomic question"));
+    };
+    match fixture.verb.as_str() {
+        "decide" => public_packet(&engine.decide_with(&question, text, options)?),
+        "choose" => {
+            let thinkthen::LoadedQuestion::Question(question) = question else {
+                return Err(usage("scalar choose fixture requires an unbanded question"));
+            };
+            public_packet(&engine.choose_with(&question.into_choose::<Team>()?, text, options)?)
+        }
+        _ => Err(usage("scalar fixture requires decide or choose")),
+    }
+}
+
+fn public_packet<T: serde::Serialize, R: serde::Serialize, P: serde::Serialize>(
+    call: &Call<T, R, P>,
+) -> Result<String, Error> {
+    serde_json::to_string(&serde_json::json!({
+        "native": true,
+        "results": call.results(),
+        "facts": call.facts().complete(),
+        "call_result": call,
+    }))
+    .map_err(|_| usage("invalid public call result"))
 }
 type Inputs<'a> =
     Box<dyn Iterator<Item = Result<thinkthen::RecordInput<QuestionInput>, Error>> + 'a>;

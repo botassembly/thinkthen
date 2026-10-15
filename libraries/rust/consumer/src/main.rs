@@ -18,6 +18,10 @@ fn run(f: Fixture) -> Result<String, Error> {
     if f.cancel {
         stop.cancel();
     }
+    let options = CallOptions::new().cancel(&stop);
+    if f.call_result_contract {
+        return fixture::scalar_call(&f, &admitted, &engine, options);
+    }
     let worker = f.held_cancel.then(|| {
         let held = stop.clone();
         std::thread::spawn(move || {
@@ -25,7 +29,6 @@ fn run(f: Fixture) -> Result<String, Error> {
             held.cancel();
         })
     });
-    let options = CallOptions::new().cancel(&stop);
     if f.batch_probe {
         println!("ready");
         std::io::stdout()
