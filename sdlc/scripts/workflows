@@ -288,7 +288,8 @@ def release(name, doc):
                       if (step.get("with") or {}).get("python-version") == "3.13"), {})
         if (not py313 or py313.get("if") != condition
                 or (active.get("with") or {}).get("python-version") != active_version
-                or active.get("if") is not None
+                or active.get("if") is not None or py313.get("uses") != active.get("uses")
+                or (py313.get("with") or {}).get("update-environment") in (False, "false")
                 or (active.get("with") or {}).get("update-environment") in (False, "false")):
             out.append(f"{name}: job {job} must retain Python {active_version} for repository tools after setting up Python 3.13")
         if job == "build":
@@ -1259,7 +1260,8 @@ def self_test():
             bad += 1
             print(f"workflows self-test host Python: wanted {wanted}, got {got}", file=sys.stderr)
     # Reintroduce the failed interpreter ordering and lose the explicit wheel floor.
-    for defect in ("old-active", "missing-floor", "wrong-floor"):
+    python_defects = ("old-active", "missing-floor", "wrong-floor", "disabled-tools-env")
+    for defect in python_defects:
         with tempfile.TemporaryDirectory() as tmp:
             folder = pathlib.Path(tmp)
             for path in (REPO / ".github/workflows").glob("*.y*ml"):
@@ -1269,10 +1271,12 @@ def self_test():
                         text = text.replace("with: {python-version: '3.13'}", "with: {python-version: '3.10'}", 1)
                     elif defect == "missing-floor":
                         text = text.replace("id: python-floor", "id: unused-floor", 1)
+                    elif defect == "disabled-tools-env":
+                        text = text.replace("with: {python-version: '3.13'}", "with: {python-version: '3.13', update-environment: false}")
                     else:
                         text = text.replace("${{ steps.python-floor.outputs.python-path }}", "python3")
                 (folder / path.name).write_text(text, encoding="utf-8")
-            wanted = "repository tools" if defect == "old-active" else "explicitly for the wheel"
+            wanted = "repository tools" if defect in ("old-active", "disabled-tools-env") else "explicitly for the wheel"
             if not any(wanted in error for error in check(folder)):
                 bad += 1
                 print(f"workflows self-test Python {defect}: missing refusal", file=sys.stderr)
@@ -1330,7 +1334,7 @@ def self_test():
             print(f"workflows self-test {fixture}: {result.stdout}{result.stderr}", file=sys.stderr)
         else:
             print(result.stdout.strip() or result.stderr.strip())
-    total = len(cases) + 4 + len(host_cases) + 13
+    total = len(cases) + 4 + len(host_cases) + 13 + len(python_defects)
     print(f"workflows self-test: {total - bad}/{total} cases hold")
     return 1 if bad else 0
 
