@@ -206,7 +206,7 @@ class PgFixture(Check):
         if tool == 'psql':
             if self.failure == 'query': raise Failure('fixture query failed')
             version = '0.1.3' if self.failure == 'version' else self.version
-            return version + '\n' + json.dumps({'value': True, 'meta': {'requests_sent': 0}})
+            return version + '\n' + json.dumps({'value': True, 'requests_sent': 0})
         return ''
 
     def close(self):
