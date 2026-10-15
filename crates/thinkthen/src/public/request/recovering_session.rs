@@ -449,11 +449,21 @@ fn make_feed(
 
 #[cfg(test)]
 mod tests {
-    //! Stays: the dual-queue wait needs a direct timing check for input wakeups while recovered output stays empty.
+    //! Stays: independent intake and output queues need direct blocked-wait control for input, cancellation and settlement wakeups.
+    use super::super::RequestSessionReady as Ready;
+    use super::*;
+    use std::{sync::mpsc, time::Duration};
     #[test]
-    fn input_closure_wakes_a_recovered_wait_without_a_timer() {
-        use super::*;
-        use std::time::{Duration, Instant};
+    fn recovered_wait_wakes_for_input_closure_cancel_and_output() {
+        for (interest, expected) in [
+            (RequestSessionWaitInterest::Input, Ready::Closed),
+            (RequestSessionWaitInterest::Result, Ready::Cancelled),
+            (RequestSessionWaitInterest::Settlement, Ready::Result),
+        ] {
+            wake_case(interest, expected);
+        }
+    }
+    fn wake_case(interest: RequestSessionWaitInterest, expected: Ready) {
         let output = Arc::new(Output::default());
         let queue = Arc::new(super::super::session_queue::Queue::recovering(Arc::clone(
             &output.changed,
@@ -474,20 +484,34 @@ mod tests {
             output,
         };
         std::thread::scope(|scope| {
-            let waiting = scope.spawn(|| {
-                let started = Instant::now();
-                assert_eq!(
-                    session.wait(RequestSessionWaitInterest::Input, Duration::from_secs(1)),
-                    super::super::RequestSessionReady::Closed
-                );
-                started.elapsed()
+            let (started, starting) = mpsc::sync_channel(0);
+            let (ready, readiness) = mpsc::sync_channel(1);
+            let session = &session;
+            let waiting = scope.spawn(move || {
+                started.send(()).unwrap();
+                ready
+                    .send(session.wait(interest, Duration::from_secs(2)))
+                    .unwrap();
             });
-            std::thread::sleep(Duration::from_millis(5));
-            queue.close_intake();
-            assert!(
-                waiting.join().unwrap() < Duration::from_millis(40),
-                "input closure waited for the poll timer"
-            );
+            // The start latch and empty read prove the call has no earlier readiness.
+            // The generous response bound detects a missing cross-queue wake without
+            // making the fixture depend on the retired 50 ms polling interval.
+            starting.recv().unwrap();
+            assert!(matches!(
+                readiness.recv_timeout(Duration::from_millis(20)),
+                Err(mpsc::RecvTimeoutError::Timeout)
+            ));
+            match expected {
+                Ready::Closed => queue.close_intake(),
+                Ready::Cancelled => session.cancel(),
+                _ => session.output.settle(RequestSessionTerminal {
+                    facts: None,
+                    error: None,
+                }),
+            }
+            let result = readiness.recv_timeout(Duration::from_secs(1));
+            waiting.join().unwrap();
+            assert_eq!(result.unwrap(), expected);
         });
     }
 }
