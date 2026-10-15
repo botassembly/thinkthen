@@ -108,6 +108,9 @@ def native_parity(consumer, command):
                             return project_session(json.loads(output.stdout), step)
                         before = int(backend.read("count"))
                         got = invoke(settings)
+                        if row["id"] == "settings-max-requests-refuses-past-the-limit":
+                            assert [entry["index"] for entry in got["rows"]] == [0, 1], got
+                            assert [entry["input"] for entry in got["rows"]] == step["items"][:2], got
                         if value.get("identity_steps"):
                             identities.append(got)
                         if step.get("stored_answers") == 0:

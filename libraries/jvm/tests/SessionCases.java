@@ -232,18 +232,18 @@ public final class SessionCases {
             if(yes(data,"incremental")){
                 if(yes(data,"owned_jsonl")){
                     String path=(String)list(data.get("paths")).getFirst();long line=0;
-                    try(var reader=Files.newBufferedReader(CaseBatch.path(path))){String raw;while((raw=reader.readLine())!=null){line++;var descriptor=new RequestSessionDescriptor().item(RequestItem.fromJson(Map.of("original",original(FixtureJson.parse(raw),false)))).location(SessionSourceLocation.fromJson(Map.of("file",path,"first_line",line,"last_line",line)));if(!push(feed,descriptor,packets))break;}}
-                }else for(Object record:list(Values.object(Values.json(input)).get("items")))if(!push(feed,new RequestSessionDescriptor().item(RequestItem.fromJson(record)),packets))break;
+                    try(var reader=Files.newBufferedReader(CaseBatch.path(path))){String raw;while((raw=reader.readLine())!=null){line++;var descriptor=new RequestSessionDescriptor().item(RequestItem.fromJson(Map.of("original",original(FixtureJson.parse(raw),false)))).location(SessionSourceLocation.fromJson(Map.of("file",path,"first_line",line,"last_line",line)));if(!push(feed,descriptor))break;}}
+                }else for(Object record:list(Values.object(Values.json(input)).get("items")))if(!push(feed,new RequestSessionDescriptor().item(RequestItem.fromJson(record))))break;
             }
             feed.finish(null);
             while(true){var read=feed.read();if(read.packet()!=null){packets.add(read.packet());if(read.packet() instanceof SessionPacketTerminal done)terminal=done;}if(read.ended())break;if(read.packet()==null)feed.waitReady(false);}
             return new Engine.OwnedCall(packets,packets.stream().filter(p->p instanceof SessionPacketTerminal).map(p->(SessionPacketTerminal)p).reduce((a,b)->b).orElseThrow());
         }finally{feed.close();if(signal!=null){signal.interrupt();signal.join(1000);if(signal.isAlive())throw new IllegalStateException("fixture cancellation signal did not finish");}}
     }
-    static boolean push(Feed feed,RequestSessionDescriptor descriptor,List<SessionPacket> packets) throws Exception {
-        while(true){int status=feed.push(descriptor);if(status==0)return true;if(status==2)return false;var read=feed.read();if(read.packet()!=null)packets.add(read.packet());if(read.ended())return false;if(read.packet()==null)feed.waitReady(true);}
+    static boolean push(Feed feed,RequestSessionDescriptor descriptor) throws Exception {
+        while(true){int status=feed.push(descriptor);if(status==0)return true;if(status==2)return false;feed.waitReady(true);}
     }
-    static Feed feed(OwnedSession session){return new Feed(){public int push(RequestSessionDescriptor d){return session.tryPush(d);}public void finish(RequestReaderFailure f){session.finish(f);}public void cancel(){session.cancel();}public void waitReady(boolean input){session.waitReady(input).join();}public OwnedSession.Read read(){return session.tryRead();}public void close(){session.close();}};}
+    static Feed feed(OwnedSession session){return new Feed(){public int push(RequestSessionDescriptor d){return session.push(d).orTimeout(10,TimeUnit.SECONDS).join();}public void finish(RequestReaderFailure f){session.finish(f);}public void cancel(){session.cancel();}public void waitReady(boolean input){session.waitReady(input).join();}public OwnedSession.Read read(){return session.tryRead();}public void close(){session.close();}};}
     public static SessionPacket packet(Object value){return SessionPacket.read(value);}
     public static Engine.OwnedCall javaCall(List<?> packets,Object terminal){return new Engine.OwnedCall(packets.stream().map(Results.SessionPacket::read).toList(),new SessionPacketTerminal(terminal));}
     public static String failure(int code,String message){return Json.write(Map.of("code",code,"message",message));}

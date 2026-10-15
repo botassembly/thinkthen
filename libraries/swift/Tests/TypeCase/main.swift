@@ -152,13 +152,24 @@ struct DriverCall: Sendable {
     let incremental = fixture["incremental"] as? Bool == true
     let worker = Task {
       if incremental, case .records(let records) = input {
-        let feed = AsyncThrowingStream<SessionDescriptor, any Error> { continuation in
-          for item in records.items { continuation.yield(SessionDescriptor(item: item)) }
-          continuation.finish()
+        let request = Request(
+          call: CallRequest(
+            function: .decide, input: .feed(InputFeed(name: "records")),
+            options: typedOptions, question: question), schema: .thinkthenRequest_1)
+        let session = try client.start(request)
+        defer { session.close() }
+        for item in records.items {
+          if try await !session.push(SessionDescriptor(item: item)) { break }
         }
-        return describe(
-          try await client.decide(
-            question, input: InputFeed(name: "records"), options: typedOptions, feed: feed))
+        try session.finish()
+        var packets: [SessionPacket] = []
+        var terminal: SessionPacketTerminal?
+        while let packet = try await session.read() {
+          packets.append(packet)
+          if case .terminal(let value) = packet { terminal = value }
+        }
+        guard let terminal else { throw ValueConversionError("Native End has no terminal") }
+        return DriverCall(call: Call(packets: packets, terminal: terminal), result: nil)
       }
       switch verb {
       case "decide":
