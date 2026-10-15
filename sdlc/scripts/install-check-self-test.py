@@ -265,8 +265,8 @@ class RefusalTable(unittest.TestCase):
                     self.assertIn(matching, sql)
                     self.assertIn("AND loaded", sql)
                     self.assertIn('thinkthen_replay', sql)
-                    self.assertIn("SELECT to_json({'value':d.answers[1].decide,'requests_sent':d.facts.requests_sent})", sql)
-                    self.assertIn('FROM (SELECT thinkthen_details(', sql)
+                    self.assertIn("SELECT to_json({'value':d.value,'requests_sent':d.facts.requests_sent})", sql)
+                    self.assertIn('FROM (SELECT thinkthen_decide_details(', sql)
                     self.assertIn(') AS d);', sql)
                     return '0.2.0\n{"value":true,"requests_sent":0}'
                 check.run = run
@@ -288,6 +288,33 @@ class RefusalTable(unittest.TestCase):
                     installed, reply, _ = duckdb(check)
                     check_result('0.2.0', installed, reply)
                     self.assertEqual(len(calls), 2)
+
+    def test_duckdb_host_builds_pinned_source_and_refuses_reported_drift(self):
+        from install_check_tools import prepare
+        identity = duckdb_identity(duckdb_versions()[0], 'x86_64-unknown-linux-gnu')
+        for version, commit in ((identity['version'], identity['source_commit'][:8]),
+                                (identity['version'], identity['source_commit'][:10]),
+                                ('v0.0.0', identity['source_commit'][:8]),
+                                (identity['version'], '00000000')):
+            with self.subTest(version=version, commit=commit), tempfile.TemporaryDirectory() as own:
+                check = Fixture(Path(own), 'duckdb')
+                check.outputs = {'duckdb': version + '|' + commit}
+                with patch('source_hosts.prepare') as source:
+                    if version != identity['version'] or commit == '00000000':
+                        with self.assertRaisesRegex(Failure, 'differs from pinned source'):
+                            prepare(check)
+                    else:
+                        prepare(check)
+                source.assert_called_once_with(check.root / 'duckdb-source', identity['source_commit'],
+                                               'https://github.com/duckdb/duckdb.git', True, identity['version'])
+                configure, build, report = check.commands
+                self.assertIn('-DBUILD_EXTENSIONS=core_functions;json', configure)
+                self.assertIn('-DDISABLE_BUILTIN_EXTENSIONS=OFF', configure)
+                self.assertIn('-DENABLE_EXTENSION_AUTOINSTALL=OFF', configure)
+                self.assertIn('build-admission.py', configure[1])
+                self.assertEqual(build[-4:], ('--target', 'shell', '--parallel', '2'))
+                self.assertEqual(report[-1], 'SELECT library_version,source_id FROM pragma_version()')
+                self.assertEqual(check.env['PATH'].split(os.pathsep)[0], str(check.root / 'duckdb-host'))
 
     def test_duckdb_repository_rejects_bad_members_and_incomplete_legal_material(self):
         sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'databases/duckdb/cpp'))
@@ -507,13 +534,15 @@ class RefusalTable(unittest.TestCase):
             prepare_sample(check)
             archive = check.root / f'thinkthen-sqlite-{check.version}-x86_64-unknown-linux-gnu.tar.gz'
             packed(archive, {'libthinkthen0.so': b'fixture extension'})
-            check.outputs = {'--version': '3.53.4 fixture', ':memory:': '0\n{"value":true,"meta":{"requests_sent":0}}'}
+            check.outputs = {'--version': '3.53.4 fixture', ':memory:': '0\n{"value":true,"requests_sent":0}'}
             with patch.object(check, 'release', return_value=archive) as release:
                 installed, reply, proof = sqlite(check)
             release.assert_called_once_with(archive.name)
             check_result(check.version, installed, reply)
             self.assertEqual(proof, 'release-asset identity')
             self.assertTrue(check.inputs[-1].startswith(f'.load {check.root}/sqlite/libthinkthen0.so\n'))
+            self.assertIn('FROM thinkthen_decide_details(', check.inputs[-1])
+            self.assertIn('facts_requests_sent', check.inputs[-1])
             self.assertFalse(any('c-' in str(arg) for command in check.commands for arg in command))
 
     def test_r_binary_only_and_superseded_routes(self):

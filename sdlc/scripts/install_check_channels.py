@@ -265,10 +265,13 @@ def sqlite(check):
     settings = (check.root / 'settings.json').read_text()
     evidence = (check.sample / 'report.txt').read_text()
     question = (check.sample / 'question.txt').read_text()
-    sql = f'.load {extension}\nSELECT thinkthen_configure({sql_quote(settings)});\nSELECT thinkthen_details({sql_quote(question)},{sql_quote(evidence)});\n'
+    sql = f'.load {extension}\nSELECT thinkthen_configure({sql_quote(settings)});\n'
+    sql += ("SELECT json_object('value',json(CASE value WHEN 1 THEN 'true' WHEN 0 THEN 'false' ELSE 'null' END),"
+            "'requests_sent',facts_requests_sent) "
+            f'FROM thinkthen_decide_details({sql_quote(question)},{sql_quote(evidence)});\n')
     lines = check.run('sqlite3', '-bail', ':memory:', input=sql).splitlines()
     details = json.loads(lines[-1])
-    return check.version, {'value': details.get('value'), 'requests_sent': details.get('meta', {}).get('requests_sent')}, 'release-asset identity'
+    return check.version, details, 'release-asset identity'
 
 
 def duckdb(check):
@@ -310,8 +313,8 @@ def duckdb(check):
         raise Failure(str(error)) from error
     sql = f'LOAD {sql_quote(extension)}; SET thinkthen_replay={sql_quote(check.sample / "recording")}; SET thinkthen_cache=\'off\';\n'
     sql += "SELECT extension_version FROM duckdb_extensions() WHERE extension_name='thinkthen' AND loaded;\n"
-    sql += ("SELECT to_json({'value':d.answers[1].decide,'requests_sent':d.facts.requests_sent}) "
-            f'FROM (SELECT thinkthen_details({sql_quote((check.sample / "question.txt").read_text())},'
+    sql += ("SELECT to_json({'value':d.value,'requests_sent':d.facts.requests_sent}) "
+            f'FROM (SELECT thinkthen_decide_details({sql_quote((check.sample / "question.txt").read_text())},'
             f'{sql_quote((check.sample / "report.txt").read_text())}) AS d);\n')
     lines = check.run('duckdb', '-unsigned', '-noheader', '-list', ':memory:', input=sql).splitlines()
     if len(lines) != 2:

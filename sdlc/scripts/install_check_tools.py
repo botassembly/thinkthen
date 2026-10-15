@@ -78,14 +78,21 @@ def prepare(check):
     elif check.channel == 'duckdb':
         sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'databases/duckdb/tools'))
         from inputs import selected, versions
+        from source_hosts import prepare as prepare_source
         identity = selected(versions()[0], 'x86_64-unknown-linux-gnu')
-        archive = pinned(check, f"https://github.com/duckdb/duckdb/releases/download/{identity['version']}/{identity['cli_asset']}",
-                         'duckdb.zip', identity['cli_zip_sha256'])
-        folder = unzip(archive, check.root / 'duckdb-tools')
-        binary = folder / 'duckdb'
-        if hashlib.sha256(binary.read_bytes()).hexdigest() != identity['cli_sha256']:
-            raise Failure('DuckDB host binary differs from its pin')
-        binary.chmod(0o755)
-        prepend(check, folder)
-        if not check.run('duckdb', '--version').startswith(identity['version'] + ' '):
-            raise Failure(f"DuckDB host differs from pinned {identity['version']}")
+        # The approved source host requires Git, CMake, Ninja and a C/C++ compiler.
+        source, build = check.root / 'duckdb-source', check.root / 'duckdb-host'
+        prepare_source(source, identity['source_commit'], 'https://github.com/duckdb/duckdb.git', True,
+                       identity['version'])
+        admission = (sys.executable, Path(__file__).with_name('build-admission.py'), '--')
+        check.run(*admission, 'cmake', '-S', source, '-B', build, '-G', 'Ninja',
+                  '-DCMAKE_BUILD_TYPE=Release', '-DBUILD_UNITTESTS=OFF', '-DBUILD_EXTENSIONS=core_functions;json',
+                  '-DDISABLE_BUILTIN_EXTENSIONS=OFF', '-DENABLE_EXTENSION_AUTOLOADING=OFF',
+                  '-DENABLE_EXTENSION_AUTOINSTALL=OFF')
+        check.run(*admission, 'cmake', '--build', build, '--target', 'shell', '--parallel', '2')
+        prepend(check, build)
+        reported = check.run('duckdb', '-noheader', '-list', '-init', '/dev/null', '-c',
+                             'SELECT library_version,source_id FROM pragma_version()').split('|')
+        if (len(reported) != 2 or reported[0] != identity['version']
+                or reported[1] not in (identity['source_commit'][:8], identity['source_commit'][:10])):
+            raise Failure(f"DuckDB host differs from pinned source {identity['source_commit']}")
