@@ -110,8 +110,10 @@ check() {
         set -e
         # ALTER SYSTEM survives restarts. Restore each case's starting settings
         # even when an assertion fails, so the next case has its own server state.
-        cp "$DATA/postgresql.auto.conf" "$RUN/postgresql.auto.conf.step"
-        trap 'cp "$RUN/postgresql.auto.conf.step" "$DATA/postgresql.auto.conf"' EXIT
+        if [ -f "$DATA/postgresql.auto.conf" ]; then
+            cp "$DATA/postgresql.auto.conf" "$RUN/postgresql.auto.conf.step"
+            trap 'cp "$RUN/postgresql.auto.conf.step" "$DATA/postgresql.auto.conf"' EXIT
+        fi
         "$@"
     )
 	code=$?
