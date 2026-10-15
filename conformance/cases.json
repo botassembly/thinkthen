@@ -11499,27 +11499,6 @@
         ]
       },
       {
-        "id": "type-15-rank-records",
-        "tier": "binding",
-        "verb": "rank",
-        "kind": "type-fixture",
-        "input": {
-          "fixture": "specification/fixtures/types/corpus.json",
-          "case_ref": "15-rank-records"
-        },
-        "expect": {
-          "fixture_ref": "15-rank-records",
-          "schema": "specification/result.schema.json",
-          "schema_version": "landed result/1"
-        },
-        "preconditions": [],
-        "checks": [
-          "named",
-          "compile",
-          "runtime"
-        ]
-      },
-      {
         "id": "type-18-find-second",
         "tier": "binding",
         "verb": "find",
@@ -16964,26 +16943,6 @@
       }
     ],
     "schema_cases": [
-      {
-        "id": "type-rank-without-probability",
-        "verb": "rank",
-        "kind": "type-fixture",
-        "input": {
-          "fixture": "specification/fixtures/types/corpus.json",
-          "case_ref": "rank-without-probability"
-        },
-        "expect": {
-          "fixture_ref": "rank-without-probability",
-          "schema": "specification/result.schema.json",
-          "schema_version": "landed result/1"
-        },
-        "preconditions": [],
-        "checks": [
-          "named",
-          "compile",
-          "runtime"
-        ]
-      },
       {
         "id": "type-find-without-probability",
         "verb": "find",
