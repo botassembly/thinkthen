@@ -250,7 +250,7 @@ fn usage_child() {
     let answer = engine
         .decide(&question, "fixture evidence")
         .expect("canned public answer");
-    assert_eq!(answer.into_value(), crate::Answer::Yes);
+    assert_eq!(answer.into_value(), Some(true));
     if selected.is_some() {
         // The writer may pause longer than the public flush deadline while
         // the parent inspects its native descriptor. Keep the host alive.

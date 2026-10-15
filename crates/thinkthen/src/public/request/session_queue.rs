@@ -4,7 +4,7 @@ use super::{
     RequestSessionRead, RequestSessionResult, RequestSessionTerminal,
 };
 use crate::{CallOptions, CancelToken, Error};
-use std::sync::{Condvar, Mutex, MutexGuard};
+use std::sync::{Arc, Condvar, Mutex, MutexGuard};
 
 #[derive(Debug)]
 enum Finish {
@@ -24,14 +24,63 @@ struct State {
     settlement_interrupted: bool,
 }
 
+/// A separate generation prevents lost wakeups across the independent intake and output locks.
+#[derive(Debug, Default)]
+pub(super) struct Change {
+    generation: Mutex<u64>,
+    wake: Condvar,
+}
+impl Change {
+    pub(super) fn observed(&self) -> u64 {
+        *self
+            .generation
+            .lock()
+            .unwrap_or_else(|error| error.into_inner())
+    }
+    pub(super) fn notify(&self) {
+        let mut generation = self
+            .generation
+            .lock()
+            .unwrap_or_else(|error| error.into_inner());
+        *generation = generation.wrapping_add(1);
+        self.wake.notify_all();
+    }
+    pub(super) fn wait(&self, observed: u64, timeout: std::time::Duration) {
+        let generation = self
+            .generation
+            .lock()
+            .unwrap_or_else(|error| error.into_inner());
+        if *generation == observed {
+            drop(
+                self.wake
+                    .wait_timeout(generation, timeout)
+                    .unwrap_or_else(|error| error.into_inner()),
+            );
+        }
+    }
+}
+
 #[derive(Debug, Default)]
 pub(super) struct Queue {
     state: Mutex<State>,
     wake: Condvar,
+    changed: Option<Arc<Change>>,
     pub(super) cancel: CancelToken,
 }
 
 impl Queue {
+    pub(super) fn recovering(changed: Arc<Change>) -> Self {
+        Self {
+            changed: Some(changed),
+            ..Self::default()
+        }
+    }
+    fn notify(&self) {
+        self.wake.notify_all();
+        if let Some(changed) = &self.changed {
+            changed.notify();
+        }
+    }
     fn lock(&self) -> MutexGuard<'_, State> {
         self.state.lock().unwrap_or_else(|error| error.into_inner())
     }
@@ -119,7 +168,7 @@ impl Queue {
             RequestSessionPushStatus::Closed
         } else {
             state.input = Some(descriptor);
-            self.wake.notify_all();
+            self.notify();
             RequestSessionPushStatus::Accepted
         }
     }
@@ -131,7 +180,7 @@ impl Queue {
             RequestSessionPush::Full(descriptor)
         } else {
             state.input = Some(descriptor);
-            self.wake.notify_all();
+            self.notify();
             RequestSessionPush::Accepted
         }
     }
@@ -153,7 +202,7 @@ impl Queue {
         } else {
             state.finish = Some(finish);
         }
-        self.wake.notify_all();
+        self.notify();
         Ok(())
     }
     pub(super) fn next(
@@ -167,11 +216,11 @@ impl Queue {
             }
             if let Err(error) = controls.reader_admission() {
                 state.intake_closed = true;
-                self.wake.notify_all();
+                self.notify();
                 return Some(Err(error));
             }
             if let Some(item) = state.input.take() {
-                self.wake.notify_all();
+                self.notify();
                 return Some(Ok(item));
             }
             if let Some(failure) = &mut state.finish {
@@ -180,7 +229,7 @@ impl Queue {
                     Finish::Native(error) => error.take(),
                 };
                 state.intake_closed = true;
-                self.wake.notify_all();
+                self.notify();
                 return error.map(Err);
             }
             state = match controls.reader_remaining() {
@@ -193,7 +242,7 @@ impl Queue {
                 Ok(None) => self.wait(state),
                 Err(error) => {
                     state.intake_closed = true;
-                    self.wake.notify_all();
+                    self.notify();
                     return Some(Err(error));
                 }
             };
@@ -206,7 +255,7 @@ impl Queue {
         }
         if !state.receiver_closed {
             state.output = Some(packet);
-            self.wake.notify_all();
+            self.notify();
         }
     }
     pub(super) fn settle(&self, terminal: RequestSessionTerminal) {
@@ -215,7 +264,7 @@ impl Queue {
         state.input = None;
         state.terminal = Some(terminal);
         state.settled = true;
-        self.wake.notify_all();
+        self.notify();
     }
     pub(super) fn read(&self) -> RequestSessionRead {
         self.read_locked(&mut self.lock())
@@ -245,7 +294,7 @@ impl Queue {
     }
     fn read_locked(&self, state: &mut State) -> RequestSessionRead {
         if let Some(packet) = state.output.take() {
-            self.wake.notify_all();
+            self.notify();
             RequestSessionRead::Result(packet)
         } else if let Some(terminal) = state.terminal.take() {
             RequestSessionRead::Result(RequestSessionResult::Terminal(terminal))
@@ -259,7 +308,7 @@ impl Queue {
         let mut state = self.lock();
         state.intake_closed = true;
         state.input = None;
-        self.wake.notify_all();
+        self.notify();
     }
     pub(super) fn stop(&self, drop_receiver: bool) {
         let mut state = self.lock();
@@ -272,6 +321,6 @@ impl Queue {
             state.output = None;
             state.terminal = None;
         }
-        self.wake.notify_all();
+        self.notify();
     }
 }

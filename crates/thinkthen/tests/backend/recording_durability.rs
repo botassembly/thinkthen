@@ -2,6 +2,7 @@
 
 use crate::harness::{Canned, Listener, UNMAKEABLE, spawn, spawn_local, stderr_is};
 use std::fs;
+#[cfg(unix)]
 use std::path::{Path, PathBuf};
 use std::thread;
 
