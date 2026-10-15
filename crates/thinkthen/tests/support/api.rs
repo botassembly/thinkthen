@@ -413,16 +413,20 @@ pub(crate) fn decision(
 // Share the actual public settlement reader across independent integration binaries.
 pub(crate) fn session_next(session: &thinkthen::RequestSession) -> thinkthen::RequestSessionRead {
     let until = std::time::Instant::now() + std::time::Duration::from_secs(5);
+    let mut last_readiness = None;
     loop {
         let packet = session.try_read();
         if !matches!(packet, thinkthen::RequestSessionRead::Pending) {
             return packet;
         }
-        assert!(std::time::Instant::now() < until, "session did not settle");
-        let _ = session.wait(
+        assert!(
+            std::time::Instant::now() < until,
+            "session did not settle: last readiness {last_readiness:?}; session {session:?}"
+        );
+        last_readiness = Some(session.wait(
             thinkthen::RequestSessionWaitInterest::Settlement,
             until.saturating_duration_since(std::time::Instant::now()),
-        );
+        ));
     }
 }
 pub(crate) fn session_drain(

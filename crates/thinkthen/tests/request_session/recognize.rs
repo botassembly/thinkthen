@@ -134,12 +134,18 @@ fn recognition_request(input: RequestInput) -> Request {
 }
 
 #[test]
+#[expect(clippy::print_stderr, reason = "report Windows cancellation phases")]
 fn cancellation_stops_waiting_duplicate_recognition_without_extra_sends() {
     let release = Arc::new(Rendezvous::new(2));
     let held = Arc::clone(&release);
     let (sent, received) = mpsc::channel();
+    let (written, writes) = mpsc::channel();
     let listener = Listener::answering_with_events(
-        move |body| recognition_response(body).after_release(Arc::clone(&held)),
+        move |body| {
+            recognition_response(body)
+                .after_release(Arc::clone(&held))
+                .notifying(written.clone())
+        },
         sent,
     )
     .unwrap();
@@ -162,9 +168,25 @@ fn cancellation_stops_waiting_duplicate_recognition_without_extra_sends() {
         }))
         .unwrap();
     received.recv_timeout(Duration::from_secs(5)).unwrap();
+    eprintln!(
+        "recognition cancel: request received; sends={}",
+        listener.count()
+    );
     session.cancel();
+    eprintln!("recognition cancel: cancel returned; session={session:?}");
     assert!(release.wait());
-    let packets = drain(&session);
+    eprintln!(
+        "recognition cancel: response released; write_attempt_ack={:?}",
+        writes.try_recv()
+    );
+    let packets = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| drain(&session)));
+    eprintln!(
+        "recognition cancel: drain returned; sends={}; write_attempt_ack={:?}; readiness={:?}; session={session:?}",
+        listener.count(),
+        writes.try_recv(),
+        session.wait(RequestSessionWaitInterest::Settlement, Duration::ZERO),
+    );
+    let packets = packets.unwrap_or_else(|panic| std::panic::resume_unwind(panic));
     let RequestSessionResult::Terminal(terminal) = packets.last().unwrap() else {
         panic!("joined terminal")
     };
