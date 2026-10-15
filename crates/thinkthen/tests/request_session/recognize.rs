@@ -134,6 +134,7 @@ fn recognition_request(input: RequestInput) -> Request {
 }
 
 #[test]
+#[expect(clippy::print_stderr, reason = "report Windows cancellation phases")]
 fn cancellation_stops_waiting_duplicate_recognition_without_extra_sends() {
     let release = Arc::new(Rendezvous::new(2));
     let held = Arc::clone(&release);
