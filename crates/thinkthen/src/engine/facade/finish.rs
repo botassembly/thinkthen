@@ -19,8 +19,7 @@ impl Engine {
 
     pub(crate) fn finish_usage_status(&self) -> UsagePersistence {
         if let Some(state) = self.state.owned(std::process::id()) {
-            let _failed = state.usage.finish();
-            state.usage.persistence()
+            state.usage.finish_status()
         } else {
             self.usage_persistence()
         }

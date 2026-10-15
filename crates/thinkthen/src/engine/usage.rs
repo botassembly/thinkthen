@@ -159,7 +159,14 @@ impl Counters {
 
     /// Wait for the writer, giving all remaining usage-lock acquisitions one
     /// finalization deadline. Other filesystem operations remain unbounded.
+    #[cfg(any(test, feature = "cli"))]
     pub(crate) fn finish(&self) -> bool {
+        self.finish_status() == UsagePersistence::Failed
+    }
+
+    /// Report the drained state while still holding the queue, so an idle
+    /// writer cannot turn successful finalization into a pending observation.
+    pub(crate) fn finish_status(&self) -> UsagePersistence {
         let busy = |queue: &mut Queue| {
             queue.writer.is_some() && (queue.writing || !queue.pending.is_empty())
         };
@@ -171,7 +178,13 @@ impl Counters {
         if settled.is_err() {
             self.shared.failed.store(true, Ordering::Release);
         }
-        self.shared.failed.load(Ordering::Acquire)
+        if self.shared.failed.load(Ordering::Acquire) {
+            UsagePersistence::Failed
+        } else if self.path.is_none() {
+            UsagePersistence::Disabled
+        } else {
+            UsagePersistence::Written
+        }
     }
 
     /// Observe without waiting for the writer, filesystem, or queue mutex.

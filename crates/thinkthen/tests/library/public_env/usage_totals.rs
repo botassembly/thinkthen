@@ -86,6 +86,17 @@ fn assert_usage_persistence(
             }
         );
         assert!(status.advice().is_none());
+        // Finalization must report the drained state even when another caller
+        // briefly owns the queue. A nonblocking observation may report pending.
+        let finish = || {
+            for _ in 0..1024 {
+                assert_eq!(engine.finish_usage_status(), status);
+            }
+        };
+        std::thread::scope(|scope| {
+            scope.spawn(finish);
+            scope.spawn(finish);
+        });
     }
     assert_eq!(engine.finish_usage_status(), status);
 }
