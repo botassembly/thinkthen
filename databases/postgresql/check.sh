@@ -35,6 +35,7 @@ case $(uname -s) in Linux|Darwin) ;; *) echo "not run: no PostgreSQL host route 
 usage_home
 . ./runtime.sh
 runtime_ready
+runtime_target
 REPO=$(cd ../.. && pwd)
 if [ "$profile" = routine ]; then
 	export THINKTHEN_CONFORMANCE_IDS=${THINKTHEN_CONFORMANCE_IDS:-$REPO/conformance/routine-ids.txt}

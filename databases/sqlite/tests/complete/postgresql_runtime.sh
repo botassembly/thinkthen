@@ -7,6 +7,7 @@ cd -- "$here"
 PG_MAJOR=16
 . ./runtime.sh
 runtime_ready
+runtime_target
 REPO=$(cd ../.. && pwd)
 LIMIT=$REPO/sdlc/scripts/time-limit
 EXT_VERSION=$(sed -n "s/^default_version = '\(.*\)'$/\1/p" thinkthen.control)

@@ -1,5 +1,5 @@
 #!/bin/sh
-# package.sh [--reuse] MAJOR FOLDER (ticket 0128): stage the PostgreSQL 16 release files in FOLDER:
+# package.sh [--reuse] MAJOR FOLDER (ticket 0128): stage the selected PostgreSQL release files in FOLDER:
 # lib/ holds the loadable module and extension/ holds the control file and the SQL. A user
 # copies them into `pg_config --pkglibdir` and `pg_config --sharedir`/extension.
 # Without --reuse it packages the shipped build through the locked pgrx wrapper against
@@ -17,13 +17,13 @@ mkdir -p -- "$1"
 out=$(CDPATH='' cd -- "$1" && pwd)
 cd -- "$(dirname -- "$0")"
 # check.sh reads the same pg_config and target folder.
+. ./runtime.sh
+runtime_target
 if [ "$(uname -s)" = Darwin ]; then
 	PG_CONFIG=${PG_CONFIG:-$(brew --prefix postgresql@$PG_MAJOR)/bin/pg_config}
 	clang=$(xcrun --find clang)
 	LIBCLANG_PATH=${LIBCLANG_PATH:-${clang%/bin/clang}/lib}
 	export LIBCLANG_PATH
-else
-	. ./runtime.sh
 fi
 EXT=${CARGO_TARGET_DIR:-target}/release/thinkthen-pg$PG_MAJOR
 if [ -n "$reuse" ]; then

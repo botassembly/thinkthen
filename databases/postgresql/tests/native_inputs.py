@@ -82,7 +82,7 @@ def record(value):
     return 'thinkthen_record(' + ','.join(arguments) + ')'
 
 def query(payload):
-    target = Path(os.environ.get('CARGO_TARGET_DIR', ROOT / 'target'))
+    target = Path(os.environ.get('CARGO_TARGET_DIR', ROOT / 'databases/postgresql/target'))
     profile = 'release' if os.environ.get('THINKTHEN_TEST_PROFILE') == 'full' else 'debug'
     with tempfile.TemporaryDirectory(prefix='thinkthen-postgresql-inputs-') as home:
         reader = subprocess.run([str(target / profile / 'thinkthen_read_inputs')],

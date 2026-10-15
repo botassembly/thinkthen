@@ -2,6 +2,12 @@
 # sourced by check.sh. It never fetches. A missing or mismatched toolchain
 # reports "not run" with the fetch command and exits 77 (R6-2).
 
+# Resolve the existing per-crate default before a child changes directory.
+runtime_target() {
+    CARGO_TARGET_DIR=$(python3 -c 'import os,sys; print(os.path.realpath(sys.argv[1]))' "${CARGO_TARGET_DIR:-target}")
+    export CARGO_TARGET_DIR
+}
+
 PG_MAJOR=${PG_MAJOR:-16}
 case $PG_MAJOR in 16|17|18) ;; *) echo "runtime: unsupported PostgreSQL major $PG_MAJOR" >&2; exit 2 ;; esac
 TOOLCHAIN=${THINKTHEN_TOOLCHAINS:-$HOME/.cache/thinkthen-toolchains}/postgresql
