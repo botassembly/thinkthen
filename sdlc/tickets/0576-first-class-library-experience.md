@@ -170,7 +170,7 @@ On the 0.2 candidate, a fresh read-only grader gives every language library, dat
 
 - Starts from: `ticket/0543-final`, where every 0576 language lane and the PostgreSQL typed family have merged. The 2026-10-13 grading at acf368f06 found Rust A-; Python, C# and MCP B+; Swift B; Java, Go and PostgreSQL B-; Ruby, Kotlin, C++, Ada and DuckDB C+; TypeScript, Scala, C, COBOL and SQLite C; R C-; PHP, Dart and Flutter, and Zig D+; Objective-C D.
 - The rubric's seven points: typed requests, one typed result per call, typed question builders, platform idiom, helpers, examples and tests, and thinness.
-- The MCP catalog measured 24,753 bytes for `tools/list` at 243002feb, recorded in `sdlc/records/0576-mcp-catalog-measurement.md`. 0581 edits `crates/thinkthen/src/mcp/tools.rs`, so the candidate measures it again.
+- The MCP catalog measured 24,753 bytes for `tools/list` at 243002feb, recorded in `sdlc/records/0576-mcp-catalog-measurement.md`. 0581 edits `crates/thinkthen/src/mcp/tools.rs`, so the candidate measures it again under 0543.
 - 0581 defines what each library call returns: one result with `value`, `probability`, `results` and `facts`. 0582 defines each database's details route. 0580 defines the Rust Polars shape.
 
 ## Decisions
@@ -184,12 +184,13 @@ On the 0.2 candidate, a fresh read-only grader gives every language library, dat
 
 ## Scope
 
-- Changes: `databases/sqlite/`, `libraries/*/ratchet*.json`, `databases/*/ratchet*.json` and `sdlc/records/0576*`. A library the fresh grading puts below B reopens its own `libraries/<lang>/` or `databases/<db>/` lane with the grader's findings.
+- Changes: `sdlc/records/0576*`. A library the fresh grading puts below B reopens its own `libraries/<lang>/` or `databases/<db>/` lane with the grader's findings.
+- Done:
+  - SQLite: the typed family with `thinkthen_<function>_details` for all ten functions, as 0582 says, is merged into `ticket/0543-final`.
+  - MCP: `tools/list` measured 24,754 bytes with its newline, and a fresh agent called every tool once.
+  - Ceilings: each library's and database's handwritten ratchet is set to its measured total, with the cause of each raise named in the 0543 record.
 - Remaining work:
-  - SQLite lane: on `ticket/0576-sqlite-typed-family`, replace the typed `thinkthen_details`, `thinkthen_try_details` and `thinkthen_details_images` with `thinkthen_<function>_details` for all ten functions as 0582 says, then merge into `ticket/0543-final`.
-  - Ceilings: set each library's and database's handwritten ratchet to its measured total on the candidate, and name the cause of each raise above its budget.
-  - MCP: measure `tools/list` on the candidate and have a fresh agent load the server and answer one call per tool.
-  - Grading: run one fresh read-only grading of every library, database and the MCP server on the candidate, after 0580, 0581 and 0582 merge.
+  - Grading: one formal fresh read-only grading of every library, database and the MCP server on the candidate. PM decision, 2026-10-14: it runs as part of 0543's area review, and the coordinator owns it.
 - Keeps: Python's dataframe and pydantic adapters, C as the shared native layer, and one function family per database.
 
 ## Proof

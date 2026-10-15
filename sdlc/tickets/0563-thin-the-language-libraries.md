@@ -47,3 +47,5 @@ Each language library that uses the C ABI keeps only its own idioms: futures or 
 
 
 PM amendment, 2026-10-13. Remaining work. Close 0563 now and move its remainder into the 0576 language lanes: PHP replaces its 50 ms `wait()` loop in `libraries/php/src/session/operation.php` with `thinkthen_session_next_packet`; Objective-C does the same in `Sources/Foundation/ThinkThen.m`; Zig merges e0afccd3a from `ticket/0563-php-dart-zig-runtime` and uses the blocking call in its examples; COBOL's session check uses the blocking call; Swift, Objective-C and Zig start sessions through `thinkthen_session_new_named_with_surface`. The no-poll rule covers only C-ABI libraries; the ticks in the Python, R, Ruby and TypeScript crates stay under ADR 0047. Proof, in each lane: the library's `check.sh` passes with a cancellation case, and `git grep -n 'session_wait.*50' libraries` returns nothing.
+
+The Objective-C polling loop is gone: 6ba9f3c59 replaced it with event waits, and the final review fix 8e1615cdc kept settlement waits correct after cancellation. This ticket closes with the passing 0543 candidate.

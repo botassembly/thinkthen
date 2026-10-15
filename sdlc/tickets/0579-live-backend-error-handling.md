@@ -46,4 +46,4 @@ PM amendment, 2026-10-13. Yes: replace only the evidence inputs in the `status_r
 - 2026-10-13 started
 - 2026-10-13 next: Qualify the reviewed backend repairs with the landed staging fixes and corrected generated outputs before merge; the combined Rust ceiling gates the candidate under the approved ruling.
 - 2026-10-13 next: Fresh review accepts only the socket-isolation and unopened-connection retry test repairs at 5ab0cd66f with 187 CLI and 14 HTTP passes; rebased 26ed9f3b measures 188575 Rust lines, 969 above main, so finish routine gates and combine safe cleanup before merging.
-- 2026-10-14 next: Merged the accepted backend repair into the combined branch at e363ee504 with all 28 patches preserved; the combined Rust ceiling remains a candidate gate and final qualification remains pending.
+- 2026-10-14 next: Merged the accepted backend repair into the combined branch at e363ee504 with all 28 patches preserved; final qualification remains pending.
