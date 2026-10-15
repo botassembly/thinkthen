@@ -3728,21 +3728,21 @@
  02 v-len usage binary-double unsigned.
 01 tt-n-cobol-ChooseWordingVersion based.
  02 v-value usage binary-double signed.
-01 tt-n-cobol-CriterionArmText based.
+01 tt-n-cobol-CriterionTextValue based.
  02 v-data usage pointer.
  02 v-len usage binary-double unsigned.
-01 tt-n-cobol-CriterionArmObject based.
+01 tt-n-cobol-CriterionObjectValue based.
  02 v-keys usage pointer.
  02 v-values usage pointer.
  02 v-len usage binary-double unsigned.
-01 tt-n-cobol-CriterionArmArray based.
+01 tt-n-cobol-CriterionArrayValue based.
  02 v-data usage pointer.
  02 v-len usage binary-double unsigned.
-01 tt-n-cobol-CriterionArmNull based.
+01 tt-n-cobol-CriterionNullValue based.
  02 v-reserved usage binary-double unsigned.
-01 tt-n-cobol-CutArmNumber based.
+01 tt-n-cobol-CutNumberValue based.
  02 v-value usage float-long.
-01 tt-n-cobol-CutArmText based.
+01 tt-n-cobol-CutTextValue based.
  02 v-data usage pointer.
  02 v-len usage binary-double unsigned.
 01 tt-n-cobol-DecideName based.
@@ -3750,17 +3750,17 @@
  02 v-len usage binary-double unsigned.
 01 tt-n-cobol-DecideWordingVersion based.
  02 v-value usage binary-double signed.
-01 tt-n-cobol-DescriptionArmText based.
+01 tt-n-cobol-DescriptionTextValue based.
  02 v-data usage pointer.
  02 v-len usage binary-double unsigned.
-01 tt-n-cobol-DescriptionArmObject based.
+01 tt-n-cobol-DescriptionObjectValue based.
  02 v-keys usage pointer.
  02 v-values usage pointer.
  02 v-len usage binary-double unsigned.
-01 tt-n-cobol-DescriptionArmArray based.
+01 tt-n-cobol-DescriptionArrayValue based.
  02 v-data usage pointer.
  02 v-len usage binary-double unsigned.
-01 tt-n-cobol-DescriptionArmNull based.
+01 tt-n-cobol-DescriptionNullValue based.
  02 v-reserved usage binary-double unsigned.
 01 tt-n-cobol-FindName based.
  02 v-data usage pointer.
@@ -3789,45 +3789,45 @@
  02 v-reserved usage binary-double unsigned.
 01 tt-n-cobol-InputPropertyStringType based.
  02 v-reserved usage binary-double unsigned.
-01 tt-n-cobol-LabelsArmArray based.
+01 tt-n-cobol-LabelsArrayValue based.
  02 v-data usage pointer.
  02 v-len usage binary-double unsigned.
-01 tt-n-cobol-LabelsArmObject based.
+01 tt-n-cobol-LabelsObjectValue based.
  02 v-keys usage pointer.
  02 v-values usage pointer.
  02 v-len usage binary-double unsigned.
-01 tt-n-cobol-LevelsArmArray based.
+01 tt-n-cobol-LevelsArrayValue based.
  02 v-data usage pointer.
  02 v-len usage binary-double unsigned.
-01 tt-n-cobol-LevelsArmObject based.
+01 tt-n-cobol-LevelsObjectValue based.
  02 v-keys usage pointer.
  02 v-values usage pointer.
  02 v-len usage binary-double unsigned.
-01 tt-n-cobol-OptionsArmArray based.
+01 tt-n-cobol-OptionsArrayValue based.
  02 v-data usage pointer.
  02 v-len usage binary-double unsigned.
-01 tt-n-cobol-OptionsArmObject based.
+01 tt-n-cobol-OptionsObjectValue based.
  02 v-keys usage pointer.
  02 v-values usage pointer.
  02 v-len usage binary-double unsigned.
-01 tt-n-cobol-PointersArmText based.
+01 tt-n-cobol-PointersTextValue based.
  02 v-data usage pointer.
  02 v-len usage binary-double unsigned.
-01 tt-n-cobol-PointersArmArray based.
+01 tt-n-cobol-PointersArrayValue based.
  02 v-data usage pointer.
  02 v-len usage binary-double unsigned.
-01 tt-n-cobol-QuestionBatchArmMax based.
+01 tt-n-cobol-QuestionBatchMaxValue based.
  02 v-reserved usage binary-double unsigned.
-01 tt-n-cobol-QuestionBatchArmInteger based.
+01 tt-n-cobol-QuestionBatchIntegerValue based.
  02 v-value usage binary-double signed.
-01 tt-n-cobol-QuestionTextArmText based.
+01 tt-n-cobol-QuestionTextTextValue based.
  02 v-data usage pointer.
  02 v-len usage binary-double unsigned.
-01 tt-n-cobol-QuestionTextArmObject based.
+01 tt-n-cobol-QuestionTextObjectValue based.
  02 v-keys usage pointer.
  02 v-values usage pointer.
  02 v-len usage binary-double unsigned.
-01 tt-n-cobol-QuestionTextArmArray based.
+01 tt-n-cobol-QuestionTextArrayValue based.
  02 v-data usage pointer.
  02 v-len usage binary-double unsigned.
 01 tt-n-cobol-RelateName based.
@@ -3851,18 +3851,18 @@
  02 v-len usage binary-double unsigned.
 01 tt-n-cobol-TagWordingVersion based.
  02 v-value usage binary-double signed.
-01 tt-n-cobol-ThresholdArmNumber based.
+01 tt-n-cobol-ThresholdNumberValue based.
  02 v-value usage float-long.
-01 tt-n-cobol-ThresholdArmText based.
+01 tt-n-cobol-ThresholdTextValue based.
  02 v-data usage pointer.
  02 v-len usage binary-double unsigned.
-01 tt-n-cobol-CacheDocumentArmText based.
+01 tt-n-cobol-CacheDocumentTextValue based.
  02 v-data usage pointer.
  02 v-len usage binary-double unsigned.
-01 tt-n-cobol-ContextSchemaArmText based.
+01 tt-n-cobol-ContextSchemaTextValue based.
  02 v-data usage pointer.
  02 v-len usage binary-double unsigned.
-01 tt-n-cobol-ContextSchemaArmObject based.
+01 tt-n-cobol-ContextSchemaObjectValue based.
  02 v-keys usage pointer.
  02 v-values usage pointer.
  02 v-len usage binary-double unsigned.
@@ -3911,20 +3911,20 @@
 01 tt-n-cobol-SettingsUsdPerMillionOutput based.
  02 v-data usage pointer.
  02 v-len usage binary-double unsigned.
-01 tt-n-cobol-ImageMediaArmImageJpeg based.
+01 tt-n-cobol-ImageMediaImageJpegValue based.
  02 v-reserved usage binary-double unsigned.
-01 tt-n-cobol-ImageMediaArmImagePng based.
+01 tt-n-cobol-ImageMediaImagePngValue based.
  02 v-reserved usage binary-double unsigned.
 01 tt-n-cobol-OptionSchemaDescription based.
  02 v-value usage pointer.
 01 tt-n-cobol-OptionSchemaName based.
  02 v-data usage pointer.
  02 v-len usage binary-double unsigned.
-01 tt-n-cobol-ReaderMediaArmText based.
+01 tt-n-cobol-ReaderMediaTextValue based.
  02 v-reserved usage binary-double unsigned.
-01 tt-n-cobol-ReaderMediaArmImage based.
+01 tt-n-cobol-ReaderMediaImageValue based.
  02 v-reserved usage binary-double unsigned.
-01 tt-n-cobol-RecognitionExampleArmText based.
+01 tt-n-cobol-RecognitionExampleTextValue based.
  02 v-data usage pointer.
  02 v-len usage binary-double unsigned.
 01 tt-n-cobol-RecognitionExampleEntityEnd based.
@@ -3943,9 +3943,9 @@
 01 tt-n-cobol-RecognitionExampleTextText based.
  02 v-data usage pointer.
  02 v-len usage binary-double unsigned.
-01 tt-n-cobol-RecognitionModeArmWhole based.
+01 tt-n-cobol-RecognitionModeWholeValue based.
  02 v-reserved usage binary-double unsigned.
-01 tt-n-cobol-RecognitionModeArmBoundaryOnly based.
+01 tt-n-cobol-RecognitionModeBoundaryOnlyValue based.
  02 v-reserved usage binary-double unsigned.
 01 tt-n-cobol-RecognitionSeedSpanEnd based.
  02 v-value usage binary-double unsigned.
@@ -3988,9 +3988,9 @@
 01 tt-n-cobol-RelateQuestionRelations based.
  02 v-data usage pointer.
  02 v-len usage binary-double unsigned.
-01 tt-n-cobol-RequestBatchArmInteger based.
+01 tt-n-cobol-RequestBatchIntegerValue based.
  02 v-value usage binary-double unsigned.
-01 tt-n-cobol-RequestBatchArmText based.
+01 tt-n-cobol-RequestBatchTextValue based.
  02 v-data usage pointer.
  02 v-len usage binary-double unsigned.
 01 tt-n-cobol-DefinitionAnnotateDefinitionBatch based.
@@ -4040,35 +4040,35 @@
  02 v-reserved usage binary-double unsigned.
 01 tt-n-cobol-DefinitionRecognizeDefinitionWordingVersion based.
  02 v-value usage binary-double signed.
-01 tt-n-cobol-RequestFramingArmDocument based.
+01 tt-n-cobol-RequestFramingDocumentValue based.
  02 v-reserved usage binary-double unsigned.
-01 tt-n-cobol-RequestFramingArmLines based.
+01 tt-n-cobol-RequestFramingLinesValue based.
  02 v-reserved usage binary-double unsigned.
-01 tt-n-cobol-RequestFramingArmJsonl based.
+01 tt-n-cobol-RequestFramingJsonlValue based.
  02 v-reserved usage binary-double unsigned.
-01 tt-n-cobol-RequestFramingArmCsv based.
+01 tt-n-cobol-RequestFramingCsvValue based.
  02 v-reserved usage binary-double unsigned.
-01 tt-n-cobol-RequestFramingArmTsv based.
+01 tt-n-cobol-RequestFramingTsvValue based.
  02 v-reserved usage binary-double unsigned.
-01 tt-n-cobol-RequestFunctionArmDecide based.
+01 tt-n-cobol-RequestFunctionDecideValue based.
  02 v-reserved usage binary-double unsigned.
-01 tt-n-cobol-RequestFunctionArmChoose based.
+01 tt-n-cobol-RequestFunctionChooseValue based.
  02 v-reserved usage binary-double unsigned.
-01 tt-n-cobol-RequestFunctionArmTag based.
+01 tt-n-cobol-RequestFunctionTagValue based.
  02 v-reserved usage binary-double unsigned.
-01 tt-n-cobol-RequestFunctionArmScore based.
+01 tt-n-cobol-RequestFunctionScoreValue based.
  02 v-reserved usage binary-double unsigned.
-01 tt-n-cobol-RequestFunctionArmFilter based.
+01 tt-n-cobol-RequestFunctionFilterValue based.
  02 v-reserved usage binary-double unsigned.
-01 tt-n-cobol-RequestFunctionArmRank based.
+01 tt-n-cobol-RequestFunctionRankValue based.
  02 v-reserved usage binary-double unsigned.
-01 tt-n-cobol-RequestFunctionArmFind based.
+01 tt-n-cobol-RequestFunctionFindValue based.
  02 v-reserved usage binary-double unsigned.
-01 tt-n-cobol-RequestFunctionArmAnnotate based.
+01 tt-n-cobol-RequestFunctionAnnotateValue based.
  02 v-reserved usage binary-double unsigned.
-01 tt-n-cobol-RequestFunctionArmRecognize based.
+01 tt-n-cobol-RequestFunctionRecognizeValue based.
  02 v-reserved usage binary-double unsigned.
-01 tt-n-cobol-RequestFunctionArmRelate based.
+01 tt-n-cobol-RequestFunctionRelateValue based.
  02 v-reserved usage binary-double unsigned.
 01 tt-n-cobol-RequestImageBytesBytes based.
  02 v-data usage pointer.
@@ -4217,9 +4217,9 @@
 01 tt-n-cobol-RequestSourcePaths based.
  02 v-data usage pointer.
  02 v-len usage binary-double unsigned.
-01 tt-n-cobol-RequestThresholdArmNumber based.
+01 tt-n-cobol-RequestThresholdNumberValue based.
  02 v-value usage float-long.
-01 tt-n-cobol-RequestThresholdArmText based.
+01 tt-n-cobol-RequestThresholdTextValue based.
  02 v-data usage pointer.
  02 v-len usage binary-double unsigned.
 01 tt-n-cobol-SessionSourceLocationFile based.
@@ -4229,45 +4229,45 @@
  02 v-value usage binary-double unsigned.
 01 tt-n-cobol-SessionSourceLocationLastLine based.
  02 v-value usage binary-double unsigned.
-01 tt-n-cobol-SourceUnitArmLine based.
+01 tt-n-cobol-SourceUnitLineValue based.
  02 v-reserved usage binary-double unsigned.
-01 tt-n-cobol-SourceUnitArmWindow based.
+01 tt-n-cobol-SourceUnitWindowValue based.
  02 v-reserved usage binary-double unsigned.
-01 tt-n-cobol-SourceUnitArmFile based.
+01 tt-n-cobol-SourceUnitFileValue based.
  02 v-reserved usage binary-double unsigned.
-01 tt-n-cobol-CriterionArmObjectEntry based.
+01 tt-n-cobol-CriterionObjectValueEntry based.
  02 v-value usage pointer.
-01 tt-n-cobol-CriterionArmArrayItem based.
+01 tt-n-cobol-CriterionArrayValueItem based.
  02 v-value usage pointer.
-01 tt-n-cobol-DescriptionArmObjectEntry based.
+01 tt-n-cobol-DescriptionObjectValueEntry based.
  02 v-value usage pointer.
-01 tt-n-cobol-DescriptionArmArrayItem based.
+01 tt-n-cobol-DescriptionArrayValueItem based.
  02 v-value usage pointer.
 01 tt-n-cobol-InputDeclarationObjectRequiredItem based.
  02 v-data usage pointer.
  02 v-len usage binary-double unsigned.
 01 tt-n-cobol-InputPropertyArrayItemsType based.
  02 v-reserved usage binary-double unsigned.
-01 tt-n-cobol-PointersArmArrayItem based.
+01 tt-n-cobol-PointersArrayValueItem based.
  02 v-data usage pointer.
  02 v-len usage binary-double unsigned.
-01 tt-n-cobol-QuestionTextArmObjectEntry based.
+01 tt-n-cobol-QuestionTextObjectValueEntry based.
  02 v-value usage pointer.
-01 tt-n-cobol-QuestionTextArmArrayItem based.
+01 tt-n-cobol-QuestionTextArrayValueItem based.
  02 v-value usage pointer.
-01 tt-n-cobol-ContextSchemaArmObjectEntry based.
+01 tt-n-cobol-ContextSchemaObjectValueEntry based.
  02 v-value usage pointer.
-01 tt-n-cobol-SettingsInputTokenBudgetArmInteger based.
+01 tt-n-cobol-SettingsInputTokenBudgetIntegerValue based.
  02 v-value usage binary-double unsigned.
-01 tt-n-cobol-SettingsInputTokenBudgetArmNull based.
+01 tt-n-cobol-SettingsInputTokenBudgetNullValue based.
  02 v-reserved usage binary-double unsigned.
-01 tt-n-cobol-SettingsMaxRequestsArmInteger based.
+01 tt-n-cobol-SettingsMaxRequestsIntegerValue based.
  02 v-value usage binary-double unsigned.
-01 tt-n-cobol-SettingsMaxRequestsArmNull based.
+01 tt-n-cobol-SettingsMaxRequestsNullValue based.
  02 v-reserved usage binary-double unsigned.
-01 tt-n-cobol-SettingsMaxRequestsTotalArmInteger based.
+01 tt-n-cobol-SettingsMaxRequestsTotalIntegerValue based.
  02 v-value usage binary-double unsigned.
-01 tt-n-cobol-SettingsMaxRequestsTotalArmNull based.
+01 tt-n-cobol-SettingsMaxRequestsTotalNullValue based.
  02 v-reserved usage binary-double unsigned.
 01 tt-n-cobol-RecognitionExampleTextKindsItem based.
  02 v-data usage pointer.

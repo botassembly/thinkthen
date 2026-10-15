@@ -332,19 +332,19 @@ static void *convert_RequestItem_member_seed_spans_RecognitionSeedSpan_list(aren
 static void *convert_SessionSourceLocation_member_file_Text(arena *,const void *);
 static void *convert_SessionSourceLocation_member_first_line_Unsigned(arena *,const void *);
 static void *convert_SessionSourceLocation_member_last_line_Unsigned(arena *,const void *);
-static void *convert_RequestBatch_arm_Integer_Unsigned(arena *,const void *);
-static void *convert_RequestBatch_arm_Text_Text(arena *,const void *);
-static void *convert_CacheDocument_arm_Text_Text(arena *,const void *);
+static void *convert_RequestBatch_Integer_Value_Unsigned(arena *,const void *);
+static void *convert_RequestBatch_Text_Value_Text(arena *,const void *);
+static void *convert_CacheDocument_Text_Value_Text(arena *,const void *);
 static void *convert_DisabledCache_DisabledCache(arena *,const void *);
-static void *convert_EngineSettings_member_max_estimated_input_tokens_total_arm_Integer_Unsigned(arena *,
+static void *convert_EngineSettings_member_max_estimated_input_tokens_total_Integer_Value_Unsigned(arena *,
 const void *);
-static void *convert_EngineSettings_member_max_estimated_input_tokens_total_arm_Null_Null(arena *,
+static void *convert_EngineSettings_member_max_estimated_input_tokens_total_Null_Value_Null(arena *,
 const void *);
-static void *convert_EngineSettings_member_max_requests_arm_Integer_Unsigned(arena *,const void *);
-static void *convert_EngineSettings_member_max_requests_arm_Null_Null(arena *,const void *);
-static void *convert_EngineSettings_member_max_requests_total_arm_Integer_Unsigned(arena *,
+static void *convert_EngineSettings_member_max_requests_Integer_Value_Unsigned(arena *,const void *);
+static void *convert_EngineSettings_member_max_requests_Null_Value_Null(arena *,const void *);
+static void *convert_EngineSettings_member_max_requests_total_Integer_Value_Unsigned(arena *,
 const void *);
-static void *convert_EngineSettings_member_max_requests_total_arm_Null_Null(arena *,const void *);
+static void *convert_EngineSettings_member_max_requests_total_Null_Value_Null(arena *,const void *);
 static void *convert_RequestInput_text_member_images_RequestImage_list(arena *,const void *);
 static void *convert_RequestInput_text_member_text_Text(arena *,const void *);
 static void *convert_RequestInput_json_member_images_RequestImage_list(arena *,const void *);
@@ -359,10 +359,10 @@ static void *convert_RequestInput_feed_member_name_Text(arena *,const void *);
 static void *convert_RequestReader_RequestReader(arena *,const void *);
 static void *convert_RecognitionExample_RecognitionExample(arena *,const void *);
 static void *convert_RequestOptions_member_field_item_Text(arena *,const void *);
-static void *convert_RecognitionMode_arm_whole_Literal_whole(arena *,const void *);
-static void *convert_RecognitionMode_arm_boundary_only_Literal_boundary_only(arena *,const void *);
-static void *convert_RequestThreshold_arm_Number_Number(arena *,const void *);
-static void *convert_RequestThreshold_arm_Text_Text(arena *,const void *);
+static void *convert_RecognitionMode_whole_Value_Literal_whole(arena *,const void *);
+static void *convert_RecognitionMode_boundary_only_Value_Literal_boundary_only(arena *,const void *);
+static void *convert_RequestThreshold_Number_Value_Number(arena *,const void *);
+static void *convert_RequestThreshold_Text_Value_Text(arena *,const void *);
 static void *convert_RecognitionSeedSpan_RecognitionSeedSpan(arena *,const void *);
 static void *convert_RecognitionStageContext_member_boundary_Text(arena *,const void *);
 static void *convert_RecognitionStageContext_member_kind_edge_Text(arena *,const void *);
@@ -372,22 +372,22 @@ static void *convert_RequestDefinition_RequestDefinition(arena *,const void *);
 static void *convert_RequestQuestion_file_member_path_Text(arena *,const void *);
 static void *convert_RequestQuestion_name_member_name_Text(arena *,const void *);
 static void *convert_RequestQuestion_reference_member_reference_Text(arena *,const void *);
-static void *convert_ContextSchema_arm_Text_Text(arena *,const void *);
-static void *convert_ContextSchema_arm_Object_JsonValue_map(arena *,const void *);
+static void *convert_ContextSchema_Text_Value_Text(arena *,const void *);
+static void *convert_ContextSchema_Object_Value_JsonValue_map(arena *,const void *);
 static void *convert_RequestImage_RequestImage(arena *,const void *);
 static void *convert_OptionSchema_OptionSchema(arena *,const void *);
 static void *convert_RequestOriginal_text_RequestOriginal_text(arena *,const void *);
 static void *convert_RequestOriginal_json_RequestOriginal_json(arena *,const void *);
 static void *convert_ReaderMedia_ReaderMedia(arena *,const void *);
 static void *convert_RequestSource_member_paths_Text_list(arena *,const void *);
-static void *convert_RequestFraming_arm_document_Literal_document(arena *,const void *);
-static void *convert_RequestFraming_arm_lines_Literal_lines(arena *,const void *);
-static void *convert_RequestFraming_arm_jsonl_Literal_jsonl(arena *,const void *);
-static void *convert_RequestFraming_arm_csv_Literal_csv(arena *,const void *);
-static void *convert_RequestFraming_arm_tsv_Literal_tsv(arena *,const void *);
+static void *convert_RequestFraming_document_Value_Literal_document(arena *,const void *);
+static void *convert_RequestFraming_lines_Value_Literal_lines(arena *,const void *);
+static void *convert_RequestFraming_jsonl_Value_Literal_jsonl(arena *,const void *);
+static void *convert_RequestFraming_csv_Value_Literal_csv(arena *,const void *);
+static void *convert_RequestFraming_tsv_Value_Literal_tsv(arena *,const void *);
 static void *convert_SourceUnit_SourceUnit(arena *,const void *);
 static void *convert_RequestReader_member_window_Unsigned(arena *,const void *);
-static void *convert_RecognitionExample_arm_Text_Text(arena *,const void *);
+static void *convert_RecognitionExample_Text_Value_Text(arena *,const void *);
 static void *convert_RecognitionExampleText_RecognitionExampleText(arena *,const void *);
 static void *convert_RecognitionSeedSpan_member_end_Unsigned(arena *,const void *);
 static void *convert_RecognitionSeedSpan_member_kind_Text(arena *,const void *);
@@ -408,19 +408,19 @@ static void *convert_RequestDefinition_RecognizeDefinition_RequestDefinition_Rec
 const void *);
 static void *convert_RequestDefinition_AnnotateDefinition_RequestDefinition_AnnotateDefinition(arena *,
 const void *);
-static void *convert_ContextSchema_arm_Object_entry_JsonValue(arena *,const void *);
+static void *convert_ContextSchema_Object_Value_entry_JsonValue(arena *,const void *);
 static void *convert_RequestImage_file_RequestImage_file(arena *,const void *);
 static void *convert_RequestImage_bytes_RequestImage_bytes(arena *,const void *);
 static void *convert_OptionSchema_member_description_JsonValue(arena *,const void *);
 static void *convert_OptionSchema_member_name_Text(arena *,const void *);
 static void *convert_RequestOriginal_text_member_text_Text(arena *,const void *);
 static void *convert_RequestOriginal_json_member_value_RequestOriginal_json_value(arena *,const void *);
-static void *convert_ReaderMedia_arm_text_Literal_text(arena *,const void *);
-static void *convert_ReaderMedia_arm_image_Literal_image(arena *,const void *);
+static void *convert_ReaderMedia_text_Value_Literal_text(arena *,const void *);
+static void *convert_ReaderMedia_image_Value_Literal_image(arena *,const void *);
 static void *convert_RequestSource_member_paths_item_Text(arena *,const void *);
-static void *convert_SourceUnit_arm_line_Literal_line(arena *,const void *);
-static void *convert_SourceUnit_arm_window_Literal_window(arena *,const void *);
-static void *convert_SourceUnit_arm_file_Literal_file(arena *,const void *);
+static void *convert_SourceUnit_line_Value_Literal_line(arena *,const void *);
+static void *convert_SourceUnit_window_Value_Literal_window(arena *,const void *);
+static void *convert_SourceUnit_file_Value_Literal_file(arena *,const void *);
 static void *convert_RecognitionExampleText_member_entities_RecognitionExampleEntity_list(arena *,
 const void *);
 static void *convert_RecognitionExampleText_member_kinds_Text_list(arena *,const void *);
@@ -468,50 +468,50 @@ static void *convert_RequestImage_file_member_path_Text(arena *,const void *);
 static void *convert_RequestImage_bytes_member_bytes_Text(arena *,const void *);
 static void *convert_RecognitionExampleEntity_RecognitionExampleEntity(arena *,const void *);
 static void *convert_RecognitionExampleText_member_kinds_item_Text(arena *,const void *);
-static void *convert_Authored_questionBatch_arm_max_Literal_max(arena *,const void *);
-static void *convert_Authored_questionBatch_arm_Integer_Integer(arena *,const void *);
+static void *convert_Authored_questionBatch_max_Value_Literal_max(arena *,const void *);
+static void *convert_Authored_questionBatch_Integer_Value_Integer(arena *,const void *);
 static void *convert_Authored_inputDeclaration_string_Authored_inputDeclaration_string(arena *,
 const void *);
 static void *convert_Authored_inputDeclaration_object_Authored_inputDeclaration_object(arena *,
 const void *);
-static void *convert_Authored_questionText_arm_Text_Text(arena *,const void *);
-static void *convert_Authored_questionText_arm_Object_JsonValue_map(arena *,const void *);
-static void *convert_Authored_questionText_arm_Array_JsonValue_list(arena *,const void *);
-static void *convert_Authored_criterion_arm_Text_Text(arena *,const void *);
-static void *convert_Authored_criterion_arm_Object_JsonValue_map(arena *,const void *);
-static void *convert_Authored_criterion_arm_Array_JsonValue_list(arena *,const void *);
-static void *convert_Authored_criterion_arm_Null_Null(arena *,const void *);
-static void *convert_Authored_pointers_arm_Text_Text(arena *,const void *);
-static void *convert_Authored_pointers_arm_Array_Text_list(arena *,const void *);
-static void *convert_Authored_threshold_arm_Number_Number(arena *,const void *);
-static void *convert_Authored_threshold_arm_Text_Text(arena *,const void *);
-static void *convert_Authored_options_arm_Array_Authored_name_list(arena *,const void *);
-static void *convert_Authored_options_arm_Object_Authored_description_map(arena *,const void *);
-static void *convert_Authored_cut_arm_Number_Number(arena *,const void *);
-static void *convert_Authored_cut_arm_Text_Text(arena *,const void *);
-static void *convert_Authored_labels_arm_Array_Authored_name_list(arena *,const void *);
-static void *convert_Authored_labels_arm_Object_Authored_description_map(arena *,const void *);
-static void *convert_Authored_levels_arm_Array_Authored_name_list(arena *,const void *);
-static void *convert_Authored_levels_arm_Object_Authored_criterion_map(arena *,const void *);
+static void *convert_Authored_questionText_Text_Value_Text(arena *,const void *);
+static void *convert_Authored_questionText_Object_Value_JsonValue_map(arena *,const void *);
+static void *convert_Authored_questionText_Array_Value_JsonValue_list(arena *,const void *);
+static void *convert_Authored_criterion_Text_Value_Text(arena *,const void *);
+static void *convert_Authored_criterion_Object_Value_JsonValue_map(arena *,const void *);
+static void *convert_Authored_criterion_Array_Value_JsonValue_list(arena *,const void *);
+static void *convert_Authored_criterion_Null_Value_Null(arena *,const void *);
+static void *convert_Authored_pointers_Text_Value_Text(arena *,const void *);
+static void *convert_Authored_pointers_Array_Value_Text_list(arena *,const void *);
+static void *convert_Authored_threshold_Number_Value_Number(arena *,const void *);
+static void *convert_Authored_threshold_Text_Value_Text(arena *,const void *);
+static void *convert_Authored_options_Array_Value_Authored_name_list(arena *,const void *);
+static void *convert_Authored_options_Object_Value_Authored_description_map(arena *,const void *);
+static void *convert_Authored_cut_Number_Value_Number(arena *,const void *);
+static void *convert_Authored_cut_Text_Value_Text(arena *,const void *);
+static void *convert_Authored_labels_Array_Value_Authored_name_list(arena *,const void *);
+static void *convert_Authored_labels_Object_Value_Authored_description_map(arena *,const void *);
+static void *convert_Authored_levels_Array_Value_Authored_name_list(arena *,const void *);
+static void *convert_Authored_levels_Object_Value_Authored_criterion_map(arena *,const void *);
 static void *convert_RelateFields_RelateFields(arena *,const void *);
 static void *convert_RelateQuestion_member_relations_Authored_relation_list(arena *,const void *);
 static void *convert_RecognizeQuestion_member_kinds_Authored_description_map(arena *,const void *);
 static void *convert_RecognizeQuestion_member_relations_Authored_relation_list(arena *,const void *);
 static void *convert_RecognizeQuestion_member_snippet_pieces_Unsigned(arena *,const void *);
 static void *convert_AnnotateQuestion_AnnotateQuestion(arena *,const void *);
-static void *convert_ImageMedia_arm_image_jpeg_Literal_image_jpeg(arena *,const void *);
-static void *convert_ImageMedia_arm_image_png_Literal_image_png(arena *,const void *);
+static void *convert_ImageMedia_image_jpeg_Value_Literal_image_jpeg(arena *,const void *);
+static void *convert_ImageMedia_image_png_Value_Literal_image_png(arena *,const void *);
 static void *convert_RecognitionExampleEntity_member_end_Unsigned(arena *,const void *);
 static void *convert_RecognitionExampleEntity_member_kind_Text(arena *,const void *);
 static void *convert_RecognitionExampleEntity_member_start_Unsigned(arena *,const void *);
 static void *convert_Authored_inputDeclaration_object_member_properties_Authored_inputProperty_map(arena *,
 const void *);
 static void *convert_Authored_inputDeclaration_object_member_required_Text_list(arena *,const void *);
-static void *convert_Authored_questionText_arm_Object_entry_JsonValue(arena *,const void *);
-static void *convert_Authored_questionText_arm_Array_item_JsonValue(arena *,const void *);
-static void *convert_Authored_criterion_arm_Object_entry_JsonValue(arena *,const void *);
-static void *convert_Authored_criterion_arm_Array_item_JsonValue(arena *,const void *);
-static void *convert_Authored_pointers_arm_Array_item_Text(arena *,const void *);
+static void *convert_Authored_questionText_Object_Value_entry_JsonValue(arena *,const void *);
+static void *convert_Authored_questionText_Array_Value_item_JsonValue(arena *,const void *);
+static void *convert_Authored_criterion_Object_Value_entry_JsonValue(arena *,const void *);
+static void *convert_Authored_criterion_Array_Value_item_JsonValue(arena *,const void *);
+static void *convert_Authored_pointers_Array_Value_item_Text(arena *,const void *);
 static void *convert_Authored_description_Authored_description(arena *,const void *);
 static void *convert_RelateFields_member_kind_Text(arena *,const void *);
 static void *convert_RelateFields_member_name_Text(arena *,const void *);
@@ -522,10 +522,10 @@ static void *convert_AnnotateQuestion_tag_AnnotateQuestion_tag(arena *,const voi
 static void *convert_AnnotateQuestion_score_AnnotateQuestion_score(arena *,const void *);
 static void *convert_Authored_inputProperty_Authored_inputProperty(arena *,const void *);
 static void *convert_Authored_inputDeclaration_object_member_required_item_Text(arena *,const void *);
-static void *convert_Authored_description_arm_Text_Text(arena *,const void *);
-static void *convert_Authored_description_arm_Object_JsonValue_map(arena *,const void *);
-static void *convert_Authored_description_arm_Array_JsonValue_list(arena *,const void *);
-static void *convert_Authored_description_arm_Null_Null(arena *,const void *);
+static void *convert_Authored_description_Text_Value_Text(arena *,const void *);
+static void *convert_Authored_description_Object_Value_JsonValue_map(arena *,const void *);
+static void *convert_Authored_description_Array_Value_JsonValue_list(arena *,const void *);
+static void *convert_Authored_description_Null_Value_Null(arena *,const void *);
 static void *convert_Authored_relation_member_either_Boolean(arena *,const void *);
 static void *convert_Authored_relation_member_single_Boolean(arena *,const void *);
 static void *convert_AnnotateQuestion_decide_member_name_Text(arena *,const void *);
@@ -541,8 +541,8 @@ static void *convert_Authored_inputProperty_number_Authored_inputProperty_number
 static void *convert_Authored_inputProperty_boolean_Authored_inputProperty_boolean(arena *,
 const void *);
 static void *convert_Authored_inputProperty_array_Authored_inputProperty_array(arena *,const void *);
-static void *convert_Authored_description_arm_Object_entry_JsonValue(arena *,const void *);
-static void *convert_Authored_description_arm_Array_item_JsonValue(arena *,const void *);
+static void *convert_Authored_description_Object_Value_entry_JsonValue(arena *,const void *);
+static void *convert_Authored_description_Array_Value_item_JsonValue(arena *,const void *);
 static void *convert_Authored_inputProperty_array_member_items_Authored_inputProperty_array_items(arena *,
 const void *);
 static void *convert_RequestCall_RequestArguments(arena *a,const void *input) {
@@ -773,9 +773,9 @@ static void *convert_RequestBatch_RequestBatch(arena *a,const void *input) {
     }
     out->kind=(uint32_t)p->kind;
     switch(p->kind) {
-        case 1: out->data.unsigned_value=convert_RequestBatch_arm_Integer_Unsigned(a,p->value);
+        case 1: out->data.unsigned_value=convert_RequestBatch_Integer_Value_Unsigned(a,p->value);
         break;
-        case 2: out->data.text=convert_RequestBatch_arm_Text_Text(a,p->value);
+        case 2: out->data.text=convert_RequestBatch_Text_Value_Text(a,p->value);
         break;
         default: a->code=THINKTHEN_COBOL_REPRESENTATION;
         break;
@@ -792,7 +792,7 @@ static void *convert_CacheDocument_CacheDocument(arena *a,const void *input) {
     }
     out->kind=(uint32_t)p->kind;
     switch(p->kind) {
-        case 1: out->data.text=convert_CacheDocument_arm_Text_Text(a,p->value);
+        case 1: out->data.text=convert_CacheDocument_Text_Value_Text(a,p->value);
         break;
         case 2: out->data.disabled_cache=convert_DisabledCache_DisabledCache(a,p->value);
         break;
@@ -812,10 +812,10 @@ const void *input) {
     }
     out->kind=(uint32_t)p->kind;
     switch(p->kind) {
-        case 1: out->data.unsigned_value=convert_EngineSettings_member_max_estimated_input_tokens_total_arm_Integer_Unsigned(a,
+        case 1: out->data.unsigned_value=convert_EngineSettings_member_max_estimated_input_tokens_total_Integer_Value_Unsigned(a,
         p->value);
         break;
-        case 2: out->data.null=convert_EngineSettings_member_max_estimated_input_tokens_total_arm_Null_Null(a,
+        case 2: out->data.null=convert_EngineSettings_member_max_estimated_input_tokens_total_Null_Value_Null(a,
         p->value);
         break;
         default: a->code=THINKTHEN_COBOL_REPRESENTATION;
@@ -845,10 +845,10 @@ const void *input) {
     }
     out->kind=(uint32_t)p->kind;
     switch(p->kind) {
-        case 1: out->data.unsigned_value=convert_EngineSettings_member_max_requests_arm_Integer_Unsigned(a,
+        case 1: out->data.unsigned_value=convert_EngineSettings_member_max_requests_Integer_Value_Unsigned(a,
         p->value);
         break;
-        case 2: out->data.null=convert_EngineSettings_member_max_requests_arm_Null_Null(a,p->value);
+        case 2: out->data.null=convert_EngineSettings_member_max_requests_Null_Value_Null(a,p->value);
         break;
         default: a->code=THINKTHEN_COBOL_REPRESENTATION;
         break;
@@ -866,10 +866,10 @@ const void *input) {
     }
     out->kind=(uint32_t)p->kind;
     switch(p->kind) {
-        case 1: out->data.unsigned_value=convert_EngineSettings_member_max_requests_total_arm_Integer_Unsigned(a,
+        case 1: out->data.unsigned_value=convert_EngineSettings_member_max_requests_total_Integer_Value_Unsigned(a,
         p->value);
         break;
-        case 2: out->data.null=convert_EngineSettings_member_max_requests_total_arm_Null_Null(a,p->value);
+        case 2: out->data.null=convert_EngineSettings_member_max_requests_total_Null_Value_Null(a,p->value);
         break;
         default: a->code=THINKTHEN_COBOL_REPRESENTATION;
         break;
@@ -1228,9 +1228,9 @@ static void *convert_RecognitionMode_RecognitionMode(arena *a,const void *input)
     }
     out->kind=(uint32_t)p->kind;
     switch(p->kind) {
-        case 1: out->data.literal_whole=convert_RecognitionMode_arm_whole_Literal_whole(a,p->value);
+        case 1: out->data.literal_whole=convert_RecognitionMode_whole_Value_Literal_whole(a,p->value);
         break;
-        case 2: out->data.literal_boundary_only=convert_RecognitionMode_arm_boundary_only_Literal_boundary_only(a,
+        case 2: out->data.literal_boundary_only=convert_RecognitionMode_boundary_only_Value_Literal_boundary_only(a,
         p->value);
         break;
         default: a->code=THINKTHEN_COBOL_REPRESENTATION;
@@ -1286,9 +1286,9 @@ static void *convert_RequestThreshold_RequestThreshold(arena *a,const void *inpu
     }
     out->kind=(uint32_t)p->kind;
     switch(p->kind) {
-        case 1: out->data.number=convert_RequestThreshold_arm_Number_Number(a,p->value);
+        case 1: out->data.number=convert_RequestThreshold_Number_Value_Number(a,p->value);
         break;
-        case 2: out->data.text=convert_RequestThreshold_arm_Text_Text(a,p->value);
+        case 2: out->data.text=convert_RequestThreshold_Text_Value_Text(a,p->value);
         break;
         default: a->code=THINKTHEN_COBOL_REPRESENTATION;
         break;
@@ -1430,9 +1430,9 @@ static void *convert_ContextSchema_ContextSchema(arena *a,const void *input) {
     }
     out->kind=(uint32_t)p->kind;
     switch(p->kind) {
-        case 1: out->data.text=convert_ContextSchema_arm_Text_Text(a,p->value);
+        case 1: out->data.text=convert_ContextSchema_Text_Value_Text(a,p->value);
         break;
-        case 2: out->data.json_value_map=convert_ContextSchema_arm_Object_JsonValue_map(a,p->value);
+        case 2: out->data.json_value_map=convert_ContextSchema_Object_Value_JsonValue_map(a,p->value);
         break;
         default: a->code=THINKTHEN_COBOL_REPRESENTATION;
         break;
@@ -1573,8 +1573,8 @@ static void *convert_SessionSourceLocation_member_last_line_Unsigned(arena *a,co
     out->value=p->value;
     return out;
 }
-static void *convert_RequestBatch_arm_Integer_Unsigned(arena *a,const void *input) {
-    const thinkthen_cobol_RequestBatchArmInteger *p=input;
+static void *convert_RequestBatch_Integer_Value_Unsigned(arena *a,const void *input) {
+    const thinkthen_cobol_RequestBatchIntegerValue *p=input;
     thinkthen_request_unsigned_v1 *out=allocate(a,1,sizeof(*out));
     if(!out) return NULL;
     if(!p) {
@@ -1584,8 +1584,8 @@ static void *convert_RequestBatch_arm_Integer_Unsigned(arena *a,const void *inpu
     out->value=p->value;
     return out;
 }
-static void *convert_RequestBatch_arm_Text_Text(arena *a,const void *input) {
-    const thinkthen_cobol_RequestBatchArmText *p=input;
+static void *convert_RequestBatch_Text_Value_Text(arena *a,const void *input) {
+    const thinkthen_cobol_RequestBatchTextValue *p=input;
     thinkthen_request_text_v1 *out=allocate(a,1,sizeof(*out));
     if(!out) return NULL;
     if(!p) {
@@ -1597,8 +1597,8 @@ static void *convert_RequestBatch_arm_Text_Text(arena *a,const void *input) {
     };
     return out;
 }
-static void *convert_CacheDocument_arm_Text_Text(arena *a,const void *input) {
-    const thinkthen_cobol_CacheDocumentArmText *p=input;
+static void *convert_CacheDocument_Text_Value_Text(arena *a,const void *input) {
+    const thinkthen_cobol_CacheDocumentTextValue *p=input;
     thinkthen_request_text_v1 *out=allocate(a,1,sizeof(*out));
     if(!out) return NULL;
     if(!p) {
@@ -1617,9 +1617,9 @@ static void *convert_DisabledCache_DisabledCache(arena *a,const void *input) {
     (void)p;
     return out;
 }
-static void *convert_EngineSettings_member_max_estimated_input_tokens_total_arm_Integer_Unsigned(arena *a,
+static void *convert_EngineSettings_member_max_estimated_input_tokens_total_Integer_Value_Unsigned(arena *a,
 const void *input) {
-    const thinkthen_cobol_SettingsInputTokenBudgetArmInteger *p=input;
+    const thinkthen_cobol_SettingsInputTokenBudgetIntegerValue *p=input;
     thinkthen_request_unsigned_v1 *out=allocate(a,1,sizeof(*out));
     if(!out) return NULL;
     if(!p) {
@@ -1629,16 +1629,16 @@ const void *input) {
     out->value=p->value;
     return out;
 }
-static void *convert_EngineSettings_member_max_estimated_input_tokens_total_arm_Null_Null(arena *a,
+static void *convert_EngineSettings_member_max_estimated_input_tokens_total_Null_Value_Null(arena *a,
 const void *input) {
-    const thinkthen_cobol_SettingsInputTokenBudgetArmNull *p=input;
+    const thinkthen_cobol_SettingsInputTokenBudgetNullValue *p=input;
     thinkthen_request_null_v1 *out=allocate(a,1,sizeof(*out));
     if(!out) return NULL;
     (void)p;
     return out;
 }
-static void *convert_EngineSettings_member_max_requests_arm_Integer_Unsigned(arena *a,const void *input) {
-    const thinkthen_cobol_SettingsMaxRequestsArmInteger *p=input;
+static void *convert_EngineSettings_member_max_requests_Integer_Value_Unsigned(arena *a,const void *input) {
+    const thinkthen_cobol_SettingsMaxRequestsIntegerValue *p=input;
     thinkthen_request_unsigned_v1 *out=allocate(a,1,sizeof(*out));
     if(!out) return NULL;
     if(!p) {
@@ -1648,16 +1648,16 @@ static void *convert_EngineSettings_member_max_requests_arm_Integer_Unsigned(are
     out->value=p->value;
     return out;
 }
-static void *convert_EngineSettings_member_max_requests_arm_Null_Null(arena *a,const void *input) {
-    const thinkthen_cobol_SettingsMaxRequestsArmNull *p=input;
+static void *convert_EngineSettings_member_max_requests_Null_Value_Null(arena *a,const void *input) {
+    const thinkthen_cobol_SettingsMaxRequestsNullValue *p=input;
     thinkthen_request_null_v1 *out=allocate(a,1,sizeof(*out));
     if(!out) return NULL;
     (void)p;
     return out;
 }
-static void *convert_EngineSettings_member_max_requests_total_arm_Integer_Unsigned(arena *a,
+static void *convert_EngineSettings_member_max_requests_total_Integer_Value_Unsigned(arena *a,
 const void *input) {
-    const thinkthen_cobol_SettingsMaxRequestsTotalArmInteger *p=input;
+    const thinkthen_cobol_SettingsMaxRequestsTotalIntegerValue *p=input;
     thinkthen_request_unsigned_v1 *out=allocate(a,1,sizeof(*out));
     if(!out) return NULL;
     if(!p) {
@@ -1667,8 +1667,8 @@ const void *input) {
     out->value=p->value;
     return out;
 }
-static void *convert_EngineSettings_member_max_requests_total_arm_Null_Null(arena *a,const void *input) {
-    const thinkthen_cobol_SettingsMaxRequestsTotalArmNull *p=input;
+static void *convert_EngineSettings_member_max_requests_total_Null_Value_Null(arena *a,const void *input) {
+    const thinkthen_cobol_SettingsMaxRequestsTotalNullValue *p=input;
     thinkthen_request_null_v1 *out=allocate(a,1,sizeof(*out));
     if(!out) return NULL;
     (void)p;
@@ -1822,15 +1822,16 @@ static void *convert_RequestFraming_RequestFraming(arena *a,const void *input) {
     }
     out->kind=(uint32_t)p->kind;
     switch(p->kind) {
-        case 1: out->data.literal_document=convert_RequestFraming_arm_document_Literal_document(a,p->value);
+        case 1: out->data.literal_document=convert_RequestFraming_document_Value_Literal_document(a,
+        p->value);
         break;
-        case 2: out->data.literal_lines=convert_RequestFraming_arm_lines_Literal_lines(a,p->value);
+        case 2: out->data.literal_lines=convert_RequestFraming_lines_Value_Literal_lines(a,p->value);
         break;
-        case 3: out->data.literal_jsonl=convert_RequestFraming_arm_jsonl_Literal_jsonl(a,p->value);
+        case 3: out->data.literal_jsonl=convert_RequestFraming_jsonl_Value_Literal_jsonl(a,p->value);
         break;
-        case 4: out->data.literal_csv=convert_RequestFraming_arm_csv_Literal_csv(a,p->value);
+        case 4: out->data.literal_csv=convert_RequestFraming_csv_Value_Literal_csv(a,p->value);
         break;
-        case 5: out->data.literal_tsv=convert_RequestFraming_arm_tsv_Literal_tsv(a,p->value);
+        case 5: out->data.literal_tsv=convert_RequestFraming_tsv_Value_Literal_tsv(a,p->value);
         break;
         default: a->code=THINKTHEN_COBOL_REPRESENTATION;
         break;
@@ -1892,7 +1893,7 @@ static void *convert_RecognitionExample_RecognitionExample(arena *a,const void *
     }
     out->kind=(uint32_t)p->kind;
     switch(p->kind) {
-        case 1: out->data.text=convert_RecognitionExample_arm_Text_Text(a,p->value);
+        case 1: out->data.text=convert_RecognitionExample_Text_Value_Text(a,p->value);
         break;
         case 2: out->data.example_text=convert_RecognitionExampleText_RecognitionExampleText(a,p->value);
         break;
@@ -1914,22 +1915,22 @@ static void *convert_RequestOptions_member_field_item_Text(arena *a,const void *
     };
     return out;
 }
-static void *convert_RecognitionMode_arm_whole_Literal_whole(arena *a,const void *input) {
-    const thinkthen_cobol_RecognitionModeArmWhole *p=input;
+static void *convert_RecognitionMode_whole_Value_Literal_whole(arena *a,const void *input) {
+    const thinkthen_cobol_RecognitionModeWholeValue *p=input;
     thinkthen_request_literal_whole_v1 *out=allocate(a,1,sizeof(*out));
     if(!out) return NULL;
     (void)p;
     return out;
 }
-static void *convert_RecognitionMode_arm_boundary_only_Literal_boundary_only(arena *a,const void *input) {
-    const thinkthen_cobol_RecognitionModeArmBoundaryOnly *p=input;
+static void *convert_RecognitionMode_boundary_only_Value_Literal_boundary_only(arena *a,const void *input) {
+    const thinkthen_cobol_RecognitionModeBoundaryOnlyValue *p=input;
     thinkthen_request_literal_boundary_only_v1 *out=allocate(a,1,sizeof(*out));
     if(!out) return NULL;
     (void)p;
     return out;
 }
-static void *convert_RequestThreshold_arm_Number_Number(arena *a,const void *input) {
-    const thinkthen_cobol_RequestThresholdArmNumber *p=input;
+static void *convert_RequestThreshold_Number_Value_Number(arena *a,const void *input) {
+    const thinkthen_cobol_RequestThresholdNumberValue *p=input;
     thinkthen_request_number_v1 *out=allocate(a,1,sizeof(*out));
     if(!out) return NULL;
     if(!p) {
@@ -1939,8 +1940,8 @@ static void *convert_RequestThreshold_arm_Number_Number(arena *a,const void *inp
     out->value=p->value;
     return out;
 }
-static void *convert_RequestThreshold_arm_Text_Text(arena *a,const void *input) {
-    const thinkthen_cobol_RequestThresholdArmText *p=input;
+static void *convert_RequestThreshold_Text_Value_Text(arena *a,const void *input) {
+    const thinkthen_cobol_RequestThresholdTextValue *p=input;
     thinkthen_request_text_v1 *out=allocate(a,1,sizeof(*out));
     if(!out) return NULL;
     if(!p) {
@@ -2095,8 +2096,8 @@ static void *convert_RequestQuestion_reference_member_reference_Text(arena *a,co
     };
     return out;
 }
-static void *convert_ContextSchema_arm_Text_Text(arena *a,const void *input) {
-    const thinkthen_cobol_ContextSchemaArmText *p=input;
+static void *convert_ContextSchema_Text_Value_Text(arena *a,const void *input) {
+    const thinkthen_cobol_ContextSchemaTextValue *p=input;
     thinkthen_request_text_v1 *out=allocate(a,1,sizeof(*out));
     if(!out) return NULL;
     if(!p) {
@@ -2108,8 +2109,8 @@ static void *convert_ContextSchema_arm_Text_Text(arena *a,const void *input) {
     };
     return out;
 }
-static void *convert_ContextSchema_arm_Object_JsonValue_map(arena *a,const void *input) {
-    const thinkthen_cobol_ContextSchemaArmObject *p=input;
+static void *convert_ContextSchema_Object_Value_JsonValue_map(arena *a,const void *input) {
+    const thinkthen_cobol_ContextSchemaObjectValue *p=input;
     thinkthen_request_json_value_map_v1 *out=allocate(a,1,sizeof(*out));
     if(!out) return NULL;
     if(!p) {
@@ -2129,7 +2130,7 @@ static void *convert_ContextSchema_arm_Object_JsonValue_map(arena *a,const void 
         items[i].key=(thinkthen_complete_utf8_v1){
             p->keys[i].data,p->keys[i].len
         };
-        items[i].value=convert_ContextSchema_arm_Object_entry_JsonValue(a,p->values[i]);
+        items[i].value=convert_ContextSchema_Object_Value_entry_JsonValue(a,p->values[i]);
     }
     return out;
 }
@@ -2198,9 +2199,9 @@ static void *convert_ReaderMedia_ReaderMedia(arena *a,const void *input) {
     }
     out->kind=(uint32_t)p->kind;
     switch(p->kind) {
-        case 1: out->data.literal_text=convert_ReaderMedia_arm_text_Literal_text(a,p->value);
+        case 1: out->data.literal_text=convert_ReaderMedia_text_Value_Literal_text(a,p->value);
         break;
-        case 2: out->data.literal_image=convert_ReaderMedia_arm_image_Literal_image(a,p->value);
+        case 2: out->data.literal_image=convert_ReaderMedia_image_Value_Literal_image(a,p->value);
         break;
         default: a->code=THINKTHEN_COBOL_REPRESENTATION;
         break;
@@ -2227,36 +2228,36 @@ static void *convert_RequestSource_member_paths_Text_list(arena *a,const void *i
     i++) items[i]=convert_RequestSource_member_paths_item_Text(a,p->data[i]);
     return out;
 }
-static void *convert_RequestFraming_arm_document_Literal_document(arena *a,const void *input) {
-    const thinkthen_cobol_RequestFramingArmDocument *p=input;
+static void *convert_RequestFraming_document_Value_Literal_document(arena *a,const void *input) {
+    const thinkthen_cobol_RequestFramingDocumentValue *p=input;
     thinkthen_request_literal_document_v1 *out=allocate(a,1,sizeof(*out));
     if(!out) return NULL;
     (void)p;
     return out;
 }
-static void *convert_RequestFraming_arm_lines_Literal_lines(arena *a,const void *input) {
-    const thinkthen_cobol_RequestFramingArmLines *p=input;
+static void *convert_RequestFraming_lines_Value_Literal_lines(arena *a,const void *input) {
+    const thinkthen_cobol_RequestFramingLinesValue *p=input;
     thinkthen_request_literal_lines_v1 *out=allocate(a,1,sizeof(*out));
     if(!out) return NULL;
     (void)p;
     return out;
 }
-static void *convert_RequestFraming_arm_jsonl_Literal_jsonl(arena *a,const void *input) {
-    const thinkthen_cobol_RequestFramingArmJsonl *p=input;
+static void *convert_RequestFraming_jsonl_Value_Literal_jsonl(arena *a,const void *input) {
+    const thinkthen_cobol_RequestFramingJsonlValue *p=input;
     thinkthen_request_literal_jsonl_v1 *out=allocate(a,1,sizeof(*out));
     if(!out) return NULL;
     (void)p;
     return out;
 }
-static void *convert_RequestFraming_arm_csv_Literal_csv(arena *a,const void *input) {
-    const thinkthen_cobol_RequestFramingArmCsv *p=input;
+static void *convert_RequestFraming_csv_Value_Literal_csv(arena *a,const void *input) {
+    const thinkthen_cobol_RequestFramingCsvValue *p=input;
     thinkthen_request_literal_csv_v1 *out=allocate(a,1,sizeof(*out));
     if(!out) return NULL;
     (void)p;
     return out;
 }
-static void *convert_RequestFraming_arm_tsv_Literal_tsv(arena *a,const void *input) {
-    const thinkthen_cobol_RequestFramingArmTsv *p=input;
+static void *convert_RequestFraming_tsv_Value_Literal_tsv(arena *a,const void *input) {
+    const thinkthen_cobol_RequestFramingTsvValue *p=input;
     thinkthen_request_literal_tsv_v1 *out=allocate(a,1,sizeof(*out));
     if(!out) return NULL;
     (void)p;
@@ -2272,11 +2273,11 @@ static void *convert_SourceUnit_SourceUnit(arena *a,const void *input) {
     }
     out->kind=(uint32_t)p->kind;
     switch(p->kind) {
-        case 1: out->data.literal_line=convert_SourceUnit_arm_line_Literal_line(a,p->value);
+        case 1: out->data.literal_line=convert_SourceUnit_line_Value_Literal_line(a,p->value);
         break;
-        case 2: out->data.literal_window=convert_SourceUnit_arm_window_Literal_window(a,p->value);
+        case 2: out->data.literal_window=convert_SourceUnit_window_Value_Literal_window(a,p->value);
         break;
-        case 3: out->data.literal_file=convert_SourceUnit_arm_file_Literal_file(a,p->value);
+        case 3: out->data.literal_file=convert_SourceUnit_file_Value_Literal_file(a,p->value);
         break;
         default: a->code=THINKTHEN_COBOL_REPRESENTATION;
         break;
@@ -2294,8 +2295,8 @@ static void *convert_RequestReader_member_window_Unsigned(arena *a,const void *i
     out->value=p->value;
     return out;
 }
-static void *convert_RecognitionExample_arm_Text_Text(arena *a,const void *input) {
-    const thinkthen_cobol_RecognitionExampleArmText *p=input;
+static void *convert_RecognitionExample_Text_Value_Text(arena *a,const void *input) {
+    const thinkthen_cobol_RecognitionExampleTextValue *p=input;
     thinkthen_request_text_v1 *out=allocate(a,1,sizeof(*out));
     if(!out) return NULL;
     if(!p) {
@@ -2542,8 +2543,8 @@ const void *input) {
     if(p->m_threshold) out->m_threshold=convert_Authored_threshold_Authored_threshold(a,p->m_threshold);
     return out;
 }
-static void *convert_ContextSchema_arm_Object_entry_JsonValue(arena *a,const void *input) {
-    const thinkthen_cobol_ContextSchemaArmObjectEntry *p=input;
+static void *convert_ContextSchema_Object_Value_entry_JsonValue(arena *a,const void *input) {
+    const thinkthen_cobol_ContextSchemaObjectValueEntry *p=input;
     thinkthen_request_json_value_v1 *out=allocate(a,1,sizeof(*out));
     if(!out) return NULL;
     if(!p) {
@@ -2626,15 +2627,15 @@ const void *input) {
     out->value=p->value;
     return out;
 }
-static void *convert_ReaderMedia_arm_text_Literal_text(arena *a,const void *input) {
-    const thinkthen_cobol_ReaderMediaArmText *p=input;
+static void *convert_ReaderMedia_text_Value_Literal_text(arena *a,const void *input) {
+    const thinkthen_cobol_ReaderMediaTextValue *p=input;
     thinkthen_request_literal_text_v1 *out=allocate(a,1,sizeof(*out));
     if(!out) return NULL;
     (void)p;
     return out;
 }
-static void *convert_ReaderMedia_arm_image_Literal_image(arena *a,const void *input) {
-    const thinkthen_cobol_ReaderMediaArmImage *p=input;
+static void *convert_ReaderMedia_image_Value_Literal_image(arena *a,const void *input) {
+    const thinkthen_cobol_ReaderMediaImageValue *p=input;
     thinkthen_request_literal_image_v1 *out=allocate(a,1,sizeof(*out));
     if(!out) return NULL;
     (void)p;
@@ -2653,22 +2654,22 @@ static void *convert_RequestSource_member_paths_item_Text(arena *a,const void *i
     };
     return out;
 }
-static void *convert_SourceUnit_arm_line_Literal_line(arena *a,const void *input) {
-    const thinkthen_cobol_SourceUnitArmLine *p=input;
+static void *convert_SourceUnit_line_Value_Literal_line(arena *a,const void *input) {
+    const thinkthen_cobol_SourceUnitLineValue *p=input;
     thinkthen_request_literal_line_v1 *out=allocate(a,1,sizeof(*out));
     if(!out) return NULL;
     (void)p;
     return out;
 }
-static void *convert_SourceUnit_arm_window_Literal_window(arena *a,const void *input) {
-    const thinkthen_cobol_SourceUnitArmWindow *p=input;
+static void *convert_SourceUnit_window_Value_Literal_window(arena *a,const void *input) {
+    const thinkthen_cobol_SourceUnitWindowValue *p=input;
     thinkthen_request_literal_window_v1 *out=allocate(a,1,sizeof(*out));
     if(!out) return NULL;
     (void)p;
     return out;
 }
-static void *convert_SourceUnit_arm_file_Literal_file(arena *a,const void *input) {
-    const thinkthen_cobol_SourceUnitArmFile *p=input;
+static void *convert_SourceUnit_file_Value_Literal_file(arena *a,const void *input) {
+    const thinkthen_cobol_SourceUnitFileValue *p=input;
     thinkthen_request_literal_file_v1 *out=allocate(a,1,sizeof(*out));
     if(!out) return NULL;
     (void)p;
@@ -2738,9 +2739,9 @@ static void *convert_Authored_questionBatch_Authored_questionBatch(arena *a,cons
     }
     out->kind=(uint32_t)p->kind;
     switch(p->kind) {
-        case 1: out->data.literal_max=convert_Authored_questionBatch_arm_max_Literal_max(a,p->value);
+        case 1: out->data.literal_max=convert_Authored_questionBatch_max_Value_Literal_max(a,p->value);
         break;
-        case 2: out->data.integer=convert_Authored_questionBatch_arm_Integer_Integer(a,p->value);
+        case 2: out->data.integer=convert_Authored_questionBatch_Integer_Value_Integer(a,p->value);
         break;
         default: a->code=THINKTHEN_COBOL_REPRESENTATION;
         break;
@@ -2778,11 +2779,12 @@ static void *convert_Authored_questionText_Authored_questionText(arena *a,const 
     }
     out->kind=(uint32_t)p->kind;
     switch(p->kind) {
-        case 1: out->data.text=convert_Authored_questionText_arm_Text_Text(a,p->value);
+        case 1: out->data.text=convert_Authored_questionText_Text_Value_Text(a,p->value);
         break;
-        case 2: out->data.json_value_map=convert_Authored_questionText_arm_Object_JsonValue_map(a,p->value);
+        case 2: out->data.json_value_map=convert_Authored_questionText_Object_Value_JsonValue_map(a,
+        p->value);
         break;
-        case 3: out->data.json_value_list=convert_Authored_questionText_arm_Array_JsonValue_list(a,
+        case 3: out->data.json_value_list=convert_Authored_questionText_Array_Value_JsonValue_list(a,
         p->value);
         break;
         default: a->code=THINKTHEN_COBOL_REPRESENTATION;
@@ -2800,13 +2802,13 @@ static void *convert_Authored_criterion_Authored_criterion(arena *a,const void *
     }
     out->kind=(uint32_t)p->kind;
     switch(p->kind) {
-        case 1: out->data.text=convert_Authored_criterion_arm_Text_Text(a,p->value);
+        case 1: out->data.text=convert_Authored_criterion_Text_Value_Text(a,p->value);
         break;
-        case 2: out->data.json_value_map=convert_Authored_criterion_arm_Object_JsonValue_map(a,p->value);
+        case 2: out->data.json_value_map=convert_Authored_criterion_Object_Value_JsonValue_map(a,p->value);
         break;
-        case 3: out->data.json_value_list=convert_Authored_criterion_arm_Array_JsonValue_list(a,p->value);
+        case 3: out->data.json_value_list=convert_Authored_criterion_Array_Value_JsonValue_list(a,p->value);
         break;
-        case 4: out->data.null=convert_Authored_criterion_arm_Null_Null(a,p->value);
+        case 4: out->data.null=convert_Authored_criterion_Null_Value_Null(a,p->value);
         break;
         default: a->code=THINKTHEN_COBOL_REPRESENTATION;
         break;
@@ -2849,9 +2851,9 @@ static void *convert_Authored_pointers_Authored_pointers(arena *a,const void *in
     }
     out->kind=(uint32_t)p->kind;
     switch(p->kind) {
-        case 1: out->data.text=convert_Authored_pointers_arm_Text_Text(a,p->value);
+        case 1: out->data.text=convert_Authored_pointers_Text_Value_Text(a,p->value);
         break;
-        case 2: out->data.text_list=convert_Authored_pointers_arm_Array_Text_list(a,p->value);
+        case 2: out->data.text_list=convert_Authored_pointers_Array_Value_Text_list(a,p->value);
         break;
         default: a->code=THINKTHEN_COBOL_REPRESENTATION;
         break;
@@ -2881,9 +2883,9 @@ static void *convert_Authored_threshold_Authored_threshold(arena *a,const void *
     }
     out->kind=(uint32_t)p->kind;
     switch(p->kind) {
-        case 1: out->data.number=convert_Authored_threshold_arm_Number_Number(a,p->value);
+        case 1: out->data.number=convert_Authored_threshold_Number_Value_Number(a,p->value);
         break;
-        case 2: out->data.text=convert_Authored_threshold_arm_Text_Text(a,p->value);
+        case 2: out->data.text=convert_Authored_threshold_Text_Value_Text(a,p->value);
         break;
         default: a->code=THINKTHEN_COBOL_REPRESENTATION;
         break;
@@ -2925,9 +2927,9 @@ static void *convert_Authored_options_Authored_options(arena *a,const void *inpu
     }
     out->kind=(uint32_t)p->kind;
     switch(p->kind) {
-        case 1: out->data.name_list=convert_Authored_options_arm_Array_Authored_name_list(a,p->value);
+        case 1: out->data.name_list=convert_Authored_options_Array_Value_Authored_name_list(a,p->value);
         break;
-        case 2: out->data.description_map=convert_Authored_options_arm_Object_Authored_description_map(a,
+        case 2: out->data.description_map=convert_Authored_options_Object_Value_Authored_description_map(a,
         p->value);
         break;
         default: a->code=THINKTHEN_COBOL_REPRESENTATION;
@@ -2945,9 +2947,9 @@ static void *convert_Authored_cut_Authored_cut(arena *a,const void *input) {
     }
     out->kind=(uint32_t)p->kind;
     switch(p->kind) {
-        case 1: out->data.number=convert_Authored_cut_arm_Number_Number(a,p->value);
+        case 1: out->data.number=convert_Authored_cut_Number_Value_Number(a,p->value);
         break;
-        case 2: out->data.text=convert_Authored_cut_arm_Text_Text(a,p->value);
+        case 2: out->data.text=convert_Authored_cut_Text_Value_Text(a,p->value);
         break;
         default: a->code=THINKTHEN_COBOL_REPRESENTATION;
         break;
@@ -2976,9 +2978,9 @@ static void *convert_Authored_labels_Authored_labels(arena *a,const void *input)
     }
     out->kind=(uint32_t)p->kind;
     switch(p->kind) {
-        case 1: out->data.name_list=convert_Authored_labels_arm_Array_Authored_name_list(a,p->value);
+        case 1: out->data.name_list=convert_Authored_labels_Array_Value_Authored_name_list(a,p->value);
         break;
-        case 2: out->data.description_map=convert_Authored_labels_arm_Object_Authored_description_map(a,
+        case 2: out->data.description_map=convert_Authored_labels_Object_Value_Authored_description_map(a,
         p->value);
         break;
         default: a->code=THINKTHEN_COBOL_REPRESENTATION;
@@ -3021,9 +3023,9 @@ static void *convert_Authored_levels_Authored_levels(arena *a,const void *input)
     }
     out->kind=(uint32_t)p->kind;
     switch(p->kind) {
-        case 1: out->data.name_list=convert_Authored_levels_arm_Array_Authored_name_list(a,p->value);
+        case 1: out->data.name_list=convert_Authored_levels_Array_Value_Authored_name_list(a,p->value);
         break;
-        case 2: out->data.criterion_map=convert_Authored_levels_arm_Object_Authored_criterion_map(a,
+        case 2: out->data.criterion_map=convert_Authored_levels_Object_Value_Authored_criterion_map(a,
         p->value);
         break;
         default: a->code=THINKTHEN_COBOL_REPRESENTATION;
@@ -3214,10 +3216,11 @@ static void *convert_ImageMedia_ImageMedia(arena *a,const void *input) {
     }
     out->kind=(uint32_t)p->kind;
     switch(p->kind) {
-        case 1: out->data.literal_image_jpeg=convert_ImageMedia_arm_image_jpeg_Literal_image_jpeg(a,
+        case 1: out->data.literal_image_jpeg=convert_ImageMedia_image_jpeg_Value_Literal_image_jpeg(a,
         p->value);
         break;
-        case 2: out->data.literal_image_png=convert_ImageMedia_arm_image_png_Literal_image_png(a,p->value);
+        case 2: out->data.literal_image_png=convert_ImageMedia_image_png_Value_Literal_image_png(a,
+        p->value);
         break;
         default: a->code=THINKTHEN_COBOL_REPRESENTATION;
         break;
@@ -3276,15 +3279,15 @@ static void *convert_RecognitionExampleText_member_kinds_item_Text(arena *a,cons
     };
     return out;
 }
-static void *convert_Authored_questionBatch_arm_max_Literal_max(arena *a,const void *input) {
-    const thinkthen_cobol_QuestionBatchArmMax *p=input;
+static void *convert_Authored_questionBatch_max_Value_Literal_max(arena *a,const void *input) {
+    const thinkthen_cobol_QuestionBatchMaxValue *p=input;
     thinkthen_request_literal_max_v1 *out=allocate(a,1,sizeof(*out));
     if(!out) return NULL;
     (void)p;
     return out;
 }
-static void *convert_Authored_questionBatch_arm_Integer_Integer(arena *a,const void *input) {
-    const thinkthen_cobol_QuestionBatchArmInteger *p=input;
+static void *convert_Authored_questionBatch_Integer_Value_Integer(arena *a,const void *input) {
+    const thinkthen_cobol_QuestionBatchIntegerValue *p=input;
     thinkthen_request_integer_v1 *out=allocate(a,1,sizeof(*out));
     if(!out) return NULL;
     if(!p) {
@@ -3320,8 +3323,8 @@ const void *input) {
     p->m_required);
     return out;
 }
-static void *convert_Authored_questionText_arm_Text_Text(arena *a,const void *input) {
-    const thinkthen_cobol_QuestionTextArmText *p=input;
+static void *convert_Authored_questionText_Text_Value_Text(arena *a,const void *input) {
+    const thinkthen_cobol_QuestionTextTextValue *p=input;
     thinkthen_request_text_v1 *out=allocate(a,1,sizeof(*out));
     if(!out) return NULL;
     if(!p) {
@@ -3333,8 +3336,8 @@ static void *convert_Authored_questionText_arm_Text_Text(arena *a,const void *in
     };
     return out;
 }
-static void *convert_Authored_questionText_arm_Object_JsonValue_map(arena *a,const void *input) {
-    const thinkthen_cobol_QuestionTextArmObject *p=input;
+static void *convert_Authored_questionText_Object_Value_JsonValue_map(arena *a,const void *input) {
+    const thinkthen_cobol_QuestionTextObjectValue *p=input;
     thinkthen_request_json_value_map_v1 *out=allocate(a,1,sizeof(*out));
     if(!out) return NULL;
     if(!p) {
@@ -3354,12 +3357,12 @@ static void *convert_Authored_questionText_arm_Object_JsonValue_map(arena *a,con
         items[i].key=(thinkthen_complete_utf8_v1){
             p->keys[i].data,p->keys[i].len
         };
-        items[i].value=convert_Authored_questionText_arm_Object_entry_JsonValue(a,p->values[i]);
+        items[i].value=convert_Authored_questionText_Object_Value_entry_JsonValue(a,p->values[i]);
     }
     return out;
 }
-static void *convert_Authored_questionText_arm_Array_JsonValue_list(arena *a,const void *input) {
-    const thinkthen_cobol_QuestionTextArmArray *p=input;
+static void *convert_Authored_questionText_Array_Value_JsonValue_list(arena *a,const void *input) {
+    const thinkthen_cobol_QuestionTextArrayValue *p=input;
     thinkthen_request_json_value_list_v1 *out=allocate(a,1,sizeof(*out));
     if(!out) return NULL;
     if(!p) {
@@ -3375,11 +3378,11 @@ static void *convert_Authored_questionText_arm_Array_JsonValue_list(arena *a,con
     out->len=p->len;
     if(items) for(uint64_t i=0;
     i<p->len && !a->code;
-    i++) items[i]=convert_Authored_questionText_arm_Array_item_JsonValue(a,p->data[i]);
+    i++) items[i]=convert_Authored_questionText_Array_Value_item_JsonValue(a,p->data[i]);
     return out;
 }
-static void *convert_Authored_criterion_arm_Text_Text(arena *a,const void *input) {
-    const thinkthen_cobol_CriterionArmText *p=input;
+static void *convert_Authored_criterion_Text_Value_Text(arena *a,const void *input) {
+    const thinkthen_cobol_CriterionTextValue *p=input;
     thinkthen_request_text_v1 *out=allocate(a,1,sizeof(*out));
     if(!out) return NULL;
     if(!p) {
@@ -3391,8 +3394,8 @@ static void *convert_Authored_criterion_arm_Text_Text(arena *a,const void *input
     };
     return out;
 }
-static void *convert_Authored_criterion_arm_Object_JsonValue_map(arena *a,const void *input) {
-    const thinkthen_cobol_CriterionArmObject *p=input;
+static void *convert_Authored_criterion_Object_Value_JsonValue_map(arena *a,const void *input) {
+    const thinkthen_cobol_CriterionObjectValue *p=input;
     thinkthen_request_json_value_map_v1 *out=allocate(a,1,sizeof(*out));
     if(!out) return NULL;
     if(!p) {
@@ -3412,12 +3415,12 @@ static void *convert_Authored_criterion_arm_Object_JsonValue_map(arena *a,const 
         items[i].key=(thinkthen_complete_utf8_v1){
             p->keys[i].data,p->keys[i].len
         };
-        items[i].value=convert_Authored_criterion_arm_Object_entry_JsonValue(a,p->values[i]);
+        items[i].value=convert_Authored_criterion_Object_Value_entry_JsonValue(a,p->values[i]);
     }
     return out;
 }
-static void *convert_Authored_criterion_arm_Array_JsonValue_list(arena *a,const void *input) {
-    const thinkthen_cobol_CriterionArmArray *p=input;
+static void *convert_Authored_criterion_Array_Value_JsonValue_list(arena *a,const void *input) {
+    const thinkthen_cobol_CriterionArrayValue *p=input;
     thinkthen_request_json_value_list_v1 *out=allocate(a,1,sizeof(*out));
     if(!out) return NULL;
     if(!p) {
@@ -3433,18 +3436,18 @@ static void *convert_Authored_criterion_arm_Array_JsonValue_list(arena *a,const 
     out->len=p->len;
     if(items) for(uint64_t i=0;
     i<p->len && !a->code;
-    i++) items[i]=convert_Authored_criterion_arm_Array_item_JsonValue(a,p->data[i]);
+    i++) items[i]=convert_Authored_criterion_Array_Value_item_JsonValue(a,p->data[i]);
     return out;
 }
-static void *convert_Authored_criterion_arm_Null_Null(arena *a,const void *input) {
-    const thinkthen_cobol_CriterionArmNull *p=input;
+static void *convert_Authored_criterion_Null_Value_Null(arena *a,const void *input) {
+    const thinkthen_cobol_CriterionNullValue *p=input;
     thinkthen_request_null_v1 *out=allocate(a,1,sizeof(*out));
     if(!out) return NULL;
     (void)p;
     return out;
 }
-static void *convert_Authored_pointers_arm_Text_Text(arena *a,const void *input) {
-    const thinkthen_cobol_PointersArmText *p=input;
+static void *convert_Authored_pointers_Text_Value_Text(arena *a,const void *input) {
+    const thinkthen_cobol_PointersTextValue *p=input;
     thinkthen_request_text_v1 *out=allocate(a,1,sizeof(*out));
     if(!out) return NULL;
     if(!p) {
@@ -3456,8 +3459,8 @@ static void *convert_Authored_pointers_arm_Text_Text(arena *a,const void *input)
     };
     return out;
 }
-static void *convert_Authored_pointers_arm_Array_Text_list(arena *a,const void *input) {
-    const thinkthen_cobol_PointersArmArray *p=input;
+static void *convert_Authored_pointers_Array_Value_Text_list(arena *a,const void *input) {
+    const thinkthen_cobol_PointersArrayValue *p=input;
     thinkthen_request_text_list_v1 *out=allocate(a,1,sizeof(*out));
     if(!out) return NULL;
     if(!p) {
@@ -3473,11 +3476,11 @@ static void *convert_Authored_pointers_arm_Array_Text_list(arena *a,const void *
     out->len=p->len;
     if(items) for(uint64_t i=0;
     i<p->len && !a->code;
-    i++) items[i]=convert_Authored_pointers_arm_Array_item_Text(a,p->data[i]);
+    i++) items[i]=convert_Authored_pointers_Array_Value_item_Text(a,p->data[i]);
     return out;
 }
-static void *convert_Authored_threshold_arm_Number_Number(arena *a,const void *input) {
-    const thinkthen_cobol_ThresholdArmNumber *p=input;
+static void *convert_Authored_threshold_Number_Value_Number(arena *a,const void *input) {
+    const thinkthen_cobol_ThresholdNumberValue *p=input;
     thinkthen_request_number_v1 *out=allocate(a,1,sizeof(*out));
     if(!out) return NULL;
     if(!p) {
@@ -3487,8 +3490,8 @@ static void *convert_Authored_threshold_arm_Number_Number(arena *a,const void *i
     out->value=p->value;
     return out;
 }
-static void *convert_Authored_threshold_arm_Text_Text(arena *a,const void *input) {
-    const thinkthen_cobol_ThresholdArmText *p=input;
+static void *convert_Authored_threshold_Text_Value_Text(arena *a,const void *input) {
+    const thinkthen_cobol_ThresholdTextValue *p=input;
     thinkthen_request_text_v1 *out=allocate(a,1,sizeof(*out));
     if(!out) return NULL;
     if(!p) {
@@ -3500,8 +3503,8 @@ static void *convert_Authored_threshold_arm_Text_Text(arena *a,const void *input
     };
     return out;
 }
-static void *convert_Authored_options_arm_Array_Authored_name_list(arena *a,const void *input) {
-    const thinkthen_cobol_OptionsArmArray *p=input;
+static void *convert_Authored_options_Array_Value_Authored_name_list(arena *a,const void *input) {
+    const thinkthen_cobol_OptionsArrayValue *p=input;
     thinkthen_request_name_list_v1 *out=allocate(a,1,sizeof(*out));
     if(!out) return NULL;
     if(!p) {
@@ -3520,8 +3523,8 @@ static void *convert_Authored_options_arm_Array_Authored_name_list(arena *a,cons
     i++) items[i]=convert_Authored_name_Authored_name(a,p->data[i]);
     return out;
 }
-static void *convert_Authored_options_arm_Object_Authored_description_map(arena *a,const void *input) {
-    const thinkthen_cobol_OptionsArmObject *p=input;
+static void *convert_Authored_options_Object_Value_Authored_description_map(arena *a,const void *input) {
+    const thinkthen_cobol_OptionsObjectValue *p=input;
     thinkthen_request_description_map_v1 *out=allocate(a,1,sizeof(*out));
     if(!out) return NULL;
     if(!p) {
@@ -3545,8 +3548,8 @@ static void *convert_Authored_options_arm_Object_Authored_description_map(arena 
     }
     return out;
 }
-static void *convert_Authored_cut_arm_Number_Number(arena *a,const void *input) {
-    const thinkthen_cobol_CutArmNumber *p=input;
+static void *convert_Authored_cut_Number_Value_Number(arena *a,const void *input) {
+    const thinkthen_cobol_CutNumberValue *p=input;
     thinkthen_request_number_v1 *out=allocate(a,1,sizeof(*out));
     if(!out) return NULL;
     if(!p) {
@@ -3556,8 +3559,8 @@ static void *convert_Authored_cut_arm_Number_Number(arena *a,const void *input) 
     out->value=p->value;
     return out;
 }
-static void *convert_Authored_cut_arm_Text_Text(arena *a,const void *input) {
-    const thinkthen_cobol_CutArmText *p=input;
+static void *convert_Authored_cut_Text_Value_Text(arena *a,const void *input) {
+    const thinkthen_cobol_CutTextValue *p=input;
     thinkthen_request_text_v1 *out=allocate(a,1,sizeof(*out));
     if(!out) return NULL;
     if(!p) {
@@ -3569,8 +3572,8 @@ static void *convert_Authored_cut_arm_Text_Text(arena *a,const void *input) {
     };
     return out;
 }
-static void *convert_Authored_labels_arm_Array_Authored_name_list(arena *a,const void *input) {
-    const thinkthen_cobol_LabelsArmArray *p=input;
+static void *convert_Authored_labels_Array_Value_Authored_name_list(arena *a,const void *input) {
+    const thinkthen_cobol_LabelsArrayValue *p=input;
     thinkthen_request_name_list_v1 *out=allocate(a,1,sizeof(*out));
     if(!out) return NULL;
     if(!p) {
@@ -3589,8 +3592,8 @@ static void *convert_Authored_labels_arm_Array_Authored_name_list(arena *a,const
     i++) items[i]=convert_Authored_name_Authored_name(a,p->data[i]);
     return out;
 }
-static void *convert_Authored_labels_arm_Object_Authored_description_map(arena *a,const void *input) {
-    const thinkthen_cobol_LabelsArmObject *p=input;
+static void *convert_Authored_labels_Object_Value_Authored_description_map(arena *a,const void *input) {
+    const thinkthen_cobol_LabelsObjectValue *p=input;
     thinkthen_request_description_map_v1 *out=allocate(a,1,sizeof(*out));
     if(!out) return NULL;
     if(!p) {
@@ -3614,8 +3617,8 @@ static void *convert_Authored_labels_arm_Object_Authored_description_map(arena *
     }
     return out;
 }
-static void *convert_Authored_levels_arm_Array_Authored_name_list(arena *a,const void *input) {
-    const thinkthen_cobol_LevelsArmArray *p=input;
+static void *convert_Authored_levels_Array_Value_Authored_name_list(arena *a,const void *input) {
+    const thinkthen_cobol_LevelsArrayValue *p=input;
     thinkthen_request_name_list_v1 *out=allocate(a,1,sizeof(*out));
     if(!out) return NULL;
     if(!p) {
@@ -3634,8 +3637,8 @@ static void *convert_Authored_levels_arm_Array_Authored_name_list(arena *a,const
     i++) items[i]=convert_Authored_name_Authored_name(a,p->data[i]);
     return out;
 }
-static void *convert_Authored_levels_arm_Object_Authored_criterion_map(arena *a,const void *input) {
-    const thinkthen_cobol_LevelsArmObject *p=input;
+static void *convert_Authored_levels_Object_Value_Authored_criterion_map(arena *a,const void *input) {
+    const thinkthen_cobol_LevelsObjectValue *p=input;
     thinkthen_request_criterion_map_v1 *out=allocate(a,1,sizeof(*out));
     if(!out) return NULL;
     if(!p) {
@@ -3770,15 +3773,15 @@ static void *convert_AnnotateQuestion_AnnotateQuestion(arena *a,const void *inpu
     }
     return out;
 }
-static void *convert_ImageMedia_arm_image_jpeg_Literal_image_jpeg(arena *a,const void *input) {
-    const thinkthen_cobol_ImageMediaArmImageJpeg *p=input;
+static void *convert_ImageMedia_image_jpeg_Value_Literal_image_jpeg(arena *a,const void *input) {
+    const thinkthen_cobol_ImageMediaImageJpegValue *p=input;
     thinkthen_request_literal_image_jpeg_v1 *out=allocate(a,1,sizeof(*out));
     if(!out) return NULL;
     (void)p;
     return out;
 }
-static void *convert_ImageMedia_arm_image_png_Literal_image_png(arena *a,const void *input) {
-    const thinkthen_cobol_ImageMediaArmImagePng *p=input;
+static void *convert_ImageMedia_image_png_Value_Literal_image_png(arena *a,const void *input) {
+    const thinkthen_cobol_ImageMediaImagePngValue *p=input;
     thinkthen_request_literal_image_png_v1 *out=allocate(a,1,sizeof(*out));
     if(!out) return NULL;
     (void)p;
@@ -3865,8 +3868,8 @@ static void *convert_Authored_inputDeclaration_object_member_required_Text_list(
     i++) items[i]=convert_Authored_inputDeclaration_object_member_required_item_Text(a,p->data[i]);
     return out;
 }
-static void *convert_Authored_questionText_arm_Object_entry_JsonValue(arena *a,const void *input) {
-    const thinkthen_cobol_QuestionTextArmObjectEntry *p=input;
+static void *convert_Authored_questionText_Object_Value_entry_JsonValue(arena *a,const void *input) {
+    const thinkthen_cobol_QuestionTextObjectValueEntry *p=input;
     thinkthen_request_json_value_v1 *out=allocate(a,1,sizeof(*out));
     if(!out) return NULL;
     if(!p) {
@@ -3876,8 +3879,8 @@ static void *convert_Authored_questionText_arm_Object_entry_JsonValue(arena *a,c
     out->value=p->value;
     return out;
 }
-static void *convert_Authored_questionText_arm_Array_item_JsonValue(arena *a,const void *input) {
-    const thinkthen_cobol_QuestionTextArmArrayItem *p=input;
+static void *convert_Authored_questionText_Array_Value_item_JsonValue(arena *a,const void *input) {
+    const thinkthen_cobol_QuestionTextArrayValueItem *p=input;
     thinkthen_request_json_value_v1 *out=allocate(a,1,sizeof(*out));
     if(!out) return NULL;
     if(!p) {
@@ -3887,8 +3890,8 @@ static void *convert_Authored_questionText_arm_Array_item_JsonValue(arena *a,con
     out->value=p->value;
     return out;
 }
-static void *convert_Authored_criterion_arm_Object_entry_JsonValue(arena *a,const void *input) {
-    const thinkthen_cobol_CriterionArmObjectEntry *p=input;
+static void *convert_Authored_criterion_Object_Value_entry_JsonValue(arena *a,const void *input) {
+    const thinkthen_cobol_CriterionObjectValueEntry *p=input;
     thinkthen_request_json_value_v1 *out=allocate(a,1,sizeof(*out));
     if(!out) return NULL;
     if(!p) {
@@ -3898,8 +3901,8 @@ static void *convert_Authored_criterion_arm_Object_entry_JsonValue(arena *a,cons
     out->value=p->value;
     return out;
 }
-static void *convert_Authored_criterion_arm_Array_item_JsonValue(arena *a,const void *input) {
-    const thinkthen_cobol_CriterionArmArrayItem *p=input;
+static void *convert_Authored_criterion_Array_Value_item_JsonValue(arena *a,const void *input) {
+    const thinkthen_cobol_CriterionArrayValueItem *p=input;
     thinkthen_request_json_value_v1 *out=allocate(a,1,sizeof(*out));
     if(!out) return NULL;
     if(!p) {
@@ -3909,8 +3912,8 @@ static void *convert_Authored_criterion_arm_Array_item_JsonValue(arena *a,const 
     out->value=p->value;
     return out;
 }
-static void *convert_Authored_pointers_arm_Array_item_Text(arena *a,const void *input) {
-    const thinkthen_cobol_PointersArmArrayItem *p=input;
+static void *convert_Authored_pointers_Array_Value_item_Text(arena *a,const void *input) {
+    const thinkthen_cobol_PointersArrayValueItem *p=input;
     thinkthen_request_text_v1 *out=allocate(a,1,sizeof(*out));
     if(!out) return NULL;
     if(!p) {
@@ -3932,13 +3935,15 @@ static void *convert_Authored_description_Authored_description(arena *a,const vo
     }
     out->kind=(uint32_t)p->kind;
     switch(p->kind) {
-        case 1: out->data.text=convert_Authored_description_arm_Text_Text(a,p->value);
+        case 1: out->data.text=convert_Authored_description_Text_Value_Text(a,p->value);
         break;
-        case 2: out->data.json_value_map=convert_Authored_description_arm_Object_JsonValue_map(a,p->value);
+        case 2: out->data.json_value_map=convert_Authored_description_Object_Value_JsonValue_map(a,
+        p->value);
         break;
-        case 3: out->data.json_value_list=convert_Authored_description_arm_Array_JsonValue_list(a,p->value);
+        case 3: out->data.json_value_list=convert_Authored_description_Array_Value_JsonValue_list(a,
+        p->value);
         break;
-        case 4: out->data.null=convert_Authored_description_arm_Null_Null(a,p->value);
+        case 4: out->data.null=convert_Authored_description_Null_Value_Null(a,p->value);
         break;
         default: a->code=THINKTHEN_COBOL_REPRESENTATION;
         break;
@@ -4111,8 +4116,8 @@ static void *convert_Authored_inputDeclaration_object_member_required_item_Text(
     };
     return out;
 }
-static void *convert_Authored_description_arm_Text_Text(arena *a,const void *input) {
-    const thinkthen_cobol_DescriptionArmText *p=input;
+static void *convert_Authored_description_Text_Value_Text(arena *a,const void *input) {
+    const thinkthen_cobol_DescriptionTextValue *p=input;
     thinkthen_request_text_v1 *out=allocate(a,1,sizeof(*out));
     if(!out) return NULL;
     if(!p) {
@@ -4124,8 +4129,8 @@ static void *convert_Authored_description_arm_Text_Text(arena *a,const void *inp
     };
     return out;
 }
-static void *convert_Authored_description_arm_Object_JsonValue_map(arena *a,const void *input) {
-    const thinkthen_cobol_DescriptionArmObject *p=input;
+static void *convert_Authored_description_Object_Value_JsonValue_map(arena *a,const void *input) {
+    const thinkthen_cobol_DescriptionObjectValue *p=input;
     thinkthen_request_json_value_map_v1 *out=allocate(a,1,sizeof(*out));
     if(!out) return NULL;
     if(!p) {
@@ -4145,12 +4150,12 @@ static void *convert_Authored_description_arm_Object_JsonValue_map(arena *a,cons
         items[i].key=(thinkthen_complete_utf8_v1){
             p->keys[i].data,p->keys[i].len
         };
-        items[i].value=convert_Authored_description_arm_Object_entry_JsonValue(a,p->values[i]);
+        items[i].value=convert_Authored_description_Object_Value_entry_JsonValue(a,p->values[i]);
     }
     return out;
 }
-static void *convert_Authored_description_arm_Array_JsonValue_list(arena *a,const void *input) {
-    const thinkthen_cobol_DescriptionArmArray *p=input;
+static void *convert_Authored_description_Array_Value_JsonValue_list(arena *a,const void *input) {
+    const thinkthen_cobol_DescriptionArrayValue *p=input;
     thinkthen_request_json_value_list_v1 *out=allocate(a,1,sizeof(*out));
     if(!out) return NULL;
     if(!p) {
@@ -4166,11 +4171,11 @@ static void *convert_Authored_description_arm_Array_JsonValue_list(arena *a,cons
     out->len=p->len;
     if(items) for(uint64_t i=0;
     i<p->len && !a->code;
-    i++) items[i]=convert_Authored_description_arm_Array_item_JsonValue(a,p->data[i]);
+    i++) items[i]=convert_Authored_description_Array_Value_item_JsonValue(a,p->data[i]);
     return out;
 }
-static void *convert_Authored_description_arm_Null_Null(arena *a,const void *input) {
-    const thinkthen_cobol_DescriptionArmNull *p=input;
+static void *convert_Authored_description_Null_Value_Null(arena *a,const void *input) {
+    const thinkthen_cobol_DescriptionNullValue *p=input;
     thinkthen_request_null_v1 *out=allocate(a,1,sizeof(*out));
     if(!out) return NULL;
     (void)p;
@@ -4339,8 +4344,8 @@ static void *convert_Authored_inputProperty_array_Authored_inputProperty_array(a
     p->m_items);
     return out;
 }
-static void *convert_Authored_description_arm_Object_entry_JsonValue(arena *a,const void *input) {
-    const thinkthen_cobol_DescriptionArmObjectEntry *p=input;
+static void *convert_Authored_description_Object_Value_entry_JsonValue(arena *a,const void *input) {
+    const thinkthen_cobol_DescriptionObjectValueEntry *p=input;
     thinkthen_request_json_value_v1 *out=allocate(a,1,sizeof(*out));
     if(!out) return NULL;
     if(!p) {
@@ -4350,8 +4355,8 @@ static void *convert_Authored_description_arm_Object_entry_JsonValue(arena *a,co
     out->value=p->value;
     return out;
 }
-static void *convert_Authored_description_arm_Array_item_JsonValue(arena *a,const void *input) {
-    const thinkthen_cobol_DescriptionArmArrayItem *p=input;
+static void *convert_Authored_description_Array_Value_item_JsonValue(arena *a,const void *input) {
+    const thinkthen_cobol_DescriptionArrayValueItem *p=input;
     thinkthen_request_json_value_v1 *out=allocate(a,1,sizeof(*out));
     if(!out) return NULL;
     if(!p) {

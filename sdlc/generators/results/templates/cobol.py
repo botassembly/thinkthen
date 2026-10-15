@@ -133,7 +133,7 @@ def requests(definitions, native_facts, root):
             elif isinstance(source.get('type'), list):
                 alternatives = [{**source, 'type':kind} for kind in source['type']]
             for tag, value in zip(alternative_names(alternatives), alternatives):
-                child(value, key + '_arm_' + tag)
+                child(value, key + '_' + tag + '_Value')
             fields = [('uint64_t', 'kind'), ('const void *', 'value')]
         elif source.get('type') in ('integer', 'number', 'boolean'):
             native = 'double' if source['type'] == 'number' else 'uint64_t' if source['type'] == 'boolean' or source.get('format', '').startswith('u') else 'int64_t'

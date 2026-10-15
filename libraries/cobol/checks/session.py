@@ -42,7 +42,7 @@ _Static_assert(THINKTHEN_COBOL_CACHEDOCUMENT_DISABLEDCACHE_KIND == 2, "cache dis
 _Static_assert(THINKTHEN_COBOL_REQUESTTHRESHOLD_NUMBER_KIND == 1, "numeric threshold tag");
 _Static_assert(THINKTHEN_COBOL_REQUESTTHRESHOLD_TEXT_KIND == 2, "text threshold tag");
 tt_value *TT_TEST_ENTITY(const char *name, unsigned long long length) {
-    thinkthen_cobol_CacheDocumentArmText semantic_text={name,length};
+    thinkthen_cobol_CacheDocumentTextValue semantic_text={name,length};
     tt_value *id=NULL,*named=NULL,*kind=NULL,*object=NULL;
     const thinkthen_cobol_text names[3]={{"id",2},{"name",4},{"kind",4}};
     if(TT_VALUE_STRING("p1",2,&id) || TT_VALUE_STRING(semantic_text.data,semantic_text.len,&named) || TT_VALUE_STRING("person",6,&kind)) goto done;

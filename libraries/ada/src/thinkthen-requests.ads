@@ -46,16 +46,16 @@ type T_Authored_inputProperty_array is record
 T_items : T_Authored_inputProperty_array_field_items;
 T_type : T_Literal_array;
 end record;
-type T_Authored_inputProperty_Kind is (T_Authored_inputProperty_arm_string,
-T_Authored_inputProperty_arm_number,
-T_Authored_inputProperty_arm_boolean,
-T_Authored_inputProperty_arm_array);
-type T_Authored_inputProperty (Kind : T_Authored_inputProperty_Kind := T_Authored_inputProperty_arm_string) is record
+type T_Authored_inputProperty_Kind is (T_Authored_inputProperty_string_Case,
+T_Authored_inputProperty_number_Case,
+T_Authored_inputProperty_boolean_Case,
+T_Authored_inputProperty_array_Case);
+type T_Authored_inputProperty (Kind : T_Authored_inputProperty_Kind := T_Authored_inputProperty_string_Case) is record
 case Kind is
-when T_Authored_inputProperty_arm_string => V_0 : T_Authored_inputProperty_string;
-when T_Authored_inputProperty_arm_number => V_1 : T_Authored_inputProperty_number;
-when T_Authored_inputProperty_arm_boolean => V_2 : T_Authored_inputProperty_boolean;
-when T_Authored_inputProperty_arm_array => V_3 : T_Authored_inputProperty_array;
+when T_Authored_inputProperty_string_Case => V_0 : T_Authored_inputProperty_string;
+when T_Authored_inputProperty_number_Case => V_1 : T_Authored_inputProperty_number;
+when T_Authored_inputProperty_boolean_Case => V_2 : T_Authored_inputProperty_boolean;
+when T_Authored_inputProperty_array_Case => V_3 : T_Authored_inputProperty_array;
 end case;
 end record;
 type T_Authored_inputProperty_Map_Entry is record
@@ -75,12 +75,12 @@ T_properties : T_Authored_inputProperty_Map;
 T_required : T_Text_List_Optional;
 T_type : T_Literal_object;
 end record;
-type T_Authored_inputDeclaration_Kind is (T_Authored_inputDeclaration_arm_string,
-T_Authored_inputDeclaration_arm_object);
-type T_Authored_inputDeclaration (Kind : T_Authored_inputDeclaration_Kind := T_Authored_inputDeclaration_arm_string) is record
+type T_Authored_inputDeclaration_Kind is (T_Authored_inputDeclaration_string_Case,
+T_Authored_inputDeclaration_object_Case);
+type T_Authored_inputDeclaration (Kind : T_Authored_inputDeclaration_Kind := T_Authored_inputDeclaration_string_Case) is record
 case Kind is
-when T_Authored_inputDeclaration_arm_string => V_0 : T_Authored_inputDeclaration_string;
-when T_Authored_inputDeclaration_arm_object => V_1 : T_Authored_inputDeclaration_object;
+when T_Authored_inputDeclaration_string_Case => V_0 : T_Authored_inputDeclaration_string;
+when T_Authored_inputDeclaration_object_Case => V_1 : T_Authored_inputDeclaration_object;
 end case;
 end record;
 package T_Authored_inputDeclaration_Options is new Optional_Values (T_Authored_inputDeclaration);
@@ -93,50 +93,50 @@ package T_JSON_Map_Vectors is new Ada.Containers.Vectors (Positive, T_JSON_Map_E
 subtype T_JSON_Map is T_JSON_Map_Vectors.Vector;
 package T_JSON_List_Vectors is new Ada.Containers.Vectors (Positive, T_JSON);
 subtype T_JSON_List is T_JSON_List_Vectors.Vector;
-type T_Authored_questionText_Kind is (T_Authored_questionText_arm_Text,
-T_Authored_questionText_arm_Object,
-T_Authored_questionText_arm_Array);
-type T_Authored_questionText (Kind : T_Authored_questionText_Kind := T_Authored_questionText_arm_Text) is record
+type T_Authored_questionText_Kind is (T_Authored_questionText_Text_Case,
+T_Authored_questionText_Object_Case,
+T_Authored_questionText_Array_Case);
+type T_Authored_questionText (Kind : T_Authored_questionText_Kind := T_Authored_questionText_Text_Case) is record
 case Kind is
-when T_Authored_questionText_arm_Text => V_0 : T_Text;
-when T_Authored_questionText_arm_Object => V_1 : T_JSON_Map;
-when T_Authored_questionText_arm_Array => V_2 : T_JSON_List;
+when T_Authored_questionText_Text_Case => V_0 : T_Text;
+when T_Authored_questionText_Object_Case => V_1 : T_JSON_Map;
+when T_Authored_questionText_Array_Case => V_2 : T_JSON_List;
 end case;
 end record;
 type T_Null is null record;
-type T_Authored_criterion_Kind is (T_Authored_criterion_arm_Text,
-T_Authored_criterion_arm_Object,
-T_Authored_criterion_arm_Array,
-T_Authored_criterion_arm_Null);
-type T_Authored_criterion (Kind : T_Authored_criterion_Kind := T_Authored_criterion_arm_Text) is record
+type T_Authored_criterion_Kind is (T_Authored_criterion_Text_Case,
+T_Authored_criterion_Object_Case,
+T_Authored_criterion_Array_Case,
+T_Authored_criterion_Null_Case);
+type T_Authored_criterion (Kind : T_Authored_criterion_Kind := T_Authored_criterion_Text_Case) is record
 case Kind is
-when T_Authored_criterion_arm_Text => V_0 : T_Text;
-when T_Authored_criterion_arm_Object => V_1 : T_JSON_Map;
-when T_Authored_criterion_arm_Array => V_2 : T_JSON_List;
-when T_Authored_criterion_arm_Null => V_3 : T_Null;
+when T_Authored_criterion_Text_Case => V_0 : T_Text;
+when T_Authored_criterion_Object_Case => V_1 : T_JSON_Map;
+when T_Authored_criterion_Array_Case => V_2 : T_JSON_List;
+when T_Authored_criterion_Null_Case => V_3 : T_Null;
 end case;
 end record;
 package T_Authored_criterion_Options is new Optional_Values (T_Authored_criterion);
 subtype T_Authored_criterion_Optional is T_Authored_criterion_Options.Optional;
 package T_Text_Options is new Optional_Values (T_Text);
 subtype T_Text_Optional is T_Text_Options.Optional;
-type T_Authored_pointers_Kind is (T_Authored_pointers_arm_Text,
-T_Authored_pointers_arm_Array);
-type T_Authored_pointers (Kind : T_Authored_pointers_Kind := T_Authored_pointers_arm_Text) is record
+type T_Authored_pointers_Kind is (T_Authored_pointers_Text_Case,
+T_Authored_pointers_Array_Case);
+type T_Authored_pointers (Kind : T_Authored_pointers_Kind := T_Authored_pointers_Text_Case) is record
 case Kind is
-when T_Authored_pointers_arm_Text => V_0 : T_Text;
-when T_Authored_pointers_arm_Array => V_1 : T_Text_List;
+when T_Authored_pointers_Text_Case => V_0 : T_Text;
+when T_Authored_pointers_Array_Case => V_1 : T_Text_List;
 end case;
 end record;
 package T_Authored_pointers_Options is new Optional_Values (T_Authored_pointers);
 subtype T_Authored_pointers_Optional is T_Authored_pointers_Options.Optional;
 type T_Number is new Long_Float;
-type T_Authored_threshold_Kind is (T_Authored_threshold_arm_Number,
-T_Authored_threshold_arm_Text);
-type T_Authored_threshold (Kind : T_Authored_threshold_Kind := T_Authored_threshold_arm_Number) is record
+type T_Authored_threshold_Kind is (T_Authored_threshold_Number_Case,
+T_Authored_threshold_Text_Case);
+type T_Authored_threshold (Kind : T_Authored_threshold_Kind := T_Authored_threshold_Number_Case) is record
 case Kind is
-when T_Authored_threshold_arm_Number => V_0 : T_Number;
-when T_Authored_threshold_arm_Text => V_1 : T_Text;
+when T_Authored_threshold_Number_Case => V_0 : T_Number;
+when T_Authored_threshold_Text_Case => V_1 : T_Text;
 end case;
 end record;
 package T_Authored_threshold_Options is new Optional_Values (T_Authored_threshold);
@@ -158,16 +158,16 @@ end record;
 type T_Authored_name is new Unbounded_String;
 package T_Authored_name_List_Vectors is new Ada.Containers.Vectors (Positive, T_Authored_name);
 subtype T_Authored_name_List is T_Authored_name_List_Vectors.Vector;
-type T_Authored_description_Kind is (T_Authored_description_arm_Text,
-T_Authored_description_arm_Object,
-T_Authored_description_arm_Array,
-T_Authored_description_arm_Null);
-type T_Authored_description (Kind : T_Authored_description_Kind := T_Authored_description_arm_Text) is record
+type T_Authored_description_Kind is (T_Authored_description_Text_Case,
+T_Authored_description_Object_Case,
+T_Authored_description_Array_Case,
+T_Authored_description_Null_Case);
+type T_Authored_description (Kind : T_Authored_description_Kind := T_Authored_description_Text_Case) is record
 case Kind is
-when T_Authored_description_arm_Text => V_0 : T_Text;
-when T_Authored_description_arm_Object => V_1 : T_JSON_Map;
-when T_Authored_description_arm_Array => V_2 : T_JSON_List;
-when T_Authored_description_arm_Null => V_3 : T_Null;
+when T_Authored_description_Text_Case => V_0 : T_Text;
+when T_Authored_description_Object_Case => V_1 : T_JSON_Map;
+when T_Authored_description_Array_Case => V_2 : T_JSON_List;
+when T_Authored_description_Null_Case => V_3 : T_Null;
 end case;
 end record;
 type T_Authored_description_Map_Entry is record
@@ -176,22 +176,22 @@ Value : T_Authored_description;
 end record;
 package T_Authored_description_Map_Vectors is new Ada.Containers.Vectors (Positive, T_Authored_description_Map_Entry);
 subtype T_Authored_description_Map is T_Authored_description_Map_Vectors.Vector;
-type T_Authored_options_Kind is (T_Authored_options_arm_Array,
-T_Authored_options_arm_Object);
-type T_Authored_options (Kind : T_Authored_options_Kind := T_Authored_options_arm_Array) is record
+type T_Authored_options_Kind is (T_Authored_options_Array_Case,
+T_Authored_options_Object_Case);
+type T_Authored_options (Kind : T_Authored_options_Kind := T_Authored_options_Array_Case) is record
 case Kind is
-when T_Authored_options_arm_Array => V_0 : T_Authored_name_List;
-when T_Authored_options_arm_Object => V_1 : T_Authored_description_Map;
+when T_Authored_options_Array_Case => V_0 : T_Authored_name_List;
+when T_Authored_options_Object_Case => V_1 : T_Authored_description_Map;
 end case;
 end record;
 package T_Authored_options_Options is new Optional_Values (T_Authored_options);
 subtype T_Authored_options_Optional is T_Authored_options_Options.Optional;
-type T_Authored_cut_Kind is (T_Authored_cut_arm_Number,
-T_Authored_cut_arm_Text);
-type T_Authored_cut (Kind : T_Authored_cut_Kind := T_Authored_cut_arm_Number) is record
+type T_Authored_cut_Kind is (T_Authored_cut_Number_Case,
+T_Authored_cut_Text_Case);
+type T_Authored_cut (Kind : T_Authored_cut_Kind := T_Authored_cut_Number_Case) is record
 case Kind is
-when T_Authored_cut_arm_Number => V_0 : T_Number;
-when T_Authored_cut_arm_Text => V_1 : T_Text;
+when T_Authored_cut_Number_Case => V_0 : T_Number;
+when T_Authored_cut_Text_Case => V_1 : T_Text;
 end case;
 end record;
 package T_Authored_cut_Options is new Optional_Values (T_Authored_cut);
@@ -206,12 +206,12 @@ T_options : T_Authored_options_Optional;
 T_threshold : T_Authored_cut_Optional;
 T_wording_version : T_Integer_Optional;
 end record;
-type T_Authored_labels_Kind is (T_Authored_labels_arm_Array,
-T_Authored_labels_arm_Object);
-type T_Authored_labels (Kind : T_Authored_labels_Kind := T_Authored_labels_arm_Array) is record
+type T_Authored_labels_Kind is (T_Authored_labels_Array_Case,
+T_Authored_labels_Object_Case);
+type T_Authored_labels (Kind : T_Authored_labels_Kind := T_Authored_labels_Array_Case) is record
 case Kind is
-when T_Authored_labels_arm_Array => V_0 : T_Authored_name_List;
-when T_Authored_labels_arm_Object => V_1 : T_Authored_description_Map;
+when T_Authored_labels_Array_Case => V_0 : T_Authored_name_List;
+when T_Authored_labels_Object_Case => V_1 : T_Authored_description_Map;
 end case;
 end record;
 package T_Authored_labels_Options is new Optional_Values (T_Authored_labels);
@@ -232,12 +232,12 @@ Value : T_Authored_criterion;
 end record;
 package T_Authored_criterion_Map_Vectors is new Ada.Containers.Vectors (Positive, T_Authored_criterion_Map_Entry);
 subtype T_Authored_criterion_Map is T_Authored_criterion_Map_Vectors.Vector;
-type T_Authored_levels_Kind is (T_Authored_levels_arm_Array,
-T_Authored_levels_arm_Object);
-type T_Authored_levels (Kind : T_Authored_levels_Kind := T_Authored_levels_arm_Array) is record
+type T_Authored_levels_Kind is (T_Authored_levels_Array_Case,
+T_Authored_levels_Object_Case);
+type T_Authored_levels (Kind : T_Authored_levels_Kind := T_Authored_levels_Array_Case) is record
 case Kind is
-when T_Authored_levels_arm_Array => V_0 : T_Authored_name_List;
-when T_Authored_levels_arm_Object => V_1 : T_Authored_criterion_Map;
+when T_Authored_levels_Array_Case => V_0 : T_Authored_name_List;
+when T_Authored_levels_Object_Case => V_1 : T_Authored_criterion_Map;
 end case;
 end record;
 package T_Authored_levels_Options is new Optional_Values (T_Authored_levels);
@@ -251,16 +251,16 @@ T_on : T_Authored_pointers_Optional;
 T_score : T_Authored_questionText;
 T_wording_version : T_Integer_Optional;
 end record;
-type T_AnnotateQuestion_Kind is (T_AnnotateQuestion_arm_decide,
-T_AnnotateQuestion_arm_choose,
-T_AnnotateQuestion_arm_tag,
-T_AnnotateQuestion_arm_score);
-type T_AnnotateQuestion (Kind : T_AnnotateQuestion_Kind := T_AnnotateQuestion_arm_decide) is record
+type T_AnnotateQuestion_Kind is (T_AnnotateQuestion_decide_Case,
+T_AnnotateQuestion_choose_Case,
+T_AnnotateQuestion_tag_Case,
+T_AnnotateQuestion_score_Case);
+type T_AnnotateQuestion (Kind : T_AnnotateQuestion_Kind := T_AnnotateQuestion_decide_Case) is record
 case Kind is
-when T_AnnotateQuestion_arm_decide => V_0 : T_AnnotateQuestion_decide;
-when T_AnnotateQuestion_arm_choose => V_1 : T_AnnotateQuestion_choose;
-when T_AnnotateQuestion_arm_tag => V_2 : T_AnnotateQuestion_tag;
-when T_AnnotateQuestion_arm_score => V_3 : T_AnnotateQuestion_score;
+when T_AnnotateQuestion_decide_Case => V_0 : T_AnnotateQuestion_decide;
+when T_AnnotateQuestion_choose_Case => V_1 : T_AnnotateQuestion_choose;
+when T_AnnotateQuestion_tag_Case => V_2 : T_AnnotateQuestion_tag;
+when T_AnnotateQuestion_score_Case => V_3 : T_AnnotateQuestion_score;
 end case;
 end record;
 type T_AnnotateQuestion_Map_Entry is record
@@ -278,12 +278,12 @@ T_threshold : T_Authored_threshold_Optional;
 T_version : T_Literal_1;
 end record;
 type T_Literal_max is null record;
-type T_Authored_questionBatch_Kind is (T_Authored_questionBatch_arm_max,
-T_Authored_questionBatch_arm_Integer);
-type T_Authored_questionBatch (Kind : T_Authored_questionBatch_Kind := T_Authored_questionBatch_arm_max) is record
+type T_Authored_questionBatch_Kind is (T_Authored_questionBatch_max_Case,
+T_Authored_questionBatch_Integer_Case);
+type T_Authored_questionBatch (Kind : T_Authored_questionBatch_Kind := T_Authored_questionBatch_max_Case) is record
 case Kind is
-when T_Authored_questionBatch_arm_max => V_0 : T_Literal_max;
-when T_Authored_questionBatch_arm_Integer => V_1 : T_Integer;
+when T_Authored_questionBatch_max_Case => V_0 : T_Literal_max;
+when T_Authored_questionBatch_Integer_Case => V_1 : T_Integer;
 end case;
 end record;
 package T_Authored_questionBatch_Options is new Optional_Values (T_Authored_questionBatch);
@@ -387,63 +387,63 @@ T_threshold : T_Authored_cut_Optional;
 T_wording_version : T_Integer_Optional;
 end record;
 type T_DisabledCache is null record;
-type T_CacheDocument_Kind is (T_CacheDocument_arm_Text,
-T_CacheDocument_arm_DisabledCache);
-type T_CacheDocument (Kind : T_CacheDocument_Kind := T_CacheDocument_arm_Text) is record
+type T_CacheDocument_Kind is (T_CacheDocument_Text_Case,
+T_CacheDocument_DisabledCache_Case);
+type T_CacheDocument (Kind : T_CacheDocument_Kind := T_CacheDocument_Text_Case) is record
 case Kind is
-when T_CacheDocument_arm_Text => V_0 : T_Text;
-when T_CacheDocument_arm_DisabledCache => V_1 : T_DisabledCache;
+when T_CacheDocument_Text_Case => V_0 : T_Text;
+when T_CacheDocument_DisabledCache_Case => V_1 : T_DisabledCache;
 end case;
 end record;
-type T_ContextSchema_Kind is (T_ContextSchema_arm_Text,
-T_ContextSchema_arm_Object);
-type T_ContextSchema (Kind : T_ContextSchema_Kind := T_ContextSchema_arm_Text) is record
+type T_ContextSchema_Kind is (T_ContextSchema_Text_Case,
+T_ContextSchema_Object_Case);
+type T_ContextSchema (Kind : T_ContextSchema_Kind := T_ContextSchema_Text_Case) is record
 case Kind is
-when T_ContextSchema_arm_Text => V_0 : T_Text;
-when T_ContextSchema_arm_Object => V_1 : T_JSON_Map;
+when T_ContextSchema_Text_Case => V_0 : T_Text;
+when T_ContextSchema_Object_Case => V_1 : T_JSON_Map;
 end case;
 end record;
 type T_Unsigned is new Interfaces.Unsigned_64;
-type T_RequestBatch_Kind is (T_RequestBatch_arm_Integer,
-T_RequestBatch_arm_Text);
-type T_RequestBatch (Kind : T_RequestBatch_Kind := T_RequestBatch_arm_Integer) is record
+type T_RequestBatch_Kind is (T_RequestBatch_Integer_Case,
+T_RequestBatch_Text_Case);
+type T_RequestBatch (Kind : T_RequestBatch_Kind := T_RequestBatch_Integer_Case) is record
 case Kind is
-when T_RequestBatch_arm_Integer => V_0 : T_Unsigned;
-when T_RequestBatch_arm_Text => V_1 : T_Text;
+when T_RequestBatch_Integer_Case => V_0 : T_Unsigned;
+when T_RequestBatch_Text_Case => V_1 : T_Text;
 end case;
 end record;
 package T_RequestBatch_Options is new Optional_Values (T_RequestBatch);
 subtype T_RequestBatch_Optional is T_RequestBatch_Options.Optional;
 package T_CacheDocument_Options is new Optional_Values (T_CacheDocument);
 subtype T_CacheDocument_Optional is T_CacheDocument_Options.Optional;
-type T_EngineSettings_field_max_estimated_input_tokens_total_Kind is (T_Input_Token_Limit_arm_Integer,
-T_Input_Token_Limit_arm_Null);
-type T_EngineSettings_field_max_estimated_input_tokens_total (Kind : T_EngineSettings_field_max_estimated_input_tokens_total_Kind := T_Input_Token_Limit_arm_Integer) is record
+type T_EngineSettings_field_max_estimated_input_tokens_total_Kind is (T_Input_Token_Limit_Integer_Case,
+T_Input_Token_Limit_Null_Case);
+type T_EngineSettings_field_max_estimated_input_tokens_total (Kind : T_EngineSettings_field_max_estimated_input_tokens_total_Kind := T_Input_Token_Limit_Integer_Case) is record
 case Kind is
-when T_Input_Token_Limit_arm_Integer => V_0 : T_Unsigned;
-when T_Input_Token_Limit_arm_Null => V_1 : T_Null;
+when T_Input_Token_Limit_Integer_Case => V_0 : T_Unsigned;
+when T_Input_Token_Limit_Null_Case => V_1 : T_Null;
 end case;
 end record;
 package T_EngineSettings_field_max_estimated_input_tokens_total_Options is new Optional_Values (T_EngineSettings_field_max_estimated_input_tokens_total);
 subtype T_EngineSettings_field_max_estimated_input_tokens_total_Optional is T_EngineSettings_field_max_estimated_input_tokens_total_Options.Optional;
 package T_Unsigned_Options is new Optional_Values (T_Unsigned);
 subtype T_Unsigned_Optional is T_Unsigned_Options.Optional;
-type T_EngineSettings_field_max_requests_Kind is (T_EngineSettings_field_max_requests_arm_Integer,
-T_EngineSettings_field_max_requests_arm_Null);
-type T_EngineSettings_field_max_requests (Kind : T_EngineSettings_field_max_requests_Kind := T_EngineSettings_field_max_requests_arm_Integer) is record
+type T_EngineSettings_field_max_requests_Kind is (T_EngineSettings_field_max_requests_Integer_Case,
+T_EngineSettings_field_max_requests_Null_Case);
+type T_EngineSettings_field_max_requests (Kind : T_EngineSettings_field_max_requests_Kind := T_EngineSettings_field_max_requests_Integer_Case) is record
 case Kind is
-when T_EngineSettings_field_max_requests_arm_Integer => V_0 : T_Unsigned;
-when T_EngineSettings_field_max_requests_arm_Null => V_1 : T_Null;
+when T_EngineSettings_field_max_requests_Integer_Case => V_0 : T_Unsigned;
+when T_EngineSettings_field_max_requests_Null_Case => V_1 : T_Null;
 end case;
 end record;
 package T_EngineSettings_field_max_requests_Options is new Optional_Values (T_EngineSettings_field_max_requests);
 subtype T_EngineSettings_field_max_requests_Optional is T_EngineSettings_field_max_requests_Options.Optional;
-type T_EngineSettings_field_max_requests_total_Kind is (T_EngineSettings_field_max_requests_total_arm_Integer,
-T_EngineSettings_field_max_requests_total_arm_Null);
-type T_EngineSettings_field_max_requests_total (Kind : T_EngineSettings_field_max_requests_total_Kind := T_EngineSettings_field_max_requests_total_arm_Integer) is record
+type T_EngineSettings_field_max_requests_total_Kind is (T_EngineSettings_field_max_requests_total_Integer_Case,
+T_EngineSettings_field_max_requests_total_Null_Case);
+type T_EngineSettings_field_max_requests_total (Kind : T_EngineSettings_field_max_requests_total_Kind := T_EngineSettings_field_max_requests_total_Integer_Case) is record
 case Kind is
-when T_EngineSettings_field_max_requests_total_arm_Integer => V_0 : T_Unsigned;
-when T_EngineSettings_field_max_requests_total_arm_Null => V_1 : T_Null;
+when T_EngineSettings_field_max_requests_total_Integer_Case => V_0 : T_Unsigned;
+when T_EngineSettings_field_max_requests_total_Null_Case => V_1 : T_Null;
 end case;
 end record;
 package T_EngineSettings_field_max_requests_total_Options is new Optional_Values (T_EngineSettings_field_max_requests_total);
@@ -489,12 +489,12 @@ T_entities : T_RecognitionExampleEntity_List;
 T_kinds : T_Text_List_Optional;
 T_text : Thinkthen.Requests.T_Text;
 end record;
-type T_RecognitionExample_Kind is (T_RecognitionExample_arm_Text,
-T_RecognitionExample_arm_RecognitionExampleText);
-type T_RecognitionExample (Kind : T_RecognitionExample_Kind := T_RecognitionExample_arm_Text) is record
+type T_RecognitionExample_Kind is (T_RecognitionExample_Text_Case,
+T_RecognitionExample_RecognitionExampleText_Case);
+type T_RecognitionExample (Kind : T_RecognitionExample_Kind := T_RecognitionExample_Text_Case) is record
 case Kind is
-when T_RecognitionExample_arm_Text => V_0 : T_Text;
-when T_RecognitionExample_arm_RecognitionExampleText => V_1 : T_RecognitionExampleText;
+when T_RecognitionExample_Text_Case => V_0 : T_Text;
+when T_RecognitionExample_RecognitionExampleText_Case => V_1 : T_RecognitionExampleText;
 end case;
 end record;
 type T_RecognitionMode is (T_RecognitionMode_whole,
@@ -565,12 +565,12 @@ T_bytes : T_Text;
 T_kind : T_Literal_bytes;
 T_media : T_ImageMedia;
 end record;
-type T_RequestImage_Kind is (T_RequestImage_arm_file,
-T_RequestImage_arm_bytes);
-type T_RequestImage (Kind : T_RequestImage_Kind := T_RequestImage_arm_file) is record
+type T_RequestImage_Kind is (T_RequestImage_file_Case,
+T_RequestImage_bytes_Case);
+type T_RequestImage (Kind : T_RequestImage_Kind := T_RequestImage_file_Case) is record
 case Kind is
-when T_RequestImage_arm_file => V_0 : T_RequestImage_file;
-when T_RequestImage_arm_bytes => V_1 : T_RequestImage_bytes;
+when T_RequestImage_file_Case => V_0 : T_RequestImage_file;
+when T_RequestImage_bytes_Case => V_1 : T_RequestImage_bytes;
 end case;
 end record;
 package T_RequestImage_List_Vectors is new Ada.Containers.Vectors (Positive, T_RequestImage);
@@ -607,12 +607,12 @@ type T_RequestOriginal_json is record
 T_kind : T_Literal_json;
 T_value : T_JSON;
 end record;
-type T_RequestOriginal_Kind is (T_RequestOriginal_arm_text,
-T_RequestOriginal_arm_json);
-type T_RequestOriginal (Kind : T_RequestOriginal_Kind := T_RequestOriginal_arm_text) is record
+type T_RequestOriginal_Kind is (T_RequestOriginal_text_Case,
+T_RequestOriginal_json_Case);
+type T_RequestOriginal (Kind : T_RequestOriginal_Kind := T_RequestOriginal_text_Case) is record
 case Kind is
-when T_RequestOriginal_arm_text => V_0 : T_RequestOriginal_text;
-when T_RequestOriginal_arm_json => V_1 : T_RequestOriginal_json;
+when T_RequestOriginal_text_Case => V_0 : T_RequestOriginal_text;
+when T_RequestOriginal_json_Case => V_1 : T_RequestOriginal_json;
 end case;
 end record;
 package T_RequestOriginal_Options is new Optional_Values (T_RequestOriginal);
@@ -685,30 +685,30 @@ T_kind : T_Literal_feed;
 T_name : T_Text;
 T_reading : T_RequestReader_Optional;
 end record;
-type T_RequestInput_Kind is (T_RequestInput_arm_text,
-T_RequestInput_arm_json,
-T_RequestInput_arm_records,
-T_RequestInput_arm_units,
-T_RequestInput_arm_entities,
-T_RequestInput_arm_source,
-T_RequestInput_arm_feed);
-type T_RequestInput (Kind : T_RequestInput_Kind := T_RequestInput_arm_text) is record
+type T_RequestInput_Kind is (T_RequestInput_text_Case,
+T_RequestInput_json_Case,
+T_RequestInput_records_Case,
+T_RequestInput_units_Case,
+T_RequestInput_entities_Case,
+T_RequestInput_source_Case,
+T_RequestInput_feed_Case);
+type T_RequestInput (Kind : T_RequestInput_Kind := T_RequestInput_text_Case) is record
 case Kind is
-when T_RequestInput_arm_text => V_0 : T_RequestInput_text;
-when T_RequestInput_arm_json => V_1 : T_RequestInput_json;
-when T_RequestInput_arm_records => V_2 : T_RequestInput_records;
-when T_RequestInput_arm_units => V_3 : T_RequestInput_units;
-when T_RequestInput_arm_entities => V_4 : T_RequestInput_entities;
-when T_RequestInput_arm_source => V_5 : T_RequestInput_source;
-when T_RequestInput_arm_feed => V_6 : T_RequestInput_feed;
+when T_RequestInput_text_Case => V_0 : T_RequestInput_text;
+when T_RequestInput_json_Case => V_1 : T_RequestInput_json;
+when T_RequestInput_records_Case => V_2 : T_RequestInput_records;
+when T_RequestInput_units_Case => V_3 : T_RequestInput_units;
+when T_RequestInput_entities_Case => V_4 : T_RequestInput_entities;
+when T_RequestInput_source_Case => V_5 : T_RequestInput_source;
+when T_RequestInput_feed_Case => V_6 : T_RequestInput_feed;
 end case;
 end record;
-type T_RequestThreshold_Kind is (T_RequestThreshold_arm_Number,
-T_RequestThreshold_arm_Text);
-type T_RequestThreshold (Kind : T_RequestThreshold_Kind := T_RequestThreshold_arm_Number) is record
+type T_RequestThreshold_Kind is (T_RequestThreshold_Number_Case,
+T_RequestThreshold_Text_Case);
+type T_RequestThreshold (Kind : T_RequestThreshold_Kind := T_RequestThreshold_Number_Case) is record
 case Kind is
-when T_RequestThreshold_arm_Number => V_0 : T_Number;
-when T_RequestThreshold_arm_Text => V_1 : T_Text;
+when T_RequestThreshold_Number_Case => V_0 : T_Number;
+when T_RequestThreshold_Text_Case => V_1 : T_Text;
 end case;
 end record;
 package T_RequestThreshold_Options is new Optional_Values (T_RequestThreshold);
@@ -836,24 +836,24 @@ T_questions : T_AnnotateQuestion_Map;
 T_threshold : T_Authored_threshold_Optional;
 T_version : T_Literal_1;
 end record;
-type T_RequestDefinition_Kind is (T_RequestDefinition_arm_Authored_decide,
-T_RequestDefinition_arm_Authored_choose,
-T_RequestDefinition_arm_Authored_tag,
-T_RequestDefinition_arm_Authored_score,
-T_RequestDefinition_arm_Authored_relate,
-T_RequestDefinition_arm_Authored_find,
-T_RequestDefinition_arm_RecognizeDefinition,
-T_RequestDefinition_arm_AnnotateDefinition);
-type T_RequestDefinition (Kind : T_RequestDefinition_Kind := T_RequestDefinition_arm_Authored_decide) is record
+type T_RequestDefinition_Kind is (T_RequestDefinition_Authored_decide_Case,
+T_RequestDefinition_Authored_choose_Case,
+T_RequestDefinition_Authored_tag_Case,
+T_RequestDefinition_Authored_score_Case,
+T_RequestDefinition_Authored_relate_Case,
+T_RequestDefinition_Authored_find_Case,
+T_RequestDefinition_RecognizeDefinition_Case,
+T_RequestDefinition_AnnotateDefinition_Case);
+type T_RequestDefinition (Kind : T_RequestDefinition_Kind := T_RequestDefinition_Authored_decide_Case) is record
 case Kind is
-when T_RequestDefinition_arm_Authored_decide => V_0 : T_RequestDefinition_Authored_decide;
-when T_RequestDefinition_arm_Authored_choose => V_1 : T_RequestDefinition_Authored_choose;
-when T_RequestDefinition_arm_Authored_tag => V_2 : T_RequestDefinition_Authored_tag;
-when T_RequestDefinition_arm_Authored_score => V_3 : T_RequestDefinition_Authored_score;
-when T_RequestDefinition_arm_Authored_relate => V_4 : T_RequestDefinition_Authored_relate;
-when T_RequestDefinition_arm_Authored_find => V_5 : T_RequestDefinition_Authored_find;
-when T_RequestDefinition_arm_RecognizeDefinition => V_6 : T_RequestDefinition_RecognizeDefinition;
-when T_RequestDefinition_arm_AnnotateDefinition => V_7 : T_RequestDefinition_AnnotateDefinition;
+when T_RequestDefinition_Authored_decide_Case => V_0 : T_RequestDefinition_Authored_decide;
+when T_RequestDefinition_Authored_choose_Case => V_1 : T_RequestDefinition_Authored_choose;
+when T_RequestDefinition_Authored_tag_Case => V_2 : T_RequestDefinition_Authored_tag;
+when T_RequestDefinition_Authored_score_Case => V_3 : T_RequestDefinition_Authored_score;
+when T_RequestDefinition_Authored_relate_Case => V_4 : T_RequestDefinition_Authored_relate;
+when T_RequestDefinition_Authored_find_Case => V_5 : T_RequestDefinition_Authored_find;
+when T_RequestDefinition_RecognizeDefinition_Case => V_6 : T_RequestDefinition_RecognizeDefinition;
+when T_RequestDefinition_AnnotateDefinition_Case => V_7 : T_RequestDefinition_AnnotateDefinition;
 end case;
 end record;
 type T_RequestQuestion_definition is record
@@ -874,18 +874,18 @@ type T_RequestQuestion_reference is record
 T_kind : T_Literal_reference;
 T_reference : T_Text;
 end record;
-type T_RequestQuestion_Kind is (T_RequestQuestion_arm_text,
-T_RequestQuestion_arm_definition,
-T_RequestQuestion_arm_file,
-T_RequestQuestion_arm_name,
-T_RequestQuestion_arm_reference);
-type T_RequestQuestion (Kind : T_RequestQuestion_Kind := T_RequestQuestion_arm_text) is record
+type T_RequestQuestion_Kind is (T_RequestQuestion_text_Case,
+T_RequestQuestion_definition_Case,
+T_RequestQuestion_file_Case,
+T_RequestQuestion_name_Case,
+T_RequestQuestion_reference_Case);
+type T_RequestQuestion (Kind : T_RequestQuestion_Kind := T_RequestQuestion_text_Case) is record
 case Kind is
-when T_RequestQuestion_arm_text => V_0 : T_RequestQuestion_text;
-when T_RequestQuestion_arm_definition => V_1 : T_RequestQuestion_definition;
-when T_RequestQuestion_arm_file => V_2 : T_RequestQuestion_file;
-when T_RequestQuestion_arm_name => V_3 : T_RequestQuestion_name;
-when T_RequestQuestion_arm_reference => V_4 : T_RequestQuestion_reference;
+when T_RequestQuestion_text_Case => V_0 : T_RequestQuestion_text;
+when T_RequestQuestion_definition_Case => V_1 : T_RequestQuestion_definition;
+when T_RequestQuestion_file_Case => V_2 : T_RequestQuestion_file;
+when T_RequestQuestion_name_Case => V_3 : T_RequestQuestion_name;
+when T_RequestQuestion_reference_Case => V_4 : T_RequestQuestion_reference;
 end case;
 end record;
 type T_RequestCall is record
@@ -925,16 +925,16 @@ type T_RequestReaderFailure_invalid_input is record
 T_kind : T_Literal_invalid_input;
 T_location : T_SessionSourceLocation_Optional;
 end record;
-type T_RequestReaderFailure_Kind is (T_RequestReaderFailure_arm_producer,
-T_RequestReaderFailure_arm_io,
-T_RequestReaderFailure_arm_utf8,
-T_RequestReaderFailure_arm_invalid_input);
-type T_RequestReaderFailure (Kind : T_RequestReaderFailure_Kind := T_RequestReaderFailure_arm_producer) is record
+type T_RequestReaderFailure_Kind is (T_RequestReaderFailure_producer_Case,
+T_RequestReaderFailure_io_Case,
+T_RequestReaderFailure_utf8_Case,
+T_RequestReaderFailure_invalid_input_Case);
+type T_RequestReaderFailure (Kind : T_RequestReaderFailure_Kind := T_RequestReaderFailure_producer_Case) is record
 case Kind is
-when T_RequestReaderFailure_arm_producer => V_0 : T_RequestReaderFailure_producer;
-when T_RequestReaderFailure_arm_io => V_1 : T_RequestReaderFailure_io;
-when T_RequestReaderFailure_arm_utf8 => V_2 : T_RequestReaderFailure_utf8;
-when T_RequestReaderFailure_arm_invalid_input => V_3 : T_RequestReaderFailure_invalid_input;
+when T_RequestReaderFailure_producer_Case => V_0 : T_RequestReaderFailure_producer;
+when T_RequestReaderFailure_io_Case => V_1 : T_RequestReaderFailure_io;
+when T_RequestReaderFailure_utf8_Case => V_2 : T_RequestReaderFailure_utf8;
+when T_RequestReaderFailure_invalid_input_Case => V_3 : T_RequestReaderFailure_invalid_input;
 end case;
 end record;
 type T_RequestSessionDescriptor is record
@@ -945,15 +945,15 @@ subtype Question is T_RequestQuestion;
 subtype Input is T_RequestInput;
 subtype Item is T_RequestItem;
 subtype Items is T_RequestItem_List;
-function Text_Question (Value : String) return T_RequestQuestion is (T_RequestQuestion'(Kind => T_RequestQuestion_arm_text, V_0 => (T_text => T_Text (Ada.Strings.Unbounded.To_Unbounded_String (Value)), others => <>)));
-function Question_File (Value : String) return T_RequestQuestion is (T_RequestQuestion'(Kind => T_RequestQuestion_arm_file, V_2 => (T_path => T_Text (Ada.Strings.Unbounded.To_Unbounded_String (Value)), others => <>)));
-function Question_Name (Value : String) return T_RequestQuestion is (T_RequestQuestion'(Kind => T_RequestQuestion_arm_name, V_3 => (T_name => T_Text (Ada.Strings.Unbounded.To_Unbounded_String (Value)), others => <>)));
-function Question_Reference (Value : String) return T_RequestQuestion is (T_RequestQuestion'(Kind => T_RequestQuestion_arm_reference, V_4 => (T_reference => T_Text (Ada.Strings.Unbounded.To_Unbounded_String (Value)), others => <>)));
-function Recognize_Question (Value : T_RecognizeQuestion) return T_RequestQuestion is (T_RequestQuestion'(Kind => T_RequestQuestion_arm_definition, V_1 => (T_value => T_RequestDefinition'(Kind => T_RequestDefinition_arm_RecognizeDefinition, V_6 => (T_recognize => Value, others => <>)), others => <>)));
-function Recognize_Question (Value : T_RequestDefinition_RecognizeDefinition) return T_RequestQuestion is (T_RequestQuestion'(Kind => T_RequestQuestion_arm_definition, V_1 => (T_value => T_RequestDefinition'(Kind => T_RequestDefinition_arm_RecognizeDefinition, V_6 => Value), others => <>)));
-function Relate_Question (Value : T_RelateQuestion) return T_RequestQuestion is (T_RequestQuestion'(Kind => T_RequestQuestion_arm_definition, V_1 => (T_value => T_RequestDefinition'(Kind => T_RequestDefinition_arm_Authored_relate, V_4 => (T_relate => Value, others => <>)), others => <>)));
-function Relate_Question (Value : T_RequestDefinition_Authored_relate) return T_RequestQuestion is (T_RequestQuestion'(Kind => T_RequestQuestion_arm_definition, V_1 => (T_value => T_RequestDefinition'(Kind => T_RequestDefinition_arm_Authored_relate, V_4 => Value), others => <>)));
-function Text_Item (Value : String) return T_RequestItem is (T_RequestItem'(T_original => (Present => True, Value => (Kind => T_RequestOriginal_arm_text, V_0 => (T_text => T_Text (Ada.Strings.Unbounded.To_Unbounded_String (Value)), others => <>))), others => <>));
-function Items_Input (Value : T_RequestItem_List) return T_RequestInput is (T_RequestInput'(Kind => T_RequestInput_arm_records, V_2 => (T_items => Value, others => <>)));
-function File_Input (Path : String) return T_RequestInput is (T_RequestInput'(Kind => T_RequestInput_arm_source, V_5 => (T_source => (T_paths => T_Text_List'[T_Text (Ada.Strings.Unbounded.To_Unbounded_String (Path))], others => <>), others => <>)));
+function Text_Question (Value : String) return T_RequestQuestion is (T_RequestQuestion'(Kind => T_RequestQuestion_text_Case, V_0 => (T_text => T_Text (Ada.Strings.Unbounded.To_Unbounded_String (Value)), others => <>)));
+function Question_File (Value : String) return T_RequestQuestion is (T_RequestQuestion'(Kind => T_RequestQuestion_file_Case, V_2 => (T_path => T_Text (Ada.Strings.Unbounded.To_Unbounded_String (Value)), others => <>)));
+function Question_Name (Value : String) return T_RequestQuestion is (T_RequestQuestion'(Kind => T_RequestQuestion_name_Case, V_3 => (T_name => T_Text (Ada.Strings.Unbounded.To_Unbounded_String (Value)), others => <>)));
+function Question_Reference (Value : String) return T_RequestQuestion is (T_RequestQuestion'(Kind => T_RequestQuestion_reference_Case, V_4 => (T_reference => T_Text (Ada.Strings.Unbounded.To_Unbounded_String (Value)), others => <>)));
+function Recognize_Question (Value : T_RecognizeQuestion) return T_RequestQuestion is (T_RequestQuestion'(Kind => T_RequestQuestion_definition_Case, V_1 => (T_value => T_RequestDefinition'(Kind => T_RequestDefinition_RecognizeDefinition_Case, V_6 => (T_recognize => Value, others => <>)), others => <>)));
+function Recognize_Question (Value : T_RequestDefinition_RecognizeDefinition) return T_RequestQuestion is (T_RequestQuestion'(Kind => T_RequestQuestion_definition_Case, V_1 => (T_value => T_RequestDefinition'(Kind => T_RequestDefinition_RecognizeDefinition_Case, V_6 => Value), others => <>)));
+function Relate_Question (Value : T_RelateQuestion) return T_RequestQuestion is (T_RequestQuestion'(Kind => T_RequestQuestion_definition_Case, V_1 => (T_value => T_RequestDefinition'(Kind => T_RequestDefinition_Authored_relate_Case, V_4 => (T_relate => Value, others => <>)), others => <>)));
+function Relate_Question (Value : T_RequestDefinition_Authored_relate) return T_RequestQuestion is (T_RequestQuestion'(Kind => T_RequestQuestion_definition_Case, V_1 => (T_value => T_RequestDefinition'(Kind => T_RequestDefinition_Authored_relate_Case, V_4 => Value), others => <>)));
+function Text_Item (Value : String) return T_RequestItem is (T_RequestItem'(T_original => (Present => True, Value => (Kind => T_RequestOriginal_text_Case, V_0 => (T_text => T_Text (Ada.Strings.Unbounded.To_Unbounded_String (Value)), others => <>))), others => <>));
+function Items_Input (Value : T_RequestItem_List) return T_RequestInput is (T_RequestInput'(Kind => T_RequestInput_records_Case, V_2 => (T_items => Value, others => <>)));
+function File_Input (Path : String) return T_RequestInput is (T_RequestInput'(Kind => T_RequestInput_source_Case, V_5 => (T_source => (T_paths => T_Text_List'[T_Text (Ada.Strings.Unbounded.To_Unbounded_String (Path))], others => <>), others => <>)));
 end Thinkthen.Requests;
