@@ -134,7 +134,7 @@ fn a_replayed_recording_piped_to_audit_grades_as_the_prototype_does() {
         .spawn()
         .expect("decide runs");
     let audit = Command::new(env!("CARGO_BIN_EXE_thinkthen"))
-        .args(["audit", "-", "replay/key.jsonl"])
+        .args(["runs", "audit", "-", "replay/key.jsonl"])
         .clear_environment()
         .current_dir(fixtures())
         .stdin(decide.stdout.take().expect("the pipe"))

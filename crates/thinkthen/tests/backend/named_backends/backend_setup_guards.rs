@@ -155,7 +155,7 @@ fn check_preflights_every_fixed_probe_under_the_selected_setup_before_sending_or
             .to_string(),
         );
         for plan in [false, true] {
-            let mut args = vec!["check", "--backend", "small"];
+            let mut args = vec!["backends", "check", "--backend", "small"];
             if plan {
                 args.push("--plan");
             }
@@ -178,7 +178,7 @@ fn check_preflights_every_fixed_probe_under_the_selected_setup_before_sending_or
         }}}).to_string());
         let proxy = Proxy::start();
         let out = home.run(
-            &["check", "--backend", "small"],
+            &["backends", "check", "--backend", "small"],
             &[("LOCAL_D1_KEY", ""), ("HTTPS_PROXY", &proxy.url)],
         );
         assert_eq!(out.status.code(), Some(2));

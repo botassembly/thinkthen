@@ -236,7 +236,10 @@ fn a_plan_a_recording_a_replay_and_check_name_the_backend_variable_and_hold_no_k
         "a replay reads no key and sends nothing"
     );
     assert_eq!(target.count(), 2);
-    let check = home.run(&["check", "--backend", "liquid", "--plan"], &proxied);
+    let check = home.run(
+        &["backends", "check", "--backend", "liquid", "--plan"],
+        &proxied,
+    );
     let (stdout, stderr) = said(&check);
     assert_eq!(check.status.code(), Some(0), "{stderr}");
     assert!(

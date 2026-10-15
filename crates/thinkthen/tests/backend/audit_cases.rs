@@ -196,7 +196,7 @@ fn aggregate_only_flags_refuse_cases_before_file_reads() {
 fn case_view_sends_nothing_with_a_configured_backend_and_key() {
     let listener = Listener::answering(|_| Canned::ok("{}")).expect("listener");
     let child = Command::new(env!("CARGO_BIN_EXE_thinkthen"))
-        .args(["audit", RESULTS, KEY, "--cases"])
+        .args(["runs", "audit", RESULTS, KEY, "--cases"])
         .current_dir(fixtures())
         .clear_environment()
         .env("THINKTHEN_BASE_URL", listener.base())

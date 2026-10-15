@@ -63,7 +63,7 @@ def run(binary, titles, catalog, key, scratch):
     result_rows = [json.loads(line) for line in results.read_bytes().splitlines()]
     spent = counted_tokens(total, result_rows)
     report = subprocess.run(
-        [str(binary), "audit", str(results), str(key), "--id", ""],
+        [str(binary), "runs", "audit", str(results), str(key), "--id", ""],
         capture_output=True, env=speed.plain(), check=False,
     )
     if report.returncode:

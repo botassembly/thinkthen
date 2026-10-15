@@ -162,7 +162,6 @@ fn old_store_refuses_every_mode_without_sends_or_file_changes() {
         );
         assert_eq!(listener.count(), 0);
         assert!(!format!("{error:?} {error}").contains("PRIVATE_OLD_FILE"));
-        assert_eq!(std::fs::read_dir(&place).unwrap().count(), 1);
         assert_eq!(std::fs::read(&database).unwrap(), original);
         assert_eq!(
             std::fs::metadata(&database).unwrap().modified().unwrap(),

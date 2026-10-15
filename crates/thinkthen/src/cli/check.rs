@@ -1,4 +1,4 @@
-//! `thinkthen check`: rich probes and minimal production function calls.
+//! `thinkthen backends check`: rich probes and minimal production function calls.
 //!
 //! Each probe goes through the production encoder, engine, and decoder, so a
 //! critical finding is what a real run would meet. `core::check` holds the

@@ -3,7 +3,7 @@
 use crate::harness::spawn;
 
 #[test]
-fn help_advertises_backend_checks_and_hides_the_published_alias() {
+fn help_advertises_backend_checks_and_omits_the_retired_name() {
     let help = spawn(&["--help"], &[], b"").expect("help runs");
     assert_eq!(help.status.code(), Some(0));
     let text = crate::harness::printed(&help);
@@ -22,9 +22,12 @@ fn help_advertises_backend_checks_and_hides_the_published_alias() {
 }
 
 #[test]
-fn reserved_top_level_nouns_are_refused_without_sending() {
+fn retired_and_reserved_commands_refuse_before_setup_without_sending() {
     let listener = crate::harness::Listener::serving(Vec::new()).expect("listener");
     for noun in [
+        "check",
+        "audit",
+        "diff",
         "questions",
         "items",
         "answers",
@@ -35,12 +38,13 @@ fn reserved_top_level_nouns_are_refused_without_sending() {
         "people",
         "search",
     ] {
-        for arguments in [vec![noun], vec!["help", noun]] {
+        for arguments in [vec![noun], vec![noun, "--help"], vec!["help", noun]] {
             let output = spawn(
                 &arguments,
                 &[
                     ("THINKTHEN_BASE_URL", listener.base()),
                     ("THINKTHEN_API_KEY", "namespace-fake-key"),
+                    ("THINKTHEN_BACKEND", "invalid-namespace-backend"),
                 ],
                 b"",
             )
@@ -53,6 +57,7 @@ fn reserved_top_level_nouns_are_refused_without_sending() {
                 "{said}"
             );
             assert!(!said.contains("namespace-fake-key"), "{said}");
+            assert!(!said.contains("invalid-namespace-backend"), "{said}");
         }
     }
     assert!(listener.requests().is_empty());
@@ -60,7 +65,7 @@ fn reserved_top_level_nouns_are_refused_without_sending() {
 }
 
 #[test]
-fn help_advertises_runs_and_hides_the_published_audit_and_diff_aliases() {
+fn help_advertises_runs_and_omits_the_retired_audit_and_diff_names() {
     let help = spawn(&["--help"], &[], b"").expect("help runs");
     assert_eq!(help.status.code(), Some(0));
     let text = crate::harness::printed(&help);
