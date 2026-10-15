@@ -104,11 +104,11 @@ def named_forms(run):
 def unresolved_probabilities(run):
     with Backend() as backend:
         question = "{'decide':'Refund?','true':NULL,'threshold':'0.1:0.95'}"
-        got = run([
+        got = run(["SET thinkthen_cache = 'off'",
             "SELECT d.value,d.probability,d.failure.kind,d.facts.requests_sent FROM (SELECT thinkthen_decide_details(" + question + ",'alpha') AS d)",
             "SELECT ordinal,value,probability,failure.kind,facts.requests_sent FROM " + table('decide', question, "[{'text':'alpha'},{'text':'beta'}]") + ' ORDER BY ordinal',
             "SELECT d.value,d.probability,d.result.value,d.failure.kind,d.facts.requests_sent FROM (SELECT thinkthen_decide_details({'decide':'Refund?','true':NULL},'alpha') AS d)",
-        ], backend.base())
+        ], backend.base())[1:]
         expect([rows(item) for item in got], [[[None,None,None,1]],[[0,None,None,None,1],[1,None,None,None,1]],[[True,.9,None,None,1]]],
                'unresolved details have null probability; authored null retains resolved yes probability')
         expect(backend.count(), 3, 'one send per details invocation')
