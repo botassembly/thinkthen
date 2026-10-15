@@ -61,6 +61,7 @@ case $host in Linux|Darwin) ;; *) not_run "no Ruby host route for $host" ;; esac
 . ./toolchain.env
 if [ -z "${THINKTHEN_RUBY_MINOR:-}" ] && [ "$profile" != routine ]; then
   scratch_dir versions
+  failed=0
   for minor in $RUBY_MINORS; do
     code=0
     THINKTHEN_RUBY_MINOR=$minor sh "$0" "$@" >"$versions/$minor.log" 2>&1 || code=$?
@@ -71,9 +72,9 @@ if [ -z "${THINKTHEN_RUBY_MINOR:-}" ] && [ "$profile" != routine ]; then
     else
       sed "s/^parity: /Ruby $minor parity: /" "$versions/$minor.log"
     fi
-    [ "$code" -eq 0 ] || exit "$code"
+    [ "$code" -eq 0 ] || failed=$code
   done
-  exit 0
+  exit "$failed"
 fi
 THINKTHEN_RUBY_MINOR=${THINKTHEN_RUBY_MINOR:-4.0}
 export THINKTHEN_RUBY_MINOR
