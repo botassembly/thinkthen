@@ -171,6 +171,9 @@ def native_parity(consumer, running):
                             return result
                         before = int(backend.read("count"))
                         got = invoke(settings)
+                        if row["id"] == "settings-max-requests-refuses-past-the-limit":
+                            assert [entry["index"] for entry in got["rows"]] == [0, 1], got
+                            assert [entry["input"] for entry in got["rows"]] == step["items"][:2], got
                         if step["verb"] == "find" and got["code"] == 0:
                             assert all(r["answer_kind"] == "find" for r in got["rows"]), "find answer discriminator"
                         if value.get("identity_steps"):
