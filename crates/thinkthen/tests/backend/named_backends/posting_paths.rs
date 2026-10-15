@@ -308,7 +308,14 @@ fn check_satisfies_both_sides_and_plan_pins_exact_requests() {
     let target = schema_listener();
     let home = Home::new("check-sides-0399");
     let out = home.run(
-        &["check", "--backend", "openrouter", "--url", target.base()],
+        &[
+            "backends",
+            "check",
+            "--backend",
+            "openrouter",
+            "--url",
+            target.base(),
+        ],
         &[("OPENROUTER_API_KEY", "fixture0399")],
     );
     let (stdout, stderr) = said(&out);
@@ -322,7 +329,7 @@ fn check_satisfies_both_sides_and_plan_pins_exact_requests() {
     );
     assert!(stdout.ends_with("critical 0, warning 0\n"));
     assert_eq!(target.count(), 15);
-    let out = home.run(&["check", "--url", target.base()], &[]);
+    let out = home.run(&["backends", "check", "--url", target.base()], &[]);
     assert_eq!(out.status.code(), Some(4));
     let stdout = said(&out).0;
     assert!(stdout.contains("critical noul:"));
@@ -330,6 +337,7 @@ fn check_satisfies_both_sides_and_plan_pins_exact_requests() {
     assert_eq!(target.count(), 30);
     let out = home.run(
         &[
+            "backends",
             "check",
             "--backend",
             "openrouter",
@@ -360,7 +368,14 @@ fn manual_check_caps_bind_admission_and_all_retry_attempts() {
                 Listener::answering(|_| Canned::status(503, "{}")).expect("retry listener");
             let home = Home::new("cap-0399");
             let out = home.run(
-                &["check", "--backend", name, "--url", target.base()],
+                &[
+                    "backends",
+                    "check",
+                    "--backend",
+                    name,
+                    "--url",
+                    target.base(),
+                ],
                 &[("THINKTHEN_MAX_ESTIMATED_INPUT_TOKENS_TOTAL", cap)],
             );
             assert_eq!(out.status.code(), Some(if cap == "1" { 2 } else { 4 }));
@@ -451,7 +466,7 @@ fn new_builtin_names_preserve_the_rate_only_configuration_contract() {
     for name in ["perplexity", "openrouter"] {
         let custom = json!({"schema":"thinkthen.config/1","backends":{name:{"url":"http://127.0.0.1/v1","key_env":"K","model":"m"}}});
         home.config(&custom.to_string());
-        let out = home.run(&["check", "--backend", name, "--plan"], &[]);
+        let out = home.run(&["backends", "check", "--backend", name, "--plan"], &[]);
         assert_eq!(out.status.code(), Some(5));
         assert_eq!(
             said(&out).1,
@@ -462,7 +477,7 @@ fn new_builtin_names_preserve_the_rate_only_configuration_contract() {
         let rated =
             json!({"schema":"thinkthen.config/1","backends":{name:{"requests_per_minute":60}}});
         home.config(&rated.to_string());
-        let out = home.run(&["check", "--backend", name, "--plan"], &[]);
+        let out = home.run(&["backends", "check", "--backend", name, "--plan"], &[]);
         assert_eq!(out.status.code(), Some(0), "{}", said(&out).1);
         let (url, model) = if name == "perplexity" {
             (

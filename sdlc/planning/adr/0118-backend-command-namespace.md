@@ -11,3 +11,5 @@ Reserve `questions`, `items`, `answers`, `checks`, `datasets`, `setups`, `findin
 `thinkthen runs audit` and `thinkthen runs diff` activate the previously reserved `runs` noun under ticket 0440. Keep published top-level `audit` and `diff` as hidden compatibility aliases. Both forms route before setup to the existing offline analysis, with identical options, outputs, diagnostics and exit codes. This introduces no judging function or business policy.
 
 Current examples use the canonical spelling. Historical run evidence retains the spelling it executed. Ian can overturn the names or compatibility policy.
+
+Ticket 0565 applies the later [no-compatibility ruling](../../decisions/2026-10-12-no-compatibility-before-1-0.md) and supersedes this ADR and ticket 0440 only where they retain the published top-level aliases. The 0.1.2 release shipped `check`, `audit` and `diff`; 0.2 refuses those names before setup and accepts only `backends check`, `runs audit` and `runs diff`. Historical evidence keeps the spelling it executed.

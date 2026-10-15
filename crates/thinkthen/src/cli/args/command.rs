@@ -5,9 +5,8 @@ use std::path::PathBuf;
 use clap::{Args, Subcommand};
 
 use super::{
-    AnnotateArguments, CheckArguments, ChooseArguments, DecideArguments, FilterArguments,
-    FindArguments, RankArguments, RecognizeArguments, RelateArguments, ScoreArguments,
-    TagArguments,
+    AnnotateArguments, ChooseArguments, DecideArguments, FilterArguments, FindArguments,
+    RankArguments, RecognizeArguments, RelateArguments, ScoreArguments, TagArguments,
 };
 
 /// The verbs the tool answers to.
@@ -27,10 +26,6 @@ pub(crate) enum Command {
     /// Check that a named backend works with this tool.
     #[command(display_order = 1003, subcommand)]
     Backends(super::backends::BackendCommand),
-
-    /// Published compatibility spelling for backends check.
-    #[command(hide = true)]
-    Check(CheckArguments),
 
     /// Answer one yes or no question about a text. A record run exits 0 when
     /// it completes without a partial or whole-run failure. The printed
@@ -254,14 +249,6 @@ pub(crate) enum Command {
     /// Grade or compare saved answers without sending a request.
     #[command(display_order = 1000, subcommand)]
     Runs(super::runs::RunsCommand),
-
-    /// Published compatibility spelling for runs audit.
-    #[command(hide = true)]
-    Audit(crate::cli::audit::AuditArguments),
-
-    /// Published compatibility spelling for runs diff.
-    #[command(hide = true)]
-    Diff(crate::cli::diff::DiffArguments),
 }
 
 #[derive(Args, Debug)]
@@ -382,12 +369,9 @@ impl Command {
             Self::Cache(_)
                 | Self::Status(_)
                 | Self::Mcp(_)
-                | Self::Check(_)
                 | Self::Backends(_)
                 | Self::Transform(_)
                 | Self::Runs(_)
-                | Self::Audit(_)
-                | Self::Diff(_)
         )
     }
 
@@ -407,12 +391,9 @@ impl Command {
             Self::Cache(_)
             | Self::Status(_)
             | Self::Mcp(_)
-            | Self::Check(_)
             | Self::Backends(_)
             | Self::Transform(_)
-            | Self::Runs(_)
-            | Self::Audit(_)
-            | Self::Diff(_) => None,
+            | Self::Runs(_) => None,
         }
     }
 
@@ -429,17 +410,12 @@ impl Command {
             Self::Annotate(arguments) => arguments.common.timeout,
             Self::Recognize(arguments) => arguments.common.timeout,
             Self::Relate(arguments) => arguments.common.timeout,
-            Self::Check(arguments)
-            | Self::Backends(super::backends::BackendCommand::Check(arguments)) => {
-                arguments.timeout
-            }
+            Self::Backends(super::backends::BackendCommand::Check(arguments)) => arguments.timeout,
             Self::Cache(_)
             | Self::Status(_)
             | Self::Mcp(_)
             | Self::Transform(_)
-            | Self::Runs(_)
-            | Self::Audit(_)
-            | Self::Diff(_) => 1,
+            | Self::Runs(_) => 1,
         }
     }
 }

@@ -148,7 +148,7 @@ fn command_refuses_before_plan_status_or_recording_output() {
             "--plan",
         ],
         vec!["relate", "linked=person:person", "--url", &base, "--plan"],
-        vec!["check", "--url", &base, "--plan"],
+        vec!["backends", "check", "--url", &base, "--plan"],
         vec!["status", "--json"],
         vec!["status"],
     ] {

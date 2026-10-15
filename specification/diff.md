@@ -13,7 +13,7 @@ thinkthen runs diff runs/before.jsonl --key key.jsonl --compare-threshold 0.4
 
 ## Command line
 
-Ticket 0440 makes `runs diff` the visible spelling. Top-level `diff` remains a hidden compatibility alias with identical options, output, diagnostics and exit codes.
+Use `thinkthen runs diff`. Top-level `diff` is refused with exit 2 before setup or requests.
 
 ```text
 thinkthen runs diff A [B] [--key KEY] [--threshold RULE] [--compare-threshold RULE] [--id POINTER] [--match strict|overlap] [--table]

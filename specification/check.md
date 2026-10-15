@@ -21,7 +21,7 @@ thinkthen backends check [--url BASE] [--backend NAME] [--model NAME] [--timeout
 - Its attempts and reported tokens count in the usage totals, as every live request does.
 - `THINKTHEN_MAX_ESTIMATED_INPUT_TOKENS_TOTAL` binds each probe as it binds every live request, by [backends.md](backends.md). `backends check` has no flag for it. A probe the cap cannot admit stops the check before that probe is sent: the command prints the asking commands' sentence, such as `thinkthen usage: max_estimated_input_tokens_total=1 (encoded-body-bytes-908-v1) would be exceeded before this call's first request`, prints no report, and exits 2.
 
-`thinkthen check` remains a hidden compatibility alias. Both spellings accept the same options and produce identical request bodies, reports, diagnostics, secrecy, timeout and exit behavior. Help advertises only `backends`.
+Top-level `thinkthen check` is refused with exit 2 before setup or requests. Use `thinkthen backends check`.
 
 ## The four probes
 

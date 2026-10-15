@@ -1,4 +1,4 @@
-//! `thinkthen diff`: show which saved answers changed between two runs or two cuts.
+//! `thinkthen runs diff`: show which saved answers changed between two runs or two cuts.
 //!
 //! The command reads the paths it is handed and nothing else, sends no
 //! request, and reads no setting. `sdlc/scripts/policy.py` holds it to that.
@@ -23,7 +23,7 @@ use crate::core::measure::{places, rounded, rounded_line};
 use crate::core::{BatchSetting, Json};
 use crate::failure::Failure;
 
-/// The command line of `diff`. Its help is on the `Diff` command.
+/// The command line of `runs diff`.
 #[derive(Args, Debug)]
 pub(crate) struct DiffArguments {
     /// The first run's saved answer lines, or - for standard input.

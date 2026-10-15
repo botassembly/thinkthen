@@ -1707,7 +1707,7 @@ def route_failures(text: str) -> list[str]:
     read = first(("Environment", "read"))
     held = []
     for command in MEASURE_COMMANDS:
-        found = first(("Command", command))
+        found = first(("args", "RunsCommand", command))
         if found is None or read is None or found > read:
             held.append(f"{command} returns after Environment::read")
     return held
@@ -1783,7 +1783,8 @@ def check_measure_policy() -> None:
     ):
         if measure_policy_failures(control, writer=True):
             fail("measure", f"the writer's exact new-output call {control!r} stays allowed")
-    audit, diff = "if let Some(Command::Audit(a)) = c {}", "if let Some(Command::Diff(a)) = c {}"
+    audit = "if let Some(Command::Runs(args::RunsCommand::Audit(a))) = c {}"
+    diff = "if let Some(Command::Runs(args::RunsCommand::Diff(a))) = c {}"
     read = "let e = Environment::read();"
     if route_failures(audit + read + diff) != ["Diff returns after Environment::read"] \
             or route_failures(audit + diff + read):

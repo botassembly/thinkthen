@@ -40,7 +40,7 @@ Completed record runs and explicit multiple-document runs exit 0 even when indiv
 
 Exit 2 means invalid usage/input, 4 backend failure, 5 local failure and 70 a defect. Failed streams can leave a completed prefix; do not treat it as a finished dataset. Capture the status under `set -e` with `command && rc=0 || rc=$?`. Read stderr for the cause; failure is never a negative answer.
 
-For saved run analysis, use `thinkthen runs audit results.jsonl key.jsonl` to grade answers against a key, and `thinkthen runs diff before.jsonl after.jsonl` to show changed answers. Both run offline without a key or request. Published top-level `audit` and `diff` remain hidden compatibility aliases; use the `runs` forms in new commands.
+For saved run analysis, use `thinkthen runs audit results.jsonl key.jsonl` to grade answers against a key, and `thinkthen runs diff before.jsonl after.jsonl` to show changed answers. Both run offline without a key or request. Top-level `audit` and `diff` are refused; use the `runs` commands.
 
 ## Shortlists and abstention
 

@@ -69,7 +69,7 @@ Each section carries one of three words. **Settled** means code may be built aga
 | `transform list`, `transform show NAME` | Lists and prints the built-in `jq` transforms |
 | `backends check` | Checks that a backend you name works with this tool, and exits 0 only when nothing is critical |
 
-The `runs` parent exposes `audit` and `diff` as settled by ticket 0440. Published top-level `audit` and `diff` remain hidden compatibility aliases with the same options, output, diagnostics and exit codes. Both spellings read saved inputs without setup or requests.
+The `runs` parent exposes `audit` and `diff`. Both commands read saved inputs without setup or requests. Top-level `audit` and `diff` are refused with exit 2.
 
 The top-level nouns `questions`, `items`, `answers`, `checks`, `datasets`, `setups`, `findings`, `people` and `search` are reserved by [ADR 0118](../sdlc/planning/adr/0118-backend-command-namespace.md). They are unimplemented and exit 2 as unrecognized commands. This adds no judging function or proxy.
 

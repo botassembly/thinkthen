@@ -346,7 +346,7 @@ fn relate_originals_do_not_hide_bad_object_ids_or_explicit_audit_pointers() {
             json!({"input":input,"value":[],"question":{"verb":"relate"}})
         );
         let output = spawn(
-            &["audit", "-", &key, "--id", pointer],
+            &["runs", "audit", "-", &key, "--id", pointer],
             &[],
             source.as_bytes(),
         )

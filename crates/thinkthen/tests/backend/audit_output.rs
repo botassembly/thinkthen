@@ -97,6 +97,7 @@ fn a_single_question_writes_literal_tuned_bytes_without_touching_the_source_or_s
     let listener = Listener::answering(|_| Canned::ok("{}")).expect("listener");
     let child = Command::new(env!("CARGO_BIN_EXE_thinkthen"))
         .args([
+            "runs",
             "audit",
             &results,
             &key(),

@@ -1,4 +1,4 @@
-//! `thinkthen audit`: grade saved answers against an answer key and suggest a bar.
+//! `thinkthen runs audit`: grade saved answers against an answer key and suggest a bar.
 //!
 //! The command reads the paths it is handed and nothing else, sends no
 //! request, and reads no setting. Only `--write`, optionally paired with
@@ -23,7 +23,7 @@ use crate::core::measure::rounded_line;
 use crate::core::{BatchSetting, Pointer};
 use crate::failure::Failure;
 
-/// The command line of `audit`. Its help is on the `Audit` command.
+/// The command line of `runs audit`.
 #[derive(Args, Debug)]
 pub(crate) struct AuditArguments {
     /// Saved answer lines, or - for standard input.
