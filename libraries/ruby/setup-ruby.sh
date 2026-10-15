@@ -65,7 +65,9 @@ scratch_dir source "$tools/ruby/source.XXXX"
 tar -xJf "$archives/ruby-$RUBY_VERSION.tar.xz" -C "$source"
 tar -xzf "$archives/yaml-0.2.5.tar.gz" -C "$source"
 scratch_dir stage "$tools/ruby/stage.XXXX"
-configure="--prefix=$prefix --enable-shared --enable-load-relative --disable-install-doc --with-libyaml-source-dir=$source/yaml-0.2.5 --without-fiddle"
+# Ruby 4 moves a load-relative prefix into DESTDIR unless it is explicit.
+# Keep the configured prefix so make's temporary staging root works on both.
+configure="--prefix=$prefix --with-destdir=/ --enable-shared --enable-load-relative --disable-install-doc --with-libyaml-source-dir=$source/yaml-0.2.5 --without-fiddle"
 if [ -n "${openssl:-}" ]; then
 	configure="$configure --with-openssl-dir=$openssl"
 	[ "$host" != Linux ] || configure="$configure --with-openssl-lib=$openssl/lib64"
