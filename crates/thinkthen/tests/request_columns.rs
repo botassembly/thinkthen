@@ -64,9 +64,14 @@ fn values(view: RequestColumnView) -> Value {
     }
 }
 
-#[test]
-fn nullable_positions_and_result_prefixes_keep_typed_values_and_probabilities() {
-    let cases = [
+type ColumnCase = (
+    RequestFunction,
+    &'static str,
+    Value,
+    Option<Vec<Option<f64>>>,
+);
+fn column_cases() -> [ColumnCase; 6] {
+    [
         (
             RequestFunction::Decide,
             r#"{"decide":"Fits?"}"#,
@@ -80,6 +85,18 @@ fn nullable_positions_and_result_prefixes_keep_typed_values_and_probabilities() 
             Some(vec![None, Some(0.9), None, Some(0.9), None]),
         ),
         (
+            RequestFunction::Decide,
+            r#"{"decide":"Fits?","threshold":"0.2:0.95"}"#,
+            json!([null, null, null, false, null]),
+            Some(vec![None, None, None, Some(0.1), None]),
+        ),
+        (
+            RequestFunction::Choose,
+            r#"{"choose":"Which?","options":["first","second"],"threshold":0.95}"#,
+            json!([null, null, null, null, null]),
+            Some(vec![None, None, None, None, None]),
+        ),
+        (
             RequestFunction::Tag,
             r#"{"tag":"Which?","labels":["first","second"]}"#,
             json!([[], ["first"], [], ["second"], []]),
@@ -91,8 +108,12 @@ fn nullable_positions_and_result_prefixes_keep_typed_values_and_probabilities() 
             json!([null, 0.1, null, 0.9, null]),
             None,
         ),
-    ];
-    for (function, definition, expected, probability) in cases {
+    ]
+}
+
+#[test]
+fn nullable_positions_and_result_prefixes_keep_typed_values_and_probabilities() {
+    for (function, definition, expected, probability) in column_cases() {
         let listener = conformance_backend::Listener::answering(response).unwrap();
         let engine = api::loopback(listener.base(), "column-fixture");
         let first = Some(item("First."));

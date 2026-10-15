@@ -1,6 +1,6 @@
 //! Nullable host columns share input admission and ordered result projection.
 use super::{RequestFunction, RequestInput, RequestItem, RequestOriginal, RequestValue};
-use crate::{Answer, Error, Probabilities};
+use crate::{Answer, Error};
 
 /// Original positions of present cells in a nullable host column.
 #[derive(Clone, Debug)]
@@ -89,24 +89,13 @@ impl RequestColumn {
                         Answer::Unsure => None,
                     }
                 })?),
-                probability: Some(self.project(rows, |row| match row.result.probabilities() {
-                    Probabilities::YesNo { yes } => Some(yes),
-                    _ => None,
-                })?),
+                probability: Some(self.project(rows, |row| row.result.probability())?),
             },
             RequestValue::Choices(rows) => RequestColumnView {
                 values: RequestColumnValues::Choices(
                     self.project(rows, |row| row.result.value().map(str::to_owned))?,
                 ),
-                probability: Some(self.project(rows, |row| match row.result.probabilities() {
-                    Probabilities::Named(values) => row.result.value().and_then(|name| {
-                        values
-                            .iter()
-                            .find(|v| v.name() == name)
-                            .map(|v| v.probability())
-                    }),
-                    _ => None,
-                })?),
+                probability: Some(self.project(rows, |row| row.result.probability())?),
             },
             RequestValue::Tags(rows) => RequestColumnView {
                 values: RequestColumnValues::Tags(
