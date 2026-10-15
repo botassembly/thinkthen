@@ -18,9 +18,7 @@ use crate::core::{
     RelationEntity, Value as Bare,
 };
 use crate::engine::facade::Recognized;
-use crate::public::{
-    CallReply, Counters, ErrorKind, Picked, PlanEstimate, QuestionJson, RankedRow,
-};
+use crate::public::{CallReply, Counters, ErrorKind, Picked, PlanEstimate, QuestionJson};
 
 /// One failed call as a JSON reader would see it: its kind, the retry signal,
 /// and a message safe to log. No surface prints it yet, so it lives only in
@@ -99,10 +97,6 @@ fn generated(reference: &str) -> String {
         (
             "filter",
             generator.subschema_for::<Vec<String>>().to_value(),
-        ),
-        (
-            "rank",
-            generator.subschema_for::<Vec<RankedRow<'_>>>().to_value(),
         ),
         (
             "find",
