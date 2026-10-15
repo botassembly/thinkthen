@@ -110,6 +110,26 @@ public final class SessionConsumer {
             }
         }
     }
+    static void feederError(Engine engine, Inputs.RequestQuestion question) throws Exception {
+        var failure = new AssertionError("second feed item failed");
+        var request = new Inputs.Request().call(new Inputs.RequestCall().function(Inputs.RequestFunction.DECIDE)
+            .question(question).input(new Inputs.RequestInputFeed().name("input"))
+            .options(new Inputs.RequestOptions().batch(new Inputs.RequestBatch(100))));
+        Iterable<Inputs.RequestSessionDescriptor> feed = () -> new Iterator<>() {
+            int items;
+            public boolean hasNext() { return true; }
+            public Inputs.RequestSessionDescriptor next() {
+                if (++items == 2) throw failure;
+                check(items == 1, "feeder continued after its error");
+                return new Inputs.RequestSessionDescriptor().item(new Inputs.RequestItem()
+                    .original(new Inputs.RequestOriginalText().text("feeder-error-buffered")));
+            }
+        };
+        var call = engine.execute(request, feed);
+        try { call.get(2, TimeUnit.SECONDS); throw new AssertionError("feeder error succeeded"); }
+        catch (ExecutionException error) { check(error.getCause() == failure, "feeder error was wrapped or replaced"); }
+        // The installed runner's exact backend arrival count rejects any send from this feed.
+    }
     public static void main(String[] ignored) throws Exception {
         if (ignored.length == 0) { thinkthen.JsonTest.main(new String[0]); PublicResultsCases.run(); }
         Results.Plan retainedPlan;
@@ -179,6 +199,7 @@ public final class SessionConsumer {
             try { engine.decide(question,records("status-401"),options()).join(); throw new AssertionError("provider failure succeeded"); }
             catch (CompletionException error) { retainedFailure = (Engine.SessionFailure)error.getCause(); }
             planFunctions(engine);
+            feederError(engine, question);
             thinkthen.AuthoredOrderCases.javaCaller();
             waitScheduler(engine, question);
             var held = engine.decide(question,records("hold-jvm-java"),options());
