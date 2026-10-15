@@ -394,6 +394,11 @@ fn a_missing_key_and_a_refused_connection_have_distinct_causes() {
     );
     assert_eq!(line(&output)["requests_sent"], 0);
 
+    // Port zero is an invalid destination on Windows, rather than a refused connection.
+    let closed = std::net::TcpListener::bind("127.0.0.1:0").expect("unused loopback port");
+    let address = closed.local_addr().expect("loopback address");
+    drop(closed);
+    let url = format!("http://{address}/v1/systemone");
     let refused = spawn(
         &[
             "decide",
@@ -403,7 +408,7 @@ fn a_missing_key_and_a_refused_connection_have_distinct_causes() {
             "--max-retries",
             "0",
             "--url",
-            "http://127.0.0.1:0/v1/systemone",
+            &url,
         ],
         &[KEY],
         b"line 1",
