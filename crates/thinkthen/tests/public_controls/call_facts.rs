@@ -2,6 +2,45 @@
 
 use super::*;
 
+#[test]
+fn a_refused_connection_retries_with_a_live_deadline_and_stops_when_spent() {
+    let _serial = serial();
+    let port = std::net::TcpListener::bind("127.0.0.1:0")
+        .and_then(|listener| listener.local_addr())
+        .expect("a free port")
+        .port();
+    let engine = engine(&format!("http://127.0.0.1:{port}/v1"));
+    let token = CancelToken::new();
+    token.cancel();
+    for (options, expected, sends) in [
+        (CallOptions::new(), ErrorKind::Backend, 2),
+        (
+            CallOptions::new()
+                .deadline_after(Duration::from_secs(2))
+                .expect("deadline"),
+            ErrorKind::Backend,
+            2,
+        ),
+        (
+            CallOptions::new()
+                .deadline_after(Duration::ZERO)
+                .expect("spent deadline"),
+            ErrorKind::Deadline,
+            0,
+        ),
+        (CallOptions::new().cancel(&token), ErrorKind::Cancelled, 0),
+    ] {
+        let before = engine.usage();
+        let error = engine
+            .decide_with(&question(), "Refund me.", options)
+            .expect_err("refusal");
+        assert_eq!(error.kind(), expected);
+        let after = engine.usage();
+        assert_eq!(after.requests_sent() - before.requests_sent(), sends);
+        assert_eq!(after.retries() - before.retries(), u64::from(sends == 2));
+    }
+}
+
 fn priced(base: &str, input: &str, output: &str) -> thinkthen::EngineBuilder {
     crate::api::builder(base, "sk-public-controls")
         .prices_usd_per_million(input, output)
