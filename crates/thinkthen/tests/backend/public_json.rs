@@ -20,6 +20,17 @@ use crate::harness::spawn;
 const CASES: &str = include_str!("../../../../conformance/cases.json");
 const KEY: &str = "sk-public-json";
 
+// Bind the loaded cases to scalar calls; binding checks every label and its order.
+thinkthen::choices! {
+    enum Team { Billing => "billing", Shipping => "shipping", Other => "other" }
+}
+thinkthen::choices! {
+    enum Label { Billing => "billing", Urgent => "urgent", Security => "security" }
+}
+thinkthen::choices! {
+    enum Word { Refund => "the refund word", Maybe => "the maybe word" }
+}
+
 #[derive(Deserialize)]
 struct Cases {
     cases: Vec<Case>,
@@ -187,30 +198,35 @@ fn atomic_document(
                 return Err("unbanded question required".into());
             };
             match verb {
-                "choose" => crate::api::choose(
-                    engine,
-                    q,
-                    crate::api::plain_records([text]).map(Result::unwrap),
-                    thinkthen::CallOptions::new(),
-                )
-                .map_err(|e| e.to_string())?
-                .value()
-                .first()
-                .ok_or("no retained result")?
-                .result()
-                .to_json(),
-                "tag" => crate::api::tag(
-                    engine,
-                    q,
-                    crate::api::plain_records([text]).map(Result::unwrap),
-                    thinkthen::CallOptions::new(),
-                )
-                .map_err(|e| e.to_string())?
-                .value()
-                .first()
-                .ok_or("no retained result")?
-                .result()
-                .to_json(),
+                "choose" => engine
+                    .choose(
+                        &q.clone().into_choose::<Team>().map_err(|e| e.to_string())?,
+                        text,
+                    )
+                    .map_err(|e| e.to_string())?
+                    .results()
+                    .first()
+                    .ok_or("no retained result")?
+                    .to_json(),
+                "tag" => match q.clone().into_tag::<Label>() {
+                    Ok(typed) => engine
+                        .tag(&typed, text)
+                        .map_err(|e| e.to_string())?
+                        .results()
+                        .first()
+                        .ok_or("no retained result")?
+                        .to_json(),
+                    Err(_) => engine
+                        .tag(
+                            &q.clone().into_tag::<Word>().map_err(|e| e.to_string())?,
+                            text,
+                        )
+                        .map_err(|e| e.to_string())?
+                        .results()
+                        .first()
+                        .ok_or("no retained result")?
+                        .to_json(),
+                },
                 _ => engine
                     .score(q, text)
                     .map_err(|e| e.to_string())?
