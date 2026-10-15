@@ -78,7 +78,8 @@ def cases(root, base):
     def blob(kind, label, ok, data):
         name = f'case-{len(result)}.bin'
         (root / name).write_bytes(data)
-        case(kind, label, ok, file=name)
+        fields = {'expected_file': 'thinkthen.exe'} if kind == 'zip' and ok else {}
+        case(kind, label, ok, file=name, **fields)
 
     for value in ('0.2.0', 'v0.2.0', '1.2.3'):
         case('version', 'valid version ' + value, True, value=value)
@@ -145,6 +146,10 @@ def cases(root, base):
         for label, relative, form, value in (
                 ('disk', 34, '<H', 1), ('offset', 42, '<I', 1),
                 ('encrypted', 8, '<H', 1), ('descriptor', 8, '<H', 8),
+                ('unknown flags', 8, '<H', 0x4000),
+                ('unsupported method', 10, '<H', 99),
+                ('extra field', 30, '<H', 1),
+                ('wrong name length', 28, '<H', len(member.filename) - 1),
                 ('directory', 38, '<I', 0o040755 << 16),
                 ('link', 38, '<I', 0o120777 << 16),
                 ('reparse', 38, '<I', (0o100644 << 16) | 0x400)):
@@ -154,7 +159,10 @@ def cases(root, base):
         for label, central_field, local_field, value in (
                 ('wrong CRC', 16, 14, member.CRC ^ 1),
                 ('expanded length mismatch', 24, 22, member.file_size + 1),
-                ('compressed overlap', 20, 18, member.compress_size + 1)):
+                ('expands beyond declared length', 24, 22, member.file_size - 1),
+                ('compressed overlap', 20, 18, member.compress_size + 1),
+                ('expanded byte limit', 24, 22, 134217729),
+                ('compressed byte limit', 20, 18, 134217729)):
             data = bytearray(good_zip)
             struct.pack_into('<I', data, cursor + central_field, value)
             struct.pack_into('<I', data, local + local_field, value)
@@ -162,6 +170,9 @@ def cases(root, base):
         for label, relative, form, value in (
                 ('local CRC', 14, '<I', member.CRC ^ 1),
                 ('local length', 22, '<I', member.file_size + 1),
+                ('local compressed length', 18, '<I', member.compress_size + 1),
+                ('local method', 8, '<H', 0),
+                ('local extra', 28, '<H', 1),
                 ('local encryption', 6, '<H', 1), ('local name', 30, '<B', ord('X'))):
             data = bytearray(good_zip)
             struct.pack_into(form, data, local + relative, value)

@@ -28,7 +28,13 @@ foreach ($case in $table) {
             transport { Assert-Transport ([uri] $case.value) }
             base { $null = Get-Base $case.value 'https://github.com' }
             pe { Assert-PE ([System.IO.File]::ReadAllBytes((Join-Path $FixtureRoot $case.file))) }
-            zip { $null = Read-CommandZip ([System.IO.File]::ReadAllBytes((Join-Path $FixtureRoot $case.file))) }
+            zip {
+                $binary = Read-CommandZip ([System.IO.File]::ReadAllBytes((Join-Path $FixtureRoot $case.file)))
+                if ($case.ok) {
+                    $expected = [System.IO.File]::ReadAllBytes((Join-Path $FixtureRoot $case.expected_file))
+                    Check ([Convert]::ToBase64String($binary) -ceq [Convert]::ToBase64String($expected)) ($case.label + ' returns only exact executable bytes')
+                }
+            }
             checksum {
                 $bytes = [System.IO.File]::ReadAllBytes((Join-Path $FixtureRoot $case.file))
                 Assert-Checksum $bytes ([System.Text.Encoding]::UTF8.GetBytes($case.value)) $case.name
