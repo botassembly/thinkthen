@@ -130,6 +130,78 @@ def python_host_environment(smoke, base):
         child.assert_called_once_with([sys.executable, "-I", "-m", "venv", str(base / "python")], expected)
 
 
+def remap_transport(base, source, scripts, tools, env):
+    """Run the packer through real Cargo/rustc after a modeled MSYS boundary."""
+    import json
+    cargo = subprocess.check_output(['rustup', 'which', 'cargo'], text=True).strip()
+    rustc = subprocess.check_output(['rustup', 'which', 'rustc'], text=True).strip()
+    probe = base / 'compiler-probe'
+    (probe / 'src').mkdir(parents=True)
+    (probe / 'Cargo.toml').write_text('[workspace]\n[package]\nname="remap_probe"\nversion="0.0.0"\nedition="2024"\n')
+    (probe / 'src/lib.rs').write_text('pub fn value() -> u8 { 1 }\n')
+    wrapper = probe / 'rustc-wrapper'
+    wrapper.write_text(f'#!{sys.executable}\nimport json, os, sys\n'
+        'with open(os.environ["REMAP_ARGS"], "a") as out: out.write(json.dumps(sys.argv[1:]) + "\\n")\n'
+        'os.execv(os.environ["REMAP_RUSTC"], [os.environ["REMAP_RUSTC"], *sys.argv[1:]])\n')
+    wrapper.chmod(0o755)
+    originals = {name: (tools / name).read_text() for name in ('cargo', 'cygpath')}
+    (tools / 'cygpath').write_text('#!/bin/sh\ncase "$2" in\n'
+        '"$REMAP_SOURCE") echo "D:/Work tree/source" ;;\n'
+        '"$HOME") echo "C:/Program Files/Git/home" ;;\n'
+        '"$CARGO_HOME") echo "C:/Program Files/Git/home/.cargo" ;;\n'
+        '"$CARGO_TARGET_DIR") printf "%s\\n" "$2" ;;\n'
+        '*) echo "D:/Scratch build/target" ;; esac\n')
+    (tools / 'cargo').write_text(f'#!{sys.executable}\nimport os, pathlib, shutil, subprocess\n'
+        'env = dict(os.environ)\n'
+        'assert env["MSYS2_ENV_CONV_EXCL"].startswith("KEEP_ME=;")\n'
+        '# Model MSYS converting environment values at a native executable boundary.\n'
+        'for key in ("RUSTFLAGS", "CARGO_ENCODED_RUSTFLAGS"):\n'
+        ' if key not in env: continue\n'
+        ' if not any((key + "=").startswith(p) for p in env.get("MSYS2_ENV_CONV_EXCL", "").split(";") if p):\n'
+        '  env[key] = env.get(key, "").replace("/home=", "C:/Program Files/Git/home=").replace(":", ";")\n'
+        'env["CARGO_TARGET_DIR"] = env["REMAP_PROBE"] + "/target"\n'
+        'env["RUSTC"] = env["REMAP_WRAPPER"]\n'
+        'subprocess.run([env["REMAP_CARGO"], "build", "--offline", "--quiet", "--manifest-path", env["REMAP_PROBE"] + "/Cargo.toml"], env=env, check=True)\n'
+        'out = pathlib.Path(os.environ["CARGO_TARGET_DIR"]) / "' + TARGET + '/release/thinkthen.exe"\n'
+        'out.parent.mkdir(parents=True, exist_ok=True)\n'
+        'shutil.copyfile(os.environ["WINDOWS_TEST_BINARY"], out)\n')
+    try:
+        for inherited in ('plain', 'encoded'):
+            for full, own in ((False, False), (True, False), (False, True), (True, True)):
+                log = probe / 'args.jsonl'
+                log.unlink(missing_ok=True)
+                clean = {'PATH': env['PATH'], 'WINDOWS_TEST_BINARY': env['WINDOWS_TEST_BINARY'],
+                         'LC_ALL': 'C.UTF-8', 'TMPDIR': str(base)}
+                clean.update(HOME=str(base / 'home space'), CARGO_HOME=str(base / 'cargo space'),
+                    CARGO_NET_OFFLINE='true', REMAP_CARGO=cargo, REMAP_RUSTC=rustc,
+                    REMAP_PROBE=str(probe), REMAP_WRAPPER=str(wrapper), REMAP_ARGS=str(log),
+                    REMAP_SOURCE=str(source), RUSTFLAGS='--cfg fixture_plain',
+                    THINKTHEN_FULL_COMPILER='1' if full else '0', MSYS2_ENV_CONV_EXCL='KEEP_ME=')
+                if inherited == 'encoded':
+                    clean['CARGO_ENCODED_RUSTFLAGS'] = '--cfg\x1ffixture_encoded\x1f--remap-path-prefix=Z:/Extra cache=/build/extra'
+                if not own:
+                    clean['CARGO_TARGET_DIR'] = str(base / 'shared build')
+                expect(run('sh', str(scripts / 'release-pack'), TARGET,
+                           str(base / f'remap-{inherited}-{full}-{own}'), 'command', env=clean))
+                calls = [json.loads(line) for line in log.read_text().splitlines()]
+                args = next(call for call in calls if '--crate-name' in call and 'remap_probe' in call)
+                expected = ['--remap-path-prefix=D:/Work tree/source=/build/source',
+                            '--remap-path-prefix=C:/Program Files/Git/home/.cargo=/build/cargo']
+                if not full:
+                    expected += ['--remap-path-prefix=/home=/build/host', '--remap-path-prefix=/Users=/build/users',
+                                 '--remap-path-prefix=C:/Program Files/Git/home=/build/host']
+                if own:
+                    expected += ['--remap-path-prefix=D:/Scratch build/target=/build/target']
+                if inherited == 'encoded':
+                    expected += ['--remap-path-prefix=Z:/Extra cache=/build/extra']
+                assert sorted(expected) == sorted(arg for arg in args if arg.startswith('--remap-path-prefix='))
+                assert ('fixture_encoded' if inherited == 'encoded' else 'fixture_plain') in args
+                assert ('fixture_plain' if inherited == 'encoded' else 'fixture_encoded') not in args
+    finally:
+        for name, body in originals.items():
+            (tools / name).write_text(body)
+
+
 def main():
     # The command smoke must send the recording's bytes through a Windows pipe unchanged.
     spec = importlib.util.spec_from_file_location("windows_smoke", REPO / "sdlc/scripts/release-windows-smoke.py")
@@ -236,6 +308,7 @@ def main():
         shutil.copy2(binary, build / "debug/thinkthen.exe")
         env = os.environ | {"PATH": str(tools) + os.pathsep + os.environ["PATH"],
                             "CARGO_TARGET_DIR": str(build), "WINDOWS_TEST_BINARY": str(binary)}
+        remap_transport(base, source, scripts, tools, env)
         for args in (("--reuse",), ()):
             out = base / ("reuse" if args else "release")
             expect(run("sh", str(scripts / "release-pack"), *args, TARGET, str(out), "command", env=env))
