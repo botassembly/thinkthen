@@ -4,6 +4,7 @@
 use crate::child::ChildEnvironment as _;
 #[cfg(unix)]
 use crate::child::Folder;
+#[cfg(unix)]
 use crate::harness::stderr_is;
 #[cfg(unix)]
 use std::fs;

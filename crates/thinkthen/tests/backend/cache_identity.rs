@@ -4,7 +4,9 @@
 use crate::harness::{Canned, Listener, spawn_one as spawn, spawn_one_local, stderr_is};
 use std::fs;
 use std::io;
-use std::path::{Path, PathBuf};
+use std::path::Path;
+#[cfg(unix)]
+use std::path::PathBuf;
 use std::thread;
 
 use crate::support::stored;

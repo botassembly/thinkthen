@@ -129,6 +129,8 @@ fn an_existing_index_needs_no_writer_and_a_missing_index_is_repaired() {
         )
         .expect("index exists");
     assert_eq!(count, 1);
+    #[cfg(windows)]
+    drop(repaired);
     #[cfg(not(windows))]
     {
         drop(holder);

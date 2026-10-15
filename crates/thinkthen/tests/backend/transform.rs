@@ -7,6 +7,7 @@
 )]
 
 use crate::child::ChildEnvironment as _;
+#[cfg(unix)]
 use crate::harness::stderr_is;
 use std::fs;
 use std::path::{Path, PathBuf};
