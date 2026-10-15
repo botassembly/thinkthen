@@ -4,7 +4,8 @@
 # The container runs as the calling user on its own copy of the commit in WORK, and never
 # on this checkout. WORK/cache keeps the pinned downloads between runs. Each toolchain has
 # one source: rustup-init and the channel rust-toolchain.toml names, the image's CPython
-# 3.10 with maturin and PyPI's libclang wheel, the nodejs.org Node 22 tarball, the PGDG EL8
+# 3.13 with maturin and PyPI's libclang wheel, CPython 3.10 for the release wheel,
+# the nodejs.org Node 22 tarball, the PGDG EL8
 # PostgreSQL 16 RPMs unpacked as this user, cargo-pgrx 0.17.0, and the image's gcc.
 # RELEASE_CARGO_REGISTRY names this user's crate registry to share, and the release files
 # then build offline. cargo-pgrx, a tool outside every lock here, still fetches. It builds
@@ -95,13 +96,15 @@ docker run "$@" "$IMAGE" sh -euc '
 	cd /work/src
 	/work/home/.cargo/bin/rustup toolchain install --no-self-update --profile minimal \
 		"$(sed -n "s/^channel = \"\(.*\)\"$/\1/p" rust-toolchain.toml)"
-	/opt/python/cp310-cp310/bin/python -m venv /work/home/venv
+	/opt/python/cp313-cp313/bin/python -m venv /work/home/venv
+	PYO3_PYTHON=/opt/python/cp310-cp310/bin/python
+	export PYO3_PYTHON
 	/work/home/venv/bin/pip install --quiet --no-index --no-deps "$cache/$maturin" "$cache/$libclang"
 	tar -xJf "$cache/$node.tar.xz" -C /work/home
 	PATH=/work/home/.cargo/bin:/work/home/venv/bin:/work/home/$node/bin:/work/home/pgrx/bin:$PATH
 	CARGO_NET_OFFLINE=false cargo install --quiet --locked --no-default-features --root /work/home/pgrx cargo-pgrx --version 0.17.0
 	# bindgen reads the headers of the image gcc beside the libclang of the wheel.
-	LIBCLANG_PATH=/work/home/venv/lib/python3.10/site-packages/clang/native
+	LIBCLANG_PATH=/work/home/venv/lib/python3.13/site-packages/clang/native
 	BINDGEN_EXTRA_CLANG_ARGS="-I$(gcc -print-file-name=include)"
 	PG_CONFIG=/work/home/pg/usr/pgsql-16/bin/pg_config
 	mkdir -p /work/home/.pgrx && printf "[configs]\npg16 = \"%s\"\n" "$PG_CONFIG" >/work/home/.pgrx/config.toml

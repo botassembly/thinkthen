@@ -14,7 +14,9 @@ builder_home=$HOME
 case $(uname -s) in MINGW*|MSYS*) builder_home=$(cygpath -m "$HOME") ;; esac
 [ "${THINKTHEN_FULL_COMPILER:-}" = 1 ] || RUSTFLAGS="${RUSTFLAGS:+$RUSTFLAGS }--remap-path-prefix=$builder_home=/build"
 export RUSTFLAGS
-maturin build --quiet --locked --offline --release -o "$out"
+set --
+[ -z "${PYO3_PYTHON:-}" ] || set -- --interpreter "$PYO3_PYTHON"
+maturin build --quiet --locked --offline --release -o "$out" "$@"
 
 python3 - "$out"/thinkthen-*.whl "$builder_home" <<'PY'
 import sys
