@@ -6,7 +6,7 @@
 #endif
 
 int main(void) {
-    const char output[] = "cancelled\r\nfreed\nembedded\rtail\r\n";
+    const char output[] = "cancelled\r\n{\"kind\":\"terminal\",\"facts\":{\"requests_sent\":1}}\nfreed\r\nembedded\rtail\r\n";
 #ifdef _WIN32
     if (_setmode(_fileno(stdout), _O_BINARY) == -1) return 1;
 #endif
