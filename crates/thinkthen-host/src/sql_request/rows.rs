@@ -116,6 +116,7 @@ pub fn typed_values(result: &thinkthen::RequestValue, rows: &mut [Value]) -> Res
                 thinkthen::Answer::Unsure => Value::Null,
             };
             crate::complete_native::put(row, "value", value)?;
+            crate::complete_native::put(row, "probability", json!(decision.result().probability()))?;
         }
     }
     Ok(())
