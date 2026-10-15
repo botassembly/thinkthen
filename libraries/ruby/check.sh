@@ -74,7 +74,11 @@ if [ -z "${THINKTHEN_RUBY_MINOR:-}" ] && [ "$profile" != routine ]; then
     else
       sed "s/^parity: /Ruby $minor parity: /" "$versions/$minor.log"
     fi
-    [ "$code" -eq 0 ] || failed=$code
+    case $code in
+      0) ;;
+      77) [ "$failed" -ne 0 ] || failed=77 ;;
+      *) failed=$code ;;
+    esac
   done
   exit "$failed"
 fi
