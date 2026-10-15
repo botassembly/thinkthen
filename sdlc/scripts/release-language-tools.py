@@ -280,6 +280,12 @@ def safe_extract(archive, destination):
                 if path.is_absolute() or ".." in path.parts or ((item.external_attr >> 16) & 0o170000) == 0o120000:
                     fail("SDK zip contains an unsafe member")
             data.extractall(destination)
+            # ZipFile discards Unix modes; compiler launchers must remain executable.
+            # Apply directories last so their modes cannot obstruct child updates.
+            for item in sorted(members, key=lambda entry: len(Path(entry.filename).parts), reverse=True):
+                mode = (item.external_attr >> 16) & 0o777
+                if item.create_system == 3 and mode:
+                    (destination / item.filename).chmod(mode)
     else:
         with tarfile.open(archive, "r:gz") as data:
             members = data.getmembers()

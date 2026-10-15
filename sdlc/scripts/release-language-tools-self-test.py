@@ -100,6 +100,7 @@ def must_fail(action, phrase):
 
 def main():
     fetch_retries()
+    acquire_kotlin_zip()
     with tempfile.TemporaryDirectory(prefix="thinkthen-language-tools-test-") as folder:
         root = Path(folder)
         github_env, github_path = fixture(root)
@@ -215,6 +216,39 @@ def main():
             os.environ.clear()
             os.environ.update(old)
     print("release language tools self-test: selected inputs and refusals PASS")
+
+
+def acquire_kotlin_zip():
+    """Acquire a valid compiler ZIP and run its pinned executable."""
+    with tempfile.TemporaryDirectory(prefix="thinkthen-kotlin-acquire-test-") as folder:
+        root = Path(folder)
+        (root / "OWNER").write_text("release language tools Kotlin acquisition regression\n")
+        archive = root / "compiler.zip"
+        with zipfile.ZipFile(archive, "w") as data:
+            for name, mode, content in (
+                ("kotlinc/bin/kotlinc", 0o107755,
+                 "#!/bin/sh\nprintf '%s\\n' 'info: kotlinc-jvm 2.4.20 (JRE fixture)'\n"),
+                ("kotlinc/lib/kotlin-stdlib.jar", 0o100644, "fixture runtime"),
+            ):
+                member = zipfile.ZipInfo(name)
+                member.create_system = 3
+                member.external_attr = mode << 16
+                data.writestr(member, content)
+        url, kind, _ = tools.ASSETS["kotlin"]
+        job = root / "job"
+        job.mkdir()
+        requested = []
+        def get(request_url, path):
+            requested.append(request_url)
+            path.write_bytes(archive.read_bytes())
+        with patch.dict(os.environ, {"THINKTHEN_KOTLIN_HOME": ""}), \
+             patch.object(tools.shutil, "which", return_value=None), \
+             patch.dict(tools.ASSETS, {"kotlin": (url, kind, tools.digest(archive, kind))}):
+            home = tools.sdk_path("kotlin", job, True, get=get)
+        assert requested == [url], requested
+        assert home == job / "kotlin/kotlinc", home
+        assert (home / "bin/kotlinc").stat().st_mode & 0o7777 == 0o755
+        assert (home / "lib/kotlin-stdlib.jar").stat().st_mode & 0o7777 == 0o644
 
 
 def acquisition_cli(root):

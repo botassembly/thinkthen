@@ -21,6 +21,26 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'databases/duckdb/t
 from inputs import selected as duckdb_identity, versions as duckdb_versions
 
 
+class ZipInstallation(unittest.TestCase):
+    def test_unpack_preserves_safe_unix_executable_modes(self):
+        from install_check_tools import unzip
+        with tempfile.TemporaryDirectory(prefix='thinkthen-install-zip-test-') as folder:
+            root = Path(folder)
+            (root / 'OWNER').write_text('install check ZIP mode regression\n')
+            archive = root / 'sdk.zip'
+            with zipfile.ZipFile(archive, 'w') as packed:
+                member = zipfile.ZipInfo('sdk/bin/compiler')
+                member.create_system = 3
+                member.external_attr = 0o107755 << 16
+                packed.writestr(member, "#!/bin/sh\nprintf '%s\\n' 'compiler fixture'\n")
+                packed.writestr('sdk/lib/data', 'runtime fixture')
+            tree = unzip(archive, root / 'tools')
+            binary = tree / 'sdk/bin/compiler'
+            self.assertEqual(binary.stat().st_mode & 0o7777, 0o755)
+            self.assertEqual(subprocess.check_output([str(binary)], text=True), 'compiler fixture\n')
+            self.assertEqual((tree / 'sdk/lib/data').stat().st_mode & 0o111, 0)
+
+
 class NativeInstallation(unittest.TestCase):
     def test_copies_only_the_effective_cargo_artifact(self):
         cargo = subprocess.check_output(['rustup', 'which', 'cargo'], text=True).strip()
