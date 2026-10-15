@@ -1,3 +1,4 @@
+from templates.host_alternatives import alternative_names
 from native import selected_header
 from registry import output_path
 from templates.csharp import enum_values
@@ -10,6 +11,9 @@ from pathlib import Path
 
 
 def identifier(value):
+    value = value.replace('EngineSettings_field_max_estimated_input_tokens_total_arm_', 'Input_Token_Limit_arm_')
+    if '_arm_' in value:
+        value = value.replace('_arm_', '_') + '_Case'
     return 'T_' + re.sub(r'[^a-zA-Z0-9]+', '_', value).strip('_')
 
 
@@ -49,7 +53,7 @@ def render(definitions, names=None, schemas=None):
             alternatives = [{**schema, 'type': k} for k in kinds]
         variants = schema.get('variants')
         if variants or alternatives and len(alternatives) > 1:
-            members = [(n, {'$ref': '#/$defs/' + n}) for n, _ in variants] if variants else [(str(i), v) for i, v in enumerate(alternatives)]
+            members = [(n, {'$ref': '#/$defs/' + n}) for n, _ in variants] if variants else list(zip(alternative_names(alternatives), alternatives))
             arms = [(identifier(key + '_arm_' + tag.removeprefix(key + '_')), emit(key + '_value_' + tag.removeprefix(key + '_'), value)) for tag, value in members]
             specs.append(f'type {name}_Kind is (' + ',\n'.join(tag for tag, _ in arms) + ');')
             specs.append(f'type {name} (Kind : {name}_Kind := {arms[0][0]}) is record\ncase Kind is\n' + '\n'.join(f'when {tag} => V_{i} : {typ};' for i, (tag, typ) in enumerate(arms)) + '\nend case;\nend record;')
@@ -189,9 +193,9 @@ def request_helpers(definitions, names):
         definition = f"{names['RequestDefinition']}'(Kind => {identifier('RequestDefinition_arm_' + branch.removeprefix('RequestDefinition_'))}, V_{index} => Value)"
         output.append(selector('definition','value',function.title() + '_Question (Value : ' + names[branch] + ')',definition))
     output += [
-        "function Text_Item (Value : String) return T_RequestItem is (T_RequestItem'(T_original => (Present => True, Value => (Kind => T_RequestOriginal_arm_text, V_0 => (T_text => T_Text (Ada.Strings.Unbounded.To_Unbounded_String (Value)), others => <>))), others => <>));",
-        "function Items_Input (Value : T_RequestItem_List) return T_RequestInput is (T_RequestInput'(Kind => T_RequestInput_arm_records, V_2 => (T_items => Value, others => <>)));",
-        "function File_Input (Path : String) return T_RequestInput is (T_RequestInput'(Kind => T_RequestInput_arm_source, V_5 => (T_source => (T_paths => T_Text_List'[T_Text (Ada.Strings.Unbounded.To_Unbounded_String (Path))], others => <>), others => <>)));",
+        "function Text_Item (Value : String) return T_RequestItem is (T_RequestItem'(T_original => (Present => True, Value => (Kind => T_RequestOriginal_text_Case, V_0 => (T_text => T_Text (Ada.Strings.Unbounded.To_Unbounded_String (Value)), others => <>))), others => <>));",
+        "function Items_Input (Value : T_RequestItem_List) return T_RequestInput is (T_RequestInput'(Kind => T_RequestInput_records_Case, V_2 => (T_items => Value, others => <>)));",
+        "function File_Input (Path : String) return T_RequestInput is (T_RequestInput'(Kind => T_RequestInput_source_Case, V_5 => (T_source => (T_paths => T_Text_List'[T_Text (Ada.Strings.Unbounded.To_Unbounded_String (Path))], others => <>), others => <>)));",
     ]
     return '\n'.join(output)
 

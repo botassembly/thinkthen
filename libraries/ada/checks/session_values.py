@@ -106,7 +106,7 @@ def construct(key, source, value):
         return f"{typ}'(Kind => {template.identifier(key + '_arm_' + branch.removeprefix(key + '_'))}, V_{index} => " + construct(branch, definitions[branch], value) + ')'
     if alternatives and len(alternatives) > 1:
         index, branch = next((i, branch) for i, branch in enumerate(alternatives) if matches(branch, value))
-        return f"{typ}'(Kind => {name(key + '_arm_' + str(index))}, V_{index} => " + construct(key + '_value_' + str(index), branch, value) + ')'
+        return f"{typ}'(Kind => {name(key + '_arm_' + template.alternative_names(alternatives)[index])}, V_{index} => " + construct(key + '_value_' + template.alternative_names(alternatives)[index], branch, value) + ')'
     if alternatives:
         source = alternatives[0]
     if 'properties' in source:

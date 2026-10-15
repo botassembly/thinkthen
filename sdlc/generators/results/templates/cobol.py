@@ -1,3 +1,4 @@
+from templates.host_alternatives import alternative_names
 """COBOL records and mechanical serialization from Rust schemas and measured C ABI."""
 import importlib.util
 import json
@@ -131,8 +132,8 @@ def requests(definitions, native_facts, root):
                 alternatives = [source['primitive_schemas'][kind] for kind in source['primitive_variants']]
             elif isinstance(source.get('type'), list):
                 alternatives = [{**source, 'type':kind} for kind in source['type']]
-            for index, value in enumerate(alternatives, 1):
-                child(value, key + '_arm_' + str(index))
+            for tag, value in zip(alternative_names(alternatives), alternatives):
+                child(value, key + '_' + tag + '_Value')
             fields = [('uint64_t', 'kind'), ('const void *', 'value')]
         elif source.get('type') in ('integer', 'number', 'boolean'):
             native = 'double' if source['type'] == 'number' else 'uint64_t' if source['type'] == 'boolean' or source.get('format', '').startswith('u') else 'int64_t'
@@ -150,9 +151,13 @@ def requests(definitions, native_facts, root):
             for index, (target, _) in enumerate(source['variants'], 1):
                 header.append(f'#define THINKTHEN_COBOL_{target.upper()}_KIND {index}')
         elif source.get('primitive_variants') or source.get('oneOf') or source.get('anyOf') or isinstance(source.get('type'), list):
-            count = len(source.get('primitive_variants', source.get('oneOf', source.get('anyOf', source.get('type', [])))))
-            for index in range(1, count + 1):
-                header.append(f'#define THINKTHEN_COBOL_{key.upper()}_ARM_{index}_KIND {index}')
+            alternatives = source.get('oneOf', source.get('anyOf', []))
+            if source.get('primitive_variants'):
+                alternatives = [source['primitive_schemas'][kind] for kind in source['primitive_variants']]
+            elif isinstance(source.get('type'), list):
+                alternatives = [{**source, 'type': kind} for kind in source['type']]
+            for index, tag in enumerate(alternative_names(alternatives), 1):
+                header.append(f'#define THINKTHEN_COBOL_{key.upper()}_{tag.upper()}_KIND {index}')
     for key, fields in layouts.items():
         header += ['typedef struct thinkthen_cobol_' + key + ' {'] + [' '+kind+' '+member+';' for kind, member in fields] + ['} thinkthen_cobol_'+key+';']
     from templates.csharp import enum_values
@@ -175,8 +180,11 @@ def requests(definitions, native_facts, root):
         raise ValueError('colliding semantic COBOL native names')
     substitutions = {'thinkthen_cobol_' + key: 'thinkthen_cobol_' + value for key, value in names.items()}
     for key, value in names.items():
-        for suffix in re.findall(r'\bTHINKTHEN_COBOL_' + re.escape(key.upper()) + r'(_ARM_\d+_KIND|_KIND)\b', '\n'.join(header)):
-            substitutions['THINKTHEN_COBOL_' + key.upper() + suffix] = 'THINKTHEN_COBOL_' + value.upper() + suffix
+        for suffix in re.findall(r'\bTHINKTHEN_COBOL_' + re.escape(key.upper()) + r'(_[A-Z_]+_KIND|_KIND)\b', '\n'.join(header)):
+            # A referenced alternative already names its owner (ExampleText).
+            # Keep that semantic name once rather than Example_ExampleText.
+            tail = suffix.removeprefix('_' + value.upper()) if suffix.startswith('_' + value.upper()) else suffix
+            substitutions['THINKTHEN_COBOL_' + key.upper() + suffix] = 'THINKTHEN_COBOL_' + value.upper() + tail
     def rename(text):
         return re.sub(r'\b[A-Za-z_][A-Za-z_0-9]*\b', lambda token: substitutions.get(token[0], token[0]), text)
     return rename('\n'.join(header) + '\n'), rename(code)

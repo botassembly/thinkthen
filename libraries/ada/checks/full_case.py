@@ -53,7 +53,7 @@ class Reader:
             if encode: token(values.index(value))
             else: body.append(f"return {typ}'Val (Integer'Value (Get_Line (Input)));")
         elif variants or alternatives and len(alternatives) > 1:
-            branches = [(branch, definitions[branch], template.identifier(key + '_arm_' + branch.removeprefix(key + '_'))) for branch, _ in variants] if variants else [(key + '_value_' + str(i), branch, name(key + '_arm_' + str(i))) for i, branch in enumerate(alternatives)]
+            branches = [(branch, definitions[branch], template.identifier(key + '_arm_' + branch.removeprefix(key + '_'))) for branch, _ in variants] if variants else [(key + '_value_' + tag, branch, name(key + '_arm_' + tag)) for tag, branch in zip(template.alternative_names(alternatives), alternatives)]
             if encode:
                 index = next(i for i, (_, branch, _) in enumerate(branches) if matches(branch, value))
                 token(index)

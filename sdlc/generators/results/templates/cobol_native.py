@@ -1,3 +1,4 @@
+from templates.host_alternatives import alternative_names
 """Adapt existing COBOL carriers to the canonical Rust request ABI."""
 from templates.native_request import render as native_render, name
 from templates.csharp import enum_values
@@ -46,8 +47,8 @@ def render(definitions, old_nodes):
             elif isinstance(source.get('type'), list):
                 alternatives = [{**source, 'type':kind} for kind in source['type']]
             body = ['out->kind=(uint32_t)p->kind;', 'switch(p->kind) {']
-            for index, alternative in enumerate(alternatives, 1):
-                call = child(alternative, native + '_arm_' + str(index), old + '_arm_' + str(index))
+            for index, (tag, alternative) in enumerate(zip(alternative_names(alternatives), alternatives), 1):
+                call = child(alternative, native + '_arm_' + str(index), old + '_' + tag + '_Value')
                 body.append(f'case {index}: out->data.{metadata['arms'][(native, index)]}={call}(a,p->value); break;')
             body += ['default: a->code=THINKTHEN_COBOL_REPRESENTATION; break;', '}']
         elif source.get('type') == 'array':

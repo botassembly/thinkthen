@@ -132,7 +132,7 @@ class Records:
             if isinstance(source.get('type'), list): alternatives = [{**source, 'type': k} for k in source['type']]
             kinds = {'string': isinstance(value, str), 'integer': type(value) is int, 'number': type(value) in (float,int), 'boolean': type(value) is bool, 'null': value is None, 'object': isinstance(value, dict), 'array': isinstance(value, list)}
             index, branch = next((i, a) for i,a in enumerate(alternatives,1) if kinds.get(a.get('type'), True) and ('const' not in a or a['const'] == value))
-            row.kind, row.value = index, self.construct(key + '_arm_' + str(index), branch, value)
+            row.kind, row.value = index, self.construct(key + '_' + template.alternative_names(alternatives)[index - 1] + '_Value', branch, value)
         elif source.get('type') in ('integer','number','boolean'): row.value = value
         elif source.get('type') == 'string':
             data = value.encode()
