@@ -52,7 +52,7 @@ def development(source, native, destination):
     source, destination = Path(source).resolve(), Path(destination).resolve()
     package = destination / 'libraries/dart'
     shutil.copytree(source, package, ignore=shutil.ignore_patterns(
-        '.dart_tool', 'build', 'scratch', 'logs', '__pycache__', 'pubspec_overrides.yaml'))
+        '.dart_tool', 'build', 'ephemeral', 'scratch', 'logs', '__pycache__', 'pubspec_overrides.yaml'))
     # Keep existing fixture paths valid in the owned tree; all non-Dart inputs remain read-only.
     repo = source.parents[1]
     for item in repo.iterdir():
