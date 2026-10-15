@@ -60,7 +60,7 @@
       "setting": "max_requests",
       "arm": "generic/v1",
       "steps": [
-        {"settings": {"max_requests": 2}, "verb": "decide_many", "records": ["refund one", "refund two", "refund three"], "error": "usage", "count": 2}
+        {"settings": {"max_requests": 2, "throttle": 1}, "verb": "decide_many", "records": ["refund one", "refund two", "refund three", "refund 3", "refund 4", "refund 5", "refund 6", "refund 7", "refund 8", "refund 9", "refund 10", "refund 11", "refund 12", "refund 13", "refund 14", "refund 15", "refund 16", "refund 17", "refund 18", "refund 19", "refund 20", "refund 21", "refund 22", "refund 23", "refund 24", "refund 25", "refund 26", "refund 27", "refund 28", "refund 29", "refund 30", "refund 31"], "error": "usage", "count": 2}
       ]
     },
     {
