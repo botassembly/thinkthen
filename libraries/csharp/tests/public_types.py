@@ -7,6 +7,7 @@ import subprocess
 import sys
 sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "conformance/children"))
 from children import child_env, read_process_line
+from question_files import file_question_expectation
 import tempfile
 from toolchains import dotnet as resolve_dotnet
 
@@ -92,6 +93,18 @@ def native_parity(consumer, command):
                     identities = []
                     for original in value.get("steps", [value]):
                         step = dict(original)
+                        definition = step.get("question", {})
+                        wording_version = definition.get("wording_version")
+                        file_authored = not step.get("loader") and step.get("question_form") != "file" and (
+                            any(key in definition and not isinstance(definition[key], dict)
+                                for key in ("item_schema", "context_schema")) or
+                            "wording_version" in definition and not (type(wording_version) is int and
+                                -(1 << 63) <= wording_version < (1 << 63)))
+                        if file_authored:
+                            # Typed carriers cannot hold these authored shapes. Keep the
+                            # original bytes on the existing public question-file path.
+                            step.update(raw=step["raw"] if step.get("raw") is not None else c_parity.compact(definition), question_form="file")
+                            (home / "fixture-question.json").write_text(step["raw"], encoding="utf-8")
                         if step.get("copy_store"):
                             (home / "refreshed").mkdir()
                             with sqlite3.connect(home / "saved/thinkthen.sqlite") as source, sqlite3.connect(home / "refreshed/thinkthen.sqlite") as target:
@@ -161,7 +174,7 @@ def native_parity(consumer, command):
                             request = json.loads(json.loads(backend.read("capture"))["bodies"][0])
                             expected = {f"q{i+1}": {"type": "noul", "instructions": f"The text is {c_parity.compact(item)}. {step['question']['decide']}"} for i, item in enumerate(step["items"][:2])}
                             assert request["questions"] == expected
-                        c_parity.assertions(row, original, got, int(backend.read("count")) - (before if step.get("count_delta") else 0))
+                        c_parity.assertions(row, file_question_expectation(step) if file_authored else original, got, int(backend.read("count")) - (before if step.get("count_delta") else 0))
                         if row["kind"] in ("images", "image-location"):
                             before = int(backend.read("count"))
                             saved = invoke({**{k:v for k,v in settings.items() if k != "record"}, "replay": str(home / "recorded")})
