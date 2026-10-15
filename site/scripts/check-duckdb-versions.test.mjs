@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { omissions } from './check-duckdb-versions.mjs';
 const versions = 'DUCKDB_VERSIONS="v1.5.6 v2.0-cyanoptera"';
-const catalog = "versions: { runtime: ['v1.5.6', 'v2.0-cyanoptera'], platforms: '' }";
+const catalog = "slug: 'duckdb', versions: { runtime: ['v1.5.6', 'v2.0-cyanoptera'], platforms: '' }";
 const readme = 'DuckDB v1.5.6 and v2.0-cyanoptera';
 assert.deepEqual(omissions(versions, catalog, readme), []);
 assert.deepEqual(omissions(versions, catalog.replace("'v2.0-cyanoptera'", ''), readme), ['catalog omits v2.0-cyanoptera']);
@@ -18,4 +18,9 @@ for (const standIn of ["/* 'v2.0-cyanoptera' */", "// 'v2.0-cyanoptera'\n", "'v2
   assert.deepEqual(omissions(versions, catalog.replace("'v2.0-cyanoptera'", standIn), readme),
     ['catalog omits v2.0-cyanoptera']);
 }
+const unrelated = catalog.replace("'duckdb'", "'other'");
+assert.deepEqual(omissions(versions, unrelated, readme),
+  ['catalog omits v1.5.6', 'catalog omits v2.0-cyanoptera']);
+assert.deepEqual(omissions(versions, unrelated + '\n' + catalog.replace("'v2.0-cyanoptera'", ''), readme),
+  ['catalog omits v2.0-cyanoptera']);
 console.log('DuckDB declarations reject independent omissions');

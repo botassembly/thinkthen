@@ -525,7 +525,7 @@ export const SURFACES = [
   },
   {
     slug: 'ruby', name: 'Ruby', deckHeading: 'Ruby',
-    versions: { runtime: 'Ruby 3.4 and 4.0', platforms: UNIX_PLATFORMS },
+    versions: { runtime: 'Ruby 3.4 or later, below 4.1', platforms: UNIX_PLATFORMS },
     backends: 'code',
     lang: 'ruby', tab: 'Ruby',
     blurb: "Use the ten named methods on `ThinkThen::Client` and read each answer from the result.",
@@ -555,7 +555,7 @@ export const SURFACES = [
   },
   {
     slug: 'rust', name: 'Rust', deckHeading: 'Rust',
-    versions: { runtime: 'Rust 1.95.0 or later; Polars 0.55.2 for the polars feature', platforms: NATIVE_PLATFORMS },
+    versions: { runtime: 'Rust 1.95.0 or later; Polars 0.55.2 or later, below 0.56, for the polars feature', platforms: NATIVE_PLATFORMS },
     backends: 'builder',
     lang: 'rust', tab: 'Rust',
     blurb: 'Call the engine directly. The compiler makes you handle not sure.',
@@ -586,7 +586,7 @@ export const SURFACES = [
   },
   {
     slug: 'cpp', name: 'C++', deckHeading: null,
-    versions: { runtime: 'C++17', platforms: LINUX_PLATFORMS },
+    versions: { runtime: 'C++17', platforms: 'Linux x86-64' },
     backends: 'code',
     lang: 'cpp', tab: 'C++',
     blurb: "Call the ten functions from C++17 through a header-only CMake package.",
@@ -735,7 +735,7 @@ export const SURFACES = [
   },
   {
     slug: 'swift', name: 'Swift', deckHeading: null,
-    versions: { runtime: 'Swift 6.0 or later', platforms: UNIX_PLATFORMS },
+    versions: { runtime: 'Swift 6.0 or later', platforms: `Linux x86-64; ${MAC_PLATFORMS}` },
     backends: 'code',
     lang: 'swift', tab: 'Swift',
     blurb: "Await the ten functions from Swift with async throws.",
@@ -751,7 +751,7 @@ export const SURFACES = [
   },
   {
     slug: 'zig', name: 'Zig', deckHeading: null,
-    versions: { runtime: 'Zig 0.15.2', platforms: 'Linux x86-64' },
+    versions: { runtime: 'Zig 0.15.2 or later', platforms: 'Linux x86-64' },
     backends: 'code',
     lang: 'zig', tab: 'Zig',
     blurb: "Call the ten functions from Zig through a source module.",
@@ -767,7 +767,7 @@ export const SURFACES = [
   },
   {
     slug: 'php', name: 'PHP', deckHeading: null,
-    versions: { runtime: 'PHP 8.3 or later', platforms: LINUX_PLATFORMS },
+    versions: { runtime: 'PHP 8.3 or later', platforms: 'Linux x86-64' },
     backends: 'code',
     lang: 'php', tab: 'PHP',
     blurb: "Call the ten functions from PHP 8.3 through FFI.",
