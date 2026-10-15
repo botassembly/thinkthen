@@ -1,6 +1,6 @@
 # Measure fixtures
 
-These files define `thinkthen audit` and `thinkthen diff`. The source is a prototype measurement script. Its history was removed on 2026-09-26, so no commit holds it now. These SHA-256 values of its three files, with the golden files below, are the record:
+These files define `thinkthen runs audit` and `thinkthen runs diff`. The source is a prototype measurement script. Its history was removed on 2026-09-26, so no commit holds it now. These SHA-256 values of its three files, with the golden files below, are the record:
 
 | Prototype file | SHA-256 |
 | --- | --- |

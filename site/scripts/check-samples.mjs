@@ -78,7 +78,7 @@ const EXEMPT = [
   },
   {
     name: 'the diff warning',
-    why: 'thinkthen diff prints its warning as one line.',
+    why: 'thinkthen runs diff prints its warning as one line.',
     test: (line, file) => file.startsWith('beatles/diff/') && file.endsWith('.out') && line.startsWith('thinkthen: diff: warning:'),
   },
   {
