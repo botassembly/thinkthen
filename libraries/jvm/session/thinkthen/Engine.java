@@ -91,7 +91,7 @@ public final class Engine extends NamedCalls implements AutoCloseable {
                 try {
                     for (var descriptor : feed) if (session.push(descriptor).join() == 2) break;
                     session.finish();
-                } catch (RuntimeException error) { result.completeExceptionally(error); }
+                } catch (Throwable error) { result.completeExceptionally(error); }
             });
         }
         workers.executor.execute(() -> {
