@@ -186,8 +186,9 @@ fn successful_named(output: &Output, label: &str) {
     );
 }
 
+/// Decode platform text lines without discarding lone carriage returns or spaces.
 fn text(bytes: &[u8]) -> String {
-    String::from_utf8_lossy(bytes).into_owned()
+    String::from_utf8_lossy(bytes).replace("\r\n", "\n")
 }
 
 /// The documented session caller reads terminal facts through owned packet views.

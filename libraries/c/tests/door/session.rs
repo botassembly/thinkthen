@@ -1,6 +1,36 @@
 //! Installed-header ownership and immediate control refusals.
 use super::*;
 
+/// Collected and streamed C text preserves content across platform line endings.
+#[test]
+fn consumer_text_preserves_content_across_platform_line_endings() {
+    let binary = compile(&crate_dir().join("tests/c/text_output.c"));
+    let output = run(&binary, "", b"");
+    successful(&output);
+    assert_eq!(
+        text(&output.stdout),
+        "cancelled\n{\"kind\":\"terminal\",\"facts\":{\"requests_sent\":1}}\nfreed\nembedded\rtail\n"
+    );
+    let mut child = start_with(&binary, "", &[]);
+    drop(child.stdin.take());
+    let mut output = BufReader::new(child.stdout.take().expect("output"));
+    let mut line = String::new();
+    output.read_line(&mut line).expect("consumer text");
+    assert_eq!(text(line.as_bytes()), "cancelled\n");
+    assert_eq!(
+        cancelled_terminal(&mut output).expect("terminal before freed marker"),
+        serde_json::json!({"kind":"terminal","facts":{"requests_sent":1}})
+    );
+    line.clear();
+    output
+        .read_line(&mut line)
+        .expect("remaining consumer text");
+    assert_eq!(text(line.as_bytes()), "embedded\rtail\n");
+    line.clear();
+    assert_eq!(output.read_line(&mut line).expect("end of text"), 0);
+    successful(&finished(child));
+}
+
 #[test]
 fn owned_session_controls_refuse_before_sending_and_preserve_outputs() {
     let backend = Backend::start().expect("loopback");
@@ -233,7 +263,8 @@ fn session_wait_and_packet_read_cancel_promptly_and_drain_terminal_facts() {
             let mut line = String::new();
             output.read_line(&mut line).expect("operation return");
             assert_eq!(
-                line, expected,
+                text(line.as_bytes()),
+                expected,
                 "operation must return while the provider stays held"
             );
         }
@@ -279,7 +310,7 @@ fn cancelled_terminal(
         {
             return None;
         }
-        if line == "freed\n" {
+        if text(line.as_bytes()) == "freed\n" {
             return terminal;
         }
         let packet: serde_json::Value = serde_json::from_str(&line).expect("complete packet");
