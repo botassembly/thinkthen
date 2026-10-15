@@ -639,10 +639,10 @@ uv) case $0 in "$FAKE_ROOT/pinned/uv") ;; *) echo 'a stray uv ran' >&2; exit 93 
 uname) case $1 in -s) case $FAKE_TARGET in *apple*) echo Darwin ;; *) echo Linux ;; esac ;;
   -m) case $FAKE_TARGET in aarch64*) echo arm64 ;; *) echo x86_64 ;; esac ;; esac ;;
 xcrun) echo "$FAKE_ROOT/sdk" ;;
-brew) case $1 in --cache) echo "$FAKE_ROOT/bottle" ;; --prefix) echo "$FAKE_ROOT/openssl3" ;; esac ;;
-shasum) . databases/postgresql/runtime-darwin.env
+brew) case $1 in --cache) for formula in "$@"; do :; done; echo "$FAKE_ROOT/$formula" ;; --prefix) echo "$FAKE_ROOT/openssl3" ;; esac ;;
+shasum) PG_MAJOR=${3##*postgresql@}; . databases/postgresql/runtime-darwin.env
   case $FAKE_TARGET in aarch64*) pin=$PG_BOTTLE_ARM64_SEQUOIA ;;
-    *) pin=$PG_BOTTLE_X86_64_SONOMA ;; esac
+    *) pin=${PG_BOTTLE_X86_64_SONOMA:-$PG_SOURCE_SHA256} ;; esac
   printf '%s  %s\\n' "$pin" "$3" ;;
 sh) case $1 in databases/duckdb/tools/setup.sh)
       [ -f "$FAKE_UV_READY" ] && [ -f "$FAKE_PY313_READY" ] || {
@@ -1231,12 +1231,12 @@ def self_test():
                       "libraries/ruby/setup-ruby.sh ",
                       "databases/sqlite/setup.sh ", "databases/duckdb/tools/setup.sh --fetch",
                       *(["sqlite-python-check", "sqlite-venv", "sqlite-jsonschema", "sqlite-python-check", "npm-seed"] if smoke else []), *seed,
-                      'pgrx [configs] pg16 = "$ROOT/openssl3/bin/pg_config"', "path $ROOT/pinned",
+                      'pgrx [configs] pg16 = "$ROOT/openssl3/bin/pg_config" pg17 = "$ROOT/openssl3/bin/pg_config" pg18 = "$ROOT/openssl3/bin/pg_config"', "path $ROOT/pinned",
                       *(["env THINKTHEN_PYTHON=$ROOT/.cache/thinkthen-toolchains/sqlite-python-3.14/bin/python"] if smoke else [])]
         elif smoke:
             wanted = ["py313-ready", "uv-install", "uv-check", "libraries/ruby/setup-ruby.sh ",
                       "databases/duckdb/tools/setup.sh --fetch", "databases/sqlite/setup.sh ",
-                      "databases/postgresql/setup.sh ",
+                      *[f"databases/postgresql/setup.sh {major}" for major in (16, 17, 18)],
                       *(["r-index", "r-host", "r-dependencies"] if target == "x86_64-unknown-linux-gnu" else []),
                       "npm-seed", *seed, "path $ROOT/pinned"]
         else:

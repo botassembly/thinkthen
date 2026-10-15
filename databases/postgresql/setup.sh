@@ -14,7 +14,7 @@ case $PG_MAJOR in 16|17|18) ;; *) echo "usage: setup.sh [16|17|18]" >&2; exit 2 
 [ -n "$PINNED" ] && [ -n "$PACKAGE_URL" ] || { echo "setup: no pinned server package for $(uname -m)" >&2; exit 1; }
 mkdir -p -- "$TOOLCHAIN"
 while read -r digest name; do
-    case $name in *-"$PG_MAJOR"_*_"$DEB_ARCH".deb) ;; *) continue ;; esac
+    case $name in *-"$PG_MAJOR"_*_"$DEB_ARCH".deb) ;; libpq5_*_"$DEB_ARCH".deb) [ "$PG_MAJOR" != 16 ] || continue ;; liburing2_*_"$DEB_ARCH".deb) [ "$PG_MAJOR" = 18 ] || continue ;; *) continue ;; esac
     url=$(awk -v name="/$name" 'substr($0, length($0) - length(name) + 1) == name' runtime.url)
     if [ ! -f "$TOOLCHAIN/$name" ]; then
         scratch_dir work

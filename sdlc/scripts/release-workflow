@@ -338,15 +338,25 @@ PYWIN
 		[ -z "${GITHUB_PATH:-}" ] || printf '%s\n' "${uv_bin%/*}" >>"$GITHUB_PATH"
 	fi
 	if [ "$(uname -s)" = Darwin ]; then
-		. databases/postgresql/runtime-darwin.env
-		MACOSX_DEPLOYMENT_TARGET=15.0
-		SDKROOT=$(xcrun --sdk macosx --show-sdk-path)
-		export MACOSX_DEPLOYMENT_TARGET SDKROOT
-		case $(uname -m) in arm64) tag=arm64_sequoia; pin=$PG_BOTTLE_ARM64_SEQUOIA ;; x86_64) tag=sonoma; pin=$PG_BOTTLE_X86_64_SONOMA ;; *) fail 'unknown Mac chip' ;; esac
-		brew fetch --bottle-tag="$tag" postgresql@16
-		bottle=$(brew --cache --bottle-tag="$tag" postgresql@16)
-		[ "$(shasum -a 256 "$bottle" | awk '{print $1}')" = "$pin" ] || fail 'Homebrew PostgreSQL bottle differs from pin'
-		brew install --force-bottle postgresql@16
+        MACOSX_DEPLOYMENT_TARGET=15.0
+        SDKROOT=$(xcrun --sdk macosx --show-sdk-path)
+        export MACOSX_DEPLOYMENT_TARGET SDKROOT
+        for PG_MAJOR in 16 17 18; do
+            . databases/postgresql/runtime-darwin.env
+            case $(uname -m) in arm64) tag=arm64_sequoia; pin=$PG_BOTTLE_ARM64_SEQUOIA ;; x86_64) tag=sonoma; pin=${PG_BOTTLE_X86_64_SONOMA:-} ;; *) fail 'unknown Mac chip' ;; esac
+            if [ -n "$pin" ]; then
+                brew fetch --bottle-tag="$tag" postgresql@$PG_MAJOR
+                bottle=$(brew --cache --bottle-tag="$tag" postgresql@$PG_MAJOR)
+                [ "$(shasum -a 256 "$bottle" | awk '{print $1}')" = "$pin" ] || fail 'Homebrew PostgreSQL bottle differs from pin'
+                brew install --force-bottle postgresql@$PG_MAJOR
+            else
+                brew fetch --build-from-source postgresql@$PG_MAJOR
+                source=$(brew --cache --build-from-source postgresql@$PG_MAJOR)
+                [ "$(shasum -a 256 "$source" | awk '{print $1}')" = "$PG_SOURCE_SHA256" ] || fail 'Homebrew PostgreSQL source differs from pin'
+                brew install --build-from-source postgresql@$PG_MAJOR
+            fi
+        done
+        unset PG_MAJOR
 		brew install pkgconf jq openssl@3
 		# python@3.14 comes before the OpenSSL check, since its install may upgrade openssl@3 (ticket 0369).
 		if [ "${RELEASE_SMOKE:-0}" = 1 ]; then
@@ -361,7 +371,10 @@ PYWIN
 		# A host that already has one keeps it. package.sh passes --pg-config either way.
 		if [ ! -e "$HOME/.pgrx/config.toml" ]; then
 			mkdir -p "$HOME/.pgrx"
-			printf '[configs]\npg16 = "%s"\n' "$(brew --prefix postgresql@16)/bin/pg_config" >"$HOME/.pgrx/config.toml"
+            printf '[configs]\n' >"$HOME/.pgrx/config.toml"
+            for major in 16 17 18; do
+                printf 'pg%s = "%s"\n' "$major" "$(brew --prefix postgresql@$major)/bin/pg_config" >>"$HOME/.pgrx/config.toml"
+            done
 		fi
 		sh libraries/ruby/setup-ruby.sh
 		sh databases/sqlite/setup.sh
@@ -387,7 +400,7 @@ PYWIN
 			sh libraries/ruby/setup-ruby.sh
 			sh databases/duckdb/tools/setup.sh --fetch
 			sh databases/sqlite/setup.sh
-			sh databases/postgresql/setup.sh
+			for major in 16 17 18; do sh databases/postgresql/setup.sh "$major"; done
 			if [ "$2" = x86_64-unknown-linux-gnu ]; then
 				sudo apt-get update
 				sudo apt-get install -y r-base-dev

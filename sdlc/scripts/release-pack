@@ -582,10 +582,19 @@ part_duckdb() {
 }
 
 part_postgresql() {
-	folder=$(fresh postgresql)
-	sh databases/postgresql/package.sh ${reuse:+--reuse} "$folder"
-	cp databases/postgresql/README-PUBLIC.md "$folder/README.md"
-	pack "thinkthen-postgresql16-$V-$TARGET.tar.gz" "$folder"
+    majors='16 17 18'
+    if [ -n "$reuse" ] && [ "${THINKTHEN_TEST_PROFILE:-}" = routine ]; then majors='16 18'; fi
+    for major in $majors; do
+        folder=$(fresh postgresql$major)
+        if [ -n "${PG_CONFIG:-}" ]; then
+            config=$(printf '%s' "$PG_CONFIG" | sed "s|pgsql-[0-9]*/|pgsql-$major/|; s|postgresql@[0-9]*|postgresql@$major|")
+            PG_CONFIG=$config sh databases/postgresql/package.sh ${reuse:+--reuse} "$major" "$folder"
+        else
+            sh databases/postgresql/package.sh ${reuse:+--reuse} "$major" "$folder"
+        fi
+        cp databases/postgresql/README-PUBLIC.md "$folder/README.md"
+        pack "thinkthen-postgresql$major-$V-$TARGET.tar.gz" "$folder"
+    done
 }
 
 part_python() {

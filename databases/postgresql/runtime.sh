@@ -100,7 +100,7 @@ runtime_ready() {
 	if [ ! -x "$EXTRACTED/usr/lib/postgresql/$PG_MAJOR/bin/postgres" ]; then
         scratch_dir partial "$TOOLCHAIN/pg$PG_MAJOR.XXXXXX"
         while read -r digest name; do
-            case $name in *-"$PG_MAJOR"_*_"$DEB_ARCH".deb) ;; *) continue ;; esac
+            case $name in *-"$PG_MAJOR"_*_"$DEB_ARCH".deb) ;; libpq5_*_"$DEB_ARCH".deb) [ "$PG_MAJOR" != 16 ] || continue ;; liburing2_*_"$DEB_ARCH".deb) [ "$PG_MAJOR" = 18 ] || continue ;; *) continue ;; esac
             [ -f "$TOOLCHAIN/$name" ] || not_run "the pinned package $name is missing"
             [ "$(sha256sum "$TOOLCHAIN/$name" | cut -d' ' -f1)" = "$digest" ] || not_run "the package $name differs from its pin"
             dpkg-deb -x "$TOOLCHAIN/$name" "$partial"
@@ -108,6 +108,11 @@ runtime_ready() {
         mv "$partial" "$EXTRACTED"
     fi
 
+    if [ "$PG_MAJOR" != 16 ]; then
+        case $DEB_ARCH in amd64) pg_triplet=x86_64-linux-gnu ;; arm64) pg_triplet=aarch64-linux-gnu ;; esac
+        LD_LIBRARY_PATH=$EXTRACTED/usr/lib/$pg_triplet${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}
+        export LD_LIBRARY_PATH
+    fi
 	[ -z "${THINKTHEN_ARTIFACT:-}" ] || return 0
 	header=$("$PG_CONFIG" --version | sed 's/^PostgreSQL //')
 	server=$("$EXTRACTED/usr/lib/postgresql/$PG_MAJOR/bin/postgres" -V | sed 's/^postgres (PostgreSQL) //')

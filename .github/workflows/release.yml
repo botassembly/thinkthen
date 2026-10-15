@@ -128,8 +128,7 @@ jobs:
             sdlc/scripts/release-pack "$TARGET" release-files command first-run
             disk 'after the final pack'
           else
-            PG_CONFIG="$(brew --prefix postgresql@16)/bin/pg_config"
-            export PG_CONFIG
+            # Each PostgreSQL archive selects its server's pg_config.
             sdlc/scripts/release-pack "$TARGET" release-files
           fi
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2

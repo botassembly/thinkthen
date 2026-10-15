@@ -12,3 +12,7 @@ https://apt.postgresql.org/pub/repos/apt/pool/main/p/postgresql-18/postgresql-se
 https://apt.postgresql.org/pub/repos/apt/pool/main/p/postgresql-18/postgresql-18_18.6-3.pgdg24.04+1_arm64.deb
 https://apt.postgresql.org/pub/repos/apt/pool/main/p/postgresql-18/postgresql-client-18_18.6-3.pgdg24.04+1_arm64.deb
 https://apt.postgresql.org/pub/repos/apt/pool/main/p/postgresql-18/postgresql-server-dev-18_18.6-3.pgdg24.04+1_arm64.deb
+https://archive.ubuntu.com/ubuntu/pool/main/libu/liburing/liburing2_2.5-1build1_amd64.deb
+https://ports.ubuntu.com/ubuntu-ports/pool/main/libu/liburing/liburing2_2.5-1build1_arm64.deb
+https://apt.postgresql.org/pub/repos/apt/pool/main/p/postgresql-18/libpq5_18.6-3.pgdg24.04+1_amd64.deb
+https://apt.postgresql.org/pub/repos/apt/pool/main/p/postgresql-18/libpq5_18.6-3.pgdg24.04+1_arm64.deb
