@@ -515,6 +515,51 @@ class PublicAssertions(unittest.TestCase):
                     self.assertIn(cause, result.stderr)
                     self.assertFalse(marker.exists(), 'invalid selection started a backend')
 
+    @unittest.skipUnless(os.name == 'posix', 'PostgreSQL child readers run on POSIX hosts')
+    def test_sql_postgresql_child_keeps_alternate_target_and_selected_profile(self):
+        from importlib.util import module_from_spec, spec_from_file_location
+        from unittest.mock import Mock
+        complete = parity.ROOT / 'databases/sqlite/tests/complete'
+        spec = spec_from_file_location('sql_complete_control', complete / 'parity.py')
+        module = module_from_spec(spec)
+        with patch.object(sys, 'path', [str(complete), str(parity.ROOT / 'conformance'), *sys.path]):
+            spec.loader.exec_module(module)
+            import postgresql_host as host_module
+        row = {'id': '01-decide-yes-captured', 'kind': 'typed-result', 'verb': 'decide'}
+        value = {'arm': 'generic/v1', 'verb': 'decide', 'question': {'decide': 'Fixture?'},
+                 'items': ['Fixture.'], 'expect': {}}
+        with tempfile.TemporaryDirectory(prefix='sql-reader-target-') as folder:
+            root = Path(folder)
+            for profile in ('routine', 'full'):
+                with self.subTest(profile=profile):
+                    target = root / profile / 'alternate-target'
+                    selected = 'release' if profile == 'full' else 'debug'
+                    marker = root / ('read-' + profile)
+                    for mode in ('debug', 'release'):
+                        reader = target / mode / 'thinkthen_read_inputs'
+                        reader.parent.mkdir(parents=True)
+                        program = ('import json, os, pathlib, sys\n'
+                                   'assert "FAKE_SERVICE_API_KEY" not in os.environ\n'
+                                   f'pathlib.Path({str(marker)!r}).write_text({mode!r})\n'
+                                   'json.dump(json.load(sys.stdin), sys.stdout)\n')
+                        reader.write_text('#!' + sys.executable + '\n' + program)
+                        reader.chmod(0o755)
+                    def execute(consumer, frame, env, home, backend):
+                        probe = 'import json,sys; from native_inputs import query; query(json.load(sys.stdin))'
+                        result = subprocess.run([sys.executable, '-c', probe],
+                            env=env | {'PYTHONPATH': str(parity.ROOT / 'databases/postgresql/tests')},
+                            input=json.dumps(frame), capture_output=True, text=True)
+                        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+                        self.assertEqual(marker.read_text(), selected)
+                        return {}
+                    env = {'PATH': os.defpath, 'CARGO_TARGET_DIR': str(target),
+                           'THINKTHEN_TEST_PROFILE': profile, 'THINKTHEN_POSTGRESQL_SOCKET': '/fixture',
+                           'FAKE_SERVICE_API_KEY': 'hostile-parent-only'}
+                    backend = Mock(port=12345)
+                    backend.read.return_value = '0'
+                    with patch.object(os, 'environ', env), patch.object(sys, 'argv', ['sql-complete', 'postgresql']), patch.object(module.inventory, 'required_cases', return_value={row['id']: row}), patch.object(module, 'document', return_value=value), patch.object(module, 'prepare'), patch.object(module, 'Backend', return_value=backend), patch.object(host_module, 'PostgresqlHost'), patch.object(module, 'execute', side_effect=execute), patch.object(module, 'assertions'), contextlib.redirect_stdout(io.StringIO()):
+                        self.assertFalse(module.main())
+
     def test_prepared_python_shell_uses_shared_installed_venv_and_private_fixture_copy(self):
         import venv
         with tempfile.TemporaryDirectory() as scratch:

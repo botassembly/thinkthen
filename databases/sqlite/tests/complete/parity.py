@@ -124,7 +124,10 @@ def main():
                               PATH=os.environ['PATH'],
                               LANG='C.UTF-8',
                               LD_LIBRARY_PATH=os.environ.get('LD_LIBRARY_PATH',''))
-                if consumer=='postgresql':env['THINKTHEN_POSTGRESQL_SOCKET']=os.environ['THINKTHEN_POSTGRESQL_SOCKET']
+                if consumer=='postgresql':
+                    env.update(THINKTHEN_POSTGRESQL_SOCKET=os.environ['THINKTHEN_POSTGRESQL_SOCKET'],
+                               CARGO_TARGET_DIR=str(Path(os.environ.get('CARGO_TARGET_DIR',ROOT/'databases/postgresql/target')).resolve()),
+                               THINKTHEN_TEST_PROFILE=os.environ.get('THINKTHEN_TEST_PROFILE','routine'))
                 backend=Backend(BACKEND,env)
                 try:
                     env.update(THINKTHEN_API_KEY='sk-conformance-loopback',LIQUIDAI_API_KEY='sk-conformance-loopback',OPENROUTER_API_KEY='sk-conformance-loopback',PERPLEXITY_API_KEY='sk-conformance-loopback')
