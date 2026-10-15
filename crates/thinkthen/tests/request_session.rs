@@ -6,6 +6,9 @@ use std::time::{Duration, Instant};
 use thinkthen::RequestFunction;
 use thinkthen::*;
 
+#[path = "../src/test_deadline/child.rs"]
+mod child;
+
 #[path = "request_session/framing.rs"]
 mod framing;
 #[path = "request_session/push.rs"]

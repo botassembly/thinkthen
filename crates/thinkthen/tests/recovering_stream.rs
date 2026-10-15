@@ -523,3 +523,117 @@ fn declared_file_source_yields_located_prefix_before_reading_invalid_utf8_suffix
 
 #[path = "recovering_stream/terminal.rs"]
 mod terminal;
+
+#[test]
+fn push_all_then_finish_or_cancel_preserves_parked_recovering_rows() {
+    for (blocking, cancel) in [(false, false), (true, false), (true, true)] {
+        let listener = Listener::answering(response).unwrap();
+        let engine = api::fixed(listener.base(), "sk-parked-recovery")
+            .no_cache()
+            .max_retries(0)
+            .throttle(1)
+            .unwrap()
+            .max_requests(if cancel { None } else { Some(3) })
+            .unwrap()
+            .batch(BatchSetting::Records(
+                std::num::NonZeroUsize::new(1).unwrap(),
+            ))
+            .build()
+            .unwrap();
+        let session = Arc::new(
+            engine
+                .start_request_recovering_session(request(), Surface::Rust)
+                .unwrap(),
+        );
+        for index in 0..if cancel { 8 } else { 32 } {
+            let status = push_bounded(&session, index, blocking);
+            if status == RequestSessionPushStatus::Closed {
+                break;
+            }
+        }
+        if cancel {
+            session.cancel();
+        } else {
+            session.finish(None).unwrap();
+        }
+        let packets = drain(&session);
+        let rows = packets
+            .iter()
+            .filter_map(|packet| match packet {
+                RequestRecoveringResult::Row(row) => Some(row),
+                _ => None,
+            })
+            .collect::<Vec<_>>();
+        if cancel {
+            assert!(rows.len() >= 3, "push parked a completed prefix");
+        } else {
+            assert_eq!(rows.len(), 3);
+        }
+        for (index, row) in rows.iter().enumerate() {
+            assert_eq!(row.ordinal(), index);
+            let RequestValue::Decisions(values) = row.outcome().unwrap() else {
+                panic!("decision row")
+            };
+            let thinkthen::QuestionInput::Record(original) = values[0].original() else {
+                panic!("feed original")
+            };
+            assert_eq!(
+                original.original().literal(),
+                Some(format!("row {index}").as_str())
+            );
+        }
+        let RequestRecoveringResult::Terminal(terminal) = packets.last().unwrap() else {
+            panic!("terminal follows parked rows")
+        };
+        assert_eq!(
+            terminal.error.as_ref().unwrap().kind(),
+            if cancel {
+                ErrorKind::Cancelled
+            } else {
+                ErrorKind::Usage
+            }
+        );
+        if !cancel {
+            assert_eq!(terminal.facts.as_ref().unwrap().requests_sent(), 3);
+            assert_eq!(listener.count(), 3);
+        }
+    }
+}
+
+#[expect(
+    clippy::unwrap_used,
+    reason = "fixture admission and timeout failures stop this caller behavior"
+)]
+fn push_bounded(
+    session: &Arc<RequestRecoveringSession>,
+    index: usize,
+    blocking: bool,
+) -> RequestSessionPushStatus {
+    let waiting = Arc::clone(session);
+    let (sent, received) = mpsc::channel();
+    let producer = std::thread::spawn(move || {
+        if blocking {
+            let status = waiting
+                .push_with(|| Ok::<_, thinkthen::Error>(descriptor(&format!("row {index}"))))
+                .unwrap();
+            let _ = sent.send(status);
+            return;
+        }
+        let encoded =
+            json!({"item":{"original":{"kind":"text","text":format!("row {index}")}}}).to_string();
+        let status = loop {
+            let status = waiting.try_push_json(&encoded).unwrap();
+            if status != RequestSessionPushStatus::Full {
+                break status;
+            }
+            std::thread::yield_now();
+        };
+        let _ = sent.send(status);
+    });
+    let status = received.recv_timeout(Duration::from_secs(2));
+    if status.is_err() {
+        session.cancel();
+    }
+    producer.join().unwrap();
+    status.unwrap()
+}

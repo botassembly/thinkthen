@@ -1,9 +1,7 @@
 //! Native wait readiness, ownership and cancellation behavior.
 use super::*;
-use thinkthen::RequestFunction;
-#[path = "../../src/test_deadline/child.rs"]
-mod child;
 use child::ChildEnvironment as _;
+use thinkthen::RequestFunction;
 
 #[test]
 fn result_wait_ignores_input_room_and_timeout_consumes_nothing() {

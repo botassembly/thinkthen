@@ -4405,8 +4405,9 @@ int thinkthen_session_next_packet(struct thinkthen_session *session,
                                   struct thinkthen_session_result **out);
 
 /*
- Wait for input room and transfer one descriptor without consuming output.
- Pending output cannot wake this producer. Closure or cancellation returns
+ Wait for input room and transfer one descriptor.
+ Park unread output in session order; unread answers consume memory.
+ Push never waits for a reader. Closure or cancellation returns
  CLOSED without decoding the payload. Failures preserve status and publish
  only the calling thread diagnostic. No input bytes survive return.
  # Safety
@@ -4419,8 +4420,9 @@ int thinkthen_session_push(struct thinkthen_session *session,
                            uint32_t *status);
 
 /*
- Wait for input room and transfer a typed descriptor without consuming output.
- Closed intake retains nothing and never inspects the descriptor tree.
+ Wait for input room and transfer a typed descriptor.
+ Park unread output in session order; unread answers consume memory.
+ Push never waits for a reader. Closed intake retains nothing and never inspects the descriptor tree.
  No input pointer survives return; status is published only on success.
  # Safety
  session is live, status is writable and nonnull, and descriptor satisfies

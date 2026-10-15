@@ -18,7 +18,7 @@ No library's session or incremental API can hang, spin, race or lose a result on
   2. **C++ race.** `cancel` writes a plain bool that `admit` reads, which is a data race (`libraries/cpp/` `native_implementation.hpp`).
   3. **C++ use after free.** `close` while another thread is blocked in a call is a use after free (the same file).
   4. **Free without cancel.** Ada `Close` and `Finalize`, and Zig `deinit`, free a session without cancelling it.
-  5. **JVM.** The feeder catches only `RuntimeException`. A thrown `Error` leaves the session unfinished and its future never completes (`libraries/jvm/` `Engine.java`).
+  5. **JVM.** Moved to 0.2 as ticket 0600 on 2026-10-15.
   6. **Python.** Leaving `iterate` early without `close` keeps the session alive until `engine.close`.
   7. **PHP.** `wait` has no timeout without a token.
   8. **Dart.** `finishUsageStatus` blocks the UI isolate.

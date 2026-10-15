@@ -157,7 +157,7 @@ OPERATIONS = (
             Argument('status', '*mut u32', 'output'),
         ), 'push_typed', ('session', 'descriptor', '@false'), ('status',), 'session_native_call', native_unsafe=True),
     Operation('typed', 'thinkthen_session_push_typed',
-        '/// Wait for input room and transfer a typed descriptor without consuming output.\n/// Closed intake retains nothing and never inspects the descriptor tree.\n/// No input pointer survives return; status is published only on success.\n/// # Safety\n/// session is live, status is writable and nonnull, and descriptor satisfies\n/// the finite aligned carrier-tree obligations of the typed constructor.\n',
+        '/// Wait for input room and transfer a typed descriptor.\n/// Park unread output in session order; unread answers consume memory.\n/// Push never waits for a reader. Closed intake retains nothing and never inspects the descriptor tree.\n/// No input pointer survives return; status is published only on success.\n/// # Safety\n/// session is live, status is writable and nonnull, and descriptor satisfies\n/// the finite aligned carrier-tree obligations of the typed constructor.\n',
         (
             Argument('session', '*const SessionHandle', 'borrow'),
             Argument('descriptor', '*const carriers::thinkthen_request_session_descriptor_v1', 'input'),
@@ -183,7 +183,7 @@ OPERATIONS = (
             Argument('descriptor_len', 'usize', 'input', None),
             Argument('status', '*mut u32', 'output', None),
         ), 'try_push_json', ('session', 'descriptor_json', 'descriptor_len'), ('status',), 'session_call', native_unsafe=True),
-    Operation('session', 'thinkthen_session_push', '/// Wait for input room and transfer one descriptor without consuming output.\n/// Pending output cannot wake this producer. Closure or cancellation returns\n/// CLOSED without decoding the payload. Failures preserve status and publish\n/// only the calling thread diagnostic. No input bytes survive return.\n/// # Safety\n/// session stays live throughout the wait. descriptor_json has descriptor_len\n/// readable bytes (NULL requires zero); status is nonnull writable storage.\n',
+    Operation('session', 'thinkthen_session_push', '/// Wait for input room and transfer one descriptor.\n/// Park unread output in session order; unread answers consume memory.\n/// Push never waits for a reader. Closure or cancellation returns\n/// CLOSED without decoding the payload. Failures preserve status and publish\n/// only the calling thread diagnostic. No input bytes survive return.\n/// # Safety\n/// session stays live throughout the wait. descriptor_json has descriptor_len\n/// readable bytes (NULL requires zero); status is nonnull writable storage.\n',
         (
             Argument('session', '*mut SessionHandle', 'borrow', None),
             Argument('descriptor_json', '*const c_char', 'input', 'descriptor_len'),

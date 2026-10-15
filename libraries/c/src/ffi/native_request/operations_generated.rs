@@ -91,8 +91,9 @@ pub unsafe extern "C" fn thinkthen_session_try_push_typed(
     })
 }
 
-/// Wait for input room and transfer a typed descriptor without consuming output.
-/// Closed intake retains nothing and never inspects the descriptor tree.
+/// Wait for input room and transfer a typed descriptor.
+/// Park unread output in session order; unread answers consume memory.
+/// Push never waits for a reader. Closed intake retains nothing and never inspects the descriptor tree.
 /// No input pointer survives return; status is published only on success.
 /// # Safety
 /// session is live, status is writable and nonnull, and descriptor satisfies
