@@ -92,7 +92,20 @@ def native(rows, verb):
     completed = [row for row in rows if row['result'] is not None]
     if verb == 'rank':
         completed.sort(key=lambda row: row['result']['value'])
-    values = [decode(row['result'], DEFINITIONS[roots[verb]]) for row in completed]
+    schema = DEFINITIONS[roots[verb]]
+    values = []
+    retained_sql = None
+    for row in completed:
+        result = row['result']
+        metadata = json.dumps({key: child for key, child in result.items() if key != 'value'}, sort_keys=True) if verb == 'relate' else None
+        if values and verb == 'relate' and metadata == retained_sql:
+            # SQL repeats the aggregate answer on every edge. JSON equality
+            # preserves boolean versus number types and presence flags.
+            values.append({**values[0], 'value': decode(result['value'], schema['properties']['value'])})
+        else:
+            values.append(decode(result, schema))
+        if len(values) == 1:
+            retained_sql = metadata
     if verb == 'relate' and values:
         retained = {key: child for key, child in values[0].items() if key != 'value'}
         assert all({key: child for key, child in value.items() if key != 'value'} == retained for value in values), values
