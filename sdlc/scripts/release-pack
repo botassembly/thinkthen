@@ -115,8 +115,39 @@ if [ "$TARGET" = x86_64-pc-windows-msvc ]; then
 		export CARGO_TARGET_DIR
 	fi
 fi
+# Cargo splits RUSTFLAGS on whitespace. Its encoded form preserves native paths
+# with spaces; MSYS must also leave the drive colons and remap destinations alone.
+# https://doc.rust-lang.org/cargo/reference/environment-variables.html
+# https://www.msys2.org/docs/filesystem-paths/
+RUSTFLAGS=${RUSTFLAGS:-}
+if [ "$TARGET" = x86_64-pc-windows-msvc ]; then
+	rust_separator=$(printf '\037')
+	if [ "${CARGO_ENCODED_RUSTFLAGS+x}" != x ]; then
+		CARGO_ENCODED_RUSTFLAGS=$(
+			set -f
+			separator=
+			for flag in $RUSTFLAGS; do
+				printf '%s%s' "$separator" "$flag"
+				separator=$rust_separator
+			done
+		)
+	fi
+	MSYS2_ENV_CONV_EXCL="${MSYS2_ENV_CONV_EXCL:+$MSYS2_ENV_CONV_EXCL;}CARGO_ENCODED_RUSTFLAGS="
+	export CARGO_ENCODED_RUSTFLAGS MSYS2_ENV_CONV_EXCL
+fi
+rust_remap() {
+	if [ "$TARGET" = x86_64-pc-windows-msvc ]; then
+		CARGO_ENCODED_RUSTFLAGS="${CARGO_ENCODED_RUSTFLAGS:+$CARGO_ENCODED_RUSTFLAGS$rust_separator}--remap-path-prefix=$1=$2"
+	else
+		RUSTFLAGS="${RUSTFLAGS:+$RUSTFLAGS }--remap-path-prefix=$1=$2"
+	fi
+}
 if [ "${THINKTHEN_FULL_COMPILER:-}" != 1 ]; then
-RUSTFLAGS="${RUSTFLAGS:+$RUSTFLAGS }--remap-path-prefix=/home=/build/host --remap-path-prefix=/Users=/build/users --remap-path-prefix=$source_remap=/build/source --remap-path-prefix=$cargo_remap=/build/cargo --remap-path-prefix=$home_remap=$home_destination"
+	rust_remap /home /build/host
+	rust_remap /Users /build/users
+	rust_remap "$source_remap" /build/source
+	rust_remap "$cargo_remap" /build/cargo
+	rust_remap "$home_remap" "$home_destination"
 if [ "$TARGET" != x86_64-pc-windows-msvc ]; then
 	compiler_remaps="-ffile-prefix-map=/home=/build/host -ffile-prefix-map=/Users=/build/users -ffile-prefix-map=$REPO=/build/source -ffile-prefix-map=$cargo_home=/build/cargo -ffile-prefix-map=$HOME=$home_destination"
 	CFLAGS="${CFLAGS:+$CFLAGS }$compiler_remaps"
@@ -126,7 +157,8 @@ else
 	CFLAGS=${CFLAGS:-}
 fi
 elif [ "$TARGET" = x86_64-pc-windows-msvc ]; then
-	RUSTFLAGS="${RUSTFLAGS:+$RUSTFLAGS }--remap-path-prefix=$source_remap=/build/source --remap-path-prefix=$cargo_remap=/build/cargo"
+	rust_remap "$source_remap" /build/source
+	rust_remap "$cargo_remap" /build/cargo
 	CFLAGS=
 fi
 export RUSTFLAGS CFLAGS CXXFLAGS
@@ -672,6 +704,7 @@ fi
 own_build=
 [ -n "$reuse" ] || [ -n "${CARGO_TARGET_DIR:-}" ] || own_build=1
 duckdb_build=${THINKTHEN_DUCKDB_CPP_BUILD:-} rust_flags=$RUSTFLAGS c_flags=$CFLAGS cxx_flags=${CXXFLAGS:-}
+encoded_rust_flags=${CARGO_ENCODED_RUSTFLAGS:-}
 for part in "$@"; do
 	if [ -n "$own_build" ]; then
 		scratch_dir part_build
@@ -681,7 +714,9 @@ for part in "$@"; do
 			build_remap=$(cygpath -m "$part_build")
 			CARGO_TARGET_DIR=$build_remap
 		fi
-		RUSTFLAGS="$rust_flags --remap-path-prefix=$build_remap=/build/target"
+		RUSTFLAGS=$rust_flags
+		[ "$TARGET" != x86_64-pc-windows-msvc ] || CARGO_ENCODED_RUSTFLAGS=$encoded_rust_flags
+		rust_remap "$build_remap" /build/target
 		CFLAGS=$c_flags
 		[ "$TARGET" = x86_64-pc-windows-msvc ] || CFLAGS="$c_flags -ffile-prefix-map=$part_build=/build/target"
 		CXXFLAGS="${cxx_flags:+$cxx_flags }-ffile-prefix-map=$part_build=/build/target"
