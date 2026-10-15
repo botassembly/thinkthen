@@ -8,16 +8,24 @@ cd -- "$(dirname -- "$0")"
 [ "$(uname -s)" = Linux ] || { echo 'setup: Linux only; macOS uses the bottle runtime-darwin.env pins' >&2; exit 2; }
 . ../../sdlc/scripts/scratch.sh
 . ../../sdlc/scripts/fetch.sh
+PG_MAJOR=${1:-16}
+case $PG_MAJOR in 16|17|18) ;; *) echo "usage: setup.sh [16|17|18]" >&2; exit 2 ;; esac
 . ./runtime.sh
 [ -n "$PINNED" ] && [ -n "$PACKAGE_URL" ] || { echo "setup: no pinned server package for $(uname -m)" >&2; exit 1; }
-if [ ! -f "$PACKAGE" ]; then
-	scratch_dir work
-	fetch_url "$work/${PACKAGE##*/}" "$PACKAGE_URL" --proto '=https' --tlsv1.2
-	[ "$(sha256sum "$work/${PACKAGE##*/}" | cut -d' ' -f1)" = "$PINNED" ] ||
-		{ echo "setup: $PACKAGE_URL does not match its pinned SHA256" >&2; exit 1; }
-	mkdir -p -- "$TOOLCHAIN"
-	mv -- "$work/${PACKAGE##*/}" "$PACKAGE"
-fi
-[ "$(sha256sum "$PACKAGE" | cut -d' ' -f1)" = "$PINNED" ] ||
-	{ echo "setup: $PACKAGE does not match its pinned SHA256" >&2; exit 1; }
-echo "setup: $PACKAGE matches its pin"
+mkdir -p -- "$TOOLCHAIN"
+while read -r digest name; do
+    case $name in *-"$PG_MAJOR"_*_"$DEB_ARCH".deb) ;; *) continue ;; esac
+    url=$(awk -v name="/$name" 'substr($0, length($0) - length(name) + 1) == name' runtime.url)
+    if [ ! -f "$TOOLCHAIN/$name" ]; then
+        scratch_dir work
+        fetch_url "$work/$name" "$url" --proto '=https' --tlsv1.2
+        [ "$(sha256sum "$work/$name" | cut -d' ' -f1)" = "$digest" ] || {
+            echo "setup: $url does not match its pinned SHA256" >&2; exit 1;
+        }
+        mv -- "$work/$name" "$TOOLCHAIN/$name"
+    fi
+    [ "$(sha256sum "$TOOLCHAIN/$name" | cut -d' ' -f1)" = "$digest" ] || {
+        echo "setup: $name does not match its pinned SHA256" >&2; exit 1;
+    }
+    echo "setup: $name matches its pin"
+done <runtime.sha256

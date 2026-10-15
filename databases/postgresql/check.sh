@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # The PostgreSQL surface's check (ticket 0111). It builds the
-# extension against pinned PostgreSQL 16.15 headers and runs a local server from
+# extension against pinned PostgreSQL $PG_MAJOR.15 headers and runs a local server from
 # the pinned package as this user on a socket with no TCP port, and restarts
 # it for each test with that test's own loopback backend (ticket 0117) and
 # answer cache. No test reaches a paid backend: the server gets a fake key
@@ -23,6 +23,9 @@ unset THINKTHEN_API_KEY RUSTFLAGS CARGO_ENCODED_RUSTFLAGS
 # Packing cases explicitly select the new default with `SET thinkthen.batch`.
 export THINKTHEN_BATCH=1
 cd "$(dirname "$0")"
+PG_MAJOR=${1:-16}
+case $PG_MAJOR in 16|17|18) ;; *) echo 'usage: check.sh [16|17|18]' >&2; exit 2 ;; esac
+export PG_MAJOR
 profile=${THINKTHEN_TEST_PROFILE:-routine}
 case $profile in routine|full|stress) ;; *) echo "postgresql: unknown THINKTHEN_TEST_PROFILE: $profile" >&2; exit 2 ;; esac
 [ "$profile" = routine ] || unset THINKTHEN_CONFORMANCE_IDS
@@ -46,19 +49,19 @@ COMMAND=${CARGO_TARGET_DIR:-$REPO/target}/debug/thinkthen
 # The client reader test binary uses this workspace's pgrx dependency. Give its
 # build the same pinned headers used for source packages without requiring a
 # cargo-pgrx home in the installed-archive smoke.
-PG_CONFIG=${PG_CONFIG:-$(if [ "$PG_HOST" = Darwin ]; then echo "$EXTRACTED/bin/pg_config"; else echo /usr/bin/pg_config; fi)}
+PG_CONFIG=${PG_CONFIG:-$(if [ "$PG_HOST" = Darwin ]; then echo "$EXTRACTED/bin/pg_config"; else echo "$EXTRACTED/usr/lib/postgresql/$PG_MAJOR/bin/pg_config"; fi)}
 if [ -n "${THINKTHEN_ARTIFACT:-}" ] && [ "$PG_HOST" = Linux ]; then
-	[ -x "$PG_CONFIG" ] || not_run "the PostgreSQL 16 pg_config at $PG_CONFIG is missing"
-	case $("$PG_CONFIG" --version) in 'PostgreSQL 16.'*) ;; *) not_run "the PostgreSQL client reader needs PostgreSQL 16 headers at $PG_CONFIG" ;; esac
-	[ -f "$("$PG_CONFIG" --includedir-server)/postgres.h" ] || not_run "the PostgreSQL 16 server headers at $PG_CONFIG are missing"
+	[ -x "$PG_CONFIG" ] || not_run "the PostgreSQL $PG_MAJOR pg_config at $PG_CONFIG is missing"
+	case $("$PG_CONFIG" --version) in "PostgreSQL $PG_MAJOR."*) ;; *) not_run "the PostgreSQL client reader needs PostgreSQL $PG_MAJOR headers at $PG_CONFIG" ;; esac
+	[ -f "$("$PG_CONFIG" --includedir-server)/postgres.h" ] || not_run "the PostgreSQL $PG_MAJOR server headers at $PG_CONFIG are missing"
 fi
 
 export PGRX_PG_CONFIG_PATH="$PG_CONFIG"
 [ -n "${THINKTHEN_ARTIFACT:-}" ] || [ "$profile" = full ] || {
 	echo "== build"
 	cargo fmt --check
-	cargo clippy --locked --offline --all-targets -- -D warnings
-	cargo test --locked --offline --lib
+	cargo clippy --locked --offline --all-targets --no-default-features --features "pg$PG_MAJOR" -- -D warnings
+	cargo test --locked --offline --lib --no-default-features --features "pg$PG_MAJOR"
 }
 reader_profile=
 [ "$profile" != full ] || reader_profile=--release
@@ -66,14 +69,14 @@ if [ "$PG_HOST" = Darwin ]; then
 	# Cargo also links this package's library when it builds the client reader.
 	# Its PostgreSQL symbols resolve when the server loads the extension (ticket 0336).
 	PGRX_PG_CONFIG_PATH="$PG_CONFIG" RUSTFLAGS="${RUSTFLAGS:+$RUSTFLAGS }-Clink-arg=-Wl,-undefined,dynamic_lookup" \
-		cargo build --locked --offline --quiet ${reader_profile:+$reader_profile} --bin thinkthen_read_inputs
+		cargo build --locked --offline --quiet ${reader_profile:+$reader_profile} --bin thinkthen_read_inputs --no-default-features --features "pg$PG_MAJOR"
 else
-	PGRX_PG_CONFIG_PATH="$PG_CONFIG" cargo build --locked --offline --quiet ${reader_profile:+$reader_profile} --bin thinkthen_read_inputs
+	PGRX_PG_CONFIG_PATH="$PG_CONFIG" cargo build --locked --offline --quiet ${reader_profile:+$reader_profile} --bin thinkthen_read_inputs --no-default-features --features "pg$PG_MAJOR"
 fi
 (cd "$REPO" && cargo build --locked --offline --quiet --package conformance-backend --package thinkthen --bin conformance-backend --bin thinkthen)
 if [ "$profile" != full ]; then export RUSTFLAGS="--remap-path-prefix=$HOME=/build"; fi
 # package.sh reads the same pg_config and target folder (ticket 0128).
-EXT=${CARGO_TARGET_DIR:-target}/release/thinkthen-pg16
+EXT=${CARGO_TARGET_DIR:-target}/release/thinkthen-pg$PG_MAJOR
 # The shipped build, which `package.sh --reuse` packs (ticket 0128).
 SHIPPED=$EXT-shipped
 
@@ -178,10 +181,10 @@ echo "== package"
 	if [ "$profile" != full ]; then STEPS=${STEPS:-shipped_lacks_probe no_home_in_library examples slide_sample plain_question_contract portable_batch_identity recognize_and_relate_as_drawn complete_question_resolution_keeps_privilege_and_content_boundaries client_reader_validates_file_formats complete_cases complete_request_contract_cases native_record_contract_cases conformance find_inputs find_proxy_cases find_cancel find_signatures_are_owned_and_private the_fake_key_stays_in_the_environment token_variable_refuses_before_sending}; fi
 }
 [ -n "${THINKTHEN_ARTIFACT:-}" ] || {
-	./pgrx-package-locked.sh --pg-config "$PG_CONFIG" >/dev/null
+	./pgrx-package-locked.sh --pg-config "$PG_CONFIG" --no-default-features --features "pg$PG_MAJOR" >/dev/null
 	mkdir -p "$SHIPPED" && cp -a "$EXT/." "$SHIPPED/"
 	if [ "$profile" != full ]; then
-	    ./pgrx-package-locked.sh --pg-config "$PG_CONFIG" --features panic-probe >/dev/null
+	    ./pgrx-package-locked.sh --pg-config "$PG_CONFIG" --no-default-features --features "pg$PG_MAJOR,panic-probe" >/dev/null
 	fi
 	runtime_install "$EXT$("$PG_CONFIG" --pkglibdir)" "$EXT$("$PG_CONFIG" --sharedir)/extension"
 	PACKAGE_LIB=$SHIPPED$("$PG_CONFIG" --pkglibdir)
@@ -737,7 +740,7 @@ stored_image_composites_use_native_order_and_strict_replay() {
 check stored_image_composites_use_native_order_and_strict_replay
 client_reader_keeps_keys_find_indexes_native_spans_and_relation_ends() {
 	fresh generic
-	cargo build --locked --offline --example client_files
+	cargo build --locked --offline --example client_files --no-default-features --features "pg$PG_MAJOR"
 	"${CARGO_TARGET_DIR:-target}/debug/examples/client_files" "$SOCK" "$RUN/client-source.txt"
 	# One coalesced rank judgment retains two records, one find, two recognition stages per source,
 	# and one relation request; readers and span mapping add no sends.
