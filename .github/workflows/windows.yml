@@ -198,7 +198,4 @@ jobs:
       - name: Diagnose recognition cancellation once
         run: |
           set -eu
-          for attempt in $(seq 1 20); do
-            printf 'MCP shutdown diagnostic attempt %s\n' "$attempt"
-            cargo test --locked --offline -p thinkthen --test mcp_stdio protocol::initialization_gates_tools_and_catalog_preserves_the_ten_tool_contract -- --exact --nocapture
-          done
+          cargo test --locked --offline -p thinkthen --lib mcp::input::windows::tests::accepted_output_bytes_remain_written_when_shutdown_races_completion -- --exact --nocapture
