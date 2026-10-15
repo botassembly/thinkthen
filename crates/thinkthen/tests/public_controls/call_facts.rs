@@ -30,11 +30,14 @@ fn a_refused_connection_retries_with_a_live_deadline_and_stops_when_spent() {
         ),
         (CallOptions::new().cancel(&token), ErrorKind::Cancelled, 0),
     ] {
+        let before = engine.usage();
         let error = engine
             .decide_with(&question(), "Refund me.", options)
             .expect_err("refusal");
         assert_eq!(error.kind(), expected);
-        assert_eq!(error.facts().expect("call facts").requests_sent(), sends);
+        let after = engine.usage();
+        assert_eq!(after.requests_sent() - before.requests_sent(), sends);
+        assert_eq!(after.retries() - before.retries(), u64::from(sends == 2));
     }
 }
 
