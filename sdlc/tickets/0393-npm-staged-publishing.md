@@ -52,3 +52,5 @@ Official [staged publishing docs](https://docs.npmjs.com/staged-publishing/) req
 ## Landing slices
 
 Slice A lands the reviewed workflow, parser and approval instructions. Final rehearsal and actual registry staging, approval and public availability remain open under this ticket and final qualification.
+
+The `npm-pack` job of the rc.13 rehearsal under 0543 is this ticket's rehearsal proof. Ian's change on npmjs.com, switching off direct publishing, sits in 0425's go list.

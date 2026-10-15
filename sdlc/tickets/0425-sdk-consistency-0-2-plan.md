@@ -6,14 +6,6 @@ Milestone: 0.2
 
 Depends on: 0543
 
-Depends on: 0461
-
-Depends on: 0468
-
-Depends on: 0487
-
-Depends on: 0510
-
 Owner: builder.
 
 Reviews: revision 1f8bc0179286c6b3ec6a87b11618e4fca5057be9, accept
@@ -28,23 +20,32 @@ Reviews: revision fe9bf662f0234e8177eecd2a0f0adea96b36e5d0, accept
 
 ## Outcome
 
-The commit that passed the 0543 candidate also passes release QA by a fresh agent with only the public docs. On Ian's explicit go, that same commit is released as 0.2.0. Every published package then installs and runs from its public channel on a clean machine. This ticket owns release preparation, release QA, publication and the after-publication checks. 0543 owns the candidate.
+The commit that passed the 0543 candidate also passes release QA by a fresh agent with only the public docs. On Ian's explicit go, that same commit is released as 0.2.0. Every published package then installs and runs from its public channel on a clean machine. This ticket owns release QA, publication and the after-publication checks. 0543 owns release preparation and the candidate.
 
 ## Evidence
 
-- Starts from: the [0.1 release record](../records/0128-release-0-1.md), the six-candidate retrospective in the [0425 record](../records/0425-sdk-consistency-0-2-plan.md), and three mailroom rulings in `repos/agents/inbox/thinkthen/`: the 2026-10-06 completion criteria (`2026-10-06-pm-what-0-2-done-means-beyond-the-tickets-and-two-cleanups.md`), the 2026-10-07 two-stage release (`2026-10-07-thinkthen-m5-use-and-the-two-stage-github-release.md`) and Ian's 2026-10-08 release hold. It also absorbs the release issues this rewrite closes: release and install for 0.1, run facts, the RubyGems placeholder, public install checks, R before release, rehearsal publish steps, two release secrets, two approvals, patch-release hand passes, and doc tests gating releases.
+- Starts from: the [0.1 release record](../records/0128-release-0-1.md), the six-candidate retrospective in the [0425 record](../records/0425-sdk-consistency-0-2-plan.md), and the 2026-10-06 completion criteria, the 2026-10-07 two-stage release and Ian's 2026-10-08 release hold in `repos/agents/inbox/thinkthen/`. Release preparation and the candidate moved to 0543. This ticket also closes the release issues it absorbed: release and install for 0.1, run facts, the RubyGems placeholder, public install checks, R before release, rehearsal publish steps, two release secrets, two approvals, patch-release hand passes, and doc tests gating releases.
 - Keeps: every release safety gate already built.
-  - Both GitHub approvals stay as safety gates: the `release` environment and the `publish` step. 0393 keeps the npm staged approval.
+  - Both GitHub approvals stay: the `release` environment and the `publish` step. 0393 keeps the npm staged approval.
   - 0398 keeps the exact-commit rehearsal guard and the after-publication install-check workflow.
   - The M5 runs bounded Mac checks only and never stands in for hosted macOS. Yellow stays excluded. No paid diagnostic runs.
   - A candidate or archive check never stands in for a published-package check.
-- Changes: finish release QA and publication after candidate qualification.
-  - Release preparation moved to 0543. Ian confirms or rotates the secrets before publication.
-  - Release QA. A fresh docs-only agent installs the candidate artifacts, then asks questions including an admitted image question and a real MCP tool call. 0.1 question files load unchanged. 0.1 caches read through the compatibility path or refuse with one clear message before sending. Record docs failures with their owning tickets. `CHANGELOG.md`, the release notes and a written known-gaps list describe the final behavior, including images, MCP, the additive question format and 0.1 compatibility.
-  - Publication, on Ian's explicit go. Tag the same commit `v0.2.0` and dispatch release mode. Move the public install text to 0.2.0 once and re-prove the site pages. With Ian's authorization, replace the RubyGems `ruby` platform 0.0.1 placeholder with the diagnostic gem.
-  - After publication. Run 0398's install check on every channel, including R-universe once it syncs. Each channel installs 0.2.0 and replays the first-run sample. On Ruby 3.3 and on macOS's Python 3.9, install fails with the diagnostic message and never installs a 0.0.1 placeholder. The experiments team runs its selective 0035 follow-up against public 0.2 for the affected steps.
+- Changes: `CHANGELOG.md`, the release notes, the known-gaps list, the public install text and `sdlc/records/0425-sdk-consistency-0-2-plan.md`.
+- Remaining work, all on the candidate SHA after 0543 passes:
+  - Release QA. A fresh agent with only the public docs installs the candidate on the Beelink and GitHub runners, asks an admitted image question, makes one real MCP tool call, and loads 0.1 question files unchanged. It uses recorded or local backends only. 0565 removed compatibility, so QA checks that a 0.1 cache is refused with its plain message before any send, not loaded. Docs failures go to their owning tickets.
+  - Write `CHANGELOG.md`, the release notes and a known-gaps list that describe the final behavior: images, MCP, the additive question format and the 0.1 cache refusal.
+  - The PM brings Ian's go list to Ian.
+  - On Ian's go, tag the same commit `v0.2.0` and dispatch `release.yml` in release mode. Ian approves the `release` environment, the `publish` step and the npm staged publish. With Ian's authorization, replace the RubyGems `ruby` platform 0.0.1 placeholder with the diagnostic gem.
+  - 0575 lands the docs on main and deploys thinkthen.dev, and 0577 pushes the DuckDB descriptor, under the same go.
+  - Move the public install text to 0.2.0 once and re-prove the site pages.
+  - Run 0398's `install-check.yml` on every channel, including R-universe after it syncs. Each channel installs 0.2.0 and replays the first-run sample. On Ruby 3.3 and on macOS's Python 3.9, install fails with the diagnostic message and never installs a 0.0.1 placeholder.
+  - The experiments team runs its selective 0035 follow-up against public 0.2 for the affected steps.
+- Ian's go list:
+  - Give the expiry and rotation dates of the Maven Central token, the signing key and the Homebrew tap deploy key (`TAP_DEPLOY_KEY`), or rotate them. The 0425 record keeps the dates only.
+  - Switch off direct publishing on the npm trusted publisher for `thinkthen`, so npm publishes through 0393's staged publish.
+  - Give one go that covers the registries, the DuckDB pull request and the thinkthen.dev deploy.
 - Proof: The 0425 record cites 0543's candidate and names the QA result, the publication run and the install-check run.
-- Defers: An approval notice, reuse of the rehearsal's built files, version-only proof hashing, install-text automation, a switch to silence the spend warning, Maven trusted publishing and an app token for the tap. They are ideas for after 0.2. The transcript-search recipe stays with the later issue `2026-10-05-recipe-search-transcripts.md`.
+- Defers: An approval notice, reuse of the rehearsal's built files, version-only proof hashing, install-text automation, a switch to silence the spend warning, Maven trusted publishing and an app token for the tap are ideas for after 0.2. The transcript-search recipe stays with the later issue `2026-10-05-recipe-search-transcripts.md`.
 
 ## Progress
 
@@ -56,7 +57,3 @@ The commit that passed the 0543 candidate also passes release QA by a fresh agen
 - 2026-10-10 next: Add the missing Windows public-channel install checks in lane 1 while 0530 finishes; then run the authorized nonpublishing candidate and fresh QA, with publication awaiting Ian.
 - 2026-10-10 landed 973edbc28; next: Windows public-channel checks are reviewed and landed; await 0530 installed qualification, then run the authorized candidate and platform QA before asking Ian to publish.
 - 2026-10-10 next: Stopped at Ian’s wrap-up request; after 0530 finishes, candidate/platform runs and fresh QA remain authorized but unstarted, and publication still requires Ian’s explicit go.
-
-PM amendment, 2026-10-13. Remaining work after 0543 passes. A fresh agent with only the public docs installs the candidate on the Beelink and GitHub runners, asks an admitted image question, makes one real MCP tool call, and loads 0.1 question files and caches, using recorded or local backends only. Write `CHANGELOG.md`, the release notes and a known-gaps list. The PM asks Ian for one go covering the registries, the DuckDB PR and the thinkthen.dev deploy, and for confirmation or rotation of the secrets. Then tag the same commit `v0.2.0` and dispatch `release.yml` in release mode; Ian approves the `release` environment, the publish step and the npm staged publish. With Ian's authorization replace the RubyGems 0.0.1 placeholder. 0575 lands the docs on main and deploys the site, and 0577 pushes the DuckDB descriptor. Move the install text to 0.2.0, re-prove the site pages, and run `install-check.yml` on every channel, including R-universe after it syncs.
-
-PM amendment, 2026-10-14. 0565 removed compatibility: QA checks that a 0.1 cache is refused with its plain message, not loaded.

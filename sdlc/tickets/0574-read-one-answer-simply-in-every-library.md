@@ -42,3 +42,5 @@ PM amendment, 2026-10-13. Remaining work. 0574 owns the Zig session wait, the Ob
 PM amendment, 2026-10-14. 0581 supersedes the answer-accessor change: stop adding `decideAnswer`-style readers. 0581 puts `value` and `probability` on each call result instead. The C++ safety, Zig session wait, builders and examples stay here.
 
 PM amendment, 2026-10-14. Work starts per language. A language or database whose 0581 or 0582 lane is merged into the 0543 final branch may have its examples and text rewritten now, on its own lane, without waiting for the other languages. The fresh-reader review still runs once all are done.
+
+The remaining work is done. The answer readers that 0581 removed are gone from every library, and the C++ check runs all ten examples under AddressSanitizer. The 0576 and 0581 reviews covered this work. This ticket closes with the passing 0543 candidate.
