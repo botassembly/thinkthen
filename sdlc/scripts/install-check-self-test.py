@@ -289,6 +289,32 @@ class RefusalTable(unittest.TestCase):
                     check_result('0.2.0', installed, reply)
                     self.assertEqual(len(calls), 2)
 
+    def test_duckdb_host_builds_pinned_source_and_refuses_reported_drift(self):
+        from install_check_tools import prepare
+        identity = duckdb_identity(duckdb_versions()[0], 'x86_64-unknown-linux-gnu')
+        for version, commit in ((identity['version'], identity['source_commit'][:8]),
+                                (identity['version'], identity['source_commit'][:10]),
+                                ('v0.0.0', identity['source_commit'][:8]),
+                                (identity['version'], '00000000')):
+            with self.subTest(version=version, commit=commit), tempfile.TemporaryDirectory() as own:
+                check = Fixture(Path(own), 'duckdb')
+                check.outputs = {'duckdb': version + '|' + commit}
+                with patch('source_hosts.prepare') as source:
+                    if version != identity['version'] or commit == '00000000':
+                        with self.assertRaisesRegex(Failure, 'differs from pinned source'):
+                            prepare(check)
+                    else:
+                        prepare(check)
+                source.assert_called_once_with(check.root / 'duckdb-source', identity['source_commit'],
+                                               'https://github.com/duckdb/duckdb.git', True, identity['version'])
+                configure, build, report = check.commands
+                self.assertIn('-DBUILD_EXTENSIONS=core_functions;json', configure)
+                self.assertIn('-DENABLE_EXTENSION_AUTOINSTALL=OFF', configure)
+                self.assertIn('build-admission.py', configure[1])
+                self.assertEqual(build[-4:], ('--target', 'shell', '--parallel', '2'))
+                self.assertEqual(report[-1], 'SELECT library_version,source_id FROM pragma_version()')
+                self.assertEqual(check.env['PATH'].split(os.pathsep)[0], str(check.root / 'duckdb-host'))
+
     def test_duckdb_repository_rejects_bad_members_and_incomplete_legal_material(self):
         sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'databases/duckdb/cpp'))
         from verify_repository import verify_repository
