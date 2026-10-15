@@ -34,6 +34,6 @@ public class RegistryExample {
 }
 ```
 
-`value()` gives the answer; `probability()` gives nullable `BigDecimal` odds. Record inputs return ordered lists. `results()` keeps typed records and `facts()` keeps call observations. Kotlin reads properties; Scala uses `Option` for missing scalar answers. The library is free and MIT licensed. Hosted models charge per token. Local models are free to use; you supply the computer that runs them. These examples were checked with saved answers; live answers and probabilities can differ. See the [package guide](https://thinkthen.dev/languages/java/) for results, failures, record inputs and offline replay.
+`value()` gives the answer; `probability()` gives nullable `Double` and `List<Double>` odds. Record inputs return ordered lists. `results()` keeps typed records and `facts()` keeps call observations. Kotlin reads properties; Scala uses `Option` for missing scalar answers. The library is free and MIT licensed. Hosted models charge per token. Local models are free to use; you supply the computer that runs them. These examples were checked with saved answers; live answers and probabilities can differ. See the [package guide](https://thinkthen.dev/languages/java/) for results, failures, record inputs and offline replay.
 
 [Backend setup](https://thinkthen.dev/install/backends/) · [ThinkThen documentation](https://thinkthen.dev)
