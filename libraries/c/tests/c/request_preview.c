@@ -245,9 +245,9 @@ static thinkthen_engine *typed_settings(void) {
 }
 static thinkthen_value *full_plan(thinkthen_engine *engine) {
     thinkthen_value *owner=(thinkthen_value *)(uintptr_t)7;
-    const char bad_utf8[]={ (char)0xff };
+    const unsigned char bad_utf8[]={0xff};
     struct {const char *bytes;size_t len;} bad[]={
-        {NULL,0},{NULL,1},{p1,SIZE_MAX},{bad_utf8,sizeof(bad_utf8)},
+        {NULL,0},{NULL,1},{p1,SIZE_MAX},{(const char *)bad_utf8,sizeof(bad_utf8)},
         {"{}",2},{"{\"schema\":\"thinkthen.request/1\",\"PRIVATE\":false}",sizeof("{\"schema\":\"thinkthen.request/1\",\"PRIVATE\":false}")-1}};
     for(size_t i=0;i<sizeof(bad)/sizeof(bad[0]);i++) {
         check(thinkthen_request_plan_value(engine,bad[i].bytes,bad[i].len,&owner)==THINKTHEN_EUSAGE,"full Plan refuses invalid input");
@@ -266,9 +266,9 @@ static thinkthen_value *full_plan(thinkthen_engine *engine) {
 }
 static void arbitrary_values(void) {
     thinkthen_value *owner=(thinkthen_value *)(uintptr_t)7;
-    const char bad_utf8[]={ (char)0xff };
+    const unsigned char bad_utf8[]={0xff};
     struct {const char *bytes;size_t len;} bad[]={
-        {NULL,0},{NULL,1},{"null",SIZE_MAX},{bad_utf8,sizeof(bad_utf8)},
+        {NULL,0},{NULL,1},{"null",SIZE_MAX},{(const char *)bad_utf8,sizeof(bad_utf8)},
         {"[",1},{"true false",10}};
     for(size_t i=0;i<sizeof(bad)/sizeof(bad[0]);i++) {
         check(thinkthen_value_parse(bad[i].bytes,bad[i].len,&owner)==THINKTHEN_EUSAGE,"arbitrary value refuses invalid input");

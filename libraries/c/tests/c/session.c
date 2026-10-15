@@ -75,7 +75,8 @@ static void packet_view(const thinkthen_complete_session_packet_v1 *view) {
         if (!terminal) return;
         if (terminal->failure.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) {
             const thinkthen_complete_error_v1 *error = terminal->failure.value->error;
-            check(error->kind->kind == (getenv("SESSION_NEXT") ? THINKTHEN_COMPLETE_FAILURE_KIND_CANCELLED_V1 : THINKTHEN_COMPLETE_FAILURE_KIND_LOCAL_V1), "retained typed native failure");
+            uint32_t expected = getenv("SESSION_NEXT") ? THINKTHEN_COMPLETE_FAILURE_KIND_CANCELLED_V1 : THINKTHEN_COMPLETE_FAILURE_KIND_LOCAL_V1;
+            check(error->kind->kind == expected, "retained typed native failure");
             check(error->message.data && error->message.len, "retained typed safe message");
         } else {
             check(terminal->failure.presence == THINKTHEN_COMPLETE_PRESENCE_MISSING_V1, "success has absent failure");
@@ -367,7 +368,8 @@ int main(void) {
         check(usage_state.kind == 99 && usage_advice.data == (const char *)(uintptr_t)7 && usage_advice.len == 99, "usage failure preserves both outputs");
         const char *diagnostic = thinkthen_session_error_message();
         check(operations[i](engine, &usage_state, &usage_advice) == THINKTHEN_OK, "live usage observation succeeds");
-        check(usage_state.kind == (getenv("SESSION_USAGE_DISABLED") ? THINKTHEN_COMPLETE_USAGE_PERSISTENCE_DISABLED_V1 : THINKTHEN_COMPLETE_USAGE_PERSISTENCE_WRITTEN_V1) && usage_advice.data == NULL && usage_advice.len == 0, "successful state has no advice");
+        uint32_t expected = getenv("SESSION_USAGE_DISABLED") ? THINKTHEN_COMPLETE_USAGE_PERSISTENCE_DISABLED_V1 : THINKTHEN_COMPLETE_USAGE_PERSISTENCE_WRITTEN_V1;
+        check(usage_state.kind == expected && usage_advice.data == NULL && usage_advice.len == 0, "successful state has no advice");
         check(diagnostic == thinkthen_session_error_message(), "usage success preserves diagnostic");
         usage_state.kind = 99; usage_advice.data = (const char *)(uintptr_t)7; usage_advice.len = 99;
     }
@@ -390,7 +392,7 @@ int main(void) {
     uint32_t ready_sentinel = 99;
     check(thinkthen_session_wait(NULL, THINKTHEN_SESSION_WAIT_RESULT_V1, 0, &ready_sentinel) == THINKTHEN_EUSAGE && ready_sentinel == 99, "wait refusal preserves output");
     check(thinkthen_session_wait(NULL, THINKTHEN_SESSION_WAIT_RESULT_V1, 0, NULL) == THINKTHEN_EUSAGE, "wait requires output");
-    const char invalid[] = {(char)0xff};
+    const unsigned char invalid[] = {0xff};
     thinkthen_session *sentinel = (thinkthen_session *)(uintptr_t)7;
     const char *bad_surfaces[] = {"", "Go", " go", "php\n", "secret-surface"};
     for (size_t i = 0; i < sizeof bad_surfaces / sizeof bad_surfaces[0]; ++i) {
@@ -398,11 +400,11 @@ int main(void) {
         check(sentinel == (thinkthen_session *)(uintptr_t)7, "surface refusal preserves output");
         check(strcmp(thinkthen_session_error_message(), "invalid session arguments or input") == 0, "surface diagnostic withholds spelling");
     }
-    check(thinkthen_session_new_with_surface(engine, direct, strlen(direct), invalid, sizeof invalid, &sentinel) == THINKTHEN_EUSAGE, "surface UTF-8 refuses");
+    check(thinkthen_session_new_with_surface(engine, direct, strlen(direct), (const char *)invalid, sizeof invalid, &sentinel) == THINKTHEN_EUSAGE, "surface UTF-8 refuses");
     check(thinkthen_session_new_with_surface(engine, direct, strlen(direct), "go", SIZE_MAX, &sentinel) == THINKTHEN_EUSAGE, "surface extent refuses");
     check(thinkthen_session_new_with_surface(engine, direct, strlen(direct), NULL, 1, &sentinel) == THINKTHEN_EUSAGE, "surface NULL extent refuses");
     check(thinkthen_session_new_with_surface(engine, direct, strlen(direct), NULL, 0, &sentinel) == THINKTHEN_EUSAGE, "surface token required");
-    check(thinkthen_session_new(engine, invalid, sizeof invalid, &sentinel) == THINKTHEN_EUSAGE, "UTF-8 refusal");
+    check(thinkthen_session_new(engine, (const char *)invalid, sizeof invalid, &sentinel) == THINKTHEN_EUSAGE, "UTF-8 refusal");
     check(thinkthen_session_new(engine, feed, SIZE_MAX, &sentinel) == THINKTHEN_EUSAGE, "extent refusal");
     check(thinkthen_session_new(NULL, feed, strlen(feed), &sentinel) == THINKTHEN_EUSAGE, "NULL engine refusal");
     check(thinkthen_session_new(engine, feed, strlen(feed), NULL) == THINKTHEN_EUSAGE, "required constructor output");
@@ -435,12 +437,12 @@ int main(void) {
         check(thinkthen_session_try_push(session, bad_descriptors[i], strlen(bad_descriptors[i]), &status) == THINKTHEN_EUSAGE, "bad descriptor refuses");
         check(status == 99, "bad descriptor preserves status");
     }
-    check(thinkthen_session_try_push(session, invalid, sizeof invalid, &status) == THINKTHEN_EUSAGE, "descriptor UTF-8 refuses");
+    check(thinkthen_session_try_push(session, (const char *)invalid, sizeof invalid, &status) == THINKTHEN_EUSAGE, "descriptor UTF-8 refuses");
     check(thinkthen_session_try_push(session, "{}", 2, NULL) == THINKTHEN_EUSAGE, "push requires status");
     const char *bad_failures[] = {"", "{}", "{\"kind\":\"io\",\"kind\":\"utf8\"}", "{\"kind\":\"io\",\"unknown\":0}", "{\"kind\":\"io\",\"location\":null}", "{\"kind\":\"io\",\"location\":{\"file\":\"x\",\"file\":\"y\"}}"};
     for (size_t i = 0; i < sizeof bad_failures / sizeof bad_failures[0]; ++i)
         check(thinkthen_session_finish(session, bad_failures[i], strlen(bad_failures[i])) == THINKTHEN_EUSAGE, "bad reader failure refuses");
-    check(thinkthen_session_finish(session, invalid, sizeof invalid) == THINKTHEN_EUSAGE, "reader failure UTF-8 refuses");
+    check(thinkthen_session_finish(session, (const char *)invalid, sizeof invalid) == THINKTHEN_EUSAGE, "reader failure UTF-8 refuses");
     check(finish_owned(session, 1) == THINKTHEN_OK, "valid owned reader failure");
     check(thinkthen_session_finish(session, NULL, 0) == THINKTHEN_EUSAGE, "changed finish refuses");
     check(thinkthen_session_try_push(session, "malformed", 9, &status) == THINKTHEN_OK && status == THINKTHEN_SESSION_CLOSED_V1, "closed intake avoids descriptor decoding");
