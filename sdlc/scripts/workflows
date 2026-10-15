@@ -123,7 +123,7 @@ def duckdb_internal_call(folder, doc):
     lane = dispatch.get('inputs', {}).get('lane', {})
     expected = {'if': "inputs.lane == 'duckdb-community'", 'uses': './.github/workflows/duckdb-community.yml'}
     return (set(dispatch.get('inputs', {})) in ({'lane'}, {'lane', 'candidate_sha'}) and lane.get('type') == 'choice'
-            and lane.get('options') == ['windows', 'duckdb-community'] and lane.get('default') == 'windows'
+            and lane.get('options') == ['windows', 'duckdb-community', 'recognition-cancel'] and lane.get('default') == 'windows'
             and windows.get('permissions') == {'contents': 'read'}
             and windows.get('jobs', {}).get('duckdb-community') == expected)
 
@@ -861,7 +861,7 @@ def duckdb_hook_self_test():
     """Plant nonmanual callers and argument/secret escalation at the gate boundary."""
     target = {'on': {'workflow_dispatch': None, 'workflow_call': None}, 'permissions': {'contents': 'read'}}
     caller = {'on': {'workflow_dispatch': {'inputs': {'lane': {
-        'type': 'choice', 'default': 'windows', 'options': ['windows', 'duckdb-community']}}}},
+        'type': 'choice', 'default': 'windows', 'options': ['windows', 'duckdb-community', 'recognition-cancel']}}}},
         'permissions': {'contents': 'read'}, 'jobs': {'duckdb-community': {
             'if': "inputs.lane == 'duckdb-community'", 'uses': './.github/workflows/duckdb-community.yml'}}}
     with tempfile.TemporaryDirectory() as directory:
