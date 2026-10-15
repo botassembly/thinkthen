@@ -97,10 +97,10 @@ def native(rows, verb):
     retained_sql = None
     for row in completed:
         result = row['result']
-        metadata = {key: child for key, child in result.items() if key != 'value'} if verb == 'relate' else None
+        metadata = json.dumps({key: child for key, child in result.items() if key != 'value'}, sort_keys=True) if verb == 'relate' else None
         if values and verb == 'relate' and metadata == retained_sql:
-            # SQL repeats the aggregate answer on every edge. Equal raw fields
-            # have the same decoded types and presence; decode each edge value.
+            # SQL repeats the aggregate answer on every edge. JSON equality
+            # preserves boolean versus number types and presence flags.
             values.append({**values[0], 'value': decode(result['value'], schema['properties']['value'])})
         else:
             values.append(decode(result, schema))
