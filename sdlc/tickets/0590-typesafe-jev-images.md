@@ -27,6 +27,7 @@ Milestone: 0.2
 - PM decision, 2026-10-15: ThinkThen never resizes. Admission refuses an image file over 16 MiB, a side outside 256 to 1568, or a pixel count outside 78,400 to 2,458,624. The body limit is 32 MiB. An oversized value uses the existing `ImageLimit::Dimension` sentence. An undersized value needs a new sentence, `image N is below KIND: limit L, actual A`, because "exceeds" would be false. ThinkThen cannot check the post-processing total or animated PNGs; the server's 400 reports those.
 - PM decision, 2026-10-15: TypeSafe publishes no image token count, so `image_tokens_known` is false and `tokens_per_question` is 0, as on the local route. Questions have no count limit.
 - PM decision, 2026-10-15: build on `ticket/0543-final`; the release notes stay there. Animated PNGs are left to the server's 400.
+- Ian authorized the live calls in checklist step 5 on 2026-10-15. PM decision, 2026-10-15: run them as one `sdlc/scripts/live --max-tokens 100000` job, one small PNG per call; stop and report if the cap is reached before all four calls finish.
 - PM decision, 2026-10-15: Box answers and the long-context header are out of scope.
 
 ## Scope
