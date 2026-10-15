@@ -17,6 +17,6 @@ class PostgresqlHost:
         try:
             subprocess.run([str(self.bin/'pg_ctl'),'-D',str(self.data),'-l',str(self.log),'-w','start'],env=env,capture_output=True,check=True,timeout=30)
         except subprocess.CalledProcessError as error:
-            log=self.log.read_text() if self.log.is_file() else ''
+            log=self.log.read_text()[-4000:] if self.log.is_file() else ''
             raise AssertionError((error.returncode,error.stdout,error.stderr,log)) from error
         subprocess.run(['psql','-X','-q','-v','ON_ERROR_STOP=1','-h',self.socket,'-U','postgres','-d','postgres','-c','CREATE EXTENSION IF NOT EXISTS thinkthen'],env=env,capture_output=True,check=True,timeout=30)
