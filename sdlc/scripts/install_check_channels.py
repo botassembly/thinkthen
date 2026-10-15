@@ -324,14 +324,27 @@ def duckdb(check):
 
 
 def postgresql(check):
-    folder = check.unpack(check.release(f'thinkthen-postgresql16-{check.version}-{TARGET}.tar.gz'), check.root / 'postgresql')
+    root, environment = check.root, check.env.copy()
+    try:
+        for major in (16, 17, 18):
+            check.root = root / f'postgresql{major}'
+            check.root.mkdir()
+            check.env = environment.copy()
+            result = postgresql_major(check, major)
+        return result
+    finally:
+        check.root, check.env = root, environment
+
+
+def postgresql_major(check, major):
+    folder = check.unpack(check.release(f'thinkthen-postgresql{major}-{check.version}-{TARGET}.tar.gz'), check.root / 'postgresql')
     # Runtime setup supplies a private relocatable PGDG tree inside this run's scratch.
     runtime = check.root / 'pg-runtime'
     from install_check_tools import postgres_tools
-    postgres_tools(check, runtime)
-    binary = runtime / 'usr/lib/postgresql/16/bin'
-    shared = runtime / 'usr/share/postgresql/16/extension'
-    library = runtime / 'usr/lib/postgresql/16/lib'
+    postgres_tools(check, runtime, major)
+    binary = runtime / f'usr/lib/postgresql/{major}/bin'
+    shared = runtime / f'usr/share/postgresql/{major}/extension'
+    library = runtime / f'usr/lib/postgresql/{major}/lib'
     for source in (folder / 'extension').iterdir():
         shutil.copy2(source, shared / source.name)
     for source in (folder / 'lib').iterdir():

@@ -707,13 +707,20 @@ def run_example(family, packages, work, root=REPO, selected=None, sample_index=0
         output = run(['duckdb', '-unsigned', '-bail', '-list', '-init', '/dev/null'], input="LOAD '" + str(library) + "';\n" + code)
         print('registry-readmes: DuckDB source ' + source_id + ' loaded ' + str(library.relative_to(package)))
     elif family == 'postgresql' and os.uname().sysname == 'Linux':
-        pin = re.search(r'(?m)^VERSION=(.*)$', (root / 'databases/postgresql/runtime.sh').read_text()).group(1)
+        major = re.match(r'thinkthen-postgresql(16|17|18)-', selected.name).group(1)
+        pins = (root / 'databases/postgresql/runtime.sha256').read_text().splitlines()
+        machine = {'x86_64': 'amd64', 'aarch64': 'arm64'}[os.uname().machine]
+        server = next(line.split()[1] for line in pins if line.split()[1].startswith(f'postgresql-{major}_') and line.endswith(f'_{machine}.deb'))
+        pin = server.split('_')[1]
         tree = work / 'server'
         shutil.copytree(Path(os.environ.get('THINKTHEN_TOOLCHAINS', str(Path.home() / '.cache/thinkthen-toolchains'))) / 'postgresql' / pin, tree, symlinks=True)
-        for member, suffix in (('lib', 'usr/lib/postgresql/16/lib'),
-                               ('extension', 'usr/share/postgresql/16/extension')):
+        for member, suffix in (('lib', f'usr/lib/postgresql/{major}/lib'),
+                               ('extension', f'usr/share/postgresql/{major}/extension')):
             shutil.copytree(package / member, tree / suffix, dirs_exist_ok=True)
-        binaries = tree / 'usr/lib/postgresql/16/bin'
+        binaries = tree / f'usr/lib/postgresql/{major}/bin'
+        if major != '16':
+            triplet = {'amd64': 'x86_64-linux-gnu', 'arm64': 'aarch64-linux-gnu'}[machine]
+            env['LD_LIBRARY_PATH'] = str(tree / 'usr/lib' / triplet)
         data = work / 'data'; socket = work / 'socket'; socket.mkdir()
         run([str(binaries / 'initdb'), '-D', str(data), '--auth=trust', '-U', 'postgres'])
         with (data / 'postgresql.conf').open('a') as config:
@@ -741,9 +748,9 @@ def check_examples(packages, root=REPO, families=None):
             raise Refusal('unknown-public-example-family')
         for family in families if families is not None else roster:
             selected = [None]
-            if family == 'duckdb':
+            if family in ('duckdb', 'postgresql'):
                 native = 'apple-darwin' if os.uname().sysname == 'Darwin' else 'linux'
-                selected = [path for path in packages.glob('thinkthen-duckdb-*.tar.gz')
+                selected = [path for path in packages.glob('thinkthen-' + family + '*.tar.gz')
                             if {'arm64': 'aarch64'}.get(os.uname().machine, os.uname().machine) in path.name and native in path.name] or [None]
             for index, package in enumerate(selected):
                 work = scratch / (family + '-' + str(index)); work.mkdir()
@@ -772,7 +779,7 @@ def archive_family(path):
     if name.endswith('.nupkg'): return 'csharp'
     if name.startswith('thinkthen_'): return 'r'
     for family in PUBLIC_FAMILIES:
-        if name.startswith('thinkthen-' + family + '-') or (family == 'postgresql' and name.startswith('thinkthen-postgresql16-')):
+        if name.startswith('thinkthen-' + family + '-') or (family == 'postgresql' and re.match(r'thinkthen-postgresql1[678]-', name)):
             return family
     if name.endswith('.tgz'): return 'typescript'
     if re.match(r'thinkthen-\d', name): return 'command'

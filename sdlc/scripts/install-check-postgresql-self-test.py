@@ -43,7 +43,8 @@ class PostgresLifecycle(unittest.TestCase):
                 installed, reply, proof = self.run_fixture(check)
                 check_result(check.version, installed, reply)
                 self.assertEqual(proof, 'installed SQL extension version')
-                self.assertIsNotNone(check.child.poll())
+                self.assertEqual(check.majors, [16, 17, 18])
+                self.assertTrue(all(child.poll() is not None for child in check.children))
                 self.assertFalse(check.retain_scratch)
                 self.assertTrue(any(Path(command[0]).name == 'psql' for command in check.commands))
             finally: check.close()
@@ -147,6 +148,8 @@ class PgFixture(Check):
         self.server, self.child = server, None
         self.failure = self.bad_identity = None
         self.commands = []
+        self.majors = []
+        self.children = []
         self.runtime = root / 'pg-runtime'
         self.binary = self.runtime / 'usr/lib/postgresql/16/bin'
         self.data, self.socket = root / 'pg-data', root / 'pg-socket'
@@ -161,9 +164,13 @@ class PgFixture(Check):
                 entry = tarfile.TarInfo(name); entry.size = 7; tar.addfile(entry, io.BytesIO(b'fixture'))
         return archive
 
-    def tools(self, check, runtime):
-        (runtime / 'usr/share/postgresql/16/extension').mkdir(parents=True)
-        (runtime / 'usr/lib/postgresql/16/lib').mkdir(parents=True)
+    def tools(self, check, runtime, major=16):
+        self.majors.append(major)
+        self.runtime = runtime
+        self.binary = runtime / f'usr/lib/postgresql/{major}/bin'
+        self.data, self.socket = check.root / 'pg-data', check.root / 'pg-socket'
+        (runtime / f'usr/share/postgresql/{major}/extension').mkdir(parents=True)
+        (runtime / f'usr/lib/postgresql/{major}/lib').mkdir(parents=True)
         self.binary.mkdir(parents=True)
         shutil.copy2(self.server, self.binary / 'postgres')
 
@@ -174,6 +181,7 @@ class PgFixture(Check):
         if self.bad_identity == 'runtime': command = self.server
         data = self.data if self.bad_identity != 'arguments' else self.root / 'unowned'
         self.child = subprocess.Popen([command, '-D', data, '-k', self.socket], env=self.env, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
+        self.children.append(self.child)
         # The child declares readiness from main, after exec has populated its
         # executable and arguments. Never publish a ready PID during that race.
         if not select.select([self.child.stdout], [], [], 5)[0] or os.read(self.child.stdout.fileno(), 6) != b'ready\n':

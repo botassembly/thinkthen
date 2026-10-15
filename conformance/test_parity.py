@@ -794,7 +794,7 @@ class InstalledInputs(unittest.TestCase):
                  'thinkthen-0.2.0-x86_64-linux.gem', 'thinkthen_0.2.0.tar.gz']
         names += [f'thinkthen-{family}-0.2.0-x86_64-unknown-linux-gnu.tar.gz' for family in
                   ['go', 'csharp', 'jvm', 'cpp', 'swift', 'zig', 'php',
-                   'flutter', 'ada', 'cobol', 'sqlite', 'duckdb', 'postgresql16']]
+                   'flutter', 'ada', 'cobol', 'sqlite', 'duckdb', 'postgresql16', 'postgresql17', 'postgresql18']]
         for name in names:
             (folder / name).touch()
         # The plain diagnostic gem is shipped alongside the actual native gem.
@@ -818,6 +818,9 @@ class InstalledInputs(unittest.TestCase):
                 self.assertEqual(len({inputs[row]['THINKTHEN_ARTIFACT'] for row in group}), 1)
             self.assertEqual(Path(inputs['postgresql']['THINKTHEN_ARTIFACT']).name,
                              'thinkthen-postgresql16-0.2.0-x86_64-unknown-linux-gnu.tar.gz')
+            for major in (16, 17, 18):
+                self.assertEqual(Path(inputs['postgresql'][f'THINKTHEN_PG{major}_ARTIFACT']).name,
+                                 f'thinkthen-postgresql{major}-0.2.0-x86_64-unknown-linux-gnu.tar.gz')
             for row in inputs.values():
                 self.assertEqual(row['THINKTHEN_C_ARTIFACT'], native)
                 self.assertEqual(Path(row['THINKTHEN_DART_ARTIFACT']).name, self.dart)

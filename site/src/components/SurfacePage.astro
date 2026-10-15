@@ -130,7 +130,7 @@ const builtIns = backends().map((b) => b.name);
   {surface.slug === 'postgresql' && (
     <>
       <h3>Let an application role call ThinkThen</h3>
-      <p>A server administrator copies the release files into PostgreSQL's library and extension directories before running <code>CREATE EXTENSION thinkthen</code>. These directories usually require administrator access. The released package is built and tested for PostgreSQL 16.</p>
+      <p>A server administrator copies the release files into PostgreSQL's library and extension directories before running <code>CREATE EXTENSION thinkthen</code>. These directories usually require administrator access. Release packages support PostgreSQL 16, 17 and 18. Choose the archive whose name matches your server major.</p>
       <p>The extension revokes public execution rights. After installation, an administrator runs this grant with the existing application role in place of <code>the_app_role</code>. It grants only the functions owned by ThinkThen. That role can then make paid requests using the server's configured backend.</p>
       <Code code={postgresGrant.trimEnd()} lang="sql" label="Copy the extension-only application grant" />
       <p>The <a href="https://github.com/botassembly/thinkthen/blob/main/databases/postgresql/README.md#authority-who-may-do-what">PostgreSQL README</a> explains execution rights and the separate permissions for named files.</p>
