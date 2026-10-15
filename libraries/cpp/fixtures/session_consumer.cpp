@@ -129,16 +129,11 @@ int main(int argc,char** argv) {
         }
         Data::Array packets;
         try {
-            // Pump output while intake is full; blocking push needs another reader.
+            // Feed every record before reading any packets.
             if(v.contains("feed_items")) for(const auto& item:v.at("feed_items")) {
                 if(call.input_closed()) break;
                 auto next=RequestSessionDescriptor().set_item(::tt::results::detail::Loader::input<RequestItem>(item));
-                while(!call.try_push(next) && !call.input_closed()) {
-                    auto packet=call.poll();
-                    if(packet.packet) packets.push_back(::tt::results::detail::document(*packet.packet));
-                    else if(packet.state==PollState::end) break;
-                    else call.wait(true);
-                }
+                if(!call.push(next)) break;
             }
             call.finish();
             if(v.at("held_cancel").get<bool>()) { if(std::cin.get()!='!') return 3; call.cancel(); std::cout<<"cancel-fired\n"<<std::flush; }
