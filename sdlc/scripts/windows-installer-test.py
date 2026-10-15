@@ -5,6 +5,7 @@ import argparse
 import hashlib
 import http.server
 import io
+import importlib.util
 import json
 import os
 from pathlib import Path
@@ -18,6 +19,9 @@ import warnings
 
 REPO = Path(__file__).resolve().parents[2]
 NAME = 'thinkthen-0.2.0-x86_64-pc-windows-msvc.zip'
+SPEC = importlib.util.spec_from_file_location('windows_command', REPO / 'sdlc/scripts/release-windows-command.py')
+COMMAND = importlib.util.module_from_spec(SPEC)
+SPEC.loader.exec_module(COMMAND)
 
 
 def prepare_private_fixture(root, host, env):
@@ -52,15 +56,16 @@ def pe():
     return bytes(data)
 
 
-def archive(names=('thinkthen.exe',), *, mode=0o100755, dos=0, binary=None):
+def archive(names=('thinkthen.exe', 'README.md'), *, mode=0o100755, dos=0, binary=None):
     output = io.BytesIO()
     with warnings.catch_warnings(), zipfile.ZipFile(output, 'w') as target:
-        warnings.filterwarnings('ignore', message="Duplicate name: 'thinkthen.exe'", category=UserWarning)
+        warnings.filterwarnings('ignore', message='Duplicate name:', category=UserWarning)
         for name in names:
             entry = zipfile.ZipInfo(name)
             entry.external_attr = mode << 16 | dos
             entry.compress_type = zipfile.ZIP_DEFLATED
-            target.writestr(entry, pe() if binary is None else binary)
+            data = b'Package instructions' if name == 'README.md' else pe() if binary is None else binary
+            target.writestr(entry, data)
     return output.getvalue()
 
 
@@ -73,7 +78,8 @@ def cases(root, base):
     def blob(kind, label, ok, data):
         name = f'case-{len(result)}.bin'
         (root / name).write_bytes(data)
-        case(kind, label, ok, file=name)
+        fields = {'expected_file': 'thinkthen.exe'} if kind == 'zip' and ok else {}
+        case(kind, label, ok, file=name, **fields)
 
     for value in ('0.2.0', 'v0.2.0', '1.2.3'):
         case('version', 'valid version ' + value, True, value=value)
@@ -98,10 +104,16 @@ def cases(root, base):
         blob('pe', label, False, data)
     for length in (0, 2, 63, 65, 89):
         blob('pe', f'truncated PE {length}', False, good[:length])
-    good_zip = archive()
-    blob('zip', 'one regular command ZIP', True, good_zip)
+    binary = root / 'thinkthen.exe'
+    binary.write_bytes(good)
+    produced = root / NAME
+    COMMAND.pack(binary, produced)
+    good_zip = produced.read_bytes()
+    blob('zip', 'actual command producer ZIP with approved README', True, good_zip)
     blob('zip', 'unspecified Unix type', True, archive(mode=0o755))
-    for names in ((), ('thinkthen.exe', 'thinkthen.exe'), ('thinkthen.exe', 'extra'),
+    for names in ((), ('thinkthen.exe',), ('thinkthen.exe', 'README.md', 'extra'),
+                  ('thinkthen.exe', '../README.md'), ('thinkthen.exe', 'README.md', 'README.md'),
+                  ('thinkthen.exe', 'thinkthen.exe'), ('thinkthen.exe', 'extra'),
                   ('folder/thinkthen.exe',), ('thinkthen.exe/',), ('../thinkthen.exe',),
                   ('/thinkthen.exe',), ('C:thinkthen.exe',), ('thinkthen.exe:stream',),
                   ('folder\\thinkthen.exe',), ('THINKTHEN.EXE',)):
@@ -121,6 +133,53 @@ def cases(root, base):
         data = bytearray(good_zip)
         struct.pack_into(form, data, offset, value)
         blob('zip', label, False, data)
+    end = good_zip.rindex(b'PK\x05\x06')
+    for field, value in ((4, 1), (6, 1), (8, 1), (10, 3), (12, 1), (16, 0)):
+        data = bytearray(good_zip)
+        struct.pack_into('<H' if field < 12 else '<I', data, end + field, value)
+        blob('zip', f'bad end inventory field {field}', False, data)
+    with zipfile.ZipFile(io.BytesIO(good_zip)) as source:
+        members = source.infolist()
+    cursor = central
+    for member in members:
+        local = member.header_offset
+        for label, relative, form, value in (
+                ('disk', 34, '<H', 1), ('offset', 42, '<I', 1),
+                ('encrypted', 8, '<H', 1), ('descriptor', 8, '<H', 8),
+                ('unknown flags', 8, '<H', 0x4000),
+                ('unsupported method', 10, '<H', 99),
+                ('extra field', 30, '<H', 1),
+                ('wrong name length', 28, '<H', len(member.filename) - 1),
+                ('directory', 38, '<I', 0o040755 << 16),
+                ('link', 38, '<I', 0o120777 << 16),
+                ('reparse', 38, '<I', (0o100644 << 16) | 0x400)):
+            data = bytearray(good_zip)
+            struct.pack_into(form, data, cursor + relative, value)
+            blob('zip', member.filename + ' ' + label, False, data)
+        for label, central_field, local_field, value in (
+                ('wrong CRC', 16, 14, member.CRC ^ 1),
+                ('expanded length mismatch', 24, 22, member.file_size + 1),
+                ('expands beyond declared length', 24, 22, member.file_size - 1),
+                ('compressed overlap', 20, 18, member.compress_size + 1),
+                ('expanded byte limit', 24, 22, 134217729),
+                ('compressed byte limit', 20, 18, 134217729)):
+            data = bytearray(good_zip)
+            struct.pack_into('<I', data, cursor + central_field, value)
+            struct.pack_into('<I', data, local + local_field, value)
+            blob('zip', member.filename + ' ' + label, False, data)
+        for label, relative, form, value in (
+                ('local CRC', 14, '<I', member.CRC ^ 1),
+                ('local length', 22, '<I', member.file_size + 1),
+                ('local compressed length', 18, '<I', member.compress_size + 1),
+                ('local method', 8, '<H', 0),
+                ('local extra', 28, '<H', 1),
+                ('local encryption', 6, '<H', 1), ('local name', 30, '<B', ord('X'))):
+            data = bytearray(good_zip)
+            struct.pack_into(form, data, local + relative, value)
+            blob('zip', member.filename + ' ' + label, False, data)
+        cursor += 46 + len(member.filename) + len(member.extra) + len(member.comment)
+    blob('zip', 'unlisted prefix', False, b'x' + good_zip)
+    blob('zip', 'unlisted suffix', False, good_zip + b'x')
     (root / NAME).write_bytes(good_zip)
     digest = hashlib.sha256(good_zip).hexdigest()
     for text in (digest, digest + '  ' + NAME, digest + ' *' + NAME, '\n' + digest + '\r\n\n'):
@@ -204,7 +263,7 @@ def main():
             table = cases(root, 'http://127.0.0.1:1')
             json.loads(json.dumps(table))
             with zipfile.ZipFile(io.BytesIO(archive())) as source:
-                assert source.namelist() == ['thinkthen.exe'] and source.read('thinkthen.exe') == pe()
+                assert source.namelist() == ['thinkthen.exe', 'README.md'] and source.read('thinkthen.exe') == pe()
             assert sum(case['kind'] == 'download' for case in table) == 8
             assert any(case['label'] == 'encrypted' and not case['ok'] for case in table)
         print(f'Windows installer fixtures: {len(table)} cases constructed; root/site copies match; Windows execution NOT RUN')
@@ -231,7 +290,9 @@ def main():
             try:
                 base = f'http://127.0.0.1:{server.server_port}'
                 if args.binary:
-                    Server.command_zip = archive(binary=args.binary.read_bytes())
+                    produced = root / NAME
+                    COMMAND.pack(args.binary, produced)
+                    Server.command_zip = produced.read_bytes()
                     Server.release_version = args.version
                 table = cases(root, base)
                 case_file = root / 'cases.json'

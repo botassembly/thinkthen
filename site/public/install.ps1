@@ -53,6 +53,14 @@ namespace ThinkThenInstall {
         static extern bool CreateDirectory(string path, ref SecurityAttributes attributes);
         [DllImport("kernel32.dll")] static extern IntPtr LocalFree(IntPtr pointer);
         [DllImport("kernel32.dll")] static extern void GetNativeSystemInfo(IntPtr info);
+        public static uint Crc32(byte[] bytes) {
+            uint crc = 0xffffffff;
+            foreach (byte value in bytes) {
+                crc ^= value;
+                for (int bit = 0; bit < 8; bit++) crc = (crc >> 1) ^ ((crc & 1) != 0 ? 0xedb88320u : 0u);
+            }
+            return ~crc;
+        }
         public static bool X64() {
             IntPtr info = Marshal.AllocHGlobal(64);
             try { GetNativeSystemInfo(info); return Marshal.ReadInt16(info) == 9; }
@@ -226,46 +234,79 @@ function Assert-ZipContainer([byte[]] $Bytes) {
     if ($end -lt 0) { throw 'Archive has no complete central inventory.' }
     if ([System.BitConverter]::ToUInt16($Bytes, $end + 4) -ne 0 -or
         [System.BitConverter]::ToUInt16($Bytes, $end + 6) -ne 0 -or
-        [System.BitConverter]::ToUInt16($Bytes, $end + 8) -ne 1 -or
-        [System.BitConverter]::ToUInt16($Bytes, $end + 10) -ne 1) { throw 'Archive must have one entry on one disk.' }
+        [System.BitConverter]::ToUInt16($Bytes, $end + 8) -ne 2 -or
+        [System.BitConverter]::ToUInt16($Bytes, $end + 10) -ne 2) { throw 'Archive must have two entries on one disk.' }
     $offset = [long] [System.BitConverter]::ToUInt32($Bytes, $end + 16)
     $size = [long] [System.BitConverter]::ToUInt32($Bytes, $end + 12)
-    if ($offset + $size -ne $end -or $size -lt 46 -or $offset + 46 -gt $end -or
-        [System.BitConverter]::ToUInt32($Bytes, [int] $offset) -ne 0x02014b50) { throw 'Archive central inventory is malformed.' }
-    $flags = [System.BitConverter]::ToUInt16($Bytes, [int] $offset + 8)
-    $method = [System.BitConverter]::ToUInt16($Bytes, [int] $offset + 10)
-    $local = [long] [System.BitConverter]::ToUInt32($Bytes, [int] $offset + 42)
-    if (($flags -band 0x41) -or $method -notin @(0, 8) -or $local + 30 -gt $offset -or
-        [System.BitConverter]::ToUInt32($Bytes, [int] $local) -ne 0x04034b50 -or
-        [System.BitConverter]::ToUInt16($Bytes, [int] $local + 6) -ne $flags -or
-        [System.BitConverter]::ToUInt16($Bytes, [int] $local + 8) -ne $method) { throw 'Archive member is encrypted, unsupported or inconsistent.' }
+    if ($offset + $size -ne $end) { throw 'Archive central inventory is malformed.' }
+    $cursor = $offset; $local = 0L; $checksums = @()
+    foreach ($name in @('thinkthen.exe', 'README.md')) {
+        if ($cursor + 46 -gt $end -or
+            [System.BitConverter]::ToUInt32($Bytes, [int] $cursor) -ne 0x02014b50) { throw 'Archive central inventory is malformed.' }
+        $flags = [System.BitConverter]::ToUInt16($Bytes, [int] $cursor + 8)
+        $method = [System.BitConverter]::ToUInt16($Bytes, [int] $cursor + 10)
+        $crc = [System.BitConverter]::ToUInt32($Bytes, [int] $cursor + 16)
+        $compressed = [long] [System.BitConverter]::ToUInt32($Bytes, [int] $cursor + 20)
+        $length = [long] [System.BitConverter]::ToUInt32($Bytes, [int] $cursor + 24)
+        $namesize = [System.BitConverter]::ToUInt16($Bytes, [int] $cursor + 28)
+        $extra = [System.BitConverter]::ToUInt16($Bytes, [int] $cursor + 30)
+        $comment = [System.BitConverter]::ToUInt16($Bytes, [int] $cursor + 32)
+        if ($cursor + 46 + $namesize + $extra + $comment -gt $end -or $namesize -ne $name.Length -or
+            [System.Text.Encoding]::ASCII.GetString($Bytes, [int] $cursor + 46, $namesize) -cne $name -or
+            [System.BitConverter]::ToUInt16($Bytes, [int] $cursor + 34) -ne 0 -or
+            [System.BitConverter]::ToUInt32($Bytes, [int] $cursor + 42) -ne $local) { throw 'Archive member inventory is inconsistent.' }
+        # Release ZIPs use ordinary headers without encryption, descriptors or ZIP64.
+        if (($flags -band 0xf7ff) -or $method -notin @(0, 8) -or $extra -ne 0 -or
+            $length -gt 134217728 -or $compressed -gt 134217728 -or $local + 30 -gt $offset -or
+            [System.BitConverter]::ToUInt32($Bytes, [int] $local) -ne 0x04034b50 -or
+            [System.BitConverter]::ToUInt16($Bytes, [int] $local + 6) -ne $flags -or
+            [System.BitConverter]::ToUInt16($Bytes, [int] $local + 8) -ne $method -or
+            [System.BitConverter]::ToUInt32($Bytes, [int] $local + 14) -ne $crc -or
+            [System.BitConverter]::ToUInt32($Bytes, [int] $local + 18) -ne $compressed -or
+            [System.BitConverter]::ToUInt32($Bytes, [int] $local + 22) -ne $length -or
+            [System.BitConverter]::ToUInt16($Bytes, [int] $local + 26) -ne $namesize -or
+            [System.BitConverter]::ToUInt16($Bytes, [int] $local + 28) -ne 0 -or
+            $local + 30 + $namesize + $compressed -gt $offset -or
+            [System.Text.Encoding]::ASCII.GetString($Bytes, [int] $local + 30, $namesize) -cne $name) {
+            throw 'Archive member is encrypted, unsupported or inconsistent.'
+        }
+        $checksums += $crc
+        $local += 30 + $namesize + $compressed
+        $cursor += 46 + $namesize + $extra + $comment
+    }
+    if ($cursor -ne $end -or $local -ne $offset) { throw 'Archive contains unlisted bytes or members.' }
+    return ,$checksums
 }
 
 function Read-CommandZip([byte[]] $Bytes) {
-    Assert-ZipContainer $Bytes
+    $checksums = Assert-ZipContainer $Bytes
     Add-Type -AssemblyName System.IO.Compression
     $memory = [System.IO.MemoryStream]::new($Bytes, $false)
     $archive = $null
     try {
         $archive = [System.IO.Compression.ZipArchive]::new($memory, [System.IO.Compression.ZipArchiveMode]::Read)
-        if ($archive.Entries.Count -ne 1 -or $archive.Entries[0].FullName -cne 'thinkthen.exe') { throw 'Archive must contain exactly thinkthen.exe.' }
-        $entry = $archive.Entries[0]
-        $attributes = [long] $entry.ExternalAttributes -band 0xffffffffL
-        $kind = ($attributes -shr 16) -band 0xf000
-        if ($kind -notin @(0, 0x8000) -or ($attributes -band 0x410)) { throw 'Archive command is not a regular file.' }
-        if ($entry.Length -gt 134217728 -or $entry.CompressedLength -gt 134217728) { throw 'Archive member exceeds its byte limit.' }
-        $stream = $entry.Open(); $output = [System.IO.MemoryStream]::new()
-        try {
-            $buffer = [byte[]]::new(65536)
-            while (($count = $stream.Read($buffer, 0, $buffer.Length)) -gt 0) {
-                if ($output.Length + $count -gt 134217728 -or $output.Length + $count -gt $entry.Length) { throw 'Expanded command exceeds its byte limit.' }
-                $output.Write($buffer, 0, $count)
-            }
-            if ($output.Length -ne $entry.Length) { throw 'Expanded command differs from its declared length.' }
-            $binary = $output.ToArray()
-            Assert-PE $binary
-            return ,$binary
-        } finally { $stream.Dispose(); $output.Dispose() }
+        if ($archive.Entries.Count -ne 2 -or $archive.Entries[0].FullName -cne 'thinkthen.exe' -or
+            $archive.Entries[1].FullName -cne 'README.md') { throw 'Archive must contain exactly thinkthen.exe and README.md.' }
+        $binary = $null; $index = 0
+        foreach ($entry in $archive.Entries) {
+            $attributes = [long] $entry.ExternalAttributes -band 0xffffffffL
+            $kind = ($attributes -shr 16) -band 0xf000
+            if ($kind -notin @(0, 0x8000) -or ($attributes -band 0x410)) { throw 'Archive member is not a regular file.' }
+            $stream = $entry.Open(); $output = [System.IO.MemoryStream]::new()
+            try {
+                $buffer = [byte[]]::new(65536)
+                while (($count = $stream.Read($buffer, 0, $buffer.Length)) -gt 0) {
+                    if ($output.Length + $count -gt 134217728 -or $output.Length + $count -gt $entry.Length) { throw 'Expanded member exceeds its byte limit.' }
+                    $output.Write($buffer, 0, $count)
+                }
+                if ($output.Length -ne $entry.Length) { throw 'Expanded member differs from its declared length.' }
+                $data = $output.ToArray()
+                if ([ThinkThenInstall.Native]::Crc32($data) -ne $checksums[$index]) { throw 'Archive member CRC does not match.' }
+                if ($index -eq 0) { Assert-PE $data; $binary = $data }
+                $index++
+            } finally { $stream.Dispose(); $output.Dispose() }
+        }
+        return ,$binary
     } finally { if ($archive) { $archive.Dispose() }; $memory.Dispose() }
 }
 
