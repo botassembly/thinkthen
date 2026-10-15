@@ -43,7 +43,7 @@ OUTPUTS = (
     *group('python', 'results', 'libraries/python/src/', 'results_generated.rs'),
     *group('python', 'results', 'libraries/python/thinkthen/', '_native_results.py', '_native_results.pyi'),
     *group('zig', 'results', 'libraries/zig/src/', 'plan_generated.zig', 'results_generated.zig'),
-    *group('zig', 'inputs', 'libraries/zig/src/', 'request_generated.zig', 'calls_generated.zig'),
+    *group('zig', 'inputs', 'libraries/zig/src/', 'request_generated.zig', 'calls_generated.zig', 'request_codec_generated.zig'),
     *group('ruby', 'results', 'libraries/ruby/lib/thinkthen/', 'results_generated.rb'),
     *group('ruby', 'results', 'libraries/ruby/src/ffi/', 'results_generated.rs'),
     *group('ruby', 'results', 'libraries/ruby/sig/thinkthen/', 'results_generated.rbs'),

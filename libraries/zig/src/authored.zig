@@ -1,5 +1,6 @@
 //! Generated payloads and owned native admission. Constructors copy caller bytes.
 const std = @import("std");
+const codec = @import("request_codec_generated.zig");
 const tt = @import("thinkthen.zig");
 const c = @import("native.zig").c;
 const values = @import("results_generated.zig");
@@ -11,7 +12,7 @@ pub const Question = struct {
     handle: *anyopaque,
     pub fn init(engine: *tt.Engine, role: Role, definition: inputs.RequestDefinition) !tt.Result(Question) {
         if (engine.closed) return error.ClosedEngine;
-        const json = try std.json.Stringify.valueAlloc(engine.allocator, definition, .{ .emit_null_optional_fields = false });
+        const json = try codec.encode(engine.allocator, definition);
         defer engine.allocator.free(json);
         var raw: ?*c.thinkthen_question = null;
         const code = c.thinkthen_question_parse(@as(*c.thinkthen_engine, @ptrCast(engine.handle)), @intFromEnum(role), .{ .data = json.ptr, .len = json.len }, &raw);
@@ -49,11 +50,11 @@ pub const Request = opaque {
     pub fn init(allocator: std.mem.Allocator, function: []const u8, question_value: inputs.RequestQuestion, input_value: inputs.RequestInput, option_value: ?inputs.RequestOptions) !*Request {
         const owned = try allocator.create(RequestStorage);
         errdefer allocator.destroy(owned);
-        const question = try std.json.Stringify.valueAlloc(allocator, question_value, .{ .emit_null_optional_fields = false });
+        const question = try codec.encode(allocator, question_value);
         errdefer allocator.free(question);
-        const input = try std.json.Stringify.valueAlloc(allocator, input_value, .{ .emit_null_optional_fields = false });
+        const input = try codec.encode(allocator, input_value);
         errdefer allocator.free(input);
-        const options = if (option_value) |value| try std.json.Stringify.valueAlloc(allocator, value, .{ .emit_null_optional_fields = false }) else try allocator.dupe(u8, "{}");
+        const options = if (option_value) |value| try codec.encode(allocator, value) else try allocator.dupe(u8, "{}");
         errdefer allocator.free(options);
         const copied_function = try allocator.dupe(u8, function);
         owned.* = .{ .allocator = allocator, .function = copied_function, .question = question, .input = input, .options = options };

@@ -93,6 +93,7 @@ libraries/typescript/results_generated.d.ts linguist-generated
 libraries/typescript/results_generated.js linguist-generated
 libraries/zig/src/calls_generated.zig linguist-generated
 libraries/zig/src/plan_generated.zig linguist-generated
+libraries/zig/src/request_codec_generated.zig linguist-generated
 libraries/zig/src/request_generated.zig linguist-generated
 libraries/zig/src/results_generated.zig linguist-generated
 sdlc/generators/results/csharp/CompleteFacts.g.cs linguist-generated

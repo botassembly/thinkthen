@@ -1,5 +1,6 @@
 //! Thin owned sessions over the Rust-generated complete packet graph.
 const std = @import("std");
+const codec = @import("request_codec_generated.zig");
 const tt = @import("thinkthen.zig");
 const c = @import("native.zig").c;
 const values = @import("results_generated.zig");
@@ -77,7 +78,7 @@ pub const Session = struct {
         c.thinkthen_session_cancel(self.native());
     }
     pub fn push(self: Session, allocator: std.mem.Allocator, item: tt.authored.inputs.RequestSessionDescriptor) !enum { accepted, full, closed } {
-        const json = try std.json.Stringify.valueAlloc(allocator, item, .{ .emit_null_optional_fields = false });
+        const json = try codec.encode(allocator, item);
         defer allocator.free(json);
         var status: u32 = undefined;
         try checked(c.thinkthen_session_try_push(self.native(), json.ptr, json.len, &status));

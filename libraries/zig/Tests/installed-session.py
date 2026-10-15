@@ -39,7 +39,7 @@ with tempfile.TemporaryDirectory(prefix='installed-session-', dir=root) as tempo
         subprocess.run([sys.executable, str(REPO / 'sdlc/scripts/build-admission.py'), '--lock', '/tmp/thinkthen-heavy.lock', '--timeout', '900', '--', str(zig), 'build', '-j2'], cwd=project, env=env, check=True)
         if os.environ.get('THINKTHEN_COVERAGE_STAGE'):
             stage = Path(os.environ['THINKTHEN_COVERAGE_STAGE']); stage.mkdir(parents=True, exist_ok=True)
-            for name in ('session', 'example'):
+            for name in ('session', 'example', 'public-example'):
                 shutil.copy2(project / 'zig-out/bin' / name, stage / name)
         preview_env = child_env(home=home, THINKTHEN_BASE_URL=f'http://127.0.0.1:{backend.server_port}/generic/v1')
         preview = subprocess.run([str(project / 'zig-out/bin/session'), 'plan'], cwd=project, env=preview_env, capture_output=True, text=True, timeout=5)
@@ -67,9 +67,12 @@ with tempfile.TemporaryDirectory(prefix='installed-session-', dir=root) as tempo
         assert helpers.returncode == 0 and helpers.stderr == 'installed Zig helpers PASS\n', helpers.stderr
         assert len(backend.arrivals) == before + 2, backend.arrivals
         before = len(backend.arrivals)
-        public = subprocess.run([str(project / 'zig-out/bin/public-example')], cwd=project, env=env, capture_output=True, text=True, timeout=5)
-        assert public.returncode == 0 and public.stderr == 'refund=true records=3\n', public.stderr
-        assert len(backend.arrivals) == before + 3, backend.arrivals
+        public_cache = trial / 'public-cache'; public_cache.mkdir()
+        shutil.copy2(REPO / 'site/recordings/thinkthen.jsonl', public_cache / 'thinkthen.jsonl')
+        public_env = child_env(home=trial / 'public-home', THINKTHEN_CACHE=str(public_cache))
+        public = subprocess.run([str(project / 'zig-out/bin/public-example')], cwd=project, env=public_env, capture_output=True, text=True, timeout=5)
+        assert public.returncode == 0 and not public.stdout and not public.stderr, (public.returncode, public.stdout, public.stderr)
+        assert len(backend.arrivals) == before, backend.arrivals
         for mode in ('usage-written', 'usage-failed', 'usage-disabled'):
             mode_home = home / mode
             mode_home.mkdir()
