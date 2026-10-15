@@ -9,6 +9,8 @@ import shlex
 import shutil
 import subprocess
 import sys
+# Build helpers run from the selected release archive, which must stay unchanged.
+sys.dont_write_bytecode = True
 from python_host import require_tomllib
 
 require_tomllib()
