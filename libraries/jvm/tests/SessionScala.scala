@@ -52,7 +52,8 @@ object SessionScala {
       assert(retained.get("metadata").asInstanceOf[java.util.List[Any]].get(0).asInstanceOf[java.util.Map[String, Any]].containsKey("present"))
       assert(nested.terminal().facts().value().requestsSent().intValueExact() == 1)
       assert(nested.value.head.contains(reading), "result keeps authored JSON")
-      assert(nested.probability.head.contains(new java.math.BigDecimal("0.9")) && nested.results.size == 1 && nested.facts.requestsSent().intValueExact() == 1, "result exposes odds, receipts and facts")
+      val probability: Option[Double] = nested.probability.head
+      assert(probability.contains(0.9) && nested.results.size == 1 && nested.facts.requestsSent().intValueExact() == 1, "result exposes odds, receipts and facts")
       try { Await.result(engine.decide(authored, records, new Inputs.RequestOptions().extension("field", List(7).asJava)).result, 10.seconds); throw new AssertionError("invalid field admitted") }
       catch { case _: thinkthen.scala.NativeFailure => () }
       retainedCall = independent

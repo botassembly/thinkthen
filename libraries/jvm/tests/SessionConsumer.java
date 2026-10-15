@@ -136,7 +136,7 @@ public final class SessionConsumer {
             var row = (Results.SessionPacketDecideRow)decide.packets().stream().filter(Results.SessionPacketDecideRow.class::isInstance).findFirst().orElseThrow();
             check(Boolean.TRUE.equals(row.value().value().value()),"typed decide reading");
             check(decide.value().equals(List.of(true)), "one input source keeps list cardinality");
-            check(decide.probability().equals(List.of(new java.math.BigDecimal("0.9"))), "settled yes probability");
+            check(decide.probability().equals(List.of(0.9)), "settled yes probability");
             check(decide.results().size() == 1 && decide.facts().requestsSent().intValueExact() == 1, "one result exposes receipts and facts");
             var choose = done(engine.choose(authored(new Inputs.RequestDefinitionAuthoredChoose().choose(wording("Which?")).options(new Inputs.AuthoredOptions(List.of("first","second")))),records("session-choose"),options()));
             check(choose.value() != null, "normalized choose answer");
@@ -154,10 +154,10 @@ public final class SessionConsumer {
             var recognized = done(engine.recognize(authored(new Inputs.RequestDefinitionRecognizeDefinition().recognize(new Inputs.RecognizeQuestion().kinds(new Inputs.Ordered<Inputs.AuthoredDescription>().entry("person",new Inputs.AuthoredDescription("A person's name."))))),records("Maria Chen"),options()));
             var proposals = ((Results.RecognitionOddsRecognizeAnswer)recognized.results().getFirst().answer()).proposals();
             var kept = proposals.stream().filter(Results.RecognitionProposal::kept).findFirst().orElseThrow();
-            check(recognized.probability().getFirst().getFirst().equals(kept.spanProbability()), "recognize returns the kept span probability");
+            check(recognized.probability().getFirst().getFirst().equals(kept.spanProbability().doubleValue()), "recognize returns the kept span probability");
             var entities = new Inputs.RequestInputEntities().items(List.of(new Inputs.RequestItem().original(new Inputs.RequestOriginalJson().value(Map.of("name","First","kind","alert"))),new Inputs.RequestItem().original(new Inputs.RequestOriginalJson().value(Map.of("name","Second","kind","alert")))));
             var related = done(engine.relate(authored(new Inputs.RequestDefinitionAuthoredRelate().relate(new Inputs.RelateQuestion().relations(List.of(new Inputs.AuthoredRelation().name("caused_by").source("alert").target("alert"))))),entities,options()));
-            check(related.probability().equals(related.value().stream().map(Results.RelatedEntityEdge::probability).toList()), "relate probabilities follow edge order");
+            check(related.probability().equals(related.value().stream().map(edge -> edge.probability().doubleValue()).toList()), "relate probabilities follow edge order");
             var request = new Inputs.Request().call(new Inputs.RequestCall().function(Inputs.RequestFunction.DECIDE).question(question).input(records("preview")));
             retainedPlan = engine.plan(request);
             check(retainedPlan.requests().intValueExact() == 1,"typed no-send plan");

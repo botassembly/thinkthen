@@ -23,13 +23,63 @@ object SessionCases {
           }
           println(thinkthen.SessionCases.write(Fixtures.normalize(Fixtures.drain(feed,data,input),data)));return
         }
-        val pending=data.get("verb") match {
-          case "decide"=>engine.decide(question,input,options);case "choose"=>engine.choose(question,input,options)
-          case "tag"=>engine.tag(question,input,options);case "score"=>engine.score(question,input,options)
-          case "filter"=>engine.filter(question,input,options);case "rank"=>engine.rank(question,input,options)
-          case "find"=>engine.find(question,input,options);case "annotate"=>engine.annotate(question,input,options)
-          case "recognize"=>engine.recognize(question,input,options);case "relate"=>engine.relate(question,input,options)
+        val pending=input match {
+          case selected: Inputs.RequestInputEntities => data.get("verb") match {
+          case "decide"=>engine.decide(question,selected,options);case "choose"=>engine.choose(question,selected,options)
+          case "tag"=>engine.tag(question,selected,options);case "score"=>engine.score(question,selected,options)
+          case "filter"=>engine.filter(question,selected,options);case "rank"=>engine.rank(question,selected,options)
+          case "find"=>engine.find(question,selected,options);case "annotate"=>engine.annotate(question,selected,options)
+          case "recognize"=>engine.recognize(question,selected,options);case "relate"=>engine.relate(question,selected,options)
           case _=>throw new IllegalArgumentException("unknown fixture function")
+        }
+          case selected: Inputs.RequestInputFeed => data.get("verb") match {
+          case "decide"=>engine.decide(question,selected,options);case "choose"=>engine.choose(question,selected,options)
+          case "tag"=>engine.tag(question,selected,options);case "score"=>engine.score(question,selected,options)
+          case "filter"=>engine.filter(question,selected,options);case "rank"=>engine.rank(question,selected,options)
+          case "find"=>engine.find(question,selected,options);case "annotate"=>engine.annotate(question,selected,options)
+          case "recognize"=>engine.recognize(question,selected,options);case "relate"=>engine.relate(question,selected,options)
+          case _=>throw new IllegalArgumentException("unknown fixture function")
+        }
+          case selected: Inputs.RequestInputJson => data.get("verb") match {
+          case "decide"=>engine.decide(question,selected,options);case "choose"=>engine.choose(question,selected,options)
+          case "tag"=>engine.tag(question,selected,options);case "score"=>engine.score(question,selected,options)
+          case "filter"=>engine.filter(question,selected,options);case "rank"=>engine.rank(question,selected,options)
+          case "find"=>engine.find(question,selected,options);case "annotate"=>engine.annotate(question,selected,options)
+          case "recognize"=>engine.recognize(question,selected,options);case "relate"=>engine.relate(question,selected,options)
+          case _=>throw new IllegalArgumentException("unknown fixture function")
+        }
+          case selected: Inputs.RequestInputRecords => data.get("verb") match {
+          case "decide"=>engine.decide(question,selected,options);case "choose"=>engine.choose(question,selected,options)
+          case "tag"=>engine.tag(question,selected,options);case "score"=>engine.score(question,selected,options)
+          case "filter"=>engine.filter(question,selected,options);case "rank"=>engine.rank(question,selected,options)
+          case "find"=>engine.find(question,selected,options);case "annotate"=>engine.annotate(question,selected,options)
+          case "recognize"=>engine.recognize(question,selected,options);case "relate"=>engine.relate(question,selected,options)
+          case _=>throw new IllegalArgumentException("unknown fixture function")
+        }
+          case selected: Inputs.RequestInputSource => data.get("verb") match {
+          case "decide"=>engine.decide(question,selected,options);case "choose"=>engine.choose(question,selected,options)
+          case "tag"=>engine.tag(question,selected,options);case "score"=>engine.score(question,selected,options)
+          case "filter"=>engine.filter(question,selected,options);case "rank"=>engine.rank(question,selected,options)
+          case "find"=>engine.find(question,selected,options);case "annotate"=>engine.annotate(question,selected,options)
+          case "recognize"=>engine.recognize(question,selected,options);case "relate"=>engine.relate(question,selected,options)
+          case _=>throw new IllegalArgumentException("unknown fixture function")
+        }
+          case selected: Inputs.RequestInputText => data.get("verb") match {
+          case "decide"=>engine.decide(question,selected,options);case "choose"=>engine.choose(question,selected,options)
+          case "tag"=>engine.tag(question,selected,options);case "score"=>engine.score(question,selected,options)
+          case "filter"=>engine.filter(question,selected,options);case "rank"=>engine.rank(question,selected,options)
+          case "find"=>engine.find(question,selected,options);case "annotate"=>engine.annotate(question,selected,options)
+          case "recognize"=>engine.recognize(question,selected,options);case "relate"=>engine.relate(question,selected,options)
+          case _=>throw new IllegalArgumentException("unknown fixture function")
+        }
+          case selected: Inputs.RequestInputUnits => data.get("verb") match {
+          case "decide"=>engine.decide(question,selected,options);case "choose"=>engine.choose(question,selected,options)
+          case "tag"=>engine.tag(question,selected,options);case "score"=>engine.score(question,selected,options)
+          case "filter"=>engine.filter(question,selected,options);case "rank"=>engine.rank(question,selected,options)
+          case "find"=>engine.find(question,selected,options);case "annotate"=>engine.annotate(question,selected,options)
+          case "recognize"=>engine.recognize(question,selected,options);case "relate"=>engine.relate(question,selected,options)
+          case _=>throw new IllegalArgumentException("unknown fixture function")
+        }
         }
         val call=Await.result(pending.result,30.seconds)
         call.terminal().facts().state()

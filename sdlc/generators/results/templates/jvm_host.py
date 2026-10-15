@@ -21,7 +21,7 @@ def signature(spec, definitions, scalar=False):
             source = {**source, 'type': next(kind for kind in source['type'] if kind != 'null')}
         value_type = conversion(source, definitions)[0]
     mode = spec['probability_mode']
-    odds_type = 'Void' if mode == 'null' else 'List<BigDecimal>' if mode == 'items' and spec['call_shape'] != 'collection' else 'BigDecimal'
+    odds_type = 'Void' if mode == 'null' else 'List<Double>' if mode == 'items' and spec['call_shape'] != 'collection' else 'Double'
     if spec['call_shape'] != 'aggregate' and not scalar:
         value_type = f'List<{value_type}>'
         if mode != 'null': odds_type = f'List<{odds_type}>'
@@ -56,8 +56,9 @@ def named_calls(definitions, results):
             if dynamic:
                 test = ' || '.join('input instanceof Inputs.' + name(child) for child in sorted(scalar_types))
                 project = f'({test}) ? Results.project{function.title()}Scalar(call) : {project}'
-            lines += [f'public final CompletableFuture<{result}> {function}({args}) {{ return {function}(question, input, null); }}',
-                      f'public final CompletableFuture<{result}> {function}({args}, Inputs.RequestOptions options) {{ return project(named(Inputs.RequestFunction.{function.upper()}, question, input, options), call -> {project}); }}']
+            visibility = 'private' if dynamic else 'public'
+            lines += [f'{visibility} final CompletableFuture<{result}> {function}({args}) {{ return {function}(question, input, null); }}',
+                      f'{visibility} final CompletableFuture<{result}> {function}({args}, Inputs.RequestOptions options) {{ return project(named(Inputs.RequestFunction.{function.upper()}, question, input, options), call -> {project}); }}']
     return lines + ['}']
 
 
@@ -72,7 +73,8 @@ def answers(definitions):
              'public V value() { return value; }', 'public P probability() { return probability; }',
              'public List<R> results() { return results; }', 'public Facts facts() { return facts; }', '}',
              'private static <T> T optional(Presence<T> value) { return value.state() == Presence.State.VALUE ? value.value() : null; }',
-             'private static <T> List<T> immutable(List<T> values) { return Collections.unmodifiableList(values); }']
+             'private static <T> List<T> immutable(List<T> values) { return Collections.unmodifiableList(values); }',
+             'private static Double probability(BigDecimal value) { return value == null ? null : value.doubleValue(); }']
     for function, spec in call_results(definitions).items():
         payload = spec['receipt_payload']
         array = payload.get('type') == 'array'
@@ -88,11 +90,11 @@ def answers(definitions):
         if function == 'decide': value_expr += '.value()'
         mode = spec['probability_mode']
         if mode == 'null': odds_expr = 'null'
-        elif mode == 'yes': odds_expr = 'row.answer() instanceof AnswerYesNo odds ? odds.probability() : null'
+        elif mode == 'yes': odds_expr = 'row.answer() instanceof AnswerYesNo odds ? probability(odds.probability()) : null'
         elif mode == 'picked':
-            odds_expr = 'row.answer() instanceof ' + ('FindAnswer' if function == 'find' else 'AnswerChoice') + ' odds ? odds.probabilities().get(odds.pick()) : null'
-        elif function == 'rank': odds_expr = 'row.answer() instanceof AnswerYesNo odds ? odds.probability() : null'
-        elif function == 'relate': odds_expr = 'row.value().stream().map(RelatedEntityEdge::probability).toList()'
+            odds_expr = 'row.answer() instanceof ' + ('FindAnswer' if function == 'find' else 'AnswerChoice') + ' odds ? probability(odds.probabilities().get(odds.pick())) : null'
+        elif function == 'rank': odds_expr = 'row.answer() instanceof AnswerYesNo odds ? probability(odds.probability()) : null'
+        elif function == 'relate': odds_expr = 'row.value().stream().map(edge -> probability(edge.probability())).toList()'
         else: odds_expr = 'recognitionProbabilities(row)'
         if spec.get('selection_path'):
             selected = member(spec['selection_path'][-1])
@@ -133,14 +135,14 @@ def answers(definitions):
 
 
 def recognition_probabilities():
-    return ['private static List<BigDecimal> recognitionProbabilities(Recognition row) {',
-            'if (row.value() instanceof RecognizeModeProposals boundary) return boundary.proposals().stream().map(BoundaryProposal::probability).toList();',
+    return ['private static List<Double> recognitionProbabilities(Recognition row) {',
+            'if (row.value() instanceof RecognizeModeProposals boundary) return boundary.proposals().stream().map(proposal -> probability(proposal.probability())).toList();',
             'var entities = ((RecognizeEntities)row.value()).entities();',
             'var proposals = row.answer() instanceof RecognitionOddsRecognizeAnswer odds ? odds.proposals() : List.<RecognitionProposal>of();',
-            'var probabilities = new ArrayList<BigDecimal>();',
-            'for (var entity : entities) { BigDecimal probability = null;',
+            'var probabilities = new ArrayList<Double>();',
+            'for (var entity : entities) { Double probability = null;',
             'for (var proposal : proposals) { var selected = optional(proposal.selected());',
-            'if (proposal.kept() && selected != null && selected.start().equals(entity.start()) && selected.end().equals(entity.end()) && Objects.equals(optional(proposal.kind()), entity.kind())) { probability = proposal.spanProbability(); break; }',
+            'if (proposal.kept() && selected != null && selected.start().equals(entity.start()) && selected.end().equals(entity.end()) && Objects.equals(optional(proposal.kind()), entity.kind())) { probability = probability(proposal.spanProbability()); break; }',
             '}', 'probabilities.add(probability);', '}', 'return immutable(probabilities);', '}']
 
 
@@ -184,7 +186,7 @@ def facade_calls(definitions, language, results):
             return 'List<' + child + '>' if language == 'kotlin' else 'List[' + child + ']'
         typ = {'Object': 'Any', 'Void': 'Nothing'}.get(typ, typ)
         if typ in ('BigDecimal', 'BigInteger'): typ = 'java.math.' + typ
-        elif typ not in ('String', 'Boolean', 'Any', 'Nothing'): typ = 'Results.' + typ
+        elif typ not in ('String', 'Boolean', 'Double', 'Any', 'Nothing'): typ = 'Results.' + typ
         if nil or typ == 'Nothing': typ = typ + '?' if language == 'kotlin' else 'Option[' + typ + ']'
         return typ
     def convert(typ, expr, nil=False, depth=0):
@@ -193,6 +195,8 @@ def facade_calls(definitions, language, results):
             inner = convert(child, var, nil, depth + 1)
             return expr + ('.map { ' + var + ' -> ' + inner + ' }' if language == 'kotlin' else '.asScala.toList.map(' + var + ' => ' + inner + ')')
         if typ == 'Void': return 'null' if language == 'kotlin' else 'None'
+        if typ == 'Double' and language == 'scala':
+            return 'Option(' + expr + ').map(_.doubleValue())' if nil else expr + '.doubleValue()'
         if nil and language == 'scala': return 'Option(' + expr + ')'
         return expr
     from csharp import nullable
@@ -227,15 +231,15 @@ def facade_calls(definitions, language, results):
         r = signature(spec, results)[2]
         selectors = [child for child, _ in definitions['RequestInput']['variants']]
         if language == 'kotlin':
-            lines += [f'suspend fun {function}(question: Inputs.RequestQuestion, input: Inputs.RequestInput, options: Inputs.RequestOptions? = null): CallResult<*,*,Results.{r}> = when (input) {{']
+            lines += [f'private suspend fun {function}(question: Inputs.RequestQuestion, input: Inputs.RequestInput, options: Inputs.RequestOptions? = null): CallResult<*,*,Results.{r}> = when (input) {{']
             lines += [f'is Inputs.{name(child)} -> {function}(question, input, options)' for child in selectors]
             lines += ['}']
         else:
             result = f'Call[CallResult[?,?,Results.{r}]]'
-            lines += [f'final def {function}(question: Inputs.RequestQuestion, input: Inputs.RequestInput, options: Option[Inputs.RequestOptions]): {result} = input match {{']
+            lines += [f'private def {function}(question: Inputs.RequestQuestion, input: Inputs.RequestInput, options: Option[Inputs.RequestOptions]): {result} = input match {{']
             lines += [f'case selected: Inputs.{name(child)} => {function}(question, selected, options)' for child in selectors]
-            lines += ['}', f'final def {function}(question: Inputs.RequestQuestion, input: Inputs.RequestInput): {result} = {function}(question, input, None)',
-                      f'final def {function}(question: Inputs.RequestQuestion, input: Inputs.RequestInput, options: Inputs.RequestOptions): {result} = {function}(question, input, Some(options))']
+            lines += ['}', f'private def {function}(question: Inputs.RequestQuestion, input: Inputs.RequestInput): {result} = {function}(question, input, None)',
+                      f'private def {function}(question: Inputs.RequestQuestion, input: Inputs.RequestInput, options: Inputs.RequestOptions): {result} = {function}(question, input, Some(options))']
     lines += ['}']
     if language == 'kotlin':
         lines += ['open class OwnedCall internal constructor(private val native: Engine.OwnedCall) {',

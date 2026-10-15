@@ -92,7 +92,8 @@ class PolarsResult(PandasResult):
 
     def __reduce__(self):
         return (_restore, (self.results, self.terminal, self.function, self.scalar,
-                           self.source.name, self.source.to_list(), self.source.dtype, self.present))
+                           self.source.name, self.source.to_list(), self.source.dtype, self.present),
+                {'_resolved': getattr(self, '_resolved', {})})
 
 
 def _restore(results, terminal, function, scalar, name, values, dtype, present):
