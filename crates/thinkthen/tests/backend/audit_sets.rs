@@ -1,4 +1,4 @@
-//! `thinkthen audit` grades `recognize` names and `relate` edges by precision,
+//! `thinkthen runs audit` grades `recognize` names and `relate` edges by precision,
 //! recall, and F1, tunes their cut from the run's cut up, and refuses a run
 //! with no label. `tests/fixtures/measure/README.md`, "Ticket 0135 fixtures",
 //! works each value by hand.

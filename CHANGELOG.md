@@ -28,7 +28,7 @@ Complete results use `thinkthen.result/2`. They keep source locations, answer id
 
 ThinkThen refuses 0.1 cache and recording files before sending. The message names the file and says to delete it. The database bytes and modification time stay unchanged. ThinkThen does not convert old stores. Save any answers you need before deleting those files.
 
-`runs audit` and `runs diff` compare saved answers offline. The old top-level `audit` and `diff` spellings still work.
+`runs audit` and `runs diff` compare saved answers offline. The old top-level `check`, `audit` and `diff` spellings are refused before setup. Use `backends check`, `runs audit` and `runs diff`.
 
 ### Backends and platforms
 

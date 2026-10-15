@@ -1,4 +1,4 @@
-//! `thinkthen audit` refuses bad input in one line that echoes nothing, sends
+//! `thinkthen runs audit` refuses bad input in one line that echoes nothing, sends
 //! no request, reads no key, and names itself in help.
 #![cfg(feature = "cli")]
 #![allow(
