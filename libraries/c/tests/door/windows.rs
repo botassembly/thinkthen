@@ -83,6 +83,7 @@ fn compile_mode(source: &Path, sanitizer: bool) -> PathBuf {
                 "/nologo",
                 "/TC",
                 "/std:c11",
+                "/experimental:c11atomics",
                 "/W4",
                 "/WX",
                 "/MD",
