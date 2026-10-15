@@ -163,7 +163,7 @@ def check_hosts(cache, fetch):
     if fetch:
         return 0
     prepare_backend()
-    for version, _, _ in selected_hosts:
+    for version, source_commit, _ in selected_hosts:
         inputs = cache / version
         build = ROOT / 'build/community' / version
         build.mkdir(parents=True, exist_ok=True)
