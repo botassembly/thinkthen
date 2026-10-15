@@ -22,18 +22,18 @@ public class RegistryExample {
             for (var index = 0; index < refunds.length; index++) {
                 var refund = engine.decide(new RequestQuestionText().text("Does the customer ask for a refund?"), new RequestInputText().text(refunds[index])).join();
                 var isRefund = refund.value(); var odds = refund.probability();
-                assert Boolean.valueOf(new boolean[]{true, false, true}[index]).equals(isRefund) && odds.compareTo(new java.math.BigDecimal(new String[]{"0.99", "0.01", "0.54"}[index])) == 0;
+                assert Boolean.valueOf(new boolean[]{true, false, true}[index]).equals(isRefund) && odds == new double[]{0.99, 0.01, 0.54}[index];
             }
             var messages = new String[]{"Please refund the extra fee on my invoice.", "My parcel went to the wrong address.", "I cannot reset my password."}; for (var index = 0; index < messages.length; index++) {
                 var team = engine.choose(teamQuestion, new RequestInputText().text(messages[index])).join();
                 var owner = team.value(); var odds = team.probability();
-                assert owner.equals(new String[]{"billing", "shipping", "account"}[index]) && odds.compareTo(java.math.BigDecimal.ONE) == 0;
+                assert owner.equals(new String[]{"billing", "shipping", "account"}[index]) && odds == 1.0;
             }
         }
     }
 }
 ```
 
-`value()` gives the answer; `probability()` gives nullable `BigDecimal` odds. Record inputs return ordered lists. `results()` keeps typed records and `facts()` keeps call observations. Kotlin reads properties; Scala uses `Option` for missing scalar answers. The library is free and MIT licensed. Hosted models charge per token. Local models are free to use; you supply the computer that runs them. These examples were checked with saved answers; live answers and probabilities can differ. See the [package guide](https://thinkthen.dev/languages/java/) for results, failures, record inputs and offline replay.
+`value()` gives the answer; `probability()` gives nullable `Double` and `List<Double>` odds. Record inputs return ordered lists. `results()` keeps typed records and `facts()` keeps call observations. Kotlin reads properties; Scala uses `Option` for missing scalar answers. The library is free and MIT licensed. Hosted models charge per token. Local models are free to use; you supply the computer that runs them. These examples were checked with saved answers; live answers and probabilities can differ. See the [package guide](https://thinkthen.dev/languages/java/) for results, failures, record inputs and offline replay.
 
 [Backend setup](https://thinkthen.dev/install/backends/) · [ThinkThen documentation](https://thinkthen.dev)
