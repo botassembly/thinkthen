@@ -69,6 +69,13 @@ pub(crate) fn builder(base: &str, key: &str) -> EngineBuilder {
         .expect("isolated backend")
 }
 
+/// Bound each unopened attempt below the call budget, including slow loopback refusals.
+pub(crate) fn closed_port_builder(base: &str, key: &str) -> EngineBuilder {
+    builder(base, key)
+        .timeout(std::time::Duration::from_millis(50))
+        .expect("bounded connection attempt")
+}
+
 /// Retain the caller's remaining settings after selecting the shared test model.
 pub(crate) fn fixed(base: &str, key: &str) -> EngineBuilder {
     builder(base, key).model("fixed").expect("fixed test model")
