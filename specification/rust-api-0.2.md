@@ -18,7 +18,7 @@ The public API inventory applies these reviewed declaration changes after the hi
 
 [0582](../sdlc/tickets/0582-one-sql-details-route-per-function.md) adds a separate recovering Request path. `RequestRecoveredRow` retains its original ordinal, canonical successful records or safe error, and the typed logical failure cause when present. Invalid eager input refuses before sending; runtime record failures can remain alongside completed records. Rank, find and relate retain one whole-set invocation. Ordinary Request values and packet shapes retain their existing contracts.
 
-The former `Ranked`, `SetRanked` and `AnnotatedRecord` value carriers are retired. Canonical complete records retain their inputs and fields inside the call. The legacy C ranked-record schema retains its private producer.
+The former `Ranked`, `SetRanked` and `AnnotatedRecord` value carriers are retired. Canonical complete records retain their inputs and fields inside the call. The generated rank schema describes the current complete records and session packets.
 
 ### Retired public declarations
 

@@ -106,6 +106,8 @@ pub use recognize::{
 };
 pub use relate::{Edge, Entity, Relate, RelateBuilder};
 pub use results::FindSelection;
+#[cfg(test)]
+pub(crate) use results::QuestionJson;
 pub use results::{
     Answer, AttemptObservation, AttemptOutcome, BatchMismatch, Call, CallReply, Candidate,
     CompleteAnnotated, CompleteAnnotationMember, CompleteAttempt, CompleteChoice, CompleteDecision,
@@ -122,8 +124,6 @@ pub use results::{
     CompleteRelated, CompleteRelationMember, SourceRelationEdge, SourceRelationEndpoint,
 };
 pub use results::{OwnedObservedRow, OwnedQuestionDetail, OwnedRecordObservation};
-#[cfg(test)]
-pub(crate) use results::{QuestionJson, RankedRow};
 pub use set::{QuestionSet, QuestionSetBuilder};
 pub use settings::EngineBuilder;
 
