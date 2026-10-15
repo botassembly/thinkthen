@@ -140,10 +140,14 @@ def portable(root):
                             refused(lambda: SMOKE.consume(archive), 'consumer.exe timed out after 1 seconds')
                     assert archive.read_bytes() == original and consumers and not consumers[0].parent.exists()
                 elif caller is INSTALLER:
-                    with mock.patch.object(caller, 'CAPTURE', short):
+                    diagnostic = io.StringIO()
+                    with contextlib.redirect_stdout(diagnostic), mock.patch.object(caller, 'CAPTURE', short):
                         refused(lambda: INSTALLER.run_fixture([sys.executable, str(tool), str(pids)],
                             environment, timeout=30, label='cleanup regression'),
                             Path(sys.executable).name + ' timed out after 1 seconds')
+                    assert 'starting cleanup regression (deadline 30s)' in diagnostic.getvalue()
+                    assert 'cleanup regression failed in ' in diagnostic.getvalue(), 'FIXTURE_FAILURE_PHASE_MISSING'
+                    assert 'timed out after 1 seconds' in diagnostic.getvalue()
                 elif caller is WINDOWS:
                     with mock.patch.object(caller, 'CAPTURE', short):
                         refused(lambda: WINDOWS.run([sys.executable, str(tool), str(pids)], environment),

@@ -29,7 +29,11 @@ CAPTURE = runpy.run_path(str(REPO / 'sdlc/scripts/release-bounded.py'))['capture
 def run_fixture(args, env, *, timeout, label):
     started = time.monotonic()
     print(f'{Path(args[0]).name}: starting {label} (deadline {timeout}s)', flush=True)
-    result = CAPTURE(args, env=env, timeout=timeout)
+    try:
+        result = CAPTURE(args, env=env, timeout=timeout)
+    except Exception as error:
+        print(f'{Path(args[0]).name}: {label} failed in {time.monotonic() - started:.2f}s: {error}', flush=True)
+        raise
     for output in (result.stdout, result.stderr):
         if output:
             print(output.decode('utf-8', errors='replace'), end='', flush=True)
