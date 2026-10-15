@@ -252,10 +252,13 @@ def release(name, doc):
     if (crate.get("if") is not None or crate.get("continue-on-error") is not None
             or any(i is None for i in route) or route != sorted(set(route))):
         out.append(f"{name}: job crate must run resolved checkout, exact unconditional setup, fetch, package, and upload in order")
-    consumer_fetch = crate_step(lambda step: step.get("run") ==
-                                "cargo fetch --locked --manifest-path libraries/rust/consumer/Cargo.toml")
+    # A literal run alone keeps the fetch in the package step's checkout and cache,
+    # using the runner's fail-fast shell rather than a step override that skips it.
+    consumer_fetch = crate_step(lambda step: step == {
+        "run": "cargo fetch --locked --manifest-path libraries/rust/consumer/Cargo.toml"})
     if (all(i is not None for i in route) and route == sorted(set(route))
-            and (consumer_fetch is None or consumer_fetch >= route[3])):
+            and (consumer_fetch is None or not route[2] < consumer_fetch < route[3]
+                 or "env" in crate or "defaults" in crate)):
         out.append(f"{name}: job crate must fetch the locked Rust consumer before offline package validation")
     dry = crate_step(lambda step: step.get("run") == "cargo publish --dry-run --locked --package thinkthen")
     if all(i is not None for i in route) and (dry is None or not route[3] < dry < route[4]):
@@ -980,7 +983,22 @@ def self_test():
               ("missing", ""),
               ("conditional", '      - run: cargo fetch --locked --manifest-path libraries/rust/consumer/Cargo.toml\n        if: false\n'),
               ("masked", '      - run: cargo fetch --locked --manifest-path libraries/rust/consumer/Cargo.toml || true\n'),
+              ("ignored-failure", '      - run: cargo fetch --locked --manifest-path libraries/rust/consumer/Cargo.toml\n        continue-on-error: true\n'),
+              ("shell", '      - run: cargo fetch --locked --manifest-path libraries/rust/consumer/Cargo.toml\n        shell: true {0}\n'),
+              ("directory", '      - run: cargo fetch --locked --manifest-path libraries/rust/consumer/Cargo.toml\n        working-directory: another-checkout\n'),
+              ("environment", '      - run: cargo fetch --locked --manifest-path libraries/rust/consumer/Cargo.toml\n        env: {CARGO_HOME: /tmp/unused-cargo}\n'),
           )],
+        ("crate-consumer-early", "release.yml", lambda t: t.replace(
+            '      - run: cargo fetch --locked --manifest-path libraries/rust/consumer/Cargo.toml\n', '').replace(
+            '      - run: cargo fetch --locked\n',
+            '      - run: cargo fetch --locked --manifest-path libraries/rust/consumer/Cargo.toml\n      - run: cargo fetch --locked\n'),
+         ["release.yml: job crate must fetch the locked Rust consumer before offline package validation"]),
+        *[("crate-consumer-job-" + key, "release.yml",
+           lambda t, key=key, value=value: yaml.safe_dump((lambda doc: (
+               doc["jobs"]["crate"].update({key: value}) or doc))(yaml.safe_load(t))),
+           ["release.yml: job crate must fetch the locked Rust consumer before offline package validation"])
+          for key, value in (("defaults", {"run": {"shell": "true {0}"}}),
+                             ("env", {"BASH_ENV": "/tmp/skipped-command"}))],
         ("crate-consumer-late", "release.yml", lambda t: t.replace(
             '      - run: cargo fetch --locked --manifest-path libraries/rust/consumer/Cargo.toml\n', '').replace(
             '      - run: sh sdlc/scripts/package\n',
