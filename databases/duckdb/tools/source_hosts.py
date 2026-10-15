@@ -214,7 +214,7 @@ def prepare_backend():
                           '--package', 'conformance-backend', '--bin', 'conformance-backend',
                           '--message-format=json'], cwd=REPO, env=env,
                           stdout=subprocess.PIPE, text=True, check=True)
-    executables = [Path(item['executable']) for line in done.stdout.splitlines()
+    executables = [(REPO / item['executable']).resolve() for line in done.stdout.splitlines()
                    if (item := json.loads(line)).get('reason') == 'compiler-artifact'
                    and item.get('target', {}).get('name') == 'conformance-backend'
                    and item.get('executable')]
