@@ -79,7 +79,15 @@ fn model_compatibility_and_dimension_arithmetic_refuse_without_panicking() {
 #[test]
 fn typesafe_pins_models_and_published_boundaries_without_token_guesses() {
     for model in ["jev-1.13.0", "jev-1.14.0"] {
-        for dimensions in [(256, 400), (400, 256), (280, 280), (1568, 1568)] {
+        for dimensions in [
+            (256, 400),
+            (257, 400),
+            (400, 256),
+            (400, 257),
+            (280, 280),
+            (1567, 1567),
+            (1568, 1568),
+        ] {
             let wire = ImageRoute::TypeSafe
                 .admit(model, &state(&[dimensions]))
                 .unwrap();
@@ -119,10 +127,27 @@ fn typesafe_pins_models_and_published_boundaries_without_token_guesses() {
             message
         );
     }
-    for length in [16 * 1024 * 1024, 16 * 1024 * 1024 + 1] {
+    for length in [16 * 1024 * 1024 - 1, 16 * 1024 * 1024, 16 * 1024 * 1024 + 1] {
         let mut input = state(&[(280, 280)]);
         Arc::make_mut(&mut input.images)[0].bytes = vec![0; length].into();
         let result = ImageRoute::TypeSafe.admit("jev-1.13.0", &input);
-        assert_eq!(result.is_ok(), length == 16 * 1024 * 1024);
+        assert_eq!(result.is_ok(), length <= 16 * 1024 * 1024);
+    }
+}
+
+#[test]
+fn typesafe_pixel_boundaries_remain_inclusive_when_side_limits_mask_the_upper_one() {
+    // Above the maximum pixel area, a side must also exceed its limit.
+    for actual in [2_458_623, 2_458_624, 2_458_625] {
+        assert_eq!(
+            super::check(0, "pixels", 2_458_624, actual).is_ok(),
+            actual <= 2_458_624
+        );
+    }
+    for actual in [78_399, 78_400, 78_401] {
+        assert_eq!(
+            super::minimum(0, "pixels", 78_400, actual).is_ok(),
+            actual >= 78_400
+        );
     }
 }

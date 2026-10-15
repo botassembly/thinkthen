@@ -82,10 +82,16 @@ impl ImageRoute {
 
     fn assets(self, input: &ImageState) -> Result<ImageWire, ImageLimit> {
         use sha2::{Digest as _, Sha256};
-        let mut assets = serde_json::Map::new();
+        #[derive(Serialize)]
+        struct Asset {
+            r#type: &'static str,
+            format: &'static str,
+            data_base64: String,
+        }
+        let mut assets = std::collections::BTreeMap::new();
         let mut state = Vec::new();
         if input.text.as_str() != Some("") {
-            state.push(serde_json::to_value(&input.text).map_err(|_| ImageLimit::Overflow)?);
+            state.push(serde_json::to_string(&input.text).map_err(|_| ImageLimit::Overflow)?);
         }
         for (at, image) in input.images.iter().enumerate() {
             let width = u64::from(image.width.get());
@@ -102,14 +108,7 @@ impl ImageRoute {
                 ("pixels", 78_400, 2_458_624, width * height),
             ] {
                 check(at, kind, max, actual)?;
-                if actual < min {
-                    return Err(ImageLimit::Minimum {
-                        ordinal: at + 1,
-                        kind,
-                        limit: min,
-                        actual,
-                    });
-                }
+                minimum(at, kind, min, actual)?;
             }
             let digest = crate::core::digest::hex(&Sha256::digest(&image.bytes));
             let hash: String = digest.chars().take(16).collect();
@@ -120,14 +119,16 @@ impl ImageRoute {
             };
             assets.insert(
                 key.clone(),
-                serde_json::json!({
-                    "type": "image", "format": format, "data_base64": image.base64(),
-                }),
+                Asset {
+                    r#type: "image",
+                    format,
+                    data_base64: image.base64(),
+                },
             );
-            state.push(serde_json::Value::String(key));
+            state.push(serde_json::to_string(&key).map_err(|_| ImageLimit::Overflow)?);
         }
         Ok(ImageWire {
-            state: serde_json::to_string(&state).map_err(|_| ImageLimit::Overflow)?,
+            state: format!("[{}]", state.join(",")),
             images: Some(serde_json::to_string(&assets).map_err(|_| ImageLimit::Overflow)?),
             body_limit: 32 * 1024 * 1024,
             questions_limit: None,
@@ -272,6 +273,19 @@ impl ImageRoute {
             tokens_per_question: tokens,
             image_tokens_known: true,
         })
+    }
+}
+
+fn minimum(at: usize, kind: &'static str, limit: u64, actual: u64) -> Result<(), ImageLimit> {
+    if actual < limit {
+        Err(ImageLimit::Minimum {
+            ordinal: at + 1,
+            kind,
+            limit,
+            actual,
+        })
+    } else {
+        Ok(())
     }
 }
 

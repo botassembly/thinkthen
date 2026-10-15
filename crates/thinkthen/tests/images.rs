@@ -303,8 +303,6 @@ fn every_text_only_function_and_unknown_route_refuses_with_zero_connections() {
         ("llamacpp", "local"),
         ("openrouter", "liquid/lfm-2.5-clef"),
         ("typesafe", "jev-1.13"),
-        ("typesafe", "jev-latest"),
-        ("typesafe", "jev-preview"),
         ("mlx", "local"),
         ("ollama", "local"),
     ] {

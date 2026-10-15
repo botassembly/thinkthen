@@ -292,7 +292,7 @@ Official facts in the table were retained on 2026-10-04; the Clef routed prices 
 
 | Provider | How ThinkThen reaches it | Base | Path | Key variable | Model | Published limits | Published price | Image evidence and limitations | Needs both sides | Suggested settings | Check or run on record |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| TypeSafe | typesafe | https://api.typesafe.ai/v1 | systemone | TYPESAFE_API_KEY | jev-1.13.0 | Retained 1200 requests/minute; current rate not re-established | 0033 retained 2026-10-05: $0.042/M input, output free | Images unverified in retained run | No | Optional rate 1200 for short records | Prior passing check; no new run |
+| TypeSafe | typesafe | https://api.typesafe.ai/v1 | systemone | TYPESAFE_API_KEY | jev-1.13.0 | Retained 1200 requests/minute; current rate not re-established | 0033 retained 2026-10-05: $0.042/M input, output free | JPEG/PNG on pinned Jev 1.13.0 and 1.14.0; TypeSafe labels images not ready for production | No | Optional rate 1200 for short records | Prior passing check; no new run |
 | Liquid | liquid | https://api.liquid.ai/decisions/v1 | systemone | LIQUIDAI_API_KEY then LIQUID_API_KEY | d1:free | Free-tier rate unverified | Retained direct calls billed zero; current tariff unverified | Unverified | No | Jobs 4 or fewer and resume if stalled; no inferred rate | 2026-10-02 direct check; 52/1501 retries |
 | Ollama | ollama | http://localhost:11434/v1 | systemone | OLLAMA_API_KEY; optional on loopback | nimble | v0.35.0+; text body 64 KiB; context model-dependent | Retained local runs no API charge; hardware excluded | Documented for vision models; unverified in retained runs | Fixed Text workaround | Server-capacity dependent | Retained nimble/tev variants, experiment 0004 |
 | Perplexity | perplexity | https://api.perplexity.ai/v1 | decisions | PERPLEXITY_API_KEY | pplx-decider-v1-27b | 10 requests/sec per organization; 128 questions; 255 options; 10 score levels; under 262144 input tokens; 32 MiB body | 2026-10-09: $0.02/M input; output free | Documented; ThinkThen sends none | No | Optional process-local rate 600; other clients share allowance | 0399 check 2026-10-04: exit 0, critical 0, warning 0; requested/served pplx-decider-v1-27b |
@@ -328,7 +328,15 @@ Direct Workers AI remains unverified. Its vendor address shape and token-variabl
 
 ## Native image route admission (0447/0448)
 
-[ADR0121](../sdlc/planning/adr/0121-native-image-input-and-route-admission.md) records exact original-byte protocols and documented boundaries for explicitly selected Liquid d1 and Perplexity pplx-decider-v1-27b. Native JPEG/PNG support refuses other formats; vendor format lists do not widen the decoder. Local image admission requires an explicit declaration of one of the measured setups below; unprofiled local images refuse. Named provider-wide support or URL suffixes never enable images. Text remains operational.
+[ADR0121](../sdlc/planning/adr/0121-native-image-input-and-route-admission.md) records exact original-byte protocols and documented boundaries for explicitly selected Liquid d1, Perplexity pplx-decider-v1-27b and TypeSafe jev-1.13.0/jev-1.14.0. Native JPEG/PNG support refuses other formats; vendor format lists do not widen the decoder. Local image admission requires an explicit declaration of one of the measured setups below; unprofiled local images refuse. Named provider-wide support or URL suffixes never enable images. Text remains operational.
+
+### TypeSafe image assets
+
+The named `typesafe` System One route admits exactly `jev-1.13.0` and `jev-1.14.0`. Moving aliases `jev-latest` and `jev-preview`, abbreviated `jev-1.13`, other model names and unnamed routes refuse images. [TypeSafe's image documentation](https://docs.typesafe.ai/go/images), checked 2026-10-15, label image input not ready for production. A supported route makes no claim about image accuracy.
+
+Each original appears once in top-level `assets` as `{"type":"image","format":"png"|"jpeg","data_base64":...}`. Its key is `thinkthen-image-N-H`, where N is its 1-based input order and H is the first 16 lowercase hexadecimal digits of its SHA-256. The `state` array contains the text/JSON state unless it is an empty string, followed by each key in image order. Repeated originals retain separate ordered keys. Paths never reach the model. The adapter selects `TypeSafe-Danger-Zone-Images: true` only for an asset body; the engine attaches it. Text-only bodies and headers stay unchanged.
+
+Admission checks each original against TypeSafe's published limits: 16 MiB compressed bytes, width and height each 256–1568, 78,400–2,458,624 pixels, and a 32 MiB final request body. Over-limit errors retain `image N exceeds KIND: limit L, actual A`; under-limit errors say `image N is below KIND: limit L, actual A`. Caller limits may narrow admission. ThinkThen never resizes. Animated PNGs, the server's expanded-request limit and its 32 MiB post-processing image total remain server checks and can return 400. TypeSafe publishes no image token count or question-count limit; image token estimates stay unknown.
 
 ### Local image declarations
 
