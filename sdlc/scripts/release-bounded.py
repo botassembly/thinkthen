@@ -14,6 +14,7 @@ def capture(args, *, env, timeout, input=None, text=False, cwd=None):
     deadline = time.monotonic() + timeout
     job = None
     child = None
+    timed_out = None
     # Files cannot fill a pipe or wait for a descendant to close an inherited writer.
     with tempfile.TemporaryFile() as stdout, tempfile.TemporaryFile() as stderr, tempfile.TemporaryFile() as stdin:
         if input is not None:
@@ -31,7 +32,7 @@ def capture(args, *, env, timeout, input=None, text=False, cwd=None):
             try:
                 child.wait(timeout=max(0, deadline - time.monotonic()))
             except subprocess.TimeoutExpired as error:
-                raise ValueError(f'{tool} timed out after {timeout} seconds') from error
+                timed_out = error
         finally:
             try:
                 if job:
@@ -59,4 +60,7 @@ def capture(args, *, env, timeout, input=None, text=False, cwd=None):
         if text:
             outputs = [value.decode(locale.getpreferredencoding(False)).replace('\r\n', '\n').replace('\r', '\n')
                        for value in outputs]
+        if timed_out is not None:
+            timed_out.output, timed_out.stderr = outputs
+            raise ValueError(f'{tool} timed out after {timeout} seconds') from timed_out
         return subprocess.CompletedProcess(args, child.returncode, *outputs)
