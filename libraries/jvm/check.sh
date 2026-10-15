@@ -50,8 +50,8 @@ jars=$package/jars
 if [ "${THINKTHEN_TEST_PROFILE:-}" = smoke ]; then
     smoke_guard
     floor=$(python3 -c 'import sys; sys.path.insert(0, sys.argv[1]); from toolchains import JDK_FLOOR; print(JDK_FLOOR)' "$here/tests")
-    "$THINKTHEN_JDK_HOME/bin/javac" --release "$floor" -cp "$jars/thinkthen-session.jar" -d "$consumer" "$here/tests/SessionConsumer.java"
-    "$THINKTHEN_JDK_HOME/bin/java" --enable-native-access=ALL-UNNAMED -cp "$jars/*:$consumer" SessionConsumer smoke
+    "$THINKTHEN_JDK_HOME/bin/javac" --release "$floor" -cp "$jars/thinkthen-session.jar" -d "$consumer" "$here/tests/SmokeConsumer.java"
+    "$THINKTHEN_JDK_HOME/bin/java" --enable-native-access=ALL-UNNAMED -cp "$jars/*:$consumer" SmokeConsumer
     exit
 fi
 if [ -z "${THINKTHEN_PARITY_PREPARED:-}" ]; then
