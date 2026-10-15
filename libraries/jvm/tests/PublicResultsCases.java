@@ -9,6 +9,9 @@ public final class PublicResultsCases {
     private PublicResultsCases() {}
     private static void check(boolean value) { if (!value) throw new AssertionError("shared result presence"); }
     public static void run() {
+        for (var method : thinkthen.NamedCalls.class.getDeclaredMethods())
+            if (method.getGenericReturnType().getTypeName().contains("CallResult<?, ?"))
+                check(java.lang.reflect.Modifier.isPrivate(method.getModifiers()));
         for (var type : java.util.List.<Class<?>>of(Results.Plan.class, Inputs.Request.class, Inputs.RequestQuestion.class))
             for (var method : type.getMethods()) check(!method.getName().equals("json") && !method.getName().equals("fromJson"));
         var missing = new Results.AnnotationValueDecision(Map.of("kind", "decision"));

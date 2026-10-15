@@ -4230,40 +4230,43 @@ public final class Results {
     private static <T> List<T> immutable(List<T> values) {
         return Collections.unmodifiableList(values);
     }
-    static CallResult<List<Object>,List<BigDecimal>,AtomicDecideValue> projectDecide(Engine.OwnedCall call) {
+    private static Double probability(BigDecimal value) {
+        return value == null ? null : value.doubleValue();
+    }
+    static CallResult<List<Object>,List<Double>,AtomicDecideValue> projectDecide(Engine.OwnedCall call) {
         var results = new ArrayList<AtomicDecideValue>();
         for (SessionPacket packet : call.packets()) {
             if (packet instanceof SessionPacketDecideAggregate aggregate) results.addAll(aggregate.value());
             else if (packet instanceof SessionPacketDecideRow row) results.add(row.value());
         }
         var values = new ArrayList<Object>();
-        var probabilities = new ArrayList<BigDecimal>();
+        var probabilities = new ArrayList<Double>();
         for (AtomicDecideValue row : results) {
             values.add(row.value().value());
-            probabilities.add(resolved(call, "decide", optional(row.index())) ? (row.answer() instanceof AnswerYesNo odds ? odds.probability() : null) : null);
+            probabilities.add(resolved(call, "decide", optional(row.index())) ? (row.answer() instanceof AnswerYesNo odds ? probability(odds.probability()) : null) : null);
         }
         return new CallResult<>(call, immutable(values), immutable(probabilities), results);
     }
-    static CallResult<Object,BigDecimal,AtomicDecideValue> projectDecideScalar(Engine.OwnedCall call) {
+    static CallResult<Object,Double,AtomicDecideValue> projectDecideScalar(Engine.OwnedCall call) {
         var result = projectDecide(call);
         if (result.results().size() != 1) throw new IllegalStateException("Expected one input result");
         return new CallResult<>(call, result.value().getFirst(), result.probability().getFirst(), result.results());
     }
-    static CallResult<List<String>,List<BigDecimal>,AtomicNullableString> projectChoose(Engine.OwnedCall call) {
+    static CallResult<List<String>,List<Double>,AtomicNullableString> projectChoose(Engine.OwnedCall call) {
         var results = new ArrayList<AtomicNullableString>();
         for (SessionPacket packet : call.packets()) {
             if (packet instanceof SessionPacketChooseAggregate aggregate) results.addAll(aggregate.value());
             else if (packet instanceof SessionPacketChooseRow row) results.add(row.value());
         }
         var values = new ArrayList<String>();
-        var probabilities = new ArrayList<BigDecimal>();
+        var probabilities = new ArrayList<Double>();
         for (AtomicNullableString row : results) {
             values.add(optional(row.value()));
-            probabilities.add(resolved(call, "choose", optional(row.index())) ? (row.answer() instanceof AnswerChoice odds ? odds.probabilities().get(odds.pick()) : null) : null);
+            probabilities.add(resolved(call, "choose", optional(row.index())) ? (row.answer() instanceof AnswerChoice odds ? probability(odds.probabilities().get(odds.pick())) : null) : null);
         }
         return new CallResult<>(call, immutable(values), immutable(probabilities), results);
     }
-    static CallResult<String,BigDecimal,AtomicNullableString> projectChooseScalar(Engine.OwnedCall call) {
+    static CallResult<String,Double,AtomicNullableString> projectChooseScalar(Engine.OwnedCall call) {
         var result = projectChoose(call);
         if (result.results().size() != 1) throw new IllegalStateException("Expected one input result");
         return new CallResult<>(call, result.value().getFirst(), result.probability().getFirst(), result.results());
@@ -4302,42 +4305,42 @@ public final class Results {
         if (result.results().size() != 1) throw new IllegalStateException("Expected one input result");
         return new CallResult<>(call, result.value().getFirst(), null, result.results());
     }
-    static CallResult<List<Object>,List<BigDecimal>,AtomicBoolean> projectFilter(Engine.OwnedCall call) {
+    static CallResult<List<Object>,List<Double>,AtomicBoolean> projectFilter(Engine.OwnedCall call) {
         var results = new ArrayList<AtomicBoolean>();
         for (SessionPacket packet : call.packets()) {
             if (packet instanceof SessionPacketFilterAggregate aggregate) results.addAll(aggregate.value());
             else if (packet instanceof SessionPacketFilterRow row) results.add(row.value());
         }
         var values = new ArrayList<Object>();
-        var probabilities = new ArrayList<BigDecimal>();
+        var probabilities = new ArrayList<Double>();
         for (AtomicBoolean row : results) {
             values.add(optional(row.input()));
-            probabilities.add(row.answer() instanceof AnswerYesNo odds ? odds.probability() : null);
+            probabilities.add(row.answer() instanceof AnswerYesNo odds ? probability(odds.probability()) : null);
         }
         return new CallResult<>(call, immutable(values), immutable(probabilities), results);
     }
-    static CallResult<List<BigInteger>,List<BigDecimal>,AtomicNonZeroUsize> projectRank(Engine.OwnedCall call) {
+    static CallResult<List<BigInteger>,List<Double>,AtomicNonZeroUsize> projectRank(Engine.OwnedCall call) {
         var results = new ArrayList<AtomicNonZeroUsize>();
         for (SessionPacket packet : call.packets()) {
             if (packet instanceof SessionPacketRankAggregate aggregate) results.addAll(aggregate.value());
         }
         results.sort(Comparator.comparing(AtomicNonZeroUsize::value));
         var values = new ArrayList<BigInteger>();
-        var probabilities = new ArrayList<BigDecimal>();
+        var probabilities = new ArrayList<Double>();
         for (AtomicNonZeroUsize row : results) {
             values.add(optional(row.index()));
-            probabilities.add(row.answer() instanceof AnswerYesNo odds ? odds.probability() : null);
+            probabilities.add(row.answer() instanceof AnswerYesNo odds ? probability(odds.probability()) : null);
         }
         return new CallResult<>(call, immutable(values), immutable(probabilities), results);
     }
-    static CallResult<Object,BigDecimal,Find> projectFind(Engine.OwnedCall call) {
+    static CallResult<Object,Double,Find> projectFind(Engine.OwnedCall call) {
         var results = new ArrayList<Find>();
         for (SessionPacket packet : call.packets()) {
             if (packet instanceof SessionPacketFindAggregate aggregate) results.add(aggregate.value());
         }
         if (results.size() != 1) throw new IllegalStateException("Expected one aggregate result");
         var row = results.getFirst();
-        return new CallResult<>(call, optional(row.value()), optional(row.index()) == null ? null : (row.answer() instanceof FindAnswer odds ? odds.probabilities().get(odds.pick()) : null),
+        return new CallResult<>(call, optional(row.value()), optional(row.index()) == null ? null : (row.answer() instanceof FindAnswer odds ? probability(odds.probabilities().get(odds.pick())) : null),
         results);
     }
     static CallResult<List<AnnotatedRow>,Void,Annotation> projectAnnotate(Engine.OwnedCall call) {
@@ -4357,46 +4360,46 @@ public final class Results {
         if (result.results().size() != 1) throw new IllegalStateException("Expected one input result");
         return new CallResult<>(call, result.value().getFirst(), null, result.results());
     }
-    static CallResult<List<Recognize>,List<List<BigDecimal>>,Recognition> projectRecognize(Engine.OwnedCall call) {
+    static CallResult<List<Recognize>,List<List<Double>>,Recognition> projectRecognize(Engine.OwnedCall call) {
         var results = new ArrayList<Recognition>();
         for (SessionPacket packet : call.packets()) {
             if (packet instanceof SessionPacketRecognizeAggregate aggregate) results.addAll(aggregate.value());
         }
         var values = new ArrayList<Recognize>();
-        var probabilities = new ArrayList<List<BigDecimal>>();
+        var probabilities = new ArrayList<List<Double>>();
         for (Recognition row : results) {
             values.add(row.value());
             probabilities.add(recognitionProbabilities(row));
         }
         return new CallResult<>(call, immutable(values), immutable(probabilities), results);
     }
-    static CallResult<Recognize,List<BigDecimal>,Recognition> projectRecognizeScalar(Engine.OwnedCall call) {
+    static CallResult<Recognize,List<Double>,Recognition> projectRecognizeScalar(Engine.OwnedCall call) {
         var result = projectRecognize(call);
         if (result.results().size() != 1) throw new IllegalStateException("Expected one input result");
         return new CallResult<>(call, result.value().getFirst(), result.probability().getFirst(), result.results());
     }
-    static CallResult<List<RelatedEntityEdge>,List<BigDecimal>,Relation> projectRelate(Engine.OwnedCall call) {
+    static CallResult<List<RelatedEntityEdge>,List<Double>,Relation> projectRelate(Engine.OwnedCall call) {
         var results = new ArrayList<Relation>();
         for (SessionPacket packet : call.packets()) {
             if (packet instanceof SessionPacketRelateAggregate aggregate) results.add(aggregate.value());
         }
         if (results.size() != 1) throw new IllegalStateException("Expected one aggregate result");
         var row = results.getFirst();
-        return new CallResult<>(call, row.value(), row.value().stream().map(RelatedEntityEdge::probability).toList(),
+        return new CallResult<>(call, row.value(), row.value().stream().map(edge -> probability(edge.probability())).toList(),
         results);
     }
-    private static List<BigDecimal> recognitionProbabilities(Recognition row) {
-        if (row.value() instanceof RecognizeModeProposals boundary) return boundary.proposals().stream().map(BoundaryProposal::probability).toList();
+    private static List<Double> recognitionProbabilities(Recognition row) {
+        if (row.value() instanceof RecognizeModeProposals boundary) return boundary.proposals().stream().map(proposal -> probability(proposal.probability())).toList();
         var entities = ((RecognizeEntities)row.value()).entities();
         var proposals = row.answer() instanceof RecognitionOddsRecognizeAnswer odds ? odds.proposals() : List.<RecognitionProposal>of();
-        var probabilities = new ArrayList<BigDecimal>();
+        var probabilities = new ArrayList<Double>();
         for (var entity : entities) {
-            BigDecimal probability = null;
+            Double probability = null;
             for (var proposal : proposals) {
                 var selected = optional(proposal.selected());
                 if (proposal.kept() && selected != null && selected.start().equals(entity.start()) && selected.end().equals(entity.end()) && Objects.equals(optional(proposal.kind()),
                 entity.kind())) {
-                    probability = proposal.spanProbability();
+                    probability = probability(proposal.spanProbability());
                     break;
                 }
             }

@@ -90,13 +90,63 @@ public final class SessionCases {
         return options;
     }
     public static CompletableFuture<? extends Engine.OwnedCall> named(Engine engine,String function,RequestQuestion question,RequestInput input,RequestOptions options) {
-        return switch(function) {
-            case "decide" -> engine.decide(question,input,options); case "choose" -> engine.choose(question,input,options);
-            case "tag" -> engine.tag(question,input,options); case "score" -> engine.score(question,input,options);
-            case "filter" -> engine.filter(question,input,options); case "rank" -> engine.rank(question,input,options);
-            case "find" -> engine.find(question,input,options); case "annotate" -> engine.annotate(question,input,options);
-            case "recognize" -> engine.recognize(question,input,options); case "relate" -> engine.relate(question,input,options);
+        return switch(input) {
+            case RequestInputEntities selected -> switch(function) {
+            case "decide" -> engine.decide(question,selected,options); case "choose" -> engine.choose(question,selected,options);
+            case "tag" -> engine.tag(question,selected,options); case "score" -> engine.score(question,selected,options);
+            case "filter" -> engine.filter(question,selected,options); case "rank" -> engine.rank(question,selected,options);
+            case "find" -> engine.find(question,selected,options); case "annotate" -> engine.annotate(question,selected,options);
+            case "recognize" -> engine.recognize(question,selected,options); case "relate" -> engine.relate(question,selected,options);
             default -> throw new IllegalArgumentException("unknown fixture function");
+        };
+            case RequestInputFeed selected -> switch(function) {
+            case "decide" -> engine.decide(question,selected,options); case "choose" -> engine.choose(question,selected,options);
+            case "tag" -> engine.tag(question,selected,options); case "score" -> engine.score(question,selected,options);
+            case "filter" -> engine.filter(question,selected,options); case "rank" -> engine.rank(question,selected,options);
+            case "find" -> engine.find(question,selected,options); case "annotate" -> engine.annotate(question,selected,options);
+            case "recognize" -> engine.recognize(question,selected,options); case "relate" -> engine.relate(question,selected,options);
+            default -> throw new IllegalArgumentException("unknown fixture function");
+        };
+            case RequestInputJson selected -> switch(function) {
+            case "decide" -> engine.decide(question,selected,options); case "choose" -> engine.choose(question,selected,options);
+            case "tag" -> engine.tag(question,selected,options); case "score" -> engine.score(question,selected,options);
+            case "filter" -> engine.filter(question,selected,options); case "rank" -> engine.rank(question,selected,options);
+            case "find" -> engine.find(question,selected,options); case "annotate" -> engine.annotate(question,selected,options);
+            case "recognize" -> engine.recognize(question,selected,options); case "relate" -> engine.relate(question,selected,options);
+            default -> throw new IllegalArgumentException("unknown fixture function");
+        };
+            case RequestInputRecords selected -> switch(function) {
+            case "decide" -> engine.decide(question,selected,options); case "choose" -> engine.choose(question,selected,options);
+            case "tag" -> engine.tag(question,selected,options); case "score" -> engine.score(question,selected,options);
+            case "filter" -> engine.filter(question,selected,options); case "rank" -> engine.rank(question,selected,options);
+            case "find" -> engine.find(question,selected,options); case "annotate" -> engine.annotate(question,selected,options);
+            case "recognize" -> engine.recognize(question,selected,options); case "relate" -> engine.relate(question,selected,options);
+            default -> throw new IllegalArgumentException("unknown fixture function");
+        };
+            case RequestInputSource selected -> switch(function) {
+            case "decide" -> engine.decide(question,selected,options); case "choose" -> engine.choose(question,selected,options);
+            case "tag" -> engine.tag(question,selected,options); case "score" -> engine.score(question,selected,options);
+            case "filter" -> engine.filter(question,selected,options); case "rank" -> engine.rank(question,selected,options);
+            case "find" -> engine.find(question,selected,options); case "annotate" -> engine.annotate(question,selected,options);
+            case "recognize" -> engine.recognize(question,selected,options); case "relate" -> engine.relate(question,selected,options);
+            default -> throw new IllegalArgumentException("unknown fixture function");
+        };
+            case RequestInputText selected -> switch(function) {
+            case "decide" -> engine.decide(question,selected,options); case "choose" -> engine.choose(question,selected,options);
+            case "tag" -> engine.tag(question,selected,options); case "score" -> engine.score(question,selected,options);
+            case "filter" -> engine.filter(question,selected,options); case "rank" -> engine.rank(question,selected,options);
+            case "find" -> engine.find(question,selected,options); case "annotate" -> engine.annotate(question,selected,options);
+            case "recognize" -> engine.recognize(question,selected,options); case "relate" -> engine.relate(question,selected,options);
+            default -> throw new IllegalArgumentException("unknown fixture function");
+        };
+            case RequestInputUnits selected -> switch(function) {
+            case "decide" -> engine.decide(question,selected,options); case "choose" -> engine.choose(question,selected,options);
+            case "tag" -> engine.tag(question,selected,options); case "score" -> engine.score(question,selected,options);
+            case "filter" -> engine.filter(question,selected,options); case "rank" -> engine.rank(question,selected,options);
+            case "find" -> engine.find(question,selected,options); case "annotate" -> engine.annotate(question,selected,options);
+            case "recognize" -> engine.recognize(question,selected,options); case "relate" -> engine.relate(question,selected,options);
+            default -> throw new IllegalArgumentException("unknown fixture function");
+        };
         };
     }
     public static Object optional(Presence<?> value) { return value.state()==Presence.State.VALUE ? value.value() : null; }
