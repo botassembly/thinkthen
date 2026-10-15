@@ -25,6 +25,7 @@ class TestPackage < Minitest::Test
   end
 
   def child(root, code, *args)
+    root = File.realpath(root)
     Open3.capture3(Children.env(keep: %w[LD_LIBRARY_PATH DYLD_LIBRARY_PATH], home: root, GEM_HOME: "#{root}/gems",
                               GEM_PATH: "#{root}/gems", LANG: "C.UTF-8"),
                   RbConfig.ruby, "-e", code, *args, chdir: root, unsetenv_others: true)
@@ -55,7 +56,9 @@ class TestPackage < Minitest::Test
     native = Gem::Package.new(Dir["#{ROOT}/thinkthen-#{VERSION}-*.gem"].fetch(0))
     assert_equal ">= 3.4, < 4.1", native.spec.required_ruby_version.to_s
     assert_equal %w[3.4 4.0], native.spec.files.filter_map { |path| path[%r{\Alib/thinkthen/([^/]+)/thinkthen\.}, 1] }.sort
-    Dir.mktmpdir("thinkthen-ruby-selection-") do |root|
+    Dir.mktmpdir("thinkthen-ruby-selection-") do |directory|
+      root = "#{directory}/linked"
+      File.symlink(directory, root)
       source = "#{root}/source"
       native.extract_files(source)
       FileUtils.cp(FALLBACK, root)
