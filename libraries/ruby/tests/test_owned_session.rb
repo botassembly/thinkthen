@@ -3,6 +3,25 @@ require "minitest/autorun"
 require_relative "backend"
 
 class TestOwnedSession < Minitest::Test
+  def test_operation_result_signature_accepts_only_numeric_probabilities
+    require "rbs"
+    require "rbs/test"
+    loader = RBS::EnvironmentLoader.new
+    loader.add(path: Pathname.new(File.expand_path("../sig", TestBackend::LIB)))
+    environment = RBS::Environment.from_loader(loader).resolve_type_names
+    builder = RBS::DefinitionBuilder.new(env: environment)
+    completed = environment.class_decls.fetch(RBS::TypeName.parse("::ThinkThen::Results::Completed"))
+    probability_type = completed.type_params.find { |parameter| parameter.name == :P }.default_type
+    checker = RBS::Test::TypeCheck.new(self_class: Object, builder: builder,
+      sample_size: 100, unchecked_classes: [])
+    [nil, 1, 0.9, [], [0.9, nil, 1], [[0.9, 1], [], [0.7]]].each do |probability|
+      assert checker.value(probability, probability_type), "numeric probability rejected by installed RBS"
+    end
+    ["0.9", true, {}, ["0.9"], [true], [{}], [["0.9"]], [[true]], [[{}]], [[[0.9]]]].each do |probability|
+      refute checker.value(probability, probability_type), "non-numeric probability accepted by installed RBS"
+    end
+  end
+
   def test_authored_decide_values_match_the_installed_return_signature
     require "rbs"
     require "rbs/test"
