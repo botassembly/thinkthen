@@ -12,6 +12,8 @@ PG_MAJOR=${1:-16}
 case $PG_MAJOR in 16|17|18) ;; *) echo "usage: setup.sh [16|17|18]" >&2; exit 2 ;; esac
 . ./runtime.sh
 if [ "$PG_HOST" = Darwin ]; then
+    # Refresh runner metadata before selecting the reviewed formula revision.
+    brew update
     case $(uname -m) in
     arm64) tag=arm64_sequoia; pin=$PG_BOTTLE_ARM64_SEQUOIA ;;
     x86_64) tag=sonoma; pin=${PG_BOTTLE_X86_64_SONOMA:-} ;;
@@ -27,7 +29,8 @@ if [ "$PG_HOST" = Darwin ]; then
         brew fetch --build-from-source postgresql@$PG_MAJOR
         archive=$(brew --cache --build-from-source postgresql@$PG_MAJOR)
     fi
-    [ "$(shasum -a 256 "$archive" | awk '{print $1}')" = "$pin" ] || { echo 'setup: Homebrew PostgreSQL archive differs from pin' >&2; exit 1; }
+    actual=$(shasum -a 256 "$archive" | awk '{print $1}')
+    [ "$actual" = "$pin" ] || { echo "setup: Homebrew PostgreSQL archive SHA256 $actual differs from pin $pin" >&2; exit 1; }
     if [ -n "${PG_BOTTLE_X86_64_SONOMA:-}" ] || [ "$(uname -m)" = arm64 ]; then
         brew install --force-bottle postgresql@$PG_MAJOR
     else
