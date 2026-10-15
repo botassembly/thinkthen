@@ -84,6 +84,6 @@ def smoke(native, scratch):
     terminal, = [packet for packet in packets if packet['kind'] == 'terminal']
     assert 'failure' not in terminal, terminal
     row, = [packet for packet in packets if packet['kind'] == 'row' and packet['function'] == 'decide']
-    answer = row['value']['value']['value']
+    answer = row['value']['value']
     assert isinstance(answer, bool), row
     print('smoke:', json.dumps(answer))
