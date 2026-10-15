@@ -30,6 +30,8 @@ def home(variable, executable, runtime=None):
     return root
 
 
+if "THINKTHEN_JDK_HOME" not in os.environ and os.environ.get("THINKTHEN_SESSION_JDK_HOME"):
+    os.environ["THINKTHEN_JDK_HOME"] = os.environ["THINKTHEN_SESSION_JDK_HOME"]
 JDK = home("THINKTHEN_JDK_HOME", "javac")
 KOTLIN = home("THINKTHEN_KOTLIN_HOME", "kotlinc", "lib/kotlin-stdlib.jar")
 SCALA = home("THINKTHEN_SCALA_HOME", "scalac", "lib/scala.jar")
