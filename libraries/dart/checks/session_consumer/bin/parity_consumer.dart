@@ -164,7 +164,38 @@ Future<Map<String, Object?>> consumeFixture(Map fixture, Engine engine) async {
   if (injection == 'cancel_token') cancellation.cancel();
   List<SessionPacket> packets;
   CallResult? callResult;
-  if (fixture['held_cancel'] == true) {
+  if (feed != null && fixture['settings']?['max_requests'] == 2) {
+    final session = startFixture(
+      engine,
+      verb,
+      question,
+      input,
+      options: options,
+    );
+    try {
+      await for (final item in feed) {
+        if (!await session.push(item)) break;
+      }
+      session.finish();
+      packets = await session.packets.toList();
+      final rows = packets.whereType<SessionPacketDecideRow>().toList();
+      final indices = packets
+          .whereType<SessionPacketObservation>()
+          .map((packet) => packet.value)
+          .whereType<SessionObservationRow>()
+          .map((row) => row.index)
+          .toList();
+      if (rows.length != 2 ||
+          rows[0].value.input.value != 'refund one' ||
+          rows[1].value.input.value != 'refund two' ||
+          indices.length != 2 ||
+          indices[0] != BigInt.zero ||
+          indices[1] != BigInt.one)
+        throw StateError('push-all ordered prefix');
+    } finally {
+      session.close();
+    }
+  } else if (fixture['held_cancel'] == true) {
     final session = startFixture(
       engine,
       verb,

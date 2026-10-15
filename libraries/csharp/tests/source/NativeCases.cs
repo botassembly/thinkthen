@@ -104,6 +104,18 @@ static class AsyncFixtureCases
             foreach (var item in records.Items) { yield return new ThinkThen.Inputs.RequestSessionDescriptor { Item = item }; await System.Threading.Tasks.Task.Yield(); }
         } else throw new InvalidOperationException("fixture feed requires records");
     }
+    static async System.Threading.Tasks.Task<OwnedCall> PushAll(Engine engine, ThinkThen.Inputs.RequestQuestion question, JsonElement data, ThinkThen.Inputs.RequestInput? input, ThinkThen.Inputs.RequestOptions options)
+    {
+        using var session = engine.StartSession(new ThinkThen.Inputs.Request { Schema = new ThinkThen.Inputs.RequestVersionThinkthenRequest1(), Call = new ThinkThen.Inputs.RequestCall { Function = new ThinkThen.Inputs.RequestFunctionDecide(), Question = question, Input = new ThinkThen.Inputs.RequestInputFeed { Name = "push-all" }, Options = options } });
+        await foreach (var item in Feed(data,input)) if (!await session.PushAsync(item)) break;
+        session.Finish();
+        var packets = new List<ThinkThen.Results.SessionPacket>();
+        while (await session.ReadAsync() is {} packet) packets.Add(packet);
+        var rows = packets.OfType<ThinkThen.Results.SessionPacketDecideRow>().ToArray();
+        var indices = packets.OfType<ThinkThen.Results.SessionPacketObservation>().Select(p=>p.Value).OfType<ThinkThen.Results.SessionObservationRow>().Select(r=>r.Index);
+        if (!rows.Select(r=>r.Value.Input.Value.GetString()).SequenceEqual(new[]{"refund one","refund two"}) || !indices.SequenceEqual(new ulong[]{0,1})) throw new Exception("push-all ordered prefix");
+        return new OwnedCall(packets.AsReadOnly(),packets.OfType<ThinkThen.Results.SessionPacketTerminal>().Single());
+    }
     public static string Run(string raw) => RunAsync(raw).GetAwaiter().GetResult();
     static async System.Threading.Tasks.Task<string> RunAsync(string raw)
     {
@@ -121,7 +133,8 @@ static class AsyncFixtureCases
                 DeadlineMs = injection == "expired_deadline" ? 0L : default(ThinkThen.Inputs.AuthoredPresence<long>)
             };
             try {
-                OwnedCall call = (Yes(data,"incremental") ? Text(data,"verb") switch {
+                OwnedCall call = Yes(data,"incremental") && Get(settings.RootElement,"max_requests").ValueKind == JsonValueKind.Number && Get(settings.RootElement,"max_requests").GetUInt64() == 2
+                    ? await PushAll(engine,question,data,input,options) : (Yes(data,"incremental") ? Text(data,"verb") switch {
                     "decide" => await engine.DecideAsync(question,Feed(data,input),options,cancel.Token), "choose" => await engine.ChooseAsync(question,Feed(data,input),options,cancel.Token),
                     "tag" => await engine.TagAsync(question,Feed(data,input),options,cancel.Token), "score" => await engine.ScoreAsync(question,Feed(data,input),options,cancel.Token),
                     "filter" => await engine.FilterAsync(question,Feed(data,input),options,cancel.Token), "rank" => await engine.RankAsync(question,Feed(data,input),options,cancel.Token),
