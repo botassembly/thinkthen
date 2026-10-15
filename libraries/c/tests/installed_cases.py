@@ -57,3 +57,33 @@ def run(native, scratch, *, header=None, library=None):
             backend.process.stdin.write('release\n'); backend.process.stdin.flush()
             if process.poll() is None: process.kill(); process.wait()
     shared_cases.native_cases(binary, consumer='c', invoke=invoke)
+
+
+def smoke(native, scratch):
+    """Replay the seed through the same installed typed consumer as shared cases."""
+    import os
+    scratch = Path(scratch)
+    (scratch / 'session_views.c').write_text(render())
+    binary = scratch / 'session-smoke'
+    subprocess.run(['cc', '-std=c11', '-Wall', '-Wextra', '-Werror',
+                    '-I', str(native / 'include'), '-I', str(scratch),
+                    str(ROOT / 'libraries/c/tests/c/session_cases.c'),
+                    '-L', str(native / 'lib'), '-lthinkthen',
+                    '-Wl,-rpath,' + str(native / 'lib'), '-o', str(binary)], check=True)
+    request = {'schema': 'thinkthen.request/1', 'call': {'function': 'decide',
+               'question': {'kind': 'text', 'text': os.environ['THINKTHEN_TEST_SMOKE_QUESTION']},
+               'input': {'kind': 'text', 'text': os.environ['THINKTHEN_TEST_SMOKE_TEXT']}}}
+    path = scratch / 'request.json'
+    path.write_text(json.dumps(request))
+    result = subprocess.run([str(binary), str(path), '{}', '-', '-'],
+                            capture_output=True, text=True, check=True)
+    assert not result.stderr, result.stderr
+    payload = json.loads(result.stdout)
+    assert payload['packets'] == payload['native'], payload
+    packets = payload['packets']
+    terminal, = [packet for packet in packets if packet['kind'] == 'terminal']
+    assert 'failure' not in terminal, terminal
+    row, = [packet for packet in packets if packet['kind'] == 'row' and packet['function'] == 'decide']
+    answer = row['value']['value']
+    assert isinstance(answer, bool), row
+    print('smoke:', json.dumps(answer))

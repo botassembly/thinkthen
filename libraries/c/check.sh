@@ -20,12 +20,17 @@ if [ "$profile" = smoke ]; then
     . ../../sdlc/scripts/installed.sh
     native_install "$(cd ../.. && pwd)" "$cache/native"
     python3 ../../sdlc/scripts/check-c-exports.py --self-test "$cache/native/include/thinkthen.h"
-    cc -std=c11 -Wall -Wextra -Werror -I "$cache/native/include" examples/session.c \
-        -L "$cache/native/lib" -lthinkthen -Wl,-rpath,"$cache/native/lib" -o "$cache/session"
     cc -std=c11 -Wall -Wextra -Werror -I "$cache/native/include" tests/c/request_preview.c \
         -L "$cache/native/lib" -lthinkthen -Wl,-rpath,"$cache/native/lib" -o "$cache/preview"
     env -i THINKTHEN_USAGE=off HOME="$cache/home" THINKTHEN_BASE_URL=http://127.0.0.1:9/v1 \
         THINKTHEN_CACHE="$cache/cache" "$cache/preview" >"$cache/plan.json"
+    python3 - "$cache/native" "$cache" <<'PY'
+from pathlib import Path
+import sys
+sys.path.insert(0, "tests")
+from installed_cases import smoke
+smoke(Path(sys.argv[1]), Path(sys.argv[2]))
+PY
     exit
 fi
 python3 tests/test_installed_consumers.py
