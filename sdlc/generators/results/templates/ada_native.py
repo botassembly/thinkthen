@@ -1,3 +1,4 @@
+from templates.host_alternatives import alternative_names
 """Convert idiomatic generated Ada values to the canonical counted C carriers."""
 from templates.native_request import render as native_render, name
 from templates.ada import identifier
@@ -62,13 +63,13 @@ def render(definitions, names, schemas):
                 body.append('end case;')
         elif source.get('variants') or source.get('oneOf') or source.get('anyOf') or isinstance(source.get('type'), list):
             alternatives = source.get('oneOf', source.get('anyOf', []))
-            tags = [str(i) for i in range(len(alternatives))]
+            tags = alternative_names(alternatives)
             if source.get('variants'):
                 alternatives = [{'$ref':'#/$defs/' + target} for target, _ in source['variants']]
                 tags = [target.removeprefix(host + '_') for target, _ in source['variants']]
             elif isinstance(source.get('type'), list):
                 alternatives = [{**source, 'type':kind} for kind in source['type']]
-                tags = [str(i) for i in range(len(alternatives))]
+                tags = alternative_names(alternatives)
             body = ['case Value.Kind is']
             for index, (tag, alternative) in enumerate(zip(tags, alternatives)):
                 function, child_type = child(alternative, native + '_arm_' + str(index + 1), host + '_value_' + tag)

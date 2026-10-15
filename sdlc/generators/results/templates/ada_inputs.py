@@ -1,3 +1,4 @@
+from templates.host_alternatives import alternative_names
 """Generate friendly private Ada inputs and their internal carrier projections."""
 import re
 from templates.ada import identifier, enum_values, ada_string
@@ -136,7 +137,7 @@ def outputs(definitions, names, schemas, metadata=None, plan_definitions=None, r
         alternatives = source.get('anyOf',source.get('oneOf',[]))
         if isinstance(source.get('type'),list): alternatives = [{**source,'type':kind} for kind in source['type']]
         variants = source.get('variants')
-        branches = [(branch,{'$ref':'#/$defs/'+branch}) for branch,_ in variants] if variants else [(str(i),child) for i,child in enumerate(alternatives)]
+        branches = [(branch,{'$ref':'#/$defs/'+branch}) for branch,_ in variants] if variants else list(zip(alternative_names(alternatives), alternatives))
         if branches and not values:
             kind_labels = [label + '_' + (friendly(names[child['$ref'].removeprefix('#/$defs/')]).removeprefix(label + '_') if '$ref' in child else str(actual(child).get('const', actual(child).get('type', 'Value'))).title()) for _,child in branches]
             kind_labels = [name + '_Case' for name in kind_labels]

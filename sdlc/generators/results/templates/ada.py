@@ -1,3 +1,4 @@
+from templates.host_alternatives import alternative_names
 from native import selected_header
 from registry import output_path
 from templates.csharp import enum_values
@@ -10,6 +11,7 @@ from pathlib import Path
 
 
 def identifier(value):
+    value = value.replace('EngineSettings_field_max_estimated_input_tokens_total_arm_', 'Input_Token_Limit_arm_')
     return 'T_' + re.sub(r'[^a-zA-Z0-9]+', '_', value).strip('_')
 
 
@@ -49,7 +51,7 @@ def render(definitions, names=None, schemas=None):
             alternatives = [{**schema, 'type': k} for k in kinds]
         variants = schema.get('variants')
         if variants or alternatives and len(alternatives) > 1:
-            members = [(n, {'$ref': '#/$defs/' + n}) for n, _ in variants] if variants else [(str(i), v) for i, v in enumerate(alternatives)]
+            members = [(n, {'$ref': '#/$defs/' + n}) for n, _ in variants] if variants else list(zip(alternative_names(alternatives), alternatives))
             arms = [(identifier(key + '_arm_' + tag.removeprefix(key + '_')), emit(key + '_value_' + tag.removeprefix(key + '_'), value)) for tag, value in members]
             specs.append(f'type {name}_Kind is (' + ',\n'.join(tag for tag, _ in arms) + ');')
             specs.append(f'type {name} (Kind : {name}_Kind := {arms[0][0]}) is record\ncase Kind is\n' + '\n'.join(f'when {tag} => V_{i} : {typ};' for i, (tag, typ) in enumerate(arms)) + '\nend case;\nend record;')

@@ -37,6 +37,10 @@ with tempfile.TemporaryDirectory(prefix='cobol-session-', dir=REPO / 'libraries/
     shutil.copy(LIBRARY, root / 'libthinkthen.so.0')
     entity_helper = root / 'entity.c'
     entity_helper.write_text('''#include "tt_requests_generated.h"
+_Static_assert(THINKTHEN_COBOL_CACHEDOCUMENT_TEXT_KIND == 1, "cache text tag");
+_Static_assert(THINKTHEN_COBOL_CACHEDOCUMENT_DISABLEDCACHE_KIND == 2, "cache disabled tag");
+_Static_assert(THINKTHEN_COBOL_REQUESTTHRESHOLD_NUMBER_KIND == 1, "numeric threshold tag");
+_Static_assert(THINKTHEN_COBOL_REQUESTTHRESHOLD_TEXT_KIND == 2, "text threshold tag");
 tt_value *TT_TEST_ENTITY(const char *name, unsigned long long length) {
     tt_value *id=NULL,*named=NULL,*kind=NULL,*object=NULL;
     const thinkthen_cobol_text names[3]={{"id",2},{"name",4},{"kind",4}};
