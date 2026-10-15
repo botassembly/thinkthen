@@ -11,7 +11,7 @@ BAD = (b"/home/", b"/Users/", b"-----BEGIN PRIVATE KEY-----", b"auth.json", b"tt
 
 def inspect(name, data):
     # This exact canonical native wait-event arm is ABI, not a schema path.
-    identifiers = data.replace(b"K_THINKTHEN_SESSION_WAIT_SETTLEMENT_ARM_V1", b"").replace(b"tt-n-session-wait-settlement-arm-v1-k", b"")
+    identifiers = re.sub(rb"(?<![A-Za-z0-9_-])(?:K_THINKTHEN_SESSION_WAIT_SETTLEMENT_ARM_V1|tt-n-session-wait-settlement-arm-v1-k)(?![A-Za-z0-9_-])", b"", data)
     if re.search(rb"(?i:arm[_-])|Arm[A-Z0-9]|Alternative", identifiers):
         raise ValueError(f"schema alternative marker in {name}")
     if any(marker in data for marker in BAD):
@@ -40,7 +40,7 @@ for path in sources:
         check(path)
 with tempfile.TemporaryDirectory() as name:
     folder = Path(name)
-    for index, marker in enumerate((BAD[0], BAD[1], b"T_CacheDocument_arm_1", b"CacheDocumentArm2", b"CACHE-DOCUMENT-ARM-1", b"T_CacheDocument_arm_Text", b"CacheDocumentAlternative", b"K_THINKTHEN_SESSION_WAIT_UNKNOWN_ARM_V1")):
+    for index, marker in enumerate((BAD[0], BAD[1], b"T_CacheDocument_arm_1", b"CacheDocumentArm2", b"CACHE-DOCUMENT-ARM-1", b"T_CacheDocument_arm_Text", b"CacheDocumentAlternative", b"K_THINKTHEN_SESSION_WAIT_UNKNOWN_ARM_V1", b"K_THINKTHEN_SESSION_WAIT_SETTLEMENT_ARM_V1_Extra")):
         path = folder / f"plant-{index}"
         path.write_bytes(marker)
         try:
