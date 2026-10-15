@@ -17,7 +17,7 @@ module ThinkThen
   class CancelledError < Error; end
   class DefectError < Error; end
 end
-require_relative "thinkthen/thinkthen"
+require_relative "thinkthen/#{RUBY_VERSION.split(".").first(2).join(".")}/thinkthen"
 require_relative "thinkthen/session"
 module ThinkThen
   private_constant :Native

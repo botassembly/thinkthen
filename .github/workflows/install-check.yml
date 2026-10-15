@@ -15,7 +15,18 @@ jobs:
       fail-fast: false
       matrix:
         runner: [ubuntu-24.04, ubuntu-24.04-arm, macos-15, macos-15-intel, macos-26]
-        channel: [download, cargo-install, cargo-add, pip, uv, npm, rubygems]
+        channel: [download, cargo-install, cargo-add, pip, uv, npm]
+        include:
+          - {runner: ubuntu-24.04, channel: rubygems, ruby: '3.4.11'}
+          - {runner: ubuntu-24.04, channel: rubygems, ruby: '4.0.7'}
+          - {runner: ubuntu-24.04-arm, channel: rubygems, ruby: '3.4.11'}
+          - {runner: ubuntu-24.04-arm, channel: rubygems, ruby: '4.0.7'}
+          - {runner: macos-15, channel: rubygems, ruby: '3.4.11'}
+          - {runner: macos-15, channel: rubygems, ruby: '4.0.7'}
+          - {runner: macos-15-intel, channel: rubygems, ruby: '3.4.11'}
+          - {runner: macos-15-intel, channel: rubygems, ruby: '4.0.7'}
+          - {runner: macos-26, channel: rubygems, ruby: '3.4.11'}
+          - {runner: macos-26, channel: rubygems, ruby: '4.0.7'}
     runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
@@ -37,7 +48,7 @@ jobs:
       - uses: ruby/setup-ruby@14594264cd68ce8a2345dd349bc3d138a4ef85c8
         if: matrix.channel == 'rubygems'
         with:
-          ruby-version: '3.4.11'
+          ruby-version: ${{ matrix.ruby }}
       - name: Install and replay
         env:
           VERSION: ${{ inputs.version }}

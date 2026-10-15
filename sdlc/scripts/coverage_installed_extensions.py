@@ -2,6 +2,7 @@
 import os
 from pathlib import Path
 import shutil
+import subprocess
 import tarfile
 
 COLLECTIONS = ('installed-javascript', 'installed-typescript', 'installed-ruby',
@@ -13,11 +14,9 @@ def prepare(context):
     command, missing = context['command'], context['missing_tool']
     env = {**context['env'], 'CARGO_BUILD_JOBS': '2', 'THINKTHEN_FULL_COMPILER': '1',
            'THINKTHEN_TEST_PROFILE': 'routine'}
-    node = Path(env['HOME']) / '.cache/thinkthen-toolchains/node-v22.22.3-linux-x64/bin'
-    ruby_version = next(line.split('=', 1)[1] for line in
-                        (root / 'libraries/ruby/toolchain.env').read_text().splitlines()
-                        if line.startswith('RUBY_VERSION='))
-    ruby = Path(env['HOME']) / '.cache/thinkthen-toolchains/ruby' / ruby_version
+    tools = Path(env.get('THINKTHEN_TOOLCHAINS', str(Path(env['HOME']) / '.cache/thinkthen-toolchains')))
+    node = tools / 'node-v22.22.3-linux-x64/bin'
+    ruby = tools / 'ruby' / selected_ruby_version(root, env)
     if not (node / 'node').is_file() or not (ruby / 'thinkthen-toolchain.stamp').is_file():
         raise missing('installed extensions need the cached pinned Node and stamped Ruby toolchains')
     env['PATH'] = str(node) + os.pathsep + env['PATH']
@@ -115,3 +114,10 @@ def verify_packaged_core(root, artifact, prefix):
             compared += 1
     if not compared:
         raise RuntimeError('coverage package contains no core source: ' + str(artifact))
+
+
+def selected_ruby_version(root, env):
+    """Read the same pinned selector as setup, build and installed checks."""
+    return subprocess.check_output(
+        ['sh', '-c', '. "$1"; printf "%s" "$RUBY_VERSION"', 'ruby-toolchain',
+         str(root / 'libraries/ruby/toolchain.env')], env=env, text=True).strip()

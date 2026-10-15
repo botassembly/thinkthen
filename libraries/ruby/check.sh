@@ -12,6 +12,8 @@ case $profile in routine|full|stress|smoke) ;; *) echo "check ruby: unknown THIN
 repo=$(cd ../.. && pwd)
 . "$repo/sdlc/scripts/scratch.sh"
 # ADR 0113: this run's engines write a scratch usage folder, never the real one.
+THINKTHEN_TOOLCHAINS=${THINKTHEN_TOOLCHAINS:-$HOME/.cache/thinkthen-toolchains}
+export THINKTHEN_TOOLCHAINS
 usage_home
 # macOS has no `timeout` (ticket 0128).
 LIMIT=$repo/sdlc/scripts/time-limit
@@ -59,10 +61,33 @@ fi
 host=$(uname -s)
 case $host in Linux|Darwin) ;; *) not_run "no Ruby host route for $host" ;; esac
 . ./toolchain.env
+if [ -z "${THINKTHEN_RUBY_MINOR:-}" ] && [ "$profile" != routine ]; then
+  scratch_dir versions
+  failed=0
+  for minor in $RUBY_MINORS; do
+    code=0
+    (unset RUBY RBCONFIG; THINKTHEN_RUBY_MINOR=$minor sh "$PWD/check.sh" "$@") >"$versions/$minor.log" 2>&1 || code=$?
+    # Strict parity accepts one cell per consumer. Keep the alternate Ruby's
+    # asserted results visible without emitting duplicate canonical cells.
+    if [ "$minor" = 4.0 ]; then
+      cat "$versions/$minor.log"
+    else
+      sed "s/^parity: /Ruby $minor parity: /" "$versions/$minor.log"
+    fi
+    case $code in
+      0) ;;
+      77) [ "$failed" -ne 0 ] || failed=77 ;;
+      *) failed=$code ;;
+    esac
+  done
+  exit "$failed"
+fi
+THINKTHEN_RUBY_MINOR=${THINKTHEN_RUBY_MINOR:-4.0}
+export THINKTHEN_RUBY_MINOR
 if [ "$host" = Darwin ]; then
-  prefix=$HOME/.cache/thinkthen-toolchains/ruby/$RUBY_VERSION-$(uname -m)-darwin
+  prefix=$THINKTHEN_TOOLCHAINS/ruby/$RUBY_VERSION-$(uname -m)-darwin
 else
-  prefix=$HOME/.cache/thinkthen-toolchains/ruby/$RUBY_VERSION
+  prefix=$THINKTHEN_TOOLCHAINS/ruby/$RUBY_VERSION
 fi
 setup="run libraries/ruby/setup-ruby.sh once on this machine, with the network"
 [ -f "$prefix/thinkthen-toolchain.stamp" ] || not_run "no Ruby $RUBY_VERSION prefix; $setup"
@@ -135,7 +160,7 @@ if [ -z "${THINKTHEN_ARTIFACT:-}" ]; then
   python3 "$repo/sdlc/generators/results/generate.py" --target ruby --check
   ./build.sh
   cargo fmt --check
-  cargo clippy --locked --offline --all-targets --quiet -- -D warnings
+  CARGO_TARGET_DIR=${CARGO_TARGET_DIR:-$PWD/target}/ruby-$THINKTHEN_RUBY_MINOR cargo clippy --locked --offline --all-targets --quiet -- -D warnings
   THINKTHEN_ARTIFACT=$(find "$PWD" -maxdepth 1 -name 'thinkthen-*-*.gem' | head -n 1)
 fi
 THINKTHEN_ARTIFACT=$(realpath "$THINKTHEN_ARTIFACT")
@@ -161,10 +186,10 @@ export THINKTHEN_TEST_LIBRARY
   abort "native gem signature inventory differs from manifest" unless !expected.empty? && expected == package.files.grep(/\.rbs$/).sort
   expected.each { |path| abort "installed signature is absent" unless File.file?(File.join(ARGV[2], path)) }' \
   "$repo/libraries/ruby" "$THINKTHEN_ARTIFACT" "${THINKTHEN_TEST_LIBRARY%/lib}"
-"$prefix/bin/rbs" _3.8.0_ -I "${THINKTHEN_TEST_LIBRARY%/lib}/sig" validate
+"$prefix/bin/rbs" "_$RUBY_RBS_VERSION"_ -I "${THINKTHEN_TEST_LIBRARY%/lib}/sig" validate
 if [ -n "${THINKTHEN_COVERAGE_OBJECT:-}" ]; then
   extension=$("$RUBY" -e 'print RbConfig::CONFIG["DLEXT"]')
-  cp "$THINKTHEN_TEST_LIBRARY/thinkthen/thinkthen.$extension" "$THINKTHEN_COVERAGE_OBJECT"
+  cp "$THINKTHEN_TEST_LIBRARY/thinkthen/$THINKTHEN_RUBY_MINOR/thinkthen.$extension" "$THINKTHEN_COVERAGE_OBJECT"
 fi
 if [ "$profile" = smoke ]; then
   smoke_guard

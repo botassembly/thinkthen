@@ -19,6 +19,15 @@ def rules(name, doc):
         choices = (list(matrix.get('runner') or []) +
                    [row['runner'] for row in matrix.get('include', []) if 'runner' in row]
                    if runner == '${{ matrix.runner }}' else [runner])
+        if runner == "${{ inputs.platform || 'ubuntu-24.04' }}":
+            dispatch = (doc.get('on', doc.get(True)) or {}).get('workflow_dispatch') or {}
+            platform = (dispatch.get('inputs') or {}).get('platform') or {}
+            if not isinstance(platform, dict):
+                platform = {}
+            options = platform.get('options')
+            choices = options if platform.get('type') == 'choice' and isinstance(options, list) else []
+            if platform.get('default') not in choices:
+                choices = []
         if not choices or any(not isinstance(value, str) or value not in STANDARD for value in choices):
             out.append(f'{name}: job {label} must use only standard free hosted runners')
     if name == 'windows.yml' and 'stage-0' in jobs:

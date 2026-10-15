@@ -1,3 +1,4 @@
 target/
-lib/thinkthen/thinkthen.*
+lib/thinkthen/3.4/
+lib/thinkthen/4.0/
 *.gem
