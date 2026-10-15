@@ -54,3 +54,5 @@ Box answers and long context go to a later ticket if a user asks for them. Anima
 ## Progress
 
 - 2026-10-15 next: The image implementation is accepted at c4368db100 with all focused offline checks passing; run the four authorized live calls under the ticket cap before the rc.15 freeze.
+
+- 2026-10-15 next: All four authorized pinned-model image calls passed in one job with four sends, zero retries and 2,503 reported tokens under the 100,000-token reservation; qualify their unchanged reviewed code on rc.15.
