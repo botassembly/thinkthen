@@ -1428,6 +1428,7 @@
         ]
       },
       "exported_declarations": {
+        "libraries/zig/src/request_codec_generated.zig": [],
         "libraries/zig/src/blocking.zig": [
           "CallResult"
         ]

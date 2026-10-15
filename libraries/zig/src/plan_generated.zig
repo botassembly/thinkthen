@@ -1,17 +1,9 @@
 // Generated from the canonical Rust schema; do not edit.
 const std = @import("std");
-/// Ordered authored maps preserve member ordering during transport.
+/// Ordered authored maps retain caller member ordering.
 pub fn Map(comptime T: type) type {
     return struct {
         entries: []const struct { key: []const u8, value: T },
-        pub fn jsonStringify(self: @This(), writer: anytype) !void {
-            try writer.beginObject();
-            for (self.entries) |entry| {
-                try writer.objectField(entry.key);
-                try writer.write(entry.value);
-            }
-            try writer.endObject();
-        }
     };
 }
 

@@ -16,6 +16,7 @@ fn publicTypes(comptime T: type, comptime seen: *[4096]type, comptime count: *us
         },
         .@"struct", .@"union", .@"enum", .@"opaque" => {
             if (std.mem.startsWith(u8, @typeName(T), "std.")) return;
+            if (@hasDecl(T, "jsonStringify") or @hasDecl(T, "encode")) @compileError("public transport hook: " ++ @typeName(T));
             inline for (std.meta.declarations(T)) |decl| {
                 const member = @field(T, decl.name);
                 publicTypes(if (@TypeOf(member) == type) member else @TypeOf(member), seen, count);

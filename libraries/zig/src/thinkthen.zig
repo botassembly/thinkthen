@@ -1,4 +1,5 @@
 const std = @import("std");
+const codec = @import("request_codec_generated.zig");
 pub const authored = @import("authored.zig");
 pub const inputs = authored.inputs;
 pub const Question = authored.Question;
@@ -49,7 +50,7 @@ pub const Engine = struct {
         return initWithSettings(allocator, .{});
     }
     pub fn initWithSettings(allocator: std.mem.Allocator, settings: inputs.EngineSettings) !Result(Engine) {
-        const encoded = try std.json.Stringify.valueAlloc(allocator, settings, .{ .emit_null_optional_fields = false });
+        const encoded = try codec.encode(allocator, settings);
         defer allocator.free(encoded);
         const terminated = try allocator.dupeZ(u8, encoded);
         defer allocator.free(terminated);

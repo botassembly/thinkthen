@@ -791,7 +791,8 @@ def main():
         if args.inputs:
             schema['$defs']['Request'] = {key: value for key, value in schema.items() if key != '$defs'}
             definitions = prepare(graph(schema, ('Request', 'RequestSessionDescriptor', 'EngineSettings')))
-            outputs = {'request_generated.zig': zig.render(definitions), 'calls_generated.zig': zig.calls(definitions)}
+            outputs = {'request_generated.zig': zig.render(definitions), 'calls_generated.zig': zig.calls(definitions),
+                       'request_codec_generated.zig': zig.request_codec()}
         else:
             outputs = {'plan_generated.zig': zig.render(prepare(graph(schema, ('completeplan',)))),
                        'results_generated.zig': zig.render_results(prepare(graph(immediate_schema(schema), ('completesessionPacket', 'completeImmediateFacts'))))}

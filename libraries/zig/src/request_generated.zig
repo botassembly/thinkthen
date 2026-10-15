@@ -1,17 +1,9 @@
 // Generated from the canonical Rust schema; do not edit.
 const std = @import("std");
-/// Ordered authored maps preserve member ordering during transport.
+/// Ordered authored maps retain caller member ordering.
 pub fn Map(comptime T: type) type {
     return struct {
         entries: []const struct { key: []const u8, value: T },
-        pub fn jsonStringify(self: @This(), writer: anytype) !void {
-            try writer.beginObject();
-            for (self.entries) |entry| {
-                try writer.objectField(entry.key);
-                try writer.write(entry.value);
-            }
-            try writer.endObject();
-        }
     };
 }
 
@@ -35,18 +27,6 @@ pub const AnnotateQuestion = union(enum) {
     tag: AnnotateQuestionTag,
 
     score: AnnotateQuestionScore,
-
-    pub fn jsonStringify(self: @This(), writer: anytype) !void {
-        switch (self) {
-            .decide => |value| try writer.write(value),
-
-            .choose => |value| try writer.write(value),
-
-            .tag => |value| try writer.write(value),
-
-            .score => |value| try writer.write(value),
-        }
-    }
 };
 
 pub const AnnotateQuestionChoose = struct {
@@ -153,32 +133,12 @@ pub const AuthoredCriterion = union(enum) {
     array: []const std.json.Value,
 
     null: void,
-
-    pub fn jsonStringify(self: @This(), writer: anytype) !void {
-        switch (self) {
-            .string => |value| try writer.write(value),
-
-            .object => |value| try writer.write(value),
-
-            .array => |value| try writer.write(value),
-
-            .null => try writer.write(null),
-        }
-    }
 };
 
 pub const AuthoredCut = union(enum) {
     number: f64,
 
     string: []const u8,
-
-    pub fn jsonStringify(self: @This(), writer: anytype) !void {
-        switch (self) {
-            .number => |value| try writer.write(value),
-
-            .string => |value| try writer.write(value),
-        }
-    }
 };
 
 pub const AuthoredDecide = struct {
@@ -231,14 +191,6 @@ pub const AuthoredInputDeclaration = union(enum) {
     string: AuthoredInputDeclarationString,
 
     object: AuthoredInputDeclarationObject,
-
-    pub fn jsonStringify(self: @This(), writer: anytype) !void {
-        switch (self) {
-            .string => |value| try writer.write(value),
-
-            .object => |value| try writer.write(value),
-        }
-    }
 };
 
 pub const AuthoredInputDeclarationObject = struct {
@@ -261,18 +213,6 @@ pub const AuthoredInputProperty = union(enum) {
     boolean: AuthoredInputPropertyBoolean,
 
     array: AuthoredInputPropertyArray,
-
-    pub fn jsonStringify(self: @This(), writer: anytype) !void {
-        switch (self) {
-            .string => |value| try writer.write(value),
-
-            .number => |value| try writer.write(value),
-
-            .boolean => |value| try writer.write(value),
-
-            .array => |value| try writer.write(value),
-        }
-    }
 };
 
 pub const AuthoredInputPropertyArray = struct {
@@ -297,28 +237,12 @@ pub const AuthoredLabels = union(enum) {
     array: []const AuthoredName,
 
     object: Map(AuthoredDescription),
-
-    pub fn jsonStringify(self: @This(), writer: anytype) !void {
-        switch (self) {
-            .array => |value| try writer.write(value),
-
-            .object => |value| try writer.write(value),
-        }
-    }
 };
 
 pub const AuthoredLevels = union(enum) {
     array: []const AuthoredName,
 
     object: Map(AuthoredCriterion),
-
-    pub fn jsonStringify(self: @This(), writer: anytype) !void {
-        switch (self) {
-            .array => |value| try writer.write(value),
-
-            .object => |value| try writer.write(value),
-        }
-    }
 };
 
 pub const AuthoredName = []const u8;
@@ -327,28 +251,12 @@ pub const AuthoredOptions = union(enum) {
     array: []const AuthoredName,
 
     object: Map(AuthoredDescription),
-
-    pub fn jsonStringify(self: @This(), writer: anytype) !void {
-        switch (self) {
-            .array => |value| try writer.write(value),
-
-            .object => |value| try writer.write(value),
-        }
-    }
 };
 
 pub const AuthoredPointers = union(enum) {
     string: []const u8,
 
     array: []const []const u8,
-
-    pub fn jsonStringify(self: @This(), writer: anytype) !void {
-        switch (self) {
-            .string => |value| try writer.write(value),
-
-            .array => |value| try writer.write(value),
-        }
-    }
 };
 
 pub const AuthoredProfile = []const u8;
@@ -357,14 +265,6 @@ pub const AuthoredQuestionBatch = union(enum) {
     max: enum { max },
 
     integer: i64,
-
-    pub fn jsonStringify(self: @This(), writer: anytype) !void {
-        switch (self) {
-            .max => |value| try writer.write(value),
-
-            .integer => |value| try writer.write(value),
-        }
-    }
 };
 
 pub const AuthoredQuestionText = union(enum) {
@@ -373,16 +273,6 @@ pub const AuthoredQuestionText = union(enum) {
     object: std.json.Value,
 
     array: []const std.json.Value,
-
-    pub fn jsonStringify(self: @This(), writer: anytype) !void {
-        switch (self) {
-            .string => |value| try writer.write(value),
-
-            .object => |value| try writer.write(value),
-
-            .array => |value| try writer.write(value),
-        }
-    }
 };
 
 pub const AuthoredRelate = struct {
@@ -469,42 +359,18 @@ pub const AuthoredThreshold = union(enum) {
     number: f64,
 
     string: []const u8,
-
-    pub fn jsonStringify(self: @This(), writer: anytype) !void {
-        switch (self) {
-            .number => |value| try writer.write(value),
-
-            .string => |value| try writer.write(value),
-        }
-    }
 };
 
 pub const CacheDocument = union(enum) {
     string: []const u8,
 
     disabled_cache: DisabledCache,
-
-    pub fn jsonStringify(self: @This(), writer: anytype) !void {
-        switch (self) {
-            .string => |value| try writer.write(value),
-
-            .disabled_cache => |value| try writer.write(value),
-        }
-    }
 };
 
 pub const ContextSchema = union(enum) {
     string: []const u8,
 
     object: std.json.Value,
-
-    pub fn jsonStringify(self: @This(), writer: anytype) !void {
-        switch (self) {
-            .string => |value| try writer.write(value),
-
-            .object => |value| try writer.write(value),
-        }
-    }
 };
 
 pub const DisabledCache = bool;
@@ -563,14 +429,6 @@ pub const RecognitionExample = union(enum) {
     string: []const u8,
 
     recognition_example_text: RecognitionExampleText,
-
-    pub fn jsonStringify(self: @This(), writer: anytype) !void {
-        switch (self) {
-            .string => |value| try writer.write(value),
-
-            .recognition_example_text => |value| try writer.write(value),
-        }
-    }
 };
 
 pub const RecognitionExampleEntity = struct {
@@ -669,14 +527,6 @@ pub const RequestBatch = union(enum) {
     integer: u64,
 
     string: []const u8,
-
-    pub fn jsonStringify(self: @This(), writer: anytype) !void {
-        switch (self) {
-            .integer => |value| try writer.write(value),
-
-            .string => |value| try writer.write(value),
-        }
-    }
 };
 
 pub const RequestCall = struct {
@@ -705,26 +555,6 @@ pub const RequestDefinition = union(enum) {
     RecognizeDefinition: RequestDefinitionRecognizeDefinition,
 
     AnnotateDefinition: RequestDefinitionAnnotateDefinition,
-
-    pub fn jsonStringify(self: @This(), writer: anytype) !void {
-        switch (self) {
-            .Authored_decide => |value| try writer.write(value),
-
-            .Authored_choose => |value| try writer.write(value),
-
-            .Authored_tag => |value| try writer.write(value),
-
-            .Authored_score => |value| try writer.write(value),
-
-            .Authored_relate => |value| try writer.write(value),
-
-            .Authored_find => |value| try writer.write(value),
-
-            .RecognizeDefinition => |value| try writer.write(value),
-
-            .AnnotateDefinition => |value| try writer.write(value),
-        }
-    }
 };
 
 pub const RequestDefinitionAnnotateDefinition = struct {
@@ -905,14 +735,6 @@ pub const RequestImage = union(enum) {
     file: RequestImageFile,
 
     bytes: RequestImageBytes,
-
-    pub fn jsonStringify(self: @This(), writer: anytype) !void {
-        switch (self) {
-            .file => |value| try writer.write(value),
-
-            .bytes => |value| try writer.write(value),
-        }
-    }
 };
 
 pub const RequestImageBytes = struct {
@@ -945,24 +767,6 @@ pub const RequestInput = union(enum) {
     source: RequestInputSource,
 
     feed: RequestInputFeed,
-
-    pub fn jsonStringify(self: @This(), writer: anytype) !void {
-        switch (self) {
-            .text => |value| try writer.write(value),
-
-            .json => |value| try writer.write(value),
-
-            .records => |value| try writer.write(value),
-
-            .units => |value| try writer.write(value),
-
-            .entities => |value| try writer.write(value),
-
-            .source => |value| try writer.write(value),
-
-            .feed => |value| try writer.write(value),
-        }
-    }
 };
 
 pub const RequestInputEntities = struct {
@@ -1079,14 +883,6 @@ pub const RequestOriginal = union(enum) {
     text: RequestOriginalText,
 
     json: RequestOriginalJson,
-
-    pub fn jsonStringify(self: @This(), writer: anytype) !void {
-        switch (self) {
-            .text => |value| try writer.write(value),
-
-            .json => |value| try writer.write(value),
-        }
-    }
 };
 
 pub const RequestOriginalJson = struct {
@@ -1111,20 +907,6 @@ pub const RequestQuestion = union(enum) {
     name: RequestQuestionName,
 
     reference: RequestQuestionReference,
-
-    pub fn jsonStringify(self: @This(), writer: anytype) !void {
-        switch (self) {
-            .text => |value| try writer.write(value),
-
-            .definition => |value| try writer.write(value),
-
-            .file => |value| try writer.write(value),
-
-            .name => |value| try writer.write(value),
-
-            .reference => |value| try writer.write(value),
-        }
-    }
 };
 
 pub const RequestQuestionDefinition = struct {
@@ -1183,14 +965,6 @@ pub const RequestThreshold = union(enum) {
     number: f64,
 
     string: []const u8,
-
-    pub fn jsonStringify(self: @This(), writer: anytype) !void {
-        switch (self) {
-            .number => |value| try writer.write(value),
-
-            .string => |value| try writer.write(value),
-        }
-    }
 };
 
 pub const RequestVersion = enum { @"thinkthen.request/1" };
@@ -1213,18 +987,6 @@ pub const AuthoredDescriptionValue = union(enum) {
     array: []const std.json.Value,
 
     null: void,
-
-    pub fn jsonStringify(self: @This(), writer: anytype) !void {
-        switch (self) {
-            .string => |value| try writer.write(value),
-
-            .object => |value| try writer.write(value),
-
-            .array => |value| try writer.write(value),
-
-            .null => try writer.write(null),
-        }
-    }
 };
 
 pub const AuthoredInputPropertyArrayItems = struct {
