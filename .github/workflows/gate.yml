@@ -214,6 +214,7 @@ jobs:
           fi
           printf 'LIBCLANG_PATH=%s\n' "$clang" >> "$GITHUB_ENV"
           cargo install --locked "cargo-deny@$DENY_VERSION"
+          cargo deny fetch db
           cargo fetch --locked --manifest-path libraries/ruby/Cargo.toml
           sh libraries/ruby/setup-ruby.sh
           cargo build --locked --offline -p conformance-backend
