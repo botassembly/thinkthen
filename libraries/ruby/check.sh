@@ -64,7 +64,7 @@ if [ -z "${THINKTHEN_RUBY_MINOR:-}" ] && [ "$profile" != routine ]; then
   failed=0
   for minor in $RUBY_MINORS; do
     code=0
-    THINKTHEN_RUBY_MINOR=$minor sh "$0" "$@" >"$versions/$minor.log" 2>&1 || code=$?
+    THINKTHEN_RUBY_MINOR=$minor sh "$PWD/check.sh" "$@" >"$versions/$minor.log" 2>&1 || code=$?
     # Strict parity accepts one cell per consumer. Keep the alternate Ruby's
     # asserted results visible without emitting duplicate canonical cells.
     if [ "$minor" = 4.0 ]; then
