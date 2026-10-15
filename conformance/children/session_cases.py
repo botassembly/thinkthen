@@ -118,9 +118,9 @@ def native_cases(binary, *, consumer=CONSUMER, invoke=None):
                         if value.get('image_variants'):
                             backend.close();backend=shared.Backend(backend_path,child)
                             child['THINKTHEN_BASE_URL']='http://127.0.0.1:%d/%s'%(backend.port,step['arm']);child['PERPLEXITY_API_KEY']='sk-conformance-loopback';shared.prepare(home,step)
-                        push_all = CONSUMER in ('c','cpp','cobol','ada','zig') and row['id']=='settings-max-requests-refuses-past-the-limit'
+                        push_all = CONSUMER in ('c','cpp','cobol','ada','zig','java','swift','csharp','dart') and row['id']=='settings-max-requests-refuses-past-the-limit'
                         if push_all:
-                            step={**step,'items':['refund %d'%i for i in range(32)],'settings':{**step['settings'],'throttle':1}}
+                            step={**step,'items':step['items']+['refund %d'%i for i in range(len(step['items']),32)],'settings':{**step['settings'],'throttle':1}}
                         settings={'cache':False,'model':'jev-latest' if 'steps' in value else 'jev-1.13.0','batch':1,'max_retries':0,**step.get('settings',{}),'base_url':child['THINKTHEN_BASE_URL']}
                         replacements={'$FOLDER':str(home/'saved'),'$REFRESH':str(home/'refreshed'),'$PROFILE':str(home/'profile.json')}
                         settings={k:replacements.get(v,v) if isinstance(v,str) else v for k,v in settings.items()}
