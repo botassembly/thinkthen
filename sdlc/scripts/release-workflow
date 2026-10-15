@@ -341,22 +341,7 @@ PYWIN
         MACOSX_DEPLOYMENT_TARGET=15.0
         SDKROOT=$(xcrun --sdk macosx --show-sdk-path)
         export MACOSX_DEPLOYMENT_TARGET SDKROOT
-        for PG_MAJOR in 16 17 18; do
-            . databases/postgresql/runtime-darwin.env
-            case $(uname -m) in arm64) tag=arm64_sequoia; pin=$PG_BOTTLE_ARM64_SEQUOIA ;; x86_64) tag=sonoma; pin=${PG_BOTTLE_X86_64_SONOMA:-} ;; *) fail 'unknown Mac chip' ;; esac
-            if [ -n "$pin" ]; then
-                brew fetch --bottle-tag="$tag" postgresql@$PG_MAJOR
-                bottle=$(brew --cache --bottle-tag="$tag" postgresql@$PG_MAJOR)
-                [ "$(shasum -a 256 "$bottle" | awk '{print $1}')" = "$pin" ] || fail 'Homebrew PostgreSQL bottle differs from pin'
-                brew install --force-bottle postgresql@$PG_MAJOR
-            else
-                brew fetch --build-from-source postgresql@$PG_MAJOR
-                source=$(brew --cache --build-from-source postgresql@$PG_MAJOR)
-                [ "$(shasum -a 256 "$source" | awk '{print $1}')" = "$PG_SOURCE_SHA256" ] || fail 'Homebrew PostgreSQL source differs from pin'
-                brew install --build-from-source postgresql@$PG_MAJOR
-            fi
-        done
-        unset PG_MAJOR
+        for major in 16 17 18; do sh databases/postgresql/setup.sh "$major"; done
 		brew install pkgconf jq openssl@3
 		# python@3.14 comes before the OpenSSL check, since its install may upgrade openssl@3 (ticket 0369).
 		if [ "${RELEASE_SMOKE:-0}" = 1 ]; then

@@ -54,6 +54,12 @@ mv "$work/fallback.saved" "$work/bundle/$fallback"
 mv "$work/bundle/$fallback.sha256" "$work/fallback.sha256.saved"
 expect_refusal "release-smoke: missing or linked $fallback.sha256"
 mv "$work/fallback.sha256.saved" "$work/bundle/$fallback.sha256"
+for major in 16 17 18; do
+    name=thinkthen-postgresql$major-$version-$target.tar.gz
+    mv "$work/bundle/$name" "$work/$name"
+    expect_refusal "release-smoke: missing or linked $name"
+    mv "$work/$name" "$work/bundle/$name"
+done
 go=thinkthen-go-$version-$target.tar.gz
 mv "$work/bundle/$go" "$work/go.saved"
 mv "$work/bundle/$go.sha256" "$work/go.sha256.saved"

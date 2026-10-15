@@ -1212,7 +1212,7 @@ def self_test():
               file=sys.stderr)
     # Ticket 0375: macOS's own bash 3.2 stops the smoke's host setup by name.
     result, calls = host_setup_calls("aarch64-apple-darwin", True, old_bash=True)
-    if (result.returncode != 1 or calls != ["py313-ready", "uv-install", "uv-check", "bash-check", "path $ROOT/pinned"]
+    if (result.returncode != 1 or calls != ["py313-ready", "uv-install", "uv-check", *[f"databases/postgresql/setup.sh {major}" for major in (16, 17, 18)], "bash-check", "path $ROOT/pinned"]
             or not result.stderr.endswith("the PostgreSQL check needs bash 5 on PATH\n")):
         bad += 1
         print(f"workflows self-test old-bash: exit {result.returncode}, calls {calls}, stderr {result.stderr}",
@@ -1227,7 +1227,9 @@ def self_test():
         # Ticket 0375: the macOS smoke checks for bash 5 after its Homebrew installs.
         seed = ["seed $ROOT/bin/python3.13"] if smoke else []
         if "apple" in target:
-            wanted = ["py313-ready", "uv-install", "uv-check", *(["bash-check"] if smoke else []),
+            wanted = ["py313-ready", "uv-install", "uv-check",
+                      *[f"databases/postgresql/setup.sh {major}" for major in (16, 17, 18)],
+                      *(["bash-check"] if smoke else []),
                       "libraries/ruby/setup-ruby.sh ",
                       "databases/sqlite/setup.sh ", "databases/duckdb/tools/setup.sh --fetch",
                       *(["sqlite-python-check", "sqlite-venv", "sqlite-jsonschema", "sqlite-python-check", "npm-seed"] if smoke else []), *seed,

@@ -16,3 +16,7 @@ https://archive.ubuntu.com/ubuntu/pool/main/libu/liburing/liburing2_2.5-1build1_
 https://ports.ubuntu.com/ubuntu-ports/pool/main/libu/liburing/liburing2_2.5-1build1_arm64.deb
 https://apt.postgresql.org/pub/repos/apt/pool/main/p/postgresql-18/libpq5_18.6-3.pgdg24.04+1_amd64.deb
 https://apt.postgresql.org/pub/repos/apt/pool/main/p/postgresql-18/libpq5_18.6-3.pgdg24.04+1_arm64.deb
+https://launchpad.net/ubuntu/+archive/primary/+files/postgresql-server-dev-16_16.15-0ubuntu0.24.04.1_amd64.deb
+https://launchpad.net/ubuntu/+archive/primary/+files/postgresql-server-dev-16_16.15-0ubuntu0.24.04.1_arm64.deb
+https://launchpad.net/ubuntu/+archive/primary/+files/postgresql-client-16_16.15-0ubuntu0.24.04.1_amd64.deb
+https://launchpad.net/ubuntu/+archive/primary/+files/postgresql-client-16_16.15-0ubuntu0.24.04.1_arm64.deb

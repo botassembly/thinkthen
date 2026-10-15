@@ -31,8 +31,7 @@ if [ "$PG_MAJOR" != 16 ]; then
 fi
 EXTRACTED=$TOOLCHAIN/$VERSION
 if [ "$PG_HOST" = Linux ]; then
-    if [ "$PG_MAJOR" = 16 ]; then PG_CONFIG=${PG_CONFIG:-/usr/bin/pg_config}
-    else PG_CONFIG=${PG_CONFIG:-$EXTRACTED/usr/lib/postgresql/$PG_MAJOR/bin/pg_config}; fi
+    PG_CONFIG=${PG_CONFIG:-$EXTRACTED/usr/lib/postgresql/$PG_MAJOR/bin/pg_config}
 fi
 FAKE_KEY=tt-loopback-fake
 
@@ -97,7 +96,9 @@ runtime_ready() {
 	[ -f "$PACKAGE" ] || not_run "the server package $PACKAGE is missing"
 	actual=$(sha256sum "$PACKAGE" | cut -d' ' -f1)
 	[ "$actual" = "$PINNED" ] || not_run "the server package's SHA256 $actual is not the pinned $PINNED"
-	if [ ! -x "$EXTRACTED/usr/lib/postgresql/$PG_MAJOR/bin/postgres" ]; then
+	if [ ! -x "$EXTRACTED/usr/lib/postgresql/$PG_MAJOR/bin/postgres" ] ||
+       [ ! -f "$EXTRACTED/usr/include/postgresql/$PG_MAJOR/server/postgres.h" ] ||
+       [ ! -x "$EXTRACTED/usr/lib/postgresql/$PG_MAJOR/bin/pg_config" ]; then
         scratch_dir partial "$TOOLCHAIN/pg$PG_MAJOR.XXXXXX"
         while read -r digest name; do
             case $name in *-"$PG_MAJOR"_*_"$DEB_ARCH".deb) ;; libpq5_*_"$DEB_ARCH".deb) [ "$PG_MAJOR" != 16 ] || continue ;; liburing2_*_"$DEB_ARCH".deb) [ "$PG_MAJOR" = 18 ] || continue ;; *) continue ;; esac
@@ -105,7 +106,8 @@ runtime_ready() {
             [ "$(sha256sum "$TOOLCHAIN/$name" | cut -d' ' -f1)" = "$digest" ] || not_run "the package $name differs from its pin"
             dpkg-deb -x "$TOOLCHAIN/$name" "$partial"
         done <runtime.sha256
-        mv "$partial" "$EXTRACTED"
+        mkdir -p "$EXTRACTED"
+        cp -a "$partial/." "$EXTRACTED/"
     fi
 
     if [ "$PG_MAJOR" != 16 ]; then

@@ -855,6 +855,25 @@ class InstalledInputs(unittest.TestCase):
             self.assertNotIn('platform_pending', row)
             self.assertEqual(set(row['cells'].values()), {'missing'})
 
+    def test_postgresql_requires_every_case_on_every_server_major(self):
+        contract = parity.inventory() | {'consumers': [self.consumers['postgresql']], 'pending_consumers': []}
+        for missing in (None, '16', '17', '18'):
+            with self.subTest(missing=missing), tempfile.TemporaryDirectory() as scratch:
+                majors = []
+                def command(args, **kwargs):
+                    major = args[-1]
+                    majors.append(major)
+                    for key, case in parity.required_cases(contract, 'postgresql').items():
+                        if major == missing:
+                            continue
+                        kwargs['stdout'].write(parity.PREFIX + json.dumps({
+                            'consumer': 'postgresql', 'case': key, 'status': 'pass',
+                            'checks': case.get('checks', ['named', 'runtime'])}) + '\n')
+                    return subprocess.CompletedProcess(args, 0)
+                with contextlib.redirect_stdout(io.StringIO()), patch.object(parity, 'ROOT', Path(scratch)), patch.object(parity, 'inventory', return_value=contract), patch.object(parity.subprocess, 'run', side_effect=command), patch.object(parity.os, 'environ', {}):
+                    self.assertEqual(parity.run('12345'), int(missing is not None))
+                self.assertEqual(majors, ['16', '17', '18'])
+
     def test_linux_keeps_apple_cells_pending_without_hiding_required_failures(self):
         contract = parity.inventory()
         contract = contract | {'consumers': [self.consumers[key] for key in ('objective-c', 'c', 'python')],

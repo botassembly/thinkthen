@@ -111,7 +111,7 @@ const DATABASES = {
       for (const tool of ['cargo', 'psql']) if (run('sh', ['-c', `command -v ${tool}`]).status !== 0) return { missing: tool };
       if (run('cargo', ['pgrx', '--version']).stdout.trim() !== 'cargo-pgrx 0.17.0') return { missing: 'cargo-pgrx 0.17.0' };
       const target = path.join(repo, 'target', 'site-postgresql');
-      const done = compile('bash', ['./pgrx-package-locked.sh', '--pg-config', pgConfig], { cwd: path.join(repo, this.folder), env: { ...process.env, CARGO_TARGET_DIR: target } });
+      const done = compile('bash', ['./pgrx-package-locked.sh', '--pg-config', pgConfig, '--no-default-features', '--features', 'pg16'], { cwd: path.join(repo, this.folder), env: { ...process.env, CARGO_TARGET_DIR: target } });
       if (done.status !== 0) throw new Error(`pgrx-package-locked.sh failed in ${this.folder}\n${done.stdout}${done.stderr}`);
       // A private copy of the server with the extension installed, and one
       // cluster that each attempt copies.
