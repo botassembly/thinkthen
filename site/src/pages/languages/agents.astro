@@ -3,8 +3,9 @@
 // through the local MCP server, and how the agent skill helps it pick one.
 import Base from '../../layouts/Base.astro';
 import Code from '../../components/Code.astro';
-import { CODE_FUNCTIONS, REPO } from '../../data/catalog.mjs';
+import { CODE_FUNCTIONS, REPO, SURFACES } from '../../data/catalog.mjs';
 
+const command = SURFACES.find((s) => s.slug === 'shell');
 const mcpGuide = `${REPO}/blob/main/libraries/mcp/README.md`;
 const mcpSpec = `${REPO}/blob/main/specification/mcp.md`;
 const skill = `${REPO}/blob/main/skills/thinkthen/SKILL.md`;
@@ -18,6 +19,8 @@ const call = `{
   <div class="eyebrow"><a href="/languages/">Languages</a></div>
   <h1>Agents</h1>
   <p class="lede">An agent calls the ten functions as tools. The local MCP server runs them through the same engine and cache as the command line. Use Jev, TypeSafe’s decision model, OpenAI or a local model through the <a href="/models/">backend settings</a>. The agent skill tells the agent which function fits a job.</p>
+
+  <p><strong>Supported versions:</strong> {command.versions.runtime}. {command.versions.platforms}.</p>
 
   <h2 id="mcp">The MCP server</h2>
   <p><code>thinkthen mcp</code> serves exactly ten tools over local stdio: {CODE_FUNCTIONS.map((fn, i) => <>{i > 0 && ', '}<a href={`/functions/${fn.name}/`}><code>{fn.name}</code></a></>)}. It starts no shell and no process per call. Each tool returns a typed answer, and a failed call never looks like an answer.</p>

@@ -94,6 +94,8 @@ const builtIns = backends().map((b) => b.name);
 
   <p>ThinkThen is free and MIT licensed. Hosted models charge per token; local models run on your own computer. Judgment calls can send your question and text to the selected backend. The default is TypeSafe. The examples were checked with saved answers; live answers and probabilities can differ.</p>
 
+  {surface.versions && <p><strong>Supported versions:</strong> {Array.isArray(surface.versions.runtime) ? surface.versions.runtime.join(' and ') : surface.versions.runtime}. {surface.versions.platforms}.</p>}
+
   <h2>Install</h2>
   <table class="install">
     <tr><th>Channel</th>{notes && <th>Note</th>}</tr>
@@ -140,7 +142,7 @@ const builtIns = backends().map((b) => b.name);
     <>
       <h3 id="use-the-release-from-dbt-v1">Use the release with DuckDB</h3>
       <p>Download the archive for your platform from the <a href="https://github.com/botassembly/thinkthen/releases">release downloads</a>. Use its matching DuckDB source host. The <a href={guide}>DuckDB package guide</a> links each host and archive member. Copy that member to <code>./thinkthen.duckdb_extension</code> before running the sample below.</p>
-      <p>The current release archive supports {surface.supportedVersions.map((version, index) => <>{index ? ' and ' : ''}<code>{version}</code></>)}. Use the direct DuckDB installation above and the SQL samples below.</p>
+      <p>Use the direct DuckDB installation above and the SQL samples below.</p>
       <p>The earlier dbt v1 setup used a DuckDB version outside this release's supported list. A dbt setup for the current archive has not been verified.</p>
     </>
   )}

@@ -428,9 +428,15 @@ export function exitMark(script, exit) {
 export const CODE_FUNCTIONS = FUNCTIONS.filter((f) => !f.notAFunction);
 
 
+const LINUX_PLATFORMS = 'Linux x86-64 and ARM64';
+const MAC_PLATFORMS = 'macOS 15 or later on Intel and Apple silicon';
+const UNIX_PLATFORMS = `${LINUX_PLATFORMS}; ${MAC_PLATFORMS}`;
+const NATIVE_PLATFORMS = `${UNIX_PLATFORMS}; Windows x86-64`;
+
 export const SURFACES = [
   {
     slug: 'shell', name: 'Bash', deckHeading: null,
+    versions: { runtime: 'No language runtime required', platforms: NATIVE_PLATFORMS },
     backends: 'cli',
     lang: 'bash', tab: 'Bash',
     blurb: 'Pipe text in, read the answer out, and branch on the exit code.',
@@ -459,6 +465,7 @@ export const SURFACES = [
   },
   {
     slug: 'python', name: 'Python', deckHeading: 'Python',
+    versions: { runtime: 'Python 3.10 or later', platforms: NATIVE_PLATFORMS },
     backends: 'code',
     lang: 'python', tab: 'Python',
     blurb: "Use one `Engine` and read each answer from `Result.value`.",
@@ -466,11 +473,12 @@ export const SURFACES = [
     facts: "`Result.facts` retains actual final native settlement.",
     errors: 'Every failure raises a `ThinkThenError`. Its subclass names the kind: `UsageError`, `BackendError`, `LocalError`, `DeadlineError`, `DefectError` or `Cancelled`.',
     settings: '`tt.Engine` takes each setting as a keyword and reads the environment for the rest. `record=` writes a recording to a folder. `replay=` answers from that recording with no connection.',
-    install: [['pip install thinkthen', 'Python 3.10 or later.'], ['uv add thinkthen', null]],
+    install: [['pip install thinkthen', null], ['uv add thinkthen', null]],
     particular: ["An authored question dictionary carries thresholds and options. Explicit `QuestionSource` selectors choose saved questions.", "Use `engine.iterate` for lazy typed rows and `engine.plan` for a no-send plan."],
   },
   {
     slug: 'polars', name: 'Polars', deckHeading: 'Polars',
+    versions: { runtime: 'Python 3.10 or later; Polars 1.44.2 or later, below 2', platforms: NATIVE_PLATFORMS },
     backends: 'python',
     lang: 'python', tab: 'Python',
     blurb: "Use named Python engine methods or the opt-in Polars Series namespace.",
@@ -486,6 +494,7 @@ export const SURFACES = [
   },
   {
     slug: 'pandas', name: 'pandas', deckHeading: null,
+    versions: { runtime: 'Python 3.10 or later', platforms: NATIVE_PLATFORMS },
     backends: 'python',
     lang: 'python', tab: 'Python',
     blurb: "Use the opt-in `series.tt` namespace or named engine methods.",
@@ -498,6 +507,7 @@ export const SURFACES = [
   },
   {
     slug: 'typescript', name: 'TypeScript', deckHeading: 'TypeScript',
+    versions: { runtime: 'Node.js 22 or later', platforms: NATIVE_PLATFORMS },
     backends: 'code',
     lang: 'ts', tab: 'TypeScript',
     blurb: "Await one of the ten `Client` methods. Read each answer from `call.value`.",
@@ -522,6 +532,7 @@ export const SURFACES = [
   },
   {
     slug: 'r', name: 'R', deckHeading: 'R',
+    versions: { runtime: 'R 4.2 or later', platforms: UNIX_PLATFORMS },
     backends: 'code',
     lang: 'r', tab: 'R',
     blurb: "Call `tt_decide` and nine more functions from R, on text, vectors and data frames.",
@@ -531,13 +542,14 @@ export const SURFACES = [
     errors: 'Each failure arrives as an R condition named for its kind, such as `thinkthen_usage`. Each condition carries `retryable`.',
     settings: "`tt_engine(backend =)` configures the native engine; call controls go in `options = list()`.",
     install: [
-      ['install.packages("thinkthen", repos = c("https://botassembly.r-universe.dev", "https://cloud.r-project.org"))', 'On Linux this route builds from source: R 4.2+, jsonlite 2.0.0+, R development headers, C compiler/linker, make, cargo and rustc 1.95.0+; installation fetches Rust dependencies.'],
+      ['install.packages("thinkthen", repos = c("https://botassembly.r-universe.dev", "https://cloud.r-project.org"))', 'On Linux this route builds from source: jsonlite 2.0.0+, R development headers, C compiler/linker, make, cargo and rustc 1.95.0+; installation fetches Rust dependencies.'],
       ['install.packages("thinkthen", repos = c("https://botassembly.r-universe.dev/bin/linux/resolute-x86_64/4.6/", "https://cloud.r-project.org"))', 'Ubuntu 26.04 (Resolute), R 4.6, x86-64 only. Use `resolute-arm64` for ARM64. Dependencies or missing binaries can fall back to source; keep source prerequisites then.'],
     ],
     particular: ["Authored lists supply questions, labels and thresholds.", "`tt_batch` streams generated results; `tt_plan` previews supported native requests."],
   },
   {
     slug: 'rust', name: 'Rust', deckHeading: 'Rust',
+    versions: { runtime: 'Rust 1.95.0 or later', platforms: NATIVE_PLATFORMS },
     backends: 'builder',
     lang: 'rust', tab: 'Rust',
     blurb: 'Call the engine directly. The compiler makes you handle not sure.',
@@ -553,6 +565,7 @@ export const SURFACES = [
   },
   {
     slug: 'c', name: 'C', deckHeading: 'C',
+    versions: { runtime: 'C11', platforms: NATIVE_PLATFORMS },
     backends: 'code',
     lang: 'c', tab: 'Rust',
     blurb: "Call the ten functions from C through one header and one library.",
@@ -567,6 +580,7 @@ export const SURFACES = [
   },
   {
     slug: 'cpp', name: 'C++', deckHeading: null,
+    versions: { runtime: 'C++17', platforms: UNIX_PLATFORMS },
     backends: 'code',
     lang: 'cpp', tab: 'C++',
     blurb: "Call the ten functions from C++17 through a header-only CMake package.",
@@ -576,12 +590,13 @@ export const SURFACES = [
     errors: "`tt::Failure` retains the failure kind, retryability, completed packets and available facts.",
     settings: "`tt::Client` takes native settings. Rust owns configuration, recording and replay.",
     install: [
-      ['thinkthen-cpp-VERSION-TARGET.tar.gz', 'The header and a CMake package, from each release. Needs a C++17 compiler and CMake.'],
+      ['thinkthen-cpp-VERSION-TARGET.tar.gz', 'The header and a CMake package, from each release. Needs a compiler and CMake.'],
     ],
     particular: ["Each named method returns a `ResultCall`. Read its completed result with `result()`; use `collect` or `poll` to read packets.", "Use `tt::inputs` for typed questions and inputs. The result owns its records after the call closes."],
   },
   {
     slug: 'objective-c', name: 'Objective-C', deckHeading: null,
+    versions: { runtime: 'Objective-C with ARC; Swift tools 6.0 or later', platforms: MAC_PLATFORMS },
     backends: 'code',
     lang: 'objective-c', tab: 'Objective-C',
     blurb: "Call the ten functions from Objective-C on Apple platforms, with blocks and ARC.",
@@ -597,6 +612,7 @@ export const SURFACES = [
   },
   {
     slug: 'cobol', name: 'COBOL', deckHeading: null,
+    versions: { runtime: 'GnuCOBOL 4', platforms: 'Linux x86-64' },
     backends: 'code',
     lang: 'cobol', tab: 'COBOL',
     blurb: "Call the ten functions from GnuCOBOL through copybooks and called programs.",
@@ -606,12 +622,13 @@ export const SURFACES = [
     errors: "`tt-n-cobol-AnswerStatus` preserves native errors and refuses representation overflow. Free its nonnull `v-owner` with `TT_ANSWER_FREE`, including after failure.",
     settings: "The generated engine declarations forward settings to Rust.",
     install: [
-      ['thinkthen-cobol-VERSION-TARGET.tar.gz', 'The copybooks, the bridge and the native library, from each release. Needs GnuCOBOL 4 on Linux x86-64.'],
+      ['thinkthen-cobol-VERSION-TARGET.tar.gz', 'The copybooks, the bridge and the native library, from each release.'],
     ],
     particular: ["Generated declarations require a matching compiler-measured platform layout.", "The package carries its native library."],
   },
   {
     slug: 'ada', name: 'Ada', deckHeading: null,
+    versions: { runtime: 'Ada 2022; GNAT 13.3', platforms: 'Linux x86-64' },
     backends: 'code',
     lang: 'ada', tab: 'Ada',
     blurb: "Call the ten functions from Ada 2022 through a GNAT project.",
@@ -621,12 +638,13 @@ export const SURFACES = [
     errors: "Typed native failures preserve kind, retryability and owned messages.",
     settings: "`Configure` forwards engine settings to Rust.",
     install: [
-      ['thinkthen-ada-VERSION-TARGET.tar.gz', 'The package and its GNAT project, from each release. Needs GNAT 13.3, gprbuild and Ada 2022 on Linux x86-64.'],
+      ['thinkthen-ada-VERSION-TARGET.tar.gz', 'The package and its GNAT project, from each release. Needs gprbuild.'],
     ],
     particular: ["Release owned sessions after their borrowers finish.", "Direct ABI planning remains; no named typed Ada Plan result is claimed."],
   },
   {
     slug: 'java', name: 'Java', deckHeading: null,
+    versions: { runtime: 'JDK 22 or later', platforms: NATIVE_PLATFORMS },
     backends: 'code',
     lang: 'java', tab: 'Java',
     blurb: "Call the ten functions from Java 22 or later. Each call returns a future.",
@@ -636,13 +654,14 @@ export const SURFACES = [
     errors: "Native admission and session failures retain typed errors and completed results.",
     settings: "`Engine` takes generated settings; Rust owns recording and replay.",
     install: [
-      ['io.github.botassembly:thinkthen-jvm:VERSION', 'The Maven coordinate. Needs JDK 22 or later. Run with `--enable-native-access=ALL-UNNAMED`.'],
+      ['io.github.botassembly:thinkthen-jvm:VERSION', 'The Maven coordinate. Run with `--enable-native-access=ALL-UNNAMED`.'],
       ['thinkthen-jvm-VERSION-TARGET.tar.gz', 'The session, Kotlin and Scala JARs, from each release.'],
     ],
     particular: ["Use `--enable-native-access=ALL-UNNAMED`; no `--enable-preview` flag or manual library path is required.", "The package loads its bundled native target."],
   },
   {
     slug: 'kotlin', name: 'Kotlin', deckHeading: null,
+    versions: { runtime: 'JDK 22 or later', platforms: NATIVE_PLATFORMS },
     backends: 'code',
     lang: 'kotlin', tab: 'Kotlin',
     blurb: "Call the ten functions from Kotlin as suspend functions.",
@@ -652,13 +671,14 @@ export const SURFACES = [
     errors: "Typed native failures preserve completed results and actual facts.",
     settings: "`KotlinEngine` uses the generated JVM engine settings.",
     install: [
-      ['io.github.botassembly:thinkthen-jvm:VERSION:kotlin', 'The Maven coordinate with the `kotlin` classifier. It needs no separate Java dependency. Add `org.jetbrains.kotlinx:kotlinx-coroutines-core-jvm:1.8.0` beside it. Needs JDK 22 or later. Run with `--enable-native-access=ALL-UNNAMED`.'],
+      ['io.github.botassembly:thinkthen-jvm:VERSION:kotlin', 'The Maven coordinate with the `kotlin` classifier. It needs no separate Java dependency. Add `org.jetbrains.kotlinx:kotlinx-coroutines-core-jvm:1.8.0` beside it. Run with `--enable-native-access=ALL-UNNAMED`.'],
       ['thinkthen-jvm-VERSION-TARGET.tar.gz', 'The session, Kotlin and Scala JARs, from each release.'],
     ],
     particular: ["Stable JDK 22 or later is required, with native access and no `--enable-preview` flag.", "Kotlin cancellation and cleanup follow the shared owned session."],
   },
   {
     slug: 'scala', name: 'Scala', deckHeading: null,
+    versions: { runtime: 'JDK 22 or later', platforms: NATIVE_PLATFORMS },
     backends: 'code',
     lang: 'scala', tab: 'Scala',
     blurb: "Call the ten functions from Scala. Each call returns a Future you can cancel.",
@@ -668,13 +688,14 @@ export const SURFACES = [
     errors: "Typed native failures preserve completed results and actual facts.",
     settings: "`ScalaEngine` uses the generated JVM engine settings.",
     install: [
-      ['io.github.botassembly:thinkthen-jvm:VERSION:scala', 'The Maven coordinate with the `scala` classifier. It needs no separate Java dependency. Keep the normal Scala runtime libraries. Needs JDK 22 or later. Run with `--enable-native-access=ALL-UNNAMED`.'],
+      ['io.github.botassembly:thinkthen-jvm:VERSION:scala', 'The Maven coordinate with the `scala` classifier. It needs no separate Java dependency. Keep the normal Scala runtime libraries. Run with `--enable-native-access=ALL-UNNAMED`.'],
       ['thinkthen-jvm-VERSION-TARGET.tar.gz', 'The session, Kotlin and Scala JARs, from each release.'],
     ],
     particular: ["Stable JDK 22 or later is required, with native access and no `--enable-preview` flag.", "Keep the normal Scala runtime libraries on the class path."],
   },
   {
     slug: 'csharp', name: 'C#', deckHeading: null,
+    versions: { runtime: '.NET 8 or later', platforms: NATIVE_PLATFORMS },
     backends: 'code',
     lang: 'csharp', tab: 'C#',
     blurb: "Await the ten functions from .NET 8, with cancellation tokens.",
@@ -684,13 +705,14 @@ export const SURFACES = [
     errors: "Typed failures retain native kind, retryability, final facts and completed prefixes.",
     settings: "`Engine.Open(InputEngineSettings)` forwards generated settings to Rust.",
     install: [
-      ['dotnet add package Botassembly.ThinkThen', 'The NuGet package. Needs .NET 8.'],
+      ['dotnet add package Botassembly.ThinkThen', 'The NuGet package.'],
       ['thinkthen-csharp-VERSION-TARGET.tar.gz', 'The package file, from each release. Its folder serves as a local feed.'],
     ],
     particular: ["The package loads its bundled native target automatically.", "Use CancellationToken and scoped cleanup."],
   },
   {
     slug: 'go', name: 'Go', deckHeading: null,
+    versions: { runtime: 'Go 1.22 or later', platforms: 'Linux x86-64' },
     backends: 'code',
     lang: 'go', tab: 'Go',
     blurb: "Call the ten functions from Go, with a context for deadlines and cancellation.",
@@ -700,13 +722,14 @@ export const SURFACES = [
     errors: "`SessionError` retains failed calls; admission returns typed `Error` values.",
     settings: "`NewClient(EngineSettings)` forwards native settings to Rust.",
     install: [
-      ['go get github.com/botassembly/thinkthen/libraries/go', 'Needs Go 1.22 and a C compiler.'],
+      ['go get github.com/botassembly/thinkthen/libraries/go', 'Needs a C compiler.'],
       ['thinkthen-go-VERSION-TARGET.tar.gz', 'The module source, from each release.'],
     ],
     particular: ["The native-bearing package requires Go and a C compiler.", "A context deadline reaches native execution; producers must return promptly on cancellation."],
   },
   {
     slug: 'swift', name: 'Swift', deckHeading: null,
+    versions: { runtime: 'Swift 6.0 or later', platforms: UNIX_PLATFORMS },
     backends: 'code',
     lang: 'swift', tab: 'Swift',
     blurb: "Await the ten functions from Swift with async throws.",
@@ -716,12 +739,13 @@ export const SURFACES = [
     errors: "`SessionFailure.call` preserves typed failure settlement and completed packets.",
     settings: "`Client` takes generated engine settings and loads its packaged native target.",
     install: [
-      ['thinkthen-swift-VERSION-TARGET.tar.gz', 'The package source, from each release. Needs Swift 6.'],
+      ['thinkthen-swift-VERSION-TARGET.tar.gz', 'The package source, from each release.'],
     ],
     particular: ["Close the client after use; generated results remain owned.", "Rust owns files, images, cache, replay and admission."],
   },
   {
     slug: 'zig', name: 'Zig', deckHeading: null,
+    versions: { runtime: 'Zig 0.15.2', platforms: 'Linux x86-64' },
     backends: 'code',
     lang: 'zig', tab: 'Zig',
     blurb: "Call the ten functions from Zig through a source module.",
@@ -731,12 +755,13 @@ export const SURFACES = [
     errors: "Handle the `failed` arm of `thinkthen.Result` and release it with `thinkthen.releaseFailure` using the engine allocator. Started failures retain packets and terminal facts.",
     settings: "Generated engine settings forward recording and replay configuration to Rust.",
     install: [
-      ['thinkthen-zig-VERSION-TARGET.tar.gz', 'The module source, from each release. Needs Zig 0.15.2.'],
+      ['thinkthen-zig-VERSION-TARGET.tar.gz', 'The module source, from each release.'],
     ],
     particular: ["The package carries its generated header and native engine.", "`Request.plan` returns an owned plan; release owners with `deinit` after borrowers finish."],
   },
   {
     slug: 'php', name: 'PHP', deckHeading: null,
+    versions: { runtime: 'PHP 8.3 or later', platforms: LINUX_PLATFORMS },
     backends: 'code',
     lang: 'php', tab: 'PHP',
     blurb: "Call the ten functions from PHP 8.3 through FFI.",
@@ -746,13 +771,14 @@ export const SURFACES = [
     errors: "Typed native failures retain their kind, retryability and final settlement.",
     settings: "`Client` forwards native settings to Rust and loads its packaged native library.",
     install: [
-      ['composer require botassembly/thinkthen', 'Needs PHP 8.3 with `ext-ffi`. Run PHP with `-d ffi.enable=1`.'],
+      ['composer require botassembly/thinkthen', 'Needs `ext-ffi`. Run PHP with `-d ffi.enable=1`.'],
       ['thinkthen-php-VERSION-TARGET.tar.gz', 'The package source, from each release.'],
     ],
     particular: ["Enable PHP FFI and release the client after use.", "Use `Client::item` and `Client::files` for explicit input selectors."],
   },
   {
     slug: 'dart', name: 'Dart', deckHeading: null,
+    versions: { runtime: 'Dart 3.10 or later, below 4', platforms: 'Linux x86-64' },
     backends: 'code',
     lang: 'dart', tab: 'Dart',
     blurb: "Await the ten functions from Dart and Flutter.",
@@ -762,13 +788,14 @@ export const SURFACES = [
     errors: "`NativeFailure` reports admission errors; `SessionFailure` retains the failed call.",
     settings: "`Engine.open(settings: InputEngineSettings(...))` loads the bundled native asset.",
     install: [
-      ['dart pub add thinkthen_dart', 'Needs Dart 3.10 or later.'],
+      ['dart pub add thinkthen_dart', null],
       ['thinkthen-dart-VERSION-TARGET.tar.gz', 'The package source, from each release.'],
     ],
     particular: ["Close engines and sessions in `finally`.", "Dart and Flutter share the native asset route."],
   },
   {
     slug: 'duckdb', backends: 'sql', name: 'DuckDB', deckHeading: 'DuckDB',
+    versions: { runtime: ['v1.5.6', 'v2.0-cyanoptera'], platforms: UNIX_PLATFORMS },
     lang: 'sql', tab: 'SQL',
     blurb: 'Ask a question in WHERE, SELECT, or ORDER BY.',
     unsureWord: '`NULL`',
@@ -776,14 +803,14 @@ export const SURFACES = [
     errors: 'Scalar calls raise an SQL error on failure. Details calls return recoverable failures in the row’s `failure` field. Check that field before using `value` or `probability`. Cancellation, deadline and defect failures raise an SQL error. A not-sure answer has a null probability; an authored JSON null answer can have a numeric probability.',
     settings: '`SET thinkthen_record` writes a recording to a folder. `SET thinkthen_replay` answers from that recording with no connection.',
     install: [
-      ['thinkthen-duckdb-VERSION-TARGET.tar.gz', 'Unsigned extensions for DuckDB 1.5.6 and 2.0, from each release. Unpack the archive where DuckDB runs.'],
+      ['thinkthen-duckdb-VERSION-TARGET.tar.gz', 'Unsigned extensions, from each release. Unpack the archive where DuckDB runs.'],
       ['duckdb -unsigned', 'The `-unsigned` flag lets DuckDB load a local extension file. The query loads that file first.'],
     ],
-    supportedVersions: ['v1.5.6', 'v2.0-cyanoptera'],
     particular: ['dbt v2 requires signed extensions; this unsigned archive does not enable ThinkThen in dbt v2.', 'To load by path, choose the member under your DuckDB version and platform, then pass its path to LOAD.', 'DuckDB hands the extension rows in chunks. One call judges a chunk together, and `SET thinkthen_max_requests` caps that call.'],
   },
   {
     slug: 'sqlite', backends: 'sql', name: 'SQLite', deckHeading: 'SQLite',
+    versions: { runtime: 'SQLite 3.50.0 or later', platforms: UNIX_PLATFORMS },
     lang: 'sql', tab: 'SQL',
     blurb: 'Judge a whole table in one call, then join the answers back by key.',
     unsureWord: '`NULL`',
@@ -791,7 +818,7 @@ export const SURFACES = [
     errors: 'A failure is an error whose text starts `thinkthen <kind>: `. The message follows, and the text ends with `(retryable: yes)` or `(retryable: no)`.',
     settings: '`thinkthen_configure` takes the settings as JSON. `"record"` writes a recording to a folder. `"replay"` answers from that recording with no connection.',
     install: [
-      ['thinkthen-sqlite-VERSION-TARGET.tar.gz', 'The extension, from each release. Rename `libthinkthen0.so` to `thinkthen.so`, or `libthinkthen0.dylib` to `thinkthen.dylib` on a Mac. It needs SQLite 3.50.0 or newer.'],
+      ['thinkthen-sqlite-VERSION-TARGET.tar.gz', 'The extension, from each release. Rename `libthinkthen0.so` to `thinkthen.so`, or `libthinkthen0.dylib` to `thinkthen.dylib` on a Mac.'],
       ['.load ./thinkthen', null],
     ],
     particular: [
