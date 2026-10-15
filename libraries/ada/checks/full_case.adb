@@ -1,4 +1,9 @@
 with Ada.Exceptions;
+with Thinkthen.Sessions; use Thinkthen.Sessions;
+with Thinkthen.Inputs.Calls;
+with Thinkthen.Inputs.Native;
+with Thinkthen.Answers;
+with Thinkthen.Values;
 with Ada.Streams.Stream_IO;
 with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
 with Ada.Text_IO; use Ada.Text_IO;
@@ -78,10 +83,7 @@ procedure Thinkthen.Sessions.Parity_Case is
                if Code /= 0 then raise Program_Error with "packet serialization refused"; end if;
                if not First then Append (Packets, ','); end if;
                First := False;
-               Append (Packets, Text ((data => Bytes, len => Count)));
-               if View (Value).kind = K_THINKTHEN_COMPLETE_SESSION_PACKET_TERMINAL_V1 then
-                  Thinkthen.Native_Sessions.Close (Owner);
-               end if;
+               Append (Packets, Thinkthen.Native_Sessions.Text ((data => Bytes, len => Count)));
             end;
       end case;
    end Drain_One;
@@ -108,29 +110,122 @@ procedure Thinkthen.Sessions.Parity_Case is
       return Value;
    end Fixture_Text;
    -- REQUEST
+   function JSON (Item : Thinkthen.Values.Value) return String is
+      use Thinkthen.Values;
+      Output : Unbounded_String;
+   begin
+      case Kind (Item) is
+         when Null_Value => return "null";
+         when Thinkthen.Values.Boolean_Value => return (if As_Boolean (Item) then "true" else "false");
+         when Number_Value => return As_Number (Item);
+         when String_Value => return Quoted (As_String (Item));
+         when Array_Value | Object_Value =>
+            Append (Output, (if Kind (Item) = Array_Value then '[' else '{'));
+            for I in 1 .. Length (Item) loop
+               if I > 1 then Append (Output, ','); end if;
+               if Kind (Item) = Object_Value then
+                  Append (Output, Quoted (Field_Name (Item, I)) & ':' & JSON (Field_Value (Item, Field_Name (Item, I))));
+               else
+                  Append (Output, JSON (Element (Item, I)));
+               end if;
+            end loop;
+            Append (Output, (if Kind (Item) = Array_Value then ']' else '}'));
+            return To_String (Output);
+      end case;
+   end JSON;
+   procedure Public_Call is
+      use Thinkthen.Answers;
+      use Thinkthen.Values;
+      Verb : constant String := Get_Line (Input);
+      Request : constant T_RequestCall := -- PUBLIC REQUEST;
+      Question : constant Thinkthen.Inputs.Question := Thinkthen.Inputs.Native.Wrap (Request.T_question);
+      Original : constant Thinkthen.Inputs.Input_text := Thinkthen.Inputs.As_text (Thinkthen.Inputs.Native.Wrap (Request.T_input));
+      Options : constant Thinkthen.Inputs.Call_Options := Thinkthen.Inputs.Native.Wrap (Request.T_options);
+      procedure Emit (Value : Thinkthen.Values.Value; Probability : Number_Field; Results : Receipt_List; Facts : Thinkthen.Answers.Facts) is
+         Rows : Unbounded_String := To_Unbounded_String ("[");
+         Packets : Unbounded_String := To_Unbounded_String ("[");
+         Facts_JSON : constant String := "{""requests_sent"":" & Interfaces.Unsigned_64'Image (Requests_Sent (Facts)) & ",""call_id"":" & Quoted (Call_Id (Facts)) & "}";
+      begin
+         for I in Results'Range loop
+            if I > Results'First then Append (Rows, ','); Append (Packets, ','); end if;
+            Append (Rows, JSON (Record_Value (Results (I))));
+            Append (Packets, "{""kind"":""row"",""value"":" & JSON (Record_Value (Results (I))) & "}");
+         end loop;
+         Append (Rows, ']');
+         if Results'Length > 0 then Append (Packets, ','); end if;
+         Append (Packets, "{""kind"":""terminal"",""facts"":" & Facts_JSON & "}]");
+         Put_Line ("{""packets"":" & To_String (Packets) & ",""call_result"":{""value"":" & JSON (Value) & ",""probability"":" & (if Probability.State = Present_Field then Long_Float'Image (Probability.Value) else "null") & ",""results"":" & To_String (Rows) & ",""facts"":" & Facts_JSON & "}}");
+      end Emit;
+   begin
+      if Verb = "decide" then
+         declare Item : constant Decide_Result := Thinkthen.Inputs.Calls.Decide (Client, Question, Original, Options); begin
+            Emit (Item.Value, Item.Probability, Item.Results, Item.Facts);
+         end;
+      elsif Verb = "choose" then
+         declare Item : constant Choose_Result := Thinkthen.Inputs.Calls.Choose (Client, Question, Original, Options); begin
+            Emit ((if Item.Value.Known then String_Item (To_String (Item.Value.Value)) else Null_Item), Item.Probability, Item.Results, Item.Facts);
+         end;
+      else
+         raise Program_Error with "unexpected call result function";
+      end if;
+   end Public_Call;
 begin
    Configure (Client, -- SETTINGS
               Error);
    if Error.Kind /= None then Admission (Error_Kind'Pos (Error.Kind), Message (Error)); return; end if;
    Thinkthen.Sessions.Calls.CALL_NAME (Client, Owner, Request);
    -- CANCEL
-   -- FEED
-   Thinkthen.Native_Sessions.Finish (Owner);
    declare
-      task Canceller;
-      task body Canceller is
+      Count : constant Natural := Natural'Value (Get_Line (Input));
+      type Feed_List is array (Positive range <>) of T_RequestSessionDescriptor;
+      function Read_Feed return Feed_List is
+         Items : Feed_List (1 .. Count);
       begin
-         if HELD_CANCEL then
-            declare Signal : constant String := Get_Line; begin null; end;
-            Thinkthen.Native_Sessions.Cancel (Owner); Put_Line ("cancel-fired"); Flush;
-         end if;
-      end Canceller;
+         for Item of Items loop Item := -- FEED ITEM; end loop;
+         return Items;
+      end Read_Feed;
+      Items : constant Feed_List := Read_Feed;
+      Held : constant Boolean := Boolean'Value (Get_Line (Input));
+      Producer_Failure : Unbounded_String;
    begin
-      loop
-         Drain_One;
-         exit when Read = Finished or else
-           (Read = Result and then View (Value).kind = K_THINKTHEN_COMPLETE_SESSION_PACKET_TERMINAL_V1);
-      end loop;
+      declare
+         -- Blocking pushes require a concurrent reader when output fills.
+         task Producer;
+         task body Producer is
+            Status : Push_Status;
+         begin
+            for Item of Items loop
+               Thinkthen.Native_Sessions.Push (Owner, Item, Status);
+               if Status /= Accepted then raise Program_Error with "blocking feed refused"; end if;
+            end loop;
+            Thinkthen.Native_Sessions.Finish (Owner);
+         exception
+            when E : others =>
+               Producer_Failure := To_Unbounded_String (Ada.Exceptions.Exception_Information (E));
+               Thinkthen.Native_Sessions.Cancel (Owner);
+         end Producer;
+         task Canceller;
+         task body Canceller is
+         begin
+            if HELD_CANCEL then
+               declare Signal : constant String := Get_Line; begin null; end;
+               Thinkthen.Native_Sessions.Cancel (Owner); Put_Line ("cancel-fired"); Flush;
+            end if;
+         end Canceller;
+      begin
+         loop
+            Drain_One;
+            exit when Read = Finished or else
+              (Read = Result and then View (Value).kind = K_THINKTHEN_COMPLETE_SESSION_PACKET_TERMINAL_V1);
+         end loop;
+      exception
+         when others => Thinkthen.Native_Sessions.Cancel (Owner); raise;
+      end;
+      -- The task scope joins both workers before releasing the session.
+      Thinkthen.Native_Sessions.Close (Owner);
+      if Length (Producer_Failure) > 0 then
+         raise Program_Error with To_String (Producer_Failure);
+      end if;
    end;
    Append (Packets, "]}"); Put_Line (Ada.Strings.Unbounded.To_String (Packets));
 exception
