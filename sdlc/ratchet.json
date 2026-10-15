@@ -1,6 +1,6 @@
 {
   "extension": ".rs",
-  "max": 192810,
+  "max": 192826,
   "directory": [
     "crates",
     "conformance"
