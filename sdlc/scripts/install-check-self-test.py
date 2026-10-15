@@ -309,6 +309,7 @@ class RefusalTable(unittest.TestCase):
                                                'https://github.com/duckdb/duckdb.git', True, identity['version'])
                 configure, build, report = check.commands
                 self.assertIn('-DBUILD_EXTENSIONS=core_functions;json', configure)
+                self.assertIn('-DDISABLE_BUILTIN_EXTENSIONS=OFF', configure)
                 self.assertIn('-DENABLE_EXTENSION_AUTOINSTALL=OFF', configure)
                 self.assertIn('build-admission.py', configure[1])
                 self.assertEqual(build[-4:], ('--target', 'shell', '--parallel', '2'))

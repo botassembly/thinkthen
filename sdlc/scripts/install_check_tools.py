@@ -87,7 +87,7 @@ def prepare(check):
         admission = (sys.executable, Path(__file__).with_name('build-admission.py'), '--')
         check.run(*admission, 'cmake', '-S', source, '-B', build, '-G', 'Ninja',
                   '-DCMAKE_BUILD_TYPE=Release', '-DBUILD_UNITTESTS=OFF', '-DBUILD_EXTENSIONS=core_functions;json',
-                  '-DDISABLE_BUILTIN_EXTENSIONS=ON', '-DENABLE_EXTENSION_AUTOLOADING=OFF',
+                  '-DDISABLE_BUILTIN_EXTENSIONS=OFF', '-DENABLE_EXTENSION_AUTOLOADING=OFF',
                   '-DENABLE_EXTENSION_AUTOINSTALL=OFF')
         check.run(*admission, 'cmake', '--build', build, '--target', 'shell', '--parallel', '2')
         prepend(check, build)
