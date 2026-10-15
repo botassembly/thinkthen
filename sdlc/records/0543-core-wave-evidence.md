@@ -355,3 +355,60 @@ The required compatibility grep at `0eccf3895` returns 168 lines across eighty-f
 | Backend compatibility, source budgets, result metadata and host translation | Describe current capability checks, budgets and typed projection; no alternate retired dispatcher remains. |
 
 The repository-wide removed-name repair accepted at `7706fb62e` searches all 8,067 tracked text files without extension filters; ninety-seven binary files and two upstream submodule gitlinks are explicitly outside that textual sweep. It checks RankedRow, each removed rank corpus/type identifier and actual top-level check/audit/diff call chains, including multiline and variable-based arguments. It preserves canonical real rank cases, derived controls, retired declaration lists, dated evidence and deliberate refusals. The remaining active caller was the private Debug fixture; inserting backends preserves all four vectors and both redaction assertions, adds one measured line and changes no runtime behavior. Review also fixes the remaining current source comment in backend-checks.mjs. Current descriptions, four retained decision contracts and the approved factual CHANGELOG correction use canonical names; dated rendered evidence is unchanged. Independent Debug, namespace, audit, diff, forty-three parity, policy, formatting, JavaScript and commit checks pass. The earlier focused alias selection exercised backend/library/store callers and omitted this private unit fixture, explaining its acceptance gap.
+
+Windows `38762848632`, job `116518382622`, completes the old `0eccf3895` gate with its sole failure in the private Debug unit fixture: 470 library tests pass, one fails and twenty-two are ignored. C tests, installed Python selections of eighty-eight and thirty-seven cases and native archive consumption pass. All three old hosted jobs retain their completed logs and reaped watches, with no collection errors or retries. Their three failed required jobs remain failures, separate from later repaired revisions.
+
+Frozen `04a61e6a1a316e1377ad9a8660014bcd40bf44fe` passes forty-eight local phases with the one expected Linux Objective-C exit 77. Routine passes 2,048 workspace and twenty-one consumer tests, retaining seventy-three and four skips, plus one doctest. Thirty-nine Polars tests pass with two skips and both Clippy profiles. C passes twenty-five official cases, both forty-two-case parity runs and the forty-six-export check; every SDK build and lint passes. Routine holds all four permits and some/full IO pressure avg10 falls from 4.16/3.67 to 0.18/0.18. No retry runs. Every phase and owner exits with no children, and source stays clean. The retained executable has mode 0775, size 75,868,816 bytes and hash `e7bb7d28fb076c32b151f9aa005f8c0eb9b7c37826edcc82e007b608750b5ec2`.
+
+The existing candidate coverage flow distinguishes native gate proof from measured coverage. Successful same-SHA Swift and Objective-C receipts supply the former; their PASS markers are not coverage counts. The release rehearsal's existing apple-coverage job separately measures installed Swift and Objective-C packages against its instrumented candidate archive and emits actual totals. The existing join requires matching source revisions, complete required collections and positive production denominators/counts; Apple contains exactly installed-swift and installed-objective-c. Source inspection confirms S1's lack of an Objective-C uploaded artifact does not remove a coverage dependency: the candidate coverage job builds its own tracked package inputs. This inspection runs no coverage and asserts no future measured result.
+
+The retained C caller inventory below distinguishes actual production or example calls from the three documented-public-C exceptions. Each source location is a call expression. The exceptions have C test callers and generated-header public contracts; they are not claimed as host-library execution.
+
+| Export | Caller or documented exception |
+| --- | --- |
+| thinkthen_engine_finish_usage_status_v1 | libraries/cpp/include/thinkthen/native_implementation.hpp:114 |
+| thinkthen_engine_free | libraries/cpp/include/thinkthen/native_implementation.hpp:24 |
+| thinkthen_engine_new | libraries/cpp/include/thinkthen/native_implementation.hpp:36 |
+| thinkthen_engine_new_typed | libraries/cobol/src/tt_requests_generated.c:4462 |
+| thinkthen_engine_new_with | libraries/cpp/include/thinkthen/native_implementation.hpp:36 |
+| thinkthen_engine_usage_persistence_v1 | libraries/cpp/include/thinkthen/native_implementation.hpp:114 |
+| thinkthen_error_code | libraries/cpp/include/thinkthen/native_implementation.hpp:37 |
+| thinkthen_error_facts_json | libraries/go/thinkthen.go:53 |
+| thinkthen_error_message | libraries/go/thinkthen.go:59 |
+| thinkthen_error_retryable | libraries/go/thinkthen.go:58 |
+| thinkthen_error_view | libraries/cpp/include/thinkthen/native_implementation.hpp:37 |
+| thinkthen_free_string | libraries/csharp/src/OwnedPlan.cs:16 |
+| thinkthen_question_author | libraries/zig/src/authored.zig:30 |
+| thinkthen_question_free | libraries/zig/src/authored.zig:34 |
+| thinkthen_question_parse | libraries/zig/src/authored.zig:18 |
+| thinkthen_question_value | Documented C API; libraries/c/tests/c/authored.c:36; header contract:4169 |
+| thinkthen_request_plan_json | libraries/csharp/src/OwnedPlan.cs:13 |
+| thinkthen_request_plan_named_value | libraries/cpp/include/thinkthen/native_implementation.hpp:106 |
+| thinkthen_request_plan_typed_json | Documented C API; libraries/c/tests/c/request_preview.c:98; header contract:4209 |
+| thinkthen_request_plan_typed_value | libraries/cobol/src/tt_requests_generated.c:4477 |
+| thinkthen_request_plan_value | libraries/objective-c/Sources/Foundation/ThinkThen.m:265 |
+| thinkthen_session_cancel | libraries/cpp/include/thinkthen/native_implementation.hpp:25 |
+| thinkthen_session_error_facts_json | libraries/go/session.go:72 |
+| thinkthen_session_error_message | libraries/go/session.go:75 |
+| thinkthen_session_error_retryable | libraries/go/session.go:75 |
+| thinkthen_session_error_view | libraries/cpp/include/thinkthen/native_implementation.hpp:23 |
+| thinkthen_session_finish | libraries/cpp/include/thinkthen/native_implementation.hpp:49 |
+| thinkthen_session_finish_typed | libraries/cobol/src/tt_requests_generated.c:9554 |
+| thinkthen_session_free | libraries/cpp/include/thinkthen/native_implementation.hpp:25 |
+| thinkthen_session_new | C example: libraries/c/examples/session.c:22 |
+| thinkthen_session_new_named_with_surface | libraries/cpp/include/thinkthen/native_implementation.hpp:97 |
+| thinkthen_session_new_typed_with_surface | libraries/cobol/src/tt_requests_generated.c:4387 |
+| thinkthen_session_new_with_surface | libraries/objective-c/Sources/Foundation/ThinkThen.m:275 |
+| thinkthen_session_next_packet | libraries/cpp/include/thinkthen/native_implementation.hpp:63 |
+| thinkthen_session_push | libraries/cpp/include/thinkthen/native_implementation.hpp:56 |
+| thinkthen_session_push_typed | libraries/cobol/src/tt_requests_generated.c:4421 |
+| thinkthen_session_result_free | libraries/cpp/include/thinkthen/native_implementation.hpp:26 |
+| thinkthen_session_result_json | libraries/go/session.go:225 |
+| thinkthen_session_result_view | libraries/cpp/include/thinkthen/native_implementation.hpp:69 |
+| thinkthen_session_try_push | libraries/cpp/include/thinkthen/native_implementation.hpp:56 |
+| thinkthen_session_try_push_typed | Documented C API; libraries/c/tests/c/session.c:55; header contract:4480 |
+| thinkthen_session_try_read | libraries/cpp/include/thinkthen/native_implementation.hpp:63 |
+| thinkthen_session_wait | libraries/cpp/include/thinkthen/native_implementation.hpp:78 |
+| thinkthen_value_free | libraries/swift/Sources/ThinkThen/OwnedSession.swift:216 |
+| thinkthen_value_parse | libraries/cpp/include/thinkthen/native_implementation.hpp:9 |
+| thinkthen_value_view | libraries/cpp/include/thinkthen/native_implementation.hpp:12 |
