@@ -915,17 +915,22 @@ def main():
                    str(base / "override"), "go", env=env),
                "archive identity cannot override a repository checkout")
 
-        # Capture only the launcher's transport inputs. Assert their identity below.
+        # Import the real source-host helper before checking the container source tree.
         docker = fake_bin / "docker"
         docker.write_text("#!/bin/sh\n"
+                          "set -eu\n"
                           "for arg do case $arg in *:/work) root=${arg%:/work} ;; "
                           "THINKTHEN_ARCHIVED_SOURCE_COMMIT=*) selected=${arg#*=} ;; "
-                          "THINKTHEN_ARCHIVED_SOURCE_TAR=*) tar_path=${arg#*=} ;; esac; done\n"
+                          "THINKTHEN_ARCHIVED_SOURCE_TAR=*) tar_path=${arg#*=} ;; "
+                          "PYTHONDONTWRITEBYTECODE=*) export \"$arg\" ;; esac; done\n"
+                          "python3 \"$root/src/databases/duckdb/tools/source_hosts.py\" --help >/dev/null\n"
+                          "python3 \"$root/src/sdlc/scripts/release-archive-tree.py\" \"$root/source.tar\" \"$root/src\"\n"
                           "printf '%s\\n' \"$selected\" >\"$root/out/selected-commit\"\n"
                           "printf '%s\\n' \"$tar_path\" >\"$root/out/selected-tar\"\n"
                           "cp \"$root/source.tar\" \"$root/out/source.tar\"\n")
         docker.chmod(0o755)
         launcher_env = os.environ.copy()
+        launcher_env.pop("PYTHONDONTWRITEBYTECODE", None)
         launcher_env["PATH"] = str(fake_bin) + os.pathsep + launcher_env["PATH"]
         launcher_env["THINKTHEN_RELEASE_EXPECTED_SHA"] = "0" * 40
         expect(run("sh", str(REPO / "sdlc/scripts/release-container"), str(base / "container-work"),

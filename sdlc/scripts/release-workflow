@@ -4,6 +4,8 @@
 # `maven-upload` and `pub-publish` change a remote service, and the workflow
 # gates those jobs separately.
 set -eu
+# Release helpers import modules from source that must stay unchanged.
+export PYTHONDONTWRITEBYTECODE=1
 repo=$(CDPATH='' cd -- "$(dirname -- "$0")/../.." && pwd)
 cd "$repo"
 . "$repo/sdlc/scripts/scratch.sh"
