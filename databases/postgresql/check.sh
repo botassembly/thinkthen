@@ -66,14 +66,17 @@ export PGRX_PG_CONFIG_PATH="$PG_CONFIG"
 }
 reader_profile=
 [ "$profile" != full ] || reader_profile=--release
-if [ "$PG_HOST" = Darwin ]; then
-	# Cargo also links this package's library when it builds the client reader.
-	# Its PostgreSQL symbols resolve when the server loads the extension (ticket 0336).
-	PGRX_PG_CONFIG_PATH="$PG_CONFIG" RUSTFLAGS="${RUSTFLAGS:+$RUSTFLAGS }-Clink-arg=-Wl,-undefined,dynamic_lookup" \
-		cargo build --locked --offline --quiet ${reader_profile:+$reader_profile} --bin thinkthen_read_inputs --no-default-features --features "pg$PG_MAJOR"
-else
-	PGRX_PG_CONFIG_PATH="$PG_CONFIG" cargo build --locked --offline --quiet ${reader_profile:+$reader_profile} --bin thinkthen_read_inputs --no-default-features --features "pg$PG_MAJOR"
-fi
+# A client build also links this package's extension library. Its PostgreSQL
+# symbols resolve when the server loads it, including the client_files example.
+postgresql_client_build() {
+    if [ "$PG_HOST" = Darwin ]; then
+        RUSTFLAGS="${RUSTFLAGS:+$RUSTFLAGS }-Clink-arg=-Wl,-undefined,dynamic_lookup" \
+            cargo build --locked --offline "$@"
+    else
+        cargo build --locked --offline "$@"
+    fi
+}
+postgresql_client_build --quiet ${reader_profile:+$reader_profile} --bin thinkthen_read_inputs --no-default-features --features "pg$PG_MAJOR"
 (cd "$REPO" && cargo build --locked --offline --quiet --package conformance-backend --package thinkthen --bin conformance-backend --bin thinkthen)
 if [ "$profile" != full ]; then export RUSTFLAGS="--remap-path-prefix=$HOME=/build"; fi
 # package.sh reads the same pg_config and target folder (ticket 0128).
@@ -747,7 +750,7 @@ stored_image_composites_use_native_order_and_strict_replay() {
 check stored_image_composites_use_native_order_and_strict_replay
 client_reader_keeps_keys_find_indexes_native_spans_and_relation_ends() {
 	fresh generic
-	cargo build --locked --offline --example client_files --no-default-features --features "pg$PG_MAJOR"
+	postgresql_client_build --example client_files --no-default-features --features "pg$PG_MAJOR"
 	"${CARGO_TARGET_DIR:-target}/debug/examples/client_files" "$SOCK" "$RUN/client-source.txt"
 	# One coalesced rank judgment retains two records, one find, two recognition stages per source,
 	# and one relation request; readers and span mapping add no sends.
@@ -1099,10 +1102,15 @@ usage_total() {
 		python3 -c 'import json, sys; print(json.load(sys.stdin)["usage"]["total"][sys.argv[1]])' "$1"
 }
 usage_requests() { usage_total requests_sent; }
+usage_folder() {
+    case $PG_HOST in
+    Darwin) printf '%s\n' "$SCRATCH/Library/Application Support/thinkthen/usage" ;;
+    *) printf '%s\n' "$SCRATCH/.local/state/thinkthen" ;;
+    esac
+}
 each_backend_adds_its_sends_at_exit() {
 	fresh generic
-	folder=$SCRATCH/.local/state/thinkthen
-	[ "$PG_HOST" != Darwin ] || folder="$SCRATCH/Library/Application Support/thinkthen/usage"
+	folder=$(usage_folder)
 	mkdir -p -m 700 "$folder"
 	(umask 077 && : >>"$folder/.lock")
 	before=$(usage_requests)
@@ -1387,7 +1395,7 @@ check shared_settings_cases
 usage_persistence_status() {
 	for mode in held written; do
 		fresh generic
-		python3 tests/settings_cases.py usage-status "$SOCK" "$SCRATCH/.local/state/thinkthen" "$mode"
+		python3 tests/settings_cases.py usage-status "$SOCK" "$(usage_folder)" "$mode"
 		same "$(bcount)" 1
 	done
 }
