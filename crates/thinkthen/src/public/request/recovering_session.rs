@@ -51,6 +51,7 @@ struct OutputState {
 struct Output {
     state: Mutex<OutputState>,
     wake: Condvar,
+    changed: Arc<super::session_queue::Change>,
 }
 impl Output {
     fn lock(&self) -> MutexGuard<'_, OutputState> {
@@ -67,6 +68,7 @@ impl Output {
         if !state.closed {
             state.packet = Some(packet);
             self.wake.notify_all();
+            self.changed.notify();
         }
     }
     fn settle(&self, terminal: RequestSessionTerminal) {
@@ -74,10 +76,12 @@ impl Output {
         state.terminal = Some(terminal);
         state.settled = true;
         self.wake.notify_all();
+        self.changed.notify();
     }
     fn read(&self, state: &mut OutputState) -> RequestRecoveringRead {
         if let Some(packet) = state.packet.take() {
             self.wake.notify_all();
+            self.changed.notify();
             RequestRecoveringRead::Result(packet)
         } else if let Some(terminal) = state.terminal.take() {
             RequestRecoveringRead::Result(RequestRecoveringResult::Terminal(terminal))
@@ -202,20 +206,21 @@ impl RequestRecoveringSession {
             };
         }
         let started = std::time::Instant::now();
-        let mut state = self.output.lock();
         loop {
+            let observed = self.output.changed.observed();
+            let state = self.output.lock();
             if state.packet.is_some() || state.terminal.is_some() {
                 return Ready::Result;
             }
             if state.settled || state.closed {
                 return Ready::End;
             }
+            drop(state);
             let readiness =
                 self.input
                     .queue
                     .ready(interest, std::time::Duration::ZERO, self.input.feed);
-            if readiness != Ready::Timeout || interest == RequestSessionWaitInterest::SettlementArm
-            {
+            if readiness != Ready::Timeout {
                 return readiness;
             }
             let Some(remaining) = timeout.checked_sub(started.elapsed()) else {
@@ -224,12 +229,7 @@ impl RequestRecoveringSession {
             if remaining.is_zero() {
                 return Ready::Timeout;
             }
-            state = self
-                .output
-                .wake
-                .wait_timeout(state, remaining.min(std::time::Duration::from_millis(50)))
-                .unwrap_or_else(|error| error.into_inner())
-                .0;
+            self.output.changed.wait(observed, remaining);
         }
     }
     /// Stop descriptor intake while retaining final output.
@@ -237,6 +237,7 @@ impl RequestRecoveringSession {
         self.input.cancel();
         let _state = self.output.lock();
         self.output.wake.notify_all();
+        self.output.changed.notify();
     }
 }
 impl Drop for RequestRecoveringSession {
@@ -247,6 +248,7 @@ impl Drop for RequestRecoveringSession {
         state.packet = None;
         state.terminal = None;
         self.output.wake.notify_all();
+        self.output.changed.notify();
     }
 }
 impl Engine {
@@ -288,14 +290,16 @@ impl Engine {
                 "owned feed controls require a caller-supplied feed",
             ));
         }
-        let queue = Arc::new(super::session_queue::Queue::default());
+        let output = Arc::new(Output::default());
+        let queue = Arc::new(super::session_queue::Queue::recovering(Arc::clone(
+            &output.changed,
+        )));
         let runtime_feed = make_feed(&admitted, Arc::clone(&queue), &options);
         super::execution::feed_projection(&admitted, runtime_feed.as_ref())?;
         drop(runtime_feed);
         if options.image_inputs {
             super::execution::prepare(self, &admitted, CallOptions::new().surface(surface), true)?;
         }
-        let output = Arc::new(Output::default());
         let worker_output = Arc::clone(&output);
         let worker_queue = Arc::clone(&queue);
         let engine = self.clone();
@@ -441,4 +445,49 @@ fn make_feed(
     feed.all_filter_results = options.all_filter_results;
     feed.record_reading = options.record_reading.clone();
     Some(feed)
+}
+
+#[cfg(test)]
+mod tests {
+    //! Stays: the dual-queue wait needs a direct timing check for input wakeups while recovered output stays empty.
+    #[test]
+    fn input_closure_wakes_a_recovered_wait_without_a_timer() {
+        use super::*;
+        use std::time::{Duration, Instant};
+        let output = Arc::new(Output::default());
+        let queue = Arc::new(super::super::session_queue::Queue::recovering(Arc::clone(
+            &output.changed,
+        )));
+        let descriptor = super::super::RequestSessionDescriptor::from_json(
+            r#"{"item":{"original":{"kind":"text","text":"Held."}}}"#,
+        )
+        .unwrap();
+        assert_eq!(
+            queue.push_wait(descriptor),
+            RequestSessionPushStatus::Accepted
+        );
+        let session = RequestRecoveringSession {
+            input: RequestSession {
+                queue: Arc::clone(&queue),
+                feed: true,
+            },
+            output,
+        };
+        std::thread::scope(|scope| {
+            let waiting = scope.spawn(|| {
+                let started = Instant::now();
+                assert_eq!(
+                    session.wait(RequestSessionWaitInterest::Input, Duration::from_secs(1)),
+                    super::super::RequestSessionReady::Closed
+                );
+                started.elapsed()
+            });
+            std::thread::sleep(Duration::from_millis(5));
+            queue.close_intake();
+            assert!(
+                waiting.join().unwrap() < Duration::from_millis(40),
+                "input closure waited for the poll timer"
+            );
+        });
+    }
 }
