@@ -128,9 +128,8 @@ jobs:
             sdlc/scripts/release-pack "$TARGET" release-files command first-run
             disk 'after the final pack'
           else
-            RUBY="$HOME/.cache/thinkthen-toolchains/ruby/3.4.11-$(uname -m)-darwin/bin/ruby"
             PG_CONFIG="$(brew --prefix postgresql@16)/bin/pg_config"
-            export RUBY PG_CONFIG
+            export PG_CONFIG
             sdlc/scripts/release-pack "$TARGET" release-files
           fi
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2

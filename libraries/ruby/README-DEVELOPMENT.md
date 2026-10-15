@@ -1,6 +1,6 @@
 # ThinkThen for Ruby
 
-These calls require the development 0.2 gem; the public release remains 0.1.2. Install a supplied development gem with `gem install --local path/to/thinkthen-0.2.0-platform.gem`. The gem supports Ruby 3.4 on Linux and macOS. An unsupported platform selects a diagnostic fallback that refuses to load; candidate checks qualify platform packages.
+These calls require the development 0.2 gem; the public release remains 0.1.2. Install a supplied development gem with `gem install --local path/to/thinkthen-0.2.0-platform.gem`. The gem supports Ruby 3.4 and 4.0 on Linux and macOS. An unsupported platform selects a diagnostic fallback that refuses to load; candidate checks qualify platform packages.
 
 ```ruby
 require "thinkthen"
@@ -27,4 +27,4 @@ Replace module-level verbs and `Engine`/`Engine#complete` calls with the same na
 
 ## Development
 
-Build with the pinned toolchain using `build.sh`. `check.sh` installs the native gem in an empty gem folder and runs owned-session cases plus the routine shared cases through named typed calls. `THINKTHEN_ARTIFACT` checks the supplied gem. `THINKTHEN_TEST_PROFILE=full` selects the complete shared inventory only at a candidate. Checks use isolated homes and local fake providers; no paid service is used.
+Run `setup-ruby.sh` once to build both pinned Ruby toolchains. `build.sh` compiles an extension for each Ruby minor in separate Cargo target folders and includes both in one platform gem. `check.sh` checks Ruby 4.0 in the routine profile and both versions in release profiles. `THINKTHEN_RUBY_MINOR=3.4` selects an individual check. It installs the native gem in an empty gem folder and runs owned-session cases plus the routine shared cases through named typed calls. `THINKTHEN_ARTIFACT` checks the supplied gem. `THINKTHEN_TEST_PROFILE=full` selects the complete shared inventory only at a candidate. Checks use isolated homes and local fake providers; no paid service is used.

@@ -138,8 +138,6 @@ docker run "$@" "$IMAGE" sh -euc '
 	THINKTHEN_RUBY_OPENSSL=/work/home/openssl/usr
 	export THINKTHEN_RUBY_OPENSSL
 	sh libraries/ruby/setup-ruby.sh
-	RUBY=/work/home/.cache/thinkthen-toolchains/ruby/3.4.11/bin/ruby
-	export RUBY
 	if [ "$ARCH" = x86_64 ]; then
 		sh sdlc/scripts/release-pack "$TARGET" /work/out c sqlite duckdb postgresql python typescript ruby go cpp swift zig php dart ada cobol
 	else

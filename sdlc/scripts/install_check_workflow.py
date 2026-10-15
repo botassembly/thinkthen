@@ -14,7 +14,7 @@ PUBLISH_STEP = {
     'run': 'sdlc/scripts/release-workflow publish "$NAME" "$SHA"',
 }
 RUNNERS = ['ubuntu-24.04', 'ubuntu-24.04-arm', 'macos-15', 'macos-15-intel', 'macos-26']
-PORTABLE = ['download', 'cargo-install', 'cargo-add', 'pip', 'uv', 'npm', 'rubygems']
+PORTABLE = ['download', 'cargo-install', 'cargo-add', 'pip', 'uv', 'npm']
 WINDOWS = ['download', 'cargo-install', 'cargo-add', 'pip', 'uv', 'npm', 'nuget', 'maven', 'c']
 LINUX = ['nuget', 'maven', 'pub', 'packagist', 'go', 'c', 'sqlite', 'duckdb', 'postgresql']
 R_IMAGE = 'rocker/r-ver:4.6.1@sha256:268e4c559c905a78519793f1a8c9ec5c8051a6ac98a16cbf489135ccdad330bb'
@@ -70,12 +70,18 @@ def install_workflow(name, doc):
         if spec.get('if') is not None or spec.get('continue-on-error') is not None:
             out.append(f'{name}: job {job} must run unconditionally and propagate failures')
         matrix = ((spec.get('strategy') or {}).get('matrix') or {})
-        expected = {'portable': {'runner': RUNNERS, 'channel': PORTABLE},
+        expected = {'portable': {'runner': RUNNERS, 'channel': PORTABLE,
+                                 'include': [{'runner': runner, 'channel': 'rubygems', 'ruby': ruby}
+                                             for runner in RUNNERS for ruby in ['3.4.11', '4.0.7']]},
                     'homebrew': {'runner': ['ubuntu-24.04', 'macos-26']},
                     'linux': {'channel': LINUX}, 'windows': {'channel': WINDOWS}, 'r-universe': {}}.get(job)
         if expected is not None and (matrix != expected or spec.get('runs-on') != (
                 '${{ matrix.runner }}' if job in ('portable', 'homebrew') else 'windows-2025' if job == 'windows' else 'ubuntu-24.04')):
             out.append(f'{name}: job {job} must retain its accepted channel and runner matrix')
+        if job == 'portable':
+            setups = [step for step in spec.get('steps', []) if str(step.get('uses', '')).startswith('ruby/setup-ruby@')]
+            if len(setups) != 1 or setups[0].get('if') != "matrix.channel == 'rubygems'" or setups[0].get('with') != {'ruby-version': '${{ matrix.ruby }}'}:
+                out.append(f'{name}: rubygems must use the matrix Ruby version')
         if job == 'r-universe' and spec.get('container') != R_IMAGE:
             out.append(f'{name}: R-universe must use the pinned Linux R 4.6.1 image')
         channel = '${{ matrix.channel }}' if job in ('portable', 'linux', 'windows') else job

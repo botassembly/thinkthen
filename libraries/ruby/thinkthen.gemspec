@@ -24,18 +24,20 @@ Gem::Specification.new do |spec|
     # Let unsupported Ruby versions select the current diagnostic package.
     spec.required_ruby_version = ">= 0"
     spec.post_install_message = "thinkthen #{spec.version}: no compatible native gem was selected. " \
-      "Requires Ruby >= 3.4, < 4 on x86_64-linux, aarch64-linux, x86_64-darwin or arm64-darwin " \
+      "Requires Ruby 3.4 or 4.0 on x86_64-linux, aarch64-linux, x86_64-darwin or arm64-darwin " \
       "(macOS 15.0 or later). This fallback cannot run ThinkThen; require \"thinkthen\" raises LoadError."
   else
     # Retain 0394: Darwin gems match every OS version; binaries keep the 15.0 floor.
     local = Gem::Platform.local
     spec.platform = local.os == "darwin" ? Gem::Platform.new([local.cpu, local.os]) : local
-    extension = "lib/thinkthen/thinkthen.#{RbConfig::CONFIG["DLEXT"]}"
-    raise "#{extension} is missing; run build.sh" unless File.file?(File.expand_path(extension, __dir__))
+    extensions = %w[3.4 4.0].map { |minor| "lib/thinkthen/#{minor}/thinkthen.#{RbConfig::CONFIG["DLEXT"]}" }
+    extensions.each do |extension|
+      raise "#{extension} is missing; run build.sh" unless File.file?(File.expand_path(extension, __dir__))
+    end
 
-    spec.files = ["README.md", extension] + Dir.glob(["lib/**/*.rb", "sig/**/*.rbs"], base: __dir__).sort
+    spec.files = ["README.md", *extensions] + Dir.glob(["lib/**/*.rb", "sig/**/*.rbs"], base: __dir__).sort
     spec.require_paths = ["lib"]
-    # Built and tested on 3.4 only. 4.x is another ABI.
-    spec.required_ruby_version = [">= 3.4", "< 4"].freeze
+    # Each supported Ruby minor has its own native extension.
+    spec.required_ruby_version = [">= 3.4", "< 4.1"].freeze
   end
 end

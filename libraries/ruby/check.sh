@@ -59,6 +59,14 @@ fi
 host=$(uname -s)
 case $host in Linux|Darwin) ;; *) not_run "no Ruby host route for $host" ;; esac
 . ./toolchain.env
+if [ -z "${THINKTHEN_RUBY_MINOR:-}" ] && [ "$profile" != routine ]; then
+  for minor in $RUBY_MINORS; do
+    THINKTHEN_RUBY_MINOR=$minor sh "$0" "$@"
+  done
+  exit 0
+fi
+THINKTHEN_RUBY_MINOR=${THINKTHEN_RUBY_MINOR:-4.0}
+export THINKTHEN_RUBY_MINOR
 if [ "$host" = Darwin ]; then
   prefix=$HOME/.cache/thinkthen-toolchains/ruby/$RUBY_VERSION-$(uname -m)-darwin
 else
@@ -135,7 +143,7 @@ if [ -z "${THINKTHEN_ARTIFACT:-}" ]; then
   python3 "$repo/sdlc/generators/results/generate.py" --target ruby --check
   ./build.sh
   cargo fmt --check
-  cargo clippy --locked --offline --all-targets --quiet -- -D warnings
+  CARGO_TARGET_DIR=${CARGO_TARGET_DIR:-$PWD/target}/ruby-$THINKTHEN_RUBY_MINOR cargo clippy --locked --offline --all-targets --quiet -- -D warnings
   THINKTHEN_ARTIFACT=$(find "$PWD" -maxdepth 1 -name 'thinkthen-*-*.gem' | head -n 1)
 fi
 THINKTHEN_ARTIFACT=$(realpath "$THINKTHEN_ARTIFACT")
@@ -164,7 +172,7 @@ export THINKTHEN_TEST_LIBRARY
 "$prefix/bin/rbs" _3.8.0_ -I "${THINKTHEN_TEST_LIBRARY%/lib}/sig" validate
 if [ -n "${THINKTHEN_COVERAGE_OBJECT:-}" ]; then
   extension=$("$RUBY" -e 'print RbConfig::CONFIG["DLEXT"]')
-  cp "$THINKTHEN_TEST_LIBRARY/thinkthen/thinkthen.$extension" "$THINKTHEN_COVERAGE_OBJECT"
+  cp "$THINKTHEN_TEST_LIBRARY/thinkthen/$THINKTHEN_RUBY_MINOR/thinkthen.$extension" "$THINKTHEN_COVERAGE_OBJECT"
 fi
 if [ "$profile" = smoke ]; then
   smoke_guard

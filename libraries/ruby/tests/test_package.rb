@@ -13,7 +13,7 @@ class TestPackage < Minitest::Test
   VERSION = File.read(File.expand_path("../../crates/thinkthen/Cargo.toml", ROOT))[/^version = "([^"]+)"/, 1]
   FALLBACK = File.expand_path(ENV.fetch("THINKTHEN_ARTIFACT", "#{ROOT}/thinkthen-#{VERSION}.gem"))
   DIAGNOSTIC = "thinkthen #{VERSION}: no compatible native gem was selected. " \
-    "Requires Ruby >= 3.4, < 4 on x86_64-linux, aarch64-linux, x86_64-darwin or arm64-darwin " \
+    "Requires Ruby 3.4 or 4.0 on x86_64-linux, aarch64-linux, x86_64-darwin or arm64-darwin " \
     "(macOS 15.0 or later). This fallback cannot run ThinkThen."
 
   def fallback_files
@@ -53,7 +53,7 @@ class TestPackage < Minitest::Test
 
   def test_local_selection_prefers_native_only_for_supported_ruby_and_platform
     native = Gem::Package.new(Dir["#{ROOT}/thinkthen-#{VERSION}-*.gem"].fetch(0))
-    assert_equal ">= 3.4, < 4", native.spec.required_ruby_version.to_s
+    assert_equal ">= 3.4, < 4.1", native.spec.required_ruby_version.to_s
     Dir.mktmpdir("thinkthen-ruby-selection-") do |root|
       source = "#{root}/source"
       native.extract_files(source)
@@ -84,7 +84,7 @@ class TestPackage < Minitest::Test
       %w[specs latest_specs prerelease_specs].each do |name|
         Zlib::GzipWriter.open("#{repository}/#{name}.4.8.gz") { |out| out.write(Marshal.dump(name == "prerelease_specs" ? [] : tuples)) }
       end
-      cases = %w[x86_64-linux aarch64-linux x86_64-darwin-24 arm64-darwin-25 x64-mingw-ucrt riscv64-linux].product(%w[3.3 3.4 4.0])
+      cases = %w[x86_64-linux aarch64-linux x86_64-darwin-24 arm64-darwin-25 x64-mingw-ucrt riscv64-linux].product(%w[3.3 3.4 4.0 4.1])
       cases.each_with_index do |(platform, ruby), index|
         home = "#{root}/consumer-#{index}"
         FileUtils.mkdir_p(home)
@@ -102,7 +102,7 @@ class TestPackage < Minitest::Test
         assert_equal 1, specs.size
         selected = specs.fetch(0)
         assert_equal VERSION, selected.version.to_s
-        supported = ruby == "3.4" && !%w[x64-mingw-ucrt riscv64-linux].include?(platform)
+        supported = %w[3.4 4.0].include?(ruby) && !%w[x64-mingw-ucrt riscv64-linux].include?(platform)
         assert_equal supported ? platform.sub(/-2[45]$/, "") : "ruby", selected.platform.to_s
         if supported
           refute_includes out, DIAGNOSTIC.delete_suffix(".")
@@ -110,7 +110,7 @@ class TestPackage < Minitest::Test
           assert_includes out, DIAGNOSTIC.delete_suffix(".")
         end
         # Only the actual host's native binary is an import claim.
-        next unless supported && platform == Gem::Platform.local.to_s
+        next unless supported && ruby == RUBY_VERSION.split(".").first(2).join(".") && platform == Gem::Platform.local.to_s
 
         out, errors, status = child(home, 'require "thinkthen"; abort unless ThinkThen::Client && ThinkThen::VERSION == ARGV[0]; abort unless $LOADED_FEATURES.grep(%r{/lib/thinkthen(\.rb|/)}).all? { |path| path.start_with?(ENV.fetch("GEM_HOME")) }', VERSION)
         assert_equal 0, status.exitstatus, "#{out} #{errors}"
