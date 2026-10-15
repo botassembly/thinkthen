@@ -287,8 +287,23 @@ for surface in $(landed sdlc/surfaces.txt) $(feature sdlc/surfaces.txt); do
 	fi
 	set +e
 	# A daemon a check starts must not hold the backend's input open.
-	sh "$surface/check.sh" "$port" 3>&-
-	code=$?
+    if [ "$surface" = databases/postgresql ]; then
+        majors='16 18'
+        [ "$mode" != release ] || majors='16 17 18'
+        code=0
+        for major in $majors; do
+            major_code=0
+            sh "$surface/check.sh" "$major" 3>&- || major_code=$?
+            case $major_code in
+            0) ;;
+            77) [ "$code" -ne 0 ] || code=77 ;;
+            *) code=1 ;;
+            esac
+        done
+    else
+        sh "$surface/check.sh" "$port" 3>&-
+        code=$?
+    fi
 	set -e
 	[ "$code" -ne 77 ] || skipped="$skipped $surface"
 	verdict "$mode" "$surface" "$code" || failed=1
@@ -326,6 +341,7 @@ host=$(rustc -vV | sed -n 's/^host: //p')
 parts=
 [ -z "$publish_tag" ] || parts='command c sqlite duckdb postgresql python typescript ruby first-run go cpp csharp jvm swift zig php dart ada cobol'
 case $host in *-apple-darwin) [ -z "$publish_tag" ] || parts="$parts objective-c" ;; esac
+[ "$mode" != release ] || export THINKTHEN_TEST_PROFILE=full
 { sh sdlc/scripts/release-pack --reuse "$host" "$packed" $parts &&
 	sh sdlc/scripts/release-smoke "$packed"; } 3>&- || code=$?
 verdict "$mode" "release smoke" "$code"

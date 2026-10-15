@@ -399,6 +399,9 @@ def installed_artifacts(directory, consumers):
             artifact = select([f'thinkthen-{family}-{version}-{target}.tar.gz'])
         found[consumer] = dict(THINKTHEN_ARTIFACT=artifact,
                                THINKTHEN_C_ARTIFACT=native, THINKTHEN_DART_ARTIFACT=dart)
+        if consumer == 'postgresql':
+            for major in (16, 17, 18):
+                found[consumer][f'THINKTHEN_PG{major}_ARTIFACT'] = select([f'thinkthen-postgresql{major}-{version}-{target}.tar.gz'])
     return found, command, native
 
 
@@ -498,10 +501,24 @@ def run(port, baseline=False, artifact_dir=None):
 
 
 def run_consumers(port, baseline, parity, cases, consumers, commands, output_dir, artifacts, installed, installed_library, matrix):
-    def run_command(command, ids, preparation=None):
+    def run_command(command, ids, preparation=None, pg_major=None):
+        if ids == ['postgresql'] and pg_major is None:
+            versions = [run_command(command, ids, preparation, major)[0] for major in (16, 17, 18)]
+            row = dict(versions[-1])
+            for cell in row['cells']:
+                states = [version['cells'][cell] for version in versions]
+                row['cells'][cell] = next((state for state in states if state != 'pass'), 'pass')
+            row['baseline_exit'] = next((version['baseline_exit'] for version in versions if version['baseline_exit'] != 0), 0)
+            row['baseline_error'] = next((version['baseline_error'] for version in versions if version['baseline_error']), None)
+            row['adopted_case_count'] = sum(state == 'pass' for state in row['cells'].values())
+            if any(version['named_typed_functions'] != row['named_typed_functions'] for version in versions):
+                row['named_typed_functions'] = None
+            row['duration_seconds'] = sum(version['duration_seconds'] for version in versions)
+            row['postgresql_majors'] = {str(major): version['log'] for major, version in zip((16, 17, 18), versions)}
+            return [row]
         rows = []
         started = time.monotonic()
-        label = '+'.join(ids)
+        label = '+'.join(ids) + (f'-{pg_major}' if pg_major else '')
         log = output_dir / (label + '.log')
         code, seen, error = None, {}, None
         setup_seconds = preparation[1] if preparation else 0
@@ -510,7 +527,7 @@ def run_consumers(port, baseline, parity, cases, consumers, commands, output_dir
         execute = not platform_pending and (not baseline or set(ids) <= {'cli', 'rust', 'c'})
         if execute:
             print(f'parity consumer: {label}', flush=True)
-            args = list(command) + ([] if command[0] == 'cargo' else [port])
+            args = list(command) + ([str(pg_major)] if pg_major else [] if command[0] == 'cargo' else [port])
             if artifacts and ids == ['cli']:
                 args.append(str(installed / 'command/thinkthen'))
             with tempfile.TemporaryDirectory(prefix='thinkthen-parity-') as scratch, log.open('w') as stream:
@@ -519,6 +536,8 @@ def run_consumers(port, baseline, parity, cases, consumers, commands, output_dir
                     env.update(artifacts[ids[0]], THINKTHEN_COMMAND=str(installed / 'command/thinkthen'),
                                THINKTHEN_C_HEADER=str(installed / 'c/include/thinkthen.h'),
                                THINKTHEN_C_LIBRARY=str(installed_library))
+                if artifacts and pg_major:
+                    env['THINKTHEN_ARTIFACT'] = artifacts['postgresql'][f'THINKTHEN_PG{pg_major}_ARTIFACT']
                 if preparation:
                     env.update(THINKTHEN_PARITY_PREPARED=preparation[0], THINKTHEN_PARITY_CONSUMER=ids[0])
                 try:

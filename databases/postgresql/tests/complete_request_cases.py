@@ -19,7 +19,9 @@ from children import child_env
 def main():
     with tempfile.TemporaryDirectory(prefix='thinkthen-pg-request-') as tmp:
         home = Path(tmp)
-        env = child_env(keep=('LANG', 'LC_ALL', 'LD_LIBRARY_PATH', 'CARGO_TARGET_DIR'), home=home,
+        env = child_env(keep=('LANG', 'LC_ALL', 'LD_LIBRARY_PATH'), home=home,
+                        CARGO_TARGET_DIR=str(Path(os.environ.get('CARGO_TARGET_DIR', ROOT / 'databases/postgresql/target')).resolve()),
+                        THINKTHEN_TEST_PROFILE=os.environ.get('THINKTHEN_TEST_PROFILE', 'routine'),
                         THINKTHEN_API_KEY='sk-conformance-loopback')
         backend = Backend(Path(os.environ.get('CARGO_TARGET_DIR', ROOT / 'target')) / 'debug/conformance-backend', env)
         host = PostgresqlHost()

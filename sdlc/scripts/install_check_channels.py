@@ -324,14 +324,27 @@ def duckdb(check):
 
 
 def postgresql(check):
-    folder = check.unpack(check.release(f'thinkthen-postgresql16-{check.version}-{TARGET}.tar.gz'), check.root / 'postgresql')
+    root, environment = check.root, check.env.copy()
+    try:
+        for major in (16, 17, 18):
+            check.root = root / f'postgresql{major}'
+            check.root.mkdir()
+            check.env = environment.copy()
+            result = postgresql_major(check, major)
+        return result
+    finally:
+        check.root, check.env = root, environment
+
+
+def postgresql_major(check, major):
+    folder = check.unpack(check.release(f'thinkthen-postgresql{major}-{check.version}-{TARGET}.tar.gz'), check.root / 'postgresql')
     # Runtime setup supplies a private relocatable PGDG tree inside this run's scratch.
     runtime = check.root / 'pg-runtime'
     from install_check_tools import postgres_tools
-    postgres_tools(check, runtime)
-    binary = runtime / 'usr/lib/postgresql/16/bin'
-    shared = runtime / 'usr/share/postgresql/16/extension'
-    library = runtime / 'usr/lib/postgresql/16/lib'
+    postgres_tools(check, runtime, major)
+    binary = runtime / f'usr/lib/postgresql/{major}/bin'
+    shared = runtime / f'usr/share/postgresql/{major}/extension'
+    library = runtime / f'usr/lib/postgresql/{major}/lib'
     for source in (folder / 'extension').iterdir():
         shutil.copy2(source, shared / source.name)
     for source in (folder / 'lib').iterdir():
@@ -344,10 +357,10 @@ def postgresql(check):
         check.run(binary / 'pg_ctl', '-D', data, '-l', check.root / 'postgres.log', '-o', f"-k {socket} -c listen_addresses=''", 'start', '-w')
         sql = f'CREATE EXTENSION thinkthen; SET thinkthen.replay={sql_quote(check.sample / "recording")}; SET thinkthen.cache=\'off\';\n'
         sql += "SELECT extversion FROM pg_extension WHERE extname='thinkthen';\n"
-        sql += f'SELECT thinkthen_details({sql_quote((check.sample / "question.txt").read_text())},{sql_quote((check.sample / "report.txt").read_text())});\n'
+        sql += ("SELECT json_build_object('value',value,'requests_sent',(facts).requests_sent) "
+                f'FROM thinkthen_decide_details({sql_quote((check.sample / "question.txt").read_text())},{sql_quote((check.sample / "report.txt").read_text())});\n')
         lines = check.run(binary / 'psql', '-XAt', '-v', 'ON_ERROR_STOP=1', '-h', socket, '-d', 'postgres', input=sql).splitlines()
-        details = json.loads(lines[-1])
-        reply = {'value': details.get('value'), 'requests_sent': details.get('meta', {}).get('requests_sent')}
+        reply = json.loads(lines[-1])
         check_result(check.version, lines[-2], reply)
         return lines[-2], reply, 'installed SQL extension version'
     except Exception as error:

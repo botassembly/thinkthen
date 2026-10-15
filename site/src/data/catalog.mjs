@@ -808,6 +808,8 @@ export const SURFACES = [
     settings: '`SET thinkthen.record` writes a recording to a folder. `SET thinkthen.replay` answers from that recording with no connection.',
     install: [
       ['thinkthen-postgresql16-VERSION-TARGET.tar.gz', 'The extension for PostgreSQL 16, from each release. A server administrator copies the file in `lib/` to `pg_config --pkglibdir`. They copy the files in `extension/` to the `extension` folder under `pg_config --sharedir`.'],
+      ['thinkthen-postgresql17-VERSION-TARGET.tar.gz', 'The extension for PostgreSQL 17, from each release. A server administrator copies the file in `lib/` to `pg_config --pkglibdir`. They copy the files in `extension/` to the `extension` folder under `pg_config --sharedir`.'],
+      ['thinkthen-postgresql18-VERSION-TARGET.tar.gz', 'The extension for PostgreSQL 18, from each release. A server administrator copies the file in `lib/` to `pg_config --pkglibdir`. They copy the files in `extension/` to the `extension` folder under `pg_config --sharedir`.'],
       ['CREATE EXTENSION thinkthen;', null],
     ],
     particular: [

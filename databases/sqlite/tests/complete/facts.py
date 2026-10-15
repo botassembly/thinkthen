@@ -39,6 +39,7 @@ def main():
         base=f'http://127.0.0.1:{server.server_port}/v1'
         host=None
         if consumer=='postgresql':
+            env['CARGO_TARGET_DIR']=str(Path(os.environ.get('CARGO_TARGET_DIR',Path(__file__).resolve().parents[4]/'databases/postgresql/target')).resolve())
             from postgresql_host import PostgresqlHost
             host=PostgresqlHost();host.start({**env,'THINKTHEN_BASE_URL':base})
         try:

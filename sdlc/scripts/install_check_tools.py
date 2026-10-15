@@ -42,14 +42,31 @@ def prepend(check, directory):
     check.env['PATH'] = f'{directory}:{check.env["PATH"]}'
 
 
-def postgres_tools(check, destination):
+def postgres_tools(check, destination, major=16):
     destination.mkdir()
-    for name, digest in PGDG:
-        archive = pinned(check, 'https://apt.postgresql.org/pub/repos/apt/pool/main/p/postgresql-16/' + name, name, digest)
+    pins = Path(__file__).resolve().parents[2] / 'databases/postgresql'
+    if major == 16:
+        packages = [(name, digest, 'https://apt.postgresql.org/pub/repos/apt/pool/main/p/postgresql-16/' + name)
+                    for name, digest in PGDG]
+    else:
+        urls = {url.rsplit('/', 1)[1]: url for url in (pins / 'runtime.url').read_text().splitlines()}
+        packages = []
+        for line in (pins / 'runtime.sha256').read_text().splitlines():
+            digest, name = line.split()
+            if name.endswith('_amd64.deb') and (name.startswith((f'postgresql-{major}_', f'postgresql-client-{major}_', 'libpq5_'))
+                                               or major == 18 and name.startswith('liburing2_')):
+                packages.append((name, digest, urls[name]))
+        if not packages:
+            raise Failure(f'no pinned PostgreSQL {major} runtime')
+    for name, digest, url in packages:
+        archive = pinned(check, url, name, digest)
         check.run('dpkg-deb', '-x', archive, destination)
-    binary = destination / 'usr/lib/postgresql/16/bin'
-    if not check.run(binary / 'postgres', '--version').startswith('postgres (PostgreSQL) 16.15 '):
-        raise Failure('PostgreSQL host differs from pinned 16.15')
+    binary = destination / f'usr/lib/postgresql/{major}/bin'
+    if major != 16:
+        check.env['LD_LIBRARY_PATH'] = str(destination / 'usr/lib/x86_64-linux-gnu')
+    expected = next(name.split('_')[1].split('-')[0] for name, _, _ in packages if name.startswith(f'postgresql-{major}_'))
+    if not check.run(binary / 'postgres', '--version').startswith(f'postgres (PostgreSQL) {expected} '):
+        raise Failure(f'PostgreSQL host differs from pinned {expected}')
     prepend(check, binary)
 
 

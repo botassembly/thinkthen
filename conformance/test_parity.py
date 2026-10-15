@@ -515,6 +515,152 @@ class PublicAssertions(unittest.TestCase):
                     self.assertIn(cause, result.stderr)
                     self.assertFalse(marker.exists(), 'invalid selection started a backend')
 
+    @unittest.skipUnless(os.name == 'posix', 'Homebrew PostgreSQL setup runs on POSIX hosts')
+    def test_postgresql_keg_cleanup_preserves_unowned_files_and_removes_owned_files(self):
+        import re
+        import shlex
+        postgres = parity.ROOT / 'databases/postgresql'
+        cleanup = re.search(r'^cleanup\(\) \{.*?^\}', (postgres / 'check.sh').read_text(), re.M | re.S).group()
+        helper = parity.ROOT / 'databases/sqlite/tests/complete/postgresql_runtime.sh'
+        helper_cleanup = next(line for line in helper.read_text().splitlines() if line.startswith('cleanup()'))
+        for entry, cleanup_function in (('check', cleanup), ('sqlite-host', helper_cleanup)):
+            for major in (16, 17, 18):
+                for occupied in ('so', 'dylib', 'control', 'sql', 'dangling-so', 'dangling-sql', 'owned'):
+                    with self.subTest(entry=entry, major=major, occupied=occupied), tempfile.TemporaryDirectory(prefix='pg-keg-ownership-') as folder:
+                        root = Path(folder)
+                        for name in ('runtime.sha256', 'runtime.url', 'runtime-darwin.env'):
+                            shutil.copyfile(postgres / name, root / name)
+                        for name in ('lib', 'extension', 'source-lib', 'source-extension', 'data', 'home', 'bin'):
+                            (root / name).mkdir()
+                        config = root / 'pg_config'
+                        config.write_text('#!/bin/sh\nprintf "%s\n" ' + shlex.quote(str(root / 'lib')) + '\n')
+                        config.chmod(0o755)
+                        initdb = root / 'bin/initdb'
+                        initdb.write_text('#!/bin/sh\n: >"$DATA/postgresql.conf"\n')
+                        initdb.chmod(0o755)
+                        for name in ('thinkthen.control', 'thinkthen--0.2.0.sql'):
+                            (root / 'source-extension' / name).write_text('owned source')
+                        (root / 'source-lib/thinkthen.so').write_text('owned module')
+                        other = root / 'extension/other.sql'
+                        other.write_text('other extension')
+                        if occupied != 'owned':
+                            name = {'so': 'lib/thinkthen.so', 'dylib': 'lib/thinkthen.dylib',
+                                    'control': 'extension/thinkthen.control', 'sql': 'extension/thinkthen--0.1.0.sql',
+                                    'dangling-so': 'lib/thinkthen.so', 'dangling-sql': 'extension/thinkthen--0.1.0.sql'}[occupied]
+                            sentinel = root / name
+                            if occupied.startswith('dangling'): sentinel.symlink_to(root / 'unowned-target')
+                            else: sentinel.write_text('preexisting extension')
+                        script = root / 'run.sh'
+                        script.write_text('set -eu\n. ' + shlex.quote(str(postgres / 'runtime.sh'))
+                            + '\nPG_HOST=Darwin\nEXTRACTED=$FIXTURE_ROOT\nscratch_clean() { :; }\n'
+                            + cleanup_function + '\ntrap cleanup EXIT\nruntime_install source-lib source-extension\n')
+                        env = {'PATH': os.defpath, 'HOME': str(root / 'home'), 'PG_MAJOR': str(major),
+                               'PG_CONFIG': str(config), 'FIXTURE_ROOT': str(root), 'RUN': str(root),
+                               'RUNTIME_EXTENSION_DIR': str(root / 'extension'), 'DATA': str(root / 'data'),
+                               'BIN': str(root / 'bin'), 'SOCK': str(root / 'socket'), 'EXT_VERSION': '0.2.0',
+                               'LIMIT': str(parity.ROOT / 'sdlc/scripts/time-limit')}
+                        result = subprocess.run(['bash', str(script)], cwd=root, env=env, capture_output=True, text=True)
+                        self.assertEqual(result.returncode, 0 if occupied == 'owned' else 1, result.stdout + result.stderr)
+                        self.assertEqual(other.read_text(), 'other extension')
+                        if occupied == 'owned':
+                            self.assertFalse((root / 'lib/thinkthen.so').exists())
+                            self.assertFalse((root / 'extension/thinkthen.control').exists())
+                            self.assertFalse((root / 'extension/thinkthen--0.2.0.sql').exists())
+                        elif occupied.startswith('dangling'):
+                            self.assertTrue(sentinel.is_symlink())
+                            self.assertFalse((root / 'unowned-target').exists())
+                        else: self.assertEqual(sentinel.read_text(), 'preexisting extension')
+
+    @unittest.skipUnless(os.name == 'posix', 'PostgreSQL child readers run on POSIX hosts')
+    def test_sql_postgresql_child_keeps_alternate_target_and_selected_profile(self):
+        from importlib.util import module_from_spec, spec_from_file_location
+        from unittest.mock import Mock
+        complete = parity.ROOT / 'databases/sqlite/tests/complete'
+        postgres = parity.ROOT / 'databases/postgresql'
+        def load(name, path):
+            spec = spec_from_file_location(name, path)
+            loaded = module_from_spec(spec)
+            spec.loader.exec_module(loaded)
+            return loaded
+        with patch.object(sys, 'path', [str(complete), str(parity.ROOT / 'conformance'), *sys.path]):
+            shared = load('sql_complete_control', complete / 'parity.py')
+            import postgresql_host as host_module
+            with patch.dict(sys.modules, {'parity': shared}):
+                requests = load('sql_request_control', postgres / 'tests/complete_request_cases.py')
+                facts = load('sql_facts_control', complete / 'facts.py')
+        class ReachedReader(Exception):
+            pass
+        row = {'id': '01-decide-yes-captured', 'kind': 'typed-result', 'verb': 'decide'}
+        value = {'arm': 'generic/v1', 'verb': 'decide', 'question': {'decide': 'Fixture?'},
+                 'items': ['Fixture.'], 'expect': {}}
+        with tempfile.TemporaryDirectory(prefix='sql-reader-target-') as folder:
+            for launcher, module in (('shared', shared), ('requests', requests), ('facts', facts)):
+                for profile in ('routine', 'full'):
+                    for target_kind in ('absolute', 'relative', 'unset'):
+                        with self.subTest(launcher=launcher, profile=profile, target=target_kind):
+                            root = Path(folder) / launcher / profile / target_kind
+                            target = root / ('databases/postgresql/target' if target_kind == 'unset' else 'alternate-target')
+                            selected = 'release' if profile == 'full' else 'debug'
+                            marker = root / 'reader-used'
+                            for mode in ('debug', 'release'):
+                                reader = target / mode / 'thinkthen_read_inputs'
+                                reader.parent.mkdir(parents=True)
+                                program = ('import json, os, pathlib, sys\n'
+                                           'assert "FAKE_SERVICE_API_KEY" not in os.environ\n'
+                                           f'pathlib.Path({str(marker)!r}).write_text({mode!r})\n'
+                                           'json.dump(json.load(sys.stdin), sys.stdout)\n')
+                                reader.write_text('#!' + sys.executable + '\n' + program)
+                                reader.chmod(0o755)
+                            (root / 'conformance').mkdir()
+                            for name in ('cases.json', 'named-inputs.json'):
+                                (root / 'conformance' / name).write_text('{"cases":[]}')
+                            def execute(consumer, frame, env, home, backend):
+                                self.assertEqual(consumer, 'postgresql')
+                                probe = 'import json,sys; from native_inputs import query; query(json.load(sys.stdin))'
+                                result = subprocess.run([sys.executable, '-c', probe],
+                                    env=env | {'PYTHONPATH': str(postgres / 'tests')},
+                                    input=json.dumps(frame), cwd=home, capture_output=True, text=True)
+                                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+                                self.assertEqual(marker.read_text(), selected)
+                                if launcher != 'shared': raise ReachedReader()
+                                return {}
+                            env = {'PATH': os.defpath, 'THINKTHEN_TEST_PROFILE': profile,
+                                   'THINKTHEN_POSTGRESQL_SOCKET': '/fixture',
+                                   'FAKE_SERVICE_API_KEY': 'hostile-parent-only'}
+                            if target_kind != 'unset':
+                                env['CARGO_TARGET_DIR'] = str(target) if target_kind == 'absolute' else os.path.relpath(target)
+                            if launcher == 'shared':
+                                build_env = {'PATH': os.defpath, 'HOME': str(root / 'home')}
+                                if target_kind != 'unset':
+                                    build_env['CARGO_TARGET_DIR'] = str(target) if target_kind == 'absolute' else os.path.relpath(target, postgres)
+                                built = subprocess.run(['sh', '-c', ". ./runtime.sh; runtime_target; exec python3 -c 'import os,sys; sys.stdout.write(os.environ[\"CARGO_TARGET_DIR\"])'"],
+                                                       cwd=postgres, env=build_env, text=True, capture_output=True, check=True)
+                                self.assertEqual(built.stdout, str((target if target_kind != 'unset' else postgres / 'target').resolve()))
+                            backend = Mock(port=12345)
+                            backend.read.return_value = '0'
+                            listener = Mock(count=0, server_address=('127.0.0.1', 12345))
+                            with contextlib.ExitStack() as stack:
+                                for target_module in (shared, requests, facts):
+                                    stack.enter_context(patch.object(target_module, 'ROOT', root, create=True))
+                                    stack.enter_context(patch.object(target_module, 'execute', side_effect=execute))
+                                stack.enter_context(patch.object(facts, '__file__', str(root / 'databases/sqlite/tests/complete/facts.py')))
+                                stack.enter_context(patch.object(facts, 'Listener', return_value=listener))
+                                stack.enter_context(patch.object(facts.threading, 'Thread'))
+                                stack.enter_context(patch.object(os, 'environ', env))
+                                stack.enter_context(patch.object(sys, 'argv', ['sql-complete', 'postgresql']))
+                                stack.enter_context(patch.object(shared.inventory, 'required_cases', return_value={row['id']: row}))
+                                stack.enter_context(patch.object(shared, 'document', return_value=value))
+                                stack.enter_context(patch.object(shared, 'prepare'))
+                                stack.enter_context(patch.object(shared, 'assertions'))
+                                stack.enter_context(patch.object(shared, 'Backend', return_value=backend))
+                                stack.enter_context(patch.object(requests, 'Backend', return_value=backend))
+                                stack.enter_context(patch.object(host_module, 'PostgresqlHost'))
+                                stack.enter_context(patch.object(requests, 'PostgresqlHost'))
+                                stack.enter_context(contextlib.redirect_stdout(io.StringIO()))
+                                if launcher == 'shared': self.assertFalse(module.main())
+                                else:
+                                    with self.assertRaises(ReachedReader): module.main()
+
     def test_prepared_python_shell_uses_shared_installed_venv_and_private_fixture_copy(self):
         import venv
         with tempfile.TemporaryDirectory() as scratch:
@@ -794,7 +940,7 @@ class InstalledInputs(unittest.TestCase):
                  'thinkthen-0.2.0-x86_64-linux.gem', 'thinkthen_0.2.0.tar.gz']
         names += [f'thinkthen-{family}-0.2.0-x86_64-unknown-linux-gnu.tar.gz' for family in
                   ['go', 'csharp', 'jvm', 'cpp', 'swift', 'zig', 'php',
-                   'flutter', 'ada', 'cobol', 'sqlite', 'duckdb', 'postgresql16']]
+                   'flutter', 'ada', 'cobol', 'sqlite', 'duckdb', 'postgresql16', 'postgresql17', 'postgresql18']]
         for name in names:
             (folder / name).touch()
         # The plain diagnostic gem is shipped alongside the actual native gem.
@@ -818,6 +964,9 @@ class InstalledInputs(unittest.TestCase):
                 self.assertEqual(len({inputs[row]['THINKTHEN_ARTIFACT'] for row in group}), 1)
             self.assertEqual(Path(inputs['postgresql']['THINKTHEN_ARTIFACT']).name,
                              'thinkthen-postgresql16-0.2.0-x86_64-unknown-linux-gnu.tar.gz')
+            for major in (16, 17, 18):
+                self.assertEqual(Path(inputs['postgresql'][f'THINKTHEN_PG{major}_ARTIFACT']).name,
+                                 f'thinkthen-postgresql{major}-0.2.0-x86_64-unknown-linux-gnu.tar.gz')
             for row in inputs.values():
                 self.assertEqual(row['THINKTHEN_C_ARTIFACT'], native)
                 self.assertEqual(Path(row['THINKTHEN_DART_ARTIFACT']).name, self.dart)
@@ -851,6 +1000,25 @@ class InstalledInputs(unittest.TestCase):
             row = json.loads((Path(scratch) / 'target/parity/matrix.json').read_text())[0]
             self.assertNotIn('platform_pending', row)
             self.assertEqual(set(row['cells'].values()), {'missing'})
+
+    def test_postgresql_requires_every_case_on_every_server_major(self):
+        contract = parity.inventory() | {'consumers': [self.consumers['postgresql']], 'pending_consumers': []}
+        for missing in (None, '16', '17', '18'):
+            with self.subTest(missing=missing), tempfile.TemporaryDirectory() as scratch:
+                majors = []
+                def command(args, **kwargs):
+                    major = args[-1]
+                    majors.append(major)
+                    for key, case in parity.required_cases(contract, 'postgresql').items():
+                        if major == missing:
+                            continue
+                        kwargs['stdout'].write(parity.PREFIX + json.dumps({
+                            'consumer': 'postgresql', 'case': key, 'status': 'pass',
+                            'checks': case.get('checks', ['named', 'runtime'])}) + '\n')
+                    return subprocess.CompletedProcess(args, 0)
+                with contextlib.redirect_stdout(io.StringIO()), patch.object(parity, 'ROOT', Path(scratch)), patch.object(parity, 'inventory', return_value=contract), patch.object(parity.subprocess, 'run', side_effect=command), patch.object(parity.os, 'environ', {}):
+                    self.assertEqual(parity.run('12345'), int(missing is not None))
+                self.assertEqual(majors, ['16', '17', '18'])
 
     def test_linux_keeps_apple_cells_pending_without_hiding_required_failures(self):
         contract = parity.inventory()

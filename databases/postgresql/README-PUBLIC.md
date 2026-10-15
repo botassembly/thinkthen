@@ -2,7 +2,7 @@
 
 ThinkThen is ten functions on top of Jev, TypeSafe's decision model, or any model like it. It puts these decision models in your code, whatever model, language or database you use. Use Jev, OpenAI or a local model. Ask a typed question and get back `true`, `false`, a label or a number. Your code branches on the answer. A model can say not sure, and a failed call never looks like an answer. ThinkThen packs many records into few requests, saves each answer for reuse, and lets tests replay saved answers with no key and no network.
 
-Download and unpack the release archive for your platform. Install the extension files into your PostgreSQL 16 server, then enable the extension as an administrator:
+Download and unpack the release archive for your platform and server major: `thinkthen-postgresql16-…` for PostgreSQL 16, `thinkthen-postgresql17-…` for 17, or `thinkthen-postgresql18-…` for 18. Install the extension files into that server, then enable the extension as an administrator:
 
 ```sql
 CREATE EXTENSION thinkthen;
