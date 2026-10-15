@@ -21,7 +21,7 @@ def statements(create):
             "SELECT thinkthen_decide_images('Is red visible?', (SELECT array_agg(image ORDER BY ordinal) FROM images), 'Compare originals.')",
             'SELECT thinkthen_choose_images(' + quoted('{"choose":"Which color?","options":["red","blue"]}') + ", (SELECT array_agg(image ORDER BY ordinal) FROM images), 'Compare originals.')",
             'SELECT thinkthen_score_images(' + quoted('{"score":"How red?","levels":["none","all"]}') + ", (SELECT array_agg(image ORDER BY ordinal) FROM images), 'Compare originals.')",
-            'SELECT to_jsonb(result)->\'answer\'->\'probabilities\' FROM thinkthen_choose_details(' + quoted('{"choose":"Which color?","options":["red","blue"]}') + ",ARRAY[thinkthen_record(text=>'Compare originals.',images=>(SELECT array_agg(image ORDER BY ordinal) FROM images))])",
+            *([] if create else ['SELECT to_jsonb(result)->\'answer\'->\'probabilities\' FROM thinkthen_choose_details(' + quoted('{"choose":"Which color?","options":["red","blue"]}') + ",ARRAY[thinkthen_record(text=>'Compare originals.',images=>(SELECT array_agg(image ORDER BY ordinal) FROM images))])"]),
             'SELECT (image).file IS NULL FROM images ORDER BY ordinal']
 
 
@@ -53,8 +53,10 @@ def verify(socket, create):
     out, err = sql(socket, *statements(create))
     lines = out.splitlines()
     assert not err and lines[:3] == ['t', 'red', '0.8'], (out, err)
-    assert {entry['name']: entry['value'] for entry in json.loads(lines[3])} == {'red': 0.8, 'blue': 0.2}, out
-    assert lines[4:] == ['t'] * 3, out
+    if not create:
+        # Native details reuse the scalar image recording without a live send.
+        assert {entry['name']: entry['value'] for entry in json.loads(lines[3])} == {'red': 0.8, 'blue': 0.2}, out
+    assert lines[3 if create else 4:] == ['t'] * 3, out
 
 
 if __name__ == '__main__':
