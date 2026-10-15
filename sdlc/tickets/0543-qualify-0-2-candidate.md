@@ -95,7 +95,7 @@ Reviews: revision c4608af, accept
 
 ## Outcome
 
-One reviewed commit on `ticket/0543-final`, tagged `rc/0.2.0-rc.13`, passes the local release suite, the coverage comparison and the nonpublishing hosted runs on Linux, macOS and Windows, and publishes nothing.
+One reviewed commit on `ticket/0543-final`, tagged `rc/0.2.0-rc.13` or a later candidate number, passes the local release suite, the coverage comparison and the nonpublishing hosted runs on Linux, macOS and Windows, and publishes nothing.
 
 ## Evidence
 
@@ -110,6 +110,7 @@ One reviewed commit on `ticket/0543-final`, tagged `rc/0.2.0-rc.13`, passes the 
 - PM decision, 2026-10-14: the Rust ratchet is not a gate on a lane or the candidate, and step 4 extends this to every line-count ratchet for 0.2 growth. At freeze it equals the measured total, and the record names the 0.2 features that raised it above main. The consolidated final stood 1,567 lines above main after 0564 found no safe cut that kept every distinct check.
 - PM decision, 2026-10-13: 0560, 0561, 0563 and 0565 close on the passing candidate SHA with 0562, 0564 and the other wave tickets.
 - PM decision, 2026-10-14: hosted Windows and macOS runs gate every frozen commit the coordinator gates. The coordinator starts them in parallel with the local gates, not only after tagging.
+- PM decision, 2026-10-15: candidate tags are immutable. The rc.13 rehearsal found two setup bugs, so the fixed commit is tagged `rc/0.2.0-rc.14` after review and the step 8 reruns.
 - PM decision, 2026-10-14: 0576's formal grading runs on the candidate as part of the area review, and the coordinator owns it.
 
 ## Scope
@@ -120,7 +121,7 @@ One reviewed commit on `ticket/0543-final`, tagged `rc/0.2.0-rc.13`, passes the 
   2. Done. `release.yml` rehearse mode qualifies installed Swift and Objective-C Foundation on `macos-15` and `macos-15-intel`, builds the R source package from the published crate, and runs `check-binding-samples.mjs` on the resolved commit. `install-check.yml` has `windows-2025` rows for every channel that ships Windows.
   3. The frozen SHA runs routine `test` and `lint`, the Polars nextest and Clippy, complete C and installed C, a build of every library, and hosted Windows and macOS, and the failures are collected. This step is done when the 0543 record shows those results for the frozen SHA.
   4. Fresh reviewers review the frozen SHA by area: core, generators, each language group and docs. This step is done when the freeze recount lands. Line-count ratchets are not candidate gates for 0.2 growth. The freeze record is written once, at the candidate commit after the last fix. The root 44-line overage and the SQLite Python 3-line overage need no cuts.
-  5. Tag `rc/0.2.0-rc.13`.
+  5. Tag `rc/0.2.0-rc.13`. A tag never moves. A fix after tagging goes on `ticket/0543-final` under step 8, and the fixed commit takes the next number, starting with `rc/0.2.0-rc.14`.
   6. Run in parallel: on the Beelink, `sdlc/scripts/test-full-cases --run`, `sdlc/scripts/package` and `sdlc/scripts/test-stress --run`, where exit 77 or a pending platform row fails and only Swift and Objective-C may skip; on the Beelink, `sdlc/scripts/coverage` compared by counts with the 0560 baseline net of deletions; on GitHub, `release.yml` in rehearse mode and `windows.yml`, covering Linux x86 and ARM, `macos-15`, `macos-15-intel` and Windows. The Windows run carries the platform proofs for 0383, 0384, 0385 and 0455 and the 0474 and 0480 cache checks. The candidate also carries these duties from closed or closing tickets, each recorded in the 0543 record:
      - 0560: one table that compares each coverage collection's reached count with its lower baseline count minus the deleted-line allowance, which is 59,962 minus the candidate's mapped line count.
      - 0561: the `nm -D --defined-only` export list for `libthinkthen.so` with one caller per export.
