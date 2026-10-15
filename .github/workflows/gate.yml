@@ -24,7 +24,13 @@ on:
         type: choice
         required: false
         default: none
-        options: [none, go, cpp]
+        options: [none, go, cpp, postgresql]
+      platform:
+        description: Standard hosted runner for the selected installed package
+        type: choice
+        required: false
+        default: ubuntu-24.04
+        options: [ubuntu-24.04, ubuntu-24.04-arm, macos-15, macos-15-intel]
 
 permissions:
   contents: read
@@ -115,9 +121,9 @@ jobs:
         run: sdlc/scripts/spec
 
   language:
-    name: Installed ${{ inputs.language }} package
+    name: Installed ${{ inputs.language }} package on ${{ inputs.platform || 'ubuntu-24.04' }}
     if: inputs.language != '' && inputs.language != 'none'
-    runs-on: ubuntu-24.04
+    runs-on: ${{ inputs.platform || 'ubuntu-24.04' }}
     defaults: {run: {shell: bash}}
     env:
       LANGUAGE: ${{ inputs.language }}
@@ -133,7 +139,7 @@ jobs:
         env: {REF: "${{ github.ref }}", SHA: "${{ github.sha }}"}
         run: |
           set -eu
-          case "$LANGUAGE" in go|cpp) ;; *) exit 2 ;; esac
+          case "$LANGUAGE" in go|cpp|postgresql) ;; *) exit 2 ;; esac
           case "$REF" in refs/heads/*) ;; *) exit 2 ;; esac
           [ "$(git rev-parse HEAD)" = "$SHA" ]
           echo "Checking $LANGUAGE at $SHA"
@@ -156,7 +162,42 @@ jobs:
           (cd libraries/cpp && node ../../sdlc/scripts/ratchet.mjs ratchet.hpp.json)
           python3 sdlc/generators/results/generate.py --target cpp --check
           python3 sdlc/generators/results/generate.py --target cpp --inputs --check
+      - name: Prepare the pinned PostgreSQL hosts
+        if: inputs.language == 'postgresql'
+        run: |
+          set -eu
+          if [ "$(uname -s)" = Darwin ]; then
+            brew install bash
+          else
+            sudo apt-get update -qq
+            sudo apt-get install -y libclang-dev postgresql-server-dev-16
+          fi
+          cargo install --locked --no-default-features --version 0.17.0 cargo-pgrx
+          cargo fetch --locked --manifest-path databases/postgresql/Cargo.toml
+          mkdir -p "$HOME/.pgrx"
+          printf '[configs]\n' >"$HOME/.pgrx/config.toml"
+          for major in 16 17 18; do
+            sh databases/postgresql/setup.sh "$major"
+            config=$(cd databases/postgresql && PG_MAJOR=$major bash -c '. ../../sdlc/scripts/scratch.sh; . ./runtime.sh; runtime_ready; printf "%s" "$PG_CONFIG"')
+            printf 'pg%s = "%s"\n' "$major" "$config" >>"$HOME/.pgrx/config.toml"
+          done
+      - name: Check each PostgreSQL major and its installed archive
+        if: inputs.language == 'postgresql'
+        run: |
+          set -eu
+          target=$(rustc -vV | sed -n 's/^host: //p')
+          version=$(sed -n 's/^version = "\(.*\)"$/\1/p' crates/thinkthen/Cargo.toml | head -n 1)
+          out="$RUNNER_TEMP/thinkthen-language-packages"
+          for major in 16 17 18; do
+            python3 sdlc/scripts/build-admission.py -- bash databases/postgresql/check.sh "$major"
+          done
+          THINKTHEN_TEST_PROFILE=full CARGO_NET_OFFLINE=true sdlc/scripts/release-pack --reuse "$target" "$out" postgresql
+          for major in 16 17 18; do
+            THINKTHEN_ARTIFACT="$out/thinkthen-postgresql$major-$version-$target.tar.gz" \
+              python3 sdlc/scripts/build-admission.py -- bash databases/postgresql/check.sh "$major"
+          done
       - name: Pack and check only the selected installed language
+        if: inputs.language != 'postgresql'
         run: |
           set -eu
           target=$(rustc -vV | sed -n 's/^host: //p')
