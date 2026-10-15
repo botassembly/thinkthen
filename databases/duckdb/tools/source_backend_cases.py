@@ -15,8 +15,10 @@ import source_hosts
 def check(root, target, selection):
     # Only the costly host matrix is omitted. The actual entry, Cargo build,
     # artifact selection, harness and loopback process all run unchanged.
-    with patch.dict(os.environ, CARGO_TARGET_DIR=selection, CARGO_BUILD_JOBS='2',
-                    THINKTHEN_BACKEND_BIN='/missing/stale-caller-backend'), \
+    env = source_hosts.tool_environment() | {
+        'CARGO_TARGET_DIR': selection, 'CARGO_BUILD_JOBS': '2',
+        'THINKTHEN_BACKEND_BIN': '/missing/stale-caller-backend'}
+    with patch.object(os, 'environ', env), \
             patch.object(source_hosts, 'hosts', return_value=iter(())), \
             patch.object(harness, 'BACKEND', ''):
         assert source_hosts.check_hosts(root / 'cache', False) == 0
