@@ -93,3 +93,8 @@ One case in `conformance/cases.json`, replayed by every binding's installed driv
 ## Defers
 
 Registry pages (0578), the website (0575) and docs examples follow after this lands.
+
+## Progress
+
+- 2026-10-14 started
+- 2026-10-14 next: The reviewed null-probability repair covers every dataframe call; earlier accepted checks expected all-null Series and compared only the first cell, so they missed whole-call None, and the new checks verify container presence, cardinality and dtype before projection across all cases.
