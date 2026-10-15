@@ -28,6 +28,9 @@ BOUNDED = load('release-bounded')
 C = load('release-windows-c')
 MSVC = load('release-msvc')
 SMOKE = load('release-windows-c-smoke')
+INSTALLER = load('windows-installer-test')
+WINDOWS = load('release-windows-smoke')
+SDK = load('release-windows-sdk-smoke')
 FIXTURE = runpy.run_path(str(SCRIPTS / 'release-windows-c-fixture.py'))
 
 
@@ -66,7 +69,7 @@ def portable(root):
                                       'FAKE_SERVICE_API_KEY': 'fake-only', 'THINKTHEN_BACKEND': 'planted'}):
         assert C.run([sys.executable, '-c',
             'import os; print(",".join(sorted(set(os.environ) & {"CL","_CL_","LINK","FAKE_SERVICE_API_KEY","THINKTHEN_BACKEND"})))']) == '\n'
-    for caller in (C, MSVC):
+    for caller in (C, MSVC, INSTALLER, WINDOWS, SDK):
         args = [sys.executable, '-c',
             'import os; os.write(1,b"a"*524288); os.write(2,b"b"*524288)']
         result = caller.CAPTURE(args, env=environment, timeout=10)
@@ -79,8 +82,15 @@ def portable(root):
             'import sys; sys.stdout.buffer.write(sys.stdin.buffer.read())'],
             env=environment, timeout=10, input=b'\x00\xff\r\n')
         assert result.stdout == b'\x00\xff\r\n' and not result.stderr and result.returncode == 0
-        invoke = (lambda command: C.run(command)) if caller is C else (lambda command: MSVC.run(command, environment))
-        refused(lambda: invoke([sys.executable, '-c', 'import sys; sys.exit(23)']), 'exit 23')
+        if caller in (C, MSVC):
+            invoke = (lambda command: C.run(command)) if caller is C else (lambda command: MSVC.run(command, environment))
+            refused(lambda: invoke([sys.executable, '-c', 'import sys; sys.exit(23)']), 'exit 23')
+    result = SDK.run([sys.executable, '-c', 'from pathlib import Path; print(Path.cwd())'], root, environment)
+    assert Path(result).resolve() == root.resolve(), 'SDK_CHILD_WRONG_DIRECTORY'
+    result = WINDOWS.run([sys.executable, '-c',
+        'import sys; sys.stdout.buffer.write(sys.stdin.buffer.read()); sys.exit(23)'],
+        environment, text='first\nsecond\r\n', code=23, output='first\nsecond')
+    assert result.stdout == 'first\nsecond\r\n', 'SMOKE_STDIN_BYTES_CHANGED'
 
     if os.name != 'posix':
         print('POSIX owned-session execution skipped; native Windows lifecycle proof remains separate')
@@ -97,14 +107,17 @@ def portable(root):
         stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
     try:
         assert alive(unrelated.pid), 'LIVE_OWNED_CHILD_REPORTED_GONE'
-        for caller in (C, MSVC, SMOKE):
-            pids = root / ('c-pids' if caller is C else 'msvc-pids' if caller is MSVC else 'consumer-pids')
+        for caller in (C, MSVC, SMOKE, INSTALLER, WINDOWS, SDK):
+            pids = root / (caller.__name__ + '-pids')
             # Exercise each real release wrapper, shortening only its declared deadline.
             def short(args, **options):
-                assert options['timeout'] == (120 if caller is C else 60)
+                expected = {C: 120, MSVC: 60, SMOKE: 60, INSTALLER: 30, WINDOWS: 180, SDK: 600}
+                assert options['timeout'] == expected[caller]
                 if caller is not SMOKE:
                     assert options['env'] == environment
-                    assert options.get('text', False) is (caller is MSVC)
+                    assert options.get('text', False) is (caller in (MSVC, SDK))
+                    if caller is SDK:
+                        assert options['cwd'] == root
                 else:
                     assert 'text' not in options and 'input' not in options
                     assert not any(name in options['env'] for name in ('INCLUDE', 'LIB', 'LIBPATH', 'CL', '_CL_', 'LINK'))
@@ -126,6 +139,19 @@ def portable(root):
                         with mock.patch.object(SMOKE.C, 'CAPTURE', short):
                             refused(lambda: SMOKE.consume(archive), 'consumer.exe timed out after 1 seconds')
                     assert archive.read_bytes() == original and consumers and not consumers[0].parent.exists()
+                elif caller is INSTALLER:
+                    with mock.patch.object(caller, 'CAPTURE', short):
+                        refused(lambda: INSTALLER.run_fixture([sys.executable, str(tool), str(pids)],
+                            environment, timeout=30, label='cleanup regression'),
+                            Path(sys.executable).name + ' timed out after 1 seconds')
+                elif caller is WINDOWS:
+                    with mock.patch.object(caller, 'CAPTURE', short):
+                        refused(lambda: WINDOWS.run([sys.executable, str(tool), str(pids)], environment),
+                            Path(sys.executable).name + ' timed out after 1 seconds')
+                elif caller is SDK:
+                    with mock.patch.object(caller, 'CAPTURE', short):
+                        refused(lambda: SDK.run([sys.executable, str(tool), str(pids)], root, environment),
+                            Path(sys.executable).name + ' timed out after 1 seconds')
                 else:
                     with mock.patch.object(caller, 'CAPTURE', short):
                         invoke = (lambda: C.run([sys.executable, str(tool), str(pids)])) if caller is C else (

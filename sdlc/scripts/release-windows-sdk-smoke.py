@@ -7,14 +7,15 @@ import json
 import os
 from pathlib import Path
 import re
+import runpy
 import shutil
-import subprocess
 import sys
 import tempfile
 import threading
 import xml.etree.ElementTree as ET
 
 REPO = Path(__file__).resolve().parents[2]
+CAPTURE = runpy.run_path(str(REPO / 'sdlc/scripts/release-bounded.py'))['capture']
 sys.path.insert(0, str(REPO / 'conformance/children'))
 from children import child_env
 from install_check_consumers import SOURCES
@@ -55,8 +56,7 @@ object InstallScala {
 
 
 def run(command, project, env):
-    result = subprocess.run(list(map(str, command)), cwd=project, env=env,
-                            capture_output=True, text=True, timeout=600)
+    result = CAPTURE(list(map(str, command)), cwd=project, env=env, text=True, timeout=600)
     if result.returncode:
         raise RuntimeError(f'{command[0]} failed ({result.returncode}): {result.stdout}\n{result.stderr}')
     return result.stdout.strip()

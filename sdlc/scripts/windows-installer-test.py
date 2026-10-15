@@ -9,11 +9,12 @@ import importlib.util
 import json
 import os
 from pathlib import Path
+import runpy
 import shutil
 import struct
-import subprocess
 import tempfile
 import threading
+import time
 import zipfile
 import warnings
 
@@ -22,6 +23,18 @@ NAME = 'thinkthen-0.2.0-x86_64-pc-windows-msvc.zip'
 SPEC = importlib.util.spec_from_file_location('windows_command', REPO / 'sdlc/scripts/release-windows-command.py')
 COMMAND = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(COMMAND)
+CAPTURE = runpy.run_path(str(REPO / 'sdlc/scripts/release-bounded.py'))['capture']
+
+
+def run_fixture(args, env, *, timeout, label):
+    started = time.monotonic()
+    print(f'{Path(args[0]).name}: starting {label} (deadline {timeout}s)', flush=True)
+    result = CAPTURE(args, env=env, timeout=timeout)
+    for output in (result.stdout, result.stderr):
+        if output:
+            print(output.decode('utf-8', errors='replace'), end='', flush=True)
+    print(f'{Path(args[0]).name}: {label} exited {result.returncode} in {time.monotonic() - started:.2f}s', flush=True)
+    return result
 
 
 def prepare_private_fixture(root, host, env):
@@ -40,8 +53,9 @@ foreach ($rule in $acl.GetAccessRules($true, $true, [System.Security.Principal.S
     if ($rule.AccessControlType -eq 'Allow' -and $rule.IdentityReference.Value -notin @($sid, 'S-1-5-18')) { throw 'Fixture root grants foreign access.' }
 }
 '''
-    subprocess.run([host, '-NoProfile', '-NonInteractive', '-Command', script],
-                   env=env | {'THINKTHEN_FIXTURE_PATH': str(root)}, check=True, timeout=30)
+    run_fixture([host, '-NoProfile', '-NonInteractive', '-Command', script],
+                env=env | {'THINKTHEN_FIXTURE_PATH': str(root)}, timeout=30,
+                label='private fixture preparation').check_returncode()
 
 
 def pe():
@@ -299,10 +313,10 @@ def main():
                 case_file.write_text(json.dumps(table), encoding='utf-8')
                 for host in hosts:
                     for mode in ('transaction', 'replacement', 'committed', 'uncommitted'):
-                        recovery = subprocess.run([host, '-NoProfile', '-NonInteractive', '-File',
-                                                   str(REPO / 'sdlc/scripts/windows-installer-recovery-test.ps1'),
-                                                   '-Installer', str(REPO / 'install.ps1'), '-Mode', mode,
-                                                   '-FixtureRoot', str(root)], env=env, timeout=30)
+                        call = [host, '-NoProfile', '-NonInteractive', '-File',
+                                str(REPO / 'sdlc/scripts/windows-installer-recovery-test.ps1'),
+                                '-Installer', str(REPO / 'install.ps1'), '-Mode', mode, '-FixtureRoot', str(root)]
+                        recovery = run_fixture(call, env=env, timeout=30, label='recovery ' + mode)
                         expected = 1 if mode == 'uncommitted' else 0
                         if recovery.returncode != expected:
                             raise RuntimeError(f'actual recovery AST {mode} exited {recovery.returncode}, expected {expected}')
@@ -311,7 +325,7 @@ def main():
                             '-Installer', str(REPO / 'install.ps1'), '-Cases', str(case_file), '-FixtureRoot', str(root)]
                     if args.binary:
                         call += ['-NativeBinary', str(args.binary.resolve()), '-ReleaseVersion', args.version, '-ReleaseBase', base]
-                    subprocess.run(call, env=env, check=True, timeout=180)
+                    run_fixture(call, env=env, timeout=180, label='installer boundaries').check_returncode()
             finally:
                 server.shutdown()
                 thread.join()

@@ -22,13 +22,13 @@ $cleanup = @($ast.FindAll({
         $null -ne $node.Finally -and $node.Finally.Extent.Text.Contains('Remove-OwnedScratch')
 }, $true))
 if ($transaction.Count -ne 1 -or $cleanup.Count -ne 1) { throw 'Expected one installer transaction and cleanup block.' }
-Add-Type -TypeDefinition @'
-public class ThinkThenFailingErrorWriter : System.IO.TextWriter {
-    public override System.Text.Encoding Encoding { get { return System.Text.Encoding.UTF8; } }
-    public override void WriteLine(string value) { throw new System.IO.IOException("DIAGNOSTIC ERROR"); }
-    public override void WriteLine(string format, object first, object second) { throw new System.IO.IOException("DIAGNOSTIC ERROR"); }
+function New-FailingErrorWriter {
+    # A closed real writer fails every WriteLine overload without starting a
+    # compiler in each short-lived recovery process on a cold Windows host.
+    $writer = [System.IO.StringWriter]::new()
+    $writer.Dispose()
+    return $writer
 }
-'@
 if ($Mode -in @('committed', 'uncommitted')) {
     $entry = @($ast.EndBlock.Statements | Where-Object { $_ -is [System.Management.Automation.Language.TryStatementAst] })
     if ($entry.Count -ne 1) { throw 'Expected the actual installer entry point.' }
@@ -37,7 +37,7 @@ if ($Mode -in @('committed', 'uncommitted')) {
         throw 'OUTPUT ERROR'
     }
     $Version = '0.2.0'
-    [Console]::SetError([ThinkThenFailingErrorWriter]::new())
+    [Console]::SetError((New-FailingErrorWriter))
     & ([scriptblock]::Create($entry[0].Extent.Text))
     return
 }
@@ -65,7 +65,7 @@ if ($Mode -eq 'replacement') {
     $file = [System.IO.File]::Open($snapshot, [System.IO.FileMode]::CreateNew, [System.IO.FileAccess]::Write, [System.IO.FileShare]::None)
     try { $file.WriteByte(1) } finally { $file.Dispose() }
     $priorWriter = [Console]::Error
-    $writer = [ThinkThenFailingErrorWriter]::new()
+    $writer = New-FailingErrorWriter
     [Console]::SetError($writer)
     try {
         foreach ($operation in @('commit', 'restore')) {
@@ -109,7 +109,7 @@ foreach ($scenario in @('inspection-failure', 'absent-receipt', 'diagnostic-fail
     $script:InspectionFault = $scenario -ne 'absent-receipt'
     $capture = [System.IO.StringWriter]::new()
     $writer = $capture
-    if ($scenario -eq 'diagnostic-failure') { $writer = [ThinkThenFailingErrorWriter]::new() }
+    if ($scenario -eq 'diagnostic-failure') { $writer = New-FailingErrorWriter }
     [Console]::SetError($writer)
     try {
         $actual = ''
