@@ -1,4 +1,4 @@
-# The local PostgreSQL 16.15 runtime and the per-test loopback backend,
+# The selected pinned PostgreSQL runtime and the per-test loopback backend,
 # sourced by check.sh. It never fetches. A missing or mismatched toolchain
 # reports "not run" with the fetch command and exits 77 (R6-2).
 

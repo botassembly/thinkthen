@@ -1,8 +1,6 @@
 #!/bin/sh
-# One-time Linux setup (ticket 0369): fetch the pinned PostgreSQL 16.15 server package for this
-# CPU from Launchpad into the toolchain folder runtime.sh reads, and check its SHA256. The file
-# lands in a scratch folder first and moves into place only after its hash matches. macOS uses
-# the Homebrew bottle that runtime-darwin.env pins.
+# Fetch the selected pinned packages into the private Linux toolchain folder.
+# macOS uses the pinned Homebrew ARM bottle or the same-version Intel source.
 set -eu
 cd -- "$(dirname -- "$0")"
 case $(uname -s) in Linux|Darwin) ;; *) echo "setup: unsupported host" >&2; exit 2 ;; esac

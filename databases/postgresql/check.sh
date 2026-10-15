@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # The PostgreSQL surface's check (ticket 0111). It builds the
-# extension against pinned PostgreSQL $PG_MAJOR.15 headers and runs a local server from
+# extension against the selected pinned PostgreSQL headers and runs a local server from
 # the pinned package as this user on a socket with no TCP port, and restarts
 # it for each test with that test's own loopback backend (ticket 0117) and
 # answer cache. No test reaches a paid backend: the server gets a fake key
