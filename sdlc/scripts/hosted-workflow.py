@@ -55,8 +55,10 @@ def rules(name, doc):
         build = next((i for i, step in enumerate(steps) if 'cargo ' in step.get('run', '')), None)
         lane = {'name': 'Require the standard Windows lane',
                 'env': {'LANE': '${{ inputs.lane }}'}, 'run': 'test "$LANE" = windows'}
-        if lane not in jobs.get('stage-0', {}).get('steps', []):
-            out.append(f'{name}: the standard Windows lane must reject unknown input')
+        standard = jobs.get('stage-0', {}).get('steps', [])
+        candidate = next((i for i, step in enumerate(standard) if step.get('id') == 'candidate'), None)
+        if lane not in standard or candidate is None or standard.index(lane) >= candidate:
+            out.append(f'{name}: the standard Windows lane must reject unknown input before its candidate SHA guard')
         if (job.get('if') != "inputs.lane == 'recognition-cancel'"
                 or job.get('runs-on') != 'windows-2025'
                 or job.get('environment') is not None

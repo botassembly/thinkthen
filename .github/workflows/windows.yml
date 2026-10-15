@@ -48,14 +48,14 @@ jobs:
         with:
           persist-credentials: false
 
+      - name: Require the standard Windows lane
+        env: {LANE: "${{ inputs.lane }}"}
+        run: test "$LANE" = windows
+
       - name: Require the exact candidate commit
         id: candidate
         env: {CANDIDATE_SHA: "${{ inputs.candidate_sha }}", DISPATCH_SHA: "${{ github.sha }}"}
         run: python3 sdlc/scripts/hosted-candidate.py checkout "$CANDIDATE_SHA" "$DISPATCH_SHA"
-
-      - name: Require the standard Windows lane
-        env: {LANE: "${{ inputs.lane }}"}
-        run: test "$LANE" = windows
 
       - name: Install the toolchain that rust-toolchain.toml pins
         run: rustup show active-toolchain || rustup toolchain install

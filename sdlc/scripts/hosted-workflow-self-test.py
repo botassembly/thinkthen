@@ -106,7 +106,7 @@ def workflow_cases():
         assert code == 1 and 'candidate SHA' in output, (defect, output)
 
 
-    for defect in ('wrong-test', 'skip-guard', 'paid', 'unknown-input'):
+    for defect in ('wrong-test', 'skip-guard', 'paid', 'unknown-input', 'late-lane'):
         doc = deepcopy(windows)
         job = doc['jobs']['recognition-cancel']
         if defect == 'wrong-test':
@@ -115,9 +115,14 @@ def workflow_cases():
             next(step for step in job['steps'] if step.get('id') == 'candidate')['if'] = 'false'
         elif defect == 'paid':
             job['runs-on'] = 'windows-latest-8-cores'
-        else:
+        elif defect == 'unknown-input':
             steps = doc['jobs']['stage-0']['steps']
             steps.remove(next(step for step in steps if step.get('name') == 'Require the standard Windows lane'))
+        else:
+            steps = doc['jobs']['stage-0']['steps']
+            lane = next(step for step in steps if step.get('name') == 'Require the standard Windows lane')
+            steps.remove(lane)
+            steps.insert(next(i for i, step in enumerate(steps) if step.get('id') == 'candidate') + 1, lane)
         code, output = workflow_command('windows.yml', doc)
         assert code == 1, (defect, output)
     lane = next(step for step in windows['jobs']['stage-0']['steps']

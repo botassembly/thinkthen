@@ -176,12 +176,12 @@ fn cancellation_stops_waiting_duplicate_recognition_without_extra_sends() {
     eprintln!("recognition cancel: cancel returned; session={session:?}");
     assert!(release.wait());
     eprintln!(
-        "recognition cancel: response released; write={:?}",
+        "recognition cancel: response released; write_attempt_ack={:?}",
         writes.try_recv()
     );
     let packets = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| drain(&session)));
     eprintln!(
-        "recognition cancel: drain returned; sends={}; write={:?}; readiness={:?}; session={session:?}",
+        "recognition cancel: drain returned; sends={}; write_attempt_ack={:?}; readiness={:?}; session={session:?}",
         listener.count(),
         writes.try_recv(),
         session.wait(RequestSessionWaitInterest::Settlement, Duration::ZERO),
