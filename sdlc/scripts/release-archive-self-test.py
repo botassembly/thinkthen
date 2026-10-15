@@ -915,7 +915,7 @@ def main():
                    str(base / "override"), "go", env=env),
                "archive identity cannot override a repository checkout")
 
-        # Import the real source-host helper before checking the container source tree.
+        # Cross the fetch pipeline's real cache-lock child environment before importing.
         docker = fake_bin / "docker"
         docker.write_text("#!/bin/sh\n"
                           "set -eu\n"
@@ -923,6 +923,7 @@ def main():
                           "THINKTHEN_ARCHIVED_SOURCE_COMMIT=*) selected=${arg#*=} ;; "
                           "THINKTHEN_ARCHIVED_SOURCE_TAR=*) tar_path=${arg#*=} ;; "
                           "PYTHONDONTWRITEBYTECODE=*) export \"$arg\" ;; esac; done\n"
+                          "python3 \"$root/src/databases/duckdb/tools/cache_lock.py\" \"$root/cache.lock\" "
                           "python3 \"$root/src/databases/duckdb/tools/source_hosts.py\" --help >/dev/null\n"
                           "python3 \"$root/src/sdlc/scripts/release-archive-tree.py\" \"$root/source.tar\" \"$root/src\"\n"
                           "printf '%s\\n' \"$selected\" >\"$root/out/selected-commit\"\n"
