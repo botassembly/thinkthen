@@ -43,3 +43,4 @@ PM amendment, 2026-10-13. Remaining work. Close 0565 now. The 0576 Rust lane rem
 ## Progress
 
 - 2026-10-15 started
+- 2026-10-15 next: Retain unchanged count-only Facts and Attempt failure JSON and result.md for 0.2 under the PM ruling, record consistency with complete projections as a post-0.2 candidate, and qualify the four accepted cleanup repairs together on the repaired freeze.
