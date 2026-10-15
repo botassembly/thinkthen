@@ -4,6 +4,8 @@ Status: OPEN.
 
 Milestone: 0.2
 
+Reviews: revision c4b48c5, accept
+
 ## Outcome
 
 A caller who pushes every record into a session, finishes it, and only then reads gets every answer in input order on every surface. No push waits on answers the caller has not read.
