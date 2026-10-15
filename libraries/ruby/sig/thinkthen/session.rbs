@@ -18,7 +18,7 @@ module ThinkThen
 
     # The owned answer of one named call. Ruby treats every object as true,
     # including a result whose value is false; read value to branch.
-    class Completed[A = answer, P = nil | Integer | Float | Array[untyped], R = Native::Result]
+    class Completed[A = answer, P = nil | Integer | Float | Array[Integer | Float | nil | Array[Integer | Float]], R = Native::Result]
       def initialize: (Array[Native::Result] results, NativeSessionPacketTerminal? terminal, bool scalar, String verb, Array[NativeSessionPacketObservation] observations) -> void
 
       # The typed result rows.
