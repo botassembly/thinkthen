@@ -1,0 +1,15 @@
+#!/usr/bin/python3
+import os, sys, signal, re
+for name in ('SIGPIPE', 'SIGXFSZ', 'SIGXFZ'):
+ signum=getattr(signal,name,None)
+ if signum is not None:
+  signal.signal(signum,signal.SIG_DFL)
+  signal.pthread_sigmask(signal.SIG_UNBLOCK,{signum})
+env=dict(os.environ)
+flags=env.get('CARGO_MAKEFLAGS','')
+match=re.search(r'--jobserver-(?:auth|fds)=(\d+),(\d+)',flags)
+if match:
+ try:
+  for fd in map(int,match.groups()): os.fstat(fd)
+ except OSError: env.pop('CARGO_MAKEFLAGS',None)
+os.execvpe(sys.argv[1], sys.argv[1:], env)

@@ -53,13 +53,66 @@ class CandidatePlatforms(unittest.TestCase):
 
 
 class CandidateSmokes(unittest.TestCase):
+    @unittest.skipUnless(shutil.which('cc'), 'C compiler required')
+    def test_four_smokes_admit_real_nested_compilers(self):
+        # Four orchestrators must leave all four permits for their child builds.
+        with tempfile.TemporaryDirectory(prefix='thinkthen-smoke-nested-') as folder:
+            root = Path(folder)
+            scripts, tools, binaries = root / 'sdlc/scripts', root / 'tools', root / 'bin'
+            for directory in (scripts, tools, binaries):
+                directory.mkdir(parents=True)
+            for name in ('smoke', 'full-compiler', 'verdict.sh', 'scratch.sh',
+                         'heavy-lock', 'allow-list', 'build-admission.py'):
+                shutil.copyfile(parity.ROOT / 'sdlc/scripts' / name, scripts / name)
+            (binaries / 'conformance-backend').write_text(
+                '#!/bin/sh\necho 12345\nwhile read line; do echo 1; done\n')
+            (binaries / 'thinkthen').write_text('#!/bin/sh\ncat >/dev/null\necho true\n')
+            (tools / 'jq').write_text('#!/bin/sh\necho true\n')
+            for executable in (*binaries.iterdir(), tools / 'jq'):
+                executable.chmod(0o755)
+            (root / 'main.c').write_text('int main(void) { return 0; }\n')
+            # Rendezvous makes the old four outer reservations deadlock reliably.
+            (root / 'compile.py').write_text(
+                'from pathlib import Path\nimport os,subprocess,sys,time\n'
+                'slot=sys.argv[1]; Path("ready-"+slot).touch()\n'
+                'env={"PATH":os.environ["PATH"],"THINKTHEN_HEAVY_LOCK":os.environ["THINKTHEN_HEAVY_LOCK"]}\n'
+                'deadline=time.monotonic()+5\n'
+                'while len(list(Path(".").glob("ready-*"))) != 4:\n'
+                ' assert time.monotonic()<deadline, "smoke children did not start"\n'
+                ' time.sleep(0.01)\n'
+                'subprocess.run([sys.executable,"sdlc/scripts/build-admission.py",'
+                '"--timeout","3","--","cc","main.c","-o","built-"+slot],env=env,check=True)\n'
+                'subprocess.run(["./built-"+slot],env=env,check=True)\n'
+                'print("smoke: true")\n')
+            env = child_env(home=root / 'home', THINKTHEN_HEAVY_LOCK=str(root / 'build.lock'))
+            env['PATH'] = str(tools) + os.pathsep + env['PATH']
+            children = []
+            try:
+                for slot in range(4):
+                    surface = 'libraries/child' + str(slot)
+                    (root / surface).mkdir(parents=True)
+                    (root / surface / 'check.sh').write_text(
+                        'exec python3 compile.py ' + str(slot) + '\n')
+                    children.append(subprocess.Popen(
+                        ['sh', str(scripts / 'smoke'), '--full-functional', '--one', str(binaries), surface],
+                        cwd=root, env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True))
+                for child in children:
+                    log, _ = child.communicate(timeout=10)
+                    self.assertEqual(child.returncode, 0, log)
+                self.assertEqual(len(list(root.glob('built-*'))), 4)
+            finally:
+                for child in children:
+                    if child.poll() is None:
+                        child.kill()
+                    child.wait()
+
     def test_full_smoke_fails_exit77_and_only_delegates_apple(self):
         with tempfile.TemporaryDirectory(prefix='thinkthen-smoke-candidate-') as folder:
             root = Path(folder)
             scripts, tools, binaries = root / 'sdlc/scripts', root / 'tools', root / 'bin'
             for directory in (scripts, tools, binaries):
                 directory.mkdir(parents=True)
-            for name in ('smoke', 'full-compiler', 'verdict.sh', 'scratch.sh'):
+            for name in ('smoke', 'full-compiler', 'verdict.sh', 'scratch.sh', 'allow-list'):
                 shutil.copyfile(parity.ROOT / 'sdlc/scripts' / name, scripts / name)
             (scripts / 'heavy-lock').write_text('')
             backend = binaries / 'conformance-backend'
