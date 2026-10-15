@@ -233,9 +233,7 @@ fn a_global_timeout_during_connection_setup_retries_without_sending_http_bytes()
                 Ok((mut stream, _)) => {
                     // Windows inherits the listener's nonblocking mode on accepted sockets.
                     stream.set_nonblocking(false).unwrap();
-                    stream
-                        .set_read_timeout(Some(Duration::from_secs(1)))
-                        .unwrap();
+                    stream.set_read_timeout(Some(Duration::from_secs(1))).unwrap();
                     let mut bytes = [0_u8; 4096];
                     let count = stream.read(&mut bytes).unwrap();
                     assert!(count > 0);

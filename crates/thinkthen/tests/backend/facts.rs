@@ -381,12 +381,8 @@ fn retried_permanent_and_too_large_statuses_name_their_causes() {
 
 #[test]
 fn a_missing_key_and_a_refused_connection_have_distinct_causes() {
-    let output = spawn(
-        &["decide", QUESTION, "--facts", "--no-cache"],
-        &[],
-        b"line 1",
-    )
-    .expect("no-key command");
+    let no_key = ["decide", QUESTION, "--facts", "--no-cache"];
+    let output = spawn(&no_key, &[], b"line 1").expect("no-key command");
     assert_eq!(output.status.code(), Some(4));
     assert_eq!(
         line(&output)["stopped"],
