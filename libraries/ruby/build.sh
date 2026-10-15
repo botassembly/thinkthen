@@ -1,6 +1,6 @@
 #!/bin/sh
-# Build the extension and the gem with the pinned Ruby that check.sh
-# exported as RUBY. Every cargo call runs --locked --offline.
+# Build both pinned Ruby extensions into one platform gem.
+# Every cargo call runs --locked --offline.
 set -eu
 cd -- "$(dirname -- "$0")"
 # Keep direct gem builds clean too. release-pack may already pass the same

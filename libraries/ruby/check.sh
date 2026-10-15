@@ -60,8 +60,18 @@ host=$(uname -s)
 case $host in Linux|Darwin) ;; *) not_run "no Ruby host route for $host" ;; esac
 . ./toolchain.env
 if [ -z "${THINKTHEN_RUBY_MINOR:-}" ] && [ "$profile" != routine ]; then
+  scratch_dir versions
   for minor in $RUBY_MINORS; do
-    THINKTHEN_RUBY_MINOR=$minor sh "$0" "$@"
+    code=0
+    THINKTHEN_RUBY_MINOR=$minor sh "$0" "$@" >"$versions/$minor.log" 2>&1 || code=$?
+    # Strict parity accepts one cell per consumer. Keep the alternate Ruby's
+    # asserted results visible without emitting duplicate canonical cells.
+    if [ "$minor" = 4.0 ]; then
+      cat "$versions/$minor.log"
+    else
+      sed "s/^parity: /Ruby $minor parity: /" "$versions/$minor.log"
+    fi
+    [ "$code" -eq 0 ] || exit "$code"
   done
   exit 0
 fi
@@ -169,7 +179,7 @@ export THINKTHEN_TEST_LIBRARY
   abort "native gem signature inventory differs from manifest" unless !expected.empty? && expected == package.files.grep(/\.rbs$/).sort
   expected.each { |path| abort "installed signature is absent" unless File.file?(File.join(ARGV[2], path)) }' \
   "$repo/libraries/ruby" "$THINKTHEN_ARTIFACT" "${THINKTHEN_TEST_LIBRARY%/lib}"
-"$prefix/bin/rbs" _3.8.0_ -I "${THINKTHEN_TEST_LIBRARY%/lib}/sig" validate
+"$prefix/bin/rbs" "_$RUBY_RBS_VERSION"_ -I "${THINKTHEN_TEST_LIBRARY%/lib}/sig" validate
 if [ -n "${THINKTHEN_COVERAGE_OBJECT:-}" ]; then
   extension=$("$RUBY" -e 'print RbConfig::CONFIG["DLEXT"]')
   cp "$THINKTHEN_TEST_LIBRARY/thinkthen/$THINKTHEN_RUBY_MINOR/thinkthen.$extension" "$THINKTHEN_COVERAGE_OBJECT"

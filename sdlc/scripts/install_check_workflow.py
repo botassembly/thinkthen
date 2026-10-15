@@ -1,5 +1,6 @@
 """Dispatch and permission boundaries for published install checks (0398B)."""
 import re
+from pathlib import Path
 
 DISPATCH_STEP = {
     'env': {'GH_TOKEN': '${{ secrets.GITHUB_TOKEN }}',
@@ -14,6 +15,8 @@ PUBLISH_STEP = {
     'run': 'sdlc/scripts/release-workflow publish "$NAME" "$SHA"',
 }
 RUNNERS = ['ubuntu-24.04', 'ubuntu-24.04-arm', 'macos-15', 'macos-15-intel', 'macos-26']
+RUBIES = re.findall(r'^RUBY_\d+_VERSION=(.+)$',
+                    (Path(__file__).resolve().parents[2] / 'libraries/ruby/toolchain.env').read_text(), re.M)
 PORTABLE = ['download', 'cargo-install', 'cargo-add', 'pip', 'uv', 'npm']
 WINDOWS = ['download', 'cargo-install', 'cargo-add', 'pip', 'uv', 'npm', 'nuget', 'maven', 'c']
 LINUX = ['nuget', 'maven', 'pub', 'packagist', 'go', 'c', 'sqlite', 'duckdb', 'postgresql']
@@ -72,7 +75,7 @@ def install_workflow(name, doc):
         matrix = ((spec.get('strategy') or {}).get('matrix') or {})
         expected = {'portable': {'runner': RUNNERS, 'channel': PORTABLE,
                                  'include': [{'runner': runner, 'channel': 'rubygems', 'ruby': ruby}
-                                             for runner in RUNNERS for ruby in ['3.4.11', '4.0.7']]},
+                                             for runner in RUNNERS for ruby in RUBIES]},
                     'homebrew': {'runner': ['ubuntu-24.04', 'macos-26']},
                     'linux': {'channel': LINUX}, 'windows': {'channel': WINDOWS}, 'r-universe': {}}.get(job)
         if expected is not None and (matrix != expected or spec.get('runs-on') != (

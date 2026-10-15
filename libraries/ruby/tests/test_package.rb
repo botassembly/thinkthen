@@ -54,6 +54,7 @@ class TestPackage < Minitest::Test
   def test_local_selection_prefers_native_only_for_supported_ruby_and_platform
     native = Gem::Package.new(Dir["#{ROOT}/thinkthen-#{VERSION}-*.gem"].fetch(0))
     assert_equal ">= 3.4, < 4.1", native.spec.required_ruby_version.to_s
+    assert_equal %w[3.4 4.0], native.spec.files.filter_map { |path| path[%r{\Alib/thinkthen/([^/]+)/thinkthen\.}, 1] }.sort
     Dir.mktmpdir("thinkthen-ruby-selection-") do |root|
       source = "#{root}/source"
       native.extract_files(source)
