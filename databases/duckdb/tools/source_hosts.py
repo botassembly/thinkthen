@@ -151,6 +151,8 @@ def cli_value(value, kind=''):
 
 
 def check_hosts(cache, fetch):
+    if not fetch:
+        prepare_backend()
     for version, source_commit, tools_commit in hosts():
         inputs = cache / version
         if not fetch and not (inputs / 'source/.git').exists():
@@ -195,6 +197,32 @@ def check_hosts(cache, fetch):
         stage(version, extension)
         print(f'DuckDB {version} at {source_commit}: community SQL, named options and native records pass', flush=True)
     return 0
+
+
+def prepare_backend():
+    """Build this checkout's fixture and keep its Cargo-selected executable alive.
+
+    The caller owns CARGO_TARGET_DIR until all source-host checks return. Read
+    Cargo's artifact path rather than guessing a profile, host or executable suffix.
+    """
+    env = tool_environment()
+    lock = env.get('THINKTHEN_HEAVY_LOCK', '/tmp/thinkthen-heavy.lock')
+    admission = []
+    if env.get('THINKTHEN_HEAVY_LOCK_HELD') != lock:
+        admission = [sys.executable, str(REPO / 'sdlc/scripts/build-admission.py'), '--lock', lock, '--']
+    done = subprocess.run(admission + ['cargo', 'build', '--locked', '--offline',
+                          '--package', 'conformance-backend', '--bin', 'conformance-backend',
+                          '--message-format=json'], cwd=REPO, env=env,
+                          stdout=subprocess.PIPE, text=True, check=True)
+    executables = [Path(item['executable']) for line in done.stdout.splitlines()
+                   if (item := json.loads(line)).get('reason') == 'compiler-artifact'
+                   and item.get('target', {}).get('name') == 'conformance-backend'
+                   and item.get('executable')]
+    if len(executables) != 1 or not executables[0].is_file() or not os.access(executables[0], os.X_OK):
+        raise ValueError('Cargo did not build one executable loopback backend')
+    import harness
+    harness.BACKEND = str(executables[0])
+    return executables[0]
 
 
 def stage(version, extension):

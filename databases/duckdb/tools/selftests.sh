@@ -16,6 +16,8 @@ fail() {
 	exit 1
 }
 
+"$PY" "$HERE/source_backend_cases.py"
+
 planted() {
 	"$PY" - "$REPO/conformance/cases.json" "$work/cases.json" "$1" <<'PYEOF'
 import json, sys
