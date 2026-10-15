@@ -8,7 +8,7 @@ export function omissions(authority, catalog, readme) {
   // declaration must fail even when a new version is still being prepared.
   const match = /^DUCKDB_VERSIONS="(v[0-9.A-Za-z-]+(?: v[0-9.A-Za-z-]+)*)"$/m.exec(authority);
   if (!match) throw new Error('malformed DuckDB version list');
-  const declaration = /supportedVersions: \[([^\]]+)\]/.exec(catalog)?.[1] ?? '';
+  const declaration = /slug:\s*['"]duckdb['"][^{}]*versions:\s*\{\s*runtime:\s*\[([^\]]+)\]/.exec(catalog)?.[1] ?? '';
   const entries = declaration.replace(/'(?:\\.|[^'\\])*'|"(?:\\.|[^"\\])*"|\/\/[^\n]*|\/\*[\s\S]*?\*\//g,
     (token) => token.startsWith('/') ? ' ' : token).split(',')
     .map((entry) => /^\s*(['"])(v[0-9.A-Za-z-]+)\1\s*$/.exec(entry)?.[2]);
