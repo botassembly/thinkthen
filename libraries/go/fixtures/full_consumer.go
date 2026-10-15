@@ -195,9 +195,18 @@ func main() {
 			}
 		}
 	}
+	callResult := fixture["call_result_contract"] != nil && scalar[bool](fixture["call_result_contract"])
+	if callResult {
+		original := object(object(scalar[[]json.RawMessage](input["items"])[0])["original"])
+		if scalar[string](original["kind"]) == "text" {
+			source = tt.TextInput(scalar[string](original["text"]))
+		} else {
+			source = tt.RequestInputJson{Value: scalar[any](original["value"])}
+		}
+	}
 	client, err := tt.NewClient(settings([]byte(os.Args[2])))
 	if err != nil {
-		emit(tt.Call{}, err)
+		emit(tt.Call{}, err, false)
 		return
 	}
 	defer client.Close()
@@ -237,7 +246,7 @@ func main() {
 	}
 	controls := options(fixture["options"])
 	call, err := calls[scalar[string](fixture["verb"])](ctx, q, source, &controls)
-	emit(call, err)
+	emit(call, err, callResult)
 }
 func mustRead(path string) []byte {
 	data, err := os.ReadFile(path)
@@ -246,7 +255,7 @@ func mustRead(path string) []byte {
 	}
 	return data
 }
-func emit(call tt.Call, err error) {
+func emit(call tt.Call, err error, callResult bool) {
 	if errors.Is(err, context.Canceled) {
 		json.NewEncoder(os.Stdout).Encode(map[string]any{"admission": map[string]any{"code": 5, "message": err.Error()}})
 		return
@@ -260,5 +269,10 @@ func emit(call tt.Call, err error) {
 	if err != nil && !errors.As(err, &started) {
 		panic(err)
 	}
-	json.NewEncoder(os.Stdout).Encode(map[string]any{"packets": fixtureCall(call).(map[string]any)["Packets"]})
+	result := fixtureCall(call).(map[string]any)
+	payload := map[string]any{"packets": result["Packets"]}
+	if callResult {
+		payload["call_result"] = map[string]any{"value": result["Value"], "probability": result["Probability"], "results": result["Results"], "facts": result["Facts"]}
+	}
+	json.NewEncoder(os.Stdout).Encode(payload)
 }
