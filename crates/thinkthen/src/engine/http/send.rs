@@ -30,6 +30,14 @@ pub(super) fn timed(
     (sent, wall_ms)
 }
 
+#[allow(
+    clippy::print_stderr,
+    reason = "temporary bounded Windows phase diagnostic"
+)]
+#[allow(
+    clippy::too_many_lines,
+    reason = "temporary diagnostic markers are removed after the bounded run"
+)]
 fn send(
     agent: &Agent,
     exchange: &Exchange<'_>,
@@ -61,6 +69,9 @@ fn send(
         "" => request,
         key => request.header("authorization", &format!("Bearer {key}")),
     };
+
+    #[cfg(debug_assertions)]
+    eprintln!("phase {:?}: HTTP send entered", std::thread::current().id());
     let mut response = request.send(exchange.body).map_err(|error| {
         let opening = unopened(&error);
         let kind =
@@ -69,6 +80,12 @@ fn send(
         attempt.unopened = opening.is_some();
         Box::new(attempt)
     })?;
+
+    #[cfg(debug_assertions)]
+    eprintln!(
+        "phase {:?}: HTTP headers received",
+        std::thread::current().id()
+    );
     let status = response.status().as_u16();
     let storable = crate::core::cache_control::permits(
         response
@@ -107,6 +124,12 @@ fn send(
                 unopened: false,
             })
         })?;
+
+    #[cfg(debug_assertions)]
+    eprintln!(
+        "phase {:?}: HTTP body received",
+        std::thread::current().id()
+    );
     Ok(Sent {
         body,
         info,

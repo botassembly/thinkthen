@@ -151,12 +151,21 @@ impl Engine {
     }
 }
 
+#[allow(
+    clippy::print_stderr,
+    reason = "temporary bounded Windows phase diagnostic"
+)]
 fn answer(
     ordinal: usize,
     prepared: Prepared,
     limit: usize,
     cancel: &crate::engine::Cancel<'_>,
 ) -> Result<ordered::Row<Answered>, Error> {
+    #[cfg(debug_assertions)]
+    eprintln!(
+        "phase {:?}: recognition worker entered",
+        std::thread::current().id()
+    );
     let mut attempts = BTreeMap::new();
     let found = prepared
         .engine
@@ -173,6 +182,12 @@ fn answer(
             },
         )
         .map_err(|error| Error::from(error).at_record(ordinal))?;
+
+    #[cfg(debug_assertions)]
+    eprintln!(
+        "phase {:?}: recognition worker answered",
+        std::thread::current().id()
+    );
     Ok(ordered::Row {
         replayed: !found.meta.live,
         value: Answered {

@@ -458,6 +458,10 @@ fn configured_feed(
     feed
 }
 
+#[allow(
+    clippy::print_stderr,
+    reason = "temporary bounded Windows phase diagnostic"
+)]
 fn run(
     engine: Engine,
     request: AdmittedRequest,
@@ -520,6 +524,9 @@ fn run(
             recognized.into_inner(),
         )));
     }
+
+    #[cfg(debug_assertions)]
+    eprintln!("phase {:?}: session settling", std::thread::current().id());
     queue.settle(terminal);
 }
 

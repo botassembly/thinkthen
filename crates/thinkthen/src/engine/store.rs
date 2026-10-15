@@ -312,15 +312,36 @@ impl Store {
     }
 
     /// Run `body` inside one write transaction, rolling back on failure.
+    #[allow(
+        clippy::print_stderr,
+        reason = "temporary bounded Windows phase diagnostic"
+    )]
     fn transaction(
         &self,
         cancel: &Cancel,
         connection: &Connection,
         body: impl FnOnce() -> Result<(), Error>,
     ) -> Result<(), Error> {
+        #[cfg(debug_assertions)]
+        eprintln!(
+            "phase {:?}: storage transaction starting",
+            std::thread::current().id()
+        );
         self.waiting(cancel, || connection.execute_batch("BEGIN IMMEDIATE"))?;
+        #[cfg(debug_assertions)]
+        eprintln!(
+            "phase {:?}: storage transaction begun",
+            std::thread::current().id()
+        );
+
         let done =
             body().and_then(|()| self.waiting(cancel, || connection.execute_batch("COMMIT")));
+
+        #[cfg(debug_assertions)]
+        eprintln!(
+            "phase {:?}: storage transaction returned",
+            std::thread::current().id()
+        );
         if done.is_err() && !connection.is_autocommit() {
             let _rolled_back = connection.execute_batch("ROLLBACK");
         }

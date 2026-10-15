@@ -383,6 +383,10 @@ fn accept_every(
 }
 
 /// Answer every request on one connection until the caller closes it.
+#[allow(
+    clippy::print_stderr,
+    reason = "temporary bounded Windows phase diagnostic"
+)]
 fn serve_kept(
     stream: &TcpStream,
     reply: &Reply,
@@ -422,9 +426,18 @@ fn serve_kept(
             counts.in_flight.fetch_sub(1, Ordering::SeqCst);
             return;
         }
+
+        #[cfg(debug_assertions)]
+        eprintln!(
+            "phase {:?}: fixture release waiting",
+            std::thread::current().id()
+        );
         if !wait_answer(&canned, lifetime) {
             return;
         }
+
+        #[cfg(debug_assertions)]
+        eprintln!("phase {:?}: fixture released", std::thread::current().id());
         write_answer(stream, &canned, false);
         if let Some(answered) = canned.answered.as_ref() {
             let _ = answered.send(());
@@ -468,6 +481,10 @@ fn wait_answer(canned: &Canned, lifetime: &Lifetime) -> bool {
 }
 
 /// Write one canned response, closing the connection or keeping it open.
+#[allow(
+    clippy::print_stderr,
+    reason = "temporary bounded Windows phase diagnostic"
+)]
 fn write_answer(mut stream: &TcpStream, canned: &Canned, closing: bool) {
     if canned.close_without_reply {
         return;
@@ -493,6 +510,14 @@ fn write_answer(mut stream: &TcpStream, canned: &Canned, closing: bool) {
         canned.promised.unwrap_or(canned.body.len()),
         canned.body
     );
-    let _ = stream.write_all(answer.as_bytes());
-    let _ = stream.flush();
+    let written = stream.write_all(answer.as_bytes());
+    let flushed = stream.flush();
+    #[cfg(debug_assertions)]
+    eprintln!(
+        "phase {:?}: fixture write {:?}; flush {:?}",
+        std::thread::current().id(),
+        written.as_ref().map_err(io::Error::kind),
+        flushed.as_ref().map_err(io::Error::kind)
+    );
+    let _ = (written, flushed);
 }

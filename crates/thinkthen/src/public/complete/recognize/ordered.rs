@@ -52,6 +52,10 @@ struct Run<R, E> {
 }
 
 impl<R, E> Run<R, E> {
+    #[allow(
+        clippy::print_stderr,
+        reason = "temporary bounded Windows phase diagnostic"
+    )]
     fn accept<T>(&mut self, event: Event<T, R, E>, work: &Sender<(usize, T)>, ended: fn() -> E) {
         match event {
             Event::Input(input) => {
@@ -66,6 +70,12 @@ impl<R, E> Run<R, E> {
             }
             Event::ReaderReady => {}
             Event::Answered(place, result) => {
+                #[cfg(debug_assertions)]
+                eprintln!(
+                    "phase {:?}: ordered worker returned {place}; success {}",
+                    std::thread::current().id(),
+                    result.is_ok()
+                );
                 self.in_flight -= 1;
                 self.halted |= result.is_err();
                 self.pending.insert(place, result);

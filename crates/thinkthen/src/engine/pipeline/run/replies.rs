@@ -70,6 +70,14 @@ impl<A: Asker> Run<'_, A> {
     }
 
     /// Store a reply's good answers and hand every answer to the inputs that wait on it.
+    #[allow(
+        clippy::print_stderr,
+        reason = "temporary bounded Windows phase diagnostic"
+    )]
+    #[allow(
+        clippy::too_many_lines,
+        reason = "temporary diagnostic markers are removed after the bounded run"
+    )]
     pub(super) fn answered(&mut self, done: Done, cancel: &Cancel) {
         let span = done
             .asks
@@ -89,6 +97,12 @@ impl<A: Asker> Run<'_, A> {
                 return self.fail_all(&done.asks, &error, span);
             }
         };
+
+        #[cfg(debug_assertions)]
+        eprintln!(
+            "phase {:?}: reply decoded; accepting",
+            std::thread::current().id()
+        );
         let accepted = match Accepted::new(&self.call, &done.asks, &split) {
             Ok(accepted) => accepted,
             Err(error) => return self.fail_all(&done.asks, &error, span),
@@ -96,10 +110,21 @@ impl<A: Asker> Run<'_, A> {
         let rows = accepted.rows(&self.call, &done.asks, done.taken_at, &split);
         let written = match self.store.as_ref() {
             Some(shared) => {
+                #[cfg(debug_assertions)]
+                eprintln!(
+                    "phase {:?}: storage mutex waiting",
+                    std::thread::current().id()
+                );
                 shared
                     .lock()
                     .map_err(|_| Error::RecordingStorage)
                     .and_then(|mut held| {
+                        #[cfg(debug_assertions)]
+                        eprintln!(
+                            "phase {:?}: storage mutex acquired",
+                            std::thread::current().id()
+                        );
+
                         held.as_mut().ok_or(Error::RecordingStorage)?.accept(
                             &rows,
                             done.storable,
@@ -111,6 +136,12 @@ impl<A: Asker> Run<'_, A> {
             }
             None => Ok(()),
         };
+
+        #[cfg(debug_assertions)]
+        eprintln!(
+            "phase {:?}: storage accept returned",
+            std::thread::current().id()
+        );
         drop(rows);
         if let Err(error) = written {
             return self.fail_all(&done.asks, &error, span);
