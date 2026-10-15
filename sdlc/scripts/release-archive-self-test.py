@@ -31,6 +31,70 @@ def expect(result, text, success=False):
         raise AssertionError((result.args, result.returncode, result.stdout, result.stderr, text))
 
 
+def draft_notes():
+    with tempfile.TemporaryDirectory(prefix="thinkthen-draft-notes-") as temporary:
+        root = Path(temporary)
+        for name in ("sdlc/scripts/release-workflow", "sdlc/scripts/scratch.sh",
+                     "sdlc/scripts/fetch.sh", "crates/thinkthen/Cargo.toml",
+                     "release-notes/0.2.0.md", "release-notes/0.2.0-known-gaps.md"):
+            target = root / name
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(REPO / name, target)
+        binary = root / "bin"
+        binary.mkdir()
+        receipt = root / "calls.jsonl"
+        commit = "1" * 40
+        for name, code in {
+            "git": f"#!/bin/sh\nprintf '%s\\n' '{commit}'\n",
+            "python3": "#!/bin/sh\nexit 0\n",
+            "gh": f"#!{sys.executable}\n" + """import json, os, sys
+from pathlib import Path
+args = sys.argv[1:]
+body = Path(args[args.index('--notes-file') + 1]).read_text() if '--notes-file' in args else None
+with open(os.environ['GH_TEST_RECEIPT'], 'a') as held:
+    held.write(json.dumps([args, body]) + '\\n')
+if args[:2] == ['release', 'view']:
+    sys.exit(1)
+if args[0] == 'api':
+    print('HTTP/2 404')
+""",
+        }.items():
+            path = binary / name
+            path.write_text(code)
+            path.chmod(0o755)
+        files = root / "files"
+        files.mkdir()
+        (files / "fixture.sha256").write_text("checksum\n")
+        env = {"PATH": str(binary) + ":/usr/bin:/bin", "HOME": str(root),
+               "LC_ALL": "C.UTF-8", "GH_TEST_RECEIPT": str(receipt),
+               "GITHUB_REPOSITORY": "botassembly/thinkthen", "GITHUB_REF": "refs/tags/v0.2.0"}
+        expected = ((root / "release-notes/0.2.0.md").read_text() + "\n" +
+                    (root / "release-notes/0.2.0-known-gaps.md").read_text())
+        for mode in ("release", "rehearse"):
+            receipt.write_text("")
+            result = run("sh", str(root / "sdlc/scripts/release-workflow"), "draft", mode,
+                         "v0.2.0", commit, str(files), env=env)
+            expect(result, "", success=True)
+            calls = [json.loads(line) for line in receipt.read_text().splitlines()]
+            created = [call for call in calls if call[0][:2] == ['release', 'create']]
+            wanted = expected if mode == "release" else f"Rehearsal from {commit}; do not publish\n\n" + expected
+            if len(created) != 1 or created[0][1] != wanted:
+                raise AssertionError(("draft notes", mode, created))
+            if ('--draft' not in created[0][0] or
+                    ('--verify-tag' if mode == 'release' else '--target') not in created[0][0]):
+                raise AssertionError(("draft guards", created))
+        for document in ("0.2.0.md", "0.2.0-known-gaps.md"):
+            page = root / "release-notes" / document
+            body = page.read_text()
+            page.unlink()
+            receipt.write_text("")
+            expect(run("sh", str(root / "sdlc/scripts/release-workflow"), "draft", "rehearse",
+                       "v0.2.0", commit, str(files), env=env), "missing release document release-notes/" + document)
+            if receipt.read_text():
+                raise AssertionError("missing notes reached GitHub")
+            page.write_text(body)
+
+
 def resolve_outputs(commit, version):
     repository = "botassembly/thinkthen"
     candidate = f"rc/{version}-rc.1"
@@ -895,4 +959,5 @@ def main():
 
 
 if __name__ == "__main__":
+    draft_notes()
     main()

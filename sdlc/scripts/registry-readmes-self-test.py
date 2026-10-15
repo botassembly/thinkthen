@@ -86,6 +86,25 @@ class PackageText(unittest.TestCase):
                     with self.assertRaisesRegex(readmes.Refusal, reason):
                         readmes.check_package('typescript', package)
 
+    def test_python_metadata_terminator_preserves_approved_body(self):
+        with tempfile.TemporaryDirectory() as scratch:
+            package = Path(scratch) / 'thinkthen.whl'
+            body = readmes.source('python').read_bytes()
+            header = ('Metadata-Version: 2.1\nSummary: ' +
+                      readmes.description('python') + '\n\n').encode()
+            for changed, cause in [(body, None), (body + b'\n', None),
+                                   (body + b'\n\n', 'readme-needs-under-40-lines'),
+                                   (body.replace(b'The library is free', b'The library costs money'),
+                                    'readme-source-mismatch')]:
+                with self.subTest(cause=cause):
+                    with zipfile.ZipFile(package, 'w') as bundle:
+                        bundle.writestr('thinkthen.dist-info/METADATA', header + changed)
+                    if cause:
+                        with self.assertRaisesRegex(readmes.Refusal, cause):
+                            readmes.check_package('python', package)
+                    else:
+                        readmes.check_package('python', package)
+
     def test_npm_assembles_public_readme_and_refuses_adr(self):
         with tempfile.TemporaryDirectory() as scratch:
             tree = Path(scratch)
