@@ -168,17 +168,8 @@ fn cancellation_stops_waiting_duplicate_recognition_without_extra_sends() {
         }))
         .unwrap();
     received.recv_timeout(Duration::from_secs(5)).unwrap();
-    eprintln!(
-        "recognition cancel: request received; sends={}",
-        listener.count()
-    );
     session.cancel();
-    eprintln!("recognition cancel: cancel returned; session={session:?}");
     assert!(release.wait());
-    eprintln!(
-        "recognition cancel: response released; write_attempt_ack={:?}",
-        writes.try_recv()
-    );
     let packets = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| drain(&session)));
     eprintln!(
         "recognition cancel: drain returned; sends={}; write_attempt_ack={:?}; readiness={:?}; session={session:?}",
@@ -291,10 +282,13 @@ fn uncached_and_refreshed_repeated_recognition_keep_parallel_sends() {
                 items: vec![descriptor("Ada").item; 2],
             }))
             .unwrap();
-        for _ in 0..2 {
-            received.recv_timeout(Duration::from_secs(5)).unwrap();
-            received.recv_timeout(Duration::from_secs(5)).unwrap();
-            assert!(release.wait());
+        for arrival in 0..4 {
+            received.recv_timeout(Duration::from_secs(5)).unwrap_or_else(|error| {
+                panic!("recognition arrival {arrival}, refresh {refresh}: {error:?}; sends {}; requests {:?}; session {session:?}", listener.count(), listener.requests());
+            });
+            if arrival % 2 == 1 {
+                assert!(release.wait());
+            }
         }
         let packets = drain(&session);
         let RequestSessionResult::Terminal(terminal) = packets.last().unwrap() else {
