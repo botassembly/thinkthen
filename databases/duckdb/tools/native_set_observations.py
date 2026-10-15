@@ -4,7 +4,7 @@ from native_queries import value
 from receipt_adapter import carrier
 
 
-def check(run):
+def check(run, json_text=True):
     duplicate_entities(run)
     source_rank(run)
     entities = " UNION ALL ".join(f"SELECT {i} AS id, 'Person {i}' AS name" for i in range(1, 5))
@@ -30,13 +30,13 @@ def check(run):
             expect([row['probability'] for row in actual], [0.9] * count, verb + ' keeps probabilities')
             receipt = {'results': [row['result'] for row in ordered], 'facts': first['facts'], 'failure': None,
                        'observations': events, 'ordinals': [row['ordinal'] for row in ordered]}
-            restored = carrier(receipt, verb, json_text=True)
+            restored = carrier(receipt, verb, json_text=json_text)
             expect(len(restored['observations']), len(events), verb + ' native observation count survives recomposition')
             if verb == 'rank':
                 expect([(event['kind'], event['index']) for event in events],
                        [(kind, index) for index in range(3) for kind in ('question', 'row')], 'rank retains every native question and row event')
-                expect([event['inputs'][0]['input'] for event in events if event['kind'] == 'question'],
-                       ['\"alpha\"', '\"beta\"', '\"gamma\"'], 'rank observations retain all original inputs')
+                expect([event['inputs'][0]['input'] for event in restored['observations'] if event['kind'] == 'question'],
+                       ['alpha', 'beta', 'gamma'], 'rank observations retain all original inputs')
                 expect([row['value'] for row in ordered], [1, 2, 3], 'rank preserves positions')
                 expect([row['result']['index'] for row in ordered], [0, 1, 2], 'rank preserves original indices')
             else:

@@ -195,7 +195,8 @@ def check_hosts(cache, fetch):
         from native_records import check as records_check
         run = cli_runner(build / 'build/release/duckdb', extension)
         named_check(run)
-        records_check(run)
+        # Shell JSON embeds nested SQL JSON values; the Python driver returns text.
+        records_check(run, json_text=False)
         stage(version, extension)
         print(f'DuckDB {version} at {source_commit}: community SQL, named options and native records pass', flush=True)
     return 0

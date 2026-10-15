@@ -6,7 +6,7 @@ def table(verb, question, records, reading='NULL', settings='NULL'):
     return f'(SELECT detail.* FROM (SELECT UNNEST(thinkthen_{verb}_details({question},{records},reading := {reading},settings := {settings})) AS detail))'
 
 
-def check(run):
+def check(run, json_text=True):
     with Backend() as backend:
         got = run([
             "SET thinkthen_model='jev-1.13.0'",
@@ -28,7 +28,7 @@ def check(run):
         expect('error' in got[5], True, 'deadline raises')
         expect(backend.count(), 2, 'two admitted calls send; deadline and NULLs send nothing')
     from native_set_observations import check as set_observations
-    set_observations(run)
+    set_observations(run, json_text=json_text)
     ordinary_forms(run)
     recovering_rows(run)
     named_forms(run)
