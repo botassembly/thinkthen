@@ -19,12 +19,13 @@ ThinkThen's routine builds and tests for a ticket run on the M5 through `pm job 
 
 ## Scope
 
-- Changes: `AGENTS.md`, `CLAUDE.md`, `sdlc/scripts/test`, `sdlc/scripts/lint`, `sdlc/scripts/install`, `sdlc/planning/release-process.md`, and the agents repo's `machines.json`.
+- Changes: `sdlc/scripts/build-admission*`, `sdlc/scripts/heavy-compile`, `sdlc/scripts/heavy-lock`, `AGENTS.md`, `CLAUDE.md`, `sdlc/scripts/test`, `sdlc/scripts/lint`, `sdlc/scripts/install`, `sdlc/planning/release-process.md`, and the agents repo's `machines.json`.
 - Checklist:
   1. Sync the M5 clone and run `sdlc/scripts/install`, `lint` and `test` there through `pm job run` at one pushed SHA. List every check that fails or skips on macOS, with the reason.
   2. Make each Linux-only check skip on macOS with a plain message, or run it in a Linux container on the M5. Keep each such check in the Beelink candidate run.
   3. Add thinkthen to the M5's `builds` in `machines.json`.
-  4. Rewrite the Beelink line in `AGENTS.md` and `CLAUDE.md`: routine builds and tests run on the M5 through `pm job run`; Linux qualification runs on the Beelink at each candidate.
+  4. Shrink build admission (`sdlc/scripts/build-admission.py`, its 624-line test, `heavy-compile` and `heavy-lock`) to the smallest form the M5 needs, or delete it if `pm job` already limits concurrent builds. It grew from a 34-line lock to about 880 lines in three days and deadlocked the rc.14 campaign.
+  5. Rewrite the Beelink line in `AGENTS.md` and `CLAUDE.md`: routine builds and tests run on the M5 through `pm job run`; Linux qualification runs on the Beelink at each candidate.
 - Keeps: every check in the routine suite still runs somewhere before landing; the candidate still runs the full Linux release suite on the Beelink; Mac-specific hosted checks stay on GitHub macOS runners.
 
 ## Proof
