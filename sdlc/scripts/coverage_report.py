@@ -56,7 +56,7 @@ def lines(root, lcov):
     return result
 
 
-def report(root, run, revision, production, collections, elapsed, *, missing=(), missing_reasons=None, continuous=False):
+def report(root, run, revision, production, collections, elapsed, *, missing=(), missing_reasons=None, continuous=False, platform_slice=None):
     mapped = lines(root, production)
     denominator = {}
     for path, counts in mapped.items():
@@ -90,7 +90,9 @@ def report(root, run, revision, production, collections, elapsed, *, missing=(),
               for key in ('mapped_nonblank', *collections, unit_key, zero_key)}
     partial = not any(name.startswith('installed-') for name in collections) or bool(missing)
     scope = 'partial coverage; installed surfaces unmeasured' if partial else 'native and installed library coverage'
-    payload = {'source': revision, 'scope': scope, 'unmeasured_collections': list(missing),
+    if platform_slice:
+        scope = platform_slice + ' platform collection; require both platform reports before acceptance'
+    payload = {'platform_collection': platform_slice, 'source': revision, 'scope': scope, 'unmeasured_collections': list(missing),
                'unmeasured_reasons': dict(missing_reasons or {}),
                'denominator': 'nonblank lines mapped by all retained production native objects',
                'profile_mode': 'continuous' if continuous else 'normal-exit',
@@ -137,8 +139,29 @@ def report(root, run, revision, production, collections, elapsed, *, missing=(),
         rows += ['Unmeasured collections: ' + ', '.join(missing) + '.', '']
         for name, reason in (missing_reasons or {}).items():
             rows += [f'{name}: {reason}', '']
-    suffix = 'native' if not any(name.startswith('installed-') for name in collections) else 'installed'
+    suffix = platform_slice or ('native' if not any(name.startswith('installed-') for name in collections) else 'installed')
     summary = root / 'sdlc/records/coverage' / f'{datetime.date.today()}-{revision[:9]}-{suffix}.md'
     summary.parent.mkdir(parents=True, exist_ok=True)
     summary.write_text('\n'.join(rows))
     print(summary)
+
+
+def join_platforms(linux_path, apple_path, revision, expected):
+    """Accept only complete measurements from both hosts on this commit."""
+    apple_names = {'installed-swift', 'installed-objective-c'}
+    linux_names = expected - {'installed-objective-c'}
+    joined = {}
+    for path, platform_name, names in ((linux_path, 'linux', linux_names), (apple_path, 'apple', apple_names)):
+        payload = json.loads(path.read_text())
+        if payload.get('source') != revision or payload.get('platform_collection') != platform_name:
+            raise RuntimeError('coverage join needs matching source and platform collection')
+        totals = payload.get('totals', {})
+        measured = set(totals) - {'mapped_nonblank', 'observed_unit_only', 'unobserved'}
+        if payload.get('unmeasured_collections') or measured != names:
+            raise RuntimeError('coverage join needs every required collection measured')
+        if not isinstance(totals.get('mapped_nonblank'), int) or totals['mapped_nonblank'] <= 0:
+            raise RuntimeError('coverage join needs a production denominator')
+        if any(type(totals[name]) is not int or not 0 < totals[name] <= totals['mapped_nonblank'] for name in names):
+            raise RuntimeError('coverage join needs positive measured counts')
+        joined[platform_name] = totals
+    print(json.dumps({'source': revision, 'collections': joined}, indent=2, sort_keys=True))

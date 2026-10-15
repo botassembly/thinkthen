@@ -20,6 +20,52 @@ import coverage_installed_c_hosts
 DRIVER = runpy.run_path(str(Path(__file__).with_name('coverage')))
 
 
+class PlatformCommandEvidence(unittest.TestCase):
+    def test_platform_commands_refuse_a_foreign_host_and_native_slice(self):
+        command = [sys.executable, str(Path(__file__).with_name('coverage')), '--release', '--platform']
+        foreign = 'apple' if sys.platform == 'linux' else 'linux'
+        result = subprocess.run([*command, foreign], capture_output=True)
+        self.assertEqual(result.returncode, 1)
+        self.assertIn(b'requires its own host', result.stderr)
+        result = subprocess.run([*command, foreign, '--native'], capture_output=True)
+        self.assertEqual(result.returncode, 1)
+        self.assertIn(b'cannot qualify', result.stderr)
+
+    def test_join_requires_both_hosts_and_all_collections_on_the_current_commit(self):
+        revision = subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip()
+        expected = set(DRIVER['NATIVE_COLLECTIONS']) | {name for helper in DRIVER['installed_helpers']() for name in helper.COLLECTIONS}
+        with tempfile.TemporaryDirectory() as temporary:
+            paths = [Path(temporary) / name for name in ('linux.json', 'apple.json')]
+            payloads = [dict(source=revision, platform_collection=platform_name, unmeasured_collections=[],
+                             totals=dict(mapped_nonblank=100, **{name: 50 for name in names}))
+                        for platform_name, names in (('linux', expected - {'installed-objective-c'}),
+                                                    ('apple', {'installed-swift', 'installed-objective-c'}))]
+            command = [sys.executable, str(Path(__file__).with_name('coverage')), '--release', '--join', *map(str, paths)]
+            for payload, path in zip(payloads, paths):
+                path.write_text(json.dumps(payload))
+            self.assertEqual(subprocess.run(command, capture_output=True).returncode, 0)
+            for change in ('absent', 'source', 'missing', 'apple', 'pending', '77', 'linux'):
+                with self.subTest(change=change):
+                    values = json.loads(json.dumps(payloads))
+                    if change == 'source':
+                        values[1]['source'] = '0' * 40
+                    elif change == 'missing':
+                        values[1]['unmeasured_collections'] = ['installed-objective-c']
+                    elif change in ('pending', '77'):
+                        values[1]['totals']['installed-objective-c'] = change
+                    elif change == 'apple':
+                        del values[1]['totals']['installed-objective-c']
+                    elif change == 'linux':
+                        del values[0]['totals']['installed-c']
+                    for value, path in zip(values, paths):
+                        path.write_text(json.dumps(value))
+                    if change == 'absent':
+                        paths[1].unlink()
+                    result = subprocess.run(command, capture_output=True)
+                    self.assertEqual(result.returncode, 1, result.stderr.decode())
+
+
+
 class RetainedLineEvidence(unittest.TestCase):
     def test_equal_totals_retain_distinct_lines_and_production_denominator(self):
         with tempfile.TemporaryDirectory() as temporary:
@@ -69,14 +115,17 @@ class InstalledScriptInvocation(unittest.TestCase):
             run = Path(temporary)
             tools = run / 'tools'
             tools.mkdir()
-            for name in ('gprbuild', 'gnatmake', 'gcc', 'python3', 'nm', 'node'):
+            for name in ('gprbuild', 'gnatmake', 'gcc', 'nm', 'node'):
                 (tools / name).symlink_to('/bin/true')
-            for name in ('uname', 'dirname', 'flock', 'env', 'sh'):
+            for name in ('uname', 'dirname', 'flock', 'env', 'sh', 'python3'):
                 (tools / name).symlink_to(shutil.which(name))
             library = run / 'libthinkthen.so'
             library.touch()
-            script_dir = run / 'ada'
-            script_dir.mkdir()
+            script_dir = run / 'libraries/ada'
+            script_dir.mkdir(parents=True)
+            admission = run / 'sdlc/scripts'
+            admission.mkdir(parents=True)
+            shutil.copy2(checkout / 'sdlc/scripts/build-admission.py', admission)
             # Keep the real gate through its tool checks and lock-owning re-exec.
             source = (checkout / 'libraries/ada/check.sh').read_text()
             prefix = source.split('. "$REPO/sdlc/scripts/scratch.sh"')[0]
@@ -150,6 +199,49 @@ class ManagedToolAvailability(unittest.TestCase):
                             with self.assertRaisesRegex(DRIVER['MissingTool'], absent):
                                 collection['runner'](run)
 
+    def test_apple_staging_supplies_the_real_package_and_consumer_inputs(self):
+        checkout = Path(__file__).resolve().parents[2]
+        with tempfile.TemporaryDirectory() as temporary:
+            run = Path(temporary)
+            native = run / 'target-c/debug/libthinkthen_c.a'
+            native.parent.mkdir(parents=True)
+            native.write_bytes(b'measured native archive')
+            def command(args, cwd, env, log, **kwargs):
+                # XCFramework assembly requires macOS; package validation below is real.
+                framework = Path(args[args.index('-output') + 1])
+                framework.mkdir()
+                (framework / 'Info.plist').write_bytes(plistlib.dumps({}))
+            context = dict(root=checkout, run=run, env={}, command=command,
+                           missing_tool=DRIVER['MissingTool'], c_target=native.parents[1])
+            collections = coverage_installed_managed.prepare_apple(context)
+            self.assertEqual({row['name'] for row in collections}, {'installed-swift', 'installed-objective-c'})
+            for language in ('swift', 'objective-c'):
+                with self.subTest(language=language):
+                    package = run / ('unpacked-' + language)
+                    package.mkdir()
+                    with coverage_installed_managed.tarfile.open(context['apple_artifacts'][language]) as artifact:
+                        artifact.extractall(package, filter='data')
+                    if language == 'swift':
+                        result = subprocess.run(['swift', 'package', '--package-path', str(package), 'describe'],
+                                                env={'PATH': os.environ['PATH'], 'HOME': str(run)},
+                                                capture_output=True, timeout=60)
+                        self.assertEqual(result.returncode, 0, result.stderr.decode())
+                    else:
+                        # Run the actual consumer through extraction, README replay setup,
+                        # and source staging. Stop at the unavailable Apple compiler.
+                        class CompilerReached(Exception):
+                            pass
+                        def compiler(args, **kwargs):
+                            self.assertEqual(args[:2], ['xcrun', 'clang'])
+                            stage = run / 'consumer'
+                            self.assertIn('TTFoundationClient', (stage / 'Sources/Public/main.m').read_text())
+                            raise CompilerReached
+                        with patch.dict(os.environ, THINKTHEN_ARTIFACT=context['apple_artifacts'][language],
+                                        THINKTHEN_COVERAGE_STAGE=str(run / 'consumer')), patch.object(
+                                sys, 'platform', 'darwin'), patch.object(subprocess, 'run', side_effect=compiler):
+                            with self.assertRaises(CompilerReached):
+                                runpy.run_path(str(checkout / 'libraries/objective-c/checks/foundation_installed.py'))
+
     def test_apple_collector_requires_matching_archive_and_retains_executables(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
@@ -176,18 +268,27 @@ class ManagedToolAvailability(unittest.TestCase):
                     (retained / 'installed' / binary).write_bytes(binary.encode())
             context = dict(root=root, command=command, missing_tool=DRIVER['MissingTool'],
                            c_target=native.parents[1], initializer=root / 'profile.o')
-            sources = ('Sources/Foundation/TTResult.h', 'Sources/Foundation/module.modulemap')
+            sources = ('Sources/Foundation/TTResult.h', 'Sources/Foundation/module.modulemap', 'README-PUBLIC.md')
             for name in sources:
                 original = root / 'libraries/swift' / name
                 original.parent.mkdir(parents=True, exist_ok=True)
                 original.write_bytes(b'checkout source')
                 (package / name).parent.mkdir(parents=True, exist_ok=True)
-            for mismatch in ('archive', *sources, None):
+            subprocess.run(['git', 'init', '-q', str(root)], check=True)
+            subprocess.run(['git', '-C', str(root), 'add', 'libraries/swift'], check=True)
+            for mismatch in ('archive', *sources, 'missing', 'extra', None):
                 for name in sources:
                     (package / name).write_bytes(b'changed source' if mismatch == name else b'checkout source')
+                if mismatch == 'missing':
+                    (package / sources[0]).unlink()
+                extra = package / 'unknown.txt'
+                if mismatch == 'extra':
+                    extra.write_text('untracked package input')
+                elif extra.exists():
+                    extra.unlink()
                 (slice / 'libthinkthen.a').write_bytes(b'ordinary archive' if mismatch == 'archive' else native.read_bytes())
                 artifact = root / 'swift.tar.gz'
-                coverage_installed_managed.archive(package, artifact, ('CThinkThen.xcframework', 'Sources'))
+                coverage_installed_managed.archive(package, artifact, [item.name for item in package.iterdir()])
                 stage = root / str(mismatch).replace('/', '-')
                 stage.mkdir()
                 retained = stage / 'retained'
