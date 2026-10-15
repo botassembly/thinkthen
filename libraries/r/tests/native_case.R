@@ -74,7 +74,7 @@ tryCatch({
   }
   for (result in done$results) {
     if (inherits(result,"thinkthen_RankResult") && !inherits(result$members,"thinkthen_absent")) {
-      for (member in result$members) stopifnot(inherits(member,"thinkthen_RankMember"),inherits(member$result,"thinkthen_RankMemberResult"),inherits(member$result$answer_id,"thinkthen_AnswerId"),member$result$value>0,inherits(member$result$question,"thinkthen_DecideQuestion"),inherits(member$result$answer,"thinkthen_YesNo"),inherits(member$result$meta,"thinkthen_Meta"))
+      for (member in result$members) stopifnot(inherits(member,"thinkthen_RankMember"),inherits(member$result,"thinkthen_RankMemberResult"),inherits(member$result$answer_id,"thinkthen_AnswerId"),member$result$value>0,inherits(member$result$question,"thinkthen_QuestionDocument_decide"),inherits(member$result$answer,"thinkthen_YesNo"),inherits(member$result$meta,"thinkthen_Meta"))
     }
   }
   packet <- list(native=TRUE, results = lapply(done$results,plain), facts=plain(done$facts))
