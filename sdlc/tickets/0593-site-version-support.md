@@ -4,6 +4,8 @@ Status: OPEN.
 
 Milestone: 0.2
 
+Reviews: revision 522c859, accept
+
 ## Outcome
 
 Every language, database and command page on the documentation site shows a "Supported versions" line, and the languages and databases index pages show one table of every surface's supported versions and platforms.
