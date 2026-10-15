@@ -159,7 +159,12 @@ def check_package(family, path, root=REPO):
     files = members(path.read_bytes(), path.suffix in ('.whl', '.nupkg', '.zip'))
     if family == 'python':
         metadata = email.message_from_bytes(unique_suffix(files, 'METADATA') if path.suffix == '.whl' else unique_suffix(files, 'PKG-INFO'))
-        check_readme(family, metadata.get_payload(decode=True), root)
+        body = metadata.get_payload(decode=True)
+        # Maturin terminates the metadata description with one extra newline.
+        # Accept that framing only when the remaining bytes are the source.
+        if body.removesuffix(b'\n') == source(family, root).read_bytes():
+            body = body.removesuffix(b'\n')
+        check_readme(family, body, root)
         check_description(family, metadata['Summary'], root)
     elif family == 'ruby':
         package = members(files['data.tar.gz'])

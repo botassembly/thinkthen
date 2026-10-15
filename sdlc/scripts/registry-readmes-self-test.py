@@ -86,6 +86,62 @@ class PackageText(unittest.TestCase):
                     with self.assertRaisesRegex(readmes.Refusal, reason):
                         readmes.check_package('typescript', package)
 
+    def test_python_metadata_terminator_preserves_approved_body(self):
+        with tempfile.TemporaryDirectory() as scratch:
+            package = Path(scratch) / 'thinkthen.whl'
+            body = readmes.source('python').read_bytes()
+            header = ('Metadata-Version: 2.1\nSummary: ' +
+                      readmes.description('python') + '\n\n').encode()
+            for changed, cause in [(body, None), (body + b'\n', None),
+                                   (body + b'\n\n', 'readme-needs-under-40-lines'),
+                                   (body.replace(b'The library is free', b'The library costs money'),
+                                    'readme-source-mismatch')]:
+                with self.subTest(cause=cause):
+                    with zipfile.ZipFile(package, 'w') as bundle:
+                        bundle.writestr('thinkthen.dist-info/METADATA', header + changed)
+                    if cause:
+                        with self.assertRaisesRegex(readmes.Refusal, cause):
+                            readmes.check_package('python', package)
+                    else:
+                        readmes.check_package('python', package)
+
+    def test_python_metadata_cli_rejects_changed_words_and_long_source(self):
+        with tempfile.TemporaryDirectory() as scratch:
+            root = Path(scratch)
+            runner = cli_root(root)
+            for name in ('crates/thinkthen/Cargo.toml', 'libraries/python/pyproject.toml'):
+                target = root / name
+                target.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copyfile(readmes.REPO / name, target)
+            page = readmes.source('python', root)
+            body = readmes.source('python').read_bytes()
+            page.write_bytes(body)
+            header = ('Metadata-Version: 2.1\nSummary: ' +
+                      readmes.description('python') + '\n\n').encode()
+            changed = body.replace(b'The library is free', b'The library costs money')
+            for suffix in ('.whl', '.tar.gz'):
+                package = root / ('thinkthen' + suffix)
+                for source_body, packed, cause in (
+                    (body, body, None),
+                    (body, body + b'\n', None),
+                    (body, changed, 'readme-source-mismatch'),
+                    (body, changed + b'\n', 'readme-needs-under-40-lines'),
+                    (body, body + b'\n\n', 'readme-needs-under-40-lines'),
+                    (body + b'\n', body + b'\n\n', 'readme-needs-under-40-lines'),
+                ):
+                    with self.subTest(suffix=suffix, cause=cause):
+                        page.write_bytes(source_body)
+                        if suffix == '.whl':
+                            with zipfile.ZipFile(package, 'w') as bundle:
+                                bundle.writestr('thinkthen.dist-info/METADATA', header + packed)
+                        else:
+                            archive(package, {'thinkthen/PKG-INFO': header + packed})
+                        done = subprocess.run([sys.executable, str(runner), 'python', str(package)],
+                                              capture_output=True, text=True)
+                        self.assertEqual(done.returncode, 1 if cause else 0, done.stderr)
+                        if cause:
+                            self.assertIn(cause, done.stderr)
+
     def test_npm_assembles_public_readme_and_refuses_adr(self):
         with tempfile.TemporaryDirectory() as scratch:
             tree = Path(scratch)

@@ -850,7 +850,22 @@ collect)
 draft)
 	[ "$#" = 5 ] || fail 'draft MODE NAME SHA DIR'
 	mode=$2 name=$3 sha=$4; files=$5
+	case $mode in release | rehearse) ;; *) fail 'draft mode must be release or rehearse' ;; esac
+	if [ "$mode" = release ]; then
+		[ "${GITHUB_REF:-}" = "refs/tags/$name" ] || fail 'release ref differs from name'
+	fi
 	[ "$sha" = "$(git rev-parse HEAD)" ] || fail 'draft checkout differs from resolve SHA'
+	for document in "release-notes/$version.md" "release-notes/$version-known-gaps.md"; do
+		[ -s "$document" ] || fail "missing release document $document"
+	done
+	scratch_dir notes_work
+	notes=$notes_work/notes.md
+	if [ "$mode" = rehearse ]; then
+		printf 'Rehearsal from %s; do not publish\n\n' "$sha" > "$notes"
+	fi
+	cat "release-notes/$version.md" >> "$notes"
+	printf '\n' >> "$notes"
+	cat "release-notes/$version-known-gaps.md" >> "$notes"
 	python3 sdlc/scripts/registry-readmes.py sources
 	for package in "$files"/*; do
 		case ${package##*/} in *.sha256 | thinkthen-first-run.tar.gz) continue ;; esac
@@ -867,10 +882,9 @@ draft)
 		[ "$(tag_status)" = 404 ] || fail 'a rehearsal tag exists or its absence could not be proved'
 	fi
 	if [ "$mode" = release ]; then
-		[ "$GITHUB_REF" = "refs/tags/$name" ] || fail 'release ref differs from name'
-		gh release create "$name" --draft --verify-tag --title "$name" --notes "ThinkThen $name"
+		gh release create "$name" --draft --verify-tag --title "$name" --notes-file "$notes"
 	else
-		gh release create "$name" --draft --target "$sha" --title "$name" --notes "Rehearsal from $sha; do not publish"
+		gh release create "$name" --draft --target "$sha" --title "$name" --notes-file "$notes"
 		[ "$(tag_status)" = 404 ] || fail 'draft created a rehearsal tag; stop before uploading assets'
 	fi
 	gh release upload "$name" "$files"/*
