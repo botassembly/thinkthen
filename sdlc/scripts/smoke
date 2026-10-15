@@ -13,7 +13,7 @@
 #
 # `smoke SURFACE...` runs the named surfaces alone.
 set -eu
-. "$(dirname -- "$0")/heavy-lock"
+. "$(dirname -- "$0")/allow-list"
 REPO=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
 cd -- "$REPO"
 campaign=
@@ -91,7 +91,7 @@ fi
 # ADR 0113: a smoke that bypasses its check's scratch usage folder writes this decoy and fails.
 usage_guard
 # Its own target folder keeps the nextest build beside it from replacing these binaries mid-run.
-cargo build --locked --offline --quiet --target-dir target/smoke \
+python3 sdlc/scripts/build-admission.py -- cargo build --locked --offline --quiet --target-dir target/smoke \
 	--package conformance-backend --bin conformance-backend --package thinkthen --bin thinkthen
 scratch_dir bin
 cp target/smoke/debug/thinkthen target/smoke/debug/conformance-backend "$bin/"
