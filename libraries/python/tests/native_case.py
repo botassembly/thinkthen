@@ -72,7 +72,11 @@ def main():
                 value, probability = done.value, done.probability
                 if LIBRARY is not None:
                     value = value.to_list()[0]
-                    probability = probability.to_list()[0]
+                    if verb in ('score', 'tag', 'annotate'):
+                        assert probability is None, 'this function has no call probability'
+                    else:
+                        assert probability is not None, 'this function retains a probability column'
+                        probability = probability.to_list()[0]
                 call_result = {'value': value, 'probability': probability,
                                'results': [result._to_dict() for result in done.results],
                                'facts': done.facts._to_dict()}

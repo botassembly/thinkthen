@@ -53,6 +53,8 @@ class PandasResult(Result):
         return self._column(rows)
 
     def _probability_rows(self):
+        from ._native_results import _CALL_RESULTS
+        if _CALL_RESULTS[self.function]['probability_mode'] == 'null': return None
         values = Result.probability.fget(self)
         rows = [None] * len(self.source)
         if self.function == 'relate':
@@ -73,6 +75,7 @@ class PandasResult(Result):
     def probability(self):
         import pandas as pd
         rows = self._probability_rows()
+        if rows is None: return None
         name = getattr(self.source, 'name', getattr(self, 'on', None))
         if self.function in ('recognize', 'relate'):
             import pyarrow as pa
