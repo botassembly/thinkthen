@@ -54,7 +54,7 @@ runtime_ready() {
 		[ -x "$PG_CONFIG" ] || not_run "the pinned pg_config at $PG_CONFIG is missing"
 		# The bottle's own line names its builder (ticket 0369).
 		[ "$("$PG_CONFIG" --version)" = "PostgreSQL $PG_DARWIN_VERSION (Homebrew)" ] || not_run "pg_config is not PostgreSQL $PG_DARWIN_VERSION"
-		[ "$(brew list --versions postgresql@$PG_MAJOR | awk '{print $2}')" = "$PG_DARWIN_VERSION" ] || not_run "the Homebrew server is not $PG_DARWIN_VERSION"
+		[ "$(brew list --versions postgresql@$PG_MAJOR | awk '{print $2}')" = "$PG_DARWIN_PACKAGE" ] || not_run "the Homebrew server package is not $PG_DARWIN_PACKAGE"
 		case $(uname -m) in
         arm64) tag=arm64_sequoia; pin=$PG_BOTTLE_ARM64_SEQUOIA ;;
         x86_64) tag=sonoma; pin=${PG_BOTTLE_X86_64_SONOMA:-} ;;
