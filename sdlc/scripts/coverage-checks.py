@@ -199,46 +199,48 @@ class ManagedToolAvailability(unittest.TestCase):
                             with self.assertRaisesRegex(DRIVER['MissingTool'], absent):
                                 collection['runner'](run)
 
-    def test_apple_packages_run_the_installed_commands_with_the_measured_archive(self):
+    def test_apple_staging_supplies_the_real_package_and_consumer_inputs(self):
+        checkout = Path(__file__).resolve().parents[2]
         with tempfile.TemporaryDirectory() as temporary:
-            root = Path(temporary)
-            run = root / 'run'
-            run.mkdir()
-            tools = root / 'tools'
-            tools.mkdir()
+            run = Path(temporary)
             native = run / 'target-c/debug/libthinkthen_c.a'
             native.parent.mkdir(parents=True)
             native.write_bytes(b'measured native archive')
-            header = root / 'libraries/c/include/thinkthen.h'
-            header.parent.mkdir(parents=True)
-            header.write_bytes(b'measured public header')
-            fake = tools / 'xcrun'
-            fake.write_text('#!' + sys.executable + '\n' +
-                "import sys, pathlib, shutil, plistlib, platform\n" +
-                "args=sys.argv; out=pathlib.Path(args[args.index('-output')+1]); part=out/'host'\n" +
-                "part.mkdir(parents=True); shutil.copytree(args[args.index('-headers')+1],part/'Headers')\n" +
-                "shutil.copyfile(args[args.index('-library')+1],part/'libthinkthen.a')\n" +
-                "(out/'Info.plist').write_bytes(plistlib.dumps({'AvailableLibraries':[dict(SupportedPlatform='macos', SupportedArchitectures=[platform.machine()], LibraryIdentifier='host', LibraryPath='libthinkthen.a', HeadersPath='Headers')]}))\n")
-            fake.chmod(0o700)
-            for tool in ('lipo', 'swift'):
-                (tools / tool).symlink_to('/bin/true')
-            for language, binaries, subdirectory in (('swift', 'Owned Parity', 'installed'),
-                                                     ('objective-c', 'Consumer Cases', '.build/debug')):
-                library = root / 'libraries' / language
-                library.mkdir(parents=True)
-                (library / 'Package.swift').write_text('measured package manifest')
-                (library / 'check.sh').write_text('set -eu\nmkdir -p "$THINKTHEN_COVERAGE_STAGE/' + subdirectory + '"\n' +
-                    'for name in ' + binaries + '; do printf measured > "$THINKTHEN_COVERAGE_STAGE/' + subdirectory + '/$name"; done\n')
-            env = {'PATH': str(tools) + ':/usr/bin:/bin'}
-            context = dict(root=root, run=run, env=env, command=DRIVER['command'],
-                           missing_tool=DRIVER['MissingTool'], c_target=native.parents[1], initializer=run / 'profile.o')
+            def command(args, cwd, env, log, **kwargs):
+                # XCFramework assembly requires macOS; package validation below is real.
+                framework = Path(args[args.index('-output') + 1])
+                framework.mkdir()
+                (framework / 'Info.plist').write_bytes(plistlib.dumps({}))
+            context = dict(root=checkout, run=run, env={}, command=command,
+                           missing_tool=DRIVER['MissingTool'], c_target=native.parents[1])
             collections = coverage_installed_managed.prepare_apple(context)
             self.assertEqual({row['name'] for row in collections}, {'installed-swift', 'installed-objective-c'})
-            for row in collections:
-                folder = run / row['name']
-                folder.mkdir()
-                row['runner'](folder)
-                self.assertTrue(all(path.read_bytes() == b'measured' for path in row['objects']))
+            for language in ('swift', 'objective-c'):
+                with self.subTest(language=language):
+                    package = run / ('unpacked-' + language)
+                    package.mkdir()
+                    with coverage_installed_managed.tarfile.open(context['apple_artifacts'][language]) as artifact:
+                        artifact.extractall(package, filter='data')
+                    if language == 'swift':
+                        result = subprocess.run(['swift', 'package', '--package-path', str(package), 'describe'],
+                                                env={'PATH': os.environ['PATH'], 'HOME': str(run)},
+                                                capture_output=True, timeout=60)
+                        self.assertEqual(result.returncode, 0, result.stderr.decode())
+                    else:
+                        # Run the actual consumer through extraction, README replay setup,
+                        # and source staging. Stop at the unavailable Apple compiler.
+                        class CompilerReached(Exception):
+                            pass
+                        def compiler(args, **kwargs):
+                            self.assertEqual(args[:2], ['xcrun', 'clang'])
+                            stage = run / 'consumer'
+                            self.assertIn('TTFoundationClient', (stage / 'Sources/Public/main.m').read_text())
+                            raise CompilerReached
+                        with patch.dict(os.environ, THINKTHEN_ARTIFACT=context['apple_artifacts'][language],
+                                        THINKTHEN_COVERAGE_STAGE=str(run / 'consumer')), patch.object(
+                                sys, 'platform', 'darwin'), patch.object(subprocess, 'run', side_effect=compiler):
+                            with self.assertRaises(CompilerReached):
+                                runpy.run_path(str(checkout / 'libraries/objective-c/checks/foundation_installed.py'))
 
     def test_apple_collector_requires_matching_archive_and_retains_executables(self):
         with tempfile.TemporaryDirectory() as temporary:
@@ -266,18 +268,27 @@ class ManagedToolAvailability(unittest.TestCase):
                     (retained / 'installed' / binary).write_bytes(binary.encode())
             context = dict(root=root, command=command, missing_tool=DRIVER['MissingTool'],
                            c_target=native.parents[1], initializer=root / 'profile.o')
-            sources = ('Sources/Foundation/TTResult.h', 'Sources/Foundation/module.modulemap')
+            sources = ('Sources/Foundation/TTResult.h', 'Sources/Foundation/module.modulemap', 'README-PUBLIC.md')
             for name in sources:
                 original = root / 'libraries/swift' / name
                 original.parent.mkdir(parents=True, exist_ok=True)
                 original.write_bytes(b'checkout source')
                 (package / name).parent.mkdir(parents=True, exist_ok=True)
-            for mismatch in ('archive', *sources, None):
+            subprocess.run(['git', 'init', '-q', str(root)], check=True)
+            subprocess.run(['git', '-C', str(root), 'add', 'libraries/swift'], check=True)
+            for mismatch in ('archive', *sources, 'missing', 'extra', None):
                 for name in sources:
                     (package / name).write_bytes(b'changed source' if mismatch == name else b'checkout source')
+                if mismatch == 'missing':
+                    (package / sources[0]).unlink()
+                extra = package / 'unknown.txt'
+                if mismatch == 'extra':
+                    extra.write_text('untracked package input')
+                elif extra.exists():
+                    extra.unlink()
                 (slice / 'libthinkthen.a').write_bytes(b'ordinary archive' if mismatch == 'archive' else native.read_bytes())
                 artifact = root / 'swift.tar.gz'
-                coverage_installed_managed.archive(package, artifact, ('CThinkThen.xcframework', 'Sources'))
+                coverage_installed_managed.archive(package, artifact, [item.name for item in package.iterdir()])
                 stage = root / str(mismatch).replace('/', '-')
                 stage.mkdir()
                 retained = stage / 'retained'

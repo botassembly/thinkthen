@@ -5,6 +5,7 @@ import platform
 import plistlib
 import shutil
 import sys
+import subprocess
 import tarfile
 import zipfile
 
@@ -51,12 +52,13 @@ def apple_collection(language, context, env, stage, retained, folder):
     package.mkdir()
     with tarfile.open(artifact) as archive:
         archive.extractall(package, filter='data')
-    for source in package.rglob('*'):
-        relative = source.relative_to(package)
-        if source.is_file() and (relative.parts[0] == 'Sources' or relative == Path('Package.swift')):
-            original = root / 'libraries' / language / relative
-            if not original.is_file() or source.read_bytes() != original.read_bytes():
-                raise RuntimeError('Apple package source differs from the measured checkout')
+    source = root / 'libraries' / language
+    expected_members = apple_inputs(root, language)
+    actual_members = {item.relative_to(package) for item in package.rglob('*')
+                      if item.is_file() and item.relative_to(package).parts[0] != 'CThinkThen.xcframework'}
+    if actual_members != set(expected_members) or any(
+            (package / member).read_bytes() != (source / member).read_bytes() for member in expected_members):
+        raise RuntimeError('Apple package source differs from the measured checkout')
     framework = package / 'CThinkThen.xcframework'
     if not (framework / 'Info.plist').is_file():
         raise RuntimeError('instrumented Apple package is missing its XCFramework')
@@ -91,6 +93,17 @@ def apple_collection(language, context, env, stage, retained, folder):
         shutil.copy2(installed / binary, retained / binary)
 
 
+def apple_inputs(root, language):
+    """Use the checkout's tracked library inputs for staging and comparison."""
+    source = root / 'libraries' / language
+    names = subprocess.check_output(['git', 'ls-files', '-z', '--', str(source)], cwd=root)
+    members = [Path(os.fsdecode(name)).relative_to(Path('libraries') / language)
+               for name in names.split(b'\0') if name]
+    if not members:
+        raise RuntimeError('Apple package has no tracked library inputs')
+    return members
+
+
 def prepare_apple(context):
     """Assemble measured host packages from this run's instrumented archive."""
     root, run, env = context['root'], context['run'], context['env']
@@ -110,12 +123,10 @@ def prepare_apple(context):
         package = stage / (language + '-package')
         package.mkdir()
         source = root / 'libraries' / language
-        for name in ('Sources', 'Package.swift', 'LICENSE', 'README.md', 'Examples', 'source-package.json'):
-            item = source / name
-            if item.is_dir():
-                shutil.copytree(item, package / name)
-            elif item.is_file():
-                shutil.copy2(item, package / name)
+        for member in apple_inputs(root, language):
+            target = package / member
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(source / member, target)
         shutil.copytree(framework, package / framework.name)
         artifact = stage / (language + '.tar.gz')
         archive(package, artifact, [item.name for item in package.iterdir()])
