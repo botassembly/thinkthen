@@ -101,6 +101,7 @@ def must_fail(action, phrase):
 def main():
     fetch_retries()
     acquire_kotlin_zip()
+    zip_member_types()
     with tempfile.TemporaryDirectory(prefix="thinkthen-language-tools-test-") as folder:
         root = Path(folder)
         github_env, github_path = fixture(root)
@@ -234,6 +235,13 @@ def acquire_kotlin_zip():
                 member.create_system = 3
                 member.external_attr = mode << 16
                 data.writestr(member, content)
+            for name, system, mode in (("kotlinc/lib/", 3, 0o045555),
+                                       ("kotlinc/lib/closed", 3, 0o100000),
+                                       ("kotlinc/lib/dos", 0, 0o100777)):
+                member = zipfile.ZipInfo(name)
+                member.create_system = system
+                member.external_attr = mode << 16
+                data.writestr(member, "")
         url, kind, _ = tools.ASSETS["kotlin"]
         job = root / "job"
         job.mkdir()
@@ -249,6 +257,28 @@ def acquire_kotlin_zip():
         assert home == job / "kotlin/kotlinc", home
         assert (home / "bin/kotlinc").stat().st_mode & 0o7777 == 0o755
         assert (home / "lib/kotlin-stdlib.jar").stat().st_mode & 0o7777 == 0o644
+        assert (home / "lib").stat().st_mode & 0o7777 == 0o555
+        assert (home / "lib/closed").stat().st_mode & 0o7777 == 0
+        assert (home / "lib/dos").stat().st_mode & 0o111 == 0
+
+
+def zip_member_types():
+    # Archive metadata cannot turn special entries into executable regular files.
+    for kind, name in ((0o010000, "fifo"), (0o020000, "device"),
+                       (0o060000, "block"), (0o120000, "link"),
+                       (0o140000, "socket"), (0o040000, "directory"),
+                       (0o100000, "file/")):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            archive = root / "unsafe.zip"
+            with zipfile.ZipFile(archive, "w") as packed:
+                packed.writestr("first", "must not extract before validation")
+                member = zipfile.ZipInfo(name)
+                member.create_system = 3
+                member.external_attr = (kind | 0o755) << 16
+                packed.writestr(member, "unexpected file type")
+            must_fail(lambda: tools.safe_extract(archive, root / "tools"), "unsafe member")
+            assert not (root / "tools/first").exists()
 
 
 def acquisition_cli(root):

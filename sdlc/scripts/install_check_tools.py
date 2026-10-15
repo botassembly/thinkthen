@@ -1,5 +1,6 @@
 """Pinned public host runtimes, installed only into a check's owned scratch."""
 import hashlib
+import os
 from pathlib import Path
 import sys
 import zipfile
@@ -24,13 +25,15 @@ def unzip(archive, destination):
         entries = packed.infolist()
         for entry in entries:
             name = Path(entry.filename)
-            if name.is_absolute() or '..' in name.parts or (entry.external_attr >> 16) & 0o170000 == 0o120000:
+            kind = (entry.external_attr >> 16) & 0o170000
+            if (name.is_absolute() or '..' in name.parts
+                    or kind not in (0, 0o040000 if entry.is_dir() else 0o100000)):
                 raise Failure('host tool archive contains an unsafe entry')
         packed.extractall(destination)
         # ZipFile drops Unix modes. Restore safe bits after validating every path.
         for entry in sorted(entries, key=lambda item: len(Path(item.filename).parts), reverse=True):
             mode = (entry.external_attr >> 16) & 0o777
-            if entry.create_system == 3 and mode:
+            if os.name != 'nt' and entry.create_system == 3 and entry.external_attr >> 16:
                 (destination / entry.filename).chmod(mode)
     return destination
 
