@@ -5,7 +5,7 @@ import json
 import os
 from pathlib import Path
 import sys
-import time
+import threading
 from session_records import Records, definitions
 
 native = ct.CDLL(os.environ['TT_SESSION_NATIVE'], mode=ct.RTLD_GLOBAL)
@@ -17,8 +17,6 @@ native.thinkthen_engine_new_with.restype = ct.c_void_p
 for name in ('thinkthen_session_cancel','thinkthen_session_free','thinkthen_engine_free','thinkthen_session_result_free'):
     function = getattr(native, name); function.argtypes = [ct.c_void_p]; function.restype = None
 bridge.COBOL_PUSH.argtypes = [ct.POINTER(ct.c_void_p),ct.POINTER(ct.c_void_p),ct.POINTER(ct.c_uint32)]
-native.thinkthen_session_wait.argtypes = [ct.c_void_p,ct.c_uint32,ct.c_uint32,ct.POINTER(ct.c_uint32)]
-native.thinkthen_session_try_read.argtypes = [ct.c_void_p,ct.POINTER(ct.c_uint32),ct.POINTER(ct.c_void_p)]
 native.thinkthen_session_finish.argtypes = [ct.c_void_p,ct.c_void_p,ct.c_size_t]
 native.thinkthen_session_result_json.argtypes = [ct.c_void_p,ct.POINTER(ct.c_void_p),ct.POINTER(ct.c_size_t)]
 native.thinkthen_session_error_message.restype = ct.c_char_p
@@ -71,6 +69,7 @@ start.argtypes = [ct.POINTER(ct.c_void_p)] * 3
 owner = ct.c_void_p(engine)
 code = start(ct.byref(owner),ct.byref(address),ct.byref(session))
 packets, owners = [], []
+producer = None
 try:
     if code:
         assert not session, 'refused request created a session'
@@ -79,20 +78,25 @@ try:
         # Request records and caller buffers no longer own the admitted session.
         records.owners.clear()
         if value['cancel']: native.thinkthen_session_cancel(session)
-        for item in value.get('feed_items', []):
-            address = ct.c_void_p(records.construct('RequestSessionDescriptor', definitions['RequestSessionDescriptor'], {'item':item}))
-            while True:
-                state = ct.c_uint32()
-                assert bridge.COBOL_PUSH(ct.byref(session),ct.byref(address),ct.byref(state)) == 0
-                if state.value != 1: break
-                status, packet = ct.c_uint32(), ct.c_void_p()
-                assert native.thinkthen_session_try_read(session,ct.byref(status),ct.byref(packet)) == 0
-                if packet.value: owners.append(packet.value)
-                else:
-                    ready = ct.c_uint32()
-                    assert native.thinkthen_session_wait(session,1,0xffffffff,ct.byref(ready)) == 0
-        assert native.thinkthen_session_finish(session,None,0) == 0
+        producer_failures = []
+        def produce():
+            try:
+                for item in value.get('feed_items', []):
+                    address = ct.c_void_p(records.construct('RequestSessionDescriptor', definitions['RequestSessionDescriptor'], {'item':item}))
+                    state = ct.c_uint32()
+                    assert bridge.COBOL_PUSH(ct.byref(session),ct.byref(address),ct.byref(state)) == 0
+                    if state.value == 2: break
+                    assert state.value == 0
+                assert native.thinkthen_session_finish(session,None,0) == 0
+            except BaseException as error:
+                producer_failures.append(error)
+                native.thinkthen_session_cancel(session)
+        # Blocking input transfer and bounded packet output need separate owners.
+        worker = threading.Thread(target=produce)
+        worker.start()
+        producer = worker
         if value['held_cancel']:
+            producer.join()
             assert sys.stdin.read(1) == '!'
             native.thinkthen_session_cancel(session)
             print('cancel-fired',flush=True)
@@ -102,6 +106,8 @@ try:
             if status.value == 2: break
             assert status.value == 0 and packet.value
             owners.append(packet.value)
+        producer.join()
+        if producer_failures: raise producer_failures[0]
         native.thinkthen_session_free(session); session = ct.c_void_p()
         native.thinkthen_engine_free(engine); engine = None
         # Private fixture projection uses the retained canonical packet transport.
@@ -118,6 +124,9 @@ try:
             packets.append(packet)
         print(json.dumps({'packets':packets},ensure_ascii=False))
 finally:
+    if producer is not None:
+        if producer.is_alive(): native.thinkthen_session_cancel(session)
+        producer.join()
     for packet in owners: native.thinkthen_session_result_free(packet)
     if session: native.thinkthen_session_free(session)
     if engine: native.thinkthen_engine_free(engine)
