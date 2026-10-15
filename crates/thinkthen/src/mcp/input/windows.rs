@@ -117,10 +117,9 @@ impl PipeInput {
 }
 impl PipeOutput {
     fn completed(&self, result: io::Result<usize>) -> io::Result<usize> {
-        if self.watch.stop.is_cancelled() {
-            Err(io::ErrorKind::BrokenPipe.into())
-        } else {
-            result
+        match result {
+            Err(_) if self.watch.stop.is_cancelled() => Err(io::ErrorKind::BrokenPipe.into()),
+            result => result,
         }
     }
     pub(in crate::mcp) fn new(file: File, stop: CancelToken) -> io::Result<Self> {
