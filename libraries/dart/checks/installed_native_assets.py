@@ -47,10 +47,11 @@ def run_prepared():
     # Flutter writes compiler and test output; each member owns its project copy.
     with tempfile.TemporaryDirectory(prefix='thinkthen-dart-member-') as owned:
         scratch = Path(owned)
-        shutil.copytree(prepared / 'packages', scratch / 'packages')
+        shutil.copytree(prepared / 'packages', scratch / 'packages',
+                        ignore=shutil.ignore_patterns('ephemeral', 'build'))
         project = settings['consumer'] if member == 'dart' else 'flutter-app'
         shutil.copytree(prepared / project, scratch / project,
-                        ignore=shutil.ignore_patterns('build', 'flutter_build'))
+                        ignore=shutil.ignore_patterns('build', 'flutter_build', 'ephemeral'))
         for config in (scratch / project / '.dart_tool').rglob('*.json'):
             config.write_text(config.read_text().replace(str(prepared), str(scratch)))
         env.update(THINKTHEN_PARITY_PACKAGE=str(scratch / 'packages/dart'),
@@ -238,7 +239,8 @@ def main():
         print('PASS: supplied Dart and native archives, standalone typed bundle; no source build')
         return
     app = scratch / 'flutter-app'
-    shutil.copytree(ROOT / 'libraries/dart/flutter/example/linux', app / 'linux')
+    shutil.copytree(ROOT / 'libraries/dart/flutter/example/linux', app / 'linux',
+                    ignore=shutil.ignore_patterns('ephemeral'))
     (app / 'lib').mkdir()
     shutil.copyfile(consumer / 'bin/stream_cases.dart', app / 'lib/stream_cases.dart')
     shutil.copyfile(consumer / 'bin/data_cases.dart', app / 'lib/data_cases.dart')
