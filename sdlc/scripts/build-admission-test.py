@@ -34,22 +34,64 @@ class Admission(unittest.TestCase):
         self.load.write_text('0')
         self.children = []
         self.descendants = []
+        self.existing_children = self.adopted_children() if sys.platform == 'linux' else set()
 
     def tearDown(self):
-        for child in self.children:
-            if child.poll() is None:
-                child.terminate()
-            child.wait(timeout=2)
-        for pid in self.descendants:
-            try:
-                os.kill(pid, signal.SIGKILL)
-            except ProcessLookupError:
-                pass
-            try:
-                os.waitpid(pid, 0)
-            except ChildProcessError:
-                pass
-        self.temporary.cleanup()
+        # Stop all supervisors before waiting: one stalled child must not leave
+        # the remaining permit holders running or skip descendant cleanup.
+        errors = []
+        try:
+            for child in self.children:
+                try:
+                    if child.poll() is None:
+                        child.terminate()
+                except OSError as error:
+                    errors.append(error)
+            deadline = time.monotonic() + 2
+            for child in self.children:
+                try:
+                    try:
+                        child.wait(timeout=max(0, deadline - time.monotonic()))
+                    except subprocess.TimeoutExpired:
+                        child.kill()
+                        child.wait(timeout=2)
+                except (OSError, subprocess.TimeoutExpired) as error:
+                    errors.append(error)
+            for pid in self.descendants:
+                try:
+                    self.wait_for(lambda: self.kill_and_reap(pid))
+                except (AssertionError, OSError) as error:
+                    errors.append(error)
+            if sys.platform == 'linux':
+                # Killing an unresponsive supervisor adopts its compiler here.
+                # Killing that compiler can in turn adopt a detached daemon.
+                def reaped():
+                    owned = self.adopted_children() - self.existing_children
+                    for pid in owned:
+                        self.kill_and_reap(pid)
+                    return not owned
+                try:
+                    self.wait_for(reaped)
+                except (AssertionError, OSError) as error:
+                    errors.append(error)
+            if errors:
+                raise errors[0]
+        finally:
+            self.temporary.cleanup()
+
+    def adopted_children(self):
+        return {int(pid) for task in Path('/proc/self/task').iterdir()
+                for pid in (task / 'children').read_text().split()}
+
+    def kill_and_reap(self, pid):
+        try:
+            os.kill(pid, signal.SIGKILL)
+        except ProcessLookupError:
+            pass
+        try:
+            return os.waitpid(pid, os.WNOHANG)[0] == pid
+        except ChildProcessError:
+            return True
 
     def entry_scripts(self):
         scripts = self.root / 'scripts'
@@ -62,6 +104,57 @@ class Admission(unittest.TestCase):
             'os.getloadavg=lambda:(float(open(' + repr(str(self.load)) + ').read()),0,0)\n'
             'runpy.run_path(' + repr(str(HELPER)) + ',run_name="__main__")\n')
         return scripts
+
+    @unittest.skipUnless(sys.platform == 'linux', 'Linux adopted descendant cleanup')
+    def test_fixture_cleanup_reaps_unresponsive_supervisor_and_all_owned_children(self):
+        for signal_error in (False, True):
+            with self.subTest(signal_error=signal_error):
+                self.check_fixture_cleanup(signal_error)
+
+    def check_fixture_cleanup(self, signal_error):
+        fixture = Admission()
+        fixture.setUp()
+        self.addCleanup(fixture.temporary.cleanup)
+        pidfile = fixture.root / 'owned-pids'
+        code = ('import os,pathlib,subprocess,sys,time; '
+                'p=subprocess.Popen([sys.executable,"-c","import time; time.sleep(30)"],start_new_session=True); '
+                'pathlib.Path(sys.argv[1]).write_text(str(os.getpid())+" "+str(p.pid)); time.sleep(30)')
+        stopped = fixture.launch('unresponsive', command=[sys.executable, '-c', code, str(pidfile)])
+        self.children.append(stopped)
+        fixture.wait_for(pidfile.exists)
+        pids = [int(pid) for pid in pidfile.read_text().split()]
+        self.descendants.extend(pids)
+        for index in range(3):
+            self.children.append(fixture.launch('held-' + str(index)))
+        fixture.wait_for(lambda: all(fixture.started('held-' + str(i)) for i in range(3)))
+        waiting = fixture.launch('waiting')
+        self.children.append(waiting)
+        os.kill(stopped.pid, signal.SIGSTOP)
+        if signal_error:
+            terminate = stopped.terminate
+
+            def fail_after_signal():
+                terminate()
+                raise OSError("fixture signal failure")
+
+            stopped.terminate = fail_after_signal
+        try:
+            if signal_error:
+                with self.assertRaisesRegex(OSError, "fixture signal failure"):
+                    fixture.tearDown()
+            else:
+                fixture.tearDown()
+            self.assertTrue(all(child.poll() is not None for child in fixture.children))
+            self.assertEqual(fixture.adopted_children(), fixture.existing_children)
+            for pid in pids:
+                with self.assertRaises(ProcessLookupError):
+                    os.kill(pid, 0)
+            self.assertFalse(fixture.root.exists())
+        finally:
+            if signal_error:
+                stopped.terminate = terminate
+            if stopped.poll() is None:
+                os.kill(stopped.pid, signal.SIGCONT)
 
     def launch(self, name, priority='normal', command=None, timeout=None, lock=None, hosted=False, context=None):
         release = self.root / name
