@@ -52,7 +52,7 @@ def prepare(context):
     native_archive = stage / 'c.tar.gz'
     archive(native, native_archive, ('include', 'lib'))
     cpp_archive = stage / 'cpp.tar.gz'
-    archive(root / 'libraries/cpp', cpp_archive, ('include', 'cmake', 'CMakeLists.txt', 'LICENSE', 'README.md'))
+    archive(root / 'libraries/cpp', cpp_archive, ('include', 'cmake', 'examples', 'CMakeLists.txt', 'LICENSE', 'README.md'))
     go = stage / 'go'
     command(['python3', str(root / 'libraries/go/fixtures/package_owned.py'),
              str(root / 'libraries/go'), str(native), str(go)], root, env, stage / 'package-go.log')

@@ -10,6 +10,7 @@ import shutil
 import time
 import sys
 import tempfile
+import tarfile
 import subprocess
 import unittest
 from unittest.mock import patch
@@ -109,7 +110,7 @@ class RetainedLineEvidence(unittest.TestCase):
 class InstalledScriptInvocation(unittest.TestCase):
     @unittest.skipUnless(sys.platform == 'linux' and platform.machine() == 'x86_64',
                          'Ada routine gate requires Linux x86_64')
-    def test_ada_collector_reexecutes_with_clean_path_and_owns_its_lock(self):
+    def test_c_host_packages_preserve_cpp_examples_and_ada_lock_ownership(self):
         checkout = Path(__file__).resolve().parents[2]
         with tempfile.TemporaryDirectory() as temporary:
             run = Path(temporary)
@@ -150,6 +151,11 @@ class InstalledScriptInvocation(unittest.TestCase):
                     c_target=run, initializer=run / 'profile.o'))
                 next(c for c in collections if c['name'] == 'installed-ada')['runner'](run)
             self.assertEqual(len(invoked), 1)
+            with tarfile.open(run / 'stage-c-hosts/cpp.tar.gz') as package:
+                for source in (checkout / 'libraries/cpp/examples').rglob('*'):
+                    if source.is_file():
+                        member = './' + source.relative_to(checkout / 'libraries/cpp').as_posix()
+                        self.assertEqual(package.extractfile(member).read(), source.read_bytes())
 
 
 class ManagedToolAvailability(unittest.TestCase):
