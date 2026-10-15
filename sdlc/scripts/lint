@@ -152,6 +152,7 @@ if [ "$code" -ne 8 ] || ! grep -q source-not-allowed "$plant/deny"; then
     exit 1
 fi
 cargo fmt --all -- --check
+cargo fmt --all --manifest-path crates/thinkthen-host/Cargo.toml -- --check
 cargo clippy --locked --workspace --all-targets -- -D warnings
 RUSTDOCFLAGS='-D warnings' cargo doc --locked --workspace --no-deps
 # Ticket 0086: the built public API equals the frozen declarations, and the
