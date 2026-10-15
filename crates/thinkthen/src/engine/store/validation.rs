@@ -92,9 +92,55 @@ impl Store {
     }
 
     fn validate_current(&self, connection: &Connection, cancel: &Cancel) -> Result<i64, Error> {
+        // BEGIN is deferred: acquire the snapshot under the cancellable wait
+        // before entry decoding can turn lock contention into a storage failure.
+        let marker = self.data_version(connection, cancel)?;
         Entries::read(connection)
             .and_then(Entries::normalized)
             .map_err(super::versioned::sqlite_error)?;
-        self.data_version(connection, cancel)
+        Ok(marker)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    //! Stays: force a competing writer between deferred admission and snapshot decoding without a production test hook.
+    use std::{sync::mpsc, time::Duration};
+
+    use super::*;
+    use crate::engine::store::{Mode, SQLITE};
+
+    #[test]
+    fn validation_waits_for_a_competing_writer_before_reading_its_snapshot() {
+        let folder = super::super::tests::scratch();
+        let cancel = Cancel::default();
+        let mut store =
+            Store::open(folder.path(), Mode::Cache, false, None, &cancel).expect("store");
+        store.connect(&cancel).expect("initialize");
+        let connection = store.connection.take().expect("connection");
+        let writer = Connection::open(folder.path().join(SQLITE)).expect("writer");
+        writer
+            .execute_batch("BEGIN EXCLUSIVE")
+            .expect("writer lock");
+        cancel.fire();
+        assert!(matches!(
+            store.validate(&connection, &cancel),
+            Err(Error::Cancelled)
+        ));
+        let cancel = Cancel::default();
+        let (started, starting) = mpsc::channel();
+        let (finished, completed) = mpsc::channel();
+        let worker = std::thread::spawn(move || {
+            started.send(()).expect("started");
+            finished
+                .send(store.validate(&connection, &cancel))
+                .expect("result");
+        });
+        starting.recv().expect("worker started");
+        let premature = completed.recv_timeout(Duration::from_millis(50));
+        writer.execute_batch("ROLLBACK").expect("release writer");
+        worker.join().expect("worker");
+        assert!(premature.is_err(), "validation did not wait: {premature:?}");
+        assert!(completed.recv().expect("validation completed").is_ok());
     }
 }
