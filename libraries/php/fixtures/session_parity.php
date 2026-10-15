@@ -70,7 +70,7 @@ function consume(stdClass $fixture, Client $client): array
     if ($injection === 'cancel_token') $cancel->cancel();
     try {
         if ($fixture->held_cancel ?? false) {
-            $operation = $client->start($verb, $question, $input, new ThinkThen\Inputs\Options(...$options));
+            $operation = $client->start($verb, $question, $input, new ThinkThen\Inputs\Options(...$options), $cancel);
             $packets = []; $signal = getenv('HOME').'/cancel';
             try {
                 do {
