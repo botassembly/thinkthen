@@ -14,7 +14,7 @@ import unittest
 from unittest.mock import patch
 from conformance import parity
 from conformance import c_images
-from conformance.source_fixtures import stage_generated_source
+from conformance.source_fixtures import stage_files, stage_generated_source
 
 
 class NativeFixtureEnvironment(unittest.TestCase):
@@ -921,14 +921,16 @@ class InstalledInputs(unittest.TestCase):
 
 class FullCheckpoint(unittest.TestCase):
     def test_binding_builds_run_only_in_release_and_fail_the_release_on_error(self):
-        source = parity.ROOT / 'sdlc/scripts'
         with tempfile.TemporaryDirectory(prefix="thinkthen-suite-routing-") as folder:
             root = Path(folder)
             scripts = root / "sdlc/scripts"
             scripts.mkdir(parents=True)
-            for name in ("test", "test-full-cases", "scratch.sh", "full-compiler"):
-                shutil.copyfile(source / name, scripts / name)
-            (scripts / "heavy-lock").write_text("")
+            stage_files(parity.ROOT, root, (
+                "sdlc/scripts/" + name
+                for name in ("test", "test-full-cases", "scratch.sh", "full-compiler")))
+            # Routing probes retain their control variables across the shell boundary.
+            for name in ("heavy-lock", "allow-list"):
+                (scripts / name).write_text("")
             # Use the real scratch ownership/cleanup, with no host configuration reads.
             with (scripts / "scratch.sh").open("a") as stream:
                 stream.write("\nusage_guard() { :; }\nconfig_home() { :; }\n")
@@ -995,10 +997,12 @@ esac
                     root = Path(folder)
                     scripts = root / 'sdlc/scripts'
                     scripts.mkdir(parents=True)
-                    for name in ['test-full-cases', 'surfaces', 'verdict.sh', 'full-compiler']:
-                        shutil.copyfile(parity.ROOT / 'sdlc/scripts' / name, scripts / name)
+                    stage_files(parity.ROOT, root, (
+                        'sdlc/scripts/' + name
+                        for name in ('test-full-cases', 'surfaces', 'verdict.sh', 'full-compiler')))
                     files = {
-                        'sdlc/scripts/heavy-lock': '',
+                        # Environment filtering is covered by the real nested campaign fixture.
+                        'sdlc/scripts/allow-list': '',
                         'sdlc/scripts/scratch.sh': (
                             'usage_guard() { :; }\n'
                             'config_home() { XDG_CONFIG_HOME=$PWD/config; export XDG_CONFIG_HOME; }\n'

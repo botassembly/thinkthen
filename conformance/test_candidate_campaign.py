@@ -80,7 +80,11 @@ class CandidateSmokes(unittest.TestCase):
                 'while len(list(Path(".").glob("ready-*"))) != 4:\n'
                 ' assert time.monotonic()<deadline, "smoke children did not start"\n'
                 ' time.sleep(0.01)\n'
-                'subprocess.run([sys.executable,"sdlc/scripts/build-admission.py",'
+                # This fixture tests reservations; host load has its own admission cases.
+                'subprocess.run([sys.executable,"-c",'
+                '"import os,runpy,sys; os.getloadavg=lambda:(0,0,0); '
+                'sys.argv=sys.argv[1:]; runpy.run_path(sys.argv[0],run_name=\'__main__\')",'
+                '"sdlc/scripts/build-admission.py",'
                 '"--timeout","3","--","cc","main.c","-o","built-"+slot],env=env,check=True)\n'
                 'subprocess.run(["./built-"+slot],env=env,check=True)\n'
                 'print("smoke: true")\n')
