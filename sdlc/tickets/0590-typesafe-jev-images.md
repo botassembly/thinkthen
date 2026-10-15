@@ -6,7 +6,7 @@ Milestone: 0.2
 
 ## Outcome
 
-`decide`, `choose` and `score` send JPEG and PNG images to the named `typesafe` backend on `jev-1.13.0`, `jev-1.14.0`, `jev-latest` and `jev-preview`, and refuse an image outside TypeSafe's published limits with zero sends.
+`decide`, `choose` and `score` send JPEG and PNG images to the named `typesafe` backend on `jev-1.13.0` and `jev-1.14.0`, and refuse an image outside TypeSafe's published limits with zero sends.
 
 ## Evidence
 
@@ -21,11 +21,12 @@ Milestone: 0.2
 
 ## Decisions
 
-- PM decision, 2026-10-15: add `ImageRoute::TypeSafe`, returned by `named("typesafe", "systemone")`. `admit_header` admits exactly `jev-1.13.0`, `jev-1.14.0`, `jev-latest` and `jev-preview`. `jev-1.13` and other names refuse. This supersedes the TypeSafe clause of ADR 0121.
+- PM decision, 2026-10-15: add `ImageRoute::TypeSafe`, returned by `named("typesafe", "systemone")`. `admit_header` admits exactly `jev-1.13.0` and `jev-1.14.0`. The moving aliases `jev-latest` and `jev-preview`, `jev-1.13` and other names refuse, so 0.2 behavior never changes when TypeSafe moves an alias. This supersedes the TypeSafe clause of ADR 0121.
 - PM decision, 2026-10-15: the request carries `TypeSafe-Danger-Zone-Images: true` only when its body carries `assets`. The adapter decides; the engine only attaches the header. Recordings keep bodies only, so the loopback test reads the header from `conformance_backend`'s recorded request.
 - PM decision, 2026-10-15: each asset key is `thinkthen-image-N-H`, where N is the image's 1-based order in the call and H is the first 16 hex digits of its SHA-256. The fixed-length hash keeps user text from matching a key by accident and keeps `image-1` from matching `image-10`. `state` is a JSON array: the text state, left out when it is the empty string as on Perplexity, then each key as a string in image order. Each image appears once in `assets` and once in `state`. Paths never reach the model.
 - PM decision, 2026-10-15: ThinkThen never resizes. Admission refuses an image file over 16 MiB, a side outside 256 to 1568, or a pixel count outside 78,400 to 2,458,624. The body limit is 32 MiB. An oversized value uses the existing `ImageLimit::Dimension` sentence. An undersized value needs a new sentence, `image N is below KIND: limit L, actual A`, because "exceeds" would be false. ThinkThen cannot check the post-processing total or animated PNGs; the server's 400 reports those.
 - PM decision, 2026-10-15: TypeSafe publishes no image token count, so `image_tokens_known` is false and `tokens_per_question` is 0, as on the local route. Questions have no count limit.
+- PM decision, 2026-10-15: build on `ticket/0543-final`; the release notes stay there. Animated PNGs are left to the server's 400.
 - PM decision, 2026-10-15: Box answers and the long-context header are out of scope.
 
 ## Scope
