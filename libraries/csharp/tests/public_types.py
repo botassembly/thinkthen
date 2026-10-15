@@ -75,7 +75,7 @@ def native_parity(consumer, command):
         required = {key: row for key, row in required.items() if key in selected}
     elif os.environ.get("THINKTHEN_TEST_PROFILE", "routine") != "full":
         routine = {line for line in (ROOT / "conformance/routine-ids.txt").read_text().splitlines() if line and not line.startswith("#")} - {"25-defect-fault"}
-        required = {key: row for key, row in required.items() if key in routine or key.startswith("files-") or key in {"library-call-result", "images-decide", "images-choose", "images-score"}}
+        required = {key: row for key, row in required.items() if key in routine or key.startswith("files-") or key in {"library-call-result", "images-decide", "images-choose", "images-score", "settings-max-requests-refuses-past-the-limit"}}
     for row in required.values():
         failure = None
         try:
