@@ -9,7 +9,13 @@ fn a_refused_connection_retries_with_a_live_deadline_and_stops_when_spent() {
         .and_then(|listener| listener.local_addr())
         .expect("a free port")
         .port();
-    let engine = engine(&format!("http://127.0.0.1:{port}/v1"));
+    let engine = crate::api::closed_port_builder(
+        &format!("http://127.0.0.1:{port}/v1"),
+        "sk-public-controls",
+    )
+    .no_cache()
+    .build()
+    .expect("engine");
     let token = CancelToken::new();
     token.cancel();
     for (options, expected, sends) in [

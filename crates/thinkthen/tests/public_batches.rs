@@ -640,7 +640,11 @@ fn engines_built_and_dropped_across_threads_fail_fast_on_a_refused_port() {
 /// Build, call, and drop twenty engines on one thread; each call fails fast.
 fn churn(base: &str, asked: &Question) {
     for _ in 0..20 {
-        let engine = engine(base);
+        let engine = crate::api::closed_port_builder(base, "sk-public-batches")
+            .throttle(THROTTLE)
+            .map(EngineBuilder::no_cache)
+            .and_then(EngineBuilder::build)
+            .expect("engine");
         let options = CallOptions::new().deadline_after(Duration::from_secs(2));
         let result = engine.decide_with(asked, "Refund me.", options.expect("options"));
         assert_eq!(
