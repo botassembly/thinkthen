@@ -277,14 +277,14 @@ fn old_saved_envelopes_refuse_without_sending_and_current_envelopes_grade() {
             if expected == 2 {
                 assert!(output.stdout.is_empty());
                 assert_eq!(output.stderr, b"thinkthen: audit: results line 1 uses the old thinkthen.result/1 format; save the results again with the current version\n");
+                continue;
+            }
+            assert!(output.stderr.is_empty());
+            let report = rows(std::str::from_utf8(&output.stdout).expect("UTF-8"));
+            if cases {
+                assert_eq!(report.len(), 40);
             } else {
-                assert!(output.stderr.is_empty());
-                let report = rows(std::str::from_utf8(&output.stdout).expect("UTF-8"));
-                if cases {
-                    assert_eq!(report.len(), 40);
-                } else {
-                    assert_eq!(report[0]["rows"], 40);
-                }
+                assert_eq!(report[0]["rows"], 40);
             }
         }
     }

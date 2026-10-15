@@ -173,6 +173,16 @@ fn write_options(arguments: &AuditArguments) -> Result<(), Cause> {
     Ok(())
 }
 
+fn saved_results(path: &Path) -> Result<Vec<crate::core::measure::Line>, Cause> {
+    let results = lines(path)?;
+    for (line, row) in &results {
+        if row.member("schema").and_then(crate::core::Json::as_str) == Some("thinkthen.result/1") {
+            return Err(Cause::OldResults(*line));
+        }
+    }
+    Ok(results)
+}
+
 fn grade_all(arguments: &AuditArguments) -> Result<Graded, Refusal> {
     let refusal = |role, cause| Refusal {
         command: "audit",
@@ -191,12 +201,7 @@ fn grade_all(arguments: &AuditArguments) -> Result<Graded, Refusal> {
         Pointer::new(arguments.id.as_str()).map_err(|_| refusal("results", Cause::Pointer))?;
     let (rule, shown) = rule("--threshold", arguments.threshold.as_deref())
         .map_err(|cause| refusal("results", cause))?;
-    let results = lines(&arguments.results).map_err(|cause| refusal("results", cause))?;
-    for (line, row) in &results {
-        if row.member("schema").and_then(crate::core::Json::as_str) == Some("thinkthen.result/1") {
-            return Err(refusal("results", Cause::OldResults(*line)));
-        }
-    }
+    let results = saved_results(&arguments.results).map_err(|cause| refusal("results", cause))?;
     let key_lines = lines(&arguments.key).map_err(|cause| refusal("key", cause))?;
     let answers = answer::read(&results, &pointer, Identity::Question)
         .map_err(|e| refusal("results", Cause::Measure(e)))?;
