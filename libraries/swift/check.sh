@@ -29,7 +29,7 @@ Darwin)
     if [ "${THINKTHEN_TEST_PROFILE:-}" = full ]; then
         python3 "$here/Tests/fixtures/complete_parity.py" --binary "$apple_consumer/installed/Parity"
     else
-        python3 "$here/Tests/fixtures/complete_parity.py" --binary "$apple_consumer/installed/Parity" --routine
+        python3 "$here/Tests/fixtures/complete_parity.py" --binary "$apple_consumer/installed/Parity" --routine --case settings-max-requests-refuses-past-the-limit
     fi
     exit 0 ;;
 Linux) ;;
@@ -80,5 +80,5 @@ python3 "$here/Tests/fixtures/installed.py" --package "$package" --out "$consume
 if [ "${THINKTHEN_TEST_PROFILE:-}" = full ]; then
     python3 "$here/Tests/fixtures/complete_parity.py" --binary "$consumer_scratch/installed/Parity"
 else
-    python3 "$here/Tests/fixtures/complete_parity.py" --binary "$consumer_scratch/installed/Parity" --routine
+    python3 "$here/Tests/fixtures/complete_parity.py" --binary "$consumer_scratch/installed/Parity" --routine --case settings-max-requests-refuses-past-the-limit
 fi
