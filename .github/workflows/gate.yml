@@ -188,14 +188,16 @@ jobs:
           target=$(rustc -vV | sed -n 's/^host: //p')
           version=$(sed -n 's/^version = "\(.*\)"$/\1/p' crates/thinkthen/Cargo.toml | head -n 1)
           out="$RUNNER_TEMP/thinkthen-language-packages"
+          failed=0
           for major in 16 17 18; do
-            python3 sdlc/scripts/build-admission.py -- bash databases/postgresql/check.sh "$major"
+            python3 sdlc/scripts/build-admission.py -- bash databases/postgresql/check.sh "$major" || failed=1
           done
           THINKTHEN_TEST_PROFILE=full CARGO_NET_OFFLINE=true sdlc/scripts/release-pack --reuse "$target" "$out" postgresql
           for major in 16 17 18; do
             THINKTHEN_ARTIFACT="$out/thinkthen-postgresql$major-$version-$target.tar.gz" \
-              python3 sdlc/scripts/build-admission.py -- bash databases/postgresql/check.sh "$major"
+              python3 sdlc/scripts/build-admission.py -- bash databases/postgresql/check.sh "$major" || failed=1
           done
+          [ "$failed" -eq 0 ]
       - name: Prepare both pinned Ruby toolchains
         if: inputs.language == 'ruby'
         run: |
