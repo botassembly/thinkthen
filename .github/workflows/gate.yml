@@ -228,14 +228,17 @@ jobs:
           CARGO_NET_OFFLINE=true sdlc/scripts/release-pack "$target" "$out" ruby
           artifact=$(find "$out" -maxdepth 1 -name "thinkthen-$version-*.gem")
           . libraries/ruby/toolchain.env
+          failed=0
           for minor in $RUBY_MINORS; do
-            THINKTHEN_ARTIFACT="$artifact" THINKTHEN_RUBY_MINOR=$minor sh libraries/ruby/check.sh
+            echo "Check installed Ruby $minor"
+            THINKTHEN_ARTIFACT="$artifact" THINKTHEN_RUBY_MINOR=$minor sh libraries/ruby/check.sh || failed=1
             THINKTHEN_RUBY_MINOR=$minor
             . libraries/ruby/toolchain.env
-            prefix=$HOME/.cache/thinkthen-toolchains/ruby/$RUBY_VERSION
+            prefix=${THINKTHEN_TOOLCHAINS:-$HOME/.cache/thinkthen-toolchains}/ruby/$RUBY_VERSION
             [ "$(uname -s)" != Darwin ] || prefix=$prefix-$(uname -m)-darwin
-            "$prefix/bin/ruby" libraries/ruby/tests/test_package.rb
+            "$prefix/bin/ruby" libraries/ruby/tests/test_package.rb || failed=1
           done
+          exit "$failed"
       - name: Pack and check only the selected installed language
         if: inputs.language != 'postgresql' && inputs.language != 'ruby'
         run: |

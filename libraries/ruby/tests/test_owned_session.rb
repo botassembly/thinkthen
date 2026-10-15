@@ -352,7 +352,8 @@ class TestOwnedSession < Minitest::Test
   def test_saved_question_selectors_keep_native_lookup_and_literal_strings
     TestBackend.with(<<~RUBY) do |backend, child|
       require "fileutils"
-      directory = File.join(ENV.fetch("XDG_CONFIG_HOME"), "thinkthen", "questions")
+      config = RUBY_PLATFORM.include?("darwin") ? File.join(ENV.fetch("HOME"), "Library", "Application Support") : ENV.fetch("XDG_CONFIG_HOME")
+      directory = File.join(config, "thinkthen", "questions")
       FileUtils.mkdir_p(directory)
       File.write(File.join(directory, "refund.json"), JSON.generate(name: "refund", decide: "Saved wording?"))
       Dir.chdir(ENV.fetch("HOME")) do
