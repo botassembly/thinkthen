@@ -93,3 +93,7 @@ One case in `conformance/cases.json`, replayed by every binding's installed driv
 ## Defers
 
 Registry pages (0578), the website (0575) and docs examples follow after this lands.
+
+## Progress
+
+- 2026-10-14 started
