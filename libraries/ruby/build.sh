@@ -22,8 +22,9 @@ case $base_target in /*) ;; *) base_target=$PWD/$base_target ;; esac
 for THINKTHEN_RUBY_MINOR in $RUBY_MINORS; do
 export THINKTHEN_RUBY_MINOR
 . ./toolchain.env
-prefix=$HOME/.cache/thinkthen-toolchains/ruby/$RUBY_VERSION
+prefix=${THINKTHEN_TOOLCHAINS:-$HOME/.cache/thinkthen-toolchains}/ruby/$RUBY_VERSION
 [ "$(uname -s)" != Darwin ] || prefix=$prefix-$(uname -m)-darwin
+unset RBCONFIG
 RUBY=$prefix/bin/ruby
 [ -x "$RUBY" ] || { echo "build ruby: run setup-ruby.sh for Ruby $RUBY_VERSION" >&2; exit 77; }
 CARGO_TARGET_DIR=$base_target/ruby-$THINKTHEN_RUBY_MINOR

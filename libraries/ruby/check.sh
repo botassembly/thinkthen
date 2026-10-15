@@ -12,6 +12,8 @@ case $profile in routine|full|stress|smoke) ;; *) echo "check ruby: unknown THIN
 repo=$(cd ../.. && pwd)
 . "$repo/sdlc/scripts/scratch.sh"
 # ADR 0113: this run's engines write a scratch usage folder, never the real one.
+THINKTHEN_TOOLCHAINS=${THINKTHEN_TOOLCHAINS:-$HOME/.cache/thinkthen-toolchains}
+export THINKTHEN_TOOLCHAINS
 usage_home
 # macOS has no `timeout` (ticket 0128).
 LIMIT=$repo/sdlc/scripts/time-limit
@@ -64,7 +66,7 @@ if [ -z "${THINKTHEN_RUBY_MINOR:-}" ] && [ "$profile" != routine ]; then
   failed=0
   for minor in $RUBY_MINORS; do
     code=0
-    THINKTHEN_RUBY_MINOR=$minor sh "$PWD/check.sh" "$@" >"$versions/$minor.log" 2>&1 || code=$?
+    (unset RUBY RBCONFIG; THINKTHEN_RUBY_MINOR=$minor sh "$PWD/check.sh" "$@") >"$versions/$minor.log" 2>&1 || code=$?
     # Strict parity accepts one cell per consumer. Keep the alternate Ruby's
     # asserted results visible without emitting duplicate canonical cells.
     if [ "$minor" = 4.0 ]; then
@@ -79,9 +81,9 @@ fi
 THINKTHEN_RUBY_MINOR=${THINKTHEN_RUBY_MINOR:-4.0}
 export THINKTHEN_RUBY_MINOR
 if [ "$host" = Darwin ]; then
-  prefix=$HOME/.cache/thinkthen-toolchains/ruby/$RUBY_VERSION-$(uname -m)-darwin
+  prefix=$THINKTHEN_TOOLCHAINS/ruby/$RUBY_VERSION-$(uname -m)-darwin
 else
-  prefix=$HOME/.cache/thinkthen-toolchains/ruby/$RUBY_VERSION
+  prefix=$THINKTHEN_TOOLCHAINS/ruby/$RUBY_VERSION
 fi
 setup="run libraries/ruby/setup-ruby.sh once on this machine, with the network"
 [ -f "$prefix/thinkthen-toolchain.stamp" ] || not_run "no Ruby $RUBY_VERSION prefix; $setup"

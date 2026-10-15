@@ -13,7 +13,7 @@ if [ -z "${THINKTHEN_RUBY_MINOR:-}" ]; then
 fi
 . "$here/../../sdlc/scripts/scratch.sh"
 . "$here/../../sdlc/scripts/fetch.sh"
-tools=$HOME/.cache/thinkthen-toolchains
+tools=${THINKTHEN_TOOLCHAINS:-$HOME/.cache/thinkthen-toolchains}
 archives=$tools/ruby/archives
 host=$(uname -s)
 case $host in Linux) prefix=$tools/ruby/$RUBY_VERSION ;; Darwin) prefix=$tools/ruby/$RUBY_VERSION-$(uname -m)-darwin ;; *) echo "setup-ruby: no route for $host" >&2; exit 77 ;; esac
