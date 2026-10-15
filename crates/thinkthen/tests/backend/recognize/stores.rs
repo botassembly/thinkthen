@@ -224,28 +224,25 @@ fn relation_identity_drives_recording_replay_and_cache_without_changing_recognit
 fn details_carry_every_probability_and_request_metadata() {
     let listener = Listener::answering(automatic).expect("listener");
     let output = run(&listener, &[&WORKS[..], &["--details"]].concat(), ADA);
-    let keys: Vec<String> = listener
-        .requests()
+    let requests = listener.requests();
+    let keys: Vec<String> = requests
         .iter()
         .flat_map(|request| crate::support::keys(listener.url(), &request.body))
+        .collect();
+    let attempts: Vec<String> = requests
+        .iter()
+        .map(|request| crate::support::digest(listener.url(), &request.body))
         .collect();
     let expected = include_str!("../../fixtures/recognize-detailed.json")
         .replace("$VERSION", env!("CARGO_PKG_VERSION"))
         .replace("$URL", listener.url())
-        .replace("$REQUESTS", &Value::from(keys).to_string());
+        .replace("$REQUESTS", &Value::from(keys).to_string())
+        .replace("$ATTEMPT1", &attempts[0])
+        .replace("$ATTEMPT2", &attempts[1])
+        .replace("$ATTEMPT3", &attempts[2]);
     let row: Value = serde_json::from_str(&stdout(&output)).unwrap();
     crate::native_results::validate(&[("completeRecognition".into(), row.clone())]);
-    let mut retained = crate::native_results::compatibility::judgment(row);
-    // The complete schema above validates the additive proposal carrier.
-    assert!(
-        retained["answer"]
-            .as_object_mut()
-            .unwrap()
-            .remove("proposals")
-            .unwrap()
-            .is_array()
-    );
-    retained["schema"] = "thinkthen.result/1".into();
+    let retained = crate::native_results::comparison::judgment(row);
     assert_eq!(retained, serde_json::from_str::<Value>(&expected).unwrap());
 }
 

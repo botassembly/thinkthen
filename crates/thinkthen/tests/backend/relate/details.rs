@@ -15,10 +15,14 @@ fn an_h_entry_at_the_cut_is_accepted_and_bare_partial_output_exits_six() {
     let text = String::from_utf8(details.stdout).expect("details text");
     let result: Value = serde_json::from_str(&text).expect("details");
     let digest = result["meta"]["requests"][0].as_str().expect("digest");
-    let retained = crate::native_results::compatibility::judgment(result.clone());
+    let retained = crate::native_results::comparison::judgment(result.clone());
     assert_eq!(
         retained["answer"]["questions"][0],
-        serde_json::json!({"relation":"follows","reads":"follows","method":"yes_no","direction":"source_to_target","source":{"name":"Ada","kind":"person"},"target":{"name":"Grace","kind":"person"},"probability":0.5,"accepted":true,"request":digest})
+        serde_json::json!({"relation":"follows","reads":"follows","method":"yes_no","direction":"source_to_target","source":{"name":"Ada","kind":"person"},"target":{"name":"Grace","kind":"person"},"probability":0.5,"accepted":true,"request":digest,
+            "answer_id":"0".repeat(64),"answer":{"kind":"yes_no","probability":0.5},
+            "question":{"verb":"decide","text":"Is it true that i1 follows i2?"},"threshold":0.5,
+            "question_sources":[{"origin":"live","answered_by":"local-1","batch_size":2}],
+            "observations":[{"observation_id":"0".repeat(64)}]})
     );
     let bare = run(&listener, &["follows=person:person"], input);
     assert_eq!(bare.status.code(), Some(6));

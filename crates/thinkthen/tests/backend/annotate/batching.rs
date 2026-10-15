@@ -181,7 +181,7 @@ fn structured_question_text_keeps_singleton_request_bytes_at_max() {
         crate::harness::printed(output)
             .lines()
             .map(|line| {
-                crate::native_results::compatibility::judgment_with_member_facts(
+                crate::native_results::comparison::scheduled_judgment(
                     serde_json::from_str(line).expect("complete row"),
                 )
             })

@@ -259,7 +259,7 @@ fn a_detailed_pick_keeps_every_option_in_order_and_the_backends_confidence() {
 
     let printed = printed(&output);
     let row: serde_json::Value = serde_json::from_str(&printed).unwrap();
-    let preserved = crate::native_results::compatibility::judgment(row);
+    let preserved = crate::native_results::comparison::judgment(row);
     assert_eq!(preserved["value"], "billing");
     assert_eq!(
         preserved["question"],

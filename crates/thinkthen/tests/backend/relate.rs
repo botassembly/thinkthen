@@ -281,7 +281,7 @@ fn relation_recording_replays_without_a_key_and_keeps_the_same_identity() {
     let live: Value = serde_json::from_slice(&recorded.stdout).expect("live details");
     let result: Value = serde_json::from_slice(&replayed.stdout).expect("details");
     let mut expected_answer = live["answer"].clone();
-    expected_answer["questions"] = crate::native_results::compatibility::retrieved_members(
+    expected_answer["questions"] = crate::native_results::comparison::retrieved_members(
         expected_answer["questions"].clone(),
         "replay",
     );
@@ -414,7 +414,7 @@ fn the_default_and_named_caches_answer_a_repeated_run_without_a_send() {
         let first: Value = serde_json::from_slice(&first.stdout).expect("first details");
         let second: Value = serde_json::from_slice(&second.stdout).expect("second details");
         let mut expected_answer = first["answer"].clone();
-        expected_answer["questions"] = crate::native_results::compatibility::retrieved_members(
+        expected_answer["questions"] = crate::native_results::comparison::retrieved_members(
             expected_answer["questions"].clone(),
             "cache",
         );
