@@ -46,7 +46,7 @@ UNFETCHED_LOCKS = {
     "conformance/consumer/Cargo.lock": "a test consumer no release job builds",
     "libraries/r/thinkthen/src/rust/Cargo.lock": "R-universe builds R against the published crate",
     "libraries/rust/Cargo.lock": "the Rust examples surface, which no release job builds",
-    "libraries/rust/consumer/Cargo.lock": "an installed-package test consumer no release job builds",
+    "libraries/rust/consumer/Cargo.lock": "the crate job fetches this installed-package consumer separately",
     "probes/churn-0086/Cargo.lock": "an experiment probe",
 }
 # Each registry job publishes in release mode only; `publish` waits for all of them (ticket 0355).
@@ -252,6 +252,11 @@ def release(name, doc):
     if (crate.get("if") is not None or crate.get("continue-on-error") is not None
             or any(i is None for i in route) or route != sorted(set(route))):
         out.append(f"{name}: job crate must run resolved checkout, exact unconditional setup, fetch, package, and upload in order")
+    consumer_fetch = crate_step(lambda step: step.get("run") ==
+                                "cargo fetch --locked --manifest-path libraries/rust/consumer/Cargo.toml")
+    if (all(i is not None for i in route) and route == sorted(set(route))
+            and (consumer_fetch is None or consumer_fetch >= route[3])):
+        out.append(f"{name}: job crate must fetch the locked Rust consumer before offline package validation")
     dry = crate_step(lambda step: step.get("run") == "cargo publish --dry-run --locked --package thinkthen")
     if all(i is not None for i in route) and (dry is None or not route[3] < dry < route[4]):
         out.append(f"{name}: job crate must dry-run cargo publish after package and before upload")
@@ -717,6 +722,7 @@ jobs:
         with: {ref: "${{ needs.resolve.outputs.sha }}"}
       - run: rustup toolchain install 1.95.0 --profile minimal
       - run: cargo fetch --locked
+      - run: cargo fetch --locked --manifest-path libraries/rust/consumer/Cargo.toml
       - run: sh sdlc/scripts/package
       - run: cargo publish --dry-run --locked --package thinkthen
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
@@ -966,6 +972,20 @@ def self_test():
          ["release.yml: draft must render and syntax-check the resolved tap formula before collection"]),
         ("dry-tap-custom-shell", "release.yml", lambda t: t.replace('      - run: ruby -c thinkthen.rb\n', '      - run: ruby -c thinkthen.rb\n        shell: true {0}\n'),
          ["release.yml: draft must render and syntax-check the resolved tap formula before collection"]),
+        *[("crate-consumer-" + label, "release.yml",
+           lambda t, replacement=replacement: t.replace(
+               '      - run: cargo fetch --locked --manifest-path libraries/rust/consumer/Cargo.toml\n', replacement),
+           ["release.yml: job crate must fetch the locked Rust consumer before offline package validation"])
+          for label, replacement in (
+              ("missing", ""),
+              ("conditional", '      - run: cargo fetch --locked --manifest-path libraries/rust/consumer/Cargo.toml\n        if: false\n'),
+              ("masked", '      - run: cargo fetch --locked --manifest-path libraries/rust/consumer/Cargo.toml || true\n'),
+          )],
+        ("crate-consumer-late", "release.yml", lambda t: t.replace(
+            '      - run: cargo fetch --locked --manifest-path libraries/rust/consumer/Cargo.toml\n', '').replace(
+            '      - run: sh sdlc/scripts/package\n',
+            '      - run: sh sdlc/scripts/package\n      - run: cargo fetch --locked --manifest-path libraries/rust/consumer/Cargo.toml\n'),
+         ["release.yml: job crate must fetch the locked Rust consumer before offline package validation"]),
         ("crate-missing", "release.yml", lambda t: t.replace('      - run: sh sdlc/scripts/package\n', ''),
          ["release.yml: job crate must run resolved checkout, exact unconditional setup, fetch, package, and upload in order"]),
         ("crate-order", "release.yml", lambda t: t.replace('      - run: sh sdlc/scripts/package\n', '')
