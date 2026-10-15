@@ -76,6 +76,7 @@ def main():
                         assert probability is None, 'this function has no call probability'
                     else:
                         assert probability is not None, 'this function retains a probability column'
+                        assert len(probability) == len(source), 'probability retains original rows'
                         probability = probability.to_list()[0]
                 call_result = {'value': value, 'probability': probability,
                                'results': [result._to_dict() for result in done.results],
