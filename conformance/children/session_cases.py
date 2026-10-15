@@ -118,6 +118,7 @@ def native_cases(binary, *, consumer=CONSUMER, invoke=None):
                         if value.get('image_variants'):
                             backend.close();backend=shared.Backend(backend_path,child)
                             child['THINKTHEN_BASE_URL']='http://127.0.0.1:%d/%s'%(backend.port,step['arm']);child['PERPLEXITY_API_KEY']='sk-conformance-loopback';shared.prepare(home,step)
+                        push_all = CONSUMER in ('c','cpp','cobol','ada','zig','java','swift','csharp','dart') and row['id']=='settings-max-requests-refuses-past-the-limit'
                         settings={'cache':False,'model':'jev-latest' if 'steps' in value else 'jev-1.13.0','batch':1,'max_retries':0,**step.get('settings',{}),'base_url':child['THINKTHEN_BASE_URL']}
                         replacements={'$FOLDER':str(home/'saved'),'$REFRESH':str(home/'refreshed'),'$PROFILE':str(home/'profile.json')}
                         settings={k:replacements.get(v,v) if isinstance(v,str) else v for k,v in settings.items()}
@@ -164,6 +165,9 @@ def native_cases(binary, *, consumer=CONSUMER, invoke=None):
                             expected={**step,'expect':{**step['expect'],'error':'local'}}
                         if not scalar_boundary:
                             shared.assertions(row,expected,got,int(backend.read('count'))-(before if step.get('count_delta') else 0))
+                        if push_all:
+                            assert [r['index'] for r in got['completed']]==[0,1],got
+                            assert [r['input'] for r in got['completed']]==step['items'][:2],got
                         if row['id']=='native-filter-first-excluded':
                             assert [r['index'] for r in got['rows']]==[1,2] and [r['value'] for r in got['rows']]==[True,True],got
                             assert int(backend.read('count'))==3,got

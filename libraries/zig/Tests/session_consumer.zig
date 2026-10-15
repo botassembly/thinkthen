@@ -86,11 +86,12 @@ pub fn main() !void {
         defer arena.deinit();
         for (items.array.items) |item| {
             const next: tt.inputs.RequestSessionDescriptor = .{ .item = try request_fixture.decode(tt.inputs.RequestItem, arena.allocator(), item) };
-            while (try session.push(a, next) == .full) switch (try session.read()) {
-                .pending => try session.wait(true),
-                .end => break,
-                .packet => |packet| try packets.append(a, packet),
-            };
+            var status = try session.push(a, next);
+            while (status == .full) {
+                try session.wait(true);
+                status = try session.push(a, next);
+            }
+            if (status == .closed) break;
         }
     }
     try session.finish();

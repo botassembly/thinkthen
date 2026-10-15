@@ -186,24 +186,9 @@ begin
       end Read_Feed;
       Items : constant Feed_List := Read_Feed;
       Held : constant Boolean := Boolean'Value (Get_Line (Input));
-      Producer_Failure : Unbounded_String;
+      Status : Push_Status;
    begin
       declare
-         -- Blocking pushes require a concurrent reader when output fills.
-         task Producer;
-         task body Producer is
-            Status : Push_Status;
-         begin
-            for Item of Items loop
-               Thinkthen.Native_Sessions.Push (Owner, Item, Status);
-               if Status /= Accepted then raise Program_Error with "blocking feed refused"; end if;
-            end loop;
-            Thinkthen.Native_Sessions.Finish (Owner);
-         exception
-            when E : others =>
-               Producer_Failure := To_Unbounded_String (Ada.Exceptions.Exception_Information (E));
-               Thinkthen.Native_Sessions.Cancel (Owner);
-         end Producer;
          task Canceller;
          task body Canceller is
          begin
@@ -213,6 +198,12 @@ begin
             end if;
          end Canceller;
       begin
+         for Item of Items loop
+            Thinkthen.Native_Sessions.Push (Owner, Item, Status);
+            exit when Status = Closed;
+            if Status /= Accepted then raise Program_Error with "blocking feed refused"; end if;
+         end loop;
+         Thinkthen.Native_Sessions.Finish (Owner);
          loop
             Drain_One;
             exit when Read = Finished or else
@@ -221,11 +212,8 @@ begin
       exception
          when others => Thinkthen.Native_Sessions.Cancel (Owner); raise;
       end;
-      -- The task scope joins both workers before releasing the session.
+      -- Join the held cancellation worker before releasing the session.
       Thinkthen.Native_Sessions.Close (Owner);
-      if Length (Producer_Failure) > 0 then
-         raise Program_Error with To_String (Producer_Failure);
-      end if;
    end;
    Append (Packets, "]}"); Put_Line (Ada.Strings.Unbounded.To_String (Packets));
 exception
