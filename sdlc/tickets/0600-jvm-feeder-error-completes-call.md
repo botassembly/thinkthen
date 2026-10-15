@@ -4,6 +4,8 @@ Status: OPEN.
 
 Milestone: 0.2
 
+Reviews: revision 410e935, accept
+
 ## Outcome
 
 When the caller's iterator throws any `Throwable` inside `Engine.execute(request, Iterable)`, the returned future completes exceptionally with that throwable, and the session is cancelled and closed.
