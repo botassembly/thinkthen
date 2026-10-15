@@ -1536,7 +1536,7 @@ for line in pathlib.Path(sys.argv[1]).read_text().splitlines():
         print(f"native parity: not run {identity}: no outside defect boundary", file=sys.stderr)
 PY
         while IFS= read -r id; do
-            sh "$LIMIT" 300 python3 ../sqlite/tests/complete/parity.py postgresql "$id" || failed=1
+            sh "$LIMIT" 300 env -u THINKTHEN_CONFORMANCE_IDS python3 ../sqlite/tests/complete/parity.py postgresql "$id" || failed=1
         done <"$RUN/complete.ids"
     else
         sh "$LIMIT" 1800 python3 ../sqlite/tests/complete/parity.py postgresql || failed=1

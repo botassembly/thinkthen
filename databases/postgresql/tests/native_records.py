@@ -20,7 +20,7 @@ from typed_results import native
 def main():
     with tempfile.TemporaryDirectory(prefix='thinkthen-pg-native-') as tmp:
         home = Path(tmp)
-        env = child_env(home=home, THINKTHEN_API_KEY='sk-native-sql-loopback')
+        env = child_env(home=home, keep=('LD_LIBRARY_PATH',), THINKTHEN_API_KEY='sk-native-sql-loopback')
         target = Path(os.environ.get('CARGO_TARGET_DIR', ROOT / 'target'))
         backend = Backend(target / 'debug/conformance-backend', env)
         host = PostgresqlHost()

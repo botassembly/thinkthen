@@ -4,6 +4,7 @@ set -euo pipefail
 here=$(cd -- "$(dirname -- "$0")/../../../postgresql" && pwd)
 cd -- "$here"
 . ../../sdlc/scripts/scratch.sh
+PG_MAJOR=16
 . ./runtime.sh
 runtime_ready
 REPO=$(cd ../.. && pwd)
@@ -16,5 +17,6 @@ PG_CONFIG=${PG_CONFIG:-/usr/bin/pg_config}
 EXT=${CARGO_TARGET_DIR:-target}/release/thinkthen-pg16
 runtime_install "$EXT$("$PG_CONFIG" --pkglibdir)" "$EXT$("$PG_CONFIG" --sharedir)/extension"
 export THINKTHEN_POSTGRESQL_BIN=$BIN THINKTHEN_POSTGRESQL_DATA=$DATA THINKTHEN_POSTGRESQL_SOCKET=$SOCK
+[ "$#" -eq 0 ] || unset THINKTHEN_CONFORMANCE_IDS
 python3 ../sqlite/tests/complete/parity.py postgresql "$@"
 python3 ../sqlite/tests/complete/facts.py postgresql
