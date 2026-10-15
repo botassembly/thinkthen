@@ -833,6 +833,7 @@ export const SURFACES = [
   },
   {
     slug: 'postgresql', backends: 'sql', name: 'PostgreSQL', deckHeading: 'PostgreSQL',
+    versions: { runtime: 'PostgreSQL 16, 17 and 18', platforms: UNIX_PLATFORMS },
     lang: 'sql', tab: 'SQL',
     blurb: 'One extension. Ask questions in any query.',
     unsureWord: '`NULL`',
@@ -840,9 +841,9 @@ export const SURFACES = [
     errors: 'A failed plain call raises its named error. A `_details` row retains a recoverable typed failure separately from its value.',
     settings: '`SET thinkthen.record` writes a recording to a folder. `SET thinkthen.replay` answers from that recording with no connection.',
     install: [
-      ['thinkthen-postgresql16-VERSION-TARGET.tar.gz', 'The extension for PostgreSQL 16, from each release. A server administrator copies the file in `lib/` to `pg_config --pkglibdir`. They copy the files in `extension/` to the `extension` folder under `pg_config --sharedir`.'],
-      ['thinkthen-postgresql17-VERSION-TARGET.tar.gz', 'The extension for PostgreSQL 17, from each release. A server administrator copies the file in `lib/` to `pg_config --pkglibdir`. They copy the files in `extension/` to the `extension` folder under `pg_config --sharedir`.'],
-      ['thinkthen-postgresql18-VERSION-TARGET.tar.gz', 'The extension for PostgreSQL 18, from each release. A server administrator copies the file in `lib/` to `pg_config --pkglibdir`. They copy the files in `extension/` to the `extension` folder under `pg_config --sharedir`.'],
+      ['thinkthen-postgresql16-VERSION-TARGET.tar.gz', 'The extension, from each release. A server administrator copies the file in `lib/` to `pg_config --pkglibdir`. They copy the files in `extension/` to the `extension` folder under `pg_config --sharedir`.'],
+      ['thinkthen-postgresql17-VERSION-TARGET.tar.gz', 'The extension, from each release. A server administrator copies the file in `lib/` to `pg_config --pkglibdir`. They copy the files in `extension/` to the `extension` folder under `pg_config --sharedir`.'],
+      ['thinkthen-postgresql18-VERSION-TARGET.tar.gz', 'The extension, from each release. A server administrator copies the file in `lib/` to `pg_config --pkglibdir`. They copy the files in `extension/` to the `extension` folder under `pg_config --sharedir`.'],
       ['CREATE EXTENSION thinkthen;', null],
     ],
     particular: [

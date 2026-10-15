@@ -27,7 +27,7 @@ const listed = (list) => list.map((s, i) => `${i === 0 ? '' : i === list.length 
   <table>
     <thead><tr><th scope="col">Language or command</th><th scope="col">Supported versions</th><th scope="col">Platforms</th></tr></thead>
     <tbody>{supported.map((s) => (
-      <tr><td><a href={s.route ?? '/languages/bash/'}>{s.name}</a></td><td>{s.versions?.runtime}</td><td>{s.versions?.platforms}</td></tr>
+      <tr><td><a href={s.route ?? '/languages/bash/'}>{s.name}</a></td><td>{s.versions.runtime}</td><td>{s.versions.platforms}</td></tr>
     ))}</tbody>
   </table>
 

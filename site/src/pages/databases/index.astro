@@ -14,7 +14,7 @@ const [duckdb, ...others] = DBS;
 const LOAD = { duckdb: /^LOAD [^\n]*\n\n?/, sqlite: /^\.load [^\n]*\n\n?/, postgresql: /^/ };
 const body = (slug, code) => code.replace(LOAD[slug], '');
 const loadLine = (slug) => (slug === 'postgresql'
-  ? DBS[2].install[1][0]
+  ? DBS[2].install.find(([line]) => line.startsWith('CREATE EXTENSION '))[0]
   : sample('decide', slug).code.match(LOAD[slug])[0].trim());
 const parts = (text) => text.split('`').map((part, i) => ({ code: i % 2 === 1, part }));
 
@@ -55,7 +55,7 @@ const DIFFERS = [
   <table>
     <thead><tr><th scope="col">Database</th><th scope="col">Supported versions</th><th scope="col">Platforms</th></tr></thead>
     <tbody>{DBS.map((db) => (
-      <tr><td><a href={`/databases/${db.slug}/`}>{db.name}</a></td><td>{Array.isArray(db.versions?.runtime) ? db.versions.runtime.join(' and ') : db.versions?.runtime}</td><td>{db.versions?.platforms}</td></tr>
+      <tr><td><a href={`/databases/${db.slug}/`}>{db.name}</a></td><td>{Array.isArray(db.versions.runtime) ? db.versions.runtime.join(' and ') : db.versions.runtime}</td><td>{db.versions.platforms}</td></tr>
     ))}</tbody>
   </table>
 
