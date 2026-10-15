@@ -14,6 +14,9 @@ def inspect(name, data):
     identifiers = re.sub(rb"(?<![A-Za-z0-9_-])(?:K_THINKTHEN_SESSION_WAIT_SETTLEMENT_ARM_V1|tt-n-session-wait-settlement-arm-v1-k)(?![A-Za-z0-9_-])", b"", data)
     if re.search(rb"(?i:arm[_-])|Arm[A-Z0-9]|Alternative", identifiers):
         raise ValueError(f"schema alternative marker in {name}")
+    for macro in re.findall(rb"(?m)^\s*#\s*define\s+([A-Za-z_][A-Za-z_0-9]*)", data):
+        if len(macro) > 60:
+            raise ValueError(f"public macro exceeds 60 characters in {name}: {macro.decode()}")
     if any(marker in data for marker in BAD):
         raise ValueError(f"private byte pattern in {name}")
 
@@ -49,6 +52,14 @@ with tempfile.TemporaryDirectory() as name:
             pass
         else:
             raise AssertionError(f"accepted planted marker {index}")
+    path = folder / "long-macro.h"
+    path.write_bytes(b"#define THINKTHEN_COBOL_" + b"X" * 46 + b" 1\n")
+    try:
+        check(path)
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("accepted planted public macro over 60 characters")
     zipped = folder / "plant.zip"
     with zipfile.ZipFile(zipped, "w") as archive:
         archive.writestr("marker.txt", BAD[1])

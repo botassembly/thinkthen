@@ -181,7 +181,10 @@ def requests(definitions, native_facts, root):
     substitutions = {'thinkthen_cobol_' + key: 'thinkthen_cobol_' + value for key, value in names.items()}
     for key, value in names.items():
         for suffix in re.findall(r'\bTHINKTHEN_COBOL_' + re.escape(key.upper()) + r'(_[A-Z_]+_KIND|_KIND)\b', '\n'.join(header)):
-            substitutions['THINKTHEN_COBOL_' + key.upper() + suffix] = 'THINKTHEN_COBOL_' + value.upper() + suffix
+            # A referenced alternative already names its owner (ExampleText).
+            # Keep that semantic name once rather than Example_ExampleText.
+            tail = suffix.removeprefix('_' + value.upper()) if suffix.startswith('_' + value.upper()) else suffix
+            substitutions['THINKTHEN_COBOL_' + key.upper() + suffix] = 'THINKTHEN_COBOL_' + value.upper() + tail
     def rename(text):
         return re.sub(r'\b[A-Za-z_][A-Za-z_0-9]*\b', lambda token: substitutions.get(token[0], token[0]), text)
     return rename('\n'.join(header) + '\n'), rename(code)
