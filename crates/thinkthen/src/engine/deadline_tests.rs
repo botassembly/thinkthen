@@ -162,6 +162,7 @@ fn post(
 ) -> Result<HttpAnswer, Error> {
     let key = Key::of("sk-test-value");
     let exchange = Exchange {
+        headers: &[],
         url,
         body: b"{}",
         key: &key,
@@ -210,6 +211,7 @@ fn accounting_that_outlasts_the_budget_sends_nothing() {
     );
     let key = Key::of("sk-test-value");
     let exchange = Exchange {
+        headers: &[],
         url: &url,
         body: b"{}",
         key: &key,
@@ -250,6 +252,7 @@ fn a_held_response_has_one_visible_in_flight_attempt() {
     let key = Key::of("sk-test-value");
     let url = server.url.clone();
     let exchange = Exchange {
+        headers: &[],
         url: &url,
         body: b"{}",
         key: &key,

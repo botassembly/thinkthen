@@ -194,6 +194,7 @@ fn cancellation_during_a_retry_wait_starts_no_second_attempt() {
     );
     let attempts = Cell::new(0_u32);
     let exchange = Exchange {
+        headers: &[],
         url: &url,
         body: b"{}",
         key: &key,
@@ -221,6 +222,7 @@ fn a_token_fired_before_the_final_check_counts_and_sends_nothing() {
     );
     let key = Key::of("sk-test-value");
     let exchange = Exchange {
+        headers: &[],
         url: &url,
         body: b"{}",
         key: &key,
@@ -258,6 +260,7 @@ fn cancellation_after_reservation_refunds_both_process_charges() {
     );
     let key = Key::of("sk-test-value");
     let exchange = Exchange {
+        headers: &[],
         url: &url,
         body: b"{}",
         key: &key,
@@ -320,6 +323,7 @@ fn a_deadline_while_width_is_held_reserves_no_send() {
     );
     let key = Key::of("sk-test-value");
     let exchange = Exchange {
+        headers: &[],
         url: &url,
         body: b"{}",
         key: &key,
@@ -367,6 +371,7 @@ fn a_deadline_during_retry_backoff_reserves_only_the_first_send() {
     });
     let key = Key::of("sk-test-value");
     let exchange = Exchange {
+        headers: &[],
         url: &url,
         body: b"{}",
         key: &key,
@@ -417,6 +422,7 @@ fn a_connection_that_never_opened_is_retried_once_and_keeps_the_refused_kind() {
         .port();
     let url = format!("http://127.0.0.1:{port}/v1/systemone");
     let exchange = Exchange {
+        headers: &[],
         url: &url,
         body: b"{}",
         key: &key,
@@ -472,6 +478,7 @@ fn a_connection_idle_for_a_second_is_not_reused_and_nothing_is_sent_twice() {
     });
     let key = Key::of("");
     let exchange = Exchange {
+        headers: &[],
         url: &url,
         body: b"{}",
         key: &key,

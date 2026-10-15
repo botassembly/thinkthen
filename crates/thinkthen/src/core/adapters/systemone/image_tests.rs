@@ -75,3 +75,54 @@ fn model_compatibility_and_dimension_arithmetic_refuse_without_panicking() {
         assert!(route.admit(model, &state(&[(u32::MAX, u32::MAX)])).is_err());
     }
 }
+
+#[test]
+fn typesafe_pins_models_and_published_boundaries_without_token_guesses() {
+    for model in ["jev-1.13.0", "jev-1.14.0"] {
+        for dimensions in [(256, 400), (400, 256), (280, 280), (1568, 1568)] {
+            let wire = ImageRoute::TypeSafe
+                .admit(model, &state(&[dimensions]))
+                .unwrap();
+            assert!(!wire.image_tokens_known);
+            assert_eq!(wire.tokens_per_question, 0);
+            assert_eq!(wire.questions_limit, None);
+            assert_eq!(wire.body_limit, 32 * 1024 * 1024);
+        }
+    }
+    for model in ["jev-1.13", "jev-latest", "jev-preview", "jev-1.14.1"] {
+        assert_eq!(
+            ImageRoute::TypeSafe.admit(model, &state(&[(280, 280)])),
+            Err(ImageLimit::Unsupported)
+        );
+    }
+    for (dimensions, message) in [
+        ((255, 400), "image 1 is below width: limit 256, actual 255"),
+        ((400, 255), "image 1 is below height: limit 256, actual 255"),
+        (
+            (279, 281),
+            "image 1 is below pixels: limit 78400, actual 78399",
+        ),
+        (
+            (1569, 1568),
+            "image 1 exceeds width: limit 1568, actual 1569",
+        ),
+        (
+            (1568, 1569),
+            "image 1 exceeds height: limit 1568, actual 1569",
+        ),
+    ] {
+        assert_eq!(
+            ImageRoute::TypeSafe
+                .admit("jev-1.13.0", &state(&[dimensions]))
+                .unwrap_err()
+                .to_string(),
+            message
+        );
+    }
+    for length in [16 * 1024 * 1024, 16 * 1024 * 1024 + 1] {
+        let mut input = state(&[(280, 280)]);
+        Arc::make_mut(&mut input.images)[0].bytes = vec![0; length].into();
+        let result = ImageRoute::TypeSafe.admit("jev-1.13.0", &input);
+        assert_eq!(result.is_ok(), length == 16 * 1024 * 1024);
+    }
+}

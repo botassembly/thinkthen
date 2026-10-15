@@ -28,6 +28,7 @@ fn no_debug_line_shows_the_key_or_the_evidence() {
     let url = Url::new("http://127.0.0.1:1/v1/systemone").expect("an address");
     let recorded = Recorded::new(&url, body.as_bytes());
     let exchange = crate::engine::http::Exchange {
+        headers: &[],
         url: url.as_str(),
         body: body.as_bytes(),
         key: &key,

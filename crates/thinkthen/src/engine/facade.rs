@@ -408,6 +408,7 @@ impl Engine {
         cancel.key_lookup();
         let key = self.key()?;
         let exchange = Exchange {
+            headers: &[],
             url: self.backend.url().as_str(),
             body: &body,
             key: &key,

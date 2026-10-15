@@ -359,6 +359,7 @@ fn shared_cap_child() {
 fn send_once(client: &Client, url: &str, finished: &AtomicUsize) {
     let key = Key::of("sk-test-value");
     let exchange = Exchange {
+        headers: &[],
         url,
         body: br#"{"model":"local-1","questions":{"q1":{"type":"noul"}}}"#,
         key: &key,

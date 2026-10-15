@@ -48,6 +48,10 @@ fn send(
         .header("user-agent", invocation.user_agent())
         .header("X-ThinkThen-Call-Id", invocation.call_id.as_str())
         .header("X-ThinkThen-Request-Id", sdk_request_id.as_str());
+    let mut request = request;
+    for &(name, value) in exchange.headers {
+        request = request.header(name, value);
+    }
     let request = if refresh {
         request.header("cache-control", "no-cache")
     } else {

@@ -62,6 +62,7 @@ fn an_ollama_shaped_address_suggests_the_named_backend_without_changing_the_requ
     );
     let key = Key::of("sk-test-value");
     let exchange = Exchange {
+        headers: &[],
         url: backend.url().as_str(),
         body: &request_body,
         key: &key,

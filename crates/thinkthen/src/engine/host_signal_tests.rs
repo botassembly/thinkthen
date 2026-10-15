@@ -94,6 +94,7 @@ fn host_signal_child() {
         Client::new(SECOND * 30, false, &crate::engine::limits::process().widths).gated(widths);
     let key = Key::of("sk-test-value");
     let exchange = Exchange {
+        headers: &[],
         url: &url,
         body: b"{}",
         key: &key,

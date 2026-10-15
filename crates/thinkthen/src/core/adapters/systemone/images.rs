@@ -16,12 +16,14 @@ pub(crate) enum ImageRoute {
     Unsupported,
     Liquid,
     Perplexity,
+    TypeSafe,
     /// Named local wire route; admission still needs an explicit declaration.
     Local,
 }
 
 pub(crate) fn named(name: &str, path: &str) -> ImageRoute {
     match (name, path) {
+        ("typesafe", "systemone") => ImageRoute::TypeSafe,
         ("liquid", "systemone") => ImageRoute::Liquid,
         ("perplexity", "decisions") => ImageRoute::Perplexity,
         ("llamacpp", "systemone") => ImageRoute::Local,
@@ -35,6 +37,13 @@ pub(crate) enum ImageLimit {
     Unsupported,
     #[error("image {ordinal} exceeds {kind}: limit {limit}, actual {actual}")]
     Dimension {
+        ordinal: usize,
+        kind: &'static str,
+        limit: u64,
+        actual: u64,
+    },
+    #[error("image {ordinal} is below {kind}: limit {limit}, actual {actual}")]
+    Minimum {
         ordinal: usize,
         kind: &'static str,
         limit: u64,
@@ -55,6 +64,78 @@ pub(crate) struct ImageWire {
 }
 
 impl ImageRoute {
+    pub(crate) fn image_field(self) -> &'static str {
+        if self == Self::TypeSafe {
+            "assets"
+        } else {
+            "images"
+        }
+    }
+
+    pub(crate) fn headers(self) -> &'static [(&'static str, &'static str)] {
+        if self == Self::TypeSafe {
+            &[("TypeSafe-Danger-Zone-Images", "true")]
+        } else {
+            &[]
+        }
+    }
+
+    fn assets(self, input: &ImageState) -> Result<ImageWire, ImageLimit> {
+        use sha2::{Digest as _, Sha256};
+        let mut assets = serde_json::Map::new();
+        let mut state = Vec::new();
+        if input.text.as_str() != Some("") {
+            state.push(serde_json::to_value(&input.text).map_err(|_| ImageLimit::Overflow)?);
+        }
+        for (at, image) in input.images.iter().enumerate() {
+            let width = u64::from(image.width.get());
+            let height = u64::from(image.height.get());
+            check(
+                at,
+                "compressed bytes",
+                16 * 1024 * 1024,
+                u64::try_from(image.bytes.len()).map_err(|_| ImageLimit::Overflow)?,
+            )?;
+            for (kind, min, max, actual) in [
+                ("width", 256, 1568, width),
+                ("height", 256, 1568, height),
+                ("pixels", 78_400, 2_458_624, width * height),
+            ] {
+                check(at, kind, max, actual)?;
+                if actual < min {
+                    return Err(ImageLimit::Minimum {
+                        ordinal: at + 1,
+                        kind,
+                        limit: min,
+                        actual,
+                    });
+                }
+            }
+            let digest = crate::core::digest::hex(&Sha256::digest(&image.bytes));
+            let hash: String = digest.chars().take(16).collect();
+            let key = format!("thinkthen-image-{}-{hash}", at + 1);
+            let format = match image.media {
+                crate::core::image::ImageMedia::Png => "png",
+                crate::core::image::ImageMedia::Jpeg => "jpeg",
+            };
+            assets.insert(
+                key.clone(),
+                serde_json::json!({
+                    "type": "image", "format": format, "data_base64": image.base64(),
+                }),
+            );
+            state.push(serde_json::Value::String(key));
+        }
+        Ok(ImageWire {
+            state: serde_json::to_string(&state).map_err(|_| ImageLimit::Overflow)?,
+            images: Some(serde_json::to_string(&assets).map_err(|_| ImageLimit::Overflow)?),
+            body_limit: 32 * 1024 * 1024,
+            questions_limit: None,
+            tokens_per_question: 0,
+            image_tokens_known: false,
+        })
+    }
+
     /// Admit route/model authority before an edge opens compressed image files.
     pub(crate) fn admit_header(
         self,
@@ -67,7 +148,9 @@ impl ImageRoute {
                 || {
                     matches!(
                         (self, model),
-                        (Self::Liquid, "d1") | (Self::Perplexity, "pplx-decider-v1-27b")
+                        (Self::Liquid, "d1")
+                            | (Self::Perplexity, "pplx-decider-v1-27b")
+                            | (Self::TypeSafe, "jev-1.13.0" | "jev-1.14.0")
                     )
                 },
                 |declaration| self == Self::Local && declaration.matches(model),
@@ -98,6 +181,9 @@ impl ImageRoute {
 
     pub(crate) fn admit(self, model: &str, input: &ImageState) -> Result<ImageWire, ImageLimit> {
         self.admit_header(model, None)?;
+        if self == Self::TypeSafe {
+            return self.assets(input);
+        }
         let mut patches = 0u64;
         let mut tokens = 0u64;
         for (at, image) in input.images.iter().enumerate() {
@@ -117,7 +203,9 @@ impl ImageRoute {
                     check(at, "32-pixel tiles", 2048, count)?;
                     count
                 }
-                Self::Unsupported | Self::Local => return Err(ImageLimit::Unsupported),
+                Self::Unsupported | Self::Local | Self::TypeSafe => {
+                    return Err(ImageLimit::Unsupported);
+                }
             };
             patches = patches.checked_add(count).ok_or(ImageLimit::Overflow)?;
             tokens = tokens
@@ -166,7 +254,9 @@ impl ImageRoute {
                 values.extend(parts);
                 (format!("[{}]", values.join(",")), None)
             }
-            Self::Unsupported | Self::Local => return Err(ImageLimit::Unsupported),
+            Self::Unsupported | Self::Local | Self::TypeSafe => {
+                return Err(ImageLimit::Unsupported);
+            }
         };
         Ok(ImageWire {
             state,

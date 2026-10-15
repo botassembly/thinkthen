@@ -359,6 +359,8 @@ pub(crate) struct Exchange<'a> {
     pub(crate) url: &'a str,
     /// The request body the adapter wrote, which carries the evidence.
     pub(crate) body: &'a [u8],
+    /// Static request headers selected by the adapter.
+    pub(crate) headers: &'static [(&'static str, &'static str)],
     /// The key the one authorization header carries.
     pub(crate) key: &'a Key,
     /// How many times a retried status is sent again.

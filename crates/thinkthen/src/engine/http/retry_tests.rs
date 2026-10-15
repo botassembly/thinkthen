@@ -64,6 +64,7 @@ fn a_server_wait_past_the_cap_fails_at_once_and_one_at_the_cap_is_honored() {
     for (header, answered, requests) in cases {
         let (url, seen) = refusing_once(header);
         let exchange = Exchange {
+            headers: &[],
             url: &url,
             body: b"{}",
             key: &key,

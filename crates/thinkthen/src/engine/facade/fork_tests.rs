@@ -79,6 +79,7 @@ fn ask_as_parent(engine: &Engine, parent: &super::State) -> Result<(), Error> {
     let key = (engine.key)()?;
     let transport = engine.transport(parent);
     let exchange = Exchange {
+        headers: &[],
         url: engine.backend.url().as_str(),
         body: &body,
         key: &key,
