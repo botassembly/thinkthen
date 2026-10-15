@@ -21,6 +21,55 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'databases/duckdb/t
 from inputs import selected as duckdb_identity, versions as duckdb_versions
 
 
+class ZipInstallation(unittest.TestCase):
+    def test_unpack_preserves_safe_unix_executable_modes(self):
+        from install_check_tools import unzip
+        with tempfile.TemporaryDirectory(prefix='thinkthen-install-zip-test-') as folder:
+            root = Path(folder)
+            (root / 'OWNER').write_text('install check ZIP mode regression\n')
+            archive = root / 'sdk.zip'
+            with zipfile.ZipFile(archive, 'w') as packed:
+                member = zipfile.ZipInfo('sdk/bin/compiler')
+                member.create_system = 3
+                member.external_attr = 0o107755 << 16
+                packed.writestr(member, "#!/bin/sh\nprintf '%s\\n' 'compiler fixture'\n")
+                packed.writestr('sdk/lib/data', 'runtime fixture')
+                for name, system, mode in (('sdk/lib/', 3, 0o045555),
+                                           ('sdk/lib/closed', 3, 0o100000),
+                                           ('sdk/lib/dos', 0, 0o100777)):
+                    member = zipfile.ZipInfo(name)
+                    member.create_system = system
+                    member.external_attr = mode << 16
+                    packed.writestr(member, '')
+            tree = unzip(archive, root / 'tools')
+            binary = tree / 'sdk/bin/compiler'
+            self.assertEqual(binary.stat().st_mode & 0o7777, 0o755)
+            self.assertEqual(subprocess.check_output([str(binary)], text=True), 'compiler fixture\n')
+            self.assertEqual((tree / 'sdk/lib/data').stat().st_mode & 0o111, 0)
+            self.assertEqual((tree / 'sdk/lib').stat().st_mode & 0o7777, 0o555)
+            self.assertEqual((tree / 'sdk/lib/closed').stat().st_mode & 0o7777, 0)
+            self.assertEqual((tree / 'sdk/lib/dos').stat().st_mode & 0o111, 0)
+
+    def test_unpack_rejects_special_and_mismatched_unix_types(self):
+        from install_check_tools import unzip
+        for kind, name in ((0o010000, 'fifo'), (0o020000, 'device'),
+                           (0o060000, 'block'), (0o120000, 'link'),
+                           (0o140000, 'socket'), (0o040000, 'directory'),
+                           (0o100000, 'file/')):
+            with self.subTest(name=name), tempfile.TemporaryDirectory() as folder:
+                root = Path(folder)
+                archive = root / 'unsafe.zip'
+                with zipfile.ZipFile(archive, 'w') as packed:
+                    packed.writestr('first', 'must not extract before validation')
+                    member = zipfile.ZipInfo(name)
+                    member.create_system = 3
+                    member.external_attr = (kind | 0o755) << 16
+                    packed.writestr(member, 'unexpected file type')
+                with self.assertRaisesRegex(Failure, 'unsafe entry'):
+                    unzip(archive, root / 'tools')
+                self.assertFalse((root / 'tools/first').exists())
+
+
 class NativeInstallation(unittest.TestCase):
     def test_copies_only_the_effective_cargo_artifact(self):
         cargo = subprocess.check_output(['rustup', 'which', 'cargo'], text=True).strip()
