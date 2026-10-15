@@ -17,9 +17,11 @@ ThinkThen's routine builds and tests for a ticket run on the M5 through `pm job 
 - The M5 runs macOS. The routine suite reads `/proc/pressure/io`, and the 0561 export check uses `nm -D`. Some checks may be Linux-only.
 - Starts after 0.2 publishes. The 0.2 candidate qualifies on the Beelink under 0543 and must not change machines mid-run.
 
+- Trial at c4368db10, 2026-10-15: the M5 lacked cbindgen 0.29.4, cargo-nextest and Python 3.11+ (Apple's python3 is 3.9); these were installed in user folders. `install` then failed on the missing `jsonschema` Python module. `test`: 1,995 passed, 47 failed, 71 skipped. 40 failures cascade from that module; 4 invalid-UTF-8 filename fixtures fail because the macOS file system refuses those names; 1 test hard-codes a Linux config path; 1 assumes file-listing order; 1 private-name marker matches macOS temp paths. No product defect.
+
 ## Decisions
 
-- PM decision, 2026-10-15, at Ian's request through pm: run checklist step 1 now as a trial, in parallel with the 0.2 candidate. Run it on the M5 with `ssh m5 'cd ~/workspace/repos/thinkthen && git fetch -q && pm job run --here 0589 SHA -- CMD'` for `sdlc/scripts/install`, `lint` and `test` at one pushed SHA of `ticket/0543-final`. Change no file, add no `machines.json` entry and switch no landing until 0.2 publishes. Report each failure on macOS with a one-line plan.
+- PM decision, 2026-10-15, at Ian's request through pm: run checklist step 1 now as a trial, in parallel with the 0.2 candidate. Run it on the M5 with `pm job run --here 0589 SHA -- CMD` from the M5's thinkthen clone for `sdlc/scripts/install`, `lint` and `test` at one pushed SHA of `ticket/0543-final`. Change no file, add no `machines.json` entry and switch no landing until 0.2 publishes. Report each failure on macOS with a one-line plan.
 
 ## Scope
 
