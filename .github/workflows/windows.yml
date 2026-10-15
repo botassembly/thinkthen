@@ -196,4 +196,9 @@ jobs:
       - name: Download locked crates
         run: cargo fetch --locked
       - name: Diagnose recognition cancellation once
-        run: cargo test --locked --offline -p thinkthen --test request_session recognize::cancellation_stops_waiting_duplicate_recognition_without_extra_sends -- --exact --nocapture
+        run: |
+          set -eu
+          for attempt in $(seq 1 20); do
+            printf 'MCP shutdown diagnostic attempt %s\n' "$attempt"
+            cargo test --locked --offline -p thinkthen --test mcp_stdio protocol::initialization_gates_tools_and_catalog_preserves_the_ten_tool_contract -- --exact --nocapture
+          done

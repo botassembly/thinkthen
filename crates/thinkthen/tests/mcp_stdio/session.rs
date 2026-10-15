@@ -150,9 +150,15 @@ impl Session {
         drop(self.input.take());
         let output =
             crate::child::wait::finish_after(&mut self.process, "thinkthen mcp", BOUND).unwrap();
-        assert!(output.status.success());
+        let errors = self.errors.take().unwrap().join().unwrap();
+        assert!(
+            output.status.success(),
+            "MCP exited with {}; stderr: {}",
+            output.status,
+            String::from_utf8_lossy(&errors)
+        );
         self.reader.take().unwrap().join().unwrap();
-        assert!(self.errors.take().unwrap().join().unwrap().is_empty());
+        assert!(errors.is_empty(), "{}", String::from_utf8_lossy(&errors));
         std::fs::remove_dir_all(&self.home).unwrap();
     }
 }
