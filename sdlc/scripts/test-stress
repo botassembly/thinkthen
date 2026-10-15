@@ -16,7 +16,7 @@ case ${1:-} in
 --check|--run) mode=$1 ;;
 *) echo 'usage: sdlc/scripts/test-stress --list|--check|--run' >&2; exit 2 ;;
 esac
-. "$(dirname -- "$0")/heavy-lock"
+. "$(dirname -- "$0")/allow-list"
 REPO=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
 cd -- "$REPO"
 # ADR 0113: a step that bypasses its scratch usage folder writes this decoy and fails the run.

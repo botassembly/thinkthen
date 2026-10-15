@@ -63,7 +63,7 @@ with (Path({str(root)!r})/'probes.jsonl').open('a') as stream:
                 'cargo': f'/usr/bin/python3 "{probe}" compiler\n',
                 'rustc': 'echo "host: x86_64-unknown-linux-gnu"\n',
                 'jq': 'case "$*" in *expect.success*) echo true ;; *) echo fixture ;; esac\n',
-                'python3': f'''if [ "$1" = "{scripts / 'build-admission.py'}" ]; then
+                'python3': f'''if [ "$1" = "{scripts / 'build-admission.py'}" ] || [ "$1" = sdlc/scripts/build-admission.py ]; then
     exec /usr/bin/python3 -c 'import os,runpy,sys; os.getloadavg=lambda:(0,0,0); sys.argv=sys.argv[1:]; runpy.run_path(sys.argv[0],run_name="__main__")' "$@"
 fi
 if [ "$#" -eq 2 ] && [ "$1" = conformance/parity.py ]; then
@@ -134,11 +134,12 @@ exit 2
             scripts, duckdb = root / 'sdlc/scripts', root / 'databases/duckdb'
             tools = root / 'tools'
             for path in (scripts, duckdb / 'tools', duckdb / 'cpp', tools,
-                         root / 'crates/thinkthen'):
+                         root / 'crates/thinkthen', root / 'conformance/children'):
                 path.mkdir(parents=True)
             for source in ('databases/duckdb/check.sh', 'databases/duckdb/cpp/build.sh',
                            'databases/duckdb/tools/inputs.sh', 'databases/duckdb/tools/inputs.py',
                            'databases/duckdb/tools/version.env', 'databases/duckdb/tools/source_hosts.py',
+                           'databases/duckdb/tools/harness.py', 'conformance/children/children.py',
                            'sdlc/scripts/scratch.sh', 'sdlc/scripts/full-compiler', 'sdlc/scripts/heavy-compile'):
                 shutil.copyfile(parity.ROOT / source, root / source)
             (scripts / 'installed.sh').write_text('smoke_guard() { :; }\n')
@@ -174,7 +175,12 @@ with Path(CAPTURE_PATH).open('a') as out:
 '''.replace('CAPTURE_PATH', repr(str(root / 'capture.jsonl')))
             # Stop at the real community compiler boundary without building a host.
             (tools / 'make').write_text('#!/usr/bin/python3\n' + capture + 'sys.exit(91)\n')
-            (tools / 'cargo').write_text('#!/usr/bin/python3\n' + capture)
+            (tools / 'cargo').write_text('#!/usr/bin/python3\n' + capture + '''
+if '--message-format=json' in sys.argv:
+    print(json.dumps({'reason':'compiler-artifact',
+                      'target':{'name':'conformance-backend'},
+                      'executable':str(Path.cwd() / 'target/debug/conformance-backend')}))
+''')
             (tools / 'git').write_text('#!/usr/bin/python3\nimport pathlib,sys\n'
                                       'print((pathlib.Path(sys.argv[2]) / "PIN").read_text())\n')
             (root / 'probe.py').write_text(capture)
@@ -209,7 +215,9 @@ with Path(CAPTURE_PATH).open('a') as out:
                     self.assertEqual(result.returncode, 1, result.stdout.decode())
                     self.assertIn('returned non-zero exit status 91', result.stdout.decode())
                     rows = [json.loads(line) for line in receipt.read_text().splitlines()]
-                    cargo, cmake = rows[-2:]
+                    cargo, backend, cmake = rows[-3:]
+                    self.assertIn('--message-format=json', backend['args'])
+                    self.assertEqual(backend['flags'], cargo['flags'])
                     self.assertIn('caller' if full else 'test', cargo['args'])
                     self.assertEqual(cmake['args'][-1], 'release')
                     self.assertIn('DUCKDB_SRCDIR=' + str(cache / 'duckdb/community' / authority.versions()[0] / 'source'), cmake['args'])

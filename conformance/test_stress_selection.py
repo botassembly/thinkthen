@@ -23,7 +23,7 @@ class StressSelection(unittest.TestCase):
             for name in ('surfaces', 'verdict.sh', 'full-compiler', 'feature-inventory.py'):
                 shutil.copyfile(parity.ROOT / 'sdlc/scripts' / name, scripts / name)
             shutil.copyfile(parity.ROOT / 'sdlc/surfaces.txt', root / 'sdlc/surfaces.txt')
-            (scripts / 'heavy-lock').write_text('')
+            (scripts / 'allow-list').write_text('')
             (scripts / 'scratch.sh').write_text('usage_guard() { :; }\n')
             (scripts / 'installed.sh').write_text('backend_start() { port=12345; }\n')
             for name in ('release-pack', 'release-smoke'):
