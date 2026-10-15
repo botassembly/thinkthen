@@ -196,4 +196,4 @@ jobs:
       - name: Download locked crates
         run: cargo fetch --locked
       - name: Diagnose recognition cancellation once
-        run: cargo test --locked --offline -p thinkthen --test request_session
+        run: cargo test --locked --offline --no-fail-fast --workspace --all-targets
