@@ -63,11 +63,12 @@ jobs:
           printf 'APPDATA=%s\\thinkthen-appdata\\Roaming\n' "$RUNNER_TEMP" >> "$GITHUB_ENV"
           printf 'LOCALAPPDATA=%s\\thinkthen-appdata\\Local\n' "$RUNNER_TEMP" >> "$GITHUB_ENV"
           mkdir -p "$RUNNER_TEMP/thinkthen-appdata/Roaming" "$RUNNER_TEMP/thinkthen-appdata/Local"
+      # Keep the wheel floor separate from the interpreter running repository tools.
       - uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6.0.0
-        if: runner.os == 'macOS'
-        with: {python-version: '3.13'}
-      - uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6.0.0
+        id: python-floor
         with: {python-version: '3.10'}
+      - uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6.0.0
+        with: {python-version: '3.13'}
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with: {node-version: '22.22.3'}
       - name: Select x64 MSVC
@@ -90,7 +91,7 @@ jobs:
         env: {SHA: "${{ needs.resolve.outputs.sha }}"}
         run: python3 sdlc/scripts/release-language-tools.py managed "$RUNNER_TEMP/thinkthen-language-managed" "$SHA" --acquire
       - name: Build and pack the target
-        env: {TARGET: "${{ matrix.target }}", THINKTHEN_RELEASE_EXPECTED_SHA: "${{ needs.resolve.outputs.sha }}"}
+        env: {TARGET: "${{ matrix.target }}", THINKTHEN_RELEASE_EXPECTED_SHA: "${{ needs.resolve.outputs.sha }}", PYO3_PYTHON: "${{ steps.python-floor.outputs.python-path }}"}
         run: |
           set -eu
           mkdir -p release-files

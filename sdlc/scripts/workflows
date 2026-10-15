@@ -274,24 +274,29 @@ def release(name, doc):
             any(i is None for i in (verify, twine_install, twine_check)) or
             not verify < twine_install < twine_check):
         out.append(f"{name}: job wheels must verify five wheels, install pinned twine, and check strictly in order")
-    for job, active_version, condition in (("build", "3.10", "runner.os == 'macOS'"),
+    for job, active_version, condition in (("build", "3.13", None),
                                            ("smoke", "3.12", None)):
         job_steps = jobs.get(job, {}).get("steps") or []
         host = next((i for i, step in enumerate(job_steps)
                      if "release-workflow host-setup" in (step.get("run") or "")), None)
-        if host is None:  # The minimal graph fixture has no host operation.
+        if host is None:
             continue
-        configured = [(i, step) for i, step in enumerate(job_steps[:host])
+        configured = [step for step in job_steps[:host]
                       if (step.get("uses") or "").startswith("actions/setup-python@")]
-        py313 = next(((i, step) for i, step in configured
-                      if (step.get("with") or {}).get("python-version") == "3.13"), None)
-        active = next(((i, step) for i, step in configured
-                       if (step.get("with") or {}).get("python-version") == active_version), None)
-        if (py313 is None or active is None or py313[0] >= active[0]
-                or py313[1].get("if") != condition or active[1].get("if") is not None
-                or py313[1].get("uses") != active[1].get("uses")
-                or (py313[1].get("with") or {}).get("update-environment") in (False, "false")):
-            out.append(f"{name}: job {job} must set up Python 3.13 before retaining Python {active_version} for host-setup")
+        active = configured[-1] if configured else {}
+        py313 = next((step for step in configured
+                      if (step.get("with") or {}).get("python-version") == "3.13"), {})
+        if (not py313 or py313.get("if") != condition
+                or (active.get("with") or {}).get("python-version") != active_version
+                or active.get("if") is not None
+                or (active.get("with") or {}).get("update-environment") in (False, "false")):
+            out.append(f"{name}: job {job} must retain Python {active_version} for repository tools after setting up Python 3.13")
+        if job == "build":
+            floor = next((step for step in configured if step.get("id") == "python-floor"), {})
+            pack = next((step for step in job_steps if step.get("name") == "Build and pack the target"), {})
+            if ((floor.get("with") or {}).get("python-version") != "3.10" or floor.get("if") is not None
+                    or (pack.get("env") or {}).get("PYO3_PYTHON") != "${{ steps.python-floor.outputs.python-path }}"):
+                out.append(f"{name}: job build must select Python 3.10 explicitly for the wheel")
     build_steps = jobs.get("build", {}).get("steps") or []
     container = next((step for step in build_steps if "release-container" in (step.get("run") or "")), None)
     if container:
@@ -1247,12 +1252,30 @@ def self_test():
             if path.name == "release.yml":
                 text = text.replace("with: {python-version: '3.13'}", "with: {python-version: '3.11'}")
             (folder / path.name).write_text(text, encoding="utf-8")
-        wanted = ["release.yml: job build must set up Python 3.13 before retaining Python 3.10 for host-setup",
-                  "release.yml: job smoke must set up Python 3.13 before retaining Python 3.12 for host-setup"]
+        wanted = ["release.yml: job build must retain Python 3.13 for repository tools after setting up Python 3.13",
+                  "release.yml: job smoke must retain Python 3.12 for repository tools after setting up Python 3.13"]
         got = check(folder)
         if got != wanted:
             bad += 1
             print(f"workflows self-test host Python: wanted {wanted}, got {got}", file=sys.stderr)
+    # Reintroduce the failed interpreter ordering and lose the explicit wheel floor.
+    for defect in ("old-active", "missing-floor", "wrong-floor"):
+        with tempfile.TemporaryDirectory() as tmp:
+            folder = pathlib.Path(tmp)
+            for path in (REPO / ".github/workflows").glob("*.y*ml"):
+                text = path.read_text(encoding="utf-8")
+                if path.name == "release.yml":
+                    if defect == "old-active":
+                        text = text.replace("with: {python-version: '3.13'}", "with: {python-version: '3.10'}", 1)
+                    elif defect == "missing-floor":
+                        text = text.replace("id: python-floor", "id: unused-floor", 1)
+                    else:
+                        text = text.replace("${{ steps.python-floor.outputs.python-path }}", "python3")
+                (folder / path.name).write_text(text, encoding="utf-8")
+            wanted = "repository tools" if defect == "old-active" else "explicitly for the wheel"
+            if not any(wanted in error for error in check(folder)):
+                bad += 1
+                print(f"workflows self-test Python {defect}: missing refusal", file=sys.stderr)
     for name, sudo, mnt_free, wanted_dir in (
             ("roomy", "exit 0", 900, "/mnt/thinkthen-container"), ("no sudo", "exit 1", 900, "FALLBACK"),
             ("small", "exit 0", 50, "FALLBACK"), ("missing", "exit 0", None, "FALLBACK")):

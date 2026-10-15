@@ -5,6 +5,9 @@ from pathlib import Path
 import platform
 import subprocess
 import sys
+from python_host import require_tomllib
+
+require_tomllib()
 import tomllib
 
 ROOT = Path(__file__).resolve().parents[3]
