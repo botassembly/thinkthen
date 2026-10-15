@@ -9,7 +9,7 @@ import tempfile
 import time
 
 
-def capture(args, *, env, timeout, input=None, text=False):
+def capture(args, *, env, timeout, input=None, text=False, cwd=None):
     tool = Path(args[0]).name if not isinstance(args, str) else args.split()[0]
     deadline = time.monotonic() + timeout
     job = None
@@ -23,7 +23,7 @@ def capture(args, *, env, timeout, input=None, text=False):
             if os.name == 'nt':
                 import runpy
                 job = runpy.run_path(str(Path(__file__).with_name('release-owned-job.py')))['Job']()
-            child = subprocess.Popen(args, env=env, stdin=stdin, stdout=stdout, stderr=stderr,
+            child = subprocess.Popen(args, env=env, cwd=cwd, stdin=stdin, stdout=stdout, stderr=stderr,
                 start_new_session=os.name != 'nt', creationflags=4 if job else 0)
             if job:
                 # The root is suspended: no compiler/setup descendant can escape assignment.
