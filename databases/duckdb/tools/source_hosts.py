@@ -151,9 +151,8 @@ def cli_value(value, kind=''):
 
 
 def check_hosts(cache, fetch):
-    if not fetch:
-        prepare_backend()
-    for version, source_commit, tools_commit in hosts():
+    selected_hosts = list(hosts())
+    for version, source_commit, tools_commit in selected_hosts:
         inputs = cache / version
         if not fetch and not (inputs / 'source/.git').exists():
             print(f'not run: DuckDB {version} source inputs are missing; run tools/setup.sh --fetch', file=sys.stderr)
@@ -161,8 +160,11 @@ def check_hosts(cache, fetch):
         prepare(inputs / 'source', source_commit, 'https://github.com/duckdb/duckdb.git', fetch,
                 version if version == authority()['DUCKDB_ROUTINE_RELEASE'] else None)
         prepare(inputs / 'tools', tools_commit, 'https://github.com/duckdb/extension-ci-tools.git', fetch)
-        if fetch:
-            continue
+    if fetch:
+        return 0
+    prepare_backend()
+    for version, _, _ in selected_hosts:
+        inputs = cache / version
         build = ROOT / 'build/community' / version
         build.mkdir(parents=True, exist_ok=True)
         for name, target in [('extension-ci-tools', inputs / 'tools'), ('databases', ROOT.parent),
