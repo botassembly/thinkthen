@@ -10660,7 +10660,7 @@ namespace tt::results::detail {
         switch(value.kind) {
             case THINKTHEN_COMPLETE_INPUT_PROPERTY_TYPE_STRING_V1: return native_value(value.data.string);
             case THINKTHEN_COMPLETE_INPUT_PROPERTY_TYPE_NUMBER_V1: return native_value(value.data.number);
-            case THINKTHEN_COMPLETE_INPUT_PROPERTY_TYPE_BOOLEAN_V1: return Data(bool(value.data.boolean));
+            case THINKTHEN_COMPLETE_INPUT_PROPERTY_TYPE_BOOLEAN_V1: return native_value(value.data.boolean);
             case THINKTHEN_COMPLETE_INPUT_PROPERTY_TYPE_ARRAY_V1: return native_value(value.data.array);
             default: throw std::invalid_argument("invalid native alternative");
         }
