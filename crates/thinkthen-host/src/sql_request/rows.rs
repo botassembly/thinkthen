@@ -29,10 +29,7 @@ pub(super) fn complete(
                 .into_iter()
                 .flatten()
             {
-                let mut edge_result = result.clone();
-                if let Some(value) = edge_result.get_mut("value") {
-                    *value = json!([edge]);
-                }
+                let edge_result = edge_result(&result, edge);
                 rows.push(
                     json!({"ordinal":rows.len(),"value":edge,"probability":edge.get("probability"),
                     "result":edge_result,"failure":null,"facts":facts,"observations":[]}),
@@ -51,6 +48,14 @@ pub(super) fn complete(
         rows.sort_by_key(|row| row.get("ordinal").and_then(Value::as_u64));
     }
     rows
+}
+
+fn edge_result(result: &Value, edge: &Value) -> Value {
+    let mut result = result.clone();
+    if let Some(value) = result.get_mut("value") {
+        *value = json!([edge]);
+    }
+    result
 }
 
 fn observed_decision(function: F, result: &Value, observations: &[Value]) -> Option<Value> {
