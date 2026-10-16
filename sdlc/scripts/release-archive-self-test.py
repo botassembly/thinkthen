@@ -674,6 +674,15 @@ def main():
             source_only = script[installed_end:source_start]
             if "command -v node" not in source_only or "import jsonschema" not in source_only:
                 raise AssertionError(f"{family} source prerequisites precede installed return")
+        # These plants test archive checksums, not installed Swift or sandbox
+        # availability. Observe those prerequisite versions through local stubs.
+        for name in ("swift", "swiftc", "bwrap"):
+            tool = fake_bin / name
+            response = ("Swift version 6.4 (swift-6.4-RELEASE)\nTarget: x86_64-unknown-linux-gnu"
+                        if name != "bwrap" else "bubblewrap fixture")
+            tool.write_text("#!/bin/sh\n[ \"$1\" = --version ] || exit 94\n"
+                            + "printf '%s\\n' '" + response + "'\n")
+            tool.chmod(0o755)
         fake_curl = fake_bin / "curl"
         fake_curl.write_text("#!/bin/sh\nwhile [ $# -gt 0 ]; do\n"
                              "if [ \"$1\" = -o ]; then shift; printf wrong >\"$1\"; exit 0; fi\n"
