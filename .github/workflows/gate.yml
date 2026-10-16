@@ -694,7 +694,7 @@ jobs:
       - name: Require the qualified candidate tag
         run: |
           set -eu
-          test "$SHA" = 2687952c20ab2384e5ca75e434c026babae518d4
+          test "$SHA" = 823f99326f0bc856ccbecc88a36acc3beac3d437
           [[ "$TAG" =~ ^rc/0\.2\.0-rc\.[1-9][0-9]*$ ]]
           [[ "$ARTIFACT_RUN" =~ ^[1-9][0-9]*$ ]]
       - name: Check out the actual tagged candidate separately
