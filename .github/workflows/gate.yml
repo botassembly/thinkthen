@@ -717,7 +717,7 @@ jobs:
           tar -xzf "$fixture/memory-input.tar.gz" -C "$RUNNER_TEMP/qa-memory"
           cp "$fixture/split-session_consumer.cpp" "$RUNNER_TEMP/qa-memory/"
       - name: Retrieve the same-commit release rehearsal artifacts
-        env: {GH_TOKEN: '${{ github.token }}'}
+        env: {GH_TOKEN: '${{ github.token }}', SOURCE_EVENT: workflow_dispatch}
         run: |
           set -eu
           gh api "repos/$GITHUB_REPOSITORY/actions/runs/$ARTIFACT_RUN" > "$RUNNER_TEMP/qa-evidence/artifact-run.json"
@@ -727,7 +727,7 @@ jobs:
           run = json.loads((Path(os.environ['RUNNER_TEMP']) / 'qa-evidence/artifact-run.json').read_text())
           assert run['head_sha'] == os.environ['SHA']
           assert run['path'] == '.github/workflows/release.yml'
-          assert run['event'] == 'workflow_dispatch'
+          assert run['event'] == os.environ['SOURCE_EVENT']
           assert run['status'] == 'completed' and run['conclusion'] == 'success'
           PY
           gh run download "$ARTIFACT_RUN" --repo "$GITHUB_REPOSITORY" --name platform-x86_64-unknown-linux-gnu --dir "$RUNNER_TEMP/qa-artifacts"
