@@ -227,6 +227,8 @@ class ManagedToolAvailability(unittest.TestCase):
                     package.mkdir()
                     with coverage_installed_managed.tarfile.open(context['apple_artifacts'][language]) as artifact:
                         artifact.extractall(package, filter='data')
+                    self.assertEqual((package / 'README.md').read_bytes(),
+                                     (checkout / 'libraries' / language / 'README-PUBLIC.md').read_bytes())
                     if language == 'swift':
                         result = subprocess.run(['swift', 'package', '--package-path', str(package), 'describe'],
                                                 env={'PATH': os.environ['PATH'], 'HOME': str(run)},
@@ -274,11 +276,11 @@ class ManagedToolAvailability(unittest.TestCase):
                     (retained / 'installed' / binary).write_bytes(binary.encode())
             context = dict(root=root, command=command, missing_tool=DRIVER['MissingTool'],
                            c_target=native.parents[1], initializer=root / 'profile.o')
-            sources = ('Sources/Foundation/TTResult.h', 'Sources/Foundation/module.modulemap', 'README-PUBLIC.md')
+            sources = ('Sources/Foundation/TTResult.h', 'Sources/Foundation/module.modulemap', 'README-PUBLIC.md', 'README.md')
             for name in sources:
                 original = root / 'libraries/swift' / name
                 original.parent.mkdir(parents=True, exist_ok=True)
-                original.write_bytes(b'checkout source')
+                original.write_bytes(b'technical source' if name == 'README.md' else b'checkout source')
                 (package / name).parent.mkdir(parents=True, exist_ok=True)
             subprocess.run(['git', 'init', '-q', str(root)], check=True)
             subprocess.run(['git', '-C', str(root), 'add', 'libraries/swift'], check=True)

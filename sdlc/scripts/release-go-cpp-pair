@@ -290,7 +290,8 @@ with tarfile.open(sys.argv[1]) as archive:
         if relative.startswith('CThinkThen.xcframework/'):
             assert data == pathlib.Path('libraries/swift', relative).read_bytes(), relative
         elif relative != 'THINKTHEN-PACKAGE-INPUTS':
-            assert data == subprocess.check_output(['git','show','HEAD:libraries/objective-c/'+relative]), relative
+            source = 'README-PUBLIC.md' if relative == 'README.md' else relative
+            assert data == subprocess.check_output(['git','show','HEAD:libraries/objective-c/'+source]), relative
     package = json.load(archive.extractfile('./source-package.json'))
     assert package == {'name':'thinkthen-objective-c','version':sys.argv[2],'source_only':False,'native_dependency':'thinkthen-c','bundles_native':True}
 PYTHON
@@ -305,7 +306,8 @@ with tarfile.open(sys.argv[1]) as archive:
         if relative.startswith('CThinkThen.xcframework/'):
             assert data == pathlib.Path('libraries/swift', relative).read_bytes(), relative
         elif relative != 'THINKTHEN-PACKAGE-INPUTS':
-            source = 'libraries/c/include/thinkthen.h' if relative == 'Sources/CThinkThen/include/thinkthen.h' else 'libraries/swift/' + relative
+            member = 'README-PUBLIC.md' if relative == 'README.md' else relative
+            source = 'libraries/c/include/thinkthen.h' if member == 'Sources/CThinkThen/include/thinkthen.h' else 'libraries/swift/' + member
             assert data == subprocess.check_output(['git', 'show', 'HEAD:' + source]), relative
 PYTHON
 fi
