@@ -2,6 +2,7 @@
 import collections
 import contextlib
 import io
+import json
 import os
 import re
 from pathlib import Path
@@ -122,7 +123,13 @@ with contextlib.ExitStack() as installed:
             result = subprocess.run([str(work / ".build/debug/Consumer"), str(barrier)],
                                     cwd=work, env=env, text=True, capture_output=True, timeout=8)
             assert result.returncode == 0 and "FOUNDATION_INSTALLED_PASS" in result.stdout, (result.returncode, result.stdout, result.stderr)
-            assert collections.Counter(server.arrivals) == collections.Counter(["consumer-objc", 1e308, 1e-308, "no", None, False, 1e308, 1e-308, "no", "unsure", "authored-objc-0", "authored-objc-1", "authored-objc-2", "hold-foundation"]), server.arrivals
+            expected = ["consumer-objc", 1e308, 1e-308, "no", None, False, 1e308, 1e-308,
+                        "no", "unsure", "authored-objc-0", "authored-objc-1", "authored-objc-2",
+                        {"enabled": False, "name": "schema-objc", "count": 2, "labels": ["one"]},
+                        {"enabled": True, "name": "schema-objc", "count": 2, "labels": ["one"]},
+                        "hold-foundation"]
+            assert collections.Counter(json.dumps(item, sort_keys=True) for item in server.arrivals) == collections.Counter(
+                json.dumps(item, sort_keys=True) for item in expected), server.arrivals
             print("Foundation installed consumer passed ownership and held-provider cancellation")
         finally:
             (barrier / "release-hold-foundation").touch()
