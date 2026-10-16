@@ -2,7 +2,17 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
-import { spawnSync } from 'node:child_process';
+import { execFileSync, spawnSync } from 'node:child_process';
+
+// Checkout scans read indexed source, including staged additions. Build output
+// remains outside the source set even when it sits beneath a source folder.
+export function trackedFiles(root) {
+  root = path.resolve(root);
+  const env = { ...process.env };
+  for (const name of ['GIT_DIR', 'GIT_WORK_TREE', 'GIT_COMMON_DIR', 'GIT_INDEX_FILE']) delete env[name];
+  return [...new Set(execFileSync('git', ['-C', root, 'ls-files', '-z', '--', '.'], { env, encoding: 'utf8' })
+    .split('\0').filter(Boolean))].sort().map((name) => path.join(root, name));
+}
 
 export const REPLAY_FILE = 'REPLAY';
 
@@ -56,15 +66,8 @@ export function leakedVariables(env) {
 // Every one needs a REPLAY line.
 const SAMPLE = /\.(py|ts|rb|R|rs|c|cpp|m|cob|adb|java|kt|scala|cs|go|swift|zig|php|dart|sql)$/;
 export function librarySamples(examples) {
-  const found = [];
-  const walk = (dir) => {
-    for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
-      const p = path.join(dir, e.name);
-      if (e.isDirectory()) { if (e.name !== 'files') walk(p); } else if (SAMPLE.test(e.name)) found.push(path.relative(examples, p));
-    }
-  };
-  walk(examples);
-  return found.sort();
+  return trackedFiles(examples).map((file) => path.relative(examples, file))
+    .filter((rel) => !rel.split(path.sep).slice(0, -1).includes('files') && SAMPLE.test(rel));
 }
 
 // Admit compiler commands through the shared four-build supervisor.

@@ -25,7 +25,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { namedAnswerProblems } from './named-answers.mjs';
 import { CODE_FUNCTIONS } from '../src/data/catalog.mjs';
-import { readReplayList, replayLine } from './binding-samples.mjs';
+import { readReplayList, replayLine, trackedFiles } from './binding-samples.mjs';
 
 const here = fileURLToPath(import.meta.url);
 const site = path.resolve(path.dirname(here), '..');
@@ -139,13 +139,11 @@ function namedAnswers(label, text, kind, language, offset = 0) {
   }
 }
 
-function walk(dir) {
-  return fs.readdirSync(dir, { withFileTypes: true }).flatMap((e) => {
-    const p = path.join(dir, e.name);
-    // Recorded wire bodies are machine data checked by the replay smoke run,
-    // not a code block a reader copies from the page.
-    if (e.isDirectory()) return p === bench || ['recording', 'proposed'].includes(e.name) ? [] : walk(p);
-    return [p];
+function exampleFiles(dir) {
+  return trackedFiles(dir).filter((file) => {
+    const rel = path.relative(dir, file);
+    const folders = rel.split(path.sep).slice(0, -1);
+    return !file.startsWith(bench + path.sep) && !folders.some((name) => ['recording', 'proposed'].includes(name));
   });
 }
 
@@ -203,7 +201,7 @@ export function articleProblems(name, text, folder = 'articles') {
 
 function main() {
   const problems = [];
-  for (const file of walk(root)) {
+  for (const file of exampleFiles(root)) {
     const rel = path.relative(root, file);
     if (['SKIP', 'REPLAY', 'beatles/bench-pin', 'beatles/deck-pin', 'beatles/folders.json'].includes(rel)) continue;
     const ext = path.extname(file);
@@ -221,7 +219,7 @@ function main() {
   const lineCount = (file) => (fs.existsSync(file) ? fs.readFileSync(file, 'utf8').replace(/\n+$/, '').split('\n').length : 0);
   for (const fn of CODE_FUNCTIONS) {
     const dir = path.join(root, 'functions', fn.name);
-    const first = fs.readdirSync(dir).filter((n) => n.endsWith('.sh')).sort()[0];
+    const first = trackedFiles(dir).filter((file) => path.dirname(file) === dir && file.endsWith('.sh')).map((file) => path.basename(file))[0];
     if (!first) { problems.push(`examples/functions/${fn.name}: no command example. Every function page opens with one.`); continue; }
     const script = path.join(dir, first);
     const shown = lineCount(script) + lineCount(script.replace(/\.sh$/, '.out'));
@@ -231,7 +229,8 @@ function main() {
   for (const folder of ['articles']) {
     const dir = path.join(site, 'src', folder);
     if (!fs.existsSync(dir)) continue;
-    for (const name of fs.readdirSync(dir).filter(n => n.endsWith('.md'))) {
+    for (const file of trackedFiles(dir).filter((file) => path.dirname(file) === dir && file.endsWith('.md'))) {
+      const name = path.basename(file);
       const text = fs.readFileSync(path.join(dir, name), 'utf8');
       problems.push(...articleProblems(name, text, folder));
       if (!/^(---\n(?:.*\n)*?goal: .+\n|<!-- Goal: .+ -->\n)/.test(text)) problems.push(`src/${folder}/${name}: no goal. Add a goal: field or start with <!-- Goal: -->.`);
@@ -239,13 +238,7 @@ function main() {
   }
 
   // Every page says what it must communicate, before anything else.
-  function astroPages(dir) {
-    return fs.readdirSync(dir, { withFileTypes: true }).flatMap((e) => {
-      const p = path.join(dir, e.name);
-      return e.isDirectory() ? astroPages(p) : p.endsWith('.astro') ? [p] : [];
-    });
-  }
-  for (const file of astroPages(path.join(site, 'src', 'pages'))) {
+  for (const file of trackedFiles(path.join(site, 'src', 'pages')).filter((file) => file.endsWith('.astro'))) {
     const second = fs.readFileSync(file, 'utf8').split('\n')[1] || '';
     if (!second.startsWith('// Goal: ')) problems.push(`${path.relative(site, file)}: no goal. Start the front matter with // Goal: and one sentence.`);
   }
