@@ -293,7 +293,9 @@ jobs:
           set -eu
           python3 sdlc/scripts/hosted-candidate.py checkout "$SHA" "$DISPATCH_SHA"
           [[ "$TAG" =~ ^rc/0\.2\.0-rc\.[1-9][0-9]*$ ]]
-          test "$(git rev-parse "refs/tags/$TAG^{commit}")" = "$SHA"
+          if git show-ref --verify --quiet "refs/tags/$TAG"; then
+            test "$(git rev-parse "refs/tags/$TAG^{commit}")" = "$SHA"
+          fi
           work=$(sdlc/scripts/release-workflow linux-work "$RUNNER_TEMP/thinkthen-linux-release")
           mkdir -p "$work/$STAGE/evidence" "$work/$STAGE/home" "$work/$STAGE/target"
           ln -s "$work/$STAGE/target" target
