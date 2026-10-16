@@ -35,6 +35,7 @@ jobs:
         run: |
           mkdir -p target/foundation-package target/native-headers
           cp -R libraries/objective-c/. target/foundation-package/
+          cp libraries/objective-c/README-PUBLIC.md target/foundation-package/README.md
           cp native-source/libraries/c/include/thinkthen.h target/native-headers/
           printf 'module CThinkThen { header "thinkthen.h" export * }\n' > target/native-headers/module.modulemap
           xcrun xcodebuild -create-xcframework -library native-source/target/debug/libthinkthen_c.a -headers target/native-headers -output target/foundation-package/CThinkThen.xcframework
