@@ -238,6 +238,11 @@ def acquisition_cli(root):
                        "Path(os.environ['OBSERVE_INSTALLED']).touch()\n"
                        "if '-s' in sys.argv: print(os.environ['OBSERVE_PLAN'])\n")
     process.chmod(0o755)
+    process = process_dir / "dpkg-query"
+    process.write_text("#!/bin/sh\n"
+                       "[ \"$*\" = '-W -f=${Provides} libncurses-dev' ] || exit 94\n"
+                       f"printf '%s\\n' 'libncurses5-dev (= {tools.PACKAGES['libncurses-dev']})'\n")
+    process.chmod(0o755)
     process = process_dir / "sudo"
     process.write_text("#!/bin/sh\nexec \"$@\"\n")
     process.chmod(0o755)
