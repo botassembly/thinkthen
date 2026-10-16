@@ -399,7 +399,12 @@ def main():
         subprocess.run(["cc", "-c", "-o", str(base / "fixture.o"), str(base / "fixture.c")], check=True)
         subprocess.run(["ar", "rcs", str(native / "libthinkthen_c.a"), str(base / "fixture.o")], check=True)
         cpp_guard = str(REPO / "libraries/cpp/fixtures/guard.py")
-        expect(run(sys.executable, cpp_guard, str(native)), "PRIVATE_PACKAGE_PASS", success=True)
+        native_members = base / "native-members.txt"
+        native_members.write_text("\n".join(str(native / name) for name in
+                                 ("libthinkthen_c.so", "libthinkthen_c.a")) + "\n")
+        # Later build output is not part of the captured shipping install.
+        (native / "later-output.md").write_bytes(b"/Users/synthetic-private-location")
+        expect(run(sys.executable, cpp_guard, str(native), str(native_members)), "PRIVATE_PACKAGE_PASS", success=True)
         private_cpp = base / "private-cpp"
         private_cpp.mkdir()
         for private_bytes in (b"/home/synthetic-private-location", b"/Users/synthetic-private-location",
@@ -408,7 +413,9 @@ def main():
                               b"/build/home/home/private", b"/build/home/Users/private",
                               b"/build/home/auth.json", b"/build/home/tt-canary-273"):
             (private_cpp / "libthinkthen.a").write_bytes((native / "libthinkthen_c.a").read_bytes() + private_bytes)
-            expect(run(sys.executable, cpp_guard, str(private_cpp)), "private pattern in libthinkthen.a")
+            private_members = base / "private-members.txt"
+            private_members.write_text(str(private_cpp / "libthinkthen.a") + "\n")
+            expect(run(sys.executable, cpp_guard, str(private_cpp), str(private_members)), "private pattern in libthinkthen.a")
         env = os.environ.copy()
         env.update(PATH=str(fake_bin) + os.pathsep + env["PATH"],
                    CARGO_TARGET_DIR=str(native.parent),

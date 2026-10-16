@@ -5,6 +5,11 @@ from pathlib import Path
 import tarfile
 import tempfile
 import zipfile
+import os
+import sys
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "sdlc/generators/results"))
+from sources import tracked_files
 
 ROOT = Path(__file__).resolve().parents[1]
 BAD = (b"/home/", b"/Users/", b"-----BEGIN PRIVATE KEY-----", b"auth.json", b"tt-canary-private")
@@ -35,12 +40,15 @@ def check(path):
     elif path.suffix == ".gz":
         inspect(str(path), gzip.decompress(path.read_bytes()))
 
-sources = [ROOT / "README.md", ROOT / "LICENSE", ROOT / "source-package.json", *ROOT.glob("src/*"), *ROOT.glob("copybooks/*"),
-           *ROOT.glob("Src/*"), *ROOT.glob("Sources/*"), *ROOT.glob("examples/*"),
-           *ROOT.glob("Examples/*")]
+sources = [path for path in tracked_files(ROOT)
+           if path.relative_to(ROOT).as_posix() in {"README.md", "LICENSE", "source-package.json"}
+           or path.relative_to(ROOT).parts[0] in {"src", "Src", "Sources", "examples", "Examples", "copybooks"}]
 for path in sources:
     if path.is_file():
         check(path)
+for name in ('THINKTHEN_ARTIFACT', 'THINKTHEN_C_ARTIFACT'):
+    if os.environ.get(name):
+        check(Path(os.environ[name]))
 with tempfile.TemporaryDirectory() as name:
     folder = Path(name)
     for index, marker in enumerate((BAD[0], BAD[1], b"T_CacheDocument_arm_1", b"CacheDocumentArm2", b"CACHE-DOCUMENT-ARM-1", b"T_CacheDocument_arm_Text", b"CacheDocumentAlternative", b"K_THINKTHEN_SESSION_WAIT_UNKNOWN_ARM_V1", b"K_THINKTHEN_SESSION_WAIT_SETTLEMENT_ARM_V1_Extra")):

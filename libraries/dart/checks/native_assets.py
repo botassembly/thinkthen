@@ -5,6 +5,9 @@ from pathlib import Path
 import shutil
 import sys
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[3] / 'sdlc/generators/results'))
+from sources import tracked_files
+
 
 def package_members(source):
     source = Path(source)
@@ -51,8 +54,11 @@ def development(source, native, destination):
     """Copy the retained gates without copying build output or changing repository files."""
     source, destination = Path(source).resolve(), Path(destination).resolve()
     package = destination / 'libraries/dart'
-    shutil.copytree(source, package, ignore=shutil.ignore_patterns(
-        '.dart_tool', 'build', 'ephemeral', 'scratch', 'logs', '__pycache__', 'pubspec_overrides.yaml'))
+    inputs = tracked_files(source)
+    for item in inputs:
+        target = package / item.relative_to(source)
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(item, target)
     # Keep existing fixture paths valid in the owned tree; all non-Dart inputs remain read-only.
     repo = source.parents[1]
     for item in repo.iterdir():
@@ -61,8 +67,7 @@ def development(source, native, destination):
     for item in (repo / 'libraries').iterdir():
         if item.name != 'dart':
             (destination / 'libraries' / item.name).symlink_to(item, target_is_directory=item.is_dir())
-    projects = [package, package / 'checks/consumers/alpha', package / 'checks/consumers/bravo',
-                package / 'flutter', package / 'flutter/example']
+    projects = [package / item.relative_to(source).parent for item in inputs if item.name == 'pubspec.yaml']
     configure(package, native, projects)
     for folder in ('checks/logs', 'flutter/logs', 'flutter/scratch'):
         (package / folder).mkdir(parents=True, exist_ok=True)
