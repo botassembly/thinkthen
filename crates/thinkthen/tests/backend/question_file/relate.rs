@@ -123,7 +123,9 @@ fn invalid_unreadable_and_wrong_verb_files_keep_their_ruled_exit_codes() {
 #[cfg(unix)]
 fn named_recognize_and_relate_keep_saved_fields_and_refuse_bad_records_before_sends() {
     let root = crate::input_sources::folder("named-aggregate-admission").expect("folder");
-    let questions = crate::child::Folder::Config.in_home(&root).join("questions");
+    let questions = crate::child::Folder::Config
+        .in_home(&root)
+        .join("questions");
     std::fs::create_dir_all(&questions).expect("questions");
     for (verb, name, definition, valid, invalid, flags) in [
         (
@@ -158,12 +160,8 @@ fn named_recognize_and_relate_keep_saved_fields_and_refuse_bad_records_before_se
                 "--no-cache",
             ];
             args.extend(&flags);
-            crate::harness::spawn(
-                &args,
-                &[("HOME", root.to_str().expect("path"))],
-                evidence,
-            )
-            .expect("command")
+            crate::harness::spawn(&args, &[("HOME", root.to_str().expect("path"))], evidence)
+                .expect("command")
         };
         let direct = run(&file, valid);
         let lookup = run(&named, valid);
