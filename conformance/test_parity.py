@@ -32,6 +32,22 @@ class NativeFixtureEnvironment(unittest.TestCase):
                                extra_env={'THINKTHEN_API_KEY': 'fixture-only'},
                                rust_manifest=parity.ROOT/'libraries/rust/consumer/Cargo.toml')
 
+    def test_shared_routine_selects_call_result_once_without_followup(self):
+        sys.path[:0] = [str(parity.ROOT / 'conformance/children'), str(parity.ROOT / 'conformance')]
+        import session_cases
+        for consumer in ('cpp', 'zig', 'objective-c'):
+            for profile in ('routine', 'full'):
+                with self.subTest(consumer=consumer, profile=profile):
+                    output = io.StringIO()
+                    with patch.object(os, 'environ', {'THINKTHEN_TEST_PROFILE': profile}), patch.object(session_cases.shared, 'document', side_effect=OSError('no native execution')), contextlib.redirect_stdout(output), contextlib.redirect_stderr(io.StringIO()):
+                        with self.assertRaises(SystemExit):
+                            session_cases.native_cases(Path('/unused'), consumer=consumer)
+                    cases = parity.required_cases(parity.inventory(), consumer)
+                    seen = parity.cells(output.getvalue(), [consumer], cases, parity.inventory())
+                    self.assertIn((consumer, 'library-call-result'), seen)
+                    if profile == 'full': self.assertEqual(len(seen), len(cases))
+
+
 
 class BindingCaseTiers(unittest.TestCase):
     def test_scalar_input_selectors_follow_canonical_payloads_and_ignore_feed_names(self):
@@ -300,6 +316,85 @@ class PublicAssertions(unittest.TestCase):
                     self.assertEqual(row['cells'][cell['case']],
                                      'missing' if defect == 'missing' else 'fail')
                     self.assertNotEqual(set(row['cells'].values()), {'pass'})
+
+    def test_cpp_full_runner_emits_each_required_case_once(self):
+        import shlex
+        script = (parity.ROOT / 'libraries/cpp/check.sh').read_text()
+        calls = '\n'.join(line for line in script.splitlines() if 'conformance/children/session_cases.py' in line)
+        contract = parity.inventory()
+        cases = parity.required_cases(contract, 'cpp')
+        # Replay the asserted cells from the actual runner, without compiling
+        # native code. A focused follow-up must not repeat a required row.
+        with tempfile.TemporaryDirectory() as scratch:
+            root = Path(scratch)
+            entry = root / 'conformance/children/session_cases.py'
+            entry.parent.mkdir(parents=True)
+            entry.write_text(
+                'import json, os\n'
+                f'cases = {list(cases.values())!r}\n'
+                'selected = os.environ.get("THINKTHEN_CPP_CASES", "").split(",")\n'
+                'for row in cases:\n'
+                ' if selected != [""] and row["id"] not in selected: continue\n'
+                ' print("parity: " + json.dumps(dict(consumer="cpp", case=row["id"], checks=row.get("checks", ["named", "runtime"]), status="pass")))\n')
+            env = {'PATH': os.defpath, 'THINKTHEN_TEST_PROFILE': 'full'}
+            result = subprocess.run(['sh', '-c', f'repo={shlex.quote(str(root))}\n'
+                                     f'python_bin={shlex.quote(sys.executable)}\nout=/unused\n' + calls],
+                                    env=env, capture_output=True, text=True)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            seen = parity.cells(result.stdout, ['cpp'], cases, contract)
+            self.assertEqual(len(seen), len(cases))
+            row = parity.summarize('cpp', cases, 0, seen, None, None)
+            self.assertEqual(set(row['cells'].values()), {'pass'})
+
+    def test_jvm_full_and_routine_do_not_repeat_focused_cases(self):
+        script = (parity.ROOT / 'libraries/jvm/check.sh').read_text()
+        script = script[script.index('if [ -z "${THINKTHEN_PARITY_PREPARED:-}" ]; then\npython3'):]
+        fixture = ('python3() { case "$*" in *public_types.py*) '
+                   'case "$*" in *--case*) printf "library-call-result\\nsettings-max-requests-refuses-past-the-limit\\n" ;; '
+                   '*) printf "library-call-result\\nsettings-max-requests-refuses-past-the-limit\\nother-required-case\\n" ;; esac ;; esac; }\n'
+                   'cargo() { :; }\n')
+        for profile in ('routine', 'full'):
+            for portable in ('', '1'):
+                with self.subTest(profile=profile, portable=portable):
+                    result = subprocess.run(['sh', '-c', fixture + script], capture_output=True, text=True,
+                                            env={'PATH': os.defpath, 'THINKTHEN_TEST_PROFILE': profile,
+                                                 'THINKTHEN_PORTABLE_BATCH': portable})
+                    self.assertEqual(result.returncode, 0, result.stderr)
+                    rows = result.stdout.splitlines()
+                    self.assertEqual(rows.count('library-call-result'), 1)
+                    self.assertEqual(rows.count('settings-max-requests-refuses-past-the-limit'), 1)
+                    self.assertEqual(rows.count('other-required-case'), int(profile == 'full' or portable == '1'))
+
+    def test_foundation_keeps_async_and_blocking_assertions_with_one_cell_each(self):
+        script = (parity.ROOT / 'libraries/objective-c/checks/foundation_installed.py').read_text()
+        import textwrap
+        script = textwrap.dedent(script.split('        adapter.chmod(0o700)\n', 1)[1])
+        for profile in ('routine', 'full'):
+            cases = parity.required_cases(parity.inventory(), 'objective-c')
+            if profile == 'routine': cases = {'library-call-result': cases['library-call-result']}
+            calls = []
+            def run(adapter, *, consumer):
+                calls.append(adapter.read_text())
+                for row in cases.values():
+                    print(parity.PREFIX + json.dumps(dict(consumer=consumer, case=row['id'], checks=row.get('checks', ['named', 'runtime']), status='pass')))
+            with self.subTest(profile=profile), tempfile.TemporaryDirectory() as scratch:
+                adapter = Path(scratch) / 'adapter'
+                adapter.write_text('*[]')
+                output = io.StringIO()
+                with contextlib.redirect_stdout(output):
+                    exec(script, dict(native_cases=run, adapter=adapter, contextlib=contextlib, io=io, os=os))
+                self.assertEqual(calls, ['*[]', '*["blocking"]'])
+                seen = parity.cells(output.getvalue(), ['objective-c'], cases, parity.inventory())
+                self.assertEqual(len(seen), len(cases))
+                self.assertEqual(sum(line.startswith('regression: ') for line in output.getvalue().splitlines()), len(cases))
+                calls.clear()
+                adapter.write_text('*[]')
+                def fail_blocking(adapter, *, consumer):
+                    run(adapter, consumer=consumer)
+                    if len(calls) == 2: raise SystemExit(1)
+                with contextlib.redirect_stdout(io.StringIO()), self.assertRaises(SystemExit) as failed:
+                    exec(script, dict(native_cases=fail_blocking, adapter=adapter, contextlib=contextlib, io=io, os=os))
+                self.assertEqual(failed.exception.code, 1)
 
     def test_failed_case_keeps_independent_pass_and_missing_cell_visible(self):
         seen = parity.cells(self.cell(), ['rust'], self.cases)

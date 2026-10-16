@@ -69,7 +69,7 @@ def native_cases(binary, *, consumer=CONSUMER, invoke=None):
         rows=[row for row in rows if row['id'] in selected]
     elif os.environ.get('THINKTHEN_TEST_PROFILE', 'routine') != 'full':
         selected = set((ROOT/'conformance/routine-ids.txt').read_text().splitlines())
-        selected.update(('complete-decide','images-decide','image-file-decide','images-choose','images-score','cache-hit-cannot-bypass-declaration','settings-replay-answers-from-the-folder-alone','settings-cache-off-sends-again','recognize-context-cache-replay'))
+        selected.update(('library-call-result','complete-decide','images-decide','image-file-decide','images-choose','images-score','cache-hit-cannot-bypass-declaration','settings-replay-answers-from-the-folder-alone','settings-cache-off-sends-again','recognize-context-cache-replay'))
         rows = [row for row in rows if row['id'] in selected]
     cases={r['id']:r for r in json.loads((ROOT/'conformance/cases.json').read_text())['cases']}
     named={r['id']:r for r in json.loads((ROOT/'conformance/named-inputs.json').read_text())['cases']}
