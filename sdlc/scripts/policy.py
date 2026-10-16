@@ -584,9 +584,9 @@ def binding_files(name: str, crate: str) -> dict[str, str]:
     folder = REPO / crate
     files = {name: (folder / name).read_text(encoding="utf-8")
              for name in ("Cargo.toml", "Cargo.lock", "clippy.toml") if (folder / name).is_file()}
-    # Every Rust file under the binding folder, so a crate folder hides none.
+    # Keep untracked authored Rust, using the same output folders as source-size policy.
     for source in (REPO / name).rglob("*.rs"):
-        if "target" not in source.relative_to(REPO / name).parts:
+        if not SOURCE_OUTPUT_FOLDERS.intersection(source.relative_to(REPO / name).parts):
             files[posixpath.relpath(source.as_posix(), folder.as_posix())] = source.read_text(encoding="utf-8")
     deny = REPO / name / "deny.toml"
     return {**files, "deny.toml": deny.read_text(encoding="utf-8")} if deny.is_file() else files
@@ -988,6 +988,30 @@ def check_bindings() -> None:
     if "../tests/examples.rs" not in binding_files(BINDING_PLANT_BASE, f"{BINDING_PLANT_BASE}/src"):
         fail("binding", "Rust files outside the crate folder go unread")
     base = binding_files(BINDING_PLANT_BASE, BINDING_PLANT_BASE)
+    with tempfile.TemporaryDirectory() as scratch:
+        folder = pathlib.Path(scratch)
+        authored = {"src/planted.rs", "tests/planted.rs", "src/ffi.rs"}
+        outputs = {f"{output}/nested/out/bindgen.rs" for output in SOURCE_OUTPUT_FOLDERS}
+        for relative in authored | outputs:
+            source = folder / relative
+            source.parent.mkdir(parents=True, exist_ok=True)
+            source.write_text("unsafe fn planted() {}\n", encoding="utf-8")
+        # These authored files are untracked; collection must not depend on Git's index.
+        files = binding_files(scratch, scratch)
+        if set(files) != authored:
+            fail("binding", "collect untracked authored Rust and exclude nested build/vendor output")
+        unsafe = [held for held in binding_failures(BINDING_PLANT_BASE, {**base, **files})
+                  if "holds unsafe outside" in held]
+        expected = {f"{BINDING_PLANT_BASE}/{relative} holds unsafe outside the binding's FFI module"
+                    for relative in authored if relative != "src/ffi.rs"}
+        if set(unsafe) != expected:
+            fail("binding", "untracked authored unsafe is refused while the FFI module remains allowed")
+    c_files = binding_files("libraries/c", "libraries/c")
+    generated_ffi = {path.removeprefix("libraries/c/"): "unsafe fn planted() {}\n"
+                     for path in GENERATED_BINDING_SOURCES if path.startswith("libraries/c/src/ffi/")}
+    if not generated_ffi or any("holds unsafe outside" in held for held in binding_failures(
+            "libraries/c", {**c_files, **generated_ffi})):
+        fail("binding", "registered generated C FFI modules remain allowed")
     for label, relative, plant in BINDING_PLANTS:
         planted = {**base, relative: plant(base.get(relative, ""))}
         if planted[relative] == base.get(relative) or not binding_failures(BINDING_PLANT_BASE, planted):
