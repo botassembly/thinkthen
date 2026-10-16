@@ -50,3 +50,19 @@ PM amendment, 2026-10-12. Accept the 2026-10-12 installed pair at da1e3bb17 as t
 
 
 PM amendment, 2026-10-13. Remaining work. Close 0560 now; its tooling and baseline are done and reviewed. 0543 runs `sdlc/scripts/coverage --release` once on the candidate SHA and stores only its summary. The deleted-line allowance equals 59,962 minus the candidate's mapped line count. Each collection passes when its reached count is at least its lower baseline count minus that allowance. The candidate record shows this in one table, and no new script is written for it. Delete the stale branch `ticket/0560-measure-coverage`.
+
+## Post-0.2 coverage item
+
+PM ruling, 2026-10-16: accept the honest C source-unit floor of 5,598 after approved obsolete API and private projection test deletions; the 124 surviving lines with no observed hit do not hold the 0.2 tag. Each uncovered accessor or helper below must gain an outside-in check through a library or be deleted after proving it unused. Keep the collector and retired tests unchanged. The exact line list and unchanged-source accounting are in `sdlc/records/0543-core-wave-evidence.md`.
+
+- `crates/thinkthen/src/core/answer.rs`
+- `crates/thinkthen/src/public/recognize.rs`
+- `crates/thinkthen/src/public/request.rs`
+- `crates/thinkthen/src/public/results.rs`
+- `crates/thinkthen/src/public/results/aggregate_reading.rs`
+- `crates/thinkthen/src/public/results/complete_facts.rs`
+- `crates/thinkthen/src/public/results/complete_recognize.rs`
+- `crates/thinkthen/src/public/results/metadata.rs`
+- `crates/thinkthen/src/public/results/observation.rs`
+- `crates/thinkthen/src/public/results/owned_observation.rs`
+- `crates/thinkthen/src/public/results/reading.rs`

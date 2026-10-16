@@ -621,3 +621,19 @@ SDK placement repair `e19e0e4a8` adds explicit current-directory output to both 
 On `04bec22be`, the complete installed consumer stage, package stage and stress stage each exit zero and reap their descendants. All twenty-seven Linux consumers pass their required cases; Swift and Objective-C retain explicit platform-pending rows. The closed stress log includes the passing DuckDB complete_file_preflight_and_eager_invalid_input_send_nothing regression. No campaign pass is inferred from these completed stages alone.
 
 Evidence-preserving cleanup removes thirty-five clean absorbed review and repair worktrees and their local branches, recovering 5.590 GiB including regenerable compiler output. Separate lossless archives preserve all 1,803 accepted-baseline raw profiles and twenty-five old diagnostic test executables with their LLVM mappings; every path, size and content hash is verified before redundant originals are removed. Baseline summaries, packages, saved failures and active coverage remain unchanged. Unclassified proof folders and unabsorbed branches are retained.
+
+Linux coverage on `04bec22be` completes all thirty-one collections with no missing profiles or unmeasured collections: 58,542 mapped lines, 6,594 unobserved lines and 1,056 lines observed only by unit tests. Thirty collections meet their original floors. The PM accepts the C source-unit floor at its measured 5,598: approved obsolete C API and private projection deletions reduced its tests from twenty-five to seven, while collection commands and features remain unchanged. Its baseline reached 16,653 lines. The core decrease of 9,429 is a net count, not a surviving-line set. Exact unchanged-source mapping finds 9,154 lost C-unit hits; other collections cover 9,024, six no longer have production mappings, and 124 have no observed hit. The PM rules these 124 lines do not hold the tag and assigns their outside-in coverage or safe deletion after 0.2. Neither obsolete tests nor collector changes are introduced.
+
+The complete uncovered list below uses paths relative to `crates/thinkthen/src/` at `04bec22be`; these product files are unchanged at `b25c45401`.
+
+- `core/answer.rs`: 389, the yes/no arm of named().
+- `public/recognize.rs`: 429–431 and 442–444, length and strength accessors.
+- `public/request.rs`: 231, 235 and 243, RequestFunction::for_definition selection branches.
+- `public/results.rs`: 290–292, 296–298, 302–304, 308–310, 314–316, 320–324, 334–336, 346–348, 352–354 and 358–360, result accessors.
+- `public/results/aggregate_reading.rs`: 59–64, 72–77, 81–83, 85–87, 91–93, 96–98, 101–103 and 106–108, aggregate reading accessors.
+- `public/results/complete_facts.rs`: 33–35, call_id().
+- `public/results/complete_recognize.rs`: 200–202, 206–208, 217–219, 223–225, 229–231 and 263–271, probability accessors and named probability conversion.
+- `public/results/metadata.rs`: 15–17, 33 and 88–90, metadata accessors and the absent question-hash branch.
+- `public/results/observation.rs`: 251–253, probabilities().
+- `public/results/owned_observation.rs`: 155–157, raw_pick().
+- `public/results/reading.rs`: 90–93, 120–122, 125–127, 168 and 176, reading accessors and yes/no fallbacks.
