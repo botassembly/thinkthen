@@ -369,7 +369,8 @@ def main():
     continuous = sys.platform == 'linux'
     pattern = '%p-%m%c.profraw' if continuous else '%m.profraw'
     home_destination = '/build/users' if Path.home().is_relative_to('/Users') else '/build/host'
-    remaps = [(Path.home(), home_destination), (ROOT, '/build/source'),
+    remaps = [(Path('/home'), '/build/host'), (Path('/Users'), '/build/users'),
+              (Path.home(), home_destination), (ROOT, '/build/source'),
               (Path(os.environ.get('CARGO_HOME', str(Path.home() / '.cargo'))).resolve(), '/build/cargo')]
     flags = ['-C', 'instrument-coverage',
              *[f'--remap-path-prefix={source}={destination}' for source, destination in remaps],
