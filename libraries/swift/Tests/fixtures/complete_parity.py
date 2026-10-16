@@ -109,8 +109,10 @@ def native_parity(consumer, command):
                         before = int(backend.read("count"))
                         got = invoke(settings)
                         if row["id"] == "settings-max-requests-refuses-past-the-limit":
-                            assert [entry["index"] for entry in got["rows"]] == [0, 1], got
-                            assert [entry["input"] for entry in got["rows"]] == step["items"][:2], got
+                            assert [entry["index"] for entry in got["completed"]] == [0, 1], got
+                            assert [entry["input"] for entry in got["completed"]] == step["items"][:2], got
+                            assert got["requests_sent"] == got["records"] == 2, got
+                            assert got["stopped_at"] == 3, got
                         if value.get("identity_steps"):
                             identities.append(got)
                         if step.get("stored_answers") == 0:
