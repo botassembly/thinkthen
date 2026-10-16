@@ -291,6 +291,18 @@ def self_test(header):
         ('by-value', r'(?:struct )?thinkthen_complete_utf8_v1 surface', 'const thinkthen_complete_utf8_v1 *surface'),
     ]
     with tempfile.TemporaryDirectory(prefix='thinkthen-c-abi-plants-') as scratch:
+        # Clang emits kindless generic associations and empty for-loop children.
+        # The association's enum must remain visible through its kindless parent.
+        copied = Path(scratch) / 'thinkthen.h'
+        copied.write_text(text + '''
+static inline int abi_ast_children(void) {
+    for (;;) { break; }
+    return _Generic(0, int: sizeof(enum { THINKTHEN_AST_ASSOCIATION = 7 }), default: 0);
+}
+''')
+        expected = copy.deepcopy(native)
+        expected['constants']['THINKTHEN_AST_ASSOCIATION'] = 7
+        compare_abi(expected, header_abi(copied))
         for name, before, after in plants:
             pattern = re.escape(before) if name == 'return' else before
             changed, count = re.subn(pattern, lambda _: after, text, count=1)
