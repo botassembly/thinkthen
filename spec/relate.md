@@ -42,7 +42,7 @@ printf '%s' '[{"name":"gateway","kind":"service"},{"name":"billing","kind":"serv
     thinkthen relate calls=service:service --url https://api.typesafe.ai/v1 \
     --model local-1 --no-cache --details --replay "$root/spec/fixtures/relate-partial" \
     >"$out" 2>"$err" || status=$?
-printf '%s %s\n' "$status" "$(wc -c <"$out")" | mustmatch '5 0'
+printf '%s %s\n' "$status" "$(( $(wc -c <"$out") ))" | mustmatch '5 0'
 cat "$err" | mustmatch 'thinkthen: the relate request: the replay folder holds no answer for question `9be37885a59bf2e6b065016bf2fdf70d294220f1586dec3ed811fc9c04fe0b32`; the key is the SHA-256 of the adapter, address, model, shared state and question as sent'
 ```
 
