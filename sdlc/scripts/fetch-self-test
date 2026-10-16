@@ -13,7 +13,11 @@ cat >"$work/bin/curl" <<'EOF'
 n=$(($(cat "$FAKE_DIR/calls") + 1))
 echo "$n" >"$FAKE_DIR/calls"
 reply=$(sed -n "${n}p" "$FAKE_DIR/replies")
-while [ $# -gt 0 ]; do [ "$1" != -o ] || out=$2; shift; done
+while [ $# -gt 0 ]; do
+	[ "$1" != -o ] || out=$2
+	[ $# != 1 ] || printf '%s\n' "$1" >>"$FAKE_DIR/urls"
+	shift
+done
 printf 'partial' >"$out"
 printf '%s' "${reply#*:}"
 [ "${reply%%:*}" != 0 ] || printf 'whole' >"$out"
@@ -50,4 +54,28 @@ check 'lost DNS then success' '6:000 0:200' 0 2 '10 ' whole
 check 'connection reset then success' '56:200 0:200' 0 2 '10 ' whole
 check 'three 503s fail' '22:503 22:503 22:503' 1 3 '10 20 ' none
 check '502 then 403 fails' '22:502 22:403' 1 2 '10 ' none
+# Exercise the R bootstrap with fixture pins and no host installation. A current
+# CRAN release belongs in src/contrib, not its directory of older releases.
+mkdir -p "$work/repo/libraries/r/tools" "$work/repo/sdlc/scripts"
+cp "$repo/libraries/r/tools/setup.sh" "$work/repo/libraries/r/tools/"
+cp "$repo/sdlc/scripts/fetch.sh" "$work/repo/sdlc/scripts/"
+printf whole >"$work/payload"
+sum=$(sha256sum "$work/payload")
+printf '%s  current_1.0.tar.gz\n' "${sum%% *}" >"$work/repo/libraries/r/tools/pins.sha256"
+cat >"$work/bin/R" <<'EOF'
+#!/bin/sh
+printf '%s\n' "$*" >"$FAKE_DIR/install"
+EOF
+chmod +x "$work/bin/R"
+printf '0:200\n' >"$work/replies"
+echo 0 >"$work/calls"
+: >"$work/urls"
+HOME="$work/home" bash "$work/repo/libraries/r/tools/setup.sh"
+if [ "$(cat "$work/urls")" = https://cloud.r-project.org/src/contrib/current_1.0.tar.gz ] &&
+	[ "$(cat "$work/install")" = "CMD INSTALL -l $work/home/.cache/thinkthen-toolchains/r-library $work/home/.cache/thinkthen-toolchains/archives/current_1.0.tar.gz" ]; then
+	echo 'fetch self-test: pinned R current release passed'
+else
+	echo 'fetch self-test: pinned R current release failed' >&2
+	failed=1
+fi
 exit "$failed"

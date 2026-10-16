@@ -11,8 +11,7 @@ mkdir -p "$cache/archives" "$cache/r-library"
 grep -v '^#' "$here/pins.sha256" | while read -r sum name; do
   archive=$cache/archives/$name
   if [ ! -f "$archive" ]; then
-    package=${name%%_*}
-    fetch_url "$archive.part" "https://cloud.r-project.org/src/contrib/Archive/$package/$name"
+    fetch_url "$archive.part" "https://cloud.r-project.org/src/contrib/$name"
     mv "$archive.part" "$archive"
   fi
   echo "$sum  $archive" | sha256sum -c --quiet - || { echo "setup: $name does not match its pin; refused" >&2; rm -f "$archive"; exit 1; }
