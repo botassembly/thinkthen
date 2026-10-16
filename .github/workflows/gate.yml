@@ -336,6 +336,10 @@ jobs:
             libraries/rust/consumer/Cargo.toml libraries/r/thinkthen/src/rust/Cargo.toml; do
             cargo fetch --locked --manifest-path "$manifest"
           done
+          mkdir -p "$RELEASE_WORK/typescript"
+          cp libraries/typescript/package.json libraries/typescript/package-lock.json "$RELEASE_WORK/typescript/"
+          npm ci --no-audit --no-fund --prefix "$RELEASE_WORK/typescript"
+          printf '%s\n' "$RELEASE_WORK/typescript/node_modules/.bin" >> "$GITHUB_PATH"
           uv venv "$RELEASE_WORK/python"
           uv pip install --require-hashes --python "$RELEASE_WORK/python/bin/python" -r libraries/python/requirements-dev.txt
           . libraries/ruby/toolchain.env
