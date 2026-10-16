@@ -320,10 +320,11 @@ class RawClient(Client):
 
 def invoke(binary, backend, env, home, step, settings):
     command = [binary, 'mcp', '--url', settings['base_url']]
+    names = {'max_requests': 'max-requests-total', 'throttle': 'jobs'}
     for key, value in settings.items():
         if key in ('base_url', 'batch', 'threshold', 'proxy') or value is None:
             continue
-        option = '--' + key.replace('_', '-')
+        option = '--' + names.get(key, key.replace('_', '-'))
         if key == 'cache' and value is False:
             command.append('--no-cache')
         elif isinstance(value, bool):
@@ -417,6 +418,13 @@ def run(port, binary):
                         count = int(backend.read('count'))
                         assert got.get('requests_sent', count - before) == count - before, (got, count - before)
                         assertions(row, step, got, count - before if step.get('count_delta') else count)
+                        if row['id'] == 'settings-max-requests-refuses-past-the-limit':
+                            assert got['message'] == 'the process send budget was spent before another request in this call', got
+                            assert got['requests_sent'] == got['records'] == 2, got
+                            assert got['stopped_at'] == 3, got
+                            assert [r['index'] for r in got['completed']] == [0, 1], got
+                            assert [r['input'] for r in got['completed']] == step['items'][:2], got
+                            assert [(r['first_line'], r['last_line']) for r in got['completed']] == [(1, 1), (2, 2)], got
                         if row['kind'] in ('typed-result', 'result2'):
                             assertions({**row, 'kind': 'behavior'}, {**step, 'metadata_only': False}, got, count)
                         if value.get('identity_steps'):
