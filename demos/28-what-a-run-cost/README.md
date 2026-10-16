@@ -69,11 +69,13 @@ jq -n --argjson usd_per_million_input 0.042 -f ../../transforms/cost/cost.jq "$w
   | jq -c . \
   | mustmatch '{"rows":1,"no_usage":[],"charged":{"rows":0,"input_tokens":0,"output_tokens":0},"replayed":{"rows":1,"input_tokens":303,"output_tokens":21},"usd":0,"usd_per_million_input":0.042}'
 
-mkdir -p "$work/config/thinkthen"
+config="$work/config/thinkthen"
+[ "$(uname -s)" != Darwin ] || config="$work/home/Library/Application Support/thinkthen"
+mkdir -p "$config"
 printf '%s\n' '{"schema":"thinkthen.config/1","usd_per_million_input":"0.042","usd_per_million_output":"0.168"}' \
-  > "$work/config/thinkthen/config.json"
+  > "$config/config.json"
 printf '%s' "$(printf '%s' "$example" | jq -r '.body')" \
-  | XDG_CONFIG_HOME="$work/config" thinkthen decide "$question" --threshold 0.2:0.8 --details \
+  | HOME="$work/home" XDG_CONFIG_HOME="$work/config" thinkthen decide "$question" --threshold 0.2:0.8 --details \
       --replay ../../transforms/rows/recording/ --facts > "$work/priced.json" 2> "$work/priced.stderr"
 tail -n 1 "$work/priced.stderr" | jq -c '{requests_sent, estimated_cost_usd}' \
   | mustmatch '{"requests_sent":0,"estimated_cost_usd":"0.000000"}'
