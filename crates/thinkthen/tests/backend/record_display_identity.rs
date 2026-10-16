@@ -220,6 +220,7 @@ fn provider_context_remains_independent_from_display_neighbors() -> io::Result<(
 }
 
 #[cfg(unix)]
+#[cfg_attr(target_os = "macos", ignore = "macOS refuses invalid UTF-8 filenames; Linux CI runs this case")]
 #[test]
 fn invalid_utf8_paths_keep_access_and_lossy_display_and_neighbor_bytes() -> io::Result<()> {
     use crate::child::ChildEnvironment as _;

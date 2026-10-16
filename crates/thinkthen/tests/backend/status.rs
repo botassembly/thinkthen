@@ -180,7 +180,7 @@ fn status_counts_the_live_store_and_old_entries_without_writes() {
 fn a_retired_marker_is_ignored_and_a_disabled_cache_reports_off() {
     let (home, cache) = private_cache("marker-disabled").expect("private cache");
     let marker = cache.join(".thinkthen-backend.json");
-    let invalid = b"private invalid marker";
+    let invalid = b"marker-secret-c67a invalid marker";
     fs::write(&marker, invalid).expect("invalid marker");
     let config = Folder::Config.in_home(&home).join("config.json");
     fs::create_dir_all(config.parent().expect("config parent")).expect("config folder");
@@ -195,7 +195,7 @@ fn a_retired_marker_is_ignored_and_a_disabled_cache_reports_off() {
         assert_eq!(value["cache"]["enabled"], !disabled);
         assert_eq!(value["cache"]["entries"], 0);
         assert_eq!(value["cache"]["old_entries"], 0);
-        assert!(!value.to_string().contains("private"));
+        assert!(!value.to_string().contains("marker-secret-c67a"));
         assert_eq!(fs::read(&marker).expect("unchanged marker"), invalid);
     }
 }

@@ -1,8 +1,5 @@
-# The gate ladder, run only by hand from the Actions tab.
-#
-# Ian ruled on 2026-09-22 that no push or pull request starts this workflow.
-# The local sdlc/scripts ladder is the gate of record. The ruling is in
-# sdlc/issues/closed/2026-09-22-stop-github-actions-on-push.md.
+# The Linux gate runs on each push under the 2026-10-16 build placement ruling.
+# Publishing workflows remain manually dispatched and approved.
 #
 # No step here holds a secret, reads a key, or sets a THINKTHEN_ variable. A
 # live call to the paid backend never happens here. A live run is a job done by
@@ -16,6 +13,7 @@
 name: gate
 
 on:
+  push:
   workflow_dispatch:
 
 permissions:
@@ -91,7 +89,10 @@ jobs:
           if [ "$(cargo public-api --version 2>/dev/null || true)" != "cargo-public-api $(pin PUBLIC_API_VERSION)" ]; then
             cargo install --locked --force "cargo-public-api@$(pin PUBLIC_API_VERSION)"
           fi
-          python3 -m pip install --user --break-system-packages "PyYAML==$(pin PYYAML_VERSION)"
+          python3 -m pip install --user --break-system-packages "PyYAML==$(pin PYYAML_VERSION)" "jsonschema==4.23.0"
+
+      - name: Install the routine timeout runner
+        run: cargo install --locked cargo-nextest
 
       - name: Rung 0, install
         run: sdlc/scripts/install

@@ -299,6 +299,7 @@ fn release_only_source_rank_withholds_output_and_stops_before_the_invalid_tail_a
 }
 
 #[cfg(unix)]
+#[cfg_attr(target_os = "macos", ignore = "macOS refuses invalid UTF-8 filenames; Linux CI runs this case")]
 #[test]
 fn unrepresentable_folder_names_refuse_the_complete_manifest_without_sending() -> io::Result<()> {
     use std::ffi::OsString;

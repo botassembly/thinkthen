@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Every workflow starts on workflow_dispatch and runs reviewed code (0128, 0398).
+"""Workflows run reviewed code; the Linux gate also starts on push (0589).
 
 Only release.yml publish dispatches another workflow, install-check.yml.
 
-Ian ruled that no push starts a workflow and that releases publish only through a
+Ian ruled that the Linux gate runs on every push; releases publish only through a
 run he starts and approves. PyYAML's safe loader reads each workflow, and each
 broken rule prints one line. The rules sit beside the code that checks them, and
 ticket 0128's "The workflow check" table lists them.
@@ -110,7 +110,7 @@ def every(name, doc, text):
     triggers = doc.get("on", doc.get(True))
     triggers = [triggers] if isinstance(triggers, str) else list(triggers or [])
     for trigger in triggers:
-        if trigger != "workflow_dispatch":
+        if trigger != "workflow_dispatch" and not (name == "gate.yml" and trigger == "push"):
             out.append(f"{name}: starts on `{trigger}`; only workflow_dispatch may start a workflow")
     for job, _, step in steps(doc):
         uses = step.get("uses")

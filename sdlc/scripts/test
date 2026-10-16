@@ -70,4 +70,6 @@ demos/16-triage-pipeline/self-test
 
 if [ "$(uname -s)" = Linux ]; then
     sdlc/live-test
+else
+    echo "test: skip Linux live-ledger process checks on macOS; Linux CI runs sdlc/live-test"
 fi

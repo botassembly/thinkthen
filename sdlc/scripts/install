@@ -2,7 +2,7 @@
 # Rung 0: the tools the other rungs need, then the dependency closure.
 set -eu
 
-# One heavy rung at a time on this machine. See heavy-lock.
+# Preserve explicit exclusion for shared mutations. See heavy-lock.
 . "$(dirname -- "$0")/heavy-lock"
 
 REPO=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
@@ -32,6 +32,7 @@ python3 -c 'import runpy; runpy.run_path("'"$REPO"'/sdlc/scripts/generate-c-head
 # crate builds or runs imports it.
 if ! python3 -c 'from jsonschema import Draft202012Validator' >/dev/null 2>&1; then
 	printf '%s\n' 'install: the python3 module jsonschema (Draft 2020-12) is not importable, and rung 2 runs the question-file schema self-test' >&2
+	printf '%s\n' 'install: install jsonschema==4.23.0 in the Python environment on PATH' >&2
 	exit 1
 fi
 

@@ -11,9 +11,9 @@ Tickets and the notes that drive work on thinkthen. Tickets exist to drive the c
 | surfaces.txt | The nine surfaces and their state. `sdlc/scripts/surfaces` reads it |
 | ratchet.json | The source size ceiling. `sdlc/scripts/lint` reads it |
 
-The heavy rungs `install`, `test`, `spec`, and `surfaces` honor `THINKTHEN_HEAVY_LOCK`. Ian authorizes independent builds to overlap when host load, available memory and I/O permit. Give each lane its own lock, such as `/run/user/1000/thinkthen-codex-2.lock` on Linux or `/tmp/thinkthen-codex-3.lock` on M5, and keep build output in separate worktrees. The scripts' fallback `${XDG_RUNTIME_DIR:-/tmp}/thinkthen-heavy.lock` is not a machine-wide scheduling requirement. Retain exclusive access to genuinely shared mutable toolchain installations or the same build output.
+Run every build and check on M5 through `pm job run --machine m5 NNNN SHA --disk GIB --memory GIB -- COMMAND` at a pushed commit. The job owns its worktree and output, reserves disk and memory, and limits concurrent builds. The Beelink runs agents and lightweight scripts only.
 
-Inspect capacity before substantial work; the [capacity ruling](decisions/2026-10-08-preserve-planning-rulings.md#build-capacity) gives the starting guide. Reduce compiler jobs or defer a new heavy step when the host is under pressure. A direct Linux command using a lane lock runs as `flock -o "$THINKTHEN_HEAVY_LOCK" <command>`. Without `-o`, a background `sccache` server can inherit and retain that lock. Rungs already under their own lock skip reacquiring it. M5 uses Python `fcntl` when locking is needed because `flock` is absent.
+The heavy rungs preserve an explicit `THINKTHEN_HEAVY_LOCK` for genuinely shared toolchain installations or output mutations. The Python parent holds this optional lock on Linux and macOS, so a child daemon cannot keep it after the rung ends. Independent jobs need no extra lane lock.
 
 A ticket needs an Outcome and a Proof. Add other notes only when they help the builder.
 
