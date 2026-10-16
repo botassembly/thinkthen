@@ -237,11 +237,11 @@ def native_values(definitions):
         body = []
         if key in target.arms:
             body += ['switch(value.kind) {']
-            for arm, _, _, _ in target.arms[key]:
+            for arm, _, field_type, _ in target.arms[key]:
                 symbol = key.removesuffix('_v1').upper() + '_' + arm.upper() + '_V1'
                 field = arm + '_' if arm in ('true', 'false') else arm
                 expression = 'Data(nullptr)' if arm == 'null' else f'native_value(value.data.{field})'
-                if arm == 'boolean': expression = f'Data(bool(value.data.{field}))'
+                if field_type == 'u32' and arm != 'null': expression = f'Data(bool(value.data.{field}))'
                 body += [f'case {symbol}: return {expression};']
             body += ['default: throw std::invalid_argument("invalid native alternative"); }']
         elif 'enum' in schema:

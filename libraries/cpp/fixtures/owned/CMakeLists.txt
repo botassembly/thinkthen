@@ -23,3 +23,7 @@ foreach(source ${example_sources})
  target_compile_options(example_${function} PRIVATE -fsanitize=address -fno-omit-frame-pointer)
  target_link_options(example_${function} PRIVATE -fsanitize=address)
 endforeach()
+
+add_executable(schema_projection ../schema_projection.cpp)
+target_link_libraries(schema_projection PRIVATE ${native_target})
+target_compile_options(schema_projection PRIVATE -Wall -Wextra -Werror)
