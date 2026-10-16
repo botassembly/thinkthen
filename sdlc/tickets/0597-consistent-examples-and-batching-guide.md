@@ -48,7 +48,8 @@ Every library, database and data-frame page shows the same short example in Ian'
 ## Scope
 
 - Changes: `libraries/*/README.md`, `libraries/*/README-PUBLIC.md`, `libraries/*/examples.json`, `databases/*/README.md`, `databases/*/README-PUBLIC.md`, `site/src/pages/learn/` and its data files, and the saved-answer fixtures the examples replay. The owner narrows this before work starts.
-- Owner: the 0.2.1 docs work. Under the milestones plan the docs team owns 0.2.1, not the 0.2 team. Package pages reach the registries with the next package release.
+- Owner: the 0.2.1 docs work. Under the milestones plan the docs team owns 0.2.1, not the 0.2 team.
+- Ian, 2026-10-16: these documentation updates need no release bump. They update the website and the GitHub repository on their own, before 0.3 work begins in earnest. Registry package pages keep the 0.2 text until the next package release.
 - Keeps: the approved prose, except sentences that describe a changed example; every API as 0.2 ships it.
 
 ## Proof
