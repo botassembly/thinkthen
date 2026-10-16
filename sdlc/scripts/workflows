@@ -1148,6 +1148,8 @@ def self_test():
     if archive.returncode != 0:
         bad += 1
         print(f"workflows self-test archived release: {archive.stdout}{archive.stderr}", file=sys.stderr)
+    elif archive.stdout.strip():
+        print(archive.stdout.strip())
     language = subprocess.run([sys.executable, str(REPO / "sdlc/scripts/release-language-tools-self-test.py")],
                               capture_output=True, text=True)
     if language.returncode != 0:
@@ -1165,7 +1167,8 @@ def self_test():
         print(f"workflows self-test Windows command: {windows.stdout}{windows.stderr}", file=sys.stderr)
     for fixture in ("windows-installer-integration-self-test.py", "install-check-workflow-self-test.py", "install-check-self-test.py",
                     "install-check-postgresql-self-test.py", "install-check-r-binary-test.py", "release-windows-c-self-test.py"):
-        result = subprocess.run([sys.executable, str(REPO / "sdlc/scripts" / fixture)],
+        options = ["-v"] if fixture == "install-check-postgresql-self-test.py" else []
+        result = subprocess.run([sys.executable, str(REPO / "sdlc/scripts" / fixture), *options],
                                 capture_output=True, text=True)
         if result.returncode != 0:
             bad += 1
