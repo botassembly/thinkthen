@@ -17,6 +17,7 @@ import sys
 import tempfile
 import tomllib
 import xml.etree.ElementTree as ET
+from unittest.mock import patch
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
 CRATES_IO = "registry+https://github.com/rust-lang/crates.io-index"
@@ -992,7 +993,7 @@ def check_bindings() -> None:
     if "../tests/examples.rs" not in binding_files(BINDING_PLANT_BASE, f"{BINDING_PLANT_BASE}/src"):
         fail("binding", "Rust files outside the crate folder go unread")
     base = binding_files(BINDING_PLANT_BASE, BINDING_PLANT_BASE)
-    with tempfile.TemporaryDirectory() as scratch:
+    with tempfile.TemporaryDirectory(prefix="policy source ", suffix=" ") as scratch:
         folder = pathlib.Path(scratch)
         authored = {"src/planted.rs", "tests/planted.rs", "src/ffi.rs", "build/authored.rs"}
         outputs = {f"{output}/nested/out/bindgen.rs" for output in SOURCE_OUTPUT_FOLDERS}
@@ -1016,6 +1017,14 @@ def check_bindings() -> None:
                     for relative in authored if relative != "src/ffi.rs"}
         if set(unsafe) != expected:
             fail("binding", "indexed authored unsafe is refused while the FFI module remains allowed")
+        # Git's process environment must not redirect a named checkout to another index.
+        with tempfile.TemporaryDirectory() as unrelated:
+            subprocess.run(["git", "init", "-q", unrelated], check=True)
+            with patch.dict("os.environ", {"GIT_DIR": str(pathlib.Path(unrelated) / ".git"),
+                                           "GIT_WORK_TREE": unrelated,
+                                           "GIT_INDEX_FILE": str(pathlib.Path(unrelated) / "empty-index")}):
+                if set(binding_files(scratch, scratch)) != authored:
+                    fail("binding", "the named checkout's index wins over inherited Git locations")
     c_files = binding_files("libraries/c", "libraries/c")
     generated_ffi = {path.removeprefix("libraries/c/"): "unsafe fn planted() {}\n"
                      for path in GENERATED_BINDING_SOURCES if path.startswith("libraries/c/src/ffi/")}
