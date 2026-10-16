@@ -27,6 +27,7 @@ For each item below, the 0.3 team does one of two things. It either documents th
 ### 2. A session holds unread answers in memory
 
 - Issue: ticket 0598 makes a push never wait on unread answers. The session keeps finished answers in order until the caller reads them, so memory grows with what is unread. Progress messages share that queue and are held too. Release QA for 0.2 measures 100,000 records pushed before any read.
+- Measured at 0.2 release QA on the C++ session, 100,000 small records with two observation packets each: the process rose from 147,588 KiB at call start to 826,220 KiB with every answer parked before reading, and stood at 918,692 KiB at feed completion with a reader running alongside. Both stayed under the 1 GiB gate. A caller that collects every packet and copies it, as the QA fixture did, peaked near 3 to 4 GiB.
 - Right way today: read answers while feeding, or use the library's iterator or stream call, which feeds and reads for you.
 - Options to investigate: a configurable cap that turns into a clear "read answers first" error instead of growth; spilling held answers to the cache folder; dropping held progress messages; making the iterator call the only documented front door (0599 item 12).
 - Ideal: unread answers cost a small, bounded amount, and a caller who exceeds it gets a plain message that names the fix.
