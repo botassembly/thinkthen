@@ -10,6 +10,7 @@ from native_assets import development, tracked_files
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[3] / 'conformance/children'))
 from native_guard import distribution_bytes
+from children import child_env
 
 root = Path(__file__).resolve().parents[1]
 blocked = re.compile(r'(?:/home/|/Users/)|PRIVATE_PATH_MARKER|PRIVATE_KEY_MARKER|sk-private-[A-Za-z0-9]+')
@@ -42,20 +43,20 @@ with tempfile.TemporaryDirectory() as directory:
             raise SystemExit(f'PRIVATE_PLANT_NOT_REFUSED {marker}')
     fixture = Path(directory) / 'checkout/libraries/dart'
     fixture.mkdir(parents=True)
-    subprocess.run(['git', 'init', '-q', str(fixture.parents[1])], check=True)
+    subprocess.run(['git', 'init', '-q', str(fixture.parents[1])], check=True, env=child_env())
     for relative in ('pubspec.yaml', 'flutter/pubspec.yaml', 'flutter/example/pubspec.yaml',
                      'checks/session_consumer/pubspec.yaml', 'lib/target/pubspec.yaml'):
         authored = fixture / relative
         authored.parent.mkdir(parents=True, exist_ok=True)
         authored.write_text('name: fixture\n')
-        subprocess.run(['git', '-C', str(fixture), 'add', relative], check=True)
+        subprocess.run(['git', '-C', str(fixture), 'add', relative], check=True, env=child_env())
         authored.write_text('PRIVATE_KEY_MARKER')
         if str(authored) not in check(sources(fixture)):
             raise SystemExit('PRIVATE_TRACKED_SOURCE_PLANT_NOT_REFUSED')
         authored.write_text('name: fixture\n')
     definition = fixture / 'native-assets.json'
     definition.write_bytes((root / 'native-assets.json').read_bytes())
-    subprocess.run(['git', '-C', str(fixture), 'add', 'native-assets.json'], check=True)
+    subprocess.run(['git', '-C', str(fixture), 'add', 'native-assets.json'], check=True, env=child_env())
     for output in ('target/core-wave', 'target/core-wave-flutter', 'flutter/build', '.dart_tool', 'cache', 'untracked'):
         generated = fixture / output / 'pubspec.yaml'
         generated.parent.mkdir(parents=True, exist_ok=True)
