@@ -8,6 +8,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { parseSettings, plain, SURFACES, ABSENT, LEFT_OUT } from '../src/lib/settings-table.mjs';
+import { trackedFiles } from './binding-samples.mjs';
 import { backends } from '../src/lib/backends-table.mjs';
 
 const site = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
@@ -87,7 +88,7 @@ const walk = (dir) => fs.readdirSync(dir, { withFileTypes: true }).flatMap((e) =
   const p = path.join(dir, e.name);
   return e.isDirectory() ? walk(p) : [p];
 });
-for (const file of walk(src).filter((f) => /\.(astro|mjs|md)$/.test(f) && !f.endsWith('settings-table.mjs'))) {
+for (const file of trackedFiles(src).filter((f) => /\.(astro|mjs|md)$/.test(f) && !f.endsWith('settings-table.mjs'))) {
   const lines = fs.readFileSync(file, 'utf8').split('\n');
   lines.forEach((line, i) => {
     for (const m of line.matchAll(TYPED)) {

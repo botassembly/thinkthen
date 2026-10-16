@@ -11,7 +11,7 @@ import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { buildLines } from '../src/data/build-lines.mjs';
 import { BACKEND_ROUTES } from '../src/data/catalog.mjs';
-import { readReplayList, replayLine, fixtureLines, leakedVariables, sampleSurface, sampleFiles, compile } from './binding-samples.mjs';
+import { readReplayList, replayLine, fixtureLines, leakedVariables, sampleSurface, sampleFiles, compile, trackedFiles } from './binding-samples.mjs';
 
 const site = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
 const repo = path.resolve(site, '..');
@@ -41,17 +41,16 @@ fs.mkdirSync(home);
 
 // The C door, laid out as an install would. A build takes minutes, so the
 // runner keeps one per checkout under ~/.cache/thinkthen-site/c-door/, named
-// by a digest of every tracked or new file the native build reads, the Rust
+// by a digest of every tracked file the native build reads, the Rust
 // compiler and the build flags. Any change to them builds a fresh door and
 // drops that checkout's old one; an unchanged tree reuses its door.
 let door = null;
 const DOOR_INPUTS = ['crates', 'libraries/c', 'specification', 'Cargo.lock', 'Cargo.toml', 'rust-toolchain.toml', 'sdlc/scripts/installed.sh', 'sdlc/scripts/scratch.sh'];
 function doorDigest() {
-  const files = run('git', ['ls-files', '-co', '--exclude-standard', '-z', '--', ...DOOR_INPUTS], { cwd: repo });
-  if (files.status !== 0) throw new Error(`git ls-files failed\n${files.stderr}`);
   const hash = createHash('sha256');
-  for (const file of files.stdout.split('\0').filter(Boolean).sort()) {
-    const full = path.join(repo, file);
+  for (const full of trackedFiles(repo)) {
+    const file = path.relative(repo, full).split(path.sep).join('/');
+    if (!DOOR_INPUTS.some((input) => file === input || file.startsWith(`${input}/`))) continue;
     if (fs.existsSync(full)) hash.update(`${file}\0`).update(fs.readFileSync(full)).update('\0');
   }
   hash.update(run('rustc', ['-vV'], { cwd: repo }).stdout);

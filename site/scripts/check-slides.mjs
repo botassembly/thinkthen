@@ -14,8 +14,8 @@
 // The Pages build cannot read the private deck. When DECK names the deck
 // folder, as the deck's own build.sh does, the check also fails when the
 // deck's slides/, order.txt or PDF in its working tree differ from deck-pin.
-// Slides rendered and not yet committed fail too, until the slides are
-// exported again from a pinned commit.
+// Staged slides fail too, until the slides are exported again from a
+// pinned commit.
 //
 // A blog article's card can come from the social deck instead.
 // src/data/social-cards.json records each such card's slide and SHA-256,
@@ -24,6 +24,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
+import { trackedFiles } from './binding-samples.mjs';
 import { execFileSync } from 'node:child_process';
 
 const site = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
@@ -41,8 +42,7 @@ if (manifest.deck !== deckPin) {
 if (process.env.DECK) {
   const paths = ['slides', 'order.txt', '*.pdf'];
   const git = (...args) => execFileSync('git', ['-C', process.env.DECK, ...args], { encoding: 'utf8' }).trim();
-  const changed = [git('diff', '--name-only', deckPin, '--', ...paths),
-    git('ls-files', '--others', '--exclude-standard', '--', ...paths)].filter(Boolean).join('\n');
+  const changed = git('diff', '--name-only', deckPin, '--', ...paths);
   if (changed) {
     problems.push(`the deck changed after deck-pin ${deckPin.slice(0, 8)}: ${changed.split('\n').length} files under slides/, order.txt or the PDF`);
   }
@@ -59,7 +59,8 @@ for (const [page, entry] of Object.entries(social)) {
 }
 // Each folder holds one image per page, recorded under `field`.
 function images(folder, ext, field, skip = () => false) {
-  const found = fs.readdirSync(folder).filter((n) => n.endsWith(ext)).map((n) => n.slice(0, -ext.length))
+  const found = trackedFiles(folder).filter((file) => path.dirname(file) === folder && file.endsWith(ext))
+    .map((file) => path.basename(file, ext))
     .filter((n) => !(field === 'card' && social[n]));
   const where = path.relative(site, folder);
   for (const page of found) {
