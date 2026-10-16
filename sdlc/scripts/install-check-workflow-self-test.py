@@ -3,6 +3,7 @@
 import copy
 from pathlib import Path
 import runpy
+import subprocess
 import sys
 import tempfile
 import yaml
@@ -100,6 +101,8 @@ def main():
         with tempfile.TemporaryDirectory(prefix='thinkthen-workflow-plant-') as own:
             folder = Path(own)
             for filename, doc in docs.items(): (folder / filename).write_text(yaml.safe_dump(doc))
+            subprocess.run(['git', 'init', '-q', str(folder)], check=True)
+            subprocess.run(['git', '-C', str(folder), 'add', '.'], check=True)
             got = workflow_guard(folder)
         if got != expected:
             failures += 1

@@ -1,6 +1,10 @@
 #!/usr/bin/env node
 import { execFileSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
+import { readFileSync, mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { childEnv } from '../../conformance/children/children.mjs';
 import { namedAnswerProblems } from '../../site/scripts/named-answers.mjs';
 
 const folders = ['demos', 'specification', 'spec', 'libraries', 'databases'];
@@ -84,12 +88,12 @@ function pages() {
   const script = [
     'import os, sys',
     'from pathlib import Path',
-    'sys.path.insert(0, "sdlc/generators/results")',
+    'sys.path.insert(0, sys.argv[1])',
     'from sources import tracked_files',
     'root = Path.cwd()',
     'sys.stdout.buffer.write(b"\\0".join(os.fsencode(path.relative_to(root)) for path in tracked_files(root)))',
   ].join('\n');
-  return execFileSync('python3', ['-c', script], { encoding: 'utf8' })
+  return execFileSync('python3', ['-c', script, fileURLToPath(new URL('../generators/results', import.meta.url))], { encoding: 'utf8' })
     .split('\0').filter((path) => path.endsWith('.md') && folders.some((folder) => path.startsWith(`${folder}/`)))
     .map((path) => [path, readFileSync(path, 'utf8')]);
 }
@@ -153,6 +157,35 @@ function check(entries) {
 function selfTest() {
   const real = pages();
   const before = check(real).lines;
+  const fixture = mkdtempSync(join(tmpdir(), 'named-answers-'));
+  try {
+    const nested = join(fixture, 'checkout', 'nested');
+    const foreign = join(fixture, 'foreign');
+    const env = childEnv({ home: fixture });
+    mkdirSync(nested, { recursive: true });
+    for (const root of [join(fixture, 'checkout'), foreign]) {
+      mkdirSync(root, { recursive: true });
+      execFileSync('git', ['init', '-q'], { cwd: root, env });
+    }
+    // Exercise a subdirectory of the checkout, not its top-level directory.
+    const page = join(nested, 'demos', 'target', 'README.md');
+    mkdirSync(join(nested, 'demos', 'target'), { recursive: true });
+    writeFileSync(page, '```python\nresult = tt.decide(question, message)\n```\n');
+    const options = { cwd: nested, env: { ...env,
+      GIT_DIR: join(foreign, '.git'), GIT_WORK_TREE: foreign,
+      GIT_COMMON_DIR: join(foreign, '.git'), GIT_INDEX_FILE: join(foreign, '.git', 'index') },
+      encoding: 'utf8', stdio: 'pipe' };
+    const command = fileURLToPath(import.meta.url);
+    execFileSync(process.execPath, [command], options);
+    execFileSync('git', ['add', '.'], { cwd: nested, env });
+    let refused = false;
+    try { execFileSync(process.execPath, [command], options); }
+    catch (error) { refused = error.status === 1 && error.stderr.includes('demos/target/README.md:2: generic:'); }
+    if (!refused) throw new Error('staged source page escaped the checkout scan');
+  } finally {
+    rmSync(fixture, { recursive: true, force: true });
+  }
+
   const plants = [
     ['demos', 'bash', "if thinkthen decide 'Q?' --quiet < m.txt; then echo yes; fi", 'direct'],
     ['specification', 'sh', "thinkthen decide 'Q?' --quiet < m.txt\ncase $? in", 'bare-exit'],
