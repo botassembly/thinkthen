@@ -7,6 +7,7 @@ import tempfile
 from pathlib import Path
 
 from harness import Backend, REPO_ROOT, case, expect, main, rows, run, said
+from receipt_adapter import row_observations
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "sqlite" / "tests"))
 from conditional_backend import ConditionalBackend
@@ -227,7 +228,10 @@ def native_query(verb, question, descriptor, settings=None):
 def receipt(result):
     actual = rows(result)
     assert actual, result
-    ordinal, completed, facts, failure, observations = next((row for row in actual if row[3] is not None),actual[0])
+    ordinal, completed, facts, failure, _ = next((row for row in actual if row[3] is not None),actual[0])
+    observations = row_observations([
+        {'ordinal':row[0], 'failure':row[3], 'observations':row[4]} for row in actual
+    ], 'decide')
     return {'facts': facts, 'failure': failure, 'observations': observations,
             'completed': [row[1] for row in actual if row[1] is not None],
             'ordinals': [row[0] for row in actual if row[1] is not None]}
