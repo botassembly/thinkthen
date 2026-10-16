@@ -203,6 +203,78 @@ def portable(root):
         unrelated.wait(timeout=5)
 
 
+def sdk_project_locations(root):
+    """Exercise consumer orchestration with tool doubles that enforce project locations."""
+    import json
+    import urllib.request
+    from install_check import Check
+    from install_check_channels import nuget
+
+    version = '0.2.0'
+    registry = root / 'registry'
+    (registry / 'maven').mkdir(parents=True)
+    (registry / 'maven/thinkthen-jvm-0.2.0.pom').write_text(
+        '<project><version>0.2.0</version><properties><thinkthen.session.jdk>22</thinkthen.session.jdk>'
+        '<thinkthen.kotlin.coroutines.version>1.10.2</thinkthen.kotlin.coroutines.version></properties></project>')
+    built = []
+
+    def tool(command, project, env):
+        args = list(map(str, command))
+        if args[0] == 'dotnet':
+            if args[1] == 'new':
+                # dotnet new defaults to a subdirectory when --name differs from cwd.
+                output = args[args.index('--output') + 1] if '--output' in args else 'InstallCheck'
+                destination = project / output
+                destination.mkdir(exist_ok=True)
+                (destination / 'InstallCheck.csproj').write_text('<Project/>')
+            elif args[1] in ('add', 'build'):
+                assert (project / 'InstallCheck.csproj').is_file(), 'SDK_PROJECT_OUTSIDE_WORKING_DIRECTORY'
+                if args[1] == 'add':
+                    (project / 'obj').mkdir()
+                    (project / 'obj/project.assets.json').write_text(json.dumps(
+                        {'libraries': {'Botassembly.ThinkThen/' + version: {}}}))
+                else:
+                    assert (project / 'Program.cs').read_text() in (SDK.live_source('csharp'), SDK.SOURCES['csharp'])
+                    binary = project / 'bin/Debug/net8.0/InstallCheck.dll'
+                    binary.parent.mkdir(parents=True)
+                    binary.touch()
+                    built.append(binary)
+            else:
+                assert Path(args[1]) in built and Path(args[1]).is_file(), 'SDK_EXECUTES_UNBUILT_PROJECT'
+        elif 'install' in args:
+            metadata = project / 'node_modules/thinkthen/package.json'
+            metadata.parent.mkdir(parents=True)
+            metadata.write_text(json.dumps({'version': version}))
+        elif 'dependency:copy-dependencies' in args:
+            assert (project / 'pom.xml').is_file()
+            (project / 'dependencies').mkdir()
+            (project / 'dependencies/thinkthen.jar').touch()
+        if args[-1].endswith('sample'):
+            language = Path(args[-1]).parent.name
+            if language == 'jvm':
+                language = {'InstallCheck': 'java', 'InstallKotlinKt': 'kotlin', 'InstallScala': 'scala'}[args[-2]]
+            elif language == 'node':
+                assert Path(args[1]).is_file()
+            body = {'model': 'jev-1.13.0', 'questions': {'q1': {'type': 'noul',
+                'instructions': f'The text is "consumer-{language}". Is it?'}},
+                'state': 'Each question quotes the text it asks about.'}
+            with urllib.request.urlopen(urllib.request.Request(env['THINKTHEN_BASE_URL'],
+                    data=json.dumps(body).encode(), headers={'Content-Type': 'application/json'})) as response:
+                assert response.status == 200
+            return '{"value":true,"requests_sent":1}'
+        return ''
+
+    work = root / 'sdk'; work.mkdir()
+    with mock.patch.object(SDK, 'run', side_effect=tool), mock.patch.object(SDK, 'sdk', return_value=root):
+        SDK.consume(root / 'npm', registry, work)
+    (root / 'channel').mkdir()
+    check = Check(root / 'channel', 'nuget', version)
+    check.run = lambda *args: tool(args, check.project, check.env)
+    check.response = lambda *args: {'value': Path(args[1]) in built, 'requests_sent': 0}
+    installed, reply, _ = nuget(check)
+    assert installed == version and reply == {'value': True, 'requests_sent': 0}
+
+
 def windows_source_oracles():
     native = load('release-owned-job')
     events = []
@@ -294,6 +366,7 @@ def windows_source_oracles():
 def main():
     with tempfile.TemporaryDirectory(prefix='thinkthen-release-timeout-') as temporary:
         portable(Path(temporary))
+        sdk_project_locations(Path(temporary))
     windows_source_oracles()
     posix = 'POSIX inherited-output/owned cleanup passed' if os.name == 'posix' else 'POSIX cleanup execution skipped'
     print(f'Release process lifecycle: byte/success/nonzero/filled-output passed; {posix}; Windows source oracles passed, native Windows full proof pending')
