@@ -224,6 +224,8 @@ Reviews: revision 5a94565, accept
 
 Reviews: revision 97d5e71, accept
 
+Reviews: revision 239d8ff, accept
+
 ## Outcome
 
 One reviewed commit on `ticket/0543-final`, tagged `rc/0.2.0-rc.13` or a later candidate number, passes the local release suite, the coverage comparison and the nonpublishing hosted runs on Linux, macOS and Windows, and publishes nothing.
