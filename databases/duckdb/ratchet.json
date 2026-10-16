@@ -4,6 +4,6 @@
     "bridge/src"
   ],
   "extension": ".rs",
-  "max": 5644,
+  "max": 5636,
   "scope": "handwritten-production"
 }
