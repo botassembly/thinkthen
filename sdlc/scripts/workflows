@@ -590,7 +590,7 @@ esac
         sqlite_python = root / "openssl3/bin/python3.14"
         sqlite_python.write_text('#!/bin/sh\necho sqlite-python-check >> "$FAKE_LOG"\n')
         sqlite_python.chmod(0o755)
-        for name in ("rustc", "rustup", "cargo", "maturin", "npm", "uv", "uname", "sh", "xcrun", "brew", "shasum", "mktemp",
+        for name in ("rustc", "rustup", "cargo", "maturin", "npm", "uv", "uname", "sh", "xcrun", "brew", "shasum", "sha256sum", "mktemp",
                      "python3", "python3.12", "python3.13", "python3.14", "bash"):
             (bin_dir / name).symlink_to(route.name)
         (root / "pinned").mkdir()
