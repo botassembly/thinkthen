@@ -63,8 +63,13 @@ def production(path, manifest):
 def tracked_files(root):
     """List indexed files under a checkout directory, including staged additions."""
     root = FilePath(root).resolve()
+    # Callers name a checkout directory, never an inherited Git location or index.
+    env = {name: value for name, value in os.environ.items()
+           if name not in {'GIT_DIR', 'GIT_WORK_TREE', 'GIT_COMMON_DIR', 'GIT_INDEX_FILE'}}
     top = FilePath(subprocess.check_output(
-        ['git', '-C', str(root), 'rev-parse', '--show-toplevel'], text=True).strip())
+        ['git', '-C', str(root), 'rev-parse', '--show-toplevel'], env=env
+    ).decode(errors='surrogateescape').removesuffix('\n'))
+    root.relative_to(top)
     names = subprocess.check_output(
-        ['git', '-C', str(root), 'ls-files', '-z', '--full-name', '--', '.'])
+        ['git', '-C', str(root), 'ls-files', '-z', '--full-name', '--', '.'], env=env)
     return sorted({top / os.fsdecode(name) for name in names.split(b'\0') if name})
