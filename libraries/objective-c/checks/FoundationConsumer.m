@@ -132,8 +132,12 @@ int main(int argc, const char *argv[]) {
             require([row.input.value isEqual:schemaInput.value]);
             TTQuestionDocumentDecide *document = (TTQuestionDocumentDecide *)row.question.value;
             TTDeclarationObjectRootBuilder *declaration = (TTDeclarationObjectRootBuilder *)document.itemSchema.value;
-            require([declaration.rawFields isEqual:schemaDefinition.itemSchema]);
-            require([declaration.properties.value[@"enabled"] isKindOfClass:TTPropertyTypeBooleanBuilder.class]);
+            require([declaration.type.value isEqual:@"object"] && declaration.properties.value.count == 4);
+            TTPropertyTypeBooleanBuilder *boolean = (TTPropertyTypeBooleanBuilder *)declaration.properties.value[@"enabled"];
+            require([boolean isKindOfClass:TTPropertyTypeBooleanBuilder.class] && [boolean.type.value isEqual:@"boolean"]);
+            require([((TTPropertyTypeStringBuilder *)declaration.properties.value[@"name"]).type.value isEqual:@"string"]);
+            require([((TTPropertyTypeNumberBuilder *)declaration.properties.value[@"count"]).type.value isEqual:@"number"]);
+            require([((TTPropertyTypeArrayBuilder *)declaration.properties.value[@"labels"]).type.value isEqual:@"array"]);
         }
         client = nil;
         for (NSUInteger index = 0; index < authoredCalls.count; index++) {
