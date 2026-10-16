@@ -5,6 +5,8 @@ from pathlib import Path
 from jsonschema import Draft202012Validator
 
 ROOT = Path(__file__).resolve().parents[3]
+sys.path.insert(0, str(ROOT / 'databases/duckdb/tools'))
+from receipt_adapter import row_observations
 SCHEMA = json.loads((ROOT / 'crates/thinkthen/src/public/results/complete.schema.json').read_text())
 DEFINITIONS = SCHEMA['$defs']
 sys.path.insert(0, str(ROOT / 'sdlc/generators/results/templates'))
@@ -113,7 +115,7 @@ def native(rows, verb):
         values = [{**retained, 'value': [value['value'][0] for value in values]}]
     facts = next((decode(row['facts'], DEFINITIONS['completeFacts']) for row in rows if row['facts'] is not None), None)
     failure = next((decode(row['failure'], DEFINITIONS['completeError']) for row in rows if row['failure'] is not None), None)
-    raw_events = list({json.dumps(event, sort_keys=True): event for row in rows for event in row.get('observations', [])}.values())
+    raw_events = row_observations(rows, verb)
     events = [decode(event, SQL_DEFINITIONS['completesessionObservation'], SQL_DEFINITIONS) for event in raw_events]
     observations = []
     for raw_event, event in zip(raw_events, events):

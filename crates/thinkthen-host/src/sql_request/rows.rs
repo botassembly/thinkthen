@@ -30,34 +30,20 @@ pub(super) fn complete(
                 .flatten()
             {
                 let mut edge_result = result.clone();
-                edge_result["value"] = json!([edge]);
-                let call_observations = if rows.is_empty() { observations } else { &[] };
+                if let Some(value) = edge_result.get_mut("value") {
+                    *value = json!([edge]);
+                }
                 rows.push(
                     json!({"ordinal":rows.len(),"value":edge,"probability":edge.get("probability"),
-                    "result":edge_result,"failure":null,"facts":facts,"observations":call_observations}),
+                    "result":edge_result,"failure":null,"facts":facts,"observations":[]}),
                 );
             }
         } else {
-            let (mut value, probability) = project_value(function, &result);
-            if function == F::Decide {
-                value = observations
-                    .iter()
-                    .find(|event| {
-                        event.get("kind").and_then(Value::as_str) == Some("row")
-                            && event.get("index") == result.get("index")
-                    })
-                    .and_then(|event| event.get("value"))
-                    .cloned()
-                    .unwrap_or(value);
-            }
-            let call_observations = if function == F::Rank && ordinal != json!(0) {
-                &[]
-            } else {
-                observations
-            };
+            let (value, probability) = project_value(function, &result);
+            let value = observed_decision(function, &result, observations).unwrap_or(value);
             rows.push(
                 json!({"ordinal":ordinal,"value":value,"probability":probability,
-                "result":result,"failure":null,"facts":facts,"observations":call_observations}),
+                "result":result,"failure":null,"facts":facts,"observations":[]}),
             );
         }
     }
@@ -65,6 +51,20 @@ pub(super) fn complete(
         rows.sort_by_key(|row| row.get("ordinal").and_then(Value::as_u64));
     }
     rows
+}
+
+fn observed_decision(function: F, result: &Value, observations: &[Value]) -> Option<Value> {
+    if function != F::Decide {
+        return None;
+    }
+    observations
+        .iter()
+        .find(|event| {
+            event.get("kind").and_then(Value::as_str) == Some("row")
+                && event.get("index") == result.get("index")
+        })
+        .and_then(|event| event.get("value"))
+        .cloned()
 }
 
 pub(super) fn failed(
@@ -83,8 +83,52 @@ fn failed_call(failure: Value, facts: &Value, observations: &[Value]) -> Value {
         .cloned()
         .unwrap_or(Value::Null);
     let mut row = failed(0, failure, facts, observations);
-    row["ordinal"] = ordinal;
+    if let Some(value) = row.get_mut("ordinal") {
+        *value = ordinal;
+    }
     row
+}
+
+/// Assign each native event once without comparing or deduplicating its contents.
+pub(super) fn observe_rows(function: F, rows: &mut [Value], observations: &[Value]) {
+    if rows.is_empty() {
+        return;
+    }
+    let first = rows
+        .iter()
+        .position(|row| row.get("ordinal") == Some(&json!(0)))
+        .unwrap_or(0);
+    let terminal = rows
+        .iter()
+        .rposition(|row| row.get("failure").is_some_and(|failure| !failure.is_null()))
+        .unwrap_or(first);
+    let owners = observations
+        .iter()
+        .map(|event| {
+            if matches!(function, F::Rank | F::Find | F::Relate) {
+                first
+            } else if let Some(index) = event.get("index") {
+                rows.iter()
+                    .position(|row| row.get("ordinal") == Some(index))
+                    .unwrap_or(terminal)
+            } else {
+                first
+            }
+        })
+        .collect::<Vec<_>>();
+    for (index, row) in rows.iter_mut().enumerate() {
+        let events = Value::Array(
+            observations
+                .iter()
+                .zip(&owners)
+                .filter(|(_, owner)| **owner == index)
+                .map(|(event, _)| event.clone())
+                .collect(),
+        );
+        if let Some(observations) = row.get_mut("observations") {
+            *observations = events;
+        }
+    }
 }
 
 /// Restore decisions and aligned probabilities from authoritative native results.
@@ -208,6 +252,7 @@ pub fn project_outcome(
         }
         rows.push(failed_call(failure, &facts, &observations));
     }
+    observe_rows(function, &mut rows, &observations);
     Ok(rows)
 }
 
@@ -260,12 +305,19 @@ pub fn project_carrier(function: F, carrier: &Value) -> Vec<Value> {
         .or_else(|| carrier.get("completed"))
         .cloned()
         .unwrap_or(json!([]));
-    let mut rows = complete(function, 0, result, &facts, &observations);
-    if let Some(failure) = carrier.pointer("/native/error") {
+    let mut rows = carrier
+        .get("rows")
+        .and_then(Value::as_array)
+        .cloned()
+        .unwrap_or_else(|| complete(function, 0, result, &facts, &observations));
+    if carrier.get("rows").is_none()
+        && let Some(failure) = carrier.pointer("/native/error")
+    {
         if matches!(function, F::Rank | F::Find | F::Relate) {
             rows.clear();
         }
         rows.push(failed_call(failure.clone(), &facts, &observations));
     }
+    observe_rows(function, &mut rows, &observations);
     rows
 }

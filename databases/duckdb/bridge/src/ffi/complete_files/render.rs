@@ -136,5 +136,8 @@ pub(super) fn finish(packets: &str, verb: &str) -> Result<Value, Error> {
             function, &carrier,
         ));
     }
-    Ok(json!({"native":native,"rows":rows,"observations":observations}))
+    let mut carrier = json!({"native":native,"rows":rows,"observations":observations});
+    let rows = thinkthen_host::sql_request::project_carrier(function, &carrier);
+    put(&mut carrier, "rows", json!(rows))?;
+    Ok(carrier)
 }
