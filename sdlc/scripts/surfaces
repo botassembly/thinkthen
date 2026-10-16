@@ -16,6 +16,7 @@ set -eu
 mode=plain
 profile=routine
 registry_only=0
+fetch_only=0
 parity=0
 parity_baseline=
 artifact_dir=
@@ -28,6 +29,7 @@ while [ "$#" -gt 0 ]; do
     --full-functional) profile=full ;;
     --stress) profile=stress; mode=release ;;
     --registry) registry_only=1 ;;
+    --fetch) fetch_only=1 ;;
     --parity) parity=1; profile=full; mode=release ;;
     --parity-baseline) parity=1; parity_baseline=--baseline; profile=full; mode=release ;;
     --artifacts) [ "$#" -ge 2 ] && [ -d "$2" ] || { echo 'surfaces: --artifacts needs a directory' >&2; exit 2; }; artifact_dir=$(CDPATH= cd -- "$2" && pwd); shift ;;
@@ -96,6 +98,15 @@ manifest() {
 noncargo() {
 	case $1 in libraries/mcp|libraries/php|libraries/csharp|libraries/jvm|libraries/dart|libraries/swift|libraries/zig|libraries/go|libraries/cpp|libraries/ada|libraries/objective-c|libraries/cobol) return 0 ;; *) return 1 ;; esac
 }
+
+if [ "$fetch_only" -eq 1 ]; then
+	for surface in $(landed sdlc/surfaces.txt); do
+		if ! noncargo "$surface"; then
+			cargo fetch --locked --manifest-path "$(manifest sdlc/surfaces.txt "$surface")"
+		fi
+	done
+	exit 0
+fi
 
 registry() {
 	status=0

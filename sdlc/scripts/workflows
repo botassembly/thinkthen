@@ -1194,6 +1194,8 @@ def main(argv):
                                  capture_output=True, text=True)
         if managed.returncode:
             out.append(f"managed workflow fixture failed: {managed.stdout}{managed.stderr}")
+        else:
+            print(managed.stdout, end="")
         language = subprocess.run([sys.executable, str(REPO / "sdlc/scripts/release-language-tools-self-test.py")],
                                   capture_output=True, text=True)
         if language.returncode:

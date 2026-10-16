@@ -78,6 +78,8 @@ if ! rustc "+$PUBLIC_API_TOOLCHAIN" --version 2>/dev/null | grep -q " $PUBLIC_AP
 fi
 
 cargo fetch --manifest-path "$REPO/Cargo.toml" --locked
+# Lint checks each landed Rust surface offline, including separate workspaces.
+sh "$REPO/sdlc/scripts/surfaces" --fetch
 
 # The advisory database is the other thing a later rung needs and cannot make.
 # `fetch db` is the advisory database alone; the crates.io index is not needed.

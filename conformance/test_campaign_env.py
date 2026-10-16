@@ -3,7 +3,9 @@ import json
 import os
 from pathlib import Path
 import shutil
+import shlex
 import subprocess
+import sys
 import tempfile
 import unittest
 
@@ -14,7 +16,8 @@ from conformance.children.children import child_env
 class CampaignEnvironment(unittest.TestCase):
     def test_nested_full_rungs_restore_owned_compiler_settings(self):
         with tempfile.TemporaryDirectory(prefix='thinkthen-campaign-env-') as folder:
-            root = Path(folder)
+            root = Path(folder).resolve()
+            python = shlex.quote(sys.executable)
             scripts = root / 'sdlc/scripts'
             scripts.mkdir(parents=True)
             for name in ('test-full-cases', 'surfaces', 'smoke', 'heavy-lock',
@@ -47,26 +50,28 @@ with (Path({str(root)!r})/'probes.jsonl').open('a') as stream:
     stream.write(json.dumps({{'stage':sys.argv[1],'settings':{{k:env[k] for k in keys if k in env}}}})+'\\n')
 ''')
             consumer.joinpath('check.sh').write_text(
-                f'/usr/bin/python3 "{probe}" "$THINKTHEN_TEST_PROFILE"\necho "smoke: true"\n')
+                f'{python} "{probe}" "$THINKTHEN_TEST_PROFILE"\necho "smoke: true"\n')
             binaries = root / 'target/smoke/debug'
             binaries.mkdir(parents=True)
             executable = binaries / 'thinkthen'
             executable.write_text('#!/bin/sh\necho true\n')
             executable.chmod(0o755)
             executable = binaries / 'conformance-backend'
-            executable.write_text('#!/usr/bin/python3\nimport sys\nprint(12345,flush=True)\n'
+            executable.write_text(f'#!{sys.executable}\nimport sys\nprint(12345,flush=True)\n'
                                   'for line in sys.stdin:\n    if line.strip()=="count":print(1,flush=True)\n')
             executable.chmod(0o755)
             tools = root / 'tools'
             tools.mkdir()
             commands = {
-                'cargo': f'/usr/bin/python3 "{probe}" compiler\n',
+                'cargo': f'{python} "{probe}" compiler\n',
                 'rustc': 'echo "host: x86_64-unknown-linux-gnu"\n',
+                'uname': 'case "$1" in -s) echo Linux ;; -m) echo x86_64 ;; esac\n',
                 'jq': 'case "$*" in *expect.success*) echo true ;; *) echo fixture ;; esac\n',
                 'python3': f'''case "$*" in
 *--tool-environment*) echo THINKTHEN_TOOLCHAINS={tools}; exit 0 ;;
 *--validate*) exit 0 ;;
-*) exec /usr/bin/python3 "{probe}" parity ;;
+-c*) exec {python} "$@" ;;
+*) exec {python} "{probe}" parity ;;
 esac
 ''',
             }
@@ -107,7 +112,7 @@ esac
 
     def test_duckdb_build_boundary_keeps_full_and_smoke_compiler_inputs_stable(self):
         with tempfile.TemporaryDirectory(prefix='thinkthen-duckdb-env-') as folder:
-            root = Path(folder)
+            root = Path(folder).resolve()
             scripts, duckdb = root / 'sdlc/scripts', root / 'databases/duckdb'
             tools = root / 'tools'
             for path in (scripts, duckdb / 'tools', duckdb / 'cpp', tools / 'venv/bin',
@@ -136,11 +141,12 @@ with Path(os.environ['CAPTURE']).open('a') as out:
         ('RUSTFLAGS','CFLAGS','CXXFLAGS')}})+'\\n')
 '''
             (scripts / 'release-archive-tree.py').write_text(capture + 'sys.exit(91)\n')
-            (tools / 'cargo').write_text('#!/usr/bin/python3\n' + capture)
+            (tools / 'cargo').write_text(f'#!{sys.executable}\n' + capture)
             for name, body in (('rustc', 'echo "host: x86_64-unknown-linux-gnu"'),
+                               ('uname', 'case "$1" in -s) echo Linux ;; -m) echo x86_64 ;; esac'),
                                ('cmake', 'exit 0'), ('duckdb', 'exit 0')):
                 (tools / name).write_text('#!/bin/sh\n' + body + '\n')
-            for path in (tools / 'cargo', tools / 'rustc', tools / 'cmake',
+            for path in (tools / 'cargo', tools / 'rustc', tools / 'uname', tools / 'cmake',
                          tools / 'duckdb', tools / 'venv/bin/python'):
                 path.chmod(0o755)
             binary = root / 'target/debug/conformance-backend'
