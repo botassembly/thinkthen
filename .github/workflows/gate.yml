@@ -709,7 +709,7 @@ jobs:
           fixture="$GITHUB_WORKSPACE/control/sdlc/fixtures/release-qa"
           base=/tmp/thinkthen-0425-rc13-qa
           mkdir -m 700 "$base"
-          tar --extract --gzip --file "$fixture/original-inputs.tar.gz" --directory "$base"
+          tar --extract --gzip --same-permissions --file "$fixture/original-inputs.tar.gz" --directory "$base"
           cp "$fixture/run-release-qa.py" "$fixture/read-catalog.py" "$base/"
           printf 'Owned hosted release QA fixtures\n' > "$base/OWNER"
           printf '%s  %s\n' 27f51b25ef44f9479e19d630ed1aab31647898752458539fb211ece8a6f6a505 "$base/run-release-qa.py" | sha256sum --check --strict
