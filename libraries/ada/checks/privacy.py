@@ -10,6 +10,8 @@ import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "sdlc/generators/results"))
 from sources import tracked_files
+sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "conformance/children"))
+from native_guard import distribution_bytes
 
 ROOT = Path(__file__).resolve().parents[1]
 BAD = (b"/home/", b"/Users/", b"-----BEGIN PRIVATE KEY-----", b"auth.json", b"tt-canary-private")
@@ -45,7 +47,9 @@ for path in sources:
         check(path)
 for name in ('THINKTHEN_ARTIFACT', 'THINKTHEN_C_ARTIFACT'):
     if os.environ.get(name):
-        check(Path(os.environ[name]))
+        path = Path(os.environ[name])
+        if any(marker in data for data in distribution_bytes(path) for marker in BAD):
+            raise ValueError(f"private byte pattern in {path.name}")
 with tempfile.TemporaryDirectory() as name:
     folder = Path(name)
     for index, marker in enumerate((BAD[0], BAD[1], b"T_CacheDocument_arm_1", b"CacheDocumentArm2", b"CACHE-DOCUMENT-ARM-1", b"T_CacheDocument_arm_Text", b"CacheDocumentAlternative", b"K_THINKTHEN_SESSION_WAIT_UNKNOWN_ARM_V1", b"K_THINKTHEN_SESSION_WAIT_SETTLEMENT_ARM_V1_Extra")):
