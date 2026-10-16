@@ -245,7 +245,9 @@ Future<Map<String, Object?>> consumeFixture(Map fixture, Engine engine) async {
       );
       packets = callResult.packets;
     } on CallFailure catch (error) {
-      packets = error.call!.packets;
+      final call = error.call;
+      if (call == null) rethrow;
+      packets = call.packets;
     }
   }
   return {
