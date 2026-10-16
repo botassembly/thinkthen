@@ -1,5 +1,6 @@
 """Require an owning rationale on actual Rust unit-test modules."""
 import re
+from sources import tracked_files
 
 
 def missing_rationales(text, tokenize):
@@ -54,8 +55,9 @@ def check_unit_rationale(repo, tokenize, fail):
     for text, refused in fixtures:
         if bool(missing_rationales(text, tokenize)) != refused:
             fail("unit-rationale", "the planted module rationale has the wrong result")
-    paths = (path for folder in ("crates", "libraries", "databases")
-             for path in (repo / folder).glob("*/src/**/*.rs"))
+    paths = (path for path in tracked_files(repo)
+             if path.suffix == ".rs" and path.relative_to(repo).parts[0] in {"crates", "libraries", "databases"}
+             and len(path.relative_to(repo).parts) > 3 and path.relative_to(repo).parts[2] == "src")
     for path in sorted(paths):
         relative = path.relative_to(repo).as_posix()
         for name, start in missing_rationales(path.read_text(), tokenize):
