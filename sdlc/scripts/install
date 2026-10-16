@@ -52,8 +52,8 @@ if [ "$(python3 -c 'import yaml; print(yaml.__version__)' 2>/dev/null || true)" 
 fi
 
 # cargo-deny is a cargo subcommand, so `command -v` does not find it.
-if ! cargo deny --version >/dev/null 2>&1; then
-	printf 'install: cargo-deny is not installed; rung 1 runs it over deny.toml\n' >&2
+if [ "$(cargo deny --version 2>/dev/null || true)" != "cargo-deny $DENY_VERSION" ]; then
+	printf 'install: rung 1 needs cargo-deny %s on PATH\n' "$DENY_VERSION" >&2
 	printf 'install: cargo install --locked cargo-deny@%s\n' "$DENY_VERSION" >&2
 	exit 1
 fi
