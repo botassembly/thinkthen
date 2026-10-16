@@ -1,5 +1,7 @@
 """Pure ownership and source classification shared by size and policy gates."""
-from pathlib import PurePosixPath as Path
+from pathlib import Path as FilePath, PurePosixPath as Path
+import os
+import subprocess
 from registry import OUTPUTS, generated_paths
 
 EXTENSIONS = {'.rs', '.py', '.pyi', '.js', '.mjs', '.cjs', '.ts', '.mts', '.cts', '.rb', '.R', '.c', '.h', '.cpp',
@@ -56,3 +58,18 @@ def production(path, manifest):
     """Identify handwritten production source using the shared conventions."""
     name = owner(path, manifest, output_owners())
     return bool(name and classification(path, name, manifest, generated_paths()) == 'handwritten')
+
+
+def tracked_files(root):
+    """List indexed files under a checkout directory, including staged additions."""
+    root = FilePath(root).resolve()
+    # Callers name a checkout directory, never an inherited Git location or index.
+    env = {name: value for name, value in os.environ.items()
+           if name not in {'GIT_DIR', 'GIT_WORK_TREE', 'GIT_COMMON_DIR', 'GIT_INDEX_FILE'}}
+    top = FilePath(subprocess.check_output(
+        ['git', '-C', str(root), 'rev-parse', '--show-toplevel'], env=env
+    ).decode(errors='surrogateescape').removesuffix('\n'))
+    root.relative_to(top)
+    names = subprocess.check_output(
+        ['git', '-C', str(root), 'ls-files', '-z', '--full-name', '--', '.'], env=env)
+    return sorted({top / os.fsdecode(name) for name in names.split(b'\0') if name})
