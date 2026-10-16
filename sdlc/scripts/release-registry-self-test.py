@@ -13,6 +13,7 @@ import json
 import io
 import os
 import pathlib
+import runpy
 import shutil
 import subprocess
 import sys
@@ -21,6 +22,7 @@ import tempfile
 import zipfile
 import xml.etree.ElementTree as ET
 import yaml
+from unittest.mock import patch
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
 TARGET = "x86_64-unknown-linux-gnu"
@@ -336,7 +338,8 @@ def apple_package_cases():
                 shutil.copyfile(REPO / name, destination)
         for name in ('README.md', 'specification/request.schema.json',
                      'crates/thinkthen/Cargo.toml', 'libraries/c/include/thinkthen.h',
-                     'sdlc/scripts/release-pack', 'sdlc/scripts/scratch.sh', 'sdlc/scripts/registry-readmes.py'):
+                     'sdlc/scripts/release-pack', 'sdlc/scripts/release-go-cpp-pair',
+                     'sdlc/scripts/scratch.sh', 'sdlc/scripts/registry-readmes.py'):
             destination = root / name
             destination.parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(REPO / name, destination)
@@ -380,9 +383,35 @@ def apple_package_cases():
                 assert 'Apple C checksum differs' in result.stderr and len(list(output.iterdir())) == 2
         for family in ('swift', 'objective-c'):
             with tarfile.open(output / f'thinkthen-{family}-{version()}-{target}.tar.gz') as package:
+                assert package.extractfile('./README.md').read() == (REPO / f'libraries/{family}/README-PUBLIC.md').read_bytes()
+                assert './README-PUBLIC.md' not in package.getnames()
                 assert package.extractfile('./CThinkThen.xcframework/Info.plist').read() == (framework / 'Info.plist').read_bytes()
                 assert package.extractfile('./THINKTHEN-PACKAGE-INPUTS').read().decode() == (
                     f'source_commit={commit}\ntarget={target}\nversion={version()}\nc_archive={name}\nc_sha256={digest}\n')
+        paired = subprocess.run(['sh', 'sdlc/scripts/release-go-cpp-pair', str(output), 'foundation'],
+                                cwd=root, env=env, text=True, capture_output=True)
+        assert paired.returncode == 0, paired
+        # Exercise the shipped archive through the real public-example staging.
+        # Only the Apple compiler is unavailable on the local qualification host.
+        class CompilerReached(Exception):
+            pass
+        consumer = root / 'target/consumer'
+        def compiler(args, **kwargs):
+            assert args[:2] == ['xcrun', 'clang'], args
+            example = (consumer / 'Sources/Public/main.m').read_text()
+            page = (REPO / 'libraries/objective-c/README-PUBLIC.md').read_text()
+            assert example.strip() == page.split('```objc\n', 1)[1].split('\n```', 1)[0].strip()
+            raise CompilerReached
+        artifact = output / f'thinkthen-objective-c-{version()}-{target}.tar.gz'
+        with patch.dict(os.environ, THINKTHEN_ARTIFACT=str(artifact),
+                        THINKTHEN_COVERAGE_STAGE=str(consumer)), patch.object(
+                sys, 'platform', 'darwin'), patch.object(subprocess, 'run', side_effect=compiler):
+            try:
+                runpy.run_path(str(REPO / 'libraries/objective-c/checks/foundation_installed.py'))
+            except CompilerReached:
+                pass
+            else:
+                raise AssertionError('Foundation installed public example never reached the compiler')
     print('Apple wrapper assembly: paired input identity, missing build route and collection dependencies pass; native execution not run')
 
 

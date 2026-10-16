@@ -57,7 +57,8 @@ def apple_collection(language, context, env, stage, retained, folder):
     actual_members = {item.relative_to(package) for item in package.rglob('*')
                       if item.is_file() and item.relative_to(package).parts[0] != 'CThinkThen.xcframework'}
     if actual_members != set(expected_members) or any(
-            (package / member).read_bytes() != (source / member).read_bytes() for member in expected_members):
+            (package / member).read_bytes() != (source / ("README-PUBLIC.md" if member == Path("README.md") else member)).read_bytes()
+            for member in expected_members):
         raise RuntimeError('Apple package source differs from the measured checkout')
     framework = package / 'CThinkThen.xcframework'
     if not (framework / 'Info.plist').is_file():
@@ -127,6 +128,7 @@ def prepare_apple(context):
             target = package / member
             target.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(source / member, target)
+        shutil.copy2(source / "README-PUBLIC.md", package / "README.md")
         shutil.copytree(framework, package / framework.name)
         artifact = stage / (language + '.tar.gz')
         archive(package, artifact, [item.name for item in package.iterdir()])

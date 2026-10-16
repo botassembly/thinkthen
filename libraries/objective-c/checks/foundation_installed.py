@@ -41,7 +41,8 @@ with contextlib.ExitStack() as installed:
         (work / "Sources/Cases").mkdir(parents=True)
         (work / "Sources/Results").mkdir(parents=True)
         (work / "Sources/Public").mkdir(parents=True)
-        page = (package / "README-PUBLIC.md").read_text()
+        readme = "README-PUBLIC.md" if package == ROOT else "README.md"
+        page = (package / readme).read_text()
         sample = re.search(r"```objc\n(.*?)\n```", page, re.S).group(1)
         (work / "Sources/Public/main.m").write_text(sample + "\n")
         shutil.copy2(ROOT / "checks/FoundationResultsConsumer.m", work / "Sources/Results/main.m")
