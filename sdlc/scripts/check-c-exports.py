@@ -28,12 +28,12 @@ def declarations(header):
     if not shutil.which('clang'):
         raise RuntimeError('ABI declaration discovery requires Clang; Windows layout qualification must run the emitted probe with its own C compiler')
     ast = json.loads(run(['clang', '-std=c11', '-x', 'c', '-fsyntax-only', '-Xclang', '-ast-dump=json', str(header)]))
-    records = {n['id']: n for n in walk(ast) if n['kind'] == 'RecordDecl' and n.get('completeDefinition')}
-    record_types = {n['id']: n for n in walk(ast) if n['kind'] == 'RecordDecl'}
+    records = {n['id']: n for n in walk(ast) if n.get('kind') == 'RecordDecl' and n.get('completeDefinition')}
+    record_types = {n['id']: n for n in walk(ast) if n.get('kind') == 'RecordDecl'}
     aliases = {}
     for node in ast.get('inner', []):
-        if node['kind'] == 'TypedefDecl':
-            refs = [n['decl']['id'] for n in walk(node) if n['kind'] == 'RecordType']
+        if node.get('kind') == 'TypedefDecl':
+            refs = [n['decl']['id'] for n in walk(node) if n.get('kind') == 'RecordType']
             if refs and refs[0] in record_types and record_types[refs[0]].get('name'):
                 record = record_types[refs[0]]
                 aliases[record['tagUsed'] + ' ' + record['name']] = node['name']
@@ -48,26 +48,26 @@ def declarations(header):
         name = node.get('name', '')
         if not name.startswith('thinkthen_'):
             continue
-        if node['kind'] == 'TypedefDecl':
-            refs = [n['decl']['id'] for n in walk(node) if n['kind'] == 'RecordType']
+        if node.get('kind') == 'TypedefDecl':
+            refs = [n['decl']['id'] for n in walk(node) if n.get('kind') == 'RecordType']
             if refs and refs[0] in records:
                 record = records[refs[0]]
                 layouts[name] = {field: canonical(kind)
                                  for field, kind in fields(record, records).items()}
                 for field in record.get('inner', []):
-                    if field['kind'] == 'FieldDecl':
+                    if field.get('kind') == 'FieldDecl':
                         kind = field['type'].get('desugaredQualType', field['type']['qualType'])
                         if kind.startswith('union ') and kind in aliases:
                             union_owners.setdefault(aliases[kind], []).append((name, field['name']))
-        elif node['kind'] == 'FunctionDecl':
+        elif node.get('kind') == 'FunctionDecl':
             signature = node['type']['qualType']
             if node.get('variadic') or '__attribute__' in signature:
                 raise ValueError(f'unsupported C calling convention or variadic declaration: {name}')
             functions[name] = {'return': canonical(signature.split('(', 1)[0].strip()),
-                               'arguments': [canonical(n['type']['qualType']) for n in node.get('inner', []) if n['kind'] == 'ParmVarDecl']}
+                               'arguments': [canonical(n['type']['qualType']) for n in node.get('inner', []) if n.get('kind') == 'ParmVarDecl']}
     macros = run(['clang', '-std=c11', '-x', 'c', '-dM', '-E', str(header)])
     constants = sorted(set(re.findall(r'^#define (THINKTHEN_\w+)[ \t]+\S', macros, re.M)) |
-                       {n['name'] for n in walk(ast) if n['kind'] == 'EnumConstantDecl' and n.get('name', '').startswith('THINKTHEN_')})
+                       {n['name'] for n in walk(ast) if n.get('kind') == 'EnumConstantDecl' and n.get('name', '').startswith('THINKTHEN_')})
     if not layouts or not functions or not constants:
         raise ValueError('the public header must declare carriers, functions and constants')
     return {'records': layouts, 'functions': functions, 'constants': constants,
@@ -78,9 +78,9 @@ def fields(record, records, prefix=''):
     """Flatten public union arms, whether Clang names their record or nests it."""
     out, anonymous = {}, None
     for node in record.get('inner', []):
-        if node['kind'] == 'RecordDecl' and node.get('completeDefinition') and not node.get('name'):
+        if node.get('kind') == 'RecordDecl' and node.get('completeDefinition') and not node.get('name'):
             anonymous = node
-        elif node['kind'] == 'FieldDecl':
+        elif node.get('kind') == 'FieldDecl':
             name = prefix + node['name']
             kind = node['type']['qualType']
             if anonymous is not None:
