@@ -603,14 +603,6 @@ jobs:
                   run('coverage', ['python3', 'sdlc/scripts/coverage', '--release', '--platform', 'linux', '--output', str(coverage)])
                   apple = Path(os.environ['RUNNER_TEMP']) / 'thinkthen-apple-coverage/totals.json'
                   run('coverage-join', ['python3', 'sdlc/scripts/coverage', '--release', '--join', str(coverage / 'totals.json'), str(apple)])
-                  # Retain measured profiles, exports, reports and logs; omit regenerable builds.
-                  for source in coverage.rglob('*'):
-                      relative = source.relative_to(coverage)
-                      if source.is_file() and not source.is_symlink() and (source.suffix in ('.json', '.log', '.lcov', '.profraw', '.profdata', '.txt', '.md')) and not any(part.startswith(('target', 'stage-')) for part in relative.parts):
-                          destination = out / 'coverage' / relative
-                          destination.parent.mkdir(parents=True, exist_ok=True)
-                          shutil.copy2(source, destination)
-                  shutil.copy2(apple, out / 'apple-totals.json')
               else:
                   raise RuntimeError('unknown Linux stage')
               result['state'] = 'passed-local-platform-pending' if stage == 'core' else 'completed'
@@ -622,6 +614,18 @@ jobs:
                   result['exit'] = 1
               raise
           finally:
+              if stage == 'coverage':
+                  coverage = work / 'coverage'
+                  # Preserve incomplete measurements and diagnostics after any failed collection or join.
+                  for source in coverage.rglob('*'):
+                      relative = source.relative_to(coverage)
+                      if source.is_file() and not source.is_symlink() and (source.suffix in ('.json', '.log', '.lcov', '.profraw', '.profdata', '.txt', '.md')) and not any(part.startswith(('target', 'stage-')) for part in relative.parts):
+                          destination = out / 'coverage' / relative
+                          destination.parent.mkdir(parents=True, exist_ok=True)
+                          shutil.copy2(source, destination)
+                  apple = Path(os.environ['RUNNER_TEMP']) / 'thinkthen-apple-coverage/totals.json'
+                  if apple.is_file():
+                      shutil.copy2(apple, out / 'apple-totals.json')
               if stage == 'core':
                   result.update(revision_after=subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip(),
                                 source_clean=not subprocess.check_output(['git', 'status', '--porcelain']),
