@@ -22,7 +22,7 @@ else:
 # The focused behavior mode reuses a warm native build; distribution privacy
 # stays on the ordinary installed-package route with qualified artifacts.
 if len(sys.argv) <= 4 or sys.argv[4] != 'usage':
-    subprocess.run([sys.executable,str(Path(__file__).with_name("guard.py")),prefix],env=child_env(),check=True)
+    subprocess.run([sys.executable,str(Path(__file__).with_name("guard.py")),prefix,sys.argv[5]],env=child_env(),check=True)
 server = Backend(scratch, key='tt-canary-301', arrivals='named')
 cases = json.loads((ROOT / 'conformance/cases.json').read_text())['cases']
 try:

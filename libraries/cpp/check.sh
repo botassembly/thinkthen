@@ -53,7 +53,8 @@ heavy_compile "$cmake_bin" -S "$wrapper" -B "$out/package-build" -DCMAKE_BUILD_T
  -DTHINKTHEN_NATIVE_SHARED="$shared" -DTHINKTHEN_NATIVE_STATIC="$static"
 heavy_compile "$cmake_bin" --build "$out/package-build" --parallel 2
 "$cmake_bin" --install "$out/package-build"
-"$python_bin" fixtures/guard.py "$out/install" "$out/package-build/install_manifest.txt"
+install_manifest=$out/package-build/install_manifest.txt
+"$python_bin" fixtures/guard.py "$out/install" "$install_manifest"
 heavy_compile "$python_bin" fixtures/result_construction.py "$out/install"
 if [ "${THINKTHEN_TEST_PROFILE:-}" = smoke ]; then
  smoke_guard
@@ -66,9 +67,9 @@ for mode in shared static; do
   heavy_compile "$cmake_bin" -S fixtures/owned -B "$out/owned-$mode" -DCMAKE_PREFIX_PATH="$out/install" \
   -DTHINKTHEN_LINK_STATIC_C="$([ "$mode" = static ] && echo ON || echo OFF)"
  heavy_compile "$cmake_bin" --build "$out/owned-$mode" --parallel 2
-  "$python_bin" fixtures/owned_calls.py "$out/install" "$out/owned-$mode/owned_consumer" "$out/owned-cases" "$mode"
+  "$python_bin" fixtures/owned_calls.py "$out/install" "$out/owned-$mode/owned_consumer" "$out/owned-cases" "$mode" "$install_manifest"
 done
-"$python_bin" fixtures/owned_calls.py "$out/install" "$out/owned-shared/owned_consumer" "$out/owned-cases" usage
+"$python_bin" fixtures/owned_calls.py "$out/install" "$out/owned-shared/owned_consumer" "$out/owned-cases" usage "$install_manifest"
 heavy_compile c++ -std=c++17 -Wall -Wextra -Werror -fsanitize=address -I "$out/install/include" fixtures/tests/json_test.cpp "$out/install/lib/libthinkthen_cpp_shared.a" "$out/install/lib/libthinkthen.so.0" -Wl,-rpath,"$out/install/lib" -o "$out/json-test"
 "$out/json-test"
 for test in result_lifetime answer_test result_concurrency; do
