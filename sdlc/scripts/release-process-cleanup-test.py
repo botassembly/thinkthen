@@ -230,6 +230,15 @@ def sdk_project_locations(root):
             elif args[1] in ('add', 'build'):
                 assert (project / 'InstallCheck.csproj').is_file(), 'SDK_PROJECT_OUTSIDE_WORKING_DIRECTORY'
                 if args[1] == 'add':
+                    # NuGet combines these Windows tool roots while loading machine settings.
+                    probe = SDK.CAPTURE([sys.executable, '-u', '-c',
+                        'import os; from pathlib import Path; '
+                        'print(Path(os.environ["PROGRAMFILES(X86)"]) / "NuGet"); '
+                        'print(Path(os.environ["PROGRAMFILES"]) / "NuGet")'],
+                        cwd=project, env=env, timeout=10, text=True)
+                    assert probe.returncode == 0, probe.stderr
+                    assert probe.stdout.splitlines() == [str(Path(os.environ[name]) / 'NuGet')
+                        for name in ('PROGRAMFILES(X86)', 'PROGRAMFILES')], repr(probe.stdout)
                     (project / 'obj').mkdir()
                     (project / 'obj/project.assets.json').write_text(json.dumps(
                         {'libraries': {'Botassembly.ThinkThen/' + version: {}}}))
@@ -366,7 +375,9 @@ def windows_source_oracles():
 def main():
     with tempfile.TemporaryDirectory(prefix='thinkthen-release-timeout-') as temporary:
         portable(Path(temporary))
-        sdk_project_locations(Path(temporary))
+        with mock.patch.dict(os.environ, {'PROGRAMFILES': str(Path(temporary) / 'programs'),
+                                           'PROGRAMFILES(X86)': str(Path(temporary) / 'programs-x86')}):
+            sdk_project_locations(Path(temporary))
     windows_source_oracles()
     posix = 'POSIX inherited-output/owned cleanup passed' if os.name == 'posix' else 'POSIX cleanup execution skipped'
     print(f'Release process lifecycle: byte/success/nonzero/filled-output passed; {posix}; Windows source oracles passed, native Windows full proof pending')

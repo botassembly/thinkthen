@@ -90,7 +90,7 @@ def consume(npm, registry, work):
     version = metadata.findtext('{*}version')
     floor = metadata.findtext('{*}properties/{*}thinkthen.session.jdk')
     coroutines = metadata.findtext('{*}properties/{*}thinkthen.kotlin.coroutines.version')
-    env = child_env(keep=('JAVA_HOME',), home=work / 'home',
+    env = child_env(keep=('JAVA_HOME', 'PROGRAMFILES', 'PROGRAMFILES(X86)'), home=work / 'home',
                     NUGET_PACKAGES=str(work / 'nuget-cache'), DOTNET_CLI_HOME=str(work / 'dotnet-home'),
                     DOTNET_CLI_TELEMETRY_OPTOUT='1', DOTNET_SKIP_FIRST_TIME_EXPERIENCE='1',
                     npm_config_cache=str(work / 'npm-cache'))
