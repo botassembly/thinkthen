@@ -4,10 +4,7 @@ set -eu
 
 HERE=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 . "$HERE/../../../sdlc/scripts/allow-list"
-LOCK=${THINKTHEN_HEAVY_LOCK:-${XDG_RUNTIME_DIR:-/tmp}/thinkthen-heavy.lock}
-if [ "${THINKTHEN_HEAVY_LOCK_HELD:-}" != "$LOCK" ]; then
-	exec flock -o "$LOCK" env THINKTHEN_HEAVY_LOCK_HELD="$LOCK" /bin/sh "$0"
-fi
+# pm job isolates this fixture's Cargo output and admits its build resources.
 # ADR 0113: the C door's engines write a scratch usage folder, never the real one.
 . "$HERE/../../../sdlc/scripts/scratch.sh"
 usage_home
