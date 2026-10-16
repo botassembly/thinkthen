@@ -39,7 +39,7 @@ def resolve_outputs(commit, version):
     page = lambda runs: json.dumps({"total_count": len(runs), "workflow_runs": runs})
     rehearsal = f"v{version}-rehearsal-{commit[:7]}"
     with tempfile.TemporaryDirectory(prefix="thinkthen-resolve-") as temporary:
-        root = Path(temporary)
+        root = Path(temporary).resolve()
         receipt = root / "calls.jsonl"
         gh = root / "gh"
         gh.write_text(f"#!{sys.executable}\n" + """import json, os, sys
@@ -50,7 +50,7 @@ sys.stderr.write('must not expose API diagnostics')
 sys.exit(int(os.environ.get('GH_TEST_EXIT', '0')))
 """)
         gh.chmod(0o755)
-        env = {"PATH": f"{root}:/usr/bin:/bin", "HOME": str(root), "LC_ALL": "C",
+        env = {"PATH": f"{root}:{Path(sys.executable).parent}:/usr/bin:/bin", "HOME": str(root), "LC_ALL": "C",
                "GITHUB_SHA": commit, "GITHUB_REPOSITORY": repository,
                "GH_TEST_RECEIPT": str(receipt), "GH_TEST_RESPONSE": page([good])}
         endpoint = (f"repos/{repository}/actions/workflows/release.yml/runs?head_sha={commit}"
@@ -198,7 +198,7 @@ def tap_formula(version):
 end
 """
     with tempfile.TemporaryDirectory(prefix="thinkthen-tap-formula-") as temporary:
-        root = Path(temporary)
+        root = Path(temporary).resolve()
         platform = root / "platform"
         hashes = {}
         archives = []
@@ -216,7 +216,7 @@ end
             archives.append(archive)
         output = root / "thinkthen.rb"
         # No key variables, credential files or outbound commands participate.
-        env = {"PATH": "/usr/bin:/bin", "HOME": str(root), "LC_ALL": "C"}
+        env = {"PATH": f"{Path(sys.executable).parent}:/usr/bin:/bin", "HOME": str(root), "LC_ALL": "C"}
         command = ("sh", str(REPO / "sdlc/scripts/release-workflow"), "tap-formula", version, str(platform), str(output))
         result = run(*command, env=env)
         wanted = template.replace("$version", version)
@@ -257,7 +257,7 @@ def main():
         print(f"release archive self-test: skipped synthetic C fixture on {host}")
         return
     with tempfile.TemporaryDirectory(prefix="thinkthen-release-archive-") as temporary:
-        base = Path(temporary)
+        base = Path(temporary).resolve()
         source = base / "source"
         source.mkdir()
         archive = base / "source.tar"

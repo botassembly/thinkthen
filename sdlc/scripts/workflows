@@ -530,7 +530,7 @@ def host_setup_calls(target, smoke, uv_line="uv 0.9.17 (0a1b2c3d4 2025-12-09)", 
     The pinned uv lives where pip put it and prints uv_line.
     """
     with tempfile.TemporaryDirectory(prefix="thinkthen-host-setup-") as tmp:
-        root = pathlib.Path(tmp)
+        root = pathlib.Path(tmp).resolve()
         bin_dir = root / "bin"
         bin_dir.mkdir()
         route = bin_dir / "route"
@@ -1121,7 +1121,7 @@ def self_test():
             ("roomy", "exit 0", 900, "/mnt/thinkthen-container"), ("no sudo", "exit 1", 900, "FALLBACK"),
             ("small", "exit 0", 50, "FALLBACK"), ("missing", "exit 0", None, "FALLBACK")):
         with tempfile.TemporaryDirectory(prefix="thinkthen-linux-work-") as tmp:
-            root = pathlib.Path(tmp)
+            root = pathlib.Path(tmp).resolve()
             log = root / "calls"
             mnt = "exit 1" if mnt_free is None else f"free={mnt_free}"
             df = ('echo "df $*" >> "$FAKE_LOG"; case $2 in /mnt) %s ;; *) free=100 ;; esac; '

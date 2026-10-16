@@ -101,7 +101,7 @@ def must_fail(action, phrase):
 def main():
     fetch_retries()
     with tempfile.TemporaryDirectory(prefix="thinkthen-language-tools-test-") as folder:
-        root = Path(folder)
+        root = Path(folder).resolve()
         github_env, github_path = fixture(root)
         observer = Observer(root)
         old = os.environ.copy()
@@ -352,7 +352,7 @@ def fetch_retries():
 
     unavailable = lambda: urllib.error.HTTPError("u", 503, "Service Unavailable", None, None)
     with tempfile.TemporaryDirectory(prefix="thinkthen-fetch-test-") as folder:
-        root = Path(folder)
+        root = Path(folder).resolve()
         pauses = []
         tools.fetch("u", root / "a", opener_for([unavailable(), urllib.error.URLError("dns")]), pauses.append)
         assert (root / "a").read_bytes() == b"archive" and pauses == [10, 20], pauses
