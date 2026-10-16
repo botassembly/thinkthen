@@ -8396,7 +8396,7 @@ id TTNative_thinkthen_complete_input_property_type_v1(const struct thinkthen_com
     switch(value->kind) {
         case THINKTHEN_COMPLETE_INPUT_PROPERTY_TYPE_STRING_V1: return TTNative_thinkthen_complete_input_property_type_string_v1(value->data.string);
         case THINKTHEN_COMPLETE_INPUT_PROPERTY_TYPE_NUMBER_V1: return TTNative_thinkthen_complete_input_property_type_number_v1(value->data.number);
-        case THINKTHEN_COMPLETE_INPUT_PROPERTY_TYPE_BOOLEAN_V1: return @((BOOL)value->data.boolean);
+        case THINKTHEN_COMPLETE_INPUT_PROPERTY_TYPE_BOOLEAN_V1: return TTNative_thinkthen_complete_input_property_type_boolean_v1(value->data.boolean);
         case THINKTHEN_COMPLETE_INPUT_PROPERTY_TYPE_ARRAY_V1: return TTNative_thinkthen_complete_input_property_type_array_v1(value->data.array);
         default: TTInvalidResult();
     }

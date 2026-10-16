@@ -338,7 +338,8 @@ def native_values():
     target = Layout()
     for key, schema in definitions.items(): target.definition(key, schema)
     def decode(typ, expression, boolean=False):
-        if boolean: return '@((BOOL)' + expression + ')'
+        # A Boolean-named object arm still uses its native structure reader.
+        if boolean and typ == 'u32': return '@((BOOL)' + expression + ')'
         if typ in ('u32', 'u64', 'usize', 'f64', 'i64'): return '@(' + expression + ')'
         if typ == 'thinkthen_complete_utf8_v1': return 'TTNativeString(' + expression + ')'
         pointer = typ.startswith('*const ')
