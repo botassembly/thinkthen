@@ -91,7 +91,7 @@ python3 sdlc/scripts/check-c-exports.py --self-test libraries/c/include/thinkthe
 # Use a real entry script so sanitization can restart it after removing names
 # that the macOS shell cannot unset. Bash creates SHLVL itself; it holds no key.
 cat >"$planted/environment" <<'SH'
-. sdlc/scripts/heavy-lock
+. sdlc/scripts/allow-list
 exec awk 'BEGIN { for (n in ENVIRON) if (n !~ /^(AWK(LIB)?PATH|SHLVL)$/) print n }'
 SH
 seen=$(env -i PATH="$PATH" HOME=/nonexistent/HOME LANG=/nonexistent/LANG LC_ALL=/nonexistent/LC_ALL \
