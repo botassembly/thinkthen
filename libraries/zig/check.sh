@@ -10,13 +10,8 @@ esac
 zig=${THINKTHEN_ZIG:-$(command -v zig || true)}
 [ -x "$zig" ] || exit 77
 export THINKTHEN_ZIG="$zig"
-for tool in python3 node cc flock; do command -v "$tool" >/dev/null 2>&1 || exit 77; done
+for tool in python3 node cc; do command -v "$tool" >/dev/null 2>&1 || exit 77; done
 export PATH="$(dirname "$zig"):$PATH"
-lock=${THINKTHEN_HEAVY_LOCK:-/tmp/thinkthen-zig.lock}
-if [ "${THINKTHEN_HEAVY_LOCK_HELD:-}" != "$lock" ]; then
-    export THINKTHEN_HEAVY_LOCK_HELD="$lock"
-    exec flock -w 180 -o "$lock" /bin/sh "$0" "$@"
-fi
 . "$root/sdlc/scripts/scratch.sh"
 usage_home
 mkdir -p "$here/target/cache" "$here/target/scratch" "$here/target/artifacts"

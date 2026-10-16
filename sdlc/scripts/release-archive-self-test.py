@@ -837,9 +837,7 @@ def main():
         installed_env = os.environ | {"THINKTHEN_GO_BIN": str(fake_go),
                                       "THINKTHEN_PYTHON_BIN": str(no_python),
                                       "FAKE_GO_VERSION": "go version go1.27.1 linux/amd64",
-                                      "THINKTHEN_ARTIFACT": str(base / "absent-wrapper"),
-                                      "THINKTHEN_HEAVY_LOCK": str(base / "held-lock"),
-                                      "THINKTHEN_HEAVY_LOCK_HELD": str(base / "held-lock")}
+                                      "THINKTHEN_ARTIFACT": str(base / "absent-wrapper")}
         for family in ("go", "cpp"):
             expect(run("sh", str(REPO / f"libraries/{family}/check.sh"), "0", env=installed_env),
                    f"{family}: missing {'matching ' if family == 'cpp' else ''}C archive")

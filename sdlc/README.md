@@ -13,7 +13,7 @@ Tickets and the notes that drive work on thinkthen. Tickets exist to drive the c
 
 Run every build and check on M5 through `pm job run --machine m5 NNNN SHA --disk GIB --memory GIB -- COMMAND` at a pushed commit. The job owns its worktree and output, reserves disk and memory, and limits concurrent builds. The Beelink runs agents and lightweight scripts only.
 
-The heavy rungs preserve an explicit `THINKTHEN_HEAVY_LOCK` for genuinely shared toolchain installations or output mutations. The Python parent holds this optional lock on Linux and macOS, so a child daemon cannot keep it after the rung ends. Independent jobs need no extra lane lock.
+PM job admission is the only build turn-taking mechanism. Do not wrap jobs or toolchain mutations in another build lock.
 
 A ticket needs an Outcome and a Proof. Add other notes only when they help the builder.
 

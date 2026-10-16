@@ -498,8 +498,7 @@ def main(*, consumer='c', header=None, library=None, compile_consumer=None,
     named = {row['id']: row for row in json.loads((ROOT / 'conformance/named-inputs.json').read_text())['cases']}
     names = ('PATH', 'HOME', 'CARGO_HOME', 'RUSTUP_HOME', 'RUSTUP_TOOLCHAIN',
              'RUSTFLAGS', 'RUSTC_WRAPPER', 'CARGO_BUILD_RUSTC_WRAPPER', 'CFLAGS', 'TMPDIR', 'XDG_RUNTIME_DIR',
-             'CARGO_PROFILE_DEV_OPT_LEVEL', 'CARGO_PROFILE_DEV_DEBUG',
-             'THINKTHEN_HEAVY_LOCK', 'THINKTHEN_HEAVY_LOCK_HELD')
+             'CARGO_PROFILE_DEV_OPT_LEVEL', 'CARGO_PROFILE_DEV_DEBUG')
     env = {name: value for name in names if (value := os.environ.get(name)) is not None}
     env.update(CARGO_BUILD_JOBS='1', CARGO_NET_OFFLINE='true')
     header = header or os.environ.get('THINKTHEN_C_HEADER')

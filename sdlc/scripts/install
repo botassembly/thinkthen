@@ -2,7 +2,7 @@
 # Rung 0: the tools the other rungs need, then the dependency closure.
 set -eu
 
-# Preserve explicit exclusion for shared mutations. See heavy-lock.
+# Sanitize the environment inherited by build tools.
 . "$(dirname -- "$0")/heavy-lock"
 
 REPO=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)

@@ -70,7 +70,6 @@ with (Path({str(root)!r})/'probes.jsonl').open('a') as stream:
                 'python3': f'''case "$*" in
 *--tool-environment*) echo THINKTHEN_TOOLCHAINS={tools}; exit 0 ;;
 *--validate*) exit 0 ;;
--c*) exec {python} "$@" ;;
 *) exec {python} "{probe}" parity ;;
 esac
 ''',
@@ -80,7 +79,6 @@ esac
                 executable.write_text('#!/bin/sh\nset -eu\n' + body)
                 executable.chmod(0o755)
             env = child_env(home=root / 'home') | {'PATH': str(tools) + ':' + os.defpath,
-                   'THINKTHEN_HEAVY_LOCK': str(root / 'lock'),
                    'THINKTHEN_FULL_COMPILER': 'ambient', 'CFLAGS': '--ambient-c-flag',
                    'CXXFLAGS': '--ambient-cxx-flag', 'RUSTFLAGS': '--ambient-flag', 'RUSTC_WRAPPER': '/ambient/rustc-wrapper',
                    'CARGO_PROFILE_DEV_OPT_LEVEL': '0',

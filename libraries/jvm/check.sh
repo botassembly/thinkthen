@@ -2,12 +2,6 @@
 set -eu
 here=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 root=$(CDPATH= cd -- "$here/../.." && pwd)
-lock=${THINKTHEN_HEAVY_LOCK:-${XDG_RUNTIME_DIR:-/tmp}/thinkthen-jvm.lock}
-if [ "${THINKTHEN_HEAVY_LOCK_HELD:-}" != "$lock" ] && command -v flock >/dev/null 2>&1; then
-    THINKTHEN_HEAVY_LOCK_HELD=$lock
-    export THINKTHEN_HEAVY_LOCK_HELD
-    exec flock -o "$lock" /bin/sh "$0" "$@"
-fi
 . "$root/sdlc/scripts/scratch.sh"
 usage_home
 if [ -n "${THINKTHEN_PARITY_PREPARE:-}${THINKTHEN_PARITY_PREPARED:-}" ]; then

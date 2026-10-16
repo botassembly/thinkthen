@@ -21,7 +21,7 @@ def archive(source, output, members):
 def require_tools(language, env, missing):
     tools = {'csharp': ('/usr/bin/bwrap',), 'dart': ('node',),
              'flutter': ('node', '/usr/bin/xvfb-run'),
-             'swift': ('node', 'bwrap', 'flock')}[language]
+             'swift': ('node', 'bwrap')}[language]
     overrides = {'csharp': (('dotnet', 'THINKTHEN_DOTNET'),),
                  'dart': (('dart', 'TT_DART'),),
                  'flutter': (('dart', 'TT_DART'), ('flutter', 'TT_FLUTTER')),

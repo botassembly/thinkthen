@@ -17,7 +17,7 @@ for named in "$go_bin" "$python_bin"; do
     case "$named" in /*) ;; *) echo "go: not run: tool path is not absolute: $named" >&2; exit 77 ;; esac
     [ -x "$named" ] || { echo "go: not run: tool is unavailable: $named" >&2; exit 77; }
 done
-for tool in gofmt cargo cc nm node git flock; do
+for tool in gofmt cargo cc nm node git; do
     command -v "$tool" >/dev/null 2>&1 || { echo "go: not run: no $tool" >&2; exit 77; }
 done
 # Refuse unsupported toolchains before any native build or installed check.
@@ -31,11 +31,6 @@ if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
     [ -n "${THINKTHEN_C_ARTIFACT:-}" ] || { echo 'go: missing C archive' >&2; exit 1; }
 fi
 "$python_bin" -c 'import jsonschema' || { echo 'go: not run: Python jsonschema is unavailable' >&2; exit 77; }
-lock=${THINKTHEN_HEAVY_LOCK:-/run/user/1000/thinkthen-codex-6.lock}
-if [ "${THINKTHEN_HEAVY_LOCK_HELD:-}" != "$lock" ]; then
-    export THINKTHEN_HEAVY_LOCK_HELD="$lock"
-    exec flock -w 180 -o "$lock" /bin/sh "$repo/libraries/go/check.sh" "$@"
-fi
 . "$repo/sdlc/scripts/scratch.sh"
 usage_home
 export CARGO_NET_OFFLINE=true CARGO_BUILD_JOBS=2

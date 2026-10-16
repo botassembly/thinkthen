@@ -336,8 +336,6 @@ class PublicAssertions(unittest.TestCase):
         finished_rust = threading.Event()
         def command(args, **kwargs):
             name = args[-2]
-            self.assertEqual(kwargs['env']['THINKTHEN_HEAVY_LOCK_HELD'], '/owned-lock')
-            self.assertEqual(kwargs['env']['THINKTHEN_HEAVY_LOCK'], '/owned-lock')
             if name == 'rust-polars':
                 self.assertTrue(finished_rust.is_set())
             else:
@@ -348,7 +346,7 @@ class PublicAssertions(unittest.TestCase):
             if name == 'rust':
                 finished_rust.set()
             return subprocess.CompletedProcess(args, 0)
-        with tempfile.TemporaryDirectory() as scratch, contextlib.redirect_stdout(io.StringIO()), patch.object(parity, 'ROOT', Path(scratch)), patch.object(parity, 'inventory', return_value=contract), patch.object(parity.subprocess, 'run', side_effect=command), patch.object(parity.os, 'environ', {'THINKTHEN_HEAVY_LOCK_HELD': '/owned-lock'}):
+        with tempfile.TemporaryDirectory() as scratch, contextlib.redirect_stdout(io.StringIO()), patch.object(parity, 'ROOT', Path(scratch)), patch.object(parity, 'inventory', return_value=contract), patch.object(parity.subprocess, 'run', side_effect=command), patch.object(parity.os, 'environ', {}):
             self.assertEqual(parity.run('12345'), 0)
             matrix = json.loads((Path(scratch) / 'target/parity/matrix.json').read_text())
             self.assertEqual({row['consumer'] for row in matrix}, set(ids))

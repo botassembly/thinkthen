@@ -1,18 +1,2 @@
-# pm job admits builds by disk, memory and slot count and isolates ticket output.
-# Set THINKTHEN_HEAVY_LOCK only when commands mutate a shared toolchain or output.
-# A nested rung inherits the held marker instead of reacquiring its own lock.
+# pm job owns build admission and isolates output; retain child environment sanitization.
 . "$(dirname -- "$0")/allow-list"
-
-if [ -n "${THINKTHEN_HEAVY_LOCK:-}" ] && [ "${THINKTHEN_HEAVY_LOCK_HELD:-}" != "$THINKTHEN_HEAVY_LOCK" ]; then
-    export THINKTHEN_HEAVY_LOCK_HELD="$THINKTHEN_HEAVY_LOCK"
-    # The parent holds the descriptor; children cannot inherit it into a daemon.
-    exec python3 -c '
-import fcntl
-import os
-import subprocess
-import sys
-with open(os.environ["THINKTHEN_HEAVY_LOCK"], "a") as lock:
-    fcntl.flock(lock, fcntl.LOCK_EX)
-    sys.exit(subprocess.call(["/bin/sh", *sys.argv[1:]]))
-' "$0" "$@"
-fi

@@ -27,11 +27,6 @@ Darwin)
 Linux) ;;
 *) echo 'Swift installed checks require Linux or macOS' >&2; exit 77 ;;
 esac
-lock=${THINKTHEN_HEAVY_LOCK:-${XDG_RUNTIME_DIR:-/tmp}/thinkthen-swift.lock}
-if [ "${THINKTHEN_HEAVY_LOCK_HELD:-}" != "$lock" ]; then
-    export THINKTHEN_HEAVY_LOCK_HELD=$lock
-    exec flock -w 180 -E 75 -o "$lock" /bin/sh "$0" "$@"
-fi
 . "$root/sdlc/scripts/scratch.sh"
 node "$root/sdlc/scripts/ratchet.mjs" "$here/ratchet.swift.json"
 node "$root/sdlc/scripts/ratchet.mjs" "$here/ratchet.py.json"

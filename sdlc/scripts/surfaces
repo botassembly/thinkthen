@@ -10,8 +10,7 @@ set -eu
 
 # `surfaces --release` counts a check that reports "not run" as a failure (ticket 0128).
 . "$(dirname -- "$0")/verdict.sh"
-# One heavy rung at a time on this machine. See heavy-lock. It re-runs this script with "$@",
-# so it comes before the options are shifted away.
+# Sanitize the environment before starting build tools.
 [ "$*" = --registry ] || . "$(dirname -- "$0")/heavy-lock"
 mode=plain
 profile=routine
