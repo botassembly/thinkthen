@@ -77,7 +77,7 @@ def command(binary, value, settings, home):
             len(value["items"]) == 1 and isinstance(value["items"][0], str)
         )
     ))
-    names = {"base_url": "url", "max_requests": "max-requests-total"}
+    names = {"base_url": "url", "max_requests": "max-requests-total", "throttle": "jobs"}
     for name, value_ in settings.items():
         if name in ("cache", "refresh_cache") and isinstance(value_, bool):
             if value_ and name == "refresh_cache":
