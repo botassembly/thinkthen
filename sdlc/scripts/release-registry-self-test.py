@@ -367,6 +367,20 @@ def apple_package_cases():
         sidecar = output / (name + '.sha256'); sidecar.write_text(f'{digest}  {name}\n')
         env = os.environ | {'PATH': str(tools) + os.pathsep + os.defpath,
                             'THINKTHEN_RELEASE_EXPECTED_SHA': commit}
+        # The standalone workflow assembles the same installed README mapping.
+        workflow = yaml.safe_load((REPO / '.github/workflows/objective-c.yml').read_text())
+        assembly = next(step['run'] for step in workflow['jobs']['foundation']['steps']
+                        if step.get('name') == 'Assemble private installed test package')
+        header = root / 'native-source/libraries/c/include/thinkthen.h'
+        header.parent.mkdir(parents=True)
+        shutil.copyfile(REPO / 'libraries/c/include/thinkthen.h', header)
+        xcrun = tools / 'xcrun'
+        xcrun.write_text('#!/bin/sh\nexit 0\n'); xcrun.chmod(0o755)
+        assembled = subprocess.run(['sh', '-eu', '-c', assembly], cwd=root, env=env,
+                                   text=True, capture_output=True)
+        assert assembled.returncode == 0, assembled
+        assert (root / 'target/foundation-package/README.md').read_bytes() == (
+            REPO / 'libraries/objective-c/README-PUBLIC.md').read_bytes()
         apple_env = env | {'THINKTHEN_SWIFT': '/usr/bin/true', 'THINKTHEN_ARTIFACT': ''}
         refused = subprocess.run(['sh', str(REPO / 'libraries/swift/check.sh')], env=apple_env, text=True, capture_output=True)
         assert refused.returncode == 1 and 'no native build is started' in refused.stderr, refused
