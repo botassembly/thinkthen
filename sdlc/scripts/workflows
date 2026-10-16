@@ -1339,7 +1339,7 @@ def self_test():
     if archive.returncode != 0:
         bad += 1
         print(f"workflows self-test archived release: {archive.stdout}{archive.stderr}", file=sys.stderr)
-    language = subprocess.run([sys.executable, str(REPO / "sdlc/scripts/release-language-tools-self-test.py")],
+    language = subprocess.run([sys.executable, str((REPO / "sdlc/scripts/release-language-tools-self-test.py").resolve())],
                               capture_output=True, text=True)
     if language.returncode != 0:
         bad += 1
@@ -1378,11 +1378,11 @@ def main(argv):
     out = check(REPO / ".github/workflows")
     out += fetch_gaps((REPO / "sdlc/scripts/release-workflow").read_text(encoding="utf-8"))
     if not out:
-        managed = subprocess.run([sys.executable, str(REPO / "sdlc/scripts/release-managed-pair-self-test.py")],
+        managed = subprocess.run([sys.executable, str((REPO / "sdlc/scripts/release-managed-pair-self-test.py").resolve())],
                                  capture_output=True, text=True)
         if managed.returncode:
             out.append(f"managed workflow fixture failed: {managed.stdout}{managed.stderr}")
-        language = subprocess.run([sys.executable, str(REPO / "sdlc/scripts/release-language-tools-self-test.py")],
+        language = subprocess.run([sys.executable, str((REPO / "sdlc/scripts/release-language-tools-self-test.py").resolve())],
                                   capture_output=True, text=True)
         if language.returncode:
             out.append(f"language tool fixture failed: {language.stdout}{language.stderr}")

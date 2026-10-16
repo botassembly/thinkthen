@@ -15,8 +15,11 @@ def workflow_command(name, doc):
     with tempfile.TemporaryDirectory(prefix='thinkthen-hosted-gate-') as temporary:
         root = Path(temporary)
         for source in REPO.iterdir():
-            if source.name not in ('.github', 'sdlc'):
-                (root / source.name).symlink_to(source)
+            if source.name not in ('.git', '.github', 'sdlc'):
+                if source.name in ('.gitignore', '.gitattributes'):
+                    (root / source.name).write_bytes(source.read_bytes())
+                else:
+                    (root / source.name).symlink_to(source)
         scripts = root / 'sdlc/scripts'
         scripts.mkdir(parents=True)
         for source in (REPO / 'sdlc/scripts').iterdir():
@@ -25,12 +28,15 @@ def workflow_command(name, doc):
                 target.write_bytes(source.read_bytes())
             else:
                 target.symlink_to(source)
+        (root / 'sdlc/generators').symlink_to(REPO / 'sdlc/generators')
         workflows = root / '.github/workflows'
         workflows.mkdir(parents=True)
         for source in (REPO / '.github/workflows').glob('*.y*ml'):
             (workflows / source.name).write_bytes(source.read_bytes())
         original = (REPO / '.github/workflows' / name).read_text()
         (workflows / name).write_text(original if doc == yaml.safe_load(original) else yaml.safe_dump(doc))
+        subprocess.run(['git', 'init', '-q', str(root)], check=True)
+        subprocess.run(['git', '-C', str(root), 'add', '.github/workflows'], check=True)
         result = subprocess.run([sys.executable, str(scripts / 'workflows')],
                                 cwd=REPO, capture_output=True, text=True, timeout=30)
         return result.returncode, result.stdout + result.stderr
