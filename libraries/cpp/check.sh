@@ -77,5 +77,4 @@ for test in result_lifetime answer_test result_concurrency; do
 done
 heavy_compile cargo build --locked --offline --manifest-path "$repo/Cargo.toml" --package conformance-backend -j2
 "$python_bin" "$repo/conformance/children/session_cases.py" "$out/owned-shared/session_consumer"
-THINKTHEN_CPP_CASES=library-call-result "$python_bin" "$repo/conformance/children/session_cases.py" "$out/owned-shared/session_consumer"
 echo 'cpp: pass'

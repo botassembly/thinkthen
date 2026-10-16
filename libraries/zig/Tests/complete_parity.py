@@ -29,6 +29,3 @@ with tempfile.TemporaryDirectory(prefix='installed-session-', dir=ROOT / 'librar
         stage = Path(os.environ['THINKTHEN_COVERAGE_STAGE']); stage.mkdir(parents=True, exist_ok=True)
         shutil.copy2(binary, stage / 'consumer')
     session_cases.native_cases(binary, consumer='zig')
-    if not os.environ.get('THINKTHEN_ZIG_CASES') and os.environ.get('THINKTHEN_TEST_PROFILE', 'routine') != 'full':
-        os.environ['THINKTHEN_ZIG_CASES'] = 'library-call-result'
-        session_cases.native_cases(binary, consumer='zig')

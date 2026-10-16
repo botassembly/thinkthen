@@ -57,7 +57,9 @@ fi
 if [ -z "${THINKTHEN_PARITY_PREPARED:-}" ]; then
 python3 "$here/tests/session_installed.py" --jars "$jars" --out "$consumer"
 CARGO_NET_OFFLINE=true cargo build --manifest-path "$root/Cargo.toml" --locked --offline -p conformance-backend -j2
-python3 "$here/tests/public_types.py" --jars "$jars" --out "$consumer/call-result" --case library-call-result --case settings-max-requests-refuses-past-the-limit
+if [ "${THINKTHEN_TEST_PROFILE:-routine}" != full ] && [ "${THINKTHEN_PORTABLE_BATCH:-}" != 1 ]; then
+    python3 "$here/tests/public_types.py" --jars "$jars" --out "$consumer/call-result" --case library-call-result --case settings-max-requests-refuses-past-the-limit
+fi
 python3 "$here/tests/usage_installed.py" --jars "$jars" --out "$consumer/usage"
 fi
 if [ -n "${THINKTHEN_PARITY_PREPARE:-}" ]; then
