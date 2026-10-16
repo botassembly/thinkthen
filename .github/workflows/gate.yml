@@ -299,6 +299,7 @@ jobs:
           ln -s "$work/$STAGE/target" target
           printf 'GATE_OUTPUT=%s\n' "$work/$STAGE/evidence" >> "$GITHUB_ENV"
           printf 'RELEASE_WORK=%s\n' "$work/$STAGE" >> "$GITHUB_ENV"
+          printf 'UV_CACHE_DIR=%s\nUV_PYTHON_INSTALL_DIR=%s\n' "$work/$STAGE/uv-cache" "$work/$STAGE/uv-python" >> "$GITHUB_ENV"
           printf '%s\n' "$HOME/.local/bin" "$GITHUB_WORKSPACE/target/debug" >> "$GITHUB_PATH"
       - uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6.0.0
         with: {python-version: '3.13'}
@@ -422,6 +423,7 @@ jobs:
                      GOPROXY='off', GOSUMDB='off', GOTOOLCHAIN='local', CI='true',
                      DOTNET_CLI_DO_NOT_USE_MSBUILD_SERVER='1', MSBUILDDISABLENODEREUSE='1',
                      FLUTTER_SUPPRESS_ANALYTICS='true', THINKTHEN_MACOS_APPLE_CHECKS='required')
+          env['PATH'] = str(Path(env['THINKTHEN_DOTNET']).parent) + os.pathsep + env['PATH']
           for key in ('HOME', 'XDG_CONFIG_HOME', 'XDG_CACHE_HOME', 'XDG_STATE_HOME'):
               Path(env[key]).mkdir(parents=True, exist_ok=True)
           (Path(env['HOME']) / '.cache').mkdir(exist_ok=True)
@@ -439,6 +441,7 @@ jobs:
               return {line.split()[0]: dict(part.split('=') for part in line.split()[1:]) for line in value.splitlines()}
           def run(name, command, cwd=root, extra=None):
               assert subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=root, text=True).strip() == sha
+              assert subprocess.call(['git', 'diff', '--quiet', 'HEAD', '--'], cwd=root) == 0
               started = time.time(); before = snapshot(name + '.io-before')
               with (out / (name + '.log')).open('wb') as log:
                   saved = os.dup(1), os.dup(2); previous = Path.cwd()
@@ -450,7 +453,8 @@ jobs:
                       os.close(saved[0]); os.close(saved[1]); signal.pthread_sigmask(signal.SIG_SETMASK, set())
               remaining = sorted(admission.child_pids())
               after = subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=root, text=True).strip()
-              guard = None if after == sha and not remaining else 'source identity or child ownership changed'
+              clean = subprocess.call(['git', 'diff', '--quiet', 'HEAD', '--'], cwd=root) == 0
+              guard = None if after == sha and clean and not remaining else 'source identity, tracked source or child ownership changed'
               receipt = ({'revision': sha, 'command': command, 'cwd': str(cwd), 'exit': code,
                           'seconds': round(time.time() - started, 2), 'remaining_children': remaining,
                           'io_before': before, 'io_after': snapshot(name + '.io-after')} if stage == 'core' else
@@ -628,7 +632,7 @@ jobs:
                       shutil.copy2(apple, out / 'apple-totals.json')
               if stage == 'core':
                   result.update(revision_after=subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip(),
-                                source_clean=not subprocess.check_output(['git', 'status', '--porcelain']),
+                                source_clean=subprocess.call(['git', 'diff', '--quiet', 'HEAD', '--'], cwd=root) == 0,
                                 remaining_children=sorted(admission.child_pids()), effective_routine='test',
                                 effective_failures=[name for name, row in result['gates'].items()
                                                     if row['exit'] != 0 and (name, row['exit']) != ('objective-c-platform', 77)])
