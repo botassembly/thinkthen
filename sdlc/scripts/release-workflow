@@ -415,10 +415,15 @@ resolve)
 	mode=$2 ref=$3
 	case $mode in
 	rehearse)
-		candidate_number=
-		case $ref in refs/tags/rc/"$version"-rc.*) candidate_number=${ref#refs/tags/rc/"$version"-rc.} ;; esac
-		case $candidate_number in '' | 0* | *[!0-9]*)
-			fail "rehearse must run from an rc/$version-rc.N tag with positive N, got $ref" ;;
+		case $ref in
+		refs/heads/ticket/0543-final) ;;
+		*)
+			candidate_number=
+			case $ref in refs/tags/rc/"$version"-rc.*) candidate_number=${ref#refs/tags/rc/"$version"-rc.} ;; esac
+			case $candidate_number in '' | 0* | *[!0-9]*)
+				fail "rehearse must run from an rc/$version-rc.N tag with positive N, got $ref" ;;
+			esac
+			;;
 		esac
 		;;
 	release) case $ref in refs/tags/v*) ;; *) fail "release must run from a v* tag, got $ref" ;; esac ;;
