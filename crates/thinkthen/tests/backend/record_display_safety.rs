@@ -360,7 +360,10 @@ fn backend_refusal_never_prints_a_delimiter_or_provider_body() -> io::Result<()>
 }
 
 #[cfg(unix)]
-#[cfg_attr(target_os = "macos", ignore = "macOS refuses invalid UTF-8 filenames; Linux CI runs this case")]
+#[cfg_attr(
+    target_os = "macos",
+    ignore = "macOS refuses invalid UTF-8 filenames; Linux CI runs this case"
+)]
 #[test]
 fn invalid_utf8_named_path_preserves_access_and_lossy_details_location() -> io::Result<()> {
     use crate::child::ChildEnvironment as _;
