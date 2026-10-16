@@ -2,6 +2,7 @@
 """Synthetic outside-in receipt and package refusals for release-managed-pair."""
 import hashlib
 import os
+import platform
 import re
 import shutil
 import io
@@ -87,6 +88,9 @@ def run(base, mode, expected, message=None):
 
 
 def gate(base, expected):
+    if sys.platform != "linux" or platform.machine() != "x86_64":
+        print("managed gate fixture: skip Linux x86-64 host and GNU find checks; Linux CI runs them")
+        return
     provenance = base / "provenance"
     provenance.mkdir(exist_ok=True)
     for name in ("source.tar", "source.json", "c.json", "managed.json"):
