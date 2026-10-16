@@ -178,7 +178,7 @@ jobs:
             tar -xzf "$input/$name" -C "target/apple-$arch"
             cmp "target/apple-$arch/include/thinkthen.h" libraries/c/include/thinkthen.h
           done
-          libraries/swift/build-xcframework.sh target/apple-x86_64 target/apple-aarch64 target/apple-framework
+          sh libraries/swift/build-xcframework.sh target/apple-x86_64 target/apple-aarch64 target/apple-framework
           cp -R target/apple-framework/CThinkThen.xcframework libraries/swift/
           mkdir target/apple-packages
           cp "target/apple-inputs/platform-$TARGET/thinkthen-c-$version-$TARGET.tar.gz"* target/apple-packages/

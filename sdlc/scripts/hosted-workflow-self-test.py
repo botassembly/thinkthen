@@ -2,6 +2,8 @@
 """Plant hosted candidate routing and parameter failures at the actual entry points."""
 from copy import deepcopy
 import os
+import io
+import tarfile
 from pathlib import Path
 import subprocess
 import sys
@@ -151,6 +153,7 @@ def workflow_cases():
         assert result.returncode == wanted, value
 
 
+
 def parameter_cases():
     head = subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=REPO, text=True).strip()
     guard = REPO / 'sdlc/scripts/hosted-candidate.py'
@@ -177,6 +180,24 @@ def parameter_cases():
             path.write_text('#!/bin/sh\n' + body + '\n')
             path.chmod(0o755)
         env = {'PATH': f'{root}/bin:{os.defpath}', 'HOME': str(root), 'LANG': 'C.UTF-8'}
+        # Exercise the workflow caller with the real archived, non-executable helper.
+        archived = subprocess.check_output(['git', 'archive', 'HEAD',
+                                            'libraries/swift/build-xcframework.sh'], cwd=REPO)
+        with tarfile.open(fileobj=io.BytesIO(archived)) as source:
+            source.extractall(root, filter='data')
+        release = yaml.safe_load((REPO / '.github/workflows/release.yml').read_text())
+        apple = release['jobs']['apple-packages']
+        assembly = next(step['run'] for step in apple['steps'] if step.get('name') ==
+                        'Assemble Swift and Foundation from both captured C packages')
+        command = next(line for line in assembly.splitlines() if 'build-xcframework.sh' in line)
+        (root / 'bin/uname').write_text('#!/bin/sh\necho Linux\n')
+        for cell in apple['strategy']['matrix']['include']:
+            result = subprocess.run(['/bin/sh', '-c', command], cwd=root,
+                                    env={**env, 'TARGET': cell['target']},
+                                    capture_output=True, text=True, timeout=5)
+            assert result.returncode == 2 and 'Apple native tools are required' in result.stderr, (
+                cell['target'], result.returncode, result.stderr)
+        (root / 'bin/uname').write_text('#!/bin/sh\ncase $1 in -s) echo Darwin ;; *) echo arm64 ;; esac\n')
         for status in (0, 77, 1):
             (root / 'libraries/swift/check.sh').write_text(f'echo selected-swift\nexit {status}\n')
             (root / 'libraries/objective-c/check.sh').write_text('echo WRONG_LANGUAGE\nexit 1\n')
