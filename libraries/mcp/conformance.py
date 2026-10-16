@@ -419,6 +419,7 @@ def run(port, binary):
                         assert got.get('requests_sent', count - before) == count - before, (got, count - before)
                         assertions(row, step, got, count - before if step.get('count_delta') else count)
                         if row['id'] == 'settings-max-requests-refuses-past-the-limit':
+                            assert got['message'] == 'the process send budget was spent before another request in this call', got
                             assert got['requests_sent'] == got['records'] == 2, got
                             assert got['stopped_at'] == 3, got
                             assert [r['index'] for r in got['completed']] == [0, 1], got
