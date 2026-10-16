@@ -93,6 +93,8 @@ class PublicSurface(unittest.TestCase):
                             output.parent.mkdir(parents=True, exist_ok=True)
                             shutil.copyfile(path, output)
                 def invoke():
+                    subprocess.run(['git', 'init', '-q', str(root)], check=True, env=child_env(home=str(root)))
+                    subprocess.run(['git', '-C', str(root), 'add', '.'], check=True, env=child_env(home=str(root)))
                     run = subprocess.run(['python3', str(CHECK), '--root', str(root), '--library', library, '--json'],
                                          capture_output=True, text=True, env=child_env(home=folder))
                     self.assertIn(run.returncode, (0, 1), run.stderr)
@@ -157,6 +159,8 @@ class PublicSurface(unittest.TestCase):
             header.parent.mkdir(parents=True)
             shutil.copyfile(ROOT / 'libraries/c/include/thinkthen.h', header)
             def invoke():
+                subprocess.run(['git', 'init', '-q', str(root)], check=True, env=child_env(home=str(root)))
+                subprocess.run(['git', '-C', str(root), 'add', '.'], check=True, env=child_env(home=str(root)))
                 run = subprocess.run(['python3', str(CHECK), '--root', str(root), '--library', 'zig', '--json'],
                                      capture_output=True, text=True, env=child_env(home=folder))
                 self.assertIn(run.returncode, (0, 1), run.stderr)
@@ -191,6 +195,8 @@ class PublicSurface(unittest.TestCase):
             header.parent.mkdir(parents=True)
             shutil.copyfile(ROOT / 'libraries/c/include/thinkthen.h', header)
             def invoke():
+                subprocess.run(['git', 'init', '-q', str(root)], check=True, env=child_env(home=str(root)))
+                subprocess.run(['git', '-C', str(root), 'add', '.'], check=True, env=child_env(home=str(root)))
                 run = subprocess.run(['python3', str(CHECK), '--root', str(root), '--library', 'dart', '--json'],
                                      capture_output=True, text=True, env=child_env(home=folder))
                 self.assertIn(run.returncode, (0, 1), run.stderr)
@@ -249,6 +255,8 @@ class PublicSurface(unittest.TestCase):
             header.parent.mkdir(parents=True)
             shutil.copyfile(ROOT / 'libraries/c/include/thinkthen.h', header)
             def invoke():
+                subprocess.run(['git', 'init', '-q', str(root)], check=True, env=child_env(home=str(root)))
+                subprocess.run(['git', '-C', str(root), 'add', '.'], check=True, env=child_env(home=str(root)))
                 run = subprocess.run(['python3', str(CHECK), '--root', str(root), '--library', 'python', '--json'],
                                      capture_output=True, text=True, env=child_env(home=folder))
                 self.assertIn(run.returncode, (0, 1), run.stderr)
@@ -282,6 +290,8 @@ class PublicSurface(unittest.TestCase):
             header.parent.mkdir(parents=True)
             shutil.copyfile(ROOT / 'libraries/c/include/thinkthen.h', header)
             def invoke(**values):
+                subprocess.run(['git', 'init', '-q', str(root)], check=True, env=child_env(home=str(root)))
+                subprocess.run(['git', '-C', str(root), 'add', '.'], check=True, env=child_env(home=str(root)))
                 run = subprocess.run(['python3', str(CHECK), '--root', str(root), '--library', 'ruby', '--json'],
                                      capture_output=True, text=True, env=child_env(home=folder, **values))
                 self.assertIn(run.returncode, (0, 1), run.stderr)
@@ -311,6 +321,8 @@ class PublicSurface(unittest.TestCase):
                                     RUBYLIB=str(root), TEST_CREDENTIAL='fake'), baseline)
             self.assertFalse(marker.exists())
             runtime.write_text(original_runtime)
+            subprocess.run(['git', 'init', '-q', str(root)], check=True, env=child_env(home=str(root)))
+            subprocess.run(['git', '-C', str(root), 'add', '.'], check=True, env=child_env(home=str(root)))
             unavailable = subprocess.run(
                 [sys.executable, str(CHECK), '--root', str(root), '--library', 'ruby', '--json'],
                 capture_output=True, text=True,
@@ -378,6 +390,8 @@ class PublicSurface(unittest.TestCase):
             for body, public in cases:
                 with self.subTest(body=body, public=public):
                     runtime.write_text(original + '\nmodule ThinkThen\nclass Client\n' + body + '\nend\nend\n')
+                    subprocess.run(['git', 'init', '-q', str(root)], check=True, env=child_env(home=str(root)))
+                    subprocess.run(['git', '-C', str(root), 'add', '.'], check=True, env=child_env(home=str(root)))
                     run = subprocess.run([sys.executable, str(CHECK), '--root', str(root), '--library', 'ruby', '--json'],
                                          capture_output=True, text=True, env=child_env(home=folder))
                     self.assertIn(run.returncode, (0, 1), run.stderr)
@@ -395,6 +409,8 @@ class PublicSurface(unittest.TestCase):
             header.parent.mkdir(parents=True)
             shutil.copyfile(ROOT / 'libraries/c/include/thinkthen.h', header)
             def invoke():
+                subprocess.run(['git', 'init', '-q', str(root)], check=True, env=child_env(home=str(root)))
+                subprocess.run(['git', '-C', str(root), 'add', '.'], check=True, env=child_env(home=str(root)))
                 run = subprocess.run(['python3', str(CHECK), '--root', str(root), '--library', 'ada', '--json'],
                                      capture_output=True, text=True, env=child_env(home=folder))
                 self.assertIn(run.returncode, (0, 1), run.stderr)
@@ -437,6 +453,8 @@ class PublicSurface(unittest.TestCase):
             shutil.copyfile(ROOT / 'libraries/c/include/thinkthen.h', header)
             bridge = root / 'libraries/cobol/src/tt_session.h'
             def invoke():
+                subprocess.run(['git', 'init', '-q', str(root)], check=True, env=child_env(home=str(root)))
+                subprocess.run(['git', '-C', str(root), 'add', '.'], check=True, env=child_env(home=str(root)))
                 result = subprocess.run(['python3', str(CHECK), '--root', str(root), '--library', 'cobol', '--json'], capture_output=True, text=True, env=child_env(home=folder))
                 self.assertIn(result.returncode, (0, 1), result.stderr)
                 return result.returncode, json.loads(result.stdout)['libraries']['cobol']
@@ -472,6 +490,8 @@ extraPublicExport <- function(context = NULL, enabled = FALSE,
     close = function() invisible(NULL), later = list(a = 1, b = 2), ...) {}
 ''')
             def invoke():
+                subprocess.run(['git', 'init', '-q', str(root)], check=True, env=child_env(home=str(root)))
+                subprocess.run(['git', '-C', str(root), 'add', '.'], check=True, env=child_env(home=str(root)))
                 run = subprocess.run(['python3', str(CHECK), '--root', str(root), '--library', 'r', '--json'],
                                      capture_output=True, text=True, env=child_env(home=folder))
                 self.assertIn(run.returncode, (0, 1), run.stderr)
@@ -524,6 +544,8 @@ extraPublicExport <- function(context = NULL, enabled = FALSE,
             def invoke(source=original, mixin=generated):
                 client.write_text(source)
                 calls.write_text(mixin)
+                subprocess.run(['git', 'init', '-q', str(root)], check=True, env=child_env(home=str(root)))
+                subprocess.run(['git', '-C', str(root), 'add', '.'], check=True, env=child_env(home=str(root)))
                 run = subprocess.run(['python3', str(CHECK), '--root', str(root), '--library', 'cpp', '--json'],
                                      capture_output=True, text=True, env=child_env(home=folder))
                 self.assertIn(run.returncode, (0, 1), run.stderr)
@@ -637,6 +659,8 @@ extraPublicExport <- function(context = NULL, enabled = FALSE,
             def invoke(source=declarations, graph=generated):
                 write('libraries/typescript/native.d.ts', source)
                 write('libraries/typescript/results_generated.d.ts', graph)
+                subprocess.run(['git', 'init', '-q', str(root)], check=True, env=child_env(home=str(root)))
+                subprocess.run(['git', '-C', str(root), 'add', '.'], check=True, env=child_env(home=str(root)))
                 run = subprocess.run(['python3', str(CHECK), '--root', str(root), '--json'],
                                      capture_output=True, text=True,
                                      env=child_env(home=folder))
@@ -707,6 +731,8 @@ extraPublicExport <- function(context = NULL, enabled = FALSE,
                               'func (v returned) ExtraReturnedExport() {}\n'
                               'type unreachable struct {}\nfunc (v unreachable) InvisibleExport() {}\n'
                               'func (v ownedJSON) ExtraRepresentationExport() {}\n')
+            subprocess.run(['git', 'init', '-q', str(root)], check=True, env=child_env(home=str(root)))
+            subprocess.run(['git', '-C', str(root), 'add', '.'], check=True, env=child_env(home=str(root)))
             run = subprocess.run(['python3', str(CHECK), '--root', str(root), '--manifest',
                                   str(ROOT / 'conformance/library-surface.json'), '--library', 'go', '--json'],
                                  capture_output=True, text=True, env=child_env(home=folder))
@@ -725,6 +751,8 @@ extraPublicExport <- function(context = NULL, enabled = FALSE,
             source = generated.read_text()
             source = source.replace('Context           *string', 'Surprise          *string')
             generated.write_text(source)
+            subprocess.run(['git', 'init', '-q', str(root)], check=True, env=child_env(home=str(root)))
+            subprocess.run(['git', '-C', str(root), 'add', '.'], check=True, env=child_env(home=str(root)))
             run = subprocess.run(['python3', str(CHECK), '--root', str(root), '--manifest',
                                   str(ROOT / 'conformance/library-surface.json'), '--library', 'go', '--json'],
                                  capture_output=True, text=True, env=child_env(home=folder))
@@ -751,6 +779,8 @@ extraPublicExport <- function(context = NULL, enabled = FALSE,
             original = calls.read_text()
             def invoke(source):
                 calls.write_text(source)
+                subprocess.run(['git', 'init', '-q', str(root)], check=True, env=child_env(home=str(root)))
+                subprocess.run(['git', '-C', str(root), 'add', '.'], check=True, env=child_env(home=str(root)))
                 run = subprocess.run(['python3', str(CHECK), '--root', str(root), '--manifest',
                                       str(ROOT / 'conformance/library-surface.json'), '--library', 'csharp', '--json'],
                                      capture_output=True, text=True, env=child_env(home=folder))
@@ -765,6 +795,11 @@ extraPublicExport <- function(context = NULL, enabled = FALSE,
                              + 'public string FactsJson {get;} public string Failure {get;} }\n'
                              + 'public class RequestOptions { public string SurpriseOption {get;} }\n'
                              + 'public class EngineSettings { public string SurpriseSetting {get;} }\n')
+            untracked = subprocess.run(
+                ['python3', str(CHECK), '--root', str(root), '--manifest',
+                 str(ROOT / 'conformance/library-surface.json'), '--library', 'csharp', '--json'],
+                capture_output=True, text=True, env=child_env(home=folder))
+            self.assertEqual(json.loads(untracked.stdout)['libraries']['csharp'], baseline)
             unexpected = invoke(original)
             for method in methods:
                 self.assertIn('unlisted public call/export: Other.' + method, unexpected)
@@ -816,6 +851,8 @@ extraPublicExport <- function(context = NULL, enabled = FALSE,
             original = records.read_text()
             def invoke(source):
                 records.write_text(source)
+                subprocess.run(['git', 'init', '-q', str(root)], check=True, env=child_env(home=str(root)))
+                subprocess.run(['git', '-C', str(root), 'add', '.'], check=True, env=child_env(home=str(root)))
                 run = subprocess.run(['python3', str(CHECK), '--root', str(root), '--manifest',
                                       str(ROOT / 'conformance/library-surface.json'), '--library', 'jvm', '--json'],
                                      capture_output=True, text=True, env=child_env(home=folder))
@@ -890,6 +927,8 @@ extraPublicExport <- function(context = NULL, enabled = FALSE,
             self.assertIn('trait NamedCalls\n{', original)
             def invoke(source):
                 calls.write_text(source)
+                subprocess.run(['git', 'init', '-q', str(root)], check=True, env=child_env(home=str(root)))
+                subprocess.run(['git', '-C', str(root), 'add', '.'], check=True, env=child_env(home=str(root)))
                 result = subprocess.run(['python3', str(CHECK), '--root', str(root), '--manifest',
                                          str(selected), '--library', 'php', '--json'],
                                         capture_output=True, text=True, env=child_env(home=folder))
