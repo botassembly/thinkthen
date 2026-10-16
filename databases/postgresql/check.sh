@@ -84,6 +84,15 @@ EXT=${CARGO_TARGET_DIR:-target}/release/thinkthen-pg$PG_MAJOR
 # The shipped build, which `package.sh --reuse` packs (ticket 0128).
 SHIPPED=$EXT-shipped
 
+# Source parity prepares the same release archive before installed qualification.
+# The reader and fixture binaries above remain in this source's target directory.
+if [ -n "${THINKTHEN_PARITY_PREPARE:-}" ]; then
+    sh ./package.sh "$PG_MAJOR" "$THINKTHEN_PARITY_PREPARE/package"
+    tar -czf "$THINKTHEN_PARITY_PREPARE/postgresql.tar.gz" -C "$THINKTHEN_PARITY_PREPARE/package" lib extension
+    scratch_clean
+    exit 0
+fi
+
 runtime_open
 cleanup() {
 	[ ! -f "$DATA/postmaster.pid" ] || "$BIN/pg_ctl" -D "$DATA" -m immediate stop >/dev/null 2>&1 || true

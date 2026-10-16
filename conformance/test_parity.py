@@ -1125,10 +1125,19 @@ class InstalledInputs(unittest.TestCase):
         contract = parity.inventory() | {'consumers': [self.consumers['postgresql']], 'pending_consumers': []}
         for missing in (None, '16', '17', '18'):
             with self.subTest(missing=missing), tempfile.TemporaryDirectory() as scratch:
-                majors = []
+                majors, preparations, clock = [], [], [0]
                 def command(args, **kwargs):
                     major = args[-1]
+                    env = kwargs['env']
+                    self.assertEqual(args[2], '900')
+                    if destination := env.get('THINKTHEN_PARITY_PREPARE'):
+                        preparations.append(major)
+                        clock[0] += 610
+                        Path(destination, 'postgresql.tar.gz').write_bytes(b'release package')
+                        return subprocess.CompletedProcess(args, 0)
                     majors.append(major)
+                    self.assertEqual(Path(env['THINKTHEN_ARTIFACT']).read_bytes(), b'release package')
+                    self.assertNotIn('THINKTHEN_PARITY_PREPARE', env)
                     for key, case in parity.required_cases(contract, 'postgresql').items():
                         if major == missing:
                             continue
@@ -1136,9 +1145,10 @@ class InstalledInputs(unittest.TestCase):
                             'consumer': 'postgresql', 'case': key, 'status': 'pass',
                             'checks': case.get('checks', ['named', 'runtime'])}) + '\n')
                     return subprocess.CompletedProcess(args, 0)
-                with contextlib.redirect_stdout(io.StringIO()), patch.object(parity, 'ROOT', Path(scratch)), patch.object(parity, 'inventory', return_value=contract), patch.object(parity.subprocess, 'run', side_effect=command), patch.object(parity.os, 'environ', {}):
+                with contextlib.redirect_stdout(io.StringIO()), patch.object(parity, 'ROOT', Path(scratch)), patch.object(parity, 'inventory', return_value=contract), patch.object(parity.subprocess, 'run', side_effect=command), patch.object(parity.os, 'environ', {}), patch.object(parity.time, 'monotonic', side_effect=lambda: clock[0]):
                     self.assertEqual(parity.run('12345'), int(missing is not None))
                 self.assertEqual(majors, ['16', '17', '18'])
+                self.assertEqual(preparations, majors)
 
     def test_linux_keeps_apple_cells_pending_without_hiding_required_failures(self):
         contract = parity.inventory()
