@@ -100,8 +100,10 @@ def gate(base, expected):
 def fixture(base):
     source = {
         "libraries/c/include/thinkthen.h": C_HEADER,
-        "libraries/csharp/README.md": b"C# readme\n", "libraries/csharp/LICENSE": b"MIT\n",
-        "libraries/jvm/README.md": b"JVM readme\n", "libraries/jvm/LICENSE": b"MIT\n",
+        "libraries/csharp/README.md": b"C# technical readme\n",
+        "libraries/csharp/README-PUBLIC.md": b"C# public readme\n", "libraries/csharp/LICENSE": b"MIT\n",
+        "libraries/jvm/README.md": b"JVM technical readme\n",
+        "libraries/jvm/README-PUBLIC.md": b"JVM public readme\n", "libraries/jvm/LICENSE": b"MIT\n",
         "libraries/jvm/pom.xml": (HELPER.parents[2] / "libraries/jvm/pom.xml").read_bytes(),
     }
     source.update({"libraries/jvm/" + path.relative_to(HELPER.parents[2] / "libraries/jvm").as_posix(): path.read_bytes()
@@ -117,7 +119,7 @@ def fixture(base):
     nupkg = base / f"Botassembly.ThinkThen.{VERSION}.nupkg"
     nuspec = f"<package><metadata><id>Botassembly.ThinkThen</id><version>{VERSION}</version></metadata></package>".encode()
     write_zip(nupkg, {"Botassembly.ThinkThen.nuspec": nuspec,
-                      "lib/net8.0/ThinkThen.dll": b"DLL", "runtimes/linux-x64/native/libthinkthen.so": b"fixture shared library", "README.md": source["libraries/csharp/README.md"],
+                      "lib/net8.0/ThinkThen.dll": b"DLL", "runtimes/linux-x64/native/libthinkthen.so": b"fixture shared library", "README.md": source["libraries/csharp/README-PUBLIC.md"],
                       "LICENSE": source["libraries/csharp/LICENSE"], "_rels/.rels": b"rels",
                       "[Content_Types].xml": b"types",
                       "package/services/metadata/core-properties/abc.psmdcp": b"props"})
@@ -321,6 +323,17 @@ def main():
         run(base, "assemble", 0)
         run(base, "verify", 0)
         gate(base, 0)
+    for family in ("csharp", "jvm"):
+        case(f"technical {family} wrapper README", lambda base, source, family=family: mutate_outer(
+            base, family, lambda files: files.__setitem__("README.md", source[f"libraries/{family}/README.md"])))
+    def technical_readme(data):
+        members = read_zip(data)
+        members["README.md"] = b"C# technical readme\n"
+        buffer = io.BytesIO()
+        write_zip(buffer, members)
+        return buffer.getvalue()
+    inner_rejection("technical NuGet README", "nupkg", technical_readme,
+                    "nupkg README.md differs from source")
     identity = b"<groupId>io.github.botassembly</groupId>"
     for label, replacement, message in (
         ("duplicate project identity", identity * 2, "ambiguous XML groupId"),

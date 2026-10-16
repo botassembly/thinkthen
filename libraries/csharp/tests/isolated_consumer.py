@@ -19,7 +19,8 @@ if release_package:
  assert {item.name for item in package.parent.iterdir()} == {
   f'Botassembly.ThinkThen.{V}.nupkg','LICENSE','README.md','THINKTHEN-PACKAGE-INPUTS'},'C# wrapper inventory'
  for name in ('LICENSE','README.md'):
-  assert (package.parent/name).read_bytes()==(R/name).read_bytes(),f'C# wrapper {name} differs'
+  source="README-PUBLIC.md" if name=="README.md" else name
+  assert (package.parent/name).read_bytes()==(R/source).read_bytes(),f'C# wrapper {name} differs'
  with zipfile.ZipFile(package) as bundle:
   names=set(bundle.namelist())
   assert {'Botassembly.ThinkThen.nuspec','lib/net8.0/ThinkThen.dll','README.md','LICENSE'} <= names,names
