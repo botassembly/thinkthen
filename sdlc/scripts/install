@@ -24,6 +24,12 @@ for tool in cargo python3 node mustmatch jq script; do
 	fi
 done
 
+# Release-script self-tests use TemporaryDirectory(delete=), added in Python 3.12.
+if ! python3 -c 'import sys; sys.exit(sys.version_info < (3, 12))'; then
+    printf '%s\n' 'install: Python 3.12 or later must be on PATH' >&2
+    exit 1
+fi
+
 # Header generation is an external development CLI, outside every product graph.
 python3 -c 'import runpy; runpy.run_path("'"$REPO"'/sdlc/scripts/generate-c-header.py")["check_tool"]()'
 
