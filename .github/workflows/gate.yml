@@ -103,5 +103,8 @@ jobs:
       - name: Rung 2, test
         run: sdlc/scripts/test
 
+      - name: Check coverage collector regressions
+        run: python3 sdlc/scripts/coverage-checks.py -v
+
       - name: Rung 3, spec
         run: sdlc/scripts/spec
