@@ -12,7 +12,11 @@ const ALONE: &str = "THINKTHEN_TEST_CONTROLS_ALONE";
 /// Cached build folders can contain homes left by a previous process with this PID.
 fn fresh_home(path: &str) -> std::io::Result<PathBuf> {
     let root = std::path::Path::new(env!("CARGO_TARGET_TMPDIR"));
-    let name = format!("controls-{}-{}", std::process::id(), path.replace("::", "-"));
+    let name = format!(
+        "controls-{}-{}",
+        std::process::id(),
+        path.replace("::", "-")
+    );
     let mut home = root.join(&name);
     let mut next = 0;
     loop {
