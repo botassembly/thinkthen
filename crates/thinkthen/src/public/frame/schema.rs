@@ -226,7 +226,14 @@ impl Schema {
             .document
             .pointer(&format!("/$defs/{name}"))
             .ok_or_else(|| Error::defect("a native result schema is missing"))?;
-        self.shape(value)
+        let mut shape = self.shape(value)?;
+        if name == "completesourceRelationEndpoint"
+            && let Shape::Object(fields) = &mut shape
+        {
+            // Located endpoints retain the same original dtype as the input column.
+            fields.insert("record".to_owned(), Shape::Raw(self.input.clone()));
+        }
+        Ok(shape)
     }
     pub(super) fn named(&self, name: &str) -> Result<DataType, Error> {
         Ok(self.named_shape(name)?.dtype())

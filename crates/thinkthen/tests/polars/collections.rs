@@ -847,7 +847,7 @@ fn records_column_refuses_original_fields_missing_from_the_typed_column() {
 }
 
 #[test]
-fn relation_records_keep_generated_member_question_text_and_whole_set_probabilities() {
+fn located_relation_records_keep_typed_originals_member_text_and_whole_set_probabilities() {
     use thinkthen::polars::prelude::IntoSeries;
     use thinkthen::{RawRecord, RecordReading, RequestDefinition, RequestFunction};
     let listener = Listener::answering(|_| Canned::ok(r#"{"model":"jev-latest","answers":{"q1":{"type":"noul","noul":0.9},"q2":{"type":"noul","noul":0.8}}}"#)).expect("listener");
@@ -863,7 +863,12 @@ fn relation_records_keep_generated_member_question_text_and_whole_set_probabilit
             let original =
                 RawRecord::json(&serde_json::json!({"name":name,"kind":"person"}).to_string())
                     .expect("original");
-            Some(reading.compose(original).expect("record"))
+            let mut record = reading.compose(original).expect("record");
+            record.original = record.original.with_location(
+                thinkthen::SourceLocation::new(format!("{name}.json"), Some(1), Some(1))
+                    .expect("source"),
+            );
+            Some(record)
         })
         .collect();
     let column = DataFrame::new(
@@ -891,7 +896,7 @@ fn relation_records_keep_generated_member_question_text_and_whole_set_probabilit
         .expect("records")
         .struct_()
         .expect("Struct");
-    assert_eq!(records.len(), 1);
+    assert_located_relation_originals(&call, &column);
     let answer = records.field_by_name("answer").expect("answer");
     let relations = answer
         .struct_()
@@ -932,6 +937,50 @@ fn relation_records_keep_generated_member_question_text_and_whole_set_probabilit
             .collect::<Vec<_>>(),
         [Some(0.9), Some(0.8)]
     );
-    assert_eq!(call.facts().requests_sent(), 1);
     assert_eq!(listener.count(), 1);
+}
+
+#[expect(
+    clippy::expect_used,
+    reason = "a failed loopback fixture stops the consumer"
+)]
+fn assert_located_relation_originals(
+    call: &thinkthen::Call<DataFrame, thinkthen::RequestValue, Series>,
+    column: &Series,
+) {
+    let records = call
+        .value()
+        .column("records")
+        .expect("records")
+        .struct_()
+        .expect("Struct");
+    assert_eq!(records.len(), 1);
+    assert_eq!(call.facts().requests_sent(), 1);
+    let edges = records.field_by_name("value").expect("edges");
+    let edges = edges.list().expect("List").get_as_series(0).expect("edges");
+    for (endpoint, expected) in [("source", column.clone()), ("target", column.reverse())] {
+        let endpoint = edges
+            .struct_()
+            .expect("edges Struct")
+            .field_by_name(endpoint)
+            .expect("endpoint");
+        let original = endpoint
+            .struct_()
+            .expect("endpoint Struct")
+            .field_by_name("record")
+            .expect("original");
+        assert_eq!(original.dtype(), column.dtype());
+        assert!(original.equals_missing(&expected));
+    }
+    let native = serde_json::to_value(call.results()).expect("native records");
+    assert_eq!(
+        native.pointer("/value/0/source/record"),
+        Some(&serde_json::json!({"name":"Ada","kind":"person"}))
+    );
+    assert_eq!(
+        native
+            .pointer("/value/0/source/file")
+            .and_then(serde_json::Value::as_str),
+        Some("Ada.json")
+    );
 }
