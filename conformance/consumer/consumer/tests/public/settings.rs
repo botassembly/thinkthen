@@ -330,36 +330,26 @@ fn every_shared_setting_reaches_the_public_engine() {
             .expect("question")
             .cut();
         for step in case["steps"].as_array().expect("steps") {
-            let mut builder = Engine::builder()
+            let mut settings = super::values::swap(
+                &step["settings"],
+                &std::collections::BTreeMap::from([
+                    ("$PROFILE".to_owned(), serde_json::json!(profile)),
+                    ("$FOLDER".to_owned(), serde_json::json!(folder)),
+                ]),
+            );
+            settings
+                .as_object_mut()
+                .expect("settings")
+                .entry("cache")
+                .or_insert(Value::Bool(false));
+            let engine = thinkthen::EngineBuilder::from_settings_json(&settings.to_string())
+                .expect("shared settings")
                 .base_url(&base)
                 .expect("base")
                 .api_key("sk-consumer-loopback")
                 .expect("key")
-                .no_cache();
-            for (name, value) in step["settings"].as_object().expect("settings") {
-                builder = match name.as_str() {
-                    "timeout" => builder
-                        .timeout(Duration::from_secs(value.as_u64().expect("seconds")))
-                        .expect("timeout"),
-                    "max_retries" => builder.max_retries(value.as_u64().expect("retries") as u32),
-                    "profile" => builder.profile(&profile).expect("profile"),
-                    "model" => builder
-                        .model(value.as_str().expect("model"))
-                        .expect("model"),
-                    "record" => builder.record(&folder).expect("record"),
-                    "replay" => builder.replay(&folder).expect("replay"),
-                    "cache" if value == &Value::Bool(false) => builder.no_cache(),
-                    "cache" => builder.cache_at(&folder).expect("cache"),
-                    "max_requests" => builder
-                        .max_requests(Some(value.as_u64().expect("limit") as usize))
-                        .expect("limit"),
-                    "max_request_bytes" => builder
-                        .max_request_bytes(value.as_u64().expect("bytes") as usize)
-                        .expect("bytes"),
-                    _ => panic!("unknown shared setting {name}"),
-                };
-            }
-            let engine = builder.build().expect("engine");
+                .build()
+                .expect("engine");
             if step["verb"] == "relate" {
                 related(&engine, case, step, id);
             } else if step["verb"] == "decide_many" {
@@ -373,17 +363,25 @@ fn every_shared_setting_reaches_the_public_engine() {
                     )),
                 )
                 .collect();
-                assert_eq!(answers.len(), records.len(), "{id}");
-                for answer in &answers[..2] {
+                let limit = step["settings"]["max_requests"].as_u64().expect("limit") as usize;
+                assert!(records.len() > limit, "{id}: input reaches the refusal");
+                assert_eq!(answers.len(), limit + 1, "{id}: one terminal refusal");
+                for (ordinal, answer) in answers[..limit].iter().enumerate() {
+                    let answer = answer.as_ref().expect("sent row");
+                    assert_eq!(answer.result().value(), Answer::Yes, "{id}");
+                    assert_eq!(answer.ordinal(), ordinal, "{id}");
                     assert_eq!(
-                        answer.as_ref().expect("sent row").result().value(),
-                        Answer::Yes,
+                        *answer.original(),
+                        records[ordinal].as_str().expect("text"),
                         "{id}"
                     );
                 }
+                let error = answers[limit].as_ref().expect_err("limit");
+                assert_eq!(error.kind().name(), step["error"], "{id}");
+                assert_eq!(error.stopped().at(), Some(limit + 1), "{id}");
                 assert_eq!(
-                    answers[2].as_ref().expect_err("limit").kind().name(),
-                    step["error"],
+                    error.facts().expect("final facts").requests_sent(),
+                    limit as u64,
                     "{id}"
                 );
             } else {
