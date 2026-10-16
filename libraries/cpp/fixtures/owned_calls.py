@@ -34,10 +34,7 @@ try:
     if len(sys.argv) > 4 and sys.argv[4] == 'usage':
         for mode in ('usage-written', 'usage-failed'):
             state = scratch / mode / 'state/thinkthen'; state.mkdir(mode=0o700, parents=True)
-            schema = subprocess.run([binary.parent / "schema_projection"], env=env, capture_output=True, text=True, timeout=20)
-    assert schema.returncode == 0, (schema.returncode, schema.stdout, schema.stderr)
-    print(schema.stdout.strip())
-    before = len(server.requests)
+            before = len(server.requests)
             usage_env = child_env(home=scratch / mode, THINKTHEN_BASE_URL=env['THINKTHEN_BASE_URL'],
                                   THINKTHEN_API_KEY='tt-canary-301', THINKTHEN_CACHE=str(scratch / 'cache'))
             result = run_usage([binary, mode, scratch, scratch], env=usage_env, state=state, mode=mode.removeprefix('usage-'), timeout=5)
@@ -45,6 +42,9 @@ try:
             assert len(server.requests) == before + 1, server.requests
             print('CPP_USAGE_INSTALLED_PASS', mode, 'requests=1')
         sys.exit(0)
+    schema = subprocess.run([binary.parent / "schema_projection"], env=env, capture_output=True, text=True, timeout=20)
+    assert schema.returncode == 0, (schema.returncode, schema.stdout, schema.stderr)
+    print(schema.stdout.strip())
     before = len(server.requests)
     preview = subprocess.run([binary, 'plan', scratch, scratch], env=env, capture_output=True, text=True, timeout=5)
     assert preview.returncode == 0, (preview.stdout, preview.stderr)
