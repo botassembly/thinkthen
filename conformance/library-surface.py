@@ -9,6 +9,8 @@ import sys
 import subprocess
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / 'sdlc/generators/results'))
+from sources import tracked_files
 
 
 def support(name):
@@ -96,11 +98,13 @@ def helper_errors(declared, manifest, config):
     return errors
 
 
-def dart_exports(root, config):
+def dart_exports(root, config, tracked):
     entry = root / config['entrypoint']
     pending, filters = [entry], {entry: None}
     while pending:
         path = pending.pop()
+        if path.resolve() not in tracked:
+            raise ValueError(f'Dart declaration is not tracked: {path}')
         source = path.read_text()
         for match in re.finditer(r"\b(export|part)\s+'([^']+)'([^;]*);", source):
             if ':' in match[2]:
@@ -134,10 +138,16 @@ def check(root, manifest, name):
     generated_paths = [output.path for output in OUTPUTS
                        if output.target == name and output.path.endswith(suffixes[config['language']])]
 
+    tracked = set(tracked_files(root))
     errors, declared, source_files = [], set(), {}
-    exports = dart_exports(root, config) if config.get('entrypoint') else None
+    exports = dart_exports(root, config, tracked) if config.get('entrypoint') else None
     for pattern in dict.fromkeys(config['declarations'] + generated_paths):
-        for path in sorted(root.glob(pattern)):
+        matcher = re.escape(pattern).replace(r'\*\*/', r'(?:[^/]+/)*').replace(r'\*', r'[^/]*')
+        paths = [root / pattern] if '*' not in pattern else sorted(
+            path for path in tracked if re.fullmatch(matcher, path.relative_to(root).as_posix()))
+        for path in paths:
+            if not path.is_file():
+                continue
             relative = path.relative_to(root).as_posix()
             if relative in manifest.get('exceptions', {}).get(name, {}).get('paths', []):
                 continue

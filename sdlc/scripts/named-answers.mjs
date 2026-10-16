@@ -81,8 +81,16 @@ function dartForShared(source) {
 }
 
 function pages() {
-  return execFileSync('git', ['ls-files', '-co', '--exclude-standard', '--', ...folders], { encoding: 'utf8' })
-    .trim().split('\n').filter((path) => path.endsWith('.md'))
+  const script = [
+    'import os, sys',
+    'from pathlib import Path',
+    'sys.path.insert(0, "sdlc/generators/results")',
+    'from sources import tracked_files',
+    'root = Path.cwd()',
+    'sys.stdout.buffer.write(b"\\0".join(os.fsencode(path.relative_to(root)) for path in tracked_files(root)))',
+  ].join('\n');
+  return execFileSync('python3', ['-c', script], { encoding: 'utf8' })
+    .split('\0').filter((path) => path.endsWith('.md') && folders.some((folder) => path.startsWith(`${folder}/`)))
     .map((path) => [path, readFileSync(path, 'utf8')]);
 }
 

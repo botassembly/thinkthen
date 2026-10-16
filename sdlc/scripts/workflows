@@ -18,9 +18,12 @@ import os
 import pathlib
 import re
 import subprocess
-import sys
 import runpy
+import sys
 import tempfile
+
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / 'generators/results'))
+from sources import tracked_files
 
 import yaml
 
@@ -86,10 +89,15 @@ def npm_publish_specs(run):
             yield spec
 
 
+def workflow_files(folder):
+    return [path for path in tracked_files(folder)
+            if path.parent == folder.resolve() and path.match('*.y*ml')]
+
+
 def remote_pins(folder):
     """Ask GitHub whether each pinned action SHA is a commit; a tag object's SHA fails at run time."""
     out = []
-    pins = sorted({step["uses"] for path in sorted(folder.glob("*.y*ml"))
+    pins = sorted({step["uses"] for path in workflow_files(folder)
                    for _, _, step in steps(yaml.safe_load(path.read_text(encoding="utf-8")) or {})
                    if PINNED.match(step.get("uses") or "")})
     for uses in pins:
@@ -113,7 +121,7 @@ def duckdb_internal_call(folder, doc):
     if triggers['workflow_call'] not in (None, {}) or doc.get('permissions') != {'contents': 'read'}:
         return False
     caller = folder / 'windows.yml'
-    if not caller.is_file():
+    if caller.resolve() not in tracked_files(folder) or not caller.is_file():
         return False
     windows = yaml.safe_load(caller.read_text()) or {}
     manual = windows.get('on', windows.get(True))
@@ -567,7 +575,7 @@ def fetch_gaps(setup_text):
 
 def check(folder, lint_text=None):
     out = []
-    for path in sorted(folder.glob("*.y*ml")):
+    for path in workflow_files(folder):
         text = path.read_text(encoding="utf-8")
         doc = yaml.safe_load(text) or {}
         out += every(path.name, doc, text, folder)
@@ -893,6 +901,8 @@ def duckdb_hook_self_test():
         path = folder / 'windows.yml'
         def findings(document, parent, name='duckdb-community.yml'):
             path.write_text(yaml.safe_dump(parent))
+            subprocess.run(['git', 'init', '-q', str(folder)], check=True)
+            subprocess.run(['git', '-C', str(folder), 'add', '.'], check=True)
             return every(name, document, yaml.safe_dump(document), folder)
         assert not findings(target, caller), 'MANUAL_DUCKDB_CALL_REFUSED'
         import copy
@@ -1188,12 +1198,16 @@ def self_test():
         else:
             with tempfile.TemporaryDirectory() as tmp:
                 folder = pathlib.Path(tmp)
-                for path in (REPO / ".github/workflows").glob("*.y*ml"):
+                for path in workflow_files(REPO / '.github/workflows'):
                     (folder / path.name).write_text(path.read_text(encoding="utf-8"), encoding="utf-8")
                 # Keep each planted rule independent after the real release.yml lands.
                 source = ((REPO / ".github/workflows/release.yml").read_text()
                           if name.startswith(("go-cpp-", "swift-zig-", "php-dart-", "ada-objc-cobol-", "language-", "npm-", "windows-", "resolve-inherited-")) else RELEASE) if file == "release.yml" else (folder / file).read_text()
                 (folder / file).write_text(plant(source), encoding="utf-8")
+                subprocess.run(['git', 'init', '-q', str(folder)], check=True)
+                if check(folder):
+                    raise AssertionError('workflows read untracked workflow fixtures')
+                subprocess.run(['git', '-C', str(folder), 'add', '.'], check=True)
                 got = check(folder)
         if got != expected:
             bad += 1
@@ -1259,13 +1273,15 @@ def self_test():
                   f"wanted {wanted}, got {calls}; stderr {result.stderr}", file=sys.stderr)
     with tempfile.TemporaryDirectory() as tmp:
         folder = pathlib.Path(tmp)
-        for path in (REPO / ".github/workflows").glob("*.y*ml"):
+        for path in workflow_files(REPO / '.github/workflows'):
             text = path.read_text(encoding="utf-8")
             if path.name == "release.yml":
                 text = text.replace("with: {python-version: '3.13'}", "with: {python-version: '3.11'}")
             (folder / path.name).write_text(text, encoding="utf-8")
         wanted = ["release.yml: job build must retain Python 3.13 for repository tools after setting up Python 3.13",
                   "release.yml: job smoke must retain Python 3.12 for repository tools after setting up Python 3.13"]
+        subprocess.run(['git', 'init', '-q', str(folder)], check=True)
+        subprocess.run(['git', '-C', str(folder), 'add', '.'], check=True)
         got = check(folder)
         if got != wanted:
             bad += 1
@@ -1275,7 +1291,7 @@ def self_test():
     for defect in python_defects:
         with tempfile.TemporaryDirectory() as tmp:
             folder = pathlib.Path(tmp)
-            for path in (REPO / ".github/workflows").glob("*.y*ml"):
+            for path in workflow_files(REPO / '.github/workflows'):
                 text = path.read_text(encoding="utf-8")
                 if path.name == "release.yml":
                     if defect == "old-active":
@@ -1288,6 +1304,8 @@ def self_test():
                         text = text.replace("${{ steps.python-floor.outputs.python-path }}", "python3")
                 (folder / path.name).write_text(text, encoding="utf-8")
             wanted = "repository tools" if defect in ("old-active", "disabled-tools-env") else "explicitly for the wheel"
+            subprocess.run(['git', 'init', '-q', str(folder)], check=True)
+            subprocess.run(['git', '-C', str(folder), 'add', '.'], check=True)
             if not any(wanted in error for error in check(folder)):
                 bad += 1
                 print(f"workflows self-test Python {defect}: missing refusal", file=sys.stderr)

@@ -20,6 +20,9 @@ import subprocess
 import sys
 import tempfile
 
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / 'generators/results'))
+from sources import tracked_files
+
 LANGUAGES = {".rs": "Rust", ".py": "Python", ".mjs": "TypeScript", ".js": "TypeScript",
              ".ts": "TypeScript", ".rb": "Ruby", ".R": "R"}
 COMMENT = {"Rust": "//", "TypeScript": "//", "Python": "#", "Ruby": "#", "R": "#"}
@@ -262,11 +265,8 @@ def said(path, number, rule):
 
 
 def tracked(root):
-    listed = subprocess.run(["git", "-C", str(root), "ls-files", "-z"], capture_output=True,
-                            env={"PATH": "/usr/bin:/bin"}, check=False)
-    if listed.returncode == 0:
-        return [name for name in listed.stdout.decode().split("\0") if name]
-    return sorted(str(path.relative_to(root)) for path in root.rglob("*") if path.is_file())
+    root = root.resolve()
+    return [path.relative_to(root).as_posix() for path in tracked_files(root)]
 
 
 def check(root, tables):
@@ -386,6 +386,10 @@ def self_test():
             root = pathlib.Path(tmp)
             (root / relative).parent.mkdir(parents=True, exist_ok=True)
             (root / relative).write_text(text, encoding="utf-8")
+            subprocess.run(['git', 'init', '-q', str(root)], check=True)
+            if check(root, {}):
+                raise AssertionError('children read an untracked source fixture')
+            subprocess.run(['git', '-C', str(root), 'add', '.'], check=True)
             actual = check(root, {})
         if actual != expected:
             bad += 1
@@ -393,6 +397,8 @@ def self_test():
     with tempfile.TemporaryDirectory() as tmp:
         root = pathlib.Path(tmp)
         (root / "held.py").write_text('x = 1\nsubprocess.run(["x"])\nsubprocess.run(["y"])\n', encoding="utf-8")
+        subprocess.run(['git', 'init', '-q', str(root)], check=True)
+        subprocess.run(['git', '-C', str(root), 'add', '.'], check=True)
         actual = check(root, {"excluded": {"gone/": "a fixture"},
                               "pending": {("held.py", "inherits", 'subprocess.run(["x"])', 1): "a fixture",
                                           ("held.py", "inherits", 'subprocess.run(["z"])', 1): "a fixture"}})

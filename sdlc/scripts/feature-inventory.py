@@ -2,9 +2,11 @@
 """Check feature folders against the source modules of their Cargo consumer."""
 from pathlib import Path
 import re
-import subprocess
 import sys
 import tomllib
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'generators/results'))
+from sources import tracked_files
 
 
 def module_source(source):
@@ -50,13 +52,15 @@ def module_source(source):
     return ''.join(output)
 
 
-def inventory(root, surface):
+def inventory(root, surface, tracked):
     base = root / surface
     files = {base / 'README.md', base / 'check.sh'}
     consumer = base / 'consumer'
-    if not consumer.exists():
+    if not any(path.is_relative_to(consumer) for path in tracked):
         return files
     manifest = consumer / 'Cargo.toml'
+    if manifest not in tracked:
+        raise ValueError(f'feature consumer manifest is not tracked: {manifest}')
     definition = tomllib.loads(manifest.read_text())
     if not definition.get('package', {}).get('publish') is False:
         raise ValueError('feature consumer must be unpublished')
@@ -67,6 +71,8 @@ def inventory(root, surface):
         source = pending.pop().resolve()
         if source in files:
             continue
+        if source not in tracked:
+            raise ValueError(f'feature consumer source is not tracked: {source}')
         text = module_source(source.read_text())
         files.add(source)
         for match in re.finditer(r'(?m)^[ \t]*(?:#\[path\s*=\s*"([^"]+)"\]\s*)?(?:pub(?:\([^)]*\))?\s+)?mod\s+(\w+)\s*;', text):
@@ -75,17 +81,16 @@ def inventory(root, surface):
             else:
                 directory = source.parent if source.name in ('main.rs', 'lib.rs', 'mod.rs') else source.with_suffix('')
                 module = directory / (match[2] + '.rs')
-                if not module.exists():
+                if module not in tracked:
                     module = directory / match[2] / 'mod.rs'
             pending.append(module)
     return {path.resolve() for path in files}
 
 
 def check(root, surface):
-    expected = inventory(root, surface)
-    names = subprocess.check_output(['git', 'ls-files', '-co', '--exclude-standard', '--', surface], cwd=root, text=True)
-    actual = {(root / name).resolve() for name in names.splitlines()
-              if (root / name).is_file()}
+    tracked = set(tracked_files(root))
+    expected = inventory(root, surface, tracked)
+    actual = {path for path in tracked if path.is_relative_to(root / surface) and path.is_file()}
     extra, missing = actual - expected, expected - actual
     # A consumer can share a fixture from another installed library.
     missing = {path for path in missing if path.is_relative_to(root / surface)}

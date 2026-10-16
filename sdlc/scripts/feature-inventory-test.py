@@ -32,14 +32,17 @@ class FeatureInventory(unittest.TestCase):
                 return subprocess.run(['python3', str(CHECK), 'libraries/polars'],
                                       cwd=root, capture_output=True, text=True, env=env)
             self.assertEqual(invoke().returncode, 0)
-            for name in ('unknown.json', 'consumer/src/unowned.rs'):
+            for name in ('unknown.json', 'consumer/src/unowned.rs', 'consumer/target/unowned.rs'):
                 with self.subTest(name=name):
                     planted = surface / name
+                    planted.parent.mkdir(parents=True, exist_ok=True)
                     planted.write_text('unowned')
+                    self.assertEqual(invoke().returncode, 0)
+                    subprocess.run(['git', 'add', str(planted)], cwd=root, check=True, env=env)
                     result = invoke()
                     self.assertEqual(result.returncode, 1)
                     self.assertIn(name, result.stderr)
-                    planted.unlink()
+                    subprocess.run(['git', 'rm', '-q', '-f', str(planted)], cwd=root, check=True, env=env)
             (surface / 'consumer/src/main.rs').write_text('')
             result = invoke()
             self.assertEqual(result.returncode, 1)
