@@ -172,7 +172,13 @@ sys.exit(int(os.environ.get('GH_TEST_EXIT', '0')))
 
         for number in (1, 2, 12):
             check("rehearse", f"refs/tags/rc/{version}-rc.{number}")
+        check("rehearse", "refs/heads/ticket/0543-final")
         check("release", f"refs/tags/v{version}")
+        final_run = good | {"head_branch": "ticket/0543-final",
+                            "path": good["path"] + "@refs/heads/ticket/0543-final"}
+        check("release", f"refs/tags/v{version}", page([final_run]))
+        check("release", f"refs/tags/v{version}",
+              page([final_run | {"head_sha": "0" * 40}]), error="absent")
         for branch in (candidate, f"rc/{version}-rc.12"):
             for prefix in ("", f"{repository}/"):
                 for suffix in ("", f"@{branch}", f"@refs/tags/{branch}"):
@@ -222,7 +228,8 @@ sys.exit(int(os.environ.get('GH_TEST_EXIT', '0')))
                 raise AssertionError(("resolve candidate sentence", result.stderr))
         for mode, ref, wanted in (
                 ("release", f"refs/tags/{candidate}", "release must run from a v* tag"),
-                ("release", "refs/heads/release/0.1", "release must run from a v* tag")):
+                ("release", "refs/heads/release/0.1", "release must run from a v* tag"),
+                ("release", "refs/heads/ticket/0543-final", "release must run from a v* tag")):
             result = check(mode, ref, error="before-query")
             if result.stderr != f"release-workflow: {wanted}, got {ref}\n":
                 raise AssertionError(("resolve ref sentence", result.stderr))
