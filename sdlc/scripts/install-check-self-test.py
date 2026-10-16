@@ -82,6 +82,7 @@ class NativeInstallation(unittest.TestCase):
                                                shell, str(script), str(repo), str(out), str(script.with_name('scratch.sh'))], cwd=caller,
                                               env=env, capture_output=True, text=True, timeout=30)
                         self.assertEqual(done.stdout, '')
+                        self.assertTrue((root / 'build.log').exists(), done)
                         owned = Path((root / 'build.log').read_text())
                         self.assertNotEqual(owned, target.resolve())
                         self.assertFalse(owned.exists(), 'the helper build must be removed on exit')
