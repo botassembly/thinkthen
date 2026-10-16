@@ -1,13 +1,12 @@
 //! SIGINT and SIGTERM cooperatively stop new attempts and preserve completed output.
 
-use crate::child::ChildEnvironment as _;
 use crate::harness::{Canned, Listener, Observed, finish, stderr_is};
 use conformance_backend::Rendezvous;
 use std::fs;
 use std::io::{self, Write as _};
 use std::os::unix::process::ExitStatusExt as _;
 use std::path::Path;
-use std::process::{Child, Output, Stdio};
+use std::process::{Child, Output};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::mpsc::channel;
@@ -466,6 +465,8 @@ fn sigterm_after_a_check_probe_fails_prints_no_report() {
 #[cfg(target_os = "linux")]
 #[test]
 fn a_carrier_that_cannot_spawn_is_a_defect_and_sends_nothing() {
+    use crate::child::ChildEnvironment as _;
+    use std::process::Stdio;
     let listener = Listener::answering(|_| Canned::ok(YES)).expect("listener");
     let home = Path::new(env!("CARGO_TARGET_TMPDIR")).join("nproc-home");
     let output = crate::child::command("prlimit", &[])

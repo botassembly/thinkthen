@@ -7,9 +7,9 @@ scratch_dir work
 
 jq -n -c '
   def row($id; $action; $reviewed):
-    {input:({id:$id, body:"private"}
+    {input:({id:$id, body:"fixture_secret_7c83"}
             + (if $reviewed == "absent" then {} else {reviewed_action:$reviewed} end)),
-     policy:{action:$action, reason:"private"}};
+     policy:{action:$action, reason:"fixture_secret_7c83"}};
   row("D-1";"draft";"draft"),
   row("D-2";"draft";"block"),
   row("D-3";"draft";null),
@@ -47,29 +47,29 @@ expect_failure() {
 	printf '%s\n' "$expected" > "$work/expected-message"
 	cmp "$work/expected-message" "$work/message"
 	test "$(wc -l < "$work/message")" -eq 1
-	if grep -q private "$work/error"; then
+	if grep -q fixture_secret_7c83 "$work/error"; then
 		printf 'monitor echoed row data for %s\n' "$name" >&2
 		exit 1
 	fi
 }
 
-printf '%s\n' '"private"' > "$work/bad.jsonl"
+printf '%s\n' '"fixture_secret_7c83"' > "$work/bad.jsonl"
 expect_failure container 'monitor: every row must be an object' "$work/bad.jsonl"
-printf '%s\n' '{"input":"private","policy":{"action":"draft"}}' > "$work/bad.jsonl"
+printf '%s\n' '{"input":"fixture_secret_7c83","policy":{"action":"draft"}}' > "$work/bad.jsonl"
 expect_failure input-container 'monitor: every row must carry an object input with a string id' "$work/bad.jsonl"
-printf '%s\n' '{"input":{"id":7,"private":true},"policy":{"action":"draft"}}' > "$work/bad.jsonl"
+printf '%s\n' '{"input":{"id":7,"fixture_secret_7c83":true},"policy":{"action":"draft"}}' > "$work/bad.jsonl"
 expect_failure id 'monitor: every row must carry an object input with a string id' "$work/bad.jsonl"
-printf '%s\n' '{"input":{"id":"x","private":true},"policy":"private"}' > "$work/bad.jsonl"
+printf '%s\n' '{"input":{"id":"x","fixture_secret_7c83":true},"policy":"fixture_secret_7c83"}' > "$work/bad.jsonl"
 expect_failure policy-container 'monitor: every row must carry an object policy with action draft, block, or review' "$work/bad.jsonl"
-printf '%s\n' '{"input":{"id":"x","private":true},"policy":{"action":"private"}}' > "$work/bad.jsonl"
+printf '%s\n' '{"input":{"id":"x","fixture_secret_7c83":true},"policy":{"action":"fixture_secret_7c83"}}' > "$work/bad.jsonl"
 expect_failure policy-action 'monitor: every row must carry an object policy with action draft, block, or review' "$work/bad.jsonl"
-printf '%s\n' '{"input":{"id":"x","reviewed_action":"private"},"policy":{"action":"draft"}}' > "$work/bad.jsonl"
+printf '%s\n' '{"input":{"id":"x","reviewed_action":"fixture_secret_7c83"},"policy":{"action":"draft"}}' > "$work/bad.jsonl"
 expect_failure reviewed-action 'monitor: reviewed_action must be draft, block, review, null, or absent' "$work/bad.jsonl"
-printf '%s\n' '{"input":{"id":"x","reviewed_action":7,"private":true},"policy":{"action":"draft"}}' > "$work/bad.jsonl"
+printf '%s\n' '{"input":{"id":"x","reviewed_action":7,"fixture_secret_7c83":true},"policy":{"action":"draft"}}' > "$work/bad.jsonl"
 expect_failure reviewed-type 'monitor: reviewed_action must be draft, block, review, null, or absent' "$work/bad.jsonl"
 printf '%s\n%s\n' \
-  '{"input":{"id":"same","private":true},"policy":{"action":"draft"}}' \
-  '{"input":{"id":"same","private":true},"policy":{"action":"review"}}' > "$work/bad.jsonl"
+  '{"input":{"id":"same","fixture_secret_7c83":true},"policy":{"action":"draft"}}' \
+  '{"input":{"id":"same","fixture_secret_7c83":true},"policy":{"action":"review"}}' > "$work/bad.jsonl"
 expect_failure duplicate 'monitor: input ids must be unique' "$work/bad.jsonl"
 
 if printf '%s\n' '{}' | jq -s -c -f monitor.jq > "$work/out" 2> "$work/error"; then

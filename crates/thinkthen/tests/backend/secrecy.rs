@@ -143,6 +143,7 @@ pub(crate) fn written(folder: &Path) -> Vec<PathBuf> {
             found.push(path);
         }
     }
+    found.sort();
     found
 }
 

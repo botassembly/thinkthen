@@ -1,8 +1,10 @@
 # 0589 — move-builds-to-the-m5
 
-Status: OPEN.
+Status: COMPLETE.
 
 Milestone: 0.2.1
+
+Reviews: revision 4465afa, accept
 
 ## Outcome
 

@@ -2,7 +2,7 @@
 # Rung 0: the tools the other rungs need, then the dependency closure.
 set -eu
 
-# One heavy rung at a time on this machine. See heavy-lock.
+# Sanitize the environment inherited by build tools.
 . "$(dirname -- "$0")/heavy-lock"
 
 REPO=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
@@ -24,6 +24,19 @@ for tool in cargo python3 node mustmatch jq script; do
 	fi
 done
 
+# Keep transform fixtures on the same jq interpreter as the Linux gate.
+JQ_VERSION=jq-1.7.1
+if [ "$(jq --version)" != "$JQ_VERSION" ]; then
+    printf 'install: jq %s must be on PATH, matching gate.yml\n' "$JQ_VERSION" >&2
+    exit 1
+fi
+
+# Release-script self-tests use TemporaryDirectory(delete=), added in Python 3.12.
+if ! python3 -c 'import sys; sys.exit(sys.version_info < (3, 12))'; then
+    printf '%s\n' 'install: Python 3.12 or later must be on PATH' >&2
+    exit 1
+fi
+
 # Header generation is an external development CLI, outside every product graph.
 python3 -c 'import runpy; runpy.run_path("'"$REPO"'/sdlc/scripts/generate-c-header.py")["check_tool"]()'
 
@@ -32,6 +45,7 @@ python3 -c 'import runpy; runpy.run_path("'"$REPO"'/sdlc/scripts/generate-c-head
 # crate builds or runs imports it.
 if ! python3 -c 'from jsonschema import Draft202012Validator' >/dev/null 2>&1; then
 	printf '%s\n' 'install: the python3 module jsonschema (Draft 2020-12) is not importable, and rung 2 runs the question-file schema self-test' >&2
+	printf '%s\n' 'install: install jsonschema==4.23.0 in the Python environment on PATH' >&2
 	exit 1
 fi
 
@@ -45,8 +59,8 @@ if [ "$(python3 -c 'import yaml; print(yaml.__version__)' 2>/dev/null || true)" 
 fi
 
 # cargo-deny is a cargo subcommand, so `command -v` does not find it.
-if ! cargo deny --version >/dev/null 2>&1; then
-	printf 'install: cargo-deny is not installed; rung 1 runs it over deny.toml\n' >&2
+if [ "$(cargo deny --version 2>/dev/null || true)" != "cargo-deny $DENY_VERSION" ]; then
+	printf 'install: rung 1 needs cargo-deny %s on PATH\n' "$DENY_VERSION" >&2
 	printf 'install: cargo install --locked cargo-deny@%s\n' "$DENY_VERSION" >&2
 	exit 1
 fi
@@ -71,6 +85,8 @@ if ! rustc "+$PUBLIC_API_TOOLCHAIN" --version 2>/dev/null | grep -q " $PUBLIC_AP
 fi
 
 cargo fetch --manifest-path "$REPO/Cargo.toml" --locked
+# Lint checks each landed Rust surface offline, including separate workspaces.
+sh "$REPO/sdlc/scripts/surfaces" --fetch
 
 # The advisory database is the other thing a later rung needs and cannot make.
 # `fetch db` is the advisory database alone; the crates.io index is not needed.

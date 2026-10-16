@@ -10,11 +10,6 @@ esac
 . "$repo/sdlc/scripts/scratch.sh"
 usage_home
 export CARGO_NET_OFFLINE=true CARGO_BUILD_RUSTC_WRAPPER= RUSTC_WRAPPER=
-lock=${THINKTHEN_HEAVY_LOCK:-/run/user/1000/thinkthen-codex-6.lock}
-if [ "${THINKTHEN_HEAVY_LOCK_HELD:-}" != "$lock" ]; then
- export THINKTHEN_HEAVY_LOCK_HELD="$lock"
- exec flock -w 180 -o "$lock" /bin/sh "$repo/libraries/cpp/check.sh" "$@"
-fi
 cmake_bin=${THINKTHEN_CMAKE_BIN:-$(command -v cmake || true)}
 python_bin=${THINKTHEN_PYTHON_BIN:-$(command -v python3 || true)}
 for tool in "$cmake_bin" "$python_bin"; do

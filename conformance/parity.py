@@ -290,7 +290,6 @@ def consumer_environment(scratch, port):
              'RUSTFLAGS', 'CFLAGS', 'CXXFLAGS', 'THINKTHEN_FULL_COMPILER', 'CARGO_BUILD_RUSTC_WRAPPER', 'CARGO_PROFILE_DEV_OPT_LEVEL', 'CARGO_PROFILE_TEST_OPT_LEVEL',
              'CARGO_PROFILE_DEV_DEBUG', 'CARGO_PROFILE_TEST_DEBUG',
              'RUSTUP_TOOLCHAIN', 'RUSTC_WRAPPER', 'SCCACHE_CONF', 'THINKTHEN_SESSION_JDK_HOME',
-             'THINKTHEN_HEAVY_LOCK', 'THINKTHEN_HEAVY_LOCK_HELD',
              'THINKTHEN_TOOLCHAINS', 'THINKTHEN_DUCKDB_CLI',
              'SQLITE_AMALGAMATION', 'THINKTHEN_PRIVATE_NAMES',
              'R_LIBS_USER', 'PUB_CACHE', 'UV_CACHE_DIR', 'UV_PYTHON_INSTALL_DIR', 'npm_config_cache')
@@ -298,8 +297,6 @@ def consumer_environment(scratch, port):
     for name, fallback in [('CARGO_HOME', '.cargo'), ('RUSTUP_HOME', '.rustup')]:
         env[name] = os.environ.get(name, str(Path.home() / fallback))
     env.update(tool_environment())
-    if held := env.get('THINKTHEN_HEAVY_LOCK_HELD'):
-        env.setdefault('THINKTHEN_HEAVY_LOCK', held)
     for name, folder in [('HOME', 'home'), ('XDG_CONFIG_HOME', 'config'),
                          ('XDG_CACHE_HOME', 'cache'), ('XDG_STATE_HOME', 'state'),
                          ('APPDATA', 'appdata'), ('LOCALAPPDATA', 'localappdata'), ('TMPDIR', 'tmp')]:

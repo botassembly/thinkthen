@@ -21,7 +21,9 @@ env -u THINKTHEN_API_KEY -u THINKTHEN_BASE_URL \
 ```bash
 set -euo pipefail
 
-sed -n '/^set -eu$/,$p' triage.sh | mustmatch "$(cat <<'SCRIPT'
+expected=$(mktemp)
+trap 'rm -f "$expected"' EXIT
+cat > "$expected" <<'SCRIPT'
 set -eu
 
 report=$1
@@ -38,7 +40,7 @@ case $rc in
 	;;
 esac
 SCRIPT
-)"
+sed -n '/^set -eu$/,$p' triage.sh | mustmatch "$(cat "$expected")"
 ```
 
 `report.txt` is a bug report that says what the person did. `vague.txt` is a bug report that says nothing, and it is left out of the recording on purpose. Every probability here is illustrative.

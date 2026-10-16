@@ -23,6 +23,7 @@ def routing(case, encode_footer, write_script):
     for name in ('archive-sha256.txt', 'archive-sha256-v1.5.4-linux-amd64.txt'):
         (tree / 'databases/duckdb/cpp' / name).write_text(manifest)
     shim = case.root / 'build-shim'
+    write_script(shim / 'uname', 'case $1 in -s) echo Linux ;; -m) echo x86_64 ;; *) exit 94 ;; esac')
     write_script(shim / 'rustc', 'echo "host: x86_64-unknown-linux-gnu"')
     write_script(shim / 'readelf', 'echo "Machine: Advanced Micro Devices X86-64"')
     write_script(shim / 'cargo', f'printf "%s\\n" "$*" >> "{case.root}/cargo-calls"')

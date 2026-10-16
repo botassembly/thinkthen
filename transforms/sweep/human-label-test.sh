@@ -128,7 +128,7 @@ expect_failure() {
   sed -n 's/^jq: error (at .*): //p' "$work/error" > "$work/message"
   printf '%s\n' "$expected" > "$work/expected-message"
   cmp "$work/expected-message" "$work/message"
-  if grep -q 'private' "$work/error"; then
+  if grep -q 'fixture_secret_7c83' "$work/error"; then
     echo "sweep echoed hostile data for $name" >&2
     exit 1
   fi
@@ -137,11 +137,11 @@ expect_failure() {
 # Malformed semantic fields and recognized presentation types retain one
 # data-free refusal. Declarations are structural here; Rust owns their grammar.
 for change in \
-  '.text=null' '.text=7' '.text=""' '.text="private\n"' \
-  '.true=7' '.false=false' '.true=""' '.false="private\n"' \
-  '.options=[]' '.label_details=[]' '.private="private"' \
-  '.on=null' '.on="private"' '.on=[7]' '.model=null' '.profile=7' \
-  '.batch=null' '.batch=0' '.batch=1.5' '.batch="private"' \
+  '.text=null' '.text=7' '.text=""' '.text="fixture_secret_7c83\n"' \
+  '.true=7' '.false=false' '.true=""' '.false="fixture_secret_7c83\n"' \
+  '.options=[]' '.label_details=[]' '.fixture_secret_7c83="fixture_secret_7c83"' \
+  '.on=null' '.on="fixture_secret_7c83"' '.on=[7]' '.model=null' '.profile=7' \
+  '.batch=null' '.batch=0' '.batch=1.5' '.batch="fixture_secret_7c83"' \
   '.name=7' '.name="Invalid"' '.wording_version=null' '.wording_version=0' \
   '.wording_version=1.5' '.wording_version=4294967296' \
   '.item_schema=null' '.context_schema=[]'; do
@@ -161,13 +161,13 @@ expect_failure scalar-truth 'sweep: truth accepts tag or annotate rows only' \
 expect_failure empty-truth 'sweep: truth requires a nonempty run' \
   -n --arg truth /input/label -f sweep.jq "$work/empty.jsonl"
 
-jq -c '.input.human_tags=["private"]' "$work/tag.jsonl" > "$work/bad.jsonl"
+jq -c '.input.human_tags=["fixture_secret_7c83"]' "$work/tag.jsonl" > "$work/bad.jsonl"
 expect_failure bad-tag-truth 'sweep: tag truth must contain unique known labels' \
   -n --arg truth /input/human_tags -f sweep.jq "$work/bad.jsonl"
 jq -c '.value=[]' "$work/tag.jsonl" > "$work/bad.jsonl"
 expect_failure bad-tag-value 'sweep: a tag value must equal labels at or above its threshold' \
   -n --arg truth /input/human_tags -f sweep.jq "$work/bad.jsonl"
-jq -c '.meta.questions_sha256="private"' "$work/annotate.jsonl" > "$work/bad.jsonl"
+jq -c '.meta.questions_sha256="fixture_secret_7c83"' "$work/annotate.jsonl" > "$work/bad.jsonl"
 expect_failure bad-digest 'sweep: annotate rows must carry one valid question-set digest' \
   -n --argjson truth '{"correct":"/input/human_correct"}' -f sweep.jq "$work/bad.jsonl"
 jq -c '.value.correct = false' "$work/annotate.jsonl" > "$work/bad.jsonl"
@@ -176,17 +176,17 @@ expect_failure outer-value 'sweep: an annotate answer must equal its outer value
 expect_failure empty-map 'sweep: annotate truth must be a nonempty object of JSON Pointers' \
   -n --argjson truth '{}' -f sweep.jq "$work/annotate.jsonl"
 expect_failure unknown-name 'sweep: annotate truth names an unknown question' \
-  -n --argjson truth '{"private":"/input/human_correct"}' -f sweep.jq "$work/annotate.jsonl"
+  -n --argjson truth '{"fixture_secret_7c83":"/input/human_correct"}' -f sweep.jq "$work/annotate.jsonl"
 expect_failure score-name 'sweep: annotate truth accepts decide, choose, or tag answers only' \
   -n --argjson truth '{"severity":"/input/human_correct"}' -f sweep.jq "$work/annotate.jsonl"
 
-jq -c 'if .input.id=="two" then .question.text="private" else . end' "$work/tag.jsonl" > "$work/bad.jsonl"
+jq -c 'if .input.id=="two" then .question.text="fixture_secret_7c83" else . end' "$work/tag.jsonl" > "$work/bad.jsonl"
 expect_failure changed-tag-question 'sweep: tag rows must carry one shared ordered label list' \
   -n --arg truth /input/human_tags -f sweep.jq "$work/bad.jsonl"
 jq -c '.threshold=1.1' "$work/tag.jsonl" > "$work/bad.jsonl"
 expect_failure tag-threshold 'sweep: tag rows must carry one shared numeric threshold' \
   -n --arg truth /input/human_tags -f sweep.jq "$work/bad.jsonl"
-jq -c '.answer.probabilities += {private:0}' "$work/tag.jsonl" > "$work/bad.jsonl"
+jq -c '.answer.probabilities += {fixture_secret_7c83:0}' "$work/tag.jsonl" > "$work/bad.jsonl"
 expect_failure tag-keys 'sweep: tag probabilities must have exactly the label keys' \
   -n --arg truth /input/human_tags -f sweep.jq "$work/bad.jsonl"
 jq -c '.answer.probabilities.billing=1.1' "$work/tag.jsonl" > "$work/bad.jsonl"
@@ -204,16 +204,16 @@ jq -c 'if .input.id=="E-01" then del(.input.human_correct) else . end' \
 jq -n --argjson truth '{"correct":"/input/human_correct"}' \
   -f sweep.jq "$work/missing-truth.jsonl" \
   | jq -e '.questions.correct.labeled == 5 and .questions.correct.unlabeled == ["E-01"]' > /dev/null
-jq -c '.input.human_correct="private"' "$work/annotate.jsonl" > "$work/bad.jsonl"
+jq -c '.input.human_correct="fixture_secret_7c83"' "$work/annotate.jsonl" > "$work/bad.jsonl"
 expect_failure decision-truth 'sweep: decision truth must be boolean' \
   -n --argjson truth '{"correct":"/input/human_correct"}' -f sweep.jq "$work/bad.jsonl"
-jq -c '.input.human_failure="private"' "$work/annotate.jsonl" > "$work/bad.jsonl"
+jq -c '.input.human_failure="fixture_secret_7c83"' "$work/annotate.jsonl" > "$work/bad.jsonl"
 expect_failure choice-truth 'sweep: choice truth must name a listed option' \
   -n --argjson truth '{"failure_kind":"/input/human_failure"}' -f sweep.jq "$work/bad.jsonl"
-jq -c '.input.human_tags=["private"]' "$work/annotate.jsonl" > "$work/bad.jsonl"
+jq -c '.input.human_tags=["fixture_secret_7c83"]' "$work/annotate.jsonl" > "$work/bad.jsonl"
 expect_failure annotate-tag-truth 'sweep: tag truth must contain unique known labels' \
   -n --argjson truth '{"topics":"/input/human_tags"}' -f sweep.jq "$work/bad.jsonl"
-jq -c 'if .input.id=="E-02" then .answers.correct.question.text="private" else . end' \
+jq -c 'if .input.id=="E-02" then .answers.correct.question.text="fixture_secret_7c83" else . end' \
   "$work/annotate.jsonl" > "$work/bad.jsonl"
 expect_failure changed-definition 'sweep: a mapped annotate answer must keep one definition' \
   -n --argjson truth '{"correct":"/input/human_correct"}' -f sweep.jq "$work/bad.jsonl"
@@ -249,7 +249,7 @@ expect_failure choice-threshold 'sweep: mapped choice threshold must be present 
 jq -c '.answers.failure_kind.threshold=0' "$work/annotate.jsonl" > "$work/bad.jsonl"
 expect_failure choice-zero-threshold 'sweep: mapped choice threshold must be present and null or one cut' \
   -n --argjson truth '{"failure_kind":"/input/human_failure"}' -f sweep.jq "$work/bad.jsonl"
-jq -c '.answers.failure_kind.answer.probabilities="private-marker"' \
+jq -c '.answers.failure_kind.answer.probabilities="fixture_secret_7c83-marker"' \
   "$work/annotate.jsonl" > "$work/bad.jsonl"
 expect_failure choice-probabilities-object 'sweep: choice probabilities must have exactly the option keys' \
   -n --argjson truth '{"failure_kind":"/input/human_failure"}' -f sweep.jq "$work/bad.jsonl"
@@ -257,11 +257,11 @@ jq -c 'del(.answers.failure_kind.answer.probabilities.none)' \
   "$work/annotate.jsonl" > "$work/bad.jsonl"
 expect_failure choice-probabilities-keys 'sweep: choice probabilities must have exactly the option keys' \
   -n --argjson truth '{"failure_kind":"/input/human_failure"}' -f sweep.jq "$work/bad.jsonl"
-jq -c '.answers.failure_kind.answer.probabilities.none="private-marker"' \
+jq -c '.answers.failure_kind.answer.probabilities.none="fixture_secret_7c83-marker"' \
   "$work/annotate.jsonl" > "$work/bad.jsonl"
 expect_failure choice-probability-member 'sweep: choice probabilities must be numbers from zero through one' \
   -n --argjson truth '{"failure_kind":"/input/human_failure"}' -f sweep.jq "$work/bad.jsonl"
-jq -c '.answers.failure_kind.answer.pick="private-marker"' \
+jq -c '.answers.failure_kind.answer.pick="fixture_secret_7c83-marker"' \
   "$work/annotate.jsonl" > "$work/bad.jsonl"
 expect_failure choice-pick 'sweep: a choice pick must be the first option at the maximum probability' \
   -n --argjson truth '{"failure_kind":"/input/human_failure"}' -f sweep.jq "$work/bad.jsonl"

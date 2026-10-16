@@ -6,10 +6,11 @@ The official skill's shell example finishes the producer before extraction. Inva
 set -euo pipefail
 top=$(git rev-parse --show-toplevel)
 recording="$top/spec/fixtures/agent-support"
-# Run the actual example, so an edit changes the behavior tested here.
-source <(awk '/^```bash$/ {inside=1; next} inside && /^```$/ {exit} inside {print}' "$top/skills/thinkthen/SKILL.md")
 work=$(mktemp -d)
 trap 'rm -rf -- "$work"' EXIT
+# Run the actual example, so an edit changes the behavior tested here.
+awk '/^```bash$/ {inside=1; next} inside && /^```$/ {exit} inside {print}' "$top/skills/thinkthen/SKILL.md" > "$work/support.sh"
+source "$work/support.sh"
 producer() { printf '%s' "$payload"; return "$producer_exit"; }
 check() {
   expected=$1; reason=$2; expected_output=$3

@@ -14,12 +14,8 @@ case ${1:-} in
 --run) ;;
 *) echo 'usage: sdlc/scripts/test-full-cases --list|--run' >&2; exit 2 ;;
 esac
-# The lock reexecutes this script with "$@"; preserve the complete invocation.
+# Sanitize the campaign environment before starting its children.
 . "$(dirname -- "$0")/heavy-lock"
-# Surface-specific lock defaults must recognize the campaign lock holder.
-if [ -n "${THINKTHEN_HEAVY_LOCK_HELD:-}" ]; then
-    export THINKTHEN_HEAVY_LOCK="$THINKTHEN_HEAVY_LOCK_HELD"
-fi
 shift
 artifact_dir=
 if [ "$#" -gt 0 ]; then
@@ -38,7 +34,7 @@ usage_guard
 config_home
 temp_home
 # One replay smoke per binding, four at a time beside the release boundary tests.
-# It runs in its own process group, so a failed step here stops every smoke before the lock frees.
+# It runs in its own process group, so a failed step here stops every smoke before return.
 scratch_dir smoke_log
 # macOS has no setsid, so perl makes the group there.
 if command -v setsid >/dev/null 2>&1; then

@@ -23,7 +23,7 @@ DRIVER = runpy.run_path(str(Path(__file__).with_name('coverage')))
 class InstalledScriptInvocation(unittest.TestCase):
     @unittest.skipUnless(sys.platform == 'linux' and platform.machine() == 'x86_64',
                          'Ada routine gate requires Linux x86_64')
-    def test_ada_collector_reexecutes_with_clean_path_and_owns_its_lock(self):
+    def test_ada_collector_invokes_gate_with_clean_path(self):
         checkout = Path(__file__).resolve().parents[2]
         with tempfile.TemporaryDirectory() as temporary:
             run = Path(temporary)
@@ -31,26 +31,24 @@ class InstalledScriptInvocation(unittest.TestCase):
             tools.mkdir()
             for name in ('gprbuild', 'gnatmake', 'gcc', 'python3', 'nm', 'node'):
                 (tools / name).symlink_to('/bin/true')
-            for name in ('uname', 'dirname', 'flock', 'env', 'sh'):
+            for name in ('uname', 'dirname', 'env', 'sh'):
                 (tools / name).symlink_to(shutil.which(name))
             library = run / 'libthinkthen.so'
             library.touch()
             script_dir = run / 'ada'
             script_dir.mkdir()
-            # Keep the real gate through its tool checks and lock-owning re-exec.
+            # Keep the real gate through its host and tool checks.
             source = (checkout / 'libraries/ada/check.sh').read_text()
             prefix = source.split('. "$REPO/sdlc/scripts/scratch.sh"')[0]
             script = script_dir / 'check.sh'
-            script.write_text(prefix + 'flock -n "$lock" /bin/true && exit 42\nexit 23\n')
+            script.write_text(prefix + 'exit 23\n')
             script.chmod(0o700)
-            env = {'PATH': str(tools), 'THINKTHEN_HEAVY_LOCK': str(run / 'heavy.lock')}
+            env = {'PATH': str(tools)}
             invoked = []
             def command(args, cwd, settings, log, **kwargs):
                 if 'package_owned.py' in ' '.join(args):
                     Path(args[-1]).mkdir()
                 if cwd == checkout / 'libraries/ada':
-                    self.assertNotIn('THINKTHEN_HEAVY_LOCK_HELD', settings)
-                    self.assertNotIn('TT_ADA_LOCKED', settings)
                     invoked.append(args)
                     result = subprocess.run(args, cwd=script_dir, env=env, capture_output=True)
                     self.assertEqual(result.returncode, 23, result.stderr.decode())
@@ -74,7 +72,7 @@ class ManagedToolAvailability(unittest.TestCase):
             native.write_bytes(b'fixture native')
             tools = root / 'tools'
             tools.mkdir()
-            for tool in ('node', 'bwrap', 'flock', 'configured-dotnet', 'configured-dart',
+            for tool in ('node', 'bwrap', 'configured-dotnet', 'configured-dart',
                          'configured-flutter', 'configured-swift'):
                 binary = tools / tool
                 binary.write_text('#!/bin/sh\nexit 0\n')
@@ -85,7 +83,7 @@ class ManagedToolAvailability(unittest.TestCase):
                    'THINKTHEN_SWIFT': str(tools / 'configured-swift')}
             cases = {'csharp': ('/usr/bin/bwrap', 'dotnet'), 'dart': ('node', 'dart'),
                      'flutter': ('node', '/usr/bin/xvfb-run', 'dart', 'flutter'),
-                     'swift': ('node', 'bwrap', 'flock', 'swift')}
+                     'swift': ('node', 'bwrap', 'swift')}
             def command(*args, **kwargs):
                 self.fail('missing tool reached a package command')
             real_which = coverage_installed_managed.shutil.which

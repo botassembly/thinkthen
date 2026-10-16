@@ -53,5 +53,6 @@
       "targetRef": "origin/main",
       "state": "active"
     }
-  ]
+  ],
+  "ticketsGate": "sh -c 'export PATH=\"/opt/zerobrew/opt/rustup/bin:$HOME/.local/share/thinkthen-0589/python/bin:$HOME/.local/share/thinkthen-0589/toolchain/bin:$HOME/.cargo/bin:$PATH\"; sdlc/scripts/lint && sdlc/scripts/test'"
 }

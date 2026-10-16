@@ -66,7 +66,9 @@ class CandidateSmokes(unittest.TestCase):
             binary.write_text('#!/bin/sh\ncat >/dev/null\necho true\n')
             jq = tools / 'jq'
             jq.write_text('#!/bin/sh\necho true\n')
-            for executable in (backend, binary, jq):
+            uname = tools / 'uname'
+            uname.write_text('#!/bin/sh\ncase "$1" in -s) echo Linux ;; -m) echo x86_64 ;; esac\n')
+            for executable in (backend, binary, jq, uname):
                 executable.chmod(0o755)
             for member in ('c', 'swift', 'objective-c'):
                 library = root / 'libraries' / member
@@ -106,6 +108,7 @@ class RetainedNpmArtifact(unittest.TestCase):
             (library / 'build-addon.sh').write_text('printf addon > thinkthen-linux-x64.node\n')
             (library / 'package.json').write_text('{"name":"thinkthen","version":"0.2.0","license":"MIT"}\n')
             (tools / 'node').write_text('#!/bin/sh\ncase "$*" in --version) echo v22.22.3 ;; *version*) echo 0.2.0 ;; *) echo linux-x64 ;; esac\n')
+            (tools / 'uname').write_text('#!/bin/sh\ncase "$1" in -s) echo Linux ;; -m) echo x86_64 ;; esac\n')
             (tools / 'npm').write_text('''#!/bin/sh
 set -eu
 while [ "$1" != --pack-destination ]; do shift; done

@@ -11,6 +11,8 @@
 # with --reuse name that debug C archive (ticket 0362). Without --reuse or a CARGO_TARGET_DIR,
 # each part builds in a scratch folder that goes once the part is packed (ticket 0366). Every
 # cargo call is locked; fetch first where the network is off.
+# Release archives contain declared files, without macOS AppleDouble metadata.
+export COPYFILE_DISABLE=1
 set -eu
 apple_wrappers=
 [ "${1:-}" != --apple-wrappers ] || { apple_wrappers=1; shift; }

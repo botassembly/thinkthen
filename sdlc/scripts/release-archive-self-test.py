@@ -39,7 +39,7 @@ def resolve_outputs(commit, version):
     page = lambda runs: json.dumps({"total_count": len(runs), "workflow_runs": runs})
     rehearsal = f"v{version}-rehearsal-{commit[:7]}"
     with tempfile.TemporaryDirectory(prefix="thinkthen-resolve-") as temporary:
-        root = Path(temporary)
+        root = Path(temporary).resolve()
         receipt = root / "calls.jsonl"
         gh = root / "gh"
         gh.write_text(f"#!{sys.executable}\n" + """import json, os, sys
@@ -50,7 +50,7 @@ sys.stderr.write('must not expose API diagnostics')
 sys.exit(int(os.environ.get('GH_TEST_EXIT', '0')))
 """)
         gh.chmod(0o755)
-        env = {"PATH": f"{root}:/usr/bin:/bin", "HOME": str(root), "LC_ALL": "C",
+        env = {"PATH": f"{root}:{Path(sys.executable).parent}:/usr/bin:/bin", "HOME": str(root), "LC_ALL": "C",
                "GITHUB_SHA": commit, "GITHUB_REPOSITORY": repository,
                "GH_TEST_RECEIPT": str(receipt), "GH_TEST_RESPONSE": page([good])}
         endpoint = (f"repos/{repository}/actions/workflows/release.yml/runs?head_sha={commit}"
@@ -198,7 +198,7 @@ def tap_formula(version):
 end
 """
     with tempfile.TemporaryDirectory(prefix="thinkthen-tap-formula-") as temporary:
-        root = Path(temporary)
+        root = Path(temporary).resolve()
         platform = root / "platform"
         hashes = {}
         archives = []
@@ -216,7 +216,7 @@ end
             archives.append(archive)
         output = root / "thinkthen.rb"
         # No key variables, credential files or outbound commands participate.
-        env = {"PATH": "/usr/bin:/bin", "HOME": str(root), "LC_ALL": "C"}
+        env = {"PATH": f"{Path(sys.executable).parent}:/usr/bin:/bin", "HOME": str(root), "LC_ALL": "C"}
         command = ("sh", str(REPO / "sdlc/scripts/release-workflow"), "tap-formula", version, str(platform), str(output))
         result = run(*command, env=env)
         wanted = template.replace("$version", version)
@@ -257,7 +257,7 @@ def main():
         print(f"release archive self-test: skipped synthetic C fixture on {host}")
         return
     with tempfile.TemporaryDirectory(prefix="thinkthen-release-archive-") as temporary:
-        base = Path(temporary)
+        base = Path(temporary).resolve()
         source = base / "source"
         source.mkdir()
         archive = base / "source.tar"
@@ -674,6 +674,15 @@ def main():
             source_only = script[installed_end:source_start]
             if "command -v node" not in source_only or "import jsonschema" not in source_only:
                 raise AssertionError(f"{family} source prerequisites precede installed return")
+        # These plants test archive checksums, not installed Swift or sandbox
+        # availability. Observe those prerequisite versions through local stubs.
+        for name in ("swift", "swiftc", "bwrap"):
+            tool = fake_bin / name
+            response = ("Swift version 6.4 (swift-6.4-RELEASE)\nTarget: x86_64-unknown-linux-gnu"
+                        if name != "bwrap" else "bubblewrap fixture")
+            tool.write_text("#!/bin/sh\n[ \"$1\" = --version ] || exit 94\n"
+                            + "printf '%s\\n' '" + response + "'\n")
+            tool.chmod(0o755)
         fake_curl = fake_bin / "curl"
         fake_curl.write_text("#!/bin/sh\nwhile [ $# -gt 0 ]; do\n"
                              "if [ \"$1\" = -o ]; then shift; printf wrong >\"$1\"; exit 0; fi\n"
@@ -828,9 +837,7 @@ def main():
         installed_env = os.environ | {"THINKTHEN_GO_BIN": str(fake_go),
                                       "THINKTHEN_PYTHON_BIN": str(no_python),
                                       "FAKE_GO_VERSION": "go version go1.27.1 linux/amd64",
-                                      "THINKTHEN_ARTIFACT": str(base / "absent-wrapper"),
-                                      "THINKTHEN_HEAVY_LOCK": str(base / "held-lock"),
-                                      "THINKTHEN_HEAVY_LOCK_HELD": str(base / "held-lock")}
+                                      "THINKTHEN_ARTIFACT": str(base / "absent-wrapper")}
         for family in ("go", "cpp"):
             expect(run("sh", str(REPO / f"libraries/{family}/check.sh"), "0", env=installed_env),
                    f"{family}: missing {'matching ' if family == 'cpp' else ''}C archive")

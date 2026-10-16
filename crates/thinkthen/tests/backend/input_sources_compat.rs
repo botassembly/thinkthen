@@ -7,6 +7,10 @@ use std::fs;
 use std::io;
 
 #[cfg(unix)]
+#[cfg_attr(
+    target_os = "macos",
+    ignore = "macOS refuses invalid UTF-8 filenames; Linux CI runs this case"
+)]
 #[test]
 fn non_utf8_file_names_keep_answers_and_use_display_strings() -> io::Result<()> {
     use crate::child::ChildEnvironment as _;

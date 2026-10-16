@@ -13,6 +13,8 @@ set -eu
 . "$(dirname -- "$0")/verdict.sh"
 . "$(dirname -- "$0")/scratch.sh"
 . "$(dirname -- "$0")/installed.sh"
+# Keep the build identity before macOS moves HOME into the usage sandbox.
+builder_home=$HOME
 # ADR 0113: the smoked installs write a scratch usage folder, never the real one.
 usage_home
 source_packages= command_only=
@@ -43,9 +45,9 @@ scan() {
 	*.gem) tar -xOf "$1" data.tar.gz | tar -xzf - -C "$into" ;;
 	*) tar -xzf "$1" -C "$into" ;;
 	esac
-	found=$(grep -rlaF -e "$HOME" -e thinkthen_panic_probe "$into" | while IFS= read -r file; do
+	found=$(grep -rlaF -e "$builder_home" -e thinkthen_panic_probe "$into" | while IFS= read -r file; do
 		grep -qaF thinkthen_panic_probe "$file" ||
-			[ "$(grep -aoF "$HOME" "$file" | wc -l)" != "$(grep -aoF "$HOME/work/duckdb/duckdb/" "$file" | wc -l)" ] ||
+			[ "$(grep -aoF "$builder_home" "$file" | wc -l)" != "$(grep -aoF "$builder_home/work/duckdb/duckdb/" "$file" | wc -l)" ] ||
 			continue
 		printf '%s\n' "$file"
 	done | sed "s|^$into/||" | tr '\n' ' ')

@@ -212,7 +212,7 @@ for variable, name, args, expected, runtime in (
         raise SystemExit(f"managed-tools: {variable} lacks {runtime}")
     version([selected(variable, name), *args], expected)
 PY
-	for tool in python3 nm tar flock; do command -v "$tool" >/dev/null || fail "missing $tool"; done
+	for tool in python3 nm tar; do command -v "$tool" >/dev/null || fail "missing $tool"; done
 	# The build job packs managed outputs and runs no bwrap consumer. The smoke job pins and
 	# probes /usr/bin/bwrap in its language tools step. Rehearsal run 36812401623 found this gap.
 	;;
@@ -556,7 +556,7 @@ managed-gate)
 ada-objc-cobol-tools)
 	[ "$#" = 2 ] || fail 'ada-objc-cobol-tools TARGET'
 	[ "$2" = x86_64-unknown-linux-gnu ] && [ "$(uname -s):$(uname -m)" = Linux:x86_64 ] || fail 'Ada/Objective-C/COBOL installed tools require Linux x86-64'
-	for tool in gprbuild gnatmake gcc cobc cc cargo python3 nm ldd tar cmp flock; do
+	for tool in gprbuild gnatmake gcc cobc cc cargo python3 nm ldd tar cmp; do
 		command -v "$tool" >/dev/null 2>&1 || fail "installed language tool is missing: $tool"
 	done
 	gprbuild --version >/dev/null || fail 'gprbuild version probe failed'
@@ -568,7 +568,7 @@ php-dart-tools)
 	[ "$#" = 3 ] || fail 'php-dart-tools TARGET OUT'
 	[ "$2" = x86_64-unknown-linux-gnu ] && [ "$(uname -s):$(uname -m)" = Linux:x86_64 ] ||
 		fail 'PHP/Dart installed tools require Linux x86-64'
-	for tool in curl sha256sum unzip tar cargo cc nm readelf readlink flock python3 git; do
+	for tool in curl sha256sum unzip tar cargo cc nm readelf readlink python3 git; do
 		command -v "$tool" >/dev/null 2>&1 || fail "PHP/Dart installed tool is missing: $tool"
 	done
 	php_bin=/usr/bin/php8.3
@@ -589,7 +589,7 @@ swift-zig-tools)
 	[ "$#" = 3 ] || fail 'swift-zig-tools TARGET OUT'
 	[ "$2" = x86_64-unknown-linux-gnu ] && [ "$(uname -s):$(uname -m)" = Linux:x86_64 ] ||
 		fail 'Swift/Zig installed tools require Linux x86-64'
-	for tool in curl sha256sum tar swift swiftc cargo python3 node nm bwrap flock git; do
+	for tool in curl sha256sum tar swift swiftc cargo python3 node nm bwrap git; do
 		command -v "$tool" >/dev/null 2>&1 || fail "Swift/Zig installed tool is missing: $tool"
 	done
 	[ "$(swift --version)" = 'Swift version 6.4 (swift-6.4-RELEASE)
@@ -615,7 +615,7 @@ go-cpp-tools)
 	[ "$#" = 3 ] || fail 'go-cpp-tools TARGET OUT'
 	[ "$2" = x86_64-unknown-linux-gnu ] && [ "$(uname -s):$(uname -m)" = Linux:x86_64 ] ||
 		fail 'Go/C++ installed tools require Linux x86-64'
-	for tool in curl sha256sum tar cmake c++ clang++ make nm readelf ldd pkg-config cc gcc node git flock cargo rustc python3; do
+	for tool in curl sha256sum tar cmake c++ clang++ make nm readelf ldd pkg-config cc gcc node git cargo rustc python3; do
 		command -v "$tool" >/dev/null 2>&1 || fail "Go/C++ installed tool is missing: $tool"
 	done
 	cmake_version=$(cmake --version | sed -n '1s/^cmake version //p')

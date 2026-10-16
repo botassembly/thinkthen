@@ -4,13 +4,9 @@ ROOT=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 REPO=$(CDPATH= cd -- "$ROOT/../.." && pwd)
 case "$(uname -s):$(uname -m)" in Linux:x86_64) ;; *) exit 77 ;; esac
 case "${THINKTHEN_TEST_PROFILE:-routine}" in routine|full|smoke) ;; stress) exit 77 ;; *) exit 2 ;; esac
-for tool in gprbuild gnatmake gcc python3 flock nm node; do
+for tool in gprbuild gnatmake gcc python3 nm node; do
   command -v "$tool" >/dev/null 2>&1 || { echo "Ada gate missing $tool" >&2; exit 77; }
 done
-lock=${THINKTHEN_HEAVY_LOCK:-/run/user/1000/thinkthen-heavy.lock}
-if [ "${TT_ADA_LOCKED:-0}" != 1 ] && [ "${THINKTHEN_HEAVY_LOCK_HELD:-}" != "$lock" ]; then
-  TT_ADA_LOCKED=1 exec flock -w 180 -E 75 -o "$lock" env TT_ADA_LOCKED=1 "$0" "$@"
-fi
 . "$REPO/sdlc/scripts/scratch.sh"
 usage_home
 scratch_dir fixture_config

@@ -99,13 +99,17 @@ def portable(root):
         assert alive(unrelated.pid), 'LIVE_OWNED_CHILD_REPORTED_GONE'
         for caller in (C, MSVC, SMOKE):
             pids = root / ('c-pids' if caller is C else 'msvc-pids' if caller is MSVC else 'consumer-pids')
-            # Exercise each real release wrapper, shortening only its declared deadline.
+            # Exercise each real release wrapper with a short deadline.
             def short(args, **options):
                 assert options['timeout'] == (120 if caller is C else 60)
                 if caller is not SMOKE:
                     assert options['env'] == environment
                     assert options.get('text', False) is (caller is MSVC)
                 else:
+                    assert len(args) == 1 and Path(args[0]) == consumers[0] and Path(args[0]).name == 'consumer.exe'
+                    # This POSIX stand-in is Python. Bypass macOS shebang startup
+                    # delays before its first statement; keep the cleanup deadline.
+                    args = [sys.executable, *args]
                     assert 'text' not in options and options['input'].startswith(b'decide 3\n')
                     assert not any(name in options['env'] for name in ('INCLUDE', 'LIB', 'LIBPATH', 'CL', '_CL_', 'LINK'))
                 return BOUNDED.capture(args, **(options | {'timeout': 1}))
@@ -124,7 +128,7 @@ def portable(root):
                         executable.chmod(0o755)
                     with mock.patch.object(SMOKE.C, 'run', side_effect=compile_consumer), mock.patch.object(SMOKE.C, 'inspect'):
                         with mock.patch.object(SMOKE.C, 'CAPTURE', short):
-                            refused(lambda: SMOKE.consume(archive), 'consumer.exe timed out after 1 seconds')
+                            refused(lambda: SMOKE.consume(archive), Path(sys.executable).name + ' timed out after 1 seconds')
                     assert archive.read_bytes() == original and consumers and not consumers[0].parent.exists()
                 else:
                     with mock.patch.object(caller, 'CAPTURE', short):

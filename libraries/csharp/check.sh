@@ -3,12 +3,6 @@ set -eu
 here=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 root=$(CDPATH= cd -- "$here/../.." && pwd)
 version=$(sed -n 's:.*<Version>\(.*\)</Version>.*:\1:p' "$here/ThinkThen.csproj")
-lock=${THINKTHEN_HEAVY_LOCK:-${XDG_RUNTIME_DIR:-/tmp}/thinkthen-csharp.lock}
-if [ "${THINKTHEN_HEAVY_LOCK_HELD:-}" != "$lock" ] && command -v flock >/dev/null 2>&1; then
-    THINKTHEN_HEAVY_LOCK_HELD=$lock
-    export THINKTHEN_HEAVY_LOCK_HELD
-    exec flock -o "$lock" /bin/sh "$0" "$@"
-fi
 # ADR 0113: this run's engines write a scratch usage folder, never the real one.
 . "$root/sdlc/scripts/scratch.sh"
 usage_home

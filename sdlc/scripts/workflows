@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Every workflow starts on workflow_dispatch and runs reviewed code (0128, 0398).
+"""Workflows run reviewed code; the Linux gate also starts on push (0589).
 
 Only release.yml publish dispatches another workflow, install-check.yml.
 
-Ian ruled that no push starts a workflow and that releases publish only through a
+Ian ruled that the Linux gate runs on every push; releases publish only through a
 run he starts and approves. PyYAML's safe loader reads each workflow, and each
 broken rule prints one line. The rules sit beside the code that checks them, and
 ticket 0128's "The workflow check" table lists them.
@@ -110,7 +110,7 @@ def every(name, doc, text):
     triggers = doc.get("on", doc.get(True))
     triggers = [triggers] if isinstance(triggers, str) else list(triggers or [])
     for trigger in triggers:
-        if trigger != "workflow_dispatch":
+        if trigger != "workflow_dispatch" and not (name == "gate.yml" and trigger == "push"):
             out.append(f"{name}: starts on `{trigger}`; only workflow_dispatch may start a workflow")
     for job, _, step in steps(doc):
         uses = step.get("uses")
@@ -530,7 +530,7 @@ def host_setup_calls(target, smoke, uv_line="uv 0.9.17 (0a1b2c3d4 2025-12-09)", 
     The pinned uv lives where pip put it and prints uv_line.
     """
     with tempfile.TemporaryDirectory(prefix="thinkthen-host-setup-") as tmp:
-        root = pathlib.Path(tmp)
+        root = pathlib.Path(tmp).resolve()
         bin_dir = root / "bin"
         bin_dir.mkdir()
         route = bin_dir / "route"
@@ -541,6 +541,7 @@ rustc) case $1 in
   --version) echo 'rustc 1.95.0 (59807616e 2026-04-14)' ;;
   --print) printf '%s/toolchains/1.95.0\\n' "$RUSTUP_HOME" ;;
   esac ;;
+mktemp) exec /usr/bin/mktemp -d "$FAKE_ROOT/tmp.XXXXXXXX" ;;
 cargo) [ "$1 $2" != 'deny --version' ] || echo 'cargo-deny 0.19.4' ;;
 rustup) [ "$1 $2" != 'target add' ] || echo "rustup $*" >> "$FAKE_LOG" ;;
 maturin) echo 'maturin 1.15.0' ;;
@@ -589,7 +590,7 @@ esac
         sqlite_python = root / "openssl3/bin/python3.14"
         sqlite_python.write_text('#!/bin/sh\necho sqlite-python-check >> "$FAKE_LOG"\n')
         sqlite_python.chmod(0o755)
-        for name in ("rustc", "rustup", "cargo", "maturin", "npm", "uv", "uname", "sh", "xcrun", "brew", "shasum",
+        for name in ("rustc", "rustup", "cargo", "maturin", "npm", "uv", "uname", "sh", "xcrun", "brew", "shasum", "sha256sum", "mktemp",
                      "python3", "python3.12", "python3.13", "python3.14", "bash"):
             (bin_dir / name).symlink_to(route.name)
         (root / "pinned").mkdir()
@@ -1121,7 +1122,7 @@ def self_test():
             ("roomy", "exit 0", 900, "/mnt/thinkthen-container"), ("no sudo", "exit 1", 900, "FALLBACK"),
             ("small", "exit 0", 50, "FALLBACK"), ("missing", "exit 0", None, "FALLBACK")):
         with tempfile.TemporaryDirectory(prefix="thinkthen-linux-work-") as tmp:
-            root = pathlib.Path(tmp)
+            root = pathlib.Path(tmp).resolve()
             log = root / "calls"
             mnt = "exit 1" if mnt_free is None else f"free={mnt_free}"
             df = ('echo "df $*" >> "$FAKE_LOG"; case $2 in /mnt) %s ;; *) free=100 ;; esac; '
@@ -1147,6 +1148,8 @@ def self_test():
     if archive.returncode != 0:
         bad += 1
         print(f"workflows self-test archived release: {archive.stdout}{archive.stderr}", file=sys.stderr)
+    elif archive.stdout.strip():
+        print(archive.stdout.strip())
     language = subprocess.run([sys.executable, str(REPO / "sdlc/scripts/release-language-tools-self-test.py")],
                               capture_output=True, text=True)
     if language.returncode != 0:
@@ -1164,7 +1167,8 @@ def self_test():
         print(f"workflows self-test Windows command: {windows.stdout}{windows.stderr}", file=sys.stderr)
     for fixture in ("windows-installer-integration-self-test.py", "install-check-workflow-self-test.py", "install-check-self-test.py",
                     "install-check-postgresql-self-test.py", "install-check-r-binary-test.py", "release-windows-c-self-test.py"):
-        result = subprocess.run([sys.executable, str(REPO / "sdlc/scripts" / fixture)],
+        options = ["-v"] if fixture == "install-check-postgresql-self-test.py" else []
+        result = subprocess.run([sys.executable, str(REPO / "sdlc/scripts" / fixture), *options],
                                 capture_output=True, text=True)
         if result.returncode != 0:
             bad += 1
@@ -1190,11 +1194,13 @@ def main(argv):
                                  capture_output=True, text=True)
         if managed.returncode:
             out.append(f"managed workflow fixture failed: {managed.stdout}{managed.stderr}")
+        else:
+            print(managed.stdout, end="")
         language = subprocess.run([sys.executable, str(REPO / "sdlc/scripts/release-language-tools-self-test.py")],
                                   capture_output=True, text=True)
         if language.returncode:
             out.append(f"language tool fixture failed: {language.stdout}{language.stderr}")
-    print("\n".join(out) if out else "workflows: every workflow runs by hand from pinned code", file=sys.stderr if out else sys.stdout)
+    print("\n".join(out) if out else "workflows: pinned code, Linux gate on push, other workflows by hand", file=sys.stderr if out else sys.stdout)
     return 1 if out else 0
 
 

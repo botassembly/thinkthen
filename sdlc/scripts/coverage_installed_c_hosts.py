@@ -24,7 +24,7 @@ def prepare(context):
              'zig': 'THINKTHEN_ZIG', 'php8.3': 'THINKTHEN_PHP_BIN',
              'composer': 'THINKTHEN_COMPOSER_BIN'}
     for tool in ('c++', 'cc', 'ar', 'ld', 'nm', 'objcopy', 'gprbuild', 'gnatmake', 'cobc',
-                 'clang', 'node', 'flock', 'python3', 'gofmt', *tools):
+                 'clang', 'node', 'python3', 'gofmt', *tools):
         selected = env.get(tools.get(tool, ''), tool)
         phar = tool == 'composer' and Path(selected).suffix == '.phar' and Path(selected).is_file()
         if not phar and not shutil.which(selected, path=env.get('PATH')):

@@ -39,9 +39,9 @@ cmp "$work/yes-expected.jsonl" "$work/yes-report.jsonl"
 
 jq -n -c '
   def row($id;$probabilities;$threshold;$replayed):
-    {schema:"thinkthen.result/1",input:{id:$id,label:"blue"},value:"private",
+    {schema:"thinkthen.result/1",input:{id:$id,label:"blue"},value:"fixture_secret_7c83",
      question:{verb:"choose",text:"Fixture choice",options:["red","blue","other"]},
-     answer:{kind:"choice",pick:"private",probabilities:$probabilities},threshold:$threshold,
+     answer:{kind:"choice",pick:"fixture_secret_7c83",probabilities:$probabilities},threshold:$threshold,
      meta:{tool:"thinkthen 0.0.1",question_sha256:("b"*64),url:"https://example.invalid",model:"fixture",replayed:$replayed}};
   row("winner";{red:0.5,blue:0.25,other:0.25};null;false),
   row("tie";{red:0.75,blue:0.25,other:0};null;false),
@@ -63,7 +63,7 @@ jq -n -c '
   def row($probabilities;$replayed):
     {schema:"thinkthen.result/1",input:{id:"score",label:1},value:99,
      question:{verb:"score",text:"Fixture score",levels:["low","middle","high"]},
-     answer:{kind:"score",level:"private",probabilities:$probabilities},threshold:null,
+     answer:{kind:"score",level:"fixture_secret_7c83",probabilities:$probabilities},threshold:null,
      meta:{tool:"thinkthen 0.0.1",question_sha256:("c"*64),url:"https://example.invalid",model:"fixture",replayed:$replayed}};
   row({low:0.5,middle:0.25,high:0.25};false),
   row({low:0.25,middle:0.625,high:0.125};true)
@@ -127,7 +127,7 @@ expect_failure() {
 		echo "trials returned the wrong message for $name" >&2
 		exit 1
 	fi
-	if grep -q 'private' "$work/error"; then
+	if grep -q 'fixture_secret_7c83' "$work/error"; then
 		echo "trials echoed hostile row data for $name" >&2
 		exit 1
 	fi
@@ -136,37 +136,37 @@ expect_failure() {
 private_row=$(head -n 1 "$work/yes.jsonl")
 printf '%s\n' '[]' > "$work/bad.jsonl"
 expect_failure container 'trials: every row must be an object' "$work/bad.jsonl"
-printf '%s\n' "$private_row" | jq -c '.input.id="private" | .schema="private"' > "$work/bad.jsonl"
+printf '%s\n' "$private_row" | jq -c '.input.id="fixture_secret_7c83" | .schema="fixture_secret_7c83"' > "$work/bad.jsonl"
 expect_failure schema 'trials: every row must use schema thinkthen.result/1' "$work/bad.jsonl"
 printf '%s\n' "$private_row" | jq -c 'del(.input.id)' > "$work/bad.jsonl"
 expect_failure missing-id 'trials: every row must carry a string input id' "$work/bad.jsonl"
 printf '%s\n' "$private_row" | jq -c '.input.id=7' > "$work/bad.jsonl"
 expect_failure id 'trials: every row must carry a string input id' "$work/bad.jsonl"
-printf '%s\n' "$private_row" | jq -c '.input.id="private" | .question.text=7' > "$work/bad.jsonl"
+printf '%s\n' "$private_row" | jq -c '.input.id="fixture_secret_7c83" | .question.text=7' > "$work/bad.jsonl"
 expect_failure question 'trials: every row must carry a valid question' "$work/bad.jsonl"
-printf '%s\n' "$private_row" | jq -c '.input.id="private" | .answer.probability=2' > "$work/bad.jsonl"
+printf '%s\n' "$private_row" | jq -c '.input.id="fixture_secret_7c83" | .answer.probability=2' > "$work/bad.jsonl"
 expect_failure probability 'trials: every row must carry valid probabilities' "$work/bad.jsonl"
-printf '%s\n' "$private_row" | jq -c '.input.id="private" | .threshold="private"' > "$work/bad.jsonl"
+printf '%s\n' "$private_row" | jq -c '.input.id="fixture_secret_7c83" | .threshold="fixture_secret_7c83"' > "$work/bad.jsonl"
 expect_failure threshold 'trials: every row must carry a valid threshold' "$work/bad.jsonl"
-printf '%s\n' "$private_row" | jq -c '.input.id="private" | .meta.model=7' > "$work/bad.jsonl"
+printf '%s\n' "$private_row" | jq -c '.input.id="fixture_secret_7c83" | .meta.model=7' > "$work/bad.jsonl"
 expect_failure metadata 'trials: every row must carry valid metadata' "$work/bad.jsonl"
-printf '%s\n' "$private_row" | jq -c '.input.id="private" | .meta.cached=null' > "$work/bad.jsonl"
+printf '%s\n' "$private_row" | jq -c '.input.id="fixture_secret_7c83" | .meta.cached=null' > "$work/bad.jsonl"
 expect_failure canonical-null 'trials: every row must carry valid metadata' "$work/bad.jsonl"
-printf '%s\n' "$private_row" | jq -c '.input.id="private" | .meta.cached="yes"' > "$work/bad.jsonl"
+printf '%s\n' "$private_row" | jq -c '.input.id="fixture_secret_7c83" | .meta.cached="yes"' > "$work/bad.jsonl"
 expect_failure canonical-string 'trials: every row must carry valid metadata' "$work/bad.jsonl"
-printf '%s\n' "$private_row" | jq -c '.input.id="private" | del(.meta.replayed)' > "$work/bad.jsonl"
+printf '%s\n' "$private_row" | jq -c '.input.id="fixture_secret_7c83" | del(.meta.replayed)' > "$work/bad.jsonl"
 expect_failure no-provenance 'trials: every row must carry valid metadata' "$work/bad.jsonl"
-printf '%s\n' "$private_row" | jq -c '.input.id="private" | .answer.kind="tag"' > "$work/bad.jsonl"
+printf '%s\n' "$private_row" | jq -c '.input.id="fixture_secret_7c83" | .answer.kind="tag"' > "$work/bad.jsonl"
 expect_failure kind 'trials: answer kind must be yes_no, choice, or score and match the question verb' "$work/bad.jsonl"
-head -n 1 "$work/choice.jsonl" | jq -c '.input.id="private" | .question.options[0]=" "' > "$work/bad.jsonl"
+head -n 1 "$work/choice.jsonl" | jq -c '.input.id="fixture_secret_7c83" | .question.options[0]=" "' > "$work/bad.jsonl"
 expect_failure choice-name 'trials: every row must carry valid probabilities' "$work/bad.jsonl"
-head -n 1 "$work/choice.jsonl" | jq -c '.input.id="private" | .answer.probabilities.private=0' > "$work/bad.jsonl"
+head -n 1 "$work/choice.jsonl" | jq -c '.input.id="fixture_secret_7c83" | .answer.probabilities.fixture_secret_7c83=0' > "$work/bad.jsonl"
 expect_failure choice-keys 'trials: every row must carry valid probabilities' "$work/bad.jsonl"
-head -n 1 "$work/choice.jsonl" | jq -c '.input.id="private" | .answer.probabilities={red:0.4,blue:0.4,other:0}' > "$work/bad.jsonl"
+head -n 1 "$work/choice.jsonl" | jq -c '.input.id="fixture_secret_7c83" | .answer.probabilities={red:0.4,blue:0.4,other:0}' > "$work/bad.jsonl"
 expect_failure choice-total 'trials: every row must carry valid probabilities' "$work/bad.jsonl"
-head -n 1 "$work/score.jsonl" | jq -c '.input.id="private" | .question.levels=["same","same"] | .answer.probabilities={same:1}' > "$work/bad.jsonl"
+head -n 1 "$work/score.jsonl" | jq -c '.input.id="fixture_secret_7c83" | .question.levels=["same","same"] | .answer.probabilities={same:1}' > "$work/bad.jsonl"
 expect_failure score-levels 'trials: every row must carry valid probabilities' "$work/bad.jsonl"
-printf '%s\n%s\n' "$private_row" "$(printf '%s\n' "$private_row" | jq -c '.answer.probability=0.7 | .question.text="private"')" > "$work/bad.jsonl"
+printf '%s\n%s\n' "$private_row" "$(printf '%s\n' "$private_row" | jq -c '.answer.probability=0.7 | .question.text="fixture_secret_7c83"')" > "$work/bad.jsonl"
 expect_failure facts 'trials: rows for one id must share their case, question, threshold, and run facts' "$work/bad.jsonl"
 printf '%s\n' "$private_row" > "$work/mixed.jsonl"
 head -n 1 "$work/choice.jsonl" >> "$work/mixed.jsonl"
