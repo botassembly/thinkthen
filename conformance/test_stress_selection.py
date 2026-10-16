@@ -8,6 +8,7 @@ import unittest
 
 from conformance import parity
 from conformance.children.children import child_env
+from conformance.source_fixtures import stage_files
 
 
 class StressSelection(unittest.TestCase):
@@ -55,6 +56,8 @@ class StressSelection(unittest.TestCase):
             scripts.mkdir(parents=True)
             for name in ('surfaces', 'verdict.sh', 'full-compiler', 'feature-inventory.py'):
                 shutil.copyfile(parity.ROOT / 'sdlc/scripts' / name, scripts / name)
+            stage_files(parity.ROOT, root, ('sdlc/generators/results/sources.py',
+                                            'sdlc/generators/results/registry.py'))
             shutil.copyfile(parity.ROOT / 'sdlc/surfaces.txt', root / 'sdlc/surfaces.txt')
             (scripts / 'allow-list').write_text('')
             (scripts / 'scratch.sh').write_text('usage_guard() { :; }\n')
@@ -91,6 +94,7 @@ class StressSelection(unittest.TestCase):
             env = {'PATH': os.defpath, 'HOME': str(root / 'home'),
                    'FIXTURE_ROOT': str(root), 'FAILED_SURFACE': '',
                    'THINKTHEN_TEST_PROFILE': 'stress'}
+            subprocess.run(['git', 'add', 'libraries'], cwd=root, env=env, check=True)
             unsupported = subprocess.run(['sh', str(php)], env=env,
                                          capture_output=True, text=True)
             self.assertEqual(unsupported.returncode, 77, unsupported.stdout + unsupported.stderr)
