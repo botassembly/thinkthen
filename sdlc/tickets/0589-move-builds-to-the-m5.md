@@ -24,7 +24,7 @@ ThinkThen's development and release builds, tests, lint and gates run on the M5 
 
 ## Scope
 
-- Changes: `sdlc/scripts/build-admission*`, `sdlc/scripts/heavy-compile`, `sdlc/scripts/heavy-lock`, `AGENTS.md`, `CLAUDE.md`, `sdlc/scripts/test`, `sdlc/scripts/lint`, `sdlc/scripts/install`, `sdlc/planning/release-process.md`, and the agents repo's `machines.json`.
+- Changes: `sdlc/pm.json` (the landing gate), `sdlc/scripts/build-admission*`, `sdlc/scripts/heavy-compile`, `sdlc/scripts/heavy-lock`, `AGENTS.md`, `CLAUDE.md`, `sdlc/scripts/test`, `sdlc/scripts/lint`, `sdlc/scripts/install`, `sdlc/planning/release-process.md`, and the agents repo's `machines.json`.
 - Checklist:
   1. Sync the M5 clone and run `sdlc/scripts/install`, `lint` and `test` there through `pm job run` at one pushed SHA. List every check that fails or skips on macOS, with the reason.
   2. Make each Linux-only check skip on macOS with a plain message, or run it in a Linux container on the M5. Name where each such check runs instead: GitHub CI or an occasional Yellow run.
@@ -35,7 +35,7 @@ ThinkThen's development and release builds, tests, lint and gates run on the M5 
 
 ## Proof
 
-`pm job run 0589 SHA -- sdlc/scripts/test` and `-- sdlc/scripts/lint` pass on the M5 at the landing SHA, and one `pm ticket land --merge-branch` on another ticket runs its gate on the M5.
+`pm job run 0589 SHA -- sdlc/scripts/test` and `-- sdlc/scripts/lint` pass on the M5 at the landing SHA, and `sdlc/pm.json` declares the landing gate (`sdlc/scripts/lint` then `sdlc/scripts/test`), so this ticket's own `pm ticket land --merge-branch` runs that gate on the M5, or reuses a passing `pm job run` of it at the same code.
 
 ## Defers
 
