@@ -309,19 +309,6 @@ fn recover(
         .unwrap_or_else(std::sync::PoisonError::into_inner);
     let mut rows = Vec::new();
     for row in &recovered {
-        let observed = events
-            .iter()
-            .filter(|event| {
-                matches!(
-                    request.request().call.function(),
-                    thinkthen::RequestFunction::Rank
-                        | thinkthen::RequestFunction::Find
-                        | thinkthen::RequestFunction::Relate
-                ) || event.get("index").is_none()
-                    || event.get("index").and_then(Value::as_u64) == Some(row.ordinal() as u64)
-            })
-            .cloned()
-            .collect::<Vec<_>>();
         match row.outcome() {
             Ok(result) => {
                 let mut recovered = rows::complete(
@@ -329,7 +316,7 @@ fn recover(
                     row.ordinal(),
                     serde_json::to_value(result).map_err(|_| defect())?,
                     &facts,
-                    &observed,
+                    &events,
                 );
                 rows::typed_values(result, &mut recovered)?;
                 rows.extend(recovered);
@@ -344,7 +331,7 @@ fn recover(
                         serde_json::to_value(error.complete().error()).map_err(|_| defect())?,
                     ),
                 &facts,
-                &observed,
+                &events,
             )),
         }
     }
@@ -360,6 +347,7 @@ fn recover(
     if let Some(failed) = carrier.get("rows").and_then(Value::as_array) {
         rows.extend(failed.iter().cloned());
     }
+    rows::observe_rows(request.request().call.function(), &mut rows, &events);
     crate::complete_native::put(&mut carrier, "rows", json!(rows))?;
     crate::complete_native::put(&mut carrier, "observations", json!(events))?;
     Ok(carrier)

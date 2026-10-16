@@ -134,6 +134,10 @@ def call(db, verb, question, inputs, settings=None):
     if isinstance(inputs, str):
         inputs = json.loads(inputs)
     reader = Read(db, verb, question, inputs, settings)
+    details = db.execute('SELECT ordinal,observations FROM thinkthen_' + reader.verb + ' WHERE ' +
+                         ' AND '.join(name + '=?' for name in reader.fields), list(reader.fields.values())).fetchall()
+    owners = [row[1] for row in details if row[1] is not None]
+    assert len(set(owners)) == len(owners), 'native observation belongs to multiple rows'
     facts = reader.rows('facts')
     errors = reader.rows('error')
     root = ROOT_KIND[verb]

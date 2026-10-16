@@ -68,22 +68,11 @@ fn project_packet(
     observations: &[Value],
 ) -> Result<Vec<Value>, Error> {
     let index = packet.get("index").cloned().ok_or_else(defect)?;
-    let events = observations
-        .iter()
-        .filter(|event| {
-            matches!(
-                function,
-                thinkthen::RequestFunction::Rank | thinkthen::RequestFunction::Relate
-            ) || event.get("index").is_none()
-                || event.get("index") == Some(&index)
-        })
-        .cloned()
-        .collect::<Vec<_>>();
     let native = match packet.get("failure") {
         Some(failure) => json!({"error":failure,"facts":facts}),
         None => json!({"value":packet.get("results").ok_or_else(defect)?,"facts":facts}),
     };
-    let carrier = json!({"native":native,"observations":events});
+    let carrier = json!({"native":native,"observations":observations});
     let mut completed = thinkthen_host::sql_request::project_carrier(function, &carrier);
     if let Some(values) = packet.get("typed_values").and_then(Value::as_array) {
         for (row, typed) in completed.iter_mut().zip(values) {
@@ -136,5 +125,8 @@ pub(super) fn finish(packets: &str, verb: &str) -> Result<Value, Error> {
             function, &carrier,
         ));
     }
-    Ok(json!({"native":native,"rows":rows,"observations":observations}))
+    let mut carrier = json!({"native":native,"rows":rows,"observations":observations});
+    let rows = thinkthen_host::sql_request::project_carrier(function, &carrier);
+    put(&mut carrier, "rows", json!(rows))?;
+    Ok(carrier)
 }
