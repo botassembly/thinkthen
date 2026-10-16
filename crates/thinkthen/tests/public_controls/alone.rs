@@ -1,5 +1,6 @@
 //! Rerun one row alone in a fresh copy of this test binary.
 
+use std::path::PathBuf;
 use std::process::Stdio;
 
 use super::{child, wait};
@@ -7,6 +8,24 @@ use child::ChildEnvironment as _;
 
 /// Names the one row a rerun child runs.
 const ALONE: &str = "THINKTHEN_TEST_CONTROLS_ALONE";
+
+/// Cached build folders can contain homes left by a previous process with this PID.
+fn fresh_home(path: &str) -> std::io::Result<PathBuf> {
+    let root = std::path::Path::new(env!("CARGO_TARGET_TMPDIR"));
+    let name = format!("controls-{}-{}", std::process::id(), path.replace("::", "-"));
+    let mut home = root.join(&name);
+    let mut next = 0;
+    loop {
+        match std::fs::create_dir(&home) {
+            Ok(()) => return Ok(home),
+            Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => {
+                next += 1;
+                home = root.join(format!("{name}-{next}"));
+            }
+            Err(error) => return Err(error),
+        }
+    }
+}
 
 /// Run `body` alone in a fresh copy of this test binary, because the first
 /// explicit throttle selects the process's width for good (ticket 0077).
@@ -16,12 +35,7 @@ pub(super) fn alone(path: &str, body: impl FnOnce()) {
         body();
         return;
     }
-    let home = std::path::Path::new(env!("CARGO_TARGET_TMPDIR")).join(format!(
-        "controls-{}-{}",
-        std::process::id(),
-        path.replace("::", "-")
-    ));
-    std::fs::create_dir(&home).expect("a fresh child home");
+    let home = fresh_home(path).expect("a fresh child home");
     let binary = std::env::current_exe().expect("this test binary");
     let child = child::command(
         binary.to_str().expect("a UTF-8 test binary path"),
@@ -49,4 +63,5 @@ pub(super) fn alone(path: &str, body: impl FnOnce()) {
         String::from_utf8_lossy(&output.stderr)
     );
     assert!(said.contains("1 passed"), "the child ran {path}");
+    std::fs::remove_dir_all(home).expect("remove the finished child's home");
 }
