@@ -20,6 +20,8 @@ import xml.etree.ElementTree as ET
 from unittest.mock import patch
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO / "conformance/children"))
+from children import child_env
 CRATES_IO = "registry+https://github.com/rust-lang/crates.io-index"
 ALLOWED_LICENSES = {
     "MIT",
@@ -1003,8 +1005,8 @@ def check_bindings() -> None:
             source.parent.mkdir(parents=True, exist_ok=True)
             source.write_text("unsafe fn planted() {}\n", encoding="utf-8")
         (folder / ".gitignore").write_text("**/nested/\n", encoding="utf-8")
-        subprocess.run(["git", "init", "-q", scratch], check=True)
-        subprocess.run(["git", "-C", scratch, "add", "--", *sorted(authored)], check=True)
+        subprocess.run(["git", "init", "-q", scratch], check=True, env=child_env())
+        subprocess.run(["git", "-C", scratch, "add", "--", *sorted(authored)], check=True, env=child_env())
         # Unreadable text proves ignored and untracked output is never opened.
         for relative in outputs:
             (folder / relative).write_bytes(b"\xff")
@@ -1019,7 +1021,7 @@ def check_bindings() -> None:
             fail("binding", "indexed authored unsafe is refused while the FFI module remains allowed")
         # Git's process environment must not redirect a named checkout to another index.
         with tempfile.TemporaryDirectory() as unrelated:
-            subprocess.run(["git", "init", "-q", unrelated], check=True)
+            subprocess.run(["git", "init", "-q", unrelated], check=True, env=child_env())
             with patch.dict("os.environ", {"GIT_DIR": str(pathlib.Path(unrelated) / ".git"),
                                            "GIT_WORK_TREE": unrelated,
                                            "GIT_INDEX_FILE": str(pathlib.Path(unrelated) / "empty-index")}):
@@ -2251,7 +2253,7 @@ def check_sources() -> None:
     # Keep the tracked binding inventory: each binding has its own build folders.
     listed = subprocess.run(
         ["git", "ls-files", "-z", "--", "libraries", "databases"],
-        cwd=REPO, capture_output=True, check=True,
+        cwd=REPO, env=child_env(), capture_output=True, check=True,
     ).stdout.decode("utf-8").split("\0")
     bindings = [REPO / relative for relative in listed if relative and binding_source(relative)]
     for source in [*sources, *bindings]:
@@ -2576,7 +2578,7 @@ def check_recordings() -> None:
     for plant in ({"request": {"headers": {}}}, {"Authorization": "x"}, {"response": ["Bearer x"]}):
         if not recording_failures(plant):
             fail("recordings", f"the planted entry {plant!r} is refused")
-    listed = subprocess.run(["git", "ls-files", "-z", "*.json"], cwd=REPO, capture_output=True, check=True)
+    listed = subprocess.run(["git", "ls-files", "-z", "*.json"], cwd=REPO, env=child_env(), capture_output=True, check=True)
     for relative in listed.stdout.decode().split("\0"):
         if "/recording" not in f"/{relative}":
             continue
@@ -2595,7 +2597,7 @@ def check_recordings() -> None:
     for plant in fixture_plants:
         if not fixture_failures(plant):
             fail("recordings", f"the planted fixture line {plant.strip()!r} is refused")
-    listed = subprocess.run(["git", "ls-files", "-z"], cwd=REPO, capture_output=True, check=True)
+    listed = subprocess.run(["git", "ls-files", "-z"], cwd=REPO, env=child_env(), capture_output=True, check=True)
     for relative in listed.stdout.decode().split("\0"):
         if posixpath.basename(relative) != "thinkthen.jsonl":
             continue
@@ -2640,7 +2642,7 @@ def live_store_failures(paths: list[str]) -> list[str]:
 def check_live_stores() -> None:
     if not live_store_failures(["demos/01/recording/thinkthen.sqlite"]):
         fail("recordings", "a planted committed thinkthen.sqlite is refused")
-    listed = subprocess.run(["git", "ls-files", "-z"], cwd=REPO, capture_output=True, check=True)
+    listed = subprocess.run(["git", "ls-files", "-z"], cwd=REPO, env=child_env(), capture_output=True, check=True)
     for failure in live_store_failures(listed.stdout.decode().split("\0")):
         fail("recordings", failure)
 
@@ -2691,7 +2693,7 @@ def check_markers() -> None:
     if marker_failures([f"src/planted.rs:1:// {MARKERS[1]}: sdlc/issues/planted.md"]):
         fail("debt", "a planted comment marker that names its issue is allowed")
     listed = subprocess.run(["git", "grep", "-n", "-I", "-E", "|".join(MARKERS), "--", ":!*.md"],
-                            cwd=REPO, capture_output=True, text=True)
+                            cwd=REPO, env=child_env(), capture_output=True, text=True)
     if listed.returncode > 1:
         fail("debt", f"git grep for comment markers failed (exit {listed.returncode})")
     for failure in marker_failures(listed.stdout.splitlines()):
@@ -2717,7 +2719,7 @@ def check_loopback_servers() -> None:
     if loopback_server_failures({"planted.py": f"class H({HANDLER}):\n    x = ({CLOSES})\n"}):
         fail("loopback", "a planted server that closes each reply is allowed")
     listed = subprocess.run(["git", "grep", "-l", "-I", "-F", HANDLER, "--", ":!*.md"],
-                            cwd=REPO, capture_output=True, text=True)
+                            cwd=REPO, env=child_env(), capture_output=True, text=True)
     if listed.returncode > 1:
         fail("loopback", f"git grep for test servers failed (exit {listed.returncode})")
     sources = {path: (REPO / path).read_text(encoding="utf-8") for path in listed.stdout.split()}
