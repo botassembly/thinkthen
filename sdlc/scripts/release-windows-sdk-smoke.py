@@ -141,7 +141,7 @@ def consume(npm, registry, work):
             call('node', ['node', node / 'consumer.cjs'], node)
 
             net = work / 'csharp'; net.mkdir()
-            run(['dotnet', 'new', 'console', '--name', 'InstallCheck', '--framework', 'net8.0', '--no-restore'], net, env)
+            run(['dotnet', 'new', 'console', '--name', 'InstallCheck', '--output', '.', '--framework', 'net8.0', '--no-restore'], net, env)
             (net / 'NuGet.Config').write_text(f'<configuration><packageSources><clear/><add key="candidate" value="{registry / "nuget"}"/></packageSources></configuration>')
             run(['dotnet', 'add', 'package', 'Botassembly.ThinkThen', '--version', version], net, env)
             (net / 'Program.cs').write_text(live_source('csharp'), encoding='utf-8')

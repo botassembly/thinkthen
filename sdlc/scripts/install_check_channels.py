@@ -150,7 +150,7 @@ def rubygems(check):
 
 
 def nuget(check):
-    check.run('dotnet', 'new', 'console', '--name', 'InstallCheck', '--framework', 'net8.0')
+    check.run('dotnet', 'new', 'console', '--name', 'InstallCheck', '--output', '.', '--framework', 'net8.0')
     check.run('dotnet', 'add', 'package', 'Botassembly.ThinkThen', '--version', check.version)
     source = write_consumer(check.project, 'csharp', 'Program.cs')
     assets = json.loads((check.project / 'obj/project.assets.json').read_text())
