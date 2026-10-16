@@ -1198,7 +1198,7 @@ def main(argv):
                                   capture_output=True, text=True)
         if language.returncode:
             out.append(f"language tool fixture failed: {language.stdout}{language.stderr}")
-    print("\n".join(out) if out else "workflows: every workflow runs by hand from pinned code", file=sys.stderr if out else sys.stdout)
+    print("\n".join(out) if out else "workflows: pinned code, Linux gate on push, other workflows by hand", file=sys.stderr if out else sys.stdout)
     return 1 if out else 0
 
 
