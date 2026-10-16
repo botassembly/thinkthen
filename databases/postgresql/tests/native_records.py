@@ -14,7 +14,7 @@ from children import child_env
 from find_cases import sql, quoted
 sys.path.insert(0, str(ROOT / 'databases/sqlite/tests'))
 from conditional_backend import ConditionalBackend
-from typed_results import native
+from typed_results import native, row_observations
 
 
 def main():
@@ -119,6 +119,9 @@ def main():
                 assert got[1]['failure']['kind'] == 'backend', got
                 assert 'private evidence' not in got[1]['failure']['message'], got
                 assert all(row['facts']['requests_sent'] == 3 for row in got), got
+                assert all(row['observations'] and all(event['index'] == row['ordinal']
+                           for event in row['observations']) for row in got), got
+                assert len(row_observations(got, 'decide')) == sum(len(row['observations']) for row in got), got
             host.start({**env, 'THINKTHEN_BASE_URL': f'http://127.0.0.1:{backend.port}/arm/full/v1'})
             for arguments in ("'Fits?',ARRAY[" + record + "],thinkthen_reading(threshold=>'0.1:0.95')",
                               "'Fits?','Alpha.',threshold=>'0.1:0.95'"):

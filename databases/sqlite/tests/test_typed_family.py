@@ -302,7 +302,7 @@ items=json.dumps([{'text':'first'},{'text':'second'}])
 db=connect()
 quota={'max_requests_total':1} if incremental else {'max_requests':1}
 db.execute('SELECT thinkthen_configure(?)',[json.dumps({'cache':False,'batch':1,**quota})])
-rows=db.execute('SELECT ordinal,value,error_kind,error_message,facts_requests_sent,facts_call_id FROM thinkthen_decide_details WHERE request_question=? AND request_records=? AND incremental=?',('Refund?',items,incremental)).fetchall()
+rows=db.execute('SELECT ordinal,value,error_kind,error_message,facts_requests_sent,facts_call_id,observations FROM thinkthen_decide_details WHERE request_question=? AND request_records=? AND incremental=?',('Refund?',items,incremental)).fetchall()
 assert len(rows)==1+incremental,rows
 failure=rows[-1]
 reader=Read(db,'decide','Refund?',{'records':json.loads(items),'incremental':bool(incremental)},None)
@@ -312,9 +312,11 @@ assert failure[0]==error.get('stopped',{}).get('at') and failure[0]!=0 and failu
 expected='the process send budget was spent before another request in this call' if incremental else 'this engine answers at most 1 records in one call'
 assert failure[3]==expected,failure
 assert failure[4]==(1 if incremental else None),failure
+assert failure[6] is None,failure
 if incremental:
     assert rows[0][0]==0 and rows[0][1]==1 and rows[0][2] is None,rows
     assert len(failure[5])==64 and rows[0][5]==failure[5],rows
+    assert rows[0][6]==0,rows
 else: assert failure[5] is None,failure
 say(rows=rows)
 ''',environment(backend,INCREMENTAL=str(incremental)))
