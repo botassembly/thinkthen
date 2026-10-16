@@ -24,17 +24,17 @@ on:
         type: choice
         required: false
         default: none
-        options: [none, go, cpp, postgresql, ruby, linux-release]
+        options: [none, go, cpp, postgresql, ruby, linux-release, release-qa]
       candidate_sha:
-        description: Exact reviewed commit for linux-release
+        description: Exact reviewed commit for linux-release or release-qa
         type: string
         required: false
       candidate_tag:
-        description: Candidate tag for linux-release receipts
+        description: Candidate tag for linux-release receipts or release-qa
         type: string
         required: false
       apple_run:
-        description: Same-commit rehearsal run containing apple coverage
+        description: Same-commit release rehearsal run containing Apple coverage or QA archives
         type: string
         required: false
       platform:
@@ -134,7 +134,7 @@ jobs:
 
   language:
     name: Installed ${{ inputs.language }} package on ${{ inputs.platform || 'ubuntu-24.04' }}
-    if: inputs.language != '' && inputs.language != 'none' && inputs.language != 'linux-release'
+    if: inputs.language != '' && inputs.language != 'none' && inputs.language != 'linux-release' && inputs.language != 'release-qa'
     runs-on: ${{ inputs.platform || 'ubuntu-24.04' }}
     defaults: {run: {shell: bash}}
     env:
@@ -672,3 +672,200 @@ jobs:
       matrix: {stage: [coverage]}
     env: *linux-release-env
     steps: *linux-release-steps
+
+  release-qa:
+    name: Installed release command and native memory QA
+    if: inputs.language == 'release-qa'
+    runs-on: ubuntu-24.04
+    permissions: {contents: read, actions: read}
+    defaults: {run: {shell: bash}}
+    env:
+      SHA: ${{ inputs.candidate_sha }}
+      TAG: ${{ inputs.candidate_tag }}
+      ARTIFACT_RUN: ${{ inputs.apple_run }}
+      PYTHONDONTWRITEBYTECODE: '1'
+      CARGO_BUILD_JOBS: '2'
+      CARGO_INCREMENTAL: '0'
+      CARGO_TARGET_DIR: ${{ runner.temp }}/qa-tools
+    steps:
+      - name: Check out reviewed QA controls
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with: {ref: '${{ github.sha }}', path: control, persist-credentials: false}
+      - name: Require the qualified candidate tag
+        run: |
+          set -eu
+          test "$SHA" = 2687952c20ab2384e5ca75e434c026babae518d4
+          [[ "$TAG" =~ ^rc/0\.2\.0-rc\.[1-9][0-9]*$ ]]
+          [[ "$ARTIFACT_RUN" =~ ^[1-9][0-9]*$ ]]
+      - name: Check out the actual tagged candidate separately
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with: {ref: '${{ inputs.candidate_tag }}', path: candidate, fetch-depth: 0, persist-credentials: false}
+      - name: Verify candidate identity and acquire original fixture bytes
+        run: |
+          set -eu
+          test "$(git -C candidate rev-parse HEAD)" = "$SHA"
+          test "$(git -C candidate rev-parse "$TAG^{commit}")" = "$SHA"
+          test -z "$(git -C candidate status --porcelain)"
+          fixture="$GITHUB_WORKSPACE/control/sdlc/fixtures/release-qa"
+          base=/tmp/thinkthen-0425-rc13-qa
+          mkdir -m 700 "$base"
+          tar --extract --gzip --file "$fixture/original-inputs.tar.gz" --directory "$base"
+          cp "$fixture/run-release-qa.py" "$fixture/read-catalog.py" "$base/"
+          printf 'Owned hosted release QA fixtures\n' > "$base/OWNER"
+          printf '%s  %s\n' 27f51b25ef44f9479e19d630ed1aab31647898752458539fb211ece8a6f6a505 "$base/run-release-qa.py" | sha256sum --check --strict
+          mkdir -p "$RUNNER_TEMP/qa-artifacts" "$RUNNER_TEMP/qa-evidence" "$RUNNER_TEMP/qa-memory"
+          tar -xzf "$fixture/memory-input.tar.gz" -C "$RUNNER_TEMP/qa-memory"
+          cp "$fixture/split-session_consumer.cpp" "$RUNNER_TEMP/qa-memory/"
+      - name: Retrieve the same-commit release rehearsal artifacts
+        env: {GH_TOKEN: '${{ github.token }}'}
+        run: |
+          set -eu
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$ARTIFACT_RUN" > "$RUNNER_TEMP/qa-evidence/artifact-run.json"
+          python3 - <<'PY'
+          import json, os
+          from pathlib import Path
+          run = json.loads((Path(os.environ['RUNNER_TEMP']) / 'qa-evidence/artifact-run.json').read_text())
+          assert run['head_sha'] == os.environ['SHA']
+          assert run['path'] == '.github/workflows/release.yml'
+          assert run['event'] == 'workflow_dispatch'
+          assert run['status'] == 'completed' and run['conclusion'] == 'success'
+          PY
+          gh run download "$ARTIFACT_RUN" --repo "$GITHUB_REPOSITORY" --name platform-x86_64-unknown-linux-gnu --dir "$RUNNER_TEMP/qa-artifacts"
+      - uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6.0.0
+        with: {python-version: '3.13'}
+      - name: Acquire existing fixture dependencies and build only the local responder
+        working-directory: candidate
+        run: |
+          set -eu
+          sudo apt-get update -qq
+          sudo apt-get install -y bubblewrap musl-tools cmake g++ time
+          sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+          rustup show active-toolchain || rustup toolchain install
+          cargo fetch --locked
+          cargo build --locked --offline --release --package conformance-backend -j2
+      - name: Verify archives and install the matching native C++ archive
+        working-directory: candidate
+        run: |
+          set -eu
+          artifacts="$RUNNER_TEMP/qa-artifacts"
+          memory="$RUNNER_TEMP/qa-memory"
+          for name in thinkthen-0.2.0-x86_64-unknown-linux-musl thinkthen-c-0.2.0-x86_64-unknown-linux-gnu thinkthen-cpp-0.2.0-x86_64-unknown-linux-gnu; do
+            (cd "$artifacts" && sha256sum --check --strict "$name.tar.gz.sha256")
+          done
+          mkdir "$RUNNER_TEMP/qa-command" "$memory/c" "$memory/cpp"
+          tar -xzf "$artifacts/thinkthen-0.2.0-x86_64-unknown-linux-musl.tar.gz" -C "$RUNNER_TEMP/qa-command"
+          tar -xzf "$artifacts/thinkthen-c-0.2.0-x86_64-unknown-linux-gnu.tar.gz" -C "$memory/c"
+          tar -xzf "$artifacts/thinkthen-cpp-0.2.0-x86_64-unknown-linux-gnu.tar.gz" -C "$memory/cpp"
+          grep -Fx "source_commit=$SHA" "$memory/cpp/THINKTHEN-PACKAGE-INPUTS"
+          native_sha=$(sha256sum "$artifacts/thinkthen-c-0.2.0-x86_64-unknown-linux-gnu.tar.gz" | cut -d' ' -f1)
+          grep -Fx "c_sha256=$native_sha" "$memory/cpp/THINKTHEN-PACKAGE-INPUTS"
+          cmake -S "$memory/cpp" -B "$memory/build" -DCMAKE_BUILD_TYPE=Release -DTHINKTHEN_ASAN=OFF \
+            -DCMAKE_INSTALL_PREFIX="$memory/install" -DTHINKTHEN_C_HEADER="$memory/c/include/thinkthen.h" \
+            -DTHINKTHEN_NATIVE_SHARED="$memory/c/lib/libthinkthen.so" -DTHINKTHEN_NATIVE_STATIC="$memory/c/lib/libthinkthen.a"
+          cmake --build "$memory/build" --parallel 2
+          cmake --install "$memory/build"
+          cmp "$memory/install/lib/libthinkthen.so.0" "$memory/c/lib/libthinkthen.so"
+          c++ -std=c++17 -O2 -Wall -Wextra -Werror -pthread -I "$memory/install/include" \
+            "$memory/split-session_consumer.cpp" "$memory/install/lib/libthinkthen_cpp_shared.a" \
+            "$memory/install/lib/libthinkthen.so.0" -Wl,-rpath,"$memory/install/lib" -o "$memory/split-session_consumer"
+      - name: Describe the actual retrieved archive and candidate-built responder
+        run: |
+          set -eu
+          python3 - <<'PY'
+          import hashlib, json, os
+          from pathlib import Path
+          temp = Path(os.environ['RUNNER_TEMP'])
+          archive = temp / 'qa-artifacts/thinkthen-0.2.0-x86_64-unknown-linux-musl.tar.gz'
+          backend = Path(os.environ['CARGO_TARGET_DIR']) / 'release/conformance-backend'
+          def digest(p):
+              with p.open('rb') as stream: return hashlib.file_digest(stream, 'sha256').hexdigest()
+          identity = dict(source_commit=os.environ['SHA'], candidate_tag=os.environ['TAG'], version='0.2.0',
+                          build_profile='release', artifact_kind='release-command', archive_name=archive.name,
+                          archive_sha256=digest(archive), fixture_source_commit=os.environ['SHA'],
+                          fixture_sha256=digest(backend), artifact_run=int(os.environ['ARTIFACT_RUN']))
+          (temp / 'qa-evidence/campaign-identity.json').write_text(json.dumps(identity, indent=2) + '\n')
+          PY
+      - name: Run the unchanged installed command QA with loopback isolation
+        run: |
+          set -eu
+          archive="$RUNNER_TEMP/qa-artifacts/thinkthen-0.2.0-x86_64-unknown-linux-musl.tar.gz"
+          backend="$CARGO_TARGET_DIR/release/conformance-backend"
+          env -i PATH=/usr/bin:/bin PYTHONDONTWRITEBYTECODE=1 \
+            /usr/bin/python3 /tmp/thinkthen-0425-rc13-qa/run-release-qa.py \
+            --repo "$GITHUB_WORKSPACE/candidate" --candidate-sha "$SHA" --candidate-tag "$TAG" --version 0.2.0 \
+            --archive "$archive" --archive-sha256 "$(sha256sum "$archive" | cut -d' ' -f1)" \
+            --binary "$RUNNER_TEMP/qa-command/thinkthen" --campaign-identity "$RUNNER_TEMP/qa-evidence/campaign-identity.json" \
+            --fixture-backend "$backend" --fixture-sha256 "$(sha256sum "$backend" | cut -d' ' -f1)"
+      - name: Measure the existing installed 100000-record C++ fixture
+        run: |
+          set -eu
+          bwrap --unshare-net --unshare-pid --die-with-parent --new-session --ro-bind / / \
+            --bind "$RUNNER_TEMP/qa-memory" "$RUNNER_TEMP/qa-memory" --proc /proc -- \
+            env -i PATH=/usr/bin:/bin PYTHONDONTWRITEBYTECODE=1 \
+            ROOT="$GITHUB_WORKSPACE/candidate" MEMORY="$RUNNER_TEMP/qa-memory" \
+            BACKEND="$CARGO_TARGET_DIR/release/conformance-backend" /usr/bin/python3 - <<'PY'
+          import json, os, re, subprocess, sys
+          from pathlib import Path
+          root, memory = Path(os.environ['ROOT']), Path(os.environ['MEMORY'])
+          sys.path[:0] = [str(root / 'conformance'), str(root / 'conformance/children')]
+          from children import child_env
+          from c_parity import Backend
+          for mode in ('parked', 'steady'):
+              env = child_env(home=memory / (mode + '-home'), THINKTHEN_API_KEY='sk-conformance-loopback')
+              if mode == 'steady': env['MEASUREMENT_READ_WHILE_FEEDING'] = '1'
+              backend = Backend(Path(os.environ['BACKEND']), env)
+              try:
+                  settings = json.dumps(dict(base_url='http://127.0.0.1:%s/generic/v1' % backend.port,
+                      model='jev-1.13.0', cache=False, batch=100, throttle=1, max_retries=0,
+                      max_requests=None, max_requests_total=None), separators=(',', ':'))
+                  with (memory / (mode + '-output.json')).open('wb') as output, (memory / (mode + '-phases.txt')).open('wb') as phases:
+                      subprocess.run(['/usr/bin/time', '-f', 'elapsed_seconds=%e\npeak_rss_kib=%M\nexit_status=%x',
+                          '-o', str(memory / (mode + '-time.txt')), str(memory / 'split-session_consumer'),
+                          str(memory / 'input.json'), settings], env=env, stdout=output, stderr=phases, check=True, timeout=600)
+                  assert backend.read('count') == '1000'
+                  value = json.loads((memory / (mode + '-output.json')).read_text())
+                  rows = [p for p in value['packets'] if p['kind'] == 'row']
+                  assert len(rows) == 100000
+                  assert all(p['value']['index'] == i and p['value']['input'] == 'refund ' + str(i)
+                             and p['value']['value'] is True for i, p in enumerate(rows))
+                  assert sum(p['kind'] == 'observation' for p in value['packets']) == 200000
+                  terminal = [p for p in value['packets'] if p['kind'] == 'terminal']
+                  assert len(terminal) == 1 and 'error' not in terminal[0]
+                  assert terminal[0]['facts']['records'] == 100000 and terminal[0]['facts']['requests_sent'] == 1000
+                  phases = (memory / (mode + '-phases.txt')).read_text()
+                  held = re.search(r'phase=finished_before_join_or_read[^\n]*VmRSS:\s*(\d+) kB', phases)
+                  assert held, 'missing held RSS phase'
+                  if mode == 'parked':
+                      assert int(held[1]) < 1048576, 'ThinkThen held RSS exceeds 1 GiB'
+                  print(mode, 'held_rss_kib=' + held[1], flush=True)
+                  print('Held RSS includes input and native state; steady collect retains decoded packets.', flush=True)
+                  samples = {name: (int(ms), int(rss)) for name, ms, rss in re.findall(
+                      r'phase=(\w+) monotonic_ms=(\d+)[^\n]*VmRSS:\s*(\d+) kB', phases)}
+                  for before, after in (('finished_before_join_or_read', 'documents_collected_copy_freed'),
+                                        ('after_close', 'output_document_copy'),
+                                        ('output_document_copy', 'serialized_string')):
+                      print(mode, before, 'to', after, 'fixture_ms=' + str(samples[after][0] - samples[before][0]),
+                            'rss_delta_kib=' + str(samples[after][1] - samples[before][1]), flush=True)
+                  print('Phase differences include allocator retention and are not isolated native allocations.', flush=True)
+                  print(phases, flush=True)
+                  print((memory / (mode + '-time.txt')).read_text(), flush=True)
+              finally:
+                  backend.close()
+          PY
+      - name: Preserve QA results and memory phases
+        if: always()
+        run: |
+          set -eu
+          out="$RUNNER_TEMP/qa-evidence"
+          mkdir -p "$out"
+          cp /tmp/thinkthen-0425-rc13-qa/runtime* "$out/" 2>/dev/null || true
+          cp "$RUNNER_TEMP/qa-memory/"*-phases.txt "$RUNNER_TEMP/qa-memory/"*-time.txt "$out/" 2>/dev/null || true
+          git -C candidate diff --exit-code
+          test -z "$(git -C candidate status --porcelain)"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: always()
+        with:
+          name: release-qa-${{ inputs.candidate_sha }}
+          path: ${{ runner.temp }}/qa-evidence
+          if-no-files-found: error
+          retention-days: 7
