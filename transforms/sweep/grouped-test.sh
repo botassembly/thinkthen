@@ -64,9 +64,9 @@ printf '%s\n' '{"mode":"grouped_decide","group":"/input/document_type","rows":0,
   > "$work/grouped-empty-expected.json"
 cmp "$work/grouped-empty-expected.json" "$work/grouped-empty.json"
 
-choice='{"input":{"id":"private id","label":"red","document_type":"group"},"value":"red","question":{"options":["red","blue"]},"answer":{"kind":"choice","pick":"red","probabilities":{"red":0.8,"blue":0.2}}}'
-score='{"input":{"id":"private id","label":0,"document_type":"group"},"value":1,"question":{"levels":["low","high"]},"answer":{"kind":"score"}}'
-decision='{"input":{"id":"private id","label":true,"document_type":"group"},"value":true,"question":{},"answer":{"kind":"yes_no","probability":0.8}}'
+choice='{"input":{"id":"fixture_secret_7c83 id","label":"red","document_type":"group"},"value":"red","question":{"options":["red","blue"]},"answer":{"kind":"choice","pick":"red","probabilities":{"red":0.8,"blue":0.2}}}'
+score='{"input":{"id":"fixture_secret_7c83 id","label":0,"document_type":"group"},"value":1,"question":{"levels":["low","high"]},"answer":{"kind":"score"}}'
+decision='{"input":{"id":"fixture_secret_7c83 id","label":true,"document_type":"group"},"value":true,"question":{},"answer":{"kind":"yes_no","probability":0.8}}'
 
 expect_group_failure() {
   name=$1
@@ -82,7 +82,7 @@ expect_group_failure() {
   sed -n 's/^jq: error (at .*): //p' "$work/error" > "$work/message"
   printf '%s\n' "$expected" > "$work/expected-message"
   cmp "$work/expected-message" "$work/message"
-  if grep -q 'private' "$work/error"; then
+  if grep -q 'fixture_secret_7c83' "$work/error"; then
     echo "grouped sweep echoed hostile row data for $name" >&2
     exit 1
   fi

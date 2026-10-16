@@ -24,6 +24,13 @@ for tool in cargo python3 node mustmatch jq script; do
 	fi
 done
 
+# Keep transform fixtures on the same jq interpreter as the Linux gate.
+JQ_VERSION=jq-1.7.1
+if [ "$(jq --version)" != "$JQ_VERSION" ]; then
+    printf 'install: jq %s must be on PATH, matching gate.yml\n' "$JQ_VERSION" >&2
+    exit 1
+fi
+
 # Release-script self-tests use TemporaryDirectory(delete=), added in Python 3.12.
 if ! python3 -c 'import sys; sys.exit(sys.version_info < (3, 12))'; then
     printf '%s\n' 'install: Python 3.12 or later must be on PATH' >&2
