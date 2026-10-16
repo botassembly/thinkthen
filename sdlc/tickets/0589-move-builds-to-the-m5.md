@@ -4,6 +4,8 @@ Status: OPEN.
 
 Milestone: 0.2.1
 
+Reviews: revision 4465afa, accept
+
 ## Outcome
 
 ThinkThen's development and release builds, tests, lint and gates run on the M5 through `pm job run`, and `pm ticket land --merge-branch` runs the declared gate there. Linux is checked by GitHub CI on every push and by occasional Yellow runs that no routine or release workflow depends on. The Beelink builds nothing.
