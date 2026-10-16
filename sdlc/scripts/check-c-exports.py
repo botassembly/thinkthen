@@ -295,9 +295,11 @@ def self_test(header):
         # The association's enum must remain visible through its kindless parent.
         copied = Path(scratch) / 'thinkthen.h'
         copied.write_text(text + '''
+_Static_assert(_Generic(0, int: sizeof(enum { THINKTHEN_AST_ASSOCIATION = 7 }), default: 0),
+               "generic association");
 static inline int abi_ast_children(void) {
     for (;;) { break; }
-    return _Generic(0, int: sizeof(enum { THINKTHEN_AST_ASSOCIATION = 7 }), default: 0);
+    return 0;
 }
 ''')
         expected = copy.deepcopy(native)
