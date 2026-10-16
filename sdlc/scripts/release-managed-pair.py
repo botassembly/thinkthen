@@ -111,6 +111,11 @@ def xml_field(data, name, parents=("project",)):
     return matches[0].text.strip()
 
 
+def source_member(family, name):
+    member = "README-PUBLIC.md" if name == "README.md" else name
+    return f"libraries/{family}/{member}"
+
+
 def check_nupkg(data, version, source, target, native):
     members, dirs = zip_members(data, "nupkg")
     require(not dirs, "unexpected nupkg directory")
@@ -129,7 +134,7 @@ def check_nupkg(data, version, source, target, native):
     require(xml_field(nuspec, "id", ("package", "metadata")) == "Botassembly.ThinkThen" and
             xml_field(nuspec, "version", ("package", "metadata")) == version, "nupkg identity differs")
     for name in ("README.md", "LICENSE"):
-        require(members[name] == source[f"libraries/csharp/{name}"], f"nupkg {name} differs from source")
+        require(members[name] == source[source_member("csharp", name)], f"nupkg {name} differs from source")
     forbidden = (b"/home/", b"/Users/", b"thinkthen_panic_probe", b"tt-canary-290", b"-----BEGIN PRIVATE KEY-----")
     require(not any(token in value or token in name.encode() for name, value in members.items()
                     for token in forbidden), "private nupkg member")
@@ -233,7 +238,7 @@ def check(args):
                 folder.mkdir()
                 for name in source_paths[family]:
                     (folder / name).parent.mkdir(parents=True, exist_ok=True)
-                    (folder / name).write_bytes(source[f"libraries/{family}/{name}"])
+                    (folder / name).write_bytes(source[source_member(family, name)])
                 (folder / "THINKTHEN-PACKAGE-INPUTS").write_bytes(manifest)
                 if family == 'jvm':
                     (folder / 'product-inventory.json').write_bytes(inventory_bytes)
@@ -255,7 +260,7 @@ def check(args):
         files = archive_members(data, names, family)
         require(files["THINKTHEN-PACKAGE-INPUTS"] == manifest, f"{family} C identity differs")
         for member in ("README.md", "LICENSE"):
-            require(files[member] == source[f"libraries/{family}/{member}"], f"{family} {member} differs")
+            require(files[member] == source[source_member(family, member)], f"{family} {member} differs")
         if family == "csharp":
             pinned(files[nupkg], managed["nupkg"], "nupkg")
             check_nupkg(files[nupkg], args.version, source, args.target, native)
