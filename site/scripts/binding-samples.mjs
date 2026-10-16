@@ -2,16 +2,25 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { execFileSync, spawnSync } from 'node:child_process';
 
 // Checkout scans read indexed source, including staged additions. Build output
 // remains outside the source set even when it sits beneath a source folder.
 export function trackedFiles(root) {
-  root = path.resolve(root);
+  const repo = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
+  // An archive beneath another checkout must never borrow its parent's index.
+  if (!fs.existsSync(path.join(repo, '.git'))) throw new Error(`source scan requires a checkout: ${repo}`);
+  root = fs.realpathSync(root);
+  const checkout = fs.realpathSync(repo);
+  const relative = path.relative(checkout, root);
+  if (relative === '..' || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative)) {
+    throw new Error(`source scan is outside the checkout: ${root}`);
+  }
   const env = { ...process.env };
-  for (const name of ['GIT_DIR', 'GIT_WORK_TREE', 'GIT_COMMON_DIR', 'GIT_INDEX_FILE']) delete env[name];
-  return [...new Set(execFileSync('git', ['-C', root, 'ls-files', '-z', '--', '.'], { env, encoding: 'utf8' })
-    .split('\0').filter(Boolean))].sort().map((name) => path.join(root, name));
+  for (const name of Object.keys(env)) if (name.startsWith('GIT_')) delete env[name];
+  return [...new Set(execFileSync('git', ['-C', checkout, '--literal-pathspecs', 'ls-files', '-z', '--', relative || '.'], { env, encoding: 'utf8' })
+    .split('\0').filter(Boolean))].sort().map((name) => path.join(checkout, name));
 }
 
 export const REPLAY_FILE = 'REPLAY';
