@@ -299,13 +299,35 @@ fn the_builder_follows_the_command_folder_rules() {
 }
 
 #[test]
+fn every_shared_setting_reaches_the_public_engine() {
+    let folder = std::env::temp_dir().join(format!("consumer-settings-{}", std::process::id()));
+    std::fs::create_dir(&folder).expect("fresh home");
+    let output = crate::run::output(
+        Command::new(std::env::current_exe().expect("test binary"))
+            .args(["--exact", "--ignored", "settings::shared_settings_child"])
+            .clear_environment()
+            .isolated_home(&folder),
+    )
+    .expect("child");
+    let said = String::from_utf8_lossy(&output.stdout);
+    assert!(output.status.success(), "{said}");
+    assert!(said.contains("1 passed"), "the settings matrix ran: {said}");
+    assert!(
+        super::child::Folder::Usage.under(&folder).is_dir(),
+        "environment settings write usage only in their owned home"
+    );
+    std::fs::remove_dir_all(folder).expect("clean home");
+}
+
+#[test]
+#[ignore = "the parent runs the settings matrix in an isolated home"]
 #[expect(
     clippy::excessive_nesting,
     clippy::cognitive_complexity,
     clippy::too_many_lines,
     reason = "one shared corpus row maps settings, runs the engine, and checks its wire effect"
 )]
-fn every_shared_setting_reaches_the_public_engine() {
+fn shared_settings_child() {
     use conformance_backend::Backend;
     use serde_json::Value;
     let corpus: Value =
