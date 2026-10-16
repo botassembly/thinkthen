@@ -103,10 +103,10 @@ using ThinkThen;
 using ThinkThen.Inputs;
 using ThinkThen.Results;
 string root = args[0];
-using var engine = Engine.Open(new InputEngineSettings {Replay = Path.Combine(root, "recording"),
-    Cache = new InputCacheDocumentAlternative1 {Value = new InputDisabledCache()}});
-var call = await engine.DecideAsync(new InputRequestQuestionText {Text = File.ReadAllText(Path.Combine(root, "question.txt"))},
-    new InputRequestInputText {Text = File.ReadAllText(Path.Combine(root, "report.txt"))});
+using var engine = Engine.Open(new EngineSettings {Replay = Path.Combine(root, "recording"),
+    Cache = new CacheDocumentDisabledCache {Value = new DisabledCache()}});
+var call = await engine.DecideAsync(new RequestQuestionText {Text = File.ReadAllText(Path.Combine(root, "question.txt"))},
+    new RequestInputText {Text = File.ReadAllText(Path.Combine(root, "report.txt"))});
 Console.WriteLine(JsonSerializer.Serialize(new {value = call.Packets.OfType<SessionPacketDecideRow>().Single().Value.Value,
     requests_sent = (long)call.Terminal.Facts.Value.RequestsSent}));
 ''',

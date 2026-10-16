@@ -25,19 +25,20 @@ TOOLS = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(TOOLS)
 
 KOTLIN = '''import thinkthen.kotlin.KotlinEngine
-import thinkthen.kotlin.Results
+import thinkthen.Results
 import thinkthen.Inputs
 import kotlinx.coroutines.runBlocking
 fun main() = runBlocking {
   KotlinEngine(Inputs.EngineSettings().cache(Inputs.CacheDocument(false)).maxRetries(0)).use { engine ->
     val call = engine.decide(Inputs.RequestQuestionText().text("Is it?"), Inputs.RequestInputText().text("consumer-kotlin"))
     val row = call.packets.filterIsInstance<Results.SessionPacketDecideRow>().single()
-    check(row.value.value.value == true && call.terminal.facts!!.requestsSent.intValueExact() == 1)
-    println("{\\\"value\\\":true,\\\"requests_sent\\\":1}")
+    check(row.value().value().value() == true && call.terminal.facts().value().requestsSent().intValueExact() == 1)
+    println("""{"value":true,"requests_sent":1}""")
   }
 }
 '''
-SCALA = '''import thinkthen.scala.{ScalaEngine, Results}
+SCALA = '''import thinkthen.scala.ScalaEngine
+import thinkthen.Results
 import thinkthen.Inputs
 import scala.concurrent.Await
 import scala.concurrent.duration.*
@@ -46,9 +47,9 @@ object InstallScala {
     val engine = new ScalaEngine(new Inputs.EngineSettings().cache(new Inputs.CacheDocument(false)).maxRetries(0))
     try {
       val call = Await.result(engine.decide(new Inputs.RequestQuestionText().text("Is it?"), new Inputs.RequestInputText().text("consumer-scala")).result, 10.seconds)
-      val row = call.packets.collect { case value: Results.SessionPacketDecideRow => value }.head
-      assert(row.value.value.value == true && call.terminal.facts.get.requestsSent.toInt == 1)
-      println("{\\\"value\\\":true,\\\"requests_sent\\\":1}")
+      val row = call.packets().collect { case value: Results.SessionPacketDecideRow => value }.head
+      assert(row.value().value().value() == true && call.terminal().facts().value().requestsSent().intValueExact() == 1)
+      println("""{"value":true,"requests_sent":1}""")
     } finally engine.close()
   }
 }
