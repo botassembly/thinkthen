@@ -65,9 +65,8 @@ fn canonical_objects_refuse_duplicate_unknown_and_null_controls() {
 
 #[test]
 fn generated_deserialization_schema_agrees_with_canonical_control_shapes() {
-    use crate::test_deadline::child::ChildEnvironment as _;
     use std::io::Write as _;
-    use std::process::{Command, Stdio};
+    use std::process::Stdio;
     let valid = r#"{"schema":"thinkthen.request/1","call":{"function":"decide","question":{"kind":"text","text":"Fits?"},"input":{"kind":"text","text":"Alpha."}}}"#;
     let definition = |value: serde_json::Value| {
         valid.replace(
@@ -125,7 +124,7 @@ fn generated_deserialization_schema_agrees_with_canonical_control_shapes() {
             )
         })
         .collect::<Vec<_>>();
-    let mut child = Command::new("python3").clear_environment()
+    let mut child = crate::test_deadline::child::command("python3", &[])
         .arg("-c").arg("import json,sys; from jsonschema import Draft202012Validator; schema=json.load(open(sys.argv[1])); Draft202012Validator.check_schema(schema); validator=Draft202012Validator(schema); cases=json.load(sys.stdin); assert all(validator.is_valid(value)==expected for value,expected in cases)")
         .arg(concat!(env!("CARGO_MANIFEST_DIR"), "/../../specification/request.schema.json"))
         .stdin(Stdio::piped()).stdout(Stdio::piped()).stderr(Stdio::piped()).spawn().unwrap();
@@ -345,9 +344,8 @@ fn native_rank_admission_does_not_promote_the_decide_default_to_a_cutoff() {
 
 #[test]
 fn native_input_schema_preserves_closed_shapes_and_null_absence() {
-    use crate::test_deadline::child::ChildEnvironment as _;
     use std::io::Write as _;
-    use std::process::{Command, Stdio};
+    use std::process::Stdio;
     let mut cases = [
         r#"{"kind":"io"}"#,
         r#"{"kind":"utf8","location":{"file":"input","first_line":1,"last_line":2}}"#,
@@ -384,7 +382,7 @@ fn native_input_schema_preserves_closed_shapes_and_null_absence() {
     ] {
         assert!(RequestReaderFailure::from_json(text).is_err());
     }
-    let mut child = Command::new("python3").clear_environment()
+    let mut child = crate::test_deadline::child::command("python3", &[])
         .arg("-c").arg("import json,sys; from jsonschema import Draft202012Validator; schema=json.load(open(sys.argv[1])); cases=json.load(sys.stdin); assert all(Draft202012Validator({'$ref':'#/$defs/'+name,'$defs':schema['$defs']}).is_valid(value)==expected for name,value,expected in cases)")
         .arg(concat!(env!("CARGO_MANIFEST_DIR"), "/../../specification/request.schema.json"))
         .stdin(Stdio::piped()).stdout(Stdio::piped()).stderr(Stdio::piped()).spawn().unwrap();
