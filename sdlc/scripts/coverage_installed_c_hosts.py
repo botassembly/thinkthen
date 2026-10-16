@@ -45,6 +45,7 @@ def prepare(context):
     (native / 'lib').mkdir()
     shutil.copy2(root / 'libraries/c/include/thinkthen.h', native / 'include/thinkthen.h')
     shutil.copy2(context['c_shared'], native / 'lib/libthinkthen.so')
+    (native / 'lib/libthinkthen.so.0').symlink_to('libthinkthen.so')
     command(['sh', str(root / 'libraries/c/localize.sh'),
              str(context['c_target'] / 'debug/libthinkthen_c.a'), str(native / 'lib/libthinkthen.a')],
             root, {**env, 'THINKTHEN_COVERAGE_INITIALIZER': str(context['initializer'])},
