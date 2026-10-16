@@ -117,6 +117,28 @@ int main(int argc, const char *argv[]) {
             require(decision && !error && decision.value.items == nil);
             [authoredCalls addObject:decision];
         }
+        TTAuthoredDecideBuilder *schemaDefinition = [TTAuthoredDecideBuilder new];
+        schemaDefinition.decide = @"Is it?";
+        schemaDefinition.itemSchema = @{@"type":@"object", @"properties":@{
+            @"enabled":@{@"type":@"boolean"}, @"name":@{@"type":@"string"},
+            @"count":@{@"type":@"number"}, @"labels":@{@"type":@"array", @"items":@{@"type":@"string"}}}};
+        TTQuestionDefinition *schemaQuestion = [TTQuestionDefinition new]; schemaQuestion.value = schemaDefinition;
+        for (NSNumber *enabled in @[@NO, @YES]) {
+            TTJSONInput *schemaInput = [TTJSONInput new];
+            schemaInput.value = @{@"enabled":enabled, @"name":@"schema-objc", @"count":@2, @"labels":@[@"one"]};
+            TTCall *schemaCall = [client decide:schemaQuestion input:schemaInput options:nil feed:nil error:&error];
+            require(schemaCall && !error && [schemaCall.value.scalar isEqual:@YES]);
+            TTDecisionRecord *row = (TTDecisionRecord *)schemaCall.results[0];
+            require([row.input.value isEqual:schemaInput.value]);
+            TTQuestionDocumentDecide *document = (TTQuestionDocumentDecide *)row.question.value;
+            TTDeclarationObjectRootBuilder *declaration = (TTDeclarationObjectRootBuilder *)document.itemSchema.value;
+            require([declaration.type.value isEqual:@"object"] && declaration.properties.value.count == 4);
+            TTPropertyTypeBooleanBuilder *boolean = (TTPropertyTypeBooleanBuilder *)declaration.properties.value[@"enabled"];
+            require([boolean isKindOfClass:TTPropertyTypeBooleanBuilder.class] && [boolean.type.value isEqual:@"boolean"]);
+            require([((TTPropertyTypeStringBuilder *)declaration.properties.value[@"name"]).type.value isEqual:@"string"]);
+            require([((TTPropertyTypeNumberBuilder *)declaration.properties.value[@"count"]).type.value isEqual:@"number"]);
+            require([((TTPropertyTypeArrayBuilder *)declaration.properties.value[@"labels"]).type.value isEqual:@"array"]);
+        }
         client = nil;
         for (NSUInteger index = 0; index < authoredCalls.count; index++) {
             require([authoredCalls[index].value.scalar isEqual:authored[index]]);
