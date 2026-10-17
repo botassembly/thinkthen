@@ -10,14 +10,11 @@ from sources import tracked_files
 
 
 def package_members(source):
-    source = Path(source)
-    members = {name for name in ('pubspec.yaml', 'README.md', 'LICENSE', 'CHANGELOG.md')
-               if (source / name).is_file()}
-    if (source / 'native-assets.json').is_file():
-        members.add('native-assets.json')
-    for folder in ('lib', 'hook', 'linux', 'example'):
-        members.update(str(path.relative_to(source)) for path in (source / folder).rglob('*') if path.is_file() and not any(part in ('.dart_tool', 'build') for part in path.relative_to(source).parts))
-    return members
+    source = Path(source).resolve()
+    metadata = {'pubspec.yaml', 'README.md', 'LICENSE', 'CHANGELOG.md', 'native-assets.json'}
+    members = (path.relative_to(source) for path in tracked_files(source))
+    return {str(member) for member in members
+            if str(member) in metadata or member.parts[0] in ('lib', 'hook', 'linux', 'example')}
 
 
 def configure(package, native, projects):
