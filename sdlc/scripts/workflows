@@ -600,7 +600,7 @@ def host_setup_calls(target, smoke, uv_line="uv 0.9.17 (0a1b2c3d4 2025-12-09)", 
     The pinned uv lives where pip put it and prints uv_line.
     """
     with tempfile.TemporaryDirectory(prefix="thinkthen-host-setup-") as tmp:
-        root = pathlib.Path(tmp)
+        root = pathlib.Path(tmp).resolve()
         bin_dir = root / "bin"
         bin_dir.mkdir()
         route = bin_dir / "route"
@@ -611,10 +611,12 @@ rustc) case $1 in
   --version) echo 'rustc 1.95.0 (59807616e 2026-04-14)' ;;
   --print) printf '%s/toolchains/1.95.0\\n' "$RUSTUP_HOME" ;;
   esac ;;
+mktemp) exec /usr/bin/mktemp -d "$FAKE_ROOT/tmp.XXXXXXXX" ;;
 cargo) [ "$1 $2" != 'deny --version' ] || echo 'cargo-deny 0.19.4' ;;
 rustup) [ "$1 $2" != 'target add' ] || echo "rustup $*" >> "$FAKE_LOG" ;;
 maturin) echo 'maturin 1.15.0' ;;
 npm) case $* in "ci --no-audit --no-fund --silent --prefix $FAKE_ROOT/"*) echo npm-seed >> "$FAKE_LOG" ;;
+  "install --no-audit --no-fund --no-package-lock --prefix $FAKE_ROOT/runner/thinkthen-generators prettier@3.6.2") ;;
   *) echo "unexpected npm call: $*" >&2; exit 94 ;; esac ;;
 python3) case " $* " in *' uv==0.9.17 '*) touch "$FAKE_UV_READY"; echo uv-install >> "$FAKE_LOG" ;; esac
   case $1 in -c) case $2 in *find_uv_bin*) echo "$FAKE_ROOT/pinned/uv" ;; esac ;; esac ;;
@@ -677,7 +679,7 @@ esac
         sqlite_python.write_text('#!/bin/sh\necho sqlite-python-check >> "$FAKE_LOG"\n')
         sqlite_python.chmod(0o755)
         for name in ("rustc", "rustup", "cargo", "maturin", "npm", "uv", "uname", "sh", "xcrun", "brew", "shasum",
-                     "python3", "python3.12", "python3.13", "python3.14", "bash", "sudo"):
+                     "python3", "python3.12", "python3.13", "python3.14", "bash", "sudo", "mktemp", "sha256sum"):
             (bin_dir / name).symlink_to(route.name)
         (root / "pinned").mkdir()
         (root / "pinned/uv").symlink_to(route)
@@ -687,7 +689,7 @@ esac
                    TMPDIR=str(root), FAKE_TARGET=target, FAKE_LOG=str(log), FAKE_ROOT=str(root),
                    FAKE_UV_READY=str(root / "uv-ready"), FAKE_PY313_READY=str(root / "py313-ready"),
                    FAKE_UV_LINE=uv_line, FAKE_OLD_BASH="1" if old_bash else "", GITHUB_PATH=str(root / "github-path"),
-                   GITHUB_ENV=str(root / "github-env"),
+                   GITHUB_ENV=str(root / "github-env"), RUNNER_TEMP=str(root / "runner"),
                    RELEASE_SMOKE="1" if smoke else "0")
         result = subprocess.run(["/bin/sh", str(REPO / "sdlc/scripts/release-workflow"), "host-setup", target],
                                 env=env, capture_output=True, text=True, timeout=20, check=False)
@@ -1249,6 +1251,8 @@ def self_test():
         # PostgreSQL pins, and macOS hands the SQLite check a Python that loads extensions.
         # Ticket 0375: the macOS smoke checks for bash 5 after its Homebrew installs.
         seed = ["seed $ROOT/bin/python3.13"] if smoke else []
+        handoff = ("path $ROOT/pinned\n$ROOT/runner/thinkthen-generators/bin\n"
+                   "$ROOT/runner/thinkthen-generators/node_modules/.bin") if smoke else "path $ROOT/pinned"
         if "apple" in target:
             wanted = ["py313-ready", "uv-install", "uv-check",
                       *[f"databases/postgresql/setup.sh {major}" for major in (16, 17, 18)],
@@ -1256,7 +1260,7 @@ def self_test():
                       "libraries/ruby/setup-ruby.sh ",
                       "databases/sqlite/setup.sh ", "databases/duckdb/tools/setup.sh --fetch",
                       *(["sqlite-python-check", "sqlite-venv", "sqlite-jsonschema", "sqlite-python-check", "npm-seed"] if smoke else []), *seed,
-                      'pgrx [configs] pg16 = "$ROOT/openssl3/bin/pg_config" pg17 = "$ROOT/openssl3/bin/pg_config" pg18 = "$ROOT/openssl3/bin/pg_config"', "path $ROOT/pinned",
+                      'pgrx [configs] pg16 = "$ROOT/openssl3/bin/pg_config" pg17 = "$ROOT/openssl3/bin/pg_config" pg18 = "$ROOT/openssl3/bin/pg_config"', handoff,
                       *(["env THINKTHEN_PYTHON=$ROOT/.cache/thinkthen-toolchains/sqlite-python-3.14/bin/python"] if smoke else [])]
         elif smoke:
             wanted = ["py313-ready", "uv-install", "uv-check", "libraries/ruby/setup-ruby.sh ",
@@ -1264,7 +1268,7 @@ def self_test():
                       *[f"databases/postgresql/setup.sh {major}" for major in (16, 17, 18)],
                       *(["libraries/typescript/setup-toolchain.sh ", "r-index", "r-host", "r-dependencies"]
                         if target == "x86_64-unknown-linux-gnu" else []),
-                      "npm-seed", *seed, "path $ROOT/pinned"]
+                      "npm-seed", *seed, handoff]
         else:
             # Ticket 0366: the Linux build job builds Ruby in its container, not on the host.
             wanted = [f"rustup target add --toolchain 1.95.0 {target.replace('-gnu', '-musl')}"]
