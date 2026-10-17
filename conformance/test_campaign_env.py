@@ -38,7 +38,7 @@ from pathlib import Path
 keys=('RUSTFLAGS','RUSTC_WRAPPER','CARGO_BUILD_RUSTC_WRAPPER',
       'CARGO_PROFILE_DEV_OPT_LEVEL','CARGO_PROFILE_TEST_OPT_LEVEL',
       'CARGO_PROFILE_DEV_DEBUG','CARGO_PROFILE_TEST_DEBUG',
-      'CFLAGS','CXXFLAGS','THINKTHEN_FULL_COMPILER')
+      'CFLAGS','CXXFLAGS','THINKTHEN_FULL_COMPILER','GITHUB_ACTIONS','RUNNER_ENVIRONMENT')
 env={{}}
 for key in keys:
     if key in os.environ:
@@ -86,6 +86,7 @@ exit 2
                 executable.write_text('#!/bin/sh\nset -eu\n' + body)
                 executable.chmod(0o755)
             env = child_env(home=root / 'home') | {'PATH': str(tools) + ':' + os.defpath,
+                   'GITHUB_ACTIONS': 'true', 'RUNNER_ENVIRONMENT': 'github-hosted',
                    'THINKTHEN_FULL_COMPILER': 'ambient', 'CFLAGS': '--ambient-c-flag',
                    'CXXFLAGS': '--ambient-cxx-flag', 'RUSTFLAGS': '--ambient-flag', 'RUSTC_WRAPPER': '/ambient/rustc-wrapper',
                    'CARGO_PROFILE_DEV_OPT_LEVEL': '0',
@@ -96,6 +97,7 @@ exit 2
             rows = [json.loads(line) for line in (root / 'probes.jsonl').read_text().splitlines()]
             self.assertTrue({'compiler', 'smoke', 'full', 'parity'} <= {row['stage'] for row in rows})
             expected = {'CARGO_PROFILE_DEV_OPT_LEVEL': '2', 'CARGO_PROFILE_TEST_OPT_LEVEL': '2',
+                        'GITHUB_ACTIONS': 'true', 'RUNNER_ENVIRONMENT': 'github-hosted',
                         'CARGO_PROFILE_DEV_DEBUG': '0', 'CARGO_PROFILE_TEST_DEBUG': '0',
                         'RUSTC_WRAPPER': '', 'CARGO_BUILD_RUSTC_WRAPPER': '',
                         'THINKTHEN_FULL_COMPILER': '1',
@@ -113,7 +115,8 @@ exit 2
                            check=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
             rows = [json.loads(line) for line in (root / 'probes.jsonl').read_text().splitlines()]
             self.assertEqual(rows, [{'stage': 'routine',
-                                     'settings': {'RUSTC_WRAPPER': '/ambient/rustc-wrapper'}}])
+                                     'settings': {'RUSTC_WRAPPER': '/ambient/rustc-wrapper',
+                                                  'GITHUB_ACTIONS': 'true', 'RUNNER_ENVIRONMENT': 'github-hosted'}}])
             with (scripts / 'test-full-cases').open('a') as stream:
                 stream.write('\npython3 conformance/not-a-real-helper.py\n')
             (root / 'probes.jsonl').write_text('')

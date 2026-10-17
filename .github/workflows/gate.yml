@@ -436,7 +436,7 @@ jobs:
           admission = importlib.util.module_from_spec(spec); spec.loader.exec_module(admission)
           for signum in (signal.SIGTERM, signal.SIGINT, signal.SIGHUP):
               signal.signal(signum, admission.interrupted)
-          env = child_env(('LANG', 'LC_ALL', 'USER', 'LOGNAME', 'SHELL', 'TMPDIR', 'CARGO_HOME', 'RUSTUP_HOME',
+          env = child_env(('GITHUB_ACTIONS', 'RUNNER_ENVIRONMENT', 'LANG', 'LC_ALL', 'USER', 'LOGNAME', 'SHELL', 'TMPDIR', 'CARGO_HOME', 'RUSTUP_HOME',
                            'LIBCLANG_PATH', 'PUB_CACHE', 'RUBY', 'RBCONFIG', 'R_LIBS_USER', 'JAVA_HOME',
                            'UV_CACHE_DIR', 'UV_PYTHON_INSTALL_DIR', 'npm_config_cache'), home=work / 'home')
           for key in ('THINKTHEN_DOTNET', 'THINKTHEN_JDK_HOME', 'THINKTHEN_KOTLIN_HOME', 'THINKTHEN_SCALA_HOME',
