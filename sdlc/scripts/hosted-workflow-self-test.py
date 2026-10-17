@@ -249,16 +249,30 @@ def linux_nested_tools_case():
         subprocess.run(['/bin/sh', '-ec', cache_handoff], env={**env, 'work': str(root),
             'STAGE': 'core', 'GITHUB_ENV': str(env_file)}, check=True, timeout=5)
         env.update(line.split('=', 1) for line in env_file.read_text().splitlines())
+        env.update(GITHUB_ACTIONS='true', RUNNER_ENVIRONMENT='github-hosted',
+                   GITHUB_TOKEN='fake-hosted-filter', PRIVATE_SERVICE_KEY='fake-hosted-filter')
         qualification = next(step['run'] for step in steps if step.get('name') ==
                              'Run the selected existing gates and retain their actual exits')
         selection = qualification[qualification.index("env = child_env("):qualification.index("for key in ('THINKTHEN_DOTNET'")].rstrip() + '\n'
         expected_cache = str(root / 'core/npm-cache')
-        script = ('from pathlib import Path\nfrom conformance.children.children import child_env\n'
+        hosted = ('assert env["GITHUB_ACTIONS"] == "true"\n'
+                  'assert env["RUNNER_ENVIRONMENT"] == "github-hosted"\n'
+                  'assert "GITHUB_TOKEN" not in env and "PRIVATE_SERVICE_KEY" not in env\n')
+        probe = ('import os,sys\n'
+                 f'sys.path.insert(0, {str(REPO / "databases/duckdb/tools")!r})\n'
+                 'from source_hosts import tool_environment\n'
+                 'env = os.environ\n' + hosted +
+                 'os.environ.update(GITHUB_TOKEN="fake-hosted-filter", PRIVATE_SERVICE_KEY="fake-hosted-filter")\n'
+                 'env = tool_environment()\n' + hosted)
+        script = ('import subprocess,sys\nfrom pathlib import Path\nfrom conformance.children.children import child_env\n'
                   f'work = Path({str(root)!r})\n' + selection +
-                  f'assert env["npm_config_cache"] == {expected_cache!r}\n'
-                  'import subprocess\nsubprocess.run(["sh", "-ec", '
+                  hosted + f'assert env["npm_config_cache"] == {expected_cache!r}\n'
+                  'subprocess.run(["sh", "-ec", '
                   '". sdlc/scripts/allow-list; test -d \\\"$npm_config_cache\\\""], '
-                  'env=env, check=True)\n')
+                  'env=env, check=True)\n'
+                  f'subprocess.run([sys.executable, {str(REPO / "databases/duckdb/tools/cache_lock.py")!r}, '
+                  f'{str(root / "cache.lock")!r}, sys.executable, "-c", {probe!r}], '
+                  'env=dict(env, GITHUB_TOKEN="fake-hosted-filter", PRIVATE_SERVICE_KEY="fake-hosted-filter"), check=True)\n')
         Path(expected_cache).mkdir(parents=True)
         subprocess.run([sys.executable, '-c', script], cwd=REPO, env=env, check=True, timeout=5)
 
@@ -648,6 +662,9 @@ def preflight_cases():
         scripts.mkdir(parents=True)
         helper = scripts / 'hosted-preflight.py'
         helper.write_bytes((REPO / 'sdlc/scripts/hosted-preflight.py').read_bytes())
+        children = root / 'conformance/children'
+        children.mkdir(parents=True)
+        (children / 'children.py').write_bytes((REPO / 'conformance/children/children.py').read_bytes())
         (root / 'rust-toolchain.toml').write_bytes((REPO / 'rust-toolchain.toml').read_bytes())
         (root / 'libraries/typescript').mkdir(parents=True)
         (root / 'libraries/typescript/node.sha256').write_bytes((REPO / 'libraries/typescript/node.sha256').read_bytes())
@@ -672,6 +689,39 @@ def preflight_cases():
         ready = subprocess.run(command, cwd=root, env=env, capture_output=True, text=True, timeout=5)
         assert ready.returncode == 0 and ready.stderr == '', ready.stderr
         assert ready.stdout == 'hosted-preflight: all prepared inputs are ready\n'
+        # A failed prepared command must retain the error needed to repair its input.
+        maturin = tools / 'maturin'
+        maturin.unlink()
+        maturin.write_text(f'#!{sys.executable}\nimport os, sys\n'
+                          'print("prepared command output")\n'
+                          'print("prepared command error", file=sys.stderr)\n'
+                          'if os.environ.get("PREFLIGHT_NOISY"):\n'
+                          '    print("o" * (2040 - len("prepared command output\\n")) + os.environ["PRIVATE_SERVICE_KEY"])\n'
+                          '    for name in ("THINKTHEN_API_KEY", "GITHUB_TOKEN", "PRIVATE_SERVICE_KEY", "db_password", "AUTHORIZATION"):\n'
+                          '        print(os.environ[name])\n'
+                          '        print(os.environ[name], file=sys.stderr)\n'
+                          '    print("o" * 20000)\n'
+                          '    print("e" * 20000, file=sys.stderr)\n'
+                          '    print("prepared command output end")\n'
+                          '    print("ModuleNotFoundError: No module named prepared_fixture", file=sys.stderr)\n'
+                          'sys.exit(9)\n')
+        maturin.chmod(0o755)
+        failed = subprocess.run(command, cwd=root, env=env, capture_output=True, text=True, timeout=5)
+        assert failed.returncode == 1 and 'exit 9\nprepared command output\nprepared command error' in failed.stderr, failed.stderr
+        secrets = {name: 'fake-preflight-private-' + str(index) for index, name in enumerate(
+            ('THINKTHEN_API_KEY', 'GITHUB_TOKEN', 'PRIVATE_SERVICE_KEY', 'db_password', 'AUTHORIZATION'))}
+        failed = subprocess.run(command, cwd=root, env=dict(env, PREFLIGHT_NOISY='1',
+                                THINKTHEN_PROBE_SETTING='prepared_fixture', **secrets),
+                                capture_output=True, text=True, timeout=5)
+        assert failed.returncode == 1 and failed.stdout == '', failed
+        assert len(failed.stderr) < 10000, 'failed child output was not bounded'
+        assert all(value not in failed.stderr for value in secrets.values()), 'failed child output exposed an environment secret'
+        assert 'fake-pre' not in failed.stderr, 'truncation exposed a fragment of an environment secret'
+        for marker in ('prepared command output', 'prepared command error', 'prepared command output end',
+                       'ModuleNotFoundError: No module named prepared_fixture', '[truncated]'):
+            assert marker in failed.stderr, (marker, failed.stderr)
+        maturin.unlink()
+        maturin.symlink_to(probe)
         # Rehearsal output is future input during bootstrap-only proof.
         # The normal coverage path must refuse absent and different-SHA reports.
         module = runpy.run_path(str(helper))

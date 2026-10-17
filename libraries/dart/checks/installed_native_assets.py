@@ -77,7 +77,7 @@ def main():
         return
     dart, flutter, native, scratch, pub_cache = (Path(value).resolve() for value in sys.argv[1:])
     scratch.mkdir(parents=True, exist_ok=False)
-    env = child_env(keep=('LLVM_PROFILE_FILE',), home=scratch / 'home', PATH='/usr/bin:/bin', LANG='C.UTF-8',
+    env = child_env(keep=('LLVM_PROFILE_FILE', 'GITHUB_ACTIONS', 'RUNNER_ENVIRONMENT'), home=scratch / 'home', PATH='/usr/bin:/bin', LANG='C.UTF-8',
                     PUB_CACHE=str(pub_cache), FLUTTER_SUPPRESS_ANALYTICS='true',
                     CI='true')
     packages = scratch / 'packages'

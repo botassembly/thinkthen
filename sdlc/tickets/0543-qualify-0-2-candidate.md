@@ -303,6 +303,18 @@ Reviews: revision 7e5fbbd, accept
 
 Reviews: revision 3a4d5f0, accept
 
+Reviews: revision 62d01ea, accept
+
+Reviews: revision 5b70d8c, accept
+
+Reviews: revision 566c961, accept
+
+Reviews: revision 25b822a, accept
+
+Reviews: revision 3ea0fbb, accept
+
+Reviews: revision e53d3c8, accept
+
 ## Outcome
 
 One reviewed commit on `ticket/0543-final`, tagged `rc/0.2.0-rc.13` or a later candidate number, passes the local release suite, the coverage comparison and the nonpublishing hosted runs on Linux, macOS and Windows, and publishes nothing.
@@ -462,3 +474,11 @@ Release QA, publication and after-publication checks stay with 0425, 0393 and 03
 - 2026-10-16 next: The interrupted B25 full-cases child finished with release smoke passing but no recoverable parent exit, so its unchanged log and incomplete receipt are preserved and the approved full-cases rerun is active under owner 2401759 before package, stress, coverage and the existing hosted rehearsal can qualify rc.18.
 - 2026-10-16 next: Windows tool-root repair f2dd7415e and Apple installed-README repair 5a9456562 are freshly accepted and merged on next-freeze; interrupted B25 full-cases ends with release smoke passing but no qualified exit, so remaining package, stress and coverage diagnostics now run under durable user services before repaired freeze and complete qualification.
 - 2026-10-16 next: B25 package and stress diagnostics each finish under durable user services with actual exit 0 and no children, both accepted packaging repairs remain merged for refreeze, and verified unused compiler cleanup reclaimed 6.65 GiB before the remaining Linux coverage diagnostic.
+- 2026-10-17 landed 2667437bd52b7d45acb73f28e58aa087efa30e4b; next: The reviewed release integration landed on main after M5 job 1792260156595-26974 passed the complete lint-and-test gate; close accepted implementation outcomes in the authorized records-only batch, then run main-based hosted preflight and diagnostics while retaining qualification-dependent tickets open.
+- 2026-10-17 next: The integration landed as main 2667437bd after the complete M5 gate passed, hosted preflight-only run 39057211224 now checks that main SHA, and the old rehearsal 39026160272 ended with only previously repaired Apple C and DuckDB failures; the authorized child-status command refuses and its narrow records alternative is with the PM.
+- 2026-10-17 next: The PM-authorized records-only commit 59fde652f closes all 17 implementation-complete children from integration 2667437bd, pm daily and pm next confirm none remains ready or started, hosted preflight 39057211224 continues, and qualification-dependent tickets remain open while landed worktrees are cleaned.
+- 2026-10-17 next: The 17 implementation outcomes are COMPLETE in main 59fde652f and absent from ready or started queue entries, cleanup recovered 98.89 GiB while retaining verified failure evidence and QA fixtures, and hosted preflight-only run 39057211224 remains in pinned-tool setup before the main-based full diagnostic and rehearsal.
+- 2026-10-17 next: Under the PM no-main-hold ruling, the newly created immutable candidate ref ticket/0543-final points exactly to main 59fde652f09d2c49e9e1302935a71b10e4d39757 and will never advance; this existing supported ref needs no workflow change, and after preflight 39057211224 passes its normal rehearsal and Apple-backed three-job Linux diagnostic will use that fixed SHA.
+- 2026-10-17 next: Exact candidate 59fde652f passed M5 job 1792262849107-17549 and native runs 39060401013, 39060400475 and 39060400735 are collecting results, but formal grading exposed two Go fixtures retaining the deleted admission variable and the red reproduction is saved; its deletion repair and minimal support for the next immutable candidate ref are being batched while Linux preflight 39057211224 completes.
+- 2026-10-17 next: Batched fresh-accepted Go fixture deletion 62d01ea, Darwin admission fixture correction 5b70d8c and immutable rehearsal branch guards 566c961 at 715b3add5; all targeted M5 checks pass, Objective-C run 39060400735 passed, Windows 39060401013 reached installed Python checks, and Linux preflight 39057211224 remains active while its failure list is collected before the next combined gate.
+- 2026-10-17 next: Windows 39060401013 and Objective-C 39060400735 passed on 59fde652f, Swift admission fixtures failed and their repair is accepted, Linux preflight core job 117467528261 exposed three probe errors after setup passed, and fresh-accepted context preservation 25b822a plus probe repair 3ea0fbb with passing M5 targeted receipts are combined while the other two Linux jobs complete before the batch gate.

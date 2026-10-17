@@ -49,6 +49,7 @@ fi
 tar -x -f "$RUN/source.tar" -C "$RUN/src"
 set -- --rm --user "$(id -u):$(id -g)" -v "$RUN:/work" -v "$WORK/cache:/work/cache" -e HOME=/work/home -e TMPDIR=/work/tmp -e TARGET="$TARGET" -e ARCH="$ARCH" -e NODE_ARCH="$NODE_ARCH"
 set -- "$@" -e PYTHONDONTWRITEBYTECODE=1 -e THINKTHEN_ARCHIVED_SOURCE_TAR=/work/source.tar -e THINKTHEN_ARCHIVED_SOURCE_COMMIT="$source_commit"
+set -- "$@" -e GITHUB_ACTIONS -e RUNNER_ENVIRONMENT
 if [ -n "${RELEASE_CARGO_REGISTRY:-}" ]; then
 	set -- "$@" -v "$RELEASE_CARGO_REGISTRY:/work/home/.cargo/registry" -e CARGO_NET_OFFLINE=true
 fi

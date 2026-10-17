@@ -33,7 +33,7 @@ with tempfile.TemporaryDirectory(prefix='installed-session-', dir=root) as tempo
     (project / 'public.zig').write_text(fragment)
     backend = Backend(key='tt-canary-273', arrivals='wire', retry_ms=True, concurrent=True)
     try:
-        env = child_env(home=home, ZIG_GLOBAL_CACHE_DIR=str(root / 'cache'),
+        env = child_env(keep=('GITHUB_ACTIONS', 'RUNNER_ENVIRONMENT'), home=home, ZIG_GLOBAL_CACHE_DIR=str(root / 'cache'),
                         THINKTHEN_BASE_URL=f'http://127.0.0.1:{backend.server_port}/generic/v1',
                         THINKTHEN_API_KEY='tt-canary-273', THINKTHEN_CACHE=str(home / 'native-cache'))
         subprocess.run([sys.executable, str(REPO / 'sdlc/scripts/build-admission.py'), '--lock', '/tmp/thinkthen-heavy.lock', '--timeout', '900', '--', str(zig), 'build', '-j2'], cwd=project, env=env, check=True)

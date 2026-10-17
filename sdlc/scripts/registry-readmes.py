@@ -533,7 +533,8 @@ def run_example(family, packages, work, root=REPO, selected=None, sample_index=0
     # The site uses this same recording as a fresh cache, without shell settings or a key.
     shutil.copyfile(root / 'site/recordings/thinkthen.jsonl', cache / 'thinkthen.jsonl')
     sample = work / filename; sample.write_text(code)
-    env = {'PATH': os.environ.get('PATH', '/usr/bin:/bin'), 'HOME': str(home),
+    env = {**{name: os.environ[name] for name in ('GITHUB_ACTIONS', 'RUNNER_ENVIRONMENT') if name in os.environ},
+           'PATH': os.environ.get('PATH', '/usr/bin:/bin'), 'HOME': str(home),
            'LANG': 'C.UTF-8', 'LC_ALL': 'C.UTF-8', 'XDG_CACHE_HOME': str(home / '.cache'),
            'XDG_CONFIG_HOME': str(home / '.config'), 'XDG_STATE_HOME': str(home / '.local/state'),
            'THINKTHEN_CACHE': str(cache), 'RUSTC_WRAPPER': '', 'CARGO_BUILD_RUSTC_WRAPPER': '',

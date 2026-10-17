@@ -18,7 +18,7 @@ with tempfile.TemporaryDirectory(prefix='installed-session-', dir=ROOT / 'librar
     for name in ('session_consumer.zig', 'request_fixture.zig'):
         shutil.copy2(Path(__file__).parent / name, scratch / name)
     binary = scratch / 'consumer'
-    env = child_env(home=scratch, ZIG_GLOBAL_CACHE_DIR=str(ROOT / 'libraries/zig/target/cache'))
+    env = child_env(keep=('GITHUB_ACTIONS', 'RUNNER_ENVIRONMENT'), home=scratch, ZIG_GLOBAL_CACHE_DIR=str(ROOT / 'libraries/zig/target/cache'))
     subprocess.run([sys.executable, str(ROOT / 'sdlc/scripts/build-admission.py'), '--lock', '/tmp/thinkthen-heavy.lock', '--timeout', '900', '--', os.environ.get('THINKTHEN_ZIG', 'zig'), 'build-exe', '-j2', '-fllvm', '-flld',
                     '--cache-dir', str(ROOT / 'libraries/zig/target/scratch/parity-cache'),
                     str(NATIVE / 'lib/libthinkthen.a'), '--dep', 'thinkthen', '-Mroot=' + str(scratch / 'session_consumer.zig'),
