@@ -386,6 +386,7 @@ def qualify(check, stage, target):
         check.command(['jq', '--version'], '^' + re.escape(pins['JQ_VERSION']) + r'\s*$')
         check.command(['gcc', '--version'], r'\b(?:gcc|GCC)\b')
         check.command(['swift', 'format', '--help'])
+        check.command(['sh', '-ec', '. libraries/ruby/toolchain.env; ruby_source_host'])
         check.tools(('prlimit',))
         check.check('nonroot Linux routine host', lambda: require(os.getuid() != 0, 'RLIMIT_NPROC needs a nonroot user'))
         check.command(['cargo', 'deny', '--version'], '^cargo-deny ' + re.escape(pins['DENY_VERSION']) + r'\s*$')

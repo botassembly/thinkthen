@@ -6,6 +6,10 @@ set -eu
 . "$(dirname -- "$0")/heavy-lock"
 
 REPO=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
+. "$REPO/libraries/ruby/toolchain.env"
+ruby=$(ruby_source_host)
+PATH=${ruby%/*}:$PATH
+export PATH
 
 # The version the workflow installs and the version this rung names in its
 # advice, so a machine and the gate run the same checker.
@@ -19,7 +23,7 @@ DENY_VERSION=0.19.4
 # reads is proved on a real terminal rather than assumed.
 # The all-language generation check also formats source and measures the C ABI.
 # gcc must be GNU GCC with -fdump-ada-spec, rather than Apple's clang alias.
-for tool in cargo rustc rustup rustfmt cargo-nextest python3 node git mustmatch jq script cc clang gcc gofmt swift zig dart ruff prettier; do
+for tool in cargo rustc rustup rustfmt cargo-nextest python3 node git ruby mustmatch jq script cc clang gcc gofmt swift zig dart ruff prettier; do
 	if ! command -v "$tool" >/dev/null 2>&1; then
 		printf 'install: %s is not on PATH, and a later rung needs it\n' "$tool" >&2
 		exit 1
