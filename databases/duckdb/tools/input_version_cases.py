@@ -10,6 +10,7 @@ import tarfile
 import tempfile
 import threading
 import unittest
+from unittest.mock import patch
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
@@ -83,6 +84,32 @@ class Cases(unittest.TestCase):
         result = run(['git', '-C', str(folder), '-c', 'user.name=fixture', '-c', 'user.email=fixture@example.invalid', 'commit', '-qm', 'fixture'], self.env)
         self.assertEqual(result.returncode, 0, result.stderr)
         return run(['git', '-C', str(folder), 'rev-parse', 'HEAD'], self.env).stdout.strip()
+
+
+    def test_source_hosts_fix_the_cli_identity_before_compiling(self):
+        import source_hosts
+        cache = self.root / 'cache'
+        hosts = [(version, selected(version, TARGET)['source_commit'], selected(version, TARGET)['tools_commit'])
+                 for version in versions()]
+        for version, _, _ in hosts:
+            (cache / version / 'source/.git').mkdir(parents=True)
+        with patch.dict(os.environ, self.env, clear=True), \
+                patch.object(source_hosts, 'ROOT', self.root / 'duckdb'), \
+                patch.object(source_hosts, 'prepare'), \
+                patch.object(source_hosts, 'prepare_backend'), \
+                patch.object(source_hosts, 'stage'), \
+                patch.object(source_hosts, 'cli_runner'), \
+                patch('named_options.check'), patch('native_records.check'), \
+                patch.object(source_hosts.subprocess, 'run') as compiler:
+            self.assertEqual(source_hosts.check_hosts(cache, False), 0)
+        builds = [call.args[0] for call in compiler.call_args_list if call.args[0][-1] == 'release']
+        self.assertEqual(len(builds), len(hosts))
+        for command, (version, commit, _) in zip(builds, hosts):
+            with self.subTest(version=version):
+                flags = next(value.split('=', 1)[1] for value in command if value.startswith('EXT_RELEASE_FLAGS='))
+                # Git's default abbreviation can be seven characters in a shallow
+                # checkout. Keep the CLI identity accepted by installed consumers.
+                self.assertIn('-DGIT_COMMIT_HASH=' + commit[:10], flags.split())
 
 
     def test_raw_git_bypasses_filters_index_and_flags(self):
