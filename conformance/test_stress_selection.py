@@ -3,6 +3,7 @@ import os
 from pathlib import Path
 import shutil
 import subprocess
+import sys
 import tempfile
 import unittest
 
@@ -91,7 +92,11 @@ class StressSelection(unittest.TestCase):
                         target.touch()
             php = root / 'libraries/php/check.sh'
             shutil.copyfile(parity.ROOT / 'libraries/php/check.sh', php)
-            env = {'PATH': os.defpath, 'HOME': str(root / 'home'),
+            tools = root / 'bin'
+            tools.mkdir()
+            # Shell helpers must use the supported Python running this fixture.
+            (tools / 'python3').symlink_to(sys.executable)
+            env = {'PATH': str(tools) + ':' + os.defpath, 'HOME': str(root / 'home'),
                    'FIXTURE_ROOT': str(root), 'FAILED_SURFACE': '',
                    'THINKTHEN_TEST_PROFILE': 'stress'}
             subprocess.run(['git', 'add', 'libraries'], cwd=root, env=env, check=True)
