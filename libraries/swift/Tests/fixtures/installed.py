@@ -49,9 +49,15 @@ for command in (['git', 'init', '-q', str(package)], ['git', '-C', str(package),
 (work / 'empty-tool').write_bytes(b'')
 swift = Path(shutil.which('swift')).resolve()
 toolchain = swift.parents[2]
+hidden_tools = []
+for name in ('cargo', 'rustc'):
+    path = Path('/usr/bin') / name
+    # A read-only /usr cannot supply a mount point for an absent tool.
+    if path.exists():
+        hidden_tools += ['--ro-bind', str(work / 'empty-tool'), str(path)]
 base = [] if apple else ['bwrap', '--unshare-all', '--share-net', '--die-with-parent', '--ro-bind', '/usr', '/usr', '--symlink', 'usr/bin', '/bin',
         '--ro-bind', '/lib', '/lib', '--ro-bind', '/lib64', '/lib64', '--ro-bind', str(toolchain), '/swift',
-        '--ro-bind', str(work / 'empty-tool'), '/usr/bin/cargo', '--ro-bind', str(work / 'empty-tool'), '/usr/bin/rustc',
+        *hidden_tools,
         '--bind', str(work), '/work', '--proc', '/proc', '--dev', '/dev', '--tmpfs', '/tmp', '--chdir', '/work/consumer', '--']
 if os.environ.get('LLVM_PROFILE_FILE') and not apple:
     observation = Path(os.environ['LLVM_PROFILE_FILE']).parent.absolute()
