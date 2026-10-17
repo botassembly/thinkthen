@@ -17,7 +17,9 @@ internal static class NativeLoader
         string folder = Path.GetDirectoryName(assembly.Location) ?? throw new DllNotFoundException("Missing assembly location.");
         // NuGet either flattens the selected RID asset or retains its runtime directory.
         foreach (string path in new[] { Path.Combine(folder, filename), Path.Combine(folder, "runtimes", os + "-" + arch, "native", filename) })
-            if (File.Exists(path)) return NativeLibrary.Load(Path.GetFullPath(path));
+            // Windows resolves thinkthen.dll to the managed ThinkThen.dll beside the consumer.
+            if (!string.Equals(path, assembly.Location, StringComparison.OrdinalIgnoreCase) && File.Exists(path))
+                return NativeLibrary.Load(Path.GetFullPath(path));
         throw new DllNotFoundException("The installed ThinkThen package has no native asset for " + os + "-" + arch + ".");
     }
 }
