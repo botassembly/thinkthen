@@ -93,8 +93,7 @@ say(ok=True)
 def test_saved_selectors_keep_projection_locations_and_refuse_conflicting_collections():
     backend = Backend()
     got = child('''
-from pathlib import Path
-folder=Path(os.environ['XDG_CONFIG_HOME'])/'thinkthen/questions'
+folder=question_directory()
 folder.mkdir(parents=True)
 question=folder/'saved.json'
 question.write_text(json.dumps({'decide':'Fits?','on':['/body'],'item_schema':{'type':'string'}}))
@@ -103,6 +102,7 @@ db.execute('SELECT thinkthen_configure(?)', [json.dumps({'cache':False,'batch':1
 for selector in ('@@saved', '@'+str(question)):
     inputs={'records':[{'json':{'body':'Alpha.','private':'excluded'},'source':{'file':'source.jsonl','first_line':4,'last_line':4}}]}
     document=complete(db, 'decide', *[selector, json.dumps(inputs), json.dumps({'threshold': 0.95})])
+    assert 'error' not in document['native'], document
     assert document['native']['value'][0]['value'] is False, document
     assert document['ordinals']==[0] and document['native']['facts']['requests_sent']==1, document
     assert document['observations'][0]['inputs'][0]['source']=={'file':'source.jsonl','first_line':4,'last_line':4}, document

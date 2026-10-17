@@ -38,6 +38,7 @@ PRELUDE = f"""
 import json, os, sqlite3, sys, threading, time
 sys.path.insert(0, {str(HERE)!r})
 from native_receipts import call as complete, ordinary, ordinary_images
+from helper import question_directory
 LIB = {str(LIB)!r}
 def connect(path=":memory:"):
     connection = sqlite3.connect(path, isolation_level=None, check_same_thread=False)
@@ -136,6 +137,14 @@ def environment(backend: Backend | None, arm: str = "generic", **extra: str) -> 
         held.update(THINKTHEN_BASE_URL=backend.base(arm), THINKTHEN_API_KEY=LOOPBACK_KEY)
     held.update(extra)
     return held
+
+
+def question_directory(env=None):
+    """The isolated child's native named-question directory on this platform."""
+    env = os.environ if env is None else env
+    configuration = (pathlib.Path(env['HOME']) / 'Library/Application Support/thinkthen'
+                     if sys.platform == 'darwin' else pathlib.Path(env['XDG_CONFIG_HOME']) / 'thinkthen')
+    return configuration / 'questions'
 
 
 class Child:
