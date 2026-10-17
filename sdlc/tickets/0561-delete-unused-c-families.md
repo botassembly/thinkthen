@@ -1,6 +1,8 @@
 # 0561: Delete the C export families no library calls
 
-Status: OPEN.
+Status: COMPLETE.
+
+Landed: 2667437bd
 
 Milestone: 0.2
 

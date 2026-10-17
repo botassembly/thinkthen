@@ -1,6 +1,8 @@
 # 0582: Give each SQL function one details route
 
-Status: OPEN.
+Status: COMPLETE.
+
+Landed: 2667437bd
 
 Milestone: 0.2
 

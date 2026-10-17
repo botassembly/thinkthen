@@ -1,6 +1,8 @@
 # 0579: Report live backend failures plainly
 
-Status: OPEN.
+Status: COMPLETE.
+
+Landed: 2667437bd
 
 Milestone: 0.2
 

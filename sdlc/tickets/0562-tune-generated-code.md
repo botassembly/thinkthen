@@ -1,6 +1,8 @@
 # 0562: Check, trim and rename generated code before 0.2 freezes it
 
-Status: OPEN.
+Status: COMPLETE.
+
+Landed: 2667437bd
 
 Milestone: 0.2
 

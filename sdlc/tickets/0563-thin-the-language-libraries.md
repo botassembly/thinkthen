@@ -1,6 +1,8 @@
 # 0563: Move repeated language-library code into the C layer and generators
 
-Status: OPEN.
+Status: COMPLETE.
+
+Landed: 2667437bd
 
 Milestone: 0.2
 

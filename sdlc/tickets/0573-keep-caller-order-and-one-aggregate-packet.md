@@ -1,6 +1,8 @@
 # 0573: Keep the caller's order and send one aggregate packet
 
-Status: OPEN.
+Status: COMPLETE.
+
+Landed: 2667437bd
 
 Milestone: 0.2
 

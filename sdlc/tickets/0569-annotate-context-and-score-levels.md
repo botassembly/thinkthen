@@ -1,6 +1,8 @@
 # 0569: Make annotate take shared context once, name score levels, and fix status
 
-Status: OPEN.
+Status: COMPLETE.
+
+Landed: 2667437bd
 
 Milestone: 0.2
 

@@ -1,6 +1,8 @@
 # 0581: Return one result per library call
 
-Status: OPEN.
+Status: COMPLETE.
+
+Landed: 2667437bd
 
 Milestone: 0.2
 

@@ -1,6 +1,8 @@
 # 0580: Return value and probability from Rust Polars
 
-Status: OPEN.
+Status: COMPLETE.
+
+Landed: 2667437bd
 
 Milestone: 0.2
 

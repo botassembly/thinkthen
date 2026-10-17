@@ -1,6 +1,8 @@
 # 0590 — typesafe-jev-images
 
-Status: OPEN.
+Status: COMPLETE.
+
+Landed: 2667437bd
 
 Milestone: 0.2
 
