@@ -519,6 +519,17 @@ def preflight_cases():
         # Rehearsal output is future input during bootstrap-only proof.
         # The normal coverage path must refuse absent and different-SHA reports.
         module = runpy.run_path(str(helper))
+        # Missing lock-reading support must not hide an independent coverage input.
+        globals_ = module['qualify'].__globals__
+        check = module['Preflight']()
+        with patch.dict(globals_, ROOT=REPO, rust=lambda *args: None,
+                        cargo_cache=lambda *args: None, installed=lambda *args: None), \
+                patch.object(check, 'command'), patch.object(check, 'tools'), \
+                patch.dict(sys.modules, {'yaml': None}), \
+                patch.dict(os.environ, {'RUNNER_TEMP': str(root), 'PREFLIGHT_ONLY': 'false'}):
+            check.check('prepared host inputs', lambda: module['qualify'](check, 'coverage', 'x86_64-unknown-linux-gnu'))
+        assert any('yaml' in message for message in check.missing), check.missing
+        assert any('same-SHA Apple coverage input' in message for message in check.missing), check.missing
         report = root / 'thinkthen-apple-coverage/totals.json'
         for local_only, source, wanted in ((True, None, 0), (False, None, 1),
                                            (False, 'a' * 40, 0), (False, 'b' * 40, 1)):
