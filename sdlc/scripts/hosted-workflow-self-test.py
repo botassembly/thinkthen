@@ -686,6 +686,18 @@ def preflight_cases():
         ready = subprocess.run(command, cwd=root, env=env, capture_output=True, text=True, timeout=5)
         assert ready.returncode == 0 and ready.stderr == '', ready.stderr
         assert ready.stdout == 'hosted-preflight: all prepared inputs are ready\n'
+        # A failed prepared command must retain the error needed to repair its input.
+        maturin = tools / 'maturin'
+        maturin.unlink()
+        maturin.write_text(f'#!{sys.executable}\nimport sys\n'
+                          'print("prepared command output")\n'
+                          'print("prepared command error", file=sys.stderr)\n'
+                          'sys.exit(9)\n')
+        maturin.chmod(0o755)
+        failed = subprocess.run(command, cwd=root, env=env, capture_output=True, text=True, timeout=5)
+        assert failed.returncode == 1 and 'exit 9\nprepared command output\nprepared command error' in failed.stderr, failed.stderr
+        maturin.unlink()
+        maturin.symlink_to(probe)
         # Rehearsal output is future input during bootstrap-only proof.
         # The normal coverage path must refuse absent and different-SHA reports.
         module = runpy.run_path(str(helper))
