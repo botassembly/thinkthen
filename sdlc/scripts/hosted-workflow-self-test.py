@@ -231,14 +231,16 @@ def flutter_locked_setup_case():
             assert lock['packages'][package]['description']['path'] == path
             assert (example / path / 'pubspec.yaml').is_file()
         assert not (root / 'libraries/dart/flutter/pubspec.lock').exists()
+        required = set(yaml.safe_load((root / 'libraries/dart/pubspec.lock').read_text())['packages'])
         resolver = root / 'resolver'
         resolver.write_text(f'#!{sys.executable}\n' +
                             'from pathlib import Path\nimport sys\nimport yaml\n' +
                             'assert sys.argv[1:] == ["pub", "get", "--enforce-lockfile"]\n' +
                             'assert Path("pubspec.lock").is_file(), "Cannot enforce a missing pubspec.lock"\n' +
-                            # This fixture checks local source identity, not Pub's solver or SDK behavior.
+                            # Check local sources and closure entries; the real SDK owns version solving.
                             'if Path("pubspec.yaml").is_file():\n' +
                             '    lock = yaml.safe_load(Path("pubspec.lock").read_text())["packages"]\n' +
+                            f'    assert set({sorted(required)!r}).issubset(lock), "Incomplete dependency closure"\n' +
                             '    override = Path("pubspec_overrides.yaml")\n' +
                             '    overrides = yaml.safe_load(override.read_text()).get("dependency_overrides", {}) if override.exists() else {}\n' +
                             '    pending, seen = [Path.cwd()], set()\n' +
@@ -269,7 +271,8 @@ def flutter_locked_setup_case():
                                 capture_output=True, text=True, timeout=5)
         assert result.returncode == 0, (result.returncode, result.stdout, result.stderr)
         calls = Path(str(resolver) + '.calls').read_text().splitlines()
-        expected = [str(tools), str(root / 'libraries/dart'), str(example)]
+        expected = [str(tools), str(root / 'libraries/dart'),
+                    str(root / 'libraries/dart/checks/session_consumer'), str(example)]
         assert calls == expected, (calls, expected)
         assert {path: path.read_bytes() for path in root.rglob('pubspec.*')} == before
         override = example / 'pubspec_overrides.yaml'
@@ -281,6 +284,19 @@ def flutter_locked_setup_case():
             assert result.returncode != 0, result.stdout
             assert 'conflict: thinkthen_dart' in result.stderr, result.stderr
             assert not override.exists(), 'Failed acquisition retained its owned override'
+            assert {path: path.read_bytes() for path in root.rglob('pubspec.*')} == before
+        # Every retained consumer lock must carry the local Dart package's full closure.
+        for consumer in (example, root / 'libraries/dart/checks/session_consumer'):
+            locked = consumer / 'pubspec.lock'
+            original = locked.read_bytes()
+            incomplete = yaml.safe_load(original)
+            incomplete['packages'].pop('record_use')
+            locked.write_text(yaml.safe_dump(incomplete))
+            result = subprocess.run(['/bin/sh', '-ec', command], cwd=root, env=env,
+                                    capture_output=True, text=True, timeout=5)
+            assert result.returncode != 0 and 'Incomplete dependency closure' in result.stderr, result.stderr
+            assert not override.exists(), 'Failed acquisition retained its owned override'
+            locked.write_bytes(original)
             assert {path: path.read_bytes() for path in root.rglob('pubspec.*')} == before
         override.write_text('owned by another caller\n')
         result = subprocess.run(['/bin/sh', '-ec', command], cwd=root, env=env,

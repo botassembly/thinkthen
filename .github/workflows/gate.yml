@@ -387,7 +387,7 @@ jobs:
           test ! -e "$overrides"
           trap 'rm -f "$overrides"' EXIT
           printf 'dependency_overrides:\n  thinkthen_dart:\n    path: ../..\n' > "$overrides"
-          for project in libraries/dart libraries/dart/flutter/example; do
+          for project in libraries/dart libraries/dart/checks/session_consumer libraries/dart/flutter/example; do
             (cd "$project" && "$flutter" pub get --enforce-lockfile)
           done
           rm "$overrides"
