@@ -331,6 +331,7 @@ jobs:
           python3 -m pip install "PyYAML==$(pin PYYAML_VERSION)"
           pipx install "mustmatch==$MUSTMATCH_VERSION"
           command -v mustmatch
+          mkdir -p "$HOME/.local/bin"
           . sdlc/scripts/fetch.sh
           fetch_url "$HOME/.local/bin/jq" "https://github.com/jqlang/jq/releases/download/$JQ_VERSION/jq-linux-amd64"
           printf '%s  %s\n' "$JQ_SHA256" "$HOME/.local/bin/jq" | sha256sum --check --strict
@@ -367,7 +368,9 @@ jobs:
           mkdir -p "$HOME/.local/opt/flutter"
           git -C "$HOME/.local/opt/flutter" init
           git -C "$HOME/.local/opt/flutter" remote add origin https://github.com/flutter/flutter.git
-          git -C "$HOME/.local/opt/flutter" fetch --depth=1 origin 6a19cca56475dbfba1478ee68d7bd0c2ef891da1
+          # Flutter derives its SDK version from the official release tag.
+          git -C "$HOME/.local/opt/flutter" fetch --depth=1 origin refs/tags/3.47.5:refs/tags/3.47.5
+          test "$(git -C "$HOME/.local/opt/flutter" rev-parse 'refs/tags/3.47.5^{commit}')" = 6a19cca56475dbfba1478ee68d7bd0c2ef891da1
           git -C "$HOME/.local/opt/flutter" checkout --detach FETCH_HEAD
           test "$(git -C "$HOME/.local/opt/flutter" rev-parse HEAD)" = 6a19cca56475dbfba1478ee68d7bd0c2ef891da1
           flutter="$HOME/.local/opt/flutter/bin/flutter"
@@ -378,9 +381,18 @@ jobs:
           "$dart" --version 2>&1 | grep -F 'Dart SDK version: 3.13.4 (stable)'
           # Seed the SDK and every frozen consumer lock before offline gates.
           (cd "$HOME/.local/opt/flutter/packages/flutter_tools" && "$dart" pub get --enforce-lockfile)
-          for project in libraries/dart libraries/dart/flutter libraries/dart/flutter/example; do
+          # The example locks both local packages; the Flutter library has no lock.
+          # Match the installed consumer's local override without changing shipped manifests.
+          overrides=libraries/dart/flutter/example/pubspec_overrides.yaml
+          test ! -e "$overrides"
+          test ! -L "$overrides"
+          (set -C; printf 'dependency_overrides:\n  thinkthen_dart:\n    path: ../..\n' > "$overrides")
+          trap 'rm -f "$overrides"' EXIT
+          for project in libraries/dart libraries/dart/checks/session_consumer libraries/dart/flutter/example; do
             (cd "$project" && "$flutter" pub get --enforce-lockfile)
           done
+          rm "$overrides"
+          trap - EXIT
           git diff --exit-code
           printf 'TT_DART=%s\nTT_FLUTTER=%s\n' "$dart" "$flutter" >> "$GITHUB_ENV"
           printf '%s\n' "$HOME/.local/opt/flutter/bin" >> "$GITHUB_PATH"

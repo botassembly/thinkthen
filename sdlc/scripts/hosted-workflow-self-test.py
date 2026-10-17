@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Plant hosted candidate routing and parameter failures at the actual entry points."""
 from copy import deepcopy
+import hashlib
 import os
 import io
 import tarfile
@@ -153,6 +154,192 @@ def workflow_cases():
         assert result.returncode == wanted, value
 
 
+def linux_tool_destination_case():
+    gate = yaml.safe_load((REPO / '.github/workflows/gate.yml').read_text())
+    step = next(step['run'] for step in gate['jobs']['linux-release']['steps']
+                if step.get('name') == 'Install existing pinned Linux host and consumer tools')
+    block, checksum = step.split('command -v mustmatch\n', 1)[1].split('printf ', 1)
+    assert '. sdlc/scripts/fetch.sh\n' in block and 'fetch_url "$HOME/.local/bin/jq" ' in block
+    assert '"$JQ_SHA256" "$HOME/.local/bin/jq" | sha256sum --check --strict' in checksum.splitlines()[0]
+    url = 'https://github.com/jqlang/jq/releases/download/$JQ_VERSION/jq-linux-amd64'
+    with tempfile.TemporaryDirectory(prefix='thinkthen-linux-tool-') as temporary:
+        root = Path(temporary)
+        payload = root / 'jq-fixture'
+        payload.write_bytes(b'pinned jq fixture\n')
+        home = root / 'home'
+        env = {'PATH': os.environ['PATH'], 'HOME': str(home),
+               'JQ_SHA256': hashlib.sha256(payload.read_bytes()).hexdigest()}
+        assert not (home / '.local/bin').exists()
+        # Keep missing-parent failures deterministic without waiting for retry pauses.
+        command = 'sleep() { :; }\n' + block.replace(url, payload.as_uri())
+        result = subprocess.run(['/bin/sh', '-ec', command],
+                                cwd=REPO, env=env, capture_output=True, text=True, timeout=5)
+        assert result.returncode == 0, (result.returncode, result.stdout, result.stderr)
+        assert (home / '.local/bin/jq').read_bytes() == payload.read_bytes()
+        assert hashlib.sha256((home / '.local/bin/jq').read_bytes()).hexdigest() == env['JQ_SHA256']
+
+
+def flutter_locked_setup_case():
+    gate = yaml.safe_load((REPO / '.github/workflows/gate.yml').read_text())
+    step = next(step['run'] for step in gate['jobs']['linux-release']['steps']
+                if step.get('name') == 'Acquire Flutter from its pinned official source commit')
+    acquisition = step.split('flutter=', 1)[0]
+    command = '(cd "$HOME' + step.split('(cd "$HOME', 1)[1].split('git diff --exit-code', 1)[0]
+    command += 'git diff --exit-code\n'
+    with tempfile.TemporaryDirectory(prefix='thinkthen-flutter-locks-') as temporary:
+        root = Path(temporary).resolve()
+        sdk = root / 'home/.local/opt/flutter'
+        # Exercise real Git acquisition through an isolated transport, without downloading an SDK.
+        source = root / 'source'
+        subprocess.run(['git', 'init', '-q', str(source)], check=True)
+        git = ['git', '-C', str(source)]
+        commit = git + ['-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.invalid',
+                        'commit', '-q', '--allow-empty', '-m', 'SDK fixture']
+        subprocess.run(commit, check=True)
+        pin = subprocess.check_output(git + ['rev-parse', 'HEAD'], text=True).strip()
+        subprocess.run(git + ['tag', '3.47.5'], check=True)
+        acquire = acquisition.replace('https://github.com/flutter/flutter.git', source.as_uri())
+        acquire = acquire.replace('6a19cca56475dbfba1478ee68d7bd0c2ef891da1', pin)
+        env = {'PATH': os.environ['PATH'], 'HOME': str(root / 'home')}
+        result = subprocess.run(['/bin/sh', '-ec', acquire], env=env,
+                                capture_output=True, text=True, timeout=5)
+        assert result.returncode == 0, result.stderr
+        tags = subprocess.check_output(['git', '-C', str(sdk), 'tag', '--points-at', 'HEAD'], text=True)
+        assert tags.splitlines() == ['3.47.5'], 'Flutter cannot identify its release without its tag'
+        assert subprocess.check_output(['git', '-C', str(sdk), 'rev-parse', 'HEAD'], text=True).strip() == pin
+        # A moved release ref must fail against the approved commit before any SDK command runs.
+        subprocess.run(commit, check=True)
+        subprocess.run(git + ['tag', '-f', '3.47.5'], check=True, capture_output=True)
+        result = subprocess.run(['/bin/sh', '-ec', acquire],
+                                env={**env, 'HOME': str(root / 'moved-tag-home')},
+                                capture_output=True, text=True, timeout=5)
+        assert result.returncode == 1, (result.returncode, result.stderr)
+        tools = sdk / 'packages/flutter_tools'
+        tools.mkdir(parents=True)
+        (tools / 'pubspec.lock').write_text('SDK lock fixture\n')
+        for source in (REPO / 'libraries/dart').rglob('pubspec.*'):
+            if source.name not in ('pubspec.yaml', 'pubspec.lock'):
+                continue
+            target = root / source.relative_to(REPO)
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_bytes(source.read_bytes())
+        example = root / 'libraries/dart/flutter/example'
+        for source in (REPO / 'libraries/dart/flutter/example').rglob('generated_*'):
+            target = root / source.relative_to(REPO)
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_bytes(source.read_bytes())
+        manifest = yaml.safe_load((example / 'pubspec.yaml').read_text())
+        lock = yaml.safe_load((example / 'pubspec.lock').read_text())
+        for package in ('thinkthen_dart', 'thinkthen_flutter'):
+            path = manifest['dependencies'][package]['path']
+            assert lock['packages'][package]['source'] == 'path'
+            assert lock['packages'][package]['description']['path'] == path
+            assert (example / path / 'pubspec.yaml').is_file()
+        # Checked-in Linux generation must agree with local plugin declarations.
+        ffi_plugins = []
+        for dependency in manifest['dependencies'].values():
+            if not isinstance(dependency, dict) or 'path' not in dependency:
+                continue
+            package = yaml.safe_load((example / dependency['path'] / 'pubspec.yaml').read_text())
+            linux = package.get('flutter', {}).get('plugin', {}).get('platforms', {}).get('linux', {})
+            if linux.get('ffiPlugin'):
+                ffi_plugins.append(package['name'])
+        generated = example / 'linux/flutter/generated_plugins.cmake'
+        listed = generated.read_text().split('list(APPEND FLUTTER_FFI_PLUGIN_LIST\n', 1)[1].split(')', 1)[0]
+        assert listed.split() == sorted(ffi_plugins), 'Generated Linux FFI plugins differ from manifests'
+        subprocess.run(['git', 'init', '-q', str(root)], check=True)
+        subprocess.run(['git', 'add', 'libraries'], cwd=root, check=True)
+        subprocess.run(['git', '-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.invalid',
+                        'commit', '-qm', 'Tracked consumer fixture'], cwd=root, check=True)
+        assert not (root / 'libraries/dart/flutter/pubspec.lock').exists()
+        required = set(yaml.safe_load((root / 'libraries/dart/pubspec.lock').read_text())['packages'])
+        resolver = root / 'resolver'
+        resolver.write_text(f'#!{sys.executable}\n' +
+                            'from pathlib import Path\nimport sys\nimport yaml\n' +
+                            'assert sys.argv[1:] == ["pub", "get", "--enforce-lockfile"]\n' +
+                            'assert Path("pubspec.lock").is_file(), "Cannot enforce a missing pubspec.lock"\n' +
+                            # Check local sources and closure entries; the real SDK owns version solving.
+                            'if Path("pubspec.yaml").is_file():\n' +
+                            '    lock = yaml.safe_load(Path("pubspec.lock").read_text())["packages"]\n' +
+                            f'    assert set({sorted(required)!r}).issubset(lock), "Incomplete dependency closure"\n' +
+                            '    override = Path("pubspec_overrides.yaml")\n' +
+                            '    overrides = yaml.safe_load(override.read_text()).get("dependency_overrides", {}) if override.exists() else {}\n' +
+                            '    pending, seen = [Path.cwd()], set()\n' +
+                            '    while pending:\n' +
+                            '        project = pending.pop().resolve()\n' +
+                            '        if project in seen: continue\n' +
+                            '        seen.add(project)\n' +
+                            '        manifest = yaml.safe_load((project / "pubspec.yaml").read_text())\n' +
+                            '        deps = dict(manifest.get("dependencies", {}))\n' +
+                            '        if project == Path.cwd(): deps.update(manifest.get("dev_dependencies", {}))\n' +
+                            '        for name, declared in deps.items():\n' +
+                            '            spec = overrides.get(name, declared)\n' +
+                            '            source = next((kind for kind in ("path", "sdk", "git") if isinstance(spec, dict) and kind in spec), "hosted")\n' +
+                            '            assert lock[name]["source"] == source, "Dependency source conflict: " + name\n' +
+                            '            if source == "path":\n' +
+                            '                base = Path.cwd() if name in overrides else project\n' +
+                            '                target = (base / spec["path"]).resolve()\n' +
+                            '                assert target == (Path.cwd() / lock[name]["description"]["path"]).resolve(), "Locked path conflict: " + name\n' +
+                            '                assert yaml.safe_load((target / "pubspec.yaml").read_text())["name"] == name\n' +
+                            '                pending.append(target)\n' +
+                            'with open(sys.argv[0] + ".calls", "a") as calls:\n' +
+                            '    calls.write(str(Path.cwd()) + "\\n")\n')
+        resolver.chmod(0o755)
+        before = {path: path.read_bytes() for path in root.rglob('pubspec.*')}
+        env = {'PATH': os.environ['PATH'], 'HOME': str(root / 'home'),
+               'dart': str(resolver), 'flutter': str(resolver)}
+        result = subprocess.run(['/bin/sh', '-ec', command], cwd=root, env=env,
+                                capture_output=True, text=True, timeout=5)
+        assert result.returncode == 0, (result.returncode, result.stdout, result.stderr)
+        calls = Path(str(resolver) + '.calls').read_text().splitlines()
+        expected = [str(tools), str(root / 'libraries/dart'),
+                    str(root / 'libraries/dart/checks/session_consumer'), str(example)]
+        assert calls == expected, (calls, expected)
+        assert {path: path.read_bytes() for path in root.rglob('pubspec.*')} == before
+        override = example / 'pubspec_overrides.yaml'
+        assert not override.exists()
+        original = generated.read_bytes()
+        generated.write_text(generated.read_text() + '# Changed generation\n')
+        result = subprocess.run(['/bin/sh', '-ec', command], cwd=root, env=env,
+                                capture_output=True, text=True, timeout=5)
+        assert result.returncode == 1 and 'generated_plugins.cmake' in result.stdout, result
+        generated.write_bytes(original)
+        for broken in (command.replace('dependency_overrides:', 'ignored_overrides:'),
+                       command.replace('path: ../..', 'path: ..')):
+            result = subprocess.run(['/bin/sh', '-ec', broken], cwd=root, env=env,
+                                    capture_output=True, text=True, timeout=5)
+            assert result.returncode != 0, result.stdout
+            assert 'conflict: thinkthen_dart' in result.stderr, result.stderr
+            assert not override.exists(), 'Failed acquisition retained its owned override'
+            assert {path: path.read_bytes() for path in root.rglob('pubspec.*')} == before
+        # Every retained consumer lock must carry the local Dart package's full closure.
+        for consumer in (example, root / 'libraries/dart/checks/session_consumer'):
+            locked = consumer / 'pubspec.lock'
+            original = locked.read_bytes()
+            incomplete = yaml.safe_load(original)
+            incomplete['packages'].pop('record_use')
+            locked.write_text(yaml.safe_dump(incomplete))
+            result = subprocess.run(['/bin/sh', '-ec', command], cwd=root, env=env,
+                                    capture_output=True, text=True, timeout=5)
+            assert result.returncode != 0 and 'Incomplete dependency closure' in result.stderr, result.stderr
+            assert not override.exists(), 'Failed acquisition retained its owned override'
+            locked.write_bytes(original)
+            assert {path: path.read_bytes() for path in root.rglob('pubspec.*')} == before
+        override.write_text('owned by another caller\n')
+        result = subprocess.run(['/bin/sh', '-ec', command], cwd=root, env=env,
+                                capture_output=True, text=True, timeout=5)
+        assert result.returncode != 0
+        assert override.read_text() == 'owned by another caller\n'
+        override.unlink()
+        caller_target = root / 'caller-owned.yaml'
+        override.symlink_to(caller_target)
+        result = subprocess.run(['/bin/sh', '-ec', command], cwd=root, env=env,
+                                capture_output=True, text=True, timeout=5)
+        assert result.returncode != 0, 'Acquisition accepted a caller-owned dangling override'
+        assert override.is_symlink(), 'Acquisition removed a caller-owned override'
+        assert not caller_target.exists(), 'Acquisition wrote through a caller-owned override'
+        override.unlink()
+
 
 def parameter_cases():
     head = subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=REPO, text=True).strip()
@@ -216,5 +403,7 @@ def parameter_cases():
 
 
 workflow_cases()
+linux_tool_destination_case()
+flutter_locked_setup_case()
 parameter_cases()
 print('hosted workflows: standard runners, exact commits, installed Apple routing and skipped checks hold')
