@@ -17,7 +17,7 @@ class StressSelection(unittest.TestCase):
             root = Path(folder)
             scripts = root / 'sdlc/scripts'
             scripts.mkdir(parents=True)
-            for name in ('surfaces', 'verdict.sh'):
+            for name in ('surfaces', 'verdict.sh', 'heavy-lock'):
                 shutil.copyfile(parity.ROOT / 'sdlc/scripts' / name, scripts / name)
             (scripts / 'allow-list').touch()
             (scripts / 'scratch.sh').write_text('usage_guard() { :; }\n')
@@ -54,7 +54,7 @@ class StressSelection(unittest.TestCase):
                            env=child_env(home=root / 'home', PATH=os.defpath), check=True)
             scripts = root / 'sdlc/scripts'
             scripts.mkdir(parents=True)
-            for name in ('surfaces', 'verdict.sh', 'full-compiler', 'feature-inventory.py'):
+            for name in ('surfaces', 'verdict.sh', 'heavy-lock', 'full-compiler', 'feature-inventory.py'):
                 shutil.copyfile(parity.ROOT / 'sdlc/scripts' / name, scripts / name)
             stage_files(parity.ROOT, root, ('sdlc/generators/results/sources.py',
                                             'sdlc/generators/results/registry.py'))
