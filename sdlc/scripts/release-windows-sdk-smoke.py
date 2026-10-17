@@ -57,7 +57,12 @@ object InstallScala {
 
 
 def run(command, project, env):
-    result = CAPTURE(list(map(str, command)), cwd=project, env=env, text=True, timeout=600)
+    args = list(map(str, command))
+    if Path(args[0]).suffix.lower() in ('.bat', '.cmd'):
+        # Batch parameters split on unquoted semicolons. Quote our controlled
+        # tool paths and arguments explicitly, including the complete classpath.
+        args = 'cmd.exe /d /s /c "' + ' '.join('"' + arg + '"' for arg in args) + '"'
+    result = CAPTURE(args, cwd=project, env=env, text=True, timeout=600)
     if result.returncode:
         raise RuntimeError(f'{command[0]} failed ({result.returncode}): {result.stdout}\n{result.stderr}')
     return result.stdout.strip()
