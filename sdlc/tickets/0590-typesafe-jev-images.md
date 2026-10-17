@@ -48,3 +48,8 @@ Milestone: 0.2
 ## Defers
 
 Box answers and long context go to a later ticket if a user asks for them. Animated PNG detection waits for a user report; the server refuses it today.
+
+## Progress
+
+- 2026-10-17 started
+- 2026-10-17 next: Integrated on the 0.2 release branch ticket/0543-final; lands with 0543 once the frozen candidate qualifies, so it runs no separate lane.
