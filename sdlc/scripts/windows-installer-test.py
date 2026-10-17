@@ -13,6 +13,7 @@ import runpy
 import shutil
 import struct
 import subprocess
+import sys
 import tempfile
 import threading
 import time
@@ -28,6 +29,10 @@ CAPTURE = runpy.run_path(str(REPO / 'sdlc/scripts/release-bounded.py'))['capture
 
 
 def run_fixture(args, env, *, timeout, label):
+    # Windows redirected stdout can default to cp1252. The enclosing smoke
+    # decodes this log as UTF-8, including Unicode fixture paths and diagnostics.
+    if isinstance(sys.stdout, io.TextIOWrapper):
+        sys.stdout.reconfigure(encoding='utf-8')
     started = time.monotonic()
     print(f'{Path(args[0]).name}: starting {label} (deadline {timeout}s)', flush=True)
     try:
