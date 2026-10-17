@@ -3,6 +3,7 @@ import os
 from pathlib import Path
 import shutil
 import subprocess
+import sys
 import tempfile
 import unittest
 
@@ -17,7 +18,7 @@ class StressSelection(unittest.TestCase):
             root = Path(folder)
             scripts = root / 'sdlc/scripts'
             scripts.mkdir(parents=True)
-            for name in ('surfaces', 'verdict.sh'):
+            for name in ('surfaces', 'verdict.sh', 'heavy-lock'):
                 shutil.copyfile(parity.ROOT / 'sdlc/scripts' / name, scripts / name)
             (scripts / 'allow-list').touch()
             (scripts / 'scratch.sh').write_text('usage_guard() { :; }\n')
@@ -54,7 +55,7 @@ class StressSelection(unittest.TestCase):
                            env=child_env(home=root / 'home', PATH=os.defpath), check=True)
             scripts = root / 'sdlc/scripts'
             scripts.mkdir(parents=True)
-            for name in ('surfaces', 'verdict.sh', 'full-compiler', 'feature-inventory.py'):
+            for name in ('surfaces', 'verdict.sh', 'heavy-lock', 'full-compiler', 'feature-inventory.py'):
                 shutil.copyfile(parity.ROOT / 'sdlc/scripts' / name, scripts / name)
             stage_files(parity.ROOT, root, ('sdlc/generators/results/sources.py',
                                             'sdlc/generators/results/registry.py'))
@@ -91,7 +92,11 @@ class StressSelection(unittest.TestCase):
                         target.touch()
             php = root / 'libraries/php/check.sh'
             shutil.copyfile(parity.ROOT / 'libraries/php/check.sh', php)
-            env = {'PATH': os.defpath, 'HOME': str(root / 'home'),
+            tools = root / 'bin'
+            tools.mkdir()
+            # Shell helpers must use the supported Python running this fixture.
+            (tools / 'python3').symlink_to(sys.executable)
+            env = {'PATH': str(tools) + ':' + os.defpath, 'HOME': str(root / 'home'),
                    'FIXTURE_ROOT': str(root), 'FAILED_SURFACE': '',
                    'THINKTHEN_TEST_PROFILE': 'stress'}
             subprocess.run(['git', 'add', 'libraries'], cwd=root, env=env, check=True)

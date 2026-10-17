@@ -1302,7 +1302,7 @@ esac
                     scripts.mkdir(parents=True)
                     stage_files(parity.ROOT, root, (
                         'sdlc/scripts/' + name
-                        for name in ('test-full-cases', 'surfaces', 'verdict.sh', 'full-compiler')))
+                        for name in ('test-full-cases', 'surfaces', 'verdict.sh', 'heavy-lock', 'full-compiler')))
                     files = {
                         # Environment filtering is covered by the real nested campaign fixture.
                         'sdlc/scripts/allow-list': '',
