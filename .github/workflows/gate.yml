@@ -382,9 +382,17 @@ jobs:
           # Seed the SDK and every frozen consumer lock before offline gates.
           (cd "$HOME/.local/opt/flutter/packages/flutter_tools" && "$dart" pub get --enforce-lockfile)
           # The example locks both local packages; the Flutter library has no lock.
-          for project in libraries/dart libraries/dart/flutter/example; do
+          # Match the installed consumer's local override without changing shipped manifests.
+          overrides=libraries/dart/flutter/example/pubspec_overrides.yaml
+          test ! -e "$overrides"
+          test ! -L "$overrides"
+          (set -C; printf 'dependency_overrides:\n  thinkthen_dart:\n    path: ../..\n' > "$overrides")
+          trap 'rm -f "$overrides"' EXIT
+          for project in libraries/dart libraries/dart/checks/session_consumer libraries/dart/flutter/example; do
             (cd "$project" && "$flutter" pub get --enforce-lockfile)
           done
+          rm "$overrides"
+          trap - EXIT
           git diff --exit-code
           printf 'TT_DART=%s\nTT_FLUTTER=%s\n' "$dart" "$flutter" >> "$GITHUB_ENV"
           printf '%s\n' "$HOME/.local/opt/flutter/bin" >> "$GITHUB_PATH"
