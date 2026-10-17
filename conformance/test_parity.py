@@ -1229,8 +1229,9 @@ class FullCheckpoint(unittest.TestCase):
             scripts = root / "sdlc/scripts"
             scripts.mkdir(parents=True)
             stage_files(parity.ROOT, root, (
-                "sdlc/scripts/" + name
-                for name in ("test", "test-full-cases", "scratch.sh", "full-compiler")))
+                "libraries/ruby/toolchain.env",
+                *("sdlc/scripts/" + name
+                  for name in ("test", "test-full-cases", "scratch.sh", "full-compiler"))))
             # Routing probes retain their control variables across the shell boundary.
             for name in ("heavy-lock", "allow-list"):
                 (scripts / name).write_text("")
@@ -1248,7 +1249,7 @@ uname) echo Darwin ;;
 sh) case $* in *sdlc/scripts/smoke*) exit "$ROUTING_SMOKE_CODE" ;; esac ;;
 esac
 '''
-            for name in ("cargo", "python3", "sh", "uname"):
+            for name in ("cargo", "python3", "ruby", "sh", "uname"):
                 path = fake / name
                 path.write_text(command)
                 path.chmod(0o755)
