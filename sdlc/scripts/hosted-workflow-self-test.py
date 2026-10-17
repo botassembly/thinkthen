@@ -93,25 +93,6 @@ def workflow_cases():
             proof['run'] = '\n'.join(proof['run'].splitlines()[:-1])
         code, output = workflow_command('release.yml', doc)
         assert code == 1 and ('standard free hosted runners' if 'paid' in defect else 'both installed Apple languages') in output, (defect, output)
-    for defect in ('missing', 'skip', 'mask', 'wrong-sha', 'runner', 'upload'):
-        doc = deepcopy(release)
-        job = doc['jobs']['apple-coverage']
-        if defect == 'missing':
-            del doc['jobs']['apple-coverage']
-        elif defect == 'runner':
-            job['runs-on'] = 'macos-15-large'
-        else:
-            step = next(step for step in job['steps'] if 'sdlc/scripts/coverage' in step.get('run', ''))
-            if defect == 'skip':
-                step['if'] = 'false'
-            elif defect == 'mask':
-                step['continue-on-error'] = True
-            elif defect == 'wrong-sha':
-                job['steps'][0]['with']['ref'] = '${{ github.sha }}'
-            else:
-                job['steps'][-1]['if'] = '${{ always() }}'
-        code, output = workflow_command('release.yml', doc)
-        assert code == 1, (defect, output)
     for defect in ('skip', 'mask', 'wrong-sha', 'late', 'guard-bypass', 'missing-input'):
         doc = deepcopy(windows)
         steps = doc['jobs']['stage-0']['steps']
@@ -187,7 +168,6 @@ def linux_tool_destination_case():
 def linux_nested_tools_case():
     gate = yaml.safe_load((REPO / '.github/workflows/gate.yml').read_text())
     steps = gate['jobs']['linux-release']['steps']
-    assert gate['jobs']['linux-coverage']['steps'] == steps
     selected = next(step['run'] for step in steps
                     if step.get('name') == 'Select existing Go, Swift, Zig, PHP, Dart and native language tools')
     handoff = next(line for line in selected.splitlines()
@@ -357,8 +337,7 @@ touch "$tree/share/extension/thinkthen--$version.sql"
 
 def linux_coverage_destination_case():
     gate = yaml.safe_load((REPO / '.github/workflows/gate.yml').read_text())
-    job = gate['jobs']['linux-coverage']
-    assert job['steps'] == gate['jobs']['linux-release']['steps']
+    job = gate['jobs']['linux-release']
     setup = next(step['run'] for step in job['steps']
                  if step.get('name') == 'Require the frozen dispatch commit and candidate')
     selection = next(line.strip() for line in setup.splitlines() if line.strip().startswith('work=$('))
@@ -639,11 +618,8 @@ def flutter_locked_setup_case():
 def preflight_cases():
     gate = yaml.safe_load((REPO / '.github/workflows/gate.yml').read_text())
     steps = gate['jobs']['linux-release']['steps']
-    assert gate['jobs']['linux-coverage']['steps'] == steps
     preflight = next(i for i, step in enumerate(steps) if step.get('name') == 'Check every prepared hosted input')
     qualification = next(i for i, step in enumerate(steps) if step.get('name') == 'Run the selected existing gates and retain their actual exits')
-    download = next(step for step in steps if step.get('name') == 'Download the same-SHA Apple coverage report')
-    assert download['if'] == "matrix.stage == 'coverage' && !inputs.preflight_only"
     assert steps[preflight]['env'] == {'PREFLIGHT_ONLY': '${{ inputs.preflight_only }}'}
     assert preflight < qualification
     assert 'if' not in steps[preflight] and 'continue-on-error' not in steps[preflight]
@@ -652,8 +628,7 @@ def preflight_cases():
                if 'actions/upload-artifact@' in step.get('uses', ''))
     release = yaml.safe_load((REPO / '.github/workflows/release.yml').read_text())
     for job, name in (('build', 'Check every prepared build input'),
-                      ('smoke', 'Check every prepared installed smoke input'),
-                      ('apple-coverage', 'Check every prepared Apple coverage input')):
+                      ('smoke', 'Check every prepared installed smoke input')):
         step = next(step for step in release['jobs'][job]['steps'] if step.get('name') == name)
         assert 'hosted-preflight.py' in step['run'] and 'if' not in step and 'continue-on-error' not in step
     with tempfile.TemporaryDirectory(prefix='thinkthen-preflight-fixture-') as temporary:

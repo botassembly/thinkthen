@@ -35,10 +35,6 @@ on:
         type: boolean
         required: false
         default: false
-      apple_run:
-        description: Same-commit rehearsal run containing apple coverage
-        type: string
-        required: false
       platform:
         description: Standard hosted runner for the selected installed package
         type: choice
@@ -410,14 +406,6 @@ jobs:
           git -C "$HOME/.local/opt/flutter" rev-parse HEAD > "$GATE_OUTPUT/flutter-source.txt"
       - name: Report hosted disk before the selected stage
         run: sdlc/scripts/release-workflow disk "$STAGE start" "$RELEASE_WORK" "$HOME/.cargo" "$HOME/.rustup" "$HOME/.cache/thinkthen-toolchains" target
-      - name: Download the same-SHA Apple coverage report
-        if: matrix.stage == 'coverage' && !inputs.preflight_only
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
-        with:
-          name: apple-coverage-${{ inputs.candidate_sha }}
-          path: ${{ runner.temp }}/thinkthen-apple-coverage
-          run-id: ${{ inputs.apple_run }}
-          github-token: ${{ github.token }}
       - name: Check every prepared hosted input
         env: {PREFLIGHT_ONLY: '${{ inputs.preflight_only }}'}
         run: python3 sdlc/scripts/hosted-preflight.py "$STAGE" "$TARGET"
@@ -687,15 +675,3 @@ jobs:
       - name: Report final hosted disk use
         if: always() && !inputs.preflight_only
         run: sdlc/scripts/release-workflow disk "$STAGE finish" "$RELEASE_WORK" "$HOME/.cargo" "$HOME/.rustup" "$HOME/.cache/thinkthen-toolchains" target
-
-  linux-coverage:
-    name: Linux release coverage and Apple join
-    if: inputs.language == 'linux-release'
-    runs-on: ubuntu-24.04
-    permissions: {contents: read, actions: read}
-    defaults: {run: {shell: bash}}
-    strategy:
-      fail-fast: false
-      matrix: {stage: [coverage]}
-    env: *linux-release-env
-    steps: *linux-release-steps

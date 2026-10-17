@@ -315,6 +315,8 @@ Reviews: revision 3ea0fbb, accept
 
 Reviews: revision e53d3c8, accept
 
+Reviews: revision bde1a34, accept
+
 ## Outcome
 
 One reviewed commit on `ticket/0543-final`, tagged `rc/0.2.0-rc.13` or a later candidate number, passes the local release suite, the coverage comparison and the nonpublishing hosted runs on Linux, macOS and Windows, and publishes nothing.
@@ -483,3 +485,4 @@ Release QA, publication and after-publication checks stay with 0425, 0393 and 03
 - 2026-10-17 next: Batched fresh-accepted Go fixture deletion 62d01ea, Darwin admission fixture correction 5b70d8c and immutable rehearsal branch guards 566c961 at 715b3add5; all targeted M5 checks pass, Objective-C run 39060400735 passed, Windows 39060401013 reached installed Python checks, and Linux preflight 39057211224 remains active while its failure list is collected before the next combined gate.
 - 2026-10-17 next: Windows 39060401013 and Objective-C 39060400735 passed on 59fde652f, Swift admission fixtures failed and their repair is accepted, Linux preflight core job 117467528261 exposed three probe errors after setup passed, and fresh-accepted context preservation 25b822a plus probe repair 3ea0fbb with passing M5 targeted receipts are combined while the other two Linux jobs complete before the batch gate.
 - 2026-10-17 next: All three Linux preflight jobs in 39057211224 failed the same DuckDB and two Python probes after setup passed, with qualification and receipts unrun; all repairs including bounded secret-safe diagnostics e53d3c8 are fresh-accepted and the full M5 lint-and-test gate is running on prospective main merge 5e1b42faf598853ea86a0d73906aad96112b3c70 before any replacement hosted dispatch.
+- 2026-10-17 next: Exact main 5e1b42faf passed full M5 lint and test, native Objective-C passed while Windows, Swift and rehearsal 39065154485 continue, and Ian removed coverage from qualification so fresh-accepted bde1a341 deletes only the Linux coverage job, Apple artifact wait and rehearsal coverage before the next same-SHA gates and Linux core plus functional runs.
