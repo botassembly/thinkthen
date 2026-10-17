@@ -197,11 +197,13 @@ def linux_coverage_destination_case():
     # Use Linux absolute paths even when macOS redirects /home through its own filesystem.
     # Stop at directory creation: exercise the privacy rule without scanning or building a tree.
     def accepts(output):
+        path = Path(output)
+        resolved = path if path == Path('/home') or Path('/home') in path.parents else path.resolve()
         with patch.dict(driver['main'].__globals__, tools=lambda: {}, installed_helpers=lambda: []), \
                 patch.object(sys, 'platform', 'linux'), \
                 patch.object(sys, 'argv', ['coverage', '--release', '--platform', 'linux', '--output', output]), \
                 patch.object(subprocess, 'check_output', side_effect=['0' * 40, b'']), \
-                patch.object(Path, 'resolve', return_value=Path(output)), \
+                patch.object(Path, 'resolve', return_value=resolved), \
                 patch.object(Path, 'mkdir', side_effect=AcceptedOutput) as create:
             try:
                 driver['main']()
@@ -234,6 +236,12 @@ def linux_coverage_destination_case():
             expected = '/mnt/thinkthen-container' if roomy else '/tmp/thinkthen-linux-release'
             assert result.stdout == expected + '/coverage/coverage', result.stdout
             assert accepts(result.stdout), result.stdout
+            if not roomy:
+                old = command.replace('/tmp/thinkthen-linux-release', '"$RUNNER_TEMP/thinkthen-linux-release"')
+                result = subprocess.run(['/bin/sh', '-ec', old], cwd=REPO, env=env,
+                                        capture_output=True, text=True, timeout=5)
+                assert result.returncode == 0, result.stderr
+                assert not accepts(result.stdout), result.stdout
 
 
 def flutter_locked_setup_case():
