@@ -12,6 +12,7 @@ from pathlib import Path
 import subprocess
 import sys
 import tempfile
+from types import SimpleNamespace
 from unittest.mock import patch
 
 import yaml
@@ -301,6 +302,43 @@ touch "$tree/share/extension/thinkthen--$version.sql"
                                 env=env, capture_output=True, text=True, timeout=5)
         assert result.returncode == 0, result.stderr
         assert (root / 'out/lib/thinkthen.so').is_file()
+        # Installed smoke must pass the existing archive to the runtime check,
+        # which otherwise requires source-packaging tools on the host.
+        scripts = root / 'sdlc/scripts'
+        scripts.mkdir(parents=True)
+        for name in ('scratch.sh', 'release-workflow'):
+            shutil.copyfile(REPO / 'sdlc/scripts' / name, scripts / name)
+        for relative, body in (('libraries/ruby/toolchain.env', 'RUBY_MINORS=\n'),
+                               ('libraries/python/host.sh', 'python_host() { command -v python3; }\n'),
+                               ('libraries/typescript/node.sha256', ''),
+                               ('databases/sqlite/amalgamation.sha256', ''),
+                               ('crates/thinkthen/Cargo.toml', '[package]\nversion = "0.2.0"\n')):
+            path = root / relative
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(body)
+        (root / 'platform').mkdir()
+        for major in (16, 17, 18):
+            (root / 'platform' / f'thinkthen-postgresql{major}-0.2.0-aarch64-unknown-linux-gnu.tar.gz').touch()
+        (database / 'runtime.sh').write_text('runtime_ready() {\n'
+            '  test -f "${THINKTHEN_ARTIFACT:-/nonexistent}"\n'
+            '  case "$THINKTHEN_ARTIFACT" in */thinkthen-postgresql"$PG_MAJOR"-0.2.0-aarch64-unknown-linux-gnu.tar.gz) ;; *) exit 95 ;; esac\n}\n')
+        module = runpy.run_path(str(REPO / 'sdlc/scripts/hosted-preflight.py'))
+        check = module['Preflight']()
+        runtime_commands = []
+        def command(args, expected=None, cwd=root):
+            if args[:2] == ['sh', '-ec'] and 'runtime_ready' in args[2]:
+                subprocess.run(args, cwd=cwd, env=env, capture_output=True, check=True, timeout=5)
+                runtime_commands.append(args)
+        with patch.dict(module['qualify'].__globals__, ROOT=root, rust=lambda *args: None,
+                        cargo_cache=lambda *args: None, downloaded_inputs=lambda *args: None), \
+                patch.dict(sys.modules, inputs=SimpleNamespace(selected=None, versions=lambda: ()),
+                           source_hosts=SimpleNamespace(prepare=None)), \
+                patch.object(check, 'command', side_effect=command), patch.object(check, 'tools'):
+            module['installed'](check, 'aarch64-unknown-linux-gnu', root / 'cache')
+            assert not runtime_commands and any(message.startswith('native prepared inputs:')
+                                                for message in check.missing), check.missing
+            module['qualify'](check, 'smoke', 'aarch64-unknown-linux-gnu')
+        assert len(runtime_commands) == 3, (runtime_commands, check.missing)
 
 
 def linux_coverage_destination_case():

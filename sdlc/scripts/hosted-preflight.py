@@ -121,7 +121,7 @@ def managed(check):
                     tools['sdk_path'](name, Path('/nonexistent'), False, env=env))
 
 
-def native_inputs(check, target, cache, built_hosts=True, source_only=False):
+def native_inputs(check, target, cache, built_hosts=True, source_only=False, installed_files=False):
     ruby = ROOT / 'libraries/ruby/toolchain.env'
     minors = shell_values(ruby, ['RUBY_MINORS'])[0].split()
     for minor in minors:
@@ -140,7 +140,12 @@ def native_inputs(check, target, cache, built_hosts=True, source_only=False):
         # runtime_ready verifies executable hosts, their headers and libclang, not
         # only the downloaded packages. It never fetches or starts a server.
         for major in (16, 17, 18):
-            check.command(['sh', '-ec', f'PG_MAJOR={major}; . ../../sdlc/scripts/scratch.sh; . ./runtime.sh; runtime_ready'],
+            artifact = ''
+            if installed_files:
+                version = tomllib.loads((ROOT / 'crates/thinkthen/Cargo.toml').read_text())['package']['version']
+                artifact = 'THINKTHEN_ARTIFACT=' + shlex.quote(str(ROOT / 'platform' /
+                    f'thinkthen-postgresql{major}-{version}-{target}.tar.gz')) + '; '
+            check.command(['sh', '-ec', artifact + f'PG_MAJOR={major}; . ../../sdlc/scripts/scratch.sh; . ./runtime.sh; runtime_ready'],
                           cwd=ROOT / 'databases/postgresql')
         if 'apple' in target:
             check.hashes(ROOT / 'databases/sqlite/amalgamation-3490000.sha256', cache / 'sqlite-amalgamation-3490000')
@@ -170,10 +175,10 @@ def native_inputs(check, target, cache, built_hosts=True, source_only=False):
                        'SELECT source_id FROM pragma_version()'], identity['source_commit'][:8])
 
 
-def installed(check, target, cache):
+def installed(check, target, cache, installed_files=False):
     check.tools(('cc', 'c++', 'cmake', 'make', 'ninja', 'pkg-config', 'uv', 'sha256sum'))
     check.command(['uv', '--version'], r'^uv 0\.9\.17\b')
-    check.check('native prepared inputs', lambda: native_inputs(check, target, cache))
+    check.check('native prepared inputs', lambda: native_inputs(check, target, cache, installed_files=installed_files))
     generators = Path(os.environ.get('RUNNER_TEMP', '/nonexistent')) / 'thinkthen-generators'
     # Read formatter pins from their existing bootstrap rather than keep a second authority.
     bootstrap = (ROOT / 'sdlc/scripts/release-workflow').read_text()
@@ -376,7 +381,7 @@ def qualify(check, stage, target):
         check.tools(('cc', 'c++', 'make', 'pkg-config'))
         native_inputs(check, target, cache, built_hosts=False)
         return
-    installed(check, target, cache)
+    installed(check, target, cache, stage == 'smoke')
     if stage in ('core', 'functional', 'coverage'):
         install = (ROOT / 'sdlc/scripts/install').read_text()
         check.tools(shlex.split(re.search(r'for tool in ([^;]+); do', install)[1]))
