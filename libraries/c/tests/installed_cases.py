@@ -9,6 +9,18 @@ from children import child_env, read_process_line
 import session_cases as shared_cases
 from session_views import render
 
+
+def static_flags(native, env):
+    """Use the installed package's platform-specific static link contract."""
+    env = {**env, 'PKG_CONFIG_PATH': str(native / 'lib/pkgconfig')}
+    flags = subprocess.check_output(
+        ['pkg-config', '--cflags', '--libs', '--static', 'thinkthen'],
+        env=env, text=True).split()
+    # Name the archive explicitly so no installed case can select the shared library.
+    return [str(native / 'lib/libthinkthen.a') if flag == '-lthinkthen' else flag
+            for flag in flags]
+
+
 def run(native, scratch, *, header=None, library=None):
     if bool(header) != bool(library):
         raise ValueError('installed C cases require both header and library')
@@ -21,11 +33,13 @@ def run(native, scratch, *, header=None, library=None):
     binary = scratch / 'session-cases'
     if sys.platform == 'linux' and '.so' in library.name:
         (scratch / 'libthinkthen.so.0').symlink_to(library)
+    env = child_env(home=scratch / 'home')
+    flags = static_flags(native, env) if native else [str(library)]
     subprocess.run(['cc', '-std=c11', '-Wall', '-Wextra', '-Werror', '-I', str(header.parent),
                     '-I', str(scratch), str(ROOT / 'libraries/c/tests/c/session_cases.c'),
-                    str(library), '-lgcc_s', '-lutil', '-lrt', '-lpthread', '-lm', '-ldl',
+                    *flags,
                     '-Wl,-rpath,' + str(scratch), '-Wl,-rpath,' + str(library.parent),
-                    '-o', str(binary)], env=child_env(home=scratch / 'home'), check=True)
+                    '-o', str(binary)], env=env, check=True)
     def checked(output):
         if output.returncode == 0 and not output.stderr:
             payload = json.loads(output.stdout)

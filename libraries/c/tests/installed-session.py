@@ -11,6 +11,7 @@ REPO = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(REPO / 'conformance/children'))
 from children import child_env
 from backend import Backend
+from installed_cases import run, static_flags
 
 archive = Path(sys.argv[1]).resolve()
 (REPO / 'libraries/c/target').mkdir(parents=True, exist_ok=True)
@@ -29,10 +30,7 @@ with tempfile.TemporaryDirectory(prefix='installed-c-', dir=REPO / 'libraries/c/
     try:
         env = child_env(home=home, THINKTHEN_BASE_URL=f'http://127.0.0.1:{backend.server_port}/generic/v1',
                         THINKTHEN_API_KEY='tt-canary-273', THINKTHEN_CACHE=str(root / 'cache'))
-        env['PKG_CONFIG_PATH'] = str(native / 'lib/pkgconfig')
-        flags = subprocess.check_output(['pkg-config', '--cflags', '--libs', '--static', 'thinkthen'], env=env, text=True).split()
-        # Select the archive explicitly so the proof needs no runtime library path.
-        flags = [str(native / 'lib/libthinkthen.a') if flag == '-lthinkthen' else flag for flag in flags]
+        flags = static_flags(native, env)
         for source in ('tests/c/session.c', 'examples/session.c'):
             binary = root / ('owner-session' if source.startswith('tests/') else 'example-session')
             subprocess.run([shutil.which('cc'), '-std=c11', '-D_GNU_SOURCE', '-Wall', '-Wextra', '-Werror',
@@ -58,5 +56,4 @@ with tempfile.TemporaryDirectory(prefix='installed-c-', dir=REPO / 'libraries/c/
     finally:
         backend.close()
 
-    from installed_cases import run
     run(native, root)
