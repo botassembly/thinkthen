@@ -93,7 +93,7 @@ class Cases(unittest.TestCase):
                  for version in versions()]
         for version, _, _ in hosts:
             (cache / version / 'source/.git').mkdir(parents=True)
-        with patch.dict(os.environ, self.env, clear=True), \
+        with patch.object(os, 'environ', self.env), \
                 patch.object(source_hosts, 'ROOT', self.root / 'duckdb'), \
                 patch.object(source_hosts, 'prepare'), \
                 patch.object(source_hosts, 'prepare_backend'), \

@@ -141,9 +141,10 @@ def environment(backend: Backend | None, arm: str = "generic", **extra: str) -> 
 
 def question_directory(env=None):
     """The isolated child's native named-question directory on this platform."""
-    env = os.environ if env is None else env
-    configuration = (pathlib.Path(env['HOME']) / 'Library/Application Support/thinkthen'
-                     if sys.platform == 'darwin' else pathlib.Path(env['XDG_CONFIG_HOME']) / 'thinkthen')
+    name = 'HOME' if sys.platform == 'darwin' else 'XDG_CONFIG_HOME'
+    folder = pathlib.Path(os.environ[name] if env is None else env[name])
+    configuration = (folder / 'Library/Application Support/thinkthen'
+                     if sys.platform == 'darwin' else folder / 'thinkthen')
     return configuration / 'questions'
 
 
