@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"encoding/json/jsontext"
 	jsonv2 "encoding/json/v2"
-	"errors"
 	"reflect"
 )
 
@@ -27,7 +26,7 @@ var authoredCycleGuard = jsonv2.MarshalToFunc(func(_ *jsontext.Encoder, value an
 		if v.CanInterface() {
 			switch v.Interface().(type) {
 			case json.Marshaler, jsonv2.MarshalerTo, encoding.TextMarshaler:
-				return errors.ErrUnsupported
+				return authoredSkip
 			}
 		}
 		if v.Kind() == reflect.Pointer {
@@ -39,5 +38,5 @@ var authoredCycleGuard = jsonv2.MarshalToFunc(func(_ *jsontext.Encoder, value an
 		}
 		v = v.Elem()
 	}
-	return errors.ErrUnsupported
+	return authoredSkip
 })
