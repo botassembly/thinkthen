@@ -2,6 +2,20 @@
 
 package thinkthen
 
-import "errors"
+import (
+	"encoding/json"
+	"encoding/json/jsontext"
+	jsonv2 "encoding/json/v2"
+	"errors"
+)
 
-var authoredSkip = errors.ErrUnsupported
+func authoredMarshal(value any) ([]byte, error) {
+	return jsonv2.Marshal(value, json.DefaultOptionsV1(), jsonv2.WithMarshalers(authoredCycleGuard))
+}
+
+var authoredCycleGuard = jsonv2.MarshalToFunc(func(_ *jsontext.Encoder, value any) error {
+	if err := authoredCycle(value); err != nil {
+		return err
+	}
+	return errors.ErrUnsupported
+})
