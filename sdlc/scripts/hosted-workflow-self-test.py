@@ -696,6 +696,7 @@ def preflight_cases():
                           'print("prepared command output")\n'
                           'print("prepared command error", file=sys.stderr)\n'
                           'if os.environ.get("PREFLIGHT_NOISY"):\n'
+                          '    print("o" * (2040 - len("prepared command output\\n")) + os.environ["PRIVATE_SERVICE_KEY"])\n'
                           '    for name in ("THINKTHEN_API_KEY", "GITHUB_TOKEN", "PRIVATE_SERVICE_KEY", "db_password", "AUTHORIZATION"):\n'
                           '        print(os.environ[name])\n'
                           '        print(os.environ[name], file=sys.stderr)\n'
@@ -709,11 +710,13 @@ def preflight_cases():
         assert failed.returncode == 1 and 'exit 9\nprepared command output\nprepared command error' in failed.stderr, failed.stderr
         secrets = {name: 'fake-preflight-private-' + str(index) for index, name in enumerate(
             ('THINKTHEN_API_KEY', 'GITHUB_TOKEN', 'PRIVATE_SERVICE_KEY', 'db_password', 'AUTHORIZATION'))}
-        failed = subprocess.run(command, cwd=root, env=dict(env, PREFLIGHT_NOISY='1', **secrets),
+        failed = subprocess.run(command, cwd=root, env=dict(env, PREFLIGHT_NOISY='1',
+                                THINKTHEN_PROBE_SETTING='prepared_fixture', **secrets),
                                 capture_output=True, text=True, timeout=5)
         assert failed.returncode == 1 and failed.stdout == '', failed
         assert len(failed.stderr) < 10000, 'failed child output was not bounded'
         assert all(value not in failed.stderr for value in secrets.values()), 'failed child output exposed an environment secret'
+        assert 'fake-pre' not in failed.stderr, 'truncation exposed a fragment of an environment secret'
         for marker in ('prepared command output', 'prepared command error', 'prepared command output end',
                        'ModuleNotFoundError: No module named prepared_fixture', '[truncated]'):
             assert marker in failed.stderr, (marker, failed.stderr)

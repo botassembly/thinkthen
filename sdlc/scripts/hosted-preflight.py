@@ -15,6 +15,8 @@ import tempfile
 import tomllib
 
 ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT / 'conformance/children'))
+from children import SECRET  # noqa: E402
 
 
 class Preflight:
@@ -35,15 +37,37 @@ class Preflight:
         self.check(str(path), verify)
 
     def command(self, args, expected=None, cwd=ROOT, env=None):
+        # Reuse the shared credential-name policy. Its blanket THINKTHEN_
+        # namespace rule covers ordinary settings too, so inspect their suffix.
+        secrets = {value for source in (os.environ, env or {}) for name, value in source.items()
+                   if value and SECRET.search(name, len('THINKTHEN_') if name.upper().startswith('THINKTHEN_') else 0)}
+        def diagnostic(value):
+            if isinstance(value, bytes):
+                value = value.decode(errors='replace')
+            for secret in sorted(secrets, key=len, reverse=True):
+                value = value.replace(secret, '[redacted]')
+            # Redact before cutting: a secret spanning a cut must leave no fragment.
+            if len(value) > 4096:
+                value = value[:2048] + '\n[truncated]\n' + value[-2048:]
+            return value.strip()
+
         def verify():
-            result = subprocess.run(list(map(str, args)), cwd=cwd, capture_output=True,
-                                    text=True, timeout=60, check=False, env=env)
-            if result.returncode:
-                output = '\n'.join(part.strip() for part in (result.stdout, result.stderr) if part.strip())
-                raise ValueError(f'exit {result.returncode}' + ('\n' + output if output else ''))
-            if expected and not re.search(expected, result.stdout + result.stderr, re.M):
-                raise ValueError('version or prepared input differs from pin')
-        self.check(shlex.join(list(map(str, args))), verify)
+            try:
+                result = subprocess.run(list(map(str, args)), cwd=cwd, capture_output=True,
+                                        text=True, errors='replace', timeout=60, check=False, env=env)
+            except subprocess.TimeoutExpired as error:
+                reason, streams = 'timed out after 60 seconds', (error.stdout, error.stderr)
+            else:
+                if result.returncode:
+                    reason = f'exit {result.returncode}'
+                elif expected and not re.search(expected, result.stdout + result.stderr, re.M):
+                    reason = 'version or prepared input differs from pin'
+                else:
+                    return
+                streams = (result.stdout, result.stderr)
+            output = '\n'.join(diagnostic(part) for part in streams if part)
+            raise ValueError(reason + ('\n' + output if output else ''))
+        self.check(diagnostic(shlex.join(list(map(str, args)))), verify)
 
     def tools(self, names):
         for name in names:
