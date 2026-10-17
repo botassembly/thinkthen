@@ -346,12 +346,6 @@ jobs:
           printf '%s\n' "$RELEASE_WORK/typescript/node_modules/.bin" >> "$GITHUB_PATH"
           uv venv "$RELEASE_WORK/python"
           uv pip install --require-hashes --python "$RELEASE_WORK/python/bin/python" -r libraries/python/requirements-dev.txt
-          # Match the verified development formatters that produced the checked-in sources.
-          uv pip install --python "$RELEASE_WORK/python/bin/python" 'ruff==0.13.2'
-          npm install --no-audit --no-fund --no-package-lock --prefix "$RELEASE_WORK/generators" 'prettier@3.6.2'
-          mkdir -p "$RELEASE_WORK/generators/bin"
-          ln -s "$RELEASE_WORK/python/bin/ruff" "$RELEASE_WORK/generators/bin/ruff"
-          printf '%s\n' "$RELEASE_WORK/generators/bin" "$RELEASE_WORK/generators/node_modules/.bin" >> "$GITHUB_PATH"
           . libraries/ruby/toolchain.env
           printf 'RUBY=%s\nRBCONFIG=%s\n' \
             "$HOME/.cache/thinkthen-toolchains/ruby/$RUBY_VERSION/bin/ruby" \
@@ -370,8 +364,6 @@ jobs:
           sdlc/scripts/release-workflow managed-tools "$TARGET"
           # Nested gates discard SDK environment overrides and discover the same tools through PATH.
           printf '%s\n' "$THINKTHEN_JDK_HOME/bin" "$THINKTHEN_KOTLIN_HOME/bin" "$THINKTHEN_SCALA_HOME/bin" >> "$GITHUB_PATH"
-          # host-setup fetched the pinned inputs; smoke preflight also requires their built CLIs.
-          python3 databases/duckdb/tools/source_hosts.py
       - name: Acquire Flutter from its pinned official source commit
         run: |
           set -eu
