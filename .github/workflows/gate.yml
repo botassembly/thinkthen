@@ -368,7 +368,9 @@ jobs:
           mkdir -p "$HOME/.local/opt/flutter"
           git -C "$HOME/.local/opt/flutter" init
           git -C "$HOME/.local/opt/flutter" remote add origin https://github.com/flutter/flutter.git
-          git -C "$HOME/.local/opt/flutter" fetch --depth=1 origin 6a19cca56475dbfba1478ee68d7bd0c2ef891da1
+          # Flutter derives its SDK version from the official release tag.
+          git -C "$HOME/.local/opt/flutter" fetch --depth=1 origin refs/tags/3.47.5:refs/tags/3.47.5
+          test "$(git -C "$HOME/.local/opt/flutter" rev-parse 'refs/tags/3.47.5^{commit}')" = 6a19cca56475dbfba1478ee68d7bd0c2ef891da1
           git -C "$HOME/.local/opt/flutter" checkout --detach FETCH_HEAD
           test "$(git -C "$HOME/.local/opt/flutter" rev-parse HEAD)" = 6a19cca56475dbfba1478ee68d7bd0c2ef891da1
           flutter="$HOME/.local/opt/flutter/bin/flutter"

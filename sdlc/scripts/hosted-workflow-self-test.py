@@ -183,10 +183,36 @@ def flutter_locked_setup_case():
     gate = yaml.safe_load((REPO / '.github/workflows/gate.yml').read_text())
     step = next(step['run'] for step in gate['jobs']['linux-release']['steps']
                 if step.get('name') == 'Acquire Flutter from its pinned official source commit')
+    acquisition = step.split('flutter=', 1)[0]
     command = '(cd "$HOME' + step.split('(cd "$HOME', 1)[1].split('git diff --exit-code', 1)[0]
     with tempfile.TemporaryDirectory(prefix='thinkthen-flutter-locks-') as temporary:
         root = Path(temporary).resolve()
         sdk = root / 'home/.local/opt/flutter'
+        # Exercise real Git acquisition through an isolated transport, without downloading an SDK.
+        source = root / 'source'
+        subprocess.run(['git', 'init', '-q', str(source)], check=True)
+        git = ['git', '-C', str(source)]
+        commit = git + ['-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.invalid',
+                        'commit', '-q', '--allow-empty', '-m', 'SDK fixture']
+        subprocess.run(commit, check=True)
+        pin = subprocess.check_output(git + ['rev-parse', 'HEAD'], text=True).strip()
+        subprocess.run(git + ['tag', '3.47.5'], check=True)
+        acquire = acquisition.replace('https://github.com/flutter/flutter.git', source.as_uri())
+        acquire = acquire.replace('6a19cca56475dbfba1478ee68d7bd0c2ef891da1', pin)
+        env = {'PATH': os.environ['PATH'], 'HOME': str(root / 'home')}
+        result = subprocess.run(['/bin/sh', '-ec', acquire], env=env,
+                                capture_output=True, text=True, timeout=5)
+        assert result.returncode == 0, result.stderr
+        tags = subprocess.check_output(['git', '-C', str(sdk), 'tag', '--points-at', 'HEAD'], text=True)
+        assert tags.splitlines() == ['3.47.5'], 'Flutter cannot identify its release without its tag'
+        assert subprocess.check_output(['git', '-C', str(sdk), 'rev-parse', 'HEAD'], text=True).strip() == pin
+        # A moved release ref must fail against the approved commit before any SDK command runs.
+        subprocess.run(commit, check=True)
+        subprocess.run(git + ['tag', '-f', '3.47.5'], check=True, capture_output=True)
+        result = subprocess.run(['/bin/sh', '-ec', acquire],
+                                env={**env, 'HOME': str(root / 'moved-tag-home')},
+                                capture_output=True, text=True, timeout=5)
+        assert result.returncode == 1, (result.returncode, result.stderr)
         tools = sdk / 'packages/flutter_tools'
         tools.mkdir(parents=True)
         (tools / 'pubspec.lock').write_text('SDK lock fixture\n')
