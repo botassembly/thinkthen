@@ -181,6 +181,38 @@ def linux_tool_destination_case():
         assert hashlib.sha256((home / '.local/bin/jq').read_bytes()).hexdigest() == env['JQ_SHA256']
 
 
+def linux_nested_tools_case():
+    gate = yaml.safe_load((REPO / '.github/workflows/gate.yml').read_text())
+    steps = gate['jobs']['linux-release']['steps']
+    assert gate['jobs']['linux-coverage']['steps'] == steps
+    selected = next(step['run'] for step in steps
+                    if step.get('name') == 'Select existing Go, Swift, Zig, PHP, Dart and native language tools')
+    handoff = next(line for line in selected.splitlines()
+                   if '"$THINKTHEN_SCALA_HOME/bin"' in line and '>> "$GITHUB_PATH"' in line)
+    assert 'python3 databases/duckdb/tools/source_hosts.py' in selected
+    with tempfile.TemporaryDirectory(prefix='thinkthen-nested-tools-') as temporary:
+        root = Path(temporary).resolve()
+        path_file = root / 'github-path'
+        path_file.touch()
+        env = {'PATH': os.environ['PATH'], 'HOME': str(root), 'GITHUB_PATH': str(path_file)}
+        tools = {'THINKTHEN_JDK_HOME': 'javac', 'THINKTHEN_KOTLIN_HOME': 'kotlinc',
+                 'THINKTHEN_SCALA_HOME': 'scalac'}
+        for variable, binary in tools.items():
+            home = root / variable
+            (home / 'bin').mkdir(parents=True)
+            executable = home / 'bin' / binary
+            executable.write_text('#!/bin/sh\nexit 0\n')
+            executable.chmod(0o755)
+            env[variable] = str(home)
+        subprocess.run(['/bin/sh', '-ec', handoff], env=env, check=True, timeout=5)
+        env['PATH'] = os.pathsep.join(path_file.read_text().splitlines() + [env['PATH']])
+        # Use the real nested gate boundary: homes are removed, PATH must still select each SDK.
+        command = '. sdlc/scripts/allow-list\n'
+        command += '\n'.join(f'[ -z "${{{variable}+present}}" ]; [ "$(command -v {binary})" = "{env[variable]}/bin/{binary}" ]'
+                             for variable, binary in tools.items())
+        subprocess.run(['/bin/sh', '-ec', command], cwd=REPO, env=env, check=True, timeout=5)
+
+
 def linux_coverage_destination_case():
     gate = yaml.safe_load((REPO / '.github/workflows/gate.yml').read_text())
     job = gate['jobs']['linux-coverage']
@@ -469,6 +501,7 @@ def parameter_cases():
 
 workflow_cases()
 linux_tool_destination_case()
+linux_nested_tools_case()
 linux_coverage_destination_case()
 flutter_locked_setup_case()
 parameter_cases()

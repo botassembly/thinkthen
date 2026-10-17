@@ -362,6 +362,10 @@ jobs:
           sdlc/scripts/release-workflow php-dart-tools "$TARGET" "$RELEASE_WORK/dart"
           sdlc/scripts/release-workflow ada-objc-cobol-tools "$TARGET"
           sdlc/scripts/release-workflow managed-tools "$TARGET"
+          # Nested gates discard SDK environment overrides and discover the same tools through PATH.
+          printf '%s\n' "$THINKTHEN_JDK_HOME/bin" "$THINKTHEN_KOTLIN_HOME/bin" "$THINKTHEN_SCALA_HOME/bin" >> "$GITHUB_PATH"
+          # host-setup fetched the pinned inputs; smoke preflight also requires their built CLIs.
+          python3 databases/duckdb/tools/source_hosts.py
       - name: Acquire Flutter from its pinned official source commit
         run: |
           set -eu
