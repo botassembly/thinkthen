@@ -296,7 +296,7 @@ jobs:
           if git show-ref --verify --quiet "refs/tags/$TAG"; then
             test "$(git rev-parse "refs/tags/$TAG^{commit}")" = "$SHA"
           fi
-          work=$(sdlc/scripts/release-workflow linux-work "$RUNNER_TEMP/thinkthen-linux-release")
+          work=$(sdlc/scripts/release-workflow linux-work /tmp/thinkthen-linux-release)
           mkdir -p "$work/$STAGE/evidence" "$work/$STAGE/home" "$work/$STAGE/target"
           ln -s "$work/$STAGE/target" target
           printf 'GATE_OUTPUT=%s\n' "$work/$STAGE/evidence" >> "$GITHUB_ENV"

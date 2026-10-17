@@ -4,11 +4,13 @@ from copy import deepcopy
 import hashlib
 import os
 import io
+import runpy
 import tarfile
 from pathlib import Path
 import subprocess
 import sys
 import tempfile
+from unittest.mock import patch
 
 import yaml
 
@@ -177,6 +179,59 @@ def linux_tool_destination_case():
         assert result.returncode == 0, (result.returncode, result.stdout, result.stderr)
         assert (home / '.local/bin/jq').read_bytes() == payload.read_bytes()
         assert hashlib.sha256((home / '.local/bin/jq').read_bytes()).hexdigest() == env['JQ_SHA256']
+
+
+def linux_coverage_destination_case():
+    gate = yaml.safe_load((REPO / '.github/workflows/gate.yml').read_text())
+    job = gate['jobs']['linux-coverage']
+    assert job['steps'] == gate['jobs']['linux-release']['steps']
+    setup = next(step['run'] for step in job['steps']
+                 if step.get('name') == 'Require the frozen dispatch commit and candidate')
+    selection = next(line.strip() for line in setup.splitlines() if line.strip().startswith('work=$('))
+    command = selection + '\nprintf "%s" "$work/$STAGE/coverage"\n'
+    driver = runpy.run_path(str(REPO / 'sdlc/scripts/coverage'))
+
+    class AcceptedOutput(Exception):
+        pass
+
+    # Stop at directory creation: exercise the privacy rule without scanning or building a tree.
+    def accepts(output):
+        with patch.dict(driver['main'].__globals__, tools=lambda: {}, installed_helpers=lambda: []), \
+                patch.object(sys, 'platform', 'linux'), \
+                patch.object(sys, 'argv', ['coverage', '--release', '--platform', 'linux', '--output', output]), \
+                patch.object(subprocess, 'check_output', side_effect=['0' * 40, b'']), \
+                patch.object(Path, 'mkdir', side_effect=AcceptedOutput) as create:
+            try:
+                driver['main']()
+            except AcceptedOutput:
+                create.assert_called_once_with(parents=True, exist_ok=False)
+                return True
+            except RuntimeError as error:
+                assert str(error) == 'installed coverage output must be outside /home to preserve package privacy'
+                create.assert_not_called()
+                return False
+        raise AssertionError('coverage did not reach its output boundary')
+
+    assert not accepts('/home/runner/work/_temp/thinkthen-linux-release/coverage/coverage')
+    assert not accepts('/home')
+    with tempfile.TemporaryDirectory(prefix='thinkthen-linux-coverage-') as temporary:
+        root = Path(temporary)
+        for roomy in (False, True):
+            for name, body in (
+                    ('df', 'case "$2" in /mnt) free=' + ('900' if roomy else '50') +
+                     ' ;; *) free=100 ;; esac\nprintf "Filesystem Blocks Used Available Capacity Mounted\\nx 1 1 %s 1%% %s\\n" "$free" "$2"'),
+                    ('sudo', 'exit 0')):
+                tool = root / name
+                tool.write_text('#!/bin/sh\n' + body + '\n')
+                tool.chmod(0o755)
+            env = {'PATH': f'{root}:{os.defpath}', 'STAGE': 'coverage',
+                   'RUNNER_TEMP': '/home/runner/work/_temp'}
+            result = subprocess.run(['/bin/sh', '-ec', command], cwd=REPO, env=env,
+                                    capture_output=True, text=True, timeout=5)
+            assert result.returncode == 0, result.stderr
+            expected = '/mnt/thinkthen-container' if roomy else '/tmp/thinkthen-linux-release'
+            assert result.stdout == expected + '/coverage/coverage', result.stdout
+            assert accepts(result.stdout), result.stdout
 
 
 def flutter_locked_setup_case():
@@ -404,6 +459,7 @@ def parameter_cases():
 
 workflow_cases()
 linux_tool_destination_case()
+linux_coverage_destination_case()
 flutter_locked_setup_case()
 parameter_cases()
 print('hosted workflows: standard runners, exact commits, installed Apple routing and skipped checks hold')
