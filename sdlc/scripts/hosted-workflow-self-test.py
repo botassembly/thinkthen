@@ -185,6 +185,7 @@ def flutter_locked_setup_case():
                 if step.get('name') == 'Acquire Flutter from its pinned official source commit')
     acquisition = step.split('flutter=', 1)[0]
     command = '(cd "$HOME' + step.split('(cd "$HOME', 1)[1].split('git diff --exit-code', 1)[0]
+    command += 'git diff --exit-code\n'
     with tempfile.TemporaryDirectory(prefix='thinkthen-flutter-locks-') as temporary:
         root = Path(temporary).resolve()
         sdk = root / 'home/.local/opt/flutter'
@@ -223,6 +224,10 @@ def flutter_locked_setup_case():
             target.parent.mkdir(parents=True, exist_ok=True)
             target.write_bytes(source.read_bytes())
         example = root / 'libraries/dart/flutter/example'
+        for source in (REPO / 'libraries/dart/flutter/example').rglob('generated_*'):
+            target = root / source.relative_to(REPO)
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_bytes(source.read_bytes())
         manifest = yaml.safe_load((example / 'pubspec.yaml').read_text())
         lock = yaml.safe_load((example / 'pubspec.lock').read_text())
         for package in ('thinkthen_dart', 'thinkthen_flutter'):
@@ -230,6 +235,22 @@ def flutter_locked_setup_case():
             assert lock['packages'][package]['source'] == 'path'
             assert lock['packages'][package]['description']['path'] == path
             assert (example / path / 'pubspec.yaml').is_file()
+        # Checked-in Linux generation must agree with local plugin declarations.
+        ffi_plugins = []
+        for dependency in manifest['dependencies'].values():
+            if not isinstance(dependency, dict) or 'path' not in dependency:
+                continue
+            package = yaml.safe_load((example / dependency['path'] / 'pubspec.yaml').read_text())
+            linux = package.get('flutter', {}).get('plugin', {}).get('platforms', {}).get('linux', {})
+            if linux.get('ffiPlugin'):
+                ffi_plugins.append(package['name'])
+        generated = example / 'linux/flutter/generated_plugins.cmake'
+        listed = generated.read_text().split('list(APPEND FLUTTER_FFI_PLUGIN_LIST\n', 1)[1].split(')', 1)[0]
+        assert listed.split() == sorted(ffi_plugins), 'Generated Linux FFI plugins differ from manifests'
+        subprocess.run(['git', 'init', '-q', str(root)], check=True)
+        subprocess.run(['git', 'add', 'libraries'], cwd=root, check=True)
+        subprocess.run(['git', '-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.invalid',
+                        'commit', '-qm', 'Tracked consumer fixture'], cwd=root, check=True)
         assert not (root / 'libraries/dart/flutter/pubspec.lock').exists()
         required = set(yaml.safe_load((root / 'libraries/dart/pubspec.lock').read_text())['packages'])
         resolver = root / 'resolver'
@@ -277,6 +298,12 @@ def flutter_locked_setup_case():
         assert {path: path.read_bytes() for path in root.rglob('pubspec.*')} == before
         override = example / 'pubspec_overrides.yaml'
         assert not override.exists()
+        original = generated.read_bytes()
+        generated.write_text(generated.read_text() + '# Changed generation\n')
+        result = subprocess.run(['/bin/sh', '-ec', command], cwd=root, env=env,
+                                capture_output=True, text=True, timeout=5)
+        assert result.returncode == 1 and 'generated_plugins.cmake' in result.stdout, result
+        generated.write_bytes(original)
         for broken in (command.replace('dependency_overrides:', 'ignored_overrides:'),
                        command.replace('path: ../..', 'path: ..')):
             result = subprocess.run(['/bin/sh', '-ec', broken], cwd=root, env=env,
